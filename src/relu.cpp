@@ -14,8 +14,8 @@ struct relu_reference : is_a_unknown {
 
     static void implementation(const void *ptr) {
         const relu::arguments &argument = *static_cast<const relu::arguments *>(ptr);
-        auto input  = argument.input[0].primitive.output[0].as<const neural::memory *>()->pointer;
-        auto output = argument.output[0].as<const neural::memory *>()->pointer;
+        auto input  = argument.input[0].primitive.output[0].as<const neural::memory &>().pointer;
+        auto output = argument.output[0].as<const neural::memory &>().pointer;
     }
 
     std::vector<task> work() {
@@ -30,8 +30,8 @@ primitive relu::create(relu::arguments arg) {
     relu *result = new relu(arg);
 
     if(    arg.engine==engine::reference
-        && memory::format::yxfb_f32==arg.input[0].primitive.output[0].as<const neural::memory *>()->argument.format
-        && memory::format::yxfb_f32==arg.output[0].as<const neural::memory *>()->argument.format)
+        && memory::format::yxfb_f32==arg.input[0].primitive.output[0].as<const neural::memory &>().argument.format
+        && memory::format::yxfb_f32==arg.output[0].as<const neural::memory &>().argument.format)
     {
         auto implementation = new relu_reference(arg);
         result->_private.reset(implementation);

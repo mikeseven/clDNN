@@ -8,7 +8,10 @@
 #include <exception>
 #include <cassert>
 
-//[TODO] ? rename is_a_... to is_...
+// [TODO]
+//      rename is_a_... to something gramatically correct
+//      compiler-agnostic compile-time assertions for C++98
+
 
 namespace neural {
 
@@ -111,10 +114,10 @@ class primitive {
     std::shared_ptr<const is_a_primitive> _pointer;
 
     // [C++1x] replace with std:: versions
-    template<typename T> struct is_pointer          { static const bool value = false; };
-    template<typename T> struct is_pointer<T*>      { static const bool value = true; };
-    template<typename T> struct remove_pointer      {typedef T type;};
-    template<typename T> struct remove_pointer<T*>  {typedef T type;};
+    template<typename T> struct is_reference         { static const bool value = false; };
+    template<typename T> struct is_reference<T&>     { static const bool value = true; };
+    template<typename T> struct remove_reference     {typedef T type;};
+    template<typename T> struct remove_reference<T&> {typedef T type;};
 
 public:
     primitive(const is_a_primitive *raw) : _pointer(raw) {};
@@ -146,9 +149,9 @@ public:
 
     template<typename T> T as() const {
         // [C++1x] replace with static_assert
-        assert(is_pointer<T>::value==true);
-        assert(type_id<remove_pointer<T>::type>()->id==_pointer->_type_traits->id);
-        return reinterpret_cast<T>(_pointer.get());
+        assert(is_reference<T>::value==true);
+        assert(type_id<remove_reference<T>::type>()->id==_pointer->_type_traits->id);
+        return *reinterpret_cast<remove_reference<T>::type *>(_pointer.get());
     }
     template<typename T> operator T() { return as<T>(); }
     const std::vector<task> &work();

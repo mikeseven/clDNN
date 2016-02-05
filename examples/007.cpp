@@ -14,9 +14,9 @@ void example_007() {
     act.output[0];
     act.output.size();
 
-    act.as<const relu *>()->argument.engine;
-    act.as<const relu *>()->argument.input[0];
-    act.as<const relu *>()->argument.input.size();
+    act.as<const relu &>().argument.engine;
+    act.as<const relu &>().argument.input[0];
+    act.as<const relu &>().argument.input.size();
 
     execute({input(data_buffer), output(data_buffer), act});
 }

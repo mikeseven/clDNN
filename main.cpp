@@ -14,7 +14,7 @@ auto main(int, char *[]) -> int {
 
     auto conv  = convolution::create({engine::cpu, output, input, weight, bias, padding::zero});
 
-    conv.as<const convolution *>()->argument.input;
+    conv.as<const convolution &>().argument.input;
 
     execute({input(input_buffer), output(output_buffer), conv});
 }
