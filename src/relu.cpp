@@ -20,13 +20,13 @@ struct relu_reference : is_a_unknown
 primitive relu::create(relu::arguments arg) {
     relu *result = new relu(arg);
 
-    if(arg.engine==engine::reference
-        && memory::format::xyzb==arg.input[0].primitive.output[0].as<neural::memory *>()->argument.format)
-    {
-        result->_private.reset(new relu_reference());
-        result->_work.push_back({relu_reference::implementation, (void *const)&result->argument});
-    }
-    arg.engine;
+    //if(arg.engine==engine::reference
+    //    && memory::format::xyzb==arg.input[0].primitive.output[0].as<neural::memory *>()->argument.format)
+    //{
+    //    result->_private.reset(new relu_reference());
+    //    result->_work.push_back({relu_reference::implementation, (void *const)&result->argument});
+    //}
+    //arg.engine;
     
 
     // [WIP]

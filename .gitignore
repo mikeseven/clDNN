@@ -2,3 +2,6 @@ Debug/*
 *sdf
 *.suo
 x64/*
+neural.VC.opendb
+neural.vcxproj
+neural.vcxproj.filters

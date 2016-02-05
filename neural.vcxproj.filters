@@ -54,6 +54,9 @@
     <ClCompile Include="src\execute.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\neural.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="api\neural.h">

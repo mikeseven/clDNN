@@ -9,14 +9,14 @@ void example_007() {
 
     auto act  = relu::create({engine::reference, output, input});
 
-    act.input[0];
-    act.input.size();
-    act.output[0];
-    act.output.size();
+    //act.input[0];
+    //act.input.size();
+    //act.output[0];
+    //act.output.size();
 
-    act.as<relu *>()->argument.engine;
-    act.as<relu *>()->argument.input[0];
-    act.as<relu *>()->argument.input.size();
+    //act.as<relu *>()->argument.engine;
+    //act.as<relu *>()->argument.input[0];
+    //act.as<relu *>()->argument.input.size();
 
-    execute({input(data_buffer), output(data_buffer), act});
+    //execute({input(data_buffer), output(data_buffer), act});
 }
