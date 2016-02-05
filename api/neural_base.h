@@ -99,8 +99,8 @@ public:
 
 // task to be performed in form of callback & data for it
 struct task {
-    void (*const callback)(void *const);
-    void *const data;
+    void (*callback)(const void *);
+    const void *data;
 };
 
 
@@ -108,7 +108,7 @@ struct task {
 class is_a_primitive;
 struct primitive_at;
 class primitive {
-    std::shared_ptr<is_a_primitive> _pointer;
+    std::shared_ptr<const is_a_primitive> _pointer;
 
     // [C++1x] replace with std:: versions
     template<typename T> struct is_pointer          { static const bool value = false; };
@@ -117,20 +117,20 @@ class primitive {
     template<typename T> struct remove_pointer<T*>  {typedef T type;};
 
 public:
-    primitive(is_a_primitive *raw) : _pointer(raw) {};
+    primitive(const is_a_primitive *raw) : _pointer(raw) {};
     primitive(const primitive &other) : _pointer(other._pointer) {};
     any_value_type_lookup operator[] (const std::string &key) const;
-    primitive operator()(void *argument) const;
+    const primitive operator()(void *argument) const;
     class input {
-        primitive *get_base() {
-            uint8_t *ptr = reinterpret_cast<uint8_t *>(this);
+        const primitive *get_base() const {
+            const uint8_t *ptr = reinterpret_cast<const uint8_t *>(this);
             ptr -= (size_t)&reinterpret_cast<const volatile char&>((((primitive *)0)->input));
-            return reinterpret_cast<primitive *>(ptr);
+            return reinterpret_cast<const primitive *>(ptr);
         }
     public:
-        inline const primitive_at operator[](uint32_t);
-        inline const primitive_at operator[](std::string);
-        inline size_t size();
+        inline const primitive_at operator[](uint32_t) const;
+        inline const primitive_at operator[](std::string) const;
+        inline size_t size() const;
     } input;
     class output {
         primitive *get_base() {
@@ -139,9 +139,9 @@ public:
             return reinterpret_cast<primitive *>(ptr);
         }
     public:
-        inline const primitive operator[](uint32_t);
-        inline const primitive operator[](std::string);
-        inline size_t size();
+        inline const primitive operator[](uint32_t) const;
+        inline const primitive operator[](std::string) const;
+        inline size_t size() const;
     } output;
 
     template<typename T> T as() const {
@@ -151,7 +151,7 @@ public:
         return reinterpret_cast<T>(_pointer.get());
     }
     template<typename T> operator T() { return as<T>(); }
-    std::vector<task> &work();
+    const std::vector<task> &work();
 };
 
 
@@ -166,9 +166,9 @@ public:
     virtual ~is_a_primitive() {};
     virtual primitive clone() const = 0;
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
-    virtual const std::vector<primitive_at>  &input() = 0;
-    virtual const std::vector<primitive>     &output() = 0;
-    virtual void execute_argument(void *argument) { throw std::runtime_error("this primitive does not need execute-time argument"); }
+    virtual const std::vector<primitive_at>  &input() const = 0;
+    virtual const std::vector<primitive>     &output() const = 0;
+    virtual void execute_argument(void *argument) const { throw std::runtime_error("this primitive does not need execute-time argument"); }
     friend class primitive;
 
     // to be removed when new thread queue will be done
@@ -178,16 +178,16 @@ public:
 };
 
 struct primitive_at {
-    primitive   primitive;
-    uint32_t    at;
-    primitive_at(neural::primitive aprimitive) : primitive(aprimitive), at(0) {}
+    const primitive   primitive;
+    const uint32_t    at;
+    primitive_at(const neural::primitive aprimitive) : primitive(aprimitive), at(0) {}
 };
 
 // implementations of inline functions from primitive
-inline const primitive_at   primitive::input::operator[](uint32_t at) { return get_base()->_pointer.get()->input()[at]; }
-inline size_t               primitive::input::size() { return get_base()->_pointer.get()->input().size(); }
-inline primitive            primitive::operator()(void *argument) const { _pointer.get()->execute_argument(argument); return *this; }
-inline std::vector<task> &  primitive::work() { return _pointer->_work; }
+inline const primitive_at           primitive::input::operator[] (uint32_t at) const { return get_base()->_pointer.get()->input()[at]; }
+inline size_t                       primitive::input::size() const { return get_base()->_pointer.get()->input().size(); }
+inline const primitive              primitive::operator()(void *argument) const { _pointer.get()->execute_argument(argument); return *this; }
+inline const std::vector<task> &    primitive::work() { return _pointer->_work; }
 
 // unkown structure with type info for cast validation
 class is_a_unknown {
