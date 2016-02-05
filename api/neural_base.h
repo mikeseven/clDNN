@@ -158,6 +158,14 @@ public:
 };
 
 
+struct primitive_at {
+    const primitive   primitive;
+    const uint32_t    at;
+    primitive_at(const neural::primitive aprimitive) : primitive(aprimitive), at(0) {}
+};
+
+struct memory;
+
 // is_a_primitive is a base class for all primitives exposing common interface; primiary user is a primitive wrapper
 class is_a_primitive {
 protected:
@@ -171,6 +179,8 @@ public:
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
     virtual const std::vector<primitive_at>  &input() const = 0;
     virtual const std::vector<primitive>     &output() const = 0;
+    const memory &input_memory(uint32_t at) const   { return input()[at].primitive.output[input()[at].at].as<const memory &>(); }
+    const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
     virtual void execute_argument(void *argument) const { throw std::runtime_error("this primitive does not need execute-time argument"); }
     friend class primitive;
 
@@ -180,11 +190,6 @@ public:
     friend struct nn_thread_worker_pool;
 };
 
-struct primitive_at {
-    const primitive   primitive;
-    const uint32_t    at;
-    primitive_at(const neural::primitive aprimitive) : primitive(aprimitive), at(0) {}
-};
 
 // implementations of inline functions from primitive
 inline const primitive_at           primitive::input::operator[] (uint32_t at) const { return get_base()->_pointer.get()->input()[at]; }
