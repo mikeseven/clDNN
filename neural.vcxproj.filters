@@ -54,7 +54,7 @@
     <ClCompile Include="src\execute.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\neural.cpp">
+    <ClCompile Include="src\memory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

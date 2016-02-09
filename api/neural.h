@@ -156,8 +156,8 @@ struct relu : is_a_primitive {
         arguments(neural::engine, neural::memory::format, std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>, float);
         arguments(neural::engine, neural::memory::format,                                               primitive,                       float);
         arguments(neural::engine, neural::memory::format,                                               primitive);
-        arguments(neural::engine, primitive,                                                            primitive,                       float);
-        arguments(neural::engine, primitive,                                                            primitive);
+        arguments(neural::engine, primitive arg_output,                                                 primitive arg_input,             float arg_neg_slope);
+        arguments(neural::engine, primitive arg_output,                                                 primitive arg_input);
     };
     const arguments argument;
 

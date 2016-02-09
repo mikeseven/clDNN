@@ -189,6 +189,9 @@ inline size_t               primitive::input::size() { return get_base()->_point
 inline primitive            primitive::operator()(void *argument) const { _pointer.get()->execute_argument(argument); return *this; }
 inline std::vector<task> &  primitive::work() { return _pointer->_work; }
 
+inline const primitive      primitive::output::operator[](uint32_t at) { return get_base()->_pointer.get()->output()[at]; }
+inline size_t               primitive::output::size() { return get_base()->_pointer.get()->output().size(); }
+
 // unkown structure with type info for cast validation
 class is_a_unknown {
     const type_traits *const _type_traits;
