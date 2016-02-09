@@ -5,32 +5,42 @@ namespace neural {
 
 namespace {
 
-struct relu_reference : is_a_unknown
-{
-    relu_reference() : is_a_unknown(neural::type_id<relu_reference>()) {}
+struct relu_reference : is_a_unknown {
+    const relu &outer;
+    relu_reference(relu &arg)
+        : is_a_unknown(neural::type_id<relu_reference>()) 
+        , outer(arg) 
+    {};
     ~relu_reference() {}
 
-    static void implementation(void *const ptr) {
-        auto argument = static_cast<relu::arguments *>(ptr);
+    static void implementation(const void *ptr) {
+        /*auto that = static_cast<const relu *>(ptr);
+        auto input  = that->input_memory(0).pointer;
+        auto output = that->output_memory(0).pointer;
+        */
+        //auto argument = static_cast<relu::arguments *>(ptr);
+        //size_t count_src = 1;
+        //size_t count_dst = 1;
 
-        size_t count_src = 1;
-        size_t count_dst = 1;
+        //for(unsigned i = 0; i < argument->input[0].primitive.as<neural::memory *>()->argument.size.size(); ++i)
+        //    count_src *= argument->input[0].primitive.as<neural::memory *>()->argument.size[i];
+        //for(unsigned i = 0; i < argument->output[0].as<neural::memory *>()->argument.size.size(); ++i)
+        //    count_dst *= argument->output[0].as<neural::memory *>()->argument.size[i];
 
-        for(unsigned i = 0; i < argument->input[0].primitive.as<neural::memory *>()->argument.size.size(); ++i)
-            count_src *= argument->input[0].primitive.as<neural::memory *>()->argument.size[i];
-        for(unsigned i = 0; i < argument->output[0].as<neural::memory *>()->argument.size.size(); ++i)
-            count_dst *= argument->output[0].as<neural::memory *>()->argument.size[i];
+        //if( count_dst != count_src )
+        //    throw std::runtime_error("ReLU input/output size does not match.");
 
-        if( count_dst != count_src )
-            throw std::runtime_error("ReLU input/output size does not match.");
+        //auto input  = static_cast<float *>(argument->input[0].primitive.output[0].as<const neural::memory *>()->pointer);
+        //auto output = static_cast<float *>(argument->output[0].output[0].as<const neural::memory *>()->pointer);
 
-        auto input  = static_cast<float *>(argument->input[0].primitive.output[0].as<const neural::memory *>()->pointer);
-        auto output = static_cast<float *>(argument->output[0].output[0].as<const neural::memory *>()->pointer);
+        //for (size_t i = 0; i < count_src; ++i) {
+        //output[i] = std::max(input[i], .0f)
+        //    + argument->negative_slope * std::min(input[i], .0f);
+        //}
+    }
 
-        for (size_t i = 0; i < count_src; ++i) {
-        output[i] = std::max(input[i], .0f)
-            + argument->negative_slope * std::min(input[i], .0f);
-        }
+    std::vector<task> work() {
+        return {task{implementation, &outer}};
     }
 };
 
@@ -53,15 +63,15 @@ primitive relu::create(relu::arguments arg) {
 
     auto tmp = new relu_reference();
 
-    if(arg.engine==engine::reference
-       && memory::format::xyzb==arg.input[0].primitive.output[0].as<neural::memory *>()->argument.format)
+    if(    arg.engine==engine::reference
+        && memory::format::yxfb_f32==result-> input_memory(0).argument.format
+        && memory::format::yxfb_f32==result->output_memory(0).argument.format)
     {
-        result->_private.reset(new relu_reference());
-        result->_work.push_back({relu_reference::implementation, (void *const)&result->argument});
+        auto implementation = new relu_reference(*result);
+        result->_private.reset(implementation);
+        result->_work = implementation->work();
     }
     arg.engine;
-    
-    // [WIP]
 
     return result;
 }

@@ -57,7 +57,7 @@ struct nn_semaphore {
     // Notifies waiters, decrements semaphore value and atomically clears working state 
     // under semaphore lock. This method is called under wake lock also - as should 
     // be every place changing request value.
-    void atomic_clear_state_and_notify(task **request) {
+    void atomic_clear_state_and_notify(const task **request) {
         std::unique_lock<std::mutex> lck(mtx);
         *request = nullptr;
         --count;
@@ -115,7 +115,7 @@ struct nn_thread_worker {
 
 
     // Adds request to the thread.
-    void add_request(task *request) {
+    void add_request(const task *request) {
         if (request == nullptr) throw std::invalid_argument("null request sent");
         {
             // Locks wake mutex - it will get unlocked after worker
@@ -188,7 +188,7 @@ private:
     nn_semaphore* hypervisor_semaphore;
 
     // Value used both as request handle and indicator of thread state.
-    task* current_request;
+    const task* current_request;
 
     // ID of thread visible by thread pool.
     uint32_t thread_id;
@@ -450,7 +450,7 @@ struct nn_thread_worker_pool {
     }
 
     // Push job queue.
-    void push_job(std::vector<task>& requests) {
+    void push_job(const std::vector<task>& requests) {
         // Sent requests to worker threads.
         if (threads.size() != 0) {
             // Setup semaphore and lock its mutex.
