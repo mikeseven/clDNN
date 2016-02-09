@@ -293,6 +293,7 @@ struct nn_thread_worker_pool {
             // Check system to get number of HW threads available.
             // TODO: add specific implementation for windows/linux to get exact value of cores.
             num_threads = std::thread::hardware_concurrency() / 2; // take half, to work on 1 of 2 sockets
+            cfg_num_threads_per_core = 1;
         } else {
             // Get number of threads specified by user.
             num_threads = cfg_num_cores * cfg_num_threads_per_core;

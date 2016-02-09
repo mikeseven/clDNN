@@ -136,10 +136,10 @@ public:
         inline size_t size() const;
     } input;
     class output {
-        primitive *get_base() {
-            uint8_t *ptr = reinterpret_cast<uint8_t *>(this);
+        const primitive *get_base() const {
+            const uint8_t *ptr = reinterpret_cast<const uint8_t *>(this);
             ptr -= (size_t)&reinterpret_cast<const volatile char&>((((primitive *)0)->output));
-            return reinterpret_cast<primitive *>(ptr);
+            return reinterpret_cast<const primitive *>(ptr);
         }
     public:
         inline const primitive operator[](uint32_t) const;
@@ -150,11 +150,12 @@ public:
     template<typename T> T as() const {
         // [C++1x] replace with static_assert
         assert(is_reference<T>::value==true);
-        assert(type_id<remove_reference<T>::type>()->id==_pointer->_type_traits->id);
+        assert(type_id<remove_reference<T>::type>()->id ==_pointer->_type_traits->id);
         return *reinterpret_cast<remove_reference<T>::type *>(_pointer.get());
     }
     template<typename T> operator T() { return as<T>(); }
     const std::vector<task> &work();
+    const size_t id();
 };
 
 
@@ -179,7 +180,12 @@ public:
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
     virtual const std::vector<primitive_at>  &input() const = 0;
     virtual const std::vector<primitive>     &output() const = 0;
-    const memory &input_memory(uint32_t at) const   { return input()[at].primitive.output[input()[at].at].as<const memory &>(); }
+    const memory &input_memory(uint32_t at) const   { 
+        auto prim = input()[at].primitive;
+        return prim.id()==type_id<const memory>()->id
+               ? prim.as<const memory &>()
+               : prim.output[input()[at].at].as<const memory &>();
+    }
     const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
     virtual void execute_argument(void *argument) const { throw std::runtime_error("this primitive does not need execute-time argument"); }
     friend class primitive;
@@ -197,8 +203,9 @@ inline size_t                       primitive::input::size() const { return get_
 inline const primitive              primitive::operator()(void *argument) const { _pointer.get()->execute_argument(argument); return *this; }
 inline const std::vector<task> &    primitive::work() { return _pointer->_work; }
 
-inline const primitive      primitive::output::operator[](uint32_t at) { return get_base()->_pointer.get()->output()[at]; }
-inline size_t               primitive::output::size() { return get_base()->_pointer.get()->output().size(); }
+inline const primitive              primitive::output::operator[](uint32_t at) const { return get_base()->_pointer.get()->output()[at]; }
+inline size_t                       primitive::output::size() const { return get_base()->_pointer.get()->output().size(); }
+inline const size_t                 primitive::id() { return _pointer.get()->_type_traits->id; }
 
 // unkown structure with type info for cast validation
 class is_a_unknown {

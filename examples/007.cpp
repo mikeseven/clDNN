@@ -4,6 +4,7 @@
 void example_007() {
     char *data_buffer = nullptr;
     using namespace neural;
+
     auto input  = memory::create({engine::cpu, memory::format::xyzb, {16, 32, 64, 128}});
     auto output = memory::create({engine::cpu, memory::format::xyzb, {16, 32, 64, 128}});
 

@@ -2,7 +2,7 @@
 
 namespace neural {
 
-primitive memory::create(arguments arg){
+primitive memory::create(memory::arguments arg){
         return new memory(arg);
 }
 
