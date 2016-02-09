@@ -198,7 +198,7 @@ class is_a_unknown {
 protected:
     is_a_unknown(const type_traits *arg) : _type_traits(arg) {};
 public:
-    virtual ~is_a_unknown() = 0;
+    virtual ~is_a_unknown(){};
 };
 
 // execution of sequence of primitives

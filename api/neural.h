@@ -15,6 +15,7 @@ struct memory : is_a_primitive {
         std::vector<size_t> size;
     };
     const arguments argument;
+    void *pointer;
 
     static primitive create(arguments);
     memory &operator()(void *ptr) { pointer = ptr; return *this; };
@@ -23,7 +24,6 @@ private:
     memory(arguments arg) : is_a_primitive(type_id<memory>()), argument(arg), pointer(0) {};
     const std::vector<primitive_at>  &input()  {throw std::runtime_error("no inputs in memory descritiption"); };
     const std::vector<primitive>     &output() {throw std::runtime_error("no outputs in memory descritiption"); };
-    void *pointer;
 };
 
 

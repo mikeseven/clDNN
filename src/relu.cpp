@@ -1,4 +1,5 @@
 #include "neural.h"
+#include <algorithm>
 
 namespace neural {
 
@@ -10,19 +11,26 @@ struct relu_reference : is_a_unknown
     ~relu_reference() {}
 
     static void implementation(void *const ptr) {
-        auto argument = reinterpret_cast<relu::arguments *>(ptr);
+        auto argument = static_cast<relu::arguments *>(ptr);
 
-        auto count = argument->input[0].primitive.as<neural::memory *>()->argument.size[0];
+        size_t count_src = 1;
+        size_t count_dst = 1;
 
-        if( count != argument->output[0].as<neural::memory *>()->argument.size[0] )
+        for(unsigned i = 0; i < argument->input[0].primitive.as<neural::memory *>()->argument.size.size(); ++i)
+            count_src *= argument->input[0].primitive.as<neural::memory *>()->argument.size[i];
+        for(unsigned i = 0; i < argument->output[0].as<neural::memory *>()->argument.size.size(); ++i)
+            count_dst *= argument->output[0].as<neural::memory *>()->argument.size[i];
+
+        if( count_dst != count_src )
             throw std::runtime_error("ReLU input/output size does not match.");
 
-        //auto top_data = argument->input[0].primitive.input
+        auto input  = static_cast<float *>(argument->input[0].primitive.output[0].as<const neural::memory *>()->pointer);
+        auto output = static_cast<float *>(argument->output[0].output[0].as<const neural::memory *>()->pointer);
 
-        //for (int i = 0; i < count; ++i) {
-        //top_data[i] = std::max(bottom_data[i], Dtype(0))
-        //    + negative_slope * std::min(bottom_data[i], Dtype(0));
-        //}
+        for (size_t i = 0; i < count_src; ++i) {
+        output[i] = std::max(input[i], .0f)
+            + argument->negative_slope * std::min(input[i], .0f);
+        }
     }
 };
 
@@ -48,12 +56,11 @@ primitive relu::create(relu::arguments arg) {
     if(arg.engine==engine::reference
        && memory::format::xyzb==arg.input[0].primitive.output[0].as<neural::memory *>()->argument.format)
     {
-        //result->_private.reset(new relu_reference());
-        //result->_work.push_back({relu_reference::implementation, (void *const)&result->argument});
+        result->_private.reset(new relu_reference());
+        result->_work.push_back({relu_reference::implementation, (void *const)&result->argument});
     }
-    //arg.engine;
+    arg.engine;
     
-
     // [WIP]
 
     return result;
