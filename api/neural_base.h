@@ -24,6 +24,7 @@ struct type_traits {
     type_traits &operator=(const type_traits &);
 };
 
+//todo type id and const type id should be equall
 template<typename T_type> __declspec(noinline) auto type_id() -> type_traits * {
 #if defined _MSC_VER
     static std::string signature = __FUNCSIG__;
