@@ -155,7 +155,7 @@ public:
     }
     template<typename T> operator T() { return as<T>(); }
     const std::vector<task> &work();
-    const size_t id();
+    size_t id() const;
 };
 
 
@@ -180,11 +180,9 @@ public:
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
     virtual const std::vector<primitive_at>  &input() const = 0;
     virtual const std::vector<primitive>     &output() const = 0;
-    const memory &input_memory(uint32_t at) const   { 
+    const memory &input_memory(uint32_t at) const { 
         auto prim = input()[at].primitive;
-        return prim.id()==type_id<const memory>()->id
-               ? prim.as<const memory &>()
-               : prim.output[input()[at].at].as<const memory &>();
+        return (prim.id()==type_id<memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>();
     }
     const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
     virtual void execute_argument(void *argument) const { throw std::runtime_error("this primitive does not need execute-time argument"); }
@@ -198,10 +196,11 @@ public:
 
 
 // implementations of inline functions from primitive
-inline const primitive_at           primitive::input::operator[] (uint32_t at) const { return get_base()->_pointer.get()->input()[at]; }
-inline size_t                       primitive::input::size() const { return get_base()->_pointer.get()->input().size(); }
-inline const primitive              primitive::operator()(void *argument) const { _pointer.get()->execute_argument(argument); return *this; }
+inline const primitive_at           primitive::input::operator[] (uint32_t at) const { return get_base()->_pointer->input()[at]; }
+inline size_t                       primitive::input::size() const { return get_base()->_pointer->input().size(); }
+inline const primitive              primitive::operator()(void *argument) const { _pointer->execute_argument(argument); return *this; }
 inline const std::vector<task> &    primitive::work() { return _pointer->_work; }
+inline size_t                       primitive::id() const { return _pointer->_type_traits->id; }
 
 inline const primitive              primitive::output::operator[](uint32_t at) const { return get_base()->_pointer.get()->output()[at]; }
 inline size_t                       primitive::output::size() const { return get_base()->_pointer.get()->output().size(); }

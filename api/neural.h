@@ -8,10 +8,8 @@ namespace neural {
 // data in memory in known format
 struct memory : is_a_primitive {
     enum class format : size_t { 
+        xb_f32,     // 1D+batch, float32
         yxfb_f32,   // 3D+batch, float32
-        xb,         // example to be removed
-        xyzb,       // example to be removed
-        bxyz,       // example to be removed
         any=static_cast<size_t>(-1) };
 
     struct arguments {
@@ -28,7 +26,7 @@ struct memory : is_a_primitive {
 private:
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
     virtual const std::vector<primitive_at>  &input()  const {throw std::runtime_error("No inputs in memory descritiption"); };
-    virtual const std::vector<primitive>     &output() const {throw std::runtime_error("No output in memory descritiption"); };
+    virtual const std::vector<primitive>     &output() const {throw std::runtime_error("No outputs in memory descritiption"); };
 };
 
 
@@ -52,8 +50,8 @@ struct file : is_a_primitive {
     primitive clone() const { return create(argument); }
 private:
     file(arguments arg) : is_a_primitive(type_id<const file>()), argument(arg) {};
-    const std::vector<primitive_at>  &input()  {throw std::runtime_error("no inputs in file reader"); };
-    const std::vector<primitive>     &output() {throw std::runtime_error("no outputs in file reader"); };
+    const std::vector<primitive_at>  &input() const  {throw std::runtime_error("no inputs in file reader"); };
+    const std::vector<primitive>     &output() const {throw std::runtime_error("no outputs in file reader"); };
 };
 
 
