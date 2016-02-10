@@ -182,7 +182,7 @@ public:
     virtual const std::vector<primitive>     &output() const = 0;
     const memory &input_memory(uint32_t at) const { 
         auto prim = input()[at].primitive;
-        return (prim.id()==type_id<memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>();
+        return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>();
     }
     const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
     virtual void execute_argument(void *argument) const { throw std::runtime_error("this primitive does not need execute-time argument"); }
@@ -204,7 +204,6 @@ inline size_t                       primitive::id() const { return _pointer->_ty
 
 inline const primitive              primitive::output::operator[](uint32_t at) const { return get_base()->_pointer.get()->output()[at]; }
 inline size_t                       primitive::output::size() const { return get_base()->_pointer.get()->output().size(); }
-inline const size_t                 primitive::id() { return _pointer.get()->_type_traits->id; }
 
 // unkown structure with type info for cast validation
 class is_a_unknown {

@@ -25,8 +25,8 @@ const int size = 192;
     for(int i = 0; i < size ; ++i)
         input_buf[i] = frand();
 
-    auto input  = memory::create({engine::cpu, memory::format::xyzb, {4, 4, 3, 2}});
-    auto output = memory::create({engine::cpu, memory::format::xyzb, {4, 4, 3, 2}});
+    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {4, 4, 3, 2}});
+    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {4, 4, 3, 2}});
 
  //   auto input  = memory::create({engine::cpu, memory::format::xyzb, {16, 32, 64, 128}});
  //   auto output = memory::create({engine::cpu, memory::format::xyzb, {16, 32, 64, 128}});
@@ -52,14 +52,15 @@ auto main(int, char *[]) -> int {
     char  *input_buffer = nullptr;
     char *output_buffer = nullptr;
 
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {224, 224, 3,  24}});
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {224, 224, 96, 24}});
-    auto weight = file::create({engine::cpu, "weight.nnb"});
-    auto bias   = file::create({engine::cpu, "bias.nnb"});
+    foo();
+    //auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {224, 224, 3,  24}});
+    //auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {224, 224, 96, 24}});
+    //auto weight = file::create({engine::cpu, "weight.nnb"});
+    //auto bias   = file::create({engine::cpu, "bias.nnb"});
 
-    auto conv  = convolution::create({engine::cpu, output, input, weight, bias, padding::zero});
+    //auto conv  = convolution::create({engine::cpu, output, input, weight, bias, padding::zero});
 
-    conv.as<const convolution &>().argument.input;
+    //conv.as<const convolution &>().argument.input;
 
-    execute({input(input_buffer), output(output_buffer), conv});
+    //execute({input(input_buffer), output(output_buffer), conv});
 }
