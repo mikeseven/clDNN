@@ -8,10 +8,8 @@ namespace neural {
 // data in memory in known format
 struct memory : is_a_primitive {
     enum class format : size_t { 
+        xb_f32,     // 1D+batch, float32
         yxfb_f32,   // 3D+batch, float32
-        xb,         // example to be removed
-        xyzb,       // example to be removed
-        bxyz,       // example to be removed
         any=static_cast<size_t>(-1) };
 
     struct arguments {
@@ -26,9 +24,9 @@ struct memory : is_a_primitive {
     memory &operator()(void *ptr) { pointer = ptr; return *this; };
     primitive clone() const { return create(argument); }
 private:
-    memory(arguments arg) : is_a_primitive(type_id<memory>()), argument(arg), pointer(0) {};
-    const std::vector<primitive_at>  &input()  {throw std::runtime_error("no inputs in memory descritiption"); };
-    const std::vector<primitive>     &output() {throw std::runtime_error("no outputs in memory descritiption"); };
+    memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
+    const std::vector<primitive_at>  &input() const {throw std::runtime_error("no inputs in memory descritiption"); };
+    const std::vector<primitive>     &output() const {throw std::runtime_error("no outputs in memory descritiption"); };
 };
 
 
@@ -51,9 +49,9 @@ struct file : is_a_primitive {
     file &operator()(void *);
     primitive clone() const { return create(argument); }
 private:
-    file(arguments arg) : is_a_primitive(type_id<file>()), argument(arg) {};
-    const std::vector<primitive_at>  &input()  {throw std::runtime_error("no inputs in file reader"); };
-    const std::vector<primitive>     &output() {throw std::runtime_error("no outputs in file reader"); };
+    file(arguments arg) : is_a_primitive(type_id<const file>()), argument(arg) {};
+    const std::vector<primitive_at>  &input() const  {throw std::runtime_error("no inputs in file reader"); };
+    const std::vector<primitive>     &output() const {throw std::runtime_error("no outputs in file reader"); };
 };
 
 
@@ -74,7 +72,7 @@ struct conversion : is_a_primitive {
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
 private:
-    conversion(arguments arg) : is_a_primitive(type_id<conversion>()), argument(arg) {};
+    conversion(arguments arg) : is_a_primitive(type_id<const conversion>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 
@@ -107,7 +105,7 @@ struct convolution : is_a_primitive {
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
 private:
-    convolution(arguments arg) : is_a_primitive(type_id<convolution>()), argument(arg) {};
+    convolution(arguments arg) : is_a_primitive(type_id<const convolution>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
@@ -138,7 +136,7 @@ struct fully_connected : is_a_primitive {
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
 private:
-    fully_connected(arguments arg) : is_a_primitive(type_id<fully_connected>()), argument(arg) {};
+    fully_connected(arguments arg) : is_a_primitive(type_id<const fully_connected>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
@@ -171,7 +169,7 @@ struct relu : is_a_primitive {
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
 private:
-    relu(arguments arg) : is_a_primitive(type_id<relu>()), argument(arg) {};
+    relu(arguments arg) : is_a_primitive(type_id<const relu>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 
@@ -210,7 +208,7 @@ struct pooling : is_a_primitive {
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
 private:
-    pooling(arguments arg) : is_a_primitive(type_id<pooling>()), argument(arg) {};
+    pooling(arguments arg) : is_a_primitive(type_id<const pooling>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
@@ -244,7 +242,7 @@ struct /*normalization*/response : is_a_primitive {
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
 private:
-    response(arguments arg) : is_a_primitive(type_id<response>()), argument(arg) {};
+    response(arguments arg) : is_a_primitive(type_id<const response>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
@@ -271,7 +269,7 @@ struct /*normalization*/softmax : is_a_primitive {
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
 private:
-    softmax(arguments arg) : is_a_primitive(type_id<softmax>()), argument(arg) {};
+    softmax(arguments arg) : is_a_primitive(type_id<const softmax>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
@@ -305,7 +303,7 @@ struct convolution_relu : is_a_primitive {
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
 private:
-    convolution_relu(arguments arg) : is_a_primitive(type_id<convolution_relu>()), argument(arg) {};
+    convolution_relu(arguments arg) : is_a_primitive(type_id<const convolution_relu>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
@@ -337,7 +335,7 @@ struct fully_connected_relu : is_a_primitive {
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
 private:
-    fully_connected_relu(arguments arg) : is_a_primitive(type_id<fully_connected_relu>()), argument(arg) {};
+    fully_connected_relu(arguments arg) : is_a_primitive(type_id<const fully_connected_relu>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
