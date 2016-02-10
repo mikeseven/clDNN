@@ -5,7 +5,7 @@
 namespace neural {
 
 
-// data in memory in known format
+// data in memory in known format; format consists of memory {order, type} of values
 struct memory : is_a_primitive {
     enum class format : size_t { 
         xb_f32,     // 1D+batch, float32
@@ -57,8 +57,8 @@ private:
 
 
 
-// data conversion
-struct conversion : is_a_primitive {
+// reorder data, type is not changed
+struct reorder : is_a_primitive {
     struct arguments {
         engine                      engine;
         std::vector<primitive>      output;
@@ -73,10 +73,9 @@ struct conversion : is_a_primitive {
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
 private:
-    conversion(arguments arg) : is_a_primitive(type_id<const conversion>()), argument(arg) {};
+    reorder(arguments arg) : is_a_primitive(type_id<const reorder>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
-
 };
 
 

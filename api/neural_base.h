@@ -182,7 +182,7 @@ public:
     virtual const std::vector<primitive>     &output() const = 0;
     const memory &input_memory(uint32_t at) const { 
         auto prim = input()[at].primitive;
-        return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>(); //todo type id and const type id should be equall
+        return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>();
     }
     const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
     virtual void execute_argument(void *argument) const { throw std::runtime_error("This primitive does not need execute-time argument."); }
