@@ -182,10 +182,10 @@ public:
     virtual const std::vector<primitive>     &output() const = 0;
     const memory &input_memory(uint32_t at) const { 
         auto prim = input()[at].primitive;
-        return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>();
+        return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>(); //todo type id and const type id should be equall
     }
     const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
-    virtual void execute_argument(void *argument) const { throw std::runtime_error("this primitive does not need execute-time argument"); }
+    virtual void execute_argument(void *argument) const { throw std::runtime_error("This primitive does not need execute-time argument."); }
     friend class primitive;
 
     // to be removed when new thread queue will be done
@@ -211,7 +211,7 @@ class is_a_unknown {
 protected:
     is_a_unknown(const type_traits *arg) : _type_traits(arg) {};
 public:
-    virtual ~is_a_unknown(){};
+    virtual ~is_a_unknown() = 0 {};
 };
 
 // execution of sequence of primitives

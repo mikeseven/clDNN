@@ -23,10 +23,11 @@ struct memory : is_a_primitive {
     static primitive create(arguments);
     memory &operator()(void *ptr) { pointer = ptr; return *this; };
     primitive clone() const { return create(argument); }
+    void execute_argument(void *argument) const { pointer = argument; }
 private:
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
-    virtual const std::vector<primitive_at>  &input()  const {throw std::runtime_error("No inputs in memory descritiption"); };
-    virtual const std::vector<primitive>     &output() const {throw std::runtime_error("No outputs in memory descritiption"); };
+    const std::vector<primitive_at>  &input()  const {throw std::runtime_error("No inputs in memory descritiption"); };
+    const std::vector<primitive>     &output() const {throw std::runtime_error("No outputs in memory descritiption"); };
 };
 
 
@@ -137,7 +138,7 @@ struct fully_connected : is_a_primitive {
     primitive clone() const { return create(argument); }
 private:
     fully_connected(arguments arg) : is_a_primitive(type_id<const fully_connected>()), argument(arg) {};
-    const std::vector<primitive_at>  &input() const  { return argument.input; };
+    const std::vector<primitive_at>  &input()  const { return argument.input;  };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
 
