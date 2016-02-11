@@ -6,7 +6,7 @@ void example() {
     using namespace neural;
     float data_buffer[120];
 
-    for(unsigned i = 0; i < 120; ++i )
+    for(int i = 0; i < 120; ++i )
         data_buffer[i] = i - 8;
 
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 3, 4, 5}});
@@ -15,6 +15,10 @@ void example() {
     auto act    = relu::create({engine::reference, output, {0,0,0,0}, {2, 3, 4, 5}, input, {0,0,0,0} });
 
     execute({input(data_buffer), output(data_buffer), act});
+
+    if(1)
+        int x = 1;
+
 }
 
 auto main(int, char *[]) -> int {
