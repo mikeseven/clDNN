@@ -211,6 +211,7 @@ class is_an_implementation {
 protected:
     is_an_implementation(const type_traits *arg) : _type_traits(arg) {};
 public:
+    virtual std::vector<task> work() = 0;
     virtual ~is_an_implementation() = 0 {};
 };
 

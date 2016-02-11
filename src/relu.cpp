@@ -1,5 +1,8 @@
 #include "neural.h"
 #include <algorithm>
+#include <tuple>
+#include <map>
+#include <functional>
 
 namespace neural {
 
@@ -29,12 +32,22 @@ struct relu_reference : is_an_implementation {
             throw std::runtime_error("ReLU input/output size does not match.");
 
         for (size_t i = 0; i < count_src; ++i)
-        output[i] = std::max(input[i], 0.0f) + this_relu->argument.negative_slope * std::min(input[i], 0.0f);
+            output[i] = std::max(input[i], 0.0f) + this_relu->argument.negative_slope * std::min(input[i], 0.0f);
     }
 
     std::vector<task> work() {
         return {task{implementation, &outer}};
     }
+
+    static is_an_implementation *create(relu &arg) { return new relu_reference(arg); };
+};
+
+//                                    engine          output                  input
+using implementation_key = std::tuple<neural::engine, neural::memory::format, neural::memory::format>;
+
+// map of available implementations
+static std::map<implementation_key, std::function<is_an_implementation *(relu &)>> implementation_map = {
+    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), relu_reference::create}
 };
 
 } // namespace {
@@ -51,19 +64,26 @@ relu::arguments::arguments( neural::engine arg_engine, neural::primitive arg_out
     , input({arg_input})
     , negative_slope(arg_neg_slope) {}
 
-primitive relu::create(relu::arguments arg) {
-    relu *result = new relu(arg);
-    if(    arg.engine==engine::reference
-        && memory::format::yxfb_f32==result-> input_memory(0).argument.format
-        && memory::format::yxfb_f32==result->output_memory(0).argument.format)
-    {
-        auto implementation = new relu_reference(*result);
-        result->_private.reset(implementation);
-        result->_work = implementation->work();
-    }
-    arg.engine;
 
-    return result;
+
+
+// creates primitive with relu implementation that supports provided arguments
+primitive relu::create(relu::arguments arg) {
+    // wrap relu into RAII wrapper
+    std::unique_ptr<relu> result(new relu(arg));
+
+    // lookup in database; throw if not found
+    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto it = implementation_map.find(key);
+    if(it==std::end(implementation_map)) throw std::runtime_error("not yet implemented");
+
+    // create implementation & attach it to result
+    auto implementation = it->second(*result);
+    result->_private.reset(implementation);
+    result->_work = implementation->work();
+
+    // release RAII wrapper, return naked pointer
+    return result.release();
 }
 
 }
