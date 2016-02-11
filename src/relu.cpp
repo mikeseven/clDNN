@@ -1,6 +1,8 @@
 #include "neural.h"
 #include <algorithm>
 
+static unsigned tmp_counter=0; //todo remove
+
 namespace neural {
 
 namespace {
@@ -27,7 +29,7 @@ struct relu_reference : is_a_unknown {
         if(input_memory_arg.size.size() != output_memory_arg.size.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
         if(input_memory_arg.format      != output_memory_arg.format)      throw std::runtime_error("ReLU input/output data format does not match.");
 
-#define TEST
+#define TEST  //todo remove
 #ifdef TEST
         for(unsigned i = 0; i < input_memory_arg.size.size(); ++i)
             if(input_memory_arg.size[i] - input_offset[i] != output_size[i]) throw std::runtime_error("ReLU input/output size does not match.");
@@ -58,7 +60,7 @@ struct relu_reference : is_a_unknown {
        
         auto is_end = [&output_size, &counter](){ //do not compare last digit, counter is N-1 long, while size is N long
             for(auto it1  = counter.begin(), it2 = output_size.begin(); it1 != counter.end(); ++it1, ++it2)
-                if(*it1 >= *it2) return false;
+                if(*it1 != *it2) return false;
             
             return true;
         };
@@ -71,22 +73,26 @@ struct relu_reference : is_a_unknown {
                     ++counter[i-1];
                 }
 
+            if( counter[0] == output_size[0] )
+                for(auto i = counter.size() - 1; i > 0; --i)
+                    counter[i] = output_size[i];
         };
 
         while( !is_end() ){
             // todo n dimensional relu
-    
+
             // calculate idx
             auto offset = calculate_offset(output_size, counter);
             // relu on linear buffer
-            for (size_t i = 0; i < output_size.back() ; ++i)
+            for (size_t i = 0; i < output_size.back() ; ++i,             tmp_counter++) //todo remove)
                 *(output + offset + i) = std::max( *(input + offset + i), 0.0f) 
                                          + this_relu->argument.negative_slope * std::min( *(input + offset + i), 0.0f);
                 //output[i] = std::max(input[i], 0.0f) + this_relu->argument.negative_slope * std::min(input[i], 0.0f);
         
             increse_counter();
         }
-#else
+
+#else //todo remove
         auto input_vec  =  this_relu->input_memory(0).argument.size;
         auto output_vec =  this_relu->output_memory(0).argument.size;
 
@@ -98,10 +104,13 @@ struct relu_reference : is_a_unknown {
         if( count_dst != count_src )
             throw std::runtime_error("ReLU input/output size does not match.");
 
-        for (size_t i = 0; i < count_src; ++i)
+        for (size_t i = 0; i < count_src; ++i           , tmp_counter++) //todo remove)
           output[i] = std::max(input[i], 0.0f) + this_relu->argument.negative_slope * std::min(input[i], 0.0f);
 #endif
+     if(1)
+        int x = 1;
     }
+
 
     std::vector<task> work() {
         return {task{implementation, &outer}};
