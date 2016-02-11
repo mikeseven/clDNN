@@ -9,7 +9,6 @@
 #include <cassert>
 
 // [TODO]
-//      rename is_a_... to something gramatically correct
 //      compiler-agnostic compile-time assertions for C++98
 
 
@@ -207,12 +206,12 @@ inline const primitive              primitive::output::operator[](uint32_t at) c
 inline size_t                       primitive::output::size() const { return get_base()->_pointer.get()->output().size(); }
 
 // unkown structure with type info for cast validation
-class is_a_unknown {
+class is_an_implementation {
     const type_traits *const _type_traits;
 protected:
-    is_a_unknown(const type_traits *arg) : _type_traits(arg) {};
+    is_an_implementation(const type_traits *arg) : _type_traits(arg) {};
 public:
-    virtual ~is_a_unknown() = 0 {};
+    virtual ~is_an_implementation() = 0 {};
 };
 
 // execution of sequence of primitives

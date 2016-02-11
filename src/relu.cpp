@@ -5,10 +5,10 @@ namespace neural {
 
 namespace {
 
-struct relu_reference : is_a_unknown {
+struct relu_reference : is_an_implementation {
     const relu &outer;
     relu_reference(relu &arg)
-        : is_a_unknown(neural::type_id<relu_reference>()) 
+        : is_an_implementation(neural::type_id<relu_reference>()) 
         , outer(arg) 
     {};
     ~relu_reference() {}
