@@ -177,7 +177,7 @@ private:
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 
-    std::unique_ptr<is_a_unknown> _private;
+    std::unique_ptr<is_an_implementation> _private;
 };
 
 

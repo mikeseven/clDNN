@@ -1,5 +1,8 @@
 #include "neural.h"
 #include <algorithm>
+#include <tuple>
+#include <map>
+#include <functional>
 
 namespace neural {
 
@@ -44,10 +47,10 @@ void save_4d_data_yxzb( std::vector<size_t> size, std::string filename, T* data 
     file.close();
 }
 
-struct relu_reference : is_a_unknown {
+struct relu_reference : is_an_implementation {
     const relu &outer;
     relu_reference(relu &arg)
-        : is_a_unknown(neural::type_id<relu_reference>()) 
+        : is_an_implementation(neural::type_id<relu_reference>()) 
         , outer(arg) 
     {};
     ~relu_reference() {}
@@ -119,6 +122,16 @@ struct relu_reference : is_a_unknown {
     std::vector<task> work() {
         return {task{implementation, &outer}};
     }
+
+    static is_an_implementation *create(relu &arg) { return new relu_reference(arg); };
+};
+
+//                                    engine          output                  input
+using implementation_key = std::tuple<neural::engine, neural::memory::format, neural::memory::format>;
+
+// map of available implementations
+static std::map<implementation_key, std::function<is_an_implementation *(relu &)>> implementation_map = {
+    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), relu_reference::create}
 };
 
 } // namespace {
@@ -191,19 +204,26 @@ relu::arguments::arguments( neural::engine engine, primitive out, primitive in )
     , input_offset({in.as<const memory&>().argument.size.size()})
     , negative_slope(0.0f) {}
 
-primitive relu::create(relu::arguments arg) {
-    relu *result = new relu(arg);
-    if(    arg.engine==engine::reference
-        && memory::format::yxfb_f32==result-> input_memory(0).argument.format
-        && memory::format::yxfb_f32==result->output_memory(0).argument.format)
-    {
-        auto implementation = new relu_reference(*result);
-        result->_private.reset(implementation);
-        result->_work = implementation->work();
-    }
-    arg.engine;
 
-    return result;
+
+
+// creates primitive with relu implementation that supports provided arguments
+primitive relu::create(relu::arguments arg) {
+    // wrap relu into RAII wrapper
+    std::unique_ptr<relu> result(new relu(arg));
+
+    // lookup in database; throw if not found
+    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto it = implementation_map.find(key);
+    if(it==std::end(implementation_map)) throw std::runtime_error("not yet implemented");
+
+    // create implementation & attach it to result
+    auto implementation = it->second(*result);
+    result->_private.reset(implementation);
+    result->_work = implementation->work();
+
+    // release RAII wrapper, return naked pointer
+    return result.release();
 }
 
 }
