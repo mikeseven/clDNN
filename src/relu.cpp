@@ -1,11 +1,52 @@
 #include "neural.h"
 #include <algorithm>
 
+#include<iostream>
+#include<fstream>
 static unsigned tmp_counter=0; //todo remove
 
 namespace neural {
 
 namespace {
+auto calculate_offset = [](const std::vector<uint32_t> &size, const std::vector<uint32_t> &position){    //todo normal function?
+    auto calucalet_offset_by_variable = [&size, &position](size_t idx){    //todo change name?
+        size_t offset = 1;
+                
+        for(size_t i = size.size() - 1; i > idx; --i) 
+            offset *= size[i];
+                
+        offset *= position[idx];
+
+        return offset;
+    };
+
+    size_t offset = 0;            
+
+    for(unsigned i = 0; i != position.size(); ++i){    // number of iterations
+        auto idx = position.size() - 1 - i;            // have to count starting with most frequently changing variable in counter (not size)
+        offset += calucalet_offset_by_variable(idx);
+    };
+
+    return offset;
+}; 
+
+template<typename T>
+void save_4d_data_yxzb( std::vector<uint32_t> size, std::string filename, T* data ) {
+    std::ofstream file;
+    file.open( filename + ".txt" );
+
+    for( uint32_t batch = 0; batch < size[3]; ++batch )
+    for( uint32_t z = 0; z < size[2]; ++z ) {
+        file << "n\\z: " << batch << "\\" << z << std::endl;
+        for( uint32_t y = 0; y < size[1]; ++y ) {
+            for( uint32_t x = 0; x < size[0]; ++x ) {
+                file << *(data + calculate_offset(size, {y, x, z}) + batch) << "\t";
+            }
+            file << std::endl;
+        }
+    }
+    file.close();
+}
 
 struct relu_reference : is_a_unknown {
     const relu &outer;
@@ -29,33 +70,13 @@ struct relu_reference : is_a_unknown {
         if(input_memory_arg.size.size() != output_memory_arg.size.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
         if(input_memory_arg.format      != output_memory_arg.format)      throw std::runtime_error("ReLU input/output data format does not match.");
 
+        save_4d_data_yxzb<float>(output_size, "data_before", input);
 #define TEST  //todo remove
 #ifdef TEST
         for(unsigned i = 0; i < input_memory_arg.size.size(); ++i)
-            if(input_memory_arg.size[i] - input_offset[i] != output_size[i]) throw std::runtime_error("ReLU input/output size does not match.");
-      
-        auto calculate_offset = [](const std::vector<uint32_t> &size, const std::vector<uint32_t> &counter){
-            auto calucalet_offset_by_variable = [&size, &counter](size_t idx){    //todo change name?
-                size_t offset = 1;
-                
-                for(size_t i = size.size() - 1; i > idx; --i) 
-                    offset *= size[i];
-                
-                offset *= counter[idx];
-
-                return offset;
-            };
-
-            size_t offset = 0;            
-
-            for(unsigned i = 0; i != counter.size(); ++i){    // number of iterations
-                auto idx = counter.size() - 1 - i;            // have to count starting with most frequently changing variable in counter (not size)
-                offset += calucalet_offset_by_variable(idx);
-            };
-
-            return offset;
-        };   
-        
+            if(input_memory_arg.size[i] - input_offset[i] > output_size[i]) 
+                throw std::runtime_error("ReLU input/output size does not match.");
+             
         std::vector<uint32_t> counter( output_size.size() - 1, 0 ); // last position indicates linear memory layout, it's not needed in counter
        
         auto is_end = [&output_size, &counter](){ //do not compare last digit, counter is N-1 long, while size is N long
@@ -82,7 +103,8 @@ struct relu_reference : is_a_unknown {
             // todo n dimensional relu
 
             // calculate idx
-            auto offset = calculate_offset(output_size, counter);
+            auto in_offset  = calculate_offset(input_memory_arg.size, counter);
+            auto out_offset = calculate_offset(output_size, counter);
             // relu on linear buffer
             for (size_t i = 0; i < output_size.back() ; ++i,             tmp_counter++) //todo remove)
                 *(output + offset + i) = std::max( *(input + offset + i), 0.0f) 
@@ -107,6 +129,7 @@ struct relu_reference : is_a_unknown {
         for (size_t i = 0; i < count_src; ++i           , tmp_counter++) //todo remove)
           output[i] = std::max(input[i], 0.0f) + this_relu->argument.negative_slope * std::min(input[i], 0.0f);
 #endif
+     save_4d_data_yxzb<float>(output_size, "data_after", output);
      if(1)
         int x = 1;
     }

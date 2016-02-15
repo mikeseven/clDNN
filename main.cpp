@@ -1,20 +1,36 @@
 #include "neural.h"
 #include "thread_pool.h"
 
-
 void example() {
     using namespace neural;
-    float data_buffer[120];
+    const unsigned in_x = 6,
+                   in_y = 6,
+                   in_z = 2,
+                   in_b = 2,
+                   out_x = 6,
+                   out_y = 6,
+                   out_z = 2,
+                   out_b = 2;
+    const int  in_offset_x = 0,
+               in_offset_y = 0,
+               in_offset_z = 0,
+               in_offset_b = 0;
 
-    for(int i = 0; i < 120; ++i )
-        data_buffer[i] = i - 8;
+    float data_buffer[in_x*in_y*in_z*in_b];
+    float out_buffer[out_x*out_y*out_z*out_b];
 
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 3, 4, 5}});
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 3, 4, 5}});
+    for(int i = 0; i < in_x*in_y*in_z*in_b; ++i )
+        data_buffer[i] = static_cast<float>(i - static_cast<int>(in_x*in_y*in_z*in_b)/2);
 
-    auto act    = relu::create({engine::reference, output, {0,0,0,0}, {2, 3, 4, 5}, input, {0,0,0,0} });
 
-    execute({input(data_buffer), output(data_buffer), act});
+    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {in_x, in_y, in_z, in_b}});
+    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {out_x, out_y, out_z, out_b}});
+    
+    
+    auto act    = relu::create({engine::reference, output, {0,0,0,0}, {out_x, out_y, out_z, out_b}, input, {in_offset_x, in_offset_y, in_offset_z, in_offset_b}} );
+    //auto act    = relu::create({engine::reference, output, {0,0,0,0}, {x, y, z, b}, input, {0,0,0,0} });
+
+    execute({input(data_buffer), output(out_buffer), act});
 
     if(1)
         int x = 1;
