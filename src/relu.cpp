@@ -8,7 +8,7 @@ static unsigned tmp_counter=0; //todo remove
 namespace neural {
 
 namespace {
-auto calculate_offset = [](const std::vector<uint32_t> &size, const std::vector<uint32_t> &position){    //todo normal function?
+auto calculate_offset = [](const std::vector<size_t> &size, const std::vector<size_t> &position){    //todo normal function?
     auto calucalet_offset_by_variable = [&size, &position](size_t idx){    //todo change name?
         size_t offset = 1;
                 
@@ -31,15 +31,15 @@ auto calculate_offset = [](const std::vector<uint32_t> &size, const std::vector<
 }; 
 
 template<typename T>
-void save_4d_data_yxzb( std::vector<uint32_t> size, std::string filename, T* data ) {
+void save_4d_data_yxzb( std::vector<size_t> size, std::string filename, T* data ) {
     std::ofstream file;
     file.open( filename + ".txt" );
 
-    for( uint32_t batch = 0; batch < size[3]; ++batch )
-    for( uint32_t z = 0; z < size[2]; ++z ) {
+    for( size_t batch = 0; batch < size[3]; ++batch )
+    for( size_t z = 0; z < size[2]; ++z ) {
         file << "n\\z: " << batch << "\\" << z << std::endl;
-        for( uint32_t y = 0; y < size[1]; ++y ) {
-            for( uint32_t x = 0; x < size[0]; ++x ) {
+        for( size_t y = 0; y < size[1]; ++y ) {
+            for( size_t x = 0; x < size[0]; ++x ) {
                 file << *(data + calculate_offset(size, {y, x, z}) + batch) << "\t";
             }
             file << std::endl;
@@ -77,7 +77,7 @@ struct relu_reference : is_a_unknown {
             if(input_memory_arg.size[i] - input_offset[i] > output_size[i]) 
                 throw std::runtime_error("ReLU input/output size does not match.");
              
-        std::vector<uint32_t> counter( output_size.size() - 1, 0 ); // last position indicates linear memory layout, it's not needed in counter
+        std::vector<size_t> counter( output_size.size() - 1, 0 ); // last position indicates linear memory layout, it's not needed in counter
        
         auto is_end = [&output_size, &counter](){ //do not compare last digit, counter is N-1 long, while size is N long
             for(auto it1  = counter.begin(), it2 = output_size.begin(); it1 != counter.end(); ++it1, ++it2)
@@ -107,8 +107,8 @@ struct relu_reference : is_a_unknown {
             auto out_offset = calculate_offset(output_size, counter);
             // relu on linear buffer
             for (size_t i = 0; i < output_size.back() ; ++i,             tmp_counter++) //todo remove)
-                *(output + offset + i) = std::max( *(input + offset + i), 0.0f) 
-                                         + this_relu->argument.negative_slope * std::min( *(input + offset + i), 0.0f);
+                *(output + out_offset + i) = std::max( *(input + in_offset + i), 0.0f) 
+                                             + this_relu->argument.negative_slope * std::min( *(input + in_offset + i), 0.0f);
                 //output[i] = std::max(input[i], 0.0f) + this_relu->argument.negative_slope * std::min(input[i], 0.0f);
         
             increse_counter();
@@ -142,7 +142,7 @@ struct relu_reference : is_a_unknown {
 
 } // namespace {
 //todo discuss, output size is always needed or can be uninitialized?
-relu::arguments::arguments(neural::engine engine, primitive out, std::vector<uint32_t>out_off, std::vector<uint32_t>out_siz, primitive in, std::vector<int32_t>in_off, float slp)
+relu::arguments::arguments(neural::engine engine, primitive out, std::vector<size_t>out_off, std::vector<size_t>out_siz, primitive in, std::vector<int32_t>in_off, float slp)
     : engine(engine)
     , output({out})
     , output_offset({out_off})
@@ -151,7 +151,7 @@ relu::arguments::arguments(neural::engine engine, primitive out, std::vector<uin
     , input_offset({in_off})
     , negative_slope(slp) {}
 
-relu::arguments::arguments(neural::engine engine, primitive out, std::vector<uint32_t>out_off, std::vector<uint32_t>out_siz, primitive in, std::vector<int32_t>in_off)
+relu::arguments::arguments(neural::engine engine, primitive out, std::vector<size_t>out_off, std::vector<size_t>out_siz, primitive in, std::vector<int32_t>in_off)
     : engine(engine)
     , output({out})
     , output_offset({out_off})
@@ -160,7 +160,7 @@ relu::arguments::arguments(neural::engine engine, primitive out, std::vector<uin
     , input_offset({in_off})
     , negative_slope() {}
 
-relu::arguments::arguments( neural::engine engine, primitive out, std::vector<uint32_t>out_off, primitive in, std::vector<int32_t>in_off, float slp )
+relu::arguments::arguments( neural::engine engine, primitive out, std::vector<size_t>out_off, primitive in, std::vector<int32_t>in_off, float slp )
     : engine(engine)
     , output({out})
     , output_offset({out_off})
@@ -168,7 +168,7 @@ relu::arguments::arguments( neural::engine engine, primitive out, std::vector<ui
     , input_offset({in_off})
     , negative_slope(slp) {}// todo output_size initialization
 
-relu::arguments::arguments( neural::engine engine, primitive out, std::vector<uint32_t>out_off, primitive in, std::vector<int32_t>in_off )
+relu::arguments::arguments( neural::engine engine, primitive out, std::vector<size_t>out_off, primitive in, std::vector<int32_t>in_off )
     : engine(engine)
     , output({out})
     , output_offset({out_off})
