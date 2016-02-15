@@ -29,24 +29,6 @@ auto calculate_offset = [](const std::vector<size_t> &size, const std::vector<si
     return offset;
 }; 
 
-template<typename T>
-void save_4d_data_yxzb( std::vector<size_t> size, std::string filename, T* data ) {
-    std::ofstream file;
-    file.open( filename + ".txt" );
-
-    for( size_t batch = 0; batch < size[3]; ++batch )
-    for( size_t z = 0; z < size[2]; ++z ) {
-        file << "n\\z: " << batch << "\\" << z << std::endl;
-        for( size_t y = 0; y < size[1]; ++y ) {
-            for( size_t x = 0; x < size[0]; ++x ) {
-                file << *(data + calculate_offset(size, {y, x, z}) + batch) << "\t";
-            }
-            file << std::endl;
-        }
-    }
-    file.close();
-}
-
 struct relu_reference : is_an_implementation {
     const relu &outer;
     relu_reference(relu &arg)
@@ -103,7 +85,7 @@ struct relu_reference : is_an_implementation {
         std::vector<size_t> acc(uint_input_offset.size());
         while( !is_end() ){
             // relu on linear buffer
-            for (size_t i = 0; i < output_size.back() ; ++i) {
+            for (size_t i = 0; i < output_size.back() ; ++i) {  //todo offsets can be calculated without inner most dimension
                 // calculate idx
                 std::transform( uint_input_offset.begin(), uint_input_offset.end(), counter.begin(), acc.begin(), std::plus<size_t>());
                 auto in_offset  = calculate_offset(input_whole_size , acc );
