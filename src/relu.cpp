@@ -62,24 +62,31 @@ struct relu_reference : is_a_unknown {
         auto output    = static_cast<float*>(this_relu->output_memory(0).pointer);
 
         auto input_memory_arg  = this_relu->input_memory(0).argument;
-        auto output_memory_arg = this_relu->output_memory(0).argument;
+        auto input_whole_size  = input_memory_arg.size;
         auto input_offset      = this_relu->argument.input_offset;
+
+        auto output_memory_arg = this_relu->output_memory(0).argument;
+        auto output_whole_size = output_memory_arg.size;
         auto output_offset     = this_relu->argument.output_offset;
         auto output_size       = this_relu->argument.output_size;
 
-        if(input_memory_arg.size.size() != output_memory_arg.size.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
-        if(input_memory_arg.format      != output_memory_arg.format)      throw std::runtime_error("ReLU input/output data format does not match.");
+        if(input_whole_size.size() != output_whole_size.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
+        if(input_memory_arg.format != output_memory_arg.format) throw std::runtime_error("ReLU input/output data format does not match.");
 
-        save_4d_data_yxzb<float>(output_size, "data_before", input);
+        save_4d_data_yxzb<float>(input_whole_size, "in_before", input); //todo remove
+        save_4d_data_yxzb<float>(output_whole_size, "out_before", output); //todo remove
+
 #define TEST  //todo remove
 #ifdef TEST
-        for(unsigned i = 0; i < input_memory_arg.size.size(); ++i)
-            if(input_memory_arg.size[i] - input_offset[i] > output_size[i]) 
-                throw std::runtime_error("ReLU input/output size does not match.");
-             
-        std::vector<size_t> counter( output_size.size() - 1, 0 ); // last position indicates linear memory layout, it's not needed in counter
-       
-        auto is_end = [&output_size, &counter](){ //do not compare last digit, counter is N-1 long, while size is N long
+        for(unsigned i = 0; i < input_whole_size.size(); ++i){
+            //if(input_whole_size[i]  - input_offset[i]  > output_size[i]) throw std::runtime_error("ReLU input/output size does not match."); //todo addition instead of multiplication?
+            //if(output_whole_size[i] - output_offset[i] < output_size[i]) throw std::runtime_error("ReLU sizes to small."); //todo output_size indicates blob to copy, whole_size shouldnt be the same
+            if(input_whole_size[i]  < output_size[i] + input_offset[i] ) throw std::runtime_error("ReLU input/output size does not match."); //todo addition instead of multiplication?
+            if(output_whole_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("ReLU sizes to small."); //todo output_size indicates blob to copy, whole_size shouldnt be the same
+        }    
+        std::vector<size_t> counter( output_size.size(), 0 ); // last position indicates linear memory layout
+
+        auto is_end = [&output_size, &counter](){
             for(auto it1  = counter.begin(), it2 = output_size.begin(); it1 != counter.end(); ++it1, ++it2)
                 if(*it1 != *it2) return false;
             
@@ -99,19 +106,31 @@ struct relu_reference : is_a_unknown {
                     counter[i] = output_size[i];
         };
 
+        auto uint_input_offset = std::vector<size_t>(input_offset.begin(), input_offset.end());  //todo relu has always non negative offset?
+
+        std::vector<size_t> acc(uint_input_offset.size());
         while( !is_end() ){
             // todo n dimensional relu
+            
 
-            // calculate idx
-            auto in_offset  = calculate_offset(input_memory_arg.size, counter);
-            auto out_offset = calculate_offset(output_size, counter);
             // relu on linear buffer
-            for (size_t i = 0; i < output_size.back() ; ++i,             tmp_counter++) //todo remove)
-                *(output + out_offset + i) = std::max( *(input + in_offset + i), 0.0f) 
-                                             + this_relu->argument.negative_slope * std::min( *(input + in_offset + i), 0.0f);
+            for (size_t i = 0; i < output_size.back() ; ++i,             tmp_counter++) { //todo remove)
+                // calculate idx
+                std::transform( uint_input_offset.begin(), uint_input_offset.end(), counter.begin(), acc.begin(), std::plus<size_t>());
+                auto in_offset  = calculate_offset(input_whole_size , acc );
+                auto next_in  = *(input + in_offset);
+
+                std::transform( output_offset.begin(), output_offset.end(), counter.begin(), acc.begin(), std::plus<size_t>());
+                auto out_offset = calculate_offset(output_whole_size, acc);
+                auto next_out = *(output + out_offset);
+
+                *(output + out_offset) = std::max( *(input + in_offset), 0.0f) 
+                                                + this_relu->argument.negative_slope * std::min( *(input + in_offset), 0.0f);
+
                 //output[i] = std::max(input[i], 0.0f) + this_relu->argument.negative_slope * std::min(input[i], 0.0f);
         
-            increse_counter();
+                increse_counter();
+            }
         }
 
 #else //todo remove
@@ -129,7 +148,7 @@ struct relu_reference : is_a_unknown {
         for (size_t i = 0; i < count_src; ++i           , tmp_counter++) //todo remove)
           output[i] = std::max(input[i], 0.0f) + this_relu->argument.negative_slope * std::min(input[i], 0.0f);
 #endif
-     save_4d_data_yxzb<float>(output_size, "data_after", output);
+     save_4d_data_yxzb<float>(output_whole_size, "out_after", output); //todo remove
      if(1)
         int x = 1;
     }
