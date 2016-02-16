@@ -197,7 +197,7 @@ private:
 
 // pooling
 struct pooling : is_a_primitive {
-    enum class mode : size_t { max, average };
+    enum class mode : size_t { max, average }; //todo why size_t?
 
     struct arguments {
         engine                      engine;
@@ -211,12 +211,11 @@ struct pooling : is_a_primitive {
         std::vector<uint32_t>       size;
         padding                     padding;
 
-        arguments(neural::engine, neural::pooling::mode, neural::memory::format, std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>, std::vector<uint32_t>, std::vector<uint32_t>, neural::padding);
-        arguments(neural::engine, neural::pooling::mode, neural::memory::format,                                               primitive,                       std::vector<uint32_t>, std::vector<uint32_t>, neural::padding);
-        arguments(neural::engine, neural::pooling::mode, neural::memory::format,                                               primitive,                       uint32_t,              uint32_t,              neural::padding);
-        arguments(neural::engine, neural::pooling::mode, primitive,                                                            primitive,                       std::vector<uint32_t>,                        neural::padding);
-        arguments(neural::engine, neural::pooling::mode, primitive,                                                            primitive,                       uint32_t,                                     neural::padding);
-        arguments(neural::engine, neural::pooling::mode, primitive,                                                            primitive,                       uint32_t);
+        arguments(neural::engine, pooling::mode, memory::format o_frmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, std::vector<uint32_t> size, neural::padding);
+        arguments(neural::engine, pooling::mode, memory::format o_frmt,                                                               primitive in,                              uint32_t              stride, uint32_t              size, neural::padding);
+        arguments(neural::engine, pooling::mode, primitive out,                                                                       primitive in,                              std::vector<uint32_t> stride,                             neural::padding);
+        arguments(neural::engine, pooling::mode, primitive out,                                                                       primitive in,                              uint32_t              stride,                             neural::padding);
+        arguments(neural::engine, pooling::mode, primitive out,                                                                       primitive in,                              uint32_t              stride);
     };
     const arguments argument;
 

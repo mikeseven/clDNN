@@ -188,7 +188,7 @@ public:
         return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>();
     }
     const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
-    virtual void execute_argument(void *argument) const { throw std::runtime_error(std::string("execute-time argument not supported in")+_type_traits->name); }
+    virtual void execute_argument(void *) const { throw std::runtime_error(std::string("execute-time argument not supported in")+_type_traits->name); }
     friend class primitive;
 
     // to be removed when new thread queue will be done
