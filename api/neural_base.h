@@ -10,6 +10,7 @@
 
 // [TODO]
 //      compiler-agnostic compile-time assertions for C++98
+//      generic format-traits (type, sizeof, etc), currenly float32 assumed in file.cpp
 
 
 namespace neural {
@@ -156,6 +157,8 @@ public:
     template<typename T> operator T() { return as<T>(); }
     const std::vector<task> &work();
     size_t id() const;
+    bool operator==(const primitive &other) const { return _pointer==other._pointer; }
+    bool operator!=(const primitive &other) const { return !(*this==other); }
 };
 
 
@@ -178,14 +181,14 @@ public:
     virtual ~is_a_primitive() {};
     virtual primitive clone() const = 0;
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
-    virtual const std::vector<primitive_at>  &input() const = 0;
-    virtual const std::vector<primitive>     &output() const = 0;
+    virtual const std::vector<primitive_at>  &input()  const { throw std::runtime_error(std::string("no inputs in ")+_type_traits->name); };
+    virtual const std::vector<primitive>     &output() const { throw std::runtime_error(std::string("no outputs in ")+_type_traits->name); };
     const memory &input_memory(uint32_t at) const { 
         auto prim = input()[at].primitive;
         return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>();
     }
     const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
-    virtual void execute_argument(void *argument) const { throw std::runtime_error("This primitive does not need execute-time argument."); }
+    virtual void execute_argument(void *argument) const { throw std::runtime_error(std::string("execute-time argument not supported in")+_type_traits->name); }
     friend class primitive;
 
     // to be removed when new thread queue will be done
