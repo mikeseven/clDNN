@@ -23,7 +23,7 @@ struct memory : is_a_primitive {
     static primitive create(arguments);
     memory &operator()(void *ptr) { pointer = ptr; return *this; };
     primitive clone() const { return create(argument); }
-    void execute_argument(void *argument) const { pointer = argument; }
+    void execute_argument(void *arg) const { pointer = arg; }
 private:
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
     const std::vector<primitive_at>  &input()  const {throw std::runtime_error("No inputs in memory descritiption"); };

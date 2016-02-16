@@ -4,34 +4,16 @@
 #include <tuple>
 #include <map>
 #include <functional>
-#include <fstream>//todo remove
+
 namespace neural {
 
 namespace {
-
-template<typename T> //todo remove
-void save_4d_data_yxzb( std::vector<size_t> size, std::string filename, T* data ) {
-    std::ofstream file;
-    file.open( filename + ".txt" );
-
-    for( size_t batch = 0; batch < size[3]; ++batch )
-    for( size_t z = 0; z < size[2]; ++z ) {
-        file << "n\\z: " << batch << "\\" << z << std::endl;
-        for( size_t y = 0; y < size[1]; ++y ) {
-            for( size_t x = 0; x < size[0]; ++x ) {
-                file << *(data + calculate_offset(size, {y, x, z}) + batch) << "\t";
-            }
-            file << std::endl;
-        }
-    }
-    file.close();
-}
 
 auto calculate_offset = [](const std::vector<size_t> &size, const std::vector<size_t> &position){    //todo normal function?
     size_t offset = 0;
 
     for(size_t i = 0; i != position.size(); ++i){    // number of iterations
-        auto idx = position.size() - 1 - i;            // have to count starting with most frequently changing variable in counter
+        auto idx = position.size() - 1 - i;
         offset += std::accumulate(size.begin() + idx + 1, size.end(), 1, std::multiplies<size_t>() ) * position[idx];
     };
 
@@ -51,8 +33,6 @@ struct relu_reference : is_an_implementation {
         auto input     = static_cast<float*>(this_relu->input_memory(0).pointer);
         auto output    = static_cast<float*>(this_relu->output_memory(0).pointer);
 
-        //todo validate data is float
-
         auto input_memory_arg  = this_relu->input_memory(0).argument;
         auto input_whole_size  = input_memory_arg.size;
         auto input_offset      = this_relu->argument.input_offset;
@@ -62,20 +42,18 @@ struct relu_reference : is_an_implementation {
         auto output_offset     = this_relu->argument.output_offset;
         auto output_size       = this_relu->argument.output_size;
 
+        if(input_memory_arg.format != memory::format::yxfb_f32) throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
         if(input_whole_size.size() != output_whole_size.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
         if(input_memory_arg.format != output_memory_arg.format) throw std::runtime_error("ReLU input/output data format does not match.");
         for(auto &x : input_offset)  if(x < 0)                  throw std::runtime_error("ReLU negative input offset.");
         for(auto &x : output_offset) if(x < 0)                  throw std::runtime_error("ReLU negative output offset.");
 
-        save_4d_data_yxzb<float>(input_whole_size, "in_before", input); //todo remove
-        save_4d_data_yxzb<float>(output_whole_size, "out_before", output); //todo remove
-
         for(size_t i = 0; i < input_whole_size.size(); ++i){
             if(input_whole_size[i]  < output_size[i] + input_offset[i] ) throw std::runtime_error("ReLU input/output size does not match.");
             if(output_whole_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("ReLU sizes to small.");
         }
-//        std::vector<uint32_t> counter( output_size.size() - 1, 0 ); // last position indicates linear memory layout, it's not needed in counter
-        std::vector<uint32_t> counter( output_size.size(), 0 ); // last position indicates linear memory layout, it's not needed in counter
+
+        std::vector<uint32_t> counter( output_size.size() - 1, 0 ); // last position indicates linear memory layout, it's not needed in counter
 
         auto is_end = [&output_size, &counter](){
             for(auto it1  = counter.begin(), it2 = output_size.begin(); it1 != counter.end(); ++it1, ++it2)
@@ -105,25 +83,23 @@ struct relu_reference : is_an_implementation {
 
         auto uint_input_offset = std::vector<size_t>(input_offset.begin(), input_offset.end());  //relu has always non negative offset
 
-        std::vector<size_t>   acc(uint_input_offset.size());
+        std::vector<size_t> acc(uint_input_offset.size());
         while( !is_end() ){
-            // relu on linear buffer
-
-            for (uint32_t i = 0; i < output_size.back() ; ++i) {  //todo offsets can be calculated without inner most dimension
-                std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<size_t>());
-                auto in_offset  = calculate_offset(input_whole_size , acc );
+            // calculate offset without most frequently changing dimension to reduce function calls
+            // most changing dimension has linear layout in memory
+            std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<size_t>());
+            auto in_offset  = calculate_offset(input_whole_size , acc ) + input_offset.back();
             
-                std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<size_t>());
-                auto out_offset = calculate_offset(output_whole_size, acc);
-                // calculate idx
-             //   output[out_offset + i] = std::max( input[in_offset + i], 0.0f) 
-            //                                     + this_relu->argument.negative_slope * std::min( input[in_offset + i], 0.0f);
-                output[out_offset] = std::max( input[in_offset], 0.0f) 
-                                                + this_relu->argument.negative_slope * std::min( input[in_offset], 0.0f);
+            std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<size_t>());
+            auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
+
+            // relu on linear buffer
+            for (uint32_t i = 0; i < output_size.back() ; ++i) {
+                output[out_offset + i] = std::max( input[in_offset + i], 0.0f) 
+                                                 + this_relu->argument.negative_slope * std::min( input[in_offset + i], 0.0f);
             }
             increse_counter();
         }
-             save_4d_data_yxzb<float>(output_whole_size, "out_after", output); //todo remove
     }
 
     std::vector<task> work() {
