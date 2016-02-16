@@ -9,12 +9,12 @@ namespace neural {
 
 namespace {
 
-auto calculate_offset = [](const std::vector<size_t> &size, const std::vector<size_t> &position){    //todo normal function?
+auto calculate_offset = [](const std::vector<uint32_t> &size, const std::vector<uint32_t> &position){    //todo normal function?
     size_t offset = 0;
 
     for(size_t i = 0; i != position.size(); ++i){    // number of iterations
         auto idx = position.size() - 1 - i;
-        offset += std::accumulate(size.begin() + idx + 1, size.end(), 1, std::multiplies<size_t>() ) * position[idx];
+        offset += std::accumulate(size.begin() + idx + 1, size.end(), 1, std::multiplies<uint32_t>() ) * position[idx];
     };
 
     return offset;
@@ -81,9 +81,9 @@ struct relu_reference : is_an_implementation {
                     counter[i] = output_size[i];
         };
 
-        auto uint_input_offset = std::vector<size_t>(input_offset.begin(), input_offset.end());  //relu has always non negative offset
+        auto uint_input_offset = std::vector<uint32_t>(input_offset.begin(), input_offset.end());  //relu has always non negative offset
 
-        std::vector<size_t> acc(uint_input_offset.size());
+        std::vector<uint32_t> acc(uint_input_offset.size());
         while( !is_end() ){
             // calculate offset without most frequently changing dimension to reduce function calls
             // most changing dimension has linear layout in memory
