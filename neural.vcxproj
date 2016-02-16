@@ -105,6 +105,7 @@
     <ClCompile Include="examples\007.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\execute.cpp" />
+    <ClCompile Include="src\file.cpp" />
     <ClCompile Include="src\memory.cpp" />
     <ClCompile Include="src\relu.cpp" />
   </ItemGroup>

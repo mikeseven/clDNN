@@ -4,18 +4,34 @@
 
 namespace neural {
 
-
 // data in memory in known format; format consists of memory {order, type} of values
 struct memory : is_a_primitive {
+    struct format_traits {
+        const size_t        dimension;
+        const type_traits  *type;
+    };
+
     enum class format : size_t { 
         xb_f32,     // 1D+batch, float32
         yxfb_f32,   // 3D+batch, float32
         any=static_cast<size_t>(-1) };
 
+    static const format_traits traits(format fmt) {
+        switch(fmt) {
+        case format::  xb_f32:  return {2, type_id<float>()};
+        case format::yxfb_f32:  return {4, type_id<float>()};
+        default: throw std::runtime_error("unknown memory::format");
+        }
+    }
+
     struct arguments {
-        engine              engine;
-        format              format;
-        std::vector<size_t> size;
+        engine                  engine;
+        format                  format;
+        std::vector<uint32_t>   size;
+        bool                    owns_memory;
+
+        arguments(neural::engine aengine, memory::format aformat, std::vector<uint32_t> asize);
+        arguments(neural::engine aengine, memory::format aformat, std::vector<uint32_t> asize, bool aowns_memory);
     };
     const arguments argument;
     mutable void *pointer;
@@ -24,25 +40,25 @@ struct memory : is_a_primitive {
     memory &operator()(void *ptr) { pointer = ptr; return *this; };
     primitive clone() const { return create(argument); }
     void execute_argument(void *arg) const { pointer = arg; }
+    size_t count() const;
+    ~memory();
 private:
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
-    const std::vector<primitive_at>  &input()  const {throw std::runtime_error("No inputs in memory descritiption"); };
-    const std::vector<primitive>     &output() const {throw std::runtime_error("No outputs in memory descritiption"); };
 };
 
 
 
-// [TODO] should it have querries ?
+// file that is loaded and becomes a data
 struct file : is_a_primitive {
-    enum class format : size_t { nndata, any=static_cast<size_t>(-1) };
-
     struct arguments {
-        engine      engine;
-        std::string name;
-        format      format;
+        engine                  engine;
+        std::string             name;
+        std::vector<primitive>  output;
 
-        arguments(neural::engine aengine, std::string aname, file::format aformat)  : engine(aengine), name(aname), format(aformat) {};
-        arguments(neural::engine aengine, std::string aname)                        : engine(aengine), name(aname), format(file::format::any) {};
+        arguments(neural::engine aengine, std::string aname, memory::format aformat, std::vector<uint32_t> &asize);
+        arguments(neural::engine aengine, std::string aname, memory::format aformat);
+        arguments(neural::engine aengine, std::string aname, primitive aoutput);
+        arguments(neural::engine aengine, std::string aname);
     };
     const arguments argument;
 
@@ -51,8 +67,7 @@ struct file : is_a_primitive {
     primitive clone() const { return create(argument); }
 private:
     file(arguments arg) : is_a_primitive(type_id<const file>()), argument(arg) {};
-    const std::vector<primitive_at>  &input() const  {throw std::runtime_error("no inputs in file reader"); };
-    const std::vector<primitive>     &output() const {throw std::runtime_error("no outputs in file reader"); };
+    const std::vector<primitive>     &output() const { return argument.output; };
 };
 
 
@@ -62,7 +77,7 @@ struct reorder : is_a_primitive {
     struct arguments {
         engine                      engine;
         std::vector<primitive>      output;
-        std::vector<primitive_at>   input;  // 1: input
+        std::vector<primitive_at>   input;  // 1: {input}
 
         arguments(neural::engine, neural::memory::format, primitive_at);
     };
@@ -87,7 +102,7 @@ struct convolution : is_a_primitive {
         std::vector<primitive>      output;
         std::vector<uint32_t>       output_offset;
         std::vector<uint32_t>       output_size;
-        std::vector<primitive_at>   input;          // 3: input, filter, bias
+        std::vector<primitive_at>   input;          // 3: {input, filter, bias}
         std::vector<int32_t>        input_offset;
         std::vector<uint32_t>       input_stride;
         neural::padding             padding;
