@@ -39,7 +39,7 @@ struct memory : is_a_primitive {
     static primitive create(arguments);
     memory &operator()(void *ptr) { pointer = ptr; return *this; };
     primitive clone() const { return create(argument); }
-    void execute_argument(void *argument) const { pointer = argument; }
+    void execute_argument(void *arg) const { pointer = arg; }
     size_t count() const;
     ~memory();
 private:
@@ -163,19 +163,21 @@ private:
 // [TODO] "any" on slope ?
 struct relu : is_a_primitive {
     struct arguments {
-        engine                      engine;
-        std::vector<primitive>      output;
-        std::vector<uint32_t>       output_offset;
-        std::vector<uint32_t>       output_size;
-        std::vector<primitive_at>   input;          // 1: input
-        std::vector<int32_t>        input_offset;
-        float                       negative_slope;
+        engine                    engine;
+        std::vector<primitive>    output;
+        std::vector<uint32_t>     output_offset;
+        std::vector<uint32_t>     output_size;
+        std::vector<primitive_at> input;          // 1: input
+        std::vector<int32_t>      input_offset;
+        float                     negative_slope;
 
-        arguments(neural::engine, neural::memory::format, std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>, float);
-        arguments(neural::engine, neural::memory::format,                                               primitive,                       float);
-        arguments(neural::engine, neural::memory::format,                                               primitive);
-        arguments(neural::engine, primitive out,                                                        primitive in,                    float slp);
-        arguments(neural::engine, primitive out,                                                        primitive in);
+        arguments(neural::engine, memory::format out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, float);
+        arguments(neural::engine, memory::format out,                                                               primitive in,                              float);
+        arguments(neural::engine, memory::format out,                                                               primitive in);                     
+        arguments(neural::engine, primitive      out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, float slp);
+        arguments(neural::engine, primitive      out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off);
+        arguments(neural::engine, primitive      out,                                                               primitive in,                              float slp);
+        arguments(neural::engine, primitive      out,                                                               primitive in);
     };
     const arguments argument;
 
