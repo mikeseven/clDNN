@@ -43,7 +43,7 @@ struct relu_reference : is_an_implementation {
 };
 
 //                                    engine          output                  input
-using implementation_key = std::tuple<neural::engine, neural::memory::format, neural::memory::format>;
+using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(relu &)>> implementation_map = {
@@ -52,13 +52,13 @@ static std::map<implementation_key, std::function<is_an_implementation *(relu &)
 
 } // namespace {
 
-relu::arguments::arguments( neural::engine arg_engine, neural::primitive arg_output, neural::primitive arg_input )
+relu::arguments::arguments( neural::engine::type arg_engine, neural::primitive arg_output, neural::primitive arg_input )
     : engine(arg_engine)
     , output({arg_output})
     , input({arg_input})
     , negative_slope(0.0f) {}
 
-relu::arguments::arguments( neural::engine arg_engine, neural::primitive arg_output, neural::primitive arg_input, float arg_neg_slope )
+relu::arguments::arguments( neural::engine::type arg_engine, neural::primitive arg_output, neural::primitive arg_input, float arg_neg_slope )
     : engine(arg_engine)
     , output({arg_output})
     , input({arg_input})

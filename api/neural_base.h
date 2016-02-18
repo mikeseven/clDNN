@@ -39,8 +39,8 @@ template<typename T_type> __declspec(noinline) auto type_id() -> type_traits * {
 }
 
 
-enum class engine : size_t { reference, cpu, any=static_cast<size_t>(-1) };
-enum class padding  : size_t { zero, data };
+class engine  { engine();  public: enum type { reference, cpu, any=static_cast<uint32_t>(-1) }; };
+class padding { padding(); public: enum type { zero }; };
 
 // value in any format
 class any_value {

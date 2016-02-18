@@ -9,10 +9,10 @@ struct file : is_a_primitive {
         std::string             name;
         std::vector<primitive>  output;
 
-        arguments(neural::engine aengine, std::string aname, file::format aformat, std::vector<size_t> &asize);
-        arguments(neural::engine aengine, std::string aname, file::format aformat, uint32_t dimension);
-        arguments(neural::engine aengine, std::string aname, file::format aformat);
-        arguments(neural::engine aengine, std::string aname);
+        arguments(neural::engine::type aengine, std::string aname, file::format aformat, std::vector<size_t> &asize);
+        arguments(neural::engine::type aengine, std::string aname, file::format aformat, uint32_t dimension);
+        arguments(neural::engine::type aengine, std::string aname, file::format aformat);
+        arguments(neural::engine::type aengine, std::string aname);
     };
     const arguments argument;
 
@@ -50,10 +50,10 @@ uint32_t crc32(const void *buffer, size_t count, uint32_t crc) {
 #pragma pack(push,1)   /* The data has been redefined (alignment 4), so the pragma pack is not necessary,
                           but who knows if in the future, the compiler does not align to 8?  */
 struct file_header {
-    std::array<uint8_t,3>   magic;
-    uint8_t                 version;
-    neural::memory::format  format;
-    uint8_t                 rank_minus_1;
+    std::array<uint8_t,3>           magic;
+    uint8_t                         version;
+    neural::memory::format::type    format;
+    uint8_t                         rank_minus_1;
 };
 
 #pragma pack(pop)
@@ -66,22 +66,22 @@ template<typename T_type, typename... T_args> std::unique_ptr<T_type> make_uniqu
 } //namespace {
 
 
-file::arguments::arguments(neural::engine aengine, std::string aname, memory::format aformat, std::vector<uint32_t> &asize)
+file::arguments::arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize)
     : engine(aengine)
     , name(aname)
-    , output{{memory::create({aengine, aformat, asize})}} {}
+    , output{{memory::create({aengine, aformat, asize, true})}} {}
 
-file::arguments::arguments(neural::engine aengine, std::string aname, memory::format aformat)
+file::arguments::arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat)
     : engine(aengine)
     , name(aname)
     , output{{memory::create({aengine, aformat, std::vector<uint32_t>()})}} {}
 
-file::arguments::arguments(neural::engine aengine, std::string aname, primitive aoutput)
+file::arguments::arguments(neural::engine::type aengine, std::string aname, primitive aoutput)
     : engine(aengine)
     , name(aname)
     , output{aoutput} {}
 
-file::arguments::arguments(neural::engine aengine, std::string aname)
+file::arguments::arguments(neural::engine::type aengine, std::string aname)
     : engine(aengine)
     , name(aname)
     , output({null_primitive}) {};
