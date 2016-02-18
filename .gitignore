@@ -5,3 +5,5 @@ x64/*
 neural.VC.opendb
 neural.vcxproj
 neural.vcxproj.filters
+data_after.txt
+data_before.txt

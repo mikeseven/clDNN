@@ -1,5 +1,6 @@
 #include "neural.h"
 #include <algorithm>
+#include <numeric>
 #include <tuple>
 #include <map>
 #include <functional>
@@ -7,6 +8,17 @@
 namespace neural {
 
 namespace {
+
+auto calculate_offset = [](const std::vector<uint32_t> &size, const std::vector<uint32_t> &position){    //todo normal function?
+    size_t offset = 0;
+
+    for(size_t i = 0; i != position.size(); ++i){    // number of iterations
+        auto idx = position.size() - 1 - i;
+        offset += std::accumulate(size.begin() + idx + 1, size.end(), 1, std::multiplies<uint32_t>() ) * position[idx];
+    };
+
+    return offset;
+}; 
 
 struct relu_reference : is_an_implementation {
     const relu &outer;
@@ -20,19 +32,78 @@ struct relu_reference : is_an_implementation {
         auto this_relu = static_cast<const relu *>(ptr);
         auto input     = static_cast<float*>(this_relu->input_memory(0).pointer);
         auto output    = static_cast<float*>(this_relu->output_memory(0).pointer);
-        auto input_vec  =  this_relu->input_memory(0).argument.size;
-        auto output_vec =  this_relu->output_memory(0).argument.size;
 
-        size_t count_src = 1;
-        size_t count_dst = 1;
-        for(auto x : input_vec ) count_src *= x;
-        for(auto x : output_vec) count_dst *= x;
+        auto input_memory_arg  = this_relu->input_memory(0).argument;
+        auto input_whole_size  = input_memory_arg.size;
+        auto input_offset      = this_relu->argument.input_offset;
 
-        if( count_dst != count_src )
-            throw std::runtime_error("ReLU input/output size does not match.");
+        auto output_memory_arg = this_relu->output_memory(0).argument;
+        auto output_whole_size = output_memory_arg.size;
+        auto output_offset     = this_relu->argument.output_offset;
+        auto output_size       = this_relu->argument.output_size;
 
-        for (size_t i = 0; i < count_src; ++i)
-            output[i] = std::max(input[i], 0.0f) + this_relu->argument.negative_slope * std::min(input[i], 0.0f);
+        if(input_memory_arg.format != memory::format::yxfb_f32) throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
+        if(input_whole_size.size() != output_whole_size.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
+        if(input_memory_arg.format != output_memory_arg.format) throw std::runtime_error("ReLU input/output data format does not match.");
+        for(auto &x : input_offset)  if(x < 0)                  throw std::runtime_error("ReLU negative input offset.");
+
+        for(size_t i = 0; i < input_whole_size.size(); ++i){
+            if(input_whole_size[i]  < output_size[i] + input_offset[i] ) throw std::runtime_error("ReLU input/output size does not match.");
+            if(output_whole_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("ReLU sizes to small.");
+        }
+
+        // Counter is vector representing number in number system in which maximum value of each digit at index 'i'
+        // [denoted counter(i)] is limited by corresponding output_size(i).
+        // When during incrementation counter(i)==output_size(i) digit at position 'i' it overflows with carry over to the left.
+        // It means that digit at 'i' is zeroed and digit at 'i-1' is incremented.
+        // The least significant digit is on the last(max index) position of the vector.
+        std::vector<uint32_t> counter( output_size.size() - 1, 0 );
+
+        auto is_end = [&output_size, &counter](){
+            for(auto it1  = counter.begin(), it2 = output_size.begin(); it1 != counter.end(); ++it1, ++it2)
+                if(*it1 != *it2) return false;
+
+            return true;
+        };
+
+        auto increse_counter = [&counter, &output_size](){
+            // Counter is vector representing number in which each digit counter(i) maximum value is limited by output_size(i)
+            // when counter(i)==output_size(i) it overflows with carry to the left
+            // The least significant digit is on the last(max) position of the vector
+            ++counter.back();
+
+            for(auto i = counter.size() - 1; i > 0; --i)
+                if( counter[i] == output_size[i] ){
+                    counter[i] = 0;
+                    ++counter[i-1];
+                }
+
+            // After all counter(i) equal output_size(i) counter is zeroed through overflow
+            // thus after this case we write output_size to counter
+            if( counter[0] == output_size[0] )
+                for(auto i = counter.size() - 1; i > 0; --i)
+                    counter[i] = output_size[i];
+        };
+
+        auto uint_input_offset = std::vector<uint32_t>(input_offset.begin(), input_offset.end());  //relu has always non negative offset
+
+        std::vector<uint32_t> acc(uint_input_offset.size());
+        while( !is_end() ){
+            // calculate offset without most frequently changing dimension to reduce function calls
+            // most changing dimension has linear layout in memory
+            std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
+            auto in_offset  = calculate_offset(input_whole_size , acc ) + input_offset.back();
+            
+            std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
+            auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
+
+            // relu on linear buffer
+            for (uint32_t i = 0; i < output_size.back() ; ++i) {
+                output[out_offset + i] = std::max( input[in_offset + i], 0.0f) 
+                                                 + this_relu->argument.negative_slope * std::min( input[in_offset + i], 0.0f);
+            }
+            increse_counter();
+        }
     }
 
     std::vector<task> work() {
@@ -51,18 +122,42 @@ static std::map<implementation_key, std::function<is_an_implementation *(relu &)
 };
 
 } // namespace {
+//todo discuss, output size is always needed or can be uninitialized?
+relu::arguments::arguments( neural::engine::type engine, primitive out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, float slp)
+    : engine(engine)
+    , output({out})
+    , output_offset({out_off})
+    , output_size({out_siz})
+    , input({in})
+    , input_offset({in_off})
+    , negative_slope(slp) {}
 
-relu::arguments::arguments( neural::engine::type arg_engine, neural::primitive arg_output, neural::primitive arg_input )
-    : engine(arg_engine)
-    , output({arg_output})
-    , input({arg_input})
+relu::arguments::arguments( neural::engine::type engine, primitive out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off)
+    : engine(engine)
+    , output({out})
+    , output_offset({out_off})
+    , output_size({out_siz})
+    , input({in})
+    , input_offset({in_off})
+    , negative_slope() {}
+
+relu::arguments::arguments( neural::engine::type engine, primitive out, primitive in, float slp )
+    : engine(engine)
+    , output({out})
+    , output_offset({out.as<const memory&>().argument.size.size()})
+    , output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
+    , input({in})
+    , input_offset({in.as<const memory&>().argument.size.size()})
+    , negative_slope(slp) {}
+
+relu::arguments::arguments( neural::engine::type engine, primitive out, primitive in )
+    : engine(engine)
+    , output({out})
+    , output_offset({out.as<const memory&>().argument.size.size()})
+    , output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
+    , input({in})
+    , input_offset({in.as<const memory&>().argument.size.size()})
     , negative_slope(0.0f) {}
-
-relu::arguments::arguments( neural::engine::type arg_engine, neural::primitive arg_output, neural::primitive arg_input, float arg_neg_slope )
-    : engine(arg_engine)
-    , output({arg_output})
-    , input({arg_input})
-    , negative_slope(arg_neg_slope) {}
 
 
 
