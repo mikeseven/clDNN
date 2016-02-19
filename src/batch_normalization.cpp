@@ -11,6 +11,41 @@ namespace neural
 
 namespace 
 {
+// Some shady helpers.
+template <class T> T* get_mem_first(const neural::memory &mem) {return reinterpret_cast<T*>(mem.pointer);}
+template <class T> T* get_mem_last(const neural::memory &mem) {return get_mem_first<T>(mem) + mem.count();}
+
+template <class T> 
+void fill_memory(const neural::memory &mem, T value)
+{
+    if(type_id<T>()->id != memory::traits(mem.argument.format).type->id)
+        throw std::runtime_error("fill_memory: types do not match");
+
+    std::fill(get_mem_first<T>(mem), get_mem_last<T>(mem), value);
+}
+
+// maps of available strides for specific formats
+static std::map<memory::format::type, std::tuple<std::vector<uint32_t>, std::vector<uint32_t>, std::vector<uint32_t>, std::vector<uint32_t>>> format_strides_map = 
+{
+                                                                  // x,y,z,b
+    {memory::format::yxfb_f32, std::make_tuple(std::vector<uint32_t>{1,0,2,3}, std::vector<uint32_t>{2,3}, std::vector<uint32_t>{3},     std::vector<uint32_t>{})     },
+    {memory::format::yxfb_f64, std::make_tuple(std::vector<uint32_t>{1,0,2,3}, std::vector<uint32_t>{2,3}, std::vector<uint32_t>{3},     std::vector<uint32_t>{})     },
+    {memory::format::xyfb_f32, std::make_tuple(std::vector<uint32_t>{0,1,2,3}, std::vector<uint32_t>{2,3}, std::vector<uint32_t>{3},     std::vector<uint32_t>{})     },
+    {memory::format::xyfb_f64, std::make_tuple(std::vector<uint32_t>{0,1,2,3}, std::vector<uint32_t>{2,3}, std::vector<uint32_t>{3},     std::vector<uint32_t>{})     },
+    {memory::format::fyxb_f32, std::make_tuple(std::vector<uint32_t>{2,1,0,3}, std::vector<uint32_t>{3},   std::vector<uint32_t>{1,2,3}, std::vector<uint32_t>{})     },
+    {memory::format::fyxb_f64, std::make_tuple(std::vector<uint32_t>{2,1,0,3}, std::vector<uint32_t>{3},   std::vector<uint32_t>{1,2,3}, std::vector<uint32_t>{})     },
+    {memory::format::fxyb_f32, std::make_tuple(std::vector<uint32_t>{1,2,0,3}, std::vector<uint32_t>{3},   std::vector<uint32_t>{1,2,3}, std::vector<uint32_t>{})     },
+    {memory::format::fxyb_f64, std::make_tuple(std::vector<uint32_t>{1,2,0,3}, std::vector<uint32_t>{3},   std::vector<uint32_t>{1,2,3}, std::vector<uint32_t>{})     },
+    {memory::format::byxf_f32, std::make_tuple(std::vector<uint32_t>{2,1,3,0}, std::vector<uint32_t>{3},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3})},
+    {memory::format::byxf_f64, std::make_tuple(std::vector<uint32_t>{2,1,3,0}, std::vector<uint32_t>{3},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3})},
+    {memory::format::bxyf_f32, std::make_tuple(std::vector<uint32_t>{1,2,3,0}, std::vector<uint32_t>{3},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3})},
+    {memory::format::bxyf_f64, std::make_tuple(std::vector<uint32_t>{1,2,3,0}, std::vector<uint32_t>{3},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3})},
+    {memory::format::bfyx_f32, std::make_tuple(std::vector<uint32_t>{3,2,1,0}, std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3})},
+    {memory::format::bfyx_f64, std::make_tuple(std::vector<uint32_t>{3,2,1,0}, std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3})},
+    {memory::format::bfxy_f32, std::make_tuple(std::vector<uint32_t>{2,3,1,0}, std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3})},
+    {memory::format::bfxy_f64, std::make_tuple(std::vector<uint32_t>{2,3,1,0}, std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3})},
+};
+
 
 template <class T>
 struct batch_normalization_training_forward_reference : is_an_implementation {
@@ -49,7 +84,7 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
         if(this_bn->output().size() < 3 || 
            this_bn->output().size() > 5 ||
            this_bn->input().size() != 3)
-            throw std::runtime_error("Incorrect number of BatchNorm input/outputs.");
+            throw std::runtime_error("batch_normalization_training_forward_reference::implementation -> incorrect number of BatchNorm input/outputs.");
 
         const auto spatial = this_bn->argument.spatial;
         const T exp_avg_factor = static_cast<T>(this_bn->argument.exp_avg_factor);
@@ -74,127 +109,30 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
         auto current_inv_std_dev_buffer = static_cast<T*>(current_inv_std_dev.pointer);
 
         if(output.argument.format != input.argument.format)
-            throw std::runtime_error("Output format doesn't match.");
+            throw std::runtime_error("batch_normalization_training_forward_reference::implementation -> io format doesn't match.");
 
-        const auto format = input.argument.format;
-        const auto data_size = memory::traits(format).type->size;
+        auto it = format_strides_map.find(input.argument.format);
+        if(it==std::end(format_strides_map)) throw std::runtime_error("batch_normalization_training_forward_reference::implementation -> unknown BatchNorm format");
 
-        auto data_w = 0;
-        auto data_h = 0;
-        auto data_c = 0;
-        auto data_n = 0;
+        auto data_w = input.argument.size[std::get<0>(it->second)[0]];
+        auto data_h = input.argument.size[std::get<0>(it->second)[1]];
+        auto data_c = input.argument.size[std::get<0>(it->second)[2]];
+        auto data_n = input.argument.size[std::get<0>(it->second)[3]];
 
-        auto spatial_location_stride = 0;
-        auto element_stride = 0;
-        auto batch_stride = 0;
+        auto spatial_location_stride = 1;
+        auto element_stride = 1;
+        auto batch_stride = 1;
 
-        if(format == memory::format::yxfb_f32 ||
-           format == memory::format::yxfb_f64)
-        {
-            data_h = input.argument.size[0];
-            data_w = input.argument.size[1];
-            data_c = input.argument.size[2];
-            data_n = input.argument.size[3];
-
-            spatial_location_stride = data_n * data_c;
-            element_stride = data_n;
-            batch_stride = 1;
-        }
-        else if(format == memory::format::xyfb_f32 ||
-                format == memory::format::xyfb_f64)
-        {
-            data_w = input.argument.size[0];
-            data_h = input.argument.size[1];
-            data_c = input.argument.size[2];
-            data_n = input.argument.size[3];
-
-            spatial_location_stride = data_n * data_c;
-            element_stride = data_n;
-            batch_stride = 1;
-        }
-        else if(format == memory::format::fyxb_f32 ||
-                format == memory::format::fyxb_f64)
-        {
-            data_c = input.argument.size[0];
-            data_h = input.argument.size[1];
-            data_w = input.argument.size[2];
-            data_n = input.argument.size[3];
-
-            spatial_location_stride = data_n;
-            element_stride = data_n * data_w * data_h;
-            batch_stride = 1;
-        }
-        else if(format == memory::format::fxyb_f32 ||
-                format == memory::format::fxyb_f64)
-        {
-            data_c = input.argument.size[0];
-            data_w = input.argument.size[1];
-            data_h = input.argument.size[2];
-            data_n = input.argument.size[3];
-
-            spatial_location_stride = data_n;
-            element_stride = data_n * data_w * data_h;
-            batch_stride = 1;
-        }
-        else if(format == memory::format::byxf_f32 ||
-                format == memory::format::byxf_f64)
-        {
-            data_n = input.argument.size[0];
-            data_h = input.argument.size[1];
-            data_w = input.argument.size[2];
-            data_c = input.argument.size[3];
-
-            spatial_location_stride = data_c;
-            element_stride = 1;
-            batch_stride = data_c * data_w * data_h;
-        }
-        else if(format == memory::format::bxyf_f32 ||
-                format == memory::format::bxyf_f64)
-        {
-            data_n = input.argument.size[0];
-            data_w = input.argument.size[1];
-            data_h = input.argument.size[2];
-            data_c = input.argument.size[3];
-
-            spatial_location_stride = data_c;
-            element_stride = 1;
-            batch_stride = data_c * data_w * data_h;
-        }
-        else if(format == memory::format::bfyx_f32 ||
-                format == memory::format::bfyx_f64)
-        {
-            data_n = input.argument.size[0];
-            data_c = input.argument.size[1];
-            data_h = input.argument.size[2];
-            data_w = input.argument.size[3];
-
-            spatial_location_stride = 1;
-            element_stride = data_w * data_h;
-            batch_stride = data_c * data_w * data_h;
-        }
-        else if(format == memory::format::bfxy_f32 ||
-                format == memory::format::bfxy_f64)
-        {
-            data_n = input.argument.size[0];
-            data_c = input.argument.size[1];
-            data_w = input.argument.size[2];
-            data_h = input.argument.size[3];
-
-            spatial_location_stride = 1;
-            element_stride = data_w * data_h;
-            batch_stride = data_c * data_w * data_h;
-        }
-        else
-        {
-            throw std::runtime_error("Unknown BatchNorm format.");
-        }
+        for (auto index : std::get<1>(it->second)) spatial_location_stride *= input.argument.size[index];
+        for (auto index : std::get<2>(it->second)) element_stride *= input.argument.size[index];
+        for (auto index : std::get<3>(it->second)) batch_stride *= input.argument.size[index];
 
         const auto spatial_size = (spatial) ? data_w * data_h : 1;
         const auto num_averages = (spatial) ? data_c : data_c * data_w * data_h;
         const T inv_num_average_over = static_cast<T>(1.0 / (data_n * spatial_size));
 
-        memset(current_mean_buffer, 0, current_mean.count() * data_size);
-        memset(current_inv_std_dev_buffer, 0, current_inv_std_dev.count() * data_size);
+        fill_memory<T>(current_mean, 0);
+        fill_memory<T>(current_inv_std_dev, 0);
 
         auto compute_io_data_offset = [&element_stride, &batch_stride, &spatial_location_stride](int element, int batch, int spatial_location)
         {
@@ -202,27 +140,27 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
         };
 
         // Compute spatial/batch average. (can be MT over element)
-        for(int element = 0; element < num_averages; ++element)
-            for(int batch = 0; batch < data_n; ++batch)
-                for(int spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
+        for(uint32_t element = 0; element < num_averages; ++element)
+            for(uint32_t batch = 0; batch < data_n; ++batch)
+                for(uint32_t spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
                     current_mean_buffer[element] += 
                         input_buffer[compute_io_data_offset(element, batch, spatial_location)] * inv_num_average_over;
 
         // Compute spatial/batch variance. (can be MT over element)
-        for(int element = 0; element < num_averages; ++element)
-            for(int batch = 0; batch < data_n; ++batch)
-                for(int spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
+        for(uint32_t element = 0; element < num_averages; ++element)
+            for(uint32_t batch = 0; batch < data_n; ++batch)
+                for(uint32_t spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
                     current_inv_std_dev_buffer[element] += 
                         std::pow(input_buffer[compute_io_data_offset(element, batch, spatial_location)] - current_mean_buffer[element], 2.0f) * inv_num_average_over;
 
         // Compute spatial/batch inverse standard deviation. (can be MT over element)
-        for(int element = 0; element < current_inv_std_dev.count(); ++element)
+        for(uint32_t element = 0; element < current_inv_std_dev.count(); ++element)
             current_inv_std_dev_buffer[element] = std::pow(current_inv_std_dev_buffer[element] + epsilon, -0.5f);
           
         // Normalize data. (can be MT over element)
-        for(int element = 0; element < num_averages; ++element)
-            for(int batch = 0; batch < data_n; ++batch)
-                for(int spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
+        for(uint32_t element = 0; element < num_averages; ++element)
+            for(uint32_t batch = 0; batch < data_n; ++batch)
+                for(uint32_t spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
                     output_buffer[compute_io_data_offset(element, batch, spatial_location)] = 
                           (input_buffer[compute_io_data_offset(element, batch, spatial_location)] - current_mean_buffer[element])
                         * current_inv_std_dev_buffer[element]
@@ -236,13 +174,13 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
             auto moving_mean_buffer = static_cast<T*>(moving_mean.pointer);
 
             // For first run, set data to zero.
-            if(*request->minibatch_counter == 0) memset(moving_mean_buffer, 0, moving_mean.count() * data_size);
+            if(*request->minibatch_counter == 0) fill_memory<T>(moving_mean, 0);
 
             // Compute avg factor for moving average basing on number of already computed averages [factor<=0], or using user provided [factor>0] factor.
             T actual_exp_avg_factor = (exp_avg_factor > 0.0f) ? exp_avg_factor : 1.0f / (1.0f + *request->minibatch_counter);
 
             // Compute moving average. (can be MT over elements)
-            for(int element = 0; element < moving_mean.count(); ++element)
+            for(uint32_t element = 0; element < moving_mean.count(); ++element)
                 moving_mean_buffer[element] = current_mean_buffer[element] * actual_exp_avg_factor + moving_mean_buffer[element] * (1.0f - actual_exp_avg_factor);
         }
 
@@ -252,13 +190,13 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
             auto moving_inv_std_dev_buffer = static_cast<T*>(moving_inv_std_dev.pointer);
 
             // For first run, set data to zero.
-            if(*request->minibatch_counter == 0) memset(moving_inv_std_dev_buffer, 0, moving_inv_std_dev.count() * data_size);
+            if(*request->minibatch_counter == 0) fill_memory<T>(moving_inv_std_dev, 0);
 
             // Compute avg factor for moving average basing on number of already computed averages [factor<=0], or using user provided [factor>0] factor.
             T actual_exp_avg_factor = (exp_avg_factor > 0.0f) ? exp_avg_factor : 1.0f / (1.0f + *request->minibatch_counter);
 
             // Compute moving inv std dev. (can be MT over elements)
-            for(int element = 0; element < moving_inv_std_dev.count(); ++element)
+            for(uint32_t element = 0; element < moving_inv_std_dev.count(); ++element)
                 moving_inv_std_dev_buffer[element] = current_inv_std_dev_buffer[element] * actual_exp_avg_factor + moving_inv_std_dev_buffer[element] * (1.0f - actual_exp_avg_factor);
         }
 
@@ -299,7 +237,7 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
 
         if(this_bn->output().size() != 3 ||
            this_bn->input().size() != 6)
-            throw std::runtime_error("Incorrect number of BatchNorm input/outputs.");
+            throw std::runtime_error("batch_normalization_training_backward_reference::implementation -> incorrect number of BatchNorm input/outputs.");
 
         const auto spatial = this_bn->argument.spatial;
 
@@ -326,128 +264,31 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
         auto bias_grad_buffer  = static_cast<T*>(bias_grad.pointer);
 
         if(output_grad.argument.format != input_grad.argument.format)
-            throw std::runtime_error("Output format doesn't match.");
+            throw std::runtime_error("batch_normalization_training_backward_reference::implementation -> io format doesn't match.");
 
-        const auto format = input_grad.argument.format;
-        const auto data_size = memory::traits(format).type->size;
+        auto it = format_strides_map.find(input_grad.argument.format);
+        if(it==std::end(format_strides_map)) throw std::runtime_error("batch_normalization_training_backward_reference::implementation -> unknown BatchNorm format");
 
-        auto data_w = 0;
-        auto data_h = 0;
-        auto data_c = 0;
-        auto data_n = 0;
+        auto data_w = input_grad.argument.size[std::get<0>(it->second)[0]];
+        auto data_h = input_grad.argument.size[std::get<0>(it->second)[1]];
+        auto data_c = input_grad.argument.size[std::get<0>(it->second)[2]];
+        auto data_n = input_grad.argument.size[std::get<0>(it->second)[3]];
 
-        auto spatial_location_stride = 0;
-        auto element_stride = 0;
-        auto batch_stride = 0;
+        auto spatial_location_stride = 1;
+        auto element_stride = 1;
+        auto batch_stride = 1;
 
-        if(format == memory::format::yxfb_f32 ||
-           format == memory::format::yxfb_f64)
-        {
-            data_h = input_grad.argument.size[0];
-            data_w = input_grad.argument.size[1];
-            data_c = input_grad.argument.size[2];
-            data_n = input_grad.argument.size[3];
-
-            spatial_location_stride = data_n * data_c;
-            element_stride = data_n;
-            batch_stride = 1;
-        }
-        else if(format == memory::format::xyfb_f32 ||
-                format == memory::format::xyfb_f64)
-        {
-            data_w = input_grad.argument.size[0];
-            data_h = input_grad.argument.size[1];
-            data_c = input_grad.argument.size[2];
-            data_n = input_grad.argument.size[3];
-
-            spatial_location_stride = data_n * data_c;
-            element_stride = data_n;
-            batch_stride = 1;
-        }
-        else if(format == memory::format::fyxb_f32 ||
-                format == memory::format::fyxb_f64)
-        {
-            data_c = input_grad.argument.size[0];
-            data_h = input_grad.argument.size[1];
-            data_w = input_grad.argument.size[2];
-            data_n = input_grad.argument.size[3];
-
-            spatial_location_stride = data_n;
-            element_stride = data_n * data_w * data_h;
-            batch_stride = 1;
-        }
-        else if(format == memory::format::fxyb_f32 ||
-                format == memory::format::fxyb_f64)
-        {
-            data_c = input_grad.argument.size[0];
-            data_w = input_grad.argument.size[1];
-            data_h = input_grad.argument.size[2];
-            data_n = input_grad.argument.size[3];
-
-            spatial_location_stride = data_n;
-            element_stride = data_n * data_w * data_h;
-            batch_stride = 1;
-        }
-        else if(format == memory::format::byxf_f32 ||
-                format == memory::format::byxf_f64)
-        {
-            data_n = input_grad.argument.size[0];
-            data_h = input_grad.argument.size[1];
-            data_w = input_grad.argument.size[2];
-            data_c = input_grad.argument.size[3];
-
-            spatial_location_stride = data_c;
-            element_stride = 1;
-            batch_stride = data_c * data_w * data_h;
-        }
-        else if(format == memory::format::bxyf_f32 ||
-                format == memory::format::bxyf_f64)
-        {
-            data_n = input_grad.argument.size[0];
-            data_w = input_grad.argument.size[1];
-            data_h = input_grad.argument.size[2];
-            data_c = input_grad.argument.size[3];
-
-            spatial_location_stride = data_c;
-            element_stride = 1;
-            batch_stride = data_c * data_w * data_h;
-        }
-        else if(format == memory::format::bfyx_f32 ||
-                format == memory::format::bfyx_f64)
-        {
-            data_n = input_grad.argument.size[0];
-            data_c = input_grad.argument.size[1];
-            data_h = input_grad.argument.size[2];
-            data_w = input_grad.argument.size[3];
-
-            spatial_location_stride = 1;
-            element_stride = data_w * data_h;
-            batch_stride = data_c * data_w * data_h;
-        }
-        else if(format == memory::format::bfxy_f32 ||
-                format == memory::format::bfxy_f64)
-        {
-            data_n = input_grad.argument.size[0];
-            data_c = input_grad.argument.size[1];
-            data_w = input_grad.argument.size[2];
-            data_h = input_grad.argument.size[3];
-
-            spatial_location_stride = 1;
-            element_stride = data_w * data_h;
-            batch_stride = data_c * data_w * data_h;
-        }
-        else
-        {
-            throw std::runtime_error("Unknown BatchNorm format.");
-        }
+        for (auto index : std::get<1>(it->second)) spatial_location_stride *= input_grad.argument.size[index];
+        for (auto index : std::get<2>(it->second)) element_stride *= input_grad.argument.size[index];
+        for (auto index : std::get<3>(it->second)) batch_stride *= input_grad.argument.size[index];
 
         const auto spatial_size = (spatial) ? data_w * data_h : 1;
         const auto num_averages = (spatial) ? data_c : data_c * data_w * data_h;
         const T inv_num_average_over = static_cast<T>(1.0 / (data_n * spatial_size));
 
-        memset(scale_grad_buffer, 0, scale_grad.count() * data_size);
-        memset(bias_grad_buffer, 0, bias_grad.count() * data_size);
-        memset(input_grad_buffer, 0, input_grad.count() * data_size);
+        fill_memory<T>(scale_grad, 0);
+        fill_memory<T>( bias_grad, 0);
+        fill_memory<T>(input_grad, 0);
 
         auto compute_io_data_offset = [&element_stride, &batch_stride, &spatial_location_stride](int element, int batch, int spatial_location)
         {
@@ -455,9 +296,9 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
         };
 
         // Compute scale and bias gradients. (can be MT over element)
-        for(int element = 0; element < num_averages; ++element)
-            for(int batch = 0; batch < data_n; ++batch)
-                for(int spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
+        for(uint32_t element = 0; element < num_averages; ++element)
+            for(uint32_t batch = 0; batch < data_n; ++batch)
+                for(uint32_t spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
                 {
                     auto io_offset = compute_io_data_offset(element, batch, spatial_location);
 
@@ -470,9 +311,9 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
                 }
 
         // Compute input gradients. (can be MT over element)
-        for(int element = 0; element < num_averages; ++element)
-            for(int batch = 0; batch < data_n; ++batch)
-                for(int spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
+        for(uint32_t element = 0; element < num_averages; ++element)
+            for(uint32_t batch = 0; batch < data_n; ++batch)
+                for(uint32_t spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
                 {
                     auto io_offset = compute_io_data_offset(element, batch, spatial_location);
                     auto x_norm = (forward_input_buffer[io_offset] - current_mean_buffer[element]) * current_inv_std_dev_buffer[element];
@@ -518,7 +359,7 @@ struct batch_normalization_inference_reference : is_an_implementation {
 
         if(this_bn->input().size() != 5 ||
            this_bn->output().size() != 1)
-            throw std::runtime_error("Incorrect number of BatchNorm input/outputs.");
+            throw std::runtime_error("batch_normalization_inference_reference::implementation -> incorrect number of BatchNorm input/outputs.");
 
         const auto spatial = this_bn->argument.spatial;
 
@@ -538,120 +379,25 @@ struct batch_normalization_inference_reference : is_an_implementation {
 
         auto output_buffer = static_cast<T*>(output.pointer);
 
+
         if(output.argument.format != input.argument.format)
-            throw std::runtime_error("Output format doesn't match.");
+            throw std::runtime_error("batch_normalization_inference_reference::implementation -> io format doesn't match.");
 
-        const auto format = input.argument.format;
+        auto it = format_strides_map.find(input.argument.format);
+        if(it==std::end(format_strides_map)) throw std::runtime_error("batch_normalization_inference_reference::implementation -> unknown BatchNorm format");
 
-        auto data_w = 0;
-        auto data_h = 0;
-        auto data_c = 0;
-        auto data_n = 0;
+        auto data_w = input.argument.size[std::get<0>(it->second)[0]];
+        auto data_h = input.argument.size[std::get<0>(it->second)[1]];
+        auto data_c = input.argument.size[std::get<0>(it->second)[2]];
+        auto data_n = input.argument.size[std::get<0>(it->second)[3]];
 
-        auto spatial_location_stride = 0;
-        auto element_stride = 0;
-        auto batch_stride = 0;
+        auto spatial_location_stride = 1;
+        auto element_stride = 1;
+        auto batch_stride = 1;
 
-        if(format == memory::format::yxfb_f32 ||
-           format == memory::format::yxfb_f64)
-        {
-            data_h = input.argument.size[0];
-            data_w = input.argument.size[1];
-            data_c = input.argument.size[2];
-            data_n = input.argument.size[3];
-
-            spatial_location_stride = data_n * data_c;
-            element_stride = data_n;
-            batch_stride = 1;
-        }
-        else if(format == memory::format::xyfb_f32 ||
-                format == memory::format::xyfb_f64)
-        {
-            data_w = input.argument.size[0];
-            data_h = input.argument.size[1];
-            data_c = input.argument.size[2];
-            data_n = input.argument.size[3];
-
-            spatial_location_stride = data_n * data_c;
-            element_stride = data_n;
-            batch_stride = 1;
-        }
-        else if(format == memory::format::fyxb_f32 ||
-                format == memory::format::fyxb_f64)
-        {
-            data_c = input.argument.size[0];
-            data_h = input.argument.size[1];
-            data_w = input.argument.size[2];
-            data_n = input.argument.size[3];
-
-            spatial_location_stride = data_n;
-            element_stride = data_n * data_w * data_h;
-            batch_stride = 1;
-        }
-        else if(format == memory::format::fxyb_f32 ||
-                format == memory::format::fxyb_f64)
-        {
-            data_c = input.argument.size[0];
-            data_w = input.argument.size[1];
-            data_h = input.argument.size[2];
-            data_n = input.argument.size[3];
-
-            spatial_location_stride = data_n;
-            element_stride = data_n * data_w * data_h;
-            batch_stride = 1;
-        }
-        else if(format == memory::format::byxf_f32 ||
-                format == memory::format::byxf_f64)
-        {
-            data_n = input.argument.size[0];
-            data_h = input.argument.size[1];
-            data_w = input.argument.size[2];
-            data_c = input.argument.size[3];
-
-            spatial_location_stride = data_c;
-            element_stride = 1;
-            batch_stride = data_c * data_w * data_h;
-        }
-        else if(format == memory::format::bxyf_f32 ||
-                format == memory::format::bxyf_f64)
-        {
-            data_n = input.argument.size[0];
-            data_w = input.argument.size[1];
-            data_h = input.argument.size[2];
-            data_c = input.argument.size[3];
-
-            spatial_location_stride = data_c;
-            element_stride = 1;
-            batch_stride = data_c * data_w * data_h;
-        }
-        else if(format == memory::format::bfyx_f32 ||
-                format == memory::format::bfyx_f64)
-        {
-            data_n = input.argument.size[0];
-            data_c = input.argument.size[1];
-            data_h = input.argument.size[2];
-            data_w = input.argument.size[3];
-
-            spatial_location_stride = 1;
-            element_stride = data_w * data_h;
-            batch_stride = data_c * data_w * data_h;
-        }
-        else if(format == memory::format::bfxy_f32 ||
-                format == memory::format::bfxy_f64)
-        {
-            data_n = input.argument.size[0];
-            data_c = input.argument.size[1];
-            data_w = input.argument.size[2];
-            data_h = input.argument.size[3];
-
-            spatial_location_stride = 1;
-            element_stride = data_w * data_h;
-            batch_stride = data_c * data_w * data_h;
-        }
-        else
-        {
-            throw std::runtime_error("Unknown BatchNorm format.");
-        }
+        for (auto index : std::get<1>(it->second)) spatial_location_stride *= input.argument.size[index];
+        for (auto index : std::get<2>(it->second)) element_stride *= input.argument.size[index];
+        for (auto index : std::get<3>(it->second)) batch_stride *= input.argument.size[index];
 
         const auto spatial_size = (spatial) ? data_w * data_h : 1;
         const auto num_averages = (spatial) ? data_c : data_c * data_w * data_h;
@@ -662,9 +408,9 @@ struct batch_normalization_inference_reference : is_an_implementation {
         };
 
         // Normalize data. (can be MT over element)
-        for(int element = 0; element < num_averages; ++element)
-            for(int batch = 0; batch < data_n; ++batch)
-                for(int spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
+        for(uint32_t element = 0; element < num_averages; ++element)
+            for(uint32_t batch = 0; batch < data_n; ++batch)
+                for(uint32_t spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
                     output_buffer[compute_io_data_offset(element, batch, spatial_location)] = 
                     (input_buffer[compute_io_data_offset(element, batch, spatial_location)] - mean_buffer[element])
                     * inv_std_dev_buffer[element]
