@@ -1,33 +1,3 @@
-
-/*
-// file that is loaded and becomes a data
-struct file : is_a_primitive {
-    enum class format : size_t { nndata, any=static_cast<size_t>(-1) };
-
-    struct arguments {
-        engine                  engine;
-        std::string             name;
-        std::vector<primitive>  output;
-
-        arguments(neural::engine::type aengine, std::string aname, file::format aformat, std::vector<size_t> &asize);
-        arguments(neural::engine::type aengine, std::string aname, file::format aformat, uint32_t dimension);
-        arguments(neural::engine::type aengine, std::string aname, file::format aformat);
-        arguments(neural::engine::type aengine, std::string aname);
-    };
-    const arguments argument;
-
-    static primitive create(arguments);
-    file &operator()(void *);
-    primitive clone() const { return create(argument); }
-private:
-    file(arguments arg) : is_a_primitive(type_id<const file>()), argument(arg) {};
-};
-*/
-
-
-
-
-
 #include "neural.h"
 #include <fstream>
 #include <nmmintrin.h>

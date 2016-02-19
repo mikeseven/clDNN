@@ -172,6 +172,8 @@ struct memory;
 
 // is_a_primitive is a base class for all primitives exposing common interface; primiary user is a primitive wrapper
 class is_a_primitive {
+    is_a_primitive(const is_a_primitive &);
+    is_a_primitive &operator=(const is_a_primitive &);
 protected:
     type_traits                     *_type_traits;
     std::map<std::string, any_value> _map;
