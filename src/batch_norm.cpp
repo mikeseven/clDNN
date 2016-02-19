@@ -485,7 +485,6 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
     }
 };
 
-
 template <class T>
 struct batch_normalization_inference_reference : is_an_implementation {
 
