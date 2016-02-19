@@ -79,10 +79,6 @@ struct memory : is_a_primitive {
     ~memory();
 private:
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
-    
-    // should never copy memory directly; use primitive handle
-    memory &operator=(const memory &); 
-    memory(const memory&);
 };
 
 
