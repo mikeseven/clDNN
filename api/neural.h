@@ -4,10 +4,10 @@
 
 namespace neural {
 
-// data in memory in known format; format consists of memory {order, type} of values
+// data in memory in known format; format = {order, type} of values
 struct memory : is_a_primitive {
     struct format_traits {
-        const size_t        dimension;
+        const uint8_t       dimension;
         const type_traits  *type;
     };
 
@@ -29,7 +29,7 @@ struct memory : is_a_primitive {
         bfyx_f64,
         bxyf_f64,
         bfxy_f64,
-        any=static_cast<size_t>(-1)
+        any=static_cast<uint32_t>(-1)
     }; };
 
     static const format_traits traits(format::type fmt) {
@@ -70,7 +70,10 @@ struct memory : is_a_primitive {
     static primitive create(arguments);
     memory &operator()(void *ptr) { pointer = ptr; return *this; };
     primitive clone() const { return create(argument); }
-    void execute_argument(void *arg) const { pointer = arg; }
+    void execute_argument(void *arg) const {
+        if(argument.owns_memory) throw std::runtime_error("memory::execute_argument: this a container with its own memory; cannot set new pointer");
+        else pointer = arg; 
+    }
     size_t count() const;
 
     ~memory();
