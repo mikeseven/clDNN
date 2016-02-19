@@ -19,13 +19,25 @@ namespace neural {
 struct type_traits {
     const size_t          id;
     const size_t          size;
+    const bool            is_floating_point;
     const char *    const name;
-    type_traits(size_t _id, size_t _size, const char *_name) : id(_id), size(_size), name(_name) {};
+    type_traits(size_t _id, size_t _size, bool _ifp, const char *_name) : id(_id), size(_size), is_floating_point(_ifp), name(_name) {};
+private:
+    type_traits(const type_traits &);
     type_traits &operator=(const type_traits &);
 };
 
+// [C++1x] replace with std:: versions
+template<typename T> struct is_floating_point        { static const bool value = false; };
+template<>           struct is_floating_point<float> { static const bool value = true; };
+template<>           struct is_floating_point<double>{ static const bool value = true; };
+#if defined HALF_HALF_HPP
+template<>           struct is_floating_point<half>  { static const bool value = true; };
+#endif
+
 //todo type id and const type id should be equall
 template<typename T_type> __declspec(noinline) auto type_id() -> type_traits * {
+
 #if defined _MSC_VER
     static std::string signature = __FUNCSIG__;
     static std::string type_name = signature.substr(signature.find('<', 0)+1, signature.find('>', 0)-signature.find('<', 0)-1);
@@ -34,7 +46,7 @@ template<typename T_type> __declspec(noinline) auto type_id() -> type_traits * {
     static std::string type_name = signature.substr(signature.find('=', 0)+2, signature.find(']', 0)-signature.find('=', 0)-2);
 #endif
 
-    static type_traits ti{{reinterpret_cast<size_t>(&ti)}, sizeof(T_type), type_name.c_str()};
+    static type_traits ti{{reinterpret_cast<size_t>(&ti)}, sizeof(T_type), is_floating_point<T_type>::value, type_name.c_str()};
     return &ti;
 }
 
