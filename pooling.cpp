@@ -19,76 +19,60 @@ struct pooling_reference : is_an_implementation {
         auto output       = static_cast<float*>(this_pooling->output_memory(0).pointer);
 
         auto input_memory_arg  = this_pooling->input_memory(0).argument;
-        auto input_whole_size  = input_memory_arg.size;
+        auto input_buffer_size = input_memory_arg.size;
         auto input_offset      = this_pooling->argument.input_offset;
 
         auto output_memory_arg = this_pooling->output_memory(0).argument;
-        auto output_whole_size = output_memory_arg.size;
+        auto output_buffer_size= output_memory_arg.size;
         auto output_offset     = this_pooling->argument.output_offset;
         auto output_size       = this_pooling->argument.output_size;
 
-        //if(input_memory_arg.format != memory::format::yxfb_f32) throw std::runtime_error("Pooling reference uses yxfb_f32 format.");
-        //if(input_whole_size.size() != output_whole_size.size()) throw std::runtime_error("Pooling input/output number of dimension does not match.");
-        //if(input_memory_arg.format != output_memory_arg.format) throw std::runtime_error("Pooling input/output data format does not match.");
-        //for(auto &x : input_offset)  if(x < 0)                  throw std::runtime_error("Pooling negative input offset.");
+        auto stride_size       = this_pooling->argument.stride;
+        auto window_size       = this_pooling->argument.size;
+        auto padding           = this_pooling->argument.padding; //todo
 
-        //for(size_t i = 0; i < input_whole_size.size(); ++i){
-        //    if(input_whole_size[i]  < output_size[i] + input_offset[i] ) throw std::runtime_error("pooling input/output size does not match.");
-        //    if(output_whole_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("pooling sizes to small.");
-        //}
+        if(input_memory_arg.format  != memory::format::yxfb_f32)  throw std::runtime_error("Pooling reference uses yxfb_f32 format.");
+        if(input_buffer_size.size() != output_buffer_size.size()) throw std::runtime_error("Pooling input/output number of dimension does not match.");
+        if(stride_size.size()       != output_buffer_size.size()) throw std::runtime_error("Pooling stride/output number of dimension does not match.");
+        if(window_size.size()       != output_buffer_size.size()) throw std::runtime_error("Pooling window_size/output number of dimension does not match.");
+        if(input_memory_arg.format  != output_memory_arg.format)  throw std::runtime_error("Pooling input/output data format does not match.");
+        //for(auto &x : input_offset)  if(x < 0)                    throw std::runtime_error("Pooling negative input offset."); //todo
+        //for(auto &x : output_offset) if(x < 0)                    throw std::runtime_error("Pooling negative output offset."); //todo
+        for(auto &x : stride_size)   if(x < 0)                    throw std::runtime_error("Pooling negative stride.");
 
-        //// Counter is vector representing number in number system in which maximum value of each digit at index 'i'
-        //// [denoted counter(i)] is limited by corresponding output_size(i).
-        //// When during incrementation counter(i)==output_size(i) digit at position 'i' it overflows with carry over to the left.
-        //// It means that digit at 'i' is zeroed and digit at 'i-1' is incremented.
-        //// The least significant digit is on the last(max index) position of the vector.
-        //std::vector<uint32_t> counter( output_size.size() - 1, 0 );
+        // output size = (input size - window size) / step + 1
+        for(size_t i = 0; i < input_offset.size(); ++i) //todo
+            if(output_size[i] < (input_buffer_size[i] - input_offset[i]) / (stride_size[i] + 1) ) throw std::runtime_error("Output size of pooling is to small.");
 
-        //auto is_end = [&output_size, &counter](){
-        //    for(auto it1  = counter.begin(), it2 = output_size.begin(); it1 != counter.end(); ++it1, ++it2)
-        //        if(*it1 != *it2) return false;
+        std::vector<uint32_t> counter( output_size.size(), 0 );
 
-        //    return true;
-        //};
+        if( pooling::mode::max == this_pooling->argument.mode ){
+            //todo
+        } else {// avg
+            //todo
+        }
 
-        //auto increse_counter = [&counter, &output_size](){
-        //    // Counter is vector representing number in which each digit counter(i) maximum value is limited by output_size(i)
-        //    // when counter(i)==output_size(i) it overflows with carry to the left
-        //    // The least significant digit is on the last(max) position of the vector
-        //    ++counter.back();
+/*
 
-        //    for(auto i = counter.size() - 1; i > 0; --i)
-        //        if( counter[i] == output_size[i] ){
-        //            counter[i] = 0;
-        //            ++counter[i-1];
-        //        }
+        auto uint_input_offset = std::vector<uint32_t>(input_offset.begin(), input_offset.end());  //pooling has always non negative offset
 
-        //    // After all counter(i) equal output_size(i) counter is zeroed through overflow
-        //    // thus after this case we write output_size to counter
-        //    if( counter[0] == output_size[0] )
-        //        for(auto i = counter.size() - 1; i > 0; --i)
-        //            counter[i] = output_size[i];
-        //};
+        std::vector<uint32_t> acc(uint_input_offset.size());
+        while( !is_end() ){
+            // calculate offset without most frequently changing dimension to reduce function calls
+            // most changing dimension has linear layout in memory
+            std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
+            auto in_offset  = calculate_offset(input_whole_size , acc ) + input_offset.back();
+            
+            std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
+            auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
 
-        //auto uint_input_offset = std::vector<uint32_t>(input_offset.begin(), input_offset.end());  //pooling has always non negative offset
-
-        //std::vector<uint32_t> acc(uint_input_offset.size());
-        //while( !is_end() ){
-        //    // calculate offset without most frequently changing dimension to reduce function calls
-        //    // most changing dimension has linear layout in memory
-        //    std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
-        //    auto in_offset  = calculate_offset(input_whole_size , acc ) + input_offset.back();
-        //    
-        //    std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
-        //    auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
-
-        //    // pooling on linear buffer
-        //    for (uint32_t i = 0; i < output_size.back() ; ++i) {
-        //        output[out_offset + i] = std::max( input[in_offset + i], 0.0f) 
-        //                                         + this_pooling->argument.negative_slope * std::min( input[in_offset + i], 0.0f);
-        //    }
-        //    increse_counter();
-        //}
+            // pooling on linear buffer
+            for (uint32_t i = 0; i < output_size.back() ; ++i) {
+                output[out_offset + i] = std::max( input[in_offset + i], 0.0f) 
+                                                 + this_pooling->argument.negative_slope * std::min( input[in_offset + i], 0.0f);
+            }
+            increse_counter();
+        }*/
     }
 
     std::vector<task> work() {
