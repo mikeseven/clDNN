@@ -5,17 +5,6 @@ void example_008() {
     using namespace neural;
     float *data_buffer = nullptr;
 
-    /*arguments(neural::engine::type
-            neural::pooling::mode::type
-            neural::memory::format::typ            o_frmt
-            std::vector<uint32_t            out_off
-            std::vector<uint32_t            out_siz
-            primitiv            in
-            std::vector<int32_t            in_off
-            std::vector<uint32_t            strd
-            std::vector<uint32_t            siz
-            neural::padding::type);*/
-
     const uint32_t output_y = 0,    // size of whole output buffer
                    output_x = 0,
                    output_z = 0,

@@ -61,10 +61,13 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="pooling.cpp">
+    <ClCompile Include="src\batch_normalization.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="examples\008.cpp">
       <Filter>Source Files</Filter>
+    <ClCompile Include="examples\bn.cpp">
+      <Filter>Source Files\examples</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
