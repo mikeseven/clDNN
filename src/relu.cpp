@@ -46,14 +46,18 @@ struct relu_reference : is_an_implementation {
         if(input_whole_size.size() != output_whole_size.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
         if(input_memory_arg.format != output_memory_arg.format) throw std::runtime_error("ReLU input/output data format does not match.");
         for(auto &x : input_offset)  if(x < 0)                  throw std::runtime_error("ReLU negative input offset.");
-        for(auto &x : output_offset) if(x < 0)                  throw std::runtime_error("ReLU negative output offset.");
 
         for(size_t i = 0; i < input_whole_size.size(); ++i){
             if(input_whole_size[i]  < output_size[i] + input_offset[i] ) throw std::runtime_error("ReLU input/output size does not match.");
             if(output_whole_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("ReLU sizes to small.");
         }
 
-        std::vector<uint32_t> counter( output_size.size() - 1, 0 ); // last position indicates linear memory layout, it's not needed in counter
+        // Counter is vector representing number in number system in which maximum value of each digit at index 'i'
+        // [denoted counter(i)] is limited by corresponding output_size(i).
+        // When during incrementation counter(i)==output_size(i) digit at position 'i' it overflows with carry over to the left.
+        // It means that digit at 'i' is zeroed and digit at 'i-1' is incremented.
+        // The least significant digit is on the last(max index) position of the vector.
+        std::vector<uint32_t> counter( output_size.size() - 1, 0 );
 
         auto is_end = [&output_size, &counter](){
             for(auto it1  = counter.begin(), it2 = output_size.begin(); it1 != counter.end(); ++it1, ++it2)
@@ -87,10 +91,10 @@ struct relu_reference : is_an_implementation {
         while( !is_end() ){
             // calculate offset without most frequently changing dimension to reduce function calls
             // most changing dimension has linear layout in memory
-            std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<size_t>());
+            std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
             auto in_offset  = calculate_offset(input_whole_size , acc ) + input_offset.back();
             
-            std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<size_t>());
+            std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
             auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
 
             // relu on linear buffer
@@ -110,7 +114,7 @@ struct relu_reference : is_an_implementation {
 };
 
 //                                    engine          output                  input
-using implementation_key = std::tuple<neural::engine, neural::memory::format, neural::memory::format>;
+using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(relu &)>> implementation_map = {
@@ -119,7 +123,7 @@ static std::map<implementation_key, std::function<is_an_implementation *(relu &)
 
 } // namespace {
 //todo discuss, output size is always needed or can be uninitialized?
-relu::arguments::arguments( neural::engine engine, primitive out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, float slp)
+relu::arguments::arguments( neural::engine::type engine, primitive out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, float slp)
     : engine(engine)
     , output({out})
     , output_offset({out_off})
@@ -127,8 +131,8 @@ relu::arguments::arguments( neural::engine engine, primitive out, std::vector<ui
     , input({in})
     , input_offset({in_off})
     , negative_slope(slp) {}
-                                                                                      
-relu::arguments::arguments( neural::engine engine, primitive out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off)
+
+relu::arguments::arguments( neural::engine::type engine, primitive out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off)
     : engine(engine)
     , output({out})
     , output_offset({out_off})
@@ -136,8 +140,8 @@ relu::arguments::arguments( neural::engine engine, primitive out, std::vector<ui
     , input({in})
     , input_offset({in_off})
     , negative_slope() {}
-                                                                                      
-relu::arguments::arguments( neural::engine engine, primitive out, primitive in, float slp )
+
+relu::arguments::arguments( neural::engine::type engine, primitive out, primitive in, float slp )
     : engine(engine)
     , output({out})
     , output_offset({out.as<const memory&>().argument.size.size()})
@@ -146,7 +150,7 @@ relu::arguments::arguments( neural::engine engine, primitive out, primitive in, 
     , input_offset({in.as<const memory&>().argument.size.size()})
     , negative_slope(slp) {}
 
-relu::arguments::arguments( neural::engine engine, primitive out, primitive in )
+relu::arguments::arguments( neural::engine::type engine, primitive out, primitive in )
     : engine(engine)
     , output({out})
     , output_offset({out.as<const memory&>().argument.size.size()})

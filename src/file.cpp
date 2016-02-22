@@ -1,33 +1,3 @@
-
-/*
-// file that is loaded and becomes a data
-struct file : is_a_primitive {
-    enum class format : size_t { nndata, any=static_cast<size_t>(-1) };
-
-    struct arguments {
-        engine                  engine;
-        std::string             name;
-        std::vector<primitive>  output;
-
-        arguments(neural::engine aengine, std::string aname, file::format aformat, std::vector<size_t> &asize);
-        arguments(neural::engine aengine, std::string aname, file::format aformat, uint32_t dimension);
-        arguments(neural::engine aengine, std::string aname, file::format aformat);
-        arguments(neural::engine aengine, std::string aname);
-    };
-    const arguments argument;
-
-    static primitive create(arguments);
-    file &operator()(void *);
-    primitive clone() const { return create(argument); }
-private:
-    file(arguments arg) : is_a_primitive(type_id<const file>()), argument(arg) {};
-};
-*/
-
-
-
-
-
 #include "neural.h"
 #include <fstream>
 #include <nmmintrin.h>
@@ -50,10 +20,10 @@ uint32_t crc32(const void *buffer, size_t count, uint32_t crc) {
 #pragma pack(push,1)   /* The data has been redefined (alignment 4), so the pragma pack is not necessary,
                           but who knows if in the future, the compiler does not align to 8?  */
 struct file_header {
-    std::array<uint8_t,3>   magic;
-    uint8_t                 version;
-    neural::memory::format  format;
-    uint8_t                 rank_minus_1;
+    std::array<uint8_t,3>           magic;
+    uint8_t                         version;
+    neural::memory::format::type    format;
+    uint8_t                         rank_minus_1;
 };
 
 #pragma pack(pop)
@@ -66,22 +36,22 @@ template<typename T_type, typename... T_args> std::unique_ptr<T_type> make_uniqu
 } //namespace {
 
 
-file::arguments::arguments(neural::engine aengine, std::string aname, memory::format aformat, std::vector<uint32_t> &asize)
+file::arguments::arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize)
     : engine(aengine)
     , name(aname)
-    , output{{memory::create({aengine, aformat, asize})}} {}
+    , output{{memory::create({aengine, aformat, asize, true})}} {}
 
-file::arguments::arguments(neural::engine aengine, std::string aname, memory::format aformat)
+file::arguments::arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat)
     : engine(aengine)
     , name(aname)
     , output{{memory::create({aengine, aformat, std::vector<uint32_t>()})}} {}
 
-file::arguments::arguments(neural::engine aengine, std::string aname, primitive aoutput)
+file::arguments::arguments(neural::engine::type aengine, std::string aname, primitive aoutput)
     : engine(aengine)
     , name(aname)
     , output{aoutput} {}
 
-file::arguments::arguments(neural::engine aengine, std::string aname)
+file::arguments::arguments(neural::engine::type aengine, std::string aname)
     : engine(aengine)
     , name(aname)
     , output({null_primitive}) {};

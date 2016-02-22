@@ -5,13 +5,13 @@
 
 namespace neural {
 
-memory::arguments::arguments(neural::engine aengine, memory::format aformat, std::vector<uint32_t> asize)
+memory::arguments::arguments(neural::engine::type aengine, memory::format::type aformat, std::vector<uint32_t> asize)
     : engine(aengine)
     , format(aformat)
     , size(asize)
     , owns_memory(false) {}
 
-memory::arguments::arguments(neural::engine aengine, memory::format aformat, std::vector<uint32_t> asize, bool aowns_memory)
+memory::arguments::arguments(neural::engine::type aengine, memory::format::type aformat, std::vector<uint32_t> asize, bool aowns_memory)
     : engine(aengine)
     , format(aformat)
     , size(asize)
