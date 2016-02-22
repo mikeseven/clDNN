@@ -10,6 +10,7 @@
 
 // [TODO]
 //      compiler-agnostic compile-time assertions for C++98
+//      generic format-traits (type, sizeof, etc), currenly float32 assumed in file.cpp
 
 
 namespace neural {
@@ -18,13 +19,25 @@ namespace neural {
 struct type_traits {
     const size_t          id;
     const size_t          size;
+    const bool            is_floating_point;
     const char *    const name;
-    type_traits(size_t _id, size_t _size, const char *_name) : id(_id), size(_size), name(_name) {};
+    type_traits(size_t _id, size_t _size, bool _ifp, const char *_name) : id(_id), size(_size), is_floating_point(_ifp), name(_name) {};
+private:
+    type_traits(const type_traits &);
     type_traits &operator=(const type_traits &);
 };
 
+// [C++1x] replace with std:: versions
+template<typename T> struct is_floating_point        { static const bool value = false; };
+template<>           struct is_floating_point<float> { static const bool value = true; };
+template<>           struct is_floating_point<double>{ static const bool value = true; };
+#if defined HALF_HALF_HPP
+template<>           struct is_floating_point<half>  { static const bool value = true; };
+#endif
+
 //todo type id and const type id should be equall
 template<typename T_type> __declspec(noinline) auto type_id() -> type_traits * {
+
 #if defined _MSC_VER
     static std::string signature = __FUNCSIG__;
     static std::string type_name = signature.substr(signature.find('<', 0)+1, signature.find('>', 0)-signature.find('<', 0)-1);
@@ -33,13 +46,13 @@ template<typename T_type> __declspec(noinline) auto type_id() -> type_traits * {
     static std::string type_name = signature.substr(signature.find('=', 0)+2, signature.find(']', 0)-signature.find('=', 0)-2);
 #endif
 
-    static type_traits ti{{reinterpret_cast<size_t>(&ti)}, sizeof(T_type), type_name.c_str()};
+    static type_traits ti{{reinterpret_cast<size_t>(&ti)}, sizeof(T_type), is_floating_point<T_type>::value, type_name.c_str()};
     return &ti;
 }
 
 
-enum class engine : size_t { reference, cpu, any=static_cast<size_t>(-1) };
-enum class padding  : size_t { zero, data };
+class engine  { engine();  public: enum type { reference, cpu, any=static_cast<uint32_t>(-1) }; };
+class padding { padding(); public: enum type { zero }; };
 
 // value in any format
 class any_value {
@@ -156,6 +169,8 @@ public:
     template<typename T> operator T() { return as<T>(); }
     const std::vector<task> &work();
     size_t id() const;
+    bool operator==(const primitive &other) const { return _pointer==other._pointer; }
+    bool operator!=(const primitive &other) const { return !(*this==other); }
 };
 
 
@@ -169,6 +184,8 @@ struct memory;
 
 // is_a_primitive is a base class for all primitives exposing common interface; primiary user is a primitive wrapper
 class is_a_primitive {
+    is_a_primitive(const is_a_primitive &);
+    is_a_primitive &operator=(const is_a_primitive &);
 protected:
     type_traits                     *_type_traits;
     std::map<std::string, any_value> _map;
@@ -178,14 +195,14 @@ public:
     virtual ~is_a_primitive() {};
     virtual primitive clone() const = 0;
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
-    virtual const std::vector<primitive_at>  &input() const = 0;
-    virtual const std::vector<primitive>     &output() const = 0;
+    virtual const std::vector<primitive_at>  &input()  const { throw std::runtime_error(std::string("no inputs in ")+_type_traits->name); };
+    virtual const std::vector<primitive>     &output() const { throw std::runtime_error(std::string("no outputs in ")+_type_traits->name); };
     const memory &input_memory(uint32_t at) const { 
         auto prim = input()[at].primitive;
         return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>();
     }
     const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
-    virtual void execute_argument(void *argument) const { throw std::runtime_error("This primitive does not need execute-time argument."); }
+    virtual void execute_argument(void *) const { throw std::runtime_error(std::string("execute-time argument not supported in")+_type_traits->name); }
     friend class primitive;
 
     // to be removed when new thread queue will be done
