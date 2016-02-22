@@ -215,12 +215,12 @@ struct pooling : is_a_primitive {
         std::vector<uint32_t>       size;
         padding::type               padding;
 
-        arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type afrmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, std::vector<uint32_t> size, neural::padding::type);
-        arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type afrmt,                                                               primitive in,                              std::vector<uint32_t> stride, std::vector<uint32_t> size, neural::padding::type);
-        arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type afrmt,                                                               primitive in,                              uint32_t              stride, uint32_t              size, neural::padding::type);
-        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                 primitive in,                              std::vector<uint32_t> stride,                             neural::padding::type);
-        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                 primitive in,                              uint32_t              stride,                             neural::padding::type);
-        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                 primitive in,                              uint32_t              stride);
+        arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                               primitive in,                              std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                               primitive in,                              uint32_t              strd, uint32_t              siz, neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              std::vector<uint32_t> strd,                            neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              uint32_t              strd,                            neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              uint32_t              strd);
     };
     const arguments argument;
 
@@ -232,6 +232,8 @@ private:
     pooling(arguments arg) : is_a_primitive(type_id<const pooling>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
+
+    std::unique_ptr<is_an_implementation> _private;
 };
 
 
