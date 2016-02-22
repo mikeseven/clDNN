@@ -52,16 +52,16 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
 
     struct request_data
     {
-        const batch_normalization_training_forward* primitive;
+        const normalization::batch_training_forward* primitive;
         mutable std::atomic_int* minibatch_counter;
     };
 
-    const batch_normalization_training_forward &outer;
+    const normalization::batch_training_forward &outer;
     std::atomic_int minibatch_counter;
 
     std::vector<request_data> requests;
 
-    batch_normalization_training_forward_reference(batch_normalization_training_forward &arg)
+    batch_normalization_training_forward_reference(normalization::batch_training_forward &arg)
         : is_an_implementation(neural::type_id<batch_normalization_training_forward_reference>()) 
         , outer(arg)
         , minibatch_counter(0) {}
@@ -74,12 +74,12 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
         return {task{implementation, &requests[0]}};
     }
 
-    static is_an_implementation *create(batch_normalization_training_forward &arg) { return new batch_normalization_training_forward_reference(arg); };
+    static is_an_implementation *create(normalization::batch_training_forward &arg) { return new batch_normalization_training_forward_reference(arg); };
     
     static void implementation(const void *ptr) 
     {
         const auto request = reinterpret_cast<const request_data *>(ptr);
-        const auto this_bn = static_cast<const batch_normalization_training_forward *>(request->primitive);
+        const auto this_bn = static_cast<const normalization::batch_training_forward *>(request->primitive);
 
         if(this_bn->output().size() < 3 || 
            this_bn->output().size() > 5 ||
@@ -209,14 +209,14 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
 
     struct request_data
     {
-        const batch_normalization_training_backward* primitive;
+        const normalization::batch_training_backward* primitive;
     };
 
-    const batch_normalization_training_backward &outer;
+    const normalization::batch_training_backward &outer;
 
     std::vector<request_data> requests;
 
-    batch_normalization_training_backward_reference(batch_normalization_training_backward &arg)
+    batch_normalization_training_backward_reference(normalization::batch_training_backward &arg)
         : is_an_implementation(neural::type_id<batch_normalization_training_backward_reference>()) 
         , outer(arg) {}
 
@@ -228,12 +228,12 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
         return {task{implementation, &requests[0]}};
     }
 
-    static is_an_implementation *create(batch_normalization_training_backward &arg) { return new batch_normalization_training_backward_reference(arg); };
+    static is_an_implementation *create(normalization::batch_training_backward &arg) { return new batch_normalization_training_backward_reference(arg); };
 
     static void implementation(const void *ptr) 
     {
         const auto request = reinterpret_cast<const request_data *>(ptr);
-        const auto this_bn = static_cast<const batch_normalization_training_backward *>(request->primitive);
+        const auto this_bn = static_cast<const normalization::batch_training_backward *>(request->primitive);
 
         if(this_bn->output().size() != 3 ||
            this_bn->input().size() != 6)
@@ -331,14 +331,14 @@ struct batch_normalization_inference_reference : is_an_implementation {
 
     struct request_data
     {
-        const batch_normalization_inference* primitive;
+        const normalization::batch_inference* primitive;
     };
 
-    const batch_normalization_inference &outer;
+    const normalization::batch_inference &outer;
 
     std::vector<request_data> requests;
 
-    batch_normalization_inference_reference(batch_normalization_inference &arg)
+    batch_normalization_inference_reference(normalization::batch_inference &arg)
         : is_an_implementation(neural::type_id<batch_normalization_inference_reference>()) 
         , outer(arg) {}
 
@@ -350,12 +350,12 @@ struct batch_normalization_inference_reference : is_an_implementation {
         return {task{implementation, &requests[0]}};
     }
 
-    static is_an_implementation *create(batch_normalization_inference &arg) { return new batch_normalization_inference_reference(arg); };
+    static is_an_implementation *create(normalization::batch_inference &arg) { return new batch_normalization_inference_reference(arg); };
 
     static void implementation(const void *ptr) 
     {
         const auto request = reinterpret_cast<const request_data *>(ptr);
-        const auto this_bn = static_cast<const batch_normalization_inference *>(request->primitive);
+        const auto this_bn = static_cast<const normalization::batch_inference *>(request->primitive);
 
         if(this_bn->input().size() != 5 ||
            this_bn->output().size() != 1)
@@ -423,7 +423,7 @@ struct batch_normalization_inference_reference : is_an_implementation {
 using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
 // maps of available implementations
-static std::map<implementation_key, std::function<is_an_implementation *(batch_normalization_training_forward &)>> training_forward_implementation_map = 
+static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_training_forward &)>> training_forward_implementation_map = 
 {
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_training_forward_reference<float>::create},
     {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_training_forward_reference<float>::create},
@@ -442,7 +442,7 @@ static std::map<implementation_key, std::function<is_an_implementation *(batch_n
     {std::make_tuple(engine::reference, memory::format::bxyf_f64, memory::format::bxyf_f64), batch_normalization_training_forward_reference<double>::create},
     {std::make_tuple(engine::reference, memory::format::bfxy_f64, memory::format::bfxy_f64), batch_normalization_training_forward_reference<double>::create},
 };
-static std::map<implementation_key, std::function<is_an_implementation *(batch_normalization_training_backward &)>> training_backward_implementation_map = 
+static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_training_backward &)>> training_backward_implementation_map = 
 {
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_training_backward_reference<float>::create},
     {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_training_backward_reference<float>::create},
@@ -461,7 +461,7 @@ static std::map<implementation_key, std::function<is_an_implementation *(batch_n
     {std::make_tuple(engine::reference, memory::format::bxyf_f64, memory::format::bxyf_f64), batch_normalization_training_backward_reference<double>::create},
     {std::make_tuple(engine::reference, memory::format::bfxy_f64, memory::format::bfxy_f64), batch_normalization_training_backward_reference<double>::create},
 };
-static std::map<implementation_key, std::function<is_an_implementation *(batch_normalization_inference &)>> inference_implementation_map = 
+static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_inference &)>> inference_implementation_map = 
 {
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_inference_reference<float>::create},
     {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_inference_reference<float>::create},
@@ -484,7 +484,8 @@ static std::map<implementation_key, std::function<is_an_implementation *(batch_n
 } // namespace {
 
 
-batch_normalization_training_forward::arguments::arguments( neural::engine::type engine, std::vector<primitive> output, std::vector<primitive_at> input, bool spatial, double exp_avg_factor, double epsilon)
+namespace normalization {
+batch_training_forward::arguments::arguments( neural::engine::type engine, std::vector<primitive> output, std::vector<primitive_at> input, bool spatial, double exp_avg_factor, double epsilon)
     : engine(engine)
     , output(output)
     , input(input)
@@ -493,10 +494,10 @@ batch_normalization_training_forward::arguments::arguments( neural::engine::type
     , epsilon(epsilon) {}
 
 // creates primitive with batch_normalization implementation that supports provided arguments
-primitive batch_normalization_training_forward::create(batch_normalization_training_forward::arguments arg) 
+primitive batch_training_forward::create(batch_training_forward::arguments arg) 
 {
     // wrap batch norm into RAII wrapper
-    std::unique_ptr<batch_normalization_training_forward> result(new batch_normalization_training_forward(arg));
+    std::unique_ptr<batch_training_forward> result(new batch_training_forward(arg));
 
     // lookup in database; throw if not found
     auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
@@ -511,17 +512,17 @@ primitive batch_normalization_training_forward::create(batch_normalization_train
     return result.release();
 }
 
-batch_normalization_training_backward::arguments::arguments( neural::engine::type engine, std::vector<primitive> output, std::vector<primitive_at> input, bool spatial)
+batch_training_backward::arguments::arguments( neural::engine::type engine, std::vector<primitive> output, std::vector<primitive_at> input, bool spatial)
     : engine(engine)
     , output(output)
     , input(input)
     , spatial(spatial) {}
 
 // creates primitive with batch_normalization implementation that supports provided arguments
-primitive batch_normalization_training_backward::create(batch_normalization_training_backward::arguments arg) 
+primitive batch_training_backward::create(batch_training_backward::arguments arg) 
 {
     // wrap batch norm into RAII wrapper
-    std::unique_ptr<batch_normalization_training_backward> result(new batch_normalization_training_backward(arg));
+    std::unique_ptr<batch_training_backward> result(new batch_training_backward(arg));
 
     // lookup in database; throw if not found
     auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
@@ -536,17 +537,17 @@ primitive batch_normalization_training_backward::create(batch_normalization_trai
     return result.release();
 }
 
-batch_normalization_inference::arguments::arguments( neural::engine::type engine, std::vector<primitive> output, std::vector<primitive_at> input, bool spatial)
+batch_inference::arguments::arguments( neural::engine::type engine, std::vector<primitive> output, std::vector<primitive_at> input, bool spatial)
     : engine(engine)
     , output(output)
     , input(input)
     , spatial(spatial) {}
 
 // creates primitive with batch_normalization implementation that supports provided arguments
-primitive batch_normalization_inference::create(batch_normalization_inference::arguments arg) 
+primitive batch_inference::create(batch_inference::arguments arg) 
 {
     // wrap batch norm into RAII wrapper
-    std::unique_ptr<batch_normalization_inference> result(new batch_normalization_inference(arg));
+    std::unique_ptr<batch_inference> result(new batch_inference(arg));
 
     // lookup in database; throw if not found
     auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
@@ -561,4 +562,6 @@ primitive batch_normalization_inference::create(batch_normalization_inference::a
     return result.release();
 }
 
-}
+} // namespace normalization
+
+} // namespace neural
