@@ -14,13 +14,43 @@ struct memory : is_a_primitive {
     class format { format(); public: enum type {
         xb_f32,     // 1D+batch, float32
         yxfb_f32,   // 3D+batch, float32
+        fyxb_f32,
+        xyfb_f32,
+        fxyb_f32,
+        byxf_f32,   
+        bfyx_f32,
+        bxyf_f32,
+        bfxy_f32,
+        yxfb_f64,   // 3D+batch, float64
+        fyxb_f64,
+        xyfb_f64,
+        fxyb_f64,
+        byxf_f64,
+        bfyx_f64,
+        bxyf_f64,
+        bfxy_f64,
         any=static_cast<uint32_t>(-1)
     }; };
 
     static const format_traits traits(format::type fmt) {
         switch(fmt) {
-        case format::  xb_f32:  return {2, type_id<float>()};
-        case format::yxfb_f32:  return {4, type_id<float>()};
+        case format::  xb_f32: return {2, type_id<float>()};
+        case format::yxfb_f32:
+        case format::fyxb_f32:
+        case format::xyfb_f32:
+        case format::fxyb_f32:
+        case format::byxf_f32:
+        case format::bfyx_f32:
+        case format::bxyf_f32:
+        case format::bfxy_f32: return {4, type_id<float>()};
+        case format::yxfb_f64:
+        case format::fyxb_f64:
+        case format::xyfb_f64:
+        case format::fxyb_f64:
+        case format::byxf_f64:
+        case format::bfyx_f64:
+        case format::bxyf_f64:
+        case format::bfxy_f64: return {4, type_id<double>()};
         default: throw std::runtime_error("unknown memory::format");
         }
     }
@@ -45,6 +75,7 @@ struct memory : is_a_primitive {
         else pointer = arg; 
     }
     size_t count() const;
+
     ~memory();
 private:
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
@@ -97,7 +128,76 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
 };
 
+// batch normalization training - forward
+struct batch_normalization_training_forward : is_a_primitive {
+    struct arguments {
+        engine::type                engine;
+        std::vector<primitive>      output;         // 3-5: {output, current_mean, current_inv_std_dev, [moving_mean, moving_inv_std_dev]}
+        std::vector<primitive_at>   input;          // 3: {input, scale, bias}
+        bool                        spatial;
+        double                      exp_avg_factor;
+        double                      epsilon;
 
+        arguments(neural::engine::type, std::vector<primitive>, std::vector<primitive_at>, bool, double, double);
+    };
+    const arguments argument;
+
+    struct query_entry : is_a_query_entry { arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    static primitive create(arguments);
+    primitive clone() const { return create(argument); }
+    const std::vector<primitive_at>  &input() const  { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+
+private:
+    batch_normalization_training_forward(arguments arg) : is_a_primitive(type_id<const batch_normalization_training_forward>()), argument(arg) {};
+};
+
+// batch normalization training - backward
+struct batch_normalization_training_backward : is_a_primitive {
+    struct arguments {
+        engine::type                engine;
+        std::vector<primitive>      output;         // 3: {input_grad, scale_grad, bias_grad}
+        std::vector<primitive_at>   input;          // 6: {forward_input, forward_scale, forward_bias, output_grad, current_mean, current_inv_std_dev}
+        bool                        spatial;
+
+        arguments(neural::engine::type, std::vector<primitive>, std::vector<primitive_at>, bool);
+    };
+    const arguments argument;
+
+    struct query_entry : is_a_query_entry { arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    static primitive create(arguments);
+    primitive clone() const { return create(argument); }
+    const std::vector<primitive_at>  &input() const  { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+
+private:
+    batch_normalization_training_backward(arguments arg) : is_a_primitive(type_id<const batch_normalization_training_backward>()), argument(arg) {};
+};
+
+// batch normalization inference
+struct batch_normalization_inference : is_a_primitive {
+    struct arguments {
+        engine::type                engine;
+        std::vector<primitive>      output;         // 1: {output}
+        std::vector<primitive_at>   input;          // 5: {input, scale, bias, precomputed_mean, precomputed_inv_std_dev}
+        bool                        spatial;
+
+        arguments(neural::engine::type, std::vector<primitive>, std::vector<primitive_at>, bool);
+    };
+    const arguments argument;
+
+    struct query_entry : is_a_query_entry { arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    static primitive create(arguments);
+    primitive clone() const { return create(argument); }
+    const std::vector<primitive_at>  &input() const  { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+
+private:
+    batch_normalization_inference(arguments arg) : is_a_primitive(type_id<const batch_normalization_inference>()), argument(arg) {};
+};
 
 // direct convolution
 struct convolution : is_a_primitive {
