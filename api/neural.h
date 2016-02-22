@@ -128,77 +128,6 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
 };
 
-// batch normalization training - forward
-struct batch_normalization_training_forward : is_a_primitive {
-    struct arguments {
-        engine::type                engine;
-        std::vector<primitive>      output;         // 3-5: {output, current_mean, current_inv_std_dev, [moving_mean, moving_inv_std_dev]}
-        std::vector<primitive_at>   input;          // 3: {input, scale, bias}
-        bool                        spatial;
-        double                      exp_avg_factor;
-        double                      epsilon;
-
-        arguments(neural::engine::type, std::vector<primitive>, std::vector<primitive_at>, bool, double, double);
-    };
-    const arguments argument;
-
-    struct query_entry : is_a_query_entry { arguments arguments; };
-    static std::vector<query_entry> query(arguments);
-    static primitive create(arguments);
-    primitive clone() const { return create(argument); }
-    const std::vector<primitive_at>  &input() const  { return argument.input; };
-    const std::vector<primitive>     &output() const { return argument.output; };
-
-private:
-    batch_normalization_training_forward(arguments arg) : is_a_primitive(type_id<const batch_normalization_training_forward>()), argument(arg) {};
-};
-
-// batch normalization training - backward
-struct batch_normalization_training_backward : is_a_primitive {
-    struct arguments {
-        engine::type                engine;
-        std::vector<primitive>      output;         // 3: {input_grad, scale_grad, bias_grad}
-        std::vector<primitive_at>   input;          // 6: {forward_input, forward_scale, forward_bias, output_grad, current_mean, current_inv_std_dev}
-        bool                        spatial;
-
-        arguments(neural::engine::type, std::vector<primitive>, std::vector<primitive_at>, bool);
-    };
-    const arguments argument;
-
-    struct query_entry : is_a_query_entry { arguments arguments; };
-    static std::vector<query_entry> query(arguments);
-    static primitive create(arguments);
-    primitive clone() const { return create(argument); }
-    const std::vector<primitive_at>  &input() const  { return argument.input; };
-    const std::vector<primitive>     &output() const { return argument.output; };
-
-private:
-    batch_normalization_training_backward(arguments arg) : is_a_primitive(type_id<const batch_normalization_training_backward>()), argument(arg) {};
-};
-
-// batch normalization inference
-struct batch_normalization_inference : is_a_primitive {
-    struct arguments {
-        engine::type                engine;
-        std::vector<primitive>      output;         // 1: {output}
-        std::vector<primitive_at>   input;          // 5: {input, scale, bias, precomputed_mean, precomputed_inv_std_dev}
-        bool                        spatial;
-
-        arguments(neural::engine::type, std::vector<primitive>, std::vector<primitive_at>, bool);
-    };
-    const arguments argument;
-
-    struct query_entry : is_a_query_entry { arguments arguments; };
-    static std::vector<query_entry> query(arguments);
-    static primitive create(arguments);
-    primitive clone() const { return create(argument); }
-    const std::vector<primitive_at>  &input() const  { return argument.input; };
-    const std::vector<primitive>     &output() const { return argument.output; };
-
-private:
-    batch_normalization_inference(arguments arg) : is_a_primitive(type_id<const batch_normalization_inference>()), argument(arg) {};
-};
-
 // direct convolution
 struct convolution : is_a_primitive {
     struct arguments {
@@ -338,7 +267,7 @@ private:
 
 
 
-namespace normalization {
+namespace normalization { /////////////////////////////////////////////////////////////////////////////////////////////
 // normalization of response
 struct /*normalization*/response : is_a_primitive {
     struct arguments {
@@ -396,7 +325,79 @@ private:
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
-};//normalization
+
+// batch normalization training - forward
+struct /*normalization*/batch_training_forward : is_a_primitive {
+    struct arguments {
+        engine::type                engine;
+        std::vector<primitive>      output;         // 3-5: {output, current_mean, current_inv_std_dev, [moving_mean, moving_inv_std_dev]}
+        std::vector<primitive_at>   input;          // 3: {input, scale, bias}
+        bool                        spatial;
+        double                      exp_avg_factor;
+        double                      epsilon;
+
+        arguments(neural::engine::type, std::vector<primitive>, std::vector<primitive_at>, bool, double, double);
+    };
+    const arguments argument;
+
+    struct query_entry : is_a_query_entry { arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    static primitive create(arguments);
+    primitive clone() const { return create(argument); }
+    const std::vector<primitive_at>  &input() const  { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+
+private:
+    batch_training_forward(arguments arg) : is_a_primitive(type_id<const batch_training_forward>()), argument(arg) {};
+};
+
+// batch normalization training - backward
+struct /*normalization*/batch_training_backward : is_a_primitive {
+    struct arguments {
+        engine::type                engine;
+        std::vector<primitive>      output;         // 3: {input_grad, scale_grad, bias_grad}
+        std::vector<primitive_at>   input;          // 6: {forward_input, forward_scale, forward_bias, output_grad, current_mean, current_inv_std_dev}
+        bool                        spatial;
+
+        arguments(neural::engine::type, std::vector<primitive>, std::vector<primitive_at>, bool);
+    };
+    const arguments argument;
+
+    struct query_entry : is_a_query_entry { arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    static primitive create(arguments);
+    primitive clone() const { return create(argument); }
+    const std::vector<primitive_at>  &input() const  { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+
+private:
+    batch_training_backward(arguments arg) : is_a_primitive(type_id<const batch_training_backward>()), argument(arg) {};
+};
+
+// batch normalization inference
+struct /*normalization*/batch_inference : is_a_primitive {
+    struct arguments {
+        engine::type                engine;
+        std::vector<primitive>      output;         // 1: {output}
+        std::vector<primitive_at>   input;          // 5: {input, scale, bias, precomputed_mean, precomputed_inv_std_dev}
+        bool                        spatial;
+
+        arguments(neural::engine::type, std::vector<primitive>, std::vector<primitive_at>, bool);
+    };
+    const arguments argument;
+
+    struct query_entry : is_a_query_entry { arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    static primitive create(arguments);
+    primitive clone() const { return create(argument); }
+    const std::vector<primitive_at>  &input() const  { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+
+private:
+    batch_inference(arguments arg) : is_a_primitive(type_id<const batch_inference>()), argument(arg) {};
+};
+
+};//normalization /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 

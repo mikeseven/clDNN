@@ -48,6 +48,9 @@
     <ClCompile Include="examples\007.cpp">
       <Filter>Source Files\examples</Filter>
     </ClCompile>
+    <ClCompile Include="examples\008.cpp">
+      <Filter>Source Files\examples</Filter>
+    </ClCompile>
     <ClCompile Include="src\relu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -60,14 +63,18 @@
     <ClCompile Include="src\file.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pooling.cpp">
+    <ClCompile Include="src\pooling.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\batch_normalization.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="examples\008.cpp">
-      <Filter>Source Files</Filter>
+
     <ClCompile Include="examples\bn.cpp">
       <Filter>Source Files\examples</Filter>
+    </ClCompile>
+    <ClCompile Include="src\multidimensional_counter.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -78,6 +85,9 @@
       <Filter>Header Files\api</Filter>
     </ClInclude>
     <ClInclude Include="src\thread_pool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\multidimensional_counter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
