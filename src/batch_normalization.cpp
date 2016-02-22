@@ -495,7 +495,7 @@ batch_normalization_training_forward::arguments::arguments( neural::engine::type
 // creates primitive with batch_normalization implementation that supports provided arguments
 primitive batch_normalization_training_forward::create(batch_normalization_training_forward::arguments arg) 
 {
-    // wrap relu into RAII wrapper
+    // wrap batch norm into RAII wrapper
     std::unique_ptr<batch_normalization_training_forward> result(new batch_normalization_training_forward(arg));
 
     // lookup in database; throw if not found
@@ -520,7 +520,7 @@ batch_normalization_training_backward::arguments::arguments( neural::engine::typ
 // creates primitive with batch_normalization implementation that supports provided arguments
 primitive batch_normalization_training_backward::create(batch_normalization_training_backward::arguments arg) 
 {
-    // wrap relu into RAII wrapper
+    // wrap batch norm into RAII wrapper
     std::unique_ptr<batch_normalization_training_backward> result(new batch_normalization_training_backward(arg));
 
     // lookup in database; throw if not found
@@ -545,7 +545,7 @@ batch_normalization_inference::arguments::arguments( neural::engine::type engine
 // creates primitive with batch_normalization implementation that supports provided arguments
 primitive batch_normalization_inference::create(batch_normalization_inference::arguments arg) 
 {
-    // wrap relu into RAII wrapper
+    // wrap batch norm into RAII wrapper
     std::unique_ptr<batch_normalization_inference> result(new batch_normalization_inference(arg));
 
     // lookup in database; throw if not found

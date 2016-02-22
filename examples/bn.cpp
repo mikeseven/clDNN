@@ -190,20 +190,30 @@ void spatial_bn_trivial_example_inference_double()
 
 void spatial_bn_complex_example_training_float() 
 {
-    // Create data buffers.
     // TODO: after string keys have been implemented, move buffer creation to primitives' constructors and reference them by primitive-string lookups.
+
+    // Create data buffers that have to be initialized before training starts.
     auto forward_input       = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}, true});
     auto forward_scale       = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
     auto forward_bias        = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
+
+    // Create intermediate buffers that will be computed during forward training pass.
     auto current_mean        = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
     auto current_inv_std_dev = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
     auto moving_mean         = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
     auto moving_inv_std_dev  = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
+
+    // Create output buffers.
     auto forward_output      = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}, true});
     //auto forward_output_grad = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}, true}); // same as forward_output
     auto forward_input_grad  = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}, true});
     auto forward_scale_grad  = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
     auto forward_bias_grad   = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
+
+    // Initialize input buffers for forward training primitive which will initialize other buffers.
+    fill_memory<float>(forward_input, 0);
+    fill_memory<float>(forward_scale, 0);
+    fill_memory<float>( forward_bias, 0);
 
     // Create primitives.
     auto bn_train_fw  = batch_normalization_training_forward::create({engine::reference, {forward_output, current_mean, current_inv_std_dev, moving_mean, moving_inv_std_dev}, {forward_input, forward_scale, forward_bias}, true, 0.0, FLT_EPSILON});
@@ -235,20 +245,30 @@ void spatial_bn_complex_example_training_float()
 
 void spatial_bn_complex_example_training_double() 
 {
-    // Create data buffers.
     // TODO: after string keys have been implemented, move buffer creation to primitives' constructors and reference them by primitive-string lookups.
+
+    // Create data buffers that have to be initialized before training starts.
     auto forward_input       = memory::create({engine::cpu, memory::format::yxfb_f64, {16, 32, 64, 128}, true});
     auto forward_scale       = memory::create({engine::cpu, memory::format::yxfb_f64, { 1,  1, 64,   1}, true});
     auto forward_bias        = memory::create({engine::cpu, memory::format::yxfb_f64, { 1,  1, 64,   1}, true});
+
+    // Create intermediate buffers that will be computed during forward training pass.
     auto current_mean        = memory::create({engine::cpu, memory::format::yxfb_f64, { 1,  1, 64,   1}, true});
     auto current_inv_std_dev = memory::create({engine::cpu, memory::format::yxfb_f64, { 1,  1, 64,   1}, true});
     auto moving_mean         = memory::create({engine::cpu, memory::format::yxfb_f64, { 1,  1, 64,   1}, true});
     auto moving_inv_std_dev  = memory::create({engine::cpu, memory::format::yxfb_f64, { 1,  1, 64,   1}, true});
+
+    // Create output buffers.
     auto forward_output      = memory::create({engine::cpu, memory::format::yxfb_f64, {16, 32, 64, 128}, true});
     //auto forward_output_grad = memory::create({engine::cpu, memory::format::yxfb_f64, {16, 32, 64, 128}, true}); // same as forward_output
     auto forward_input_grad  = memory::create({engine::cpu, memory::format::yxfb_f64, {16, 32, 64, 128}, true});
     auto forward_scale_grad  = memory::create({engine::cpu, memory::format::yxfb_f64, { 1,  1, 64,   1}, true});
     auto forward_bias_grad   = memory::create({engine::cpu, memory::format::yxfb_f64, { 1,  1, 64,   1}, true});
+
+    // Initialize input buffers for forward training primitive which will initialize other buffers.
+    fill_memory<double>(forward_input, 0);
+    fill_memory<double>(forward_scale, 0);
+    fill_memory<double>( forward_bias, 0);
 
     // Create primitives.
     auto bn_train_fw  = batch_normalization_training_forward::create({engine::reference, {forward_output, current_mean, current_inv_std_dev, moving_mean, moving_inv_std_dev}, {forward_input, forward_scale, forward_bias}, true, 0.0, FLT_EPSILON});
