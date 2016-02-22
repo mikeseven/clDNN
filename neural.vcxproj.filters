@@ -66,7 +66,7 @@
     <ClCompile Include="examples\bn.cpp">
       <Filter>Source Files\examples</Filter>
     </ClCompile>
-    <ClCompile Include="src\internal_dev_tools.cpp">
+    <ClCompile Include="src\multidimensional_counter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -80,7 +80,7 @@
     <ClInclude Include="src\thread_pool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\internal_dev_tools.h">
+    <ClInclude Include="src\multidimensional_counter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

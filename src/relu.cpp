@@ -1,5 +1,5 @@
 #include "neural.h"
-#include "internal_dev_tools.h"
+#include "multidimensional_counter.h"
 #include <algorithm>
 #include <tuple>
 #include <map>
@@ -51,7 +51,7 @@ struct relu_reference : is_an_implementation {
             // most changing dimension has linear layout in memory
             std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
             auto in_offset  = calculate_offset(input_whole_size , acc ) + input_offset.back();
-            
+
             std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
             auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
 

@@ -1,8 +1,12 @@
-#include "internal_dev_tools.h"
+#include "multidimensional_counter.h"
 #include <numeric>
+#include <string>
 
 size_t calculate_offset(const std::vector<uint32_t> &size, const std::vector<uint32_t> &position){
     size_t offset = 0;
+
+    for(size_t i = 0; i < position.size(); ++i)
+        if(size[i] <= position[i]) throw std::out_of_range("Position is greater or equall to size at index: " + std::to_string(i) );
 
     for(size_t i = 0; i != position.size(); ++i){    // number of iterations
         auto idx = position.size() - 1 - i;
