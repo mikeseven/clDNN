@@ -7,3 +7,4 @@ neural.vcxproj
 neural.vcxproj.filters
 
 bin/*
+MSVC/
