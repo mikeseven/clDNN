@@ -1,7 +1,10 @@
 #include "neural.h"
-#include <tuple>
-#include <map>
+#include "multidimensional_counter.h"
+#include <algorithm>
 #include <functional>
+#include <numeric>
+#include <map>
+#include <tuple>
 
 namespace neural {
 
@@ -31,7 +34,7 @@ struct pooling_reference : is_an_implementation {
         auto window_size       = this_pooling->argument.size;
         auto padding           = this_pooling->argument.padding; //todo
 
-        if(input_memory_arg.format  != memory::format::yxfb_f32)  throw std::runtime_error("Pooling reference uses yxfb_f32 format.");
+        if(input_memory_arg.format  != memory::format::yxfb_f32)  throw std::runtime_error("Pooling reference uses yxfb_f32 format."); //todo ?
         if(input_buffer_size.size() != output_buffer_size.size()) throw std::runtime_error("Pooling input/output number of dimension does not match.");
         if(stride_size.size()       != output_buffer_size.size()) throw std::runtime_error("Pooling stride/output number of dimension does not match.");
         if(window_size.size()       != output_buffer_size.size()) throw std::runtime_error("Pooling window_size/output number of dimension does not match.");
@@ -40,14 +43,41 @@ struct pooling_reference : is_an_implementation {
         //for(auto &x : output_offset) if(x < 0)                    throw std::runtime_error("Pooling negative output offset."); //todo
         for(auto &x : stride_size)   if(x < 0)                    throw std::runtime_error("Pooling negative stride.");
 
-        // output size = (input size - window size) / step + 1
-        for(size_t i = 0; i < input_offset.size(); ++i) //todo
-            if(output_size[i] < (input_buffer_size[i] - input_offset[i]) / (stride_size[i] + 1) ) throw std::runtime_error("Output size of pooling is to small.");
+        // general formula: output size = (input size - window size) / step + 1
+        for(size_t i = 0; i < input_offset.size(); ++i){ //todo
+            if(output_size[i] < (static_cast<int32_t>(input_buffer_size[i]) - input_offset[i]) / (stride_size[i] + 1) ) 
+                throw std::runtime_error("Output size of pooling is to small.");
 
-        std::vector<uint32_t> counter( output_size.size(), 0 );
+            if(output_buffer_size[i] < output_size[i] + output_offset[i]) 
+                throw std::runtime_error("Pooling output buffer size is to small.");
+        }
+
+        std::vector<uint32_t> general_counter( output_size.size(), 0 ); //all sizes are equall
+        std::vector<uint32_t> window_counter ( output_size.size(), 0 ); 
+        std::vector<uint32_t> input_acc      ( output_size.size(), 0 ); //todo int32
+        std::vector<uint32_t> output_acc     ( output_size.size(), 0 ); //todo int32
+
+        float facc = 0;
 
         if( pooling::mode::max == this_pooling->argument.mode ){
             //todo
+        //std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
+        //auto in_offset  = calculate_offset(input_whole_size , acc ) + input_offset.back();
+
+        //std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
+        //auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
+            
+            while( !counter_finished(output_size, general_counter) ){
+                auto out_offset = calculate_offset(output_size, input_acc);
+
+                while( !counter_finished(window_size, window_counter) ){
+                    auto in_offset  = calculate_offset(output_size, output_acc);
+                    output[out_offset] = std::max( input[in_offset], output[out_offset] );
+                    counter_increase(window_size, window_counter);
+                }
+
+            counter_increase(output_size, general_counter);
+            }
         } else {// avg
             //todo
         }
