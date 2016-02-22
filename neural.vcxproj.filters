@@ -66,6 +66,9 @@
     <ClCompile Include="examples\bn.cpp">
       <Filter>Source Files\examples</Filter>
     </ClCompile>
+    <ClCompile Include="src\multidimensional_counter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="api\neural.h">
@@ -75,6 +78,9 @@
       <Filter>Header Files\api</Filter>
     </ClInclude>
     <ClInclude Include="src\thread_pool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\multidimensional_counter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
