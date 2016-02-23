@@ -6,6 +6,19 @@
 #include <functional>
 
 #include <fstream>//todo remove
+size_t calculate_idx(const std::vector<uint32_t> &size, const std::vector<uint32_t> &position){ //todo remove
+    size_t offset = 0;
+
+    for(size_t i = 0; i < position.size(); ++i)
+        if(size[i] <= position[i]) throw std::out_of_range("Position is greater or equall to size at index: " + std::to_string(i) );
+
+    for(size_t i = 0; i != position.size(); ++i){    // number of iterations
+        auto idx = position.size() - 1 - i;
+        offset += std::accumulate(size.begin() + idx + 1, size.end(), 1, std::multiplies<uint32_t>() ) * position[idx];
+    };
+
+    return offset;
+};
 template<typename T> //todo remove
 void save_4d_data_yxzb( std::vector<uint32_t> size, std::string filename, T* data ) {
     std::ofstream file;
@@ -16,7 +29,7 @@ void save_4d_data_yxzb( std::vector<uint32_t> size, std::string filename, T* dat
         file << "n\\z: " << batch << "\\" << z << std::endl;
         for( uint32_t y = 0; y < size[1]; ++y ) {
             for( uint32_t x = 0; x < size[0]; ++x ) {
-                file << *(data + calculate_offset(size, {y, x, z}) + batch) << "\t";
+                file << *(data + calculate_idx(size, {y, x, z}) + batch) << "\t";
             }
             file << std::endl;
         }
@@ -63,27 +76,38 @@ struct relu_reference : is_an_implementation {
             if(output_whole_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("ReLU sizes to small.");
         }
 
-        std::vector<uint32_t> counter( output_size.size() - 1, 0 );
+
+        //std::vector<uint32_t> counter( output_size.size() - 1, 0 );
 
         auto uint_input_offset = std::vector<uint32_t>(input_offset.begin(), input_offset.end());  //relu has always non negative offset
 
+        multidimensional_counter<uint32_t> counter(output_size, output_size.size()-1, {output_offset.begin(), output_offset.end()-1} );
+
         std::vector<uint32_t> acc(uint_input_offset.size());
-        while( !counter_finished(output_size, counter) ){
+        while( !counter.counter_finished() ){
             // calculate offset without most frequently changing dimension to reduce function calls
             // most changing dimension has linear layout in memory
-            std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            auto in_offset  = calculate_offset(input_whole_size , acc ) + input_offset.back();
+            //std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
+            //auto in_offset  = calculate_idx(input_whole_size , acc ) + input_offset.back();
 
-            std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
+            //std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
+            //auto out_offset = calculate_idx(output_whole_size, acc) + output_offset.back();
+
+            //   std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
+            auto out_offset = counter.calculate_idx() + output_offset.back();
+    
+            std::transform( counter.get_counter().begin(), counter.get_counter().end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
+            auto in_offset  = calculate_idx(input_whole_size , acc ) + input_offset.back();
+
 
             // relu on linear buffer
             for (uint32_t i = 0; i < output_size.back() ; ++i) {
                 output[out_offset + i] = std::max( input[in_offset + i], 0.0f) 
                                                  + this_relu->argument.negative_slope * std::min( input[in_offset + i], 0.0f);
             }
-            counter_increase(output_size, counter);
+            counter.counter_increase();
         }
+        save_4d_data_yxzb<float>(output_whole_size, "out_after", output); //todo remove
     }
 
     std::vector<task> work() {

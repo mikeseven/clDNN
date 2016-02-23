@@ -103,10 +103,14 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="examples\007.cpp" />
-    <ClCompile Include="examples\008.cpp" />
+    <ClCompile Include="examples\008.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="examples\bn.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="src\pooling.cpp" />
+    <ClCompile Include="src\pooling.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="src\batch_normalization.cpp" />
     <ClCompile Include="src\execute.cpp" />
     <ClCompile Include="src\file.cpp" />
