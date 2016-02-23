@@ -6,6 +6,39 @@
 #include <map>
 #include <tuple>
 
+#include <fstream>//todo remove
+namespace{
+size_t calculate_idx(const std::vector<uint32_t> &size, const std::vector<uint32_t> &position){ //todo remove
+    size_t offset = 0;
+
+    for(size_t i = 0; i < position.size(); ++i)
+        if(size[i] <= position[i]) throw std::out_of_range("Position is greater or equall to size at index: " + std::to_string(i) );
+
+    for(size_t i = 0; i != position.size(); ++i){    // number of iterations
+        auto idx = position.size() - 1 - i;
+        offset += std::accumulate(size.begin() + idx + 1, size.end(), 1, std::multiplies<uint32_t>() ) * position[idx];
+    };
+
+    return offset;
+};
+template<typename T> //todo remove
+void save_4d_data_yxzb( std::vector<uint32_t> size, std::string filename, T* data ) {
+    std::ofstream file;
+    file.open( filename + ".txt" );
+
+    for( uint32_t batch = 0; batch < size[3]; ++batch )
+    for( uint32_t z = 0; z < size[2]; ++z ) {
+        file << "n\\z: " << batch << "\\" << z << std::endl;
+        for( uint32_t y = 0; y < size[1]; ++y ) {
+            for( uint32_t x = 0; x < size[0]; ++x ) {
+                file << *(data + calculate_idx(size, {y, x, z}) + batch) << "\t";
+            }
+            file << std::endl;
+        }
+    }
+    file.close();
+}
+}
 namespace neural {
 
 struct pooling_reference : is_an_implementation {
@@ -41,7 +74,10 @@ struct pooling_reference : is_an_implementation {
         if(input_memory_arg.format  != output_memory_arg.format)  throw std::runtime_error("Pooling input/output data format does not match.");
         //for(auto &x : input_offset)  if(x < 0)                    throw std::runtime_error("Pooling negative input offset."); //todo
         //for(auto &x : output_offset) if(x < 0)                    throw std::runtime_error("Pooling negative output offset."); //todo
-        for(auto &x : stride_size)   if(x < 0)                    throw std::runtime_error("Pooling negative stride.");
+        //for(auto &x : stride_size)   if(x < 0)                    throw std::runtime_error("Pooling negative stride."); //todo unsigned
+
+        save_4d_data_yxzb<float>(input_buffer_size, "in_before", input); //todo remove
+        save_4d_data_yxzb<float>(output_buffer_size, "out_before", output); //todo remove
 
         // general formula: output size = (input size - window size) / step + 1
         for(size_t i = 0; i < input_offset.size(); ++i){ //todo
@@ -127,6 +163,8 @@ struct pooling_reference : is_an_implementation {
             }
             increse_counter();
         }*/
+
+        save_4d_data_yxzb<float>(output_buffer_size, "out_after", output); //todo remove
     }
 
     std::vector<task> work() {

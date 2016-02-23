@@ -6,6 +6,10 @@
 #include <functional>
 
 #include <fstream>//todo remove
+
+namespace neural {
+
+namespace {
 size_t calculate_idx(const std::vector<uint32_t> &size, const std::vector<uint32_t> &position){ //todo remove
     size_t offset = 0;
 
@@ -36,10 +40,6 @@ void save_4d_data_yxzb( std::vector<uint32_t> size, std::string filename, T* dat
     }
     file.close();
 }
-
-namespace neural {
-
-namespace {
 
 struct relu_reference : is_an_implementation {
     const relu &outer;
