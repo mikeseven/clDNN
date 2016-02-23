@@ -3,12 +3,6 @@
 #include <numeric>
 #include <string>
 
-    //size_t calculate_idx(const std::vector<int32_t>  &size, const std::vector<int32_t>  &position);
-    //bool counter_finished(const std::vector<uint32_t> &size, const std::vector<uint32_t> &counter);
-    //bool counter_finished(const std::vector<int32_t>  &size, const std::vector<int32_t>  &counter);
-    //void counter_increase(const std::vector<uint32_t> &size, std::vector<uint32_t> &counter);
-    //void counter_increase(const std::vector<int32_t>  &size, std::vector<int32_t>  &counter);
-    //void counter_increase(const std::vector<int32_t>  &size, std::vector<int32_t>  &counter, std::vector<int32_t> &val);
 namespace neural{
 
 template<typename T>
@@ -58,11 +52,11 @@ inline multidimensional_counter<T>::multidimensional_counter( const std::vector<
                                                               const std::vector<T> &v_out_offset)
     : size({v_size})
     , counter(counter_length, 0)
-    , in_buffer_size({v_in_buf_size.begin(), v_in_buf_size.begin()+counter_length})
-    , in_offset({v_in_offset.begin(), v_in_offset.begin()+counter_length})
+    , in_buffer_size({v_in_buf_size})
+    , in_offset({v_in_offset.begin(), v_in_offset.begin() + counter_length})
     , in_position({in_offset})
     , out_buffer_size({v_out_buf_size})
-    , out_offset({v_out_offset.begin(), v_out_offset.begin()+counter_length})
+    , out_offset({v_out_offset.begin(), v_out_offset.begin() + counter_length})
     , out_position({out_offset}) 
     {}
 
