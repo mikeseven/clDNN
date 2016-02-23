@@ -5,6 +5,25 @@
 #include <map>
 #include <functional>
 
+#include <fstream>//todo remove
+template<typename T> //todo remove
+void save_4d_data_yxzb( std::vector<uint32_t> size, std::string filename, T* data ) {
+    std::ofstream file;
+    file.open( filename + ".txt" );
+
+    for( uint32_t batch = 0; batch < size[3]; ++batch )
+    for( uint32_t z = 0; z < size[2]; ++z ) {
+        file << "n\\z: " << batch << "\\" << z << std::endl;
+        for( uint32_t y = 0; y < size[1]; ++y ) {
+            for( uint32_t x = 0; x < size[0]; ++x ) {
+                file << *(data + calculate_offset(size, {y, x, z}) + batch) << "\t";
+            }
+            file << std::endl;
+        }
+    }
+    file.close();
+}
+
 namespace neural {
 
 namespace {
@@ -35,6 +54,9 @@ struct relu_reference : is_an_implementation {
         if(input_whole_size.size() != output_whole_size.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
         if(input_memory_arg.format != output_memory_arg.format) throw std::runtime_error("ReLU input/output data format does not match.");
         for(auto &x : input_offset)  if(x < 0)                  throw std::runtime_error("ReLU negative input offset.");
+
+        save_4d_data_yxzb<float>(input_whole_size, "in_before", input); //todo remove
+        save_4d_data_yxzb<float>(output_whole_size, "out_before", output); //todo remove
 
         for(size_t i = 0; i < input_whole_size.size(); ++i){
             if(input_whole_size[i]  < output_size[i] + input_offset[i] ) throw std::runtime_error("ReLU input/output size does not match.");
