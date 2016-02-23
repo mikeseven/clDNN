@@ -48,9 +48,6 @@
     <ClCompile Include="examples\007.cpp">
       <Filter>Source Files\examples</Filter>
     </ClCompile>
-    <ClCompile Include="examples\008.cpp">
-      <Filter>Source Files\examples</Filter>
-    </ClCompile>
     <ClCompile Include="src\relu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -63,18 +60,11 @@
     <ClCompile Include="src\file.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\pooling.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\batch_normalization.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-
     <ClCompile Include="examples\bn.cpp">
       <Filter>Source Files\examples</Filter>
-    </ClCompile>
-    <ClCompile Include="src\multidimensional_counter.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
