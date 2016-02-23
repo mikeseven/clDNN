@@ -37,7 +37,7 @@ public:
     bool counter_finished();
     void counter_increase();
 
-    std::vector<T> get_size()        { return size;        };      //todo consts  
+    std::vector<T> get_size()        { return size;        };      //todo consts
     std::vector<T> get_counter()     { return counter;     };
     std::vector<T> get_in_position() { return  in_position;};
     std::vector<T> get_out_position(){ return out_position;};
@@ -57,7 +57,7 @@ inline multidimensional_counter<T>::multidimensional_counter( const std::vector<
     , in_position({in_offset})
     , out_buffer_size({v_out_buf_size})
     , out_offset({v_out_offset.begin(), v_out_offset.begin() + counter_length})
-    , out_position({out_offset}) 
+    , out_position({out_offset})
     {}
 
 template<typename T>
@@ -72,7 +72,7 @@ inline multidimensional_counter<T>::multidimensional_counter( const std::vector<
     , in_position(counter_length, 0)
     , out_buffer_size({v_out_buf_size})
     , out_offset(counter_length, 0)
-    , out_position(counter_length, 0) 
+    , out_position(counter_length, 0)
     {}
 
 template<typename T>
@@ -111,7 +111,7 @@ size_t multidimensional_counter<T>::calculate_out_idx(){
 
     for(size_t i = 0; i < counter.size(); ++i)
         if(size[i] <= counter[i]) throw std::out_of_range("Position is greater or equall to size at index: " + std::to_string(i) );
-    
+
     for(size_t i = 0; i != out_position.size(); ++i){    // number of iterations
         auto idx = out_position.size() - 1 - i;
         result_idx += std::accumulate(out_buffer_size.begin() + idx + 1, out_buffer_size.end(), 1, std::multiplies<uint32_t>() ) * out_position[idx];
@@ -126,7 +126,7 @@ size_t multidimensional_counter<T>::calculate_in_idx(){
 
     for(size_t i = 0; i < counter.size(); ++i)
         if(size[i] <= counter[i]) throw std::out_of_range("Position is greater or equall to size at index: " + std::to_string(i) );
-    
+
     for(size_t i = 0; i != in_position.size(); ++i){    // number of iterations
         auto idx = in_position.size() - 1 - i;
         result_idx += std::accumulate(in_buffer_size.begin() + idx + 1, in_buffer_size.end(), 1, std::multiplies<uint32_t>() ) * in_position[idx];
@@ -146,7 +146,7 @@ bool multidimensional_counter<T>::counter_finished(){
 template<typename T>
 void multidimensional_counter<T>::counter_increase(){
     // Counter is vector representing number in number system in which maximum value of each digit at index 'i'
-    // [denoted counter(i)] is limited by corresponding output_size(i). 
+    // [denoted counter(i)] is limited by corresponding output_size(i).
     // Counter can be shorter than size by any number of least significant digits.
     // When during incrementation counter(i)==output_size(i) digit at position 'i' it overflows with carry over to the left.
     // It means that digit at 'i' is zeroed and digit at 'i-1' is incremented.
@@ -157,13 +157,13 @@ void multidimensional_counter<T>::counter_increase(){
         if( counter[i] == size[i] ){
             counter[i] = 0;
             ++counter[i-1];
-            
+
             out_position[i] = out_offset[i];
             ++out_position[i-1];
 
             in_position[i] = in_offset[i];
             ++in_position[i-1];
-        } else 
+        } else
             break;
 
     // After all counter(i) equal output_size(i) counter is zeroed through overflow
