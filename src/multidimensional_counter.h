@@ -11,7 +11,7 @@ class multidimensional_counter {
     std::vector<T> counter;
 
     std::vector<T> in_buffer_size;
-    std::vector<T> in_offset;
+    std::vector<T> in_offset; //todo negative will fail
     std::vector<T> in_position;
     std::vector<T> in_stride;
     std::vector<T> out_buffer_size;
@@ -52,10 +52,10 @@ public:
     bool counter_finished();
     void counter_increase();
 
-    std::vector<T> get_size()        { return size;        };      //todo consts
-    std::vector<T> get_counter()     { return counter;     };
-    std::vector<T> get_in_position() { return in_position; };
-    std::vector<T> get_out_position(){ return out_position;};
+    std::vector<T> get_size()        {return size;        };      //todo consts
+    std::vector<T> get_counter()     {return counter;     };
+    std::vector<T> get_in_position() {return in_position; };
+    std::vector<T> get_out_position(){return out_position;};
 };
 
 template<typename T>

@@ -40,8 +40,8 @@ void example_008() {
                    in_off_z = 0,
                    in_off_b = 0;
 
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}}); //todo
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}});
+    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {input_y, input_x, input_z, input_b}});
+    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {output_y, output_x, output_z, output_b}});
 
     auto act    = pooling::create( {engine::reference,
                                     pooling::mode::max,

@@ -76,9 +76,6 @@ struct relu_reference : is_an_implementation {
             if(output_whole_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("ReLU sizes to small.");
         }
 
-
-        //std::vector<uint32_t> counter( output_size.size() - 1, 0 );
-
         multidimensional_counter<uint32_t> counter( output_size,
                                                     output_size.size() - 1,
                                                     input_whole_size,

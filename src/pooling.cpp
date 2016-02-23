@@ -52,27 +52,44 @@ struct pooling_reference : is_an_implementation {
                 throw std::runtime_error("Pooling output buffer size is to small.");
         }
 
-
-
         multidimensional_counter<uint32_t> counter( output_size,
                                                     output_size.size(),
                                                     input_buffer_size,
-                                                    input_offset,
+                                                    {input_offset.begin(), input_offset.end()}, //todo will fail if negative
                                                     stride_size,
                                                     output_buffer_size,
                                                     output_offset
                                                    );
 
 
-        std::vector<uint32_t> window_counter ( output_size.size(), 0 );
 
         if( pooling::mode::max == this_pooling->argument.mode ){
             //todo
-        //std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
-        //auto in_offset  = calculate_offset(input_whole_size , acc ) + input_offset.back();
 
-        //std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
-        //auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
+            while( !counter.counter_finished() ){
+                auto out_idx = counter.calculate_out_idx();
+
+                std::vector<uint32_t> acc(input_offset.begin(), input_offset.end()); //todo will fail if negative
+                std::transform(acc.begin(), acc.end(), counter.get_counter().begin(), acc.begin(), std::plus<uint32_t>());
+
+                multidimensional_counter<uint32_t> window_counter( window_size,
+                                                                   output_size.size(), //size of in/out-put, window, offsets etc. are equal
+                                                                   input_buffer_size,
+                                                                   acc,
+                                                                   stride_size,
+                                                                   output_buffer_size,
+                                                                   output_offset
+                                                                 );
+
+                while( !window_counter.counter_finished() ){
+                    auto in_idx = window_counter.calculate_in_idx();
+
+                    output[out_idx] = std::max(output[out_idx], input[in_idx]);
+
+                    window_counter.counter_increase();
+                }
+                counter.counter_increase();
+            }
 
             //while( !counter_finished(output_size, general_counter) ){
             //    auto out_offset = calculate_offset(output_size, input_acc);
@@ -146,7 +163,7 @@ pooling::arguments::arguments( neural::engine::type  eng,
     , input_offset(in_off)
     , stride(strd)
     , size(siz)
-    , padding(padd) {}
+    , padding(padd) {};
 
 // creates primitive with pooling implementation that supports provided arguments
 primitive pooling::create(pooling::arguments arg) {
