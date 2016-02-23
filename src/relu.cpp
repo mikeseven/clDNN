@@ -81,7 +81,7 @@ struct relu_reference : is_an_implementation {
 
         auto uint_input_offset = std::vector<uint32_t>(input_offset.begin(), input_offset.end());  //relu has always non negative offset
 
-        multidimensional_counter<uint32_t> counter(output_size, output_size.size()-1, {output_offset.begin(), output_offset.end()-1} );
+        multidimensional_counter<uint32_t> counter(output_size, output_whole_size, output_size.size()-1, {output_offset.begin(), output_offset.end()-1} );
 
         std::vector<uint32_t> acc(uint_input_offset.size());
         while( !counter.counter_finished() ){
