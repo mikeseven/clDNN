@@ -11,8 +11,8 @@ namespace neural {
 struct pooling_reference : is_an_implementation {
     const pooling &outer;
     pooling_reference(pooling &arg)
-        : is_an_implementation(neural::type_id<pooling_reference>()) 
-        , outer(arg) 
+        : is_an_implementation(neural::type_id<pooling_reference>())
+        , outer(arg)
     {};
     ~pooling_reference() {}
 
@@ -45,19 +45,16 @@ struct pooling_reference : is_an_implementation {
 
         // general formula: output size = (input size - window size) / step + 1
         for(size_t i = 0; i < input_offset.size(); ++i){ //todo
-            if(output_size[i] < (static_cast<int32_t>(input_buffer_size[i]) - input_offset[i]) / (stride_size[i] + 1) ) 
+            if(output_size[i] < (static_cast<int32_t>(input_buffer_size[i]) - input_offset[i]) / (stride_size[i] + 1) )
                 throw std::runtime_error("Output size of pooling is to small.");
 
-            if(output_buffer_size[i] < output_size[i] + output_offset[i]) 
+            if(output_buffer_size[i] < output_size[i] + output_offset[i])
                 throw std::runtime_error("Pooling output buffer size is to small.");
         }
 
-        std::vector<uint32_t> general_counter( output_size.size(), 0 ); //all sizes are equall
-        std::vector<uint32_t> window_counter ( output_size.size(), 0 ); 
-        std::vector<uint32_t> input_acc      ( output_size.size(), 0 ); //todo int32
-        std::vector<uint32_t> output_acc     ( output_size.size(), 0 ); //todo int32
 
-        float facc = 0;
+        std::vector<uint32_t> window_counter ( output_size.size(), 0 );
+
 
         if( pooling::mode::max == this_pooling->argument.mode ){
             //todo
@@ -66,7 +63,7 @@ struct pooling_reference : is_an_implementation {
 
         //std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
         //auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
-            
+
             while( !counter_finished(output_size, general_counter) ){
                 auto out_offset = calculate_offset(output_size, input_acc);
 
@@ -92,13 +89,13 @@ struct pooling_reference : is_an_implementation {
             // most changing dimension has linear layout in memory
             std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
             auto in_offset  = calculate_offset(input_whole_size , acc ) + input_offset.back();
-            
+
             std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
             auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
 
             // pooling on linear buffer
             for (uint32_t i = 0; i < output_size.back() ; ++i) {
-                output[out_offset + i] = std::max( input[in_offset + i], 0.0f) 
+                output[out_offset + i] = std::max( input[in_offset + i], 0.0f)
                                                  + this_pooling->argument.negative_slope * std::min( input[in_offset + i], 0.0f);
             }
             increse_counter();

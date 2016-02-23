@@ -12,8 +12,8 @@ namespace {
 struct relu_reference : is_an_implementation {
     const relu &outer;
     relu_reference(relu &arg)
-        : is_an_implementation(neural::type_id<relu_reference>()) 
-        , outer(arg) 
+        : is_an_implementation(neural::type_id<relu_reference>())
+        , outer(arg)
     {};
     ~relu_reference() {}
 
@@ -57,7 +57,7 @@ struct relu_reference : is_an_implementation {
 
             // relu on linear buffer
             for (uint32_t i = 0; i < output_size.back() ; ++i) {
-                output[out_offset + i] = std::max( input[in_offset + i], 0.0f) 
+                output[out_offset + i] = std::max( input[in_offset + i], 0.0f)
                                                  + this_relu->argument.negative_slope * std::min( input[in_offset + i], 0.0f);
             }
             counter_increase(output_size, counter);
