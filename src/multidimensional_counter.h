@@ -13,11 +13,26 @@ class multidimensional_counter {
     std::vector<T> in_buffer_size;
     std::vector<T> in_offset;
     std::vector<T> in_position;
+    std::vector<T> in_stride;
     std::vector<T> out_buffer_size;
     std::vector<T> out_offset;
     std::vector<T> out_position;
 
 public:
+    multidimensional_counter(const std::vector<T> &size,
+                             uint32_t             counter_length,
+                             const std::vector<T> &in_buf_size,
+                             const std::vector<T> &in_offset,
+                             const std::vector<T> &in_stride,
+                             const std::vector<T> &out_buf_size,
+                             const std::vector<T> &out_offset);
+
+    multidimensional_counter(const std::vector<T> &size,
+                             uint32_t             counter_length,
+                             const std::vector<T> &in_buf_size,
+                             const std::vector<T> &in_stride,
+                             const std::vector<T> &out_buf_size);
+
     multidimensional_counter(const std::vector<T> &size,
                              uint32_t             counter_length,
                              const std::vector<T> &in_buf_size,
@@ -39,7 +54,7 @@ public:
 
     std::vector<T> get_size()        { return size;        };      //todo consts
     std::vector<T> get_counter()     { return counter;     };
-    std::vector<T> get_in_position() { return  in_position;};
+    std::vector<T> get_in_position() { return in_position; };
     std::vector<T> get_out_position(){ return out_position;};
 };
 
@@ -53,10 +68,10 @@ inline multidimensional_counter<T>::multidimensional_counter( const std::vector<
     : size({v_size})
     , counter(counter_length, 0)
     , in_buffer_size({v_in_buf_size})
-    , in_offset({v_in_offset.begin(), v_in_offset.begin() + counter_length})
+    , in_offset(v_in_offset.begin(), v_in_offset.begin() + counter_length)
     , in_position({in_offset})
     , out_buffer_size({v_out_buf_size})
-    , out_offset({v_out_offset.begin(), v_out_offset.begin() + counter_length})
+    , out_offset(v_out_offset.begin(), v_out_offset.begin() + counter_length)
     , out_position({out_offset})
     {}
 
@@ -74,6 +89,43 @@ inline multidimensional_counter<T>::multidimensional_counter( const std::vector<
     , out_offset(counter_length, 0)
     , out_position(counter_length, 0)
     {}
+
+template<typename T>
+inline multidimensional_counter<T>::multidimensional_counter( const std::vector<T> &v_size,
+                                                              uint32_t             counter_length,
+                                                              const std::vector<T> &v_in_buf_size,
+                                                              const std::vector<T> &v_in_offset,
+                                                              const std::vector<T> &v_in_stride,
+                                                              const std::vector<T> &v_out_buf_size,
+                                                              const std::vector<T> &v_out_offset)
+    : size({v_size})
+    , counter(counter_length, 0)
+    , in_buffer_size({v_in_buf_size})
+    , in_offset( v_in_offset.begin(), v_in_offset.begin() + counter_length )
+    , in_stride( v_in_stride.begin(), v_in_stride.begin() + counter_length )
+    , in_position({in_offset})
+    , out_buffer_size({v_out_buf_size})
+    , out_offset(v_out_offset.begin(), v_out_offset.begin() + counter_length)
+    , out_position({out_offset})
+    {}
+
+template<typename T>
+inline multidimensional_counter<T>::multidimensional_counter( const std::vector<T> &v_size,
+                                                              uint32_t             counter_length,
+                                                              const std::vector<T> &v_in_buf_size,
+                                                              const std::vector<T> &v_in_stride,
+                                                              const std::vector<T> &v_out_buf_size)
+    : size({v_size})
+    , counter(counter_length, 0)
+    , in_buffer_size({v_in_buf_size})
+    , in_offset(counter_length, 0)
+    , in_position(counter_length, 0)
+    , in_stride( v_in_stride.begin(), v_in_stride.begin() + counter_length )
+    , out_buffer_size({v_out_buf_size})
+    , out_offset(counter_length, 0)
+    , out_position(counter_length, 0)
+    {}
+
 
 template<typename T>
 size_t multidimensional_counter<T>::calculate_out_idx( const std::vector<T>& position ){

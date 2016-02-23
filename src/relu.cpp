@@ -79,16 +79,14 @@ struct relu_reference : is_an_implementation {
 
         //std::vector<uint32_t> counter( output_size.size() - 1, 0 );
 
-        auto uint_input_offset = std::vector<uint32_t>(input_offset.begin(), input_offset.end());  //relu has always non negative offset
-
         multidimensional_counter<uint32_t> counter( output_size,
                                                     output_size.size() - 1,
                                                     input_whole_size,
-                                                    uint_input_offset,
+                                                    {input_offset.begin(), input_offset.end()},
                                                     output_whole_size,
                                                     output_offset );
 
-        std::vector<uint32_t> acc(uint_input_offset.size());
+        std::vector<uint32_t> acc(input_offset.size());
         while( !counter.counter_finished() ){
             // calculate offset without most frequently changing dimension to reduce function calls
             // most changing dimension has linear layout in memory

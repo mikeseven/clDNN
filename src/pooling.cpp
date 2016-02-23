@@ -53,8 +53,18 @@ struct pooling_reference : is_an_implementation {
         }
 
 
-        std::vector<uint32_t> window_counter ( output_size.size(), 0 );
 
+        multidimensional_counter<uint32_t> counter( output_size,
+                                                    output_size.size(),
+                                                    input_buffer_size,
+                                                    input_offset,
+                                                    stride_size,
+                                                    output_buffer_size,
+                                                    output_offset
+                                                   );
+
+
+        std::vector<uint32_t> window_counter ( output_size.size(), 0 );
 
         if( pooling::mode::max == this_pooling->argument.mode ){
             //todo
@@ -64,17 +74,17 @@ struct pooling_reference : is_an_implementation {
         //std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
         //auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
 
-            while( !counter_finished(output_size, general_counter) ){
-                auto out_offset = calculate_offset(output_size, input_acc);
+            //while( !counter_finished(output_size, general_counter) ){
+            //    auto out_offset = calculate_offset(output_size, input_acc);
 
-                while( !counter_finished(window_size, window_counter) ){
-                    auto in_offset  = calculate_offset(output_size, output_acc);
-                    output[out_offset] = std::max( input[in_offset], output[out_offset] );
-                    counter_increase(window_size, window_counter);
-                }
+            //    while( !counter_finished(window_size, window_counter) ){
+            //        auto in_offset  = calculate_offset(output_size, output_acc);
+            //        output[out_offset] = std::max( input[in_offset], output[out_offset] );
+            //        counter_increase(window_size, window_counter);
+            //    }
 
-            counter_increase(output_size, general_counter);
-            }
+            //counter_increase(output_size, general_counter);
+            //}
         } else {// avg
             //todo
         }
