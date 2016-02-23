@@ -81,7 +81,12 @@ struct relu_reference : is_an_implementation {
 
         auto uint_input_offset = std::vector<uint32_t>(input_offset.begin(), input_offset.end());  //relu has always non negative offset
 
-        multidimensional_counter<uint32_t> counter(output_size, output_whole_size, output_size.size()-1, {output_offset.begin(), output_offset.end()-1} );
+        multidimensional_counter<uint32_t> counter( output_size,                                                   
+                                                    output_size.size() - 1,
+                                                    input_whole_size,
+                                                    uint_input_offset,
+                                                    output_whole_size,
+                                                    output_offset );
 
         std::vector<uint32_t> acc(uint_input_offset.size());
         while( !counter.counter_finished() ){
@@ -94,11 +99,8 @@ struct relu_reference : is_an_implementation {
             //auto out_offset = calculate_idx(output_whole_size, acc) + output_offset.back();
 
             //   std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            auto out_offset = counter.calculate_idx() + output_offset.back();
-    
-            std::transform( counter.get_counter().begin(), counter.get_counter().end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            auto in_offset  = calculate_idx(input_whole_size , acc ) + input_offset.back();
-
+            auto in_offset  = counter.calculate_in_idx()  + input_offset.back();
+            auto out_offset = counter.calculate_out_idx() + output_offset.back();
 
             // relu on linear buffer
             for (uint32_t i = 0; i < output_size.back() ; ++i) {

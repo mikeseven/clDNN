@@ -58,11 +58,11 @@ inline multidimensional_counter<T>::multidimensional_counter( const std::vector<
                                                               const std::vector<T> &v_out_offset)
     : size({v_size})
     , counter(counter_length, 0)
-    , in_buffer_size({v_in_buf_size})
-    , in_offset({v_in_offset})
-    , in_position({v_in_offset})
+    , in_buffer_size({v_in_buf_size.begin(), v_in_buf_size.begin()+counter_length})
+    , in_offset({v_in_offset.begin(), v_in_offset.begin()+counter_length})
+    , in_position({in_offset})
     , out_buffer_size({v_out_buf_size})
-    , out_offset({v_out_offset})
+    , out_offset({v_out_offset.begin(), v_out_offset.begin()+counter_length})
     , out_position({out_offset}) 
     {}
 
@@ -131,7 +131,7 @@ size_t multidimensional_counter<T>::calculate_in_idx(){
     size_t result_idx = 0;
 
     for(size_t i = 0; i < counter.size(); ++i)
-        if(size[i] <= counter[i]) throw std::in_of_range("Position is greater or equall to size at index: " + std::to_string(i) );
+        if(size[i] <= counter[i]) throw std::out_of_range("Position is greater or equall to size at index: " + std::to_string(i) );
     
     for(size_t i = 0; i != in_position.size(); ++i){    // number of iterations
         auto idx = in_position.size() - 1 - i;
