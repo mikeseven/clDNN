@@ -5,7 +5,7 @@ NeuralIA
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "tests\gtest\gtest.h"
+#include "tests/gtest/gtest.h"
 
 TEST(dummy_test, dummies) {
     EXPECT_EQ(0, 0);
