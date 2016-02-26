@@ -3,6 +3,7 @@
 
 
 auto main(int, char *[]) -> int {
+    extern void example_007();
     extern void example_008();
-    example_008();
+    example_007();
 }

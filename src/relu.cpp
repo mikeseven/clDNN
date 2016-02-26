@@ -6,11 +6,12 @@
 #include <functional>
 
 #include <fstream>//todo remove
+#include <numeric>//todo remove
 
 namespace neural {
 
 namespace {
-size_t calculate_idx(const std::vector<uint32_t> &size, const std::vector<uint32_t> &position){ //todo remove
+size_t calculate_idx2(const std::vector<uint32_t> &size, const std::vector<uint32_t> &position){ //todo remove
     size_t offset = 0;
 
     for(size_t i = 0; i < position.size(); ++i)
@@ -33,7 +34,7 @@ void save_4d_data_yxzb( std::vector<uint32_t> size, std::string filename, T* dat
         file << "n\\z: " << batch << "\\" << z << std::endl;
         for( uint32_t y = 0; y < size[1]; ++y ) {
             for( uint32_t x = 0; x < size[0]; ++x ) {
-                file << *(data + calculate_idx(size, {y, x, z}) + batch) << "\t";
+                file << *(data + calculate_idx2(size, {y, x, z}) + batch) << "\t";
             }
             file << std::endl;
         }
@@ -76,34 +77,39 @@ struct relu_reference : is_an_implementation {
             if(output_whole_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("ReLU sizes to small.");
         }
 
-        multidimensional_counter<uint32_t> counter( output_size,
-                                                    output_size.size() - 1,
-                                                    input_whole_size,
-                                                    {input_offset.begin(), input_offset.end()},
-                                                    output_whole_size,
-                                                    output_offset );
+        namespace nd = ndimensional;
+        nd::value<uint32_t> range (output_size);
+        for(auto pos : range) {
+            auto in_idx  = nd::calculate_idx(range, pos + input_offset  );
+            auto out_idx = nd::calculate_idx(range, pos + output_offset );
 
-        std::vector<uint32_t> acc(input_offset.size());
-        while( !counter.counter_finished() ){
-            // calculate offset without most frequently changing dimension to reduce function calls
-            // most changing dimension has linear layout in memory
-            //std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            //auto in_offset  = calculate_idx(input_whole_size , acc ) + input_offset.back();
-
-            //std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            //auto out_offset = calculate_idx(output_whole_size, acc) + output_offset.back();
-
-            //   std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            auto in_offset  = counter.calculate_in_idx()  + input_offset.back();
-            auto out_offset = counter.calculate_out_idx() + output_offset.back();
-
-            // relu on linear buffer
-            for (uint32_t i = 0; i < output_size.back() ; ++i) {
-                output[out_offset + i] = std::max( input[in_offset + i], 0.0f)
-                                                 + this_relu->argument.negative_slope * std::min( input[in_offset + i], 0.0f);
-            }
-            counter.counter_increase();
+            output[out_idx] = std::max( input[in_idx], 0.0f) + this_relu->argument.negative_slope * std::min( input[in_idx], 0.0f);
         }
+
+
+        //multidimensional_counter<uint32_t> counter( output_size,
+        //                                            output_size.size() - 1,
+        //                                            input_whole_size,
+        //                                            {input_offset.begin(), input_offset.end()},
+        //                                            output_whole_size,
+        //                                            output_offset );
+
+        //std::vector<uint32_t> acc(input_offset.size());
+        //while( !counter.counter_finished() ){
+        //    // calculate offset without most frequently changing dimension to reduce function calls
+        //    // most changing dimension has linear layout in memory
+
+        //    auto in_offset  = counter.calculate_in_idx()  + input_offset.back();
+        //    auto out_offset = counter.calculate_out_idx() + output_offset.back();
+
+        //    // relu on linear buffer
+        //    for (uint32_t i = 0; i < output_size.back() ; ++i) {
+        //        output[out_offset + i] = std::max( input[in_offset + i], 0.0f)
+        //                                         + this_relu->argument.negative_slope * std::min( input[in_offset + i], 0.0f);
+        //    }
+        //    counter.counter_increase();
+        //}
+
         save_4d_data_yxzb<float>(output_whole_size, "out_after", output); //todo remove
     }
 

@@ -4,25 +4,25 @@
 void example_008() {
     using namespace neural;
 
-    const uint32_t output_y = 2,    // size of whole output buffer
-                   output_x = 2,
-                   output_z = 1,
-                   output_b = 1,
+    const uint32_t output_y = 8,    // size of whole output buffer
+                   output_x = 8,
+                   output_z = 2,
+                   output_b = 3,
 
-                   input_y = 3,     // size of whole input buffer
-                   input_x = 3,
-                   input_z = 1,
-                   input_b = 1,
+                   input_y = 8,     // size of whole input buffer
+                   input_x = 8,
+                   input_z = 2,
+                   input_b = 2,
 
                    out_off_y = 0,
                    out_off_x = 0,
                    out_off_z = 0,
                    out_off_b = 0,
 
-                   out_siz_y = 2,   // size of area to do pooling after offset
-                   out_siz_x = 2,
-                   out_siz_z = 1,
-                   out_siz_b = 1,
+                   out_siz_y = 5,   // size of area to do pooling after offset
+                   out_siz_x = 5,
+                   out_siz_z = 2,
+                   out_siz_b = 2,
 
                    stride_y = 1,
                    stride_x = 1,
@@ -34,8 +34,8 @@ void example_008() {
                    pooling_siz_z = 1,
                    pooling_siz_b = 1;
 
-     const int32_t in_off_y = 0,
-                   in_off_x = 0,
+     const int32_t in_off_y = 3,
+                   in_off_x = 3,
                    in_off_z = 0,
                    in_off_b = 0;
 
@@ -53,7 +53,7 @@ void example_008() {
 
     auto act    = pooling::create( {engine::reference,
                                     pooling::mode::max,
-                                    memory::format::yxfb_f32,
+                                    output,
                                     {out_off_y, out_off_x, out_off_z, out_off_b},
                                     {out_siz_y, out_siz_x, out_siz_z, out_siz_b},
                                     input,
