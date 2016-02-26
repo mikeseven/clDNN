@@ -126,43 +126,9 @@ struct pooling_reference : is_an_implementation {
                 }
                 counter.counter_increase();
             }
-
-            //while( !counter_finished(output_size, general_counter) ){
-            //    auto out_offset = calculate_offset(output_size, input_acc);
-
-            //    while( !counter_finished(window_size, window_counter) ){
-            //        auto in_offset  = calculate_offset(output_size, output_acc);
-            //        output[out_offset] = std::max( input[in_offset], output[out_offset] );
-            //        counter_increase(window_size, window_counter);
-            //    }
-
-            //counter_increase(output_size, general_counter);
-            //}
         } else {// avg
             //todo
         }
-
-/*
-
-        auto uint_input_offset = std::vector<uint32_t>(input_offset.begin(), input_offset.end());  //pooling has always non negative offset
-
-        std::vector<uint32_t> acc(uint_input_offset.size());
-        while( !is_end() ){
-            // calculate offset without most frequently changing dimension to reduce function calls
-            // most changing dimension has linear layout in memory
-            std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            auto in_offset  = calculate_offset(input_whole_size , acc ) + input_offset.back();
-
-            std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
-
-            // pooling on linear buffer
-            for (uint32_t i = 0; i < output_size.back() ; ++i) {
-                output[out_offset + i] = std::max( input[in_offset + i], 0.0f)
-                                                 + this_pooling->argument.negative_slope * std::min( input[in_offset + i], 0.0f);
-            }
-            increse_counter();
-        }*/
 
         save_4d_data_yxzb<float>(output_buffer_size, "out_after", output); //todo remove
     }
@@ -194,7 +160,28 @@ pooling::arguments::arguments( neural::engine::type  eng,
                                neural::padding::type padd)
     : engine(eng)
     , mode(mode)
-    , output( {memory::create({eng, o_frmt, out_siz})} )
+    , output( {memory::create({eng, o_frmt, out_siz, true})} )
+    , output_offset(out_off)
+    , output_size(out_siz)
+    , input({in})
+    , input_offset(in_off)
+    , stride(strd)
+    , size(siz)
+    , padding(padd) {};
+
+pooling::arguments::arguments( neural::engine::type  eng,
+                               pooling::mode::type   mode,
+                               primitive             out,
+                               std::vector<uint32_t> out_off,
+                               std::vector<uint32_t> out_siz,
+                               primitive             in,
+                               std::vector<int32_t>  in_off,
+                               std::vector<uint32_t> strd,
+                               std::vector<uint32_t> siz,
+                               neural::padding::type padd)
+    : engine(eng)
+    , mode(mode)
+    , output({out})
     , output_offset(out_off)
     , output_size(out_siz)
     , input({in})

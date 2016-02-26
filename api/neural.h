@@ -17,7 +17,7 @@ struct memory : is_a_primitive {
         fyxb_f32,
         xyfb_f32,
         fxyb_f32,
-        byxf_f32,   
+        byxf_f32,
         bfyx_f32,
         bxyf_f32,
         bfxy_f32,
@@ -72,7 +72,7 @@ struct memory : is_a_primitive {
     primitive clone() const { return create(argument); }
     void execute_argument(void *arg) const {
         if(argument.owns_memory) throw std::runtime_error("memory::execute_argument: this a container with its own memory; cannot set new pointer");
-        else pointer = arg; 
+        else pointer = arg;
     }
     size_t count() const;
 
@@ -206,7 +206,7 @@ struct relu : is_a_primitive {
 
         arguments(neural::engine::type, memory::format::type out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, float);
         arguments(neural::engine::type, memory::format::type out,                                                               primitive in,                              float);
-        arguments(neural::engine::type, memory::format::type out,                                                               primitive in);                     
+        arguments(neural::engine::type, memory::format::type out,                                                               primitive in);
         arguments(neural::engine::type, primitive            out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, float slp);
         arguments(neural::engine::type, primitive            out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off);
         arguments(neural::engine::type, primitive            out,                                                               primitive in,                              float slp);
@@ -247,6 +247,7 @@ struct pooling : is_a_primitive {
         arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                               primitive in,                              std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                               primitive in,                              uint32_t              strd, uint32_t              siz, neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,    std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              std::vector<uint32_t> strd,                            neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              uint32_t              strd,                            neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              uint32_t              strd);
