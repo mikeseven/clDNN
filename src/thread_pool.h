@@ -1,6 +1,6 @@
 #pragma once
 
-#include "neural.h"
+#include "api/neural.h"
 
 #include <cstdint>
 #include <algorithm>

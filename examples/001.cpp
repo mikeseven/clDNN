@@ -1,4 +1,4 @@
-#include "neural.h"
+#include "api/neural.h"
 
 // convolution->relu with weights & biases from file
 void example_001() {

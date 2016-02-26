@@ -1,44 +1,32 @@
-# Copyright (c) 2014, Intel Corporation
-# 
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-# 
-#     * Redistributions of source code must retain the above copyright notice,
-#       this list of conditions and the following disclaimer.
-#     * Redistributions in binary form must reproduce the above copyright
-#       notice, this list of conditions and the following disclaimer in the
-#       documentation and/or other materials provided with the distribution.
-#     * Neither the name of Intel Corporation nor the names of its contributors
-#       may be used to endorse or promote products derived from this software
-#       without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# Copyright (c) 2016, Intel Corporation
+# NeuralIA
 
 add_subdirectory (gtest)
 
+
 set (APP_NAME "tests")
 # Sources for test files
+
 file (GLOB TEST_CASES_SRC
-      "test_cases/*.cpp")
-      
+      test_cases/*.cpp)
+
 # Main source file
 set  (MAIN_SRC
-      "main.cpp"
+      main.cpp
+      )
+
+file (GLOB API_HEADERS
+       ${CMAKE_SOURCE_DIR}/api/*.h
+      )
+file (GLOB API_SRC
+       ${CMAKE_SOURCE_DIR}/src/*.h
+       ${CMAKE_SOURCE_DIR}/src/*.cpp
       )
 
 # Create named folders for the sources within the .vcproj
 # Empty name lists them directly under the .vcproj
 source_group("" FILES ${MAIN_SRC})
-source_group("test_cases" FILES ${TEST_CASES_SRC})
+source_group("test caseses" FILES ${TEST_CASES_SRC})
 
 # Properties->C/C++->General->Additional Include Directories
 include_directories (${CMAKE_SOURCE_DIR}
@@ -47,8 +35,12 @@ include_directories (${CMAKE_SOURCE_DIR}
 
 # Create exe file from sources.
 
-add_executable(${APP_NAME} ${MAIN_SRC} 
-                       ${TEST_CASES_SRC})
+add_executable(${APP_NAME}
+                 ${MAIN_SRC}
+                 ${TEST_CASES_SRC}
+                 ${API_HEADERS}
+                 ${API_SRC}
+              )
 
 # To use SDE it has to be installed and its root dir needs to be
 # added to PATH env variable.Also USE_SDE_EMULATION should be set
@@ -64,11 +56,11 @@ else()
 set(TEST_COMMAND ${SDE_EXE_DIR} -bdw -- ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${APP_NAME})
 endif()
 
-set_target_properties( ${APP_NAME} 
+set_target_properties( ${APP_NAME}
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
 )
-					  
+
 set(GFLAGS_BINARY_NAME gflags)
 
 if(RUN_ULTS_OFFLINE)
@@ -98,7 +90,7 @@ else()
                        WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
                        COMMAND ${APP_NAME} )
     endif()
-    
+
     if(NOT UNIX)
         if(NOT(GFLAGS_EXE_DIR STREQUAL "GFLAGS_EXE_DIR-NOTFOUND"))
             add_custom_command(TARGET ${APP_NAME}

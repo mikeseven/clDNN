@@ -1,5 +1,5 @@
 # Copyright (c) 2016, Intel Corporation
-# NeuralIA 
+# NeuralIA
 
 cmake_minimum_required (VERSION 2.8)
 include(CheckCXXCompilerFlag)
@@ -19,6 +19,7 @@ elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
 endif()
 
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+set (LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set (CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
 
 message (STATUS "PROJECT ............................... " ${PROJECT_NAME})
@@ -27,8 +28,10 @@ message (STATUS "CMAKE_SOURCE_DIR ...................... " ${CMAKE_SOURCE_DIR})
 message (STATUS "CMAKE_GENERATOR ....................... " ${CMAKE_GENERATOR})
 message (STATUS "CMAKE_C_COMPILER_ID ................... " ${CMAKE_C_COMPILER_ID})
 
+
 # Sub-directories where more CMakeLists.txt exist
 add_subdirectory(tests)
-
+add_subdirectory(src)
+add_subdirectory(examples)
 
 
