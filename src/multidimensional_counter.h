@@ -71,7 +71,7 @@ std::ostream &operator<<(std::ostream &out, value<T> &val) {
 }
 
 template<typename T>
-size_t calculate_idx( const value<T>& size, const value<T>& position ){
+size_t calculate_idx( const std::vector<T>& size, const std::vector<T>& position ){
     size_t result_idx = 0;
 
     for(size_t i = 0; i < position.size(); ++i)
@@ -86,8 +86,6 @@ size_t calculate_idx( const value<T>& size, const value<T>& position ){
 }
 
 }
-
-
 namespace neural{
 
 template<typename T>

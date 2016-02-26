@@ -80,35 +80,11 @@ struct relu_reference : is_an_implementation {
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
         for(auto pos : range) {
-            auto in_idx  = nd::calculate_idx(range, pos + input_offset  );
-            auto out_idx = nd::calculate_idx(range, pos + output_offset );
+            auto in_idx  = nd::calculate_idx(input_whole_size, pos + input_offset  );
+            auto out_idx = nd::calculate_idx(output_whole_size, pos + output_offset );
 
             output[out_idx] = std::max( input[in_idx], 0.0f) + this_relu->argument.negative_slope * std::min( input[in_idx], 0.0f);
         }
-
-
-        //multidimensional_counter<uint32_t> counter( output_size,
-        //                                            output_size.size() - 1,
-        //                                            input_whole_size,
-        //                                            {input_offset.begin(), input_offset.end()},
-        //                                            output_whole_size,
-        //                                            output_offset );
-
-        //std::vector<uint32_t> acc(input_offset.size());
-        //while( !counter.counter_finished() ){
-        //    // calculate offset without most frequently changing dimension to reduce function calls
-        //    // most changing dimension has linear layout in memory
-
-        //    auto in_offset  = counter.calculate_in_idx()  + input_offset.back();
-        //    auto out_offset = counter.calculate_out_idx() + output_offset.back();
-
-        //    // relu on linear buffer
-        //    for (uint32_t i = 0; i < output_size.back() ; ++i) {
-        //        output[out_offset + i] = std::max( input[in_offset + i], 0.0f)
-        //                                         + this_relu->argument.negative_slope * std::min( input[in_offset + i], 0.0f);
-        //    }
-        //    counter.counter_increase();
-        //}
 
         save_4d_data_yxzb<float>(output_whole_size, "out_after", output); //todo remove
     }

@@ -6,7 +6,7 @@ using namespace neural;
     const int  in_offset_x = 3,
                in_offset_y = 3,
                in_offset_z = 1,
-               in_offset_b = 2;
+               in_offset_b = 1;
     const unsigned in_x = 6,
                    in_y = 6,
                    in_z = 2,
@@ -14,11 +14,11 @@ using namespace neural;
                    out_x = 8,
                    out_y = 8,
                    out_z = 2,
-                   out_b = 3,
+                   out_b = 4,
                    out_offset_x = 1,
                    out_offset_y = 1,
                    out_offset_z = 0,
-                   out_offset_b = 0,
+                   out_offset_b = 2,
                    out_size_x = in_x - in_offset_x,
                    out_size_y = in_y - in_offset_y,
                    out_size_z = in_z - in_offset_z,
