@@ -1,3 +1,4 @@
+#if 0
 #include "api/neural.h"
 #include <iostream>
 #include <algorithm>
@@ -41,3 +42,4 @@ void example_006() {
     // execution
     execute({input(in_ptr), output(out_ptr), conv});
 }
+#endif

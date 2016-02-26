@@ -3,6 +3,7 @@
 
 set (TARGET_NAME "examples")
 # Sources for test files
+set (MAIN_SRC   ${CMAKE_SOURCE_DIR}/examples/main.cpp)
 
 file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h
@@ -26,6 +27,8 @@ include_directories (${CMAKE_SOURCE_DIR})
 
 # Create library file from sources.
 add_executable(${TARGET_NAME}
+               ${MAIN_SRC}
                ${API_SRC}
                ${API_HEADERS}
-               ${EXAMPLES_SRC})
+               ${EXAMPLES_SRC}
+              )

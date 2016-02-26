@@ -1,3 +1,4 @@
+#if 0
 #include "api/neural.h"
 
 // convolution->relu->pooling with weights & biases from file
@@ -15,3 +16,4 @@ void example_002() {
 
     execute({input(data_buffer), output(data_buffer), conv, act, pool});
 }
+#endif
