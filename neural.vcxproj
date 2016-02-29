@@ -111,6 +111,7 @@
     <ClCompile Include="src\multidimensional_counter.cpp" />
     <ClCompile Include="src\memory.cpp" />
     <ClCompile Include="src\relu.cpp" />
+    <ClCompile Include="src\reorder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="api\neural.h" />
