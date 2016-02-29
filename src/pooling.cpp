@@ -5,40 +5,7 @@
 #include <numeric>
 #include <map>
 #include <tuple>
-#include <iostream>//todo remove
-#include <fstream>//todo remove
-namespace{
-size_t calculate_idx(const std::vector<uint32_t> &size, const std::vector<uint32_t> &position){ //todo remove
-    size_t offset = 0;
 
-    for(size_t i = 0; i < position.size(); ++i)
-        if(size[i] <= position[i]) throw std::out_of_range("Position is greater or equall to size at index: " + std::to_string(i) );
-
-    for(size_t i = 0; i != position.size(); ++i){    // number of iterations
-        auto idx = position.size() - 1 - i;
-        offset += std::accumulate(size.begin() + idx + 1, size.end(), 1, std::multiplies<uint32_t>() ) * position[idx];
-    };
-
-    return offset;
-};
-template<typename T> //todo remove
-void save_4d_data_yxzb( std::vector<uint32_t> size, std::string filename, T* data ) {
-    std::ofstream file;
-    file.open( filename + ".txt" );
-
-    for( uint32_t batch = 0; batch < size[3]; ++batch )
-    for( uint32_t z = 0; z < size[2]; ++z ) {
-        file << "n\\z: " << batch << "\\" << z << std::endl;
-        for( uint32_t y = 0; y < size[1]; ++y ) {
-            for( uint32_t x = 0; x < size[0]; ++x ) {
-                file << *(data + calculate_idx(size, {y, x, z}) + batch) << "\t";
-            }
-            file << std::endl;
-        }
-    }
-    file.close();
-}
-}
 namespace neural {
 
 struct pooling_reference : is_an_implementation {
@@ -85,16 +52,17 @@ struct pooling_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
-        //nd::calculate_idx<uint32_t> calc_in_idx  (input_buffer_size);
-        //nd::calculate_idx<uint32_t> calc_out_idx (output_buffer_size);
+        nd::calculate_idx<uint32_t> calc_in_idx  (input_buffer_size);
+        nd::calculate_idx<uint32_t> calc_out_idx (output_buffer_size);
         switch( this_pooling->argument.mode ){
             case pooling::mode::max:
                 for(auto pos : range) {
-                    auto out_idx = nd::calculate_idx(output_buffer_size, pos + output_offset);
+                    auto out_idx = calc_out_idx(pos + output_offset);
 
                     nd::value<uint32_t> window_range (window);
                     for(auto win_pos : window_range){
-                        auto in_idx  = nd::calculate_idx(input_buffer_size, pos*stride + input_offset + win_pos);
+                        auto in_idx = calc_in_idx(pos*stride + input_offset + win_pos);
+
                         output[out_idx] = std::max(output[out_idx], input[in_idx]);
                     }
                 }
@@ -103,12 +71,12 @@ struct pooling_reference : is_an_implementation {
             {
                 auto window_elements = std::accumulate(window.cbegin(), window.cend(), 1, std::multiplies<uint32_t>());
                 for(auto pos : range) {
-                    auto out_idx = nd::calculate_idx(output_buffer_size, pos + output_offset);
+                    auto out_idx = calc_out_idx(pos + output_offset);
 
                     float acc = 0.0f;
                     nd::value<uint32_t> window_range (window);
                     for(auto win_pos : window_range){
-                        auto in_idx  = nd::calculate_idx(input_buffer_size, pos*stride + input_offset + win_pos);
+                        auto in_idx  = calc_in_idx(pos*stride + input_offset + win_pos);
                         acc += input[in_idx];
                     }
                     output[out_idx] = acc/window_elements;
@@ -118,7 +86,6 @@ struct pooling_reference : is_an_implementation {
             default:
                 throw std::runtime_error("Unknown pooling mode.");
         }
-        save_4d_data_yxzb<float>(output_buffer_size, "out_after", output); //todo remove
     }
 
     std::vector<task> work() {

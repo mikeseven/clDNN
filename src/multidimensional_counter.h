@@ -77,7 +77,23 @@ std::ostream &operator<<(std::ostream &out, value<T> &val) {
 }
 
 template<typename T>
-size_t calculate_idx( const std::vector<T>& size, const std::vector<T>& position ){
+class calculate_idx{
+    std::vector<T> size;
+    std::vector<T> LUT;
+public:
+    calculate_idx( const std::vector<T>& v_size )
+    : size(v_size)
+    , LUT(v_size) {
+
+        LUT.emplace_back(1); //this element is used in operator()
+        for(size_t i = LUT.size() - 1; i > 0; --i)
+            LUT[i-1] *= LUT[i];
+    };
+
+    size_t operator() ( const std::vector<T>& pos );
+};
+template<typename T>
+size_t calculate_idx<T>::operator()( const std::vector<T>& position ){
     size_t result_idx = 0;
 
     assert(
@@ -93,10 +109,9 @@ size_t calculate_idx( const std::vector<T>& size, const std::vector<T>& position
     // If 'position' is shorter than 'size' than function returns offset to some block of data
     for(size_t i = 0; i != position.size(); ++i){
         auto idx = position.size() - 1 - i;
-        result_idx += std::accumulate(size.cbegin() + idx + 1, size.cend(), 1, std::multiplies<uint32_t>() ) * position[idx];
+        result_idx += LUT[idx+1] * position[idx];
     };
 
     return result_idx;
 }
-
 }
