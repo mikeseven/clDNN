@@ -1,4 +1,5 @@
-#include "neural.h"
+#if 0
+#include "api/neural.h"
 
 // AlexNet with weights & biases from file
 void example_004() {
@@ -53,3 +54,4 @@ void example_004() {
 
     execute({input(input_buffer), output(input_buffer), conv1, relu1, pool1, lrn1, conv2, relu2, pool2, lrn2, conv3, relu3, conv4, relu4, conv5, relu5, pool5, fc6, relu6, fc7, relu7, fc8, relu8, sftmax});
 }
+#endif

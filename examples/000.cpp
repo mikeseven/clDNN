@@ -1,4 +1,5 @@
-#include "neural.h"
+#if 0
+#include "api/neural.h"
 
 // memory->memory convolution with weights & biases from file
 void example_000() {
@@ -22,3 +23,4 @@ void example_000() {
 
     execute({input(in_ptr), output(out_ptr), conv});
 }
+#endif
