@@ -1,4 +1,4 @@
-#include "src/multidimensional_counter.h"
+#include "multidimensional_counter.h"
 #include <numeric>
 #include <string>
 

@@ -1,5 +1,5 @@
 #include "api/neural_base.h"
-#include "src/thread_pool.h"
+#include "thread_pool.h"
 
 namespace neural {
 

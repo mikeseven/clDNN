@@ -1,5 +1,5 @@
 #include "api/neural.h"
-#include "src/multidimensional_counter.h"
+#include "multidimensional_counter.h"
 #include <algorithm>
 #include <tuple>
 #include <map>

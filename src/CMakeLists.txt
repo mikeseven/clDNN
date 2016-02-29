@@ -7,7 +7,7 @@ set (TARGET_NAME "NeuralIA")
 file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h
       )
-file (GLOB API_SRC
+file (GLOB LIBRARY_SRC
        ${CMAKE_SOURCE_DIR}/src/*.h
        ${CMAKE_SOURCE_DIR}/src/*.cpp
       )
@@ -16,12 +16,14 @@ file (GLOB API_SRC
 # Empty name lists them directly under the .vcproj
 
 source_group("api\\headers" FILES ${API_HEADERS})
-source_group("api\\src" FILES ${API_SRC})
+source_group("api\\src" FILES ${LIBRARY_SRC})
 
 # Properties->C/C++->General->Additional Include Directories
-include_directories (${CMAKE_SOURCE_DIR})
+include_directories (${CMAKE_SOURCE_DIR}
+                     ${CMAKE_SOURCE_DIR}/src
+                    )
 
 # Create library file from sources.
 add_library(${TARGET_NAME} STATIC 
-            ${API_SRC}
+            ${LIBRARY_SRC}
             ${API_HEADERS})

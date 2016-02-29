@@ -18,7 +18,7 @@ set  (MAIN_SRC
 file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h
       )
-file (GLOB API_SRC
+file (GLOB LIBRARY_SRC
        ${CMAKE_SOURCE_DIR}/src/*.h
        ${CMAKE_SOURCE_DIR}/src/*.cpp
       )
@@ -30,16 +30,16 @@ source_group("test caseses" FILES ${TEST_CASES_SRC})
 
 # Properties->C/C++->General->Additional Include Directories
 include_directories (${CMAKE_SOURCE_DIR}
+                     ${CMAKE_SOURCE_DIR}/src
                      ${CMAKE_SOURCE_DIR}/tests
                     )
 
 # Create exe file from sources.
-
 add_executable(${APP_NAME}
-                 ${MAIN_SRC}
-                 ${TEST_CASES_SRC}
-                 ${API_HEADERS}
-                 ${API_SRC}
+               ${MAIN_SRC}
+               ${TEST_CASES_SRC}
+               ${API_HEADERS}
+               ${LIBRARY_SRC}
               )
 
 # To use SDE it has to be installed and its root dir needs to be
