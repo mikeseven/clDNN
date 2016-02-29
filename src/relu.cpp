@@ -71,15 +71,49 @@ struct relu_reference : is_an_implementation {
     static is_an_implementation *create(relu &arg) { return new relu_reference(arg); };
 };
 
-//                                    engine          output                  input
+//                                    engine                output                        input
 using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
 // map of available implementations
-static std::map<implementation_key, std::function<is_an_implementation *(relu &)>> implementation_map = {
+static std::map<implementation_key, std::function<is_an_implementation *(relu &)>> forward_implementation_map = {
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), relu_reference::create}
 };
 
+
+struct relu_backward_reference : is_an_implementation {
+    const relu_backward &outer;
+    relu_backward_reference(relu_backward &arg)
+        : is_an_implementation(neural::type_id<relu_backward_reference>()) 
+        , outer(arg) 
+    {};
+    ~relu_backward_reference() {}
+
+    static void implementation(const void *ptr) {
+        auto this_relu = static_cast<const relu_backward *>(ptr);
+        auto forward_output_grad = static_cast<float*>(this_relu->input_memory(0).pointer);
+        auto forward_input       = static_cast<float*>(this_relu->input_memory(1).pointer);
+        auto forward_input_grad  = static_cast<float*>(this_relu->output_memory(0).pointer);
+
+        
+    }
+
+    std::vector<task> work() {
+        return {task{implementation, &outer}};
+    }
+
+    static is_an_implementation *create(relu_backward &arg) { return new relu_backward_reference(arg); };
+};
+
+//                                    engine                output                        input
+using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
+
+// map of available implementations
+static std::map<implementation_key, std::function<is_an_implementation *(relu_backward &)>> backward_implementation_map = {
+    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), relu_backward_reference::create}
+};
+
 } // namespace {
+
 //todo discuss, output size is always needed or can be uninitialized?
 relu::arguments::arguments( neural::engine::type engine, primitive out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, float slp)
     : engine(engine)
@@ -117,9 +151,6 @@ relu::arguments::arguments( neural::engine::type engine, primitive out, primitiv
     , input_offset({in.as<const memory&>().argument.size.size()})
     , negative_slope(0.0f) {}
 
-
-
-
 // creates primitive with relu implementation that supports provided arguments
 primitive relu::create(relu::arguments arg) {
     // wrap relu into RAII wrapper
@@ -127,8 +158,45 @@ primitive relu::create(relu::arguments arg) {
 
     // lookup in database; throw if not found
     auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto it = implementation_map.find(key);
-    if(it==std::end(implementation_map)) throw std::runtime_error("not yet implemented");
+    auto it = forward_implementation_map.find(key);
+    if(it==std::end(forward_implementation_map)) throw std::runtime_error("not yet implemented");
+
+    // create implementation & attach it to result
+    auto implementation = it->second(*result);
+    result->_private.reset(implementation);
+    result->_work = implementation->work();
+
+    // release RAII wrapper, return naked pointer
+    return result.release();
+}
+
+relu_backward::arguments::arguments(neural::engine::type engine, std::vector<primitive> out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, std::vector<primitive_at> in, std::vector<int32_t> in_off, float slp = 0.0f)
+    : engine(engine)
+    , output(out)
+    , output_offset(out_off)
+    , output_size(out_siz)
+    , input(in)
+    , input_offset(in_off)
+    , negative_slope(slp) {}
+
+relu_backward::arguments::arguments(neural::engine::type engine, std::vector<primitive> out, std::vector<primitive_at> in, float slp = 0.0f)
+    : engine(engine)
+    , output(out)
+    , output_offset({out[0].as<const memory&>().argument.size.size()})
+    , output_size(out[0].as<const memory&>().argument.size.begin(), out[0].as<const memory&>().argument.size.end())
+    , input(in)
+    , input_offset({in[0].primitive.as<const memory&>().argument.size.size()})
+    , negative_slope(slp) {}
+
+// creates primitive with relu implementation that supports provided arguments
+primitive relu_backward::create(relu_backward::arguments arg) {
+    // wrap relu into RAII wrapper
+    std::unique_ptr<relu_backward> result(new relu_backward(arg));
+
+    // lookup in database; throw if not found
+    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto it = backward_implementation_map.find(key);
+    if(it==std::end(backward_implementation_map)) throw std::runtime_error("not yet implemented");
 
     // create implementation & attach it to result
     auto implementation = it->second(*result);
