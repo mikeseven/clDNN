@@ -15,6 +15,11 @@ class value : public std::vector<T> {
     template<>           struct change_signedness< int64_t> { using type = uint64_t; };
     using negT = typename change_signedness<T>::type;
 public:
+// Iterator represents number in number system in which maximum value of each digit at index 'i'
+// [denoted _current.at(i)] is limited by corresponding value.at(i).
+// When during incrementation _current(i)==value(i) digit at position 'i' it overflows with carry over to the left.
+// It means that digit at 'i' is zeroed and digit at 'i-1' is incremented.
+// The least significant digit is on the last(max index) position of the vector.
     class iterator {
         value<T> _current;
         const value &_ref;
@@ -24,8 +29,10 @@ public:
         friend class value<T>;
     public:
         iterator(const iterator &) = default;
+        iterator(iterator &&) = default;
         ~iterator() = default;
         iterator& operator=(const iterator &) = default;
+        iterator& operator=(iterator &&) = default;
         iterator& operator++() {
             for(size_t at=_current.size(); at--;) {
                 if(++_current[at] == _ref[at])
@@ -73,10 +80,18 @@ template<typename T>
 size_t calculate_idx( const std::vector<T>& size, const std::vector<T>& position ){
     size_t result_idx = 0;
 
-    for(size_t i = 0; i < position.size(); ++i)
-        if(size[i] <= position[i]) throw std::out_of_range("Position is greater or equall to size at index: " + std::to_string(i) );
+    assert(
+        [&]() -> bool {
+        for(size_t i = 0; i < position.size(); ++i)
+            if(size[i] <= position[i]) return false;
 
-    for(size_t i = 0; i != position.size(); ++i){    // number of iterations
+          return true;
+        }() == true );
+
+    // Number of iterations depends on length of position vector.
+    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory layout.
+    // If 'position' is shorter than 'size' than function returns offset to some block of data
+    for(size_t i = 0; i != position.size(); ++i){
         auto idx = position.size() - 1 - i;
         result_idx += std::accumulate(size.cbegin() + idx + 1, size.cend(), 1, std::multiplies<uint32_t>() ) * position[idx];
     };
