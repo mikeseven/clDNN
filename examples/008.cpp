@@ -1,22 +1,22 @@
 #include "neural.h"
-
+#include <iostream>//todo remove
 // memory->memory max pooling
 void example_008() {
     using namespace neural;
 
-    const uint32_t output_y = 8,    // size of whole output buffer
-                   output_x = 8,
-                   output_z = 2,
+    const uint32_t output_y = 7,    // size of whole output buffer
+                   output_x = 7,
+                   output_z = 3,
                    output_b = 3,
 
-                   input_y = 8,     // size of whole input buffer
-                   input_x = 8,
+                   input_y = 6,     // size of whole input buffer
+                   input_x = 6,
                    input_z = 2,
                    input_b = 2,
 
-                   out_off_y = 0,
-                   out_off_x = 0,
-                   out_off_z = 0,
+                   out_off_y = 1,
+                   out_off_x = 2,
+                   out_off_z = 1,
                    out_off_b = 0,
 
                    out_siz_y = 5,   // size of area to do pooling after offset
@@ -26,16 +26,16 @@ void example_008() {
 
                    stride_y = 1,
                    stride_x = 1,
-                   stride_z = 0,
-                   stride_b = 0,
+                   stride_z = 1,
+                   stride_b = 1,
 
                    pooling_siz_y = 2,   // size of pooling window
                    pooling_siz_x = 2,
                    pooling_siz_z = 1,
                    pooling_siz_b = 1;
 
-     const int32_t in_off_y = 3,
-                   in_off_x = 3,
+     const int32_t in_off_y = 0,
+                   in_off_x = 0,
                    in_off_z = 0,
                    in_off_b = 0;
 
@@ -62,6 +62,10 @@ void example_008() {
                                     {pooling_siz_y, pooling_siz_x, pooling_siz_z, pooling_siz_b},
                                     padding::zero}
                                   );
-
-    execute({input(in_buffer), output(out_buffer), act});
+    try{
+        execute({input(in_buffer), output(out_buffer), act});
+    } catch (std::exception &e){
+        std::cout << e.what();
+    }
+    system("pause"); //todo remove
 }
