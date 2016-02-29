@@ -1,4 +1,4 @@
-#include "neural.h"
+#include "api/neural.h"
 
 // memory->memory max pooling
 void example_008() {
@@ -15,12 +15,7 @@ void example_008() {
 
     float in_buffer[input_y*input_x*input_z*input_b];
     float out_buffer[output_y*output_x*output_z*output_b];
-
-    for(int i = 0; i < input_y*input_x*input_z*input_b; ++i )
-        in_buffer[i] = 1.0f * i - 1.0f * input_y*input_x*input_z*input_b/2;
-
-    for(int i = 0; i < output_y*output_x*output_z*output_b; ++i )
-        out_buffer[i] = -999;
+    // input buffer should be initialized with valid data
 
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {input_y, input_x, input_z, input_b}});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {output_y, output_x, output_z, output_b}});
