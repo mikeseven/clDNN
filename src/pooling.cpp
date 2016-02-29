@@ -85,16 +85,17 @@ struct pooling_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
-        //nd::calculate_idx<uint32_t> calc_in_idx  (input_buffer_size);
-        //nd::calculate_idx<uint32_t> calc_out_idx (output_buffer_size);
+        nd::calculate_idx<uint32_t> calc_in_idx  (input_buffer_size);
+        nd::calculate_idx<uint32_t> calc_out_idx (output_buffer_size);
         switch( this_pooling->argument.mode ){
             case pooling::mode::max:
                 for(auto pos : range) {
-                    auto out_idx = nd::calculate_idx(output_buffer_size, pos + output_offset);
+                    auto out_idx = calc_out_idx(pos + output_offset);
 
                     nd::value<uint32_t> window_range (window);
                     for(auto win_pos : window_range){
-                        auto in_idx  = nd::calculate_idx(input_buffer_size, pos*stride + input_offset + win_pos);
+                        auto in_idx = calc_in_idx(pos*stride + input_offset + win_pos);
+
                         output[out_idx] = std::max(output[out_idx], input[in_idx]);
                     }
                 }
@@ -103,12 +104,12 @@ struct pooling_reference : is_an_implementation {
             {
                 auto window_elements = std::accumulate(window.cbegin(), window.cend(), 1, std::multiplies<uint32_t>());
                 for(auto pos : range) {
-                    auto out_idx = nd::calculate_idx(output_buffer_size, pos + output_offset);
+                    auto out_idx = calc_out_idx(pos + output_offset);
 
                     float acc = 0.0f;
                     nd::value<uint32_t> window_range (window);
                     for(auto win_pos : window_range){
-                        auto in_idx  = nd::calculate_idx(input_buffer_size, pos*stride + input_offset + win_pos);
+                        auto in_idx  = calc_in_idx(pos*stride + input_offset + win_pos);
                         acc += input[in_idx];
                     }
                     output[out_idx] = acc/window_elements;

@@ -42,9 +42,11 @@ struct relu_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
+        nd::calculate_idx<uint32_t> calc_in_idx  (input_buffer_size);
+        nd::calculate_idx<uint32_t> calc_out_idx (output_buffer_size);
         for(auto pos : range) {
-            auto in_idx  = nd::calculate_idx(input_buffer_size,  pos + input_offset );
-            auto out_idx = nd::calculate_idx(output_buffer_size, pos + output_offset);
+            auto in_idx  = calc_in_idx (pos + input_offset );
+            auto out_idx = calc_out_idx(pos + output_offset);
 
             output[out_idx] = std::max( input[in_idx], 0.0f) + this_relu->argument.negative_slope * std::min( input[in_idx], 0.0f);
         }

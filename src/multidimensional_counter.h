@@ -77,7 +77,17 @@ std::ostream &operator<<(std::ostream &out, value<T> &val) {
 }
 
 template<typename T>
-size_t calculate_idx( const std::vector<T>& size, const std::vector<T>& position ){
+class calculate_idx{
+    const std::vector<T> size;
+public:
+    calculate_idx( const std::vector<T>& v_size )
+    : size(v_size) {};
+
+    size_t operator() ( const std::vector<T>& pos );
+};
+
+template<typename T>
+size_t calculate_idx<T>::operator()( const std::vector<T>& position ){
     size_t result_idx = 0;
 
     assert(
@@ -98,5 +108,4 @@ size_t calculate_idx( const std::vector<T>& size, const std::vector<T>& position
 
     return result_idx;
 }
-
 }
