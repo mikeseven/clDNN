@@ -5,43 +5,9 @@
 #include <map>
 #include <functional>
 
-#include <fstream>//todo remove
-#include <numeric>//todo remove
-
 namespace neural {
 
 namespace {
-size_t calculate_idx2(const std::vector<uint32_t> &size, const std::vector<uint32_t> &position){ //todo remove
-    size_t offset = 0;
-
-    for(size_t i = 0; i < position.size(); ++i)
-        if(size[i] <= position[i]) throw std::out_of_range("Position is greater or equall to size at index: " + std::to_string(i) );
-
-    for(size_t i = 0; i != position.size(); ++i){    // number of iterations
-        auto idx = position.size() - 1 - i;
-        offset += std::accumulate(size.begin() + idx + 1, size.end(), 1, std::multiplies<uint32_t>() ) * position[idx];
-    };
-
-    return offset;
-};
-template<typename T> //todo remove
-void save_4d_data_yxzb( std::vector<uint32_t> size, std::string filename, T* data ) {
-    std::ofstream file;
-    file.open( filename + ".txt" );
-
-    for( uint32_t batch = 0; batch < size[3]; ++batch )
-    for( uint32_t z = 0; z < size[2]; ++z ) {
-        file << "n\\z: " << batch << "\\" << z << std::endl;
-        for( uint32_t y = 0; y < size[1]; ++y ) {
-            for( uint32_t x = 0; x < size[0]; ++x ) {
-                file << *(data + calculate_idx2(size, {y, x, z}) + batch) << "\t";
-            }
-            file << std::endl;
-        }
-    }
-    file.close();
-}
-
 struct relu_reference : is_an_implementation {
     const relu &outer;
     relu_reference(relu &arg)
@@ -56,37 +22,32 @@ struct relu_reference : is_an_implementation {
         auto output    = static_cast<float*>(this_relu->output_memory(0).pointer);
 
         auto input_memory_arg  = this_relu->input_memory(0).argument;
-        auto input_whole_size  = input_memory_arg.size;
+        auto input_buffer_size = input_memory_arg.size;
         auto input_offset      = this_relu->argument.input_offset;
 
         auto output_memory_arg = this_relu->output_memory(0).argument;
-        auto output_whole_size = output_memory_arg.size;
+        auto output_buffer_size= output_memory_arg.size;
         auto output_offset     = this_relu->argument.output_offset;
         auto output_size       = this_relu->argument.output_size;
 
-        if(input_memory_arg.format != memory::format::yxfb_f32) throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
-        if(input_whole_size.size() != output_whole_size.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
-        if(input_memory_arg.format != output_memory_arg.format) throw std::runtime_error("ReLU input/output data format does not match.");
-        for(auto &x : input_offset)  if(x < 0)                  throw std::runtime_error("ReLU negative input offset.");
+        if(input_memory_arg.format != memory::format::yxfb_f32)  throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
+        if(input_buffer_size.size() != output_buffer_size.size())throw std::runtime_error("ReLU input/output number of dimension does not match.");
+        if(input_memory_arg.format != output_memory_arg.format)  throw std::runtime_error("ReLU input/output data format does not match.");
+        for(auto &x : input_offset)  if(x < 0)                   throw std::runtime_error("ReLU negative input offset.");
 
-        save_4d_data_yxzb<float>(input_whole_size, "in_before", input); //todo remove
-        save_4d_data_yxzb<float>(output_whole_size, "out_before", output); //todo remove
-
-        for(size_t i = 0; i < input_whole_size.size(); ++i){
-            if(input_whole_size[i]  < output_size[i] + input_offset[i] ) throw std::runtime_error("ReLU input/output size does not match.");
-            if(output_whole_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("ReLU sizes to small.");
+        for(size_t i = 0; i < input_buffer_size.size(); ++i){
+            if(input_buffer_size[i]  < output_size[i] + input_offset[i])  throw std::runtime_error("ReLU input/output size does not match.");
+            if(output_buffer_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("ReLU sizes to small.");
         }
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
         for(auto pos : range) {
-            auto in_idx  = nd::calculate_idx(input_whole_size, pos + input_offset  );
-            auto out_idx = nd::calculate_idx(output_whole_size, pos + output_offset );
+            auto in_idx  = nd::calculate_idx(input_buffer_size,  pos + input_offset );
+            auto out_idx = nd::calculate_idx(output_buffer_size, pos + output_offset);
 
             output[out_idx] = std::max( input[in_idx], 0.0f) + this_relu->argument.negative_slope * std::min( input[in_idx], 0.0f);
         }
-
-        save_4d_data_yxzb<float>(output_whole_size, "out_after", output); //todo remove
     }
 
     std::vector<task> work() {

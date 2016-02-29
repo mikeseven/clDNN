@@ -1,5 +1,5 @@
 #include "neural.h"
-#include <iostream>//todo remove
+
 // memory->memory max pooling
 void example_008() {
     using namespace neural;
@@ -42,12 +42,6 @@ void example_008() {
     float in_buffer[input_y*input_x*input_z*input_b];
     float out_buffer[output_y*output_x*output_z*output_b];
 
-    for(int i = 0; i < input_y*input_x*input_z*input_b; ++i )
-        in_buffer[i] = 1.0f * i - 1.0f * input_y*input_x*input_z*input_b/2;
-
-    for(int i = 0; i < output_y*output_x*output_z*output_b; ++i )
-        out_buffer[i] = -999;
-
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {input_y, input_x, input_z, input_b}});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {output_y, output_x, output_z, output_b}});
 
@@ -62,10 +56,6 @@ void example_008() {
                                     {pooling_siz_y, pooling_siz_x, pooling_siz_z, pooling_siz_b},
                                     padding::zero}
                                   );
-    try{
-        execute({input(in_buffer), output(out_buffer), act});
-    } catch (std::exception &e){
-        std::cout << e.what();
-    }
-    system("pause"); //todo remove
+
+    execute({input(in_buffer), output(out_buffer), act});
 }

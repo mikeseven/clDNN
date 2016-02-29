@@ -6,40 +6,6 @@
 #include <map>
 #include <tuple>
 
-#include <iostream>//todo remove
-#include <fstream>//todo remove
-namespace{
-size_t calculate_idx(const std::vector<uint32_t> &size, const std::vector<uint32_t> &position){ //todo remove
-    size_t offset = 0;
-
-    for(size_t i = 0; i < position.size(); ++i)
-        if(size[i] <= position[i]) throw std::out_of_range("Position is greater or equall to size at index: " + std::to_string(i) );
-
-    for(size_t i = 0; i != position.size(); ++i){    // number of iterations
-        auto idx = position.size() - 1 - i;
-        offset += std::accumulate(size.begin() + idx + 1, size.end(), 1, std::multiplies<uint32_t>() ) * position[idx];
-    };
-
-    return offset;
-};
-template<typename T> //todo remove
-void save_4d_data_yxzb( std::vector<uint32_t> size, std::string filename, T* data ) {
-    std::ofstream file;
-    file.open( filename + ".txt" );
-
-    for( uint32_t batch = 0; batch < size[3]; ++batch )
-    for( uint32_t z = 0; z < size[2]; ++z ) {
-        file << "n\\z: " << batch << "\\" << z << std::endl;
-        for( uint32_t y = 0; y < size[1]; ++y ) {
-            for( uint32_t x = 0; x < size[0]; ++x ) {
-                file << *(data + calculate_idx(size, {y, x, z}) + batch) << "\t";
-            }
-            file << std::endl;
-        }
-    }
-    file.close();
-}
-}
 namespace neural {
 
 struct pooling_reference : is_an_implementation {
@@ -66,22 +32,17 @@ struct pooling_reference : is_an_implementation {
 
         auto stride            = this_pooling->argument.stride;
         auto window            = this_pooling->argument.size;
-        auto padding           = this_pooling->argument.padding; //todo
+        auto padding           = this_pooling->argument.padding; //todo, padding is not supported yet
 
-        if(input_memory_arg.format  != memory::format::yxfb_f32)  throw std::runtime_error("Pooling reference uses yxfb_f32 format."); //todo ?
+        if(padding::zero            != padding)                   throw std::runtime_error("Padding is not supported.");
+        if(input_memory_arg.format  != memory::format::yxfb_f32)  throw std::runtime_error("Pooling reference uses yxfb_f32 format."); //todo, only this format?
         if(input_buffer_size.size() != output_buffer_size.size()) throw std::runtime_error("Pooling input/output number of dimension does not match.");
-        if(stride.size()       != output_buffer_size.size())      throw std::runtime_error("Pooling stride/output number of dimension does not match.");
-        if(window.size()       != output_buffer_size.size())      throw std::runtime_error("Pooling window_size/output number of dimension does not match.");
+        if(stride.size()            != output_buffer_size.size()) throw std::runtime_error("Pooling stride/output number of dimension does not match.");
+        if(window.size()            != output_buffer_size.size()) throw std::runtime_error("Pooling window_size/output number of dimension does not match.");
         if(input_memory_arg.format  != output_memory_arg.format)  throw std::runtime_error("Pooling input/output data format does not match.");
-        //for(auto &x : input_offset)  if(x < 0)                    throw std::runtime_error("Pooling negative input offset."); //todo
-        //for(auto &x : output_offset) if(x < 0)                    throw std::runtime_error("Pooling negative output offset."); //todo
-        //for(auto &x : stride_size)   if(x < 0)                    throw std::runtime_error("Pooling negative stride."); //todo unsigned
-
-        save_4d_data_yxzb<float>(input_buffer_size, "in_before", input); //todo remove
-        save_4d_data_yxzb<float>(output_buffer_size, "out_before", output); //todo remove
 
         // general formula: output size = (input size - window size) / step + 1
-        for(size_t i = 0; i < input_offset.size(); ++i){ //todo
+        for(size_t i = 0; i < input_offset.size(); ++i){
             if(output_size[i] < (static_cast<int32_t>(input_buffer_size[i]) - input_offset[i]) / (stride[i] + 1) )
                 throw std::runtime_error("Output size of pooling is to small.");
 
@@ -93,7 +54,6 @@ struct pooling_reference : is_an_implementation {
         nd::value<uint32_t> range (output_size);
 
         if( pooling::mode::max == this_pooling->argument.mode ){
-            //todo
             for(auto pos : range) {
                 auto out_idx = nd::calculate_idx(output_buffer_size, pos + output_offset);
 
@@ -104,8 +64,7 @@ struct pooling_reference : is_an_implementation {
                 }
             }
 
-        } else {// avg
-            //todo
+        } else { // avg
             auto window_elements = std::accumulate(window.cbegin(), window.cend(), 1, std::multiplies<uint32_t>());
 
             for(auto pos : range) {
@@ -120,8 +79,6 @@ struct pooling_reference : is_an_implementation {
                 output[out_idx] = acc/window_elements;
             }
         }
-
-        save_4d_data_yxzb<float>(output_buffer_size, "out_after", output); //todo remove
     }
 
     std::vector<task> work() {
