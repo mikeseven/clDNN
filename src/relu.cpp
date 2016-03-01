@@ -88,13 +88,69 @@ struct relu_backward_reference : is_an_implementation {
     {};
     ~relu_backward_reference() {}
 
-    static void implementation(const void *ptr) {
+    static void implementation(const void *ptr) 
+    {
         auto this_relu = static_cast<const relu_backward *>(ptr);
+
+        if(this_relu->input().size() != 2)
+            throw std::runtime_error("ReLU backward: number of inputs is incorrect.");
+
+        if(this_relu->output().size() != 1)
+            throw std::runtime_error("ReLU backward: number of outputs is incorrect.");
+
         auto forward_output_grad = static_cast<float*>(this_relu->input_memory(0).pointer);
         auto forward_input       = static_cast<float*>(this_relu->input_memory(1).pointer);
         auto forward_input_grad  = static_cast<float*>(this_relu->output_memory(0).pointer);
 
-        
+        auto forward_output_grad_arg    = this_relu->input_memory(0).argument;
+        auto forward_output_grad_size   = forward_output_grad_arg.size;
+        auto forward_output_grad_offset = this_relu->argument.input_offset[0];
+
+        auto forward_input_arg    = this_relu->input_memory(1).argument;
+        auto forward_input_size   = forward_input_arg.size;
+        auto forward_input_offset = this_relu->argument.input_offset[1];
+
+        auto forward_input_grad_arg    = this_relu->output_memory(0).argument;
+        auto forward_input_grad_size   = forward_input_grad_arg.size;
+        auto forward_input_grad_offset = this_relu->argument.output_offset;
+
+        auto window_size = this_relu->argument.output_size;
+
+        if(forward_output_grad_size.size() != forward_input_size.size() || forward_input_size.size() != forward_input_grad_size.size()) 
+            throw std::runtime_error("ReLU backward: number of IO dimension does not match.");
+
+        if(forward_output_grad_arg.format != forward_input_arg.format || forward_input_arg.format != forward_input_grad_arg.format)
+            throw std::runtime_error("ReLU backward: IO data format does not match.");
+
+        for(size_t i = 0; i < forward_output_grad_size.size(); ++i){
+            if(forward_output_grad_size[i] < window_size[i] + forward_output_grad_offset[i]) throw std::runtime_error("ReLU backward: forward_output_grad size does not match the offset.");
+            if(forward_input_size[i] < window_size[i] + forward_input_offset[i])             throw std::runtime_error("ReLU backward: forward_input size does not match the offset.");
+            if(forward_input_grad_size[i] < window_size[i] + forward_input_grad_offset[i])   throw std::runtime_error("ReLU backward: forward_input_grad size does not match the offset.");
+        }
+
+        std::vector<uint32_t> counter(window_size.size() - 1, 0);
+
+        std::vector<uint32_t> acc(forward_input_offset.size());
+
+        while(!counter_finished(window_size, counter))
+        {
+            // calculate offset without most frequently changing dimension to reduce function calls
+            // most changing dimension has linear layout in memory
+            std::transform(counter.begin(), counter.end(), forward_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
+            auto forward_input_ptr = forward_input + calculate_offset(forward_input_size, acc) + forward_input_offset.back();
+
+            std::transform(counter.begin(), counter.end(), forward_output_grad_offset.begin(), acc.begin(), std::plus<uint32_t>());
+            auto forward_output_grad_ptr = forward_output_grad + calculate_offset(forward_output_grad_size, acc) + forward_output_grad_offset.back();
+
+            std::transform(counter.begin(), counter.end(), forward_input_grad_offset.begin(), acc.begin(), std::plus<uint32_t>());
+            auto forward_input_grad_ptr = forward_input_grad + calculate_offset(forward_input_grad_size, acc) + forward_input_grad_offset.back();
+
+            // relu backprop on linear buffer
+            for (uint32_t i = 0; i < window_size.back() ; ++i) 
+                forward_input_grad_ptr[i] = (forward_input_ptr[i] <= 0.0f ? 0.0f : 1.0f) * forward_output_grad_ptr[i];
+
+            counter_increase(window_size, counter);
+        }
     }
 
     std::vector<task> work() {
@@ -170,7 +226,7 @@ primitive relu::create(relu::arguments arg) {
     return result.release();
 }
 
-relu_backward::arguments::arguments(neural::engine::type engine, std::vector<primitive> out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, std::vector<primitive_at> in, std::vector<int32_t> in_off, float slp = 0.0f)
+relu_backward::arguments::arguments(neural::engine::type engine, std::vector<primitive> out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, std::vector<primitive_at> in, std::vector<std::vector<uint32_t>> in_off, float slp)
     : engine(engine)
     , output(out)
     , output_offset(out_off)
@@ -179,14 +235,22 @@ relu_backward::arguments::arguments(neural::engine::type engine, std::vector<pri
     , input_offset(in_off)
     , negative_slope(slp) {}
 
-relu_backward::arguments::arguments(neural::engine::type engine, std::vector<primitive> out, std::vector<primitive_at> in, float slp = 0.0f)
+relu_backward::arguments::arguments(neural::engine::type engine, std::vector<primitive> out, std::vector<primitive_at> in, float slp)
     : engine(engine)
     , output(out)
     , output_offset({out[0].as<const memory&>().argument.size.size()})
     , output_size(out[0].as<const memory&>().argument.size.begin(), out[0].as<const memory&>().argument.size.end())
     , input(in)
-    , input_offset({in[0].primitive.as<const memory&>().argument.size.size()})
-    , negative_slope(slp) {}
+    , input_offset(in.size())
+    , negative_slope(slp) 
+{
+    for(auto& in_offs : input_offset)
+    {
+        in_offs.resize(in[0].primitive.as<const memory&>().argument.size.size());
+        for(auto& offset : in_offs)
+            offset = 0;
+    }
+}
 
 // creates primitive with relu implementation that supports provided arguments
 primitive relu_backward::create(relu_backward::arguments arg) {
