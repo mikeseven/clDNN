@@ -116,28 +116,17 @@ struct relu_backward_reference : is_an_implementation {
             if(forward_input_grad_size[i] < window_size[i] + forward_input_grad_offset[i])   throw std::runtime_error("ReLU backward: forward_input_grad size does not match the offset.");
         }
 
-        std::vector<uint32_t> counter(window_size.size() - 1, 0);
+        namespace nd = ndimensional;
+        nd::value<uint32_t> range (window_size);
+        nd::calculate_idx<uint32_t> calc_forward_input_idx(forward_input_size);
+        nd::calculate_idx<uint32_t> calc_forward_output_grad_idx(forward_output_grad_size);
+        nd::calculate_idx<uint32_t> calc_forward_input_grad_idx(forward_input_grad_size);
+        for(auto pos : range) {
+            auto forward_input_idx  = calc_forward_input_idx (pos + forward_input_offset);
+            auto forward_output_grad_idx = calc_forward_output_grad_idx(pos + forward_output_grad_offset);
+            auto forward_input_grad_idx = calc_forward_input_grad_idx(pos + forward_input_grad_offset);
 
-        std::vector<uint32_t> acc(forward_input_offset.size());
-
-        while(!counter_finished(window_size, counter))
-        {
-            // calculate offset without most frequently changing dimension to reduce function calls
-            // most changing dimension has linear layout in memory
-            std::transform(counter.begin(), counter.end(), forward_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            auto forward_input_ptr = forward_input + calculate_offset(forward_input_size, acc) + forward_input_offset.back();
-
-            std::transform(counter.begin(), counter.end(), forward_output_grad_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            auto forward_output_grad_ptr = forward_output_grad + calculate_offset(forward_output_grad_size, acc) + forward_output_grad_offset.back();
-
-            std::transform(counter.begin(), counter.end(), forward_input_grad_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            auto forward_input_grad_ptr = forward_input_grad + calculate_offset(forward_input_grad_size, acc) + forward_input_grad_offset.back();
-
-            // relu backprop on linear buffer
-            for (uint32_t i = 0; i < window_size.back() ; ++i) 
-                forward_input_grad_ptr[i] = (forward_input_ptr[i] <= 0.0f ? 0.0f : 1.0f) * forward_output_grad_ptr[i];
-
-            counter_increase(window_size, counter);
+            forward_input_grad[forward_input_grad_idx] = (forward_input[forward_input_idx] <= 0.0f ? 0.0f : 1.0f) * forward_output_grad[forward_output_grad_idx];
         }
     }
 
