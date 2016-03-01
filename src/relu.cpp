@@ -241,16 +241,8 @@ relu_backward::arguments::arguments(neural::engine::type engine, std::vector<pri
     , output_offset({out[0].as<const memory&>().argument.size.size()})
     , output_size(out[0].as<const memory&>().argument.size.begin(), out[0].as<const memory&>().argument.size.end())
     , input(in)
-    , input_offset(in.size())
-    , negative_slope(slp) 
-{
-    for(auto& in_offs : input_offset)
-    {
-        in_offs.resize(in[0].primitive.as<const memory&>().argument.size.size());
-        for(auto& offset : in_offs)
-            offset = 0;
-    }
-}
+    , input_offset(in.size(), std::vector<uint32_t>(in[0].primitive.as<const memory&>().argument.size.size(), 0))
+    , negative_slope(slp) {}
 
 // creates primitive with relu implementation that supports provided arguments
 primitive relu_backward::create(relu_backward::arguments arg) {
