@@ -1,4 +1,4 @@
-#include "neural.h"
+#include "api/neural.h"
 #include "multidimensional_counter.h"
 #include <algorithm>
 #include <tuple>
@@ -8,12 +8,11 @@
 namespace neural {
 
 namespace {
-
 struct relu_reference : is_an_implementation {
     const relu &outer;
     relu_reference(relu &arg)
-        : is_an_implementation(neural::type_id<relu_reference>()) 
-        , outer(arg) 
+        : is_an_implementation(neural::type_id<relu_reference>())
+        , outer(arg)
     {};
     ~relu_reference() {}
 
@@ -23,44 +22,33 @@ struct relu_reference : is_an_implementation {
         auto output    = static_cast<float*>(this_relu->output_memory(0).pointer);
 
         auto input_memory_arg  = this_relu->input_memory(0).argument;
-        auto input_whole_size  = input_memory_arg.size;
+        auto input_buffer_size = input_memory_arg.size;
         auto input_offset      = this_relu->argument.input_offset;
 
         auto output_memory_arg = this_relu->output_memory(0).argument;
-        auto output_whole_size = output_memory_arg.size;
+        auto output_buffer_size= output_memory_arg.size;
         auto output_offset     = this_relu->argument.output_offset;
         auto output_size       = this_relu->argument.output_size;
 
-        if(input_memory_arg.format != memory::format::yxfb_f32) throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
-        if(input_whole_size.size() != output_whole_size.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
-        if(input_memory_arg.format != output_memory_arg.format) throw std::runtime_error("ReLU input/output data format does not match.");
-        for(auto &x : input_offset)  if(x < 0)                  throw std::runtime_error("ReLU negative input offset.");
+        if(input_memory_arg.format != memory::format::yxfb_f32)  throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
+        if(input_buffer_size.size() != output_buffer_size.size())throw std::runtime_error("ReLU input/output number of dimension does not match.");
+        if(input_memory_arg.format != output_memory_arg.format)  throw std::runtime_error("ReLU input/output data format does not match.");
+        for(auto &x : input_offset)  if(x < 0)                   throw std::runtime_error("ReLU negative input offset.");
 
-        for(size_t i = 0; i < input_whole_size.size(); ++i){
-            if(input_whole_size[i]  < output_size[i] + input_offset[i] ) throw std::runtime_error("ReLU input/output size does not match.");
-            if(output_whole_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("ReLU sizes to small.");
+        for(size_t i = 0; i < input_buffer_size.size(); ++i){
+            if(input_buffer_size[i]  < output_size[i] + input_offset[i])  throw std::runtime_error("ReLU input/output size does not match.");
+            if(output_buffer_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("ReLU sizes to small.");
         }
 
-        std::vector<uint32_t> counter( output_size.size() - 1, 0 );
+        namespace nd = ndimensional;
+        nd::value<uint32_t> range (output_size);
+        nd::calculate_idx<uint32_t> calc_in_idx  (input_buffer_size);
+        nd::calculate_idx<uint32_t> calc_out_idx (output_buffer_size);
+        for(auto pos : range) {
+            auto in_idx  = calc_in_idx (pos + input_offset );
+            auto out_idx = calc_out_idx(pos + output_offset);
 
-        auto uint_input_offset = std::vector<uint32_t>(input_offset.begin(), input_offset.end());  //relu has always non negative offset
-
-        std::vector<uint32_t> acc(uint_input_offset.size());
-        while( !counter_finished(output_size, counter) ){
-            // calculate offset without most frequently changing dimension to reduce function calls
-            // most changing dimension has linear layout in memory
-            std::transform( counter.begin(), counter.end(), uint_input_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            auto in_offset  = calculate_offset(input_whole_size , acc ) + input_offset.back();
-
-            std::transform( counter.begin(), counter.end(), output_offset.begin(), acc.begin(), std::plus<uint32_t>());
-            auto out_offset = calculate_offset(output_whole_size, acc) + output_offset.back();
-
-            // relu on linear buffer
-            for (uint32_t i = 0; i < output_size.back() ; ++i) {
-                output[out_offset + i] = std::max( input[in_offset + i], 0.0f) 
-                                                 + this_relu->argument.negative_slope * std::min( input[in_offset + i], 0.0f);
-            }
-            counter_increase(output_size, counter);
+            output[out_idx] = std::max( input[in_idx], 0.0f) + this_relu->argument.negative_slope * std::min( input[in_idx], 0.0f);
         }
     }
 
