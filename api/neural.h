@@ -6,8 +6,10 @@ namespace neural {
 
 // data in memory in known format; format = {order, type} of values
 struct memory : is_a_primitive {
+	enum axis {x,y,f,b};
     struct format_traits {
         const uint8_t       dimension;
+		const std::vector<axis>	order;
         const type_traits  *type;
     };
 
@@ -34,23 +36,23 @@ struct memory : is_a_primitive {
 
     static const format_traits traits(format::type fmt) {
         switch(fmt) {
-        case format::  xb_f32: return {2, type_id<float>()};
-        case format::yxfb_f32:
-        case format::fyxb_f32:
-        case format::xyfb_f32:
-        case format::fxyb_f32:
-        case format::byxf_f32:
-        case format::bfyx_f32:
-        case format::bxyf_f32:
-        case format::bfxy_f32: return {4, type_id<float>()};
-        case format::yxfb_f64:
-        case format::fyxb_f64:
-        case format::xyfb_f64:
-        case format::fxyb_f64:
-        case format::byxf_f64:
-        case format::bfyx_f64:
-        case format::bxyf_f64:
-        case format::bfxy_f64: return {4, type_id<double>()};
+		case format::  xb_f32: return {2, {x,b} , type_id<float>()};
+        case format::yxfb_f32: return {4, {y,x,f,b} , type_id<float>()};
+        case format::fyxb_f32: return {4, {f,y,x,b} , type_id<float>()};
+        case format::xyfb_f32: return {4, {x,y,f,b} , type_id<float>()};
+        case format::fxyb_f32: return {4, {f,x,y,b} , type_id<float>()};
+        case format::byxf_f32: return {4, {b,y,x,f} , type_id<float>()};
+        case format::bfyx_f32: return {4, {b,f,y,x} , type_id<float>()};
+        case format::bxyf_f32: return {4, {b,x,y,f} , type_id<float>()};
+		case format::bfxy_f32: return {4, {b,f,x,y}, type_id<float>()};
+        case format::yxfb_f64: return {4, {y,x,f,b}, type_id<float>()};
+        case format::fyxb_f64: return {4, {f,y,x,b}, type_id<float>()};
+        case format::xyfb_f64: return {4, {x,y,f,b}, type_id<float>()};
+        case format::fxyb_f64: return {4, {f,x,y,b}, type_id<float>()};
+        case format::byxf_f64: return {4, {b,y,x,f}, type_id<float>()};
+        case format::bfyx_f64: return {4, {b,f,y,x}, type_id<float>()};
+        case format::bxyf_f64: return {4, {b,x,y,f}, type_id<float>()};
+        case format::bfxy_f64: return {4, {b,f,x,y}, type_id<double>()};
         default: throw std::runtime_error("unknown memory::format");
         }
     }
@@ -114,7 +116,7 @@ struct reorder : is_a_primitive {
         std::vector<primitive>      output;
         std::vector<primitive_at>   input;  // 1: {input}
 
-        arguments(neural::engine::type, neural::memory::format::type, primitive_at);
+        arguments(neural::engine::type, neural::memory::format::type,std::vector<uint32_t> out_sizes, primitive_at);
     };
     const arguments argument;
 
