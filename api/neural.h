@@ -236,8 +236,8 @@ struct relu_backward : is_a_primitive {
         std::vector<std::vector<uint32_t>>  input_offset;
         float                               negative_slope;
 
-        arguments(neural::engine::type, std::vector<primitive>, std::vector<uint32_t>, std::vector<uint32_t>, std::vector<primitive_at>, std::vector<std::vector<uint32_t>>, float flp = 0.0f);
-        arguments(neural::engine::type, std::vector<primitive>,                                               std::vector<primitive_at>,                                     float flp = 0.0f);
+        arguments(neural::engine::type, std::vector<primitive> out, std::vector<uint32_t> out_offset, std::vector<uint32_t> out_size, std::vector<primitive_at> in, std::vector<std::vector<uint32_t>> in_offsets, float neg_slope = 0.0f);
+        arguments(neural::engine::type, std::vector<primitive> out,                                                                   std::vector<primitive_at> in,                                                float neg_slope = 0.0f);
     };
     const arguments argument;
 
