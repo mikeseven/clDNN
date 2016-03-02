@@ -226,6 +226,33 @@ private:
     std::unique_ptr<is_an_implementation> _private;
 };
 
+struct relu_backward : is_a_primitive {
+    struct arguments {
+        engine::type                        engine;
+        std::vector<primitive>              output;         // 1: {forward_input_grad}
+        std::vector<uint32_t>               output_offset;
+        std::vector<uint32_t>               output_size;
+        std::vector<primitive_at>           input;          // 2: {forward_output_grad, forward_input}
+        std::vector<std::vector<uint32_t>>  input_offset;
+        float                               negative_slope;
+
+        arguments(neural::engine::type, std::vector<primitive>, std::vector<uint32_t>, std::vector<uint32_t>, std::vector<primitive_at>, std::vector<std::vector<uint32_t>>, float flp = 0.0f);
+        arguments(neural::engine::type, std::vector<primitive>,                                               std::vector<primitive_at>,                                     float flp = 0.0f);
+    };
+    const arguments argument;
+
+    struct query_entry : is_a_query_entry { arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    static primitive create(arguments);
+    const std::vector<primitive_at>  &input() const  { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+    primitive clone() const { return create(argument); }
+
+private:
+    relu_backward(arguments arg) : is_a_primitive(type_id<const relu_backward>()), argument(arg) {};
+
+    std::unique_ptr<is_an_implementation> _private;
+};
 
 
 // pooling
