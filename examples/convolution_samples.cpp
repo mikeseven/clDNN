@@ -15,12 +15,14 @@ void example_convolution_forward() {
 
     float in_buffer[input_y*input_x*input_z*input_b];
     float out_buffer[output_y*output_x*output_z*output_b];
-    // input buffer should be initialized with valid data
+    float weight_buffer[conv_size_y*conv_size_x*conv_size_z*conv_size_b];
+    float bias_buffer[out_siz_z];
+    // buffers should be initialized with valid data
 
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {input_y, input_x, input_z, input_b}});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {output_y, output_x, output_z, output_b}});
     auto weights= memory::create({engine::cpu, memory::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_z, conv_size_b}});
-    auto biases = memory::create({engine::cpu, memory::format::yxfb_f32, {output_z}});
+    auto biases = memory::create({engine::cpu, memory::format::yxfb_f32, {out_siz_z}});
 
     auto act    = convolution::create( {engine::reference,
                                         output,
@@ -34,7 +36,7 @@ void example_convolution_forward() {
                                         padding::zero}
                                       );
 
-    execute({input(in_buffer), output(out_buffer), act});
+    execute({input(in_buffer), output(out_buffer), weights(weight_buffer), biases(bias_buffer), act});
 }
 
 void example_convolution_backward(){
