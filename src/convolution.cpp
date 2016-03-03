@@ -31,17 +31,17 @@ struct convolution_reference : is_an_implementation {
         auto output_size       = this_conv->argument.output_size;
 
         auto stride            = this_conv->argument.stride;
-        auto window            = (this_conv->argument.weight).as<const memory*>();
-        auto biases            = this_conv->argument.bias.as<const memory*>();
-        auto padding           = this_conv->argument.padding; //todo, padding is not supported yet
+        //auto window            = (this_conv->argument.weight).as<const memory*>();
+        //auto biases            = this_conv->argument.bias.as<const memory*>();
+        //auto padding           = this_conv->argument.padding; //todo, padding is not supported yet
 
-        if(padding::zero                != padding)                   throw std::runtime_error("Padding is not supported.");
-        if(input_buffer_size.size()     != output_buffer_size.size()) throw std::runtime_error("Convolution input/output number of dimension does not match.");
-        if(stride.size()                != output_buffer_size.size()) throw std::runtime_error("Convolution stride/output number of dimension does not match.");
-        if(window->argument.size.size() != output_buffer_size.size()) throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
-        if(input_memory_arg.format      != output_memory_arg.format)  throw std::runtime_error("Convolution input/output data format does not match.");
-        if(input_memory_arg.format      != memory::format::yxfb_f32)  throw std::runtime_error("Convolution reference uses yxfb_f32 format.");
-        if(biases->argument.size.size() != output_size[2])            throw std::runtime_error("Convolution biases/output feature maps number does not match.");
+        //if(padding::zero                != padding)                   throw std::runtime_error("Padding is not supported.");
+        //if(input_buffer_size.size()     != output_buffer_size.size()) throw std::runtime_error("Convolution input/output number of dimension does not match.");
+        //if(stride.size()                != output_buffer_size.size()) throw std::runtime_error("Convolution stride/output number of dimension does not match.");
+        //if(window->argument.size.size() != output_buffer_size.size()) throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
+        //if(input_memory_arg.format      != output_memory_arg.format)  throw std::runtime_error("Convolution input/output data format does not match.");
+        //if(input_memory_arg.format      != memory::format::yxfb_f32)  throw std::runtime_error("Convolution reference uses yxfb_f32 format.");
+        //if(biases->argument.size.size() != output_size[2])            throw std::runtime_error("Convolution biases/output feature maps number does not match.");
 
         // general formula: output size = (input size - window size) / step + 1
         //for(size_t i = 0; i < input_offset.size(); ++i){
@@ -83,7 +83,7 @@ static std::map<implementation_key, std::function<is_an_implementation *(convolu
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), convolution_reference::create}
 };
 
-convolution::arguments::arguments(neural::engine::type   eng,
+convolution::arguments::arguments( neural::engine::type  eng,
                                    primitive             out,
                                    std::vector<uint32_t> out_off,
                                    std::vector<uint32_t> out_siz,
@@ -104,7 +104,7 @@ convolution::arguments::arguments(neural::engine::type   eng,
     , bias(biases)
     , padding(padd) {};
 
-convolution::arguments::arguments(neural::engine::type   eng,
+convolution::arguments::arguments( neural::engine::type  eng,
                                    primitive             out,
                                    primitive             in,
                                    std::vector<uint32_t> strd,
