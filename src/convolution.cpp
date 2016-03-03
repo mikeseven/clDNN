@@ -6,6 +6,41 @@
 //#include <map>
 //#include <tuple>
 
+#include <fstream> //todo remove
+template<typename T> //todo remove
+void save_4d_data( std::vector<uint32_t> size, std::string filename, T* data, neural::memory::format::type type ) {
+    std::vector<uint32_t> xyzn_pos(4);
+
+    switch(type){
+        case neural::memory::format::yxfb_f32 : xyzn_pos = {1, 0, 2, 3}; break;
+        default                               : throw std::runtime_error("unknown data format");
+    }
+
+    std::ofstream file;
+    file.open( filename + ".txt" );
+
+    ndimensional::calculate_idx<uint32_t> calculate_idx( size );
+
+    std::vector<uint32_t> current_pos(4);
+    for( uint32_t batch = 0; batch < size[ xyzn_pos[3] ]; ++batch ){
+        current_pos[ xyzn_pos[3] ] = batch;
+        for( uint32_t z = 0; z < size[ xyzn_pos[2] ]; ++z ){
+            current_pos[ xyzn_pos[2] ] = z;
+            file << "n\\z: " << batch << "\\" << z << std::endl;
+            for( uint32_t x = 0; x < size[ xyzn_pos[0] ]; ++x ) {
+                current_pos[ xyzn_pos[0] ] = x;
+                for( uint32_t y = 0; y < size[ xyzn_pos[1] ]; ++y ) {
+                    current_pos[ xyzn_pos[1] ] = y;
+
+                    file << data[ calculate_idx(current_pos) ] << "\t";
+                }
+                file << std::endl;
+            }
+        }
+    }
+    file.close();
+}
+
 namespace neural {
 
 struct convolution_reference : is_an_implementation {
@@ -33,22 +68,22 @@ struct convolution_reference : is_an_implementation {
         auto output_size       = this_conv->argument.output_size;
 
         auto window_memory_arg = this_conv->argument.weight.as<const memory&>().argument; //convolution filter
-        auto window_memory_size= window_memory_arg.size;
+        auto window_buffer_size= window_memory_arg.size;
 
-        auto bias_memory_arg   = this_conv->argument.bias.as<const memory&>().argument; //convolution filter
-        auto bias_memory_size  = bias_memory_arg.size;
+        auto bias_memory_arg   = this_conv->argument.bias.as<const memory&>().argument;
+        auto bias_buffer_size  = bias_memory_arg.size;
 
         auto stride  = this_conv->argument.stride;
         auto padding = this_conv->argument.padding;
 
-        if(padding::zero               != padding)                   throw std::runtime_error("Padding is not supported.");
-        if(input_buffer_size.size()    != output_buffer_size.size()) throw std::runtime_error("Convolution input/output number of dimension does not match.");
-        if(stride.size()               != output_buffer_size.size()) throw std::runtime_error("Convolution stride/output number of dimension does not match.");
-        if(input_memory_arg.format     != output_memory_arg.format)  throw std::runtime_error("Convolution input/output data format does not match.");
-        if(window_memory_size.size()   != output_buffer_size.size()) throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
-        if(input_memory_arg.format     != memory::format::yxfb_f32)  throw std::runtime_error("Convolution reference uses yxfb_f32 format.");
-        if(bias_memory_size.size()     != 1)                         throw std::runtime_error("Convolution biases isn't 1D vector.");
-        if(bias_memory_size[0]         != output_size[2])            throw std::runtime_error("Convolution biases/output feature maps number does not match.");
+        if(padding::zero             != padding)                   throw std::runtime_error("Padding is not supported.");
+        if(input_buffer_size.size()  != output_buffer_size.size()) throw std::runtime_error("Convolution input/output number of dimension does not match.");
+        if(stride.size()             != output_buffer_size.size()) throw std::runtime_error("Convolution stride/output number of dimension does not match.");
+        if(input_memory_arg.format   != output_memory_arg.format)  throw std::runtime_error("Convolution input/output data format does not match.");
+        if(window_buffer_size.size() != output_buffer_size.size()) throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
+        if(input_memory_arg.format   != memory::format::yxfb_f32)  throw std::runtime_error("Convolution reference uses yxfb_f32 format.");
+        if(bias_buffer_size.size()   != 1)                         throw std::runtime_error("Convolution biases isn't 1D vector.");
+        if(bias_buffer_size[0]       != output_size[2])            throw std::runtime_error("Convolution biases/output feature maps number does not match.");
 
         // general formula: output size = (input size - window size) / step + 1
         for(size_t i = 0; i < input_offset.size(); ++i){
@@ -59,12 +94,16 @@ struct convolution_reference : is_an_implementation {
                 throw std::runtime_error("Convolution output buffer size is to small.");
         }
 
+        save_4d_data(input_buffer_size, "in_b", input, input_memory_arg.format); //todo remove
+        save_4d_data(output_buffer_size, "out_b", output, output_memory_arg.format); //todo remove
+        save_4d_data(window_buffer_size, "window", window, window_memory_arg.format); //todo remove
+
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
-        nd::value<uint32_t> window_range (window_memory_size);
+        nd::value<uint32_t> window_range (window_buffer_size);
         nd::calculate_idx<uint32_t> calc_in_idx  (input_buffer_size);
         nd::calculate_idx<uint32_t> calc_out_idx (output_buffer_size);
-        nd::calculate_idx<uint32_t> calc_win_idx (window_memory_size);
+        nd::calculate_idx<uint32_t> calc_win_idx (window_buffer_size);
         for(auto pos : range) {
             float acc = 0;
             auto out_idx = calc_out_idx(pos + output_offset);
@@ -77,6 +116,7 @@ struct convolution_reference : is_an_implementation {
             }
             output[out_idx] = acc;
         }
+    save_4d_data(output_buffer_size, "out_a", output, output_memory_arg.format); //todo remove
     }
 
     std::vector<task> work() {
@@ -103,7 +143,7 @@ convolution::arguments::arguments( neural::engine::type  eng,
                                    std::vector<uint32_t> strd,
                                    primitive             weights,
                                    primitive             biases,
-                                   padding::type         padd)
+                                   neural::padding::type padd)
     : engine(eng)
     , output({out})
     , output_offset(out_off)
@@ -121,7 +161,7 @@ convolution::arguments::arguments( neural::engine::type  eng,
                                    std::vector<uint32_t> strd,
                                    primitive             weights,
                                    primitive             biases,
-                                   padding::type         padd)
+                                   neural::padding::type padd)
     : engine(eng)
     , output({out})
     , output_offset({out.as<const memory&>().argument.size.size()})
