@@ -22,8 +22,6 @@
 #   include <sstream>
 #endif
 
-#include <Windows.h>
-
 namespace neural {
 
 /* This file contains internal device structure implementation as well as thread pool class.
@@ -305,7 +303,8 @@ struct nn_thread_worker_pool {
         // If there is only one thread available - do not create 
         // subthreads, pool will process all jobs on its own.
         if (num_threads > 1) {
-//#define DUAL_CPU
+#if 0
+            //#define DUAL_CPU
 #if defined DUAL_CPU
             for (auto thread_id = 0; thread_id < num_threads*2; ++thread_id) {
                 auto thread = std::unique_ptr<nn_thread_worker>(new nn_thread_worker(thread_id, &semaphore));
@@ -324,6 +323,7 @@ struct nn_thread_worker_pool {
                 SetThreadAffinityMask(thread->worker_thread.native_handle(), 1i64<<(thread_id*2/cfg_num_threads_per_core));
                 threads.push_back(std::move(thread));
             }
+#endif
 #endif
 #ifdef __linux__
         nn_hardware_platform hw_platform;

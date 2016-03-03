@@ -23,7 +23,7 @@ size_t memory::count() const {
 }
 
 memory::~memory() {
-    if(argument.owns_memory) delete[] pointer;
+    if(argument.owns_memory) delete[] static_cast<char *>(pointer);
 }
 
 primitive memory::create(memory::arguments arg){
@@ -34,4 +34,4 @@ primitive memory::create(memory::arguments arg){
     return result.release();
 }
 
-}
+} // namespace neural

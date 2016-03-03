@@ -1,4 +1,5 @@
 #include "api/neural.h"
+#include <limits>
 
 using namespace neural;
 
@@ -38,7 +39,7 @@ void spatial_bn_trivial_example_forward_training_float()
     fill_memory<float>( bias, 0);
 
     // Create primitive.
-    auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 0.0, FLT_EPSILON});
+    auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 0.0, std::numeric_limits<float>::epsilon()});
 
     // Run few times.
     for(int i = 0; i < 3; ++i)
@@ -65,7 +66,7 @@ void spatial_bn_trivial_example_forward_training_double()
     fill_memory<double>( bias, 0);
 
     // Create primitive.
-    auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 0.0, DBL_EPSILON});
+    auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 0.0, std::numeric_limits<double>::epsilon()});
 
     // Run few times.
     for(int i = 0; i < 3; ++i)
@@ -216,7 +217,7 @@ void spatial_bn_complex_example_training_float()
     fill_memory<float>( forward_bias, 0);
 
     // Create primitives.
-    auto bn_train_fw  = normalization::batch_training_forward::create({engine::reference, {forward_output, current_mean, current_inv_std_dev, moving_mean, moving_inv_std_dev}, {forward_input, forward_scale, forward_bias}, true, 0.0, FLT_EPSILON});
+    auto bn_train_fw  = normalization::batch_training_forward::create({engine::reference, {forward_output, current_mean, current_inv_std_dev, moving_mean, moving_inv_std_dev}, {forward_input, forward_scale, forward_bias}, true, 0.0, std::numeric_limits<float>::epsilon()});
     auto bn_train_bck = normalization::batch_training_backward::create({engine::reference, {forward_input_grad, forward_scale_grad, forward_bias_grad}, {forward_input, forward_scale, forward_bias, forward_output, current_mean, current_inv_std_dev}, true});
     auto bn_infer     = normalization::batch_inference::create({engine::reference, {forward_output}, {forward_input, forward_scale, forward_bias, moving_mean, moving_inv_std_dev}, true});
 
@@ -271,7 +272,7 @@ void spatial_bn_complex_example_training_double()
     fill_memory<double>( forward_bias, 0);
 
     // Create primitives.
-    auto bn_train_fw  = normalization::batch_training_forward::create({engine::reference, {forward_output, current_mean, current_inv_std_dev, moving_mean, moving_inv_std_dev}, {forward_input, forward_scale, forward_bias}, true, 0.0, FLT_EPSILON});
+    auto bn_train_fw  = normalization::batch_training_forward::create({engine::reference, {forward_output, current_mean, current_inv_std_dev, moving_mean, moving_inv_std_dev}, {forward_input, forward_scale, forward_bias}, true, 0.0, std::numeric_limits<float>::epsilon()});
     auto bn_train_bck = normalization::batch_training_backward::create({engine::reference, {forward_input_grad, forward_scale_grad, forward_bias_grad}, {forward_input, forward_scale, forward_bias, forward_output, current_mean, current_inv_std_dev}, true});
     auto bn_infer     = normalization::batch_inference::create({engine::reference, {forward_output}, {forward_input, forward_scale, forward_bias, moving_mean, moving_inv_std_dev}, true});
 
