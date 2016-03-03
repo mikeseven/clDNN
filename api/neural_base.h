@@ -37,7 +37,7 @@ template<>           struct is_floating_point<half>  { static const bool value =
 
 //todo type id and const type id should be equall
 template<typename T_type> 
-#if defined _MSVC_VER
+#if defined _MSC_VER
 __declspec(noinline)
 #else
 __attribute__((noinline))
@@ -146,6 +146,7 @@ public:
 #if defined __GNUC__
 #   pragma GCC diagnostic push
 #   pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
     class input {
         const primitive *get_base() const {
             const uint8_t *ptr = reinterpret_cast<const uint8_t *>(this);
@@ -168,6 +169,7 @@ public:
         inline const primitive operator[](std::string) const;
         inline size_t size() const;
     } output;
+#if defined __GNUC__
 #   pragma GCC diagnostic pop
 #endif
     template<typename T> T as() const {
