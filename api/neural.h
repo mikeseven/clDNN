@@ -45,13 +45,13 @@ struct memory : is_a_primitive {
         case format::bfyx_f32: return {4, {b,f,y,x} , type_id<float>()};
         case format::bxyf_f32: return {4, {b,x,y,f} , type_id<float>()};
 		case format::bfxy_f32: return {4, {b,f,x,y}, type_id<float>()};
-        case format::yxfb_f64: return {4, {y,x,f,b}, type_id<float>()};
-        case format::fyxb_f64: return {4, {f,y,x,b}, type_id<float>()};
-        case format::xyfb_f64: return {4, {x,y,f,b}, type_id<float>()};
-        case format::fxyb_f64: return {4, {f,x,y,b}, type_id<float>()};
-        case format::byxf_f64: return {4, {b,y,x,f}, type_id<float>()};
-        case format::bfyx_f64: return {4, {b,f,y,x}, type_id<float>()};
-        case format::bxyf_f64: return {4, {b,x,y,f}, type_id<float>()};
+        case format::yxfb_f64: return {4, {y,x,f,b}, type_id<double>()};
+        case format::fyxb_f64: return {4, {f,y,x,b}, type_id<double>()};
+        case format::xyfb_f64: return {4, {x,y,f,b}, type_id<double>()};
+        case format::fxyb_f64: return {4, {f,x,y,b}, type_id<double>()};
+        case format::byxf_f64: return {4, {b,y,x,f}, type_id<double>()};
+        case format::bfyx_f64: return {4, {b,f,y,x}, type_id<double>()};
+        case format::bxyf_f64: return {4, {b,x,y,f}, type_id<double>()};
         case format::bfxy_f64: return {4, {b,f,x,y}, type_id<double>()};
         default: throw std::runtime_error("unknown memory::format");
         }
