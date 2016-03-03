@@ -27,3 +27,5 @@ include_directories (${CMAKE_SOURCE_DIR}
 add_library(${TARGET_NAME} STATIC
             ${LIBRARY_SRC}
             ${API_HEADERS})
+
+target_link_libraries(${TARGET_NAME} pthread)
