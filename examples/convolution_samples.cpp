@@ -19,6 +19,15 @@ void example_convolution_forward() {
     float bias_buffer[out_siz_z];
     // buffers should be initialized with valid data
 
+    for(int i = 0; i < input_y*input_x*input_z*input_b; ++i)
+        in_buffer[i]  = i -  input_y*input_x*input_z*input_b/2;
+    for(int i = 0; i < output_y*output_x*output_z*output_b; ++i)
+        out_buffer[i] = -999;
+    for(int i = 0; i < conv_size_y*conv_size_x*conv_size_z*conv_size_b; ++i)
+        weight_buffer[i] = 2;
+    for(int i = 0; i < out_siz_z; ++i)
+        bias_buffer[i] = 0; //todo
+
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {input_y, input_x, input_z, input_b}});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {output_y, output_x, output_z, output_b}});
     auto weights= memory::create({engine::cpu, memory::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_z, conv_size_b}});
