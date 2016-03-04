@@ -137,9 +137,6 @@ struct relu_backward_reference : is_an_implementation {
     static is_an_implementation *create(relu_backward &arg) { return new relu_backward_reference(arg); };
 };
 
-//                                    engine                output                        input
-using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
-
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(relu_backward &)>> backward_implementation_map = {
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), relu_backward_reference::create}
