@@ -1,9 +1,6 @@
 #include "api/neural.h"
 #include "multidimensional_counter.h"
-//#include <algorithm>
-//#include <tuple>
-//#include <map>
-//#include <functional>
+#include <climits>
 
 namespace neural {
 namespace normalization {
@@ -31,7 +28,7 @@ struct softmax_reference : is_an_implementation {
         auto output_offset     = this_softmax->argument.output_offset;
         auto output_size       = this_softmax->argument.output_size;
 
-        if(input_memory_arg.format  != memory::format::yxfb_f32)  throw std::runtime_error("Softmax reference uses yxfb_f32 format.");
+        if(input_memory_arg.format  != memory::format::xb_f32)    throw std::runtime_error("Softmax reference uses yxfb_f32 format."); // todo should be format independent
         if(input_memory_arg.format  != output_memory_arg.format)  throw std::runtime_error("Softmax input/output data format does not match.");
         if(input_buffer_size.size() != output_buffer_size.size()) throw std::runtime_error("Softmax input/output number of dimension does not match.");
 
@@ -40,15 +37,30 @@ struct softmax_reference : is_an_implementation {
             if(output_buffer_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("Softmax sizes to small.");
         }
 
+        int data_index = 0; //todo type traits
+        int batch_index = 1;
+
+        std::vector<float> v_max( output_size[batch_index], -std::numeric_limits<float>::max() );
+        std::vector<float> v_acc( output_size[batch_index] );
+
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
         nd::calculate_idx<uint32_t> calc_in_idx  (input_buffer_size);
         nd::calculate_idx<uint32_t> calc_out_idx (output_buffer_size);
-        for(auto pos : range) {
-            //auto in_idx  = calc_in_idx (pos + input_offset );
-            //auto out_idx = calc_out_idx(pos + output_offset);
 
-            //output[out_idx] = std::max( input[in_idx], 0.0f) + this_softmax->argument.negative_slope * std::min( input[in_idx], 0.0f);
+        // find max val per batch
+        for(auto pos : range) {
+            auto in_idx  = calc_in_idx (pos + input_offset );
+            v_max[ pos[batch_index] ] = std::max( v_max[pos[batch_index]], input[in_idx]);
+        }
+        for(auto pos : range) {
+            auto in_idx  = calc_in_idx (pos + input_offset );
+            auto out_idx = calc_out_idx(pos + output_offset);
+
+            output[out_idx] -= v_max[ pos[batch_index] ]; // subtracte max val from every data point per batch
+            output[out_idx] = std::expf(output[out_idx]); // exp
+            v_acc[ pos[batch_index] ] += output[out_idx]; // sum eveything per batch
+            output[out_idx] /= v_acc[ pos[batch_index] ]; // compute softmax
         }
     }
 
@@ -64,7 +76,7 @@ using implementation_key = std::tuple<neural::engine::type, neural::memory::form
 
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(softmax &)>> forward_implementation_map = {
-    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), softmax_reference::create}
+    {std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), softmax_reference::create}
 };
 
 } // namespace {
@@ -112,5 +124,5 @@ primitive softmax::create(softmax::arguments arg) {
     return result.release();
 }
 
-}
-}
+} // namespace normalization
+} // namespace neural

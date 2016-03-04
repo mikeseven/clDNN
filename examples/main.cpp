@@ -7,8 +7,8 @@ NeuralIA
 
 int main( int argc, char* argv[ ] )
 {
-    extern void example_convolution_forward();
-    example_convolution_forward();
+    extern void example_softmax_forward();
+    example_softmax_forward();
     int result = 0;
     return result;
 }
