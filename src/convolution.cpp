@@ -36,15 +36,15 @@ struct convolution_reference : is_an_implementation {
         auto stride  = this_conv->argument.stride;
         auto padding = this_conv->argument.padding;
 
-        if(padding::zero             != padding)                   throw std::runtime_error("Padding is not supported.");
         if(input_buffer_size.size()  != output_buffer_size.size()) throw std::runtime_error("Convolution input/output number of dimension does not match.");
         if(stride.size()             != output_buffer_size.size()) throw std::runtime_error("Convolution stride/output number of dimension does not match.");
-        if(input_memory_arg.format   != output_memory_arg.format)  throw std::runtime_error("Convolution input/output data format does not match.");
+        if(input_memory_arg.format   != memory::format::yxfb_f32)  throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
+        if(input_memory_arg.format   != output_memory_arg.format)  throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
+        if(input_memory_arg.format   != window_memory_arg.format)  throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
         if(window_buffer_size.size() != output_buffer_size.size()) throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
-        if(input_memory_arg.format   != memory::format::yxfb_f32)  throw std::runtime_error("Convolution reference uses yxfb_f32 format.");
         if(bias_buffer_size.size()   != 1)                         throw std::runtime_error("Convolution biases isn't 1D vector.");
-        if(bias_buffer_size[0]       != output_size[2])            throw std::runtime_error("Convolution biases/output feature maps number does not match.");
-
+        if(bias_buffer_size[0]       != output_size[2])            throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
+                                                                                                                                                              // than this implementation will be format independent
         // general formula: output size = (input size - window size) / step + 1
         for(size_t i = 0; i < input_offset.size(); ++i){
             if(output_size[i] < (static_cast<int32_t>(input_buffer_size[i]) - input_offset[i]) / (stride[i] + 1) )
@@ -52,6 +52,10 @@ struct convolution_reference : is_an_implementation {
 
             if(output_buffer_size[i] < output_size[i] + output_offset[i])
                 throw std::runtime_error("Convolution output buffer size is to small.");
+
+            //todo remove after padding implementation
+            if(input_offset[i] < 0)
+                throw std::runtime_error("Convolution doesn't support padding yet. Input offset must be positive.");
         }
 
         namespace nd = ndimensional;
