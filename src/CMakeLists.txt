@@ -1,7 +1,7 @@
 # Copyright (c) 2016, Intel Corporation
-# NeuralIA 
+# NeuralIA
 
-set (TARGET_NAME "NeuralIA")
+set (TARGET_NAME "neuralia")
 # Sources for test files
 
 file (GLOB API_HEADERS
@@ -15,8 +15,8 @@ file (GLOB LIBRARY_SRC
 # Create named folders for the sources within the .vcproj
 # Empty name lists them directly under the .vcproj
 
-source_group("api\\headers" FILES ${API_HEADERS})
-source_group("api\\src" FILES ${LIBRARY_SRC})
+source_group("api" FILES ${API_HEADERS})
+source_group("src" FILES ${LIBRARY_SRC})
 
 # Properties->C/C++->General->Additional Include Directories
 include_directories (${CMAKE_SOURCE_DIR}
@@ -24,6 +24,10 @@ include_directories (${CMAKE_SOURCE_DIR}
                     )
 
 # Create library file from sources.
-add_library(${TARGET_NAME} STATIC 
+add_library(${TARGET_NAME} STATIC
             ${LIBRARY_SRC}
             ${API_HEADERS})
+
+if(UNIX)
+    target_link_libraries(${TARGET_NAME} pthread)
+endif()

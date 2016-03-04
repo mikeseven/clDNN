@@ -18,10 +18,7 @@ set  (MAIN_SRC
 file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h
       )
-file (GLOB LIBRARY_SRC
-       ${CMAKE_SOURCE_DIR}/src/*.h
-       ${CMAKE_SOURCE_DIR}/src/*.cpp
-      )
+
 
 # Create named folders for the sources within the .vcproj
 # Empty name lists them directly under the .vcproj
@@ -39,7 +36,6 @@ add_executable(${APP_NAME}
                ${MAIN_SRC}
                ${TEST_CASES_SRC}
                ${API_HEADERS}
-               ${LIBRARY_SRC}
               )
 
 # To use SDE it has to be installed and its root dir needs to be
@@ -101,4 +97,4 @@ else()
      endif()
 endif()
 # Set library dependencies
-target_link_libraries(${APP_NAME} gtest)
+target_link_libraries(${APP_NAME} gtest neuralia)

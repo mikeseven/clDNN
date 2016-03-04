@@ -10,7 +10,6 @@ file (GLOB API_HEADERS
       )
 file (GLOB LIBRARY_SRC
        ${CMAKE_SOURCE_DIR}/src/*.h
-       ${CMAKE_SOURCE_DIR}/src/*.cpp
       )
 file  (GLOB EXAMPLES_SRC
        ${CMAKE_SOURCE_DIR}/examples/*.h
@@ -19,7 +18,6 @@ file  (GLOB EXAMPLES_SRC
 # Create named folders for the sources within the .vcproj
 # Empty name lists them directly under the .vcproj
 source_group("api" FILES ${API_HEADERS})
-source_group("library" FILES ${LIBRARY_SRC})
 source_group("src" FILES ${EXAMPLES_SRC})
 
 # Properties->C/C++->General->Additional Include Directories
@@ -30,7 +28,9 @@ include_directories (${CMAKE_SOURCE_DIR}
 # Create library file from sources.
 add_executable(${TARGET_NAME}
                ${MAIN_SRC}
-               ${LIBRARY_SRC}
                ${API_HEADERS}
+               ${LIBRARY_SRC}
                ${EXAMPLES_SRC}
               )
+
+target_link_libraries(${TARGET_NAME} neuralia)

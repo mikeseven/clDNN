@@ -6,13 +6,14 @@
 
 namespace ndimensional {
 
+template<typename U> struct change_signedness;
+template<> struct change_signedness< int32_t> { using type = uint32_t; };
+template<> struct change_signedness<uint32_t> { using type =  int32_t; };
+template<> struct change_signedness<uint64_t> { using type =  int64_t; };
+template<> struct change_signedness< int64_t> { using type = uint64_t; };
+
 template<typename T>
 class value : public std::vector<T> {
-    template<typename U> struct change_signedness;
-    template<>           struct change_signedness<uint32_t> { using type =  int32_t; };
-    template<>           struct change_signedness< int32_t> { using type = uint32_t; };
-    template<>           struct change_signedness<uint64_t> { using type =  int64_t; };
-    template<>           struct change_signedness< int64_t> { using type = uint64_t; };
     using negT = typename change_signedness<T>::type;
 public:
 // Iterator represents number in number system in which maximum value of each digit at index 'i'
@@ -66,11 +67,11 @@ public:
     value  operator* (std::vector<   T> &arg) { value result=*this; return result*=arg; }
     value  operator* (std::vector<negT> &arg) { value result=*this; return result*=arg; }
 
-    template<typename T> friend std::ostream &operator<<(std::ostream &, value &);
+    template<typename U> friend std::ostream &operator<<(std::ostream &, ndimensional::value<U> &);
 };
 
-template<typename T>
-std::ostream &operator<<(std::ostream &out, value<T> &val) {
+template<typename U>
+std::ostream &operator<<(std::ostream &out, value<U> &val) {
     for(size_t at = 0; at < val.size(); ++at)
         out << val[at] << (at + 1 == val.size() ? "" : ",");
     return out;
@@ -92,6 +93,7 @@ public:
 
     size_t operator() ( const std::vector<T>& pos );
 };
+
 template<typename T>
 size_t calculate_idx<T>::operator()( const std::vector<T>& position ){
     size_t result_idx = 0;

@@ -58,10 +58,10 @@ struct memory : is_a_primitive {
     }
 
     struct arguments {
-        engine::type            engine;
-        format::type            format;
-        std::vector<uint32_t>   size;
-        bool                    owns_memory;
+        neural::engine::type            engine;
+        neural::memory::format::type    format;
+        std::vector<uint32_t>           size;
+        bool                            owns_memory;
 
         arguments(neural::engine::type aengine, memory::format::type aformat, std::vector<uint32_t> asize);
         arguments(neural::engine::type aengine, memory::format::type aformat, std::vector<uint32_t> asize, bool aowns_memory);
@@ -88,7 +88,7 @@ private:
 // file that is loaded and becomes a data
 struct file : is_a_primitive {
     struct arguments {
-        engine::type            engine;
+        neural::engine::type    engine;
         std::string             name;
         std::vector<primitive>  output;
 
@@ -112,7 +112,7 @@ private:
 // reorder data, type is not changed
 struct reorder : is_a_primitive {
     struct arguments {
-        engine::type                engine;
+        neural::engine::type        engine;
         std::vector<primitive>      output;
         std::vector<primitive_at>   input;  // 1: {input}
 
@@ -120,7 +120,7 @@ struct reorder : is_a_primitive {
     };
     const arguments argument;
 
-    struct query_entry : is_a_query_entry { arguments arguments;};
+    struct query_entry : is_a_query_entry { reorder::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
@@ -133,14 +133,14 @@ private:
 // direct convolution
 struct convolution : is_a_primitive {
     struct arguments {
-        engine::type                engine;
+        neural::engine::type        engine;
         std::vector<primitive>      output;
         std::vector<uint32_t>       output_offset;
         std::vector<uint32_t>       output_size;
         std::vector<primitive_at>   input;          // 3: {input, filter, bias}
         std::vector<int32_t>        input_offset;
         std::vector<uint32_t>       input_stride;
-        padding::type               padding;
+        neural::padding::type       padding;
 
         arguments(neural::engine::type, neural::memory::format::type, std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>, std::vector<uint32_t>, primitive, primitive, neural::padding::type);
         arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                       std::vector<uint32_t>, primitive, primitive, neural::padding::type);
@@ -150,7 +150,7 @@ struct convolution : is_a_primitive {
     };
     const arguments argument;
 
-    struct query_entry : is_a_query_entry { arguments arguments; };
+    struct query_entry : is_a_query_entry { convolution::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
@@ -165,7 +165,7 @@ private:
 // fully connected
 struct fully_connected : is_a_primitive {
     struct arguments {
-        engine::type                engine;
+        neural::engine::type        engine;
         std::vector<primitive>      output;
         std::vector<uint32_t>       output_offset;
         std::vector<uint32_t>       output_size;
@@ -181,7 +181,7 @@ struct fully_connected : is_a_primitive {
     };
     const arguments argument;
 
-    struct query_entry : is_a_query_entry { arguments arguments; };
+    struct query_entry : is_a_query_entry { fully_connected::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
@@ -198,7 +198,7 @@ private:
 // [TODO] "any" on slope ?
 struct relu : is_a_primitive {
     struct arguments {
-        engine::type              engine;
+        neural::engine::type      engine;
         std::vector<primitive>    output;
         std::vector<uint32_t>     output_offset;
         std::vector<uint32_t>     output_size;
@@ -216,7 +216,7 @@ struct relu : is_a_primitive {
     };
     const arguments argument;
 
-    struct query_entry : is_a_query_entry { arguments arguments; };
+    struct query_entry : is_a_query_entry { relu::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
@@ -228,6 +228,33 @@ private:
     std::unique_ptr<is_an_implementation> _private;
 };
 
+struct relu_backward : is_a_primitive {
+    struct arguments {
+        neural::engine::type                engine;
+        std::vector<primitive>              output;         // 1: {forward_input_grad}
+        std::vector<uint32_t>               output_offset;
+        std::vector<uint32_t>               output_size;
+        std::vector<primitive_at>           input;          // 2: {forward_output_grad, forward_input}
+        std::vector<std::vector<uint32_t>>  input_offset;
+        float                               negative_slope;
+
+        arguments(neural::engine::type, std::vector<primitive> out, std::vector<uint32_t> out_offset, std::vector<uint32_t> out_size, std::vector<primitive_at> in, std::vector<std::vector<uint32_t>> in_offsets, float neg_slope = 0.0f);
+        arguments(neural::engine::type, std::vector<primitive> out,                                                                   std::vector<primitive_at> in,                                                float neg_slope = 0.0f);
+    };
+    const arguments argument;
+
+    struct query_entry : is_a_query_entry { relu_backward::arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    static primitive create(arguments);
+    const std::vector<primitive_at>  &input() const  { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+    primitive clone() const { return create(argument); }
+
+private:
+    relu_backward(arguments arg) : is_a_primitive(type_id<const relu_backward>()), argument(arg) {};
+
+    std::unique_ptr<is_an_implementation> _private;
+};
 
 
 // pooling
@@ -235,7 +262,7 @@ struct pooling : is_a_primitive {
     class mode { mode(); public: enum type { max, average }; };
 
     struct arguments {
-        engine::type                engine;
+        neural::engine::type        engine;
         pooling::mode::type         mode;
         std::vector<primitive>      output;
         std::vector<uint32_t>       output_offset;
@@ -244,7 +271,7 @@ struct pooling : is_a_primitive {
         std::vector<int32_t>        input_offset;
         std::vector<uint32_t>       stride;
         std::vector<uint32_t>       size;
-        padding::type               padding;
+        neural::padding::type       padding;
 
         arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                               primitive in,                              std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
@@ -256,7 +283,7 @@ struct pooling : is_a_primitive {
     };
     const arguments argument;
 
-    struct query_entry : is_a_query_entry { arguments arguments; };
+    struct query_entry : is_a_query_entry { pooling::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
@@ -274,14 +301,14 @@ namespace normalization { //////////////////////////////////////////////////////
 // normalization of response
 struct /*normalization*/response : is_a_primitive {
     struct arguments {
-        engine::type                engine;
+        neural::engine::type        engine;
         std::vector<primitive>      output;
         std::vector<uint32_t>       output_offset;
         std::vector<uint32_t>       output_size;
         std::vector<primitive_at>   input;          // 1: input
         std::vector<int32_t>        input_offset;
         uint32_t                    size;
-        padding::type               padding;
+        neural::padding::type       padding;
         float                       bias;
         float                       alpha;
         float                       beta;
@@ -292,7 +319,7 @@ struct /*normalization*/response : is_a_primitive {
     };
     const arguments argument;
 
-    struct query_entry : is_a_query_entry { arguments arguments; };
+    struct query_entry : is_a_query_entry { response::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
@@ -306,7 +333,7 @@ private:
 
 struct /*normalization*/softmax : is_a_primitive {
     struct arguments {
-        engine::type                engine;
+        neural::engine::type        engine;
         std::vector<primitive>      output;
         std::vector<uint32_t>       output_offset;
         std::vector<uint32_t>       output_size;
@@ -319,7 +346,7 @@ struct /*normalization*/softmax : is_a_primitive {
     };
     const arguments argument;
 
-    struct query_entry : is_a_query_entry { arguments arguments; };
+    struct query_entry : is_a_query_entry { softmax::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
@@ -332,7 +359,7 @@ private:
 // batch normalization training - forward
 struct /*normalization*/batch_training_forward : is_a_primitive {
     struct arguments {
-        engine::type                engine;
+        neural::engine::type        engine;
         std::vector<primitive>      output;         // 3-5: {output, current_mean, current_inv_std_dev, [moving_mean, moving_inv_std_dev]}
         std::vector<primitive_at>   input;          // 3: {input, scale, bias}
         bool                        spatial;
@@ -343,7 +370,7 @@ struct /*normalization*/batch_training_forward : is_a_primitive {
     };
     const arguments argument;
 
-    struct query_entry : is_a_query_entry { arguments arguments; };
+    struct query_entry : is_a_query_entry { batch_training_forward::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
@@ -357,7 +384,7 @@ private:
 // batch normalization training - backward
 struct /*normalization*/batch_training_backward : is_a_primitive {
     struct arguments {
-        engine::type                engine;
+        neural::engine::type        engine;
         std::vector<primitive>      output;         // 3: {input_grad, scale_grad, bias_grad}
         std::vector<primitive_at>   input;          // 6: {forward_input, forward_scale, forward_bias, output_grad, current_mean, current_inv_std_dev}
         bool                        spatial;
@@ -366,7 +393,7 @@ struct /*normalization*/batch_training_backward : is_a_primitive {
     };
     const arguments argument;
 
-    struct query_entry : is_a_query_entry { arguments arguments; };
+    struct query_entry : is_a_query_entry { batch_training_backward::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
@@ -380,7 +407,7 @@ private:
 // batch normalization inference
 struct /*normalization*/batch_inference : is_a_primitive {
     struct arguments {
-        engine::type                engine;
+        neural::engine::type        engine;
         std::vector<primitive>      output;         // 1: {output}
         std::vector<primitive_at>   input;          // 5: {input, scale, bias, precomputed_mean, precomputed_inv_std_dev}
         bool                        spatial;
@@ -389,7 +416,7 @@ struct /*normalization*/batch_inference : is_a_primitive {
     };
     const arguments argument;
 
-    struct query_entry : is_a_query_entry { arguments arguments; };
+    struct query_entry : is_a_query_entry { batch_inference::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
@@ -407,7 +434,7 @@ private:
 // direct convolution+relu
 struct convolution_relu : is_a_primitive {
     struct arguments {
-        engine::type                engine;
+        neural::engine::type        engine;
         std::vector<primitive>      output;
         std::vector<uint32_t>       output_offset;
         std::vector<uint32_t>       output_size;
@@ -425,7 +452,7 @@ struct convolution_relu : is_a_primitive {
     };
     const arguments argument;
 
-    struct query_entry : is_a_query_entry { arguments arguments; };
+    struct query_entry : is_a_query_entry { convolution_relu::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     static primitive create(arguments);
     primitive clone() const { return create(argument); }
@@ -440,7 +467,7 @@ private:
 // fully connected + relu
 struct fully_connected_relu : is_a_primitive {
     struct arguments {
-        engine::type                engine;
+        neural::engine::type        engine;
         std::vector<primitive>      output;
         std::vector<uint32_t>       output_offset;
         std::vector<uint32_t>       output_size;
@@ -455,14 +482,14 @@ struct fully_connected_relu : is_a_primitive {
         arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                                              primitive, primitive, float);
         arguments(neural::engine::type, primitive,                                                                  primitive,                                              primitive, primitive, float);
     };
-    const arguments argument;
+    const neural::fully_connected_relu::arguments argument;
 
-    struct query_entry : is_a_query_entry { arguments arguments; };
-    static std::vector<query_entry> query(arguments);
-    static primitive create(arguments);
-    primitive clone() const { return create(argument); }
+    struct query_entry : is_a_query_entry { neural::fully_connected_relu::arguments arguments; };
+    static std::vector<query_entry> query(neural::fully_connected_relu::arguments);
+    static primitive create(neural::fully_connected_relu::arguments);
+    primitive clone() const { return create(neural::fully_connected_relu::argument); }
 private:
-    fully_connected_relu(arguments arg) : is_a_primitive(type_id<const fully_connected_relu>()), argument(arg) {};
+    fully_connected_relu(fully_connected_relu::arguments arg) : is_a_primitive(type_id<const fully_connected_relu>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
