@@ -71,12 +71,12 @@ static std::map<implementation_key, std::function<is_an_implementation *(relu &)
 struct relu_backward_reference : is_an_implementation {
     const relu_backward &outer;
     relu_backward_reference(relu_backward &arg)
-        : is_an_implementation(neural::type_id<relu_backward_reference>()) 
-        , outer(arg) 
+        : is_an_implementation(neural::type_id<relu_backward_reference>())
+        , outer(arg)
     {};
     ~relu_backward_reference() {}
 
-    static void implementation(const void *ptr) 
+    static void implementation(const void *ptr)
     {
         auto this_relu = static_cast<const relu_backward *>(ptr);
 
@@ -104,7 +104,7 @@ struct relu_backward_reference : is_an_implementation {
 
         auto processed_window_sizes = this_relu->argument.output_size;
 
-        if(forward_output_grad_sizes.size() != forward_input_sizes.size() || forward_input_sizes.size() != forward_input_grad_sizes.size()) 
+        if(forward_output_grad_sizes.size() != forward_input_sizes.size() || forward_input_sizes.size() != forward_input_grad_sizes.size())
             throw std::runtime_error("ReLU backward: number of IO dimension does not match.");
 
         if(forward_output_grad_arg.format != forward_input_arg.format || forward_input_arg.format != forward_input_grad_arg.format)

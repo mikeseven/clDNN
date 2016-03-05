@@ -137,14 +137,16 @@ struct convolution : is_a_primitive {
         std::vector<uint32_t>       output_size;
         std::vector<primitive_at>   input;          // 3: {input, filter, bias}
         std::vector<int32_t>        input_offset;
-        std::vector<uint32_t>       input_stride;
+        std::vector<uint32_t>       stride;
+        primitive                   weight;
+        primitive                   bias;
         neural::padding::type       padding;
 
-        arguments(neural::engine::type, neural::memory::format::type, std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>, std::vector<uint32_t>, primitive, primitive, neural::padding::type);
-        arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                       std::vector<uint32_t>, primitive, primitive, neural::padding::type);
-        arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                       uint32_t,              primitive, primitive, neural::padding::type);
-        arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                                              primitive, primitive, neural::padding::type);
-        arguments(neural::engine::type, primitive,                                                                  primitive,                                              primitive, primitive, neural::padding::type);
+        arguments(neural::engine::type, neural::memory::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
+        arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                               primitive in,                              std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
+        arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                               primitive in,                              uint32_t              stride, primitive weights, primitive biases, neural::padding::type);
+        arguments(neural::engine::type, primitive                    out,                                                                   primitive in,                              std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
+        arguments(neural::engine::type, primitive                    out,     std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
     };
     const arguments argument;
 
@@ -156,6 +158,8 @@ private:
     convolution(arguments arg) : is_a_primitive(type_id<const convolution>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
+
+    std::unique_ptr<is_an_implementation> _private;
 };
 
 
@@ -458,6 +462,8 @@ private:
     convolution_relu(arguments arg) : is_a_primitive(type_id<const convolution_relu>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
+
+    std::unique_ptr<is_an_implementation> _private;
 };
 
 
