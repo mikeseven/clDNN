@@ -2,67 +2,6 @@
 #include "multidimensional_counter.h"
 #include <climits>
 
-#include <fstream> //todo remove
-template<typename T> //todo remove
-void save_2d_data( std::vector<uint32_t> size, std::string filename, T* data, std::vector<uint32_t> xyzn_pos ) {
-    std::ofstream file;
-    file.open( filename + ".txt" );
-
-    ndimensional::calculate_idx<uint32_t> calculate_idx( size );
-
-    std::vector<uint32_t> current_pos(2);
-    for( uint32_t batch = 0; batch < size[ xyzn_pos[3] ]; ++batch ){
-        current_pos[ xyzn_pos[3] ] = batch;
-        file << "n: " << batch << std::endl;
-        for( uint32_t x = 0; x < size[ xyzn_pos[0] ]; ++x ) {
-            current_pos[ xyzn_pos[0] ] = x;
-            file << data[ calculate_idx(current_pos) ] << "\t";
-        }
-        file << std::endl;
-    }
-    file.close();
-}
-template<typename T> //todo remove
-void save_4d_data( std::vector<uint32_t> size, std::string filename, T* data, std::vector<uint32_t> xyzn_pos ) {
-    std::ofstream file;
-    file.open( filename + ".txt" );
-
-    ndimensional::calculate_idx<uint32_t> calculate_idx( size );
-
-    std::vector<uint32_t> current_pos(4);
-    for( uint32_t batch = 0; batch < size[ xyzn_pos[3] ]; ++batch ){
-        current_pos[ xyzn_pos[3] ] = batch;
-        for( uint32_t z = 0; z < size[ xyzn_pos[2] ]; ++z ){
-            current_pos[ xyzn_pos[2] ] = z;
-            file << "n\\z: " << batch << "\\" << z << std::endl;
-            for( uint32_t x = 0; x < size[ xyzn_pos[0] ]; ++x ) {
-                current_pos[ xyzn_pos[0] ] = x;
-                for( uint32_t y = 0; y < size[ xyzn_pos[1] ]; ++y ) {
-                    current_pos[ xyzn_pos[1] ] = y;
-
-                    file << data[ calculate_idx(current_pos) ] << "\t";
-                }
-                file << std::endl;
-            }
-        }
-    }
-    file.close();
-}
-template<typename T> //todo remove
-void save_data( std::vector<uint32_t> size, std::string filename, T* data, neural::memory::format::type type ) {
-    std::vector<uint32_t> xyzn_pos(4);
-
-    switch(type){
-        case neural::memory::format::xb_f32   : xyzn_pos = {0, 0, 0, 1};
-            save_2d_data(size, filename, data, xyzn_pos);
-            return;
-            break;
-        case neural::memory::format::yxfb_f32 : xyzn_pos = {1, 0, 2, 3}; break;
-        default                               : throw std::runtime_error("unknown data format");
-    }
-    save_4d_data(size, filename, data, xyzn_pos);
-}
-
 namespace neural {
 namespace normalization {
 
@@ -109,8 +48,6 @@ struct softmax_reference : is_an_implementation {
         nd::calculate_idx<uint32_t> calc_in_idx  (input_buffer_size);
         nd::calculate_idx<uint32_t> calc_out_idx (output_buffer_size);
 
-        save_data(input_buffer_size, "in_b", input, input_memory_arg.format); //todo remove
-        save_data(output_buffer_size, "out_b", output, output_memory_arg.format); //todo remove
         // find max val per batch
         for(auto pos : range) {
             auto in_idx  = calc_in_idx (pos + input_offset );
@@ -128,7 +65,6 @@ struct softmax_reference : is_an_implementation {
             auto out_idx = calc_out_idx(pos + output_offset);
             output[out_idx] /= v_acc[ pos[batch_index] ]; // compute softmax
         }
-        save_data(output_buffer_size, "out_a", output, output_memory_arg.format); //todo remove
 
     }
 
