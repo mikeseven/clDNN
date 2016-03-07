@@ -120,9 +120,12 @@ struct softmax_reference : is_an_implementation {
             auto in_idx  = calc_in_idx (pos + input_offset );
             auto out_idx = calc_out_idx(pos + output_offset);
 
-            output[out_idx] -= v_max[ pos[batch_index] ]; // subtracte max val from every data point per batch
+            output[out_idx] = input[in_idx] - v_max[ pos[batch_index] ]; // subtracte max val from every data point per batch
             output[out_idx] = std::expf(output[out_idx]); // exp
             v_acc[ pos[batch_index] ] += output[out_idx]; // sum eveything per batch
+        }
+        for(auto pos : range) {
+            auto out_idx = calc_out_idx(pos + output_offset);
             output[out_idx] /= v_acc[ pos[batch_index] ]; // compute softmax
         }
         save_data(output_buffer_size, "out_a", output, output_memory_arg.format); //todo remove
