@@ -172,12 +172,7 @@ public:
 #if defined __GNUC__
 #   pragma GCC diagnostic pop
 #endif
-    template<typename T> T as() const {
-        // [C++1x] replace with static_assert
-        assert(is_reference<T>::value==true);
-        assert(type_id<typename remove_reference<T>::type>()->id ==_pointer->_type_traits->id);
-        return *reinterpret_cast<typename remove_reference<T>::type *>(_pointer.get());
-    }
+    template<typename T> T as() const;
     template<typename T> operator T() { return as<T>(); }
     const std::vector<task> &work();
     size_t id() const;
@@ -234,6 +229,12 @@ inline size_t                       primitive::id() const { return _pointer->_ty
 inline const primitive              primitive::output::operator[](uint32_t at) const { return get_base()->_pointer.get()->output()[at]; }
 inline size_t                       primitive::output::size() const { return get_base()->_pointer.get()->output().size(); }
 
+template<typename T> T primitive::as() const {
+    // [C++1x] replace with static_assert
+    assert(is_reference<T>::value == true);
+    assert(type_id<typename remove_reference<T>::type>()->id == _pointer->_type_traits->id);
+    return *reinterpret_cast<typename remove_reference<T>::type *>(_pointer.get());
+}
 // unkown structure with type info for cast validation
 class is_an_implementation {
     const type_traits *const _type_traits;
