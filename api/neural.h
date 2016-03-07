@@ -331,8 +331,6 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
 };
 
-
-
 struct /*normalization*/softmax : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -340,11 +338,11 @@ struct /*normalization*/softmax : is_a_primitive {
         std::vector<uint32_t>       output_offset;
         std::vector<uint32_t>       output_size;
         std::vector<primitive_at>   input;          // 1: input
-        std::vector<uint32_t>       input_offset;
+        std::vector<int32_t>        input_offset;
 
-        arguments(neural::engine::type, neural::memory::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<uint32_t> in_off);
+        arguments(neural::engine::type, neural::memory::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off);
         arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                               primitive in);
-        arguments(neural::engine::type, primitive                    out,     std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<uint32_t> in_off);
+        arguments(neural::engine::type, primitive                    out,     std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off);
         arguments(neural::engine::type, primitive                    out,                                                                   primitive in);
     };
     const arguments argument;

@@ -7,9 +7,9 @@ void example_softmax_forward() {
     const uint32_t output_x  = 7, output_b  = 3,  // size of whole output buffer
                    input_x   = 6, input_b   = 2,  // size of whole input buffer
                    out_off_x = 0, out_off_b = 1,
-                   out_siz_x = 5, out_siz_b = 2,  // size of area to do softmax after offset
-                   in_off_x  = 1, in_off_b  = 0;
+                   out_siz_x = 5, out_siz_b = 2;  // size of area to do softmax after offset
 
+    const int32_t  in_off_x  = 1, in_off_b  = 0;
 
     float in_buffer[input_x*input_b];
     float out_buffer[output_x*output_b];

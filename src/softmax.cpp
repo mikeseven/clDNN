@@ -85,7 +85,7 @@ static std::map<implementation_key, std::function<is_an_implementation *(softmax
 
 } // namespace {
 
-softmax::arguments::arguments( neural::engine::type eng, primitive out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<uint32_t> in_off)
+softmax::arguments::arguments( neural::engine::type eng, primitive out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off)
     : engine(eng)
     , output({out})
     , output_offset(out_off)
@@ -101,7 +101,7 @@ softmax::arguments::arguments( neural::engine::type eng, primitive out, primitiv
     , input({in})
     , input_offset(static_cast<uint32_t>(in.as<const memory&>().argument.size.size())) {}
 
-softmax::arguments::arguments( neural::engine::type eng, memory::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<uint32_t> in_off)
+softmax::arguments::arguments( neural::engine::type eng, memory::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off)
     : engine(eng)
     , output({memory::create({eng, out_fmt, out_siz, true})})
     , output_offset(out_off)
