@@ -152,7 +152,7 @@ template<typename T>
 inline bool calculate_idx<T>::is_out_of_range( const std::vector<negT>& pos ){
     bool out_of_range = false;
 
-    assert( pos.size() < size.size() );
+    assert( pos.size() <= size.size() );
 
     for(uint32_t i = 0; i < pos.size() && !out_of_range; ++i)
         out_of_range |= (pos[i] < 0) | (static_cast<negT>(pos[i]) > size[i]);
@@ -164,7 +164,7 @@ template<typename T>
 inline bool calculate_idx<T>::is_out_of_range( const std::vector<T>& pos ){
     bool out_of_range = false;
 
-    assert( pos.size() < size.size() );
+    assert( pos.size() <= size.size() );
 
     for(uint32_t i = 0; i < pos.size() && !skip; ++i)
         skip |= (pos[i] > size[i]);
