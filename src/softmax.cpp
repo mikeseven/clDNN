@@ -1,6 +1,7 @@
 #include "api/neural.h"
 #include "multidimensional_counter.h"
 #include <climits>
+#include <cmath>
 
 namespace neural {
 namespace normalization {
