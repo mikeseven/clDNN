@@ -9,3 +9,10 @@ neural.vcxproj.filters
 bin/*
 MSVC/*
 UnixMk/*
+MSVC/*
+**/CMakeFiles/
+nbproject/*
+**/*.cmake
+CMakeCache.txt
+compile_commands.json
+**/Makefile
