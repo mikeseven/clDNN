@@ -137,9 +137,6 @@ struct relu_backward_reference : is_an_implementation {
     static is_an_implementation *create(relu_backward &arg) { return new relu_backward_reference(arg); };
 };
 
-//                                    engine                output                        input
-using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
-
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(relu_backward &)>> backward_implementation_map = {
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), relu_backward_reference::create}
@@ -169,19 +166,19 @@ relu::arguments::arguments( neural::engine::type engine, primitive out, std::vec
 relu::arguments::arguments( neural::engine::type engine, primitive out, primitive in, float slp )
     : engine(engine)
     , output({out})
-    , output_offset({static_cast<uint32_t>(out.as<const memory&>().argument.size.size())})
+    , output_offset(static_cast<uint32_t>(out.as<const memory&>().argument.size.size()))
     , output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
     , input({in})
-    , input_offset({static_cast<int32_t>(in.as<const memory&>().argument.size.size())})
+    , input_offset(static_cast<int32_t>(in.as<const memory&>().argument.size.size()))
     , negative_slope(slp) {}
 
 relu::arguments::arguments( neural::engine::type engine, primitive out, primitive in )
     : engine(engine)
     , output({out})
-    , output_offset({static_cast<uint32_t>(out.as<const memory&>().argument.size.size())})
+    , output_offset(static_cast<uint32_t>(out.as<const memory&>().argument.size.size()))
     , output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
     , input({in})
-    , input_offset({static_cast<int32_t>(in.as<const memory&>().argument.size.size())})
+    , input_offset(static_cast<int32_t>(in.as<const memory&>().argument.size.size()))
     , negative_slope(0.0f) {}
 
 // creates primitive with relu implementation that supports provided arguments
@@ -215,7 +212,7 @@ relu_backward::arguments::arguments(neural::engine::type engine, std::vector<pri
 relu_backward::arguments::arguments(neural::engine::type engine, std::vector<primitive> out, std::vector<primitive_at> in, float neg_slope)
     : engine(engine)
     , output(out)
-    , output_offset({static_cast<uint32_t>(out[0].as<const memory&>().argument.size.size())})
+    , output_offset(static_cast<uint32_t>(out[0].as<const memory&>().argument.size.size()))
     , output_size(out[0].as<const memory&>().argument.size.begin(), out[0].as<const memory&>().argument.size.end())
     , input(in)
     , input_offset(in.size(), std::vector<uint32_t>(in[0].primitive.as<const memory&>().argument.size.size(), 0))
