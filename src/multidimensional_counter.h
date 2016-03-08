@@ -58,14 +58,14 @@ public:
     value(std::initializer_list<T> il) : std::vector<T>(il) {};
 
     //todo range check asserts
-    value &operator+=(const std::vector<   T> &arg) { std::transform(arg.cbegin(), arg.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::plus<T>());       return *this; }
-    value &operator+=(const std::vector<negT> &arg) { std::transform(arg.cbegin(), arg.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::plus<T>());       return *this; }
-    value &operator*=(const std::vector<   T> &arg) { std::transform(arg.cbegin(), arg.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::multiplies<T>()); return *this; }
-    value &operator*=(const std::vector<negT> &arg) { std::transform(arg.cbegin(), arg.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::multiplies<T>()); return *this; }
-    value  operator+ (const std::vector<   T> &arg) { value result=*this; return result+=arg; }
-    value  operator+ (const std::vector<negT> &arg) { value result=*this; return result+=arg; }
-    value  operator* (const std::vector<   T> &arg) { value result=*this; return result*=arg; }
-    value  operator* (const std::vector<negT> &arg) { value result=*this; return result*=arg; }
+    value &operator+=(std::vector<   T> &arg) { std::transform(arg.cbegin(), arg.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::plus<T>());       return *this; }
+    value &operator+=(std::vector<negT> &arg) { std::transform(arg.cbegin(), arg.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::plus<T>());       return *this; }
+    value &operator*=(std::vector<   T> &arg) { std::transform(arg.cbegin(), arg.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::multiplies<T>()); return *this; }
+    value &operator*=(std::vector<negT> &arg) { std::transform(arg.cbegin(), arg.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::multiplies<T>()); return *this; }
+    value  operator+ (std::vector<   T> &arg) { value result=*this; return result+=arg; }
+    value  operator+ (std::vector<negT> &arg) { value result=*this; return result+=arg; }
+    value  operator* (std::vector<   T> &arg) { value result=*this; return result*=arg; }
+    value  operator* (std::vector<negT> &arg) { value result=*this; return result*=arg; }
 
     template<typename U> friend std::ostream &operator<<(std::ostream &, ndimensional::value<U> &);
 };
