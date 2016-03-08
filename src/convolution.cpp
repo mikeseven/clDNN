@@ -69,14 +69,10 @@ struct convolution_reference : is_an_implementation {
                     for(auto win_pos : window_range){
                         const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos;
 
-                        bool skip = false;
-                        for(auto it1 = arg_in_idx.begin(); it1 < arg_in_idx.end() && !skip; ++it1)
-                            skip |= (*it1 < 0);
-
-                        if(skip)
+                        if( !calc_in_idx.is_out_of_range(arg_in_idx) )
                             continue;
 
-                        auto in_idx  = calc_in_idx ({arg_in_idx.begin(), arg_in_idx.end()});
+                        auto in_idx  = calc_in_idx (arg_in_idx);
                         auto win_idx = calc_win_idx(win_pos);
                         acc += input[in_idx] * window[win_idx];
                     }
