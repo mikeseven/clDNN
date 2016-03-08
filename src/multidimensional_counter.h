@@ -166,7 +166,7 @@ inline bool calculate_idx<T>::is_out_of_range( const std::vector<T>& pos ){
 
     assert( pos.size() <= size.size() );
 
-    for(uint32_t i = 0; i < pos.size() && !skip; ++i)
+    for(uint32_t i = 0; i < pos.size() && !out_of_range; ++i)
         skip |= (pos[i] > size[i]);
 
     return out_of_range;
