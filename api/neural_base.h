@@ -36,7 +36,13 @@ template<>           struct is_floating_point<half>  { static const bool value =
 #endif
 
 //todo type id and const type id should be equall
-template<typename T_type> __declspec(noinline) auto type_id() -> type_traits * {
+template<typename T_type> 
+#if defined _MSC_VER
+__declspec(noinline)
+#else
+__attribute__((noinline))
+#endif
+auto type_id() -> type_traits * {
 
 #if defined _MSC_VER
     static std::string signature = __FUNCSIG__;
@@ -137,6 +143,10 @@ public:
     primitive(const primitive &other) : _pointer(other._pointer) {};
     any_value_type_lookup operator[] (const std::string &key) const;
     const primitive operator()(void *argument) const;
+#if defined __GNUC__
+#   pragma GCC diagnostic push
+#   pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
     class input {
         const primitive *get_base() const {
             const uint8_t *ptr = reinterpret_cast<const uint8_t *>(this);
@@ -159,13 +169,10 @@ public:
         inline const primitive operator[](std::string) const;
         inline size_t size() const;
     } output;
-
-    template<typename T> T as() const {
-        // [C++1x] replace with static_assert
-        assert(is_reference<T>::value==true);
-        assert(type_id<remove_reference<T>::type>()->id ==_pointer->_type_traits->id);
-        return *reinterpret_cast<remove_reference<T>::type *>(_pointer.get());
-    }
+#if defined __GNUC__
+#   pragma GCC diagnostic pop
+#endif
+    template<typename T> T as() const;
     template<typename T> operator T() { return as<T>(); }
     const std::vector<task> &work();
     size_t id() const;
@@ -175,8 +182,8 @@ public:
 
 
 struct primitive_at {
-    const primitive   primitive;
-    const uint32_t    at;
+    const neural::primitive primitive;
+    const uint32_t          at;
     primitive_at(const neural::primitive aprimitive) : primitive(aprimitive), at(0) {}
 };
 
@@ -222,6 +229,12 @@ inline size_t                       primitive::id() const { return _pointer->_ty
 inline const primitive              primitive::output::operator[](uint32_t at) const { return get_base()->_pointer.get()->output()[at]; }
 inline size_t                       primitive::output::size() const { return get_base()->_pointer.get()->output().size(); }
 
+template<typename T> T primitive::as() const {
+    // [C++1x] replace with static_assert
+    assert(is_reference<T>::value == true);
+    assert(type_id<typename remove_reference<T>::type>()->id == _pointer->_type_traits->id);
+    return *reinterpret_cast<typename remove_reference<T>::type *>(_pointer.get());
+}
 // unkown structure with type info for cast validation
 class is_an_implementation {
     const type_traits *const _type_traits;
@@ -229,7 +242,7 @@ protected:
     is_an_implementation(const type_traits *arg) : _type_traits(arg) {};
 public:
     virtual std::vector<task> work() = 0;
-    virtual ~is_an_implementation() = 0 {};
+    virtual ~is_an_implementation() {};
 };
 
 // execution of sequence of primitives
