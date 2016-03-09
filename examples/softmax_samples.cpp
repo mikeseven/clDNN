@@ -30,4 +30,5 @@ void example_softmax_forward() {
 }
 
 void example_softmax_backward(){
+    // todo softmax bw
 }

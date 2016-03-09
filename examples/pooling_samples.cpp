@@ -36,4 +36,5 @@ void example_pooling_forward() {
 }
 
 void example_pooling_backward(){
+    // todo pooling bw
 }
