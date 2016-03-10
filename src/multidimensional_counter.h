@@ -88,7 +88,7 @@ public:
     : size(v_size)
     , stride(v_size) {
 
-        assert( std::is_unsigned<T>() == true );  //this template should be used only with unsigned types
+        static_assert(std::is_unsigned<T>::value, "calculate_idx<T> constructor accepts only unsigned types");  //this template should be used only with unsigned types
 
         stride.emplace_back(1); //this element is used in operator()
         for(size_t i = stride.size() - 1; i > 0; --i)
@@ -150,25 +150,23 @@ inline size_t calculate_idx<T>::operator()( const std::vector<negT>& position ){
 
 template<typename T>
 inline bool calculate_idx<T>::is_out_of_range( const std::vector<negT>& pos ){
-    bool out_of_range = false;
-
     assert( pos.size() <= size.size() );
 
-    for(uint32_t i = 0; i < pos.size() && !out_of_range; ++i)
-        out_of_range |= (pos[i] < 0) | (static_cast<negT>(pos[i]) > size[i]);
+    for(uint32_t i = 0; i < pos.size(); ++i)
+        if(static_cast<T>(pos[i]) > size[i])
+            return true;
 
-    return out_of_range;
+    return false;
 }
 
 template<typename T>
 inline bool calculate_idx<T>::is_out_of_range( const std::vector<T>& pos ){
-    bool out_of_range = false;
-
     assert( pos.size() <= size.size() );
 
-    for(uint32_t i = 0; i < pos.size() && !out_of_range; ++i)
-        out_of_range |= (pos[i] > size[i]);
+    for(uint32_t i = 0; i < pos.size(); ++i)
+        if(pos[i] > size[i])
+            return true;
 
-    return out_of_range;
+    return false;
 }
 }
