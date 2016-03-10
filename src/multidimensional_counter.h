@@ -79,6 +79,8 @@ std::ostream &operator<<(std::ostream &out, value<U> &val) {
 
 template<typename T>
 class calculate_idx{
+    using negT = typename change_signedness<T>::type;
+
     std::vector<T> size;
     std::vector<T> stride;
 public:
@@ -86,16 +88,22 @@ public:
     : size(v_size)
     , stride(v_size) {
 
+        static_assert(std::is_unsigned<T>::value, "calculate_idx<T> constructor accepts only unsigned types");  //this template should be used only with unsigned types
+
         stride.emplace_back(1); //this element is used in operator()
         for(size_t i = stride.size() - 1; i > 0; --i)
             stride[i-1] *= stride[i];
     };
 
-    size_t operator() ( const std::vector<T>& pos );
+    size_t operator() ( const std::vector<   T>& pos );
+    size_t operator() ( const std::vector<negT>& pos );
+
+    bool is_out_of_range( const std::vector<   T>& pos );
+    bool is_out_of_range( const std::vector<negT>& pos );
 };
 
 template<typename T>
-size_t calculate_idx<T>::operator()( const std::vector<T>& position ){
+inline size_t calculate_idx<T>::operator()( const std::vector<T>& position ){
     size_t result_idx = 0;
 
     assert(
@@ -115,5 +123,50 @@ size_t calculate_idx<T>::operator()( const std::vector<T>& position ){
     };
 
     return result_idx;
+}
+
+template<typename T>
+inline size_t calculate_idx<T>::operator()( const std::vector<negT>& position ){
+    size_t result_idx = 0;
+
+    assert(
+        [&]() -> bool {
+        for(size_t i = 0; i < position.size(); ++i)
+            if(size[i] <= position[i]) return false;
+
+          return true;
+        }() == true );
+
+    // Number of iterations depends on length of position vector.
+    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory layout.
+    // If 'position' is shorter than 'size' than function returns offset to some block of data
+    for(size_t i = 0; i != position.size(); ++i){
+        auto idx = position.size() - 1 - i;
+        result_idx += stride[idx+1] * position[idx];
+    };
+
+    return result_idx;
+}
+
+template<typename T>
+inline bool calculate_idx<T>::is_out_of_range( const std::vector<negT>& pos ){
+    assert( pos.size() <= size.size() );
+
+    for(uint32_t i = 0; i < pos.size(); ++i)
+        if(static_cast<T>(pos[i]) > size[i])
+            return true;
+
+    return false;
+}
+
+template<typename T>
+inline bool calculate_idx<T>::is_out_of_range( const std::vector<T>& pos ){
+    assert( pos.size() <= size.size() );
+
+    for(uint32_t i = 0; i < pos.size(); ++i)
+        if(pos[i] > size[i])
+            return true;
+
+    return false;
 }
 }

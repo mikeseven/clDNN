@@ -190,7 +190,6 @@ private:
 
     std::unique_ptr<is_an_implementation> _private;
 };
-
 // fully connected
 struct fully_connected : is_a_primitive {
     struct arguments {
