@@ -1,6 +1,7 @@
 #include "api/neural.h"
 #include "multidimensional_counter.h"
 #include <climits>
+#include <cmath>
 
 namespace neural {
 namespace normalization {
@@ -58,7 +59,7 @@ struct softmax_reference : is_an_implementation {
             auto out_idx = calc_out_idx(pos + output_offset);
 
             output[out_idx] = input[in_idx] - v_max[ pos[batch_index] ]; // subtracte max val from every data point per batch
-            output[out_idx] = std::expf(output[out_idx]); // exp
+            output[out_idx] = std::exp(output[out_idx]);  // exp
             v_acc[ pos[batch_index] ] += output[out_idx]; // sum eveything per batch
         }
         for(auto pos : range) {

@@ -162,8 +162,6 @@ private:
     std::unique_ptr<is_an_implementation> _private;
 };
 
-
-
 // fully connected
 struct fully_connected : is_a_primitive {
     struct arguments {
@@ -192,8 +190,6 @@ private:
     const std::vector<primitive_at>  &input()  const { return argument.input;  };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
-
-
 
 // relu activation
 // [TODO] need to activation base class ?

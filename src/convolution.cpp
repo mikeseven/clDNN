@@ -52,10 +52,6 @@ struct convolution_reference : is_an_implementation {
 
             if(output_buffer_size[i] < output_size[i] + output_offset[i])
                 throw std::runtime_error("Convolution output buffer size is to small.");
-
-            //todo remove after padding implementation
-            if(input_offset[i] < 0)
-                throw std::runtime_error("Convolution doesn't support padding yet. Input offset must be positive.");
         }
 
         namespace nd = ndimensional;
@@ -64,17 +60,27 @@ struct convolution_reference : is_an_implementation {
         nd::calculate_idx<uint32_t> calc_in_idx  (input_buffer_size);
         nd::calculate_idx<uint32_t> calc_out_idx (output_buffer_size);
         nd::calculate_idx<uint32_t> calc_win_idx (window_buffer_size);
-        for(auto pos : range) {
-            float acc = 0;
-            auto out_idx = calc_out_idx(pos + output_offset);
+        switch(padding){
+            case padding::zero:
+                for(auto pos : range) {
+                    float acc = 0;
+                    auto out_idx = calc_out_idx(pos + output_offset);
 
-            for(auto win_pos : window_range){
-                auto in_idx  = calc_in_idx (pos*stride + input_offset + win_pos);
-                auto win_idx = calc_win_idx(win_pos);
+                    for(auto win_pos : window_range){
+                        const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos;
 
-                acc += input[in_idx] * window[win_idx];
-            }
-            output[out_idx] = acc + bias[ pos[2] ]; // todo need type traits for index of 'z' dimension
+                        if( calc_in_idx.is_out_of_range(arg_in_idx) )
+                            continue;
+
+                        auto in_idx  = calc_in_idx (arg_in_idx);
+                        auto win_idx = calc_win_idx(win_pos);
+                        acc += input[in_idx] * window[win_idx];
+                    }
+                    output[out_idx] = acc + bias[ pos[2] ]; // todo need type traits for index of 'z' dimension
+                }
+                break;
+            default:
+                throw std::runtime_error("Unknown padding mode in convolution.");
         }
     }
 
