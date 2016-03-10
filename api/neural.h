@@ -133,7 +133,7 @@ struct convolution : is_a_primitive {
         std::vector<primitive>    output;
         std::vector<uint32_t>     output_offset;
         std::vector<uint32_t>     output_size;
-        std::vector<primitive_at> input;          // 3: {input, filter, bias}
+        std::vector<primitive_at> input;
         std::vector<int32_t>      input_offset;
         std::vector<uint32_t>     stride;
         primitive                 weight;
@@ -163,21 +163,19 @@ private:
 struct convolution_backward : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
-        std::vector<primitive>    output;
+        std::vector<primitive>    output;         // 2: {bw_output, weight_diff}
         std::vector<uint32_t>     output_offset;
         std::vector<uint32_t>     output_size;
-        std::vector<primitive_at> input;          // 3: {input, filter, bias}
+        std::vector<primitive_at> input;          // 3: {bw_input, fw_input, filter, bias}
         std::vector<int32_t>      input_offset;
         std::vector<uint32_t>     stride;
-        primitive                 weight;
-        primitive                 bias;
         neural::padding::type     padding;
 
-        arguments(neural::engine::type, neural::memory::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
-        arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                               primitive in,                              std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
-        arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                               primitive in,                              uint32_t              stride, primitive weights, primitive biases, neural::padding::type);
-        arguments(neural::engine::type, primitive                    out,                                                                   primitive in,                              std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
-        arguments(neural::engine::type, primitive                    out,     std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
+        arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, std::vector<primitive> in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, neural::padding::type);
+        arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt,                                                               std::vector<primitive> in,                              std::vector<uint32_t> stride, neural::padding::type);
+        arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt,                                                               std::vector<primitive> in,                              uint32_t              stride, neural::padding::type);
+        arguments(neural::engine::type, std::vector<primitive>                    out,                                                                   std::vector<primitive> in,                              std::vector<uint32_t> stride, neural::padding::type);
+        arguments(neural::engine::type, std::vector<primitive>                    out,     std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, std::vector<primitive> in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, neural::padding::type);
     };
     const arguments argument;
 
