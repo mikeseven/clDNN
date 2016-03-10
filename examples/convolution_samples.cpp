@@ -119,6 +119,4 @@ void example_convolution_backward(){
         bw_output(bw_out_buffer), weights_diff(weight_diff_buffer),   //outputs
         act
     });
-
-    //input(in_buffer), output(out_buffer), weights(weight_buffer), biases(bias_buffer), act});
 }
