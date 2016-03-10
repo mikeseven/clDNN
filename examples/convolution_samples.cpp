@@ -104,8 +104,7 @@ void example_convolution_backward(){
     auto weights_diff = memory::create({engine::cpu, memory::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_z, conv_size_b}});
     auto biases       = memory::create({engine::cpu, memory::format::yxfb_f32, {out_siz_z}});
 
-    auto act = convolution_backward::create({
-                                              engine::reference,
+    auto act = convolution_backward::create({ engine::reference,
                                               std::vector<primitive>({bw_output, weights_diff}),
                                           //   {out_off_y, out_off_x, out_off_z, out_off_b},
                                           //   {out_siz_y, out_siz_x, out_siz_z, out_siz_b},
@@ -115,5 +114,5 @@ void example_convolution_backward(){
                                               padding::zero
                                             });
 
-    //execute({input(in_buffer), output(out_buffer), weights(weight_buffer), biases(bias_buffer), act});
+    execute({input(in_buffer), output(out_buffer), weights(weight_buffer), biases(bias_buffer), act});
 }

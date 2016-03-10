@@ -191,7 +191,6 @@ static std::map<implementation_key, std::function<is_an_implementation *(convolu
 static std::map<implementation_key, std::function<is_an_implementation *(convolution_backward &)>> backward_implementation_map = {
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), convolution_backward_reference::create},
 };
-
 // creates primitive with convolution implementation that supports provided arguments
 primitive convolution::create(convolution::arguments arg) {
     // wrap relu into RAII wrapper

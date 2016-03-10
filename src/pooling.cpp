@@ -95,14 +95,6 @@ struct pooling_reference : is_an_implementation {
     static is_an_implementation *create(pooling &arg) { return new pooling_reference(arg); };
 };
 
-//                                    engine          output                  input
-using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
-
-// map of available implementations
-static std::map<implementation_key, std::function<is_an_implementation *(pooling &)>> implementation_map = {
-    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), pooling_reference::create}
-};
-
 pooling::arguments::arguments( neural::engine::type  eng,
                                pooling::mode::type   mode,
                                memory::format::type  o_frmt,
@@ -144,6 +136,14 @@ pooling::arguments::arguments( neural::engine::type  eng,
     , stride(strd)
     , size(siz)
     , padding(padd) {};
+
+//                                    engine          output                  input
+using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
+
+// map of available implementations
+static std::map<implementation_key, std::function<is_an_implementation *(pooling &)>> implementation_map = {
+    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), pooling_reference::create}
+};
 
 // creates primitive with pooling implementation that supports provided arguments
 primitive pooling::create(pooling::arguments arg) {

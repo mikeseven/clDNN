@@ -76,14 +76,6 @@ struct softmax_reference : is_an_implementation {
     static is_an_implementation *create(softmax &arg) { return new softmax_reference(arg); };
 };
 
-//                                    engine                output                        input
-using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
-
-// map of available implementations
-static std::map<implementation_key, std::function<is_an_implementation *(softmax &)>> forward_implementation_map = {
-    {std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), softmax_reference::create}
-};
-
 } // namespace {
 
 softmax::arguments::arguments( neural::engine::type eng, primitive out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off)
@@ -110,6 +102,13 @@ softmax::arguments::arguments( neural::engine::type eng, memory::format::type ou
     , input({in})
     , input_offset(in_off) {}
 
+//                                    engine                output                        input
+using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
+
+// map of available implementations
+static std::map<implementation_key, std::function<is_an_implementation *(softmax &)>> forward_implementation_map = {
+    {std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), softmax_reference::create}
+};
 // creates primitive with softmax implementation that supports provided arguments
 primitive softmax::create(softmax::arguments arg) {
     // wrap softmax into RAII wrapper
