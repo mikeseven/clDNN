@@ -163,10 +163,10 @@ private:
 struct convolution_backward : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
-        std::vector<primitive>    output;         // 2: {bw_output, weight_diff}
+        std::vector<primitive>    output;         // 3: {bw_output, weight_diff, bias diff}
         std::vector<uint32_t>     output_offset;
         std::vector<uint32_t>     input_size;
-        std::vector<primitive_at> input;          // 3: {bw_input, fw_input, filter, bias}
+        std::vector<primitive_at> input;          // 4: {bw_input, fw_input, filter, bias}
         std::vector<int32_t>      input_offset;
         std::vector<uint32_t>     stride;
         neural::padding::type     padding;

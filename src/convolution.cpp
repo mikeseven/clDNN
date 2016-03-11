@@ -138,7 +138,7 @@ struct convolution_backward_reference : is_an_implementation {
     {};
     ~convolution_backward_reference() {}
 
-    static void implementation(const void *ptr) {
+    static void implementation(const void *ptr) { //todo tests
         auto this_bw_conv = static_cast<const convolution_backward *>(ptr);
 
         auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer);
@@ -148,6 +148,8 @@ struct convolution_backward_reference : is_an_implementation {
 
         auto bw_output    = static_cast<float*>(this_bw_conv->output_memory(0).pointer);
         auto window_diff  = static_cast<float*>(this_bw_conv->output_memory(1).pointer);
+        auto bias_diff    = static_cast<float*>(this_bw_conv->output_memory(2).pointer);
+
 
         auto bw_input_memory_arg  = this_bw_conv->input_memory(0).argument;
         auto bw_input_offset      = this_bw_conv->argument.input_offset;
@@ -167,8 +169,11 @@ struct convolution_backward_reference : is_an_implementation {
         auto bw_output_size       = bw_output_memory_arg.size;
         auto bw_output_offset     = this_bw_conv->argument.output_offset;
 
-        auto window_diff_memory_arg  = this_bw_conv->output_memory(1).argument;
-        auto window_diff_size        = bw_input_memory_arg.size;
+        auto window_diff_memory_arg= this_bw_conv->output_memory(1).argument;
+        auto window_diff_size      = bw_input_memory_arg.size;
+
+        auto bias_diff_memory_arg  = this_bw_conv->output_memory(2).argument;
+        auto bias_diff_size        = bw_input_memory_arg.size;
 
         auto stride  = this_bw_conv->argument.stride;
         auto padding = this_bw_conv->argument.padding;
@@ -184,6 +189,8 @@ struct convolution_backward_reference : is_an_implementation {
         if(window_size.size()         != window_diff_size.size())    throw std::runtime_error("Backward convolution weights/weights_diff number of dimension does not match.");
         if(bias_size.size()           != 1)                          throw std::runtime_error("Backward convolution biases isn't 1D vector.");
         if(bias_size[0]               != bw_output_size[2])          throw std::runtime_error("Backward convolution biases/bw_output feature maps number does not match."); // todo need type traits for index of 'z' dimension
+        if(bias_size.size()           != bias_diff_size.size())      throw std::runtime_error("Backward convolution bias/bias_diff number dimensions doesn't match.");
+        if(bias_size[0]               != bias_diff_size[0])          throw std::runtime_error("Backward convolution bias/bias_diff size doesn't match.");
 
         // general formula: output size = (input size - window size) / step + 1
         for(size_t i = 0; i < fw_input_offset.size(); ++i){
@@ -195,14 +202,17 @@ struct convolution_backward_reference : is_an_implementation {
         }
 
         namespace nd = ndimensional;
+        nd::value<uint32_t> bias_range (bias_size);
         nd::value<uint32_t> range (bw_input_size); //todo in/out size?
         nd::value<uint32_t> window_range (window_size);
+        nd::calculate_idx<uint32_t> calc_bias_idx(bias_size);
         nd::calculate_idx<uint32_t> calc_in_idx  (bw_input_size);
         nd::calculate_idx<uint32_t> calc_out_idx (bw_output_size);
         nd::calculate_idx<uint32_t> calc_win_idx (window_size);
 
         switch(padding){
             case padding::zero:
+            {
                 for(auto pos : range) {
                     float acc = 0;
                     auto in_idx = calc_in_idx(pos + bw_input_offset);
@@ -218,12 +228,14 @@ struct convolution_backward_reference : is_an_implementation {
                         bw_output[out_idx] += bw_input[in_idx] * window[win_idx];
 
                         // fw_input and bw_output is the same memory (place) in NN (here, represented by 2 separate buffers) so I can use
-                        // index from one buffer to index second. fw_input stores nother data than bw_output, because of direction of workload computations
+                        // index from one buffer to index second. fw_input stores nother data than bw_output, determined by direction of workload computations
                         window_diff[win_idx] += bw_input[in_idx] * fw_input[out_idx];
                     }
-                  //  output[out_idx] = acc + bias[ pos[2] ]; // todo need type traits for index of 'z' dimension
+
+                    // todo bias term
                 }
                 break;
+            }
             default:
                 throw std::runtime_error("Unknown padding mode in backward convolution.");
         }

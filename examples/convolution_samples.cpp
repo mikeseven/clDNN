@@ -86,6 +86,8 @@ void example_convolution_backward(){
     float weight_buffer[conv_size_y*conv_size_x*conv_size_z*conv_size_b];
     float weight_diff_buffer[conv_size_y*conv_size_x*conv_size_z*conv_size_b];
     float bias_buffer[out_siz_z];
+    float bias_diff_buffer[out_siz_z];
+
     // buffers should be initialized with valid data
 
     //todo remove
@@ -96,6 +98,8 @@ void example_convolution_backward(){
     }
     for(float &x : bias_buffer)                                              x = 0;
     for(float &x : weight_diff_buffer)                                       x = 0;
+    for(float &x : bias_diff_buffer)                                         x = 0;
+
 
     auto bw_output    = memory::create({engine::cpu, memory::format::yxfb_f32, {output_y, output_x, output_z, output_b}});
     auto bw_input     = memory::create({engine::cpu, memory::format::yxfb_f32, {input_y, input_x, input_z, input_b}});
@@ -103,9 +107,10 @@ void example_convolution_backward(){
     auto weights      = memory::create({engine::cpu, memory::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_z, conv_size_b}});
     auto weights_diff = memory::create({engine::cpu, memory::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_z, conv_size_b}});
     auto biases       = memory::create({engine::cpu, memory::format::yxfb_f32, {out_siz_z}});
+    auto biases_diff  = memory::create({engine::cpu, memory::format::yxfb_f32, {out_siz_z}});
 
     auto act = convolution_backward::create({ engine::reference,
-                                              std::vector<primitive>({bw_output, weights_diff}),
+                                              std::vector<primitive>({bw_output, weights_diff, biases_diff}),
                                           //   {out_off_y, out_off_x, out_off_z, out_off_b},
                                           //   {out_siz_y, out_siz_x, out_siz_z, out_siz_b},
                                               {bw_input, fw_input, weights, biases},
@@ -116,7 +121,7 @@ void example_convolution_backward(){
 
     execute({
         bw_input(bw_in_buffer), fw_input(fw_in_buffer), weights(weight_buffer), biases(bias_buffer), //inputs
-        bw_output(bw_out_buffer), weights_diff(weight_diff_buffer),   //outputs
+        bw_output(bw_out_buffer), weights_diff(weight_diff_buffer), biases_diff(bias_diff_buffer),   //outputs
         act
     });
 }
