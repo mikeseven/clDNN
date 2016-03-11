@@ -40,7 +40,6 @@ void example_convolution_forward() {
 }
 
 void example_convolution_backward(){
-//todo conv bw
     using namespace neural;
 
     const uint32_t output_y    = 2,
@@ -89,14 +88,6 @@ void example_convolution_backward(){
     float bias_diff_buffer[out_siz_z];
 
     // buffers should be initialized with valid data
-
-    //todo remove
-    for(int i = 0; i < conv_size_y*conv_size_x*conv_size_z*conv_size_b; ++i) weight_buffer[i]  = i - 2;
-    for(int i = 0; i < input_y*input_x*input_z*input_b; ++i)                 bw_in_buffer[i]  = 1.0f*i - 1.0f*input_x*input_b/2;
-    for(int i = 0; i < output_y*output_x*output_z*output_b; ++i){            bw_out_buffer[i] = -999;
-                                                                             fw_in_buffer[i] = -2+i;
-    }
-    for(float &x : bias_buffer)                                              x = 0;
 
     // *diff buffers must be filled with '0'
     for(float &x : weight_diff_buffer)                                       x = 0;
