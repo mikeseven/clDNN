@@ -150,7 +150,6 @@ struct convolution_backward_reference : is_an_implementation {
         auto window_diff  = static_cast<float*>(this_bw_conv->output_memory(1).pointer);
         auto bias_diff    = static_cast<float*>(this_bw_conv->output_memory(2).pointer);
 
-
         auto bw_input_memory_arg  = this_bw_conv->input_memory(0).argument;
         auto bw_input_offset      = this_bw_conv->argument.input_offset;
         auto bw_input_size        = this_bw_conv->argument.input_size;  // todo output or input?
@@ -201,6 +200,8 @@ struct convolution_backward_reference : is_an_implementation {
                 throw std::runtime_error("Backward convolution bw_input buffer size is to small.");
         }
 
+        int z_pos = 2; //todo need type traits
+
         namespace nd = ndimensional;
         nd::value<uint32_t> bias_range (bias_size);
         nd::value<uint32_t> range (bw_input_size); //todo in/out size?
@@ -214,7 +215,6 @@ struct convolution_backward_reference : is_an_implementation {
             case padding::zero:
             {
                 for(auto pos : range) {
-                    float acc = 0;
                     auto in_idx = calc_in_idx(pos + bw_input_offset);
 
                     for(auto win_pos : window_range){
@@ -226,13 +226,10 @@ struct convolution_backward_reference : is_an_implementation {
                         auto out_idx = calc_out_idx(arg_out_idx);
                         auto win_idx = calc_win_idx(win_pos);
                         bw_output[out_idx] += bw_input[in_idx] * window[win_idx];
-
-                        // fw_input and bw_output is the same memory (place) in NN (here, represented by 2 separate buffers) so I can use
-                        // index from one buffer to index second. fw_input stores nother data than bw_output, determined by direction of workload computations
-                        window_diff[win_idx] += bw_input[in_idx] * fw_input[out_idx];
+                        bias_diff[ pos[z_pos] ] += bw_input[in_idx];
+                        window_diff[win_pos] += fw_input[out_idx] * bw_output[out_idx];
                     }
 
-                    // todo bias term
                 }
                 break;
             }

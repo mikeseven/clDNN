@@ -97,6 +97,8 @@ void example_convolution_backward(){
                                                                              fw_in_buffer[i] = -2+i;
     }
     for(float &x : bias_buffer)                                              x = 0;
+
+    // *diff buffers must be filled with '0'
     for(float &x : weight_diff_buffer)                                       x = 0;
     for(float &x : bias_diff_buffer)                                         x = 0;
 

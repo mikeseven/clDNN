@@ -12,6 +12,7 @@ struct memory : is_a_primitive {
     };
 
     class format { format(); public: enum type {
+        ss_f32,     // single scalar, float32
         xb_f32,     // 1D+batch, float32
         yxfb_f32,   // 3D+batch, float32
         fyxb_f32,
@@ -21,6 +22,7 @@ struct memory : is_a_primitive {
         bfyx_f32,
         bxyf_f32,
         bfxy_f32,
+        ss_f64,     // single scalar, float64
         yxfb_f64,   // 3D+batch, float64
         fyxb_f64,
         xyfb_f64,
@@ -170,6 +172,7 @@ struct convolution_backward : is_a_primitive {
         std::vector<int32_t>      input_offset;
         std::vector<uint32_t>     stride;
         neural::padding::type     padding;
+
 
         arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> in_siz, std::vector<primitive> in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, neural::padding::type);
         arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt,                                                              std::vector<primitive> in,                              std::vector<uint32_t> stride, neural::padding::type);
