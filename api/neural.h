@@ -13,6 +13,7 @@ struct memory : is_a_primitive {
 
     class format { format(); public: enum type {
         ss_f32,     // single scalar, float32
+        x_f32,
         xb_f32,     // 1D+batch, float32
         yxfb_f32,   // 3D+batch, float32
         fyxb_f32,
@@ -23,6 +24,7 @@ struct memory : is_a_primitive {
         bxyf_f32,
         bfxy_f32,
         ss_f64,     // single scalar, float64
+        x_f64,
         yxfb_f64,   // 3D+batch, float64
         fyxb_f64,
         xyfb_f64,
@@ -36,6 +38,8 @@ struct memory : is_a_primitive {
 
     static const format_traits traits(format::type fmt) {
         switch(fmt) {
+        case format::  ss_f32:
+        case format::   x_f32: return {1, type_id<float>()};
         case format::  xb_f32: return {2, type_id<float>()};
         case format::yxfb_f32:
         case format::fyxb_f32:
@@ -45,6 +49,8 @@ struct memory : is_a_primitive {
         case format::bfyx_f32:
         case format::bxyf_f32:
         case format::bfxy_f32: return {4, type_id<float>()};
+        case format::  ss_f64:
+        case format::   x_f64: return {1, type_id<double>()};
         case format::yxfb_f64:
         case format::fyxb_f64:
         case format::xyfb_f64:

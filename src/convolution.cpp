@@ -143,52 +143,51 @@ struct convolution_backward_reference : is_an_implementation {
 
         auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer);
         auto fw_input     = static_cast<float*>(this_bw_conv->input_memory(1).pointer);
-        auto window       = static_cast<float*>(this_bw_conv->input_memory(2).pointer);
+        auto weights      = static_cast<float*>(this_bw_conv->input_memory(2).pointer);
         auto bias         = static_cast<float*>(this_bw_conv->input_memory(3).pointer);
 
         auto bw_output    = static_cast<float*>(this_bw_conv->output_memory(0).pointer);
-        auto window_diff  = static_cast<float*>(this_bw_conv->output_memory(1).pointer);
+        auto weights_diff = static_cast<float*>(this_bw_conv->output_memory(1).pointer);
         auto bias_diff    = static_cast<float*>(this_bw_conv->output_memory(2).pointer);
 
         auto bw_input_memory_arg  = this_bw_conv->input_memory(0).argument;
-        auto bw_input_offset      = this_bw_conv->argument.input_offset;
         auto bw_input_size        = this_bw_conv->argument.input_size;  // todo output or input?
+        auto bw_input_offset      = this_bw_conv->argument.input_offset;
 
         auto fw_input_memory_arg  = this_bw_conv->input_memory(1).argument;
         auto fw_input_size        = bw_input_memory_arg.size;
         auto fw_input_offset      = this_bw_conv->argument.input_offset;
 
         auto window_memory_arg    = this_bw_conv->input_memory(2).argument;
-        auto window_size          = bw_input_memory_arg.size;
+        auto window_size          = window_memory_arg.size;
 
         auto bias_memory_arg      = this_bw_conv->input_memory(3).argument;
-        auto bias_size            = bw_input_memory_arg.size;
+        auto bias_size            = bias_memory_arg.size;
 
         auto bw_output_memory_arg = this_bw_conv->output_memory(0).argument;
         auto bw_output_size       = bw_output_memory_arg.size;
         auto bw_output_offset     = this_bw_conv->argument.output_offset;
 
         auto window_diff_memory_arg= this_bw_conv->output_memory(1).argument;
-        auto window_diff_size      = bw_input_memory_arg.size;
+        auto window_diff_size      = window_diff_memory_arg.size;
 
         auto bias_diff_memory_arg  = this_bw_conv->output_memory(2).argument;
-        auto bias_diff_size        = bw_input_memory_arg.size;
+        auto bias_diff_size        = bias_diff_memory_arg.size;
 
         auto stride  = this_bw_conv->argument.stride;
         auto padding = this_bw_conv->argument.padding;
 
         if(bw_input_size.size()       != bw_output_size.size())      throw std::runtime_error("Backward convolution bw_input/bw_output number of dimension does not match.");
         if(stride.size()              != bw_output_size.size())      throw std::runtime_error("Backward convolution stride/bw_output number of dimension does not match.");
-        if(bw_input_memory_arg.format != memory::format::yxfb_f32)   throw std::runtime_error("Backward convolution reference uses yxfb_f32 format.");                // only yxfb_f32 format is supported
-        if(bw_input_memory_arg.format != bw_output_memory_arg.format)throw std::runtime_error("Backward convolution bw_input/bw_output data format does not match."); // only yxfb_f32 format is supported
-        if(bw_input_memory_arg.format != window_memory_arg.format)   throw std::runtime_error("Backward convolution bw_input/weights data format does not match.");   // only yxfb_f32 format is supported
         if(bw_input_size.size()       != fw_input_size.size())       throw std::runtime_error("Backward convolution bw_input/fw_output number of dimension does not match.");
-        if(bw_input_memory_arg.format != fw_input_memory_arg.format) throw std::runtime_error("Backward convolution bw_input/fw_output data format does not match."); // only yxfb_f32 format is supported
         if(window_size.size()         != bw_output_size.size())      throw std::runtime_error("Backward convolution window_size/bw_output number of dimension does not match.");
         if(window_size.size()         != window_diff_size.size())    throw std::runtime_error("Backward convolution weights/weights_diff number of dimension does not match.");
+        if(bw_input_memory_arg.format != bw_output_memory_arg.format)throw std::runtime_error("Backward convolution bw_input/bw_output data format does not match.");
+        if(bw_input_memory_arg.format != window_memory_arg.format)   throw std::runtime_error("Backward convolution bw_input/weights data format does not match.");
+        if(bw_input_memory_arg.format != fw_input_memory_arg.format) throw std::runtime_error("Backward convolution bw_input/fw_output data format does not match.");
         if(bias_size.size()           != 1)                          throw std::runtime_error("Backward convolution biases isn't 1D vector.");
-        if(bias_size[0]               != bw_output_size[2])          throw std::runtime_error("Backward convolution biases/bw_output feature maps number does not match."); // todo need type traits for index of 'z' dimension
         if(bias_size.size()           != bias_diff_size.size())      throw std::runtime_error("Backward convolution bias/bias_diff number dimensions doesn't match.");
+        if(bias_size[0]               != bw_output_size[2])          throw std::runtime_error("Backward convolution biases/bw_output feature maps number does not match."); // todo need type traits for index of 'z' dimension
         if(bias_size[0]               != bias_diff_size[0])          throw std::runtime_error("Backward convolution bias/bias_diff size doesn't match.");
 
         // general formula: output size = (input size - window size) / step + 1
@@ -220,14 +219,14 @@ struct convolution_backward_reference : is_an_implementation {
                     for(auto win_pos : window_range){
                         const std::vector<uint32_t> arg_out_idx = nd::value<uint32_t>(bw_output_offset) + pos*stride + win_pos;
 
-                        if( calc_in_idx.is_out_of_range(arg_out_idx) )
+                        if( calc_out_idx.is_out_of_range(arg_out_idx) )
                             continue;
 
                         auto out_idx = calc_out_idx(arg_out_idx);
                         auto win_idx = calc_win_idx(win_pos);
-                        bw_output[out_idx] += bw_input[in_idx] * window[win_idx];
+                        bw_output[out_idx] += bw_input[in_idx] * weights[win_idx];
                         bias_diff[ pos[z_pos] ] += bw_input[in_idx];
-                        window_diff[win_pos] += fw_input[out_idx] * bw_output[out_idx];
+                        weights_diff[win_idx] += fw_input[out_idx] * bw_output[out_idx];
                     }
 
                 }
