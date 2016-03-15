@@ -8,8 +8,6 @@ NeuralIA
 #include "tests/gtest/gtest.h"
 #include "api/neural.h"
 
-#include <random>
-
 namespace{
     auto calc_idx = [](std::vector<uint32_t> yxzb_pos, std::vector<uint32_t>& buf_size) -> uint32_t{
         return yxzb_pos[3]
@@ -19,7 +17,7 @@ namespace{
     };
 }
 
-TEST(relu_fw_test, basic) {
+TEST(relu_f32_fw_test, basic) {
     using namespace neural;
 
     const uint32_t y = 8, x = 8, z = 3, b = 2;
@@ -45,7 +43,7 @@ TEST(relu_fw_test, basic) {
     EXPECT_EQ(false, result);
 }
 
-TEST(relu_fw_test, offsets) {
+TEST(relu_f32_fw_test, offsets) {
     using namespace neural;
 
     const uint32_t output_y  = 7,
@@ -121,7 +119,7 @@ TEST(relu_fw_test, offsets) {
     EXPECT_EQ(true, result);
 }
 
-TEST(relu_bw_test, basic) {
+TEST(relu_f32_bw_test, basic) {
     using namespace neural;
 
     const uint32_t y = 8, x = 8, z = 3, b = 2;
@@ -146,7 +144,7 @@ TEST(relu_bw_test, basic) {
     EXPECT_EQ(true, result);
 }
 
-TEST(relu_bw_test, offsets) {
+TEST(relu_f32_bw_test, offsets) {
     using namespace neural;
 
     const uint32_t output_y  = 7,
