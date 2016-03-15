@@ -16,6 +16,5 @@ int main( int argc, char* argv[ ] )
         std::cerr << e.what();
     }
 
-    int result = 0;
-    return result;
+    return 0;
 }
