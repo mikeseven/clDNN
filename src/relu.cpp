@@ -18,32 +18,31 @@ struct relu_reference : is_an_implementation {
 
     static void implementation(const void *ptr) {
         auto this_relu = static_cast<const relu *>(ptr);
-        auto input     = static_cast<float*>(this_relu->input_memory(0).pointer);
-        auto output    = static_cast<float*>(this_relu->output_memory(0).pointer);
 
-        auto input_memory_arg  = this_relu->input_memory(0).argument;
-        auto input_buffer_size = input_memory_arg.size;
-        auto input_offset      = this_relu->argument.input_offset;
+        auto input_offset  = this_relu->argument.input_offset;
+        auto output_offset = this_relu->argument.output_offset;
+        auto output_size   = this_relu->argument.output_size;
 
-        auto output_memory_arg = this_relu->output_memory(0).argument;
-        auto output_buffer_size= output_memory_arg.size;
-        auto output_offset     = this_relu->argument.output_offset;
-        auto output_size       = this_relu->argument.output_size;
+        auto input_arg  = this_relu->input_memory(0).argument;
+        auto output_arg = this_relu->output_memory(0).argument;
 
-        if(input_memory_arg.format != memory::format::yxfb_f32)  throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
-        if(input_buffer_size.size() != output_buffer_size.size())throw std::runtime_error("ReLU input/output number of dimension does not match.");
-        if(input_memory_arg.format != output_memory_arg.format)  throw std::runtime_error("ReLU input/output data format does not match.");
+        if(input_arg.format != memory::format::yxfb_f32)  throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
+        if(input_arg.size.size() != output_arg.size.size())throw std::runtime_error("ReLU input/output number of dimension does not match.");
+        if(input_arg.format != output_arg.format)  throw std::runtime_error("ReLU input/output data format does not match.");
         for(auto &x : input_offset)  if(x < 0)                   throw std::runtime_error("ReLU negative input offset.");
 
-        for(size_t i = 0; i < input_buffer_size.size(); ++i){
-            if(input_buffer_size[i]  < output_size[i] + input_offset[i])  throw std::runtime_error("ReLU input/output size does not match.");
-            if(output_buffer_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("ReLU sizes to small.");
+        for(size_t i = 0; i < input_arg.size.size(); ++i){
+            if(input_arg.size[i]  < output_size[i] + input_offset[i])  throw std::runtime_error("ReLU input/output size does not match.");
+            if(output_arg.size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("ReLU sizes to small.");
         }
+
+        auto input  = static_cast<float*>(this_relu->input_memory(0).pointer);
+        auto output = static_cast<float*>(this_relu->output_memory(0).pointer);
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
-        nd::calculate_idx<uint32_t> calc_in_idx  (input_buffer_size);
-        nd::calculate_idx<uint32_t> calc_out_idx (output_buffer_size);
+        nd::calculate_idx<uint32_t> calc_in_idx  (input_arg.size);
+        nd::calculate_idx<uint32_t> calc_out_idx (output_arg.size);
         for(auto pos : range) {
             auto in_idx  = calc_in_idx (pos + input_offset );
             auto out_idx = calc_out_idx(pos + output_offset);

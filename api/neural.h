@@ -1,6 +1,8 @@
 #pragma once
 
 #include "neural_base.h"
+#include <random>
+#include <type_traits>
 
 namespace neural {
 
@@ -89,7 +91,32 @@ private:
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
 };
 
+namespace memory_helper {
+    template <class T> T* get_mem_first(const neural::primitive &mem) {return reinterpret_cast<T*>(mem.as<const memory&>().pointer);}
+    template <class T> T* get_mem_last(const neural::primitive &mem) {return get_mem_first<T>(mem) + mem.as<const memory&>().count();}
 
+    template <class T>
+    void fill_memory(neural::primitive &mem, T value)
+    {
+        if(type_id<T>()->id != memory::traits(mem.as<const memory&>().argument.format).type->id)
+            throw std::runtime_error("fill_memory: types do not match");
+
+        std::fill(get_mem_first<T>(mem), get_mem_last<T>(mem), value);
+    }
+
+    template <class T>
+    void fill_memory(neural::primitive &mem)
+    {
+        if(type_id<T>()->id != memory::traits(mem.as<const memory&>().argument.format).type->id)
+            throw std::runtime_error("fill_memory: types do not match");
+
+        static std::mt19937 rng(1);
+       // using type = std::is_floating_point<T>::value ? T : float
+        std::uniform_real_distribution<float> dist(-10, 10);
+        for(auto it1 = get_mem_first<T>(mem), it2 = get_mem_last<T>(mem); it1 != it2; ++it1)
+            *it1 = static_cast<T>( dist(rng) );
+    }
+}
 
 // file that is loaded and becomes a data
 struct file : is_a_primitive {
