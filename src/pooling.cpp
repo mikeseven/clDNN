@@ -137,6 +137,24 @@ pooling::arguments::arguments( neural::engine::type  eng,
     , size(siz)
     , padding(padd) {};
 
+pooling::arguments::arguments( neural::engine::type eng,
+                              pooling::mode::type   mode,
+                              primitive             out,
+                              primitive             in,
+                              uint32_t              strd,
+                              uint32_t              siz,
+                              neural::padding::type padd)
+    : engine(eng)
+    , mode(mode)
+    , output({out})
+    , output_offset(out.as<const memory&>().argument.size.size())
+    , output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
+    , input({in})
+    , input_offset(in.as<const memory&>().argument.size.size())
+    , stride({strd, strd, 1, 1})
+    , size({siz, siz, 1, 1})
+    , padding(padd) {};
+
 //                                    engine          output                  input
 using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 

@@ -26,7 +26,7 @@ TEST(relu_fw_test, basic) {
 
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}, true});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}});
-    memory_helper::fill_memory<float>(input);
+    input.as<const memory&>().fill<float>();
 
     auto act = relu::create({engine::reference, output, input});
     auto buf = static_cast<float*>(input.as<const memory&>().pointer);
@@ -78,7 +78,7 @@ TEST(relu_fw_test, offsets) {
 
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {in_buf_size.cbegin(), in_buf_size.cend()}, true});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, out_buf_size, true});
-    memory_helper::fill_memory<float>(input);
+    input.as<const memory&>().fill<float>();
 
     std::vector<uint32_t> in_off = {in_off_y, in_off_x, in_off_f, in_off_b};
     auto act = relu::create( {engine::reference,
@@ -129,8 +129,8 @@ TEST(relu_bw_test, basic) {
     auto fw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}, true});
     auto bw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}, true});
     auto bw_output = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}, true});
-    memory_helper::fill_memory<float>(fw_input);
-    memory_helper::fill_memory<float>(bw_input);
+    fw_input.as<const memory&>().fill<float>();
+    bw_input.as<const memory&>().fill<float>();
 
     auto act = relu_backward::create({engine::reference, {bw_output}, {bw_input, fw_input}});
     execute({act});
@@ -186,8 +186,8 @@ TEST(relu_bw_test, offsets) {
     auto fw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, fw_in_buf_size, true});
     auto bw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, bw_in_buf_size, true});
     auto bw_output = memory::create({engine::cpu, memory::format::yxfb_f32, bw_out_buf_size,true});
-    memory_helper::fill_memory<float>(fw_input);
-    memory_helper::fill_memory<float>(bw_input);
+    fw_input.as<const memory&>().fill<float>();
+    bw_input.as<const memory&>().fill<float>();
 
     std::vector<uint32_t> fw_in_off = {fw_in_off_y, fw_in_off_x, fw_in_off_f, fw_in_off_b};
     std::vector<uint32_t> bw_in_off = {bw_in_off_y, bw_in_off_x, bw_in_off_f, bw_in_off_b};

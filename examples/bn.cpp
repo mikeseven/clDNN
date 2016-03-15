@@ -3,22 +3,6 @@
 
 using namespace neural;
 
-// Some shady helpers.
-namespace 
-{
-    template <class T> T* get_mem_first(const neural::primitive &mem) {return reinterpret_cast<T*>(mem.as<const memory&>().pointer);}
-    template <class T> T* get_mem_last(const neural::primitive &mem) {return get_mem_first<T>(mem) + mem.as<const memory&>().count();}
-
-    template <class T> 
-    void fill_memory(neural::primitive &mem, T value)
-    {
-        if(type_id<T>()->id != memory::traits(mem.as<const memory&>().argument.format).type->id)
-            throw std::runtime_error("fill_memory: types do not match");
-
-        std::fill(get_mem_first<T>(mem), get_mem_last<T>(mem), value);
-    }
-}
-
 void spatial_bn_trivial_example_forward_training_float() 
 {
     // Create input buffers.
@@ -34,9 +18,9 @@ void spatial_bn_trivial_example_forward_training_float()
     auto moving_inv_std_dev  = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
 
     // Initialize input buffers.
-    fill_memory<float>(input, 0);
-    fill_memory<float>(scale, 0);
-    fill_memory<float>( bias, 0);
+    input.as<const memory&>().fill<float>(0);
+    scale.as<const memory&>().fill<float>(0);
+    bias.as<const memory&>().fill<float>(0);
 
     // Create primitive.
     auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 0.0, std::numeric_limits<float>::epsilon()});
@@ -61,9 +45,9 @@ void spatial_bn_trivial_example_forward_training_double()
     auto moving_inv_std_dev  = memory::create({engine::cpu, memory::format::yxfb_f64, { 1,  1, 64,   1}, true});
 
     // Initialize input buffers.
-    fill_memory<double>(input, 0);
-    fill_memory<double>(scale, 0);
-    fill_memory<double>( bias, 0);
+    input.as<const memory&>().fill<double>(0);
+    scale.as<const memory&>().fill<double>(0);
+    bias.as<const memory&>().fill<double>(0);
 
     // Create primitive.
     auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 0.0, std::numeric_limits<double>::epsilon()});
@@ -89,12 +73,12 @@ void spatial_bn_trivial_example_backward_training_float()
     auto bias_grad  = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
 
     // Initialize input buffers.
-    fill_memory<float>(      forward_input, 0);
-    fill_memory<float>(      forward_scale, 0);
-    fill_memory<float>(       forward_bias, 0);
-    fill_memory<float>(        output_grad, 0);
-    fill_memory<float>(       current_mean, 0);
-    fill_memory<float>(current_inv_std_dev, 0);
+    forward_input.as<const memory&>().fill<float>(0);
+    forward_scale.as<const memory&>().fill<float>(0);
+    forward_bias.as<const memory&>().fill<float>(0);
+    output_grad.as<const memory&>().fill<float>(0);
+    current_mean.as<const memory&>().fill<float>(0);
+    current_inv_std_dev.as<const memory&>().fill<float>(0);
 
     // Create primitive.
     auto bn = normalization::batch_training_backward::create({engine::reference, {input_grad, scale_grad, bias_grad}, {forward_input, forward_scale, forward_bias, output_grad, current_mean, current_inv_std_dev}, true});
@@ -120,12 +104,12 @@ void spatial_bn_trivial_example_backward_training_double()
     auto bias_grad  = memory::create({engine::cpu, memory::format::yxfb_f64, { 1,  1, 64,   1}, true});
 
     // Initialize input buffers.
-    fill_memory<double>(      forward_input, 0);
-    fill_memory<double>(      forward_scale, 0);
-    fill_memory<double>(       forward_bias, 0);
-    fill_memory<double>(        output_grad, 0);
-    fill_memory<double>(       current_mean, 0);
-    fill_memory<double>(current_inv_std_dev, 0);
+    forward_input.as<const memory&>().fill<double>(0);
+    forward_scale.as<const memory&>().fill<double>(0);
+    forward_bias.as<const memory&>().fill<double>(0);
+    output_grad.as<const memory&>().fill<double>(0);
+    current_mean.as<const memory&>().fill<double>(0);
+    current_inv_std_dev.as<const memory&>().fill<double>(0);
 
     // Create primitive.
     auto bn = normalization::batch_training_backward::create({engine::reference, {input_grad, scale_grad, bias_grad}, {forward_input, forward_scale, forward_bias, output_grad, current_mean, current_inv_std_dev}, true});
@@ -148,11 +132,11 @@ void spatial_bn_trivial_example_inference_float()
     auto output      = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}, true});
 
     // Initialize input buffers.
-    fill_memory<float>(      input, 0);
-    fill_memory<float>(      scale, 0);
-    fill_memory<float>(       bias, 0);
-    fill_memory<float>(    average, 0);
-    fill_memory<float>(inv_std_dev, 0);
+    input.as<const memory&>().fill<float>(0);
+    scale.as<const memory&>().fill<float>(0);
+    bias.as<const memory&>().fill<float>(0);
+    average.as<const memory&>().fill<float>(0);
+    inv_std_dev.as<const memory&>().fill<float>(0);
 
     // Create primitive.
     auto bn = normalization::batch_inference::create({engine::reference, {output}, {input, scale, bias, average, inv_std_dev}, true});
@@ -175,11 +159,11 @@ void spatial_bn_trivial_example_inference_double()
     auto output      = memory::create({engine::cpu, memory::format::yxfb_f64, {16, 32, 64, 128}, true});
 
     // Initialize input buffers.
-    fill_memory<double>(      input, 0);
-    fill_memory<double>(      scale, 0);
-    fill_memory<double>(       bias, 0);
-    fill_memory<double>(    average, 0);
-    fill_memory<double>(inv_std_dev, 0);
+    input.as<const memory&>().fill<double>(0);
+    scale.as<const memory&>().fill<double>(0);
+    bias.as<const memory&>().fill<double>(0);
+    average.as<const memory&>().fill<double>(0);
+    inv_std_dev.as<const memory&>().fill<double>(0);
 
     // Create primitive.
     auto bn = normalization::batch_inference::create({engine::reference, {output}, {input, scale, bias, average, inv_std_dev}, true});
@@ -212,9 +196,9 @@ void spatial_bn_complex_example_training_float()
     auto forward_bias_grad   = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
 
     // Initialize input buffers for forward training primitive which will initialize other buffers.
-    fill_memory<float>(forward_input, 0);
-    fill_memory<float>(forward_scale, 0);
-    fill_memory<float>( forward_bias, 0);
+    forward_input.as<const memory&>().fill<float>(0);
+    forward_scale.as<const memory&>().fill<float>(0);
+    forward_bias.as<const memory&>().fill<float>(0);
 
     // Create primitives.
     auto bn_train_fw  = normalization::batch_training_forward::create({engine::reference, {forward_output, current_mean, current_inv_std_dev, moving_mean, moving_inv_std_dev}, {forward_input, forward_scale, forward_bias}, true, 0.0, std::numeric_limits<float>::epsilon()});
@@ -267,9 +251,9 @@ void spatial_bn_complex_example_training_double()
     auto forward_bias_grad   = memory::create({engine::cpu, memory::format::yxfb_f64, { 1,  1, 64,   1}, true});
 
     // Initialize input buffers for forward training primitive which will initialize other buffers.
-    fill_memory<double>(forward_input, 0);
-    fill_memory<double>(forward_scale, 0);
-    fill_memory<double>( forward_bias, 0);
+    forward_input.as<const memory&>().fill<double>(0);
+    forward_scale.as<const memory&>().fill<double>(0);
+    forward_bias.as<const memory&>().fill<double>(0);
 
     // Create primitives.
     auto bn_train_fw  = normalization::batch_training_forward::create({engine::reference, {forward_output, current_mean, current_inv_std_dev, moving_mean, moving_inv_std_dev}, {forward_input, forward_scale, forward_bias}, true, 0.0, std::numeric_limits<float>::epsilon()});
