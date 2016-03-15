@@ -20,22 +20,20 @@ struct softmax_reference : is_an_implementation {
         auto input        = static_cast<float*>(this_softmax->input_memory(0).pointer);
         auto output       = static_cast<float*>(this_softmax->output_memory(0).pointer);
 
-        auto input_memory_arg  = this_softmax->input_memory(0).argument;
-        auto input_buffer_size = input_memory_arg.size;
-        auto input_offset      = this_softmax->argument.input_offset;
-
-        auto output_memory_arg = this_softmax->output_memory(0).argument;
-        auto output_buffer_size= output_memory_arg.size;
+        auto input_offset = this_softmax->argument.input_offset;
         auto output_offset     = this_softmax->argument.output_offset;
         auto output_size       = this_softmax->argument.output_size;
 
-        if(input_memory_arg.format  != memory::format::xb_f32)    throw std::runtime_error("Softmax reference uses xb_f32 format."); // todo should be format independent
-        if(input_memory_arg.format  != output_memory_arg.format)  throw std::runtime_error("Softmax input/output data format does not match.");
-        if(input_buffer_size.size() != output_buffer_size.size()) throw std::runtime_error("Softmax input/output number of dimension does not match.");
+        auto input_arg  = this_softmax->input_memory(0).argument;
+        auto output_arg = this_softmax->output_memory(0).argument;
 
-        for(size_t i = 0; i < input_buffer_size.size(); ++i){
-            if(input_buffer_size[i]  < output_size[i] + input_offset[i])  throw std::runtime_error("Softmax input/output size does not match.");
-            if(output_buffer_size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("Softmax sizes to small.");
+        if(input_arg.format      != memory::format::xb_f32) throw std::runtime_error("Softmax reference uses xb_f32 format."); // todo should be format independent
+        if(input_arg.format      != output_arg.format)      throw std::runtime_error("Softmax input/output data format does not match.");
+        if(input_arg.size.size() != output_arg.size.size()) throw std::runtime_error("Softmax input/output number of dimension does not match.");
+
+        for(size_t i = 0; i < input_arg.size.size(); ++i){
+            if(input_arg.size[i]  < output_size[i] + input_offset[i])  throw std::runtime_error("Softmax input/output size does not match.");
+            if(output_arg.size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("Softmax sizes to small.");
         }
 
         int data_index = 0; //todo type traits
@@ -46,8 +44,8 @@ struct softmax_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
-        nd::calculate_idx<uint32_t> calc_in_idx  (input_buffer_size);
-        nd::calculate_idx<uint32_t> calc_out_idx (output_buffer_size);
+        nd::calculate_idx<uint32_t> calc_in_idx  (input_arg.size);
+        nd::calculate_idx<uint32_t> calc_out_idx (output_arg.size);
 
         // find max val per batch
         for(auto pos : range) {
