@@ -132,7 +132,7 @@ inline size_t calculate_idx<T>::operator()( const std::vector<negT>& position ){
     assert(
         [&]() -> bool {
         for(size_t i = 0; i < position.size(); ++i)
-            if(size[i] <= position[i]) return false;
+            if(size[i] <= static_cast<T>(position[i])) return false;
 
           return true;
         }() == true );
