@@ -8,234 +8,202 @@ NeuralIA
 #include "tests/gtest/gtest.h"
 #include "api/neural.h"
 
-namespace{
-    auto calc_idx = [](std::vector<uint32_t> yxzb_pos, std::vector<uint32_t>& buf_size) -> uint32_t{
-        return yxzb_pos[3]
-             + yxzb_pos[2] * buf_size[3]
-             + yxzb_pos[1] * buf_size[3] * buf_size[2]
-             + yxzb_pos[0] * buf_size[3] * buf_size[2] * buf_size[1];
-    };
+TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
+/*
+Filter window: 2x2
+Stride       : 2x2
+Input size   : 4x4
+Output size  : 2x2
+
+Input:
+-0.5   1.5   0.5  0.5
+ 1    -0.5   0.5  2
+ 0.5   0    -1    1.5
+ 2    -1     1   -0.5
+
+Filter
+-2   3.5
+ 0.5 1.5
+
+Bias
+2
+
+Output:
+8   6
+0.5 9
+*/
+using namespace neural;
+
+    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {4, 4, 1, 1}, true});
+    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto weights= memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto biases = memory::create({engine::cpu, memory::format::   x_f32, {1}         , true});
+
+    auto& input_memory  = input.as<const memory&>();
+    auto& output_memory = output.as<const memory&>();
+    auto& weight_memory = weights.as<const memory&>();
+
+    *static_cast<float*>(biases.as<const memory&>().pointer) = 2;
+
+    input_memory.set_value<float>(0, -0.5f);
+    input_memory.set_value<float>(1,  1.0f);
+    input_memory.set_value<float>(2,  0.5f);
+    input_memory.set_value<float>(3,  2.0f);
+    input_memory.set_value<float>(4,  1.5f);
+    input_memory.set_value<float>(5, -0.5f);
+    input_memory.set_value<float>(6,  0.0f);
+    input_memory.set_value<float>(7, -1.0f);
+    input_memory.set_value<float>(8,  0.5f);
+    input_memory.set_value<float>(9,  0.5f);
+    input_memory.set_value<float>(10, -1.0f);
+    input_memory.set_value<float>(11,  1.0f);
+    input_memory.set_value<float>(12,  0.5f);
+    input_memory.set_value<float>(13,  2.0f);
+    input_memory.set_value<float>(14,  1.5f);
+    input_memory.set_value<float>(15, -0.5f);
+
+    weight_memory.set_value<float>(0, -2.0f);
+    weight_memory.set_value<float>(1,  0.5f);
+    weight_memory.set_value<float>(2,  3.5f);
+    weight_memory.set_value<float>(3,  1.5f);
+
+    auto conv = convolution::create({engine::reference, output, input, {2, 2, 1, 1}, weights, biases, padding::zero});
+    execute({conv});
+
+    EXPECT_EQ(8.0f, output_memory.get_value<float>(0));
+    EXPECT_EQ(0.5f, output_memory.get_value<float>(1));
+    EXPECT_EQ(6.0f, output_memory.get_value<float>(2));
+    EXPECT_EQ(9.0f, output_memory.get_value<float>(3));
 }
 
-TEST(convolution_f32_fw_test, basic) {
-    //using namespace neural;
+TEST(convolution_f32_fw, basic_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
+/*
+Filter window: 3x3
+Stride       : 2x2
+Input size   : 2x2
+Output size  : 1x1
+Padding      : zero
 
-    //const uint32_t y = 8, x = 8, z = 3, b = 2;
+Input:
+-0.5   0.5   padd
+ 1     2.0   padd
+padd  padd   padd
 
-    //auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}, true});
-    //auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}});
-    //memory_helper::fill_memory<float>(input);
+Filter
+-2    1.5  0.5
+ 0.5  4    1.5
+ 3.5 -5   -1.5
 
-    //auto act = relu::create({engine::reference, output, input});
-    //auto buf = static_cast<float*>(input.as<const memory&>().pointer);
-    //execute({output(buf), act});
+Bias
+2
 
-    //for(size_t i = 0; i < y*x*z*b; ++i)
-    //    buf[i] = (buf[i] > 0)? -buf[i] : buf[i];
+Output:
+12.25
+*/
+using namespace neural;
 
-    //auto act2 = relu::create({engine::reference, output, output});
-    //execute({act});
+    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {1, 1, 1, 1}, true});
+    auto weights= memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 1, 1}, true});
+    auto biases = memory::create({engine::cpu, memory::format::   x_f32, {1}         , true});
 
-    //bool result = false;
-    //for(size_t i = 0; i < y*x*z*b; ++i)
-    //    result = result || buf[i];
+    auto& input_memory  = input.as<const memory&>();
+    auto& output_memory = output.as<const memory&>();
+    auto& weight_memory = weights.as<const memory&>();
 
-    //EXPECT_EQ(false, result);
+    *static_cast<float*>(biases.as<const memory&>().pointer) = 2;
+
+    input_memory.set_value<float>(0, -0.5f);
+    input_memory.set_value<float>(1,  1.0f);
+    input_memory.set_value<float>(2,  0.5f);
+    input_memory.set_value<float>(3,  2.0f);
+
+    weight_memory.set_value<float>(0, -2.0f);
+    weight_memory.set_value<float>(1,  0.5f);
+    weight_memory.set_value<float>(2,  3.5f);
+    weight_memory.set_value<float>(3,  1.5f);
+    weight_memory.set_value<float>(4,  4.0f);
+    weight_memory.set_value<float>(5, -5.0f);
+    weight_memory.set_value<float>(6,  0.5f);
+    weight_memory.set_value<float>(7,  1.5f);
+    weight_memory.set_value<float>(8, -1.5f);
+
+    float* inptr  = (float*)input_memory.pointer;
+    float* wptr   = (float*)weight_memory.pointer;
+    float* outptr = (float*)output_memory.pointer;
+
+    auto conv = convolution::create({engine::reference, output, input, {2, 2, 1, 1}, weights, biases, padding::zero});
+    execute({conv});
+
+    EXPECT_EQ(12.25f, output_memory.get_value<float>(0));
 }
 
-//todo padding test
+TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
+/*
+Filter window: 3x3
+Stride       : 2x2
+Input size   : 2x2
+Input offset : -1x-1
+Output size  : 2x2
+Output offset: 1x1
+Padding      : zero
 
-TEST(convolution_f32_fw_test, offsets) {
-    //using namespace neural;
+Input:
+padd padd  padd
+padd -0.5   0.5
+padd  1     2.0
 
-    //const uint32_t output_y  = 7,
-    //               output_x  = 7,
-    //               output_f  = 2,
-    //               output_b  = 3, // size of whole output buffer
+Filter
+-2    1.5  0.5
+ 0.5  4    1.5
+ 3.5 -5   -1.5
 
-    //               input_y   = 10,
-    //               input_x   = 10,
-    //               input_f   = 3,
-    //               input_b   = 3,  // size of whole input buffer
+Bias
+2
 
-    //               out_off_y = 1,
-    //               out_off_x = 2,
-    //               out_off_f = 0,
-    //               out_off_b = 1,
+Output:
+rnd   rnd
+rnd  -7.25
+*/
+    using namespace neural;
+    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto weights= memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 1, 1}, true});
+    auto biases = memory::create({engine::cpu, memory::format::   x_f32, {1}         , true});
 
-    //               out_siz_y = 5,
-    //               out_siz_x = 5,
-    //               out_siz_f = 2,
-    //               out_siz_b = 2,
+    auto& input_memory  = input.as<const memory&>();
+    auto& output_memory = output.as<const memory&>();
+    auto& weight_memory = weights.as<const memory&>();
 
-    //               in_off_y  = 1,
-    //               in_off_x  = 1,
-    //               in_off_f  = 1,
-    //               in_off_b  = 0;
+    *static_cast<float*>(biases.as<const memory&>().pointer) = 2;
 
-    //std::vector<uint32_t> in_buf_size  = {input_y, input_x, input_f, input_b};
-    //std::vector<uint32_t> out_buf_size = {output_y, output_x, output_f, output_b};
+    input_memory.set_value<float>(0, -0.5f);
+    input_memory.set_value<float>(1,  1.0f);
+    input_memory.set_value<float>(2,  0.5f);
+    input_memory.set_value<float>(3,  2.0f);
 
-    //auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {in_buf_size.cbegin(), in_buf_size.cend()}, true});
-    //auto output = memory::create({engine::cpu, memory::format::yxfb_f32, out_buf_size, true});
-    //memory_helper::fill_memory<float>(input);
+    weight_memory.set_value<float>(0, -2.0f);
+    weight_memory.set_value<float>(1,  0.5f);
+    weight_memory.set_value<float>(2,  3.5f);
+    weight_memory.set_value<float>(3,  1.5f);
+    weight_memory.set_value<float>(4,  4.0f);
+    weight_memory.set_value<float>(5, -5.0f);
+    weight_memory.set_value<float>(6,  0.5f);
+    weight_memory.set_value<float>(7,  1.5f);
+    weight_memory.set_value<float>(8, -1.5f);
 
-    //std::vector<uint32_t> in_off = {in_off_y, in_off_x, in_off_f, in_off_b};
-    //auto act = relu::create( {engine::reference,
-    //                          output,
-    //                          {out_off_y, out_off_x, out_off_f, out_off_b},
-    //                          {out_siz_y, out_siz_x, out_siz_f, out_siz_b},
-    //                          input,
-    //                          {in_off.cbegin(), in_off.cend()}
-    //                         });
+    auto conv = convolution::create({engine::reference,
+                                     output,
+                                     {1, 1, 0, 0},
+                                     {1, 1, 1, 1},
+                                     input,
+                                     {-1, -1, 0, 0},
+                                     { 2,  2, 1, 1},
+                                     weights,
+                                     biases,
+                                     padding::zero});
+    execute({conv});
 
-    //execute({act});
-
-    //auto buf_in  = static_cast<float*>(input.as<const memory&>().pointer);
-    //auto buf_out = static_cast<float*>(output.as<const memory&>().pointer);
-    //bool result = true;
-
-    //for(uint32_t y = 0; y < out_siz_y; ++y)
-    //for(uint32_t x = 0; x < out_siz_x; ++x)
-    //for(uint32_t f = 0; f < out_siz_f; ++f)
-    //for(uint32_t b = 0; b < out_siz_b; ++b)
-    //{
-    //    auto in_idx = calc_idx( {
-    //                             in_off_y + y,
-    //                             in_off_x + x,
-    //                             in_off_f + f,
-    //                             in_off_b + b
-    //                            }, in_buf_size);
-    //    auto out_idx = calc_idx( {
-    //                             out_off_y + y,
-    //                             out_off_x + x,
-    //                             out_off_f + f,
-    //                             out_off_b + b
-    //                            }, out_buf_size);
-
-    //    result &= (buf_out[out_idx] > 0.0f)
-    //              ? (buf_out[out_idx] == buf_in[in_idx])
-    //              : (buf_in[in_idx] < 0.0f);
-    //}
-
-    //EXPECT_EQ(true, result);
+    EXPECT_EQ(-7.25f, output_memory.get_value<float>(3));
 }
 
-TEST(convolution_f32_bw_test, basic) {
- /*   using namespace neural;
-
-    const uint32_t y = 8, x = 8, z = 3, b = 2;
-
-    auto fw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}, true});
-    auto bw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}, true});
-    auto bw_output = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}, true});
-    memory_helper::fill_memory<float>(fw_input);
-    memory_helper::fill_memory<float>(bw_input);
-
-    auto act = relu_backward::create({engine::reference, {bw_output}, {bw_input, fw_input}});
-    execute({act});
-
-    auto fw_input_buf  = static_cast<float*>(fw_input .as<const memory&>().pointer);
-    auto bw_input_buf  = static_cast<float*>(bw_input .as<const memory&>().pointer);
-    auto bw_output_buf = static_cast<float*>(bw_output.as<const memory&>().pointer);
-
-    bool result = true;
-    for(size_t i = 0; i < y*x*z*b; ++i)
-        result &= (((fw_input_buf[i] > 0) * bw_input_buf[i]) == bw_output_buf[i]);
-
-    EXPECT_EQ(true, result);*/
-}
-
-//todo padding test
-
-TEST(convolution_f32_bw_test, offsets) {
-    //using namespace neural;
-
-    //const uint32_t output_y  = 7,
-    //               output_x  = 7,
-    //               output_f  = 2,
-    //               output_b  = 3, // size of whole output buffer
-
-    //               input_y   = 10,
-    //               input_x   = 10,
-    //               input_f   = 3,
-    //               input_b   = 3,  // size of whole input buffer
-
-    //               out_off_y = 1,
-    //               out_off_x = 2,
-    //               out_off_f = 0,
-    //               out_off_b = 1,
-
-    //               out_siz_y = 5,
-    //               out_siz_x = 5,
-    //               out_siz_f = 2,
-    //               out_siz_b = 2,
-
-    //               fw_in_off_y  = 1,
-    //               fw_in_off_x  = 1,
-    //               fw_in_off_f  = 1,
-    //               fw_in_off_b  = 0,
-
-    //               bw_in_off_y  = 0,
-    //               bw_in_off_x  = 0,
-    //               bw_in_off_f  = 0,
-    //               bw_in_off_b  = 1;
-
-    //std::vector<uint32_t> fw_in_buf_size  = {input_y, input_x, input_f, input_b};
-    //std::vector<uint32_t> bw_in_buf_size  = {output_y, output_x, output_f, output_b};
-    //std::vector<uint32_t> bw_out_buf_size = {output_y, output_x, output_f, output_b};
-
-    //auto fw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, fw_in_buf_size, true});
-    //auto bw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, bw_in_buf_size, true});
-    //auto bw_output = memory::create({engine::cpu, memory::format::yxfb_f32, bw_out_buf_size,true});
-    //memory_helper::fill_memory<float>(fw_input);
-    //memory_helper::fill_memory<float>(bw_input);
-
-    //std::vector<uint32_t> fw_in_off = {fw_in_off_y, fw_in_off_x, fw_in_off_f, fw_in_off_b};
-    //std::vector<uint32_t> bw_in_off = {bw_in_off_y, bw_in_off_x, bw_in_off_f, bw_in_off_b};
-
-    //auto act = relu_backward::create( {engine::reference,
-    //                                  {bw_output},
-    //                                  {out_off_y, out_off_x, out_off_f, out_off_b},
-    //                                  {out_siz_y, out_siz_x, out_siz_f, out_siz_b},
-    //                                  {bw_input, fw_input},
-    //                                  {bw_in_off, fw_in_off}
-    //                                 });
-    //execute({act});
-
-    //auto buf_fw_input  = static_cast<float*>(fw_input.as<const memory&>().pointer);
-    //auto buf_bw_input  = static_cast<float*>(bw_input.as<const memory&>().pointer);
-    //auto buf_bw_output = static_cast<float*>(bw_output.as<const memory&>().pointer);
-
-    //bool result = true;
-    //for(uint32_t y = 0; y < out_siz_y; ++y)
-    //for(uint32_t x = 0; x < out_siz_x; ++x)
-    //for(uint32_t f = 0; f < out_siz_f; ++f)
-    //for(uint32_t b = 0; b < out_siz_b; ++b)
-    //{
-    //    auto fw_in_idx = calc_idx( {
-    //                             fw_in_off_y + y,
-    //                             fw_in_off_x + x,
-    //                             fw_in_off_f + f,
-    //                             fw_in_off_b + b
-    //                            }, fw_in_buf_size);
-
-    //    auto bw_in_idx = calc_idx( {
-    //                             bw_in_off_y + y,
-    //                             bw_in_off_x + x,
-    //                             bw_in_off_f + f,
-    //                             bw_in_off_b + b
-    //                            }, bw_in_buf_size);
-
-    //    auto out_idx = calc_idx( {
-    //                             out_off_y + y,
-    //                             out_off_x + x,
-    //                             out_off_f + f,
-    //                             out_off_b + b
-    //                            }, bw_out_buf_size);
-
-    //    result &= (((buf_fw_input[fw_in_idx] > 0) * buf_bw_input[bw_in_idx]) == buf_bw_output[out_idx]);
-    //}
-
-    //EXPECT_EQ(true, result);
-}

@@ -17,7 +17,7 @@ namespace{
     };
 }
 
-TEST(relu_f32_fw_test, basic) {
+TEST(relu_f32_fw, basic) {
     using namespace neural;
 
     const uint32_t y = 8, x = 8, z = 3, b = 2;
@@ -43,7 +43,7 @@ TEST(relu_f32_fw_test, basic) {
     EXPECT_EQ(false, result);
 }
 
-TEST(relu_f32_fw_test, offsets) {
+TEST(relu_f32_fw, offsets) {
     using namespace neural;
 
     const uint32_t output_y  = 7,
@@ -119,7 +119,7 @@ TEST(relu_f32_fw_test, offsets) {
     EXPECT_EQ(true, result);
 }
 
-TEST(relu_f32_bw_test, basic) {
+TEST(relu_f32_bw, basic) {
     using namespace neural;
 
     const uint32_t y = 8, x = 8, z = 3, b = 2;
@@ -144,7 +144,7 @@ TEST(relu_f32_bw_test, basic) {
     EXPECT_EQ(true, result);
 }
 
-TEST(relu_f32_bw_test, offsets) {
+TEST(relu_f32_bw, offsets) {
     using namespace neural;
 
     const uint32_t output_y  = 7,

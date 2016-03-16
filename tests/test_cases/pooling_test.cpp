@@ -10,7 +10,7 @@ NeuralIA
 
 using namespace neural;
 
-TEST(pooling_forward, max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
+TEST(pooling_f32_fw, max_yxfb_f32_wsiz3x3_wstr1x1_in3x3x1x1_nopad) {
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 1, 1}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {1, 1, 1, 1}, true});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, 1, 3, padding::type::zero});
@@ -35,7 +35,7 @@ TEST(pooling_forward, max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
     EXPECT_EQ(2.0f, output_memory.get_value<float>(0));
 }
 
-TEST(pooling_forward, max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
+TEST(pooling_f32_fw, max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 1, 1}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, 1, 2, padding::type::zero});
@@ -63,7 +63,7 @@ TEST(pooling_forward, max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
     EXPECT_EQ(1.5f, output_memory.get_value<float>(3));
 }
 
-TEST(pooling_forward, max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
+TEST(pooling_f32_fw, max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {4, 4, 1, 1}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, 2, 2, padding::type::zero});
