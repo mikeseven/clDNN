@@ -8,6 +8,9 @@ foreach(source ${srcs})
   # caffe target already exits
   if(name MATCHES "caffe")
     set(name ${name}.bin)
+  else()
+    # add caffe- prefix to know that it's part of caffe
+    set(name caffe-${name})
   endif()
 
   # target
@@ -18,7 +21,7 @@ foreach(source ${srcs})
   # set back RUNTIME_OUTPUT_DIRECTORY
   caffe_set_runtime_directory(${name} "${PROJECT_BINARY_DIR}/tools")
   caffe_set_solution_folder(${name} tools)
-
+  
   # restore output name without suffix
   if(name MATCHES "caffe.bin")
     set_target_properties(${name} PROPERTIES OUTPUT_NAME caffe)

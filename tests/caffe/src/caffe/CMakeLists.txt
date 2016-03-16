@@ -18,8 +18,9 @@ if(HAVE_CUDA)
 endif()
 
 add_library(caffe ${srcs})
-target_link_libraries(caffe proto ${Caffe_LINKER_LIBS})
+target_link_libraries(caffe proto neuralia ${Caffe_LINKER_LIBS})
 caffe_default_properties(caffe)
+remove_definitions(caffe -fvisibility=hidden)
 
 # ---[ Tests
  add_subdirectory(test)
@@ -32,5 +33,4 @@ install(TARGETS caffe proto EXPORT CaffeTargets DESTINATION lib)
 file(WRITE ${PROJECT_BINARY_DIR}/__init__.py)
 list(APPEND proto_python ${PROJECT_BINARY_DIR}/__init__.py)
 install(PROGRAMS ${proto_python} DESTINATION python/caffe/proto)
-
 

@@ -18,9 +18,9 @@ elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
     set (COMPILER_STR "mscc")
 endif()
 
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set (CMAKE_BINARY_DIR ${CMAKE_BINARY_DIR}/bin)
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+set (LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+set (CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
 
 message (STATUS "PROJECT ............................... " ${PROJECT_NAME})
 message (STATUS "CMAKE_BINARY_DIR ...................... " ${CMAKE_BINARY_DIR})
@@ -55,8 +55,9 @@ if(UNIX)
   endif(COMPILER_SUPPORTS_VISIBILITY)
 endif(UNIX)
 
+include_directories(${CMAKE_SOURCE_DIR}/api)
+
 # Sub-directories where more CMakeLists.txt exist
-add_subdirectory(tests)
 add_subdirectory(src)
 add_subdirectory(examples)
-
+add_subdirectory(tests)

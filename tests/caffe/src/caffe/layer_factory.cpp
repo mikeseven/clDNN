@@ -78,6 +78,7 @@ shared_ptr<Layer<Dtype> > GetConvolutionLayer(
   } else {
     LOG(FATAL) << "Layer " << param.name() << " has unknown engine.";
   }
+  return {}; // for compiler warnings
 }
 
 REGISTER_LAYER_CREATOR(Convolution, GetConvolutionLayer);

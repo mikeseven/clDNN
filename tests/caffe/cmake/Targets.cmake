@@ -83,7 +83,7 @@ function(caffe_pickup_caffe_sources root)
   # collect cuda files
   file(GLOB    test_cuda ${root}/src/caffe/test/test_*.cu)
   file(GLOB_RECURSE cuda ${root}/src/caffe/*.cu)
-  list(REMOVE_ITEM  cuda ${test_cuda})
+  #list(REMOVE_ITEM  cuda ${test_cuda})
 
   # add proto to make them editable in IDEs too
   file(GLOB_RECURSE proto_files ${root}/src/caffe/*.proto)
@@ -172,4 +172,3 @@ function(caffe_leave_only_selected_tests file_list)
   endforeach()
   set(${file_list} ${result} PARENT_SCOPE)
 endfunction()
-

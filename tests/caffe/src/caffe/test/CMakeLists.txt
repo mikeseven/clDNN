@@ -15,7 +15,7 @@ caffe_leave_only_selected_tests(test_cuda ${BUILD_only_tests})
 # generates test_data/sample_data_list.txt.gen.cmake
 #caffe_configure_testdatafile(test_data/sample_data_list.txt)
 
-set(the_target test.testbin)
+set(the_target caffetests)
 set(test_args --gtest_shuffle)
 
 if(HAVE_CUDA)
@@ -27,10 +27,13 @@ endif()
 
 # ---[ Adding test target
 add_executable(${the_target} EXCLUDE_FROM_ALL ${test_srcs})
-target_link_libraries(${the_target} gtest ${Caffe_LINK})
+target_link_libraries(${the_target} gtest-caffe ${Caffe_LINK})
 caffe_default_properties(${the_target})
 caffe_set_runtime_directory(${the_target} "${PROJECT_BINARY_DIR}/test")
 
+
+add_custom_target(caffetest caffetests)
+
 # ---[ Adding runtest
-add_custom_target(runtest COMMAND ${the_target} ${test_args}
+add_custom_target(runcaffe COMMAND ${the_target} ${test_args}
                           WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
