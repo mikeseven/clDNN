@@ -10,9 +10,10 @@ foreach(source ${srcs})
     set(name ${name}.bin)
   else()
     # add caffe- prefix to know that it's part of caffe
+    set(oldname ${name})
     set(name caffe-${name})
   endif()
-
+  
   # target
   add_executable(${name} ${source})
   target_link_libraries(${name} ${Caffe_LINK})
@@ -25,7 +26,12 @@ foreach(source ${srcs})
   # restore output name without suffix
   if(name MATCHES "caffe.bin")
     set_target_properties(${name} PROPERTIES OUTPUT_NAME caffe)
+  else()
+    # remove caffe- prefix 
+    set_target_properties(${name} PROPERTIES OUTPUT_NAME ${oldname})
   endif()
+
+  add_dependencies(caffe-all ${name})
 
   # Install
   install(TARGETS ${name} DESTINATION bin)

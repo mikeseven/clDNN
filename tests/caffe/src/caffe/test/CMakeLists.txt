@@ -33,6 +33,7 @@ caffe_set_runtime_directory(${the_target} "${PROJECT_BINARY_DIR}/test")
 
 
 add_custom_target(caffetest caffetests)
+add_dependencies(caffe-all caffetests)
 
 # ---[ Adding runtest
 add_custom_target(runcaffe COMMAND ${the_target} ${test_args}

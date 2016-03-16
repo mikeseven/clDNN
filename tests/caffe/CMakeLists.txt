@@ -65,6 +65,9 @@ set(Caffe_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 include_directories(${Caffe_INCLUDE_DIR} ${PROJECT_BINARY_DIR})
 include_directories(BEFORE src) # This is needed for gtest.
 
+# all caffe binaries
+add_custom_target(caffe-all)
+
 # ---[ Subdirectories
 add_subdirectory(src/gtest)
 add_subdirectory(src/caffe)
