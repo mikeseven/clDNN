@@ -33,5 +33,4 @@ primitive memory::create(memory::arguments arg){
     }
     return result.release();
 }
-
 } // namespace neural

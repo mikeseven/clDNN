@@ -1,7 +1,7 @@
 #include "api/neural.h"
 
 // memory->memory max pooling
-void example_008() {
+void example_pooling_forward() {
     using namespace neural;
 
     const uint32_t output_y      = 7, output_x      = 7, output_z      = 3, output_b      = 3,  // size of whole output buffer
@@ -33,4 +33,8 @@ void example_008() {
                                   );
 
     execute({input(in_buffer), output(out_buffer), act});
+}
+
+void example_pooling_backward(){
+    // todo pooling bw
 }

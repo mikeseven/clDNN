@@ -1,6 +1,8 @@
 #pragma once
 
 #include "neural_base.h"
+#include <random>
+#include <type_traits>
 
 namespace neural {
 
@@ -13,6 +15,8 @@ struct memory : is_a_primitive {
     };
 
     class format { format(); public: enum type {
+        scalar_f32, // single scalar, float32
+        x_f32,
         xb_f32,     // 1D+batch, float32
         yxfb_f32,   // 3D+batch, float32
         fyxb_f32,
@@ -22,6 +26,8 @@ struct memory : is_a_primitive {
         bfyx_f32,
         bxyf_f32,
         bfxy_f32,
+        scalar_f64, // single scalar, float64
+        x_f64,
         yxfb_f64,   // 3D+batch, float64
         fyxb_f64,
         xyfb_f64,
@@ -35,6 +41,8 @@ struct memory : is_a_primitive {
 
     static const format_traits traits(format::type fmt) {
         switch(fmt) {
+        case format::scalar_f32:
+        case format::   x_f32: return {1, type_id<float>()};
 		case format::  xb_f32: return {2, type_id<float>()};
         case format::yxfb_f32:
         case format::fyxb_f32:
@@ -44,6 +52,8 @@ struct memory : is_a_primitive {
         case format::bfyx_f32:
         case format::bxyf_f32:
 		case format::bfxy_f32: return {4, type_id<float>()};
+        case format::scalar_f64:
+        case format::   x_f64: return {1, type_id<double>()};
         case format::yxfb_f64:
         case format::fyxb_f64:
         case format::xyfb_f64:
@@ -77,12 +87,36 @@ struct memory : is_a_primitive {
     }
     size_t count() const;
 
+    template <class T> T* data_begin() const {return reinterpret_cast<T*>(pointer);}
+    template <class T> T* data_end() const {return data_begin<T>() + count();}
+
+    template <class T> void set_value(uint32_t index, T value) const {data_begin<T>()[index] = value;}
+    template <class T> T    get_value(uint32_t index) const {return data_begin<T>()[index];}
+
+    template <class T> void fill(T value) const
+    {
+        if(type_id<T>()->id != memory::traits(argument.format).type->id)
+            throw std::runtime_error("fill_memory: types do not match");
+
+        std::fill(data_begin<T>(), data_end<T>(), value);
+    }
+
+    template <class T> void fill() const
+    {
+        if(type_id<T>()->id != memory::traits(argument.format).type->id)
+            throw std::runtime_error("fill_memory: types do not match");
+
+        static std::mt19937 rng(1);
+        std::uniform_real_distribution<T> dist(-10, 10);
+        for(auto it1 = data_begin<T>(), it2 = data_end<T>(); it1 != it2; ++it1)
+            *it1 = static_cast<T>( dist(rng) );
+    }
+
     ~memory();
 private:
+
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
 };
-
-
 
 // file that is loaded and becomes a data
 struct file : is_a_primitive {
@@ -105,8 +139,6 @@ private:
     file(arguments arg) : is_a_primitive(type_id<const file>()), argument(arg) {};
     const std::vector<primitive>     &output() const { return argument.output; };
 };
-
-
 
 // reorder data, type is not changed
 struct reorder : is_a_primitive {
@@ -133,20 +165,22 @@ private:
 // direct convolution
 struct convolution : is_a_primitive {
     struct arguments {
-        neural::engine::type        engine;
-        std::vector<primitive>      output;
-        std::vector<uint32_t>       output_offset;
-        std::vector<uint32_t>       output_size;
-        std::vector<primitive_at>   input;          // 3: {input, filter, bias}
-        std::vector<int32_t>        input_offset;
-        std::vector<uint32_t>       input_stride;
-        neural::padding::type       padding;
+        neural::engine::type      engine;
+        std::vector<primitive>    output;
+        std::vector<uint32_t>     output_offset;
+        std::vector<uint32_t>     output_size;
+        std::vector<primitive_at> input;
+        std::vector<int32_t>      input_offset;
+        std::vector<uint32_t>     stride;
+        primitive                 weight;
+        primitive                 bias;
+        neural::padding::type     padding;
 
-        arguments(neural::engine::type, neural::memory::format::type, std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>, std::vector<uint32_t>, primitive, primitive, neural::padding::type);
-        arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                       std::vector<uint32_t>, primitive, primitive, neural::padding::type);
-        arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                       uint32_t,              primitive, primitive, neural::padding::type);
-        arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                                              primitive, primitive, neural::padding::type);
-        arguments(neural::engine::type, primitive,                                                                  primitive,                                              primitive, primitive, neural::padding::type);
+        arguments(neural::engine::type, neural::memory::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
+        arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                               primitive in,                              std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
+        arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                               primitive in,                              uint32_t              stride, primitive weights, primitive biases, neural::padding::type);
+        arguments(neural::engine::type, primitive                    out,                                                                   primitive in,                              std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
+        arguments(neural::engine::type, primitive                    out,     std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
     };
     const arguments argument;
 
@@ -158,10 +192,41 @@ private:
     convolution(arguments arg) : is_a_primitive(type_id<const convolution>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
+
+    std::unique_ptr<is_an_implementation> _private;
 };
 
+struct convolution_backward : is_a_primitive {
+    struct arguments {
+        neural::engine::type      engine;
+        std::vector<primitive>    output;         // 3: {bw_output, weight_diff, bias diff}
+        std::vector<uint32_t>     output_offset;
+        std::vector<uint32_t>     input_size;
+        std::vector<primitive_at> input;          // 4: {bw_input, fw_input, filter, bias}
+        std::vector<int32_t>      input_offset;
+        std::vector<uint32_t>     stride;
+        neural::padding::type     padding;
 
 
+        arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> in_siz, std::vector<primitive> in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, neural::padding::type);
+        arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt,                                                              std::vector<primitive> in,                              std::vector<uint32_t> stride, neural::padding::type);
+        arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt,                                                              std::vector<primitive> in,                              uint32_t              stride, neural::padding::type);
+        arguments(neural::engine::type, std::vector<primitive>                    out,                                                                  std::vector<primitive> in,                              std::vector<uint32_t> stride, neural::padding::type);
+        arguments(neural::engine::type, std::vector<primitive>                    out,     std::vector<uint32_t> out_off, std::vector<uint32_t> in_siz, std::vector<primitive> in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, neural::padding::type);
+    };
+    const arguments argument;
+
+    struct query_entry : is_a_query_entry { convolution::arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    static primitive create(arguments);
+    primitive clone() const { return create(argument); }
+private:
+    convolution_backward(arguments arg) : is_a_primitive(type_id<const convolution_backward>()), argument(arg) {};
+    const std::vector<primitive_at>  &input() const  { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+
+    std::unique_ptr<is_an_implementation> _private;
+};
 // fully connected
 struct fully_connected : is_a_primitive {
     struct arguments {
@@ -190,8 +255,6 @@ private:
     const std::vector<primitive_at>  &input()  const { return argument.input;  };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
-
-
 
 // relu activation
 // [TODO] need to activation base class ?
@@ -276,10 +339,13 @@ struct pooling : is_a_primitive {
         arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                               primitive in,                              std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                               primitive in,                              uint32_t              strd, uint32_t              siz, neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              uint32_t              strd, uint32_t              siz, neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in, std::vector<int32_t> in_off, uint32_t              strd, uint32_t              siz, neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,    std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              std::vector<uint32_t> strd,                            neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              uint32_t              strd,                            neural::padding::type);
-        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              uint32_t              strd);
     };
     const arguments argument;
 
@@ -329,8 +395,6 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
 };
 
-
-
 struct /*normalization*/softmax : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -340,9 +404,10 @@ struct /*normalization*/softmax : is_a_primitive {
         std::vector<primitive_at>   input;          // 1: input
         std::vector<int32_t>        input_offset;
 
-        arguments(neural::engine::type, neural::memory::format::type, std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>);
-        arguments(neural::engine::type, neural::memory::format::type,                                               primitive);
-        arguments(neural::engine::type, primitive,                                                                  primitive);
+        arguments(neural::engine::type, neural::memory::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off);
+        arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                               primitive in);
+        arguments(neural::engine::type, primitive                    out,     std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off);
+        arguments(neural::engine::type, primitive                    out,                                                                   primitive in);
     };
     const arguments argument;
 
@@ -354,6 +419,8 @@ private:
     softmax(arguments arg) : is_a_primitive(type_id<const softmax>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
+
+    std::unique_ptr<is_an_implementation> _private;
 };
 
 // batch normalization training - forward
@@ -460,6 +527,8 @@ private:
     convolution_relu(arguments arg) : is_a_primitive(type_id<const convolution_relu>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
+
+    std::unique_ptr<is_an_implementation> _private;
 };
 
 

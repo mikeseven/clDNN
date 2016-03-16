@@ -1,7 +1,7 @@
 #include "api/neural.h"
 
 // memory->memory relu
-void relu_forward() {
+void example_relu_forward() {
     using namespace neural;
     float *data_buffer = nullptr;
 
@@ -13,7 +13,7 @@ void relu_forward() {
     execute({input(data_buffer), output(data_buffer), act});
 }
 
-void relu_backward() {
+void example_relu_backward() {
     using namespace neural;
 
     auto forward_input  = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}, true});

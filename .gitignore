@@ -11,7 +11,7 @@ MSVC/*
 UnixMk/*
 **/CMakeFiles/
 nbproject/*
-cmake_install.cmake
+**/*.cmake
 CMakeCache.txt
 compile_commands.json
 **/Makefile

@@ -4,11 +4,17 @@ NeuralIA
 */
 
 #include "api/neural.h"
+#include <iostream>
 
 int main( int argc, char* argv[ ] )
 {
     extern void example_009();
     example_009();
-    int result = 0;
-    return result;
+    try{
+        example_convolution_backward();
+    } catch (std::exception &e) {
+        std::cerr << e.what();
+    }
+
+    return 0;
 }
