@@ -153,7 +153,7 @@ inline bool calculate_idx<T>::is_out_of_range( const std::vector<negT>& pos ){
     assert( pos.size() <= size.size() );
 
     for(uint32_t i = 0; i < pos.size(); ++i)
-        if(static_cast<T>(pos[i]) > size[i])
+        if(static_cast<T>(pos[i]) >= size[i])
             return true;
 
     return false;
@@ -164,7 +164,7 @@ inline bool calculate_idx<T>::is_out_of_range( const std::vector<T>& pos ){
     assert( pos.size() <= size.size() );
 
     for(uint32_t i = 0; i < pos.size(); ++i)
-        if(pos[i] > size[i])
+        if(pos[i] >= size[i])
             return true;
 
     return false;
