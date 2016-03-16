@@ -60,9 +60,10 @@ if(UNIX)
   endif(COMPILER_SUPPORTS_VISIBILITY)
 endif(UNIX)
 
+include_directories(${CMAKE_SOURCE_DIR}/api)
+
 # Sub-directories where more CMakeLists.txt exist
-add_subdirectory(tests)
 add_subdirectory(src)
 add_subdirectory(examples)
-
+add_subdirectory(tests)
 
