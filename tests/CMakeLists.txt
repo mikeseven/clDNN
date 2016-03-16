@@ -99,6 +99,6 @@ endif()
 # Set library dependencies
 target_link_libraries(${APP_NAME} gtest neuralia)
 
-if(UNIX OR APPLE)
+if(UNIX AND WITH_CAFFE)
     add_subdirectory (caffe EXCLUDE_FROM_ALL)
 endif()
