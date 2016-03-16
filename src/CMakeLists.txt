@@ -28,10 +28,6 @@ add_library(${TARGET_NAME} STATIC
             ${LIBRARY_SRC}
             ${API_HEADERS})
 
-set_target_properties(${TARGET_NAME}
-                      PROPERTIES
-                      ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
-
 if(UNIX)
     target_link_libraries(${TARGET_NAME} pthread)
 endif()
