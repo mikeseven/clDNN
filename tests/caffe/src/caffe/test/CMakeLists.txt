@@ -31,8 +31,9 @@ target_link_libraries(${the_target} gtest-caffe ${Caffe_LINK})
 caffe_default_properties(${the_target})
 caffe_set_runtime_directory(${the_target} "${PROJECT_BINARY_DIR}/test")
 
+add_custom_target(caffetest)
+add_dependencies(caffetest caffetests)
 
-add_custom_target(caffetest caffetests)
 add_dependencies(caffe-all caffetests)
 
 # ---[ Adding runtest
