@@ -86,37 +86,36 @@ struct memory : is_a_primitive {
     }
     size_t count() const;
 
-    ~memory();
-private:
-    memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
-};
+    template <class T> T* data_begin() const {return reinterpret_cast<T*>(pointer);}
+    template <class T> T* data_end() const {return data_begin<T>() + count();}
 
-namespace memory_helper {
-    template <class T> T* get_mem_first(const neural::primitive &mem) {return reinterpret_cast<T*>(mem.as<const memory&>().pointer);}
-    template <class T> T* get_mem_last(const neural::primitive &mem) {return get_mem_first<T>(mem) + mem.as<const memory&>().count();}
+    template <class T> void set_value(uint32_t index, T value) const {data_begin<T>()[index] = value;}
+    template <class T> T    get_value(uint32_t index) const {return data_begin<T>()[index];}
 
-    template <class T>
-    void fill_memory(neural::primitive &mem, T value)
+    template <class T> void fill(T value) const
     {
-        if(type_id<T>()->id != memory::traits(mem.as<const memory&>().argument.format).type->id)
+        if(type_id<T>()->id != memory::traits(argument.format).type->id)
             throw std::runtime_error("fill_memory: types do not match");
 
-        std::fill(get_mem_first<T>(mem), get_mem_last<T>(mem), value);
+        std::fill(data_begin<T>(), data_end<T>(), value);
     }
 
-    template <class T>
-    void fill_memory(neural::primitive &mem)
+    template <class T> void fill() const
     {
-        if(type_id<T>()->id != memory::traits(mem.as<const memory&>().argument.format).type->id)
+        if(type_id<T>()->id != memory::traits(argument.format).type->id)
             throw std::runtime_error("fill_memory: types do not match");
 
         static std::mt19937 rng(1);
-       // using type = std::is_floating_point<T>::value ? T : float
-        std::uniform_real_distribution<float> dist(-10, 10);
-        for(auto it1 = get_mem_first<T>(mem), it2 = get_mem_last<T>(mem); it1 != it2; ++it1)
+        std::uniform_real_distribution<T> dist(-10, 10);
+        for(auto it1 = data_begin<T>(), it2 = data_end<T>(); it1 != it2; ++it1)
             *it1 = static_cast<T>( dist(rng) );
     }
-}
+
+    ~memory();
+private:
+
+    memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
+};
 
 // file that is loaded and becomes a data
 struct file : is_a_primitive {
@@ -338,6 +337,10 @@ struct pooling : is_a_primitive {
         arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                               primitive in,                              std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                               primitive in,                              uint32_t              strd, uint32_t              siz, neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              uint32_t              strd, uint32_t              siz, neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
+        arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in, std::vector<int32_t> in_off, uint32_t              strd, uint32_t              siz, neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,    std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              std::vector<uint32_t> strd,                            neural::padding::type);
         arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              uint32_t              strd,                            neural::padding::type);

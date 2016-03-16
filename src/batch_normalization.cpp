@@ -11,18 +11,6 @@ namespace neural
 
 namespace 
 {
-// Some shady helpers.
-template <class T> T* get_mem_first(const neural::memory &mem) {return reinterpret_cast<T*>(mem.pointer);}
-template <class T> T* get_mem_last(const neural::memory &mem) {return get_mem_first<T>(mem) + mem.count();}
-
-template <class T> 
-void fill_memory(const neural::memory &mem, T value)
-{
-    if(type_id<T>()->id != memory::traits(mem.argument.format).type->id)
-        throw std::runtime_error("fill_memory: types do not match");
-
-    std::fill(get_mem_first<T>(mem), get_mem_last<T>(mem), value);
-}
 
 // maps of available strides for specific formats
 static std::map<memory::format::type, std::tuple<std::vector<uint32_t>, std::vector<uint32_t>, std::vector<uint32_t>, std::vector<uint32_t>>> format_strides_map = 
@@ -131,8 +119,8 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
         const auto num_averages = (spatial) ? data_c : data_c * data_w * data_h;
         const T inv_num_average_over = static_cast<T>(1.0 / (data_n * spatial_size));
 
-        fill_memory<T>(current_mean, 0);
-        fill_memory<T>(current_inv_std_dev, 0);
+        current_mean.fill<T>(0);
+        current_inv_std_dev.fill<T>(0);
 
         auto compute_io_data_offset = [&element_stride, &batch_stride, &spatial_location_stride](int element, int batch, int spatial_location)
         {
@@ -174,7 +162,7 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
             auto moving_mean_buffer = static_cast<T*>(moving_mean.pointer);
 
             // For first run, set data to zero.
-            if(*request->minibatch_counter == 0) fill_memory<T>(moving_mean, 0);
+            if(*request->minibatch_counter == 0) moving_mean.fill<T>(0);
 
             // Compute avg factor for moving average basing on number of already computed averages [factor<=0], or using user provided [factor>0] factor.
             T actual_exp_avg_factor = (exp_avg_factor > 0.0f) ? exp_avg_factor : 1.0f / (1.0f + *request->minibatch_counter);
@@ -190,7 +178,7 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
             auto moving_inv_std_dev_buffer = static_cast<T*>(moving_inv_std_dev.pointer);
 
             // For first run, set data to zero.
-            if(*request->minibatch_counter == 0) fill_memory<T>(moving_inv_std_dev, 0);
+            if(*request->minibatch_counter == 0) moving_inv_std_dev.fill<T>(0);
 
             // Compute avg factor for moving average basing on number of already computed averages [factor<=0], or using user provided [factor>0] factor.
             T actual_exp_avg_factor = (exp_avg_factor > 0.0f) ? exp_avg_factor : 1.0f / (1.0f + *request->minibatch_counter);
@@ -286,9 +274,9 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
         const auto num_averages = (spatial) ? data_c : data_c * data_w * data_h;
         const T inv_num_average_over = static_cast<T>(1.0 / (data_n * spatial_size));
 
-        fill_memory<T>(scale_grad, 0);
-        fill_memory<T>( bias_grad, 0);
-        fill_memory<T>(input_grad, 0);
+        scale_grad.fill<T>(0);
+        bias_grad.fill<T>(0);
+        input_grad.fill<T>(0);
 
         auto compute_io_data_offset = [&element_stride, &batch_stride, &spatial_location_stride](int element, int batch, int spatial_location)
         {
