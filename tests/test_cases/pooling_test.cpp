@@ -29,7 +29,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 1, 1}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {1, 1, 1, 1}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, 1, 3, padding::type::zero});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {1, 1, 1, 1}, {3, 3, 1, 1}, padding::type::zero});
 
     auto& input_memory = input_prim.as<const memory&>();
     auto& output_memory = output_prim.as<const memory&>();
@@ -73,7 +73,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 1, 1}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, 1, 2, padding::type::zero});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {1, 1, 1, 1}, {2, 2, 1, 1}, padding::type::zero});
 
     auto& input_memory = input_prim.as<const memory&>();
     auto& output_memory = output_prim.as<const memory&>();
@@ -121,7 +121,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {4, 4, 1, 1}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, 2, 2, padding::type::zero});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {2, 2, 1, 1}, {2, 2, 1, 1}, padding::type::zero});
 
     auto& input_memory = input_prim.as<const memory&>();
     auto& output_memory = output_prim.as<const memory&>();
@@ -187,7 +187,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 2, 2}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 2, 2}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, 1, 2, padding::type::zero});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {1, 1, 1, 1}, {2, 2, 1, 1}, padding::type::zero});
 
     auto& input_memory = input_prim.as<const memory&>();
     auto& output_memory = output_prim.as<const memory&>();
@@ -227,13 +227,13 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
     EXPECT_EQ( 1.5f, output_memory.get_value<float>(13)); EXPECT_EQ( 0.0f, output_memory.get_value<float>(15)); 
 }
 
-TEST(pooling_forward, basic_max_yxfb_f32_wsiz4x4_wstr1x1_i2x2x1x1_zeropad1x1) {
+TEST(pooling_forward, basic_max_yxfb_f32_wsiz4x4_wstr1x1_i2x2x1x1_inoffs1) {
     /*  Brief test description.
 
         Pool window: 4x4
         Pool stride: 1x1
         Pool mode: max
-        Padding: zero, 1x1
+        Input offset: -1
 
         Input data:
         [ pad,  pad,  pad, pad]
@@ -247,7 +247,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz4x4_wstr1x1_i2x2x1x1_zeropad1x1) {
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, 1, 4, padding::type::zero});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, {1, 1, 1, 1}, {4, 4, 1, 1}, padding::type::zero});
 
     auto& input_memory = input_prim.as<const memory&>();
     auto& output_memory = output_prim.as<const memory&>();
@@ -264,13 +264,13 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz4x4_wstr1x1_i2x2x1x1_zeropad1x1) {
     EXPECT_EQ(1.0f, output_memory.get_value<float>(0));
 }
 
-TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i2x2x1x1_zeropad1x1) {
+TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i2x2x1x1_inoffs1) {
     /*  Brief test description.
 
         Pool window: 3x3
         Pool stride: 1x1
         Pool mode: max
-        Padding: zero, 1x1
+        Input offset: -1
 
         Input data:
         [ pad,  pad,  pad, pad]
@@ -285,7 +285,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i2x2x1x1_zeropad1x1) {
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, 1, 3, padding::type::zero});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, {1, 1, 1, 1}, {3, 3, 1, 1}, padding::type::zero});
 
     auto& input_memory = input_prim.as<const memory&>();
     auto& output_memory = output_prim.as<const memory&>();
@@ -305,13 +305,13 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i2x2x1x1_zeropad1x1) {
     EXPECT_EQ(1.0f, output_memory.get_value<float>(3));
 }
 
-TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad1x1) {
+TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_inoffs1) {
     /*  Brief test description.
 
         Pool window: 2x2
         Pool stride: 2x2
         Pool mode: max
-        Padding: zero, 1x1
+        Input offset: -1
 
         Input data:
         [ pad,  pad,  pad, pad]
@@ -326,7 +326,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad1x1) {
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, 2, 2, padding::type::zero});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, {2, 2, 1, 1}, {2, 2, 1, 1}, padding::type::zero});
 
     auto& input_memory = input_prim.as<const memory&>();
     auto& output_memory = output_prim.as<const memory&>();
@@ -346,13 +346,13 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad1x1) {
     EXPECT_EQ(0.0f, output_memory.get_value<float>(3));
 }
 
-TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_zeropad1x1) {
+TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_inoffs1) {
     /*  Brief test description.
 
         Pool window: 2x2
         Pool stride: 2x2
         Pool mode: max
-        Padding: zero, 1x1
+        Input offset: -1
 
         Input data:
         FM: 0 BATCH: 0           FM: 1 BATCH: 0
@@ -379,7 +379,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_zeropad1x1) {
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 2, 2}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 2, 2}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, 2, 2, padding::type::zero});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, {2, 2, 1, 1}, {2, 2, 1, 1}, padding::type::zero});
 
     auto& input_memory = input_prim.as<const memory&>();
     auto& output_memory = output_prim.as<const memory&>();
