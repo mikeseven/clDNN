@@ -90,7 +90,7 @@ void example_convolution_backward(){
     // *diff buffers must be filled with '0'
 
     auto act = convolution_backward::create({ engine::reference,
-                                              std::vector<primitive>({bw_output, weights_diff, biases_diff}),
+                                              std::vector<primitive>{bw_output, weights_diff, biases_diff},
                                           //   {out_off_y, out_off_x, out_off_z, out_off_b},
                                           //   {out_siz_y, out_siz_x, out_siz_z, out_siz_b},
                                               {bw_input, fw_input, weights, biases},

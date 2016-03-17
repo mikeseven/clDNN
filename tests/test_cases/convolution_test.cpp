@@ -10,10 +10,10 @@ NeuralIA
 
 TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 /*
-Filter window: 2x2
-Stride       : 2x2
-Input size   : 4x4
-Output size  : 2x2
+Filter : 2x2
+Stride : 2x2
+Input  : 4x4
+Output : 2x2
 
 Input:
 -0.5   1.5   0.5  0.5
@@ -68,6 +68,7 @@ using namespace neural;
     weight_memory.set_value<float>(3,  1.5f);
 
     auto conv = convolution::create({engine::reference, output, input, {2, 2, 1, 1}, weights, biases, padding::zero});
+
     execute({conv});
 
     EXPECT_EQ(8.0f, output_memory.get_value<float>(0));
@@ -78,11 +79,11 @@ using namespace neural;
 
 TEST(convolution_f32_fw, basic_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 /*
-Filter window: 3x3
-Stride       : 2x2
-Input size   : 2x2
-Output size  : 1x1
-Padding      : zero
+Filter  : 3x3
+Stride  : 2x2
+Input   : 2x2
+Output  : 1x1
+Padding : zero
 
 Input:
 -0.5   0.5   padd
@@ -100,8 +101,7 @@ Bias
 Output:
 12.25
 */
-using namespace neural;
-
+    using namespace neural;
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {1, 1, 1, 1}, true});
     auto weights= memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 1, 1}, true});
@@ -140,11 +140,11 @@ using namespace neural;
 
 TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 /*
-Filter window: 3x3
+Filter       : 3x3
 Stride       : 2x2
-Input size   : 2x2
+Input        : 2x2
 Input offset : -1x-1
-Output size  : 2x2
+Output       : 2x2
 Output offset: 1x1
 Padding      : zero
 
@@ -207,3 +207,79 @@ rnd  -7.25
     EXPECT_EQ(-7.25f, output_memory.get_value<float>(3));
 }
 
+TEST(convolution_f32_bw, basic_wsiz2x2_wstr2x2_in2x2x1x1_nopad) {
+/*
+Filter    : 2x2
+Stride    : 2x2
+FW Input  : 2x2
+BW Input  : 1x1
+BW Output : 1x1
+
+FW Input:
+-0.5   1.5
+ 1    -0.5
+
+BW Input
+1
+
+Filter
+-2   3.5
+ 0.5 1.5
+
+Bias
+2
+
+BW Output:
+-2   3.5
+ 0.5 1.5
+*/
+
+    using namespace neural;
+    auto bw_output    = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto bw_input     = memory::create({engine::cpu, memory::format::yxfb_f32, {1, 1, 1, 1}, true});
+    auto fw_input     = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto weights      = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto weights_diff = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto biases       = memory::create({engine::cpu, memory::format::x_f32,    {1}         , true});
+    auto biases_diff  = memory::create({engine::cpu, memory::format::x_f32,    {1}         , true});
+
+    auto& bw_output_mem    = bw_output.as<const memory&>();
+    auto& bw_input_mem     = bw_input.as<const memory&>();
+    auto& fw_input_mem     = fw_input.as<const memory&>();
+    auto& weights_mem      = weights.as<const memory&>();
+    auto& weights_diff_mem = weights_diff.as<const memory&>();
+    auto& biases_mem       = biases.as<const memory&>();
+    auto& biases_diff_mem  = biases_diff.as<const memory&>();
+
+    fw_input_mem.set_value<float>(0, -0.5f);
+    fw_input_mem.set_value<float>(1,  1.5f);
+    fw_input_mem.set_value<float>(2,  1.0f);
+    fw_input_mem.set_value<float>(3, -0.5f);
+
+    bw_input_mem.set_value<float>(0, 1.0f);
+
+    weights_mem.set_value<float>(0, -2.0f);
+    weights_mem.set_value<float>(1,  3.5f);
+    weights_mem.set_value<float>(2,  1.0f);
+    weights_mem.set_value<float>(3,  1.5f);
+
+    biases_mem.set_value<float>(0, 2.0f);
+
+    auto conv = convolution_backward::create({engine::reference,
+                                              std::vector<primitive>{bw_output, weights_diff, biases_diff},
+                                              {bw_input, fw_input, weights, biases},
+                                              {2, 2, 1, 1},
+                                              padding::zero});
+    try{
+        execute({conv});
+    } catch (std::exception &e){
+        int x = 0;
+    }
+
+    auto x = bw_output_mem.get_value<float>(0);
+
+    //EXPECT_EQ(-2.0f, bw_output_mem.get_value<float>(0));
+    //EXPECT_EQ( 3.5f, bw_output_mem.get_value<float>(1));
+    //EXPECT_EQ( 0.5f, bw_output_mem.get_value<float>(2));
+    //EXPECT_EQ( 1.5f, bw_output_mem.get_value<float>(3));
+}
