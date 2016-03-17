@@ -71,10 +71,10 @@ using namespace neural;
 
     execute({conv});
 
-    EXPECT_EQ(8.0f, output_memory.get_value<float>(0));
-    EXPECT_EQ(0.5f, output_memory.get_value<float>(1));
-    EXPECT_EQ(6.0f, output_memory.get_value<float>(2));
-    EXPECT_EQ(9.0f, output_memory.get_value<float>(3));
+    ASSERT_EQ(8.0f, output_memory.get_value<float>(0));
+    ASSERT_EQ(0.5f, output_memory.get_value<float>(1));
+    ASSERT_EQ(6.0f, output_memory.get_value<float>(2));
+    ASSERT_EQ(9.0f, output_memory.get_value<float>(3));
 }
 
 TEST(convolution_f32_fw, basic_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
@@ -135,7 +135,7 @@ Output:
     auto conv = convolution::create({engine::reference, output, input, {2, 2, 1, 1}, weights, biases, padding::zero});
     execute({conv});
 
-    EXPECT_EQ(12.25f, output_memory.get_value<float>(0));
+    ASSERT_EQ(12.25f, output_memory.get_value<float>(0));
 }
 
 TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
@@ -204,7 +204,7 @@ rnd  -7.25
                                      padding::zero});
     execute({conv});
 
-    EXPECT_EQ(-7.25f, output_memory.get_value<float>(3));
+    ASSERT_EQ(-7.25f, output_memory.get_value<float>(3));
 }
 
 TEST(convolution_f32_bw, basic_wsiz2x2_wstr2x2_in2x2x1x1_nopad) {
@@ -232,6 +232,13 @@ Bias
 BW Output:
 -2   3.5
  0.5 1.5
+
+Weights grad
+1    5.25
+0.5 -0,75
+
+Bias grad
+1
 */
 
     using namespace neural;
@@ -260,26 +267,34 @@ BW Output:
 
     weights_mem.set_value<float>(0, -2.0f);
     weights_mem.set_value<float>(1,  3.5f);
-    weights_mem.set_value<float>(2,  1.0f);
+    weights_mem.set_value<float>(2,  0.5f);
     weights_mem.set_value<float>(3,  1.5f);
 
     biases_mem.set_value<float>(0, 2.0f);
 
-    auto conv = convolution_backward::create({engine::reference,
-                                              std::vector<primitive>{bw_output, weights_diff, biases_diff},
-                                              {bw_input, fw_input, weights, biases},
-                                              {2, 2, 1, 1},
-                                              padding::zero});
-    try{
-        execute({conv});
-    } catch (std::exception &e){
-        int x = 0;
-    }
+    auto conv_bw = convolution_backward::create({engine::reference,
+                                                 std::vector<primitive>{bw_output, weights_diff, biases_diff},
+                                                 {bw_input, fw_input, weights, biases},
+                                                 {2, 2, 1, 1},
+                                                 padding::zero});
 
-    auto x = bw_output_mem.get_value<float>(0);
+    execute({conv_bw});
 
-    //EXPECT_EQ(-2.0f, bw_output_mem.get_value<float>(0));
-    //EXPECT_EQ( 3.5f, bw_output_mem.get_value<float>(1));
-    //EXPECT_EQ( 0.5f, bw_output_mem.get_value<float>(2));
-    //EXPECT_EQ( 1.5f, bw_output_mem.get_value<float>(3));
+    bool results_equal = true;
+    results_equal &= -2.0f == bw_output_mem.get_value<float>(0);
+    results_equal &=  3.5f == bw_output_mem.get_value<float>(1);
+    results_equal &=  0.5f == bw_output_mem.get_value<float>(2);
+    results_equal &=  1.5f == bw_output_mem.get_value<float>(3);
+    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong output gradient";
+
+    results_equal = true;
+    results_equal &=  1.00f == weights_diff_mem.get_value<float>(0);
+    results_equal &=  5.25f == weights_diff_mem.get_value<float>(1);
+    results_equal &=  0.50f == weights_diff_mem.get_value<float>(2);
+    results_equal &= -0.75f == weights_diff_mem.get_value<float>(3);
+    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong weights gradient";
+
+    results_equal = true;
+    results_equal &= 1.0f == biases_diff_mem.get_value<float>(0);
+    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }

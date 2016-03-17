@@ -42,9 +42,9 @@ struct convolution_reference : is_an_implementation {
         auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory&>().pointer);
         auto bias   = static_cast<float*>(this_conv->argument.bias.as<const memory&>().pointer);
 
-        // general formula: output size = (input size - filter size) / step + 1
         for(size_t i = 0; i < input_offset.size(); ++i){
-            if(output_size[i] + filter_arg.size[i] - 1 <
+            // general formula: output size = (input size - filter size) / step + 1
+            if(output_size[i] <
                std::abs(static_cast<int32_t>(input_arg.size[i] - input_offset[i] - filter_arg.size[i])) / stride[i] + 1) //todo is it safe?
                 throw std::runtime_error("Output size of convolution is to small.");
 
@@ -176,12 +176,13 @@ struct convolution_backward_reference : is_an_implementation {
         auto weights_diff = static_cast<float*>(this_bw_conv->output_memory(1).pointer);
         auto bias_diff    = static_cast<float*>(this_bw_conv->output_memory(2).pointer);
 
-        // general formula for forward: output size = (input size - filter size) / step + 1
         for(size_t i = 0; i < bw_output_offset.size(); ++i){
-            if(bw_input_size[i] < (static_cast<int32_t>(fw_input_arg.size[i]) - bw_output_offset[i]) / stride[i] + 1 )
-                throw std::runtime_error("Input size of bw convolution is to small.");
+            // general formula for forward: output size = (input size - filter size) / step + 1
+            if(bw_input_size[i] <
+               std::abs(static_cast<int32_t>(bw_output_arg.size[i] - bw_output_offset[i] - filter_arg.size[i])) / stride[i] + 1) //todo is it safe?
+                throw std::runtime_error("Output size of bw convolution is to small.");
 
-            if(bw_input_size[i] < bw_output_arg.size[i] + bw_output_offset[i])
+            if(bw_input_arg.size[i] < bw_input_size[i] + bw_output_offset[i])
                 throw std::runtime_error("Backward convolution bw_input buffer size is to small.");
         }
 
@@ -216,10 +217,9 @@ struct convolution_backward_reference : is_an_implementation {
                         auto out_idx = calc_out_idx(arg_out_idx);
                         auto win_idx = calc_win_idx(win_pos);
                         bw_output[out_idx] += bw_input[in_idx] * weights[win_idx];
-                        bias_diff[ pos[f_pos] ] += bw_input[in_idx];
                         weights_diff[win_idx] += fw_input[out_idx] * bw_output[out_idx];
                     }
-
+                    bias_diff[ pos[f_pos] ] += bw_input[in_idx];
                 }
                 break;
             }
