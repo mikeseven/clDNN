@@ -5,6 +5,7 @@
 #include <numeric>
 #include <map>
 #include <tuple>
+#include <limits>
 
 namespace neural {
 
@@ -51,20 +52,30 @@ struct pooling_reference : is_an_implementation {
         }
 
         namespace nd = ndimensional;
-        nd::value<uint32_t> range (output_size);
-        nd::calculate_idx<uint32_t> calc_in_idx  (input_buffer_size);
-        nd::calculate_idx<uint32_t> calc_out_idx (output_buffer_size);
+        nd::value<uint32_t> range(output_size);
+        nd::value<uint32_t> window_range(window);
+        nd::calculate_idx<uint32_t> calc_in_idx(input_buffer_size);
+        nd::calculate_idx<uint32_t> calc_out_idx(output_buffer_size);
         switch( this_pooling->argument.mode ){
             case pooling::mode::max:
                 for(auto pos : range) {
                     auto out_idx = calc_out_idx(pos + output_offset);
 
-                    nd::value<uint32_t> window_range (window);
+                    float acc = -std::numeric_limits<float>::max();
                     for(auto win_pos : window_range){
-                        auto in_idx = calc_in_idx(pos*stride + input_offset + win_pos);
+                        const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos;
 
-                        output[out_idx] = std::max(output[out_idx], input[in_idx]);
+                        if( calc_in_idx.is_out_of_range(arg_in_idx) )
+                        {
+                            // Pad with zero.
+                            acc = std::max(acc, 0.0f);
+                            continue;
+                        }    
+
+                        auto in_idx = calc_in_idx(arg_in_idx);
+                        acc = std::max(acc, input[in_idx]);
                     }
+                    output[out_idx] = acc;
                 }
                 break;
             case pooling::mode::average:
@@ -74,9 +85,13 @@ struct pooling_reference : is_an_implementation {
                     auto out_idx = calc_out_idx(pos + output_offset);
 
                     float acc = 0.0f;
-                    nd::value<uint32_t> window_range (window);
                     for(auto win_pos : window_range){
-                        auto in_idx  = calc_in_idx(pos*stride + input_offset + win_pos);
+                        const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos;
+
+                        if( calc_in_idx.is_out_of_range(arg_in_idx) )
+                            continue;
+
+                        auto in_idx = calc_in_idx(arg_in_idx);
                         acc += input[in_idx];
                     }
                     output[out_idx] = acc/window_elements;
@@ -141,8 +156,8 @@ pooling::arguments::arguments( neural::engine::type eng,
                               pooling::mode::type   mode,
                               primitive             out,
                               primitive             in,
-                              uint32_t              strd,
-                              uint32_t              siz,
+                              std::vector<uint32_t> strd,
+                              std::vector<uint32_t> siz,
                               neural::padding::type padd)
     : engine(eng)
     , mode(mode)
@@ -151,8 +166,27 @@ pooling::arguments::arguments( neural::engine::type eng,
     , output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
     , input({in})
     , input_offset(in.as<const memory&>().argument.size.size())
-    , stride({strd, strd, 1, 1})
-    , size({siz, siz, 1, 1})
+    , stride({strd})
+    , size({siz})
+    , padding(padd) {};
+
+pooling::arguments::arguments( neural::engine::type eng,
+                              pooling::mode::type   mode,
+                              primitive             out,
+                              primitive             in,
+                              std::vector<int32_t>  in_off,
+                              std::vector<uint32_t> strd,
+                              std::vector<uint32_t> siz,
+                              neural::padding::type padd)
+    : engine(eng)
+    , mode(mode)
+    , output({out})
+    , output_offset(out.as<const memory&>().argument.size.size())
+    , output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
+    , input({in})
+    , input_offset({in_off})
+    , stride({strd})
+    , size({siz})
     , padding(padd) {};
 
 //                                    engine          output                  input
