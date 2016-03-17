@@ -216,8 +216,9 @@ struct convolution_backward_reference : is_an_implementation {
 
                         auto out_idx = calc_out_idx(arg_out_idx);
                         auto win_idx = calc_win_idx(win_pos);
-                        bw_output[out_idx] += bw_input[in_idx] * weights[win_idx];
-                        weights_diff[win_idx] += fw_input[out_idx] * bw_output[out_idx];
+                        auto sum_arg = bw_input[in_idx] * weights[win_idx];
+                        bw_output[out_idx] += sum_arg;
+                        weights_diff[win_idx] += fw_input[out_idx] * sum_arg;
                     }
                     bias_diff[ pos[f_pos] ] += bw_input[in_idx];
                 }
