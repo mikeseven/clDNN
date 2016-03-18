@@ -46,7 +46,8 @@ struct convolution_reference : is_an_implementation {
             // general formula: output size = (input size - filter size) / step + 1
             if(output_size[i] <
                std::abs(static_cast<int32_t>(input_arg.size[i] - input_offset[i] - filter_arg.size[i])) / stride[i] + 1) //todo is it safe?
-                throw std::runtime_error("Output size of convolution is to small.");
+                if(filter_arg.size[i] <= output_size[i])
+                    throw std::runtime_error("Output size of convolution is to small.");
 
             if(output_arg.size[i] < output_size[i] + output_offset[i])
                 throw std::runtime_error("Convolution output buffer size is to small.");
@@ -170,7 +171,7 @@ struct convolution_backward_reference : is_an_implementation {
         auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer);
         auto fw_input     = static_cast<float*>(this_bw_conv->input_memory(1).pointer);
         auto weights      = static_cast<float*>(this_bw_conv->input_memory(2).pointer);
-        auto bias         = static_cast<float*>(this_bw_conv->input_memory(3).pointer);
+        auto bias         = static_cast<float*>(this_bw_conv->input_memory(3).pointer); //todo bias isn't needed in bw conv. It is only used to compare its size with bias_diff. Remove?
 
         auto bw_output    = static_cast<float*>(this_bw_conv->output_memory(0).pointer);
         auto weights_diff = static_cast<float*>(this_bw_conv->output_memory(1).pointer);
@@ -180,7 +181,8 @@ struct convolution_backward_reference : is_an_implementation {
             // general formula for forward: output size = (input size - filter size) / step + 1
             if(bw_input_size[i] <
                std::abs(static_cast<int32_t>(bw_output_arg.size[i] - bw_output_offset[i] - filter_arg.size[i])) / stride[i] + 1) //todo is it safe?
-                throw std::runtime_error("Output size of bw convolution is to small.");
+                if(filter_arg.size[i] <= bw_input_size[i])
+                    throw std::runtime_error("Output size of bw convolution is to small.");
 
             if(bw_input_arg.size[i] < bw_input_size[i] + bw_output_offset[i])
                 throw std::runtime_error("Backward convolution bw_input buffer size is to small.");
