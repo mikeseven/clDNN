@@ -420,3 +420,128 @@ Bias grad
     results_equal &= 2.0f == biases_diff_mem.get_value<float>(0);
     EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }
+
+TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
+/*
+Filter      : 3x3
+Stride      : 1x1
+FW Input    : 4x4
+BW Input    : 2x2
+BWin offset : 1x1
+BW Output   : 4x4
+BWout offset: 1x1 (the same offset applies to FWin)
+
+FW Input:
+1   1   1     1
+1   1   1     1
+1   1  -0.5   1.5
+1   1   1    -0.5
+
+BW Input
+1  1
+1  2
+
+Filter
+1   1    1
+1  -2    3.5
+1   0.5  1.5
+
+Bias
+-3
+
+BW Output:
+0   0   0   0
+0   2   2   2
+0   2  -4   7
+0   2   1   3
+
+
+Weights grad
+2   2   2
+2   2  10.5
+2   1  -1.5
+
+Bias grad
+2
+*/
+
+    using namespace neural;
+    auto bw_output    = memory::create({engine::cpu, memory::format::yxfb_f32, {4, 4, 1, 1}, true});
+    auto bw_input     = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto fw_input     = memory::create({engine::cpu, memory::format::yxfb_f32, {4, 4, 1, 1}, true});
+    auto weights      = memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 1, 1}, true});
+    auto weights_diff = memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 1, 1}, true});
+    auto biases       = memory::create({engine::cpu, memory::format::x_f32,    {1}         , true});
+    auto biases_diff  = memory::create({engine::cpu, memory::format::x_f32,    {1}         , true});
+
+    auto& bw_output_mem    = bw_output.as<const memory&>();
+    auto& bw_input_mem     = bw_input.as<const memory&>();
+    auto& fw_input_mem     = fw_input.as<const memory&>();
+    auto& weights_mem      = weights.as<const memory&>();
+    auto& weights_diff_mem = weights_diff.as<const memory&>();
+    auto& biases_mem       = biases.as<const memory&>();
+    auto& biases_diff_mem  = biases_diff.as<const memory&>();
+
+
+    fw_input_mem.fill(1.0f);
+    fw_input_mem.set_value(10, -0.5f);
+    fw_input_mem.set_value(11,  1.5f);
+    fw_input_mem.set_value(14,  1.0f);
+    fw_input_mem.set_value(15, -0.5f);
+
+    bw_input_mem.fill(1.0f);
+    bw_input_mem.set_value(3, 2.0f);
+
+    weights_mem.fill(1.0f);
+    weights_mem.set_value(4, -2.0f);
+    weights_mem.set_value(5,  3.5f);
+    weights_mem.set_value(7,  0.5f);
+    weights_mem.set_value(8,  1.5f);
+
+    biases_mem.set_value(0, -3.0f);
+
+    auto conv_bw = convolution_backward::create({engine::reference,
+                                                 std::vector<primitive>{bw_output, weights_diff, biases_diff},
+                                                 {1, 1, 0, 0},
+                                                 {1, 1, 1, 1},
+                                                 {bw_input, fw_input, weights, biases},
+                                                 {1, 1, 0, 0},
+                                                 {1, 1, 1, 1},
+                                                 padding::zero});
+    execute({conv_bw});
+
+    bool results_equal = true;
+    results_equal &=  0.0f == bw_output_mem.get_value<float>(0);
+    results_equal &=  0.0f == bw_output_mem.get_value<float>(1);
+    results_equal &=  0.0f == bw_output_mem.get_value<float>(2);
+    results_equal &=  0.0f == bw_output_mem.get_value<float>(3);
+    results_equal &=  0.0f == bw_output_mem.get_value<float>(4);
+    results_equal &=  2.0f == bw_output_mem.get_value<float>(5);
+    results_equal &=  2.0f == bw_output_mem.get_value<float>(6);
+    results_equal &=  2.0f == bw_output_mem.get_value<float>(7);
+    results_equal &=  0.0f == bw_output_mem.get_value<float>(8);
+    results_equal &=  2.0f == bw_output_mem.get_value<float>(9);
+    results_equal &= -4.0f == bw_output_mem.get_value<float>(10);
+    results_equal &=  7.0f == bw_output_mem.get_value<float>(11);
+    results_equal &=  0.0f == bw_output_mem.get_value<float>(12);
+    results_equal &=  2.0f == bw_output_mem.get_value<float>(13);
+    results_equal &=  1.0f == bw_output_mem.get_value<float>(14);
+    results_equal &=  3.0f == bw_output_mem.get_value<float>(15);
+    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong output gradient";
+
+    results_equal = true;
+    results_equal &=  2.0f == weights_diff_mem.get_value<float>(0);
+    results_equal &=  2.0f == weights_diff_mem.get_value<float>(1);
+    results_equal &=  2.0f == weights_diff_mem.get_value<float>(2);
+    results_equal &=  2.0f == weights_diff_mem.get_value<float>(3);
+    results_equal &=  2.0f == weights_diff_mem.get_value<float>(4);
+    results_equal &= 10.5f == weights_diff_mem.get_value<float>(5);
+    results_equal &=  2.0f == weights_diff_mem.get_value<float>(6);
+    results_equal &=  1.0f == weights_diff_mem.get_value<float>(7);
+    results_equal &= -1.5f == weights_diff_mem.get_value<float>(8);
+    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong weights gradient";
+
+    results_equal = true;
+    results_equal &= 2.0f == biases_diff_mem.get_value<float>(0);
+    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong bias gradient";
+}

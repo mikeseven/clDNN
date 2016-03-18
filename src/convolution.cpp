@@ -186,6 +186,9 @@ struct convolution_backward_reference : is_an_implementation {
 
             if(bw_input_arg.size[i] < bw_input_size[i] + bw_output_offset[i])
                 throw std::runtime_error("Backward convolution bw_input buffer size is to small.");
+
+            if(bw_output_arg.size[i] != fw_input_arg.size[i])
+                throw std::runtime_error("Sizes of BW output and FW input buffers in convolution bw must be equal.");
         }
 
         // initializie gradients with 0
@@ -200,7 +203,7 @@ struct convolution_backward_reference : is_an_implementation {
         nd::value<uint32_t> range (bw_input_size); //todo in/out size?
         nd::value<uint32_t> window_range (filter_arg.size);
         nd::calculate_idx<uint32_t> calc_bias_idx(bias_arg.size);
-        nd::calculate_idx<uint32_t> calc_in_idx  (bw_input_size);
+        nd::calculate_idx<uint32_t> calc_in_idx  (bw_input_arg.size);
         nd::calculate_idx<uint32_t> calc_out_idx (bw_output_arg.size);
         nd::calculate_idx<uint32_t> calc_win_idx (filter_arg.size);
 
