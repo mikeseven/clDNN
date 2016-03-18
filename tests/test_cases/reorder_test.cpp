@@ -1,19 +1,23 @@
+/*
+Copyright (c) 2016, Intel Corporation
+NeuralIA
+*/
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include "tests/gtest/gtest.h"
 #include "api/neural.h"
-#include <vector>
-#include <numeric>
-#include <cassert>
-#include <iostream>
 
-// memory->memory reshape
-void example_009() {
-    using namespace neural;
-    using namespace std;
+using namespace neural;
+using namespace std;
 
+class Reorder_test_fixture: public ::testing::Test {
+public:
     const uint32_t dim_y      = 2, dim_x      = 2, dim_f      = 4, dim_b      = 3;
 
-  	const uint32_t all_size = dim_y*dim_x*dim_f*dim_b;
-	auto in_layout = memory::format::yxfb_f32;
-    auto out_layout = memory::format::bfxy_f32;
+  	static const uint32_t all_size = 48; //dim_y*dim_x*dim_f*dim_b;
+	memory::format::type in_layout = memory::format::yxfb_f32;
+    memory::format::type out_layout = memory::format::bfxy_f32;
 
     float in_buffer[all_size] =
     {// yxfb
@@ -96,16 +100,26 @@ void example_009() {
        47, // b2 f3 x1 y1
     };
 
+    float wyn_buffer_fail[all_size] =
+    {//bfxy x=2, y=2, f=4, b=3
+        0,24,12,36,3,27,15,39,6,30,18,42,9,33,21,45,1,25,13,37,4,28,16,40,7,
+        31,19,43,10,34,22,46,
+        3, // b2 f0 x0 y0 // should fail (2 is OK)
+        26,14,38,5,29,17,41,8,32,20,44,11,35,23,47
+    };
+
 	// input buffer should be initialized with valid data
-                                     //y  x  f  b
-    std::vector<uint32_t> in_sizes = { 2, 2, 4, 3};
-                                     //b  f  x  y
-    std::vector<uint32_t> out_sizes= { 3, 4, 2, 2};
+                                    //y=2 x=2 f=4 b=3
+    std::vector<uint32_t> in_sizes = { dim_y, dim_x, dim_f, dim_b};
+                                    //b=3 f=4 x=2 y=2
+    std::vector<uint32_t> out_sizes= { dim_b, dim_f, dim_x, dim_y};
 
-    auto input  = memory::create({engine::cpu, in_layout, in_sizes});
-    auto output = memory::create({engine::cpu, out_layout, out_sizes, true});
+    neural::primitive input   = memory::create({engine::cpu, in_layout, in_sizes});
+    neural::primitive output  = memory::create({engine::cpu, out_layout, out_sizes, true});
+    neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,input,output});
+};
 
-    auto reorder    = reorder::create(reorder::arguments{engine::reference,input,output});
+TEST_F(Reorder_test_fixture,reorder_test_basic) {
 
     try
     {
@@ -121,41 +135,34 @@ void example_009() {
     bool result = true;
     for(size_t i = 0; i < dim_y*dim_x*dim_f*dim_b; ++i)
         result &= buf_out[i] == wyn_buffer[i];
-    assert (result == true);
 
-    //2 pass output as input, should give input ;)
+    EXPECT_EQ(true, result);
+}
+
+TEST_F(Reorder_test_fixture,reorder_test_output_as_input_2pass) {
+
     auto input2  = memory::create({engine::cpu, out_layout, out_sizes});
     auto output2 = memory::create({engine::cpu, in_layout, in_sizes, true});
+    auto reorder2    = reorder::create({engine::reference,input2,output2});
 
+    float* buf_out = nullptr;
+    float* buf_out2 = nullptr;
     try
     {
-        auto reorder2    = reorder::create({engine::reference,input2,output2});
-        execute({input2(wyn_buffer), reorder2});
+        execute({input(in_buffer), reorder});
+        buf_out = static_cast<float*>(output.as<const memory&>().pointer);
+
+        execute({input2(buf_out), reorder2});
+        buf_out2 = static_cast<float*>(output2.as<const memory&>().pointer);
     }
     catch (const std::exception& ex)
     {
         std::cout << ex.what() << std::endl;
     }
-
-    auto buf_out2 = static_cast<float*>(output2.as<const memory&>().pointer);
+    bool result = true;
 
     for(size_t i = 0; i < dim_y*dim_x*dim_f*dim_b; ++i)
         result &= buf_out2[i] == in_buffer[i];
-    assert (result == true);
 
-    //throws exception auto in_layout = memory::format::yxfb_f32;
-    input2  = memory::create({engine::cpu, memory::format::yxfb_f64, out_sizes});
-    output2 = memory::create({engine::cpu, in_layout, in_sizes, true});
-
-    try
-    {
-        auto reorder2    = reorder::create({engine::reference,input2,output2});
-        execute({input2(wyn_buffer), reorder2});
-    }
-    catch (const std::exception& ex)
-    {
-        std::cout << ex.what() << std::endl;
-    }
-    system("pause");
-
+    EXPECT_EQ(true, result);
 }
