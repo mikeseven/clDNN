@@ -70,7 +70,7 @@ struct pooling_reference : is_an_implementation {
                             // Pad with zero.
                             acc = std::max(acc, 0.0f);
                             continue;
-                        }    
+                        }
 
                         auto in_idx = calc_in_idx(arg_in_idx);
                         acc = std::max(acc, input[in_idx]);

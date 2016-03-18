@@ -61,9 +61,9 @@ if(UNIX)
 endif(UNIX)
 
 include_directories(${CMAKE_SOURCE_DIR}/api)
+include_directories(${CMAKE_SOURCE_DIR}/xbyak)
 
 # Sub-directories where more CMakeLists.txt exist
 add_subdirectory(src)
 add_subdirectory(examples)
 add_subdirectory(tests)
-

@@ -1,5 +1,12 @@
 #pragma once
 
+#ifdef _MSC_VER
+    #define NOMINMAX            // mscc compatibility
+#else
+    #define XBYAK_NO_OP_NAMES   // gcc compatibility
+#endif
+
+#include "xbyak/xbyak.h"
 #include "neural_base.h"
 #include <random>
 #include <type_traits>
@@ -159,7 +166,6 @@ private:
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
-
 // direct convolution
 struct convolution : is_a_primitive {
     struct arguments {
@@ -193,7 +199,6 @@ private:
 
     std::unique_ptr<is_an_implementation> _private;
 };
-
 struct convolution_backward : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
