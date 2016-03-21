@@ -1,10 +1,9 @@
 #pragma once
 
 #ifdef _MSC_VER
-    #define NOMINMAX            // mscc compatibility
-#else
-    #define XBYAK_NO_OP_NAMES   // gcc compatibility
+    #define NOMINMAX        // mscc compatibility
 #endif
+#define XBYAK_NO_OP_NAMES
 
 #include "xbyak/xbyak.h"
 #include "neural_base.h"
