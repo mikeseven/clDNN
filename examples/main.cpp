@@ -8,8 +8,8 @@ NeuralIA
 
 int main( int argc, char* argv[ ] )
 {
-    extern void example_convolution_backward();
-
+    extern void example_009();
+    example_009();
     try{
         example_convolution_backward();
     } catch (std::exception &e) {
