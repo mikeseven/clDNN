@@ -17,10 +17,15 @@ if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
     set (COMPILER_STR "mscc")
 endif()
-
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
-set (LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
-set (CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
+if(NOT(UNIX))
+  set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+  set (LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+  set (CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
+else ()
+  set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
+  set (LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
+  set (CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
+endif()
 
 message (STATUS "PROJECT ............................... " ${PROJECT_NAME})
 message (STATUS "CMAKE_BINARY_DIR ...................... " ${CMAKE_BINARY_DIR})
@@ -55,9 +60,10 @@ if(UNIX)
   endif(COMPILER_SUPPORTS_VISIBILITY)
 endif(UNIX)
 
+include_directories(${CMAKE_SOURCE_DIR}/api)
+
 # Sub-directories where more CMakeLists.txt exist
-add_subdirectory(tests)
 add_subdirectory(src)
 add_subdirectory(examples)
-
+add_subdirectory(tests)
 

@@ -36,7 +36,7 @@ template<>           struct is_floating_point<half>  { static const bool value =
 #endif
 
 //todo type id and const type id should be equall
-template<typename T_type> 
+template<typename T_type>
 #if defined _MSC_VER
 __declspec(noinline)
 #else
@@ -185,6 +185,7 @@ struct primitive_at {
     const neural::primitive primitive;
     const uint32_t          at;
     primitive_at(const neural::primitive aprimitive) : primitive(aprimitive), at(0) {}
+    primitive_at(const neural::primitive aprimitive, const uint32_t pos) : primitive(aprimitive), at(pos) {}
 };
 
 struct memory;
@@ -204,7 +205,7 @@ public:
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
     virtual const std::vector<primitive_at>  &input()  const { throw std::runtime_error(std::string("no inputs in ")+_type_traits->name); };
     virtual const std::vector<primitive>     &output() const { throw std::runtime_error(std::string("no outputs in ")+_type_traits->name); };
-    const memory &input_memory(uint32_t at) const { 
+    const memory &input_memory(uint32_t at) const {
         auto prim = input()[at].primitive;
         return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>();
     }
