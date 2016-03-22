@@ -1,4 +1,3 @@
-#include "api/neural.h"
 #include "multidimensional_counter.h"
 #include "convolution.h"
 
@@ -74,8 +73,7 @@ convolution_backward::arguments::arguments( neural::engine::type   eng,
     , stride(strd)
     , padding(padd) {};
 
-
-//                                    engine          output                  input
+//                                           engine                          output                  input
 using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(convolution &)>> forward_implementation_map = {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "api/neural.h"
+#include "convolution.h"
 
 namespace neural {
     struct convolution_cpu_jit : is_an_implementation {
