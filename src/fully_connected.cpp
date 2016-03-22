@@ -28,28 +28,56 @@ struct fully_connected_reference : is_an_implementation {
 
         if (input_buffer_size.size() != output_buffer_size.size())throw std::runtime_error("Fully connected input/output number of dimension does not match.");
         if (input_memory_arg.format != output_memory_arg.format)  throw std::runtime_error("Fully connected input/output data format does not match.");
-
         if (weight_size.size() != 2) throw std::runtime_error("Fully connected weight is not 2-dimensional.");
         if (this_ful_con->argument.weight.as<const memory&>().argument.format != memory::format::xb_f32) throw std::runtime_error("Fully connected weight format is not xb_f32.");
+
+        assert(this_ful_con->input_memory(0).argument.size.size()==1 || this_ful_con->input_memory(0).argument.size.size() == 2);
+
+        // up-casts data format form 1D to 2D if necessery; DOES not copy memory, just redescribes 1D input buffer as 2D (x+batch) with batch=1
+        auto mem_arg_in = this_ful_con->input_memory(0).argument;
+        if(mem_arg_in.size.size()==1) {
+            mem_arg_in.size.emplace_back(1);
+            mem_arg_in.format = memory::format::xb_f32;
+        }
+        mem_arg_in.owns_memory = false;
+        auto in_wrapper = memory::create(mem_arg_in);
+        in_wrapper(input);
+
+        auto mem_arg_out = this_ful_con->output_memory(0).argument;
+        if (mem_arg_out.size.size() == 1) {
+            mem_arg_out.size.emplace_back(1);
+            mem_arg_out.format = memory::format::xb_f32;
+        }
+        mem_arg_out.owns_memory = false;
+        auto out_wrapper = memory::create(mem_arg_out);
+        out_wrapper(input);
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range(output_size);
         nd::value<uint32_t> range_weight(weight_size);
+        nd::value<uint32_t> range_input(input_size);
         nd::calculate_idx<uint32_t> calc_in_idx(input_buffer_size);
         nd::calculate_idx<uint32_t> calc_out_idx(output_buffer_size);
         nd::calculate_idx<uint32_t> calc_w_idx(weight_size);
 
-        for(uint32_t at_dst=0; at_dst<output_size[0]; ++at_dst) {
-            float acc = 0;
-            auto out_idx = calc_out_idx(nd::value<uint32_t>(std::vector<uint32_t>{at_dst}));
+        int data_index = 0; //todo type traits
+        int batch_index = 1;
 
-            for(uint32_t at_in=0; at_in<input_size[0]; ++at_in){
-                auto in_idx = calc_in_idx(nd::value<uint32_t>(std::vector<uint32_t>{at_in}));
-                auto w_idx = calc_w_idx(nd::value<uint32_t>(std::vector<uint32_t>{at_in, at_dst}));
+        for (auto pos_out : range){
+
+        //for(uint32_t at_dst=0; at_dst<output_size[0]; ++at_dst) {
+            float acc = 0;
+            auto out_idx = calc_out_idx(pos_out);
+
+            //for(uint32_t at_in=0; at_in<input_size[0]; ++at_in){
+            for (auto pos_in : range_input){
+                auto in_idx = calc_in_idx(pos_in);
+                auto w_idx = calc_w_idx({ pos_out[data_index], pos_in[data_index] });
                 acc += input[in_idx] * weight[w_idx];
             }
         output[out_idx] = acc;
         }
+        
     }
 
 
