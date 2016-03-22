@@ -26,6 +26,8 @@ struct convolution_reference : is_an_implementation {
         auto& filter_arg = this_conv->argument.weight.as<const memory&>().argument; //convolution filter
         auto& bias_arg   = this_conv->argument.bias.as<const memory&>().argument;
 
+        int f_pos = 2; //todo need type traits
+
         if(input_arg.size.size()  != output_arg.size.size())   throw std::runtime_error("Convolution input/output number of dimension does not match.");
         if(stride.size()          != output_arg.size.size())   throw std::runtime_error("Convolution stride/output number of dimension does not match.");
         if(input_arg.format       != memory::format::yxfb_f32) throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
@@ -33,17 +35,19 @@ struct convolution_reference : is_an_implementation {
         if(input_arg.format       != filter_arg.format)        throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
         if(filter_arg.size.size() != output_arg.size.size())   throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
         if(bias_arg.size.size()   != 1)                        throw std::runtime_error("Convolution biases isn't 1D vector.");
-        if(bias_arg.size[0]       != output_size[2])           throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
+        if(bias_arg.size[0]       != output_size[f_pos])       throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
                                                                                                                                                               // than this implementation will be format independent
         auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
         auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
         auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory&>().pointer);
         auto bias   = static_cast<float*>(this_conv->argument.bias.as<const memory&>().pointer);
 
-        // general formula: output size = (input size - filter size) / step + 1
         for(size_t i = 0; i < input_offset.size(); ++i){
-            if(output_size[i] < (static_cast<int32_t>(input_arg.size[i]) - input_offset[i]) / (stride[i] + 1) )
-                throw std::runtime_error("Output size of convolution is to small.");
+            // general formula: output size = (input size - filter size) / step + 1
+            if(output_size[i] <
+               std::abs(static_cast<int32_t>(input_arg.size[i] - input_offset[i] - filter_arg.size[i])) / stride[i] + 1) //todo is it safe?
+                if(filter_arg.size[i] <= output_size[i])
+                    throw std::runtime_error("Output size of convolution is to small.");
 
             if(output_arg.size[i] < output_size[i] + output_offset[i])
                 throw std::runtime_error("Convolution output buffer size is to small.");
@@ -71,7 +75,7 @@ struct convolution_reference : is_an_implementation {
                         auto win_idx = calc_win_idx(win_pos);
                         acc += input[in_idx] * filter[win_idx];
                     }
-                    output[out_idx] = acc + bias[ pos[2] ]; // todo need type traits for index of 'z' dimension
+                    output[out_idx] = acc + bias[ pos[f_pos] ]; // todo need type traits for index of 'f' dimension
                 }
                 break;
             default:
@@ -167,20 +171,30 @@ struct convolution_backward_reference : is_an_implementation {
         auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer);
         auto fw_input     = static_cast<float*>(this_bw_conv->input_memory(1).pointer);
         auto weights      = static_cast<float*>(this_bw_conv->input_memory(2).pointer);
-        auto bias         = static_cast<float*>(this_bw_conv->input_memory(3).pointer);
+        auto bias         = static_cast<float*>(this_bw_conv->input_memory(3).pointer); //todo bias isn't needed in bw conv. It is only used to compare its size with bias_diff. Remove?
 
         auto bw_output    = static_cast<float*>(this_bw_conv->output_memory(0).pointer);
         auto weights_diff = static_cast<float*>(this_bw_conv->output_memory(1).pointer);
         auto bias_diff    = static_cast<float*>(this_bw_conv->output_memory(2).pointer);
 
-        // general formula: output size = (input size - filter size) / step + 1
         for(size_t i = 0; i < bw_output_offset.size(); ++i){
-            if(bw_input_size[i] < (static_cast<int32_t>(fw_input_arg.size[i]) - bw_output_offset[i]) / (stride[i] + 1) )
-                throw std::runtime_error("Input size of bw convolution is to small.");
+            // general formula for forward: output size = (input size - filter size) / step + 1
+            if(bw_input_size[i] <
+               std::abs(static_cast<int32_t>(bw_output_arg.size[i] - bw_output_offset[i] - filter_arg.size[i])) / stride[i] + 1) //todo is it safe?
+                if(filter_arg.size[i] <= bw_input_size[i])
+                    throw std::runtime_error("Output size of bw convolution is to small.");
 
-            if(bw_input_size[i] < bw_output_arg.size[i] + bw_output_offset[i])
+            if(bw_input_arg.size[i] < bw_input_size[i] + bw_output_offset[i])
                 throw std::runtime_error("Backward convolution bw_input buffer size is to small.");
+
+            if(bw_output_arg.size[i] != fw_input_arg.size[i])
+                throw std::runtime_error("Sizes of BW output and FW input buffers in convolution bw must be equal.");
         }
+
+        // initializie gradients with 0
+        this_bw_conv->output_memory(0).fill(0.0f);
+        this_bw_conv->output_memory(1).fill(0.0f);
+        this_bw_conv->output_memory(2).fill(0.0f);
 
         int f_pos = 2; //todo need type traits
 
@@ -189,7 +203,7 @@ struct convolution_backward_reference : is_an_implementation {
         nd::value<uint32_t> range (bw_input_size); //todo in/out size?
         nd::value<uint32_t> window_range (filter_arg.size);
         nd::calculate_idx<uint32_t> calc_bias_idx(bias_arg.size);
-        nd::calculate_idx<uint32_t> calc_in_idx  (bw_input_size);
+        nd::calculate_idx<uint32_t> calc_in_idx  (bw_input_arg.size);
         nd::calculate_idx<uint32_t> calc_out_idx (bw_output_arg.size);
         nd::calculate_idx<uint32_t> calc_win_idx (filter_arg.size);
 
@@ -207,11 +221,11 @@ struct convolution_backward_reference : is_an_implementation {
 
                         auto out_idx = calc_out_idx(arg_out_idx);
                         auto win_idx = calc_win_idx(win_pos);
-                        bw_output[out_idx] += bw_input[in_idx] * weights[win_idx];
-                        bias_diff[ pos[f_pos] ] += bw_input[in_idx];
-                        weights_diff[win_idx] += fw_input[out_idx] * bw_output[out_idx];
+                        auto sum_arg = bw_input[in_idx] * weights[win_idx];
+                        bw_output[out_idx] += sum_arg;
+                        weights_diff[win_idx] += fw_input[out_idx] * sum_arg;
                     }
-
+                    bias_diff[ pos[f_pos] ] += bw_input[in_idx];
                 }
                 break;
             }
@@ -231,7 +245,7 @@ struct convolution_backward_reference : is_an_implementation {
 convolution_backward::arguments::arguments( neural::engine::type   eng,
                                             std::vector<primitive> out,
                                             std::vector<uint32_t>  out_off,
-                                            std::vector<uint32_t>  out_siz,
+                                            std::vector<uint32_t>  in_siz,
                                             std::vector<primitive> in,
                                             std::vector<int32_t>   in_off,
                                             std::vector<uint32_t>  strd,
@@ -239,7 +253,7 @@ convolution_backward::arguments::arguments( neural::engine::type   eng,
     : engine(eng)
     , output({out})
     , output_offset(out_off)
-    , input_size(out_siz)
+    , input_size(in_siz)
     , input(in.cbegin(), in.cend())
     , input_offset(in_off)
     , stride(strd)
@@ -253,7 +267,7 @@ convolution_backward::arguments::arguments( neural::engine::type   eng,
     : engine(eng)
     , output({out})
     , output_offset(out[0].as<const memory&>().argument.size.size())
-    , input_size(out[0].as<const memory&>().argument.size.begin(), out[0].as<const memory&>().argument.size.end())
+    , input_size(in[0].as<const memory&>().argument.size)
     , input(in.cbegin(), in.cend())
     , input_offset(in[0].as<const memory&>().argument.size.size())
     , stride(strd)
