@@ -73,26 +73,15 @@ convolution_backward::arguments::arguments( neural::engine::type   eng,
     , stride(strd)
     , padding(padd) {};
 
-//                                           engine                          output                  input
-using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
-// map of available implementations
-static std::map<implementation_key, std::function<is_an_implementation *(convolution &)>> forward_implementation_map = {
-    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), convolution_cpu_reference::create},
-    //{std::make_tuple(engine::cpu, memory::format::yxfb_f32, memory::format::yxfb_f32), convolution_cpu_jit::create} //todo singleton map, and add definitions in implementation files
-};
-
-static std::map<implementation_key, std::function<is_an_implementation *(convolution_backward &)>> backward_implementation_map = {
-    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), convolution_backward_cpu_reference::create},
-};
 // creates primitive with convolution implementation that supports provided arguments
 primitive convolution::create(convolution::arguments arg) {
     // wrap relu into RAII wrapper
     std::unique_ptr<convolution> result(new convolution(arg));
 
     // lookup in database; throw if not found
-    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto it = forward_implementation_map.find(key);
-    if(it==std::end(forward_implementation_map)) throw std::runtime_error("not yet implemented");
+    conv_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto it = conv_fw_implementation_map.find(key);
+    if(it==std::end(conv_fw_implementation_map)) throw std::runtime_error("Not yet implemented.");
 
     // create implementation & attach it to result
     auto implementation = it->second(*result);
@@ -107,9 +96,9 @@ primitive convolution_backward::create(convolution_backward::arguments arg) {
     std::unique_ptr<convolution_backward> result(new convolution_backward(arg));
 
     // lookup in database; throw if not found
-    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto it = backward_implementation_map.find(key);
-    if(it==std::end(backward_implementation_map)) throw std::runtime_error("not yet implemented");
+    conv_bw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto it = conv_bw_implementation_map.find(key);
+    if(it==std::end(conv_bw_implementation_map)) throw std::runtime_error("Not yet implemented.");
 
     // create implementation & attach it to result
     auto implementation = it->second(*result);
