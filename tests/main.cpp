@@ -16,12 +16,13 @@
 
 #include "gtest/gtest.h"
 
+#include "convolution.h" //todo remove
 int main( int argc, char* argv[ ] )
 {
     int result;
     {
+        neural::attach_conv(); //todo remove
         ::testing::InitGoogleTest(&argc, argv);
-
 #if _WIN32
         // Safety cleanup.
         system("where /q umdh && del pre_cpu.txt");

@@ -289,12 +289,15 @@ struct jit_convolution_zxyn
         uint64_t filter_width,
         uint64_t filter_height,
 
-        float*   bias)
+        float*   bias,
+
+        void* code_ptr = nullptr)
             : code(output_width, output_height, output_feature_maps,
                    input_width, input_feature_maps,
                    filter_height, filter_width,
                    stride_width, stride_height,
-                   apply_relu)
+                   apply_relu,
+                   code_ptr)
     {
         assert(output_feature_maps % output_features_per_iteration == 0);
 
@@ -397,7 +400,6 @@ convolution_cpu_jit:: ~convolution_cpu_jit() {}
     int x_pos = 1;
     int y_pos = 0;
 
-
     static const uint64_t input_features_per_iteration  = 8;
     static const uint64_t output_features_per_iteration = 4;
     static const uint64_t batch_size                    = 24;
@@ -427,11 +429,9 @@ convolution_cpu_jit:: ~convolution_cpu_jit() {}
                 bias
                 );
 
-            //for(auto& job : conv.jobs)
-            //    for(auto& task : job)
-            //        task.callback();
-
-            conv.jobs[0][0].callback(conv.jobs[0][0].request_handle);
+            for(auto& job : conv.jobs)
+                for(auto& task : job)
+                    task.callback(task.request_handle);
 
             break;
         }
@@ -444,6 +444,6 @@ attach_conv_cpu_jit::attach_conv_cpu_jit() {
     auto val_fw = convolution_cpu_reference::create;
 
     // todo untested
-    //conv_fw_implementation_map.insert( {key, val_fw} ); //todo keys should be different
+    conv_fw_implementation_map.insert( {key, val_fw} ); //todo keys should be different
 }
 }

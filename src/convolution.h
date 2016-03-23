@@ -36,7 +36,7 @@ namespace neural{
         attach_conv_cpu_jit();
     };
 
-    static void attach_conv(){
+    static void attach_conv() { // todo why it has to be static?
         static attach_conv_cpu_ref c0;
         static attach_conv_cpu_jit c1;
     }

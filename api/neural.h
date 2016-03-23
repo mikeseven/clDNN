@@ -138,7 +138,6 @@ private:
 
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
 };
-
 // file that is loaded and becomes a data
 struct file : is_a_primitive {
     struct arguments {
@@ -160,7 +159,6 @@ private:
     file(arguments arg) : is_a_primitive(type_id<const file>()), argument(arg) {};
     const std::vector<primitive>     &output() const { return argument.output; };
 };
-
 // reorder data, type is not changed
 struct reorder : is_a_primitive {
     struct arguments {
