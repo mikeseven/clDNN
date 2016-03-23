@@ -423,18 +423,11 @@ convolution_cpu_jit:: ~convolution_cpu_jit() {}
             throw std::runtime_error("Unknown padding mode in convolution.");
     }
 }
+attach_conv_cpu_jit::attach_conv_cpu_jit() {
+    auto key = std::make_tuple(engine::cpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
+    auto val_fw = convolution_cpu_reference::create;
 
-namespace{
-    struct attach {
-        attach(){
-            auto key = std::make_tuple(engine::cpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
-            auto val_fw = convolution_cpu_reference::create;
-
-            // todo untested
-            //conv_fw_implementation_map.insert( {key, val_fw} ); //todo keys should be different
-        }
-    };
-
-    attach attach_;
+    // todo untested
+    //conv_fw_implementation_map.insert( {key, val_fw} ); //todo keys should be different
 }
 }

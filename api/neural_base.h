@@ -12,7 +12,6 @@
 //      compiler-agnostic compile-time assertions for C++98
 //      generic format-traits (type, sizeof, etc), currenly float32 assumed in file.cpp
 
-
 namespace neural {
 
 // minimal RTTI-independent type traits

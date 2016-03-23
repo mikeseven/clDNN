@@ -167,22 +167,12 @@ convolution_backward_cpu_reference::~convolution_backward_cpu_reference() {};
 
 }
 
-namespace{
-    struct attach {
-#ifdef __GNUC__
-    __attribute__((constructor))
-#elif _MSC_VER
+attach_conv_cpu_ref::attach_conv_cpu_ref() {
+    auto key = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
+    auto val_fw = convolution_cpu_reference::create;
+    auto val_bw = convolution_backward_cpu_reference::create;
 
-#endif
-        attach(){
-            auto key = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
-            auto val_fw = convolution_cpu_reference::create;
-            auto val_bw = convolution_backward_cpu_reference::create;
-
-            conv_fw_implementation_map.insert( {key, val_fw} ); //todo keys should be different
-            conv_bw_implementation_map.insert( {key, val_bw} );
-        }
-    };
-    attach attach_;
+    conv_fw_implementation_map.insert( {key, val_fw} ); //todo keys should be different
+    conv_bw_implementation_map.insert( {key, val_bw} );
 }
 }

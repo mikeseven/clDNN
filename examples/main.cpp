@@ -6,8 +6,11 @@ NeuralIA
 #include "api/neural.h"
 #include <iostream>
 
+#include "convolution.h" //todo remove
+
 int main( int argc, char* argv[ ] )
 {
+    neural::attach_conv();
     extern void example_convolution_forward();
 
     try{
