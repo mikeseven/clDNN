@@ -28,6 +28,8 @@ int main( int argc, char* argv[ ] )
         example_convolution_forward();
     } catch (std::exception &e) {
         std::cerr << e.what();
+    } catch(...) {
+        std::cerr << "Unknown exceptions.";
     }
 
     return 0;
