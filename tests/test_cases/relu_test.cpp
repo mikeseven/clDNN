@@ -1,14 +1,23 @@
 /*
-Copyright (c) 2016, Intel Corporation
-NeuralIA
+// Copyright (c) 2016 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "tests/gtest/gtest.h"
 #include "api/neural.h"
-
-#include <random>
 
 namespace{
     auto calc_idx = [](std::vector<uint32_t> yxzb_pos, std::vector<uint32_t>& buf_size) -> uint32_t{
@@ -19,7 +28,7 @@ namespace{
     };
 }
 
-TEST(relu_fw_test, basic) {
+TEST(relu_f32_fw, basic) {
     using namespace neural;
 
     const uint32_t y = 8, x = 8, z = 3, b = 2;
@@ -45,7 +54,7 @@ TEST(relu_fw_test, basic) {
     EXPECT_EQ(false, result);
 }
 
-TEST(relu_fw_test, offsets) {
+TEST(relu_f32_fw, offsets) {
     using namespace neural;
 
     const uint32_t output_y  = 7,
@@ -121,7 +130,7 @@ TEST(relu_fw_test, offsets) {
     EXPECT_EQ(true, result);
 }
 
-TEST(relu_bw_test, basic) {
+TEST(relu_f32_bw, basic) {
     using namespace neural;
 
     const uint32_t y = 8, x = 8, z = 3, b = 2;
@@ -146,7 +155,7 @@ TEST(relu_bw_test, basic) {
     EXPECT_EQ(true, result);
 }
 
-TEST(relu_bw_test, offsets) {
+TEST(relu_f32_bw, offsets) {
     using namespace neural;
 
     const uint32_t output_y  = 7,

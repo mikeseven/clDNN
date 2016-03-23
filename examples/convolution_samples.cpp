@@ -1,3 +1,19 @@
+/*
+// Copyright (c) 2016 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+*/
+
 #include "api/neural.h"
 
 // memory->memory convolution
@@ -22,9 +38,9 @@ void example_convolution_forward() {
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {input_y, input_x, input_z, input_b}});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {output_y, output_x, output_z, output_b}});
     auto weights= memory::create({engine::cpu, memory::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_z, conv_size_b}});
-    auto biases = memory::create({engine::cpu, memory::format::yxfb_f32, {out_siz_z}});
+    auto biases = memory::create({engine::cpu, memory::format::   x_f32, {out_siz_z}});
 
-    auto act    = convolution::create( {engine::reference,
+    auto conv   = convolution::create( {engine::reference,
                                         output,
                                         {out_off_y, out_off_x, out_off_z, out_off_b},
                                         {out_siz_y, out_siz_x, out_siz_z, out_siz_b},
@@ -36,7 +52,7 @@ void example_convolution_forward() {
                                         padding::zero}
                                       );
 
-    execute({input(in_buffer), output(out_buffer), weights(weight_buffer), biases(bias_buffer), act});
+    execute({input(in_buffer), output(out_buffer), weights(weight_buffer), biases(bias_buffer), conv});
 }
 
 void example_convolution_backward(){
@@ -89,19 +105,19 @@ void example_convolution_backward(){
     // buffers should be initialized with valid data
     // *diff buffers must be filled with '0'
 
-    auto act = convolution_backward::create({ engine::reference,
-                                              std::vector<primitive>({bw_output, weights_diff, biases_diff}),
-                                          //   {out_off_y, out_off_x, out_off_z, out_off_b},
-                                          //   {out_siz_y, out_siz_x, out_siz_z, out_siz_b},
-                                              {bw_input, fw_input, weights, biases},
-                                          //  {in_off_y, in_off_x, in_off_z, in_off_b},
-                                              {stride_y, stride_x, stride_z, stride_b},
-                                              padding::zero
-                                            });
+    auto conv_bw = convolution_backward::create({ engine::reference,
+                                                 std::vector<primitive>{bw_output, weights_diff, biases_diff},
+                                             //   {out_off_y, out_off_x, out_off_z, out_off_b},
+                                             //   {out_siz_y, out_siz_x, out_siz_z, out_siz_b},
+                                                 {bw_input, fw_input, weights, biases},
+                                             //  {in_off_y, in_off_x, in_off_z, in_off_b},
+                                                 {stride_y, stride_x, stride_z, stride_b},
+                                                 padding::zero
+                                               });
 
     execute({
         bw_input, fw_input, weights, biases,  //inputs
         bw_output, weights_diff, biases_diff, //outputs
-        act
+        conv_bw
     });
 }

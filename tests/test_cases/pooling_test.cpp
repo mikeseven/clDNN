@@ -1,6 +1,17 @@
 /*
-Copyright (c) 2016, Intel Corporation
-NeuralIA
+// Copyright (c) 2016 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -24,7 +35,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
         [ 0.0, -1.0,  0.5]
 
         Expected output:
-        [ 2.0] 
+        [ 2.0]
     */
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 1, 1}, true});
@@ -176,13 +187,13 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
         [-0.5, -1.0,  1.5]   [ 0.5, -0.5,  0.0]
 
         Expected output:
-        FM: 0 BATCH: 0       FM: 1 BATCH: 0 
-        [ 1.0,  0.5]         [ 0.0,  1.5]   
-        [ 1.0, -0.5]         [ 1.0,  1.5]   
-                             
-        FM: 0 BATCH: 1       FM: 1 BATCH: 1 
-        [ 0.5,  1.0]         [ 1.0,  0.5]   
-        [-0.5,  1.5]         [ 1.0,  0.0] 
+        FM: 0 BATCH: 0       FM: 1 BATCH: 0
+        [ 1.0,  0.5]         [ 0.0,  1.5]
+        [ 1.0, -0.5]         [ 1.0,  1.5]
+
+        FM: 0 BATCH: 1       FM: 1 BATCH: 1
+        [ 0.5,  1.0]         [ 1.0,  0.5]
+        [-0.5,  1.5]         [ 1.0,  0.0]
     */
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 2, 2}, true});
@@ -224,7 +235,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
     EXPECT_EQ( 0.5f, output_memory.get_value<float>( 1)); EXPECT_EQ( 1.0f, output_memory.get_value<float>( 3));
     EXPECT_EQ( 1.0f, output_memory.get_value<float>( 5)); EXPECT_EQ( 0.5f, output_memory.get_value<float>( 7));
     EXPECT_EQ(-0.5f, output_memory.get_value<float>( 9)); EXPECT_EQ( 1.0f, output_memory.get_value<float>(11));
-    EXPECT_EQ( 1.5f, output_memory.get_value<float>(13)); EXPECT_EQ( 0.0f, output_memory.get_value<float>(15)); 
+    EXPECT_EQ( 1.5f, output_memory.get_value<float>(13)); EXPECT_EQ( 0.0f, output_memory.get_value<float>(15));
 }
 
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz4x4_wstr1x1_i2x2x1x1_inoffs1) {
@@ -368,13 +379,13 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_inoffs1) {
         [ pad,  pad,  pad, pad]  [ pad,  pad,  pad, pad]
 
         Expected output:
-        FM: 0 BATCH: 0           FM: 1 BATCH: 0 
-        [ 0.0,  0.5]             [ 0.0,  0.0]   
-        [ 1.0,  0.0]             [ 1.0,  1.5]   
+        FM: 0 BATCH: 0           FM: 1 BATCH: 0
+        [ 0.0,  0.5]             [ 0.0,  0.0]
+        [ 1.0,  0.0]             [ 1.0,  1.5]
 
-        FM: 0 BATCH: 1           FM: 1 BATCH: 1 
-        [ 0.5,  0.0]             [ 0.5,  0.0]   
-        [ 0.0,  1.0]             [ 1.0,  0.0] 
+        FM: 0 BATCH: 1           FM: 1 BATCH: 1
+        [ 0.5,  0.0]             [ 0.5,  0.0]
+        [ 0.0,  1.0]             [ 1.0,  0.0]
     */
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 2, 2}, true});
@@ -406,7 +417,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_inoffs1) {
     EXPECT_EQ(0.5f, output_memory.get_value<float>( 1)); EXPECT_EQ(0.5f, output_memory.get_value<float>( 3));
     EXPECT_EQ(0.0f, output_memory.get_value<float>( 5)); EXPECT_EQ(0.0f, output_memory.get_value<float>( 7));
     EXPECT_EQ(0.0f, output_memory.get_value<float>( 9)); EXPECT_EQ(1.0f, output_memory.get_value<float>(11));
-    EXPECT_EQ(1.0f, output_memory.get_value<float>(13)); EXPECT_EQ(0.0f, output_memory.get_value<float>(15)); 
+    EXPECT_EQ(1.0f, output_memory.get_value<float>(13)); EXPECT_EQ(0.0f, output_memory.get_value<float>(15));
 }
 
 TEST(pooling_forward, advanced_max_yxfb) {
@@ -474,10 +485,10 @@ TEST(pooling_forward, advanced_max_yxfb) {
                 input_memory.fill<float>(-0.5f);
                 output_memory.fill<float>(-1.0f);
 
-                // Now, for each output find its input sample window and set one value to 1.0f. 
+                // Now, for each output find its input sample window and set one value to 1.0f.
                 // We expect that, due to pooling, in output only these values will be visible.
                 ndimensional::calculate_idx<uint32_t> calc_in_idx(input_sizes);
-                for(auto pos : ndimensional::value<uint32_t>(output_sizes)) 
+                for(auto pos : ndimensional::value<uint32_t>(output_sizes))
                     for(auto win_pos : ndimensional::value<uint32_t>(pooling_window_sizes))
                     {
                         // Find value that is out of zero padded region.

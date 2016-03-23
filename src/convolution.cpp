@@ -1,3 +1,19 @@
+/*
+// Copyright (c) 2016 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+*/
+
 #include "multidimensional_counter.h"
 #include "convolution.h"
 
@@ -45,7 +61,7 @@ convolution::arguments::arguments( neural::engine::type  eng,
 convolution_backward::arguments::arguments( neural::engine::type   eng,
                                             std::vector<primitive> out,
                                             std::vector<uint32_t>  out_off,
-                                            std::vector<uint32_t>  out_siz,
+                                            std::vector<uint32_t>  in_siz,
                                             std::vector<primitive> in,
                                             std::vector<int32_t>   in_off,
                                             std::vector<uint32_t>  strd,
@@ -53,7 +69,7 @@ convolution_backward::arguments::arguments( neural::engine::type   eng,
     : engine(eng)
     , output({out})
     , output_offset(out_off)
-    , input_size(out_siz)
+    , input_size(in_siz)
     , input(in.cbegin(), in.cend())
     , input_offset(in_off)
     , stride(strd)
@@ -67,7 +83,7 @@ convolution_backward::arguments::arguments( neural::engine::type   eng,
     : engine(eng)
     , output({out})
     , output_offset(out[0].as<const memory&>().argument.size.size())
-    , input_size(out[0].as<const memory&>().argument.size.begin(), out[0].as<const memory&>().argument.size.end())
+    , input_size(in[0].as<const memory&>().argument.size)
     , input(in.cbegin(), in.cend())
     , input_offset(in[0].as<const memory&>().argument.size.size())
     , stride(strd)
