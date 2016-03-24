@@ -66,7 +66,7 @@ void example_convolution_forward() {
                                         padding::zero}
                                       );
 
-    execute({input, output, weights, biases, conv});
+    execute({conv});
 }
 
 void example_convolution_backward(){
