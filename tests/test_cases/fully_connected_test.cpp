@@ -1,23 +1,52 @@
 /*
-Copyright (c) 2016, Intel Corporation
-NeuralIA
+// Copyright (c) 2016 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-
 #include "tests/gtest/gtest.h"
 #include "api/neural.h"
 #include "multidimensional_counter.h"
-#include <iostream> // todo remove
+
 using namespace neural;
 
-TEST(fully_connected, basic) {
-    
+TEST(fully_connected, xb_f32) {
+
+/*
+    Input  : 3x1
+    Output : 4x1
+    Weights: 4x3
+
+    Input:
+    -0.5     2    0.5
+
+    Weights:
+     1.5     1    0.5
+    -1       0    0.5
+     0.5    -0.5 -2
+    -0.5     1    1.5
+
+    Output:
+     1.5    0.75    -2.25   3
+
+*/
+
     const uint32_t output_x  = 4, output_b  = 1,  // size of whole output buffer
                    input_x   = 3, input_b   = 1,  // size of whole input buffer
                    weight_x  = 4, weight_y  = 3;  // size of whole weights buffer
 
-    auto input_prim   = memory::create({ engine::cpu, memory::format::x_f32,{ input_x,  input_b  } , true });
+    auto input_prim   = memory::create({ engine::cpu, memory::format::xb_f32,{ input_x,  input_b  } , true });
     auto output_prim  = memory::create({ engine::cpu, memory::format::xb_f32,{ output_x, output_b } , true });
     auto weights_prim = memory::create({ engine::cpu, memory::format::xb_f32,{ weight_x, weight_y } , true });
     auto full_con_prim = fully_connected::create({ engine::reference, output_prim, input_prim, weights_prim });
@@ -45,12 +74,7 @@ TEST(fully_connected, basic) {
 
     output_memory.fill<float>(0.0f);
 
-    try {
-        execute({full_con_prim});
-    }
-    catch (std::exception &e) {
-        std::cout << e.what();
-    }
+    execute({full_con_prim});
 
     EXPECT_EQ(1.5f,   output_memory.get_value<float>(0));
     EXPECT_EQ(0.75f,  output_memory.get_value<float>(1));
