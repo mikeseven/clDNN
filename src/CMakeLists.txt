@@ -35,7 +35,7 @@ include_directories (${CMAKE_SOURCE_DIR}
                     )
 
 # Create library file from sources.
-add_library(${TARGET_NAME} STATIC
+add_library(${TARGET_NAME} SHARED
             ${LIBRARY_SRC}
             ${API_HEADERS})
 

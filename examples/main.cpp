@@ -15,13 +15,21 @@
 */
 
 #include "api/neural.h"
+
+#if defined _WIN32
+#   include "os_windows.h"
+#else
+#   include "os_linux.h"
+#endif
+
 #include <iostream>
 
 #include "convolution.h" //todo remove
 
 int main( int argc, char* argv[ ] )
 {
-    neural::attach_conv();
+    // RAII for loading library, device initialization and opening interface 0
+    scoped_library library("neuralIA"+dynamic_library_extension);
     extern void example_convolution_forward();
 
     try{

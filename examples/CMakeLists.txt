@@ -43,5 +43,3 @@ add_executable(${TARGET_NAME}
                ${LIBRARY_SRC}
                ${EXAMPLES_SRC}
               )
-
-target_link_libraries(${TARGET_NAME} neuralia)
