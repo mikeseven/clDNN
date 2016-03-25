@@ -11,8 +11,8 @@ void example_fully_connected() {
     float out_buffer[output_x*output_b];
     float weight_buffer[weight_x*weight_y];
 
-    auto input = memory::create({ engine::cpu, memory::format::xb_f32,{ input_x, input_b } });
-    auto output = memory::create({ engine::cpu, memory::format::xb_f32,{ output_x, output_b } });
+    auto input   = memory::create({ engine::cpu, memory::format::xb_f32,{ input_x,  input_b  } });
+    auto output  = memory::create({ engine::cpu, memory::format::xb_f32,{ output_x, output_b } });
     auto weights = memory::create({ engine::cpu, memory::format::xb_f32,{ weight_x, weight_y } });
 
     auto act = fully_connected::create({ engine::reference,

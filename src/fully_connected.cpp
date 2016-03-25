@@ -28,7 +28,6 @@ struct fully_connected_reference : is_an_implementation {
 
         if (input_buffer_size.size() != output_buffer_size.size())throw std::runtime_error("Fully connected input/output number of dimension does not match.");
         if (input_memory_arg.format != output_memory_arg.format)  throw std::runtime_error("Fully connected input/output data format does not match.");
-        if (weight_size.size() != 2) throw std::runtime_error("Fully connected weight is not 2-dimensional.");
         if (this_ful_con->argument.weight.as<const memory&>().argument.format != memory::format::xb_f32) throw std::runtime_error("Fully connected weight format is not xb_f32.");
 
         assert(this_ful_con->input_memory(0).argument.size.size()==1 || this_ful_con->input_memory(0).argument.size.size() == 2);
@@ -50,10 +49,10 @@ struct fully_connected_reference : is_an_implementation {
         }
         mem_arg_out.owns_memory = false;
         auto out_wrapper = memory::create(mem_arg_out);
-        out_wrapper(input);
+        out_wrapper(output);
 
         namespace nd = ndimensional;
-        nd::value<uint32_t> range(output_size);
+        nd::value<uint32_t> range_output(output_size);
         nd::value<uint32_t> range_weight(weight_size);
         nd::value<uint32_t> range_input(input_size);
         nd::calculate_idx<uint32_t> calc_in_idx(input_buffer_size);
@@ -63,21 +62,18 @@ struct fully_connected_reference : is_an_implementation {
         int data_index = 0; //todo type traits
         int batch_index = 1;
 
-        for (auto pos_out : range){
+        for (auto pos_out : range_output){
 
-        //for(uint32_t at_dst=0; at_dst<output_size[0]; ++at_dst) {
             float acc = 0;
             auto out_idx = calc_out_idx(pos_out);
 
-            //for(uint32_t at_in=0; at_in<input_size[0]; ++at_in){
             for (auto pos_in : range_input){
                 auto in_idx = calc_in_idx(pos_in);
-                auto w_idx = calc_w_idx({ pos_out[data_index], pos_in[data_index] });
+                auto w_idx = calc_w_idx(std::vector<uint32_t>{ pos_out[data_index], pos_in[data_index] });
                 acc += input[in_idx] * weight[w_idx];
             }
         output[out_idx] = acc;
         }
-        
     }
 
 
@@ -89,15 +85,15 @@ struct fully_connected_reference : is_an_implementation {
 };
 
 
-//                                    engine          output                  input
+//                                    engine                output                        input
 using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(fully_connected &)>> implementation_map = {
-    { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), fully_connected_reference::create }
+    { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create }
 };
 
-fully_connected::arguments::arguments( neural::engine::type  eng,
+/*fully_connected::arguments::arguments( neural::engine::type  eng,
                                        primitive             out,
                                        std::vector<uint32_t> out_off,
                                        std::vector<uint32_t> out_siz,
@@ -112,18 +108,19 @@ fully_connected::arguments::arguments( neural::engine::type  eng,
 , input({in})
 , input_offset(in_off)
 , input_stride(in_str)
-, weight(weights){};
+, weight(weights){};*/
 
 fully_connected::arguments::arguments( neural::engine::type  eng,
-                                       primitive out,
+                                       primitive             out,
                                        primitive             in,
                                        primitive             weights)
 : engine(eng)
 , output({out})
+, output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
 , input({in})
 , weight(weights){};
 
-// creates primitive with convolution implementation that supports provided arguments
+// creates primitive with fully_connected implementation that supports provided arguments
 primitive fully_connected::create(fully_connected::arguments arg) {
     // wrap relu into RAII wrapper
     std::unique_ptr<fully_connected> result(new fully_connected(arg));
