@@ -42,3 +42,4 @@ add_library(${TARGET_NAME} SHARED
 if(UNIX)
     target_link_libraries(${TARGET_NAME} pthread)
 endif()
+

@@ -21,7 +21,6 @@ int main( int argc, char* argv[ ] )
 {
     int result;
     {
-        neural::attach_conv(); //todo remove
         ::testing::InitGoogleTest(&argc, argv);
 #if _WIN32
         // Safety cleanup.

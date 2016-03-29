@@ -43,3 +43,8 @@ add_executable(${TARGET_NAME}
                ${LIBRARY_SRC}
                ${EXAMPLES_SRC}
               )
+
+find_library(NEURALIA_LOCATION libneuralia.so ${LIBRARY_OUTPUT_PATH})
+message("libneuralia.so is at: ${NEURALIA_LOCATION}")
+target_link_libraries(${TARGET_NAME} ${NEURALIA_LOCATION})
+
