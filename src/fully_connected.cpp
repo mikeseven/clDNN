@@ -17,7 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
 #include "multidimensional_counter.h"
-
+#include<iostream>//todo: remove
 namespace neural {
 
 struct fully_connected_reference : is_an_implementation {
@@ -45,11 +45,12 @@ struct fully_connected_reference : is_an_implementation {
 
         if (input_buffer_size.size() != output_buffer_size.size())throw std::runtime_error("Fully connected input/output number of dimension does not match.");
         if (input_memory_arg.format != output_memory_arg.format)  throw std::runtime_error("Fully connected input/output data format does not match.");
-        if (this_ful_con->argument.weight.as<const memory&>().argument.format != memory::format::xb_f32) throw std::runtime_error("Fully connected weight format is not xb_f32.");
+        if (this_ful_con->argument.weight.as<const memory&>().argument.format != memory::format::xb_f32 && 
+            this_ful_con->argument.weight.as<const memory&>().argument.format != memory::format::x_f32) throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
 
         assert(this_ful_con->input_memory(0).argument.size.size()==1 || this_ful_con->input_memory(0).argument.size.size() == 2);
 
-        // up-casts data format form 1D to 2D if necessery; DOES not copy memory, just redescribes 1D input buffer as 2D (x+batch) with batch=1
+        // up-casts data format form 1D to 2D if necessary; DOES not copy memory, just redescribes 1D input buffer as 2D (x+batch) with batch=1
         auto mem_arg_in = this_ful_con->input_memory(0).argument;
         if(mem_arg_in.size.size()==1) {
             mem_arg_in.size.emplace_back(1);
@@ -67,9 +68,22 @@ struct fully_connected_reference : is_an_implementation {
         mem_arg_out.owns_memory = false;
         auto out_wrapper = memory::create(mem_arg_out);
         out_wrapper(output);
-
+        
         namespace nd = ndimensional;
-        nd::value<uint32_t> range_output(output_size);
+
+        int batch_size;
+        int batch_exists;
+
+        if (this_ful_con->argument.weight.as<const memory&>().argument.format == memory::format::x_f32) {
+            batch_size = 1;
+            batch_exists = 0;
+        } 
+        else if (this_ful_con->argument.weight.as<const memory&>().argument.format == memory::format::xb_f32) {
+            batch_size = (int)input_buffer_size[1];
+            batch_exists = 1;
+        }
+
+        nd::value<uint32_t> range_output({ begin(output_size), end(output_size) - batch_exists }); //in every iteration whole batch is computed at once, so it has to be removed from the range
         nd::value<uint32_t> range_weight(weight_size);
         nd::value<uint32_t> range_input(input_size);
         nd::calculate_idx<uint32_t> calc_in_idx(input_buffer_size);
@@ -79,17 +93,31 @@ struct fully_connected_reference : is_an_implementation {
         int data_index = 0; //todo type traits
         int batch_index = 1;
 
+        int batch_counter = 0;
+        float *acc = new float[batch_size];
+        for (auto i = 0; i < batch_size; ++i) {
+            acc[i] = 0;
+        }
+
         for (auto pos_out : range_output){
 
-            float acc = 0;
-            auto out_idx = calc_out_idx(pos_out);
+                auto out_idx = calc_out_idx(pos_out);
 
-            for (auto pos_in : range_input){
-                auto in_idx = calc_in_idx(pos_in);
-                auto w_idx = calc_w_idx(std::vector<uint32_t>{ pos_out[data_index], pos_in[data_index] });
-                acc += input[in_idx] * weight[w_idx];
-            }
-        output[out_idx] = acc;
+                for (auto pos_in : range_input){
+                    auto in_idx = calc_in_idx(pos_in);
+                    auto w_idx = calc_w_idx(std::vector<uint32_t>{ pos_out[data_index], pos_in[data_index] });
+                    if (this_ful_con->argument.weight.as<const memory&>().argument.format == memory::format::xb_f32) {
+                        batch_counter = pos_in[1];
+                    }
+                    std::cout << "batch: " << batch_size <<"\n";
+                    acc[batch_counter] += input[in_idx] * weight[w_idx];
+                    std::cout << "acc[" << batch_counter << "] = input[" << in_idx << "] * weight[" << w_idx << "] = " << input[in_idx] << " * " << weight[w_idx] << " = " << input[in_idx] * weight[w_idx] << "\n";
+                }
+                for (auto i = 0; i < batch_size; ++i) {
+                    output[out_idx + i] = acc[i];
+                    std::cout << "output[" << out_idx + i << "] = " << output[out_idx + i] <<"\n";
+                    acc[i] = 0;
+                }
         }
     }
 
@@ -107,7 +135,8 @@ using implementation_key = std::tuple<neural::engine::type, neural::memory::form
 
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(fully_connected &)>> implementation_map = {
-    { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create }
+    { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create },
+    { std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create }
 };
 
 /*fully_connected::arguments::arguments( neural::engine::type  eng,
