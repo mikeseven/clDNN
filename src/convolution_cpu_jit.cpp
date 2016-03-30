@@ -443,11 +443,7 @@ convolution_cpu_jit:: ~convolution_cpu_jit() {}
 }
 
 namespace{
-#ifdef __GNUC__
-    __attribute__((constructor))
-#elif _MSC_VER
-#endif
-    void attach(){
+DLL_SYM void attach(){
     auto key = std::make_tuple(engine::cpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
     auto val_fw = convolution_cpu_jit::create;
 

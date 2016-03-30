@@ -198,11 +198,7 @@ convolution_backward_cpu_reference::~convolution_backward_cpu_reference() {};
 }
 
 namespace{
-#ifdef __GNUC__
-    __attribute__((constructor))
-#elif _MSC_VER
-#endif
-void attach(){
+DLL_SYM void attach(){
     auto key = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
     auto val_fw = convolution_cpu_reference::create;
     auto val_bw = convolution_backward_cpu_reference::create;

@@ -411,7 +411,7 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
 };
 
-struct /*normalization*/softmax : is_a_primitive {
+struct DLL_SYM /*normalization*/ softmax : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
         std::vector<primitive>      output;

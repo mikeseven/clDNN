@@ -15,6 +15,8 @@
 set (TARGET_NAME "neuralia")
 # Sources for test files
 
+add_definitions(-DEXPORT_NIA_SYMBOLS)
+
 file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h
       )
