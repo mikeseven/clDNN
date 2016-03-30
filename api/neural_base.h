@@ -288,5 +288,5 @@ public:
 };
 
 // execution of sequence of primitives
-void execute(std::vector<primitive>);
+DLL_SYM void execute(std::vector<primitive>);
 }

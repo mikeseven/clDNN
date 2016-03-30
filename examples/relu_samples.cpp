@@ -37,7 +37,7 @@ void example_relu_backward() {
 
     auto forward_input_grad = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}, true});
 
-    auto act    = relu_backward::create({engine::reference, {forward_input_grad}, {forward_output_grad, forward_input}});
+    auto act = relu_backward::create({engine::reference, {forward_input_grad}, {forward_output_grad, forward_input}});
 
     execute({act});
 }
