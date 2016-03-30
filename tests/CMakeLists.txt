@@ -108,12 +108,11 @@ else()
      endif()
 endif()
 # Set library dependencies
-target_link_libraries(${APP_NAME} gtest neuralia)
+target_link_libraries(${APP_NAME} gtest)
 
-find_library(NEURALIA_LOCATION libneuralia.so ${LIBRARY_OUTPUT_PATH})
-message("libneuralia.so is at: ${NEURALIA_LOCATION}")
+find_library(NEURALIA_LOCATION ${LIB_PREFIX}neuralia.${LIB_TYPE} ${LIBRARY_OUTPUT_PATH} ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
+message("${LIB_PREFIX}neuralia.${LIB_TYPE} is at: ${NEURALIA_LOCATION}")
 target_link_libraries(${TARGET_NAME} ${NEURALIA_LOCATION})
-
 if(UNIX AND WITH_CAFFE)
     add_subdirectory (caffe EXCLUDE_FROM_ALL)
 endif()

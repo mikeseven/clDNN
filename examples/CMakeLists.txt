@@ -44,7 +44,9 @@ add_executable(${TARGET_NAME}
                ${EXAMPLES_SRC}
               )
 
-find_library(NEURALIA_LOCATION libneuralia.so ${LIBRARY_OUTPUT_PATH})
-message("libneuralia.so is at: ${NEURALIA_LOCATION}")
+message("${CMAKE_SHARED_LIBRARY_PREFIX}neuralia${CMAKE_SHARED_LIBRARY_SUFFIX} paths to search: ${LIBRARY_OUTPUT_PATH} ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}") #todo remove
+find_library(NEURALIA_LOCATION 
+            ${CMAKE_SHARED_LIBRARY_PREFIX}neuralia${CMAKE_SHARED_LIBRARY_SUFFIX} 
+            PATHS ${LIBRARY_OUTPUT_PATH} ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
+message("${CMAKE_SHARED_LIBRARY_PREFIX}neuralia${CMAKE_SHARED_LIBRARY_SUFFIX} is at: ${NEURALIA_LOCATION}")
 target_link_libraries(${TARGET_NAME} ${NEURALIA_LOCATION})
-

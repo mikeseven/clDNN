@@ -32,11 +32,12 @@ if(NOT(UNIX))
   set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
   set (LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
   set (CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
+  set (LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_DIRECTORY}) # compatibility issue: linux uses LIBRARY_OUTPUT_PATH, windows uses LIBRARY_OUTPUT_DIRECTORY
 else ()
   set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
   set (LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
   set (CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
-  set (LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
+  set (LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_DIRECTORY})
 endif()
 
 message (STATUS "PROJECT ............................... " ${PROJECT_NAME})
@@ -77,7 +78,7 @@ include_directories(${CMAKE_SOURCE_DIR}/api)
 include_directories(${CMAKE_SOURCE_DIR}/xbyak)
 
 # Sub-directories where more CMakeLists.txt exist
-add_subdirectory(src)
+#add_subdirectory(src)
 add_subdirectory(examples)
-add_subdirectory(tests)
+#add_subdirectory(tests)
 
