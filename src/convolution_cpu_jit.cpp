@@ -250,7 +250,7 @@ struct jit_convolution_zxyn
                 add(aux_input_outer, (i * input_width * stride_y + output_width / 6 * stride_x) * 6 * input_feats * sizeof(float));
                 for (auto j = 0u; j < output_height % 6; ++j)
                 {
-                    generate_for_single_output_block("vertical_full_" + std::to_string(i), 6, true);
+                    generate_for_single_output_block("vertical_full_" + std::to_string(i) + "_" + std::to_string(j), 6, true);
                     add(aux_output, output_feats * sizeof(float));
                 }
             }
@@ -260,7 +260,7 @@ struct jit_convolution_zxyn
                 mov(aux_output, output);
                 add(aux_output, (i * output_width + output_width / 6 * 6) * output_feats * sizeof(float));
                 add(aux_input_outer, (i * input_width * stride_y + output_width / 6 * stride_x * 6) * input_feats * sizeof(float));
-                generate_for_single_output_block("horizontal_partial", output_width % 6, false);
+                generate_for_single_output_block("horizontal_partial_" + std::to_string(i), output_width % 6, false);
             }
 
             postamble();
@@ -430,10 +430,11 @@ convolution_cpu_jit:: ~convolution_cpu_jit() {}
                 bias
                 );
 
-            for(auto& job : conv.jobs)
-                for(auto& task : job)
+            for(auto& job : conv.jobs){
+                for(auto& task : job){
                     task.callback(task.request_handle);
-
+                }
+            }
             break;
         }
         default:
