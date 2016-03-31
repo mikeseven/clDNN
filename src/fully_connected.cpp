@@ -71,19 +71,18 @@ struct fully_connected_reference : is_an_implementation {
         
         namespace nd = ndimensional;
 
-        int batch_size;
-        int batch_exists;
+        int batch_size = 1;
+        nd::value<uint32_t> range_output(0);
 
         if (this_ful_con->argument.weight.as<const memory&>().argument.format == memory::format::x_f32) {
             batch_size = 1;
-            batch_exists = 0;
+            range_output = nd::value<uint32_t> (output_size); //there is no batch, so nothing has to be removed
         } 
         else if (this_ful_con->argument.weight.as<const memory&>().argument.format == memory::format::xb_f32) {
             batch_size = (int)input_buffer_size[1];
-            batch_exists = 1;
+            range_output = nd::value<uint32_t>({ begin(output_size), end(output_size) - 1 }); //in every iteration whole batch is computed at once, so it has to be removed from the range
         }
 
-        nd::value<uint32_t> range_output({ begin(output_size), end(output_size) - batch_exists }); //in every iteration whole batch is computed at once, so it has to be removed from the range
         nd::value<uint32_t> range_weight(weight_size);
         nd::value<uint32_t> range_input(input_size);
         nd::calculate_idx<uint32_t> calc_in_idx(input_buffer_size);
@@ -107,7 +106,7 @@ struct fully_connected_reference : is_an_implementation {
                     auto in_idx = calc_in_idx(pos_in);
                     auto w_idx = calc_w_idx(std::vector<uint32_t>{ pos_out[data_index], pos_in[data_index] });
                     if (this_ful_con->argument.weight.as<const memory&>().argument.format == memory::format::xb_f32) {
-                        batch_counter = pos_in[1];
+                        batch_counter = pos_in[1]; // in format x_f32 there is nothing in pos_in[1]
                     }
                     std::cout << "batch: " << batch_size <<"\n";
                     acc[batch_counter] += input[in_idx] * weight[w_idx];
