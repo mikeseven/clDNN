@@ -36,7 +36,7 @@ void example_pooling_forward() {
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {input_y, input_x, input_z, input_b}});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {output_y, output_x, output_z, output_b}});
 
-    auto act    = pooling::create( {engine::reference,
+    auto pool  = pooling::create( {engine::reference,
                                     pooling::mode::max,
                                     output,
                                     {out_off_y, out_off_x, out_off_z, out_off_b},
@@ -48,7 +48,7 @@ void example_pooling_forward() {
                                     padding::zero}
                                   );
 
-    execute({input(in_buffer), output(out_buffer), act});
+    execute({input(in_buffer), output(out_buffer), pool});
 }
 
 void example_pooling_backward(){

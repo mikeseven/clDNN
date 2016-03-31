@@ -19,13 +19,13 @@
 
 using namespace neural;
 
-void spatial_bn_trivial_example_forward_training_float() 
+void spatial_bn_trivial_example_forward_training_float()
 {
     // Create input buffers.
     auto input               = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}, true});
     auto scale               = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
     auto bias                = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    
+
     // Create output buffers.
     auto output              = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}, true});
     auto current_average     = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
@@ -46,7 +46,7 @@ void spatial_bn_trivial_example_forward_training_float()
         execute({bn});
 }
 
-void spatial_bn_trivial_example_forward_training_double() 
+void spatial_bn_trivial_example_forward_training_double()
 {
     // Create input buffers.
     auto input               = memory::create({engine::cpu, memory::format::yxfb_f64, {16, 32, 64, 128}, true});
@@ -73,7 +73,7 @@ void spatial_bn_trivial_example_forward_training_double()
         execute({bn});
 }
 
-void spatial_bn_trivial_example_backward_training_float() 
+void spatial_bn_trivial_example_backward_training_float()
 {
     // Create input buffers.
     auto forward_input       = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}, true});
@@ -104,7 +104,7 @@ void spatial_bn_trivial_example_backward_training_float()
         execute({bn});
 }
 
-void spatial_bn_trivial_example_backward_training_double() 
+void spatial_bn_trivial_example_backward_training_double()
 {
     // Create input buffers.
     auto forward_input       = memory::create({engine::cpu, memory::format::yxfb_f64, {16, 32, 64, 128}, true});
@@ -135,7 +135,7 @@ void spatial_bn_trivial_example_backward_training_double()
         execute({bn});
 }
 
-void spatial_bn_trivial_example_inference_float() 
+void spatial_bn_trivial_example_inference_float()
 {
     // Create input buffers.
     auto input       = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}, true});
@@ -143,7 +143,7 @@ void spatial_bn_trivial_example_inference_float()
     auto bias        = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
     auto average     = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
     auto inv_std_dev = memory::create({engine::cpu, memory::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    
+
     // Create output buffer.
     auto output      = memory::create({engine::cpu, memory::format::yxfb_f32, {16, 32, 64, 128}, true});
 
@@ -162,7 +162,7 @@ void spatial_bn_trivial_example_inference_float()
         execute({bn});
 }
 
-void spatial_bn_trivial_example_inference_double() 
+void spatial_bn_trivial_example_inference_double()
 {
     // Create input buffers.
     auto input       = memory::create({engine::cpu, memory::format::yxfb_f64, {16, 32, 64, 128}, true});
@@ -189,7 +189,7 @@ void spatial_bn_trivial_example_inference_double()
         execute({bn});
 }
 
-void spatial_bn_complex_example_training_float() 
+void spatial_bn_complex_example_training_float()
 {
     // TODO: after string keys have been implemented, move buffer creation to primitives' constructors and reference them by primitive-string lookups.
 
@@ -244,7 +244,7 @@ void spatial_bn_complex_example_training_float()
     }
 }
 
-void spatial_bn_complex_example_training_double() 
+void spatial_bn_complex_example_training_double()
 {
     // TODO: after string keys have been implemented, move buffer creation to primitives' constructors and reference them by primitive-string lookups.
 

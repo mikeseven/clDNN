@@ -34,8 +34,8 @@ void example_006() {
 
     // query convolutions: any engine producing any data format
     auto result = convolution::query({engine::any, memory::format::any, input, weight, bias, padding::zero});
-    for(auto &entry : result) std::cout 
-            << entry["engine"].u64() << ":" << entry["engine"].s() 
+    for(auto &entry : result) std::cout
+            << entry["engine"].u64() << ":" << entry["engine"].s()
             << "time = " << entry["time"].f32()*1000.0f << "ms, "
             << "energy = " << entry["energy"].f32() << "j" << std::endl;
 
