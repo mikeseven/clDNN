@@ -68,7 +68,7 @@ struct fully_connected_reference : is_an_implementation {
         mem_arg_out.owns_memory = false;
         auto out_wrapper = memory::create(mem_arg_out);
         out_wrapper(output);
-        
+
         namespace nd = ndimensional;
 
         int batch_size = 1;
@@ -137,23 +137,6 @@ static std::map<implementation_key, std::function<is_an_implementation *(fully_c
     { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create },
     { std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create }
 };
-
-/*fully_connected::arguments::arguments( neural::engine::type  eng,
-                                       primitive             out,
-                                       std::vector<uint32_t> out_off,
-                                       std::vector<uint32_t> out_siz,
-                                       primitive             in,
-                                       std::vector<int32_t>  in_off,
-                                       std::vector<uint32_t> in_str,
-                                       primitive             weights)
-: engine(eng)
-, output({out})
-, output_offset(out_off)
-, output_size(out_siz)
-, input({in})
-, input_offset(in_off)
-, input_stride(in_str)
-, weight(weights){};*/
 
 fully_connected::arguments::arguments( neural::engine::type  eng,
                                        primitive             out,
