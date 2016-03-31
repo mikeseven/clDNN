@@ -20,29 +20,27 @@
 #include "api/neural.h"
 
 TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
-/*
-Filter : 2x2
-Stride : 2x2
-Input  : 4x4
-Output : 2x2
-
-Input:
--0.5   1.5   0.5  0.5
- 1    -0.5   0.5  2
- 0.5   0    -1    1.5
- 2    -1     1   -0.5
-
-Filter
--2   3.5
- 0.5 1.5
-
-Bias
-2
-
-Output:
-8   6
-0.5 9
-*/
+//  Filter : 2x2
+//  Stride : 2x2
+//  Input  : 4x4
+//  Output : 2x2
+//
+//  Input:
+//  -0.5   1.5   0.5  0.5
+//   1    -0.5   0.5  2
+//   0.5   0    -1    1.5
+//   2    -1     1   -0.5
+//
+//  Filter
+//  -2   3.5
+//   0.5 1.5
+//
+//  Bias
+//  2
+//
+//  Output:
+//  8   6
+//  0.5 9
 using namespace neural;
 
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {4, 4, 1, 1}, true});
@@ -89,29 +87,27 @@ using namespace neural;
 }
 
 TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
-/*
-Filter  : 3x3
-Stride  : 2x2
-Input   : 2x2
-Output  : 1x1
-Padding : zero
-
-Input:
--0.5   0.5   padd
- 1     2.0   padd
-padd  padd   padd
-
-Filter
--2    1.5  0.5
- 0.5  4    1.5
- 3.5 -5   -1.5
-
-Bias
-2
-
-Output:
-12.25
-*/
+//  Filter  : 3x3
+//  Stride  : 2x2
+//  Input   : 2x2
+//  Output  : 1x1
+//  Padding : zero
+//
+//  Input:
+//  -0.5   0.5   padd
+//   1     2.0   padd
+//  padd  padd   padd
+//
+//  Filter
+//  -2    1.5  0.5
+//   0.5  4    1.5
+//   3.5 -5   -1.5
+//
+//  Bias
+//  2
+//
+//  Output:
+//  12.25
     using namespace neural;
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {1, 1, 1, 1}, true});
@@ -150,32 +146,30 @@ Output:
 }
 
 TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
-/*
-Filter       : 3x3
-Stride       : 2x2
-Input        : 2x2
-Input offset : -1x-1
-Output       : 2x2
-Output offset: 1x1
-Padding      : zero
-
-Input:
-padd padd  padd
-padd -0.5   0.5
-padd  1     2.0
-
-Filter
--2    1.5  0.5
- 0.5  4    1.5
- 3.5 -5   -1.5
-
-Bias
-2
-
-Output:
-rnd   rnd
-rnd  -7.25
-*/
+//   Filter       : 3x3
+//   Stride       : 2x2
+//   Input        : 2x2
+//   Input offset : -1x-1
+//   Output       : 2x2
+//   Output offset: 1x1
+//   Padding      : zero
+//
+//   Input:
+//   padd padd  padd
+//   padd -0.5   0.5
+//   padd  1     2.0
+//
+//   Filter
+//   -2    1.5  0.5
+//    0.5  4    1.5
+//    3.5 -5   -1.5
+//
+//   Bias
+//   2
+//
+//   Output:
+//   rnd   rnd
+//   rnd  -7.25
     using namespace neural;
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
@@ -219,42 +213,39 @@ rnd  -7.25
 }
 
 TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
-/*
-Filter    : 2x2
-Stride    : 1x1
-FW Input  : 3x3
-BW Input  : 2x2
-BW Output : 3x3
-
-FW Input:
--0.5   1.5  1
- 1    -0.5  2
- 1     2    3
-
-BW Input
-1   2
-3   4
-
-Filter
--2   3.5
- 0.5 1.5
-
-Bias
--3
-
-BW Output:
--2   -0.5   7
--5.5  5    17
- 1.5  6.5   6
-
-Weights grad
--7    35
- 5.5  32.5
-
-Bias grad
-10
-*/
-
+//   Filter    : 2x2
+//   Stride    : 1x1
+//   FW Input  : 3x3
+//   BW Input  : 2x2
+//   BW Output : 3x3
+//
+//   FW Input:
+//   -0.5   1.5  1
+//    1    -0.5  2
+//    1     2    3
+//
+//   BW Input
+//   1   2
+//   3   4
+//
+//   Filter
+//   -2   3.5
+//    0.5 1.5
+//
+//   Bias
+//   -3
+//
+//   BW Output:
+//   -2   -0.5   7
+//   -5.5  5    17
+//    1.5  6.5   6
+//
+//   Weights grad
+//   -7    35
+//    5.5  32.5
+//
+//   Bias grad
+//   10
     using namespace neural;
     auto bw_output    = memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 1, 1}, true});
     auto bw_input     = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
@@ -328,43 +319,40 @@ Bias grad
 }
 
 TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
-/*
-Filter    : 3x3
-Stride    : 2x2
-FW Input  : 2x2
-BW Input  : 1x1
-BW Output : 2x2
-
-FW Input:
--0.5   1.5  padd
- 1    -0.5  padd
- padd padd  padd
-
-BW Input
-2
-
-Filter
--2   3.5  1
- 0.5 1.5  2
- 1   2    3
-
-Bias
--3
-
-BW Output:
- -4    7    padd
-  1    3    padd
-padd  padd  padd
-
-Weights grad
- 2  10.5  0
- 1  -1.5  0
- 0   0    0
-
-Bias grad
-2
-*/
-
+//  Filter    : 3x3
+//  Stride    : 2x2
+//  FW Input  : 2x2
+//  BW Input  : 1x1
+//  BW Output : 2x2
+//
+//  FW Input:
+//  -0.5   1.5  padd
+//   1    -0.5  padd
+//   padd padd  padd
+//
+//  BW Input
+//  2
+//
+//  Filter
+//  -2   3.5  1
+//   0.5 1.5  2
+//   1   2    3
+//
+//  Bias
+//  -3
+//
+//  BW Output:
+//   -4    7    padd
+//    1    3    padd
+//  padd  padd  padd
+//
+//  Weights grad
+//   2  10.5  0
+//   1  -1.5  0
+//   0   0    0
+//
+//  Bias grad
+//  2
     using namespace neural;
     auto bw_output    = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto bw_input     = memory::create({engine::cpu, memory::format::yxfb_f32, {1, 1, 1, 1}, true});
@@ -433,49 +421,46 @@ Bias grad
 }
 
 TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
-/*
-Filter      : 3x3
-Stride      : 1x1
-FW Input    : 4x4
-BW Input    : 2x2
-BWin offset : 1x1
-BW Output   : 4x4
-BWout offset: 1x1 (the same offset applies to FWin)
-
-FW Input:
-1   1   1     1
-1   1   1     1
-1   1  -0.5   1.5
-1   1   1    -0.5
-
-BW Input
-1  1
-1  2
-
-Filter
-1   1    1
-1  -2    3.5
-1   0.5  1.5
-
-Bias
--3
-
-BW Output:
-0   0   0   0
-0   2   2   2
-0   2  -4   7
-0   2   1   3
-
-
-Weights grad
-2   2   2
-2   2  10.5
-2   1  -1.5
-
-Bias grad
-2
-*/
-
+//  Filter      : 3x3
+//  Stride      : 1x1
+//  FW Input    : 4x4
+//  BW Input    : 2x2
+//  BWin offset : 1x1
+//  BW Output   : 4x4
+//  BWout offset: 1x1 (the same offset applies to FWin)
+//
+//  FW Input:
+//  1   1   1     1
+//  1   1   1     1
+//  1   1  -0.5   1.5
+//  1   1   1    -0.5
+//
+//  BW Input
+//  1  1
+//  1  2
+//
+//  Filter
+//  1   1    1
+//  1  -2    3.5
+//  1   0.5  1.5
+//
+//  Bias
+//  -3
+//
+//  BW Output:
+//  0   0   0   0
+//  0   2   2   2
+//  0   2  -4   7
+//  0   2   1   3
+//
+//
+//  Weights grad
+//  2   2   2
+//  2   2  10.5
+//  2   1  -1.5
+//
+//  Bias grad
+//  2
     using namespace neural;
     auto bw_output    = memory::create({engine::cpu, memory::format::yxfb_f32, {4, 4, 1, 1}, true});
     auto bw_input     = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
