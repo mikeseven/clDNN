@@ -32,6 +32,13 @@ void example_fully_connected() {
     auto output  = memory::create({ engine::cpu, memory::format::xb_f32,{ output_x, output_b } });
     auto weights = memory::create({ engine::cpu, memory::format::xb_f32,{ weight_x, weight_y } });
 
+    auto& input_memory = input.as<const memory&>();
+    auto& output_memory = output.as<const memory&>();
+    auto& weights_memory = weights.as<const memory&>();
+
+    input_memory.fill(1.0f);
+    weights_memory.fill(1.0f);
+
     auto act = fully_connected::create({ engine::reference,
                                          output,
                                          input,

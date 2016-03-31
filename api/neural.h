@@ -246,19 +246,14 @@ struct fully_connected : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
         std::vector<primitive>      output;
-        std::vector<uint32_t>       output_offset;
         std::vector<uint32_t>       output_size;
-        std::vector<primitive_at>   input;          // 3: input, filter, bias
-        std::vector<int32_t>        input_offset;
-        std::vector<uint32_t>       input_stride;
+        std::vector<primitive_at>   input;
         primitive                   weight;
 
-        arguments(neural::engine::type, neural::memory::format::type, std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>, std::vector<uint32_t>, primitive);
-        arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                       std::vector<uint32_t>, primitive);
-        arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                       uint32_t,              primitive);
-        arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                                              primitive);
-        arguments(neural::engine::type, primitive,                                                                  primitive,                                              primitive);
-        arguments(neural::engine::type, primitive,                    std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>, std::vector<uint32_t>, primitive);
+        arguments(neural::engine::type, neural::memory::format::type out_fmt, std::vector<uint32_t> out_siz, primitive in, primitive weights);
+        arguments(neural::engine::type, neural::memory::format::type out_fmt,                                primitive in, primitive weights);
+        arguments(neural::engine::type, primitive                    out,                                    primitive in, primitive weights);
+        arguments(neural::engine::type, primitive                    out,     std::vector<uint32_t> out_siz, primitive in, primitive weights);
 
     };
     const arguments argument;

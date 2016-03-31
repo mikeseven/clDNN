@@ -33,20 +33,19 @@ struct fully_connected_reference : is_an_implementation {
         auto input = static_cast<float*>(this_ful_con->input_memory(0).pointer);
         auto output = static_cast<float*>(this_ful_con->output_memory(0).pointer);
         auto weight = static_cast<float*>(this_ful_con->argument.weight.as<const memory&>().pointer);
-        auto weight_size = this_ful_con->argument.weight.as<const memory&>().argument.size;
+        auto weight_buffer_size = this_ful_con->argument.weight.as<const memory&>().argument.size;
 
         auto input_memory_arg = this_ful_con->input_memory(0).argument;
         auto input_buffer_size = input_memory_arg.size;
-        auto input_size = this_ful_con->input_memory(0).argument.size;
 
         auto output_memory_arg = this_ful_con->output_memory(0).argument;
         auto output_buffer_size = output_memory_arg.size;
-        auto output_size = this_ful_con->argument.output_size;
+
+        auto weight_memory_arg = this_ful_con->argument.weight.as<const memory&>().argument.format;
 
         if (input_buffer_size.size() != output_buffer_size.size())throw std::runtime_error("Fully connected input/output number of dimension does not match.");
         if (input_memory_arg.format != output_memory_arg.format)  throw std::runtime_error("Fully connected input/output data format does not match.");
-        if (this_ful_con->argument.weight.as<const memory&>().argument.format != memory::format::xb_f32 && 
-            this_ful_con->argument.weight.as<const memory&>().argument.format != memory::format::x_f32) throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
+        if (weight_memory_arg != memory::format::xb_f32 && weight_memory_arg != memory::format::x_f32) throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
 
         assert(this_ful_con->input_memory(0).argument.size.size()==1 || this_ful_con->input_memory(0).argument.size.size() == 2);
 
@@ -71,32 +70,31 @@ struct fully_connected_reference : is_an_implementation {
 
         namespace nd = ndimensional;
 
-        int batch_size = 1;
+        int batch_size;
         nd::value<uint32_t> range_output(0);
 
         if (this_ful_con->argument.weight.as<const memory&>().argument.format == memory::format::x_f32) {
             batch_size = 1;
-            range_output = nd::value<uint32_t> (output_size); //there is no batch, so nothing has to be removed
+            range_output = nd::value<uint32_t> (output_buffer_size); //there is no batch, so nothing has to be removed
         } 
         else if (this_ful_con->argument.weight.as<const memory&>().argument.format == memory::format::xb_f32) {
             batch_size = (int)input_buffer_size[1];
-            range_output = nd::value<uint32_t>({ begin(output_size), end(output_size) - 1 }); //in every iteration whole batch is computed at once, so it has to be removed from the range
+            range_output = nd::value<uint32_t>({ begin(output_buffer_size), end(output_buffer_size) - 1 }); //in every iteration whole batch is computed at once, so it has to be removed from the range
         }
 
-        nd::value<uint32_t> range_weight(weight_size);
-        nd::value<uint32_t> range_input(input_size);
+        nd::value<uint32_t> range_weight(weight_buffer_size);
+        nd::value<uint32_t> range_input(input_buffer_size);
         nd::calculate_idx<uint32_t> calc_in_idx(input_buffer_size);
         nd::calculate_idx<uint32_t> calc_out_idx(output_buffer_size);
-        nd::calculate_idx<uint32_t> calc_w_idx(weight_size);
+        nd::calculate_idx<uint32_t> calc_w_idx(weight_buffer_size);
 
         int data_index = 0; //todo type traits
         int batch_index = 1;
 
         int batch_counter = 0;
-        float *acc = new float[batch_size];
-        for (auto i = 0; i < batch_size; ++i) {
-            acc[i] = 0;
-        }
+        float *acc = new float[batch_size]();
+
+        std::vector<uint32_t> arg_weight_idx(2);
 
         for (auto pos_out : range_output){
 
@@ -104,9 +102,11 @@ struct fully_connected_reference : is_an_implementation {
 
                 for (auto pos_in : range_input){
                     auto in_idx = calc_in_idx(pos_in);
-                    auto w_idx = calc_w_idx(std::vector<uint32_t>{ pos_out[data_index], pos_in[data_index] });
-                    if (this_ful_con->argument.weight.as<const memory&>().argument.format == memory::format::xb_f32) {
-                        batch_counter = pos_in[1]; // in format x_f32 there is nothing in pos_in[1]
+                    arg_weight_idx[0] = pos_out[data_index];
+                    arg_weight_idx[1] = pos_in [data_index];
+                    auto w_idx = calc_w_idx(arg_weight_idx);
+                    if (weight_memory_arg == memory::format::xb_f32) {
+                        batch_counter = pos_in[batch_index]; // in format x_f32 there is nothing in pos_in[1]
                     }
                     acc[batch_counter] += input[in_idx] * weight[w_idx];
                 }
@@ -135,10 +135,10 @@ static std::map<implementation_key, std::function<is_an_implementation *(fully_c
     { std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create }
 };
 
-fully_connected::arguments::arguments( neural::engine::type  eng,
-                                       primitive             out,
-                                       primitive             in,
-                                       primitive             weights)
+fully_connected::arguments::arguments( neural::engine::type   eng,
+                                       primitive              out,
+                                       primitive              in,
+                                       primitive              weights)
 : engine(eng)
 , output({out})
 , output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
