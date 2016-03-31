@@ -108,13 +108,10 @@ struct fully_connected_reference : is_an_implementation {
                     if (this_ful_con->argument.weight.as<const memory&>().argument.format == memory::format::xb_f32) {
                         batch_counter = pos_in[1]; // in format x_f32 there is nothing in pos_in[1]
                     }
-                    std::cout << "batch: " << batch_size <<"\n";
                     acc[batch_counter] += input[in_idx] * weight[w_idx];
-                    std::cout << "acc[" << batch_counter << "] = input[" << in_idx << "] * weight[" << w_idx << "] = " << input[in_idx] << " * " << weight[w_idx] << " = " << input[in_idx] * weight[w_idx] << "\n";
                 }
                 for (auto i = 0; i < batch_size; ++i) {
                     output[out_idx + i] = acc[i];
-                    std::cout << "output[" << out_idx + i << "] = " << output[out_idx + i] <<"\n";
                     acc[i] = 0;
                 }
         }
