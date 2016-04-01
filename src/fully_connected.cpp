@@ -29,28 +29,28 @@ struct fully_connected_reference : is_an_implementation {
     ~fully_connected_reference() {}
 
     static void implementation(const void *ptr) {
-        auto this_ful_con = static_cast<const fully_connected *>(ptr);
-        auto input = static_cast<float*>(this_ful_con->input_memory(0).pointer);
-        auto output = static_cast<float*>(this_ful_con->output_memory(0).pointer);
-        auto weight = static_cast<float*>(this_ful_con->argument.weight.as<const memory&>().pointer);
-        auto weight_buffer_size = this_ful_con->argument.weight.as<const memory&>().argument.size;
+        auto this_fc = static_cast<const fully_connected *>(ptr);
+        auto input = static_cast<float*>(this_fc->input_memory(0).pointer);
+        auto output = static_cast<float*>(this_fc->output_memory(0).pointer);
+        auto weight = static_cast<float*>(this_fc->argument.weight.as<const memory&>().pointer);
+        auto weight_buffer_size = this_fc->argument.weight.as<const memory&>().argument.size;
 
-        auto input_memory_arg = this_ful_con->input_memory(0).argument;
+        auto input_memory_arg = this_fc->input_memory(0).argument;
         auto input_buffer_size = input_memory_arg.size;
 
-        auto output_memory_arg = this_ful_con->output_memory(0).argument;
+        auto output_memory_arg = this_fc->output_memory(0).argument;
         auto output_buffer_size = output_memory_arg.size;
 
-        auto weight_memory_arg = this_ful_con->argument.weight.as<const memory&>().argument.format;
+        auto weight_memory_arg = this_fc->argument.weight.as<const memory&>().argument.format;
 
         if (input_buffer_size.size() != output_buffer_size.size())throw std::runtime_error("Fully connected input/output number of dimension does not match.");
         if (input_memory_arg.format != output_memory_arg.format)  throw std::runtime_error("Fully connected input/output data format does not match.");
         if (weight_memory_arg != memory::format::xb_f32 && weight_memory_arg != memory::format::x_f32) throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
 
-        assert(this_ful_con->input_memory(0).argument.size.size()==1 || this_ful_con->input_memory(0).argument.size.size() == 2);
+        assert(this_fc->input_memory(0).argument.size.size()==1 || this_fc->input_memory(0).argument.size.size() == 2);
 
         // up-casts data format form 1D to 2D if necessary; DOES not copy memory, just redescribes 1D input buffer as 2D (x+batch) with batch=1
-        auto mem_arg_in = this_ful_con->input_memory(0).argument;
+        auto mem_arg_in = this_fc->input_memory(0).argument;
         if(mem_arg_in.size.size()==1) {
             mem_arg_in.size.emplace_back(1);
             mem_arg_in.format = memory::format::xb_f32;
@@ -59,7 +59,7 @@ struct fully_connected_reference : is_an_implementation {
         auto in_wrapper = memory::create(mem_arg_in);
         in_wrapper(input);
 
-        auto mem_arg_out = this_ful_con->output_memory(0).argument;
+        auto mem_arg_out = this_fc->output_memory(0).argument;
         if (mem_arg_out.size.size() == 1) {
             mem_arg_out.size.emplace_back(1);
             mem_arg_out.format = memory::format::xb_f32;
