@@ -70,34 +70,27 @@ struct fully_connected_reference : is_an_implementation {
 
         namespace nd = ndimensional;
 
-        int batch_size;
         nd::value<uint32_t> range_output(0);
 
-        if (this_ful_con->argument.weight.as<const memory&>().argument.format == memory::format::x_f32) {
-            batch_size = 1;
+        if (weight_memory_arg == memory::format::x_f32) {
             range_output = nd::value<uint32_t> (output_buffer_size); //there is no batch, so nothing has to be removed
         } 
-        else if (this_ful_con->argument.weight.as<const memory&>().argument.format == memory::format::xb_f32) {
-            batch_size = (int)input_buffer_size[1];
+        else if (weight_memory_arg == memory::format::xb_f32) {
             range_output = nd::value<uint32_t>({ begin(output_buffer_size), end(output_buffer_size) - 1 }); //in every iteration whole batch is computed at once, so it has to be removed from the range
         }
 
+        nd::value<uint32_t> range_input(in_wrapper.as<const memory &>().argument.size);
         nd::value<uint32_t> range_weight(weight_buffer_size);
-        nd::value<uint32_t> range_input(input_buffer_size);
-        nd::calculate_idx<uint32_t> calc_in_idx(input_buffer_size);
-        nd::calculate_idx<uint32_t> calc_out_idx(output_buffer_size);
+        nd::calculate_idx<uint32_t> calc_in_idx(in_wrapper.as<const memory &>().argument.size);
+        nd::calculate_idx<uint32_t> calc_out_idx(out_wrapper.as<const memory &>().argument.size);
         nd::calculate_idx<uint32_t> calc_w_idx(weight_buffer_size);
 
         int data_index = 0; //todo type traits
         int batch_index = 1;
 
-        int batch_counter = 0;
-        float *acc = new float[batch_size]();
-
         std::vector<uint32_t> arg_weight_idx(2);
 
         for (auto pos_out : range_output){
-
                 auto out_idx = calc_out_idx(pos_out);
 
                 for (auto pos_in : range_input){
@@ -105,14 +98,7 @@ struct fully_connected_reference : is_an_implementation {
                     arg_weight_idx[0] = pos_out[data_index];
                     arg_weight_idx[1] = pos_in [data_index];
                     auto w_idx = calc_w_idx(arg_weight_idx);
-                    if (weight_memory_arg == memory::format::xb_f32) {
-                        batch_counter = pos_in[batch_index]; // in format x_f32 there is nothing in pos_in[1]
-                    }
-                    acc[batch_counter] += input[in_idx] * weight[w_idx];
-                }
-                for (auto i = 0; i < batch_size; ++i) {
-                    output[out_idx + i] = acc[i];
-                    acc[i] = 0;
+                    output[out_idx + pos_in[batch_index]] += input[in_idx] * weight[w_idx];
                 }
         }
     }
