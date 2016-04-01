@@ -17,7 +17,7 @@
 #pragma once
 
 #ifdef _MSC_VER
-    #define NOMINMAX        // mscc compatibility
+#   define NOMINMAX        // mscc compatibility
 #endif
 #define XBYAK_NO_OP_NAMES
 
@@ -50,7 +50,7 @@ namespace initialization{
         }
     };
 }
-#endif // _MSC_VER && EXPORT_NIA_SYMBOLS
+#endif // _MSC_VER
 
 // data in memory in known format; format = {order, type} of values
 struct memory : is_a_primitive {

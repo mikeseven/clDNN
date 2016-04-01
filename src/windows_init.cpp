@@ -5,15 +5,6 @@
 
 #include "api/dll.h"
 
-struct foo {
-    foo() {
-        std::cout << "foo::foo()" << std::endl;
-    }
-    ~foo() {
-        std::cout << "foo::~foo()" << std::endl;
-    }
-};
-
 using void_fun_ptr = void (__cdecl *)();
 
 #pragma warning(disable : 4075)
