@@ -15,8 +15,26 @@
 */
 
 #include "gtest/gtest.h"
+#include "dll.h"
 
-#include "convolution.h" //todo remove
+#ifdef _MSC_VER
+namespace{
+    extern "C" DLL_SYM void _cdecl nn_init();
+    extern "C" DLL_SYM void _cdecl nn_exit();
+
+    struct init_openmkl_t {
+        init_openmkl_t() {
+            nn_init();
+        }
+        ~init_openmkl_t() {
+            nn_exit();
+        }
+    };
+
+    init_openmkl_t init_openmkl;
+}
+#endif // _MSC_VER
+
 int main( int argc, char* argv[ ] )
 {
     int result;

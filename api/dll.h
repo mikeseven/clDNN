@@ -1,0 +1,25 @@
+#ifdef EXPORT_NIA_SYMBOLS
+#   if defined(_MSC_VER)
+       //  Microsoft
+#      define DLL_SYM __declspec(dllexport)
+#   elif defined(_GCC)
+       //  GCC
+#      define DLL_SYM __attribute__((visibility("default")))
+#   else
+       //  do nothing and hope for the best?
+#      define DLL_SYM
+#      pragma warning Unknown dynamic link import/export semantics.
+#   endif
+#else //import dll
+#   if defined(_MSC_VER)
+       //  Microsoft
+#      define DLL_SYM __declspec(dllimport)
+#   elif defined(_GCC)
+       //  GCC
+#      define DLL_SYM
+#   else
+       //  do nothing and hope for the best?
+#      define DLL_SYM
+#      pragma warning Unknown dynamic link import/export semantics.
+#   endif
+#endif
