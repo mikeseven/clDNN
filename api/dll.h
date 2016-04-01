@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef EXPORT_NIA_SYMBOLS
 #   if defined(_MSC_VER)
        //  Microsoft
@@ -6,7 +8,6 @@
        //  GCC
 #      define DLL_SYM __attribute__((visibility("default")))
 #   else
-       //  do nothing and hope for the best?
 #      define DLL_SYM
 #      pragma warning Unknown dynamic link import/export semantics.
 #   endif
@@ -18,7 +19,6 @@
        //  GCC
 #      define DLL_SYM
 #   else
-       //  do nothing and hope for the best?
 #      define DLL_SYM
 #      pragma warning Unknown dynamic link import/export semantics.
 #   endif

@@ -18,7 +18,6 @@
 
 #include "tests/gtest/gtest.h"
 #include "api/neural.h"
-/*
 
 TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 //  Filter : 2x2
@@ -542,4 +541,3 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
     results_equal &= 2.0f == biases_diff_mem.get_value<float>(0);
     EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }
-*/

@@ -28,6 +28,30 @@
 
 namespace neural {
 
+#if defined(_MSC_VER)
+namespace initialization{
+    extern "C" DLL_SYM void _cdecl nn_init();
+    extern "C" DLL_SYM void _cdecl nn_exit();
+
+    class lib_init_t {
+        lib_init_t() {
+            nn_init();
+        }
+        ~lib_init_t() {
+            nn_exit();
+        }
+
+        void operator=(lib_init_t const&) = delete;
+
+        public:
+        DLL_SYM static lib_init_t &instance() {
+            static lib_init_t instance_;
+            return instance_;
+        }
+    };
+}
+#endif // _MSC_VER && EXPORT_NIA_SYMBOLS
+
 // data in memory in known format; format = {order, type} of values
 struct memory : is_a_primitive {
     struct format_traits {

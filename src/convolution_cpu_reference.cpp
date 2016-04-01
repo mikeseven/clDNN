@@ -215,7 +215,6 @@ struct attach{
 #elif _MSC_VER
 #   pragma section(".nn_init$m", read, write)
 #endif
-//DLL_SYM
 attach attach_impl;
 
 }
