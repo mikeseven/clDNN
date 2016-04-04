@@ -19,7 +19,6 @@
 #ifdef _MSC_VER
 #   define NOMINMAX        // mscc compatibility
 #endif
-#define XBYAK_NO_OP_NAMES
 
 #include "xbyak/xbyak.h"
 #include "neural_base.h"
@@ -29,11 +28,11 @@
 namespace neural {
 
 #if defined(_MSC_VER)
-namespace initialization{
+namespace {
     extern "C" DLL_SYM void _cdecl nn_init();
     extern "C" DLL_SYM void _cdecl nn_exit();
 
-    class lib_init_t {
+    template<typename T = void> class lib_init_t {
         lib_init_t() {
             nn_init();
         }
@@ -49,6 +48,8 @@ namespace initialization{
             return instance_;
         }
     };
+
+    template class lib_init_t<void>;
 }
 #endif // _MSC_VER
 
