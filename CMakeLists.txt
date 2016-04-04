@@ -64,6 +64,7 @@ if(UNIX)
     add_definitions(-ffast-math)
   endif()
   add_definitions(-fPIC)
+  add_definitions(-fno-operator-names)
 endif()
 
 if(UNIX)
