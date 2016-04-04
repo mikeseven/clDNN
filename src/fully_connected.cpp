@@ -32,8 +32,8 @@ struct fully_connected_reference : is_an_implementation {
         auto this_fc = static_cast<const fully_connected *>(ptr);
         auto input = static_cast<float*>(this_fc->input_memory(0).pointer);
         auto output = static_cast<float*>(this_fc->output_memory(0).pointer);
-        auto weight = static_cast<float*>(this_fc->argument.weight.as<const memory&>().pointer);
-        auto weight_buffer_size = this_fc->argument.weight.as<const memory&>().argument.size;
+        auto weight = static_cast<float*>(this_fc->input_memory(1).pointer);
+        auto weight_buffer_size = this_fc->input_memory(1).argument.size;
 
         auto input_memory_arg = this_fc->input_memory(0).argument;
         auto input_buffer_size = input_memory_arg.size;
@@ -41,7 +41,7 @@ struct fully_connected_reference : is_an_implementation {
         auto output_memory_arg = this_fc->output_memory(0).argument;
         auto output_buffer_size = output_memory_arg.size;
 
-        auto weight_memory_arg = this_fc->argument.weight.as<const memory&>().argument.format;
+        auto weight_memory_arg = this_fc->input_memory(1).argument.format;
 
         if (input_buffer_size.size() != output_buffer_size.size())throw std::runtime_error("Fully connected input/output number of dimension does not match.");
         if (input_memory_arg.format != output_memory_arg.format)  throw std::runtime_error("Fully connected input/output data format does not match.");
@@ -128,8 +128,9 @@ fully_connected::arguments::arguments( neural::engine::type   eng,
 : engine(eng)
 , output({out})
 , output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
-, input({in})
-, weight(weights){};
+, input({in, weights})
+{
+};
 
 // creates primitive with fully_connected implementation that supports provided arguments
 primitive fully_connected::create(fully_connected::arguments arg) {

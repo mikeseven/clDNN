@@ -248,7 +248,6 @@ struct fully_connected : is_a_primitive {
         std::vector<primitive>      output;
         std::vector<uint32_t>       output_size;
         std::vector<primitive_at>   input;
-        primitive                   weight;
 
         arguments(neural::engine::type, neural::memory::format::type out_fmt, std::vector<uint32_t> out_siz, primitive in, primitive weights);
         arguments(neural::engine::type, neural::memory::format::type out_fmt,                                primitive in, primitive weights);
