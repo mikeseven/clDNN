@@ -14,20 +14,19 @@
 // limitations under the License.
 */
 
-#include "api/neural.h"
-#include <iostream>
+#pragma once
 
-int main( int argc, char* argv[ ] )
-{
-    extern void example_convolution_forward();
+#include "convolution.h"
 
-    try{
-        example_convolution_forward();
-    } catch (std::exception &e) {
-        std::cerr << e.what();
-    } catch(...) {
-        std::cerr << "Unknown exceptions.";
-    }
+namespace neural {
+    struct convolution_cpu_jit : is_an_implementation {
+        convolution_cpu_jit(convolution &arg);
+        ~convolution_cpu_jit();
+        static void implementation(const void *ptr);
 
-    return 0;
+        static is_an_implementation *create(convolution &arg) { return new convolution_cpu_jit(arg); };
+        std::vector<task> work() { return {task{implementation, &outer}}; };
+
+        const convolution &outer;
+    };
 }

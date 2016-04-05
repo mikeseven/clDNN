@@ -15,13 +15,13 @@
 */
 
 #include "gtest/gtest.h"
+#include "api/neural.h"
 
 int main( int argc, char* argv[ ] )
 {
     int result;
     {
         ::testing::InitGoogleTest(&argc, argv);
-
 #if _WIN32
         // Safety cleanup.
         system("where /q umdh && del pre_cpu.txt");

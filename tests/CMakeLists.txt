@@ -113,3 +113,4 @@ target_link_libraries(${APP_NAME} gtest neuralia)
 if(UNIX AND WITH_CAFFE)
     add_subdirectory (caffe EXCLUDE_FROM_ALL)
 endif()
+

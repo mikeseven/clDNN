@@ -45,3 +45,4 @@ add_executable(${TARGET_NAME}
               )
 
 target_link_libraries(${TARGET_NAME} neuralia)
+

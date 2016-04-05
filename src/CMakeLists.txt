@@ -15,6 +15,8 @@
 set (TARGET_NAME "neuralia")
 # Sources for test files
 
+add_definitions(-DEXPORT_NIA_SYMBOLS)
+
 file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h
       )
@@ -35,10 +37,11 @@ include_directories (${CMAKE_SOURCE_DIR}
                     )
 
 # Create library file from sources.
-add_library(${TARGET_NAME} STATIC
+add_library(${TARGET_NAME} SHARED
             ${LIBRARY_SRC}
             ${API_HEADERS})
 
 if(UNIX)
     target_link_libraries(${TARGET_NAME} pthread)
 endif()
+
