@@ -17,6 +17,12 @@ set (TARGET_NAME "neuralia")
 
 add_definitions(-DEXPORT_NIA_SYMBOLS)
 
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
+   #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4") todo test
+endif()
+
 file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h
       )

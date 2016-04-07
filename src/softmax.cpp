@@ -52,8 +52,7 @@ struct softmax_reference : is_an_implementation {
             if(output_arg.size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("Softmax sizes to small.");
         }
 
-        int data_index = 0; //todo type traits
-        int batch_index = 1;
+        int batch_index = 1;//todo type traits
 
         std::vector<float> v_max( output_size[batch_index], -std::numeric_limits<float>::max() );
         std::vector<float> v_acc( output_size[batch_index] );

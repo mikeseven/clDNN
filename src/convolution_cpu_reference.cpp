@@ -135,7 +135,7 @@ convolution_backward_cpu_reference::~convolution_backward_cpu_reference() {};
     auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer);
     auto fw_input     = static_cast<float*>(this_bw_conv->input_memory(1).pointer);
     auto weights      = static_cast<float*>(this_bw_conv->input_memory(2).pointer);
-    auto bias         = static_cast<float*>(this_bw_conv->input_memory(3).pointer);
+    //todo fw bias is used only for size check, is it needed?
 
     auto bw_output    = static_cast<float*>(this_bw_conv->output_memory(0).pointer);
     auto weights_diff = static_cast<float*>(this_bw_conv->output_memory(1).pointer);
@@ -211,7 +211,7 @@ struct attach{
 };
 
 #ifdef __GNUC__
-    __attribute__((constructor))
+    __attribute__((visibility("default"))) //todo meybe dll_sym?
 #elif _MSC_VER
 #   pragma section(".nn_init$m", read, write)
 #endif
