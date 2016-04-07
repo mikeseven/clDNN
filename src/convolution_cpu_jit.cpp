@@ -44,9 +44,9 @@ const uint64_t BUFFERS_ALIGNMENT = BATCH_SHIFT * sizeof(float);   //required ali
 struct task //todo remove, it is already in neural.h
 {
     // Callback that will be called with opaque request handle.
-    void (* callback)(void*);
+    void (* callback)(const void*);
     // Generic request handle.
-    void* data;
+    const void* data;
 };
 
 template<typename T> class reverse_t
@@ -73,7 +73,7 @@ struct jit_convolution_zxyn
     };
 #pragma pack(pop)
 
-    std::vector<std::vector<task>> jobs; //todo remove or replace
+    std::vector<task> tasks; //todo remove or replace
     static const uint64_t output_features_per_iteration = 16;
     static const uint64_t register_width_in_float       = 8;
     static const uint64_t register_width                = register_width_in_float * sizeof(float);
@@ -347,10 +347,9 @@ struct jit_convolution_zxyn
             }
         }
 
-        jobs.resize(1);
-        jobs[0].resize(op_data.size());
-        for (auto i = 0u; i < jobs[0].size(); ++i)
-            jobs[0][i] = {reinterpret_cast<void(*)(void*)>(code.getCode()), &op_data[i]};
+        tasks.resize(op_data.size());
+        for (auto i = 0u; i < tasks.size(); ++i)
+            tasks[i] = {reinterpret_cast<void(*)(const void*)>(code.getCode()), &op_data[i]};
     }
 };
 }
@@ -426,10 +425,8 @@ convolution_cpu_jit:: ~convolution_cpu_jit() {}
                 bias
                 );
 
-            for(auto& job : conv.jobs){
-                for(auto& task : job){
-                    task.callback(task.data);
-                }
+            for(auto& task : conv.tasks){
+                task.callback(task.data);
             }
             break;
         }
