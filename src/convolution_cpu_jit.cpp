@@ -143,7 +143,7 @@ struct jit_convolution_zxyn
             auto left_kern_rows           = rdx;
 
             auto generate_for_single_output_block = [&](std::string tag,
-                                                        uint64_t output_blocks,
+                                                        int output_blocks,
                                                         bool vertical) {
 
                     const auto accumulators_count   = output_blocks * 2;
@@ -151,7 +151,7 @@ struct jit_convolution_zxyn
                     align(4);
                     mov(aux_input, aux_input_outer);
                     mov(aux_filter, filter);
-                    for (uint64_t n = 0; n < accumulators_count; ++n)
+                    for (int n = 0; n < accumulators_count; ++n)
                         vxorps(Ymm(n), Ymm(n), Ymm(n));
 
                     mov(left_kern_rows, filter_height);
@@ -168,7 +168,7 @@ struct jit_convolution_zxyn
                                 vmovaps(ymm13, ptr [aux_filter + filter_offset]);
                                 vmovaps(ymm14, ptr [aux_filter + filter_offset + register_width]);
 
-                                for (uint64_t j = 0u; j < output_blocks; ++j)
+                                for (int j = 0; j < output_blocks; ++j)
                                 {
                                     auto block_offset = j * stride_x;
                                     if (vertical) block_offset = j * stride_y * input_width;
@@ -182,21 +182,21 @@ struct jit_convolution_zxyn
                                 }
                             }
                         }
-                        add(aux_input, input_width * input_feats * sizeof(float));
-                        add(aux_filter, filter_width * input_feats * output_features_per_iteration * sizeof(float));
+                        add(aux_input , static_cast<int>(input_width * input_feats * sizeof(float)));
+                        add(aux_filter, static_cast<int>(filter_width * input_feats * output_features_per_iteration * sizeof(float)));
                     }
                     dec(left_kern_rows);
                     jnz(tag + "_kern_row");
 
-                    for (uint64_t n = 0; n < accumulators_count; ++n)
+                    for (int n = 0; n < accumulators_count; ++n)
                         vaddps(Ymm(n), ptr [bias + (n % 2) * register_width]);
                     if (apply_relu)
                     {
                         vxorps(ymm15, ymm15, ymm15);
-                        for (uint64_t n = 0; n < accumulators_count; ++n)
+                        for (int n = 0; n < accumulators_count; ++n)
                             vmaxps(Ymm(n), Ymm(n), ymm15);
                     }
-                    for (uint64_t o = 0; o < output_blocks; ++o)
+                    for (int o = 0; o < output_blocks; ++o)
                     {
                         auto output_offset = o * output_feats * sizeof(float);
                         if (vertical) output_offset *= output_width;
