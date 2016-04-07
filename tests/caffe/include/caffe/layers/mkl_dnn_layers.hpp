@@ -1,5 +1,5 @@
-#ifndef CAFFE_NEURALIA_LAYERS_HPP_
-#define CAFFE_NEURALIA_LAYERS_HPP_
+#ifndef CAFFE_MKL_DNN_LAYERS_HPP_
+#define CAFFE_MKL_DNN_LAYERS_HPP_
 
 #include <string>
 
@@ -11,16 +11,15 @@
 #include "caffe/proto/caffe.pb.h"
 #include "boost/enable_shared_from_this.hpp"
 
-#include "neural.h"
+#include "dnn.hpp"
 
 namespace caffe {
 
-#if 0 // not yet implemented except ReLU
 template <typename Dtype, bool is_diff>
-struct NeuraliaMemoryDescriptor : PrvMemDescr, boost::enable_shared_from_this<NeuraliaMemoryDescriptor<Dtype, is_diff> > {
-  NeuraliaMemoryDescriptor() : layout_usr(NULL), layout_int(NULL),
+struct MKL_DNNMemoryDescriptor : PrvMemDescr, boost::enable_shared_from_this<MKL_DNNMemoryDescriptor<Dtype, is_diff> > {
+  MKL_DNNMemoryDescriptor() : layout_usr(NULL), layout_int(NULL),
     internal_ptr(NULL), convert_to_int(NULL), convert_from_int(NULL), name("UKNOWN") {};
-  ~NeuraliaMemoryDescriptor()
+  ~MKL_DNNMemoryDescriptor()
   {
     dnnLayoutDelete<Dtype>(layout_usr);
     dnnLayoutDelete<Dtype>(layout_int);
@@ -29,7 +28,7 @@ struct NeuraliaMemoryDescriptor : PrvMemDescr, boost::enable_shared_from_this<Ne
     dnnDelete<Dtype>(convert_from_int);
   }
 
-  shared_ptr<NeuraliaMemoryDescriptor<Dtype, is_diff> > get_shared_ptr() {
+  shared_ptr<MKL_DNNMemoryDescriptor<Dtype, is_diff> > get_shared_ptr() {
     return this->shared_from_this();
   }
 
@@ -56,25 +55,25 @@ struct NeuraliaMemoryDescriptor : PrvMemDescr, boost::enable_shared_from_this<Ne
   }
   virtual size_t prv_count() {return dnnLayoutGetMemorySize<Dtype>(layout_int) / sizeof(Dtype);};
   virtual void convert_from_prv(void* prv_ptr, void* cpu_ptr);
-  virtual PrvDescrType get_descr_type() {return PRV_DESCR_MKLDNN;};
+  virtual PrvDescrType get_descr_type() {return PRV_DESCR_MKL_DNN;};
   Dtype* get_converted_prv(Blob<Dtype> * blob, bool test_prv_layout, bool set_prv_ptr=true);
 };
 
 template <typename Dtype>
-struct NeuraliaData : NeuraliaMemoryDescriptor<Dtype, false>
+struct MKL_DNNData : MKL_DNNMemoryDescriptor<Dtype, false>
 {};
 
 template <typename Dtype>
-struct NeuraliaDiff : NeuraliaMemoryDescriptor<Dtype, true>
+struct MKL_DNNDiff : MKL_DNNMemoryDescriptor<Dtype, true>
 {};
 
 template <typename Dtype>
-class NeuraliaConvolutionLayer : public ConvolutionLayer<Dtype> {
+class MKL_DNNConvolutionLayer : public ConvolutionLayer<Dtype> {
 public:
-  explicit NeuraliaConvolutionLayer(const LayerParameter& param);
+  explicit MKL_DNNConvolutionLayer(const LayerParameter& param);
 
   virtual inline const char* type() const { return "DnnConvolution"; }
-  virtual ~NeuraliaConvolutionLayer();
+  virtual ~MKL_DNNConvolutionLayer();
 
 protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
@@ -92,27 +91,27 @@ protected:
 
 private:
   /* Fwd step */
-  shared_ptr<NeuraliaData<Dtype> > fwd_bottom_data, fwd_top_data, fwd_filter_data, fwd_bias_data;
+  shared_ptr<MKL_DNNData<Dtype> > fwd_bottom_data, fwd_top_data, fwd_filter_data, fwd_bias_data;
   dnnPrimitive_t convolutionFwd;
 
   /* Bwd data step */
-  shared_ptr<NeuraliaDiff<Dtype> > bwdd_top_diff, bwdd_bottom_diff;
-  shared_ptr<NeuraliaData<Dtype> > bwdd_filter_data;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwdd_top_diff, bwdd_bottom_diff;
+  shared_ptr<MKL_DNNData<Dtype> > bwdd_filter_data;
   dnnPrimitive_t convolutionBwdData;
 
 #ifndef BWDD_DISABLE_PAD_REMOVING
   /* Temporary workaround for removing padding from bwdd_bottom_diff */
-  shared_ptr<NeuraliaDiff<Dtype> > bwdd_bottom_diff_no_padding;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwdd_bottom_diff_no_padding;
   dnnPrimitive_t convert_to_bottom_diff_no_padding;
 #endif
 
   /* Bwd filter step */
-  shared_ptr<NeuraliaDiff<Dtype> > bwdf_top_diff, bwdf_filter_diff;
-  shared_ptr<NeuraliaData<Dtype> > bwdf_bottom_data;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwdf_top_diff, bwdf_filter_diff;
+  shared_ptr<MKL_DNNData<Dtype> > bwdf_bottom_data;
   dnnPrimitive_t convolutionBwdFilter;
 
   /* Bwd bias step */
-  shared_ptr<NeuraliaDiff<Dtype> > bwdb_top_diff, bwdb_bias_diff;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwdb_top_diff, bwdb_bias_diff;
   dnnPrimitive_t convolutionBwdBias;
 
  // TODO: temp. compatibility vs. older cafe
@@ -134,15 +133,15 @@ private:
  */
 
 template <typename Dtype>
-class NeuraliaLRNLayer : public Layer<Dtype> {
+class MKL_DNNLRNLayer : public Layer<Dtype> {
  public:
-  explicit NeuraliaLRNLayer(const LayerParameter& param)
+  explicit MKL_DNNLRNLayer(const LayerParameter& param)
       : Layer<Dtype>(param), layout_usr_(NULL) {}
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
-  virtual ~NeuraliaLRNLayer();
+  virtual ~MKL_DNNLRNLayer();
 
   virtual inline const char* type() const { return "DnnLRN"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
@@ -182,8 +181,8 @@ class NeuraliaLRNLayer : public Layer<Dtype> {
   // scale_ stores the intermediate summing results
 private:
   dnnPrimitive_t lrnFwd, lrnBwd;
-  shared_ptr<NeuraliaData<Dtype> > fwd_top_data;
-  shared_ptr<NeuraliaDiff<Dtype> > bwd_bottom_diff;
+  shared_ptr<MKL_DNNData<Dtype> > fwd_top_data;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwd_bottom_diff;
   Dtype *lrn_buffer_;
   dnnLayout_t layout_usr_;
 };
@@ -191,17 +190,17 @@ private:
 
 
 template <typename Dtype>
-class NeuraliaPoolingLayer : public Layer<Dtype> {
+class MKL_DNNPoolingLayer : public Layer<Dtype> {
 public:
-  explicit NeuraliaPoolingLayer(const LayerParameter& param)
+  explicit MKL_DNNPoolingLayer(const LayerParameter& param)
     : Layer<Dtype>(param),
-      fwd_top_data    (new NeuraliaData<Dtype>()),
-      fwd_bottom_data (new NeuraliaData<Dtype>()),
-      bwd_top_diff    (new NeuraliaDiff<Dtype>()),
-      bwd_bottom_diff (new NeuraliaDiff<Dtype>()),
+      fwd_top_data    (new MKL_DNNData<Dtype>()),
+      fwd_bottom_data (new MKL_DNNData<Dtype>()),
+      bwd_top_diff    (new MKL_DNNDiff<Dtype>()),
+      bwd_bottom_diff (new MKL_DNNDiff<Dtype>()),
       poolingFwd(NULL), poolingBwd(NULL)
   {}
-  ~NeuraliaPoolingLayer();
+  ~MKL_DNNPoolingLayer();
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                           const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
@@ -240,15 +239,14 @@ private:
   size_t kernel_size[2],
          kernel_stride[4];
   int src_offset[2];
-  shared_ptr<NeuraliaData<Dtype> > fwd_top_data, fwd_bottom_data;
-  shared_ptr<NeuraliaDiff<Dtype> > bwd_top_diff, bwd_bottom_diff;
+  shared_ptr<MKL_DNNData<Dtype> > fwd_top_data, fwd_bottom_data;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwd_top_diff, bwd_bottom_diff;
 
   dnnPrimitive_t poolingFwd, poolingBwd;
 };
-#endif
 
 template <typename Dtype>
-class NeuraliaReLULayer : public NeuronLayer<Dtype> {
+class MKL_DNNReLULayer : public NeuronLayer<Dtype> {
 public:
   /**
    * @param param provides ReLUParameter relu_param,
@@ -256,14 +254,14 @@ public:
    *   - negative_slope (\b optional, default 0).
    *     the value @f$ \nu @f$ by which negative values are multiplied.
    */
-  explicit NeuraliaReLULayer(const LayerParameter& param)
+  explicit MKL_DNNReLULayer(const LayerParameter& param)
     : NeuronLayer<Dtype>(param) {}
-  ~NeuraliaReLULayer();
+  ~MKL_DNNReLULayer();
 
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                           const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "NeuraliaReLU"; }
+  virtual inline const char* type() const { return "DnnReLU"; }
 
 protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
@@ -277,10 +275,8 @@ protected:
                             const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
 private:
-  neural::primitive reluFwd_ = nullptr, reluBwd_ = nullptr;
-  neural::primitive bottom_data_ = nullptr, top_data_ = nullptr, 
-          bottom_diff_ = nullptr, top_diff_ = nullptr;
+  dnnPrimitive_t reluFwd_, reluBwd_;
 };
 
 } // namespace caffe
-#endif // #ifndef CAFFE_NEURALIA_LAYERS_HPP_
+#endif // #ifndef CAFFE_MKL_DNN_LAYERS_HPP_
