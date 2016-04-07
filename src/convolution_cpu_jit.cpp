@@ -41,13 +41,12 @@ const uint64_t BATCH_BLOCKS = BATCH_ACCEPTED_BLOCK / BATCH_SHIFT; //number of re
 const uint64_t BUFFERS_ALIGNMENT = BATCH_SHIFT * sizeof(float);   //required alignment of all buffers used by jit primitives
 
 // Generic request for thread pool.
-struct nn_multithreaded_request
+struct task //todo remove, it is already in neural.h
 {
     // Callback that will be called with opaque request handle.
-    std::function<void(void*)> callback;
-
+    void (* callback)(void*);
     // Generic request handle.
-    void* request_handle;
+    void* data;
 };
 
 template<typename T> class reverse_t
@@ -74,7 +73,7 @@ struct jit_convolution_zxyn
     };
 #pragma pack(pop)
 
-    std::vector<std::vector<nn_multithreaded_request>> jobs; //todo remove or replace
+    std::vector<std::vector<task>> jobs; //todo remove or replace
     static const uint64_t output_features_per_iteration = 16;
     static const uint64_t register_width_in_float       = 8;
     static const uint64_t register_width                = register_width_in_float * sizeof(float);
@@ -152,15 +151,15 @@ struct jit_convolution_zxyn
                     align(4);
                     mov(aux_input, aux_input_outer);
                     mov(aux_filter, filter);
-                    for (int n = 0; n < accumulators_count; ++n)
+                    for (uint64_t n = 0; n < accumulators_count; ++n)
                         vxorps(Ymm(n), Ymm(n), Ymm(n));
 
                     mov(left_kern_rows, filter_height);
                     L(tag + "_kern_row");
                     {
-                        for (auto kern_col = 0u; kern_col < filter_width; ++kern_col)
+                        for (uint64_t kern_col = 0u; kern_col < filter_width; ++kern_col)
                         {
-                            for (auto i = 0u; i < input_feats; ++i)
+                            for (uint64_t i = 0u; i < input_feats; ++i)
                             {
                                 auto filter_offset =
                                     (kern_col * input_feats * output_features_per_iteration
@@ -169,7 +168,7 @@ struct jit_convolution_zxyn
                                 vmovaps(ymm13, ptr [aux_filter + filter_offset]);
                                 vmovaps(ymm14, ptr [aux_filter + filter_offset + register_width]);
 
-                                for (auto j = 0u; j < output_blocks; ++j)
+                                for (uint64_t j = 0u; j < output_blocks; ++j)
                                 {
                                     auto block_offset = j * stride_x;
                                     if (vertical) block_offset = j * stride_y * input_width;
@@ -189,15 +188,15 @@ struct jit_convolution_zxyn
                     dec(left_kern_rows);
                     jnz(tag + "_kern_row");
 
-                    for (int n = 0; n < accumulators_count; ++n)
+                    for (uint64_t n = 0; n < accumulators_count; ++n)
                         vaddps(Ymm(n), ptr [bias + (n % 2) * register_width]);
                     if (apply_relu)
                     {
                         vxorps(ymm15, ymm15, ymm15);
-                        for (int n = 0; n < accumulators_count; ++n)
+                        for (uint64_t n = 0; n < accumulators_count; ++n)
                             vmaxps(Ymm(n), Ymm(n), ymm15);
                     }
-                    for (int o = 0; o < output_blocks; ++o)
+                    for (uint64_t o = 0; o < output_blocks; ++o)
                     {
                         auto output_offset = o * output_feats * sizeof(float);
                         if (vertical) output_offset *= output_width;
@@ -248,13 +247,13 @@ struct jit_convolution_zxyn
                 mov(aux_output, output);
                 add(aux_output, (i * output_width + output_width / 6) * 6 * output_feats * sizeof(float));
                 add(aux_input_outer, (i * input_width * stride_y + output_width / 6 * stride_x) * 6 * input_feats * sizeof(float));
-                for (auto j = 0u; j < output_height % 6; ++j)
+                for (uint64_t j = 0u; j < output_height % 6; ++j)
                 {
                     generate_for_single_output_block("vertical_full_" + std::to_string(i) + "_" + std::to_string(j), 6, true);
                     add(aux_output, output_feats * sizeof(float));
                 }
             }
-            for (auto i = output_height / 6 * 6; i < output_height; ++i)
+            for (uint64_t i = output_height / 6 * 6; i < output_height; ++i)
             {
                 mov(aux_input_outer, input);
                 mov(aux_output, output);
@@ -279,6 +278,7 @@ struct jit_convolution_zxyn
         uint64_t output_height,
         uint64_t output_feature_maps,
 
+        float*   input,
         uint64_t input_width,
         uint64_t input_height,
         uint64_t input_feature_maps,
@@ -316,12 +316,14 @@ struct jit_convolution_zxyn
                     auto bias_shifted = bias + z_block * output_features_per_iteration;
                     auto filter_shifted = filter
                         + z_block * output_features_per_iteration * input_feature_maps * filter_width * filter_height;
-                    auto input_shifted = b * input_width * input_height * input_feature_maps;
+                    auto input_shifted = //input +
+                        b * input_width * input_height * input_feature_maps;
 
                     op_data.push_back({ output_shifted,
                         input_shifted * sizeof(float),
                         filter_shifted,
-                        bias_shifted });
+                        bias_shifted,
+                        input });
                 }
             }
         }
@@ -340,7 +342,8 @@ struct jit_convolution_zxyn
                 op_data.push_back({ output_shifted,
                     input_shifted * sizeof(float),
                     filter_shifted,
-                    bias_shifted });
+                    bias_shifted,
+                    input });
             }
         }
 
@@ -389,9 +392,6 @@ convolution_cpu_jit:: ~convolution_cpu_jit() {}
 
     // general formula: output size = (input size - filter size) / step + 1
     for(size_t i = 0; i < input_offset.size(); ++i){
-        if(output_size[i] < (static_cast<int32_t>(input_arg.size[i]) - input_offset[i]) / (stride[i] + 1) )
-            throw std::runtime_error("Output size of convolution is to small.");
-
         if(output_arg.size[i] < output_size[i] + output_offset[i])
             throw std::runtime_error("Convolution output buffer size is to small.");
     }
@@ -401,15 +401,10 @@ convolution_cpu_jit:: ~convolution_cpu_jit() {}
     int x_pos = 1;
     int y_pos = 0;
 
-    static const uint64_t input_features_per_iteration  = 8;
-    static const uint64_t output_features_per_iteration = 4;
-    static const uint64_t batch_size                    = 24;
-    static const uint64_t register_width_in_float       = 8;
-    static const uint64_t registers_in_batch            = batch_size / register_width_in_float;
-
     switch(padding){
         case padding::zero:
         {
+            // todo jit conv works in xyzb format?
             // todo conv jit
             // todo how to handle offsets?
             jit_convolution_zxyn conv(
@@ -419,6 +414,7 @@ convolution_cpu_jit:: ~convolution_cpu_jit() {}
                 output_size[ x_pos ],
                 output_size[ y_pos ],
                 output_size[ f_pos ],
+                input,
                 input_arg.size[ x_pos ],
                 input_arg.size[ y_pos ],
                 input_arg.size[ f_pos ],
@@ -432,7 +428,7 @@ convolution_cpu_jit:: ~convolution_cpu_jit() {}
 
             for(auto& job : conv.jobs){
                 for(auto& task : job){
-                    task.callback(task.request_handle);
+                    task.callback(task.data);
                 }
             }
             break;
@@ -450,13 +446,13 @@ struct attach{
         auto val_fw = convolution_cpu_jit::create;
 
         // todo not working
-        //conv_fw_implementation_map.insert( {key, val_fw} ); //todo keys should be different
+        conv_fw_implementation_map.insert( {key, val_fw} ); //todo keys should be different
     }
     ~attach(){}
 };
 
 #ifdef __GNUC__
-    __attribute__((constructor))
+    __attribute__((visibility("default"))) //todo meybe dll_sym?
 #elif _MSC_VER
 #   pragma section(".nn_init$m", read, write)
 #endif
