@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set (TARGET_NAME "neuralia")
+set (TARGET_NAME "mkl_dnn")
 # Sources for test files
 
-add_definitions(-DEXPORT_NIA_SYMBOLS)
+add_definitions(-DEXPORT_NEURAL_SYMBOLS)
 
 file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h

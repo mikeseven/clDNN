@@ -20,7 +20,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 message("=====================> ${CMAKE_BUILD_TYPE} <=====================")
 
-set(PROJECT_NAME "NeuralIA")
+set(PROJECT_NAME "MKL-DNN")
 project (${PROJECT_NAME})
 
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")

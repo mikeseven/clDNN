@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef EXPORT_NIA_SYMBOLS
+#ifdef EXPORT_NEURAL_SYMBOLS
 #   if defined(_MSC_VER)
        //  Microsoft
 #      define DLL_SYM __declspec(dllexport)
