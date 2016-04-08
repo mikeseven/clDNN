@@ -35,6 +35,20 @@ namespace{
 #define nn_jit_dangerous_reg5 rsp
 #endif
 
+const uint64_t BATCH_ACCEPTED_BLOCK = 24;                         //the batch size that is minimal required for usage with jit version
+const uint64_t BATCH_SHIFT = 8;                                   //the size of register used for shifting with batch layout / number if pics/floats that are processed at the same time
+const uint64_t BATCH_BLOCKS = BATCH_ACCEPTED_BLOCK / BATCH_SHIFT; //number of registers (blocks to process) in the batch format
+const uint64_t BUFFERS_ALIGNMENT = BATCH_SHIFT * sizeof(float);   //required alignment of all buffers used by jit primitives
+
+// Generic request for thread pool.
+struct task //todo remove, it is already in neural.h
+{
+    // Callback that will be called with opaque request handle.
+    void (* callback)(const void*);
+    // Generic request handle.
+    const void* data;
+};
+
 template<typename T> class reverse_t
 {
     T& ref;
@@ -52,17 +66,17 @@ struct jit_convolution_zxyn
     struct op_data_t
     {
         float *output;
-        uint32_t input_offset;
+        uint64_t input_offset;
         float *filter;
         float *bias;
         float *input;
     };
 #pragma pack(pop)
 
-    std::vector<neural::task> tasks; //todo remove or replace
-    static const uint32_t output_features_per_iteration = 16;
-    static const uint32_t register_width_in_float       = 8;
-    static const uint32_t register_width                = register_width_in_float * sizeof(float);
+    std::vector<task> tasks; //todo remove or replace
+    static const uint64_t output_features_per_iteration = 16;
+    static const uint64_t register_width_in_float       = 8;
+    static const uint64_t register_width                = register_width_in_float * sizeof(float);
 
     class jit_code : public Xbyak::CodeGenerator
     {
@@ -94,15 +108,15 @@ struct jit_convolution_zxyn
 
     public:
 
-        jit_code(uint32_t output_width,
-                 uint32_t output_height,
-                 uint32_t output_feats,
-                 uint32_t input_width,
-                 uint32_t input_feats,
-                 uint32_t filter_height,
-                 uint32_t filter_width,
-                 uint32_t stride_x,
-                 uint32_t stride_y,
+        jit_code(uint64_t output_width,
+                 uint64_t output_height,
+                 uint64_t output_feats,
+                 uint64_t input_width,
+                 uint64_t input_feats,
+                 uint64_t filter_height,
+                 uint64_t filter_width,
+                 uint64_t stride_x,
+                 uint64_t stride_y,
                  bool apply_relu,
                  void* code_ptr = nullptr,
                  size_t code_size = 40 * Xbyak::DEFAULT_MAX_CODE_SIZE)
@@ -143,9 +157,9 @@ struct jit_convolution_zxyn
                     mov(left_kern_rows, filter_height);
                     L(tag + "_kern_row");
                     {
-                        for (uint32_t kern_col = 0u; kern_col < filter_width; ++kern_col)
+                        for (uint64_t kern_col = 0u; kern_col < filter_width; ++kern_col)
                         {
-                            for (uint32_t i = 0u; i < input_feats; ++i)
+                            for (uint64_t i = 0u; i < input_feats; ++i)
                             {
                                 auto filter_offset =
                                     (kern_col * input_feats * output_features_per_iteration
@@ -233,13 +247,13 @@ struct jit_convolution_zxyn
                 mov(aux_output, output);
                 add(aux_output, (i * output_width + output_width / 6) * 6 * output_feats * sizeof(float));
                 add(aux_input_outer, (i * input_width * stride_y + output_width / 6 * stride_x) * 6 * input_feats * sizeof(float));
-                for (uint32_t j = 0u; j < output_height % 6; ++j)
+                for (uint64_t j = 0u; j < output_height % 6; ++j)
                 {
                     generate_for_single_output_block("vertical_full_" + std::to_string(i) + "_" + std::to_string(j), 6, true);
                     add(aux_output, output_feats * sizeof(float));
                 }
             }
-            for (uint32_t i = output_height / 6 * 6; i < output_height; ++i)
+            for (uint64_t i = output_height / 6 * 6; i < output_height; ++i)
             {
                 mov(aux_input_outer, input);
                 mov(aux_output, output);
@@ -256,25 +270,25 @@ struct jit_convolution_zxyn
     jit_code code;
 
     jit_convolution_zxyn(
-        uint32_t batch,
+        uint64_t batch,
         bool apply_relu,
 
         float*   output,
-        uint32_t output_width,
-        uint32_t output_height,
-        uint32_t output_feature_maps,
+        uint64_t output_width,
+        uint64_t output_height,
+        uint64_t output_feature_maps,
 
         float*   input,
-        uint32_t input_width,
-        uint32_t input_height,
-        uint32_t input_feature_maps,
+        uint64_t input_width,
+        uint64_t input_height,
+        uint64_t input_feature_maps,
 
-        uint32_t stride_width,
-        uint32_t stride_height,
+        uint64_t stride_width,
+        uint64_t stride_height,
 
         float *  filter,
-        uint32_t filter_width,
-        uint32_t filter_height,
+        uint64_t filter_width,
+        uint64_t filter_height,
 
         float*   bias,
 
