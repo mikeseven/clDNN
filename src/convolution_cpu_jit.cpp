@@ -15,8 +15,10 @@
 */
 
 #include "convolution_cpu_jit.h"
-#include <functional>
+
 #include <cstddef>
+#include <functional>
+#include <utility>
 
 namespace{
 #ifdef __linux__
@@ -344,22 +346,19 @@ namespace neural {
 
 convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
     : is_an_implementation(neural::type_id<convolution_cpu_jit>())
-    , outer(arg) {};
-convolution_cpu_jit:: ~convolution_cpu_jit() {}
-/*static*/ void convolution_cpu_jit::implementation(const void *ptr) {
-    auto this_conv = static_cast<const convolution *>(ptr);
+    , outer(arg) {
 
-    auto& input_offset  = this_conv->argument.input_offset;
-    auto& output_offset = this_conv->argument.output_offset;
-    auto& output_size   = this_conv->argument.output_size;
-    auto& padding       = this_conv->argument.padding;
-    auto& stride        = this_conv->argument.stride;
+    auto& input_offset  = outer.argument.input_offset;
+    auto& output_offset = outer.argument.output_offset;
+    auto& output_size   = outer.argument.output_size;
+    auto& padding       = outer.argument.padding;
+    auto& stride        = outer.argument.stride;
 
-    auto& input_arg  = this_conv->input_memory(0).argument;
-    auto& output_arg = this_conv->output_memory(0).argument;
+    auto& input_arg  = outer.input_memory(0).argument;
+    auto& output_arg = outer.output_memory(0).argument;
 
-    auto& filter_arg = this_conv->argument.weight.as<const memory&>().argument; //convolution filter
-    auto& bias_arg   = this_conv->argument.bias.as<const memory&>().argument;
+    auto& filter_arg = outer.argument.weight.as<const memory&>().argument; //convolution filter
+    auto& bias_arg   = outer.argument.bias.as<const memory&>().argument;
 
     if(input_arg.size.size()  != output_arg.size.size())   throw std::runtime_error("Convolution input/output number of dimension does not match.");
     if(stride.size()          != output_arg.size.size())   throw std::runtime_error("Convolution stride/output number of dimension does not match.");
@@ -370,10 +369,10 @@ convolution_cpu_jit:: ~convolution_cpu_jit() {}
     if(bias_arg.size.size()   != 1)                        throw std::runtime_error("Convolution biases isn't 1D vector.");
     if(bias_arg.size[0]       != output_size[2])           throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
                                                                                                                                                             // than this implementation will be format independent
-    auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
-    auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
-    auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory&>().pointer);
-    auto bias   = static_cast<float*>(this_conv->argument.bias.as<const memory&>().pointer);
+    auto input  = static_cast<float*>(outer.input_memory(0).pointer);
+    auto output = static_cast<float*>(outer.output_memory(0).pointer);
+    auto filter = static_cast<float*>(outer.argument.weight.as<const memory&>().pointer);
+    auto bias   = static_cast<float*>(outer.argument.bias.as<const memory&>().pointer);
 
     // general formula: output size = (input size - filter size) / step + 1
     for(size_t i = 0; i < input_offset.size(); ++i){
@@ -390,7 +389,6 @@ convolution_cpu_jit:: ~convolution_cpu_jit() {}
         case padding::zero:
         {
             // todo jit conv works in xyzb format?
-            // todo conv jit
             // todo how to handle offsets?
             jit_convolution_zxyn conv(
                 output_size[ b_pos ], // batch??
@@ -411,15 +409,14 @@ convolution_cpu_jit:: ~convolution_cpu_jit() {}
                 bias
                 );
 
-            for(auto& task : conv.tasks){
-                task.callback(task.data);
-            }
+            this->tasks = std::move(conv.tasks);
             break;
         }
         default:
             throw std::runtime_error("Unknown padding mode in convolution.");
     }
-}
+};
+convolution_cpu_jit:: ~convolution_cpu_jit() {}
 
 namespace{
 
