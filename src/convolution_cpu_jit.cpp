@@ -35,20 +35,6 @@ namespace{
 #define nn_jit_dangerous_reg5 rsp
 #endif
 
-const uint64_t BATCH_ACCEPTED_BLOCK = 24;                         //the batch size that is minimal required for usage with jit version
-const uint64_t BATCH_SHIFT = 8;                                   //the size of register used for shifting with batch layout / number if pics/floats that are processed at the same time
-const uint64_t BATCH_BLOCKS = BATCH_ACCEPTED_BLOCK / BATCH_SHIFT; //number of registers (blocks to process) in the batch format
-const uint64_t BUFFERS_ALIGNMENT = BATCH_SHIFT * sizeof(float);   //required alignment of all buffers used by jit primitives
-
-// Generic request for thread pool.
-struct task //todo remove, it is already in neural.h
-{
-    // Callback that will be called with opaque request handle.
-    void (* callback)(const void*);
-    // Generic request handle.
-    const void* data;
-};
-
 template<typename T> class reverse_t
 {
     T& ref;
@@ -73,7 +59,7 @@ struct jit_convolution_zxyn
     };
 #pragma pack(pop)
 
-    std::vector<task> tasks; //todo remove or replace
+    std::vector<neural::task> tasks; //todo remove or replace
     static const uint64_t output_features_per_iteration = 16;
     static const uint64_t register_width_in_float       = 8;
     static const uint64_t register_width                = register_width_in_float * sizeof(float);
