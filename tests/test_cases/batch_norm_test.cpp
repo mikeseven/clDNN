@@ -26,10 +26,10 @@ TEST(batch_normalization, trivial_forward_same_value) {
     //random input size
     uint32_t input_size[4];
 
-    int max_input_size = 16384; //2^14
-    int possible_input_sizes[] = { 1, 2, 4, 8, 16, 32, 64 };
+    uint32_t max_input_size = 16384; //2^14
+    uint32_t possible_input_sizes[] = { 1, 2, 4, 8, 16, 32, 64 };
     int length = sizeof(possible_input_sizes) / sizeof(int);
-    int random_size, i = 0;
+    uint32_t random_size, i = 0;
 
     do {
         random_size = possible_input_sizes[rand() % length];
@@ -66,10 +66,72 @@ TEST(batch_normalization, trivial_forward_same_value) {
     auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 1.0, std::numeric_limits<float>::epsilon()});
 
     // Run few times.
-    for(int i = 0; i < 3; ++i)
+    for(i = 0; i < 3; ++i)
         execute({bn});
 
-    for (int i = 0; i < 64; ++i){
+    for (i = 0; i < input_size[2]; ++i){
         EXPECT_EQ(1.0f, current_average_memory.get_value<float>(i));
+    }
+}
+
+TEST(batch_normalization, trivial_forward_one_value) {
+
+    //random input size
+    uint32_t input_size[4];
+
+    uint32_t max_input_size = 16384; //2^14
+    uint32_t possible_input_sizes[] = { 1, 2, 4, 8, 16, 32, 64 };
+    int length = sizeof(possible_input_sizes) / sizeof(int);
+    uint32_t random_size, i = 0;
+
+    do {
+        random_size = possible_input_sizes[rand() % length];
+        if(random_size <= max_input_size){
+            input_size[i] = random_size;
+            max_input_size = max_input_size / random_size;
+            i++;
+        }
+    } while (i < 4);
+
+    //input size count
+    int total_input_size = 1;
+    for (i = 0; i < 4; i++) {
+        total_input_size *= input_size[i];
+    }
+
+        // Create input buffers.
+    auto input               = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
+    auto scale               = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+    auto bias                = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+
+    // Create output buffers.
+    auto output              = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
+    auto current_inv_std_dev = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+    auto moving_average      = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+    auto moving_inv_std_dev  = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+    auto current_average     = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+
+    auto& input_memory = input.as<const memory&>();
+    auto& output_memory = output.as<const memory&>();
+    auto& current_average_memory = current_average.as<const memory&>();
+
+    // Initialize input buffers.
+    input.as<const memory&>().fill<float>(0);
+    scale.as<const memory&>().fill<float>(0);
+    bias.as<const memory&>().fill<float>(0);
+
+    input.as<const memory&>().set_value(rand() % total_input_size, 10.0f);
+
+    // Create primitive.
+    auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 1.0, std::numeric_limits<float>::epsilon()});
+
+    // Run few times.
+    for(i = 0; i < 3; ++i)
+        execute({bn});
+
+    float mean = (float) 10 / total_input_size;
+
+    for (i = 0; i < input_size[2]; ++i){
+        EXPECT_EQ(mean, current_average_memory.get_value<float>(i));
     }
 }
