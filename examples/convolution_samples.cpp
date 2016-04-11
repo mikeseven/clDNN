@@ -16,9 +16,6 @@
 
 #include "api/neural.h"
 
-//todo temove
-#include "neuralia_tools.h"
-
 // memory->memory convolution
 void example_convolution_forward() {
     using namespace neural;
@@ -56,7 +53,7 @@ void example_convolution_forward() {
     output.as<const memory&>().fill(1.0f);
     weights.as<const memory&>().fill(1.0f);
     biases.as<const memory&>().fill(1.0f);
-    
+
     auto conv   = convolution::create( {eng,
                                         output,
 //                                        {out_off_y, out_off_x, out_off_z, out_off_b},
