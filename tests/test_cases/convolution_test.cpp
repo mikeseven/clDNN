@@ -18,6 +18,8 @@
 
 #include "tests/gtest/gtest.h"
 #include "api/neural.h"
+#include "test_utils/test_utils.h"
+
 
 TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 //  Filter : 2x2
@@ -48,38 +50,15 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     auto weights= memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto biases = memory::create({engine::cpu, memory::format::   x_f32, {1}         , true});
 
-    auto& input_memory  = input.as<const memory&>();
-    auto& output_memory = output.as<const memory&>();
-    auto& weight_memory = weights.as<const memory&>();
-
-    *static_cast<float*>(biases.as<const memory&>().pointer) = 2;
-
-    input_memory.set_value(0, -0.5f);
-    input_memory.set_value(1,  1.0f);
-    input_memory.set_value(2,  0.5f);
-    input_memory.set_value(3,  2.0f);
-    input_memory.set_value(4,  1.5f);
-    input_memory.set_value(5, -0.5f);
-    input_memory.set_value(6,  0.0f);
-    input_memory.set_value(7, -1.0f);
-    input_memory.set_value(8,  0.5f);
-    input_memory.set_value(9,  0.5f);
-    input_memory.set_value(10, -1.0f);
-    input_memory.set_value(11,  1.0f);
-    input_memory.set_value(12,  0.5f);
-    input_memory.set_value(13,  2.0f);
-    input_memory.set_value(14,  1.5f);
-    input_memory.set_value(15, -0.5f);
-
-    weight_memory.set_value(0, -2.0f);
-    weight_memory.set_value(1,  0.5f);
-    weight_memory.set_value(2,  3.5f);
-    weight_memory.set_value(3,  1.5f);
+    set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f, 0.5f, -1.0f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f});
+    set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f});
+    set_values(biases , {2.0f});
 
     auto conv = convolution::create({engine::reference, output, input, {2, 2, 1, 1}, weights, biases, padding::zero});
 
     execute({conv});
 
+    auto& output_memory = output.as<const memory&>();
     ASSERT_EQ(8.0f, output_memory.get_value<float>(0));
     ASSERT_EQ(0.5f, output_memory.get_value<float>(1));
     ASSERT_EQ(6.0f, output_memory.get_value<float>(2));
@@ -114,34 +93,14 @@ TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     auto weights= memory::create({engine::cpu, memory::format::yxfb_f32, {3, 3, 1, 1}, true});
     auto biases = memory::create({engine::cpu, memory::format::   x_f32, {1}         , true});
 
-    auto& input_memory  = input.as<const memory&>();
-    auto& output_memory = output.as<const memory&>();
-    auto& weight_memory = weights.as<const memory&>();
-
-    *static_cast<float*>(biases.as<const memory&>().pointer) = 2;
-
-    input_memory.set_value(0, -0.5f);
-    input_memory.set_value(1,  1.0f);
-    input_memory.set_value(2,  0.5f);
-    input_memory.set_value(3,  2.0f);
-
-    weight_memory.set_value(0, -2.0f);
-    weight_memory.set_value(1,  0.5f);
-    weight_memory.set_value(2,  3.5f);
-    weight_memory.set_value(3,  1.5f);
-    weight_memory.set_value(4,  4.0f);
-    weight_memory.set_value(5, -5.0f);
-    weight_memory.set_value(6,  0.5f);
-    weight_memory.set_value(7,  1.5f);
-    weight_memory.set_value(8, -1.5f);
-
-    float* inptr  = (float*)input_memory.pointer;
-    float* wptr   = (float*)weight_memory.pointer;
-    float* outptr = (float*)output_memory.pointer;
+    set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f});
+    set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f});
+    set_values(biases , {2.0f});
 
     auto conv = convolution::create({engine::reference, output, input, {2, 2, 1, 1}, weights, biases, padding::zero});
     execute({conv});
 
+    auto& output_memory = output.as<const memory&>();
     ASSERT_EQ(12.25f, output_memory.get_value<float>(0));
 }
 
