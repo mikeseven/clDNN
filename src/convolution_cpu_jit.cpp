@@ -48,7 +48,7 @@ public:
 template<typename T> reverse_t<const T> reverse(const T& x) { return reverse_t<const T>(x); }
 template<typename T> reverse_t<T> reverse(T& x) { return reverse_t<T>(x); }
 
-struct jit_convolution_zxyn
+struct jit_convolution_zxyn : public neural::empty_base_class
 {
 #pragma pack(push, 1)
     struct op_data_t
@@ -390,7 +390,7 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
         {
             // todo jit conv works in xyzb format?
             // todo how to handle offsets?
-            jit_convolution_zxyn conv(
+            jit_convolution_zxyn* tmp_jit_convolution_zxyn = new jit_convolution_zxyn(
                 output_size[ b_pos ], // batch??
                 false, //activaction function: relu
                 output,
@@ -409,7 +409,8 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
                 bias
                 );
 
-            this->tasks = std::move(conv.tasks);
+            this->tasks = std::move(tmp_jit_convolution_zxyn->tasks);
+            jit_conv_ptr.reset(tmp_jit_convolution_zxyn);
             break;
         }
         default:

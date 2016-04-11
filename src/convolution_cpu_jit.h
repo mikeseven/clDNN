@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <memory>
 #include "convolution.h"
 
 namespace neural {
@@ -26,6 +27,7 @@ namespace neural {
         static is_an_implementation *create(convolution &arg) { return new convolution_cpu_jit(arg); };
         std::vector<task> work() { return tasks; };
 
+        std::unique_ptr<empty_base_class> jit_conv_ptr;
         std::vector<task> tasks;
         const convolution &outer;
     };
