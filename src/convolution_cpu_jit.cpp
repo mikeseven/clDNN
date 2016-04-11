@@ -61,7 +61,7 @@ struct jit_convolution_zxyn : public neural::empty_base_class
     };
 #pragma pack(pop)
 
-    std::vector<neural::task> tasks; //todo remove or replace
+    std::vector<neural::task> tasks;
     static const uint64_t output_features_per_iteration = 16;
     static const uint64_t register_width_in_float       = 8;
     static const uint64_t register_width                = register_width_in_float * sizeof(float);
@@ -426,8 +426,7 @@ struct attach{
         auto key = std::make_tuple(engine::cpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
         auto val_fw = convolution_cpu_jit::create;
 
-        // todo not working
-        conv_fw_implementation_map.insert( {key, val_fw} ); //todo keys should be different
+        conv_fw_implementation_map.insert( {key, val_fw} );
     }
     ~attach(){}
 };
