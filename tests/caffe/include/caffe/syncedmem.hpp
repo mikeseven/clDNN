@@ -53,8 +53,7 @@ struct PrvMemDescr {
   virtual size_t prv_count() = 0;
   // This might help using prv_ptr_ by different accelerators/engines
   enum PrvDescrType {
-    PRV_DESCR_MKLDNN,
-    PRV_DESCR_NEURALIA
+    PRV_DESCR_MKL_DNN,
   };
   virtual PrvDescrType get_descr_type() = 0;
 };

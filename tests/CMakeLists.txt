@@ -108,7 +108,7 @@ else()
      endif()
 endif()
 # Set library dependencies
-target_link_libraries(${APP_NAME} gtest neuralia)
+target_link_libraries(${APP_NAME} gtest mkl_dnn)
 
 if(UNIX AND WITH_CAFFE)
     add_subdirectory (caffe EXCLUDE_FROM_ALL)

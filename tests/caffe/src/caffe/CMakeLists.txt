@@ -18,7 +18,7 @@ if(HAVE_CUDA)
 endif()
 
 add_library(caffe ${srcs})
-target_link_libraries(caffe proto neuralia ${Caffe_LINKER_LIBS})
+target_link_libraries(caffe proto mkl_dnn ${Caffe_LINKER_LIBS})
 caffe_default_properties(caffe)
 remove_definitions(caffe -fvisibility=hidden)
 

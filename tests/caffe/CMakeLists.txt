@@ -35,7 +35,7 @@ caffe_option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 caffe_option(USE_LMDB "Build with lmdb" ON)
 caffe_option(ALLOW_LMDB_NOLOCK "Allow MDB_NOLOCK when reading LMDB files (only if necessary)" OFF)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_NEURALIA")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_MKL_DNN")
 
 # ---[ Dependencies
 include(cmake/Dependencies.cmake)

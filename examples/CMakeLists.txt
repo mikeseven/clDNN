@@ -51,5 +51,5 @@ add_executable(${TARGET_NAME}
                ${EXAMPLES_SRC}
               )
 
-target_link_libraries(${TARGET_NAME} neuralia)
+target_link_libraries(${TARGET_NAME} mkl_dnn)
 
