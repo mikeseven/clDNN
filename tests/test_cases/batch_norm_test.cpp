@@ -157,7 +157,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
     } while (i < 4);
 
     // Input size count
-    int total_avarage_size = 1;
+    uint32_t total_avarage_size = 1;
     for (i = 0; i < 3; i++) {
         total_avarage_size *= input_size[i];
     }
@@ -216,11 +216,11 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     } while (i < 4);
 
     // Input size count
-    int total_average_size = 1;
+    uint32_t total_average_size = 1;
     for (i = 0; i < 3; i++) {
         total_average_size *= input_size[i];
     }
-    int total_input_size = total_average_size * input_size[3];
+    uint32_t total_input_size = total_average_size * input_size[3];
 
     // Create input buffers.
     auto input               = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
