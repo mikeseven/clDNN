@@ -21,6 +21,7 @@
 #include "test_utils/test_utils.h"
 
 using namespace neural;
+using namespace tests;
 
 TEST(fully_connected, xb_f32_batch_1) {
 //  Input  : 3x1

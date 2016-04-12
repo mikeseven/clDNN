@@ -21,6 +21,7 @@
 #include "test_utils/test_utils.h"
 
 using namespace neural;
+using namespace tests;
 
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
 //  Brief test description.
@@ -147,33 +148,11 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 2, 2}, true});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {1, 1, 1, 1}, {2, 2, 1, 1}, padding::type::zero});
 
-    auto& input_memory = input_prim.as<const memory&>();
-    auto& output_memory = output_prim.as<const memory&>();
-
-    input_memory.set_value<float>( 0, -0.5f); input_memory.set_value<float>( 2, -1.5f);
-    input_memory.set_value<float>( 4,  0.5f); input_memory.set_value<float>( 6, -0.5f);
-    input_memory.set_value<float>( 8,  0.0f); input_memory.set_value<float>(10,  0.0f);
-    input_memory.set_value<float>(12,  1.0f); input_memory.set_value<float>(14,  0.0f);
-    input_memory.set_value<float>(16, -1.0f); input_memory.set_value<float>(18, -1.0f);
-    input_memory.set_value<float>(20, -2.0f); input_memory.set_value<float>(22,  1.5f);
-    input_memory.set_value<float>(24, -1.0f); input_memory.set_value<float>(26, -2.0f);
-    input_memory.set_value<float>(28, -0.5f); input_memory.set_value<float>(30,  1.0f);
-    input_memory.set_value<float>(32, -0.5f); input_memory.set_value<float>(34, -0.5f);
-
-    input_memory.set_value<float>( 1,  0.5f); input_memory.set_value<float>( 3,  0.0f);
-    input_memory.set_value<float>( 5,  0.0f); input_memory.set_value<float>( 7,  0.5f);
-    input_memory.set_value<float>( 9, -0.5f); input_memory.set_value<float>(11, -0.5f);
-    input_memory.set_value<float>(13, -2.0f); input_memory.set_value<float>(15,  1.0f);
-    input_memory.set_value<float>(17, -1.0f); input_memory.set_value<float>(19, -1.0f);
-    input_memory.set_value<float>(21,  1.0f); input_memory.set_value<float>(23,  0.0f);
-    input_memory.set_value<float>(25, -0.5f); input_memory.set_value<float>(27,  0.5f);
-    input_memory.set_value<float>(29, -1.0f); input_memory.set_value<float>(31, -0.5f);
-    input_memory.set_value<float>(33,  1.5f); input_memory.set_value<float>(35,  0.0f);
-
-    output_memory.fill<float>(0.0f);
+    set_values(input_prim, {-0.5f, 0.5f, -1.5f, 0.0f, 0.5f, 0.0f, -0.5f, 0.5f, 0.0f, -0.5f, 0.0f, -0.5f, 1.0f, -2.0f, 0.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -2.0f, 1.0f, 1.5f, 0.0f, -1.0f, -0.5f, -2.0f, 0.5f, -0.5f, -1.0f, 1.0f, -0.5f, -0.5f, 1.5f, -0.5f, 0.0f});
 
     execute({pool_prim});
 
+    auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ( 1.0f, output_memory.get_value<float>( 0)); EXPECT_EQ( 0.0f, output_memory.get_value<float>( 2));
     EXPECT_EQ( 0.5f, output_memory.get_value<float>( 4)); EXPECT_EQ( 1.5f, output_memory.get_value<float>( 6));
     EXPECT_EQ( 1.0f, output_memory.get_value<float>( 8)); EXPECT_EQ( 1.0f, output_memory.get_value<float>(10));
@@ -186,77 +165,61 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
 }
 
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz4x4_wstr1x1_i2x2x1x1_inoffs1) {
-    /*  Brief test description.
-
-        Pool window: 4x4
-        Pool stride: 1x1
-        Pool mode: max
-        Input offset: -1
-
-        Input data:
-        [ pad,  pad,  pad, pad]
-        [ pad, -0.5,  0.5, pad]
-        [ pad,  1.0, -1.0, pad]
-        [ pad,  pad,  pad, pad]
-
-        Expected output:
-        [ 1.0]
-    */
+//  Brief test description.
+//
+//  Pool window: 4x4
+//  Pool stride: 1x1
+//  Pool mode: max
+//  Input offset: -1
+//
+//  Input data:
+//  [ pad,  pad,  pad, pad]
+//  [ pad, -0.5,  0.5, pad]
+//  [ pad,  1.0, -1.0, pad]
+//  [ pad,  pad,  pad, pad]
+//
+//  Expected output:
+//  [ 1.0]
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, {1, 1, 1, 1}, {4, 4, 1, 1}, padding::type::zero});
 
-    auto& input_memory = input_prim.as<const memory&>();
-    auto& output_memory = output_prim.as<const memory&>();
-
-    input_memory.set_value<float>(0, -0.5f);
-    input_memory.set_value<float>(1,  0.5f);
-    input_memory.set_value<float>(2,  1.0f);
-    input_memory.set_value<float>(3, -1.0f);
-
-    output_memory.fill<float>(0.0f);
+    set_values(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
 
     execute({pool_prim});
 
+    auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(1.0f, output_memory.get_value<float>(0));
 }
 
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i2x2x1x1_inoffs1) {
-    /*  Brief test description.
-
-        Pool window: 3x3
-        Pool stride: 1x1
-        Pool mode: max
-        Input offset: -1
-
-        Input data:
-        [ pad,  pad,  pad, pad]
-        [ pad, -0.5,  0.5, pad]
-        [ pad,  1.0, -1.0, pad]
-        [ pad,  pad,  pad, pad]
-
-        Expected output:
-        [ 1.0,  1.0]
-        [ 1.0,  1.0]
-    */
+//  Brief test description.
+//
+//  Pool window: 3x3
+//  Pool stride: 1x1
+//  Pool mode: max
+//  Input offset: -1
+//
+//  Input data:
+//  [ pad,  pad,  pad, pad]
+//  [ pad, -0.5,  0.5, pad]
+//  [ pad,  1.0, -1.0, pad]
+//  [ pad,  pad,  pad, pad]
+//
+//  Expected output:
+//  [ 1.0,  1.0]
+//  [ 1.0,  1.0]
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, {1, 1, 1, 1}, {3, 3, 1, 1}, padding::type::zero});
 
-    auto& input_memory = input_prim.as<const memory&>();
-    auto& output_memory = output_prim.as<const memory&>();
-
-    input_memory.set_value<float>(0, -0.5f);
-    input_memory.set_value<float>(1,  0.5f);
-    input_memory.set_value<float>(2,  1.0f);
-    input_memory.set_value<float>(3, -1.0f);
-
-    output_memory.fill<float>(0.0f);
+    set_values(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
 
     execute({pool_prim});
 
+    auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(1.0f, output_memory.get_value<float>(0));
     EXPECT_EQ(1.0f, output_memory.get_value<float>(1));
     EXPECT_EQ(1.0f, output_memory.get_value<float>(2));
@@ -264,40 +227,32 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i2x2x1x1_inoffs1) {
 }
 
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_inoffs1) {
-    /*  Brief test description.
-
-        Pool window: 2x2
-        Pool stride: 2x2
-        Pool mode: max
-        Input offset: -1
-
-        Input data:
-        [ pad,  pad,  pad, pad]
-        [ pad, -0.5,  0.5, pad]
-        [ pad,  1.0, -1.0, pad]
-        [ pad,  pad,  pad, pad]
-
-        Expected output:
-        [ 0.0,  0.5]
-        [ 1.0,  0.0]
-    */
+//  Brief test description.
+//
+//  Pool window: 2x2
+//  Pool stride: 2x2
+//  Pool mode: max
+//  Input offset: -1
+//
+//  Input data:
+//  [ pad,  pad,  pad, pad]
+//  [ pad, -0.5,  0.5, pad]
+//  [ pad,  1.0, -1.0, pad]
+//  [ pad,  pad,  pad, pad]
+//
+//  Expected output:
+//  [ 0.0,  0.5]
+//  [ 1.0,  0.0]
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, {2, 2, 1, 1}, {2, 2, 1, 1}, padding::type::zero});
 
-    auto& input_memory = input_prim.as<const memory&>();
-    auto& output_memory = output_prim.as<const memory&>();
-
-    input_memory.set_value<float>(0, -0.5f);
-    input_memory.set_value<float>(1,  0.5f);
-    input_memory.set_value<float>(2,  1.0f);
-    input_memory.set_value<float>(3, -1.0f);
-
-    output_memory.fill<float>(0.0f);
+    set_values(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
 
     execute({pool_prim});
 
+    auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(0.0f, output_memory.get_value<float>(0));
     EXPECT_EQ(0.5f, output_memory.get_value<float>(1));
     EXPECT_EQ(1.0f, output_memory.get_value<float>(2));
@@ -305,57 +260,44 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_inoffs1) {
 }
 
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_inoffs1) {
-    /*  Brief test description.
-
-        Pool window: 2x2
-        Pool stride: 2x2
-        Pool mode: max
-        Input offset: -1
-
-        Input data:
-        FM: 0 BATCH: 0           FM: 1 BATCH: 0
-        [ pad,  pad,  pad, pad]  [ pad,  pad,  pad, pad]
-        [ pad, -0.5,  0.5, pad]  [ pad, -1.5, -0.5, pad]
-        [ pad,  1.0, -1.0, pad]  [ pad,  1.0,  1.5, pad]
-        [ pad,  pad,  pad, pad]  [ pad,  pad,  pad, pad]
-
-        FM: 0 BATCH: 1           FM: 1 BATCH: 1
-        [ pad,  pad,  pad, pad]  [ pad,  pad,  pad, pad]
-        [ pad,  0.5, -0.5, pad]  [ pad,  0.5, -0.5, pad]
-        [ pad, -1.0,  1.0, pad]  [ pad,  1.0, -1.0, pad]
-        [ pad,  pad,  pad, pad]  [ pad,  pad,  pad, pad]
-
-        Expected output:
-        FM: 0 BATCH: 0           FM: 1 BATCH: 0
-        [ 0.0,  0.5]             [ 0.0,  0.0]
-        [ 1.0,  0.0]             [ 1.0,  1.5]
-
-        FM: 0 BATCH: 1           FM: 1 BATCH: 1
-        [ 0.5,  0.0]             [ 0.5,  0.0]
-        [ 0.0,  1.0]             [ 1.0,  0.0]
-    */
+//  Brief test description.
+//
+//  Pool window: 2x2
+//  Pool stride: 2x2
+//  Pool mode: max
+//  Input offset: -1
+//
+//  Input data:
+//  FM: 0 BATCH: 0           FM: 1 BATCH: 0
+//  [ pad,  pad,  pad, pad]  [ pad,  pad,  pad, pad]
+//  [ pad, -0.5,  0.5, pad]  [ pad, -1.5, -0.5, pad]
+//  [ pad,  1.0, -1.0, pad]  [ pad,  1.0,  1.5, pad]
+//  [ pad,  pad,  pad, pad]  [ pad,  pad,  pad, pad]
+//
+//  FM: 0 BATCH: 1           FM: 1 BATCH: 1
+//  [ pad,  pad,  pad, pad]  [ pad,  pad,  pad, pad]
+//  [ pad,  0.5, -0.5, pad]  [ pad,  0.5, -0.5, pad]
+//  [ pad, -1.0,  1.0, pad]  [ pad,  1.0, -1.0, pad]
+//  [ pad,  pad,  pad, pad]  [ pad,  pad,  pad, pad]
+//
+//  Expected output:
+//  FM: 0 BATCH: 0           FM: 1 BATCH: 0
+//  [ 0.0,  0.5]             [ 0.0,  0.0]
+//  [ 1.0,  0.0]             [ 1.0,  1.5]
+//
+//  FM: 0 BATCH: 1           FM: 1 BATCH: 1
+//  [ 0.5,  0.0]             [ 0.5,  0.0]
+//  [ 0.0,  1.0]             [ 1.0,  0.0]
 
     auto input_prim  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 2, 2}, true});
     auto output_prim = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 2, 2}, true});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, {2, 2, 1, 1}, {2, 2, 1, 1}, padding::type::zero});
 
-    auto& input_memory = input_prim.as<const memory&>();
-    auto& output_memory = output_prim.as<const memory&>();
-
-    input_memory.set_value<float>( 0, -0.5f); input_memory.set_value<float>( 2, -1.5f);
-    input_memory.set_value<float>( 4,  0.5f); input_memory.set_value<float>( 6, -0.5f);
-    input_memory.set_value<float>( 8,  1.0f); input_memory.set_value<float>(10,  1.0f);
-    input_memory.set_value<float>(12, -1.0f); input_memory.set_value<float>(14,  1.5f);
-
-    input_memory.set_value<float>( 1,  0.5f); input_memory.set_value<float>( 3,  0.5f);
-    input_memory.set_value<float>( 5, -0.5f); input_memory.set_value<float>( 7, -0.5f);
-    input_memory.set_value<float>( 9, -1.0f); input_memory.set_value<float>(11,  1.0f);
-    input_memory.set_value<float>(13,  1.0f); input_memory.set_value<float>(15, -1.0f);
-
-    output_memory.fill<float>(0.0f);
+    set_values(input_prim, {-0.5f, 0.5f, -1.5f, 0.5f, 0.5f, -0.5f, -0.5f, -0.5f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.5f, -1.0f});
 
     execute({pool_prim});
 
+    auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(0.0f, output_memory.get_value<float>( 0)); EXPECT_EQ(0.0f, output_memory.get_value<float>( 2));
     EXPECT_EQ(0.5f, output_memory.get_value<float>( 4)); EXPECT_EQ(0.0f, output_memory.get_value<float>( 6));
     EXPECT_EQ(1.0f, output_memory.get_value<float>( 8)); EXPECT_EQ(1.0f, output_memory.get_value<float>(10));
@@ -368,10 +310,10 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_inoffs1) {
 }
 
 TEST(pooling_forward, advanced_max_yxfb) {
-    /*  Brief test description.
+//  Brief test description.
+//
+//  Pool mode: max
 
-        Pool mode: max
-    */
     std::vector<uint32_t> input_size_configurations =           { 4,  4,  5,  2,  2,  2};
     std::vector<uint32_t> window_size_configurations =          { 2,  2,  3,  2,  2,  4};
     std::vector<uint32_t> window_stride_configurations =        { 2,  1,  2,  2,  1,  2};

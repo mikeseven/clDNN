@@ -5,6 +5,7 @@
 #include <random>
 #include "api/neural.h"
 
+namespace tests{
 template<typename T>
 void set_values( neural::primitive& prim, std::initializer_list<T> args ){
     auto& mem = prim.as<const neural::memory&>();
@@ -26,4 +27,5 @@ void fill( neural::primitive& prim ){
     auto& mem = prim.as<const neural::memory&>();
 
     mem.fill<T>();
+}
 }

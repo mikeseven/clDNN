@@ -20,6 +20,7 @@
 #include "tests/gtest/gtest.h"
 #include "test_utils/test_utils.h"
 
+using namespace tests;
 
 TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 //  Filter : 2x2
