@@ -121,7 +121,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     scale.as<const memory&>().fill<float>(0);
     bias.as<const memory&>().fill<float>(0);
 
-    input.as<const memory&>().set_value(rand() % total_input_size, 10.0f);
+    static_cast<float*>(input_memory.pointer)[rand() % total_input_size] = 10.0f;
 
     // Create primitive.
     auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 1.0, std::numeric_limits<float>::epsilon()});
@@ -244,7 +244,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     bias.as<const memory&>().fill<float>(0);
 
     auto random_input_non_zero = rand() % total_average_size;
-    input.as<const memory&>().set_value(random_input_non_zero, 10.0f);
+    static_cast<float*>(input_memory.pointer)[random_input_non_zero] = 10.0f;
 
     // Create primitive.
     auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, false, 1.0, std::numeric_limits<float>::epsilon()});
