@@ -138,10 +138,6 @@ TEST(fully_connected, x_f32) {
     set_values(input_prim  , {-0.5f, 2.0f, 0.5f});
     set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
 
-    input_memory.set_value<float>(0, -0.5f);
-    input_memory.set_value<float>(1,  2.0f);
-    input_memory.set_value<float>(2,  0.5f);
-
     execute({full_con_prim});
 
     EXPECT_EQ( 1.5f,  output_memory.get_value<float>(0));
