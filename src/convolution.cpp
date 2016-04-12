@@ -19,8 +19,8 @@
 
 namespace neural {
 
-singletion_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>         & conv_fw_implementation_map = singletion_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>         ::instance();
-singletion_map<conv_bw_key, std::function<is_an_implementation *(convolution_backward &)>>& conv_bw_implementation_map = singletion_map<conv_bw_key, std::function<is_an_implementation *(convolution_backward &)>>::instance();
+singleton_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>         & conv_fw_implementation_map = singleton_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>         ::instance();
+singleton_map<conv_bw_key, std::function<is_an_implementation *(convolution_backward &)>>& conv_bw_implementation_map = singleton_map<conv_bw_key, std::function<is_an_implementation *(convolution_backward &)>>::instance();
 
 convolution::arguments::arguments( neural::engine::type  eng,
                                    primitive             out,

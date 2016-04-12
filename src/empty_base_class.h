@@ -16,20 +16,13 @@
 
 #pragma once
 
-#include <memory>
-#include "convolution.h"
-#include "empty_base_class.h"
-
-namespace neural {
-    struct convolution_cpu_jit : is_an_implementation {
-        convolution_cpu_jit(convolution &arg);
-        ~convolution_cpu_jit();
-
-        static is_an_implementation *create(convolution &arg) { return new convolution_cpu_jit(arg); };
-        std::vector<task> work() { return tasks; };
-
-        std::unique_ptr<empty_base_class> jit_conv_ptr;
-        std::vector<task> tasks;
-        const convolution &outer;
+namespace neural{
+    // This class is used for inheritance when common parent class is needed. It is used e.g. for convolution jit implementation where
+    // class is locally defined in .cpp file but I want to keep pointer indicating on object of this class. Pointer is declared is .h file.
+    // It doesn't know about class existing in .cpp file. (Smart) Pointer is used only to keep object alive untill end of program, not to access
+    // any fields/methods.
+    struct empty_base_class {
+        empty_base_class(){};
+        virtual ~empty_base_class(){};
     };
 }

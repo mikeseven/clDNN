@@ -53,10 +53,6 @@ namespace {
 }
 #endif // _MSC_VER
 
-struct empty_base_class {
-    empty_base_class(){};
-    virtual ~empty_base_class(){};
-};
 // data in memory in known format; format = {order, type} of values
 struct memory : is_a_primitive {
     struct format_traits {

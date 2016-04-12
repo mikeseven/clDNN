@@ -304,8 +304,7 @@ struct jit_convolution_zxyn : public neural::empty_base_class
                     auto bias_shifted = bias + z_block * output_features_per_iteration;
                     auto filter_shifted = filter
                         + z_block * output_features_per_iteration * input_feature_maps * filter_width * filter_height;
-                    auto input_shifted = //input +
-                        b * input_width * input_height * input_feature_maps;
+                    auto input_shifted = b * input_width * input_height * input_feature_maps;
 
                     op_data.push_back({ output_shifted,
                         input_shifted * sizeof(float),
