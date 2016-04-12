@@ -389,23 +389,22 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
     auto& biases_mem       = biases.as<const memory&>();
     auto& biases_diff_mem  = biases_diff.as<const memory&>();
 
-
     fw_input_mem.fill(1.0f);
-    fw_input_mem.set_value(10, -0.5f);
-    fw_input_mem.set_value(11,  1.5f);
-    fw_input_mem.set_value(14,  1.0f);
-    fw_input_mem.set_value(15, -0.5f);
+    static_cast<float*>(fw_input_mem.pointer)[10] = -0.5f;
+    static_cast<float*>(fw_input_mem.pointer)[11] =  1.5f;
+    static_cast<float*>(fw_input_mem.pointer)[14] =  1.0f;
+    static_cast<float*>(fw_input_mem.pointer)[15] = -0.5f;
 
     bw_input_mem.fill(1.0f);
-    bw_input_mem.set_value(3, 2.0f);
+    static_cast<float*>(bw_input_mem.pointer)[3] = 2.0f;
 
     weights_mem.fill(1.0f);
-    weights_mem.set_value(4, -2.0f);
-    weights_mem.set_value(5,  3.5f);
-    weights_mem.set_value(7,  0.5f);
-    weights_mem.set_value(8,  1.5f);
+    static_cast<float*>(weights_mem.pointer)[4] = -2.0f;
+    static_cast<float*>(weights_mem.pointer)[5] =  3.5f;
+    static_cast<float*>(weights_mem.pointer)[7] =  0.5f;
+    static_cast<float*>(weights_mem.pointer)[8] =  1.5f;
 
-    biases_mem.set_value(0, -3.0f);
+    biases_mem.fill(-3.0f);
 
     auto conv_bw = convolution_backward::create({engine::reference,
                                                  std::vector<primitive>{bw_output, weights_diff, biases_diff},
