@@ -16,8 +16,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "tests/gtest/gtest.h"
 #include "api/neural.h"
+#include "tests/gtest/gtest.h"
 #include "test_utils/test_utils.h"
 
 

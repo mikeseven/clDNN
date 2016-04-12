@@ -74,11 +74,12 @@ struct fully_connected_reference : is_an_implementation {
 
         if (weight_memory_arg == memory::format::x_f32) {
             range_output = nd::value<uint32_t> (output_buffer_size); //there is no batch, so nothing has to be removed
-        } 
+        }
         else if (weight_memory_arg == memory::format::xb_f32) {
             range_output = nd::value<uint32_t>({ begin(output_buffer_size), end(output_buffer_size) - 1 }); //in every iteration whole batch is computed at once, so it has to be removed from the range
         }
 
+        this_fc->output_memory(0).fill(0.0f);
         nd::value<uint32_t> range_input(in_wrapper.as<const memory &>().argument.size);
         nd::value<uint32_t> range_weight(weight_buffer_size);
         nd::calculate_idx<uint32_t> calc_in_idx(in_wrapper.as<const memory &>().argument.size);
