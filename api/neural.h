@@ -431,6 +431,8 @@ private:
     response(arguments arg) : is_a_primitive(type_id<const response>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
+
+    std::unique_ptr<is_an_implementation> _private;
 };
 
 struct /*normalization*/ softmax : is_a_primitive {

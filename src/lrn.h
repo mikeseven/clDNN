@@ -13,19 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-
 #pragma once
-
 #include "api/neural.h"
 #include "implementation_map.h"
-//#include "convolution_cpu_jit.h"
-//#include "convolution_cpu_reference.h"
 
-namespace neural{
+namespace neural {
     //                                           engine                          output                  input
-    using conv_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
-    using conv_bw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>; //todo
+    using lrn_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
+    using lrn_bw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>; //todo
 
-    extern singletion_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>         & conv_fw_implementation_map;
-    extern singletion_map<conv_bw_key, std::function<is_an_implementation *(convolution_backward &)>>& conv_bw_implementation_map; 
+    extern singletion_map<lrn_fw_key, std::function<is_an_implementation *(normalization::response &)>>         & lrn_fw_implementation_map;
+//    extern singletion_map<lrn_bw_key, std::function<is_an_implementation *(normalization::response_backward &)>>& lrn_bw_implementation_map;
 }
