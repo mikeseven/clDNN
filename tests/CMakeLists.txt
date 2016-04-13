@@ -14,12 +14,16 @@
 
 add_subdirectory (gtest)
 
-
 set (APP_NAME "tests")
 # Sources for test files
 
 file (GLOB TEST_CASES_SRC
       test_cases/*.cpp)
+      
+file (GLOB TEST_UTILS_SRC
+      test_utils/*.cpp
+      test_utils/*.h
+      )
 
 # Main source file
 set  (MAIN_SRC
@@ -30,16 +34,17 @@ file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h
       )
 
-
 # Create named folders for the sources within the .vcproj
 # Empty name lists them directly under the .vcproj
 source_group("" FILES ${MAIN_SRC})
 source_group("test caseses" FILES ${TEST_CASES_SRC})
+source_group("test utils" FILES ${TEST_UTILS_SRC})
 
 # Properties->C/C++->General->Additional Include Directories
 include_directories (${CMAKE_SOURCE_DIR}
                      ${CMAKE_SOURCE_DIR}/src
                      ${CMAKE_SOURCE_DIR}/tests
+                     ${CMAKE_SOURCE_DIR}/test_utils
                     )
 
 # Create exe file from sources.

@@ -15,31 +15,30 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "tests/gtest/gtest.h"
 #include "api/neural.h"
 #include "multidimensional_counter.h"
+#include "tests/gtest/gtest.h"
+#include "test_utils/test_utils.h"
 
 using namespace neural;
+using namespace tests;
 
 TEST(fully_connected, xb_f32_batch_1) {
-
-/*
-    Input  : 3x1
-    Output : 4x1
-    Weights: 4x3
-
-    Input:
-    -0.5     2    0.5
-
-    Weights:
-     1.5     1    0.5
-    -1       0    0.5
-     0.5    -0.5 -2
-    -0.5     1    1.5
-
-    Output:
-     1.5    0.75    -2.25   3
-*/
+//  Input  : 3x1
+//  Output : 4x1
+//  Weights: 4x3
+//
+//  Input:
+//  -0.5     2    0.5
+//
+//  Weights:
+//   1.5     1    0.5
+//  -1       0    0.5
+//   0.5    -0.5 -2
+//  -0.5     1    1.5
+//
+//  Output:
+//   1.5    0.75    -2.25   3
 
     const uint32_t output_x  = 4, output_b  = 1,  // size of whole output buffer
                    input_x   = 3, input_b   = 1,  // size of whole input buffer
@@ -50,31 +49,12 @@ TEST(fully_connected, xb_f32_batch_1) {
     auto weights_prim = memory::create({ engine::cpu, memory::format::xb_f32,{ weight_x, weight_y } , true });
     auto full_con_prim = fully_connected::create({ engine::reference, output_prim, input_prim, weights_prim });
 
-    auto& input_memory   = input_prim.as<const memory&>();
-    auto& output_memory  = output_prim.as<const memory&>();
-    auto& weights_memory = weights_prim.as<const memory&>();
-
-    input_memory.set_value<float>(0, -0.5f);
-    input_memory.set_value<float>(1,  2.0f);
-    input_memory.set_value<float>(2,  0.5f);
-
-    weights_memory.set_value<float>(0,  1.5f);
-    weights_memory.set_value<float>(1,  1.0f);
-    weights_memory.set_value<float>(2,  0.5f);
-    weights_memory.set_value<float>(3, -1.0f);
-    weights_memory.set_value<float>(4,  0.0f);
-    weights_memory.set_value<float>(5,  0.5f);
-    weights_memory.set_value<float>(6,  0.5f);
-    weights_memory.set_value<float>(7, -0.5f);
-    weights_memory.set_value<float>(8, -2.0f);
-    weights_memory.set_value<float>(9, -0.5f);
-    weights_memory.set_value<float>(10, 1.0f);
-    weights_memory.set_value<float>(11, 1.5f);
-
-    output_memory.fill<float>(0.0f);
+    set_values(input_prim  , {-0.5f, 2.0f, 0.5f});
+    set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
 
     execute({full_con_prim});
 
+    auto& output_memory  = output_prim.as<const memory&>();
     EXPECT_EQ( 1.5f,  output_memory.get_value<float>(0));
     EXPECT_EQ( 0.75f, output_memory.get_value<float>(1));
     EXPECT_EQ(-2.25f, output_memory.get_value<float>(2));
@@ -82,27 +62,23 @@ TEST(fully_connected, xb_f32_batch_1) {
 }
 
 TEST(fully_connected, xb_f32_batch_2) {
-
-/*
-    Input  : 3x2
-    Output : 4x2
-    Weights: 4x3
-
-    Input:
-    -0.5     2    0.5
-     1       1.5  0
-
-    Weights:
-     1.5     1    0.5
-    -1       0    0.5
-     0.5    -0.5 -2
-    -0.5     1    1.5
-
-    Output:
-     1.5    0.75    -2.25   3
-     3     -1       -0.25   1
-
-*/
+//  Input  : 3x2
+//  Output : 4x2
+//  Weights: 4x3
+//
+//  Input:
+//  -0.5     2    0.5
+//   1       1.5  0
+//
+//  Weights:
+//   1.5     1    0.5
+//  -1       0    0.5
+//   0.5    -0.5 -2
+//  -0.5     1    1.5
+//
+//  Output:
+//   1.5    0.75    -2.25   3
+//   3     -1       -0.25   1
 
     const uint32_t output_x  = 4, output_b  = 2,  // size of whole output buffer
                    input_x   = 3, input_b   = 2,  // size of whole input buffer
@@ -113,34 +89,12 @@ TEST(fully_connected, xb_f32_batch_2) {
     auto weights_prim = memory::create({ engine::cpu, memory::format::xb_f32,{ weight_x, weight_y } , true });
     auto full_con_prim = fully_connected::create({ engine::reference, output_prim, input_prim, weights_prim });
 
-    auto& input_memory   = input_prim.as<const memory&>();
-    auto& output_memory  = output_prim.as<const memory&>();
-    auto& weights_memory = weights_prim.as<const memory&>();
-
-    input_memory.set_value<float>(0, -0.5f);
-    input_memory.set_value<float>(1,  1.0f);
-    input_memory.set_value<float>(2,  2.0f);
-    input_memory.set_value<float>(3,  1.5f);
-    input_memory.set_value<float>(4,  0.5f);
-    input_memory.set_value<float>(5,  0.0f);
-
-    weights_memory.set_value<float>(0,  1.5f);
-    weights_memory.set_value<float>(1,  1.0f);
-    weights_memory.set_value<float>(2,  0.5f);
-    weights_memory.set_value<float>(3, -1.0f);
-    weights_memory.set_value<float>(4,  0.0f);
-    weights_memory.set_value<float>(5,  0.5f);
-    weights_memory.set_value<float>(6,  0.5f);
-    weights_memory.set_value<float>(7, -0.5f);
-    weights_memory.set_value<float>(8, -2.0f);
-    weights_memory.set_value<float>(9, -0.5f);
-    weights_memory.set_value<float>(10, 1.0f);
-    weights_memory.set_value<float>(11, 1.5f);
-
-    output_memory.fill<float>(0.0f);
+    set_values(input_prim  , {-0.5f, 1.0f, 2.0f, 1.5f, 0.5f, 0.0f});
+    set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
 
     execute({full_con_prim});
 
+    auto& output_memory  = output_prim.as<const memory&>();
     EXPECT_EQ( 1.5f,  output_memory.get_value<float>(0));
     EXPECT_EQ( 3.0f,  output_memory.get_value<float>(1));
     EXPECT_EQ( 0.75f, output_memory.get_value<float>(2));
@@ -152,24 +106,21 @@ TEST(fully_connected, xb_f32_batch_2) {
 }
 
 TEST(fully_connected, x_f32) {
-
-/*
-    Input  : 3x1
-    Output : 4x1
-    Weights: 4x3
-
-    Input:
-    -0.5     2    0.5
-
-    Weights:
-     1.5     1    0.5
-    -1       0    0.5
-     0.5    -0.5 -2
-    -0.5     1    1.5
-
-    Output:
-     1.5    0.75    -2.25   3
-*/
+//  Input  : 3x1
+//  Output : 4x1
+//  Weights: 4x3
+//
+//  Input:
+//  -0.5     2    0.5
+//
+//  Weights:
+//   1.5     1    0.5
+//  -1       0    0.5
+//   0.5    -0.5 -2
+//  -0.5     1    1.5
+//
+//  Output:
+//   1.5    0.75    -2.25   3
 
     const uint32_t output_x  = 4,                 // size of whole output buffer
                    input_x   = 3,                 // size of whole input buffer
@@ -184,24 +135,8 @@ TEST(fully_connected, x_f32) {
     auto& output_memory  = output_prim.as<const memory&>();
     auto& weights_memory = weights_prim.as<const memory&>();
 
-    input_memory.set_value<float>(0, -0.5f);
-    input_memory.set_value<float>(1,  2.0f);
-    input_memory.set_value<float>(2,  0.5f);
-
-    weights_memory.set_value<float>(0,  1.5f);
-    weights_memory.set_value<float>(1,  1.0f);
-    weights_memory.set_value<float>(2,  0.5f);
-    weights_memory.set_value<float>(3, -1.0f);
-    weights_memory.set_value<float>(4,  0.0f);
-    weights_memory.set_value<float>(5,  0.5f);
-    weights_memory.set_value<float>(6,  0.5f);
-    weights_memory.set_value<float>(7, -0.5f);
-    weights_memory.set_value<float>(8, -2.0f);
-    weights_memory.set_value<float>(9, -0.5f);
-    weights_memory.set_value<float>(10, 1.0f);
-    weights_memory.set_value<float>(11, 1.5f);
-
-    output_memory.fill<float>(0.0f);
+    set_values(input_prim  , {-0.5f, 2.0f, 0.5f});
+    set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
 
     execute({full_con_prim});
 
