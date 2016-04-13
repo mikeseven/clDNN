@@ -13,44 +13,51 @@
 
 #include "neural.h"
 
-
 namespace caffe {
-using namespace neural;
 
+#if 0 // not yet implemented except ReLU
 template <typename Dtype, bool is_diff>
 struct NeuraliaMemoryDescriptor : PrvMemDescr, boost::enable_shared_from_this<NeuraliaMemoryDescriptor<Dtype, is_diff> > {
-  NeuraliaMemoryDescriptor() : layout_usr(memory::format::bfyx_f32), name("UKNOWN") {};
+  NeuraliaMemoryDescriptor() : layout_usr(NULL), layout_int(NULL),
+    internal_ptr(NULL), convert_to_int(NULL), convert_from_int(NULL), name("UKNOWN") {};
   ~NeuraliaMemoryDescriptor()
   {
-    if(internal_ptr) CaffeFreeHost(internal_ptr, use_cuda);
+    dnnLayoutDelete<Dtype>(layout_usr);
+    dnnLayoutDelete<Dtype>(layout_int);
+    dnnReleaseBuffer<Dtype>(internal_ptr);
+    dnnDelete<Dtype>(convert_to_int);
+    dnnDelete<Dtype>(convert_from_int);
   }
 
   shared_ptr<NeuraliaMemoryDescriptor<Dtype, is_diff> > get_shared_ptr() {
     return this->shared_from_this();
   }
 
-  int layout_usr = memory::format::bfyx_f32;
-  int layout_int = memory::format::yxfb_f32;
+  dnnLayout_t layout_usr;
+  dnnLayout_t layout_int;
   Dtype* internal_ptr;
-  primitive memory = nullptr;
-  primitive memory_usr = nullptr;
-  primitive to_internal = nullptr;
-  primitive from_internal = nullptr;
+  dnnPrimitive_t convert_to_int;
+  dnnPrimitive_t convert_from_int;
   std::string name;  // for debugging purposes
-  bool use_cuda;
   void create_conversions() {
-    if (layout_usr != layout_int)
+    if (layout_int
+        && !dnnLayoutCompare<Dtype>(layout_usr, layout_int))
     {
-        CaffeMallocHost((void**)&internal_ptr, sizeof(Dtype)*prv_count(), &use_cuda);
-        to_internal   = reorder::create(reorder::arguments({engine::reference, memory_usr, memory}));
-        from_internal = reorder::create(reorder::arguments({engine::reference, memory, memory_usr}));
+      CHECK(layout_usr);
+      int status = dnnConversionCreate<Dtype>(&convert_to_int, layout_usr , layout_int);
+      CHECK(status == 0) << "Failed creation convert_to_int with status " << status << "\n";
+      status = dnnConversionCreate<Dtype>(&convert_from_int, layout_int , layout_usr);
+      CHECK(status == 0) << "Failed creation convert_from_int with status " << status << "\n";
+      status = dnnAllocateBuffer<Dtype>((void **)&internal_ptr, layout_int);
+      CHECK(status == 0) << "Failed internal_ptr memory allocation with status " << status << "\n";
+
+      memset(internal_ptr, 0, dnnLayoutGetMemorySize<Dtype>(layout_int));
     }
   }
-
-  virtual size_t prv_count() {return (memory.as<const neural::memory&>().count());};
+  virtual size_t prv_count() {return dnnLayoutGetMemorySize<Dtype>(layout_int) / sizeof(Dtype);};
   virtual void convert_from_prv(void* prv_ptr, void* cpu_ptr);
-  virtual PrvDescrType get_descr_type() {return PRV_DESCR_NEURALIA;};
-  Dtype* get_converted_prv(Blob<Dtype>* blob, bool set_prv_ptr, NeuraliaMemoryDescriptor<Dtype, is_diff>* converted_in_fwd=nullptr);
+  virtual PrvDescrType get_descr_type() {return PRV_DESCR_MKLDNN;};
+  Dtype* get_converted_prv(Blob<Dtype> * blob, bool test_prv_layout, bool set_prv_ptr=true);
 };
 
 template <typename Dtype>
@@ -84,19 +91,29 @@ protected:
   virtual void compute_output_shape();
 
 private:
-  primitive convolution_fwd = nullptr;
-  primitive convolution_bwd = nullptr;
   /* Fwd step */
   shared_ptr<NeuraliaData<Dtype> > fwd_bottom_data, fwd_top_data, fwd_filter_data, fwd_bias_data;
+  dnnPrimitive_t convolutionFwd;
 
   /* Bwd data step */
-  shared_ptr<NeuraliaDiff<Dtype> > bwd_top_diff, bwd_bottom_diff;
+  shared_ptr<NeuraliaDiff<Dtype> > bwdd_top_diff, bwdd_bottom_diff;
+  shared_ptr<NeuraliaData<Dtype> > bwdd_filter_data;
+  dnnPrimitive_t convolutionBwdData;
+
+#ifndef BWDD_DISABLE_PAD_REMOVING
+  /* Temporary workaround for removing padding from bwdd_bottom_diff */
+  shared_ptr<NeuraliaDiff<Dtype> > bwdd_bottom_diff_no_padding;
+  dnnPrimitive_t convert_to_bottom_diff_no_padding;
+#endif
 
   /* Bwd filter step */
-  shared_ptr<NeuraliaDiff<Dtype> > bwd_filter_diff;
+  shared_ptr<NeuraliaDiff<Dtype> > bwdf_top_diff, bwdf_filter_diff;
+  shared_ptr<NeuraliaData<Dtype> > bwdf_bottom_data;
+  dnnPrimitive_t convolutionBwdFilter;
 
   /* Bwd bias step */
-  shared_ptr<NeuraliaDiff<Dtype> > bwd_bias_diff;
+  shared_ptr<NeuraliaDiff<Dtype> > bwdb_top_diff, bwdb_bias_diff;
+  dnnPrimitive_t convolutionBwdBias;
 
  // TODO: temp. compatibility vs. older cafe
  size_t width_,
@@ -111,7 +128,7 @@ private:
         pad_h_;
 };
 
-#if 0 // not yet implemented except ReLU
+
 /**
  * @brief Normalize the input in a local region across feature maps.
  */
@@ -164,11 +181,11 @@ class NeuraliaLRNLayer : public Layer<Dtype> {
   // Fields used for normalization ACROSS_CHANNELS
   // scale_ stores the intermediate summing results
 private:
-  primitive lrnFwd, lrnBwd;
+  dnnPrimitive_t lrnFwd, lrnBwd;
   shared_ptr<NeuraliaData<Dtype> > fwd_top_data;
   shared_ptr<NeuraliaDiff<Dtype> > bwd_bottom_diff;
   Dtype *lrn_buffer_;
-  memory::format layout_usr_;
+  dnnLayout_t layout_usr_;
 };
 
 
@@ -226,7 +243,7 @@ private:
   shared_ptr<NeuraliaData<Dtype> > fwd_top_data, fwd_bottom_data;
   shared_ptr<NeuraliaDiff<Dtype> > bwd_top_diff, bwd_bottom_diff;
 
-  primitive poolingFwd, poolingBwd;
+  dnnPrimitive_t poolingFwd, poolingBwd;
 };
 #endif
 
@@ -260,8 +277,8 @@ protected:
                             const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
 private:
-  primitive reluFwd_ = nullptr, reluBwd_ = nullptr;
-  primitive bottom_data_ = nullptr, top_data_ = nullptr, 
+  neural::primitive reluFwd_ = nullptr, reluBwd_ = nullptr;
+  neural::primitive bottom_data_ = nullptr, top_data_ = nullptr, 
           bottom_diff_ = nullptr, top_diff_ = nullptr;
 };
 

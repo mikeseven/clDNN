@@ -1,4 +1,4 @@
-#ifdef USE_NEURALIA
+#ifdef USE_MKL_DNN
 #include <algorithm>
 #include <vector>
 
@@ -9,7 +9,7 @@
 #include "caffe/common.hpp"
 #include "caffe/filler.hpp"
 
-#include "caffe/layers/neuralia_layers.hpp"
+#include "caffe/layers/mkl_dnn_layers.hpp"
 
 #include "caffe/test/test_caffe_main.hpp"
 #include "caffe/test/test_gradient_check_util.hpp"
@@ -17,11 +17,11 @@
 namespace caffe {
 
 template <typename TypeParam>
-class NeuraliaNeuronLayerTest : public MultiDeviceTest<TypeParam> {
+class MKL_DNNNeuronLayerTest : public MultiDeviceTest<TypeParam> {
   typedef typename TypeParam::Dtype Dtype;
 
  protected:
-  NeuraliaNeuronLayerTest()
+  MKL_DNNNeuronLayerTest()
       : blob_bottom_(new Blob<Dtype>(2, 3, 4, 5)),
         blob_top_(new Blob<Dtype>()) {
     Caffe::set_random_seed(1701);
@@ -32,7 +32,7 @@ class NeuraliaNeuronLayerTest : public MultiDeviceTest<TypeParam> {
     blob_bottom_vec_.push_back(blob_bottom_);
     blob_top_vec_.push_back(blob_top_);
   }
-  virtual ~NeuraliaNeuronLayerTest() { delete blob_bottom_; delete blob_top_; }
+  virtual ~MKL_DNNNeuronLayerTest() { delete blob_bottom_; delete blob_top_; }
   Blob<Dtype>* const blob_bottom_;
   Blob<Dtype>* const blob_top_;
   vector<Blob<Dtype>*> blob_bottom_vec_;
@@ -40,12 +40,12 @@ class NeuraliaNeuronLayerTest : public MultiDeviceTest<TypeParam> {
 };
 
 // TODO: Currently only float support
-TYPED_TEST_CASE(NeuraliaNeuronLayerTest, ::testing::Types<CPUDevice<float> >);
+TYPED_TEST_CASE(MKL_DNNNeuronLayerTest, ::testing::Types<CPUDevice<float> >);
 
-TYPED_TEST(NeuraliaNeuronLayerTest, TestReLU) {
+TYPED_TEST(MKL_DNNNeuronLayerTest, TestReLU) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
-  NeuraliaReLULayer<Dtype> layer(layer_param);
+  MKL_DNNReLULayer<Dtype> layer(layer_param);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Now, check values
@@ -57,14 +57,14 @@ TYPED_TEST(NeuraliaNeuronLayerTest, TestReLU) {
   }
 }
 
-TYPED_TEST(NeuraliaNeuronLayerTest, TestReLUGradient) {
+TYPED_TEST(MKL_DNNNeuronLayerTest, TestReLUGradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
-  NeuraliaReLULayer<Dtype> layer(layer_param);
+  MKL_DNNReLULayer<Dtype> layer(layer_param);
   GradientChecker<Dtype> checker(1e-2, 1e-3, 1701, 0., 0.01);
   checker.CheckGradientEltwise(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
 }
 
 }  // namespace caffe
-#endif //#ifdef USE_NEURALIA
+#endif //#ifdef USE_MKL_DNN

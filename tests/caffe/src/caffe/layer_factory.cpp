@@ -14,11 +14,8 @@
 #include "caffe/layers/sigmoid_layer.hpp"
 #include "caffe/layers/softmax_layer.hpp"
 #include "caffe/layers/tanh_layer.hpp"
-#ifdef USE_MKLDNN
-#include "caffe/layers/mkldnn_layers.hpp"
-#endif
-#ifdef USE_NEURALIA
-#include "caffe/layers/neuralia_layers.hpp"
+#ifdef USE_MKL_DNN
+#include "caffe/layers/mkl_dnn_layers.hpp"
 #endif
 #include "caffe/proto/caffe.pb.h"
 
@@ -71,9 +68,9 @@ shared_ptr<Layer<Dtype> > GetConvolutionLayer(
     }
     return shared_ptr<Layer<Dtype> >(new CuDNNConvolutionLayer<Dtype>(param));
 #endif
-#ifdef USE_MKLDNN    
-  } else if (engine == ConvolutionParameter_Engine_MKLDNN) {
-    return shared_ptr<Layer<Dtype> >(new MklDnnConvolutionLayer<Dtype>(param));
+#ifdef USE_MKL_DNN    
+  } else if (engine == ConvolutionParameter_Engine_MKL_DNN) {
+    return shared_ptr<Layer<Dtype> >(new MKL_DNNConvolutionLayer<Dtype>(param));
 #endif
   } else {
     LOG(FATAL) << "Layer " << param.name() << " has unknown engine.";
@@ -104,9 +101,9 @@ shared_ptr<Layer<Dtype> > GetPoolingLayer(const LayerParameter& param) {
     }
     return shared_ptr<Layer<Dtype> >(new CuDNNPoolingLayer<Dtype>(param));
 #endif
-#ifdef USE_MKLDNN    
-  } else if (engine == PoolingParameter_Engine_MKLDNN) {
-    return shared_ptr<Layer<Dtype> >(new MklDnnPoolingLayer<Dtype>(param));
+#ifdef USE_MKL_DNN    
+  } else if (engine == PoolingParameter_Engine_MKL_DNN) {
+    return shared_ptr<Layer<Dtype> >(new MKL_DNNPoolingLayer<Dtype>(param));
 #endif
   } else {
     LOG(FATAL) << "Layer " << param.name() << " has unknown engine.";
@@ -145,9 +142,9 @@ shared_ptr<Layer<Dtype> > GetLRNLayer(const LayerParameter& param) {
       }
     }
 #endif
-#ifdef USE_MKLDNN
-  } else if (engine == LRNParameter_Engine_MKLDNN) {
-    return shared_ptr<Layer<Dtype> >(new MklDnnLRNLayer<Dtype>(param));
+#ifdef USE_MKL_DNN
+  } else if (engine == LRNParameter_Engine_MKL_DNN) {
+    return shared_ptr<Layer<Dtype> >(new MKL_DNNLRNLayer<Dtype>(param));
 #endif
   } else {
     LOG(FATAL) << "Layer " << param.name() << " has unknown engine.";
@@ -172,13 +169,9 @@ shared_ptr<Layer<Dtype> > GetReLULayer(const LayerParameter& param) {
   } else if (engine == ReLUParameter_Engine_CUDNN) {
     return shared_ptr<Layer<Dtype> >(new CuDNNReLULayer<Dtype>(param));
 #endif
-#ifdef USE_MKLDNN
-  } else if (engine == ReLUParameter_Engine_MKLDNN) {
-    return shared_ptr<Layer<Dtype> >(new MklDnnReLULayer<Dtype>(param));
-#endif
-#ifdef USE_NEURALIA
-  } else if (engine == ReLUParameter_Engine_NEURALIA) {
-    return shared_ptr<Layer<Dtype> >(new NeuraliaReLULayer<Dtype>(param));
+#ifdef USE_MKL_DNN
+  } else if (engine == ReLUParameter_Engine_MKL_DNN) {
+    return shared_ptr<Layer<Dtype> >(new MKL_DNNReLULayer<Dtype>(param));
 #endif
   } else {
     LOG(FATAL) << "Layer " << param.name() << " has unknown engine.";

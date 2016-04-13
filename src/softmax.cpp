@@ -1,3 +1,19 @@
+/*
+// Copyright (c) 2016 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+*/
+
 #include "api/neural.h"
 #include "multidimensional_counter.h"
 #include <climits>
@@ -36,8 +52,7 @@ struct softmax_reference : is_an_implementation {
             if(output_arg.size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("Softmax sizes to small.");
         }
 
-        int data_index = 0; //todo type traits
-        int batch_index = 1;
+        int batch_index = 1;//todo type traits
 
         std::vector<float> v_max( output_size[batch_index], -std::numeric_limits<float>::max() );
         std::vector<float> v_acc( output_size[batch_index] );

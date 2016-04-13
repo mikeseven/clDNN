@@ -15,19 +15,22 @@
 */
 
 #include "api/neural.h"
-#include <iostream>
+#include <map>
 
-int main()
-{
-    extern void example_convolution_forward();
+namespace neural {
 
-    try{
-        example_convolution_forward();
-    } catch (std::exception &e) {
-        std::cerr << e.what();
-    } catch(...) {
-        std::cerr << "Unknown exceptions.";
-    }
+//static std::map<const char*, type_traits*> register_map;
+static std::map<const char*, std::shared_ptr<type_traits>> register_map;
 
-    return 0;
+type_traits* typeid_register(size_t size, bool is_float, const char* cstr){
+    auto it = register_map.find(cstr);
+    if( register_map.end() != it )
+        return it->second.get();
+
+    std::shared_ptr<type_traits> tt_ptr = std::make_shared<type_traits>(reinterpret_cast<size_t>(tt_ptr.get()), size, is_float, cstr);
+    register_map.emplace(cstr, tt_ptr);
+
+    return tt_ptr.get();
+}
+
 }
