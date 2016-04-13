@@ -17,7 +17,7 @@
 #include "api/neural.h"
 #include <iostream>
 
-int main( int argc, char* argv[ ] )
+int main()
 {
     extern void example_convolution_forward();
 

@@ -48,7 +48,7 @@ public:
 template<typename T> reverse_t<const T> reverse(const T& x) { return reverse_t<const T>(x); }
 template<typename T> reverse_t<T> reverse(T& x) { return reverse_t<T>(x); }
 
-struct jit_convolution_zxyn : public neural::empty_base_class
+struct jit_convolution_zxyn : public neural::is_an_implementation
 {
 #pragma pack(push, 1)
     struct op_data_t
@@ -286,7 +286,8 @@ struct jit_convolution_zxyn : public neural::empty_base_class
                    filter_height, filter_width,
                    stride_width, stride_height,
                    apply_relu,
-                   code_ptr)
+                   code_ptr),
+             is_an_implementation(neural::type_id<jit_convolution_zxyn>())
     {
         assert(output_feature_maps % output_features_per_iteration == 0);
 
@@ -338,6 +339,9 @@ struct jit_convolution_zxyn : public neural::empty_base_class
         for (auto i = 0u; i < tasks.size(); ++i)
             tasks[i] = {reinterpret_cast<void(*)(const void*)>(code.getCode()), &op_data[i]};
     }
+    std::vector<neural::task> work() {
+        return this->tasks;
+    };
 };
 }
 
@@ -408,7 +412,6 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
                 bias
                 );
 
-            this->tasks = std::move(tmp_jit_convolution_zxyn->tasks);
             jit_conv_ptr.reset(tmp_jit_convolution_zxyn);
             break;
         }
