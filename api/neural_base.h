@@ -255,7 +255,6 @@ template<typename T> T primitive::as() const {
 // unkown structure with type info for cast validation
 class is_an_implementation {
     const type_traits *const _type_traits;
-    is_an_implementation() : _type_traits(nullptr) {};
 protected:
     is_an_implementation(const type_traits *arg) : _type_traits(arg) {};
 public:
