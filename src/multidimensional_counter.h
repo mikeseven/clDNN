@@ -73,7 +73,6 @@ public:
     value(std::vector<T> arg) : std::vector<T>(arg) {};
     value(std::initializer_list<T> il) : std::vector<T>(il) {};
 
-    //todo range check asserts
     value &operator+=(const std::vector<   T> &arg) { std::transform(arg.cbegin(), arg.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::plus<T>());       return *this; }
     value &operator+=(const std::vector<negT> &arg) { std::transform(arg.cbegin(), arg.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::plus<T>());       return *this; }
     value &operator*=(const std::vector<   T> &arg) { std::transform(arg.cbegin(), arg.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::multiplies<T>()); return *this; }

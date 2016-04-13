@@ -3,14 +3,14 @@
 #include <functional>
 
 template<typename T, typename U>
-class singletion_map : public std::map<T, U> {
-    singletion_map() : std::map<T, U>() {};
-    singletion_map(singletion_map const&) = delete;
-    void operator=(singletion_map const&) = delete;
+class singleton_map : public std::map<T, U> {
+    singleton_map() : std::map<T, U>() {};
+    singleton_map(singleton_map const&) = delete;
+    void operator=(singleton_map const&) = delete;
 
     public:
-    static singletion_map &instance() {
-        static singletion_map instance_;
+    static singleton_map &instance() {
+        static singleton_map instance_;
         return instance_;
     }
 };

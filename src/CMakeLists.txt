@@ -17,6 +17,12 @@ set (TARGET_NAME "mkl_dnn")
 
 add_definitions(-DEXPORT_NEURAL_SYMBOLS)
 
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+endif()
+
 file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h
       )
