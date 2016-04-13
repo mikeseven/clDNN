@@ -18,7 +18,6 @@
 
 #include <memory>
 #include "convolution.h"
-#include "empty_base_class.h"
 
 namespace neural {
     struct convolution_cpu_jit : is_an_implementation {
