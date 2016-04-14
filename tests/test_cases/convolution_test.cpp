@@ -106,7 +106,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
 	EXPECT_FLOAT_EQ(-5.36f, output_memory.get_value<float>(1));
 }
 
-TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2_wstr2x2_in2x2x1x1_nopad) {
+TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2_wstr2x2_in2x2x1x1_fil2x2x1x3_nopad) {
 	//  Filter : 2x2x1x3
 	//  Stride : 2x2
 	//  Input  : 2x2x1x1
@@ -259,7 +259,7 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
 //    0.5 1.5
 //
 //   Bias
-//   -3
+//   2
 //
 //   BW Output:
 //   -2   -0.5   7
@@ -268,7 +268,7 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
 //
 //   Weights grad
 //   -7    35
-//    5.5  32.5
+//    5.5  32.25
 //
 //   Bias grad
 //   10
@@ -360,7 +360,7 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
 //   0   0    0
 //
 //  Bias grad
-//  2
+//  -3
     using namespace neural;
     auto bw_output    = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto bw_input     = memory::create({engine::cpu, memory::format::yxfb_f32, {1, 1, 1, 1}, true});
@@ -454,7 +454,7 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
 //  2   1  -1.5
 //
 //  Bias grad
-//  2
+//  -3
     using namespace neural;
     auto bw_output    = memory::create({engine::cpu, memory::format::yxfb_f32, {4, 4, 1, 1}, true});
     auto bw_input     = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
