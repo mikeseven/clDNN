@@ -91,8 +91,8 @@ namespace neural {
 				auto input = static_cast<float*>(this_reorder->input_memory(0).pointer);
 				auto output = static_cast<float*>(this_reorder->output_memory(0).pointer);
 
-				auto input_memory_arg  = this_reorder->input_memory(0).argument;
-				auto input_format = input_memory_arg.format;
+				auto& input_memory_arg  = this_reorder->input_memory(0).argument;
+				auto& input_format = input_memory_arg.format;
 
 				auto output_memory_arg = this_reorder->output_memory(0).argument;
 				auto output_format= output_memory_arg.format;
