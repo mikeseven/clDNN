@@ -1,5 +1,16 @@
-# Copyright (c) 2016, Intel Corporation
-# NeuralIA
+# Copyright (c) 2016 Intel Corporation
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#      http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 cmake_minimum_required (VERSION 2.8)
 include(CheckCXXCompilerFlag)
@@ -9,7 +20,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 message("=====================> ${CMAKE_BUILD_TYPE} <=====================")
 
-set(PROJECT_NAME "NeuralIA")
+set(PROJECT_NAME "MKL-DNN")
 project (${PROJECT_NAME})
 
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
@@ -21,10 +32,12 @@ if(NOT(UNIX))
   set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
   set (LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
   set (CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
+  set (LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_DIRECTORY}) # compatibility issue: linux uses LIBRARY_OUTPUT_PATH, windows uses LIBRARY_OUTPUT_DIRECTORY
 else ()
   set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
   set (LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
   set (CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
+  set (LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_DIRECTORY})
 endif()
 
 message (STATUS "PROJECT ............................... " ${PROJECT_NAME})
@@ -51,16 +64,19 @@ if(UNIX)
     add_definitions(-ffast-math)
   endif()
   add_definitions(-fPIC)
+  add_definitions(-fno-operator-names)
 endif()
 
 if(UNIX)
   CHECK_CXX_COMPILER_FLAG("-fvisibility=hidden" COMPILER_SUPPORTS_VISIBILITY)
   if (COMPILER_SUPPORTS_VISIBILITY)
-    add_definitions(-fvisibility=hidden)
-  endif(COMPILER_SUPPORTS_VISIBILITY)
+    #add_definitions(-fvisibility=hidden) todo: should be hidden? if so define default visibiliti explicite for each funtion
+    add_definitions(-fvisibility=default) 
+    endif(COMPILER_SUPPORTS_VISIBILITY)
 endif(UNIX)
 
 include_directories(${CMAKE_SOURCE_DIR}/api)
+include_directories(${CMAKE_SOURCE_DIR}/xbyak)
 
 # Sub-directories where more CMakeLists.txt exist
 add_subdirectory(src)

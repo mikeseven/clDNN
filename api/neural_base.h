@@ -1,3 +1,19 @@
+/*
+// Copyright (c) 2016 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+*/
+
 #pragma once
 
 #include <vector>
@@ -8,10 +24,11 @@
 #include <exception>
 #include <cassert>
 
+#include "dll.h"
+
 // [TODO]
 //      compiler-agnostic compile-time assertions for C++98
 //      generic format-traits (type, sizeof, etc), currenly float32 assumed in file.cpp
-
 
 namespace neural {
 
@@ -35,6 +52,8 @@ template<>           struct is_floating_point<double>{ static const bool value =
 template<>           struct is_floating_point<half>  { static const bool value = true; };
 #endif
 
+DLL_SYM type_traits* typeid_register(size_t size, bool is_float, const char* cstr);
+
 //todo type id and const type id should be equall
 template<typename T_type>
 #if defined _MSC_VER
@@ -43,7 +62,6 @@ __declspec(noinline)
 __attribute__((noinline))
 #endif
 auto type_id() -> type_traits * {
-
 #if defined _MSC_VER
     static std::string signature = __FUNCSIG__;
     static std::string type_name = signature.substr(signature.find('<', 0)+1, signature.find('>', 0)-signature.find('<', 0)-1);
@@ -51,11 +69,9 @@ auto type_id() -> type_traits * {
     static std::string signature =__PRETTY_FUNCTION__;
     static std::string type_name = signature.substr(signature.find('=', 0)+2, signature.find(']', 0)-signature.find('=', 0)-2);
 #endif
-
-    static type_traits ti{{reinterpret_cast<size_t>(&ti)}, sizeof(T_type), is_floating_point<T_type>::value, type_name.c_str()};
-    return &ti;
+    static type_traits *ti = typeid_register(sizeof(T_type), is_floating_point<T_type>::value, type_name.c_str());
+    return ti;
 }
-
 
 class engine  { engine();  public: enum type { reference, cpu, any=static_cast<uint32_t>(-1) }; };
 class padding { padding(); public: enum type { zero }; };
@@ -247,5 +263,5 @@ public:
 };
 
 // execution of sequence of primitives
-void execute(std::vector<primitive>);
+DLL_SYM void execute(std::vector<primitive>);
 }

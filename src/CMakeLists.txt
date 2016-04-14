@@ -1,8 +1,27 @@
-# Copyright (c) 2016, Intel Corporation
-# NeuralIA
+# Copyright (c) 2016 Intel Corporation
 
-set (TARGET_NAME "neuralia")
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#      http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set (TARGET_NAME "mkl_dnn")
 # Sources for test files
+
+add_definitions(-DEXPORT_NEURAL_SYMBOLS)
+
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+endif()
 
 file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h
@@ -24,10 +43,11 @@ include_directories (${CMAKE_SOURCE_DIR}
                     )
 
 # Create library file from sources.
-add_library(${TARGET_NAME} STATIC
+add_library(${TARGET_NAME} SHARED
             ${LIBRARY_SRC}
             ${API_HEADERS})
 
 if(UNIX)
     target_link_libraries(${TARGET_NAME} pthread)
 endif()
+

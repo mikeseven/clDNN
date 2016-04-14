@@ -1,14 +1,29 @@
-# Copyright (c) 2016, Intel Corporation
-# NeuralIA
+# Copyright (c) 2016 Intel Corporation
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#      http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 add_subdirectory (gtest)
-
 
 set (APP_NAME "tests")
 # Sources for test files
 
 file (GLOB TEST_CASES_SRC
       test_cases/*.cpp)
+      
+file (GLOB TEST_UTILS_SRC
+      test_utils/*.cpp
+      test_utils/*.h
+      )
 
 # Main source file
 set  (MAIN_SRC
@@ -19,16 +34,17 @@ file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h
       )
 
-
 # Create named folders for the sources within the .vcproj
 # Empty name lists them directly under the .vcproj
 source_group("" FILES ${MAIN_SRC})
 source_group("test caseses" FILES ${TEST_CASES_SRC})
+source_group("test utils" FILES ${TEST_UTILS_SRC})
 
 # Properties->C/C++->General->Additional Include Directories
 include_directories (${CMAKE_SOURCE_DIR}
                      ${CMAKE_SOURCE_DIR}/src
                      ${CMAKE_SOURCE_DIR}/tests
+                     ${CMAKE_SOURCE_DIR}/test_utils
                     )
 
 # Create exe file from sources.
@@ -97,8 +113,9 @@ else()
      endif()
 endif()
 # Set library dependencies
-target_link_libraries(${APP_NAME} gtest neuralia)
+target_link_libraries(${APP_NAME} gtest mkl_dnn)
 
 if(UNIX AND WITH_CAFFE)
     add_subdirectory (caffe EXCLUDE_FROM_ALL)
 endif()
+
