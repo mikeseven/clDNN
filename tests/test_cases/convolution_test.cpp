@@ -66,6 +66,48 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     ASSERT_EQ(9.0f, output_memory.get_value<float>(3));
 }
 
+TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
+	//  Filter : 2x2
+	//  Stride : 2x2
+	//  Input  : 2x2x1x2
+	//  Output : 1x1x1x2
+	//
+	//  Input:
+	//  0.5 1.5		2.3	-0.4
+	//  2.0	-4.0		1.0	3.0	
+	//  
+	//  
+	//
+	//  Filter
+	//  -1.2 1.5
+	//   0.5 -0.5
+	//
+	//  Bias
+	//  -1
+	//
+	//  Output:
+	//	3.65 -5.36	
+	//  
+	using namespace neural;
+
+	auto input = memory::create({ engine::cpu, memory::format::yxfb_f32,{ 2, 2, 1, 2 }, true });
+	auto output = memory::create({ engine::cpu, memory::format::yxfb_f32,{ 1, 1, 1, 2 }, true });
+	auto weights = memory::create({ engine::cpu, memory::format::yxfb_f32,{ 2, 2, 1, 1 }, true });
+	auto biases = memory::create({ engine::cpu, memory::format::x_f32,{ 1 }         , true });
+
+	set_values(input, { 0.5f, 2.3f, 1.5f, -0.4f, 2.0f, 1.0f, -4.0f, 3.0f });
+	set_values(weights, { -1.2f, 1.5f, 0.5f, -0.5f });
+	set_values(biases, { -1.0f });
+
+	auto conv = convolution::create({ engine::reference, output, input, { 2, 2, 1, 1 }, weights, biases, padding::zero });
+
+	execute({ conv });
+
+	auto& output_memory = output.as<const memory&>();
+	ASSERT_EQ(3.65f, output_memory.get_value<float>(0));
+	ASSERT_EQ(-5.36f, output_memory.get_value<float>(1));
+}
+
 TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //  Filter  : 3x3
 //  Stride  : 2x2
