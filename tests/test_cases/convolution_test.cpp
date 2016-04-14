@@ -73,16 +73,14 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
 	//  Output : 1x1x1x2
 	//
 	//  Input:
-	//  0.5 1.5		2.3	-0.4
-	//  2.0	-4.0		1.0	3.0	
-	//  
-	//  
+	//  0.5  1.5	2.3	-0.4
+	//  2.0	-4.0		1.0	 3.0	
 	//
-	//  Filter
-	//  -1.2 1.5
+	//  Filter:
+	//  -1.2  1.5
 	//   0.5 -0.5
 	//
-	//  Bias
+	//  Bias:
 	//  -1
 	//
 	//  Output:
@@ -106,6 +104,48 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
 	auto& output_memory = output.as<const memory&>();
 	ASSERT_EQ(3.65f, output_memory.get_value<float>(0));
 	ASSERT_EQ(-5.36f, output_memory.get_value<float>(1));
+}
+
+TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2_wstr2x2_in2x2x1x1_nopad) {
+	//  Filter : 2x2x1x3
+	//  Stride : 2x2
+	//  Input  : 2x2x1x1
+	//  Output : 1x1x3x1
+	//
+	//  Input:
+	//  -2.3 -0.1
+	//   3.1  1.9	
+	//
+ 	// Filter:
+	//  -1.1  1.5    0.1  0.2    2.0  -1.0
+	//   0.5 -0.5    0.4  0.7    2.5  -1.5
+	//
+	//  Bias:
+	//  0.1 -0.2 0.3
+	//
+	//  Output:
+	//     0.7	
+	//   2.12
+	// 3.08
+	using namespace neural;
+
+	auto input = memory::create({ engine::cpu, memory::format::yxfb_f32,{ 2, 2, 1, 1 }, true });
+	auto output = memory::create({ engine::cpu, memory::format::yxfb_f32,{ 1, 1, 3, 1 }, true });
+	auto weights = memory::create({ engine::cpu, memory::format::yxfb_f32,{ 2, 2, 1, 3 }, true });
+	auto biases = memory::create({ engine::cpu, memory::format::x_f32,{ 3 }         , true });
+
+	set_values(input, { -2.3f, -0.1f, 3.1f, 1.9f });
+	set_values(weights, { -1.1f, 0.1f, 2.0f, 1.5f, 0.2f, -1.0f, 0.5f, 0.4f, 2.5f, -0.5f, 0.7f, -1.5f });
+	set_values(biases, { 0.1f, -0.2f, 0.3f });
+
+	auto conv = convolution::create({ engine::reference, output, input, { 2, 2, 1, 1 }, weights, biases, padding::zero });
+
+	execute({ conv });
+
+	auto& output_memory = output.as<const memory&>();
+	ASSERT_FLOAT_EQ(3.08f, output_memory.get_value<float>(0));
+	ASSERT_EQ(2.12f, output_memory.get_value<float>(1));
+	ASSERT_EQ(0.7f, output_memory.get_value<float>(2));
 }
 
 TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
