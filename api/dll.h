@@ -4,7 +4,7 @@
 #   if defined(_MSC_VER)
        //  Microsoft
 #      define DLL_SYM __declspec(dllexport)
-#   elif defined(_GCC)
+#   elif defined(__GNUC__)
        //  GCC
 #      define DLL_SYM __attribute__((visibility("default")))
 #   else
@@ -15,7 +15,7 @@
 #   if defined(_MSC_VER)
        //  Microsoft
 #      define DLL_SYM __declspec(dllimport)
-#   elif defined(_GCC)
+#   elif defined(__GNUC__)
        //  GCC
 #      define DLL_SYM
 #   else
