@@ -118,7 +118,6 @@ void example_009() {
 
     auto buf_out = static_cast<float*>(output.as<const memory&>().pointer);
 
-    bool result = true;
     for(size_t i = 0; i < dim_y*dim_x*dim_f*dim_b; ++i)
         assert (buf_out[i] == wyn_buffer[i]);
 
