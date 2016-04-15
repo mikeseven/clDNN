@@ -60,10 +60,92 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     execute({conv});
 
     auto& output_memory = output.as<const memory&>();
-    ASSERT_EQ(8.0f, output_memory.get_value<float>(0));
-    ASSERT_EQ(0.5f, output_memory.get_value<float>(1));
-    ASSERT_EQ(6.0f, output_memory.get_value<float>(2));
-    ASSERT_EQ(9.0f, output_memory.get_value<float>(3));
+    EXPECT_FLOAT_EQ(8.0f, output_memory.get_value<float>(0));
+    EXPECT_FLOAT_EQ(0.5f, output_memory.get_value<float>(1));
+    EXPECT_FLOAT_EQ(6.0f, output_memory.get_value<float>(2));
+    EXPECT_FLOAT_EQ(9.0f, output_memory.get_value<float>(3));
+}
+
+TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
+    //  Filter : 2x2
+    //  Stride : 2x2
+    //  Input  : 2x2x1x2
+    //  Output : 1x1x1x2
+    //
+    //  Input:
+    //  0.5  1.5    2.3 -0.4
+    //  2.0  4.0    1.0  3.0
+    //
+    //  Filter:
+    //  -1.2  1.5
+    //   0.5 -0.5
+    //
+    //  Bias:
+    //  -1
+    //
+    //  Output:
+    //  3.65 -5.36
+    //  
+    using namespace neural;
+
+    auto input = memory::create({ engine::cpu, memory::format::yxfb_f32,{ 2, 2, 1, 2 }, true });
+    auto output = memory::create({ engine::cpu, memory::format::yxfb_f32,{ 1, 1, 1, 2 }, true });
+    auto weights = memory::create({ engine::cpu, memory::format::yxfb_f32,{ 2, 2, 1, 1 }, true });
+    auto biases = memory::create({ engine::cpu, memory::format::x_f32,{ 1 }         , true });
+
+    set_values(input, { 0.5f, 2.3f, 1.5f, -0.4f, 2.0f, 1.0f, -4.0f, 3.0f });
+    set_values(weights, { -1.2f, 1.5f, 0.5f, -0.5f });
+    set_values(biases, { -1.0f });
+
+    auto conv = convolution::create({ engine::reference, output, input, { 2, 2, 1, 1 }, weights, biases, padding::zero });
+
+    execute({ conv });
+
+    auto& output_memory = output.as<const memory&>();
+    EXPECT_FLOAT_EQ(3.65f, output_memory.get_value<float>(0));
+    EXPECT_FLOAT_EQ(-5.36f, output_memory.get_value<float>(1));
+}
+
+TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
+    //  Filter : 2x2x1x3
+    //  Stride : 2x2
+    //  Input  : 2x2x1x1
+    //  Output : 1x1x3x1
+    //
+    //  Input:
+    //  -2.3 -0.1
+    //   3.1  1.9
+    //
+     // Filter:
+    //  -1.1  1.5    0.1  0.2    2.0  -1.0
+    //   0.5 -0.5    0.4  0.7    2.5  -1.5
+    //
+    //  Bias:
+    //  0.1 -0.2 0.3
+    //
+    //  Output:
+    //     0.7
+    //   2.12
+    // 3.08
+    using namespace neural;
+
+    auto input = memory::create({ engine::cpu, memory::format::yxfb_f32,{ 2, 2, 1, 1 }, true });
+    auto output = memory::create({ engine::cpu, memory::format::yxfb_f32,{ 1, 1, 3, 1 }, true });
+    auto weights = memory::create({ engine::cpu, memory::format::yxfb_f32,{ 2, 2, 1, 3 }, true });
+    auto biases = memory::create({ engine::cpu, memory::format::x_f32,{ 3 }         , true });
+
+    set_values(input, { -2.3f, -0.1f, 3.1f, 1.9f });
+    set_values(weights, { -1.1f, 0.1f, 2.0f, 1.5f, 0.2f, -1.0f, 0.5f, 0.4f, 2.5f, -0.5f, 0.7f, -1.5f });
+    set_values(biases, { 0.1f, -0.2f, 0.3f });
+
+    auto conv = convolution::create({ engine::reference, output, input, { 2, 2, 1, 1 }, weights, biases, padding::zero });
+
+    execute({ conv });
+
+    auto& output_memory = output.as<const memory&>();
+    EXPECT_FLOAT_EQ(3.08f, output_memory.get_value<float>(0));
+    EXPECT_FLOAT_EQ(2.12f, output_memory.get_value<float>(1));
+    EXPECT_FLOAT_EQ(0.7f, output_memory.get_value<float>(2));
 }
 
 TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
@@ -74,14 +156,14 @@ TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //  Padding : zero
 //
 //  Input:
-//  -0.5   0.5   padd
-//   1     2.0   padd
+//  -0.5   1.0   padd
+//   0.5   2.0   padd
 //  padd  padd   padd
 //
 //  Filter
-//  -2    1.5  0.5
-//   0.5  4    1.5
-//   3.5 -5   -1.5
+//  -2    0.5  3.5
+//   1.5  4   -5
+//   0.5  1.5 -1.5
 //
 //  Bias
 //  2
@@ -102,7 +184,7 @@ TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     execute({conv});
 
     auto& output_memory = output.as<const memory&>();
-    ASSERT_EQ(12.25f, output_memory.get_value<float>(0));
+    EXPECT_FLOAT_EQ(12.25f, output_memory.get_value<float>(0));
 }
 
 TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
@@ -116,13 +198,13 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //
 //   Input:
 //   padd padd  padd
-//   padd -0.5   0.5
-//   padd  1     2.0
+//   padd -0.5   1
+//   padd  0.5   2.0
 //
 //   Filter
-//   -2    1.5  0.5
-//    0.5  4    1.5
-//    3.5 -5   -1.5
+//   -2    0.5  3.5
+//    1.5  4   -5
+//    0.5  1.5 -1.5
 //
 //   Bias
 //   2
@@ -153,7 +235,7 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     execute({conv});
 
     auto& output_memory = output.as<const memory&>();
-    ASSERT_EQ(-7.25f, output_memory.get_value<float>(3));
+    EXPECT_FLOAT_EQ(-7.25f, output_memory.get_value<float>(3));
 }
 
 TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
@@ -177,7 +259,7 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
 //    0.5 1.5
 //
 //   Bias
-//   -3
+//   2
 //
 //   BW Output:
 //   -2   -0.5   7
@@ -186,7 +268,7 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
 //
 //   Weights grad
 //   -7    35
-//    5.5  32.5
+//    5.5  32.25
 //
 //   Bias grad
 //   10
@@ -230,18 +312,18 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
     results_equal &=  1.5f == bw_output_mem.get_value<float>(6);
     results_equal &=  6.5f == bw_output_mem.get_value<float>(7);
     results_equal &=  6.0f == bw_output_mem.get_value<float>(8);
-    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong output gradient";
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong output gradient";
 
     results_equal = true;
     results_equal &= -7.00f == weights_diff_mem.get_value<float>(0);
     results_equal &= 35.00f == weights_diff_mem.get_value<float>(1);
     results_equal &=  5.50f == weights_diff_mem.get_value<float>(2);
     results_equal &= 32.25f == weights_diff_mem.get_value<float>(3);
-    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong weights gradient";
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong weights gradient";
 
     results_equal = true;
     results_equal &= 10.0f == biases_diff_mem.get_value<float>(0);
-    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong bias gradient";
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }
 
 TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
@@ -278,7 +360,7 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
 //   0   0    0
 //
 //  Bias grad
-//  2
+//  -3
     using namespace neural;
     auto bw_output    = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
     auto bw_input     = memory::create({engine::cpu, memory::format::yxfb_f32, {1, 1, 1, 1}, true});
@@ -313,7 +395,7 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
     results_equal &=  7.0f == bw_output_mem.get_value<float>(1);
     results_equal &=  1.0f == bw_output_mem.get_value<float>(2);
     results_equal &=  3.0f == bw_output_mem.get_value<float>(3);
-    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong output gradient";
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong output gradient";
 
     results_equal = true;
     results_equal &=  2.0f == weights_diff_mem.get_value<float>(0);
@@ -325,11 +407,11 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
     results_equal &=  0.0f == weights_diff_mem.get_value<float>(6);
     results_equal &=  0.0f == weights_diff_mem.get_value<float>(7);
     results_equal &=  0.0f == weights_diff_mem.get_value<float>(8);
-    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong weights gradient";
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong weights gradient";
 
     results_equal = true;
     results_equal &= 2.0f == biases_diff_mem.get_value<float>(0);
-    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong bias gradient";
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }
 
 TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
@@ -372,7 +454,7 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
 //  2   1  -1.5
 //
 //  Bias grad
-//  2
+//  -3
     using namespace neural;
     auto bw_output    = memory::create({engine::cpu, memory::format::yxfb_f32, {4, 4, 1, 1}, true});
     auto bw_input     = memory::create({engine::cpu, memory::format::yxfb_f32, {2, 2, 1, 1}, true});
@@ -434,7 +516,7 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
     results_equal &=  2.0f == bw_output_mem.get_value<float>(13);
     results_equal &=  1.0f == bw_output_mem.get_value<float>(14);
     results_equal &=  3.0f == bw_output_mem.get_value<float>(15);
-    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong output gradient";
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong output gradient";
 
     results_equal = true;
     results_equal &=  2.0f == weights_diff_mem.get_value<float>(0);
@@ -446,9 +528,9 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
     results_equal &=  2.0f == weights_diff_mem.get_value<float>(6);
     results_equal &=  1.0f == weights_diff_mem.get_value<float>(7);
     results_equal &= -1.5f == weights_diff_mem.get_value<float>(8);
-    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong weights gradient";
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong weights gradient";
 
     results_equal = true;
     results_equal &= 2.0f == biases_diff_mem.get_value<float>(0);
-    EXPECT_EQ(true, results_equal) << "ERROR MESSAGE: wrong bias gradient";
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }
