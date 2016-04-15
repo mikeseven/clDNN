@@ -143,6 +143,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
         i = 0;
         while (random_input_non_zero >= i++ * input_size[3]) {
             non_zero_value = i % input_size[2];
+            break;
         }
     }
 
@@ -282,6 +283,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
         i = 0;
         while (random_input_non_zero >= i++ * input_size[3]) {
             non_zero_value = i % input_size[2];
+            break;
         }
     }
 
