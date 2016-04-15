@@ -137,7 +137,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
 
     // Find non zero value in avarages
     if (input_size[2] == 1) {
-        non_zero_value = 1;
+        non_zero_value = 0;
     }
     else {
         i = 0;
@@ -277,7 +277,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
 
     // Find non zero value in avarages
     if (input_size[2] == 1) {
-        non_zero_value = 1;
+        non_zero_value = 0;
     }
     else {
         i = 0;
