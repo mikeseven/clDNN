@@ -1,6 +1,17 @@
 /*
-Copyright (c) 2016, Intel Corporation
-NeuralIA
+// Copyright (c) 2016 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 */
 
 #include "api/neural.h"
@@ -91,8 +102,8 @@ namespace neural {
 				auto input = static_cast<float*>(this_reorder->input_memory(0).pointer);
 				auto output = static_cast<float*>(this_reorder->output_memory(0).pointer);
 
-				auto input_memory_arg  = this_reorder->input_memory(0).argument;
-				auto input_format = input_memory_arg.format;
+				auto& input_memory_arg  = this_reorder->input_memory(0).argument;
+				auto& input_format = input_memory_arg.format;
 
 				auto output_memory_arg = this_reorder->output_memory(0).argument;
 				auto output_format= output_memory_arg.format;
@@ -101,8 +112,8 @@ namespace neural {
                 if (input_format == output_format)
                     return;
 
-				auto input_size = input_memory_arg.size;
-				auto output_size= output_memory_arg.size;
+				auto& input_size = input_memory_arg.size;
+				auto& output_size= output_memory_arg.size;
 
 				if(input_size.size() != output_size.size())throw std::runtime_error("Reorder input/output number of dimension does not match.");
 
