@@ -17,3 +17,7 @@
 #pragma once
 
 #include "lrn.h"
+
+namespace neural {
+
+}

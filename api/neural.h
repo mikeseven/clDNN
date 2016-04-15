@@ -413,7 +413,7 @@ struct /*normalization*/response : is_a_primitive {
         std::vector<int32_t>        input_offset;
         uint32_t                    size;
         neural::padding::type       padding;
-        float                       bias;
+        float                       k;
         float                       alpha;
         float                       beta;
 

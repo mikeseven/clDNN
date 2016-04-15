@@ -19,7 +19,6 @@
 
 namespace neural {
 
-//static std::map<const char*, type_traits*> register_map;
 static std::map<const char*, std::shared_ptr<type_traits>> register_map;
 
 type_traits* typeid_register(size_t size, bool is_float, const char* cstr){
