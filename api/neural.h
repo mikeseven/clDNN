@@ -55,6 +55,7 @@ namespace {
 
 // data in memory in known format; format = {order, type} of values
 struct memory : is_a_primitive {
+
     struct format_traits {
         const uint8_t       dimension;
         const type_traits  *type;
@@ -89,7 +90,7 @@ struct memory : is_a_primitive {
         switch(fmt) {
         case format::scalar_f32:
         case format::   x_f32: return {1, type_id<float>()};
-        case format::  xb_f32: return {2, type_id<float>()};
+		case format::  xb_f32: return {2, type_id<float>()};
         case format::yxfb_f32:
         case format::fyxb_f32:
         case format::xyfb_f32:
@@ -97,7 +98,7 @@ struct memory : is_a_primitive {
         case format::byxf_f32:
         case format::bfyx_f32:
         case format::bxyf_f32:
-        case format::bfxy_f32: return {4, type_id<float>()};
+		case format::bfxy_f32: return {4, type_id<float>()};
         case format::scalar_f64:
         case format::   x_f64: return {1, type_id<double>()};
         case format::yxfb_f64:
@@ -191,7 +192,8 @@ struct reorder : is_a_primitive {
         std::vector<primitive>      output;
         std::vector<primitive_at>   input;  // 1: {input}
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type, primitive_at);
+        DLL_SYM arguments(neural::engine::type engine, primitive_at input, primitive output);
+        DLL_SYM arguments(neural::engine::type engine, neural::memory::format::type out_fmt, std::vector<uint32_t> out_sizes, primitive_at input);
     };
     const arguments argument;
 
