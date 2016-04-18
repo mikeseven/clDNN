@@ -101,7 +101,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
 
   //TODO: support for g>1
   std::vector<unsigned> top_sizes_g = {oh, ow, oc/g, n};
-  convolution_fwd = convolution::create( {engine::reference,
+  convolution_fwd = convolution::create( {engine::cpu,
                                         fwd_top_data->memory,
                                         {0,0,0,0},
                                         top_sizes_g,
