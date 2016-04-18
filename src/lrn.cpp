@@ -19,7 +19,7 @@
 
 namespace neural {
 
-singletion_map<lrn_fw_key, std::function<is_an_implementation *(normalization::response &)>>         & lrn_fw_implementation_map = singletion_map<lrn_fw_key, std::function<is_an_implementation *(normalization::response &)>>         ::instance();
+singleton_map<lrn_fw_key, std::function<is_an_implementation *(normalization::response &)>>         & lrn_fw_implementation_map = singleton_map<lrn_fw_key, std::function<is_an_implementation *(normalization::response &)>>         ::instance();
 //singletion_map<lrn_bw_key, std::function<is_an_implementation *(normalization::response_backward &)>>& lrn_bw_implementation_map = singletion_map<lrn_bw_key, std::function<is_an_implementation *(normalization::response_backward &)>>::instance();
 
 /*
