@@ -118,10 +118,8 @@ void example_009() {
 
     auto buf_out = static_cast<float*>(output.as<const memory&>().pointer);
 
-    bool result = true;
     for(size_t i = 0; i < dim_y*dim_x*dim_f*dim_b; ++i)
-        result &= buf_out[i] == wyn_buffer[i];
-    assert (result == true);
+        assert (buf_out[i] == wyn_buffer[i]);
 
     //2 pass output as input, should give input ;)
     auto input2  = memory::create({engine::cpu, out_layout, out_sizes});
@@ -140,8 +138,7 @@ void example_009() {
     auto buf_out2 = static_cast<float*>(output2.as<const memory&>().pointer);
 
     for(size_t i = 0; i < dim_y*dim_x*dim_f*dim_b; ++i)
-        result &= buf_out2[i] == in_buffer[i];
-    assert (result == true);
+        assert (buf_out2[i] == in_buffer[i]);
 
     //throws exception auto in_layout = memory::format::yxfb_f32;
     input2  = memory::create({engine::cpu, memory::format::yxfb_f64, out_sizes});
