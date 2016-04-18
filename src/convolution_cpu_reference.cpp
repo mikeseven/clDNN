@@ -204,6 +204,8 @@ struct attach{
         auto val_fw = convolution_cpu_reference::create;
         auto val_bw = convolution_backward_cpu_reference::create;
 
+        auto& conv_fw_implementation_map = singleton_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>         ::instance();
+        auto& conv_bw_implementation_map = singleton_map<conv_bw_key, std::function<is_an_implementation *(convolution_backward &)>>::instance();
         conv_fw_implementation_map.insert( {key, val_fw} ); //todo keys should be different
         conv_bw_implementation_map.insert( {key, val_bw} );
     }
