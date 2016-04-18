@@ -1,4 +1,4 @@
-#ifdef USE_NEURALIA
+#ifdef USE_MKL_DNN
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -6,13 +6,13 @@
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
 #include "caffe/filler.hpp"
-#include "caffe/layers/neuralia_layers.hpp"
+#include "caffe/layers/mkl_dnn_layers.hpp"
 
 #include "caffe/test/test_caffe_main.hpp"
 #include "caffe/test/test_gradient_check_util.hpp"
 
 namespace caffe {
-  
+
 // Reference convolution for checking results:
 // accumulate through explicit loops over input, output, and filters.
 template <typename Dtype>
@@ -145,11 +145,11 @@ template void caffe_conv(const Blob<double>* in,
     Blob<double>* out);
 
 template <typename TypeParam>
-class NeuraliaConvolutionLayerTest : public MultiDeviceTest<TypeParam> {
+class MKL_DNNConvolutionLayerTest : public MultiDeviceTest<TypeParam> {
   typedef typename TypeParam::Dtype Dtype;
 
  protected:
-  NeuraliaConvolutionLayerTest()
+  MKL_DNNConvolutionLayerTest()
       //: blob_bottom_(new Blob<Dtype>(2, 3, 6, 4)),
         //blob_bottom_2_(new Blob<Dtype>(2, 3, 6, 4)),
          : blob_bottom_(new Blob<Dtype>(1, 2, 2, 2)), // jrenieck: temporarily simplified
@@ -167,7 +167,7 @@ class NeuraliaConvolutionLayerTest : public MultiDeviceTest<TypeParam> {
     blob_top_vec_.push_back(blob_top_);
   }
 
-  virtual ~NeuraliaConvolutionLayerTest() {
+  virtual ~MKL_DNNConvolutionLayerTest() {
     delete blob_bottom_;
     delete blob_bottom_2_;
     delete blob_top_;
@@ -190,12 +190,12 @@ class NeuraliaConvolutionLayerTest : public MultiDeviceTest<TypeParam> {
 };
 
 
-//TYPED_TEST_CASE(NeuraliaConvolutionLayerTest, TestDtypesAndDevices);
+//TYPED_TEST_CASE(MKL_DNNConvolutionLayerTest, TestDtypesAndDevices);
 // TODO: Currently only float support
-TYPED_TEST_CASE(NeuraliaConvolutionLayerTest, ::testing::Types<CPUDevice<float> >);
+TYPED_TEST_CASE(MKL_DNNConvolutionLayerTest, ::testing::Types<CPUDevice<float> >);
 
 #if 0
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestSetupNeuralia) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSetupMKL_DNN) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -206,7 +206,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSetupNeuralia) {
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
   shared_ptr<Layer<Dtype> > layer(
-      new NeuraliaConvolutionLayer<Dtype>(layer_param));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_->num(), 2);
   EXPECT_EQ(this->blob_top_->channels(), 4);
@@ -219,7 +219,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSetupNeuralia) {
   // setting group should not change the shape
   convolution_param->set_num_output(3);
   convolution_param->set_group(3);
-  layer.reset(new NeuraliaConvolutionLayer<Dtype>(layer_param));
+  layer.reset(new MKL_DNNConvolutionLayer<Dtype>(layer_param));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_->num(), 2);
   EXPECT_EQ(this->blob_top_->channels(), 3);
@@ -231,7 +231,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSetupNeuralia) {
   EXPECT_EQ(this->blob_top_2_->width(), 1);
 }
 #endif
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestSimpleConvolutionNeuralia) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolutionMKL_DNN) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
@@ -245,7 +245,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSimpleConvolutionNeuralia) {
   convolution_param->mutable_bias_filler()->set_type("constant");
   convolution_param->mutable_bias_filler()->set_value(0.1);
   shared_ptr<Layer<Dtype> > layer(
-      new NeuraliaConvolutionLayer<Dtype>(layer_param));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -272,7 +272,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSimpleConvolutionNeuralia) {
 }
 
 
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestSimpleConvolutionNeuralia_2outputs) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolutionMKL_DNN_2outputs) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
@@ -286,7 +286,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSimpleConvolutionNeuralia_2outputs)
   convolution_param->mutable_bias_filler()->set_type("constant");
   convolution_param->mutable_bias_filler()->set_value(0.1);
   shared_ptr<Layer<Dtype> > layer(
-      new NeuraliaConvolutionLayer<Dtype>(layer_param));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -312,7 +312,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSimpleConvolutionNeuralia_2outputs)
 #endif
 }
 
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestGradient) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestGradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -326,14 +326,14 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestGradient) {
   convolution_param->set_num_output(1);  // jrenieck: temporarily simplified, was:2
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
-  NeuraliaConvolutionLayer<Dtype> layer(layer_param);
+  MKL_DNNConvolutionLayer<Dtype> layer(layer_param);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
 }
 
 #if 0
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestDilatedConvolutionNeuralia) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestDilatedConvolutionMKL_DNN) {
   typedef typename TypeParam::Dtype Dtype;
   vector<int> bottom_shape;
   bottom_shape.push_back(2);
@@ -355,7 +355,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestDilatedConvolutionNeuralia) {
   convolution_param->mutable_bias_filler()->set_type("constant");
   convolution_param->mutable_bias_filler()->set_value(0.1);
   shared_ptr<Layer<Dtype> > layer(
-      new NeuraliaConvolutionLayer<Dtype>(layer_param));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -381,7 +381,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestDilatedConvolutionNeuralia) {
 #endif
 
 #if 0
-TYPED_TEST(NeuraliaConvolutionLayerTest, Test0DConvolutionNeuralia) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, Test0DConvolutionMKL_DNN) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -392,7 +392,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, Test0DConvolutionNeuralia) {
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
   shared_ptr<Layer<Dtype> > layer(
-      new NeuraliaConvolutionLayer<Dtype>(layer_param));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param));
   vector<int> top_shape = this->blob_bottom_->shape();
   top_shape[3] = kNumOutput;
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -421,7 +421,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, Test0DConvolutionNeuralia) {
 #endif
 
 #if 0
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestSimple3DConvolution) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimple3DConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
@@ -446,7 +446,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSimple3DConvolution) {
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
   shared_ptr<Layer<Dtype> > layer(
-      new NeuraliaConvolutionLayer<Dtype>(layer_param));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -473,7 +473,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSimple3DConvolution) {
 #endif
 
 #if 0
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestDilated3DConvolution) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestDilated3DConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
@@ -498,7 +498,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestDilated3DConvolution) {
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
   shared_ptr<Layer<Dtype> > layer(
-      new NeuraliaConvolutionLayer<Dtype>(layer_param));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -521,7 +521,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestDilated3DConvolution) {
 }
 #endif
 #if 0
-TYPED_TEST(NeuraliaConvolutionLayerTest, Test1x1Convolution) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, Test1x1Convolution) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -533,7 +533,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, Test1x1Convolution) {
   convolution_param->mutable_bias_filler()->set_type("constant");
   convolution_param->mutable_bias_filler()->set_value(0.1);
   shared_ptr<Layer<Dtype> > layer(
-      new NeuraliaConvolutionLayer<Dtype>(layer_param));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -548,7 +548,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, Test1x1Convolution) {
   }
 }
 
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestSimpleConvolutionGroup) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolutionGroup) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -561,7 +561,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSimpleConvolutionGroup) {
   convolution_param->mutable_bias_filler()->set_type("constant");
   convolution_param->mutable_bias_filler()->set_value(0.1);
   shared_ptr<Layer<Dtype> > layer(
-      new NeuraliaConvolutionLayer<Dtype>(layer_param));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -578,7 +578,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSimpleConvolutionGroup) {
 #endif
 #if 0
 #if 0
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestSobelConvolution) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSobelConvolution) {
   // Test separable convolution by computing the Sobel operator
   // as a single filter then comparing the result
   // as the convolution of two rectangular filters.
@@ -599,7 +599,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSobelConvolution) {
   convolution_param->set_num_output(1);
   convolution_param->set_bias_term(false);
   shared_ptr<Layer<Dtype> > layer(
-      new NeuraliaConvolutionLayer<Dtype>(layer_param));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param));
   layer->blobs().resize(1);
   layer->blobs()[0].reset(new Blob<Dtype>(1, 3, 3, 3));
   Dtype* weights = layer->blobs()[0]->mutable_cpu_data();
@@ -632,7 +632,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSobelConvolution) {
   convolution_param->set_stride_w(1);
   convolution_param->set_num_output(1);
   convolution_param->set_bias_term(false);
-  layer.reset(new NeuraliaConvolutionLayer<Dtype>(layer_param));
+  layer.reset(new MKL_DNNConvolutionLayer<Dtype>(layer_param));
   layer->blobs().resize(1);
   layer->blobs()[0].reset(new Blob<Dtype>(1, 3, 3, 1));
   Dtype* weights_1 = layer->blobs()[0]->mutable_cpu_data();
@@ -654,7 +654,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSobelConvolution) {
   convolution_param->set_stride_w(2);
   convolution_param->set_num_output(1);
   convolution_param->set_bias_term(false);
-  layer.reset(new NeuraliaConvolutionLayer<Dtype>(layer_param));
+  layer.reset(new MKL_DNNConvolutionLayer<Dtype>(layer_param));
   layer->blobs().resize(1);
   layer->blobs()[0].reset(new Blob<Dtype>(1, 1, 1, 3));
   Dtype* weights_2 = layer->blobs()[0]->mutable_cpu_data();
@@ -673,7 +673,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestSobelConvolution) {
 #endif
 
 #if 0
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestNDAgainst2D) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestNDAgainst2D) {
   typedef typename TypeParam::Dtype Dtype;
   const int kernel_h = 11;
   const int kernel_w = 13;
@@ -703,7 +703,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestNDAgainst2D) {
   bool copy_diff;
   bool reshape;
   {
-    NeuraliaConvolutionLayer<Dtype> layer(layer_param);
+    MKL_DNNConvolutionLayer<Dtype> layer(layer_param);
     layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
     top_diff.ReshapeLike(*this->blob_top_);
     filler.Fill(&top_diff);
@@ -724,7 +724,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestNDAgainst2D) {
     caffe_set(weights.count(), Dtype(0), weights.mutable_cpu_diff());
     // Do SetUp and Forward; save Forward result in result_2d.
     convolution_param->set_force_nd_im2col(false);
-    NeuraliaConvolutionLayer<Dtype> layer_2d(layer_param);
+    MKL_DNNConvolutionLayer<Dtype> layer_2d(layer_param);
     layer_2d.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
     ASSERT_EQ(1, layer_2d.blobs().size());
     copy_diff = false; reshape = false;
@@ -755,7 +755,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestNDAgainst2D) {
     caffe_set(weights.count(), Dtype(0), weights.mutable_cpu_diff());
     // Do SetUp and Forward; save Forward result in result_nd.
     convolution_param->set_force_nd_im2col(true);
-    NeuraliaConvolutionLayer<Dtype> layer_nd(layer_param);
+    MKL_DNNConvolutionLayer<Dtype> layer_nd(layer_param);
     layer_nd.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
     ASSERT_EQ(1, layer_nd.blobs().size());
     copy_diff = false; reshape = false;
@@ -792,7 +792,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestNDAgainst2D) {
 }
 #endif
 
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestGradient) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestGradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -806,14 +806,14 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestGradient) {
   convolution_param->set_num_output(2);
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
-  NeuraliaConvolutionLayer<Dtype> layer(layer_param);
+  MKL_DNNConvolutionLayer<Dtype> layer(layer_param);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
 }
 
 #if 0
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestDilatedGradient) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestDilatedGradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -831,7 +831,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestDilatedGradient) {
   convolution_param->set_num_output(2);
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
-  NeuraliaConvolutionLayer<Dtype> layer(layer_param);
+  MKL_DNNConvolutionLayer<Dtype> layer(layer_param);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
                                   this->blob_top_vec_);
@@ -839,7 +839,7 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestDilatedGradient) {
 #endif
 
 #if 0
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestGradient3D) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestGradient3D) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -861,14 +861,14 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestGradient3D) {
   convolution_param->set_num_output(2);
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
-  NeuraliaConvolutionLayer<Dtype> layer(layer_param);
+  MKL_DNNConvolutionLayer<Dtype> layer(layer_param);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
 }
 #endif
 
-TYPED_TEST(NeuraliaConvolutionLayerTest, Test1x1Gradient) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, Test1x1Gradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -880,13 +880,13 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, Test1x1Gradient) {
   convolution_param->set_num_output(2);
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
-  NeuraliaConvolutionLayer<Dtype> layer(layer_param);
+  MKL_DNNConvolutionLayer<Dtype> layer(layer_param);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
 }
 
-TYPED_TEST(NeuraliaConvolutionLayerTest, TestGradientGroup) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestGradientGroup) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -897,11 +897,11 @@ TYPED_TEST(NeuraliaConvolutionLayerTest, TestGradientGroup) {
   convolution_param->set_group(3);
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
-  NeuraliaConvolutionLayer<Dtype> layer(layer_param);
+  MKL_DNNConvolutionLayer<Dtype> layer(layer_param);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
 }
 #endif
 }  // namespace caffe
-#endif //#ifdef USE_NEURALIA
+#endif //#ifdef USE_MKL_DNN
