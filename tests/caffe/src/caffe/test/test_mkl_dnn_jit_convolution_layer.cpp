@@ -153,7 +153,7 @@ class MKL_DNN_JIT_ConvolutionLayerTest : public MultiDeviceTest<TypeParam> {
       //: blob_bottom_(new Blob<Dtype>(2, 3, 6, 4)),
         //blob_bottom_2_(new Blob<Dtype>(2, 3, 6, 4)),
          : blob_bottom_(new Blob<Dtype>(24, 1, 13, 13)), // jrenieck: temporarily simplified
-        blob_bottom_2_(new Blob<Dtype>(1, 2, 2, 2)),
+        blob_bottom_2_(new Blob<Dtype>(24, 1, 13, 13)),
         blob_top_(new Blob<Dtype>()),
         blob_top_2_(new Blob<Dtype>()) {}
   virtual void SetUp() {
@@ -231,7 +231,7 @@ TYPED_TEST(MKL_DNN_JIT_ConvolutionLayerTest, TestSetupMKL_DNN) {
   EXPECT_EQ(this->blob_top_2_->width(), 1);
 }
 #endif
-TYPED_TEST(MKL_DNN_JIT_ConvolutionLayerTest, TestSimpleConvolutionMKL_DNN) {
+TYPED_TEST(MKL_DNN_JIT_ConvolutionLayerTest, TestSimpleConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
@@ -245,7 +245,7 @@ TYPED_TEST(MKL_DNN_JIT_ConvolutionLayerTest, TestSimpleConvolutionMKL_DNN) {
   convolution_param->mutable_bias_filler()->set_type("constant");
   convolution_param->mutable_bias_filler()->set_value(0.1);
   shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::cpu));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -272,7 +272,7 @@ TYPED_TEST(MKL_DNN_JIT_ConvolutionLayerTest, TestSimpleConvolutionMKL_DNN) {
 }
 
 #if 0
-TYPED_TEST(MKL_DNN_JIT_ConvolutionLayerTest, TestSimpleConvolutionMKL_DNN_2outputs) {
+TYPED_TEST(MKL_DNN_JIT_ConvolutionLayerTest, TestSimpleConvolution_2outputs) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
@@ -333,7 +333,7 @@ TYPED_TEST(MKL_DNN_JIT_ConvolutionLayerTest, TestGradient) {
 }
 #endif
 #if 0
-TYPED_TEST(MKL_DNN_JIT_ConvolutionLayerTest, TestDilatedConvolutionMKL_DNN) {
+TYPED_TEST(MKL_DNN_JIT_ConvolutionLayerTest, TestDilatedConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   vector<int> bottom_shape;
   bottom_shape.push_back(2);
@@ -381,7 +381,7 @@ TYPED_TEST(MKL_DNN_JIT_ConvolutionLayerTest, TestDilatedConvolutionMKL_DNN) {
 #endif
 
 #if 0
-TYPED_TEST(MKL_DNN_JIT_ConvolutionLayerTest, Test0DConvolutionMKL_DNN) {
+TYPED_TEST(MKL_DNN_JIT_ConvolutionLayerTest, Test0DConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =

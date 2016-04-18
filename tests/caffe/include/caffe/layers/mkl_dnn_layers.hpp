@@ -64,7 +64,7 @@ struct MKL_DNNDiff : MKL_DNNMemoryDescriptor<Dtype, true>
 template <typename Dtype>
 class MKL_DNNConvolutionLayer : public ConvolutionLayer<Dtype> {
 public:
-  explicit MKL_DNNConvolutionLayer(const LayerParameter& param);
+  explicit MKL_DNNConvolutionLayer(const LayerParameter& param, neural::engine::type engine = neural::engine::reference);
 
   virtual inline const char* type() const { return "DnnConvolution"; }
   virtual ~MKL_DNNConvolutionLayer();
@@ -84,6 +84,7 @@ protected:
   virtual void compute_output_shape();
 
 private:
+  neural::engine::type engine_;
   primitive convolution_fwd = nullptr;
   primitive convolution_bwd = nullptr;
   /* Fwd step */

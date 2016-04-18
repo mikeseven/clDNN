@@ -16,7 +16,7 @@ using namespace neural;
 
 namespace caffe {
 template <typename Dtype>
-MKL_DNNConvolutionLayer<Dtype>::MKL_DNNConvolutionLayer(const LayerParameter& param)
+MKL_DNNConvolutionLayer<Dtype>::MKL_DNNConvolutionLayer(const LayerParameter& param, neural::engine::type engine)
       : ConvolutionLayer<Dtype>(param),
         fwd_bottom_data  (new MKL_DNNData<Dtype>()),
         fwd_top_data     (new MKL_DNNData<Dtype>()),
@@ -25,7 +25,8 @@ MKL_DNNConvolutionLayer<Dtype>::MKL_DNNConvolutionLayer(const LayerParameter& pa
         bwd_top_diff     (new MKL_DNNDiff<Dtype>()),
         bwd_bottom_diff  (new MKL_DNNDiff<Dtype>()),
         bwd_filter_diff  (new MKL_DNNDiff<Dtype>()),
-        bwd_bias_diff    (new MKL_DNNDiff<Dtype>()) {}
+        bwd_bias_diff    (new MKL_DNNDiff<Dtype>()),
+        engine_(engine) {}
 
 template <typename Dtype>
 void MKL_DNNConvolutionLayer<Dtype>::compute_output_shape() {
@@ -101,7 +102,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
 
   //TODO: support for g>1
   std::vector<unsigned> top_sizes_g = {oh, ow, oc/g, n};
-  convolution_fwd = convolution::create( {engine::cpu,
+  convolution_fwd = convolution::create( {engine_,
                                         fwd_top_data->memory,
                                         {0,0,0,0},
                                         top_sizes_g,
@@ -134,7 +135,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   bwd_bias_diff->create_conversions();
 
   // TODO: support for groups
-  convolution_bwd = convolution_backward::create({ engine::reference,
+  convolution_bwd = convolution_backward::create({ engine_,
                                               std::vector<primitive>({bwd_bottom_diff->memory,
                                                                       bwd_filter_diff->memory,
                                                                       bwd_bias_diff->memory}),

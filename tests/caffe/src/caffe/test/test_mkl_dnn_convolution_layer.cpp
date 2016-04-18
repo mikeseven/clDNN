@@ -231,7 +231,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSetupMKL_DNN) {
   EXPECT_EQ(this->blob_top_2_->width(), 1);
 }
 #endif
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolutionMKL_DNN) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
@@ -272,7 +272,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolutionMKL_DNN) {
 }
 
 
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolutionMKL_DNN_2outputs) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolution_2outputs) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
@@ -333,7 +333,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestGradient) {
 }
 
 #if 0
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestDilatedConvolutionMKL_DNN) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, TestDilatedConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   vector<int> bottom_shape;
   bottom_shape.push_back(2);
@@ -381,7 +381,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestDilatedConvolutionMKL_DNN) {
 #endif
 
 #if 0
-TYPED_TEST(MKL_DNNConvolutionLayerTest, Test0DConvolutionMKL_DNN) {
+TYPED_TEST(MKL_DNNConvolutionLayerTest, Test0DConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
