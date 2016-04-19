@@ -19,6 +19,7 @@
 #include <functional>
 #include <algorithm>
 #include <numeric>
+#include "neural.h"
 
 namespace ndimensional {
 
@@ -71,6 +72,7 @@ public:
 
     value(size_t size) : std::vector<T>(size, T(0)) {};
     value(std::vector<T> arg) : std::vector<T>(arg) {};
+    value(neural::vector<T> arg) : std::vector<T>(arg.raw) {};
     value(std::initializer_list<T> il) : std::vector<T>(il) {};
 
     value &operator+=(const std::vector<   T> &arg) { std::transform(arg.cbegin(), arg.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::plus<T>());       return *this; }
@@ -92,18 +94,29 @@ std::ostream &operator<<(std::ostream &out, value<U> &val) {
     return out;
 }
 
-template<typename T>
+template<typename T, neural::memory::format* F>
 class calculate_idx{
     using negT = typename change_signedness<T>::type;
 
     std::vector<T> size;
     std::vector<T> stride;
+
+    //todo
+};
+
+/////////////////////////
+template<typename T>
+class calculate_idx_obselote{
+    using negT = typename change_signedness<T>::type;
+
+    std::vector<T> size;
+    std::vector<T> stride;
 public:
-    calculate_idx( const std::vector<T>& v_size )
+    calculate_idx_obselote( const std::vector<T>& v_size )
     : size(v_size)
     , stride(v_size) {
 
-        static_assert(std::is_unsigned<T>::value, "calculate_idx<T> constructor accepts only unsigned types");  //this template should be used only with unsigned types
+        static_assert(std::is_unsigned<T>::value, "calculate_idx_obselote<T> constructor accepts only unsigned types");  //this template should be used only with unsigned types
 
         stride.emplace_back(1); //this element is used in operator()
         for(size_t i = stride.size() - 1; i > 0; --i)
@@ -118,7 +131,7 @@ public:
 };
 
 template<typename T>
-inline size_t calculate_idx<T>::operator()( const std::vector<T>& position ){
+inline size_t calculate_idx_obselote<T>::operator()( const std::vector<T>& position ){
     size_t result_idx = 0;
 
     assert(
@@ -130,7 +143,7 @@ inline size_t calculate_idx<T>::operator()( const std::vector<T>& position ){
         }() == true );
 
     // Number of iterations depends on length of position vector.
-    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory layout.
+    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory_obselote layout.
     // If 'position' is shorter than 'size' than function returns offset to some block of data
     for(size_t i = 0; i != position.size(); ++i){
         auto idx = position.size() - 1 - i;
@@ -141,7 +154,7 @@ inline size_t calculate_idx<T>::operator()( const std::vector<T>& position ){
 }
 
 template<typename T>
-inline size_t calculate_idx<T>::operator()( const std::vector<negT>& position ){
+inline size_t calculate_idx_obselote<T>::operator()( const std::vector<negT>& position ){
     size_t result_idx = 0;
 
     assert(
@@ -153,7 +166,7 @@ inline size_t calculate_idx<T>::operator()( const std::vector<negT>& position ){
         }() == true );
 
     // Number of iterations depends on length of position vector.
-    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory layout.
+    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory_obselote layout.
     // If 'position' is shorter than 'size' than function returns offset to some block of data
     for(size_t i = 0; i != position.size(); ++i){
         auto idx = position.size() - 1 - i;
@@ -164,7 +177,7 @@ inline size_t calculate_idx<T>::operator()( const std::vector<negT>& position ){
 }
 
 template<typename T>
-inline bool calculate_idx<T>::is_out_of_range( const std::vector<negT>& pos ){
+inline bool calculate_idx_obselote<T>::is_out_of_range( const std::vector<negT>& pos ){
     assert( pos.size() <= size.size() );
 
     for(uint32_t i = 0; i < pos.size(); ++i)
@@ -175,7 +188,7 @@ inline bool calculate_idx<T>::is_out_of_range( const std::vector<negT>& pos ){
 }
 
 template<typename T>
-inline bool calculate_idx<T>::is_out_of_range( const std::vector<T>& pos ){
+inline bool calculate_idx_obselote<T>::is_out_of_range( const std::vector<T>& pos ){
     assert( pos.size() <= size.size() );
 
     for(uint32_t i = 0; i < pos.size(); ++i)

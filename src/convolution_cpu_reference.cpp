@@ -35,14 +35,14 @@ convolution_cpu_reference::~convolution_cpu_reference() {};
     auto& input_arg  = this_conv->input_memory(0).argument;
     auto& output_arg = this_conv->output_memory(0).argument;
 
-    auto& filter_arg = this_conv->argument.weight.as<const memory&>().argument; //convolution filter
-    auto& bias_arg   = this_conv->argument.bias.as<const memory&>().argument;
+    auto& filter_arg = this_conv->argument.weight.as<const memory_obselote&>().argument; //convolution filter
+    auto& bias_arg   = this_conv->argument.bias.as<const memory_obselote&>().argument;
 
     int f_pos = 2; //todo need type traits
 
     if(input_arg.size.size()  != output_arg.size.size())   throw std::runtime_error("Convolution input/output number of dimension does not match.");
     if(stride.size()          != output_arg.size.size())   throw std::runtime_error("Convolution stride/output number of dimension does not match.");
-    if(input_arg.format       != memory::format::yxfb_f32) throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
+    if(input_arg.format       != memory_obselote::format::yxfb_f32) throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
     if(input_arg.format       != output_arg.format)        throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
     if(input_arg.format       != filter_arg.format)        throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
     if(filter_arg.size.size() != output_arg.size.size())   throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
@@ -51,8 +51,8 @@ convolution_cpu_reference::~convolution_cpu_reference() {};
                                                                                                                                                         // than this implementation will be format independent
     auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
     auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
-    auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory&>().pointer);
-    auto bias   = static_cast<float*>(this_conv->argument.bias.as<const memory&>().pointer);
+    auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory_obselote&>().pointer);
+    auto bias   = static_cast<float*>(this_conv->argument.bias.as<const memory_obselote&>().pointer);
 
     for(size_t i = 0; i < input_offset.size(); ++i){
         // general formula: output size = (input size - filter size) / step + 1
@@ -68,9 +68,9 @@ convolution_cpu_reference::~convolution_cpu_reference() {};
     namespace nd = ndimensional;
     nd::value<uint32_t> range (output_size);
     nd::value<uint32_t> window_range (filter_arg.size);
-    nd::calculate_idx<uint32_t> calc_in_idx  (input_arg.size);
-    nd::calculate_idx<uint32_t> calc_out_idx (output_arg.size);
-    nd::calculate_idx<uint32_t> calc_win_idx (filter_arg.size);
+    nd::calculate_idx_obselote<uint32_t> calc_in_idx  (input_arg.size);
+    nd::calculate_idx_obselote<uint32_t> calc_out_idx (output_arg.size);
+    nd::calculate_idx_obselote<uint32_t> calc_win_idx (filter_arg.size);
     switch(padding){
         case padding::zero:
             for(auto pos : range) {
@@ -163,10 +163,10 @@ convolution_backward_cpu_reference::~convolution_backward_cpu_reference() {};
     nd::value<uint32_t> bias_range (bias_arg.size);
     nd::value<uint32_t> range (bw_input_size); //todo in/out size?
     nd::value<uint32_t> window_range (filter_arg.size);
-    nd::calculate_idx<uint32_t> calc_bias_idx(bias_arg.size);
-    nd::calculate_idx<uint32_t> calc_in_idx  (bw_input_arg.size);
-    nd::calculate_idx<uint32_t> calc_out_idx (bw_output_arg.size);
-    nd::calculate_idx<uint32_t> calc_win_idx (filter_arg.size);
+    nd::calculate_idx_obselote<uint32_t> calc_bias_idx(bias_arg.size);
+    nd::calculate_idx_obselote<uint32_t> calc_in_idx  (bw_input_arg.size);
+    nd::calculate_idx_obselote<uint32_t> calc_out_idx (bw_output_arg.size);
+    nd::calculate_idx_obselote<uint32_t> calc_win_idx (filter_arg.size);
 
     switch(padding){
         case padding::zero:
@@ -200,7 +200,7 @@ convolution_backward_cpu_reference::~convolution_backward_cpu_reference() {};
 namespace{
 struct attach{
     attach(){
-        auto key = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
+        auto key = std::make_tuple(engine::reference, memory_obselote::format::yxfb_f32, memory_obselote::format::yxfb_f32);
         auto val_fw = convolution_cpu_reference::create;
         auto val_bw = convolution_backward_cpu_reference::create;
 

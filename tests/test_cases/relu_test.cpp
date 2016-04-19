@@ -33,12 +33,12 @@ TEST(relu_f32_fw, basic) {
 
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, f, b}, true});
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, f, b}});
-    input.as<const memory&>().fill<float>();
+    auto input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {y, x, f, b}, true});
+    auto output = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {y, x, f, b}});
+    input.as<const memory_obselote&>().fill<float>();
 
     auto act = relu::create({engine::reference, output, input});
-    auto buf = static_cast<float*>(input.as<const memory&>().pointer);
+    auto buf = static_cast<float*>(input.as<const memory_obselote&>().pointer);
     execute({output(buf), act});
 
     for(size_t i = 0; i < y*x*f*b; ++i)
@@ -85,9 +85,9 @@ TEST(relu_f32_fw, offsets) {
     std::vector<uint32_t> in_buf_size  = {input_y, input_x, input_f, input_b};
     std::vector<uint32_t> out_buf_size = {output_y, output_x, output_f, output_b};
 
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {in_buf_size.cbegin(), in_buf_size.cend()}, true});
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, out_buf_size, true});
-    input.as<const memory&>().fill<float>();
+    auto input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {in_buf_size.cbegin(), in_buf_size.cend()}, true});
+    auto output = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, out_buf_size, true});
+    input.as<const memory_obselote&>().fill<float>();
 
     auto act = relu::create( {engine::reference,
                               output,
@@ -99,8 +99,8 @@ TEST(relu_f32_fw, offsets) {
 
     execute({act});
 
-    auto buf_in  = static_cast<float*>(input.as<const memory&>().pointer);
-    auto buf_out = static_cast<float*>(output.as<const memory&>().pointer);
+    auto buf_in  = static_cast<float*>(input.as<const memory_obselote&>().pointer);
+    auto buf_out = static_cast<float*>(output.as<const memory_obselote&>().pointer);
     bool result = true;
 
     for(uint32_t y = 0; y < out_siz_y; ++y)
@@ -134,18 +134,18 @@ TEST(relu_f32_bw, basic) {
 
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
-    auto fw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, f, b}, true});
-    auto bw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, f, b}, true});
-    auto bw_output = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, f, b}, true});
-    fw_input.as<const memory&>().fill<float>();
-    bw_input.as<const memory&>().fill<float>();
+    auto fw_input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {y, x, f, b}, true});
+    auto bw_input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {y, x, f, b}, true});
+    auto bw_output = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {y, x, f, b}, true});
+    fw_input.as<const memory_obselote&>().fill<float>();
+    bw_input.as<const memory_obselote&>().fill<float>();
 
     auto act = relu_backward::create({engine::reference, {bw_output}, {bw_input, fw_input}});
     execute({act});
 
-    auto fw_input_buf  = static_cast<float*>(fw_input .as<const memory&>().pointer);
-    auto bw_input_buf  = static_cast<float*>(bw_input .as<const memory&>().pointer);
-    auto bw_output_buf = static_cast<float*>(bw_output.as<const memory&>().pointer);
+    auto fw_input_buf  = static_cast<float*>(fw_input .as<const memory_obselote&>().pointer);
+    auto bw_input_buf  = static_cast<float*>(bw_input .as<const memory_obselote&>().pointer);
+    auto bw_output_buf = static_cast<float*>(bw_output.as<const memory_obselote&>().pointer);
 
     bool result = true;
     for(size_t i = 0; i < y*x*f*b; ++i)
@@ -191,11 +191,11 @@ TEST(relu_f32_bw, offsets) {
     std::vector<uint32_t> bw_in_buf_size  = {output_y, output_x, output_f, output_b};
     std::vector<uint32_t> bw_out_buf_size = {output_y, output_x, output_f, output_b};
 
-    auto fw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, fw_in_buf_size, true});
-    auto bw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, bw_in_buf_size, true});
-    auto bw_output = memory::create({engine::cpu, memory::format::yxfb_f32, bw_out_buf_size,true});
-    fw_input.as<const memory&>().fill<float>();
-    bw_input.as<const memory&>().fill<float>();
+    auto fw_input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, fw_in_buf_size, true});
+    auto bw_input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, bw_in_buf_size, true});
+    auto bw_output = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, bw_out_buf_size,true});
+    fw_input.as<const memory_obselote&>().fill<float>();
+    bw_input.as<const memory_obselote&>().fill<float>();
 
     std::vector<uint32_t> fw_in_off = {fw_in_off_y, fw_in_off_x, fw_in_off_f, fw_in_off_b};
     std::vector<uint32_t> bw_in_off = {bw_in_off_y, bw_in_off_x, bw_in_off_f, bw_in_off_b};
@@ -209,9 +209,9 @@ TEST(relu_f32_bw, offsets) {
                                      });
     execute({act});
 
-    auto buf_fw_input  = static_cast<float*>(fw_input.as<const memory&>().pointer);
-    auto buf_bw_input  = static_cast<float*>(bw_input.as<const memory&>().pointer);
-    auto buf_bw_output = static_cast<float*>(bw_output.as<const memory&>().pointer);
+    auto buf_fw_input  = static_cast<float*>(fw_input.as<const memory_obselote&>().pointer);
+    auto buf_bw_input  = static_cast<float*>(bw_input.as<const memory_obselote&>().pointer);
+    auto buf_bw_output = static_cast<float*>(bw_output.as<const memory_obselote&>().pointer);
 
     bool result = true;
     for(uint32_t y = 0; y < out_siz_y; ++y)

@@ -1953,7 +1953,7 @@ class TestWithParam : public Test, public WithParamInterface<T> {
 //
 //   2. The {ASSERT|EXPECT}_??() macros do pointer comparisons on
 //   pointers (in particular, C strings).  Therefore, if you use it
-//   with two C strings, you are testing how their locations in memory
+//   with two C strings, you are testing how their locations in memory_obselote
 //   are related, not how their content is related.  To compare two C
 //   strings by content, use {ASSERT|EXPECT}_STR*().
 //

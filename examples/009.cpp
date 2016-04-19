@@ -4,7 +4,7 @@
 #include <cassert>
 #include <iostream>
 
-// memory->memory reshape
+// memory_obselote->memory_obselote reshape
 void example_009() {
     using namespace neural;
     using namespace std;
@@ -12,8 +12,8 @@ void example_009() {
     const uint32_t dim_y      = 2, dim_x      = 2, dim_f      = 4, dim_b      = 3;
 
   	const uint32_t all_size = dim_y*dim_x*dim_f*dim_b;
-	auto in_layout = memory::format::yxfb_f32;
-    auto out_layout = memory::format::bfxy_f32;
+	auto in_layout = memory_obselote::format::yxfb_f32;
+    auto out_layout = memory_obselote::format::bfxy_f32;
 
     float in_buffer[all_size] =
     {// yxfb
@@ -102,8 +102,8 @@ void example_009() {
                                      //b  f  x  y
     std::vector<uint32_t> out_sizes= { 3, 4, 2, 2};
 
-    auto input  = memory::create({engine::cpu, in_layout, in_sizes});
-    auto output = memory::create({engine::cpu, out_layout, out_sizes, true});
+    auto input  = memory_obselote::create({engine::cpu, in_layout, in_sizes});
+    auto output = memory_obselote::create({engine::cpu, out_layout, out_sizes, true});
 
     auto reorder    = reorder::create(reorder::arguments{engine::reference,input,output});
 
@@ -116,14 +116,14 @@ void example_009() {
         std::cout << ex.what() << std::endl;
     }
 
-    auto buf_out = static_cast<float*>(output.as<const memory&>().pointer);
+    auto buf_out = static_cast<float*>(output.as<const memory_obselote&>().pointer);
 
     for(size_t i = 0; i < dim_y*dim_x*dim_f*dim_b; ++i)
         assert (buf_out[i] == wyn_buffer[i]);
 
     //2 pass output as input, should give input ;)
-    auto input2  = memory::create({engine::cpu, out_layout, out_sizes});
-    auto output2 = memory::create({engine::cpu, in_layout, in_sizes, true});
+    auto input2  = memory_obselote::create({engine::cpu, out_layout, out_sizes});
+    auto output2 = memory_obselote::create({engine::cpu, in_layout, in_sizes, true});
 
     try
     {
@@ -135,14 +135,14 @@ void example_009() {
         std::cout << ex.what() << std::endl;
     }
 
-    auto buf_out2 = static_cast<float*>(output2.as<const memory&>().pointer);
+    auto buf_out2 = static_cast<float*>(output2.as<const memory_obselote&>().pointer);
 
     for(size_t i = 0; i < dim_y*dim_x*dim_f*dim_b; ++i)
         assert (buf_out2[i] == in_buffer[i]);
 
-    //throws exception auto in_layout = memory::format::yxfb_f32;
-    input2  = memory::create({engine::cpu, memory::format::yxfb_f64, out_sizes});
-    output2 = memory::create({engine::cpu, in_layout, in_sizes, true});
+    //throws exception auto in_layout = memory_obselote::format::yxfb_f32;
+    input2  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, out_sizes});
+    output2 = memory_obselote::create({engine::cpu, in_layout, in_sizes, true});
 
     try
     {

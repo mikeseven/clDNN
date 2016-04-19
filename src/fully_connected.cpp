@@ -45,46 +45,46 @@ struct fully_connected_reference : is_an_implementation {
 
         if (input_buffer_size.size() != output_buffer_size.size())throw std::runtime_error("Fully connected input/output number of dimension does not match.");
         if (input_memory_arg.format != output_memory_arg.format)  throw std::runtime_error("Fully connected input/output data format does not match.");
-        if (weight_memory_arg != memory::format::xb_f32 && weight_memory_arg != memory::format::x_f32) throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
+        if (weight_memory_arg != memory_obselote::format::xb_f32 && weight_memory_arg != memory_obselote::format::x_f32) throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
 
         assert(this_fc->input_memory(0).argument.size.size()==1 || this_fc->input_memory(0).argument.size.size() == 2);
 
-        // up-casts data format form 1D to 2D if necessary; DOES not copy memory, just redescribes 1D input buffer as 2D (x+batch) with batch=1
+        // up-casts data format form 1D to 2D if necessary; DOES not copy memory_obselote, just redescribes 1D input buffer as 2D (x+batch) with batch=1
         auto mem_arg_in = this_fc->input_memory(0).argument;
         if(mem_arg_in.size.size()==1) {
             mem_arg_in.size.emplace_back(1);
-            mem_arg_in.format = memory::format::xb_f32;
+            mem_arg_in.format = memory_obselote::format::xb_f32;
         }
         mem_arg_in.owns_memory = false;
-        auto in_wrapper = memory::create(mem_arg_in);
+        auto in_wrapper = memory_obselote::create(mem_arg_in);
         in_wrapper(input);
 
         auto mem_arg_out = this_fc->output_memory(0).argument;
         if (mem_arg_out.size.size() == 1) {
             mem_arg_out.size.emplace_back(1);
-            mem_arg_out.format = memory::format::xb_f32;
+            mem_arg_out.format = memory_obselote::format::xb_f32;
         }
         mem_arg_out.owns_memory = false;
-        auto out_wrapper = memory::create(mem_arg_out);
+        auto out_wrapper = memory_obselote::create(mem_arg_out);
         out_wrapper(output);
 
         namespace nd = ndimensional;
 
         nd::value<uint32_t> range_output(0);
 
-        if (weight_memory_arg == memory::format::x_f32) {
+        if (weight_memory_arg == memory_obselote::format::x_f32) {
             range_output = nd::value<uint32_t> (output_buffer_size); //there is no batch, so nothing has to be removed
         }
-        else if (weight_memory_arg == memory::format::xb_f32) {
+        else if (weight_memory_arg == memory_obselote::format::xb_f32) {
             range_output = nd::value<uint32_t>({ begin(output_buffer_size), end(output_buffer_size) - 1 }); //in every iteration whole batch is computed at once, so it has to be removed from the range
         }
 
         this_fc->output_memory(0).fill(0.0f);
-        nd::value<uint32_t> range_input(in_wrapper.as<const memory &>().argument.size);
+        nd::value<uint32_t> range_input(in_wrapper.as<const memory_obselote &>().argument.size);
         nd::value<uint32_t> range_weight(weight_buffer_size);
-        nd::calculate_idx<uint32_t> calc_in_idx(in_wrapper.as<const memory &>().argument.size);
-        nd::calculate_idx<uint32_t> calc_out_idx(out_wrapper.as<const memory &>().argument.size);
-        nd::calculate_idx<uint32_t> calc_w_idx(weight_buffer_size);
+        nd::calculate_idx_obselote<uint32_t> calc_in_idx(in_wrapper.as<const memory_obselote &>().argument.size);
+        nd::calculate_idx_obselote<uint32_t> calc_out_idx(out_wrapper.as<const memory_obselote &>().argument.size);
+        nd::calculate_idx_obselote<uint32_t> calc_w_idx(weight_buffer_size);
 
         int data_index = 0; //todo type traits
         int batch_index = 1;
@@ -114,12 +114,12 @@ struct fully_connected_reference : is_an_implementation {
 
 
 //                                    engine                output                        input
-using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
+using implementation_key = std::tuple<neural::engine::type, neural::memory_obselote::format::type, neural::memory_obselote::format::type>;
 
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(fully_connected &)>> implementation_map = {
-    { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create },
-    { std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create }
+    { std::make_tuple(engine::reference, memory_obselote::format::xb_f32, memory_obselote::format::xb_f32), fully_connected_reference::create },
+    { std::make_tuple(engine::reference, memory_obselote::format::x_f32,  memory_obselote::format::x_f32),  fully_connected_reference::create }
 };
 
 fully_connected::arguments::arguments( neural::engine::type   eng,
@@ -128,7 +128,7 @@ fully_connected::arguments::arguments( neural::engine::type   eng,
                                        primitive              weights)
 : engine(eng)
 , output({out})
-, output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
+, output_size(out.as<const memory_obselote&>().argument.size.begin(), out.as<const memory_obselote&>().argument.size.end())
 , input({in, weights})
 {
 };
