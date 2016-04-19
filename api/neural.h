@@ -303,19 +303,19 @@ struct relu : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
         std::vector<primitive>    output;
-        std::vector<uint32_t>     output_offset;
-        std::vector<uint32_t>     output_size;
+        vector<uint32_t>          output_offset;
+        vector<uint32_t>          output_size;
         std::vector<primitive_at> input;          // 1: input
-        std::vector<int32_t>      input_offset;
+        vector<int32_t>           input_offset;
         float                     negative_slope;
 
-        DLL_SYM arguments(neural::engine::type, memory::format::type out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, float);
-        DLL_SYM arguments(neural::engine::type, memory::format::type out,                                                               primitive in,                              float);
-        DLL_SYM arguments(neural::engine::type, memory::format::type out,                                                               primitive in);
-        DLL_SYM arguments(neural::engine::type, primitive            out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, float slp);
-        DLL_SYM arguments(neural::engine::type, primitive            out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off);
-        DLL_SYM arguments(neural::engine::type, primitive            out,                                                               primitive in,                              float slp);
-        DLL_SYM arguments(neural::engine::type, primitive            out,                                                               primitive in);
+        DLL_SYM arguments(neural::engine::type, memory::format::type out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off, float);
+        DLL_SYM arguments(neural::engine::type, memory::format::type out,                                                     primitive in,                         float);
+        DLL_SYM arguments(neural::engine::type, memory::format::type out,                                                     primitive in);
+        DLL_SYM arguments(neural::engine::type, primitive            out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off, float slp);
+        DLL_SYM arguments(neural::engine::type, primitive            out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off);
+        DLL_SYM arguments(neural::engine::type, primitive            out,                                                     primitive in,                         float slp);
+        DLL_SYM arguments(neural::engine::type, primitive            out,                                                     primitive in);
     };
     const arguments argument;
 

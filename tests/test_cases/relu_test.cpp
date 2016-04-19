@@ -31,24 +31,24 @@ namespace{
 TEST(relu_f32_fw, basic) {
     using namespace neural;
 
-    const uint32_t y = 8, x = 8, z = 3, b = 2;
+    const uint32_t y = 8, x = 8, f = 3, b = 2;
 
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}, true});
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}});
+    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, f, b}, true});
+    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, f, b}});
     input.as<const memory&>().fill<float>();
 
     auto act = relu::create({engine::reference, output, input});
     auto buf = static_cast<float*>(input.as<const memory&>().pointer);
     execute({output(buf), act});
 
-    for(size_t i = 0; i < y*x*z*b; ++i)
+    for(size_t i = 0; i < y*x*f*b; ++i)
         buf[i] = (buf[i] > 0)? -buf[i] : buf[i];
 
     auto act2 = relu::create({engine::reference, output, output});
     execute({act});
 
     bool result = false;
-    for(size_t i = 0; i < y*x*z*b; ++i)
+    for(size_t i = 0; i < y*x*f*b; ++i)
         result = result || buf[i];
 
     EXPECT_EQ(false, result);
@@ -75,9 +75,9 @@ TEST(relu_f32_fw, offsets) {
                    out_siz_y = 5,
                    out_siz_x = 5,
                    out_siz_f = 2,
-                   out_siz_b = 2,
+                   out_siz_b = 2;
 
-                   in_off_y  = 1,
+     const int32_t in_off_y  = 1,
                    in_off_x  = 1,
                    in_off_f  = 1,
                    in_off_b  = 0;
@@ -89,13 +89,12 @@ TEST(relu_f32_fw, offsets) {
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, out_buf_size, true});
     input.as<const memory&>().fill<float>();
 
-    std::vector<uint32_t> in_off = {in_off_y, in_off_x, in_off_f, in_off_b};
     auto act = relu::create( {engine::reference,
                               output,
-                              {out_off_y, out_off_x, out_off_f, out_off_b},
-                              {out_siz_y, out_siz_x, out_siz_f, out_siz_b},
+                              {out_off_b, {out_off_y, out_off_x}, out_off_f},
+                              {out_siz_b, {out_siz_y, out_siz_x}, out_siz_f},
                               input,
-                              {in_off.cbegin(), in_off.cend()}
+                              {in_off_b, {in_off_y, in_off_x}, in_off_f}
                              });
 
     execute({act});
@@ -133,11 +132,11 @@ TEST(relu_f32_fw, offsets) {
 TEST(relu_f32_bw, basic) {
     using namespace neural;
 
-    const uint32_t y = 8, x = 8, z = 3, b = 2;
+    const uint32_t y = 8, x = 8, f = 3, b = 2;
 
-    auto fw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}, true});
-    auto bw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}, true});
-    auto bw_output = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, z, b}, true});
+    auto fw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, f, b}, true});
+    auto bw_input  = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, f, b}, true});
+    auto bw_output = memory::create({engine::cpu, memory::format::yxfb_f32, {y, x, f, b}, true});
     fw_input.as<const memory&>().fill<float>();
     bw_input.as<const memory&>().fill<float>();
 
@@ -149,7 +148,7 @@ TEST(relu_f32_bw, basic) {
     auto bw_output_buf = static_cast<float*>(bw_output.as<const memory&>().pointer);
 
     bool result = true;
-    for(size_t i = 0; i < y*x*z*b; ++i)
+    for(size_t i = 0; i < y*x*f*b; ++i)
         result &= (((fw_input_buf[i] > 0) * bw_input_buf[i]) == bw_output_buf[i]);
 
     EXPECT_EQ(true, result);
