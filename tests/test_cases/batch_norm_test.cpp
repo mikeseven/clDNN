@@ -32,14 +32,14 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_true) {
     int length = sizeof(possible_input_sizes) / sizeof(int);
     uint32_t random_size, i = 0;
 
-    do {
+    while (i < 4) {
         random_size = possible_input_sizes[rand() % length];
         if(random_size <= max_input_size){
             input_size[i] = random_size;
             max_input_size = max_input_size / random_size;
             i++;
         }
-    } while (i < 4);
+    };
 
     // Create input buffers.
     auto input               = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
@@ -86,21 +86,20 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     int non_zero_value;
     uint32_t random_size, i = 0;
 
-    do {
+    while (i < 4) {
         random_size = possible_input_sizes[rand() % length];
         if(random_size <= max_input_size){
             input_size[i] = random_size;
             max_input_size = max_input_size / random_size;
             i++;
         }
-    } while (i < 4);
+    }
 
     // Input size count
-    uint32_t total_average_size = 1;
-    for (i = 0; i < 3; i++) {
-        total_average_size *= input_size[i];
+    uint32_t total_input_size = 1;
+    for (i = 0; i < 4; i++) {
+        total_input_size *= input_size[i];
     }
-    uint32_t total_input_size = total_average_size * input_size[3];
 
     // Create input buffers.
     auto input               = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
@@ -109,10 +108,10 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
 
     // Create output buffers.
     auto output              = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
-    auto current_inv_std_dev = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
-    auto moving_average      = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
-    auto moving_inv_std_dev  = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
-    auto current_average     = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
+    auto current_inv_std_dev = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+    auto moving_average      = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+    auto moving_inv_std_dev  = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+    auto current_average     = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
 
     auto& input_memory = input.as<const memory&>();
     auto& output_memory = output.as<const memory&>();
@@ -123,7 +122,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     scale.as<const memory&>().fill<float>(0);
     bias.as<const memory&>().fill<float>(0);
 
-    auto random_input_non_zero = rand() % total_average_size;
+    auto random_input_non_zero = rand() % total_input_size;
     static_cast<float*>(input_memory.pointer)[random_input_non_zero] = 10.0f;
 
     // Create primitive.
@@ -137,17 +136,17 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
 
     // Find non zero value in avarages
     if (input_size[2] == 1) {
-        non_zero_value = 1;
+        non_zero_value = 0;
     }
     else {
         i = 0;
         while (random_input_non_zero >= i++ * input_size[3]) {
-            non_zero_value = i % input_size[2];
+            non_zero_value = (i - 1) % input_size[2];
         }
     }
 
-    for (i = 0; i < total_average_size; ++i){
-        if (i == non_zero_value - 1) {
+    for (i = 0; i < input_size[2]; ++i){
+        if (i == non_zero_value) {
             EXPECT_EQ(mean, current_average_memory.get_value<float>(i));
         } else {
             EXPECT_EQ(0.0f, current_average_memory.get_value<float>(i));
@@ -165,14 +164,14 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
     int length = sizeof(possible_input_sizes) / sizeof(int);
     uint32_t random_size, i = 0;
 
-    do {
+    while (i < 4) {
         random_size = possible_input_sizes[rand() % length];
         if(random_size <= max_input_size){
             input_size[i] = random_size;
             max_input_size = max_input_size / random_size;
             i++;
         }
-    } while (i < 4);
+    }
 
     // Input size count
     uint32_t total_avarage_size = 1;
@@ -182,8 +181,8 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
 
     // Create input buffers.
     auto input               = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
-    auto scale               = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
-    auto bias                = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+    auto scale               = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
+    auto bias                = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
 
     // Create output buffers.
     auto output              = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
@@ -225,14 +224,14 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     int non_zero_value;
     uint32_t random_size, i = 0;
 
-    do {
+    while (i < 4) {
         random_size = possible_input_sizes[rand() % length];
         if(random_size <= max_input_size){
             input_size[i] = random_size;
             max_input_size = max_input_size / random_size;
             i++;
         }
-    } while (i < 4);
+    }
 
     // Input size count
     uint32_t total_average_size = 1;
@@ -243,8 +242,8 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
 
     // Create input buffers.
     auto input               = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
-    auto scale               = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
-    auto bias                = memory::create({ engine::cpu, memory::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+    auto scale               = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
+    auto bias                = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
 
     // Create output buffers.
     auto output              = memory::create({ engine::cpu, memory::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
@@ -276,17 +275,17 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
 
     // Find non zero value in avarages
     if (input_size[2] == 1) {
-        non_zero_value = 1;
+        non_zero_value = 0;
     }
     else {
         i = 0;
         while (random_input_non_zero >= i++ * input_size[3]) {
-            non_zero_value = i % input_size[2];
+            non_zero_value = (i - 1) % input_size[2];
         }
     }
 
     for (i = 0; i < total_average_size; ++i){
-        if (i == non_zero_value - 1) {
+        if (i == non_zero_value) {
             EXPECT_EQ(mean, current_average_memory.get_value<float>(i));
         } else {
             EXPECT_EQ(0.0f, current_average_memory.get_value<float>(i));
