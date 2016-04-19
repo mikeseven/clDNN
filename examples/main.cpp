@@ -20,7 +20,6 @@
 int main()
 {
     extern void example_convolution_forward();
-
     try{
         example_convolution_forward();
     } catch (std::exception &e) {
