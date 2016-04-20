@@ -23,7 +23,7 @@ convolution_cpu_reference::convolution_cpu_reference(convolution &arg)
         : is_an_implementation(neural::type_id<convolution_cpu_reference>())
         , outer(arg) {};
 convolution_cpu_reference::~convolution_cpu_reference() {};
-/*static*/ void convolution_cpu_reference::implementation(const void *ptr) {
+void convolution_cpu_reference::implementation(const void *ptr) {
     auto this_conv = static_cast<const convolution *>(ptr);
 
     auto& input_offset  = this_conv->argument.input_offset;
@@ -99,7 +99,7 @@ convolution_backward_cpu_reference::convolution_backward_cpu_reference(convoluti
     : is_an_implementation(neural::type_id<convolution_backward_cpu_reference>())
     , outer(arg) {};
 convolution_backward_cpu_reference::~convolution_backward_cpu_reference() {};
-/*static*/ void convolution_backward_cpu_reference::implementation(const void *ptr) { //todo tests
+void convolution_backward_cpu_reference::implementation(const void *ptr) { //todo tests
     auto this_bw_conv = static_cast<const convolution_backward *>(ptr);
 
     auto& bw_input_size    = this_bw_conv->argument.input_size;  // todo output or input?
@@ -129,7 +129,7 @@ convolution_backward_cpu_reference::~convolution_backward_cpu_reference() {};
     if(bw_input_arg.format    != fw_input_arg.format)         throw std::runtime_error("Backward convolution bw_input/fw_output data format does not match.");
     if(bias_arg.size.size()   != 1)                           throw std::runtime_error("Backward convolution biases isn't 1D vector.");
     if(bias_arg.size.size()   != bias_diff_arg.size.size())   throw std::runtime_error("Backward convolution bias/bias_diff number dimensions doesn't match.");
-    if(bias_arg.size[0]       != bw_output_arg.size[f_pos])   throw std::runtime_error("Backward convolution biases/bw_output feature maps number does not match."); // todo need type traits for index of 'z' dimension
+    if(bias_arg.size[0]       != bw_input_arg.size[f_pos])    throw std::runtime_error("Backward convolution biases/bw_input feature maps number does not match."); // todo need type traits for index of 'z' dimension
     if(bias_arg.size[0]       != bias_diff_arg.size[0])       throw std::runtime_error("Backward convolution bias/bias_diff size doesn't match.");
 
     auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer);

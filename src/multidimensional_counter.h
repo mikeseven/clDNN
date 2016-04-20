@@ -85,6 +85,15 @@ public:
     value  operator* (const std::vector<   T> &arg) { value result=*this; return result*=arg; }
     value  operator* (const std::vector<negT> &arg) { value result=*this; return result*=arg; }
 
+    value &operator+=(const neural::vector<   T> &arg) { std::transform(arg.raw.cbegin(), arg.raw.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::plus<T>());       return *this; }
+    value &operator+=(const neural::vector<negT> &arg) { std::transform(arg.raw.cbegin(), arg.raw.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::plus<T>());       return *this; }
+    value &operator*=(const neural::vector<   T> &arg) { std::transform(arg.raw.cbegin(), arg.raw.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::multiplies<T>()); return *this; }
+    value &operator*=(const neural::vector<negT> &arg) { std::transform(arg.raw.cbegin(), arg.raw.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::multiplies<T>()); return *this; }
+    value  operator+ (const neural::vector<   T> &arg) { value result=*this; return result+=arg.raw; }
+    value  operator+ (const neural::vector<negT> &arg) { value result=*this; return result+=arg.raw; }
+    value  operator* (const neural::vector<   T> &arg) { value result=*this; return result*=arg.raw; }
+    value  operator* (const neural::vector<negT> &arg) { value result=*this; return result*=arg.raw; }
+
     template<typename U> friend std::ostream &operator<<(std::ostream &, ndimensional::value<U> &);
 };
 
@@ -130,15 +139,15 @@ public:
     : size(v_size)
     , stride(v_size.size()) {
 
-        static_assert(std::is_unsigned<T>::value, "calculate_idx<T, " + static_cast<int>(neural::memory::format::yxfb_f32) + "> constructor accepts only unsigned types");
-        assert(4 == v_size.size);
+        static_assert(std::is_unsigned<T>::value, "calculate_idx<T, memory::format::yxfb_f32> constructor accepts only unsigned types");
+        assert( 4 == v_size.size() );
 
         // strides for yxfb format
         // v_size format is b, spatials(x,y), f
         stride[0] = 1;
-        stride[3] = v_size[0]
+        stride[3] = v_size[0];
         stride[1] = v_size[0] * v_size[3];
-        stride[2] = v_size[0] * v_size[3] * v_size[1]
+        stride[2] = v_size[0] * v_size[3] * v_size[1];
     };
 
     size_t operator() ( const std::vector<   T>& pos );

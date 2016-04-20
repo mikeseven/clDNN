@@ -276,6 +276,13 @@ struct memory_obselote : is_a_primitive {
             *it1 = static_cast<T>( dist(rng) );
     }
 
+    template <class T> void debug_fill(int x) const //todo remove
+    {
+        for(auto it1 = data_begin<T>(), it2 = data_end<T>(); it1 != it2; ++it1){
+            *it1 = static_cast<T>( x++ );
+        }
+    }
+
     ~memory_obselote();
 private:
 
@@ -431,9 +438,9 @@ struct relu : is_a_primitive {
         vector<int32_t>           input_offset;
         float                     negative_slope;
 
-        DLL_SYM arguments(neural::engine::type, memory_obselote::format::type out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off, float);
-        DLL_SYM arguments(neural::engine::type, memory_obselote::format::type out,                                                     primitive in,                         float);
-        DLL_SYM arguments(neural::engine::type, memory_obselote::format::type out,                                                     primitive in);
+        DLL_SYM arguments(neural::engine::type, memory::format::type out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off, float slp);
+        DLL_SYM arguments(neural::engine::type, memory::format::type out,                                                     primitive in,                         float slp);
+        DLL_SYM arguments(neural::engine::type, memory::format::type out,                                                     primitive in);
         DLL_SYM arguments(neural::engine::type, primitive            out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off, float slp);
         DLL_SYM arguments(neural::engine::type, primitive            out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off);
         DLL_SYM arguments(neural::engine::type, primitive            out,                                                     primitive in,                         float slp);

@@ -371,7 +371,7 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
     if(filter_arg.size.size() != output_arg.size.size())   throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
     if(bias_arg.size.size()   != 1)                        throw std::runtime_error("Convolution biases isn't 1D vector.");
     if(bias_arg.size[0]       != output_size[2])           throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
-                                                                                                                                                            // than this implementation will be format independent
+                                                                                                                                                      // than this implementation will be format independent
     auto input  = static_cast<float*>(outer.input_memory(0).pointer);
     auto output = static_cast<float*>(outer.output_memory(0).pointer);
     auto filter = static_cast<float*>(outer.argument.weight.as<const memory_obselote&>().pointer);
