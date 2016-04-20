@@ -159,6 +159,13 @@ struct memory : is_a_primitive {
             *it1 = static_cast<T>( dist(rng) );
     }
 
+    template <class T> void debug_fill(int x) const //todo remove
+    {
+        for(auto it1 = data_begin<T>(), it2 = data_end<T>(); it1 != it2; ++it1){
+            *it1 = static_cast<T>( x++ );
+        }
+    }
+
     ~memory();
 private:
 
