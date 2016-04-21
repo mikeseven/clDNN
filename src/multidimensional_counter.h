@@ -135,6 +135,7 @@ class calculate_idx<T, static_cast<int>(neural::memory::format::yxfb_f32)>{
     std::vector<T> size;
     std::vector<T> stride;
 public:
+    calculate_idx( const neural::vector<T>& v_size ) : calculate_idx( v_size.raw ) {};
     calculate_idx( const std::vector<T>& v_size )
     : size(v_size)
     , stride(v_size.size()) {

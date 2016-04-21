@@ -28,38 +28,37 @@ namespace{
     };
 }
 
-TEST(relu_f32_fw, basic) {
-    using namespace neural;
+using namespace neural;
 
+TEST(relu_f32_fw, basic) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
     auto input  = memory::create({engine::reference, memory::format::yxfb_f32, { b, {x, y}, f}, true});
-    //auto output = memory::create({engine::reference, memory::format::yxfb_f32, { b, {x, y}, f}});
-    //input.as<const memory&>().fill<float>();
+    auto output = memory::create({engine::reference, memory::format::yxfb_f32, { b, {x, y}, f}});
+    input.as<const memory&>().fill<float>();
 
-    //auto act = relu::create({engine::reference, output, input});
-    //auto buf = static_cast<float*>(input.as<const memory&>().pointer);
-    //// write output to input buffer
-    //execute({output(buf), act});
+    auto act = relu::create({engine::reference, output, input});
+    auto buf = static_cast<float*>(input.as<const memory&>().pointer);
+    // write output to input buffer
+    execute({output(buf), act});
 
-    //// multiply all positive intigers by -1
-    //for(size_t i = 0; i < y*x*f*b; ++i)
-    //    buf[i] = (buf[i] > 0)? -buf[i] : buf[i];
+    // multiply all positive intigers by -1
+    for(size_t i = 0; i < y*x*f*b; ++i)
+        buf[i] = (buf[i] > 0)? -buf[i] : buf[i];
 
-    //auto act2 = relu::create({engine::reference, output, output});
-    //execute({act});
+    auto act2 = relu::create({engine::reference, output, output});
+    execute({act});
 
-    //bool result = false;
-    //// every element should be 0.0f
-    //for(size_t i = 0; i < y*x*f*b; ++i)
-    //    result = result || buf[i];
+    bool result = false;
+    // every element should be 0.0f
+    for(size_t i = 0; i < y*x*f*b; ++i)
+        result = result || buf[i];
 
-    //EXPECT_EQ(false, result);
+    EXPECT_EQ(false, result);
 }
+/*
 
 TEST(relu_f32_fw, offsets) {
-    using namespace neural;
-
     const uint32_t output_y  = 7,
                    output_x  = 7,
                    output_f  = 2,

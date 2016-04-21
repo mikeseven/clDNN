@@ -70,11 +70,11 @@ template<typename T> struct vector {
         raw.push_back(arg_feature);
         raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
     };
-    vector(const T arg_batch, const T arg_spatial, const T arg_feature)
+    vector(const size_t arg_batch, const size_t arg_spatial, const size_t arg_feature)
         : spatial(raw,2, 2+arg_spatial)
         , feature(raw,1,2)
         , batch(raw,0,1) {
-    raw.resize(arg_batch + arg_feature + arg_spatial);
+        raw.resize(arg_batch + arg_feature + arg_spatial);
     };
 
     vector(const std::vector<T> &arg_spatial, const T arg_feature)
@@ -111,7 +111,7 @@ struct type_traits {
     const size_t          id;
     const size_t          size;
     const bool            is_floating_point;
-    const char *    const name;
+    const char *          const name;
     type_traits(size_t _id, size_t _size, bool _ifp, const char *_name) : id(_id), size(_size), is_floating_point(_ifp), name(_name) {};
 private:
     type_traits(const type_traits &);

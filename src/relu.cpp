@@ -39,33 +39,35 @@ struct relu_reference : is_an_implementation {
         auto output_offset = this_relu->argument.output_offset;
         auto output_size   = this_relu->argument.output_size;
 
-        auto input_arg  = this_relu->input_memory(0).argument;
-        auto output_arg = this_relu->output_memory(0).argument;
+        //auto input_arg  = this_relu->input_memory(0).argument;
+        //auto output_arg = this_relu->output_memory(0).argument;
+        auto input_arg  = this_relu->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+        auto output_arg = this_relu->argument.output[0].as<const memory&>().argument;
 
-        if(input_arg.format != memory_obselote::format::yxfb_f32)  throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
-        if(input_arg.size.size() != output_arg.size.size())throw std::runtime_error("ReLU input/output number of dimension does not match.");
-        if(input_arg.format != output_arg.format)  throw std::runtime_error("ReLU input/output data format does not match.");
-        for(auto &x : input_offset.raw)  if(x < 0)                   throw std::runtime_error("ReLU negative input offset.");
+        if(input_arg.format          != memory::format::yxfb_f32)   throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
+        if(input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
+        if(input_arg.format          != output_arg.format)          throw std::runtime_error("ReLU input/output data format does not match.");
+        for(auto &x : input_offset.raw)  if(x < 0)                  throw std::runtime_error("ReLU negative input offset.");
 
         // todo: another data order in std::vector and neural::vector
-        //for(size_t i = 0; i < input_arg.size.size(); ++i){
-        //    if(input_arg.size[i]  < output_size.raw[i] +  input_offset.raw[i]) throw std::runtime_error("ReLU input/output size does not match.");
-        //    if(output_arg.size[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("ReLU sizes to small.");
-        //}
+        for(size_t i = 0; i < input_arg.size.raw.size(); ++i){
+            if(input_arg.size.raw[i]  < output_size.raw[i] +  input_offset.raw[i]) throw std::runtime_error("ReLU input/output size does not match.");
+            if(output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("ReLU sizes to small.");
+        }
 
-        auto input  = static_cast<float*>(this_relu->input_memory(0).pointer);
-        auto output = static_cast<float*>(this_relu->output_memory(0).pointer);
+        //auto input  = static_cast<float*>(this_relu->input_memory(0).pointer);
+        //auto output = static_cast<float*>(this_relu->output_memory(0).pointer);
+        auto input  = static_cast<float*>(this_relu->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
+        auto output = static_cast<float*>(this_relu->argument.output[0].as<const memory&>().pointer);
 
         namespace nd = ndimensional;
-        nd::value<uint32_t> range ( {output_size.raw[2], output_size.raw[3], output_size.raw[1], output_size.raw[0] });
-        nd::calculate_idx_obselote<uint32_t> calc_in_idx  (input_arg.size);
-        nd::calculate_idx_obselote<uint32_t> calc_out_idx (output_arg.size);
+        nd::value<uint32_t> range ( output_size );
+        nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_in_idx  (input_arg.size);
+        nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_out_idx (output_arg.size);
 
-        std::vector<int32_t>  input_offset_reordered  { input_offset.raw[2],  input_offset.raw[3],  input_offset.raw[1],  input_offset.raw[0]  };
-        std::vector<uint32_t> output_offset_reordered {output_offset.raw[2], output_offset.raw[3], output_offset.raw[1], output_offset.raw[0] };
         for(auto pos : range) {
-            auto in_idx  = calc_in_idx (pos + input_offset_reordered );
-            auto out_idx = calc_out_idx(pos + output_offset_reordered);
+            auto in_idx  = calc_in_idx (pos + input_offset );
+            auto out_idx = calc_out_idx(pos + output_offset );
 
             output[out_idx] = std::max( input[in_idx], 0.0f) + this_relu->argument.negative_slope * std::min( input[in_idx], 0.0f);
         }
@@ -166,24 +168,24 @@ relu::arguments::arguments( neural::engine::type engine, primitive out, vector<u
     , output_size({out_siz})
     , input({in})
     , input_offset({in_off})
-    , negative_slope() {}
+    , negative_slope(0.0f) {}
 
 relu::arguments::arguments( neural::engine::type engine, primitive out, primitive in, float slp )
     : engine(engine)
     , output({out})
-    , output_offset(1, static_cast<uint32_t>(out.as<const memory_obselote&>().argument.size.size())-2, 1)
-    , output_size({out.as<const memory_obselote&>().argument.size[3], {out.as<const memory_obselote&>().argument.size[0], out.as<const memory_obselote&>().argument.size[1]}, out.as<const memory_obselote&>().argument.size[2]})
+    , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
+    , output_size(out.as<const memory&>().argument.size)
     , input({in})
-    , input_offset(1, static_cast<int32_t>(in.as<const memory_obselote&>().argument.size.size())-2, 1)
+    , input_offset(in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size())
     , negative_slope(slp) {}
 
 relu::arguments::arguments( neural::engine::type engine, primitive out, primitive in )
     : engine(engine)
     , output({out})
-    , output_offset(1, static_cast<uint32_t>(out.as<const memory_obselote&>().argument.size.size())-2, 1)
-    , output_size({out.as<const memory_obselote&>().argument.size[3], {out.as<const memory_obselote&>().argument.size[0], out.as<const memory_obselote&>().argument.size[1]}, out.as<const memory_obselote&>().argument.size[2]})
+    , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
+    , output_size(out.as<const memory&>().argument.size)
     , input({in})
-    , input_offset(1, static_cast<int32_t>(in.as<const memory_obselote&>().argument.size.size())-2, 1)
+    , input_offset(in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size())
     , negative_slope(0.0f) {}
 
 relu_backward::arguments::arguments(neural::engine::type engine, std::vector<primitive> out, std::vector<uint32_t> out_offset, std::vector<uint32_t> out_size, std::vector<primitive_at> in, std::vector<std::vector<uint32_t>> in_offsets, float neg_slope)
