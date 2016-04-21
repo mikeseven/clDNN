@@ -31,11 +31,11 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_true) {
     int length = sizeof(possible_input_sizes) / sizeof(int);
     uint32_t random_size, i = 0;
 
-    static std::mt19937 rng(1);
-    std::uniform_int_distribution<uint32_t> dist(0, length);
+    std::mt19937::result_type seed = 1;
 
     while (i < 4) {
-        random_size = possible_input_sizes[dist(rng)];
+        auto rand_length = std::bind(std::uniform_int_distribution<uint32_t>(1,length),std::mt19937(seed));
+        random_size = possible_input_sizes[rand_length()];
         if(random_size <= max_input_size){
             input_size[i] = random_size;
             max_input_size = max_input_size / random_size;
@@ -88,11 +88,11 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     int non_zero_value;
     uint32_t random_size, i = 0;
 
-    static std::mt19937 rng(1);
-    std::uniform_int_distribution<uint32_t> dist_length(0, length);
+    std::mt19937::result_type seed = 1;
 
     while (i < 4) {
-        random_size = possible_input_sizes[dist_length(rng)];
+        auto rand_length = std::bind(std::uniform_int_distribution<uint32_t>(1,length),std::mt19937(seed));
+        random_size = possible_input_sizes[rand_length()];
         if(random_size <= max_input_size){
             input_size[i] = random_size;
             max_input_size = max_input_size / random_size;
@@ -128,8 +128,8 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     bias.as<const memory&>().fill<float>(0);
 
     // Put non zero value in random place in input
-    std::uniform_int_distribution<uint32_t> dist_input(0, total_input_size);
-    auto random_input_non_zero = dist_input(rng);
+    auto rand_input = std::bind(std::uniform_int_distribution<uint32_t>(1,total_input_size),std::mt19937(seed));
+    auto random_input_non_zero = rand_input();
     static_cast<float*>(input_memory.pointer)[random_input_non_zero] = 10.0f;
 
     // Create primitive.
@@ -171,11 +171,11 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
     int length = sizeof(possible_input_sizes) / sizeof(int);
     uint32_t random_size, i = 0;
 
-    static std::mt19937 rng(1);
-    std::uniform_int_distribution<uint32_t> dist(0, length);
+    std::mt19937::result_type seed = 1;
 
     while (i < 4) {
-        random_size = possible_input_sizes[dist(rng)];
+        auto rand_length = std::bind(std::uniform_int_distribution<uint32_t>(1,length),std::mt19937(seed));
+        random_size = possible_input_sizes[rand_length()];
         if(random_size <= max_input_size){
             input_size[i] = random_size;
             max_input_size = max_input_size / random_size;
@@ -234,11 +234,11 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     int non_zero_value;
     uint32_t random_size, i = 0;
 
-    static std::mt19937 rng(1);
-    std::uniform_int_distribution<uint32_t> dist_length(0, length);
+    std::mt19937::result_type seed = 1;
 
     while (i < 4) {
-        random_size = possible_input_sizes[dist_length(rng)];
+        auto rand_length = std::bind(std::uniform_int_distribution<uint32_t>(1,length),std::mt19937(seed));
+        random_size = possible_input_sizes[rand_length()];
         if(random_size <= max_input_size){
             input_size[i] = random_size;
             max_input_size = max_input_size / random_size;
@@ -275,8 +275,8 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     bias.as<const memory&>().fill<float>(0);
 
     // Put non zero value in random place in input
-    std::uniform_int_distribution<uint32_t> dist_input(0, total_input_size);
-    auto random_input_non_zero = dist_input(rng);
+    auto rand_input = std::bind(std::uniform_int_distribution<uint32_t>(1,total_input_size),std::mt19937(seed));
+    auto random_input_non_zero = rand_input();
     static_cast<float*>(input_memory.pointer)[random_input_non_zero] = 10.0f;
 
     // Create primitive.
