@@ -20,11 +20,11 @@
 #include "api/neural.h"
 
 namespace{
-    auto calc_idx = [](std::vector<uint32_t> yxzb_pos, std::vector<uint32_t>& buf_size) -> uint32_t{
-        return yxzb_pos[3]
-             + yxzb_pos[2] * buf_size[3]
-             + yxzb_pos[1] * buf_size[3] * buf_size[2]
-             + yxzb_pos[0] * buf_size[3] * buf_size[2] * buf_size[1];
+    auto calc_idx = [](std::vector<uint32_t> yxfb_pos, std::vector<uint32_t>& buf_size_bfyx) -> uint32_t{
+        return yxfb_pos[3]
+             + yxfb_pos[2] * buf_size_bfyx[0]
+             + yxfb_pos[1] * buf_size_bfyx[0] * buf_size_bfyx[1]
+             + yxfb_pos[0] * buf_size_bfyx[0] * buf_size_bfyx[1] * buf_size_bfyx[3];
     };
 }
 
@@ -33,8 +33,8 @@ using namespace neural;
 TEST(relu_f32_fw, basic) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
-    auto input  = memory::create({engine::reference, memory::format::yxfb_f32, { b, {x, y}, f}, true});
-    auto output = memory::create({engine::reference, memory::format::yxfb_f32, { b, {x, y}, f}});
+    auto input  = memory::create({engine::reference, memory::format::yxfb_f32, { b, {y, x}, f}, true});
+    auto output = memory::create({engine::reference, memory::format::yxfb_f32, { b, {y, x}, f}});
     input.as<const memory&>().fill<float>();
 
     auto act = relu::create({engine::reference, output, input});
@@ -56,16 +56,15 @@ TEST(relu_f32_fw, basic) {
 
     EXPECT_EQ(false, result);
 }
-/*
 
 TEST(relu_f32_fw, offsets) {
-    const uint32_t output_y  = 7,
-                   output_x  = 7,
+    const uint32_t output_y  = 5,
+                   output_x  = 5,
                    output_f  = 2,
                    output_b  = 3, // size of whole output buffer
 
-                   input_y   = 10,
-                   input_x   = 10,
+                   input_y   = 4,
+                   input_x   = 5,
                    input_f   = 3,
                    input_b   = 3,  // size of whole input buffer
 
@@ -74,8 +73,8 @@ TEST(relu_f32_fw, offsets) {
                    out_off_f = 0,
                    out_off_b = 1,
 
-                   out_siz_y = 5,
-                   out_siz_x = 5,
+                   out_siz_y = 3,
+                   out_siz_x = 3,
                    out_siz_f = 2,
                    out_siz_b = 2;
 
@@ -84,12 +83,12 @@ TEST(relu_f32_fw, offsets) {
                    in_off_f  = 1,
                    in_off_b  = 0;
 
-    std::vector<uint32_t> in_buf_size  = {input_y, input_x, input_f, input_b};
-    std::vector<uint32_t> out_buf_size = {output_y, output_x, output_f, output_b};
+    vector<uint32_t> in_buf_size  = {input_b , {input_y , input_x }, input_f  };
+    vector<uint32_t> out_buf_size = {output_b, {output_y, output_x}, output_f };
 
-    auto input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {in_buf_size.cbegin(), in_buf_size.cend()}, true});
-    auto output = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, out_buf_size, true});
-    input.as<const memory_obselote&>().fill<float>();
+    auto input  = memory::create({engine::reference, memory::format::yxfb_f32, in_buf_size, true});
+    auto output = memory::create({engine::reference, memory::format::yxfb_f32, out_buf_size, true});
+    input.as<const memory&>().fill<float>();
 
     auto act = relu::create( {engine::reference,
                               output,
@@ -101,10 +100,11 @@ TEST(relu_f32_fw, offsets) {
 
     execute({act});
 
-    auto buf_in  = static_cast<float*>(input.as<const memory_obselote&>().pointer);
-    auto buf_out = static_cast<float*>(output.as<const memory_obselote&>().pointer);
+    auto buf_in  = static_cast<float*>( input.as<const memory&>().pointer);
+    auto buf_out = static_cast<float*>(output.as<const memory&>().pointer);
     bool result = true;
 
+   //todo remove std::cout << "-------------TEST-------------" << std::endl;
     for(uint32_t y = 0; y < out_siz_y; ++y)
     for(uint32_t x = 0; x < out_siz_x; ++x)
     for(uint32_t f = 0; f < out_siz_f; ++f)
@@ -115,13 +115,15 @@ TEST(relu_f32_fw, offsets) {
                                  in_off_x + x,
                                  in_off_f + f,
                                  in_off_b + b
-                                }, in_buf_size);
+                                }, in_buf_size.raw);
         auto out_idx = calc_idx( {
                                  out_off_y + y,
                                  out_off_x + x,
                                  out_off_f + f,
                                  out_off_b + b
-                                }, out_buf_size);
+                                }, out_buf_size.raw);
+        //todo remove
+      //  std::cout << ndimensional::value<uint32_t>({in_off_b + b, in_off_f + f, in_off_y + y, in_off_x + x}) << "\t" << in_idx << " | " << ndimensional::value<uint32_t>({out_off_b + b, out_off_f + f, out_off_y + y, out_off_x + x}) << "\t" << out_idx << std::endl; //todo remove
 
         result &= (buf_out[out_idx] > 0.0f)
                   ? (buf_out[out_idx] == buf_in[in_idx])

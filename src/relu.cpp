@@ -65,9 +65,11 @@ struct relu_reference : is_an_implementation {
         nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_in_idx  (input_arg.size);
         nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_out_idx (output_arg.size);
 
+        //todo remove std::cout << "-------------IMPLEMENTATION-------------" << std::endl;
         for(auto pos : range) {
             auto in_idx  = calc_in_idx (pos + input_offset );
-            auto out_idx = calc_out_idx(pos + output_offset );
+            auto out_idx = calc_out_idx(pos + output_offset);
+            //todo remove std::cout << pos + input_offset << "\t" << in_idx << " | " << pos + output_offset << "\t" << out_idx << std::endl; //todo remove
 
             output[out_idx] = std::max( input[in_idx], 0.0f) + this_relu->argument.negative_slope * std::min( input[in_idx], 0.0f);
         }

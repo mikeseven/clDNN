@@ -144,11 +144,11 @@ public:
         assert( 4 == v_size.size() );
 
         // strides for yxfb format
-        // v_size format is b, spatials(x,y), f
+        // vectors v_size and stride use format: b, f, spatials(y,x...)
         stride[0] = 1;
-        stride[3] = v_size[0];
-        stride[1] = v_size[0] * v_size[3];
-        stride[2] = v_size[0] * v_size[3] * v_size[1];
+        stride[1] = v_size[0];
+        stride[2] = v_size[0] * v_size[1] * v_size[3];
+        stride[3] = v_size[0] * v_size[1];
     };
 
     size_t operator() ( const std::vector<   T>& pos );
