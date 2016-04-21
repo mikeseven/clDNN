@@ -104,6 +104,7 @@ std::ostream &operator<<(std::ostream &out, value<U> &val) {
     return out;
 }
 
+// todo tmp solution, should we just pass pointer to stride table? It can be done in runtime
 template<typename T, int FORMAT>
 class calculate_idx{
     using negT = typename change_signedness<T>::type;
@@ -112,9 +113,8 @@ class calculate_idx{
     std::vector<T> stride;
 
 public:
-    //todo
     calculate_idx( const std::vector<T>& v_size ) {
-        throw std::runtime_error("Template specialization of calculate_idx is not implemented for memory::format: " + std::to_string(FORMAT) );
+        throw std::runtime_error("Template specialization of calculate_idx is not implemented for (int)memory::format: " + std::to_string(FORMAT) );
     }
 
     size_t operator() ( const std::vector<   T>& pos );
@@ -128,6 +128,8 @@ public:
     bool is_out_of_range( const neural::vector<negT>& pos );
 };
 
+// todo think about interface class implementing opearator() and is_out_of_range()
+// specialization of yxfb_f32
 template<typename T>
 class calculate_idx<T, static_cast<int>(neural::memory::format::yxfb_f32)>{
     using negT = typename change_signedness<T>::type;
@@ -142,6 +144,7 @@ public:
 
         static_assert(std::is_unsigned<T>::value, "calculate_idx<T, memory::format::yxfb_f32> constructor accepts only unsigned types");
         assert( 4 == v_size.size() );
+        assert( 0 != std::accumulate(v_size.cbegin(), v_size.cend(), 1, std::multiplies<T>()));
 
         // strides for yxfb format
         // vectors v_size and stride use format: b, f, spatials(y,x...)
@@ -161,7 +164,6 @@ public:
     bool is_out_of_range( const neural::vector<   T>& pos );
     bool is_out_of_range( const neural::vector<negT>& pos );
 };
-
 template<typename T>
 inline size_t calculate_idx<T, static_cast<int>(neural::memory::format::yxfb_f32)>::operator()( const std::vector<T>& position ){
     size_t result_idx = 0;
@@ -181,7 +183,6 @@ inline size_t calculate_idx<T, static_cast<int>(neural::memory::format::yxfb_f32
 
     return result_idx;
 }
-
 template<typename T>
 inline size_t calculate_idx<T, static_cast<int>(neural::memory::format::yxfb_f32)>::operator()( const std::vector<negT>& position ){
     size_t result_idx = 0;
@@ -201,7 +202,6 @@ inline size_t calculate_idx<T, static_cast<int>(neural::memory::format::yxfb_f32
 
     return result_idx;
 }
-
 template<typename T>
 inline bool calculate_idx<T, static_cast<int>(neural::memory::format::yxfb_f32)>::is_out_of_range( const std::vector<negT>& pos ){
     assert( pos.size() == size.size() );
@@ -212,7 +212,6 @@ inline bool calculate_idx<T, static_cast<int>(neural::memory::format::yxfb_f32)>
 
     return false;
 }
-
 template<typename T>
 inline bool calculate_idx<T, static_cast<int>(neural::memory::format::yxfb_f32)>::is_out_of_range( const std::vector<T>& pos ){
     assert( pos.size() == size.size() );

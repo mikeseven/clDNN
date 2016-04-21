@@ -20,6 +20,12 @@
 #include "api/neural.h"
 
 namespace{
+    auto calc_idx_obselote = [](std::vector<uint32_t> yxzb_pos, std::vector<uint32_t>& buf_size) -> uint32_t{
+        return yxzb_pos[3]
+             + yxzb_pos[2] * buf_size[3]
+             + yxzb_pos[1] * buf_size[3] * buf_size[2]
+             + yxzb_pos[0] * buf_size[3] * buf_size[2] * buf_size[1];
+    };
     auto calc_idx = [](std::vector<uint32_t> yxfb_pos, std::vector<uint32_t>& buf_size_bfyx) -> uint32_t{
         return yxfb_pos[3]
              + yxfb_pos[2] * buf_size_bfyx[0]
@@ -104,7 +110,6 @@ TEST(relu_f32_fw, offsets) {
     auto buf_out = static_cast<float*>(output.as<const memory&>().pointer);
     bool result = true;
 
-   //todo remove std::cout << "-------------TEST-------------" << std::endl;
     for(uint32_t y = 0; y < out_siz_y; ++y)
     for(uint32_t x = 0; x < out_siz_x; ++x)
     for(uint32_t f = 0; f < out_siz_f; ++f)
@@ -122,8 +127,6 @@ TEST(relu_f32_fw, offsets) {
                                  out_off_f + f,
                                  out_off_b + b
                                 }, out_buf_size.raw);
-        //todo remove
-      //  std::cout << ndimensional::value<uint32_t>({in_off_b + b, in_off_f + f, in_off_y + y, in_off_x + x}) << "\t" << in_idx << " | " << ndimensional::value<uint32_t>({out_off_b + b, out_off_f + f, out_off_y + y, out_off_x + x}) << "\t" << out_idx << std::endl; //todo remove
 
         result &= (buf_out[out_idx] > 0.0f)
                   ? (buf_out[out_idx] == buf_in[in_idx])
@@ -133,7 +136,6 @@ TEST(relu_f32_fw, offsets) {
     EXPECT_EQ(true, result);
 }
 
-/*
 TEST(relu_f32_bw, basic) {
     using namespace neural;
 
@@ -224,21 +226,21 @@ TEST(relu_f32_bw, offsets) {
     for(uint32_t f = 0; f < out_siz_f; ++f)
     for(uint32_t b = 0; b < out_siz_b; ++b)
     {
-        auto fw_in_idx = calc_idx( {
+        auto fw_in_idx = calc_idx_obselote( {
                                  fw_in_off_y + y,
                                  fw_in_off_x + x,
                                  fw_in_off_f + f,
                                  fw_in_off_b + b
                                 }, fw_in_buf_size);
 
-        auto bw_in_idx = calc_idx( {
+        auto bw_in_idx = calc_idx_obselote( {
                                  bw_in_off_y + y,
                                  bw_in_off_x + x,
                                  bw_in_off_f + f,
                                  bw_in_off_b + b
                                 }, bw_in_buf_size);
 
-        auto out_idx = calc_idx( {
+        auto out_idx = calc_idx_obselote( {
                                  out_off_y + y,
                                  out_off_x + x,
                                  out_off_f + f,
@@ -250,4 +252,3 @@ TEST(relu_f32_bw, offsets) {
 
     EXPECT_EQ(true, result);
 }
-*/

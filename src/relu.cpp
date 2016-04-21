@@ -49,7 +49,6 @@ struct relu_reference : is_an_implementation {
         if(input_arg.format          != output_arg.format)          throw std::runtime_error("ReLU input/output data format does not match.");
         for(auto &x : input_offset.raw)  if(x < 0)                  throw std::runtime_error("ReLU negative input offset.");
 
-        // todo: another data order in std::vector and neural::vector
         for(size_t i = 0; i < input_arg.size.raw.size(); ++i){
             if(input_arg.size.raw[i]  < output_size.raw[i] +  input_offset.raw[i]) throw std::runtime_error("ReLU input/output size does not match.");
             if(output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("ReLU sizes to small.");
@@ -65,11 +64,9 @@ struct relu_reference : is_an_implementation {
         nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_in_idx  (input_arg.size);
         nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_out_idx (output_arg.size);
 
-        //todo remove std::cout << "-------------IMPLEMENTATION-------------" << std::endl;
         for(auto pos : range) {
             auto in_idx  = calc_in_idx (pos + input_offset );
             auto out_idx = calc_out_idx(pos + output_offset);
-            //todo remove std::cout << pos + input_offset << "\t" << in_idx << " | " << pos + output_offset << "\t" << out_idx << std::endl; //todo remove
 
             output[out_idx] = std::max( input[in_idx], 0.0f) + this_relu->argument.negative_slope * std::min( input[in_idx], 0.0f);
         }
@@ -153,7 +150,6 @@ struct relu_backward_reference : is_an_implementation {
 
 } // namespace {
 
-//todo discuss, output size is always needed or can be uninitialized?
 relu::arguments::arguments( neural::engine::type engine, primitive out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off, float slp)
     : engine(engine)
     , output({out})

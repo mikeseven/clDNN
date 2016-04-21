@@ -15,19 +15,18 @@
 */
 
 #include "api/neural.h"
-#include "neuralia_tools.h"
 
-// memory_obselote->memory_obselote relu
+// memory->memory relu
 void example_relu_forward() {
-//    using namespace neural;
-//
-//    auto input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {8, 8, 3, 8}, true});
-//    auto output = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {8, 8, 3, 8}, true});
-//    input.as<const memory_obselote&>().fill<float>();
-//
-//    auto act = relu::create({engine::reference, output, input});
-//
-//    execute({act});
+    using namespace neural;
+
+    auto input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {8, 8, 3, 8}, true});
+    auto output = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {8, 8, 3, 8}, true});
+    input.as<const memory_obselote&>().fill<float>();
+
+    auto act = relu::create({engine::reference, output, input});
+
+    execute({act});
 }
 
 void example_relu_backward() {
