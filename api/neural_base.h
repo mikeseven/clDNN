@@ -56,7 +56,7 @@ template<typename T> struct vector {
         , feature(raw, arg.feature.begin_, arg.feature.end_)
         , batch  (raw, arg.batch.begin_,   arg.batch.end_)
     {}
-    vector &operator=(const vector &rhs)  {
+    vector &operator=(const vector &arg)  {
         raw = arg.raw;
         spatial.raw_ = arg.spatial.raw_;
     }
