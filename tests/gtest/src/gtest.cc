@@ -834,7 +834,7 @@ TimeInMillis GetTimeInMillis() {
 
 #if GTEST_OS_WINDOWS_MOBILE
 // Creates a UTF-16 wide string from the given ANSI string, allocating
-// memory using new. The caller is responsible for deleting the return
+// memory_obselote using new. The caller is responsible for deleting the return
 // value using delete[]. Returns the wide string, or NULL if the
 // input is NULL.
 LPCWSTR String::AnsiToUtf16(const char* ansi) {
@@ -851,7 +851,7 @@ LPCWSTR String::AnsiToUtf16(const char* ansi) {
 }
 
 // Creates an ANSI string from the given wide string, allocating
-// memory using new. The caller is responsible for deleting the return
+// memory_obselote using new. The caller is responsible for deleting the return
 // value using delete[]. Returns the ANSI string, or NULL if the
 // input is NULL.
 const char* String::Utf16ToAnsi(LPCWSTR utf16_str)  {

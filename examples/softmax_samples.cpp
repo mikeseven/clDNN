@@ -16,7 +16,7 @@
 
 #include "api/neural.h"
 
-// memory->memory softmax
+// memory_obselote->memory_obselote softmax
 void example_softmax_forward() {
     using namespace neural;
 
@@ -31,8 +31,8 @@ void example_softmax_forward() {
     float out_buffer[output_x*output_b];
     // input buffer should be initialized with valid data
 
-    auto input  = memory::create({engine::cpu, memory::format::xb_f32, {input_x, input_b}});
-    auto output = memory::create({engine::cpu, memory::format::xb_f32, {output_x, output_b}});
+    auto input  = memory_obselote::create({engine::cpu, memory_obselote::format::xb_f32, {input_x, input_b}});
+    auto output = memory_obselote::create({engine::cpu, memory_obselote::format::xb_f32, {output_x, output_b}});
 
     auto act    = normalization::softmax::create( {engine::reference,
                                                    output,

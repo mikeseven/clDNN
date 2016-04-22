@@ -38,7 +38,7 @@ uint32_t crc32(const void *buffer, size_t count, uint32_t crc) {
 struct file_header {
     std::array<uint8_t,3>           magic;
     uint8_t                         version;
-    neural::memory::format::type    format;
+    neural::memory_obselote::format::type    format;
     uint8_t                         rank_minus_1;
 };
 
@@ -52,15 +52,15 @@ template<typename T_type, typename... T_args> std::unique_ptr<T_type> make_uniqu
 } //namespace {
 
 
-file::arguments::arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize)
+file::arguments::arguments(neural::engine::type aengine, std::string aname, memory_obselote::format::type aformat, std::vector<uint32_t> &asize)
     : engine(aengine)
     , name(aname)
-    , output{{memory::create({aengine, aformat, asize, true})}} {}
+    , output{{memory_obselote::create({aengine, aformat, asize, true})}} {}
 
-file::arguments::arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat)
+file::arguments::arguments(neural::engine::type aengine, std::string aname, memory_obselote::format::type aformat)
     : engine(aengine)
     , name(aname)
-    , output{{memory::create({aengine, aformat, std::vector<uint32_t>()})}} {}
+    , output{{memory_obselote::create({aengine, aformat, std::vector<uint32_t>()})}} {}
 
 file::arguments::arguments(neural::engine::type aengine, std::string aname, primitive aoutput)
     : engine(aengine)
@@ -101,15 +101,15 @@ primitive file::create(file::arguments arg) {
 
         // validation
         if(arg.output[0]!=null_primitive) {
-            auto output = arg.output[0].as<const memory&>().argument;
+            auto output = arg.output[0].as<const memory_obselote&>().argument;
             if(header.format!=output.format)                        throw std::runtime_error("file::create: format in file different than requested");
             if(0!=output.size.size() && *size!=output.size)         throw std::runtime_error("file::create: size/dimensionality of data is different than requested");
         }
 
-        // crete result with output owning memory, load data into it
-        auto result = std::unique_ptr<file>(new file({arg.engine, arg.name, memory::create({arg.engine, header.format, *size, true})}));
+        // crete result with output owning memory_obselote, load data into it
+        auto result = std::unique_ptr<file>(new file({arg.engine, arg.name, memory_obselote::create({arg.engine, header.format, *size, true})}));
         auto &buffer = result->output_memory(0); 
-        auto count = buffer.count()*memory::traits(buffer.argument.format).type->size;
+        auto count = buffer.count()*memory_obselote::traits(buffer.argument.format).type->size;
         in.read(static_cast<char *>(buffer.pointer), count);
 
         return result.release();

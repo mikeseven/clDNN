@@ -429,7 +429,7 @@ inline void PrintTo(unsigned char* s, ::std::ostream* os) {
 // short.  It defines _NATIVE_WCHAR_T_DEFINED when wchar_t is a native
 // type.  When wchar_t is a typedef, defining an overload for const
 // wchar_t* would cause unsigned short* be printed as a wide string,
-// possibly causing invalid memory accesses.
+// possibly causing invalid memory_obselote accesses.
 #if !defined(_MSC_VER) || defined(_NATIVE_WCHAR_T_DEFINED)
 // Overloads for wide C strings
 GTEST_API_ void PrintTo(const wchar_t* s, ::std::ostream* os);
