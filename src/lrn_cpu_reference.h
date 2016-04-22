@@ -19,5 +19,14 @@
 #include "lrn.h"
 
 namespace neural {
+    struct lrn_cpu_reference : is_an_implementation {
+        lrn_cpu_reference(normalization::response &arg);
+        ~lrn_cpu_reference();
+        static void implementation(const void *ptr);
 
+        static is_an_implementation *create(normalization::response &arg) { return new lrn_cpu_reference(arg); };
+        std::vector<task> work() { return{ task{ implementation, &outer } }; };
+
+        const normalization::response &outer;
+    };
 }

@@ -24,7 +24,7 @@ void example_lrn_forward() {
     auto output = memory::create({ engine::reference, memory::format::yxfb_f32,{ 8, 8, 3, 8 }, true });
     input.as<const memory&>().fill<float>();
 
-    auto act = relu::create({ engine::reference, output, input });
+    auto act = lrn_cpu_reference::create({ engine::reference, output, input });
 
     execute({ act });
 }

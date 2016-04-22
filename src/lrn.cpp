@@ -22,77 +22,31 @@ namespace neural {
 singleton_map<lrn_fw_key, std::function<is_an_implementation *(normalization::response &)>>         & lrn_fw_implementation_map = singleton_map<lrn_fw_key, std::function<is_an_implementation *(normalization::response &)>>         ::instance();
 //singletion_map<lrn_bw_key, std::function<is_an_implementation *(normalization::response_backward &)>>& lrn_bw_implementation_map = singletion_map<lrn_bw_key, std::function<is_an_implementation *(normalization::response_backward &)>>::instance();
 
-/*
-convolution::arguments::arguments( neural::engine::type  eng,
-                                   primitive             out,
-                                   std::vector<uint32_t> out_off,
-                                   std::vector<uint32_t> out_siz,
-                                   primitive             in,
-                                   std::vector<int32_t>  in_off,
-                                   std::vector<uint32_t> strd,
-                                   primitive             weights,
-                                   primitive             biases,
-                                   neural::padding::type padd)
-    : engine(eng)
-    , output({out})
-    , output_offset(out_off)
-    , output_size(out_siz)
-    , input({in})
-    , input_offset(in_off)
-    , stride(strd)
-    , weight(weights)
-    , bias(biases)
-    , padding(padd) {};
+normalization::response::arguments::arguments(
+                 neural::engine::type aengine,
+                 primitive aoutput,
+                 std::vector<uint32_t> aoutput_offset,
+                 std::vector<uint32_t> aoutput_size,
+                 primitive ainput,
+                 std::vector<int32_t> ainput_offset,
+                 uint32_t asize,
+                 neural::padding::type apadding,
+                 float ak,
+                 float aalpha,
+                 float abeta)
+    : engine (aengine)
+    , output({ aoutput })
+    , output_offset (aoutput_offset)
+    , output_size (aoutput_size)
+    , input({ ainput })
+    , input_offset (ainput_offset)
+    , size (asize)
+    , padding (apadding)
+    , k (ak)
+    , alpha (aalpha)
+    , beta (abeta) { };
 
-convolution::arguments::arguments( neural::engine::type  eng,
-                                   primitive             out,
-                                   primitive             in,
-                                   std::vector<uint32_t> strd,
-                                   primitive             weights,
-                                   primitive             biases,
-                                   neural::padding::type padd)
-    : engine(eng)
-    , output({out})
-    , output_offset(out.as<const memory&>().argument.size.size())
-    , output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
-    , input({in})
-    , input_offset(in.as<const memory&>().argument.size.size())
-    , stride(strd)
-    , weight(weights)
-    , bias(biases)
-    , padding(padd) {};
 
-convolution_backward::arguments::arguments( neural::engine::type   eng,
-                                            std::vector<primitive> out,
-                                            std::vector<uint32_t>  out_off,
-                                            std::vector<uint32_t>  in_siz,
-                                            std::vector<primitive> in,
-                                            std::vector<int32_t>   in_off,
-                                            std::vector<uint32_t>  strd,
-                                            neural::padding::type  padd)
-    : engine(eng)
-    , output({out})
-    , output_offset(out_off)
-    , input_size(in_siz)
-    , input(in.cbegin(), in.cend())
-    , input_offset(in_off)
-    , stride(strd)
-    , padding(padd) {};
-
-convolution_backward::arguments::arguments( neural::engine::type   eng,
-                                            std::vector<primitive> out,
-                                            std::vector<primitive> in,
-                                            std::vector<uint32_t>  strd,
-                                            neural::padding::type  padd)
-    : engine(eng)
-    , output({out})
-    , output_offset(out[0].as<const memory&>().argument.size.size())
-    , input_size(in[0].as<const memory&>().argument.size)
-    , input(in.cbegin(), in.cend())
-    , input_offset(in[0].as<const memory&>().argument.size.size())
-    , stride(strd)
-    , padding(padd) {};
-*/
 // creates primitive with convolution implementation that supports provided arguments
 primitive normalization::response::create(response::arguments arg) {
     // wrap relu into RAII wrapper
