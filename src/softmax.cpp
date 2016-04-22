@@ -43,7 +43,7 @@ struct softmax_reference : is_an_implementation {
         auto input_arg  = this_softmax->input_memory(0).argument;
         auto output_arg = this_softmax->output_memory(0).argument;
 
-        if(input_arg.format      != memory::format::xb_f32) throw std::runtime_error("Softmax reference uses xb_f32 format."); // todo should be format independent
+        if(input_arg.format      != memory_obselote::format::xb_f32) throw std::runtime_error("Softmax reference uses xb_f32 format."); // todo should be format independent
         if(input_arg.format      != output_arg.format)      throw std::runtime_error("Softmax input/output data format does not match.");
         if(input_arg.size.size() != output_arg.size.size()) throw std::runtime_error("Softmax input/output number of dimension does not match.");
 
@@ -59,8 +59,8 @@ struct softmax_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
-        nd::calculate_idx<uint32_t> calc_in_idx  (input_arg.size);
-        nd::calculate_idx<uint32_t> calc_out_idx (output_arg.size);
+        nd::calculate_idx_obselote<uint32_t> calc_in_idx  (input_arg.size);
+        nd::calculate_idx_obselote<uint32_t> calc_out_idx (output_arg.size);
 
         // find max val per batch
         for(auto pos : range) {
@@ -102,25 +102,25 @@ softmax::arguments::arguments( neural::engine::type eng, primitive out, std::vec
 softmax::arguments::arguments( neural::engine::type eng, primitive out, primitive in )
     : engine(eng)
     , output({out})
-    , output_offset(static_cast<uint32_t>(out.as<const memory&>().argument.size.size()))
-    , output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
+    , output_offset(static_cast<uint32_t>(out.as<const memory_obselote&>().argument.size.size()))
+    , output_size(out.as<const memory_obselote&>().argument.size.begin(), out.as<const memory_obselote&>().argument.size.end())
     , input({in})
-    , input_offset(static_cast<uint32_t>(in.as<const memory&>().argument.size.size())) {}
+    , input_offset(static_cast<uint32_t>(in.as<const memory_obselote&>().argument.size.size())) {}
 
-softmax::arguments::arguments( neural::engine::type eng, memory::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off)
+softmax::arguments::arguments( neural::engine::type eng, memory_obselote::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off)
     : engine(eng)
-    , output({memory::create({eng, out_fmt, out_siz, true})})
+    , output({memory_obselote::create({eng, out_fmt, out_siz, true})})
     , output_offset(out_off)
     , output_size(out_siz)
     , input({in})
     , input_offset(in_off) {}
 
 //                                    engine                output                        input
-using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
+using implementation_key = std::tuple<neural::engine::type, neural::memory_obselote::format::type, neural::memory_obselote::format::type>;
 
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(softmax &)>> forward_implementation_map = {
-    {std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), softmax_reference::create}
+    {std::make_tuple(engine::reference, memory_obselote::format::xb_f32, memory_obselote::format::xb_f32), softmax_reference::create}
 };
 // creates primitive with softmax implementation that supports provided arguments
 primitive softmax::create(softmax::arguments arg) {

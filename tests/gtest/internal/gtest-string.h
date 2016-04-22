@@ -59,13 +59,13 @@ class GTEST_API_ String {
  public:
   // Static utility methods
 
-  // Clones a 0-terminated C string, allocating memory using new.  The
+  // Clones a 0-terminated C string, allocating memory_obselote using new.  The
   // caller is responsible for deleting the return value using
   // delete[].  Returns the cloned string, or NULL if the input is
   // NULL.
   //
   // This is different from strdup() in string.h, which allocates
-  // memory using malloc().
+  // memory_obselote using malloc().
   static const char* CloneCString(const char* c_str);
 
 #if GTEST_OS_WINDOWS_MOBILE
@@ -74,7 +74,7 @@ class GTEST_API_ String {
   // to 'Unicode', UTF-16.
 
   // Creates a UTF-16 wide string from the given ANSI string, allocating
-  // memory using new. The caller is responsible for deleting the return
+  // memory_obselote using new. The caller is responsible for deleting the return
   // value using delete[]. Returns the wide string, or NULL if the
   // input is NULL.
   //
@@ -84,7 +84,7 @@ class GTEST_API_ String {
   static LPCWSTR AnsiToUtf16(const char* c_str);
 
   // Creates an ANSI string from the given wide string, allocating
-  // memory using new. The caller is responsible for deleting the return
+  // memory_obselote using new. The caller is responsible for deleting the return
   // value using delete[]. Returns the ANSI string, or NULL if the
   // input is NULL.
   //

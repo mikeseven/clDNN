@@ -116,11 +116,11 @@ struct memory : is_a_primitive {
     struct arguments {
         neural::engine::type            engine;
         neural::memory::format::type    format;
-        std::vector<uint32_t>           size;
+        neural::vector<uint32_t>        size;
         bool                            owns_memory;
 
-        DLL_SYM arguments(neural::engine::type aengine, memory::format::type aformat, std::vector<uint32_t> asize);
-        DLL_SYM arguments(neural::engine::type aengine, memory::format::type aformat, std::vector<uint32_t> asize, bool aowns_memory);
+        DLL_SYM arguments(neural::engine::type aengine, memory::format::type aformat, neural::vector<uint32_t> asize);
+        DLL_SYM arguments(neural::engine::type aengine, memory::format::type aformat, neural::vector<uint32_t> asize, bool aowns_memory);
     };
     const arguments argument;
     mutable void *pointer;
@@ -159,20 +159,145 @@ struct memory : is_a_primitive {
             *it1 = static_cast<T>( dist(rng) );
     }
 
+    template <class T> void debug_fill(int x) const //todo remove
+    {
+        for(auto it1 = data_begin<T>(), it2 = data_end<T>(); it1 != it2; ++it1){
+            *it1 = static_cast<T>( x++ );
+        }
+    }
+
     ~memory();
 private:
 
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
 };
+struct memory_obselote : is_a_primitive {
+
+    struct format_traits {
+        const uint8_t       dimension;
+        const type_traits  *type;
+    };
+
+    class format { format(); public: enum type {
+        scalar_f32, // single scalar, float32
+        x_f32,
+        xb_f32,     // 1D+batch, float32
+        yxfb_f32,   // 3D+batch, float32
+        fyxb_f32,
+        xyfb_f32,
+        fxyb_f32,
+        byxf_f32,
+        bfyx_f32,
+        bxyf_f32,
+        bfxy_f32,
+        scalar_f64, // single scalar, float64
+        x_f64,
+        yxfb_f64,   // 3D+batch, float64
+        fyxb_f64,
+        xyfb_f64,
+        fxyb_f64,
+        byxf_f64,
+        bfyx_f64,
+        bxyf_f64,
+        bfxy_f64,
+        any=static_cast<uint32_t>(-1)
+    }; };
+
+    static const format_traits traits(format::type fmt) {
+        switch(fmt) {
+        case format::scalar_f32:
+        case format::   x_f32: return {1, type_id<float>()};
+		case format::  xb_f32: return {2, type_id<float>()};
+        case format::yxfb_f32:
+        case format::fyxb_f32:
+        case format::xyfb_f32:
+        case format::fxyb_f32:
+        case format::byxf_f32:
+        case format::bfyx_f32:
+        case format::bxyf_f32:
+		case format::bfxy_f32: return {4, type_id<float>()};
+        case format::scalar_f64:
+        case format::   x_f64: return {1, type_id<double>()};
+        case format::yxfb_f64:
+        case format::fyxb_f64:
+        case format::xyfb_f64:
+        case format::fxyb_f64:
+        case format::byxf_f64:
+        case format::bfyx_f64:
+        case format::bxyf_f64:
+        case format::bfxy_f64: return {4, type_id<double>()};
+        default: throw std::runtime_error("unknown memory_obselote::format");
+        }
+    }
+
+    struct arguments {
+        neural::engine::type            engine;
+        neural::memory_obselote::format::type    format;
+        std::vector<uint32_t>           size;
+        bool                            owns_memory;
+
+        DLL_SYM arguments(neural::engine::type aengine, memory_obselote::format::type aformat, std::vector<uint32_t> asize);
+        DLL_SYM arguments(neural::engine::type aengine, memory_obselote::format::type aformat, std::vector<uint32_t> asize, bool aowns_memory);
+    };
+    const arguments argument;
+    mutable void *pointer;
+
+    DLL_SYM static primitive create(arguments);
+    memory_obselote &operator()(void *ptr) { pointer = ptr; return *this; };
+    primitive clone() const { return create(argument); }
+    void execute_argument(void *arg) const {
+        if(argument.owns_memory) throw std::runtime_error("memory_obselote::execute_argument: this a container with its own memory_obselote; cannot set new pointer");
+        else pointer = arg;
+    }
+    DLL_SYM size_t count() const;
+
+    template <class T> T* data_begin() const {return reinterpret_cast<T*>(pointer);}
+    template <class T> T* data_end() const {return data_begin<T>() + count();}
+
+    template <class T> void set_value(uint32_t index, T value) const {data_begin<T>()[index] = value;}
+    template <class T> T    get_value(uint32_t index) const {return data_begin<T>()[index];}
+
+    template <class T> void fill(T value) const
+    {
+        if(type_id<T>()->id != memory_obselote::traits(argument.format).type->id)
+            throw std::runtime_error("fill_memory: types do not match");
+
+        std::fill(data_begin<T>(), data_end<T>(), value);
+    }
+
+    template <class T> void fill() const
+    {
+        if(type_id<T>()->id != memory_obselote::traits(argument.format).type->id)
+            throw std::runtime_error("fill_memory: types do not match");
+
+        static std::mt19937 rng(1);
+        std::uniform_real_distribution<T> dist(-10, 10);
+        for(auto it1 = data_begin<T>(), it2 = data_end<T>(); it1 != it2; ++it1)
+            *it1 = static_cast<T>( dist(rng) );
+    }
+
+    template <class T> void debug_fill(int x) const //todo remove
+    {
+        for(auto it1 = data_begin<T>(), it2 = data_end<T>(); it1 != it2; ++it1){
+            *it1 = static_cast<T>( x++ );
+        }
+    }
+
+    ~memory_obselote();
+private:
+
+    memory_obselote(arguments arg) : is_a_primitive(type_id<const memory_obselote>()), argument(arg), pointer(0) {};
+};
 // file that is loaded and becomes a data
+//todo remove std::vectors and memory_obselote
 struct file : is_a_primitive {
     struct arguments {
         neural::engine::type    engine;
         std::string             name;
         std::vector<primitive>  output;
 
-        DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize);
-        DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat);
+        DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory_obselote::format::type aformat, std::vector<uint32_t> &asize);
+        DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory_obselote::format::type aformat);
         DLL_SYM arguments(neural::engine::type aengine, std::string aname, primitive aoutput);
         DLL_SYM arguments(neural::engine::type aengine, std::string aname);
     };
@@ -186,6 +311,7 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
 };
 // reorder data, type is not changed
+//todo remove std::vectors and memory_obselote
 struct reorder : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -193,7 +319,7 @@ struct reorder : is_a_primitive {
         std::vector<primitive_at>   input;  // 1: {input}
 
         DLL_SYM arguments(neural::engine::type engine, primitive_at input, primitive output);
-        DLL_SYM arguments(neural::engine::type engine, neural::memory::format::type out_fmt, std::vector<uint32_t> out_sizes, primitive_at input);
+        DLL_SYM arguments(neural::engine::type engine, neural::memory_obselote::format::type out_fmt, std::vector<uint32_t> out_sizes, primitive_at input);
     };
     const arguments argument;
 
@@ -207,6 +333,7 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
 };
 // direct convolution
+//todo remove std::vectors and memory_obselote
 struct convolution : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
@@ -220,9 +347,9 @@ struct convolution : is_a_primitive {
         primitive                 bias;
         neural::padding::type     padding;
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                               primitive in,                              std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                               primitive in,                              uint32_t              stride, primitive weights, primitive biases, neural::padding::type);
+        DLL_SYM arguments(neural::engine::type, neural::memory_obselote::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
+        DLL_SYM arguments(neural::engine::type, neural::memory_obselote::format::type out_fmt,                                                               primitive in,                              std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
+        DLL_SYM arguments(neural::engine::type, neural::memory_obselote::format::type out_fmt,                                                               primitive in,                              uint32_t              stride, primitive weights, primitive biases, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, primitive                    out,                                                                   primitive in,                              std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, primitive                    out,     std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
     };
@@ -239,6 +366,7 @@ private:
 
     std::unique_ptr<is_an_implementation> _private;
 };
+//todo remove std::vectors and memory_obselote
 struct convolution_backward : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
@@ -250,9 +378,9 @@ struct convolution_backward : is_a_primitive {
         std::vector<uint32_t>     stride;
         neural::padding::type     padding;
 
-        DLL_SYM arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> in_siz, std::vector<primitive> in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt,                                                              std::vector<primitive> in,                              std::vector<uint32_t> stride, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt,                                                              std::vector<primitive> in,                              uint32_t              stride, neural::padding::type);
+        DLL_SYM arguments(neural::engine::type, std::vector<neural::memory_obselote::format::type> out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> in_siz, std::vector<primitive> in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, neural::padding::type);
+        DLL_SYM arguments(neural::engine::type, std::vector<neural::memory_obselote::format::type> out_fmt,                                                              std::vector<primitive> in,                              std::vector<uint32_t> stride, neural::padding::type);
+        DLL_SYM arguments(neural::engine::type, std::vector<neural::memory_obselote::format::type> out_fmt,                                                              std::vector<primitive> in,                              uint32_t              stride, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, std::vector<primitive>                    out,                                                                  std::vector<primitive> in,                              std::vector<uint32_t> stride, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, std::vector<primitive>                    out,     std::vector<uint32_t> out_off, std::vector<uint32_t> in_siz, std::vector<primitive> in, std::vector<int32_t> in_off, std::vector<uint32_t> stride, neural::padding::type);
     };
@@ -270,6 +398,7 @@ private:
     std::unique_ptr<is_an_implementation> _private;
 };
 // fully connected
+//todo remove std::vectors and memory_obselote
 struct fully_connected : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -277,8 +406,8 @@ struct fully_connected : is_a_primitive {
         std::vector<uint32_t>       output_size;
         std::vector<primitive_at>   input;
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, std::vector<uint32_t> out_siz, primitive in, primitive weights);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                primitive in, primitive weights);
+        DLL_SYM arguments(neural::engine::type, neural::memory_obselote::format::type out_fmt, std::vector<uint32_t> out_siz, primitive in, primitive weights);
+        DLL_SYM arguments(neural::engine::type, neural::memory_obselote::format::type out_fmt,                                primitive in, primitive weights);
         DLL_SYM arguments(neural::engine::type, primitive                    out,                                    primitive in, primitive weights);
         DLL_SYM arguments(neural::engine::type, primitive                    out,     std::vector<uint32_t> out_siz, primitive in, primitive weights);
 
@@ -296,7 +425,6 @@ private:
 
     std::unique_ptr<is_an_implementation> _private;
 };
-
 // relu activation
 // [TODO] need to activation base class ?
 // [TODO] "any" on slope ?
@@ -304,19 +432,19 @@ struct relu : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
         std::vector<primitive>    output;
-        std::vector<uint32_t>     output_offset;
-        std::vector<uint32_t>     output_size;
+        vector<uint32_t>          output_offset;
+        vector<uint32_t>          output_size;
         std::vector<primitive_at> input;          // 1: input
-        std::vector<int32_t>      input_offset;
+        vector<int32_t>           input_offset;
         float                     negative_slope;
 
-        DLL_SYM arguments(neural::engine::type, memory::format::type out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, float);
-        DLL_SYM arguments(neural::engine::type, memory::format::type out,                                                               primitive in,                              float);
-        DLL_SYM arguments(neural::engine::type, memory::format::type out,                                                               primitive in);
-        DLL_SYM arguments(neural::engine::type, primitive            out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, float slp);
-        DLL_SYM arguments(neural::engine::type, primitive            out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off);
-        DLL_SYM arguments(neural::engine::type, primitive            out,                                                               primitive in,                              float slp);
-        DLL_SYM arguments(neural::engine::type, primitive            out,                                                               primitive in);
+        DLL_SYM arguments(neural::engine::type, memory::format::type out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off, float slp);
+        DLL_SYM arguments(neural::engine::type, memory::format::type out,                                                     primitive in,                         float slp);
+        DLL_SYM arguments(neural::engine::type, memory::format::type out,                                                     primitive in);
+        DLL_SYM arguments(neural::engine::type, primitive            out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off, float slp);
+        DLL_SYM arguments(neural::engine::type, primitive            out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off);
+        DLL_SYM arguments(neural::engine::type, primitive            out,                                                     primitive in,                         float slp);
+        DLL_SYM arguments(neural::engine::type, primitive            out,                                                     primitive in);
     };
     const arguments argument;
 
@@ -331,7 +459,7 @@ private:
 
     std::unique_ptr<is_an_implementation> _private;
 };
-
+//todo remove std::vectors and memory_obselote
 struct relu_backward : is_a_primitive {
     struct arguments {
         neural::engine::type                engine;
@@ -359,8 +487,8 @@ private:
 
     std::unique_ptr<is_an_implementation> _private;
 };
-
 // pooling
+//todo remove std::vectors and memory_obselote
 struct pooling : is_a_primitive {
     class mode { mode(); public: enum type { max, average }; };
 
@@ -376,9 +504,9 @@ struct pooling : is_a_primitive {
         std::vector<uint32_t>       size;
         neural::padding::type       padding;
 
-        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                               primitive in,                              std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                               primitive in,                              uint32_t              strd, uint32_t              siz, neural::padding::type);
+        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, neural::memory_obselote::format::type o_frmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
+        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, neural::memory_obselote::format::type o_frmt,                                                               primitive in,                              std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
+        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, neural::memory_obselote::format::type o_frmt,                                                               primitive in,                              uint32_t              strd, uint32_t              siz, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              uint32_t              strd, uint32_t              siz, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in,                              std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                  primitive in, std::vector<int32_t> in_off, std::vector<uint32_t> strd, std::vector<uint32_t> siz, neural::padding::type);
@@ -402,26 +530,26 @@ private:
 };
 
 
-
 namespace normalization { /////////////////////////////////////////////////////////////////////////////////////////////
 // normalization of response
+//todo remove memory_obselote
 struct /*normalization*/response : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
         std::vector<primitive>      output;
-        std::vector<uint32_t>       output_offset;
-        std::vector<uint32_t>       output_size;
+        vector<uint32_t>            output_offset;
+        vector<uint32_t>            output_size;
         std::vector<primitive_at>   input;          // 1: input
-        std::vector<int32_t>        input_offset;
+        vector<int32_t>             input_offset;
         uint32_t                    size;
         neural::padding::type       padding;
         float                       bias;
         float                       alpha;
         float                       beta;
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type, std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>, uint32_t, neural::padding::type, float, float, float);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                       uint32_t, neural::padding::type, float, float, float);
-        DLL_SYM arguments(neural::engine::type, primitive,                                                                  primitive,                       uint32_t, neural::padding::type, float, float, float);
+        DLL_SYM arguments(neural::engine::type, neural::memory_obselote::format::type, vector<uint32_t>, vector<uint32_t>, primitive, vector<int32_t>, uint32_t, neural::padding::type, float, float, float);
+        DLL_SYM arguments(neural::engine::type, neural::memory_obselote::format::type,                                     primitive,                  uint32_t, neural::padding::type, float, float, float);
+        DLL_SYM arguments(neural::engine::type, primitive,                                                        primitive,                  uint32_t, neural::padding::type, float, float, float);
     };
     const arguments argument;
 
@@ -435,7 +563,8 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
 };
 
-struct /*normalization*/ softmax : is_a_primitive {
+//todo remove memory_obselote
+struct /*normalization*/softmax : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
         std::vector<primitive>      output;
@@ -444,8 +573,8 @@ struct /*normalization*/ softmax : is_a_primitive {
         std::vector<primitive_at>   input;          // 1: input
         std::vector<int32_t>        input_offset;
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                               primitive in);
+        DLL_SYM arguments(neural::engine::type, neural::memory_obselote::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off);
+        DLL_SYM arguments(neural::engine::type, neural::memory_obselote::format::type out_fmt,                                                               primitive in);
         DLL_SYM arguments(neural::engine::type, primitive                    out,     std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off);
         DLL_SYM arguments(neural::engine::type, primitive                    out,                                                                   primitive in);
     };
@@ -541,19 +670,19 @@ struct convolution_relu : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
         std::vector<primitive>      output;
-        std::vector<uint32_t>       output_offset;
-        std::vector<uint32_t>       output_size;
+        vector<uint32_t>            output_offset;
+        vector<uint32_t>            output_size;
         std::vector<primitive_at>   input;          // 3: input, filter, bias
-        std::vector<int32_t>        input_offset;
-        std::vector<uint32_t>       input_stride;
+        vector<int32_t>             input_offset;
+        vector<uint32_t>            input_stride;
         neural::padding::type       padding;
         float                       negative_slope;
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type, std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>, std::vector<uint32_t>, primitive, primitive, neural::padding::type, float);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                       std::vector<uint32_t>, primitive, primitive, neural::padding::type, float);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                       uint32_t,              primitive, primitive, neural::padding::type, float);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                                              primitive, primitive, neural::padding::type, float);
-        DLL_SYM arguments(neural::engine::type, primitive,                                                                  primitive,                                              primitive, primitive, neural::padding::type, float);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type, vector<uint32_t>, vector<uint32_t>, primitive, vector<int32_t>, vector<uint32_t>, primitive, primitive, neural::padding::type, float);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                     primitive,                  vector<uint32_t>, primitive, primitive, neural::padding::type, float);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                     primitive,                  uint32_t,         primitive, primitive, neural::padding::type, float);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                     primitive,                                    primitive, primitive, neural::padding::type, float);
+        DLL_SYM arguments(neural::engine::type, primitive,                                                        primitive,                                    primitive, primitive, neural::padding::type, float);
     };
     const arguments argument;
 
@@ -574,18 +703,18 @@ struct fully_connected_relu : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
         std::vector<primitive>      output;
-        std::vector<uint32_t>       output_offset;
-        std::vector<uint32_t>       output_size;
+        vector<uint32_t>            output_offset;
+        vector<uint32_t>            output_size;
         std::vector<primitive_at>   input;          // 3: input, filter, bias
-        std::vector<int32_t>        input_offset;
-        std::vector<uint32_t>       input_stride;
+        vector<int32_t>             input_offset;
+        vector<uint32_t>            input_stride;
         float                       negative_slope;
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type, std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>, std::vector<uint32_t>, primitive, primitive, float);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                       std::vector<uint32_t>, primitive, primitive, float);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                       uint32_t,              primitive, primitive, float);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                                              primitive, primitive, float);
-        DLL_SYM arguments(neural::engine::type, primitive,                                                                  primitive,                                              primitive, primitive, float);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type, vector<uint32_t>, vector<uint32_t>, primitive, vector<int32_t>, vector<uint32_t>, primitive, primitive, float);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                     primitive,                  vector<uint32_t>, primitive, primitive, float);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                     primitive,                  uint32_t,         primitive, primitive, float);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                     primitive,                                    primitive, primitive, float);
+        DLL_SYM arguments(neural::engine::type, primitive,                                                        primitive,                                    primitive, primitive, float);
     };
     const neural::fully_connected_relu::arguments argument;
 
