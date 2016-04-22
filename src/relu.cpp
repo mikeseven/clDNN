@@ -206,10 +206,12 @@ relu_backward::arguments::arguments(neural::engine::type engine, std::vector<pri
 
 //                                    engine                output                        input
 using implementation_key = std::tuple<neural::engine::type, neural::memory_obselote::format::type, neural::memory_obselote::format::type>;
+using implementation_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
+
 
 // map of available implementations
-static std::map<implementation_key, std::function<is_an_implementation *(relu &)>> forward_implementation_map = {
-    {std::make_tuple(engine::reference, memory_obselote::format::yxfb_f32, memory_obselote::format::yxfb_f32), relu_reference::create}
+static std::map<implementation_fw_key, std::function<is_an_implementation *(relu &)>> forward_implementation_map = {
+    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), relu_reference::create}
 };
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(relu_backward &)>> backward_implementation_map = {
@@ -221,7 +223,11 @@ primitive relu::create(relu::arguments arg) {
     std::unique_ptr<relu> result(new relu(arg));
 
     // lookup in database; throw if not found
-    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    //todo tmp solution
+    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
+    auto& outfmt= result->argument.output[0].as<const memory&>().argument.format;
+    auto key = std::make_tuple(arg.engine, infmt, outfmt);
+    //auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = forward_implementation_map.find(key);
     if(it==std::end(forward_implementation_map)) throw std::runtime_error("not yet implemented");
 
