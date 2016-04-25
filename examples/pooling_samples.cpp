@@ -16,7 +16,7 @@
 
 #include "api/neural.h"
 
-// memory_obselote->memory_obselote max pooling
+// memory_obsolete->memory_obsolete max pooling
 void example_pooling_forward() {
     using namespace neural;
 
@@ -33,8 +33,8 @@ void example_pooling_forward() {
     float out_buffer[output_y*output_x*output_z*output_b];
     // input buffer should be initialized with valid data
 
-    auto input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {input_y, input_x, input_z, input_b}});
-    auto output = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {output_y, output_x, output_z, output_b}});
+    auto input  = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {input_y, input_x, input_z, input_b}});
+    auto output = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {output_y, output_x, output_z, output_b}});
 
     auto pool  = pooling::create( {engine::reference,
                                     pooling::mode::max,

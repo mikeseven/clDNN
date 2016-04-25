@@ -360,12 +360,12 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
     auto& input_arg  = outer.input_memory(0).argument;
     auto& output_arg = outer.output_memory(0).argument;
 
-    auto& filter_arg = outer.argument.weight.as<const memory_obselote&>().argument; //convolution filter
-    auto& bias_arg   = outer.argument.bias.as<const memory_obselote&>().argument;
+    auto& filter_arg = outer.argument.weight.as<const memory_obsolete&>().argument; //convolution filter
+    auto& bias_arg   = outer.argument.bias.as<const memory_obsolete&>().argument;
 
     if(input_arg.size.size()  != output_arg.size.size())   throw std::runtime_error("Convolution input/output number of dimension does not match.");
     if(stride.size()          != output_arg.size.size())   throw std::runtime_error("Convolution stride/output number of dimension does not match.");
-    if(input_arg.format       != memory_obselote::format::yxfb_f32) throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
+    if(input_arg.format       != memory_obsolete::format::yxfb_f32) throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
     if(input_arg.format       != output_arg.format)        throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
     if(input_arg.format       != filter_arg.format)        throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
     if(filter_arg.size.size() != output_arg.size.size())   throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
@@ -374,8 +374,8 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
                                                                                                                                                       // than this implementation will be format independent
     auto input  = static_cast<float*>(outer.input_memory(0).pointer);
     auto output = static_cast<float*>(outer.output_memory(0).pointer);
-    auto filter = static_cast<float*>(outer.argument.weight.as<const memory_obselote&>().pointer);
-    auto bias   = static_cast<float*>(outer.argument.bias.as<const memory_obselote&>().pointer);
+    auto filter = static_cast<float*>(outer.argument.weight.as<const memory_obsolete&>().pointer);
+    auto bias   = static_cast<float*>(outer.argument.bias.as<const memory_obsolete&>().pointer);
 
     // general formula: output size = (input size - filter size) / step + 1
     for(size_t i = 0; i < input_offset.size(); ++i){
@@ -425,7 +425,7 @@ namespace{
 
 struct attach{
     attach(){
-        auto key = std::make_tuple(engine::cpu, memory_obselote::format::yxfb_f32, memory_obselote::format::yxfb_f32);
+        auto key = std::make_tuple(engine::cpu, memory_obsolete::format::yxfb_f32, memory_obsolete::format::yxfb_f32);
         auto val_fw = convolution_cpu_jit::create;
 
         conv_fw_implementation_map.insert( {key, val_fw} );

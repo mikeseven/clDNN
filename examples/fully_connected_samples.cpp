@@ -28,12 +28,12 @@ void example_fully_connected() {
     float out_buffer[output_x*output_b];
     float weight_buffer[weight_x*weight_y];
 
-    auto input   = memory_obselote::create({ engine::cpu, memory_obselote::format::xb_f32,{ input_x,  input_b  } });
-    auto output  = memory_obselote::create({ engine::cpu, memory_obselote::format::xb_f32,{ output_x, output_b } });
-    auto weights = memory_obselote::create({ engine::cpu, memory_obselote::format::xb_f32,{ weight_x, weight_y } });
+    auto input   = memory_obsolete::create({ engine::cpu, memory_obsolete::format::xb_f32,{ input_x,  input_b  } });
+    auto output  = memory_obsolete::create({ engine::cpu, memory_obsolete::format::xb_f32,{ output_x, output_b } });
+    auto weights = memory_obsolete::create({ engine::cpu, memory_obsolete::format::xb_f32,{ weight_x, weight_y } });
 
-    auto& input_memory = input.as<const memory_obselote&>();
-    auto& weights_memory = weights.as<const memory_obselote&>();
+    auto& input_memory = input.as<const memory_obsolete&>();
+    auto& weights_memory = weights.as<const memory_obsolete&>();
 
     input_memory.fill(1.0f);
     weights_memory.fill(1.0f);

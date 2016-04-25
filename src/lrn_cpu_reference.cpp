@@ -54,11 +54,22 @@ namespace neural {
         nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_out_idx(output_arg.size);
         nd::value<uint32_t> window_range({1,{1,1},size});
 
-        vector<int32_t> help_input_offset({ input_offset.raw.begin(),input_offset.raw.end() });
+        vector<int32_t> help_input_offset({input_offset});
 
         switch (padding) {
         case padding::zero:
-            help_input_offset.feature[0] = static_cast<int32_t>(size / 2);
+            help_input_offset.feature[0] -= static_cast<int32_t>(size / 2);
+            for (auto pos : range) {
+                auto out_idx = calc_out_idx(pos + output_offset);
+                float acc = 0.f;
+                float sum_of_products = 0.f;
+                for (auto window_pos : window_range) {
+                    auto input_pos = pos - help_input_offset + window_pos;
+                    auto input_index = calc_in_idx(input_pos);
+                    acc = input[input_index];
+                };
+            }
+            /*
             for (auto pos : range) {
                 float acc = 0;
                 auto out_idx = calc_out_idx(pos + output_offset);
@@ -75,6 +86,7 @@ namespace neural {
                 }
                 output[out_idx] = acc + bias[pos[f_pos]]; // todo need type traits for index of 'f' dimension
             }
+            */
             break;
         default:
             throw std::runtime_error("Unknown padding mode in lrn");

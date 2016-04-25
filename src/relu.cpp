@@ -129,9 +129,9 @@ struct relu_backward_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (processed_window_sizes);
-        nd::calculate_idx_obselote<uint32_t> calc_forward_input_idx(forward_input_sizes);
-        nd::calculate_idx_obselote<uint32_t> calc_forward_output_grad_idx(forward_output_grad_sizes);
-        nd::calculate_idx_obselote<uint32_t> calc_forward_input_grad_idx(forward_input_grad_sizes);
+        nd::calculate_idx_obsolete<uint32_t> calc_forward_input_idx(forward_input_sizes);
+        nd::calculate_idx_obsolete<uint32_t> calc_forward_output_grad_idx(forward_output_grad_sizes);
+        nd::calculate_idx_obsolete<uint32_t> calc_forward_input_grad_idx(forward_input_grad_sizes);
         for(auto pos : range) {
             auto forward_input_idx  = calc_forward_input_idx (pos + forward_input_offset);
             auto forward_output_grad_idx = calc_forward_output_grad_idx(pos + forward_output_grad_offset);
@@ -198,14 +198,14 @@ relu_backward::arguments::arguments(neural::engine::type engine, std::vector<pri
 relu_backward::arguments::arguments(neural::engine::type engine, std::vector<primitive> out, std::vector<primitive_at> in, float neg_slope)
     : engine(engine)
     , output(out)
-    , output_offset(static_cast<uint32_t>(out[0].as<const memory_obselote&>().argument.size.size()))
-    , output_size(out[0].as<const memory_obselote&>().argument.size.begin(), out[0].as<const memory_obselote&>().argument.size.end())
+    , output_offset(static_cast<uint32_t>(out[0].as<const memory_obsolete&>().argument.size.size()))
+    , output_size(out[0].as<const memory_obsolete&>().argument.size.begin(), out[0].as<const memory_obsolete&>().argument.size.end())
     , input(in)
-    , input_offset(in.size(), std::vector<uint32_t>(in[0].primitive.as<const memory_obselote&>().argument.size.size(), 0))
+    , input_offset(in.size(), std::vector<uint32_t>(in[0].primitive.as<const memory_obsolete&>().argument.size.size(), 0))
     , negative_slope(neg_slope) {}
 
 //                                    engine                output                        input
-using implementation_key = std::tuple<neural::engine::type, neural::memory_obselote::format::type, neural::memory_obselote::format::type>;
+using implementation_key = std::tuple<neural::engine::type, neural::memory_obsolete::format::type, neural::memory_obsolete::format::type>;
 using implementation_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
 
@@ -215,7 +215,7 @@ static std::map<implementation_fw_key, std::function<is_an_implementation *(relu
 };
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(relu_backward &)>> backward_implementation_map = {
-    {std::make_tuple(engine::reference, memory_obselote::format::yxfb_f32, memory_obselote::format::yxfb_f32), relu_backward_reference::create}
+    {std::make_tuple(engine::reference, memory_obsolete::format::yxfb_f32, memory_obsolete::format::yxfb_f32), relu_backward_reference::create}
 };
 // creates primitive with relu implementation that supports provided arguments
 primitive relu::create(relu::arguments arg) {

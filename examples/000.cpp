@@ -17,7 +17,7 @@
 #if 0
 #include "api/neural.h"
 
-// memory_obselote->memory_obselote convolution with weights & biases from file
+// memory_obsolete->memory_obsolete convolution with weights & biases from file
 void example_000() {
     char *in_ptr = nullptr, *out_ptr = nullptr;
     using namespace neural;

@@ -16,7 +16,7 @@
 
 #include "api/neural.h"
 
-// memory_obselote->memory_obselote convolution
+// memory_obsolete->memory_obsolete convolution
 void example_convolution_forward() {
     using namespace neural;
 
@@ -43,16 +43,16 @@ void example_convolution_forward() {
 //    const int32_t in_off_y = 0, in_off_x = 0, in_off_z = 0, in_off_b = 0;
 
     auto eng    = engine::reference;
-    auto input  = memory_obselote::create({eng, memory_obselote::format::yxfb_f32, {input_y, input_x, input_z, input_b}, true});
-    auto output = memory_obselote::create({eng, memory_obselote::format::yxfb_f32, {output_y, output_x, output_z, output_b}, true});
-    auto weights= memory_obselote::create({eng, memory_obselote::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_ifm, conv_size_ofm}, true});
-    auto biases = memory_obselote::create({eng, memory_obselote::format::   x_f32, {output_z}, true});
+    auto input  = memory_obsolete::create({eng, memory_obsolete::format::yxfb_f32, {input_y, input_x, input_z, input_b}, true});
+    auto output = memory_obsolete::create({eng, memory_obsolete::format::yxfb_f32, {output_y, output_x, output_z, output_b}, true});
+    auto weights= memory_obsolete::create({eng, memory_obsolete::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_ifm, conv_size_ofm}, true});
+    auto biases = memory_obsolete::create({eng, memory_obsolete::format::   x_f32, {output_z}, true});
 
     // buffers should be initialized with valid data
-    input.as<const memory_obselote&>().fill(1.0f);
-    output.as<const memory_obselote&>().fill(1.0f);
-    weights.as<const memory_obselote&>().fill(1.0f);
-    biases.as<const memory_obselote&>().fill(1.0f);
+    input.as<const memory_obsolete&>().fill(1.0f);
+    output.as<const memory_obsolete&>().fill(1.0f);
+    weights.as<const memory_obsolete&>().fill(1.0f);
+    biases.as<const memory_obsolete&>().fill(1.0f);
 
     auto conv   = convolution::create( {eng,
                                         output,
@@ -110,13 +110,13 @@ void example_convolution_backward(){
                   in_off_b = 0;
 
     auto eng          = engine::reference;
-    auto bw_output    = memory_obselote::create({eng, memory_obselote::format::yxfb_f32, {output_y, output_x, output_z, output_b}, true});
-    auto bw_input     = memory_obselote::create({eng, memory_obselote::format::yxfb_f32, {input_y, input_x, input_z, input_b}, true});
-    auto fw_input     = memory_obselote::create({eng, memory_obselote::format::yxfb_f32, {output_y, output_x, output_z, output_b}, true});
-    auto weights      = memory_obselote::create({eng, memory_obselote::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_z, conv_size_b}, true});
-    auto weights_diff = memory_obselote::create({eng, memory_obselote::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_z, conv_size_b}, true});
-    auto biases       = memory_obselote::create({eng, memory_obselote::format::x_f32,    {out_siz_z}, true});
-    auto biases_diff  = memory_obselote::create({eng, memory_obselote::format::x_f32,    {out_siz_z}, true});
+    auto bw_output    = memory_obsolete::create({eng, memory_obsolete::format::yxfb_f32, {output_y, output_x, output_z, output_b}, true});
+    auto bw_input     = memory_obsolete::create({eng, memory_obsolete::format::yxfb_f32, {input_y, input_x, input_z, input_b}, true});
+    auto fw_input     = memory_obsolete::create({eng, memory_obsolete::format::yxfb_f32, {output_y, output_x, output_z, output_b}, true});
+    auto weights      = memory_obsolete::create({eng, memory_obsolete::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_z, conv_size_b}, true});
+    auto weights_diff = memory_obsolete::create({eng, memory_obsolete::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_z, conv_size_b}, true});
+    auto biases       = memory_obsolete::create({eng, memory_obsolete::format::x_f32,    {out_siz_z}, true});
+    auto biases_diff  = memory_obsolete::create({eng, memory_obsolete::format::x_f32,    {out_siz_z}, true});
     // buffers should be initialized with valid data
     // *diff buffers must be filled with '0'
 

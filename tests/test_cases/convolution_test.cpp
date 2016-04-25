@@ -46,10 +46,10 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 //  0.5 9
     using namespace neural;
 
-    auto input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {4, 4, 1, 1}, true});
-    auto output = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto weights= memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto biases = memory_obselote::create({engine::cpu, memory_obselote::format::   x_f32, {1}         , true});
+    auto input  = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {4, 4, 1, 1}, true});
+    auto output = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto weights= memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto biases = memory_obsolete::create({engine::cpu, memory_obsolete::format::   x_f32, {1}         , true});
 
     set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f, 0.5f, -1.0f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f});
     set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f});
@@ -59,7 +59,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     execute({conv});
 
-    auto& output_memory = output.as<const memory_obselote&>();
+    auto& output_memory = output.as<const memory_obsolete&>();
     EXPECT_FLOAT_EQ(8.0f, output_memory.get_value<float>(0));
     EXPECT_FLOAT_EQ(0.5f, output_memory.get_value<float>(1));
     EXPECT_FLOAT_EQ(6.0f, output_memory.get_value<float>(2));
@@ -88,10 +88,10 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
     //  
     using namespace neural;
 
-    auto input = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32,{ 2, 2, 1, 2 }, true });
-    auto output = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32,{ 1, 1, 1, 2 }, true });
-    auto weights = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32,{ 2, 2, 1, 1 }, true });
-    auto biases = memory_obselote::create({ engine::cpu, memory_obselote::format::x_f32,{ 1 }         , true });
+    auto input = memory_obsolete::create({ engine::cpu, memory_obsolete::format::yxfb_f32,{ 2, 2, 1, 2 }, true });
+    auto output = memory_obsolete::create({ engine::cpu, memory_obsolete::format::yxfb_f32,{ 1, 1, 1, 2 }, true });
+    auto weights = memory_obsolete::create({ engine::cpu, memory_obsolete::format::yxfb_f32,{ 2, 2, 1, 1 }, true });
+    auto biases = memory_obsolete::create({ engine::cpu, memory_obsolete::format::x_f32,{ 1 }         , true });
 
     set_values(input, { 0.5f, 2.3f, 1.5f, -0.4f, 2.0f, 1.0f, -4.0f, 3.0f });
     set_values(weights, { -1.2f, 1.5f, 0.5f, -0.5f });
@@ -101,7 +101,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
 
     execute({ conv });
 
-    auto& output_memory = output.as<const memory_obselote&>();
+    auto& output_memory = output.as<const memory_obsolete&>();
     EXPECT_FLOAT_EQ(3.65f, output_memory.get_value<float>(0));
     EXPECT_FLOAT_EQ(-5.36f, output_memory.get_value<float>(1));
 }
@@ -129,10 +129,10 @@ TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
     // 3.08
     using namespace neural;
 
-    auto input = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32,{ 2, 2, 1, 1 }, true });
-    auto output = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32,{ 1, 1, 3, 1 }, true });
-    auto weights = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32,{ 2, 2, 1, 3 }, true });
-    auto biases = memory_obselote::create({ engine::cpu, memory_obselote::format::x_f32,{ 3 }         , true });
+    auto input = memory_obsolete::create({ engine::cpu, memory_obsolete::format::yxfb_f32,{ 2, 2, 1, 1 }, true });
+    auto output = memory_obsolete::create({ engine::cpu, memory_obsolete::format::yxfb_f32,{ 1, 1, 3, 1 }, true });
+    auto weights = memory_obsolete::create({ engine::cpu, memory_obsolete::format::yxfb_f32,{ 2, 2, 1, 3 }, true });
+    auto biases = memory_obsolete::create({ engine::cpu, memory_obsolete::format::x_f32,{ 3 }         , true });
 
     set_values(input, { -2.3f, -0.1f, 3.1f, 1.9f });
     set_values(weights, { -1.1f, 0.1f, 2.0f, 1.5f, 0.2f, -1.0f, 0.5f, 0.4f, 2.5f, -0.5f, 0.7f, -1.5f });
@@ -142,7 +142,7 @@ TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
 
     execute({ conv });
 
-    auto& output_memory = output.as<const memory_obselote&>();
+    auto& output_memory = output.as<const memory_obsolete&>();
     EXPECT_FLOAT_EQ(3.08f, output_memory.get_value<float>(0));
     EXPECT_FLOAT_EQ(2.12f, output_memory.get_value<float>(1));
     EXPECT_FLOAT_EQ(0.7f, output_memory.get_value<float>(2));
@@ -171,10 +171,10 @@ TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //  Output:
 //  12.25
     using namespace neural;
-    auto input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto output = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {1, 1, 1, 1}, true});
-    auto weights= memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto biases = memory_obselote::create({engine::cpu, memory_obselote::format::   x_f32, {1}         , true});
+    auto input  = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto output = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {1, 1, 1, 1}, true});
+    auto weights= memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {3, 3, 1, 1}, true});
+    auto biases = memory_obsolete::create({engine::cpu, memory_obsolete::format::   x_f32, {1}         , true});
 
     set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f});
     set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f});
@@ -183,7 +183,7 @@ TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     auto conv = convolution::create({engine::reference, output, input, {2, 2, 1, 1}, weights, biases, padding::zero});
     execute({conv});
 
-    auto& output_memory = output.as<const memory_obselote&>();
+    auto& output_memory = output.as<const memory_obsolete&>();
     EXPECT_FLOAT_EQ(12.25f, output_memory.get_value<float>(0));
 }
 
@@ -213,10 +213,10 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //   rnd   rnd
 //   rnd  -7.25
     using namespace neural;
-    auto input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto output = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto weights= memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto biases = memory_obselote::create({engine::cpu, memory_obselote::format::   x_f32, {1}         , true});
+    auto input  = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto output = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto weights= memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {3, 3, 1, 1}, true});
+    auto biases = memory_obsolete::create({engine::cpu, memory_obsolete::format::   x_f32, {1}         , true});
 
     set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f});
     set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f});
@@ -234,7 +234,7 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
                                      padding::zero});
     execute({conv});
 
-    auto& output_memory = output.as<const memory_obselote&>();
+    auto& output_memory = output.as<const memory_obsolete&>();
     EXPECT_FLOAT_EQ(-7.25f, output_memory.get_value<float>(3));
 }
 
@@ -273,21 +273,21 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
 //   Bias grad
 //   10
     using namespace neural;
-    auto bw_output    = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto bw_input     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto fw_input     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto weights      = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto weights_diff = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto biases       = memory_obselote::create({engine::cpu, memory_obselote::format::x_f32,    {1}         , true});
-    auto biases_diff  = memory_obselote::create({engine::cpu, memory_obselote::format::x_f32,    {1}         , true});
+    auto bw_output    = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {3, 3, 1, 1}, true});
+    auto bw_input     = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto fw_input     = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {3, 3, 1, 1}, true});
+    auto weights      = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto weights_diff = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto biases       = memory_obsolete::create({engine::cpu, memory_obsolete::format::x_f32,    {1}         , true});
+    auto biases_diff  = memory_obsolete::create({engine::cpu, memory_obsolete::format::x_f32,    {1}         , true});
 
-    auto& bw_output_mem    = bw_output.as<const memory_obselote&>();
-    auto& bw_input_mem     = bw_input.as<const memory_obselote&>();
-    auto& fw_input_mem     = fw_input.as<const memory_obselote&>();
-    auto& weights_mem      = weights.as<const memory_obselote&>();
-    auto& weights_diff_mem = weights_diff.as<const memory_obselote&>();
-    auto& biases_mem       = biases.as<const memory_obselote&>();
-    auto& biases_diff_mem  = biases_diff.as<const memory_obselote&>();
+    auto& bw_output_mem    = bw_output.as<const memory_obsolete&>();
+    auto& bw_input_mem     = bw_input.as<const memory_obsolete&>();
+    auto& fw_input_mem     = fw_input.as<const memory_obsolete&>();
+    auto& weights_mem      = weights.as<const memory_obsolete&>();
+    auto& weights_diff_mem = weights_diff.as<const memory_obsolete&>();
+    auto& biases_mem       = biases.as<const memory_obsolete&>();
+    auto& biases_diff_mem  = biases_diff.as<const memory_obsolete&>();
 
     set_values( fw_input, {-0.5f, 1.5f, 1.0f, 1.0f, -0.5f, 2.0f, 1.0f, 2.0f, 3.0f});
     set_values( bw_input, {1.0f, 2.0f, 3.0f, 4.0f});
@@ -362,21 +362,21 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
 //  Bias grad
 //  -3
     using namespace neural;
-    auto bw_output    = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto bw_input     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {1, 1, 1, 1}, true});
-    auto fw_input     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto weights      = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto weights_diff = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto biases       = memory_obselote::create({engine::cpu, memory_obselote::format::x_f32,    {1}         , true});
-    auto biases_diff  = memory_obselote::create({engine::cpu, memory_obselote::format::x_f32,    {1}         , true});
+    auto bw_output    = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto bw_input     = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {1, 1, 1, 1}, true});
+    auto fw_input     = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto weights      = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {3, 3, 1, 1}, true});
+    auto weights_diff = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {3, 3, 1, 1}, true});
+    auto biases       = memory_obsolete::create({engine::cpu, memory_obsolete::format::x_f32,    {1}         , true});
+    auto biases_diff  = memory_obsolete::create({engine::cpu, memory_obsolete::format::x_f32,    {1}         , true});
 
-    auto& bw_output_mem    = bw_output.as<const memory_obselote&>();
-    auto& bw_input_mem     = bw_input.as<const memory_obselote&>();
-    auto& fw_input_mem     = fw_input.as<const memory_obselote&>();
-    auto& weights_mem      = weights.as<const memory_obselote&>();
-    auto& weights_diff_mem = weights_diff.as<const memory_obselote&>();
-    auto& biases_mem       = biases.as<const memory_obselote&>();
-    auto& biases_diff_mem  = biases_diff.as<const memory_obselote&>();
+    auto& bw_output_mem    = bw_output.as<const memory_obsolete&>();
+    auto& bw_input_mem     = bw_input.as<const memory_obsolete&>();
+    auto& fw_input_mem     = fw_input.as<const memory_obsolete&>();
+    auto& weights_mem      = weights.as<const memory_obsolete&>();
+    auto& weights_diff_mem = weights_diff.as<const memory_obsolete&>();
+    auto& biases_mem       = biases.as<const memory_obsolete&>();
+    auto& biases_diff_mem  = biases_diff.as<const memory_obsolete&>();
 
     set_values( fw_input, {-0.5f, 1.5f, 1.0f,-0.5f});
     set_values( bw_input, {2.0f});
@@ -456,21 +456,21 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
 //  Bias grad
 //  -3
     using namespace neural;
-    auto bw_output    = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {4, 4, 1, 1}, true});
-    auto bw_input     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto fw_input     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {4, 4, 1, 1}, true});
-    auto weights      = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto weights_diff = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto biases       = memory_obselote::create({engine::cpu, memory_obselote::format::x_f32,    {1}         , true});
-    auto biases_diff  = memory_obselote::create({engine::cpu, memory_obselote::format::x_f32,    {1}         , true});
+    auto bw_output    = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {4, 4, 1, 1}, true});
+    auto bw_input     = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {2, 2, 1, 1}, true});
+    auto fw_input     = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {4, 4, 1, 1}, true});
+    auto weights      = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {3, 3, 1, 1}, true});
+    auto weights_diff = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {3, 3, 1, 1}, true});
+    auto biases       = memory_obsolete::create({engine::cpu, memory_obsolete::format::x_f32,    {1}         , true});
+    auto biases_diff  = memory_obsolete::create({engine::cpu, memory_obsolete::format::x_f32,    {1}         , true});
 
-    auto& bw_output_mem    = bw_output.as<const memory_obselote&>();
-    auto& bw_input_mem     = bw_input.as<const memory_obselote&>();
-    auto& fw_input_mem     = fw_input.as<const memory_obselote&>();
-    auto& weights_mem      = weights.as<const memory_obselote&>();
-    auto& weights_diff_mem = weights_diff.as<const memory_obselote&>();
-    auto& biases_mem       = biases.as<const memory_obselote&>();
-    auto& biases_diff_mem  = biases_diff.as<const memory_obselote&>();
+    auto& bw_output_mem    = bw_output.as<const memory_obsolete&>();
+    auto& bw_input_mem     = bw_input.as<const memory_obsolete&>();
+    auto& fw_input_mem     = fw_input.as<const memory_obsolete&>();
+    auto& weights_mem      = weights.as<const memory_obsolete&>();
+    auto& weights_diff_mem = weights_diff.as<const memory_obsolete&>();
+    auto& biases_mem       = biases.as<const memory_obsolete&>();
+    auto& biases_diff_mem  = biases_diff.as<const memory_obsolete&>();
 
     fw_input_mem.fill(1.0f);
     static_cast<float*>(fw_input_mem.pointer)[10] = -0.5f;

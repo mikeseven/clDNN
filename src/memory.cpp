@@ -21,31 +21,31 @@
 
 namespace neural {
 
-memory_obselote::arguments::arguments(neural::engine::type aengine, memory_obselote::format::type aformat, std::vector<uint32_t> asize)
+memory_obsolete::arguments::arguments(neural::engine::type aengine, memory_obsolete::format::type aformat, std::vector<uint32_t> asize)
     : engine(aengine)
     , format(aformat)
     , size(asize)
     , owns_memory(false) {}
 
-memory_obselote::arguments::arguments(neural::engine::type aengine, memory_obselote::format::type aformat, std::vector<uint32_t> asize, bool aowns_memory)
+memory_obsolete::arguments::arguments(neural::engine::type aengine, memory_obsolete::format::type aformat, std::vector<uint32_t> asize, bool aowns_memory)
     : engine(aengine)
     , format(aformat)
     , size(asize)
     , owns_memory(aowns_memory) {}
 
 
-size_t memory_obselote::count() const {
+size_t memory_obsolete::count() const {
     return std::accumulate(argument.size.begin(), argument.size.end(), size_t(1), std::multiplies<size_t>());
 }
 
-memory_obselote::~memory_obselote() {
+memory_obsolete::~memory_obsolete() {
     if(argument.owns_memory) delete[] static_cast<char *>(pointer);
 }
 
-primitive memory_obselote::create(memory_obselote::arguments arg){
-    auto result = std::unique_ptr<memory_obselote>(new memory_obselote(arg));
+primitive memory_obsolete::create(memory_obsolete::arguments arg){
+    auto result = std::unique_ptr<memory_obsolete>(new memory_obsolete(arg));
     if(arg.owns_memory) {
-        result->pointer = new char[result->count()*memory_obselote::traits(arg.format).type->size];
+        result->pointer = new char[result->count()*memory_obsolete::traits(arg.format).type->size];
     }
     return result.release();
 }
