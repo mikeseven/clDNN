@@ -61,8 +61,8 @@ struct relu_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range ( output_size );
-        nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_in_idx  (input_arg.size);
-        nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_out_idx (output_arg.size);
+        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (input_arg.size);
+        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (output_arg.size);
 
         for(auto pos : range) {
             auto in_idx  = calc_in_idx (pos + input_offset );
@@ -132,9 +132,9 @@ struct relu_backward_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (processed_window_sizes);
-        nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_forward_input_idx(forward_input_arg.size);
-        nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_forward_output_grad_idx(forward_output_grad_arg.size);
-        nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_forward_input_grad_idx(forward_input_grad_arg.size);
+        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_forward_input_idx(forward_input_arg.size);
+        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_forward_output_grad_idx(forward_output_grad_arg.size);
+        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_forward_input_grad_idx(forward_input_grad_arg.size);
         for(auto pos : range) {
             auto forward_input_idx  = calc_forward_input_idx (pos + forward_input_offset);
             auto forward_output_grad_idx = calc_forward_output_grad_idx(pos + forward_output_grad_offset);
@@ -153,7 +153,7 @@ struct relu_backward_reference : is_an_implementation {
 
 } // namespace {
 
-relu::arguments::arguments( neural::engine::type engine, primitive out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off, float slp)
+relu::arguments::arguments( neural::engine::type engine, primitive out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, float slp)
     : engine(engine)
     , output({out})
     , output_offset({out_off})
@@ -162,7 +162,7 @@ relu::arguments::arguments( neural::engine::type engine, primitive out, vector<u
     , input_offset({in_off})
     , negative_slope(slp) {}
 
-relu::arguments::arguments( neural::engine::type engine, primitive out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off)
+relu::arguments::arguments( neural::engine::type engine, primitive out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off)
     : engine(engine)
     , output({out})
     , output_offset({out_off})
@@ -189,7 +189,7 @@ relu::arguments::arguments( neural::engine::type engine, primitive out, primitiv
     , input_offset(in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size())
     , negative_slope(0.0f) {}
 
-relu_backward::arguments::arguments(neural::engine::type engine, primitive out, vector<uint32_t> out_offset, vector<uint32_t> out_size, std::vector<primitive_at> in, std::vector<vector<uint32_t>> in_offsets, float neg_slope)
+relu_backward::arguments::arguments(neural::engine::type engine, primitive out, neural::vector<uint32_t> out_offset, neural::vector<uint32_t> out_size, std::vector<primitive_at> in, std::vector<neural::vector<uint32_t>> in_offsets, float neg_slope)
     : engine(engine)
     , output({out})
     , output_offset(out_offset)

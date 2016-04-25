@@ -64,8 +64,8 @@ struct softmax_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
-        nd::calculate_idx<uint32_t, static_cast<int>(memory::format::xb_f32)> calc_in_idx  (input_arg.size);
-        nd::calculate_idx<uint32_t, static_cast<int>(memory::format::xb_f32)> calc_out_idx (output_arg.size);
+        nd::calculate_idx<uint32_t, memory::format::xb_f32> calc_in_idx  (input_arg.size);
+        nd::calculate_idx<uint32_t, memory::format::xb_f32> calc_out_idx (output_arg.size);
 
         // find max val per batch
         for(auto pos : range) {
