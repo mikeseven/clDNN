@@ -25,10 +25,32 @@ singleton_map<lrn_fw_key, std::function<is_an_implementation *(normalization::re
 normalization::response::arguments::arguments(
                  neural::engine::type aengine,
                  primitive aoutput,
-                 std::vector<uint32_t> aoutput_offset,
-                 std::vector<uint32_t> aoutput_size,
                  primitive ainput,
-                 std::vector<int32_t> ainput_offset,
+                 uint32_t  asize,
+                 neural::padding::type apadding,
+                 float ak,
+                 float aalpha,
+                 float abeta)
+    : engine(aengine)
+    , output({ aoutput })
+    , output_offset(aoutput.as<const memory&>().argument.size.batch.size(), aoutput.as<const memory&>().argument.size.spatial.size(), aoutput.as<const memory&>().argument.size.feature.size())
+    , output_size(aoutput.as<const memory&>().argument.size)
+    , input({ ainput })
+    , input_offset(ainput.as<const memory&>().argument.size.batch.size(), ainput.as<const memory&>().argument.size.spatial.size(), ainput.as<const memory&>().argument.size.feature.size())
+    , size(asize)
+    , padding(apadding)
+    , k(ak)
+    , alpha(aalpha)
+    , beta(abeta) 
+{ };
+
+normalization::response::arguments::arguments(
+                 neural::engine::type aengine,
+                 primitive aoutput,
+                 vector<uint32_t> aoutput_offset,
+                 vector<uint32_t> aoutput_size,
+                 primitive ainput,
+                 vector<int32_t> ainput_offset,
                  uint32_t asize,
                  neural::padding::type apadding,
                  float ak,
@@ -53,7 +75,12 @@ primitive normalization::response::create(response::arguments arg) {
     std::unique_ptr<response> result(new response(arg));
 
     // lookup in database; throw if not found
-    lrn_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    //todo tmp solution
+    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
+    auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
+    lrn_fw_key key = std::make_tuple(arg.engine, infmt, outfmt);
+
+//    lrn_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = lrn_fw_implementation_map.find(key);
     if(it==std::end(lrn_fw_implementation_map)) throw std::runtime_error("Not yet implemented.");
 

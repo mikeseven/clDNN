@@ -549,7 +549,8 @@ struct /*normalization*/response : is_a_primitive {
         DLL_SYM arguments(neural::engine::type, neural::memory::format::type, std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>, uint32_t, neural::padding::type, float, float, float);
         DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                               primitive,                       uint32_t, neural::padding::type, float, float, float);
         DLL_SYM arguments(neural::engine::type, primitive,                                                                  primitive,                       uint32_t, neural::padding::type, float, float, float);
-        DLL_SYM arguments(neural::engine::type, primitive, std::vector<uint32_t>, std::vector<uint32_t>, primitive, std::vector<int32_t>, uint32_t, neural::padding::type, float, float, float);
+        DLL_SYM arguments(neural::engine::type, primitive, vector<uint32_t>, vector<uint32_t>, primitive, vector<int32_t>, uint32_t, neural::padding::type, float, float, float);
+
     };
     const arguments argument;
 

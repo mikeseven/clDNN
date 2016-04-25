@@ -20,11 +20,14 @@ void example_lrn_forward() {
 
     using namespace neural;
 
-    auto input = memory::create({ engine::reference, memory::format::yxfb_f32,{ 8, 8, 3, 8 }, true });
-    auto output = memory::create({ engine::reference, memory::format::yxfb_f32,{ 8, 8, 3, 8 }, true });
+    auto input = memory::create({ engine::reference, memory::format::yxfb_f32,{ 8, {10, 10}, 3 }, true });
+    auto output = memory::create({ engine::reference, memory::format::yxfb_f32,{ 8, {10, 10}, 3 }, true});
     input.as<const memory&>().fill<float>();
+    float ak = 1.f;
+    uint32_t asize = 5;
+    float aalpha = 0.00002f;
+    float abeta = 0.75f;
+    auto lrn = normalization::response::create({ engine::reference, output, input, asize, padding::zero, ak, aalpha, abeta});
 
-    auto act = lrn_cpu_reference::create({ engine::reference, output, input });
-
-    execute({ act });
+    execute({ lrn });
 }
