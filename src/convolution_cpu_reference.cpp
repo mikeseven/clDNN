@@ -32,45 +32,51 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     auto& padding       = this_conv->argument.padding;
     auto& stride        = this_conv->argument.stride;
 
-    auto& input_arg  = this_conv->input_memory(0).argument;
-    auto& output_arg = this_conv->output_memory(0).argument;
+    //auto input_arg  = this_relu->input_memory(0).argument;
+    //auto output_arg = this_relu->output_memory(0).argument;
+    auto input_arg  = this_conv->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+    auto output_arg = this_conv->argument.output[0].as<const memory&>().argument;
 
-    auto& filter_arg = this_conv->argument.weight.as<const memory_obselote&>().argument; //convolution filter
-    auto& bias_arg   = this_conv->argument.bias.as<const memory_obselote&>().argument;
+    auto& filter_arg = this_conv->argument.weight.as<const memory&>().argument; //convolution filter
+    auto& bias_arg   = this_conv->argument.bias.as<const memory&>().argument;
 
-    int f_pos = 2; //todo need type traits
+    assert( 1 == output_size.feature.size() );
+    assert( 1 == output_size.batch.size()   );
 
-    if(input_arg.size.size()  != output_arg.size.size())   throw std::runtime_error("Convolution input/output number of dimension does not match.");
-    if(stride.size()          != output_arg.size.size())   throw std::runtime_error("Convolution stride/output number of dimension does not match.");
-    if(input_arg.format       != memory_obselote::format::yxfb_f32) throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
-    if(input_arg.format       != output_arg.format)        throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
-    if(input_arg.format       != filter_arg.format)        throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
-    if(filter_arg.size.size() != output_arg.size.size())   throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
-    if(bias_arg.size.size()   != 1)                        throw std::runtime_error("Convolution biases isn't 1D vector.");
-    if(bias_arg.size[0]       != output_size[f_pos])       throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
+    if(input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("Convolution input/output number of dimension does not match.");
+    if(stride.raw.size()         != output_arg.size.raw.size()) throw std::runtime_error("Convolution stride/output number of dimension does not match.");
+    if(input_arg.format          != memory::format::yxfb_f32)   throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
+    if(input_arg.format          != output_arg.format)          throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
+    if(input_arg.format          != filter_arg.format)          throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
+    if(filter_arg.size.raw.size()!= output_arg.size.raw.size()) throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
+    if(bias_arg.size.raw.size()  != 3)                          throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
+    if(bias_arg.size.batch[0]    != output_size.feature[0])     throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
                                                                                                                                                         // than this implementation will be format independent
-    auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
-    auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
-    auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory_obselote&>().pointer);
-    auto bias   = static_cast<float*>(this_conv->argument.bias.as<const memory_obselote&>().pointer);
+   // auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
+   // auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
+    auto input  = static_cast<float*>(this_conv->argument.input[0].primitive.as<const memory&>().pointer); //todo tmp solution
+    auto output = static_cast<float*>(this_conv->argument.output[0].as<const memory&>().pointer);
+    auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory&>().pointer);
+    auto bias   = static_cast<float*>(this_conv->argument.bias.as<const memory&>().pointer);
 
-    for(size_t i = 0; i < input_offset.size(); ++i){
-        // general formula: output size = (input size - filter size) / step + 1
-        if(output_size[i] <
-            std::abs(static_cast<int32_t>(input_arg.size[i] - input_offset[i] - filter_arg.size[i])) / stride[i] + 1) //todo is it safe?
-            if(filter_arg.size[i] <= output_size[i])
-                throw std::runtime_error("Output size of convolution is to small.");
+    //for(size_t i = 0; i < input_offset.raw.size(); ++i){
+    //    // general formula: output size = (input size - filter size) / step + 1
+    //    if(output_size[i] <
+    //        std::abs(static_cast<int32_t>(input_arg.size[i] - input_offset[i] - filter_arg.size[i])) / stride[i] + 1) //todo is it safe?
+    //        if(filter_arg.size[i] <= output_size[i])
+    //            throw std::runtime_error("Output size of convolution is to small.");
 
-        if(output_arg.size[i] < output_size[i] + output_offset[i])
-            throw std::runtime_error("Convolution output buffer size is to small.");
-    }
+    //    if(output_arg.size[i] < output_size[i] + output_offset[i])
+    //        throw std::runtime_error("Convolution output buffer size is to small.");
+    //}
 
+    int f_pos = 1; // neural::vector format is b,f,spatials
     namespace nd = ndimensional;
     nd::value<uint32_t> range (output_size);
     nd::value<uint32_t> window_range (filter_arg.size);
-    nd::calculate_idx_obselote<uint32_t> calc_in_idx  (input_arg.size);
-    nd::calculate_idx_obselote<uint32_t> calc_out_idx (output_arg.size);
-    nd::calculate_idx_obselote<uint32_t> calc_win_idx (filter_arg.size);
+    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (input_arg.size);
+    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (output_arg.size);
+    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_win_idx (filter_arg.size);
     switch(padding){
         case padding::zero:
             for(auto pos : range) {
@@ -87,7 +93,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                     auto win_idx = calc_win_idx(win_pos);
                     acc += input[in_idx] * filter[win_idx];
                 }
-                output[out_idx] = acc + bias[ pos[f_pos] ]; // todo need type traits for index of 'f' dimension
+                output[out_idx] = acc + bias[ pos[f_pos] ];
             }
             break;
         default:
@@ -200,12 +206,13 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
 namespace{
 struct attach{
     attach(){
-        auto key = std::make_tuple(engine::reference, memory_obselote::format::yxfb_f32, memory_obselote::format::yxfb_f32);
+        auto key_fw = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
+        auto key_bw = std::make_tuple(engine::reference, memory_obselote::format::yxfb_f32, memory_obselote::format::yxfb_f32);
         auto val_fw = convolution_cpu_reference::create;
         auto val_bw = convolution_backward_cpu_reference::create;
 
-        conv_fw_implementation_map.insert( {key, val_fw} ); //todo keys should be different
-        conv_bw_implementation_map.insert( {key, val_bw} );
+        conv_fw_implementation_map.insert( {key_fw, val_fw} ); //todo keys should be different
+        conv_bw_implementation_map.insert( {key_bw, val_bw} );
     }
     ~attach(){}
 };

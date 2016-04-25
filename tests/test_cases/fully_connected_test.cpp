@@ -49,8 +49,8 @@ TEST(fully_connected, xb_f32_batch_1) {
     auto weights_prim = memory_obselote::create({ engine::cpu, memory_obselote::format::xb_f32,{ weight_x, weight_y } , true });
     auto full_con_prim = fully_connected::create({ engine::reference, output_prim, input_prim, weights_prim });
 
-    set_values(input_prim  , {-0.5f, 2.0f, 0.5f});
-    set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
+    set_values_obsolete(input_prim  , {-0.5f, 2.0f, 0.5f});
+    set_values_obsolete(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
 
     execute({full_con_prim});
 
@@ -89,8 +89,8 @@ TEST(fully_connected, xb_f32_batch_2) {
     auto weights_prim = memory_obselote::create({ engine::cpu, memory_obselote::format::xb_f32,{ weight_x, weight_y } , true });
     auto full_con_prim = fully_connected::create({ engine::reference, output_prim, input_prim, weights_prim });
 
-    set_values(input_prim  , {-0.5f, 1.0f, 2.0f, 1.5f, 0.5f, 0.0f});
-    set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
+    set_values_obsolete(input_prim  , {-0.5f, 1.0f, 2.0f, 1.5f, 0.5f, 0.0f});
+    set_values_obsolete(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
 
     execute({full_con_prim});
 
@@ -135,8 +135,8 @@ TEST(fully_connected, x_f32) {
     auto& output_memory  = output_prim.as<const memory_obselote&>();
     auto& weights_memory = weights_prim.as<const memory_obselote&>();
 
-    set_values(input_prim  , {-0.5f, 2.0f, 0.5f});
-    set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
+    set_values_obsolete(input_prim  , {-0.5f, 2.0f, 0.5f});
+    set_values_obsolete(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
 
     execute({full_con_prim});
 
