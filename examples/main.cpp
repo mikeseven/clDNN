@@ -18,21 +18,11 @@
 #include <iostream>
 #include "tests/test_utils/test_utils.h"
 
-using namespace tests;
-bool TEST(){
-    using namespace neural;
-    bool result = true;
-
-
-
-    return result;
-}
-
 int main()
 {
     extern void example_softmax_forward();
     try{
-        std::cout << TEST() << std::endl;
+        example_softmax_forward();
     } catch (std::exception &e) {
         std::cerr << e.what();
     } catch(...) {
