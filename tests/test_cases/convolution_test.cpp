@@ -51,11 +51,11 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     auto weights= memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 1}, 2}, true});
     auto biases = memory::create({engine::reference, memory::format::   x_f32, {1, {1}   , 1}, true});
 
+/*
     set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f, 0.5f, -1.0f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f});
     set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f});
     set_values(biases , {2.0f});
 
-/*
     auto conv = convolution::create({engine::reference, output, input, {2, 2, 1, 1}, weights, biases, padding::zero});
 
     execute({conv});
@@ -96,9 +96,9 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
     auto weights = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32,{ 2, 2, 1, 1 }, true });
     auto biases = memory_obselote::create({ engine::cpu, memory_obselote::format::x_f32,{ 1 }         , true });
 
-    set_values(input, { 0.5f, 2.3f, 1.5f, -0.4f, 2.0f, 1.0f, -4.0f, 3.0f });
-    set_values(weights, { -1.2f, 1.5f, 0.5f, -0.5f });
-    set_values(biases, { -1.0f });
+    set_values_obsolete(input, { 0.5f, 2.3f, 1.5f, -0.4f, 2.0f, 1.0f, -4.0f, 3.0f });
+    set_values_obsolete(weights, { -1.2f, 1.5f, 0.5f, -0.5f });
+    set_values_obsolete(biases, { -1.0f });
 
     auto conv = convolution::create({ engine::reference, output, input, { 2, 2, 1, 1 }, weights, biases, padding::zero });
 
@@ -137,9 +137,9 @@ TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
     auto weights = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32,{ 2, 2, 1, 3 }, true });
     auto biases = memory_obselote::create({ engine::cpu, memory_obselote::format::x_f32,{ 3 }         , true });
 
-    set_values(input, { -2.3f, -0.1f, 3.1f, 1.9f });
-    set_values(weights, { -1.1f, 0.1f, 2.0f, 1.5f, 0.2f, -1.0f, 0.5f, 0.4f, 2.5f, -0.5f, 0.7f, -1.5f });
-    set_values(biases, { 0.1f, -0.2f, 0.3f });
+    set_values_obsolete(input, { -2.3f, -0.1f, 3.1f, 1.9f });
+    set_values_obsolete(weights, { -1.1f, 0.1f, 2.0f, 1.5f, 0.2f, -1.0f, 0.5f, 0.4f, 2.5f, -0.5f, 0.7f, -1.5f });
+    set_values_obsolete(biases, { 0.1f, -0.2f, 0.3f });
 
     auto conv = convolution::create({ engine::reference, output, input, { 2, 2, 1, 1 }, weights, biases, padding::zero });
 
@@ -179,9 +179,9 @@ TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     auto weights= memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
     auto biases = memory_obselote::create({engine::cpu, memory_obselote::format::   x_f32, {1}         , true});
 
-    set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f});
-    set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f});
-    set_values(biases , {2.0f});
+    set_values_obsolete(input  , {-0.5f, 1.0f, 0.5f, 2.0f});
+    set_values_obsolete(weights, {-2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f});
+    set_values_obsolete(biases , {2.0f});
 
     auto conv = convolution::create({engine::reference, output, input, {2, 2, 1, 1}, weights, biases, padding::zero});
     execute({conv});
@@ -221,9 +221,9 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     auto weights= memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
     auto biases = memory_obselote::create({engine::cpu, memory_obselote::format::   x_f32, {1}         , true});
 
-    set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f});
-    set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f});
-    set_values(biases , {2.0f});
+    set_values_obsolete(input  , {-0.5f, 1.0f, 0.5f, 2.0f});
+    set_values_obsolete(weights, {-2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f});
+    set_values_obsolete(biases , {2.0f});
 
     auto conv = convolution::create({engine::reference,
                                      output,
@@ -293,10 +293,10 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
     auto& biases_mem       = biases.as<const memory_obselote&>();
     auto& biases_diff_mem  = biases_diff.as<const memory_obselote&>();
 
-    set_values( fw_input, {-0.5f, 1.5f, 1.0f, 1.0f, -0.5f, 2.0f, 1.0f, 2.0f, 3.0f});
-    set_values( bw_input, {1.0f, 2.0f, 3.0f, 4.0f});
-    set_values( weights , {-2.0f, 3.5f, 0.5f, 1.5f});
-    set_values( biases  , {2.0f});
+    set_values_obsolete( fw_input, {-0.5f, 1.5f, 1.0f, 1.0f, -0.5f, 2.0f, 1.0f, 2.0f, 3.0f});
+    set_values_obsolete( bw_input, {1.0f, 2.0f, 3.0f, 4.0f});
+    set_values_obsolete( weights , {-2.0f, 3.5f, 0.5f, 1.5f});
+    set_values_obsolete( biases  , {2.0f});
 
     auto conv_bw = convolution_backward::create({engine::reference,
                                                  std::vector<primitive>{bw_output, weights_diff, biases_diff},
@@ -382,10 +382,10 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
     auto& biases_mem       = biases.as<const memory_obselote&>();
     auto& biases_diff_mem  = biases_diff.as<const memory_obselote&>();
 
-    set_values( fw_input, {-0.5f, 1.5f, 1.0f,-0.5f});
-    set_values( bw_input, {2.0f});
-    set_values( weights , {-2.0f, 3.5f, 1.0f, 0.5f, 1.5f, 2.0f, 1.0f, 2.0f, 3.0f});
-    set_values( biases  , {-3.0f});
+    set_values_obsolete( fw_input, {-0.5f, 1.5f, 1.0f,-0.5f});
+    set_values_obsolete( bw_input, {2.0f});
+    set_values_obsolete( weights , {-2.0f, 3.5f, 1.0f, 0.5f, 1.5f, 2.0f, 1.0f, 2.0f, 3.0f});
+    set_values_obsolete( biases  , {-3.0f});
 
     auto conv_bw = convolution_backward::create({engine::reference,
                                                  std::vector<primitive>{bw_output, weights_diff, biases_diff},
