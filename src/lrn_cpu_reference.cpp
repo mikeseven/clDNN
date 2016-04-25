@@ -39,19 +39,24 @@ namespace neural {
         auto& alpha = this_lrn->argument.alpha;
         auto& beta = this_lrn->argument.beta;
 
-        auto& input_arg = this_lrn->input_memory(0).argument;
-        auto& output_arg = this_lrn->output_memory(0).argument;
 
-        if (input_arg.size.size() != output_arg.size.size())   throw std::runtime_error("lrn input/output number of dimension does not match.");
+        //auto input_arg  = this_lrn->input_memory(0).argument;
+        //auto output_arg = this_lrn->output_memory(0).argument;
+        auto input_arg = this_lrn->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+        auto output_arg = this_lrn->argument.output[0].as<const memory&>().argument;
+
+        if (input_arg.size.raw.size() != output_arg.size.raw.size())   throw std::runtime_error("lrn input/output number of dimension does not match.");
         if (input_arg.format != memory::format::yxfb_f32) throw std::runtime_error("lrn reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
 
-        auto input = static_cast<float*>(this_lrn->input_memory(0).pointer);
-        auto output = static_cast<float*>(this_lrn->output_memory(0).pointer);
+        //auto input  = static_cast<float*>(this_lrn->input_memory(0).pointer);
+        //auto output = static_cast<float*>(this_lrn->output_memory(0).pointer);
+        auto input = static_cast<float*>(this_lrn->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
+        auto output = static_cast<float*>(this_lrn->argument.output[0].as<const memory&>().pointer);
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range(output_size);
-        nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_in_idx(input_arg.size);
-        nd::calculate_idx<uint32_t, static_cast<int>(memory::format::yxfb_f32)> calc_out_idx(output_arg.size);
+        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx(input_arg.size);
+        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx(output_arg.size);
         nd::value<uint32_t> window_range({1,{1,1},size});
 
         vector<int32_t> help_input_offset({input_offset});

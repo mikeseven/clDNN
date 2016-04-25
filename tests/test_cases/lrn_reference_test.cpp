@@ -18,7 +18,7 @@
 
 #include "tests/gtest/gtest.h"
 
-TEST(dummy_test, dummies) {
+TEST(local_response_normalization, lrn_test) {
     EXPECT_EQ(0, 0);
     //EXPECT_EQ(1, 0);
 }
