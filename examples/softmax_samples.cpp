@@ -31,15 +31,15 @@ void example_softmax_forward() {
     float out_buffer[output_x*output_b];
     // input buffer should be initialized with valid data
 
-    auto input  = memory::create({engine::reference, memory::format::xb_f32, {input_b , std::vector<uint32_t>{input_x }, z}});
-    auto output = memory::create({engine::reference, memory::format::xb_f32, {output_b, std::vector<uint32_t>{output_x}, z}});
+    auto input  = memory::create({engine::reference, memory::format::xb_f32, {input_b , {{input_x }}, z}});
+    auto output = memory::create({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, z}});
 
     auto sftmax = normalization::softmax::create( {engine::reference,
                                                    output,
-                                                   {out_off_b, std::vector<uint32_t>{out_off_x}, 0u},
-                                                   {out_siz_b, std::vector<uint32_t>{out_siz_x}, 1u},
+                                                   {out_off_b, {{out_off_x}}, 0u},
+                                                   {out_siz_b, {{out_siz_x}}, 1u},
                                                    input,
-                                                   {in_off_b, std::vector<int32_t>{in_off_x}, 0}
+                                                   {in_off_b, {{in_off_x}}, 0}
                                                   });
 
     execute({input(in_buffer), output(out_buffer), sftmax});
