@@ -16,12 +16,23 @@
 
 #include "api/neural.h"
 #include <iostream>
+#include "tests/test_utils/test_utils.h"
+
+using namespace tests;
+bool TEST(){
+    using namespace neural;
+    bool result = true;
+
+
+
+    return result;
+}
 
 int main()
 {
     extern void example_softmax_forward();
     try{
-        example_softmax_forward();
+        std::cout << TEST() << std::endl;
     } catch (std::exception &e) {
         std::cerr << e.what();
     } catch(...) {
