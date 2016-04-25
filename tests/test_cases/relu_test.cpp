@@ -137,22 +137,20 @@ TEST(relu_f32_fw, offsets) {
 }
 
 TEST(relu_f32_bw, basic) {
-    using namespace neural;
-
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
-    auto fw_input  = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {y, x, f, b}, true});
-    auto bw_input  = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {y, x, f, b}, true});
-    auto bw_output = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, {y, x, f, b}, true});
-    fw_input.as<const memory_obsolete&>().fill<float>();
-    bw_input.as<const memory_obsolete&>().fill<float>();
+    auto fw_input  = memory::create({engine::reference, memory::format::yxfb_f32, {b, {y, x}, f}, true});
+    auto bw_input  = memory::create({engine::reference, memory::format::yxfb_f32, {b, {y, x}, f}, true});
+    auto bw_output = memory::create({engine::reference, memory::format::yxfb_f32, {b, {y, x}, f}, true});
+    fw_input.as<const memory&>().fill<float>();
+    bw_input.as<const memory&>().fill<float>();
 
     auto act = relu_backward::create({engine::reference, {bw_output}, {bw_input, fw_input}});
     execute({act});
 
-    auto fw_input_buf  = static_cast<float*>(fw_input .as<const memory_obsolete&>().pointer);
-    auto bw_input_buf  = static_cast<float*>(bw_input .as<const memory_obsolete&>().pointer);
-    auto bw_output_buf = static_cast<float*>(bw_output.as<const memory_obsolete&>().pointer);
+    auto fw_input_buf  = static_cast<float*>(fw_input .as<const memory&>().pointer);
+    auto bw_input_buf  = static_cast<float*>(bw_input .as<const memory&>().pointer);
+    auto bw_output_buf = static_cast<float*>(bw_output.as<const memory&>().pointer);
 
     bool result = true;
     for(size_t i = 0; i < y*x*f*b; ++i)
@@ -194,31 +192,31 @@ TEST(relu_f32_bw, offsets) {
                    bw_in_off_f  = 0,
                    bw_in_off_b  = 1;
 
-    std::vector<uint32_t> fw_in_buf_size  = {input_y, input_x, input_f, input_b};
-    std::vector<uint32_t> bw_in_buf_size  = {output_y, output_x, output_f, output_b};
-    std::vector<uint32_t> bw_out_buf_size = {output_y, output_x, output_f, output_b};
+    vector<uint32_t> fw_in_buf_size  = {input_b , {input_y , input_x }, input_f };
+    vector<uint32_t> bw_in_buf_size  = {output_b, {output_y, output_x}, output_f};
+    vector<uint32_t> bw_out_buf_size = {output_b, {output_y, output_x}, output_f};
 
-    auto fw_input  = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, fw_in_buf_size, true});
-    auto bw_input  = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, bw_in_buf_size, true});
-    auto bw_output = memory_obsolete::create({engine::cpu, memory_obsolete::format::yxfb_f32, bw_out_buf_size,true});
-    fw_input.as<const memory_obsolete&>().fill<float>();
-    bw_input.as<const memory_obsolete&>().fill<float>();
+    auto fw_input  = memory::create({engine::reference, memory::format::yxfb_f32, fw_in_buf_size, true});
+    auto bw_input  = memory::create({engine::reference, memory::format::yxfb_f32, bw_in_buf_size, true});
+    auto bw_output = memory::create({engine::reference, memory::format::yxfb_f32, bw_out_buf_size,true});
+    fw_input.as<const memory&>().fill<float>();
+    bw_input.as<const memory&>().fill<float>();
 
-    std::vector<uint32_t> fw_in_off = {fw_in_off_y, fw_in_off_x, fw_in_off_f, fw_in_off_b};
-    std::vector<uint32_t> bw_in_off = {bw_in_off_y, bw_in_off_x, bw_in_off_f, bw_in_off_b};
+    vector<uint32_t> fw_in_off = {fw_in_off_b, {fw_in_off_y, fw_in_off_x}, fw_in_off_f};
+    vector<uint32_t> bw_in_off = {bw_in_off_b, {bw_in_off_y, bw_in_off_x}, bw_in_off_f};
 
     auto act = relu_backward::create( {engine::reference,
                                       {bw_output},
-                                      {out_off_y, out_off_x, out_off_f, out_off_b},
-                                      {out_siz_y, out_siz_x, out_siz_f, out_siz_b},
+                                      {out_off_b, {out_off_y, out_off_x}, out_off_f},
+                                      {out_siz_b, {out_siz_y, out_siz_x}, out_siz_f},
                                       {bw_input, fw_input},
                                       {bw_in_off, fw_in_off}
                                      });
     execute({act});
 
-    auto buf_fw_input  = static_cast<float*>(fw_input.as<const memory_obsolete&>().pointer);
-    auto buf_bw_input  = static_cast<float*>(bw_input.as<const memory_obsolete&>().pointer);
-    auto buf_bw_output = static_cast<float*>(bw_output.as<const memory_obsolete&>().pointer);
+    auto buf_fw_input  = static_cast<float*>( fw_input.as<const memory&>().pointer);
+    auto buf_bw_input  = static_cast<float*>( bw_input.as<const memory&>().pointer);
+    auto buf_bw_output = static_cast<float*>(bw_output.as<const memory&>().pointer);
 
     bool result = true;
     for(uint32_t y = 0; y < out_siz_y; ++y)
@@ -226,26 +224,26 @@ TEST(relu_f32_bw, offsets) {
     for(uint32_t f = 0; f < out_siz_f; ++f)
     for(uint32_t b = 0; b < out_siz_b; ++b)
     {
-        auto fw_in_idx = calc_idx_obsolete( {
+        auto fw_in_idx = calc_idx( {
                                  fw_in_off_y + y,
                                  fw_in_off_x + x,
                                  fw_in_off_f + f,
                                  fw_in_off_b + b
-                                }, fw_in_buf_size);
+                                }, fw_in_buf_size.raw);
 
-        auto bw_in_idx = calc_idx_obsolete( {
+        auto bw_in_idx = calc_idx( {
                                  bw_in_off_y + y,
                                  bw_in_off_x + x,
                                  bw_in_off_f + f,
                                  bw_in_off_b + b
-                                }, bw_in_buf_size);
+                                }, bw_in_buf_size.raw);
 
-        auto out_idx = calc_idx_obsolete( {
+        auto out_idx = calc_idx( {
                                  out_off_y + y,
                                  out_off_x + x,
                                  out_off_f + f,
                                  out_off_b + b
-                                }, bw_out_buf_size);
+                                }, bw_out_buf_size.raw);
 
         result &= (((buf_fw_input[fw_in_idx] > 0) * buf_bw_input[bw_in_idx]) == buf_bw_output[out_idx]);
     }

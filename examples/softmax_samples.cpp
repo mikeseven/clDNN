@@ -16,7 +16,7 @@
 
 #include "api/neural.h"
 
-// memory_obsolete->memory_obsolete softmax
+// memory->memory softmax
 void example_softmax_forward() {
     using namespace neural;
 
@@ -24,25 +24,25 @@ void example_softmax_forward() {
                    input_x   = 6, input_b   = 2,  // size of whole input buffer
                    out_off_x = 0, out_off_b = 1,
                    out_siz_x = 5, out_siz_b = 2;  // size of area to do softmax after offset
-
+    const uint32_t z = 1;
     const int32_t  in_off_x  = 1, in_off_b  = 0;
 
     float in_buffer[input_x*input_b];
     float out_buffer[output_x*output_b];
     // input buffer should be initialized with valid data
 
-    auto input  = memory_obsolete::create({engine::cpu, memory_obsolete::format::xb_f32, {input_x, input_b}});
-    auto output = memory_obsolete::create({engine::cpu, memory_obsolete::format::xb_f32, {output_x, output_b}});
+    auto input  = memory::create({engine::reference, memory::format::xb_f32, {input_b , {{input_x }}, z}});
+    auto output = memory::create({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, z}});
 
-    auto act    = normalization::softmax::create( {engine::reference,
+    auto sftmax = normalization::softmax::create( {engine::reference,
                                                    output,
-                                                   {out_off_x, out_off_b},
-                                                   {out_siz_x, out_siz_b},
+                                                   {out_off_b, {{out_off_x}}, 0u},
+                                                   {out_siz_b, {{out_siz_x}}, 1u},
                                                    input,
-                                                   {in_off_x, in_off_b}
+                                                   {in_off_b, {{in_off_x}}, 0}
                                                   });
 
-    execute({input(in_buffer), output(out_buffer), act});
+    execute({input(in_buffer), output(out_buffer), sftmax});
 }
 
 void example_softmax_backward(){

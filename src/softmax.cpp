@@ -33,34 +33,39 @@ struct softmax_reference : is_an_implementation {
 
     static void implementation(const void *ptr) {
         auto this_softmax = static_cast<const softmax *>(ptr);
-        auto input        = static_cast<float*>(this_softmax->input_memory(0).pointer);
-        auto output       = static_cast<float*>(this_softmax->output_memory(0).pointer);
+        //auto input        = static_cast<float*>(this_softmax->input_memory(0).pointer);
+        //auto output       = static_cast<float*>(this_softmax->output_memory(0).pointer);
+        auto input  = static_cast<float*>(this_softmax->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
+        auto output = static_cast<float*>(this_softmax->argument.output[0].as<const memory&>().pointer);
 
-        auto input_offset = this_softmax->argument.input_offset;
-        auto output_offset     = this_softmax->argument.output_offset;
-        auto output_size       = this_softmax->argument.output_size;
+        auto input_offset  = this_softmax->argument.input_offset;
+        auto output_offset = this_softmax->argument.output_offset;
+        auto output_size   = this_softmax->argument.output_size;
 
-        auto input_arg  = this_softmax->input_memory(0).argument;
-        auto output_arg = this_softmax->output_memory(0).argument;
+        //auto input_arg  = this_relu->input_memory(0).argument;
+        //auto output_arg = this_relu->output_memory(0).argument;
+        auto input_arg  = this_softmax->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+        auto output_arg = this_softmax->argument.output[0].as<const memory&>().argument;
 
-        if(input_arg.format      != memory_obsolete::format::xb_f32) throw std::runtime_error("Softmax reference uses xb_f32 format."); // todo should be format independent
-        if(input_arg.format      != output_arg.format)      throw std::runtime_error("Softmax input/output data format does not match.");
-        if(input_arg.size.size() != output_arg.size.size()) throw std::runtime_error("Softmax input/output number of dimension does not match.");
+        if(input_arg.format          != memory::format::xb_f32    ) throw std::runtime_error("Softmax reference uses xb_f32 format."); // todo should be format independent
+        if(input_arg.format          != output_arg.format         ) throw std::runtime_error("Softmax input/output data format does not match.");
+        if(input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("Softmax input/output number of dimension does not match.");
 
-        for(size_t i = 0; i < input_arg.size.size(); ++i){
-            if(input_arg.size[i]  < output_size[i] + input_offset[i])  throw std::runtime_error("Softmax input/output size does not match.");
-            if(output_arg.size[i] < output_size[i] + output_offset[i]) throw std::runtime_error("Softmax sizes to small.");
+        for(size_t i = 0; i < input_arg.size.raw.size(); ++i){
+            if( input_arg.size.raw[i] < output_size.raw[i] +  input_offset.raw[i]) throw std::runtime_error("Softmax input/output size does not match.");
+            if(output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("Softmax sizes to small.");
         }
 
-        int batch_index = 1;//todo type traits
-
-        std::vector<float> v_max( output_size[batch_index], -std::numeric_limits<float>::max() );
-        std::vector<float> v_acc( output_size[batch_index] );
+        assert( 1 == output_size.feature.size() );
+        assert( 1 == output_size.batch.size()   );
+        int batch_index = 1;
+        std::vector<float> v_max( output_size.batch[0], -std::numeric_limits<float>::max() );
+        std::vector<float> v_acc( output_size.batch[0] );
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
-        nd::calculate_idx_obsolete<uint32_t> calc_in_idx  (input_arg.size);
-        nd::calculate_idx_obsolete<uint32_t> calc_out_idx (output_arg.size);
+        nd::calculate_idx<uint32_t, memory::format::xb_f32> calc_in_idx  (input_arg.size);
+        nd::calculate_idx<uint32_t, memory::format::xb_f32> calc_out_idx (output_arg.size);
 
         // find max val per batch
         for(auto pos : range) {
@@ -79,7 +84,6 @@ struct softmax_reference : is_an_implementation {
             auto out_idx = calc_out_idx(pos + output_offset);
             output[out_idx] /= v_acc[ pos[batch_index] ]; // compute softmax
         }
-
     }
 
     std::vector<task> work() {
@@ -91,36 +95,30 @@ struct softmax_reference : is_an_implementation {
 
 } // namespace {
 
-softmax::arguments::arguments( neural::engine::type eng, primitive out, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off)
+softmax::arguments::arguments( neural::engine::type eng, primitive out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off)
     : engine(eng)
     , output({out})
     , output_offset(out_off)
     , output_size(out_siz)
     , input({in})
-    , input_offset(in_off) {}
+    , input_offset(in_off)
+    {}
 
 softmax::arguments::arguments( neural::engine::type eng, primitive out, primitive in )
     : engine(eng)
     , output({out})
-    , output_offset(static_cast<uint32_t>(out.as<const memory_obsolete&>().argument.size.size()))
-    , output_size(out.as<const memory_obsolete&>().argument.size.begin(), out.as<const memory_obsolete&>().argument.size.end())
+    , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
+    , output_size(out.as<const memory&>().argument.size)
     , input({in})
-    , input_offset(static_cast<uint32_t>(in.as<const memory_obsolete&>().argument.size.size())) {}
-
-softmax::arguments::arguments( neural::engine::type eng, memory_obsolete::format::type out_fmt, std::vector<uint32_t> out_off, std::vector<uint32_t> out_siz, primitive in, std::vector<int32_t> in_off)
-    : engine(eng)
-    , output({memory_obsolete::create({eng, out_fmt, out_siz, true})})
-    , output_offset(out_off)
-    , output_size(out_siz)
-    , input({in})
-    , input_offset(in_off) {}
+    , input_offset(in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size())
+    {}
 
 //                                    engine                output                        input
-using implementation_key = std::tuple<neural::engine::type, neural::memory_obsolete::format::type, neural::memory_obsolete::format::type>;
+using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(softmax &)>> forward_implementation_map = {
-    {std::make_tuple(engine::reference, memory_obsolete::format::xb_f32, memory_obsolete::format::xb_f32), softmax_reference::create}
+    {std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), softmax_reference::create}
 };
 // creates primitive with softmax implementation that supports provided arguments
 primitive softmax::create(softmax::arguments arg) {
@@ -128,7 +126,11 @@ primitive softmax::create(softmax::arguments arg) {
     std::unique_ptr<softmax> result(new softmax(arg));
 
     // lookup in database; throw if not found
-    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+            //todo tmp solution
+    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
+    auto& outfmt= result->argument.output[0].as<const memory&>().argument.format;
+    auto key = std::make_tuple(arg.engine, infmt, outfmt);
+   // auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = forward_implementation_map.find(key);
     if(it==std::end(forward_implementation_map)) throw std::runtime_error("not yet implemented");
 
