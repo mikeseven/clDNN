@@ -20,11 +20,11 @@
 void example_relu_forward() {
     using namespace neural;
 
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {8, 8, 3, 8}, true});
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {8, 8, 3, 8}, true});
+    auto input  = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
+    auto output = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
     input.as<const memory&>().fill<float>();
 
-    auto act    = relu::create({engine::reference, output, input});
+    auto act = relu::create({engine::reference, output, input});
 
     execute({act});
 }
@@ -32,10 +32,10 @@ void example_relu_forward() {
 void example_relu_backward() {
     using namespace neural;
 
-    auto forward_input  = memory::create({engine::cpu, memory::format::yxfb_f32, {8, 8, 3, 8}, true});
-    auto forward_output_grad = memory::create({engine::cpu, memory::format::yxfb_f32, {8, 8, 3, 8}, true});
+    auto forward_input       = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
+    auto forward_output_grad = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
 
-    auto forward_input_grad = memory::create({engine::cpu, memory::format::yxfb_f32, {8, 8, 3, 8}, true});
+    auto forward_input_grad  = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
 
     auto act = relu_backward::create({engine::reference, {forward_input_grad}, {forward_output_grad, forward_input}});
 

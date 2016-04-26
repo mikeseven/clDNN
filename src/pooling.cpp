@@ -52,7 +52,7 @@ struct pooling_reference : is_an_implementation {
         auto padding           = this_pooling->argument.padding; //todo, padding is not supported yet
 
         if(padding::zero            != padding)                   throw std::runtime_error("Padding is not supported.");
-        if(input_memory_arg.format  != memory::format::yxfb_f32)  throw std::runtime_error("Pooling reference uses yxfb_f32 format."); //todo, only this format?
+        if(input_memory_arg.format  != memory_obselote::format::yxfb_f32)  throw std::runtime_error("Pooling reference uses yxfb_f32 format."); //todo, only this format?
         if(input_buffer_size.size() != output_buffer_size.size()) throw std::runtime_error("Pooling input/output number of dimension does not match.");
         if(stride.size()            != output_buffer_size.size()) throw std::runtime_error("Pooling stride/output number of dimension does not match.");
         if(window.size()            != output_buffer_size.size()) throw std::runtime_error("Pooling window_size/output number of dimension does not match.");
@@ -70,8 +70,8 @@ struct pooling_reference : is_an_implementation {
         namespace nd = ndimensional;
         nd::value<uint32_t> range(output_size);
         nd::value<uint32_t> window_range(window);
-        nd::calculate_idx<uint32_t> calc_in_idx(input_buffer_size);
-        nd::calculate_idx<uint32_t> calc_out_idx(output_buffer_size);
+        nd::calculate_idx_obselote<uint32_t> calc_in_idx(input_buffer_size);
+        nd::calculate_idx_obselote<uint32_t> calc_out_idx(output_buffer_size);
         switch( this_pooling->argument.mode ){
             case pooling::mode::max:
                 for(auto pos : range) {
@@ -128,7 +128,7 @@ struct pooling_reference : is_an_implementation {
 
 pooling::arguments::arguments( neural::engine::type  eng,
                                pooling::mode::type   mode,
-                               memory::format::type  o_frmt,
+                               memory_obselote::format::type  o_frmt,
                                std::vector<uint32_t> out_off,
                                std::vector<uint32_t> out_siz,
                                primitive             in,
@@ -138,7 +138,7 @@ pooling::arguments::arguments( neural::engine::type  eng,
                                neural::padding::type padd)
     : engine(eng)
     , mode(mode)
-    , output( {memory::create({eng, o_frmt, out_siz, true})} )
+    , output( {memory_obselote::create({eng, o_frmt, out_siz, true})} )
     , output_offset(out_off)
     , output_size(out_siz)
     , input({in})
@@ -178,10 +178,10 @@ pooling::arguments::arguments( neural::engine::type eng,
     : engine(eng)
     , mode(mode)
     , output({out})
-    , output_offset(out.as<const memory&>().argument.size.size())
-    , output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
+    , output_offset(out.as<const memory_obselote&>().argument.size.size())
+    , output_size(out.as<const memory_obselote&>().argument.size.begin(), out.as<const memory_obselote&>().argument.size.end())
     , input({in})
-    , input_offset(in.as<const memory&>().argument.size.size())
+    , input_offset(in.as<const memory_obselote&>().argument.size.size())
     , stride({strd})
     , size({siz})
     , padding(padd) {};
@@ -197,8 +197,8 @@ pooling::arguments::arguments( neural::engine::type eng,
     : engine(eng)
     , mode(mode)
     , output({out})
-    , output_offset(out.as<const memory&>().argument.size.size())
-    , output_size(out.as<const memory&>().argument.size.begin(), out.as<const memory&>().argument.size.end())
+    , output_offset(out.as<const memory_obselote&>().argument.size.size())
+    , output_size(out.as<const memory_obselote&>().argument.size.begin(), out.as<const memory_obselote&>().argument.size.end())
     , input({in})
     , input_offset({in_off})
     , stride({strd})
@@ -206,11 +206,11 @@ pooling::arguments::arguments( neural::engine::type eng,
     , padding(padd) {};
 
 //                                    engine          output                  input
-using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
+using implementation_key = std::tuple<neural::engine::type, neural::memory_obselote::format::type, neural::memory_obselote::format::type>;
 
 // map of available implementations
 static std::map<implementation_key, std::function<is_an_implementation *(pooling &)>> implementation_map = {
-    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), pooling_reference::create}
+    {std::make_tuple(engine::reference, memory_obselote::format::yxfb_f32, memory_obselote::format::yxfb_f32), pooling_reference::create}
 };
 
 // creates primitive with pooling implementation that supports provided arguments

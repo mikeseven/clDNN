@@ -32,12 +32,86 @@
 
 namespace neural {
 
+// vector in spatial+feature+batch space
+template<typename T> struct vector {
+    std::vector<T> raw;
+    class ref_vector {
+        size_t begin_;
+        size_t end_;
+        std::vector<T> &raw_;
+        ref_vector(std::vector<T> &raw, size_t begin, size_t end) : raw_(raw), begin_(begin), end_(end) {};
+        friend struct vector<T>;
+    public:
+        typename std::vector<T>::iterator begin() { return raw_.begin()+begin_; }
+        typename std::vector<T>::iterator end()   { return raw_.begin()+end_; }
+        size_t size() const { return end_-begin_; }
+        operator T() const { return raw_[0]; }
+        T operator[](size_t at) const { assert(at<end_-begin_); return raw_[begin_+at]; }
+    } spatial, feature, batch;
+    bool operator==(const vector &rhs) { return rhs.spatial==spatial && rhs.feature==feature && rhs.batch==batch; }
+    bool operator!=(const vector &rhs) { return !(*this==rhs); }
+    vector(const vector &arg)
+        : raw(arg.raw)
+        , spatial(raw, arg.spatial.begin_, arg.spatial.end_)
+        , feature(raw, arg.feature.begin_, arg.feature.end_)
+        , batch  (raw, arg.batch.begin_,   arg.batch.end_)
+    {}
+    vector &operator=(const vector &arg)  {
+        raw = arg.raw;
+        spatial.raw_ = arg.spatial.raw_;
+    }
+    vector() : raw(0), spatial(raw,0,0), feature(raw,0,0), batch(raw,0,0) {}
+    vector(size_t size) : raw(2+size), spatial(raw,2, 2+size), feature(raw,1,2), batch(raw,0,1) {}
+    vector(const T arg_batch, const std::vector<T> &arg_spatial, const T arg_feature)
+        : spatial(raw,2, 2+arg_spatial.size())
+        , feature(raw,1,2)
+        , batch(raw,0,1){
+        raw.push_back(arg_batch);
+        raw.push_back(arg_feature);
+        raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
+    };
+    vector(const size_t arg_batch, const size_t arg_spatial, const size_t arg_feature)
+        : spatial(raw,2, 2+arg_spatial)
+        , feature(raw,1,2)
+        , batch(raw,0,1) {
+        raw.resize(arg_batch + arg_feature + arg_spatial);
+    };
+
+    vector(const std::vector<T> &arg_spatial, const T arg_feature)
+        : spatial(raw,2,2+arg_spatial.size())
+        , feature(raw,1,2)
+        , batch(raw,0,1)
+    {
+        raw.push_back(1);
+        raw.push_back(arg_feature);
+        raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
+    };
+    vector(const std::vector<T> &arg_spatial)
+        : spatial(raw,2,2+arg_spatial.size())
+        , feature(raw,1,2)
+        , batch(raw,0,1)
+    {
+        raw.push_back(1);
+        raw.push_back(1);
+        raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
+    };
+    vector(const T arg_batch, const std::vector<T> &arg_spatial)
+        : spatial(raw,2, 2+arg_spatial.size())
+        , feature(raw,1,2)
+        , batch(raw,0,1)
+    {
+        raw.push_back(arg_batch);
+        raw.push_back(1);
+        raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
+    };
+};
+
 // minimal RTTI-independent type traits
 struct type_traits {
     const size_t          id;
     const size_t          size;
     const bool            is_floating_point;
-    const char *    const name;
+    const char *          const name;
     type_traits(size_t _id, size_t _size, bool _ifp, const char *_name) : id(_id), size(_size), is_floating_point(_ifp), name(_name) {};
 private:
     type_traits(const type_traits &);
@@ -204,7 +278,7 @@ struct primitive_at {
     primitive_at(const neural::primitive aprimitive, const uint32_t pos) : primitive(aprimitive), at(pos) {}
 };
 
-struct memory;
+struct memory_obselote;
 
 // is_a_primitive is a base class for all primitives exposing common interface; primiary user is a primitive wrapper
 class is_a_primitive {
@@ -221,11 +295,11 @@ public:
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
     virtual const std::vector<primitive_at>  &input()  const { throw std::runtime_error(std::string("no inputs in ")+_type_traits->name); };
     virtual const std::vector<primitive>     &output() const { throw std::runtime_error(std::string("no outputs in ")+_type_traits->name); };
-    const memory &input_memory(uint32_t at) const {
+    const memory_obselote &input_memory(uint32_t at) const {
         auto prim = input()[at].primitive;
-        return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>();
+        return (prim.id()==type_id<const memory_obselote>()->id ? prim : prim.output[input()[at].at]).as<const memory_obselote &>();
     }
-    const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
+    const memory_obselote &output_memory(uint32_t at) const  { return output()[at].as<const memory_obselote &>(); };
     virtual void execute_argument(void *) const { throw std::runtime_error(std::string("execute-time argument not supported in")+_type_traits->name); }
     friend class primitive;
 
