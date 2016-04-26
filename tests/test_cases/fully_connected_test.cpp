@@ -60,7 +60,6 @@ TEST(fully_connected, xb_f32_batch_1) {
     EXPECT_EQ(-2.25f, output_memory.get_value<float>(2));
     EXPECT_EQ( 3.0f,  output_memory.get_value<float>(3));
 }
-/*
 
 TEST(fully_connected, xb_f32_batch_2) {
 //  Input  : 3x2
@@ -105,7 +104,6 @@ TEST(fully_connected, xb_f32_batch_2) {
     EXPECT_EQ( 3.0f,  output_memory.get_value<float>(6));
     EXPECT_EQ( 1.0f,  output_memory.get_value<float>(7));
 }
-/*
 
 TEST(fully_connected, x_f32) {
 //  Input  : 3x1
@@ -128,9 +126,9 @@ TEST(fully_connected, x_f32) {
                    input_x   = 3,                 // size of whole input buffer
                    weight_x  = 4, weight_y  = 3;  // size of whole weights buffer
 
-    auto input_prim   = memory::create({ engine::cpu, memory::format::x_f32,{ input_x  } , true });
-    auto output_prim  = memory::create({ engine::cpu, memory::format::x_f32,{ output_x } , true });
-    auto weights_prim = memory::create({ engine::cpu, memory::format::x_f32,{ weight_x, weight_y } , true });
+    auto input_prim   = memory::create({ engine::reference, memory::format:: x_f32, {1       , {{input_x }}, 1 } , true });
+    auto output_prim  = memory::create({ engine::reference, memory::format:: x_f32, {1       , {{output_x}}, 1 } , true });
+    auto weights_prim = memory::create({ engine::reference, memory::format::xb_f32, {weight_y, {{weight_x}}, 1 } , true });
     auto full_con_prim = fully_connected::create({ engine::reference, output_prim, input_prim, weights_prim });
 
     auto& input_memory   = input_prim.as<const memory&>();
@@ -147,4 +145,3 @@ TEST(fully_connected, x_f32) {
     EXPECT_EQ(-2.25f, output_memory.get_value<float>(2));
     EXPECT_EQ( 3.0f,  output_memory.get_value<float>(3));
 }
-*/

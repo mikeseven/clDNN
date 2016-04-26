@@ -101,16 +101,16 @@ struct fully_connected_reference : is_an_implementation {
         //this_fc->output_memory(0).fill(0.0f);
         this_fc->argument.output[0].as<const memory&>().fill(0.0f);
 
+        int data_index = 2;
+        int batch_index = 0;
         //nd::value<uint32_t> range_output({{output_buffer_size.spatial[0]}}); //in every iteration whole batch is computed at once, so it has to be removed from the range
         nd::value<uint32_t> range_output(output_buffer_size); //in every iteration whole batch is computed at once, so it has to be removed from the range
+        range_output[batch_index] = 1;
         nd::value<uint32_t> range_input(input_buffer_size);
         nd::value<uint32_t> range_weight(weight_buffer_size);
         nd::calculate_idx<uint32_t, memory::format::xb_f32> calc_in_idx(input_buffer_size);
         nd::calculate_idx<uint32_t, memory::format::xb_f32> calc_out_idx(output_buffer_size);
         nd::calculate_idx<uint32_t, memory::format::xb_f32> calc_w_idx(weight_buffer_size);
-
-        int data_index = 2;
-        int batch_index = 0;
 
         std::vector<uint32_t> arg_weight_idx(3);
 
