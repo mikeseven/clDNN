@@ -61,7 +61,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_true) {
 
     // Initialize input buffers.
     input.as<const memory&>().fill<float>(1);
-    scale.as<const memory&>().fill<float>(0);
+    scale.as<const memory&>().fill<float>(1);
     bias.as<const memory&>().fill<float>(0);
 
 
@@ -73,7 +73,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_true) {
         execute({bn});
 
     for (i = 0; i < input_size[2]; ++i){
-        EXPECT_EQ(1.0f, current_average_memory.get_value<float>(i));
+        EXPECT_EQ(0.0f, static_cast<float*>(output_memory.pointer)[i]);
     }
 }
 
@@ -175,7 +175,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     expected_output[random_input_non_zero] = (10.0f - current_average_memory.get_value<float>(non_zero_value)) * current_inv_std_dev_buffer;
 
     for (i = 0; i < total_input_size; ++i) {
-        EXPECT_EQ(static_cast<float*>(output_memory.pointer)[i], expected_output[i]);
+        EXPECT_EQ(expected_output[i], static_cast<float*>(output_memory.pointer)[i]);
     }
 }
 
@@ -225,7 +225,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
 
     // Initialize input buffers.
     input.as<const memory&>().fill<float>(1);
-    scale.as<const memory&>().fill<float>(0);
+    scale.as<const memory&>().fill<float>(1);
     bias.as<const memory&>().fill<float>(0);
 
 
@@ -237,7 +237,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
         execute({bn});
 
     for (i = 0; i < total_avarage_size; ++i){
-        EXPECT_EQ(1.0f, current_average_memory.get_value<float>(i));
+        EXPECT_EQ(0.0f, static_cast<float*>(output_memory.pointer)[i]);
     }
 }
 
@@ -289,7 +289,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
 
     // Initialize input buffers.
     input.as<const memory&>().fill<float>(0);
-    scale.as<const memory&>().fill<float>(0);
+    scale.as<const memory&>().fill<float>(1);
     bias.as<const memory&>().fill<float>(0);
 
     // Put non zero value in random place in input
@@ -298,7 +298,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     static_cast<float*>(input_memory.pointer)[random_input_non_zero] = 10.0f;
 
     // Create primitive.
-    auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, false, 1.0, std::numeric_limits<float>::epsilon()});
+    auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, false, 1.0, 1.0});
 
     // Run few times.
     for(i = 0; i < 3; ++i)
@@ -317,11 +317,28 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
         }
     }
 
-    for (i = 0; i < total_average_size; ++i){
-        if (i == non_zero_value) {
-            EXPECT_EQ(mean, current_average_memory.get_value<float>(i));
-        } else {
-            EXPECT_EQ(0.0f, current_average_memory.get_value<float>(i));
-        }
+    // Count expected output
+    float * expected_output = new float[total_input_size];
+    for (i = 0; i < total_input_size; ++i) {
+        expected_output[i] = 0;
+    }
+
+    float current_inv_std_dev_buffer = 0;
+    float inv_num_average_over = (1.0 / input_size[3]);
+
+    for (i = 0; i < input_size[3] - 1; i++) {
+        current_inv_std_dev_buffer += pow(current_average_memory.get_value<float>(non_zero_value), 2.0f) * inv_num_average_over;
+    }
+    current_inv_std_dev_buffer += pow(10.0f - current_average_memory.get_value<float>(non_zero_value), 2.0f) * inv_num_average_over;
+    current_inv_std_dev_buffer = pow(current_inv_std_dev_buffer + 1.0f, -0.5f);
+
+    for (int j = 0; j < input_size[3]; j++) {
+        expected_output[(non_zero_value * input_size[3]) + j] = - current_average_memory.get_value<float>(non_zero_value) * current_inv_std_dev_buffer;
+    }
+
+    expected_output[random_input_non_zero] = (10.0f - current_average_memory.get_value<float>(non_zero_value)) * current_inv_std_dev_buffer;
+
+    for (i = 0; i < total_input_size; ++i) {
+        EXPECT_EQ(expected_output[i], static_cast<float*>(output_memory.pointer)[i]);
     }
 }
