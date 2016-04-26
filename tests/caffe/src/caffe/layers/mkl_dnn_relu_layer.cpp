@@ -8,7 +8,6 @@
 using namespace neural;
 
 namespace caffe {
-template <> MKL_DNNReLULayer<double>::~MKL_DNNReLULayer() {NOT_IMPLEMENTED;}
 template <> void MKL_DNNReLULayer<double>::LayerSetUp(const vector<Blob<double>*>& bottom,
       const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
 template <> void MKL_DNNReLULayer<double>::Forward_cpu(const vector<Blob<double>*>& bottom,
@@ -16,9 +15,6 @@ template <> void MKL_DNNReLULayer<double>::Forward_cpu(const vector<Blob<double>
 template <> void MKL_DNNReLULayer<double>::Backward_cpu(const vector<Blob<double>*>& top,
     const vector<bool>& propagate_down,
     const vector<Blob<double>*>& bottom) {NOT_IMPLEMENTED;}
-
-template <typename Dtype>
-MKL_DNNReLULayer<Dtype>::~MKL_DNNReLULayer() {}
 
 template <typename Dtype>
 void MKL_DNNReLULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,

@@ -13,7 +13,6 @@
 
 #include "neural.h"
 
-
 namespace caffe {
 using namespace neural;
 
@@ -32,9 +31,9 @@ struct MKL_DNNMemoryDescriptor : PrvMemDescr, boost::enable_shared_from_this<MKL
   int layout_usr = memory::format::bfyx_f32;
   int layout_int = memory::format::yxfb_f32;
   Dtype* internal_ptr;
-  primitive memory = nullptr;
-  primitive memory_usr = nullptr;
-  primitive to_internal = nullptr;
+  primitive memory        = nullptr;
+  primitive memory_usr    = nullptr;
+  primitive to_internal   = nullptr;
   primitive from_internal = nullptr;
   std::string name;  // for debugging purposes
   bool use_cuda;
@@ -66,7 +65,7 @@ class MKL_DNNConvolutionLayer : public ConvolutionLayer<Dtype> {
 public:
   explicit MKL_DNNConvolutionLayer(const LayerParameter& param, neural::engine::type engine = neural::engine::reference);
 
-  virtual inline const char* type() const { return "DnnConvolution"; }
+  virtual inline const char* type() const { return "MKL_DNN_Convolution"; }
   virtual ~MKL_DNNConvolutionLayer();
 
 protected:
@@ -128,7 +127,7 @@ class MKL_DNNLRNLayer : public Layer<Dtype> {
       const vector<Blob<Dtype>*>& top);
   virtual ~MKL_DNNLRNLayer();
 
-  virtual inline const char* type() const { return "DnnLRN"; }
+  virtual inline const char* type() const { return "MKL_DNN_LRN"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
 
@@ -191,7 +190,7 @@ public:
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
                        const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "DnnPooling"; }
+  virtual inline const char* type() const { return "MKL_DNN_DnnPooling"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int MinTopBlobs() const { return 1; }
   // MAX POOL layers can output an extra top blob for the mask;
@@ -242,12 +241,11 @@ public:
    */
   explicit MKL_DNNReLULayer(const LayerParameter& param)
     : NeuronLayer<Dtype>(param) {}
-  ~MKL_DNNReLULayer();
 
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                           const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "MKL_DNNReLU"; }
+  virtual inline const char* type() const { return "MKL_DNN_ReLU"; }
 
 protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
@@ -264,6 +262,47 @@ private:
   primitive reluFwd_ = nullptr, reluBwd_ = nullptr;
   primitive bottom_data_ = nullptr, top_data_ = nullptr, 
           bottom_diff_ = nullptr, top_diff_ = nullptr;
+};
+
+/**
+ * @brief Computes the softmax function.
+ *
+ * TODO(dox): thorough documentation for Forward, Backward, and proto params.
+ */
+template <typename Dtype>
+class MKL_DNNSoftmaxLayer : public Layer<Dtype> {
+ public:
+  explicit MKL_DNNSoftmaxLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline const char* type() const { return "MKL_DNN_Softmax"; }
+  virtual inline int ExactNumBottomBlobs() const { return 1; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+                          const vector<Blob<Dtype>*>& top);
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+     const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+
+  int outer_num_;
+  int inner_num_;
+  int softmax_axis_;
+  /// sum_multiplier is used to carry out sum using BLAS
+  Blob<Dtype> sum_multiplier_;
+  /// scale is an intermediate Blob to hold temporary results.
+  Blob<Dtype> scale_;
+ private:
+  primitive softmaxFwd_ = nullptr, softmaxBwd_ = nullptr;
+  primitive bottom_data_ = nullptr, top_data_ = nullptr, 
+            bottom_diff_ = nullptr, top_diff_ = nullptr;
 };
 
 } // namespace caffe

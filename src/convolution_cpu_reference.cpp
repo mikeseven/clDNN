@@ -210,7 +210,8 @@ struct attach{
         auto key_bw = std::make_tuple(engine::reference, memory_obselote::format::yxfb_f32, memory_obselote::format::yxfb_f32);
         auto val_fw = convolution_cpu_reference::create;
         auto val_bw = convolution_backward_cpu_reference::create;
-
+        auto& conv_fw_implementation_map = singleton_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>         ::instance();
+        auto& conv_bw_implementation_map = singleton_map<conv_bw_key, std::function<is_an_implementation *(convolution_backward &)>>::instance();
         conv_fw_implementation_map.insert( {key_fw, val_fw} ); //todo keys should be different
         conv_bw_implementation_map.insert( {key_bw, val_bw} );
     }

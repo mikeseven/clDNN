@@ -83,16 +83,16 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
 
   // Forward setup
   CHECK_EQ(g, 1);
-  fwd_bottom_data->memory_usr = memory::create({engine::cpu, memory::format::bfyx_f32, {n, ic, ih, iw}});
-  fwd_top_data->memory_usr    = memory::create({engine::cpu, memory::format::bfyx_f32, {n, oc, oh, ow}});
-  fwd_filter_data->memory_usr = memory::create({engine::cpu, memory::format::bfyx_f32, {oc, ic/g, kh, kw}});
-  fwd_bias_data->memory_usr   = memory::create({engine::cpu, memory::format::x_f32, {oc}});
+  fwd_bottom_data->memory_usr = memory::create({engine::cpu, memory::format::bfyx_f32, {n, {ih, iw}, ic}});
+  fwd_top_data->memory_usr    = memory::create({engine::cpu, memory::format::bfyx_f32, {n, {oh, ow}, oc }});
+  fwd_filter_data->memory_usr = memory::create({engine::cpu, memory::format::bfyx_f32, {oc, {kh, kw},  ic/g}});
+  fwd_bias_data->memory_usr   = memory::create({engine::cpu, memory::format::x_f32,    {1, {{oc}}, 1}});
   fwd_bias_data->layout_usr   = memory::format::x_f32;
 
-  fwd_bottom_data->memory = memory::create({engine::cpu, memory::format::yxfb_f32, {ih, iw, ic, n}});
-  fwd_top_data->memory    = memory::create({engine::cpu, memory::format::yxfb_f32, {oh, ow, oc, n}});
-  fwd_filter_data->memory = memory::create({engine::cpu, memory::format::yxfb_f32, {kh, kw, ic/g, oc}});
-  fwd_bias_data->memory   = memory::create({engine::cpu, memory::format::x_f32, {oc}});
+  fwd_bottom_data->memory = memory::create({engine::cpu, memory::format::yxfb_f32, {n, {ih, iw}, ic}});
+  fwd_top_data->memory    = memory::create({engine::cpu, memory::format::yxfb_f32, {n, {oh, ow}, oc }});
+  fwd_filter_data->memory = memory::create({engine::cpu, memory::format::yxfb_f32, {oc, {kh, kw},  ic/g}});
+  fwd_bias_data->memory   = memory::create({engine::cpu, memory::format::x_f32,    {1, {{oc}}, 1}});
   fwd_bias_data->layout_int = memory::format::x_f32;
 
   fwd_bottom_data->create_conversions();
@@ -104,11 +104,11 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   std::vector<unsigned> top_sizes_g = {oh, ow, oc/g, n};
   convolution_fwd = convolution::create( {engine_,
                                         fwd_top_data->memory,
-                                        {0,0,0,0},
-                                        top_sizes_g,
+                                        //{0,0,0,0},
+                                        //top_sizes_g,
                                         fwd_bottom_data->memory,
-                                        {-pad_h_, -pad_w_, 0, 0},
-                                        {stride_h_, stride_w_, 1, 1},
+                                        //{0, {-pad_h_, -pad_w_}, 0},
+                                        {1, {stride_h_, stride_w_}, 1},
                                         fwd_filter_data->memory,
                                         fwd_bias_data->memory,
                                         padding::zero}
@@ -117,16 +117,16 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
  * Backward by setup
  */
 
-  bwd_bottom_diff->memory_usr = memory::create({engine::cpu, memory::format::bfyx_f32, {n, ic, ih, iw}});
-  bwd_top_diff->memory_usr    = memory::create({engine::cpu, memory::format::bfyx_f32, {n, oc, oh, ow}});
-  bwd_filter_diff->memory_usr = memory::create({engine::cpu, memory::format::bfyx_f32, {oc, ic/g, kh, kw}});
-  bwd_bias_diff->memory_usr   = memory::create({engine::cpu, memory::format::x_f32, {oc}});
+  bwd_bottom_diff->memory_usr = memory::create({engine::cpu, memory::format::bfyx_f32, {n, {ih, iw}, ic}});
+  bwd_top_diff->memory_usr    = memory::create({engine::cpu, memory::format::bfyx_f32, {n, {oh, ow}, oc }});
+  bwd_filter_diff->memory_usr = memory::create({engine::cpu, memory::format::bfyx_f32, {oc, {kh, kw},  ic/g}});
+  bwd_bias_diff->memory_usr   = memory::create({engine::cpu, memory::format::x_f32,    {1, {{oc}}, 1}});
   bwd_bias_diff->layout_usr  = memory::format::x_f32;
 
-  bwd_bottom_diff->memory = memory::create({engine::cpu, memory::format::yxfb_f32, {ih, iw, ic, n}});
-  bwd_top_diff->memory    = memory::create({engine::cpu, memory::format::yxfb_f32, {oh, ow, oc, n}});
-  bwd_filter_diff->memory = memory::create({engine::cpu, memory::format::yxfb_f32, {kh, kw, ic/g, oc}});
-  bwd_bias_diff->memory   = memory::create({engine::cpu, memory::format::x_f32, {oc}});
+  bwd_bottom_diff->memory = memory::create({engine::cpu, memory::format::yxfb_f32, {n, {ih, iw}, ic}});
+  bwd_top_diff->memory    = memory::create({engine::cpu, memory::format::yxfb_f32, {n, {oh, ow}, oc }});
+  bwd_filter_diff->memory = memory::create({engine::cpu, memory::format::yxfb_f32, {oc, {kh, kw},  ic/g}});
+  bwd_bias_diff->memory   = memory::create({engine::cpu, memory::format::x_f32,    {1, {{oc}}, 1}});
   bwd_bias_diff->layout_int = memory::format::x_f32;
 
   bwd_bottom_diff->create_conversions();
