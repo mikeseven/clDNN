@@ -395,18 +395,17 @@ private:
     std::unique_ptr<is_an_implementation> _private;
 };
 // fully connected
-//todo remove std::vectors and memory_obselote
 struct fully_connected : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
         std::vector<primitive>      output;
-        std::vector<uint32_t>       output_size;
+        neural::vector<uint32_t>    output_size;
         std::vector<primitive_at>   input;
 
-        DLL_SYM arguments(neural::engine::type, neural::memory_obselote::format::type out_fmt, std::vector<uint32_t> out_siz, primitive in, primitive weights);
-        DLL_SYM arguments(neural::engine::type, neural::memory_obselote::format::type out_fmt,                                primitive in, primitive weights);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,                                    primitive in, primitive weights);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,     std::vector<uint32_t> out_siz, primitive in, primitive weights);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_siz, primitive in, primitive weights);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                   primitive in, primitive weights);
+        DLL_SYM arguments(neural::engine::type, primitive                    out,                                       primitive in, primitive weights);
+        DLL_SYM arguments(neural::engine::type, primitive                    out,     neural::vector<uint32_t> out_siz, primitive in, primitive weights);
 
     };
     const arguments argument;

@@ -19,7 +19,6 @@
 #include <nmmintrin.h>
 #include <array>
 
-
 namespace neural {
 
 namespace {
