@@ -22,16 +22,16 @@ namespace neural {
 singleton_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>         & conv_fw_implementation_map = singleton_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>         ::instance();
 singleton_map<conv_bw_key, std::function<is_an_implementation *(convolution_backward &)>>& conv_bw_implementation_map = singleton_map<conv_bw_key, std::function<is_an_implementation *(convolution_backward &)>>::instance();
 
-convolution::arguments::arguments( neural::engine::type  eng,
-                                   primitive             out,
-                                   std::vector<uint32_t> out_off,
-                                   std::vector<uint32_t> out_siz,
-                                   primitive             in,
-                                   std::vector<int32_t>  in_off,
-                                   std::vector<uint32_t> strd,
-                                   primitive             weights,
-                                   primitive             biases,
-                                   neural::padding::type padd)
+convolution::arguments::arguments( neural::engine::type     eng,
+                                   primitive                out,
+                                   neural::vector<uint32_t> out_off,
+                                   neural::vector<uint32_t> out_siz,
+                                   primitive                in,
+                                   neural::vector<int32_t>  in_off,
+                                   neural::vector<uint32_t> strd,
+                                   primitive                weights,
+                                   primitive                biases,
+                                   neural::padding::type    padd)
     : engine(eng)
     , output({out})
     , output_offset(out_off)
@@ -43,19 +43,19 @@ convolution::arguments::arguments( neural::engine::type  eng,
     , bias(biases)
     , padding(padd) {};
 
-convolution::arguments::arguments( neural::engine::type  eng,
-                                   primitive             out,
-                                   primitive             in,
-                                   std::vector<uint32_t> strd,
-                                   primitive             weights,
-                                   primitive             biases,
-                                   neural::padding::type padd)
+convolution::arguments::arguments( neural::engine::type     eng,
+                                   primitive                out,
+                                   primitive                in,
+                                   neural::vector<uint32_t> strd,
+                                   primitive                weights,
+                                   primitive                biases,
+                                   neural::padding::type    padd)
     : engine(eng)
     , output({out})
-    , output_offset(out.as<const memory_obsolete&>().argument.size.size())
-    , output_size(out.as<const memory_obsolete&>().argument.size.begin(), out.as<const memory_obsolete&>().argument.size.end())
+    , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
+    , output_size(out.as<const memory&>().argument.size)
     , input({in})
-    , input_offset(in.as<const memory_obsolete&>().argument.size.size())
+    , input_offset(in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size())
     , stride(strd)
     , weight(weights)
     , bias(biases)
@@ -98,7 +98,10 @@ primitive convolution::create(convolution::arguments arg) {
     std::unique_ptr<convolution> result(new convolution(arg));
 
     // lookup in database; throw if not found
-    conv_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
+    auto& outfmt= result->argument.output[0].as<const memory&>().argument.format;
+    conv_fw_key key = std::make_tuple(arg.engine, infmt, outfmt);
+ //   conv_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = conv_fw_implementation_map.find(key);
     if(it==std::end(conv_fw_implementation_map)) throw std::runtime_error("Not yet implemented.");
 

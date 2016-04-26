@@ -54,6 +54,9 @@ struct relu_reference : is_an_implementation {
             if(output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("ReLU sizes to small.");
         }
 
+        assert( 1 == output_size.feature.size() );
+        assert( 1 == output_size.batch.size()   );
+
         //auto input  = static_cast<float*>(this_relu->input_memory(0).pointer);
         //auto output = static_cast<float*>(this_relu->output_memory(0).pointer);
         auto input  = static_cast<float*>(this_relu->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution

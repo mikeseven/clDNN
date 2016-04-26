@@ -16,6 +16,7 @@
 
 #include "api/neural.h"
 #include <iostream>
+#include "tests/test_utils/test_utils.h"
 
 int main()
 {
