@@ -21,16 +21,16 @@
 
 using namespace neural;
 
+uint32_t max_input_size = 16384; //2^14
+uint32_t possible_input_sizes[] = { 1, 2, 4, 8, 16, 32, 64 };
+
 TEST(batch_normalization, trivial_forward_same_value_spatial_true) {
 
     // Random input size
     uint32_t input_size[4];
 
-    uint32_t max_input_size = 16384; //2^14
-    uint32_t possible_input_sizes[] = { 1, 2, 4, 8, 16, 32, 64 };
     int length = sizeof(possible_input_sizes) / sizeof(int);
     uint32_t random_size, i = 0;
-
     static std::mt19937 rng(1);
     std::uniform_int_distribution<int> dist(0, length - 1);
 
@@ -44,25 +44,25 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_true) {
     };
 
     // Create input buffers.
-    auto input               = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
-    auto scale               = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
-    auto bias                = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+    auto input               = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto bias                = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
+    auto scale               = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
 
     // Create output buffers.
-    auto output              = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
-    auto current_inv_std_dev = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
-    auto moving_average      = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
-    auto moving_inv_std_dev  = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
-    auto current_average     = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+    auto output              = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto current_inv_std_dev = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
+    auto moving_average      = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
+    auto moving_inv_std_dev  = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
+    auto current_average     = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
 
-    auto& input_memory = input.as<const memory_obselote&>();
-    auto& output_memory = output.as<const memory_obselote&>();
-    auto& current_average_memory = current_average.as<const memory_obselote&>();
+    auto& input_memory = input.as<const memory&>();
+    auto& output_memory = output.as<const memory&>();
+    auto& current_average_memory = current_average.as<const memory&>();
 
     // Initialize input buffers.
-    input.as<const memory_obselote&>().fill<float>(1);
-    scale.as<const memory_obselote&>().fill<float>(1);
-    bias.as<const memory_obselote&>().fill<float>(0);
+    input.as<const memory&>().fill<float>(1);
+    scale.as<const memory&>().fill<float>(1);
+    bias.as<const memory&>().fill<float>(0);
 
 
     // Create primitive.
@@ -82,8 +82,6 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     // Random input size
     uint32_t input_size[4];
 
-    uint32_t max_input_size = 16384; //2^14
-    uint32_t possible_input_sizes[] = { 1, 2, 4, 8, 16, 32, 64 };
     int length = sizeof(possible_input_sizes) / sizeof(int);
     int non_zero_value;
     uint32_t random_size, i = 0, j;
@@ -107,25 +105,25 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     }
 
     // Create input buffers.
-    auto input               = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
-    auto scale               = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
-    auto bias                = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+    auto input               = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto bias                = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
+    auto scale               = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
 
     // Create output buffers.
-    auto output              = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
-    auto current_inv_std_dev = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
-    auto moving_average      = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
-    auto moving_inv_std_dev  = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
-    auto current_average     = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, {             1,             1, input_size[2],             1 }, true });
+    auto output              = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto current_inv_std_dev = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
+    auto moving_average      = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
+    auto moving_inv_std_dev  = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
+    auto current_average     = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
 
-    auto& input_memory = input.as<const memory_obselote&>();
-    auto& output_memory = output.as<const memory_obselote&>();
-    auto& current_average_memory = current_average.as<const memory_obselote&>();
+    auto& input_memory = input.as<const memory&>();
+    auto& output_memory = output.as<const memory&>();
+    auto& current_average_memory = current_average.as<const memory&>();
 
     // Initialize input buffers.
-    input.as<const memory_obselote&>().fill<float>(0);
-    scale.as<const memory_obselote&>().fill<float>(1);
-    bias.as<const memory_obselote&>().fill<float>(0);
+    input.as<const memory&>().fill<float>(0);
+    scale.as<const memory&>().fill<float>(1);
+    bias.as<const memory&>().fill<float>(0);
 
     // Put non zero value in random place in input
     std::uniform_int_distribution<uint32_t> dist_input(0, total_input_size - 1);
@@ -157,7 +155,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     }
 
     float current_inv_std_dev_buffer = 0;
-    float inv_num_average_over = (float) (1.0 / (input_size[0] * input_size[1] * input_size[3]));
+    float inv_num_average_over = 1.0f / (input_size[0] * input_size[1] * input_size[3]);
     
     for (i = 0; i < input_size[0] * input_size[1] * input_size[3] - 1; i++) {
         current_inv_std_dev_buffer += pow(current_average_memory.get_value<float>(non_zero_value), 2.0f) * inv_num_average_over;
@@ -184,8 +182,6 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
     // Random input size
     uint32_t input_size[4];
 
-    uint32_t max_input_size = 16384; //2^14
-    uint32_t possible_input_sizes[] = { 1, 2, 4, 8, 16, 32, 64};
     int length = sizeof(possible_input_sizes) / sizeof(int);
     uint32_t random_size, i = 0;
 
@@ -208,25 +204,25 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
     }
 
     // Create input buffers.
-    auto input               = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
-    auto scale               = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
-    auto bias                = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
+    auto input               = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto scale               = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto bias                = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
 
     // Create output buffers.
-    auto output              = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
-    auto moving_average      = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
-    auto moving_inv_std_dev  = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
-    auto current_average     = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
-    auto current_inv_std_dev = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
+    auto output              = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto moving_average      = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto moving_inv_std_dev  = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto current_average     = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto current_inv_std_dev = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
 
-    auto& input_memory = input.as<const memory_obselote&>();
-    auto& output_memory = output.as<const memory_obselote&>();
-    auto& current_average_memory = current_average.as<const memory_obselote&>();
+    auto& input_memory = input.as<const memory&>();
+    auto& output_memory = output.as<const memory&>();
+    auto& current_average_memory = current_average.as<const memory&>();
 
     // Initialize input buffers.
-    input.as<const memory_obselote&>().fill<float>(1);
-    scale.as<const memory_obselote&>().fill<float>(1);
-    bias.as<const memory_obselote&>().fill<float>(0);
+    input.as<const memory&>().fill<float>(1);
+    scale.as<const memory&>().fill<float>(1);
+    bias.as<const memory&>().fill<float>(0);
 
 
     // Create primitive.
@@ -246,8 +242,6 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     // Random input size
     uint32_t input_size[4];
 
-    uint32_t max_input_size = 16384; //2^14
-    uint32_t possible_input_sizes[] = { 1, 2, 4, 8, 16, 32, 64 };
     int length = sizeof(possible_input_sizes) / sizeof(int);
     int non_zero_value;
     uint32_t random_size, i = 0, j;
@@ -272,25 +266,25 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     uint32_t total_input_size = total_average_size * input_size[3];
 
     // Create input buffers.
-    auto input               = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
-    auto scale               = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
-    auto bias                = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
+    auto input               = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto scale               = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto bias                = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
 
     // Create output buffers.
-    auto output              = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2], input_size[3] }, true });
-    auto current_inv_std_dev = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
-    auto moving_average      = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
-    auto moving_inv_std_dev  = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
-    auto current_average     = memory_obselote::create({ engine::cpu, memory_obselote::format::yxfb_f32, { input_size[0], input_size[1], input_size[2],             1 }, true });
+    auto output              = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto moving_average      = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto moving_inv_std_dev  = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto current_average     = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto current_inv_std_dev = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
 
-    auto& input_memory = input.as<const memory_obselote&>();
-    auto& output_memory = output.as<const memory_obselote&>();
-    auto& current_average_memory = current_average.as<const memory_obselote&>();
+    auto& input_memory = input.as<const memory&>();
+    auto& output_memory = output.as<const memory&>();
+    auto& current_average_memory = current_average.as<const memory&>();
 
     // Initialize input buffers.
-    input.as<const memory_obselote&>().fill<float>(0);
-    scale.as<const memory_obselote&>().fill<float>(1);
-    bias.as<const memory_obselote&>().fill<float>(0);
+    input.as<const memory&>().fill<float>(0);
+    scale.as<const memory&>().fill<float>(1);
+    bias.as<const memory&>().fill<float>(0);
 
     // Put non zero value in random place in input
     std::uniform_int_distribution<uint32_t> dist_input(0, total_input_size - 1);
@@ -304,7 +298,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     for(i = 0; i < 3; ++i)
         execute({bn});
 
-    float mean = (float) 10 / input_size[3];
+    float mean = 10.0f / input_size[3];
 
     // Find non zero value in avarages
     if (input_size[2] == 1) {
@@ -324,7 +318,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     }
 
     float current_inv_std_dev_buffer = 0;
-    float inv_num_average_over = (float) (1.0 / input_size[3]);
+    float inv_num_average_over = 1.0f / input_size[3];
 
     for (i = 0; i < input_size[3] - 1; i++) {
         current_inv_std_dev_buffer += pow(current_average_memory.get_value<float>(non_zero_value), 2.0f) * inv_num_average_over;
