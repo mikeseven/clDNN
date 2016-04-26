@@ -169,10 +169,10 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     nd::value<uint32_t> bias_range (bias_arg.size);
     nd::value<uint32_t> range (bw_input_size); //todo in/out size?
     nd::value<uint32_t> window_range (filter_arg.size);
-    nd::calculate_idx_obsolete<uint32_t> calc_bias_idx(bias_arg.size);
-    nd::calculate_idx_obsolete<uint32_t> calc_in_idx  (bw_input_arg.size);
-    nd::calculate_idx_obsolete<uint32_t> calc_out_idx (bw_output_arg.size);
-    nd::calculate_idx_obsolete<uint32_t> calc_win_idx (filter_arg.size);
+    nd::calculate_idx_obselote<uint32_t> calc_bias_idx(bias_arg.size);
+    nd::calculate_idx_obselote<uint32_t> calc_in_idx  (bw_input_arg.size);
+    nd::calculate_idx_obselote<uint32_t> calc_out_idx (bw_output_arg.size);
+    nd::calculate_idx_obselote<uint32_t> calc_win_idx (filter_arg.size);
 
     switch(padding){
         case padding::zero:

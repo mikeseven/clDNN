@@ -85,10 +85,10 @@ convolution_backward::arguments::arguments( neural::engine::type   eng,
                                             neural::padding::type  padd)
     : engine(eng)
     , output({out})
-    , output_offset(out[0].as<const memory_obsolete&>().argument.size.size())
-    , input_size(in[0].as<const memory_obsolete&>().argument.size)
+    , output_offset(out[0].as<const memory_obselote&>().argument.size.size())
+    , input_size(in[0].as<const memory_obselote&>().argument.size)
     , input(in.cbegin(), in.cend())
-    , input_offset(in[0].as<const memory_obsolete&>().argument.size.size())
+    , input_offset(in[0].as<const memory_obselote&>().argument.size.size())
     , stride(strd)
     , padding(padd) {};
 

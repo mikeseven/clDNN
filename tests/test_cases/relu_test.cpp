@@ -20,7 +20,7 @@
 #include "api/neural.h"
 
 namespace{
-    auto calc_idx_obsolete = [](std::vector<uint32_t> yxzb_pos, std::vector<uint32_t>& buf_size) -> uint32_t{
+    auto calc_idx_obselote = [](std::vector<uint32_t> yxzb_pos, std::vector<uint32_t>& buf_size) -> uint32_t{
         return yxzb_pos[3]
              + yxzb_pos[2] * buf_size[3]
              + yxzb_pos[1] * buf_size[3] * buf_size[2]

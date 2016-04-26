@@ -69,9 +69,9 @@ namespace neural {
                 float acc = 0.f;
                 float sum_of_products = 0.f;
                 for (auto window_pos : window_range) {
-                    auto input_pos = pos - help_input_offset + window_pos;
-                    auto input_index = calc_in_idx(input_pos);
-                    acc = input[input_index];
+                  //  auto input_pos = pos - help_input_offset + window_pos;
+                  //  auto input_index = calc_in_idx(input_pos);
+                  //  acc = input[input_index];
                 };
             }
             /*

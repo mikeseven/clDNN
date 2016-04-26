@@ -84,8 +84,8 @@ public:
     value &operator*=(const std::vector<negT> &arg) { std::transform(arg.cbegin(), arg.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::multiplies<T>()); return *this; }
     value  operator+ (const std::vector<   T> &arg) { value result=*this; return result+=arg; }
     value  operator+ (const std::vector<negT> &arg) { value result=*this; return result+=arg; }
-    value  operator- (const std::vector<   T> &arg) { value result=*this; return result-=arg; }
-    value  operator- (const std::vector<negT> &arg) { value result=*this; return result-=arg; }
+    value  operator- (const std::vector<   T> &arg) { value result = *this; return result -= arg; }
+    value  operator- (const std::vector<negT> &arg) { value result = *this; return result -= arg; }
     value  operator* (const std::vector<   T> &arg) { value result=*this; return result*=arg; }
     value  operator* (const std::vector<negT> &arg) { value result=*this; return result*=arg; }
 
@@ -97,8 +97,8 @@ public:
     value &operator*=(const neural::vector<negT> &arg) { std::transform(arg.raw.cbegin(), arg.raw.cend(), std::vector<T>::begin(), std::vector<T>::begin(), std::multiplies<T>()); return *this; }
     value  operator+ (const neural::vector<   T> &arg) { value result=*this; return result+=arg.raw; }
     value  operator+ (const neural::vector<negT> &arg) { value result=*this; return result+=arg.raw; }
-    value  operator- (const neural::vector<   T> &arg) { value result=*this; return result-=arg.raw; }
-    value  operator- (const neural::vector<negT> &arg) { value result=*this; return result-=arg.raw; }
+    value  operator- (const neural::vector<   T> &arg) { value result = *this; return result -= arg.raw; }
+    value  operator- (const neural::vector<negT> &arg) { value result = *this; return result -= arg.raw; }
     value  operator* (const neural::vector<   T> &arg) { value result=*this; return result*=arg.raw; }
     value  operator* (const neural::vector<negT> &arg) { value result=*this; return result*=arg.raw; }
 
@@ -328,17 +328,17 @@ inline bool calculate_idx<T, neural::memory::format::xb_f32>::is_out_of_range( c
 
 /////////////////////////
 template<typename T>
-class calculate_idx_obsolete{
+class calculate_idx_obselote{
     using negT = typename change_signedness<T>::type;
 
     std::vector<T> size;
     std::vector<T> stride;
 public:
-    calculate_idx_obsolete( const std::vector<T>& v_size )
+    calculate_idx_obselote( const std::vector<T>& v_size )
     : size(v_size)
     , stride(v_size) {
 
-        static_assert(std::is_unsigned<T>::value, "calculate_idx_obsolete<T> constructor accepts only unsigned types");  //this template should be used only with unsigned types
+        static_assert(std::is_unsigned<T>::value, "calculate_idx_obselote<T> constructor accepts only unsigned types");  //this template should be used only with unsigned types
 
         stride.emplace_back(1); //this element is used in operator()
         for(size_t i = stride.size() - 1; i > 0; --i)
@@ -353,7 +353,7 @@ public:
 };
 
 template<typename T>
-inline size_t calculate_idx_obsolete<T>::operator()( const std::vector<T>& position ){
+inline size_t calculate_idx_obselote<T>::operator()( const std::vector<T>& position ){
     size_t result_idx = 0;
 
     assert(
@@ -365,7 +365,7 @@ inline size_t calculate_idx_obsolete<T>::operator()( const std::vector<T>& posit
         }() == true );
 
     // Number of iterations depends on length of position vector.
-    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory_obsolete layout.
+    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory_obselote layout.
     // If 'position' is shorter than 'size' than function returns offset to some block of data
     for(size_t i = 0; i != position.size(); ++i){
         auto idx = position.size() - 1 - i;
@@ -376,7 +376,7 @@ inline size_t calculate_idx_obsolete<T>::operator()( const std::vector<T>& posit
 }
 
 template<typename T>
-inline size_t calculate_idx_obsolete<T>::operator()( const std::vector<negT>& position ){
+inline size_t calculate_idx_obselote<T>::operator()( const std::vector<negT>& position ){
     size_t result_idx = 0;
 
     assert(
@@ -388,7 +388,7 @@ inline size_t calculate_idx_obsolete<T>::operator()( const std::vector<negT>& po
         }() == true );
 
     // Number of iterations depends on length of position vector.
-    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory_obsolete layout.
+    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory_obselote layout.
     // If 'position' is shorter than 'size' than function returns offset to some block of data
     for(size_t i = 0; i != position.size(); ++i){
         auto idx = position.size() - 1 - i;
@@ -399,7 +399,7 @@ inline size_t calculate_idx_obsolete<T>::operator()( const std::vector<negT>& po
 }
 
 template<typename T>
-inline bool calculate_idx_obsolete<T>::is_out_of_range( const std::vector<negT>& pos ){
+inline bool calculate_idx_obselote<T>::is_out_of_range( const std::vector<negT>& pos ){
     assert( pos.size() <= size.size() );
 
     for(uint32_t i = 0; i < pos.size(); ++i)
@@ -410,7 +410,7 @@ inline bool calculate_idx_obsolete<T>::is_out_of_range( const std::vector<negT>&
 }
 
 template<typename T>
-inline bool calculate_idx_obsolete<T>::is_out_of_range( const std::vector<T>& pos ){
+inline bool calculate_idx_obselote<T>::is_out_of_range( const std::vector<T>& pos ){
     assert( pos.size() <= size.size() );
 
     for(uint32_t i = 0; i < pos.size(); ++i)
