@@ -233,7 +233,6 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ(-7.25f, output_memory.get_value<float>(3));
 }
-/*
 
 TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
 //   Filter    : 2x2
@@ -321,7 +320,6 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
     results_equal &= 10.0f == biases_diff_mem.get_value<float>(0);
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }
-/*
 
 TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
 //  Filter    : 3x3
@@ -358,32 +356,31 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
 //
 //  Bias grad
 //  -3
-    using namespace neural;
-    auto bw_output    = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto bw_input     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {1, 1, 1, 1}, true});
-    auto fw_input     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto weights      = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto weights_diff = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto biases       = memory_obselote::create({engine::cpu, memory_obselote::format::x_f32,    {1}         , true});
-    auto biases_diff  = memory_obselote::create({engine::cpu, memory_obselote::format::x_f32,    {1}         , true});
+    auto bw_output    = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
+    auto bw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 1}, true});
+    auto fw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
+    auto weights      = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
+    auto weights_diff = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
+    auto biases       = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
+    auto biases_diff  = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
 
-    auto& bw_output_mem    = bw_output.as<const memory_obselote&>();
-    auto& bw_input_mem     = bw_input.as<const memory_obselote&>();
-    auto& fw_input_mem     = fw_input.as<const memory_obselote&>();
-    auto& weights_mem      = weights.as<const memory_obselote&>();
-    auto& weights_diff_mem = weights_diff.as<const memory_obselote&>();
-    auto& biases_mem       = biases.as<const memory_obselote&>();
-    auto& biases_diff_mem  = biases_diff.as<const memory_obselote&>();
+    auto& bw_output_mem    = bw_output.as<const memory&>();
+    auto& bw_input_mem     = bw_input.as<const memory&>();
+    auto& fw_input_mem     = fw_input.as<const memory&>();
+    auto& weights_mem      = weights.as<const memory&>();
+    auto& weights_diff_mem = weights_diff.as<const memory&>();
+    auto& biases_mem       = biases.as<const memory&>();
+    auto& biases_diff_mem  = biases_diff.as<const memory&>();
 
-    set_values_obsolete( fw_input, {-0.5f, 1.5f, 1.0f,-0.5f});
-    set_values_obsolete( bw_input, {2.0f});
-    set_values_obsolete( weights , {-2.0f, 3.5f, 1.0f, 0.5f, 1.5f, 2.0f, 1.0f, 2.0f, 3.0f});
-    set_values_obsolete( biases  , {-3.0f});
+    set_values( fw_input, {-0.5f, 1.5f, 1.0f,-0.5f});
+    set_values( bw_input, {2.0f});
+    set_values( weights , {-2.0f, 3.5f, 1.0f, 0.5f, 1.5f, 2.0f, 1.0f, 2.0f, 3.0f});
+    set_values( biases  , {-3.0f});
 
     auto conv_bw = convolution_backward::create({engine::reference,
                                                  std::vector<primitive>{bw_output, weights_diff, biases_diff},
                                                  {bw_input, fw_input, weights, biases},
-                                                 {1, 1, 1, 1},
+                                                 {1, {1, 1}, 1},
                                                  padding::zero});
     execute({conv_bw});
 
@@ -410,7 +407,6 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
     results_equal &= 2.0f == biases_diff_mem.get_value<float>(0);
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }
-/*
 
 TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
 //  Filter      : 3x3
@@ -454,21 +450,21 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
 //  Bias grad
 //  -3
     using namespace neural;
-    auto bw_output    = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {4, 4, 1, 1}, true});
-    auto bw_input     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto fw_input     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {4, 4, 1, 1}, true});
-    auto weights      = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto weights_diff = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto biases       = memory_obselote::create({engine::cpu, memory_obselote::format::x_f32,    {1}         , true});
-    auto biases_diff  = memory_obselote::create({engine::cpu, memory_obselote::format::x_f32,    {1}         , true});
+    auto bw_output    = memory::create({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}, true});
+    auto bw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
+    auto fw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}, true});
+    auto weights      = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
+    auto weights_diff = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
+    auto biases       = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
+    auto biases_diff  = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
 
-    auto& bw_output_mem    = bw_output.as<const memory_obselote&>();
-    auto& bw_input_mem     = bw_input.as<const memory_obselote&>();
-    auto& fw_input_mem     = fw_input.as<const memory_obselote&>();
-    auto& weights_mem      = weights.as<const memory_obselote&>();
-    auto& weights_diff_mem = weights_diff.as<const memory_obselote&>();
-    auto& biases_mem       = biases.as<const memory_obselote&>();
-    auto& biases_diff_mem  = biases_diff.as<const memory_obselote&>();
+    auto& bw_output_mem    = bw_output.as<const memory&>();
+    auto& bw_input_mem     = bw_input.as<const memory&>();
+    auto& fw_input_mem     = fw_input.as<const memory&>();
+    auto& weights_mem      = weights.as<const memory&>();
+    auto& weights_diff_mem = weights_diff.as<const memory&>();
+    auto& biases_mem       = biases.as<const memory&>();
+    auto& biases_diff_mem  = biases_diff.as<const memory&>();
 
     fw_input_mem.fill(1.0f);
     static_cast<float*>(fw_input_mem.pointer)[10] = -0.5f;
@@ -489,11 +485,11 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
 
     auto conv_bw = convolution_backward::create({engine::reference,
                                                  std::vector<primitive>{bw_output, weights_diff, biases_diff},
-                                                 {1, 1, 0, 0},
-                                                 {1, 1, 1, 1},
+                                                 {0, {1, 1}, 0},
+                                                 {1, {1, 1}, 1},
                                                  {bw_input, fw_input, weights, biases},
-                                                 {1, 1, 0, 0},
-                                                 {1, 1, 1, 1},
+                                                 {0, {1, 1}, 0},
+                                                 {1, {1, 1}, 1},
                                                  padding::zero});
     execute({conv_bw});
 
@@ -532,4 +528,3 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
     results_equal &= 2.0f == biases_diff_mem.get_value<float>(0);
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }
-*/

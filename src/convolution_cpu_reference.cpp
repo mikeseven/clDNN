@@ -145,9 +145,9 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     if(bw_input_arg.format        != fw_input_arg.format)             throw std::runtime_error("Backward convolution bw_input/fw_output data format does not match.");
     if(bias_arg.size.raw.size()   != 3 &&
        bias_arg.size.batch[0]     != 1 &&
-       bias_arg.size.spatial[0]   != 1)                               throw std::runtime_error("Backward convolution biases isn't 1D vector.");
+       bias_arg.size.feature[0]   != 1)                               throw std::runtime_error("Backward convolution biases isn't 1D vector.");
     if(bias_arg.size.raw.size()   != bias_diff_arg.size.raw.size())   throw std::runtime_error("Backward convolution bias/bias_diff number dimensions doesn't match.");
-    if(bias_arg.size.feature[0]   != bw_input_arg.size.feature[0])    throw std::runtime_error("Backward convolution biases/bw_input feature maps number does not match.");
+    if(bias_arg.size.spatial[0]   != bw_input_arg.size.feature[0])    throw std::runtime_error("Backward convolution biases/bw_input dimensions does not match.");
     if(bias_arg.size              != bias_diff_arg.size)              throw std::runtime_error("Backward convolution bias/bias_diff size doesn't match.");
 
     //auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer);
@@ -194,43 +194,43 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     this_bw_conv->argument.output[1].as<const memory&>().fill(0.0f);
     this_bw_conv->argument.output[2].as<const memory&>().fill(0.0f);
 
-    int f_pos = 2;
+    int f_pos = 1;
     namespace nd = ndimensional;
     nd::value<uint32_t> bias_range (bias_arg.size);
     nd::value<uint32_t> range (bw_input_size); //todo in/out size?
     nd::value<uint32_t> window_range (filter_arg.size);
-    //nd::calculate_idx<uint32_t, memory::format::   x_f32> calc_bias_idx(bias_arg.size);
-    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (bw_input_arg.size);
-    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (bw_output_arg.size);
-    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_win_idx (filter_arg.size);
+    nd::calculate_idx<uint32_t, memory::format::   x_f32> calc_bias_idx(bias_arg.size);
+    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (bw_input_arg.size);
+    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (bw_output_arg.size);
+    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_win_idx (filter_arg.size);
 
-    //switch(padding){
-    //    case padding::zero:
-    //    {
-    //        for(auto pos : range) {
-    //            auto in_idx = calc_in_idx(pos + bw_input_offset);
+    switch(padding){
+        case padding::zero:
+        {
+            for(auto pos : range) {
+                auto in_idx = calc_in_idx(pos + bw_input_offset);
 
-    //            for(auto win_pos : window_range){
-    //                const std::vector<uint32_t> arg_out_idx = nd::value<uint32_t>(bw_output_offset) + pos*stride + win_pos;
+                for(auto win_pos : window_range){
+                    const std::vector<uint32_t> arg_out_idx = nd::value<uint32_t>(bw_output_offset) + pos*stride + win_pos;
 
-    //                if( calc_out_idx.is_out_of_range(arg_out_idx) )
-    //                    continue;
+                    if( calc_out_idx.is_out_of_range(arg_out_idx) )
+                        continue;
 
-    //                auto out_idx = calc_out_idx(arg_out_idx);
-    //                auto win_idx = calc_win_idx(win_pos);
+                    auto out_idx = calc_out_idx(arg_out_idx);
+                    auto win_idx = calc_win_idx(win_pos);
 
-    //                auto sensitivity = bw_input[in_idx] * weights[win_idx];
+                    auto sensitivity = bw_input[in_idx] * weights[win_idx];
 
-    //                bw_output[out_idx] += sensitivity;
-    //                weights_diff[win_idx] += fw_input[out_idx] * sensitivity;
-    //            }
-    //            bias_diff[ pos[f_pos] ] += bw_input[in_idx];
-    //        }
-    //        break;
-    //    }
-    //    default:
-    //        throw std::runtime_error("Unknown padding mode in backward convolution.");
-    //}
+                    bw_output[out_idx] += sensitivity;
+                    weights_diff[win_idx] += fw_input[out_idx] * sensitivity;
+                }
+                bias_diff[ pos[f_pos] ] += bw_input[in_idx];
+            }
+            break;
+        }
+        default:
+            throw std::runtime_error("Unknown padding mode in backward convolution.");
+    }
 }
 
 namespace{

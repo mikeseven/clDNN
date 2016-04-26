@@ -61,16 +61,16 @@ convolution::arguments::arguments( neural::engine::type     eng,
     , bias(biases)
     , padding(padd) {};
 
-convolution_backward::arguments::arguments( neural::engine::type   eng,
-                                            std::vector<primitive> out,
-                                            neural::vector<uint32_t>  out_off,
-                                            neural::vector<uint32_t>  in_siz,
-                                            std::vector<primitive> in,
-                                            neural::vector<int32_t>   in_off,
-                                            neural::vector<uint32_t>  strd,
-                                            neural::padding::type  padd)
+convolution_backward::arguments::arguments( neural::engine::type     eng,
+                                            std::vector<primitive>   out,
+                                            neural::vector<uint32_t> out_off,
+                                            neural::vector<uint32_t> in_siz,
+                                            std::vector<primitive>   in,
+                                            neural::vector<int32_t>  in_off,
+                                            neural::vector<uint32_t> strd,
+                                            neural::padding::type    padd)
     : engine(eng)
-    , output({out})
+    , output(out)
     , output_offset(out_off)
     , input_size(in_siz)
     , input(in.cbegin(), in.cend())
@@ -84,7 +84,7 @@ convolution_backward::arguments::arguments( neural::engine::type     eng,
                                             neural::vector<uint32_t> strd,
                                             neural::padding::type    padd)
     : engine(eng)
-    , output({out})
+    , output(out)
     , output_offset(out[0].as<const memory&>().argument.size.batch.size(), out[0].as<const memory&>().argument.size.spatial.size(), out[0].as<const memory&>().argument.size.feature.size())
     , input_size(in[0].as<const memory&>().argument.size)
     , input(in.cbegin(), in.cend())
@@ -122,7 +122,7 @@ primitive convolution_backward::create(convolution_backward::arguments arg) {
         //todo tmp solution
     auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
     auto& outfmt= result->argument.output[0].as<const memory&>().argument.format;
-    conv_fw_key key = std::make_tuple(arg.engine, infmt, outfmt);
+    conv_bw_key key = std::make_tuple(arg.engine, infmt, outfmt);
 //    conv_bw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = conv_bw_implementation_map.find(key);
     if(it==std::end(conv_bw_implementation_map)) throw std::runtime_error("Not yet implemented.");
