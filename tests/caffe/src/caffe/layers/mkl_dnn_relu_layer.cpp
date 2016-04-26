@@ -30,13 +30,13 @@ void MKL_DNNReLULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   vector<unsigned> sizes;
   for (auto d : bottom[0]->shape())
       sizes.push_back(d);
-  
+
   // TODO: change format?
   bottom_data_  = memory::create({engine::cpu, memory::format::yxfb_f32, sizes});
   top_data_     = memory::create({engine::cpu, memory::format::yxfb_f32, sizes});
   bottom_diff_  = memory::create({engine::cpu, memory::format::yxfb_f32, sizes});
   top_diff_     = memory::create({engine::cpu, memory::format::yxfb_f32, sizes});
-    
+
   reluFwd_ = relu::create({engine::reference, top_data_, bottom_data_, negative_slope});
   reluBwd_ = relu_backward::create({engine::reference, {bottom_diff_}, {top_diff_, bottom_data_}, negative_slope});
 }
@@ -49,8 +49,7 @@ void MKL_DNNReLULayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
   if (bottom_data) {
     top_data = top[0]->mutable_prv_data();
-  }
-  else {
+  } else {
     DLOG(INFO) << "Using cpu_data in MKL_DNNReLULayer.";
     bottom_data = (void*)bottom[0]->cpu_data();
     top_data = top[0]->mutable_cpu_data();
@@ -66,15 +65,11 @@ void MKL_DNNReLULayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 
   if (propagate_down[0]) {
     void* top_diff = (void*)top[0]->prv_diff();
-    void* bottom_data = NULL;
+    void* bottom_data = (void*)bottom[0]->prv_data();
     void* bottom_diff = NULL;
 
-    if (top_diff && bottom[0]->prv_data()) {
-      bottom_data = (void*)bottom[0]->prv_data();
+    if (top_diff && bottom_data) {
       bottom_diff = (void*)bottom[0]->mutable_prv_diff();
-
-      if (NULL == bottom_data)
-        LOG(FATAL) << "bottom_data is NULL";
     } else {
       DLOG(INFO) << "Using cpu_data in MKL_DNNReLULayer.";
       top_diff = (void*)top[0]->cpu_diff();
