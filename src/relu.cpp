@@ -35,14 +35,14 @@ struct relu_reference : is_an_implementation {
     static void implementation(const void *ptr) {
         auto this_relu = static_cast<const relu *>(ptr);
 
-        auto input_offset  = this_relu->argument.input_offset;
-        auto output_offset = this_relu->argument.output_offset;
-        auto output_size   = this_relu->argument.output_size;
+        auto& input_offset  = this_relu->argument.input_offset;
+        auto& output_offset = this_relu->argument.output_offset;
+        auto& output_size   = this_relu->argument.output_size;
 
-        //auto input_arg  = this_relu->input_memory(0).argument;
-        //auto output_arg = this_relu->output_memory(0).argument;
-        auto input_arg  = this_relu->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-        auto output_arg = this_relu->argument.output[0].as<const memory&>().argument;
+        //auto& input_arg  = this_relu->input_memory(0).argument;
+        //auto& output_arg = this_relu->output_memory(0).argument;
+        auto& input_arg  = this_relu->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+        auto& output_arg = this_relu->argument.output[0].as<const memory&>().argument;
 
         if(input_arg.format          != memory::format::yxfb_f32)   throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
         if(input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
