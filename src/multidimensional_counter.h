@@ -205,17 +205,17 @@ class calculate_idx<T, neural::memory::format::yxfb_f32> : public calculate_idx_
 public:
     calculate_idx( const neural::vector<T>& v_size ) : calculate_idx( v_size.raw ) {};
     calculate_idx( const std::vector<T>& v_size )
-    : calculate_idx_interface(v_size) {
+    : calculate_idx_interface<T>(v_size) {
 
         assert( 4 == v_size.size() );
         assert( 0 != std::accumulate(v_size.cbegin(), v_size.cend(), 1, std::multiplies<T>()));
 
         // strides for yxfb format
         // vectors v_size and stride use format: b, f, spatials(y,x...)
-        stride[0] = 1;
-        stride[1] = v_size[0];
-        stride[2] = v_size[0] * v_size[1] * v_size[3];
-        stride[3] = v_size[0] * v_size[1];
+        this->stride[0] = 1;
+        this->stride[1] = v_size[0];
+        this->stride[2] = v_size[0] * v_size[1] * v_size[3];
+        this->stride[3] = v_size[0] * v_size[1];
     };
 };
 template<typename T>
@@ -223,7 +223,7 @@ class calculate_idx<T, neural::memory::format::xb_f32> : public calculate_idx_in
 public:
     calculate_idx( const neural::vector<T>& v_size ) : calculate_idx( v_size.raw ) {};
     calculate_idx( const std::vector<T>& v_size )
-    : calculate_idx_interface(v_size) {
+    : calculate_idx_interface<T>(v_size) {
 
         assert( 3 == v_size.size() ); // b, f=1, spatial(x)
         assert( 1 == v_size[1] );     // 1 feature map, just for compatibility
@@ -231,8 +231,8 @@ public:
 
         // strides for xb format
         // vectors v_size and stride use format: b, f, spatial(x)
-        stride[0] = 1;
-        stride[2] = v_size[0];
+        this->stride[0] = 1;
+        this->stride[2] = v_size[0];
     };
 };
 template<typename T>
@@ -240,7 +240,7 @@ class calculate_idx<T, neural::memory::format::x_f32> : public calculate_idx_int
 public:
     calculate_idx( const neural::vector<T>& v_size ) : calculate_idx( v_size.raw ) {};
     calculate_idx( const std::vector<T>& v_size )
-    : calculate_idx_interface(v_size) {
+    : calculate_idx_interface<T>(v_size) {
 
         assert( 3 == v_size.size() ); // b, f=1, spatial(x)
         assert( 1 == v_size[0] );
@@ -249,7 +249,7 @@ public:
 
         // strides for xb format
         // vectors v_size and stride use format: b, f, spatial(x)
-        stride[2] = 1;
+        this->stride[2] = 1;
     };
 };
 
