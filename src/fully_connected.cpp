@@ -61,12 +61,6 @@ struct fully_connected_reference : is_an_implementation {
         assert( 1 == input_buffer_size.feature[0]    );
 
         // up-casts data format form 1D to 2D if necessary; DOES not copy memory, just redescribes 1D input buffer as 2D (x+batch) with batch=1
-        //auto& mem_arg_in = this_fc->argument.input[0].primitive.as<const memory&>();
-        //if(mem_arg_in.size.size()==1) {
-        //    mem_arg_in.size.emplace_back(1);
-        //    mem_arg_in.format = memory::format::xb_f32;
-        //}
-        //mem_arg_in.owns_memory = false;
 
         auto mem_arg_in = this_fc->argument.input[0].primitive.as<const memory&>().argument;
         mem_arg_in.format = memory::format::xb_f32;
@@ -74,14 +68,6 @@ struct fully_connected_reference : is_an_implementation {
         auto in_wrapper = memory::create(mem_arg_in);
         in_wrapper(input);
 
-        //auto mem_arg_out = this_fc->output_memory(0).argument;
-        //if (mem_arg_out.size.size() == 1) {
-        //    mem_arg_out.size.emplace_back(1);
-        //    mem_arg_out.format = memory::format::xb_f32;
-        //}
-        //mem_arg_out.owns_memory = false;
-        //auto out_wrapper = memory::create(mem_arg_out);
-        //out_wrapper(output);
         auto mem_arg_out = this_fc->argument.output[0].as<const memory&>().argument;
         mem_arg_out.format = memory::format::xb_f32;
         mem_arg_out.owns_memory = false;
@@ -91,21 +77,14 @@ struct fully_connected_reference : is_an_implementation {
 
         namespace nd = ndimensional;
 
-        //if (weight_memory_arg == memory::format::x_f32) {
-        //    range_output = nd::value<uint32_t> (output_buffer_size); //there is no batch, so nothing has to be removed
-        //}
-        //else if (weight_memory_arg == memory::format::xb_f32) {
-        //    range_output = nd::value<uint32_t>({ begin(output_buffer_size), end(output_buffer_size) - 1 }); //in every iteration whole batch is computed at once, so it has to be removed from the range
-        //}
-
         //this_fc->output_memory(0).fill(0.0f);
         this_fc->argument.output[0].as<const memory&>().fill(0.0f);
 
         int data_index = 2;
         int batch_index = 0;
-        //nd::value<uint32_t> range_output({{output_buffer_size.spatial[0]}}); //in every iteration whole batch is computed at once, so it has to be removed from the range
-        nd::value<uint32_t> range_output(output_buffer_size); //in every iteration whole batch is computed at once, so it has to be removed from the range
-        range_output[batch_index] = 1;
+
+        nd::value<uint32_t> range_output(output_buffer_size);
+        range_output[batch_index] = 1; //in every iteration whole batch is computed at once, so it has to be removed from the range
         nd::value<uint32_t> range_input(input_buffer_size);
         nd::value<uint32_t> range_weight(weight_buffer_size);
         nd::calculate_idx<uint32_t, memory::format::xb_f32> calc_in_idx(input_buffer_size);
