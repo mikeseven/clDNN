@@ -16,12 +16,13 @@
 
 #include "api/neural.h"
 #include <iostream>
+#include "tests/test_utils/test_utils.h"
 
 int main()
 {
-    extern void example_convolution_forward();
+    extern void example_softmax_forward();
     try{
-        example_convolution_forward();
+        example_softmax_forward();
     } catch (std::exception &e) {
         std::cerr << e.what();
     } catch(...) {
