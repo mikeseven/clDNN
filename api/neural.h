@@ -289,15 +289,14 @@ private:
     memory_obselote(arguments arg) : is_a_primitive(type_id<const memory_obselote>()), argument(arg), pointer(0) {};
 };
 // file that is loaded and becomes a data
-//todo remove std::vectors and memory_obselote
 struct file : is_a_primitive {
     struct arguments {
         neural::engine::type    engine;
         std::string             name;
         std::vector<primitive>  output;
 
-        DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory_obselote::format::type aformat, std::vector<uint32_t> &asize);
-        DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory_obselote::format::type aformat);
+        DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize);
+        DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat);
         DLL_SYM arguments(neural::engine::type aengine, std::string aname, primitive aoutput);
         DLL_SYM arguments(neural::engine::type aengine, std::string aname);
     };
