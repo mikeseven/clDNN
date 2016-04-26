@@ -104,6 +104,88 @@ std::ostream &operator<<(std::ostream &out, value<U> &val) {
     return out;
 }
 
+////////////////////////////////////////////////////////////////
+template<typename T>
+class calculate_idx_interface{
+    using negT = typename change_signedness<T>::type;
+
+    std::vector<T> size;
+    std::vector<T> stride;
+
+public:
+    calculate_idx_interface( const std::vector<T>& v_size ) : size(v_size), stride(v_size.size()) {};
+    virtual ~calculate_idx_interface() = 0;
+
+    size_t operator() ( const std::vector<   T>& pos );
+    size_t operator() ( const std::vector<negT>& pos );
+    size_t operator() ( const neural::vector<   T>& pos );
+    size_t operator() ( const neural::vector<negT>& pos );
+
+    bool is_out_of_range( const std::vector<   T>& pos );
+    bool is_out_of_range( const std::vector<negT>& pos );
+    bool is_out_of_range( const neural::vector<   T>& pos );
+    bool is_out_of_range( const neural::vector<negT>& pos );
+};
+template<typename T>
+inline size_t calculate_idx_interface<T>::operator()( const std::vector<T>& position ){
+    size_t result_idx = 0;
+
+    assert(
+        [&]() -> bool {
+        for(size_t i = 0; i < position.size(); ++i)
+            if(size[i] <= position[i]) return false;
+
+          return true;
+        }() == true );
+    assert(position.size() == size.size());
+
+    for(size_t i = 0; i != position.size(); ++i){
+        result_idx += stride[i] * position[i];
+    };
+
+    return result_idx;
+}
+template<typename T>
+inline size_t calculate_idx_interface<T>::operator()( const std::vector<negT>& position ){
+    size_t result_idx = 0;
+
+    assert(
+        [&]() -> bool {
+        for(size_t i = 0; i < position.size(); ++i)
+            if(size[i] <= static_cast<T>(position[i])) return false;
+
+          return true;
+        }() == true );
+    assert(position.size() == size.size());
+
+    for(size_t i = 0; i != position.size(); ++i){
+        result_idx += stride[i] * position[i];
+    };
+
+    return result_idx;
+}
+template<typename T>
+inline bool calculate_idx_interface<T>::is_out_of_range( const std::vector<negT>& pos ){
+    assert( pos.size() == size.size() );
+
+    for(uint32_t i = 0; i < pos.size(); ++i)
+        if(static_cast<T>(pos[i]) >= size[i])
+            return true;
+
+    return false;
+}
+template<typename T>
+inline bool calculate_idx_interface<T>::is_out_of_range( const std::vector<T>& pos ){
+    assert( pos.size() == size.size() );
+
+    for(uint32_t i = 0; i < pos.size(); ++i)
+        if(pos[i] >= size[i])
+            return true;
+
+    return false;
+}
+
+
 // todo tmp solution, should we just pass pointer to stride table? It can be done in runtime
 template<typename T, neural::memory::format::type FORMAT>
 class calculate_idx{
