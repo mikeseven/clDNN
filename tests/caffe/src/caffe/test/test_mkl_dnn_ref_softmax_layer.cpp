@@ -45,7 +45,7 @@ TYPED_TEST_CASE(MKL_DNNSoftmaxLayerTest, ::testing::Types<CPUDevice<float> >);
 TYPED_TEST(MKL_DNNSoftmaxLayerTest, TestForward) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
-  MKL_DNNSoftmaxLayer<Dtype> layer(layer_param);
+  MKL_DNNSoftmaxLayer<Dtype> layer(layer_param, neural::engine::reference);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Test sum
@@ -80,7 +80,7 @@ TYPED_TEST(MKL_DNNSoftmaxLayerTest, TestForward) {
 TYPED_TEST(MKL_DNNSoftmaxLayerTest, TestGradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
-  MKL_DNNSoftmaxLayer<Dtype> layer(layer_param);
+  MKL_DNNSoftmaxLayer<Dtype> layer(layer_param, neural::engine::reference);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);

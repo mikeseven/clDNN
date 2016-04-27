@@ -72,7 +72,7 @@ class MKL_DNNPoolingLayerTest : public MultiDeviceTest<TypeParam> {
       blob_bottom_->mutable_cpu_data()[i + 13] = 2;
       blob_bottom_->mutable_cpu_data()[i + 14] = 3;
     }
-    MKL_DNNPoolingLayer<Dtype> layer(layer_param);
+    MKL_DNNPoolingLayer<Dtype> layer(layer_param, neural::engine::reference);
     layer.SetUp(blob_bottom_vec_, blob_top_vec_);
     EXPECT_EQ(blob_top_->num(), num);
     EXPECT_EQ(blob_top_->channels(), channels);
@@ -170,7 +170,7 @@ class MKL_DNNPoolingLayerTest : public MultiDeviceTest<TypeParam> {
       blob_bottom_->mutable_cpu_data()[i + 34] = 18;
       blob_bottom_->mutable_cpu_data()[i + 35] = 11;
     }
-    MKL_DNNPoolingLayer<Dtype> layer(layer_param);
+    MKL_DNNPoolingLayer<Dtype> layer(layer_param, neural::engine::reference);
     layer.SetUp(blob_bottom_vec_, blob_top_vec_);
     EXPECT_EQ(blob_top_->num(), num);
     EXPECT_EQ(blob_top_->channels(), channels);
@@ -295,7 +295,7 @@ class MKL_DNNPoolingLayerTest : public MultiDeviceTest<TypeParam> {
       blob_bottom_->mutable_cpu_data()[i + 34] = 18;
       blob_bottom_->mutable_cpu_data()[i + 35] = 11;
     }
-    MKL_DNNPoolingLayer<Dtype> layer(layer_param);
+    MKL_DNNPoolingLayer<Dtype> layer(layer_param, neural::engine::reference);
     layer.SetUp(blob_bottom_vec_, blob_top_vec_);
     EXPECT_EQ(blob_top_->num(), num);
     EXPECT_EQ(blob_top_->channels(), channels);
@@ -376,7 +376,7 @@ TYPED_TEST(MKL_DNNPoolingLayerTest, TestSetup) {
   PoolingParameter* pooling_param = layer_param.mutable_pooling_param();
   pooling_param->set_kernel_size(3);
   pooling_param->set_stride(2);
-  MKL_DNNPoolingLayer<Dtype> layer(layer_param);
+  MKL_DNNPoolingLayer<Dtype> layer(layer_param, neural::engine::reference);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_->num(), this->blob_bottom_->num());
   EXPECT_EQ(this->blob_top_->channels(), this->blob_bottom_->channels());
@@ -392,7 +392,7 @@ TYPED_TEST(MKL_DNNPoolingLayerTest, TestSetupPadded) {
   pooling_param->set_stride(2);
   pooling_param->set_pad(1);
   pooling_param->set_pool(PoolingParameter_PoolMethod_AVE);
-  MKL_DNNPoolingLayer<Dtype> layer(layer_param);
+  MKL_DNNPoolingLayer<Dtype> layer(layer_param, neural::engine::reference);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_->num(), this->blob_bottom_->num());
   EXPECT_EQ(this->blob_top_->channels(), this->blob_bottom_->channels());
@@ -406,7 +406,7 @@ TYPED_TEST(MKL_DNNPoolingLayerTest, TestSetupGlobalPooling) {
   PoolingParameter* pooling_param = layer_param.mutable_pooling_param();
   pooling_param->set_global_pooling(true);
   pooling_param->set_pool(PoolingParameter_PoolMethod_AVE);
-  MKL_DNNPoolingLayer<Dtype> layer(layer_param);
+  MKL_DNNPoolingLayer<Dtype> layer(layer_param, neural::engine::reference);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_->num(), this->blob_bottom_->num());
   EXPECT_EQ(this->blob_top_->channels(), this->blob_bottom_->channels());
@@ -420,7 +420,7 @@ TYPED_TEST(MKL_DNNPoolingLayerTest, PrintBackward) {
   layer_param.set_kernelsize(3);
   layer_param.set_stride(2);
   layer_param.set_pool(LayerParameter_PoolMethod_MAX);
-  PoolingLayer<TypeParam> layer(layer_param);
+  PoolingLayer<TypeParam> layer(layer_param, neural::engine::reference);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   for (int i = 0; i < this->blob_bottom_->count(); ++i) {
@@ -466,7 +466,7 @@ TYPED_TEST(MKL_DNNPoolingLayerTest, TestGradientMax) {
       pooling_param->set_stride(2);
       pooling_param->set_pad(1);
       pooling_param->set_pool(PoolingParameter_PoolMethod_MAX);
-      MKL_DNNPoolingLayer<Dtype> layer(layer_param);
+      MKL_DNNPoolingLayer<Dtype> layer(layer_param, neural::engine::reference);
       GradientChecker<Dtype> checker(1e-4, 1e-2);
       checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
           this->blob_top_vec_);
@@ -496,7 +496,7 @@ TYPED_TEST(MKL_DNNPoolingLayerTest, TestForwardMaxPadded) {
   this->blob_bottom_->mutable_cpu_data()[6] = 4;
   this->blob_bottom_->mutable_cpu_data()[7] = 2;
   this->blob_bottom_->mutable_cpu_data()[8] = 1;
-  MKL_DNNPoolingLayer<Dtype> layer(layer_param);
+  MKL_DNNPoolingLayer<Dtype> layer(layer_param, neural::engine::reference);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_->num(), 1);
   EXPECT_EQ(this->blob_top_->channels(), 1);
@@ -532,7 +532,7 @@ TYPED_TEST(MKL_DNNPoolingLayerTest, TestGradientMaxTopMask) {
       pooling_param->set_pool(PoolingParameter_PoolMethod_MAX);
       this->blob_top_vec_.push_back(reinterpret_cast<Blob<Dtype>* >
               (this->blob_top_mask_));
-      MKL_DNNPoolingLayer<Dtype> layer(layer_param);
+      MKL_DNNPoolingLayer<Dtype> layer(layer_param, neural::engine::reference);
       GradientChecker<Dtype> checker(1e-4, 1e-2);
       checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
           this->blob_top_vec_);
@@ -556,7 +556,7 @@ TYPED_TEST(MKL_DNNPoolingLayerTest, TestForwardAve) {
   filler_param.set_value(Dtype(2));
   ConstantFiller<Dtype> filler(filler_param);
   filler.Fill(this->blob_bottom_);
-  MKL_DNNPoolingLayer<Dtype> layer(layer_param);
+  MKL_DNNPoolingLayer<Dtype> layer(layer_param, neural::engine::reference);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_->num(), 1);
   EXPECT_EQ(this->blob_top_->channels(), 1);
@@ -585,7 +585,7 @@ TYPED_TEST(MKL_DNNPoolingLayerTest, TestGradientAve) {
       pooling_param->set_kernel_w(kernel_w);
       pooling_param->set_stride(2);
       pooling_param->set_pool(PoolingParameter_PoolMethod_AVE);
-      MKL_DNNPoolingLayer<Dtype> layer(layer_param);
+      MKL_DNNPoolingLayer<Dtype> layer(layer_param, neural::engine::reference);
       GradientChecker<Dtype> checker(1e-2, 1e-2);
       checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
           this->blob_top_vec_);
@@ -604,7 +604,7 @@ TYPED_TEST(MKL_DNNPoolingLayerTest, TestGradientAvePadded) {
       pooling_param->set_stride(2);
       pooling_param->set_pad(2);
       pooling_param->set_pool(PoolingParameter_PoolMethod_AVE);
-      MKL_DNNPoolingLayer<Dtype> layer(layer_param);
+      MKL_DNNPoolingLayer<Dtype> layer(layer_param, neural::engine::reference);
       GradientChecker<Dtype> checker(1e-2, 1e-2);
       checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
           this->blob_top_vec_);

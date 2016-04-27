@@ -126,8 +126,9 @@ private:
 template <typename Dtype>
 class MKL_DNNLRNLayer : public Layer<Dtype> {
  public:
-  explicit MKL_DNNLRNLayer(const LayerParameter& param)
-      : Layer<Dtype>(param), layout_usr_(NULL) {}
+  explicit MKL_DNNLRNLayer(const LayerParameter& param,
+        neural::engine::type engine = neural::engine::reference)
+      : Layer<Dtype>(param), layout_usr_(NULL), engine_(engine) {}
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
@@ -171,6 +172,7 @@ class MKL_DNNLRNLayer : public Layer<Dtype> {
   // Fields used for normalization ACROSS_CHANNELS
   // scale_ stores the intermediate summing results
 private:
+  neural::engine::type engine_;
   primitive lrnFwd, lrnBwd;
   shared_ptr<MKL_DNNData<Dtype> > fwd_top_data;
   shared_ptr<MKL_DNNDiff<Dtype> > bwd_bottom_diff;
@@ -182,8 +184,9 @@ private:
 template <typename Dtype>
 class MKL_DNNPoolingLayer : public Layer<Dtype> {
 public:
-  explicit MKL_DNNPoolingLayer(const LayerParameter& param)
-    : Layer<Dtype>(param),
+  explicit MKL_DNNPoolingLayer(const LayerParameter& param,
+          neural::engine::type engine = neural::engine::reference)
+    : Layer<Dtype>(param), engine_(engine)
       fwd_top_data    (new MKL_DNNData<Dtype>()),
       fwd_bottom_data (new MKL_DNNData<Dtype>()),
       bwd_top_diff    (new MKL_DNNDiff<Dtype>()),
@@ -228,6 +231,7 @@ protected:
   Blob<Dtype> rand_idx_;
   Blob<size_t> max_idx_;
 private:
+  neural::engine::type engine_;
   size_t kernel_size[2],
          kernel_stride[4];
   int src_offset[2];
