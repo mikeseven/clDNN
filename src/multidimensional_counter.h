@@ -257,23 +257,6 @@ public:
 template<neural::memory::format::type FORMAT>
 size_t index(std::vector<uint32_t> size, std::vector<uint32_t> pos);
 
-template<> DLL_SYM
-size_t index<neural::memory::format::yxfb_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos);
-
-//template<neural::memory::format::type FORMAT>
-//size_t index(std::vector<uint32_t> size, std::vector<int32_t> pos){
-//    assert(
-//    [&]() -> bool {
-//    for(size_t i = 0; i < pos.size(); ++i)
-//        if(pos[i] < 0) return false;
-//
-//    return true;
-//    }() == true );
-//
-//    return index<FORMAT>(size, std::vector<uint32_t>{pos.begin(), pos.end()});
-//};
-
-// todo pos vector int or uint?
 // todo rename or remove fptr
 typedef size_t (*fptr)(std::vector<uint32_t> size, std::vector<uint32_t> pos);
 DLL_SYM fptr choose_calucalte_idx(neural::memory::format::type arg);
