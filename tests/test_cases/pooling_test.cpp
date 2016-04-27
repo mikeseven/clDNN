@@ -308,6 +308,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_inoffs1) {
     EXPECT_EQ(0.0f, output_memory.get_value<float>( 9)); EXPECT_EQ(1.0f, output_memory.get_value<float>(11));
     EXPECT_EQ(1.0f, output_memory.get_value<float>(13)); EXPECT_EQ(0.0f, output_memory.get_value<float>(15));
 }
+
+//todo remove?
 /*
 TEST(pooling_forward, advanced_max_yxfb) {
 //  Brief test description.
