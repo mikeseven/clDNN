@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <vector>
+#include <iostream>
 
 #include "caffe/layers/softmax_layer.hpp"
 #include "caffe/util/math_functions.hpp"
@@ -19,15 +20,28 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   Dtype negative_slope = this->layer_param_.relu_param().negative_slope();
 
-  auto s = bottom[0]->shape();
-  // TODO: change format?
-  bottom_data_  = memory::create({engine::cpu, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
-  top_data_     = memory::create({engine::cpu, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
-  bottom_diff_  = memory::create({engine::cpu, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
-  top_diff_     = memory::create({engine::cpu, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
+  auto batch =  bottom[0]->shape(0);
+  auto input_x = bottom[0]->shape(1);
+  auto z = 1;
 
-  //softmaxFwd_ = softmax::create({engine::reference, top_data_, bottom_data_, negative_slope});
-  //softmaxBwd_ = softmax_backward::create({engine::reference, {bottom_diff_}, {top_diff_, bottom_data_}, negative_slope});
+  std::cout << "softmax: b " << batch <<  " x: " << input_x
+       << " shape(1) " << bottom[0]->shape(1)  << " shape(2) "  << bottom[0]->shape(2) << " shape(3) "
+           << bottom[0]->shape(3) << "\n";
+
+  bottom_data_  = memory::create({engine_, memory::format::xb_f32, {batch , {{input_x }}, z}});
+  top_data_     = memory::create({engine_, memory::format::xb_f32, {batch , {{input_x }}, z}});
+  bottom_diff_  = memory::create({engine_, memory::format::xb_f32, {batch , {{input_x }}, z}});
+  top_diff_     = memory::create({engine_, memory::format::xb_f32, {batch , {{input_x }}, z}});
+
+  softmaxFwd_ = normalization::softmax::create({engine_,
+                                                top_data_,
+                                                {0, {{0}}, 0},
+                                                {batch, {{input_x}}, 1u},
+                                                bottom_data_,
+                                                {0, {{0}}, 0},
+                                                });
+  // TODO: softmax support in mkl-dnn
+  //softmaxBwd_ = normalization::softmax_backward::create({engine::reference, {bottom_diff_}, {top_diff_, bottom_data_}, negative_slope});
 }
 
 
@@ -51,37 +65,17 @@ void MKL_DNNSoftmaxLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
 template <typename Dtype>
 void MKL_DNNSoftmaxLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
-  const Dtype* bottom_data = bottom[0]->cpu_data();
-  Dtype* top_data = top[0]->mutable_cpu_data();
-  Dtype* scale_data = scale_.mutable_cpu_data();
-  int channels = bottom[0]->shape(softmax_axis_);
-  int dim = bottom[0]->count() / outer_num_;
-  caffe_copy(bottom[0]->count(), bottom_data, top_data);
-  // We need to subtract the max to avoid numerical issues, compute the exp,
-  // and then normalize.
-  for (int i = 0; i < outer_num_; ++i) {
-    // initialize scale_data to the first plane
-    caffe_copy(inner_num_, bottom_data + i * dim, scale_data);
-    for (int j = 0; j < channels; j++) {
-      for (int k = 0; k < inner_num_; k++) {
-        scale_data[k] = std::max(scale_data[k],
-            bottom_data[i * dim + j * inner_num_ + k]);
-      }
-    }
-    // subtraction
-    caffe_cpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, channels, inner_num_,
-        1, -1., sum_multiplier_.cpu_data(), scale_data, 1., top_data);
-    // exponentiation
-    caffe_exp<Dtype>(dim, top_data, top_data);
-    // sum after exp
-    caffe_cpu_gemv<Dtype>(CblasTrans, channels, inner_num_, 1.,
-        top_data, sum_multiplier_.cpu_data(), 0., scale_data);
-    // division
-    for (int j = 0; j < channels; j++) {
-      caffe_div(inner_num_, top_data, scale_data, top_data);
-      top_data += inner_num_;
-    }
+  void* bottom_data = (void*)bottom[0]->prv_data();
+  void* top_data = NULL;
+
+  if (bottom_data) {
+    top_data = top[0]->mutable_prv_data();
+  } else {
+    DLOG(INFO) << "Using cpu_data in MKL_DNNSoftmaxLayer.";
+    bottom_data = (void*)bottom[0]->cpu_data();
+    top_data = top[0]->mutable_cpu_data();
   }
+  execute({bottom_data_(bottom_data), top_data_(top_data), softmaxFwd_});
 }
 
 template <typename Dtype>

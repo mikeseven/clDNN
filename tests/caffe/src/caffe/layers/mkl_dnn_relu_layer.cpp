@@ -25,13 +25,13 @@ void MKL_DNNReLULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 
   auto s = bottom[0]->shape();
   // TODO: change format?
-  bottom_data_  = memory::create({engine::cpu, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
-  top_data_     = memory::create({engine::cpu, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
-  bottom_diff_  = memory::create({engine::cpu, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
-  top_diff_     = memory::create({engine::cpu, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
+  bottom_data_  = memory::create({engine_, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
+  top_data_     = memory::create({engine_, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
+  bottom_diff_  = memory::create({engine_, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
+  top_diff_     = memory::create({engine_, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
 
-  reluFwd_ = relu::create({engine::reference, top_data_, bottom_data_, negative_slope});
-  reluBwd_ = relu_backward::create({engine::reference, {bottom_diff_}, {top_diff_, bottom_data_}, negative_slope});
+  reluFwd_ = relu::create({engine_, top_data_, bottom_data_, negative_slope});
+  reluBwd_ = relu_backward::create({engine_, {bottom_diff_}, {top_diff_, bottom_data_}, negative_slope});
 }
 
 template <typename Dtype>

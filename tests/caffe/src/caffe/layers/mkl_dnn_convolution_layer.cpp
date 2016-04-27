@@ -16,7 +16,8 @@ using namespace neural;
 
 namespace caffe {
 template <typename Dtype>
-MKL_DNNConvolutionLayer<Dtype>::MKL_DNNConvolutionLayer(const LayerParameter& param, neural::engine::type engine)
+MKL_DNNConvolutionLayer<Dtype>::MKL_DNNConvolutionLayer(
+  const LayerParameter& param, neural::engine::type engine)
       : ConvolutionLayer<Dtype>(param),
         fwd_bottom_data  (new MKL_DNNData<Dtype>()),
         fwd_top_data     (new MKL_DNNData<Dtype>()),

@@ -41,15 +41,19 @@ struct MKL_DNNMemoryDescriptor : PrvMemDescr, boost::enable_shared_from_this<MKL
     if (layout_usr != layout_int)
     {
         CaffeMallocHost((void**)&internal_ptr, sizeof(Dtype)*prv_count(), &use_cuda);
+        // TODO: use the same engine as in the layer
         to_internal   = reorder::create(reorder::arguments({engine::reference, memory_usr, memory}));
         from_internal = reorder::create(reorder::arguments({engine::reference, memory, memory_usr}));
     }
   }
 
-  virtual size_t prv_count() {return (memory.as<const neural::memory&>().count());};
+  virtual size_t prv_count() {
+      return (memory.as<const neural::memory&>().count());
+  };
   virtual void convert_from_prv(void* prv_ptr, void* cpu_ptr);
   virtual PrvDescrType get_descr_type() {return PRV_DESCR_MKL_DNN;};
-  Dtype* get_converted_prv(Blob<Dtype>* blob, bool set_prv_ptr, MKL_DNNMemoryDescriptor<Dtype, is_diff>* converted_in_fwd=nullptr);
+  Dtype* get_converted_prv(Blob<Dtype>* blob, bool set_prv_ptr, 
+          MKL_DNNMemoryDescriptor<Dtype, is_diff>* converted_in_fwd=nullptr);
 };
 
 template <typename Dtype>
@@ -63,7 +67,9 @@ struct MKL_DNNDiff : MKL_DNNMemoryDescriptor<Dtype, true>
 template <typename Dtype>
 class MKL_DNNConvolutionLayer : public ConvolutionLayer<Dtype> {
 public:
-  explicit MKL_DNNConvolutionLayer(const LayerParameter& param, neural::engine::type engine = neural::engine::reference);
+  explicit MKL_DNNConvolutionLayer(
+          const LayerParameter& param, 
+          neural::engine::type engine = neural::engine::reference);
 
   virtual inline const char* type() const { return "MKL_DNN_Convolution"; }
   virtual ~MKL_DNNConvolutionLayer();
@@ -74,9 +80,11 @@ protected:
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
                            const vector<Blob<Dtype>*>& top);
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
-                            const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+                            const vector<bool>& propagate_down, 
+                            const vector<Blob<Dtype>*>& bottom);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-                            const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+                            const vector<bool>& propagate_down,
+                            const vector<Blob<Dtype>*>& bottom);
   // Customized methods
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                           const vector<Blob<Dtype>*>& top);
@@ -87,8 +95,8 @@ private:
   primitive convolution_fwd = nullptr;
   primitive convolution_bwd = nullptr;
   /* Fwd step */
-  shared_ptr<MKL_DNNData<Dtype> > fwd_bottom_data, fwd_top_data, fwd_filter_data, fwd_bias_data;
-
+  shared_ptr<MKL_DNNData<Dtype> > fwd_bottom_data, fwd_top_data, 
+                                  fwd_filter_data, fwd_bias_data;
   /* Bwd data step */
   shared_ptr<MKL_DNNDiff<Dtype> > bwd_top_diff, bwd_bottom_diff;
 
@@ -239,8 +247,9 @@ public:
    *   - negative_slope (\b optional, default 0).
    *     the value @f$ \nu @f$ by which negative values are multiplied.
    */
-  explicit MKL_DNNReLULayer(const LayerParameter& param)
-    : NeuronLayer<Dtype>(param) {}
+  explicit MKL_DNNReLULayer(const LayerParameter& param,
+          neural::engine::type engine = neural::engine::reference)
+    : NeuronLayer<Dtype>(param), engine_(engine) {}
 
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                           const vector<Blob<Dtype>*>& top);
@@ -254,11 +263,14 @@ protected:
                            const vector<Blob<Dtype>*>& top);
 
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
-                            const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+                            const vector<bool>& propagate_down, 
+                            const vector<Blob<Dtype>*>& bottom);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-                            const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+                            const vector<bool>& propagate_down, 
+                            const vector<Blob<Dtype>*>& bottom);
 
 private:
+  neural::engine::type engine_;
   primitive reluFwd_ = nullptr, reluBwd_ = nullptr;
   primitive bottom_data_ = nullptr, top_data_ = nullptr, 
           bottom_diff_ = nullptr, top_diff_ = nullptr;
@@ -272,8 +284,9 @@ private:
 template <typename Dtype>
 class MKL_DNNSoftmaxLayer : public Layer<Dtype> {
  public:
-  explicit MKL_DNNSoftmaxLayer(const LayerParameter& param)
-      : Layer<Dtype>(param) {}
+  explicit MKL_DNNSoftmaxLayer(const LayerParameter& param,
+          neural::engine::type engine = neural::engine::reference)
+      : Layer<Dtype>(param), engine_(engine) {}
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
@@ -300,6 +313,7 @@ class MKL_DNNSoftmaxLayer : public Layer<Dtype> {
   /// scale is an intermediate Blob to hold temporary results.
   Blob<Dtype> scale_;
  private:
+  neural::engine::type engine_;
   primitive softmaxFwd_ = nullptr, softmaxBwd_ = nullptr;
   primitive bottom_data_ = nullptr, top_data_ = nullptr, 
             bottom_diff_ = nullptr, top_diff_ = nullptr;
