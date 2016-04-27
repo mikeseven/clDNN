@@ -119,7 +119,6 @@ private:
         pad_h_;
 };
 
-#if 0 // not yet implemented except ReLU
 /**
  * @brief Normalize the input in a local region across feature maps.
  */
@@ -180,7 +179,6 @@ private:
 };
 
 
-
 template <typename Dtype>
 class MKL_DNNPoolingLayer : public Layer<Dtype> {
 public:
@@ -214,9 +212,11 @@ protected:
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
                            const vector<Blob<Dtype>*>& top);
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
-                            const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+                            const vector<bool>& propagate_down, 
+                            const vector<Blob<Dtype>*>& bottom);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-                            const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+                            const vector<bool>& propagate_down,
+                            const vector<Blob<Dtype>*>& bottom);
 
   int kernel_h_, kernel_w_;
   int stride_h_, stride_w_;
@@ -236,7 +236,7 @@ private:
 
   primitive poolingFwd, poolingBwd;
 };
-#endif
+
 
 template <typename Dtype>
 class MKL_DNNReLULayer : public NeuronLayer<Dtype> {
@@ -273,7 +273,7 @@ private:
   neural::engine::type engine_;
   primitive reluFwd_ = nullptr, reluBwd_ = nullptr;
   primitive bottom_data_ = nullptr, top_data_ = nullptr, 
-          bottom_diff_ = nullptr, top_diff_ = nullptr;
+            bottom_diff_ = nullptr, top_diff_ = nullptr;
 };
 
 /**

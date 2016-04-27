@@ -1,3 +1,4 @@
+#ifdef USE_MKL_DNN
 #include <cmath>
 #include <vector>
 
@@ -88,3 +89,5 @@ TYPED_TEST(MKL_DNNSoftmaxLayerTest, TestGradient) {
 
 
 }  // namespace caffe
+
+#endif  //#ifdef USE_MKL_DNN
