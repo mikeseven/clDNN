@@ -48,8 +48,8 @@ class MKL_DNN_Ref_PoolingLayerTest : public MultiDeviceTest<TypeParam> {
     PoolingParameter* pooling_param = layer_param.mutable_pooling_param();
     pooling_param->set_kernel_size(2);
     pooling_param->set_pool(PoolingParameter_PoolMethod_MAX);
-    const int num = 1;
-    const int channels = 1;
+    const int num = 2;
+    const int channels = 2;
     blob_bottom_->Reshape(num, channels, 3, 5);
     // Input: 2x 2 channels of:
     //     [1 2 5 2 3]
