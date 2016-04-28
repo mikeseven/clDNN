@@ -153,7 +153,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
                                                fwd_filter_data->memory_prv,
                                                fwd_bias_data->memory_prv},
                                           //  {in_off_y, in_off_x, in_off_z, in_off_b},
-                                              {stride_h_, stride_w_, 1, 1},
+                                               {1, {stride_h_, stride_w_}, 1},
                                               padding::zero
                                             });
 

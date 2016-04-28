@@ -145,11 +145,11 @@ template void caffe_conv(const Blob<double>* in,
     Blob<double>* out);
 
 template <typename TypeParam>
-class MKL_DNNConvolutionLayerTest : public MultiDeviceTest<TypeParam> {
+class MKL_DNN_Ref_ConvLayerTest : public MultiDeviceTest<TypeParam> {
   typedef typename TypeParam::Dtype Dtype;
 
  protected:
-  MKL_DNNConvolutionLayerTest()
+  MKL_DNN_Ref_ConvLayerTest()
       //: blob_bottom_(new Blob<Dtype>(2, 3, 6, 4)),
         //blob_bottom_2_(new Blob<Dtype>(2, 3, 6, 4)),
          : blob_bottom_(new Blob<Dtype>(1, 2, 2, 2)), // jrenieck: temporarily simplified
@@ -167,7 +167,7 @@ class MKL_DNNConvolutionLayerTest : public MultiDeviceTest<TypeParam> {
     blob_top_vec_.push_back(blob_top_);
   }
 
-  virtual ~MKL_DNNConvolutionLayerTest() {
+  virtual ~MKL_DNN_Ref_ConvLayerTest() {
     delete blob_bottom_;
     delete blob_bottom_2_;
     delete blob_top_;
@@ -190,12 +190,12 @@ class MKL_DNNConvolutionLayerTest : public MultiDeviceTest<TypeParam> {
 };
 
 
-//TYPED_TEST_CASE(MKL_DNNConvolutionLayerTest, TestDtypesAndDevices);
+//TYPED_TEST_CASE(MKL_DNN_Ref_ConvLayerTest, TestDtypesAndDevices);
 // TODO: Currently only float support
-TYPED_TEST_CASE(MKL_DNNConvolutionLayerTest, ::testing::Types<CPUDevice<float> >);
+TYPED_TEST_CASE(MKL_DNN_Ref_ConvLayerTest, ::testing::Types<CPUDevice<float> >);
 
 #if 0
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSetupMKL_DNN) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSetupMKL_DNN) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -231,7 +231,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSetupMKL_DNN) {
   EXPECT_EQ(this->blob_top_2_->width(), 1);
 }
 #endif
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolution) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
@@ -272,7 +272,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolution) {
 }
 
 
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolution_2outputs) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolution_2outputs) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
@@ -312,7 +312,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolution_2outputs) {
 #endif
 }
 
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestGradient) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -333,7 +333,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestGradient) {
 }
 
 #if 0
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestDilatedConvolution) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestDilatedConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   vector<int> bottom_shape;
   bottom_shape.push_back(2);
@@ -381,7 +381,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestDilatedConvolution) {
 #endif
 
 #if 0
-TYPED_TEST(MKL_DNNConvolutionLayerTest, Test0DConvolution) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, Test0DConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -421,7 +421,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, Test0DConvolution) {
 #endif
 
 #if 0
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimple3DConvolution) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimple3DConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
@@ -473,7 +473,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimple3DConvolution) {
 #endif
 
 #if 0
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestDilated3DConvolution) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestDilated3DConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
@@ -521,7 +521,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestDilated3DConvolution) {
 }
 #endif
 #if 0
-TYPED_TEST(MKL_DNNConvolutionLayerTest, Test1x1Convolution) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, Test1x1Convolution) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -548,7 +548,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, Test1x1Convolution) {
   }
 }
 
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolutionGroup) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolutionGroup) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -578,7 +578,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSimpleConvolutionGroup) {
 #endif
 #if 0
 #if 0
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSobelConvolution) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSobelConvolution) {
   // Test separable convolution by computing the Sobel operator
   // as a single filter then comparing the result
   // as the convolution of two rectangular filters.
@@ -673,7 +673,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestSobelConvolution) {
 #endif
 
 #if 0
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestNDAgainst2D) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestNDAgainst2D) {
   typedef typename TypeParam::Dtype Dtype;
   const int kernel_h = 11;
   const int kernel_w = 13;
@@ -792,7 +792,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestNDAgainst2D) {
 }
 #endif
 
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestGradient) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -813,7 +813,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestGradient) {
 }
 
 #if 0
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestDilatedGradient) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestDilatedGradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -839,7 +839,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestDilatedGradient) {
 #endif
 
 #if 0
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestGradient3D) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradient3D) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -868,7 +868,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, TestGradient3D) {
 }
 #endif
 
-TYPED_TEST(MKL_DNNConvolutionLayerTest, Test1x1Gradient) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, Test1x1Gradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
@@ -886,7 +886,7 @@ TYPED_TEST(MKL_DNNConvolutionLayerTest, Test1x1Gradient) {
       this->blob_top_vec_);
 }
 
-TYPED_TEST(MKL_DNNConvolutionLayerTest, TestGradientGroup) {
+TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradientGroup) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   ConvolutionParameter* convolution_param =
