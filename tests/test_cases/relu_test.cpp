@@ -20,12 +20,6 @@
 #include "api/neural.h"
 
 namespace{
-    auto calc_idx_obselote = [](std::vector<uint32_t> yxzb_pos, std::vector<uint32_t>& buf_size) -> uint32_t{
-        return yxzb_pos[3]
-             + yxzb_pos[2] * buf_size[3]
-             + yxzb_pos[1] * buf_size[3] * buf_size[2]
-             + yxzb_pos[0] * buf_size[3] * buf_size[2] * buf_size[1];
-    };
     auto calc_idx = [](std::vector<uint32_t> yxfb_pos, std::vector<uint32_t>& buf_size_bfyx) -> uint32_t{
         return yxfb_pos[3]
              + yxfb_pos[2] * buf_size_bfyx[0]
@@ -35,6 +29,7 @@ namespace{
 }
 
 using namespace neural;
+
 
 TEST(relu_f32_fw, basic) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
