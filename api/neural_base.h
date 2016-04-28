@@ -36,9 +36,9 @@ namespace neural {
 template<typename T> struct vector {
     std::vector<T> raw;
     class ref_vector {
+        std::vector<T> &raw_;
         size_t begin_;
         size_t end_;
-        std::vector<T> &raw_;
         ref_vector(std::vector<T> &raw, size_t begin, size_t end) : raw_(raw), begin_(begin), end_(end) {};
         friend struct vector<T>;
     public:

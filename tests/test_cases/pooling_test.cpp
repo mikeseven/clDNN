@@ -39,15 +39,15 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
 //  Expected output:
 //  [ 2.0]
 
-    auto input_prim  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto output_prim = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {1, 1, 1, 1}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {1, 1, 1, 1}, {3, 3, 1, 1}, padding::type::zero});
+    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {3, 3}, 1}, true});
+    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {1, 1}, 1}, true});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {1, {1, 1}, 1}, {1, {3, 3}, 1}, padding::type::zero});
 
-    set_values_obsolete(input_prim, {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f});
+    set_values(input_prim, {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f});
 
     execute({pool_prim});
 
-    auto& output_memory = output_prim.as<const memory_obselote&>();
+    auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(2.0f, output_memory.get_value<float>(0));
 }
 
@@ -68,15 +68,15 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
 //  [ 2.0,  1.5]
 //  [ 2.0,  1.5]
 
-    auto input_prim  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 1, 1}, true});
-    auto output_prim = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {1, 1, 1, 1}, {2, 2, 1, 1}, padding::type::zero});
+    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {3, 3}, 1}, true});
+    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {1, {1, 1}, 1}, {1, {2, 2}, 1}, padding::type::zero});
 
-    set_values_obsolete(input_prim, {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f});
+    set_values(input_prim, {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f});
 
     execute({pool_prim});
 
-    auto& output_memory = output_prim.as<const memory_obselote&>();
+    auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(2.0f, output_memory.get_value<float>(0));
     EXPECT_EQ(1.5f, output_memory.get_value<float>(1));
     EXPECT_EQ(2.0f, output_memory.get_value<float>(2));
@@ -101,15 +101,15 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
 //  [ 2.0,  0.5]
 //  [ 0.5,  0.5]
 
-    auto input_prim  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {4, 4, 1, 1}, true});
-    auto output_prim = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {2, 2, 1, 1}, {2, 2, 1, 1}, padding::type::zero});
+    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {4, 4}, 1}, true});
+    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, { 1, {2, 2}, 1}, { 1, {2, 2}, 1}, padding::type::zero});
 
-    set_values_obsolete(input_prim, {-0.25f, 1.00f, 0.50f, 0.25f, 2.00f, 1.50f, -0.50f, -0.75f, 0.00f, -1.00f, 0.50f, 0.25f, 0.50f, -2.00f, -1.50f, -2.50f});
+    set_values(input_prim, {-0.25f, 1.00f, 0.50f, 0.25f, 2.00f, 1.50f, -0.50f, -0.75f, 0.00f, -1.00f, 0.50f, 0.25f, 0.50f, -2.00f, -1.50f, -2.50f});
 
     execute({pool_prim});
 
-    auto& output_memory = output_prim.as<const memory_obselote&>();
+    auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(2.0f, output_memory.get_value<float>(0));
     EXPECT_EQ(0.5f, output_memory.get_value<float>(1));
     EXPECT_EQ(0.5f, output_memory.get_value<float>(2));
@@ -144,15 +144,15 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
 //  [ 0.5,  1.0]         [ 1.0,  0.5]
 //  [-0.5,  1.5]         [ 1.0,  0.0]
 
-    auto input_prim  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {3, 3, 2, 2}, true});
-    auto output_prim = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 2, 2}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {1, 1, 1, 1}, {2, 2, 1, 1}, padding::type::zero});
+    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 2, {3, 3}, 2}, true});
+    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 2, {2, 2}, 2}, true});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {1, {1, 1}, 1}, { 1, {2, 2}, 1}, padding::type::zero});
 
-    set_values_obsolete(input_prim, {-0.5f, 0.5f, -1.5f, 0.0f, 0.5f, 0.0f, -0.5f, 0.5f, 0.0f, -0.5f, 0.0f, -0.5f, 1.0f, -2.0f, 0.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -2.0f, 1.0f, 1.5f, 0.0f, -1.0f, -0.5f, -2.0f, 0.5f, -0.5f, -1.0f, 1.0f, -0.5f, -0.5f, 1.5f, -0.5f, 0.0f});
+    set_values(input_prim, {-0.5f, 0.5f, -1.5f, 0.0f, 0.5f, 0.0f, -0.5f, 0.5f, 0.0f, -0.5f, 0.0f, -0.5f, 1.0f, -2.0f, 0.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -2.0f, 1.0f, 1.5f, 0.0f, -1.0f, -0.5f, -2.0f, 0.5f, -0.5f, -1.0f, 1.0f, -0.5f, -0.5f, 1.5f, -0.5f, 0.0f});
 
     execute({pool_prim});
 
-    auto& output_memory = output_prim.as<const memory_obselote&>();
+    auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ( 1.0f, output_memory.get_value<float>( 0)); EXPECT_EQ( 0.0f, output_memory.get_value<float>( 2));
     EXPECT_EQ( 0.5f, output_memory.get_value<float>( 4)); EXPECT_EQ( 1.5f, output_memory.get_value<float>( 6));
     EXPECT_EQ( 1.0f, output_memory.get_value<float>( 8)); EXPECT_EQ( 1.0f, output_memory.get_value<float>(10));
@@ -181,15 +181,15 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz4x4_wstr1x1_i2x2x1x1_inoffs1) {
 //  Expected output:
 //  [ 1.0]
 
-    auto input_prim  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto output_prim = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, {1, 1, 1, 1}, {4, 4, 1, 1}, padding::type::zero});
+    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {0 ,{-1, -1}, 0}, { 1, {1, 1}, 1}, { 1, {4, 4}, 1}, padding::type::zero});
 
-    set_values_obsolete(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
+    set_values(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
 
     execute({pool_prim});
 
-    auto& output_memory = output_prim.as<const memory_obselote&>();
+    auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(1.0f, output_memory.get_value<float>(0));
 }
 
@@ -211,15 +211,15 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i2x2x1x1_inoffs1) {
 //  [ 1.0,  1.0]
 //  [ 1.0,  1.0]
 
-    auto input_prim  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto output_prim = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, {1, 1, 1, 1}, {3, 3, 1, 1}, padding::type::zero});
+    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {0, {-1, -1}, 0}, {1, {1, 1}, 1}, {1, {3, 3}, 1}, padding::type::zero});
 
-    set_values_obsolete(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
+    set_values(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
 
     execute({pool_prim});
 
-    auto& output_memory = output_prim.as<const memory_obselote&>();
+    auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(1.0f, output_memory.get_value<float>(0));
     EXPECT_EQ(1.0f, output_memory.get_value<float>(1));
     EXPECT_EQ(1.0f, output_memory.get_value<float>(2));
@@ -244,15 +244,15 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_inoffs1) {
 //  [ 0.0,  0.5]
 //  [ 1.0,  0.0]
 
-    auto input_prim  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto output_prim = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 1, 1}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, {2, 2, 1, 1}, {2, 2, 1, 1}, padding::type::zero});
+    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {0, {-1, -1}, 0}, {1, {2, 2}, 1}, {1, {2, 2}, 1}, padding::type::zero});
 
-    set_values_obsolete(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
+    set_values(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
 
     execute({pool_prim});
 
-    auto& output_memory = output_prim.as<const memory_obselote&>();
+    auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(0.0f, output_memory.get_value<float>(0));
     EXPECT_EQ(0.5f, output_memory.get_value<float>(1));
     EXPECT_EQ(1.0f, output_memory.get_value<float>(2));
@@ -289,15 +289,15 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_inoffs1) {
 //  [ 0.5,  0.0]             [ 0.5,  0.0]
 //  [ 0.0,  1.0]             [ 1.0,  0.0]
 
-    auto input_prim  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 2, 2}, true});
-    auto output_prim = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {2, 2, 2, 2}, true});
-    auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {-1, -1, 0, 0}, {2, 2, 1, 1}, {2, 2, 1, 1}, padding::type::zero});
+    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, {2, {2, 2}, 2}, true});
+    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, {2, {2, 2}, 2}, true});
+    auto pool_prim   = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {0, {-1, -1}, 0}, {1, {2, 2}, 1}, {1, {2, 2}, 1}, padding::type::zero});
 
-    set_values_obsolete(input_prim, {-0.5f, 0.5f, -1.5f, 0.5f, 0.5f, -0.5f, -0.5f, -0.5f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.5f, -1.0f});
+    set_values(input_prim, {-0.5f, 0.5f, -1.5f, 0.5f, 0.5f, -0.5f, -0.5f, -0.5f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.5f, -1.0f});
 
     execute({pool_prim});
 
-    auto& output_memory = output_prim.as<const memory_obselote&>();
+    auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(0.0f, output_memory.get_value<float>( 0)); EXPECT_EQ(0.0f, output_memory.get_value<float>( 2));
     EXPECT_EQ(0.5f, output_memory.get_value<float>( 4)); EXPECT_EQ(0.0f, output_memory.get_value<float>( 6));
     EXPECT_EQ(1.0f, output_memory.get_value<float>( 8)); EXPECT_EQ(1.0f, output_memory.get_value<float>(10));
@@ -309,6 +309,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_inoffs1) {
     EXPECT_EQ(1.0f, output_memory.get_value<float>(13)); EXPECT_EQ(0.0f, output_memory.get_value<float>(15));
 }
 
+//todo remove?
+/*
 TEST(pooling_forward, advanced_max_yxfb) {
 //  Brief test description.
 //
@@ -330,9 +332,9 @@ TEST(pooling_forward, advanced_max_yxfb) {
         int32_t  input_offset = input_offset_configurations[config];
 
         // Currently only yxfb_f32 IO format is supported for max pooling.
-        for(auto format : {memory_obselote::format::yxfb_f32})
+        for(auto format : {memory::format::yxfb_f32})
         {
-            uint32_t total_dimensions = memory_obselote::traits(format).dimension;
+            uint32_t total_dimensions = memory::traits(format).dimension;
             for(uint32_t spatial_dimensions = 1; spatial_dimensions <= total_dimensions; ++spatial_dimensions)
             {
                 std::vector<uint32_t> input_sizes;
@@ -362,13 +364,13 @@ TEST(pooling_forward, advanced_max_yxfb) {
                     }
                 }
 
-                auto input_prim  = memory_obselote::create({engine::cpu, format, input_sizes, true});
-                auto output_prim = memory_obselote::create({engine::cpu, format, output_sizes, true});
+                auto input_prim  = memory::create({engine::reference, format, input_sizes, true});
+                auto output_prim = memory::create({engine::reference, format, output_sizes, true});
 
                 auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, input_offsets, pooling_window_strides, pooling_window_sizes, padding::type::zero});
 
-                auto& input_memory = input_prim.as<const memory_obselote&>();
-                auto& output_memory = output_prim.as<const memory_obselote&>();
+                auto& input_memory = input_prim.as<const memory&>();
+                auto& output_memory = output_prim.as<const memory&>();
 
                 // Fill IO data with default values.
                 input_memory.fill<float>(-0.5f);
@@ -376,7 +378,7 @@ TEST(pooling_forward, advanced_max_yxfb) {
 
                 // Now, for each output find its input sample window and set one value to 1.0f.
                 // We expect that, due to pooling, in output only these values will be visible.
-                ndimensional::calculate_idx_obselote<uint32_t> calc_in_idx(input_sizes);
+                ndimensional::calculate_idx<uint32_t> calc_in_idx(input_sizes);
                 for(auto pos : ndimensional::value<uint32_t>(output_sizes))
                     for(auto win_pos : ndimensional::value<uint32_t>(pooling_window_sizes))
                     {
@@ -397,3 +399,4 @@ TEST(pooling_forward, advanced_max_yxfb) {
         }
     }
 }
+*/
