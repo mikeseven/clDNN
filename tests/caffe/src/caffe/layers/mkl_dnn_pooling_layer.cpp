@@ -1,4 +1,4 @@
-#ifdef MKL2017_SUPPORTED
+#ifdef USE_MKL_DNN
 #include <algorithm>
 #include <cfloat>
 #include <vector>
@@ -12,10 +12,7 @@
 
 namespace caffe {
 template <typename Dtype>
-MKL_DNNPoolingLayer<Dtype>::~MKL_DNNPoolingLayer() {
-  dnnDelete<Dtype>(poolingFwd);
-  dnnDelete<Dtype>(poolingBwd);
-}
+MKL_DNNPoolingLayer<Dtype>::~MKL_DNNPoolingLayer() {}
 
 template <typename Dtype>
 void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
@@ -99,29 +96,12 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
     CHECK_LT((pooled_width_ - 1) * stride_w_, bottom[0]->height() + pad_w_);
   }
 
-  size_t dim = 4;
-  size_t src_sizes[4], src_strides[4];
-  size_t dst_sizes[4], dst_strides[4];
-
-  src_sizes[0] = bottom[0]->width();
-  src_sizes[1] = bottom[0]->height();
-  src_sizes[2] = bottom[0]->channels();
-  src_sizes[3] = bottom[0]->num();
-
-  src_strides[0] = 1;
-  src_strides[1] = src_sizes[0];
-  src_strides[2] = src_sizes[0]*src_sizes[1];
-  src_strides[3] = src_sizes[0]*src_sizes[1]*src_sizes[2];
-
-  dst_sizes[0] = pooled_width_;
-  dst_sizes[1] = pooled_height_;
-  dst_sizes[2] = src_sizes[2];
-  dst_sizes[3] = src_sizes[3];
-
-  dst_strides[0] = 1;
-  dst_strides[1] = dst_sizes[0];
-  dst_strides[2] = dst_sizes[0]*dst_sizes[1];
-  dst_strides[3] = dst_sizes[0]*dst_sizes[1]*dst_sizes[2];
+  auto iw = bottom[0]->width();
+  auto ih = bottom[0]->height();
+  auto c  = bottom[0]->channels();
+  auto n  = bottom[0]->num();
+  auto ow = pooled_width_;
+  auto oh = pooled_height_;
 
   src_offset[0] = -pad_w_;
   src_offset[1] = -pad_h_;
@@ -132,32 +112,28 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   kernel_size[0] = kernel_w_;
   kernel_size[1] = kernel_h_;
 
-  dnnError_t e;
-  e = dnnLayoutCreate<Dtype>(&fwd_bottom_data->layout_usr, dim, src_sizes,
-          src_strides);
-  CHECK_EQ(e, E_SUCCESS);
-  e = dnnLayoutCreate<Dtype>(&fwd_top_data->layout_usr, dim, dst_sizes,
-          dst_strides);
-  CHECK_EQ(e, E_SUCCESS);
-  e = dnnLayoutCreate<Dtype>(&bwd_bottom_diff->layout_usr, dim, src_sizes,
-          src_strides);
-  CHECK_EQ(e, E_SUCCESS);
-  e = dnnLayoutCreate<Dtype>(&bwd_top_diff->layout_usr, dim, dst_sizes,
-          dst_strides);
-  CHECK_EQ(e, E_SUCCESS);
 
+  fwd_bottom_data_->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {n, {ih, iw}, c}});
+  fwd_top_data_->memory_usr    = memory::create({engine_, memory::format::bfyx_f32, {n, {oh, ow}, c }});
+  fwd_bottom_data_->memory_prv = memory::create({engine_, memory::format::yxfb_f32, {n, {ih, iw}, c}});
+  fwd_top_data_->memory_prv    = memory::create({engine_, memory::format::yxfb_f32, {n, {oh, ow}, c }});
 
+  bwd_bottom_diff_->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {n, {ih, iw}, c}});
+  bwd_top_diff_->memory_usr    = memory::create({engine_, memory::format::bfyx_f32, {n, {oh, ow}, c }});
+  bwd_bottom_diff_->memory_prv = memory::create({engine_, memory::format::yxfb_f32, {n, {ih, iw}, c}});
+  bwd_top_diff_->memory_prv    = memory::create({engine_, memory::format::yxfb_f32, {n, {oh, ow}, c }});
 
 
   // Names are for debugging only
-  fwd_bottom_data->name = "fwd_bottom_data   @ " + this->layer_param_.name();
-  fwd_top_data->name =    "fwd_top_data      @ " + this->layer_param_.name();
-  bwd_top_diff->name =    "bwd_top_diff      @ " + this->layer_param_.name();
-  bwd_bottom_diff->name = "bwd_bottom_diff   @ " + this->layer_param_.name();
+  fwd_bottom_data_->name = "fwd_bottom_data   @ " + this->layer_param_.name();
+  fwd_top_data_->name =    "fwd_top_data      @ " + this->layer_param_.name();
+  bwd_top_diff_->name =    "bwd_top_diff      @ " + this->layer_param_.name();
+  bwd_bottom_diff_->name = "bwd_bottom_diff   @ " + this->layer_param_.name();
 
   // Primitives will be allocated during the first fwd pass
-  poolingFwd = NULL;
-  poolingBwd = NULL;
+  // TODO: for mkl-dnn could it be done here?
+  poolingFwd_ = NULL;
+  poolingBwd_ = NULL;
 }
 
 template <typename Dtype>
@@ -225,39 +201,37 @@ void MKL_DNNPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   switch (this->layer_param_.pooling_param().pool()) {
   case PoolingParameter_PoolMethod_MAX:
     {
-    dnnError_t status;
-    void* pooling_res[dnnResourceNumber];
     mask = (use_top_mask) ?
       reinterpret_cast<size_t*>(top[1]->mutable_cpu_data()) :
       (max_idx_.mutable_cpu_data());
 
     caffe_set<size_t>(top_count, -1, mask);
-    pooling_res[dnnResourceWorkspace] = reinterpret_cast<void*>(mask);
+    //pooling_res[dnnResourceWorkspace] = reinterpret_cast<void*>(mask);
 
     void* bottom_data =
       reinterpret_cast<void *>(const_cast<Dtype*>(bottom[0]->prv_data()));
     if (NULL == bottom_data) {
       bottom_data =
         reinterpret_cast<void *>(const_cast<Dtype*>(bottom[0]->cpu_data()));
-      if (NULL == poolingFwd) {
+      if (poolingFwd_ == nullptr) {
         // Now create poolingFwd
-        status = dnnPoolingCreateForward<Dtype>(&poolingFwd, NULL,
+        /* dnnPoolingCreateForward<Dtype>(&poolingFwd_, NULL,
                 dnnAlgorithmPoolingMax, fwd_bottom_data->layout_usr,
                 kernel_size, kernel_stride, src_offset, dnnBorderZeros);
-        CHECK_EQ(status, E_SUCCESS);
+
 
         // Now create poolingBwd
-        status = dnnPoolingCreateBackward<Dtype>(&poolingBwd, NULL,
+        dnnPoolingCreateBackward<Dtype>(&poolingBwd_, NULL,
                 dnnAlgorithmPoolingMax, fwd_bottom_data->layout_usr,
                 kernel_size, kernel_stride, src_offset, dnnBorderZeros);
-        CHECK_EQ(status, E_SUCCESS);
+        */
       }
-    } else if (NULL == poolingFwd) {
+    } else if (poolingFwd_ == nullptr) {
       // Is it the first pass? Create a primitive.
       CHECK_EQ((bottom[0]->get_prv_descriptor_data())->get_descr_type(),
-              PrvMemDescr::PRV_DESCR_MKL2017);
-      shared_ptr<MKLData<Dtype> > mem_descr
-        =  boost::static_pointer_cast<MKLData<Dtype> >
+              PrvMemDescr::PRV_DESCR_MKL_DNN);
+      shared_ptr<MKL_DNNData<Dtype> > mem_descr
+        =  boost::static_pointer_cast<MKL_DNNData<Dtype> >
               (bottom[0]->get_prv_descriptor_data());
       CHECK(mem_descr != NULL);
 
@@ -265,51 +239,47 @@ void MKL_DNNPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
               << " as input layout for " << this->layer_param_.name();
 
       // copy shared_ptr
-      fwd_bottom_data = mem_descr;
+      fwd_bottom_data_ = mem_descr;
 
       // Now create poolingFwd
-      status = dnnPoolingCreateForward<Dtype>(&poolingFwd, NULL,
+      /* dnnPoolingCreateForward<Dtype>(&poolingFwd_, NULL,
               dnnAlgorithmPoolingMax, fwd_bottom_data->layout_int, kernel_size,
               kernel_stride, src_offset, dnnBorderZeros);
-      CHECK_EQ(status, E_SUCCESS);
 
-      status = dnnLayoutCreateFromPrimitive<Dtype>(&fwd_top_data->layout_int,
+
+      dnnLayoutCreateFromPrimitive<Dtype>(&fwd_top_data->layout_int,
               poolingFwd, dnnResourceDst);
-      CHECK_EQ(status, 0) << "Failed dnnLayoutCreateFromPrimitive with status "
-              << status << "\n";
+      */
 
-      fwd_top_data->create_conversions();
+      fwd_top_data_->create_conversions();
 
       // Now create poolingBwd
-      status = dnnPoolingCreateBackward<Dtype>(&poolingBwd, NULL,
+      /* dnnPoolingCreateBackward<Dtype>(&poolingBwd_, NULL,
               dnnAlgorithmPoolingMax, fwd_bottom_data->layout_int, kernel_size,
               kernel_stride, src_offset, dnnBorderZeros);
-      CHECK_EQ(status, E_SUCCESS);
 
-      status = dnnLayoutCreateFromPrimitive<Dtype>(&bwd_top_diff->layout_int,
+      dnnLayoutCreateFromPrimitive<Dtype>(&bwd_top_diff->layout_int,
               poolingFwd, dnnResourceDst);
-      CHECK_EQ(status, E_SUCCESS);
+      */
 
-      status = dnnLayoutCreateFromPrimitive<Dtype>(&bwd_bottom_diff->layout_int,
-              poolingFwd, dnnResourceSrc);
-      CHECK_EQ(status, E_SUCCESS);
+      //dnnLayoutCreateFromPrimitive<Dtype>(&bwd_bottom_diff->layout_int,
+      //        poolingFwd, dnnResourceSrc);
 
-      bwd_top_diff->create_conversions();
-      bwd_bottom_diff->create_conversions();
+      bwd_top_diff_->create_conversions();
+      bwd_bottom_diff_->create_conversions();
     }
 
-    pooling_res[dnnResourceSrc] = bottom_data;
-    if (fwd_top_data->convert_from_int) {
-      top[0]->set_prv_data(fwd_top_data->internal_ptr, fwd_top_data, false);
-      pooling_res[dnnResourceDst] =reinterpret_cast<void *>(
-              const_cast<Dtype*>(fwd_top_data->internal_ptr));
+    if (fwd_top_data_->from_internal != nullptr) {
+      top[0]->set_prv_data(fwd_top_data_->internal_ptr, fwd_top_data_, false);
+      //pooling_res[dnnResourceDst] =reinterpret_cast<void *>(
+        //      const_cast<Dtype*>(fwd_top_data->internal_ptr));
     } else {
-      pooling_res[dnnResourceDst] =
-              reinterpret_cast<void *>(top[0]->mutable_cpu_data());
+      //pooling_res[dnnResourceDst] =
+        //      reinterpret_cast<void *>(top[0]->mutable_cpu_data());
       DLOG(INFO) << "Using cpu_data for top in DnnPooling.";
     }
-    status = dnnExecute<Dtype>(poolingFwd, pooling_res);
-    CHECK_EQ(status, E_SUCCESS);
+    //status = dnnExecute<Dtype>(poolingFwd, pooling_res);
+
     }
     break;
   case PoolingParameter_PoolMethod_AVE:
@@ -341,27 +311,24 @@ void MKL_DNNPoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
       reinterpret_cast<const size_t*>(top[1]->cpu_data()) :
       (max_idx_.cpu_data());
 
-    dnnError_t e;
-    void* pooling_res[dnnResourceNumber];
+//    pooling_res[dnnResourceWorkspace] =
+  //          reinterpret_cast<void *>(const_cast<size_t*>(mask));
+   // pooling_res[dnnResourceDiffDst] = bwd_top_diff->get_converted_prv(top[0],
+     ///       true);
 
-    pooling_res[dnnResourceWorkspace] =
-            reinterpret_cast<void *>(const_cast<size_t*>(mask));
-    pooling_res[dnnResourceDiffDst] = bwd_top_diff->get_converted_prv(top[0],
-            true);
-
-    if (bwd_bottom_diff->convert_from_int) {
-      bottom[0]->set_prv_diff(bwd_bottom_diff->internal_ptr, bwd_bottom_diff,
+    if (bwd_bottom_diff_->from_internal != nullptr) {
+      bottom[0]->set_prv_diff(bwd_bottom_diff_->internal_ptr, bwd_bottom_diff_,
               false);
-      pooling_res[dnnResourceDiffSrc] =
-              reinterpret_cast<void *>(bwd_bottom_diff->internal_ptr);
+      //pooling_res[dnnResourceDiffSrc] =
+        //      reinterpret_cast<void *>(bwd_bottom_diff->internal_ptr);
     } else {
-      pooling_res[dnnResourceDiffSrc] = bottom[0]->mutable_cpu_diff();
+      //pooling_res[dnnResourceDiffSrc] = bottom[0]->mutable_cpu_diff();
     }
-    caffe_set(bottom[0]->count(), Dtype(0),
-            reinterpret_cast<Dtype *>(pooling_res[dnnResourceDiffSrc]));
+    //caffe_set(bottom[0]->count(), Dtype(0),
+      //      reinterpret_cast<Dtype *>(pooling_res[dnnResourceDiffSrc]));
 
-    e = dnnExecute<Dtype>(poolingBwd, pooling_res);
-    CHECK_EQ(e, E_SUCCESS);
+    //e = dnnExecute<Dtype>(poolingBwd, pooling_res);
+
 
     break;
   case PoolingParameter_PoolMethod_AVE:
@@ -390,4 +357,4 @@ void MKL_DNNPoolingLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 
 INSTANTIATE_CLASS(MKL_DNNPoolingLayer);
 }  // namespace caffe
-#endif  // #ifdef MKL2017_SUPPORTED
+#endif  // #ifdef USE_MKL_DNN

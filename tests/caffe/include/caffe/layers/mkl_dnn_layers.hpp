@@ -28,10 +28,10 @@ struct MKL_DNNMemoryDescriptor : PrvMemDescr, boost::enable_shared_from_this<MKL
     return this->shared_from_this();
   }
 
-  int layout_usr = memory::format::bfyx_f32;
-  int layout_int = memory::format::yxfb_f32;
+  memory::format::type layout_usr = memory::format::bfyx_f32;
+  memory::format::type layout_int = memory::format::yxfb_f32;
   Dtype* internal_ptr;
-  primitive memory        = nullptr;
+  primitive memory_prv    = nullptr;
   primitive memory_usr    = nullptr;
   primitive to_internal   = nullptr;
   primitive from_internal = nullptr;
@@ -42,13 +42,13 @@ struct MKL_DNNMemoryDescriptor : PrvMemDescr, boost::enable_shared_from_this<MKL
     {
         CaffeMallocHost((void**)&internal_ptr, sizeof(Dtype)*prv_count(), &use_cuda);
         // TODO: use the same engine as in the layer
-        to_internal   = reorder::create(reorder::arguments({engine::reference, memory_usr, memory}));
-        from_internal = reorder::create(reorder::arguments({engine::reference, memory, memory_usr}));
+        to_internal   = reorder::create(reorder::arguments({engine::reference, memory_usr, memory_prv}));
+        from_internal = reorder::create(reorder::arguments({engine::reference, memory_prv, memory_usr}));
     }
   }
 
   virtual size_t prv_count() {
-      return (memory.as<const neural::memory&>().count());
+      return (memory_prv.as<const neural::memory&>().count());
   };
   virtual void convert_from_prv(void* prv_ptr, void* cpu_ptr);
   virtual PrvDescrType get_descr_type() {return PRV_DESCR_MKL_DNN;};
@@ -128,7 +128,7 @@ class MKL_DNNLRNLayer : public Layer<Dtype> {
  public:
   explicit MKL_DNNLRNLayer(const LayerParameter& param,
         neural::engine::type engine = neural::engine::reference)
-      : Layer<Dtype>(param), layout_usr_(NULL), engine_(engine) {}
+      : Layer<Dtype>(param), engine_(engine) {}
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
@@ -173,11 +173,11 @@ class MKL_DNNLRNLayer : public Layer<Dtype> {
   // scale_ stores the intermediate summing results
 private:
   neural::engine::type engine_;
-  primitive lrnFwd, lrnBwd;
-  shared_ptr<MKL_DNNData<Dtype> > fwd_top_data;
-  shared_ptr<MKL_DNNDiff<Dtype> > bwd_bottom_diff;
+  primitive lrnFwd_ = nullptr, lrnBwd_ = nullptr;
+  shared_ptr<MKL_DNNData<Dtype> > fwd_top_data_;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwd_bottom_diff_;
   Dtype *lrn_buffer_;
-  memory::format layout_usr_;
+  memory::format::type layout_usr_ = memory::format::bfyx_f32;
 };
 
 
@@ -186,12 +186,12 @@ class MKL_DNNPoolingLayer : public Layer<Dtype> {
 public:
   explicit MKL_DNNPoolingLayer(const LayerParameter& param,
           neural::engine::type engine = neural::engine::reference)
-    : Layer<Dtype>(param), engine_(engine)
-      fwd_top_data    (new MKL_DNNData<Dtype>()),
-      fwd_bottom_data (new MKL_DNNData<Dtype>()),
-      bwd_top_diff    (new MKL_DNNDiff<Dtype>()),
-      bwd_bottom_diff (new MKL_DNNDiff<Dtype>()),
-      poolingFwd(NULL), poolingBwd(NULL)
+    : Layer<Dtype>(param), engine_(engine),
+      fwd_top_data_    (new MKL_DNNData<Dtype>()),
+      fwd_bottom_data_ (new MKL_DNNData<Dtype>()),
+      bwd_top_diff_    (new MKL_DNNDiff<Dtype>()),
+      bwd_bottom_diff_ (new MKL_DNNDiff<Dtype>()),
+      poolingFwd_(NULL), poolingBwd_(NULL)
   {}
   ~MKL_DNNPoolingLayer();
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
@@ -235,10 +235,10 @@ private:
   size_t kernel_size[2],
          kernel_stride[4];
   int src_offset[2];
-  shared_ptr<MKL_DNNData<Dtype> > fwd_top_data, fwd_bottom_data;
-  shared_ptr<MKL_DNNDiff<Dtype> > bwd_top_diff, bwd_bottom_diff;
+  shared_ptr<MKL_DNNData<Dtype> > fwd_top_data_, fwd_bottom_data_;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwd_top_diff_, bwd_bottom_diff_;
 
-  primitive poolingFwd, poolingBwd;
+  primitive poolingFwd_, poolingBwd_;
 };
 
 

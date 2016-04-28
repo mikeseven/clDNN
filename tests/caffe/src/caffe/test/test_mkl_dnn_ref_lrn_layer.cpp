@@ -110,7 +110,7 @@ void MKL_DNNLRNLayerTest<TypeParam>::ReferenceLRNForward(
   }
 }
 
-TYPED_TEST_CASE(MKL_DNNLRNLayerTest, TestDtypesAndDevices);
+TYPED_TEST_CASE(MKL_DNNLRNLayerTest, ::testing::Types<CPUDevice<float> >);
 
 
 TYPED_TEST(MKL_DNNLRNLayerTest, TestSetupAcrossChannels) {

@@ -368,7 +368,7 @@ class MKL_DNNPoolingLayerTest : public MultiDeviceTest<TypeParam> {
   }
 };
 
-TYPED_TEST_CASE(MKL_DNNPoolingLayerTest, TestDtypesAndDevices);
+TYPED_TEST_CASE(MKL_DNNPoolingLayerTest, ::testing::Types<CPUDevice<float> >);
 
 TYPED_TEST(MKL_DNNPoolingLayerTest, TestSetup) {
   typedef typename TypeParam::Dtype Dtype;
