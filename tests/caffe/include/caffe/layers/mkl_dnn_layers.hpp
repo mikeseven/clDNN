@@ -190,10 +190,9 @@ public:
       fwd_top_data_    (new MKL_DNNData<Dtype>()),
       fwd_bottom_data_ (new MKL_DNNData<Dtype>()),
       bwd_top_diff_    (new MKL_DNNDiff<Dtype>()),
-      bwd_bottom_diff_ (new MKL_DNNDiff<Dtype>()),
-      poolingFwd_(NULL), poolingBwd_(NULL)
+      bwd_bottom_diff_ (new MKL_DNNDiff<Dtype>())
   {}
-  ~MKL_DNNPoolingLayer();
+
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                           const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
@@ -238,7 +237,7 @@ private:
   shared_ptr<MKL_DNNData<Dtype> > fwd_top_data_, fwd_bottom_data_;
   shared_ptr<MKL_DNNDiff<Dtype> > bwd_top_diff_, bwd_bottom_diff_;
 
-  primitive poolingFwd_, poolingBwd_;
+  primitive poolingFwd_ = nullptr, poolingBwd_ = nullptr;
 };
 
 

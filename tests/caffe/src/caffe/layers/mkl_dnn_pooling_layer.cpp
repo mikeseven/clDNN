@@ -9,10 +9,20 @@
 #include "caffe/syncedmem.hpp"
 #include "caffe/util/math_functions.hpp"
 
+/* TODO:
+ * Average pooling
+ * backward
+ * using of max_idx_ / topmask
+ */
 
 namespace caffe {
-template <typename Dtype>
-MKL_DNNPoolingLayer<Dtype>::~MKL_DNNPoolingLayer() {}
+template <> void MKL_DNNPoolingLayer<double>::LayerSetUp(const vector<Blob<double>*>& bottom,
+      const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNPoolingLayer<double>::Forward_cpu(const vector<Blob<double>*>& bottom,
+    const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNPoolingLayer<double>::Backward_cpu(const vector<Blob<double>*>& top,
+    const vector<bool>& propagate_down,
+    const vector<Blob<double>*>& bottom) {NOT_IMPLEMENTED;}
 
 template <typename Dtype>
 void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
@@ -82,7 +92,7 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   pooled_height_ = static_cast<int>(ceil(static_cast<float>(
       bottom[0]->height() + 2 * pad_h_ - kernel_h_) / stride_h_)) + 1;
   pooled_width_ = static_cast<int>(ceil(static_cast<float>(
-      bottom[0]->height() + 2 * pad_w_ - kernel_w_) / stride_w_)) + 1;
+      bottom[0]->width() + 2 * pad_w_ - kernel_w_) / stride_w_)) + 1;
   if (pad_h_ || pad_w_) {
     // If we have padding, ensure that the last pooling starts strictly
     // inside the image (instead of at the padding); otherwise clip the last.
@@ -103,14 +113,14 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   auto ow = pooled_width_;
   auto oh = pooled_height_;
 
-  src_offset[0] = -pad_w_;
-  src_offset[1] = -pad_h_;
-
-  kernel_stride[0] = stride_w_;
-  kernel_stride[1] = stride_h_;
-
-  kernel_size[0] = kernel_w_;
-  kernel_size[1] = kernel_h_;
+  auto in_off_b = 0;
+  auto in_off_x = -pad_w_;
+  auto in_off_y = -pad_h_;
+  auto in_off_z = 0;
+  auto out_off_b = 0;
+  auto out_off_y = 0;
+  auto out_off_x = 0;
+  auto out_off_z = 0;
 
 
   fwd_bottom_data_->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {n, {ih, iw}, c}});
@@ -130,9 +140,35 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   bwd_top_diff_->name =    "bwd_top_diff      @ " + this->layer_param_.name();
   bwd_bottom_diff_->name = "bwd_bottom_diff   @ " + this->layer_param_.name();
 
-  // Primitives will be allocated during the first fwd pass
-  // TODO: for mkl-dnn could it be done here?
-  poolingFwd_ = NULL;
+  fwd_bottom_data_->create_conversions();
+  fwd_top_data_   ->create_conversions();
+  bwd_top_diff_   ->create_conversions();
+  bwd_bottom_diff_->create_conversions();
+
+  auto mode = pooling::mode::max;
+  switch (this->layer_param_.pooling_param().pool()) {
+    case PoolingParameter_PoolMethod_MAX:
+      mode = pooling::mode::max;
+      break;
+    case PoolingParameter_PoolMethod_AVE:
+      mode = pooling::mode::average;
+      break;
+    case PoolingParameter_PoolMethod_STOCHASTIC:
+    default:
+      NOT_IMPLEMENTED;
+  }
+  poolingFwd_ = pooling::create( {engine::reference,
+                                    mode,
+                                    fwd_top_data_->memory_prv,
+                                    {out_off_b, {out_off_y, out_off_x}, out_off_z},
+                                    {n,         {oh,        ow},        c},
+                                    fwd_bottom_data_->memory_prv,
+                                    {in_off_b,  {in_off_y, in_off_x},   in_off_z},
+                                    {1,         {stride_h_, stride_w_}, 1},
+                                    {1,         {kernel_h_, kernel_w_}, 1},
+                                    padding::zero}
+                                  );
+
   poolingBwd_ = NULL;
 }
 
@@ -208,82 +244,38 @@ void MKL_DNNPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     caffe_set<size_t>(top_count, -1, mask);
     //pooling_res[dnnResourceWorkspace] = reinterpret_cast<void*>(mask);
 
-    void* bottom_data =
-      reinterpret_cast<void *>(const_cast<Dtype*>(bottom[0]->prv_data()));
-    if (NULL == bottom_data) {
-      bottom_data =
-        reinterpret_cast<void *>(const_cast<Dtype*>(bottom[0]->cpu_data()));
-      if (poolingFwd_ == nullptr) {
-        // Now create poolingFwd
-        /* dnnPoolingCreateForward<Dtype>(&poolingFwd_, NULL,
-                dnnAlgorithmPoolingMax, fwd_bottom_data->layout_usr,
-                kernel_size, kernel_stride, src_offset, dnnBorderZeros);
-
-
-        // Now create poolingBwd
-        dnnPoolingCreateBackward<Dtype>(&poolingBwd_, NULL,
-                dnnAlgorithmPoolingMax, fwd_bottom_data->layout_usr,
-                kernel_size, kernel_stride, src_offset, dnnBorderZeros);
-        */
-      }
-    } else if (poolingFwd_ == nullptr) {
-      // Is it the first pass? Create a primitive.
-      CHECK_EQ((bottom[0]->get_prv_descriptor_data())->get_descr_type(),
-              PrvMemDescr::PRV_DESCR_MKL_DNN);
-      shared_ptr<MKL_DNNData<Dtype> > mem_descr
-        =  boost::static_pointer_cast<MKL_DNNData<Dtype> >
-              (bottom[0]->get_prv_descriptor_data());
-      CHECK(mem_descr != NULL);
-
-      DLOG(INFO) << "Using layout of " << mem_descr->name
-              << " as input layout for " << this->layer_param_.name();
-
-      // copy shared_ptr
-      fwd_bottom_data_ = mem_descr;
-
-      // Now create poolingFwd
-      /* dnnPoolingCreateForward<Dtype>(&poolingFwd_, NULL,
-              dnnAlgorithmPoolingMax, fwd_bottom_data->layout_int, kernel_size,
-              kernel_stride, src_offset, dnnBorderZeros);
-
-
-      dnnLayoutCreateFromPrimitive<Dtype>(&fwd_top_data->layout_int,
-              poolingFwd, dnnResourceDst);
-      */
-
-      fwd_top_data_->create_conversions();
-
-      // Now create poolingBwd
-      /* dnnPoolingCreateBackward<Dtype>(&poolingBwd_, NULL,
-              dnnAlgorithmPoolingMax, fwd_bottom_data->layout_int, kernel_size,
-              kernel_stride, src_offset, dnnBorderZeros);
-
-      dnnLayoutCreateFromPrimitive<Dtype>(&bwd_top_diff->layout_int,
-              poolingFwd, dnnResourceDst);
-      */
-
-      //dnnLayoutCreateFromPrimitive<Dtype>(&bwd_bottom_diff->layout_int,
-      //        poolingFwd, dnnResourceSrc);
-
-      bwd_top_diff_->create_conversions();
-      bwd_bottom_diff_->create_conversions();
-    }
-
+    auto bottom_data = fwd_bottom_data_->get_converted_prv(bottom[0], true);
+    void *top_data = nullptr;
     if (fwd_top_data_->from_internal != nullptr) {
       top[0]->set_prv_data(fwd_top_data_->internal_ptr, fwd_top_data_, false);
-      //pooling_res[dnnResourceDst] =reinterpret_cast<void *>(
-        //      const_cast<Dtype*>(fwd_top_data->internal_ptr));
+      top_data = fwd_top_data_->internal_ptr;
     } else {
-      //pooling_res[dnnResourceDst] =
-        //      reinterpret_cast<void *>(top[0]->mutable_cpu_data());
+      top_data = top[0]->mutable_cpu_data();
       DLOG(INFO) << "Using cpu_data for top in DnnPooling.";
     }
-    //status = dnnExecute<Dtype>(poolingFwd, pooling_res);
+
+    execute({fwd_bottom_data_->memory_prv(bottom_data),
+             fwd_top_data_->memory_prv(top_data),
+             poolingFwd_});
 
     }
     break;
   case PoolingParameter_PoolMethod_AVE:
-    NOT_IMPLEMENTED;
+  {
+    auto bottom_data = fwd_bottom_data_->get_converted_prv(bottom[0], true);
+    void *top_data = nullptr;
+    if (fwd_top_data_->from_internal != nullptr) {
+      top[0]->set_prv_data(fwd_top_data_->internal_ptr, fwd_top_data_, false);
+      top_data = fwd_top_data_->internal_ptr;
+    } else {
+      top_data = top[0]->mutable_cpu_data();
+      DLOG(INFO) << "Using cpu_data for top in DnnPooling.";
+    }
+
+    execute({fwd_bottom_data_->memory_prv(bottom_data),
+             fwd_top_data_->memory_prv(top_data),
+             poolingFwd_});
+  }
     break;
   case PoolingParameter_PoolMethod_STOCHASTIC:
     NOT_IMPLEMENTED;
