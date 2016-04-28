@@ -64,15 +64,20 @@ namespace neural {
         switch (padding) {
         case padding::zero:
             help_input_offset.feature[0] -= static_cast<int32_t>(size / 2);
-            for (auto pos : range) {
+            for (auto pos : range) { // KUBA: czy mo¿na za³o¿yæ, ¿e range dla inputu jest dok³adnie takie samo, czy trzeba to weryfikowaæ?
                 auto out_idx = calc_out_idx(pos + output_offset);
-                float acc = 0.f;
-                float sum_of_products = 0.f;
+
+                float acc = 0.0f;
+                float sum_of_products = 0.0f;
                 for (auto window_pos : window_range) {
                     auto input_pos = pos - help_input_offset + window_pos;
-                    auto input_index = calc_in_idx(input_pos);
+                    
+                if (calc_in_idx.is_out_of_range(input_pos))
+                        continue;
+                auto input_index = calc_in_idx(input_pos);
                     acc = input[input_index];
-                };
+                }
+                output[out_idx] = acc;
             }
             /*
             for (auto pos : range) {
