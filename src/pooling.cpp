@@ -40,14 +40,14 @@ struct pooling_reference : is_an_implementation {
         auto input  = static_cast<float*>(this_pooling->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
         auto output = static_cast<float*>(this_pooling->argument.output[0].as<const memory&>().pointer);
 
-        auto& input_memory_arg  = this_pooling->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-         //auto& input_memory_arg  = this_pooling->input_memory(0).argument;
-        auto& input_buffer_size = input_memory_arg.size;
+        auto& input_arg  = this_pooling->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+         //auto& input_arg  = this_pooling->input_memory(0).argument;
+        auto& input_buffer_size = input_arg.size;
         auto& input_offset      = this_pooling->argument.input_offset;
 
-        auto& output_memory_arg = this_pooling->argument.output[0].as<const memory&>().argument;
-        //auto& output_memory_arg = this_pooling->output_memory(0).argument;
-        auto& output_buffer_size= output_memory_arg.size;
+        auto& output_arg = this_pooling->argument.output[0].as<const memory&>().argument;
+        //auto& output_arg = this_pooling->output_memory(0).argument;
+        auto& output_buffer_size= output_arg.size;
         auto& output_offset     = this_pooling->argument.output_offset;
         auto& output_size       = this_pooling->argument.output_size;
 
@@ -56,11 +56,11 @@ struct pooling_reference : is_an_implementation {
         auto& padding           = this_pooling->argument.padding;
 
         if(padding::zero                != padding)                       throw std::runtime_error("Pooling support only zero padding.");
-        if(input_memory_arg.format      != memory::format::yxfb_f32)      throw std::runtime_error("Pooling reference uses yxfb_f32 format."); //todo, only this format?
+        if(input_arg.format             != memory::format::yxfb_f32)      throw std::runtime_error("Pooling reference uses yxfb_f32 format."); //todo, only this format?
         if(input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::runtime_error("Pooling input/output number of dimension does not match.");
         if(stride.raw.size()            != output_buffer_size.raw.size()) throw std::runtime_error("Pooling stride/output number of dimension does not match.");
         if(window.raw.size()            != output_buffer_size.raw.size()) throw std::runtime_error("Pooling window_size/output number of dimension does not match.");
-        if(input_memory_arg.format      != output_memory_arg.format)      throw std::runtime_error("Pooling input/output data format does not match.");
+        if(input_arg.format             != output_arg.format)             throw std::runtime_error("Pooling input/output data format does not match.");
 
         assert( 1 == output_size.feature.size());
         assert( 1 == output_size.batch.size()  );
@@ -77,25 +77,25 @@ struct pooling_reference : is_an_implementation {
         namespace nd = ndimensional;
         nd::value<uint32_t> range(output_size);
         nd::value<uint32_t> window_range(window);
-        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx(input_buffer_size);
-        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx(output_buffer_size);
+        auto calc_in_idx  = nd::choose_calucalte_idx(input_arg.format);
+        auto calc_out_idx = nd::choose_calucalte_idx(output_arg.format);
         switch( this_pooling->argument.mode ){
             case pooling::mode::max:
                 for(auto pos : range) {
-                    auto out_idx = calc_out_idx(pos + output_offset);
+                   auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
 
                     float acc = -std::numeric_limits<float>::max();
                     for(auto win_pos : window_range){
                         const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos;
 
-                        if( calc_in_idx.is_out_of_range(arg_in_idx) )
+                        if( nd::is_out_of_range(input_arg.size, arg_in_idx) )
                         {
                             // Pad with zero.
                             acc = std::max(acc, 0.0f);
                             continue;
                         }
 
-                        auto in_idx = calc_in_idx(arg_in_idx);
+                        auto in_idx  = calc_in_idx(input_arg.size.raw, {arg_in_idx.begin(), arg_in_idx.end()});
                         acc = std::max(acc, input[in_idx]);
                     }
                     output[out_idx] = acc;
@@ -105,16 +105,16 @@ struct pooling_reference : is_an_implementation {
             {
                 auto window_elements = std::accumulate(window.raw.cbegin(), window.raw.cend(), 1, std::multiplies<uint32_t>());
                 for(auto pos : range) {
-                    auto out_idx = calc_out_idx(pos + output_offset);
+                    auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
 
                     float acc = 0.0f;
                     for(auto win_pos : window_range){
                         const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos;
 
-                        if( calc_in_idx.is_out_of_range(arg_in_idx) )
+                        if( nd::is_out_of_range(input_arg.size, arg_in_idx) )
                             continue;
 
-                        auto in_idx = calc_in_idx(arg_in_idx);
+                        auto in_idx  = calc_in_idx(input_arg.size.raw, {arg_in_idx.begin(), arg_in_idx.end()});
                         acc += input[in_idx];
                     }
                     output[out_idx] = acc/window_elements;

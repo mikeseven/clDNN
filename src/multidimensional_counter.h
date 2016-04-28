@@ -261,6 +261,30 @@ size_t index(std::vector<uint32_t> size, std::vector<uint32_t> pos);
 typedef size_t (*fptr)(std::vector<uint32_t> size, std::vector<uint32_t> pos);
 DLL_SYM fptr choose_calucalte_idx(neural::memory::format::type arg);
 
+inline bool is_out_of_range(const std::vector<uint32_t> size, const std::vector<uint32_t> pos){
+    assert( pos.size() == size.size() );
+
+    for(size_t i = 0; i < pos.size(); ++i)
+        if(pos[i] >= size[i])
+            return true;
+
+    return false;
+}
+inline bool is_out_of_range(const std::vector<uint32_t> size, const std::vector<int32_t> pos){
+    for(size_t i = 0; i < pos.size(); ++i)
+        if(pos[i] < 0)
+            return true;
+
+    std::vector<uint32_t> pos_u {pos.begin(), pos.end()};
+    return is_out_of_range(size, pos_u);
+}
+inline bool is_out_of_range(const neural::vector<uint32_t> size, const std::vector<uint32_t> pos){
+    return is_out_of_range(size.raw, pos);
+}
+inline bool is_out_of_range(const neural::vector<uint32_t> size, const std::vector<int32_t> pos){
+    return is_out_of_range(size.raw, pos);
+}
+
 /////////////////////////
 template<typename T>
 class calculate_idx_obselote{
