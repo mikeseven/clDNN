@@ -27,8 +27,8 @@ public:
     const uint32_t dim_y      = 2, dim_x      = 2, dim_f      = 4, dim_b      = 3;
 
   	static const uint32_t all_size = 48; //dim_y*dim_x*dim_f*dim_b;
-	memory::format::type in_layout = memory::format::yxfb_f32;
-    memory::format::type out_layout = memory::format::bfxy_f32;
+	memory_obselote::format::type in_layout = memory_obselote::format::yxfb_f32;
+    memory_obselote::format::type out_layout = memory_obselote::format::bfxy_f32;
 
     float in_buffer[all_size] =
     {// yxfb
@@ -121,12 +121,12 @@ public:
 
 	// input buffer should be initialized with valid data
                                     //y=2 x=2 f=4 b=3
-	neural::vector<uint32_t> in_sizes = { dim_b, {dim_y, dim_x}, dim_f };
+    std::vector<uint32_t> in_sizes = { dim_y, dim_x, dim_f, dim_b};
                                     //b=3 f=4 x=2 y=2
-	neural::vector<uint32_t> out_sizes = { dim_b, {dim_y, dim_x}, dim_f };
+    std::vector<uint32_t> out_sizes= { dim_b, dim_f, dim_x, dim_y};
 
-    neural::primitive input   = memory::create({engine::reference, in_layout, in_sizes});
-    neural::primitive output  = memory::create({engine::reference, out_layout, out_sizes, true});
+    neural::primitive input   = memory_obselote::create({engine::cpu, in_layout, in_sizes});
+    neural::primitive output  = memory_obselote::create({engine::cpu, out_layout, out_sizes, true});
     neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,input,output});
 };
 
@@ -141,7 +141,7 @@ TEST_F(Reorder_test_fixture,reorder_test_basic) {
         std::cout << ex.what() << std::endl;
     }
 
-    auto buf_out = static_cast<float*>(output.as<const memory&>().pointer);
+    auto buf_out = static_cast<float*>(output.as<const memory_obselote&>().pointer);
 
     bool result = true;
     for(size_t i = 0; i < dim_y*dim_x*dim_f*dim_b; ++i)
@@ -152,8 +152,8 @@ TEST_F(Reorder_test_fixture,reorder_test_basic) {
 
 TEST_F(Reorder_test_fixture,reorder_test_output_as_input_2pass) {
 
-    auto input2  = memory::create({engine::reference, out_layout, out_sizes});
-    auto output2 = memory::create({engine::reference, in_layout, in_sizes, true});
+    auto input2  = memory_obselote::create({engine::cpu, out_layout, out_sizes});
+    auto output2 = memory_obselote::create({engine::cpu, in_layout, in_sizes, true});
     auto reorder2    = reorder::create({engine::reference,input2,output2});
 
     float* buf_out = nullptr;
@@ -161,10 +161,10 @@ TEST_F(Reorder_test_fixture,reorder_test_output_as_input_2pass) {
     try
     {
         execute({input(in_buffer), reorder});
-        buf_out = static_cast<float*>(output.as<const memory&>().pointer);
+        buf_out = static_cast<float*>(output.as<const memory_obselote&>().pointer);
 
         execute({input2(buf_out), reorder2});
-        buf_out2 = static_cast<float*>(output2.as<const memory&>().pointer);
+        buf_out2 = static_cast<float*>(output2.as<const memory_obselote&>().pointer);
     }
     catch (const std::exception& ex)
     {

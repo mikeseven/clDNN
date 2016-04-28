@@ -436,8 +436,7 @@ struct attach{
     attach(){
         auto key = std::make_tuple(engine::cpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
         auto val_fw = convolution_cpu_jit::create;
-        auto& conv_fw_implementation_map = singleton_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>         ::instance();
-        
+
         conv_fw_implementation_map.insert( {key, val_fw} );
     }
     ~attach(){}

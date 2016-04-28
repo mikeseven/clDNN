@@ -68,7 +68,7 @@ shared_ptr<Layer<Dtype> > GetConvolutionLayer(
     }
     return shared_ptr<Layer<Dtype> >(new CuDNNConvolutionLayer<Dtype>(param));
 #endif
-#ifdef USE_MKL_DNN
+#ifdef USE_MKL_DNN    
   } else if (engine == ConvolutionParameter_Engine_MKL_DNN) {
     return shared_ptr<Layer<Dtype> >(new MKL_DNNConvolutionLayer<Dtype>(param));
 #endif
@@ -101,7 +101,7 @@ shared_ptr<Layer<Dtype> > GetPoolingLayer(const LayerParameter& param) {
     }
     return shared_ptr<Layer<Dtype> >(new CuDNNPoolingLayer<Dtype>(param));
 #endif
-#ifdef USE_MKL_DNN_OFF //  not yet implemented
+#ifdef USE_MKL_DNN    
   } else if (engine == PoolingParameter_Engine_MKL_DNN) {
     return shared_ptr<Layer<Dtype> >(new MKL_DNNPoolingLayer<Dtype>(param));
 #endif
@@ -142,7 +142,7 @@ shared_ptr<Layer<Dtype> > GetLRNLayer(const LayerParameter& param) {
       }
     }
 #endif
-#ifdef USE_MKL_DNN_OFF //  not yet implemented
+#ifdef USE_MKL_DNN
   } else if (engine == LRNParameter_Engine_MKL_DNN) {
     return shared_ptr<Layer<Dtype> >(new MKL_DNNLRNLayer<Dtype>(param));
 #endif

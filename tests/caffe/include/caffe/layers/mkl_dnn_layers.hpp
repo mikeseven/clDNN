@@ -11,49 +11,52 @@
 #include "caffe/proto/caffe.pb.h"
 #include "boost/enable_shared_from_this.hpp"
 
-#include "neural.h"
+#include "dnn.hpp"
 
 namespace caffe {
-using namespace neural;
 
 template <typename Dtype, bool is_diff>
 struct MKL_DNNMemoryDescriptor : PrvMemDescr, boost::enable_shared_from_this<MKL_DNNMemoryDescriptor<Dtype, is_diff> > {
-  MKL_DNNMemoryDescriptor() : layout_usr(memory::format::bfyx_f32), name("UKNOWN") {};
+  MKL_DNNMemoryDescriptor() : layout_usr(NULL), layout_int(NULL),
+    internal_ptr(NULL), convert_to_int(NULL), convert_from_int(NULL), name("UKNOWN") {};
   ~MKL_DNNMemoryDescriptor()
   {
-    if(internal_ptr) CaffeFreeHost(internal_ptr, use_cuda);
+    dnnLayoutDelete<Dtype>(layout_usr);
+    dnnLayoutDelete<Dtype>(layout_int);
+    dnnReleaseBuffer<Dtype>(internal_ptr);
+    dnnDelete<Dtype>(convert_to_int);
+    dnnDelete<Dtype>(convert_from_int);
   }
 
   shared_ptr<MKL_DNNMemoryDescriptor<Dtype, is_diff> > get_shared_ptr() {
     return this->shared_from_this();
   }
 
-  memory::format::type layout_usr = memory::format::bfyx_f32;
-  memory::format::type layout_int = memory::format::yxfb_f32;
+  dnnLayout_t layout_usr;
+  dnnLayout_t layout_int;
   Dtype* internal_ptr;
-  primitive memory_prv    = nullptr;
-  primitive memory_usr    = nullptr;
-  primitive to_internal   = nullptr;
-  primitive from_internal = nullptr;
+  dnnPrimitive_t convert_to_int;
+  dnnPrimitive_t convert_from_int;
   std::string name;  // for debugging purposes
-  bool use_cuda;
   void create_conversions() {
-    if (layout_usr != layout_int)
+    if (layout_int
+        && !dnnLayoutCompare<Dtype>(layout_usr, layout_int))
     {
-        CaffeMallocHost((void**)&internal_ptr, sizeof(Dtype)*prv_count(), &use_cuda);
-        // TODO: use the same engine as in the layer
-        to_internal   = reorder::create(reorder::arguments({engine::reference, memory_usr, memory_prv}));
-        from_internal = reorder::create(reorder::arguments({engine::reference, memory_prv, memory_usr}));
+      CHECK(layout_usr);
+      int status = dnnConversionCreate<Dtype>(&convert_to_int, layout_usr , layout_int);
+      CHECK(status == 0) << "Failed creation convert_to_int with status " << status << "\n";
+      status = dnnConversionCreate<Dtype>(&convert_from_int, layout_int , layout_usr);
+      CHECK(status == 0) << "Failed creation convert_from_int with status " << status << "\n";
+      status = dnnAllocateBuffer<Dtype>((void **)&internal_ptr, layout_int);
+      CHECK(status == 0) << "Failed internal_ptr memory allocation with status " << status << "\n";
+
+      memset(internal_ptr, 0, dnnLayoutGetMemorySize<Dtype>(layout_int));
     }
   }
-
-  virtual size_t prv_count() {
-      return (memory_prv.as<const neural::memory&>().count());
-  };
+  virtual size_t prv_count() {return dnnLayoutGetMemorySize<Dtype>(layout_int) / sizeof(Dtype);};
   virtual void convert_from_prv(void* prv_ptr, void* cpu_ptr);
   virtual PrvDescrType get_descr_type() {return PRV_DESCR_MKL_DNN;};
-  Dtype* get_converted_prv(Blob<Dtype>* blob, bool set_prv_ptr, 
-          MKL_DNNMemoryDescriptor<Dtype, is_diff>* converted_in_fwd=nullptr);
+  Dtype* get_converted_prv(Blob<Dtype> * blob, bool test_prv_layout, bool set_prv_ptr=true);
 };
 
 template <typename Dtype>
@@ -67,11 +70,9 @@ struct MKL_DNNDiff : MKL_DNNMemoryDescriptor<Dtype, true>
 template <typename Dtype>
 class MKL_DNNConvolutionLayer : public ConvolutionLayer<Dtype> {
 public:
-  explicit MKL_DNNConvolutionLayer(
-          const LayerParameter& param, 
-          neural::engine::type engine = neural::engine::reference);
+  explicit MKL_DNNConvolutionLayer(const LayerParameter& param);
 
-  virtual inline const char* type() const { return "MKL_DNN_Convolution"; }
+  virtual inline const char* type() const { return "DnnConvolution"; }
   virtual ~MKL_DNNConvolutionLayer();
 
 protected:
@@ -80,31 +81,38 @@ protected:
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
                            const vector<Blob<Dtype>*>& top);
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
-                            const vector<bool>& propagate_down, 
-                            const vector<Blob<Dtype>*>& bottom);
+                            const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-                            const vector<bool>& propagate_down,
-                            const vector<Blob<Dtype>*>& bottom);
+                            const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
   // Customized methods
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                           const vector<Blob<Dtype>*>& top);
   virtual void compute_output_shape();
 
 private:
-  neural::engine::type engine_;
-  primitive convolution_fwd = nullptr;
-  primitive convolution_bwd = nullptr;
   /* Fwd step */
-  shared_ptr<MKL_DNNData<Dtype> > fwd_bottom_data, fwd_top_data, 
-                                  fwd_filter_data, fwd_bias_data;
+  shared_ptr<MKL_DNNData<Dtype> > fwd_bottom_data, fwd_top_data, fwd_filter_data, fwd_bias_data;
+  dnnPrimitive_t convolutionFwd;
+
   /* Bwd data step */
-  shared_ptr<MKL_DNNDiff<Dtype> > bwd_top_diff, bwd_bottom_diff;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwdd_top_diff, bwdd_bottom_diff;
+  shared_ptr<MKL_DNNData<Dtype> > bwdd_filter_data;
+  dnnPrimitive_t convolutionBwdData;
+
+#ifndef BWDD_DISABLE_PAD_REMOVING
+  /* Temporary workaround for removing padding from bwdd_bottom_diff */
+  shared_ptr<MKL_DNNDiff<Dtype> > bwdd_bottom_diff_no_padding;
+  dnnPrimitive_t convert_to_bottom_diff_no_padding;
+#endif
 
   /* Bwd filter step */
-  shared_ptr<MKL_DNNDiff<Dtype> > bwd_filter_diff;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwdf_top_diff, bwdf_filter_diff;
+  shared_ptr<MKL_DNNData<Dtype> > bwdf_bottom_data;
+  dnnPrimitive_t convolutionBwdFilter;
 
   /* Bwd bias step */
-  shared_ptr<MKL_DNNDiff<Dtype> > bwd_bias_diff;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwdb_top_diff, bwdb_bias_diff;
+  dnnPrimitive_t convolutionBwdBias;
 
  // TODO: temp. compatibility vs. older cafe
  size_t width_,
@@ -119,6 +127,7 @@ private:
         pad_h_;
 };
 
+
 /**
  * @brief Normalize the input in a local region across feature maps.
  */
@@ -126,16 +135,15 @@ private:
 template <typename Dtype>
 class MKL_DNNLRNLayer : public Layer<Dtype> {
  public:
-  explicit MKL_DNNLRNLayer(const LayerParameter& param,
-        neural::engine::type engine = neural::engine::reference)
-      : Layer<Dtype>(param), engine_(engine) {}
+  explicit MKL_DNNLRNLayer(const LayerParameter& param)
+      : Layer<Dtype>(param), layout_usr_(NULL) {}
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual ~MKL_DNNLRNLayer();
 
-  virtual inline const char* type() const { return "MKL_DNN_LRN"; }
+  virtual inline const char* type() const { return "DnnLRN"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
 
@@ -172,26 +180,25 @@ class MKL_DNNLRNLayer : public Layer<Dtype> {
   // Fields used for normalization ACROSS_CHANNELS
   // scale_ stores the intermediate summing results
 private:
-  neural::engine::type engine_;
-  primitive lrnFwd_ = nullptr, lrnBwd_ = nullptr;
-  shared_ptr<MKL_DNNData<Dtype> > fwd_top_data_;
-  shared_ptr<MKL_DNNDiff<Dtype> > bwd_bottom_diff_;
+  dnnPrimitive_t lrnFwd, lrnBwd;
+  shared_ptr<MKL_DNNData<Dtype> > fwd_top_data;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwd_bottom_diff;
   Dtype *lrn_buffer_;
-  memory::format::type layout_usr_ = memory::format::bfyx_f32;
+  dnnLayout_t layout_usr_;
 };
+
 
 
 template <typename Dtype>
 class MKL_DNNPoolingLayer : public Layer<Dtype> {
 public:
-  explicit MKL_DNNPoolingLayer(const LayerParameter& param,
-          neural::engine::type engine = neural::engine::reference)
-    : Layer<Dtype>(param), engine_(engine),
-      fwd_top_data_    (new MKL_DNNData<Dtype>()),
-      fwd_bottom_data_ (new MKL_DNNData<Dtype>()),
-      bwd_top_diff_    (new MKL_DNNDiff<Dtype>()),
-      bwd_bottom_diff_ (new MKL_DNNDiff<Dtype>()),
-      poolingFwd_(NULL), poolingBwd_(NULL)
+  explicit MKL_DNNPoolingLayer(const LayerParameter& param)
+    : Layer<Dtype>(param),
+      fwd_top_data    (new MKL_DNNData<Dtype>()),
+      fwd_bottom_data (new MKL_DNNData<Dtype>()),
+      bwd_top_diff    (new MKL_DNNDiff<Dtype>()),
+      bwd_bottom_diff (new MKL_DNNDiff<Dtype>()),
+      poolingFwd(NULL), poolingBwd(NULL)
   {}
   ~MKL_DNNPoolingLayer();
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
@@ -199,7 +206,7 @@ public:
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
                        const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "MKL_DNN_DnnPooling"; }
+  virtual inline const char* type() const { return "DnnPooling"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int MinTopBlobs() const { return 1; }
   // MAX POOL layers can output an extra top blob for the mask;
@@ -215,11 +222,9 @@ protected:
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
                            const vector<Blob<Dtype>*>& top);
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
-                            const vector<bool>& propagate_down, 
-                            const vector<Blob<Dtype>*>& bottom);
+                            const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-                            const vector<bool>& propagate_down,
-                            const vector<Blob<Dtype>*>& bottom);
+                            const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
   int kernel_h_, kernel_w_;
   int stride_h_, stride_w_;
@@ -231,16 +236,14 @@ protected:
   Blob<Dtype> rand_idx_;
   Blob<size_t> max_idx_;
 private:
-  neural::engine::type engine_;
   size_t kernel_size[2],
          kernel_stride[4];
   int src_offset[2];
-  shared_ptr<MKL_DNNData<Dtype> > fwd_top_data_, fwd_bottom_data_;
-  shared_ptr<MKL_DNNDiff<Dtype> > bwd_top_diff_, bwd_bottom_diff_;
+  shared_ptr<MKL_DNNData<Dtype> > fwd_top_data, fwd_bottom_data;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwd_top_diff, bwd_bottom_diff;
 
-  primitive poolingFwd_, poolingBwd_;
+  dnnPrimitive_t poolingFwd, poolingBwd;
 };
-
 
 template <typename Dtype>
 class MKL_DNNReLULayer : public NeuronLayer<Dtype> {
@@ -251,14 +254,14 @@ public:
    *   - negative_slope (\b optional, default 0).
    *     the value @f$ \nu @f$ by which negative values are multiplied.
    */
-  explicit MKL_DNNReLULayer(const LayerParameter& param,
-          neural::engine::type engine = neural::engine::reference)
-    : NeuronLayer<Dtype>(param), engine_(engine) {}
+  explicit MKL_DNNReLULayer(const LayerParameter& param)
+    : NeuronLayer<Dtype>(param) {}
+  ~MKL_DNNReLULayer();
 
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                           const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "MKL_DNN_ReLU"; }
+  virtual inline const char* type() const { return "DnnReLU"; }
 
 protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
@@ -267,60 +270,12 @@ protected:
                            const vector<Blob<Dtype>*>& top);
 
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
-                            const vector<bool>& propagate_down, 
-                            const vector<Blob<Dtype>*>& bottom);
+                            const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-                            const vector<bool>& propagate_down, 
-                            const vector<Blob<Dtype>*>& bottom);
+                            const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
 private:
-  neural::engine::type engine_;
-  primitive reluFwd_ = nullptr, reluBwd_ = nullptr;
-  primitive bottom_data_ = nullptr, top_data_ = nullptr, 
-            bottom_diff_ = nullptr, top_diff_ = nullptr;
-};
-
-/**
- * @brief Computes the softmax function.
- *
- * TODO(dox): thorough documentation for Forward, Backward, and proto params.
- */
-template <typename Dtype>
-class MKL_DNNSoftmaxLayer : public Layer<Dtype> {
- public:
-  explicit MKL_DNNSoftmaxLayer(const LayerParameter& param,
-          neural::engine::type engine = neural::engine::reference)
-      : Layer<Dtype>(param), engine_(engine) {}
-  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
-      const vector<Blob<Dtype>*>& top);
-
-  virtual inline const char* type() const { return "MKL_DNN_Softmax"; }
-  virtual inline int ExactNumBottomBlobs() const { return 1; }
-  virtual inline int ExactNumTopBlobs() const { return 1; }
-  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
-                          const vector<Blob<Dtype>*>& top);
- protected:
-  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
-      const vector<Blob<Dtype>*>& top);
-  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
-      const vector<Blob<Dtype>*>& top);
-  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
-      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
-  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-     const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
-
-  int outer_num_;
-  int inner_num_;
-  int softmax_axis_;
-  /// sum_multiplier is used to carry out sum using BLAS
-  Blob<Dtype> sum_multiplier_;
-  /// scale is an intermediate Blob to hold temporary results.
-  Blob<Dtype> scale_;
- private:
-  neural::engine::type engine_;
-  primitive softmaxFwd_ = nullptr, softmaxBwd_ = nullptr;
-  primitive bottom_data_ = nullptr, top_data_ = nullptr, 
-            bottom_diff_ = nullptr, top_diff_ = nullptr;
+  dnnPrimitive_t reluFwd_, reluBwd_;
 };
 
 } // namespace caffe

@@ -45,7 +45,7 @@ TYPED_TEST_CASE(MKL_DNNNeuronLayerTest, ::testing::Types<CPUDevice<float> >);
 TYPED_TEST(MKL_DNNNeuronLayerTest, TestReLU) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
-  MKL_DNNReLULayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNReLULayer<Dtype> layer(layer_param);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Now, check values
@@ -60,7 +60,7 @@ TYPED_TEST(MKL_DNNNeuronLayerTest, TestReLU) {
 TYPED_TEST(MKL_DNNNeuronLayerTest, TestReLUGradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
-  MKL_DNNReLULayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNReLULayer<Dtype> layer(layer_param);
   GradientChecker<Dtype> checker(1e-2, 1e-3, 1701, 0., 0.01);
   checker.CheckGradientEltwise(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
