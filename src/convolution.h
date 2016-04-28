@@ -24,8 +24,8 @@
 namespace neural{
     //                                           engine                          output                  input
     using conv_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
-    using conv_bw_key = std::tuple<neural::engine::type, neural::memory_obselote::format::type, neural::memory_obselote::format::type>; //todo
+    using conv_bw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>; //todo
 
-    extern singleton_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>         & conv_fw_implementation_map;
-    extern singleton_map<conv_bw_key, std::function<is_an_implementation *(convolution_backward &)>>& conv_bw_implementation_map;
+    #define conv_fw_implementation_map singleton_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>::instance()
+    #define conv_bw_implementation_map singleton_map<conv_bw_key, std::function<is_an_implementation *(convolution_backward &)>>::instance()
 }

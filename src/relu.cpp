@@ -35,14 +35,14 @@ struct relu_reference : is_an_implementation {
     static void implementation(const void *ptr) {
         auto this_relu = static_cast<const relu *>(ptr);
 
-        auto input_offset  = this_relu->argument.input_offset;
-        auto output_offset = this_relu->argument.output_offset;
-        auto output_size   = this_relu->argument.output_size;
+        auto& input_offset  = this_relu->argument.input_offset;
+        auto& output_offset = this_relu->argument.output_offset;
+        auto& output_size   = this_relu->argument.output_size;
 
-        //auto input_arg  = this_relu->input_memory(0).argument;
-        //auto output_arg = this_relu->output_memory(0).argument;
-        auto input_arg  = this_relu->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-        auto output_arg = this_relu->argument.output[0].as<const memory&>().argument;
+        //auto& input_arg  = this_relu->input_memory(0).argument;
+        //auto& output_arg = this_relu->output_memory(0).argument;
+        auto& input_arg  = this_relu->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+        auto& output_arg = this_relu->argument.output[0].as<const memory&>().argument;
 
         if(input_arg.format          != memory::format::yxfb_f32)   throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
         if(input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
@@ -64,12 +64,12 @@ struct relu_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range ( output_size );
-        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (input_arg.size);
-        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (output_arg.size);
+        auto calc_in_idx  = nd::choose_calucalte_idx(input_arg.format);
+        auto calc_out_idx = nd::choose_calucalte_idx(output_arg.format);
 
         for(auto pos : range) {
-            auto in_idx  = calc_in_idx (pos + input_offset );
-            auto out_idx = calc_out_idx(pos + output_offset);
+            auto in_idx  = calc_in_idx (input_arg.size.raw , pos + input_offset );
+            auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
 
             output[out_idx] = std::max( input[in_idx], 0.0f) + this_relu->argument.negative_slope * std::min( input[in_idx], 0.0f);
         }

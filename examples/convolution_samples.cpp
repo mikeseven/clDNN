@@ -104,29 +104,28 @@ void example_convolution_backward(){
                    conv_size_z = 1,
                    conv_size_b = 1;  // size of convolution window
 
-    const int32_t in_off_y = 0,
-                  in_off_x = 0,
-                  in_off_z = 0,
-                  in_off_b = 0;
+//    const int32_t in_off_y = 0,
+//                  in_off_x = 0,
+//                  in_off_z = 0,
+//                  in_off_b = 0;
 
     auto eng          = engine::reference;
-    auto bw_output    = memory_obselote::create({eng, memory_obselote::format::yxfb_f32, {output_y, output_x, output_z, output_b}, true});
-    auto bw_input     = memory_obselote::create({eng, memory_obselote::format::yxfb_f32, {input_y, input_x, input_z, input_b}, true});
-    auto fw_input     = memory_obselote::create({eng, memory_obselote::format::yxfb_f32, {output_y, output_x, output_z, output_b}, true});
-    auto weights      = memory_obselote::create({eng, memory_obselote::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_z, conv_size_b}, true});
-    auto weights_diff = memory_obselote::create({eng, memory_obselote::format::yxfb_f32, {conv_size_y, conv_size_x, conv_size_z, conv_size_b}, true});
-    auto biases       = memory_obselote::create({eng, memory_obselote::format::x_f32,    {out_siz_z}, true});
-    auto biases_diff  = memory_obselote::create({eng, memory_obselote::format::x_f32,    {out_siz_z}, true});
+    auto bw_output    = memory::create({eng, memory::format::yxfb_f32, {output_b   , {output_y    , output_x   }, output_z   }, true});
+    auto bw_input     = memory::create({eng, memory::format::yxfb_f32, {input_b    , {input_y     , input_x    }, input_z    }, true});
+    auto fw_input     = memory::create({eng, memory::format::yxfb_f32, {output_b   , {output_y    , output_x   }, output_z   }, true});
+    auto weights      = memory::create({eng, memory::format::yxfb_f32, {conv_size_b, {conv_size_y , conv_size_x}, conv_size_z}, true});
+    auto weights_diff = memory::create({eng, memory::format::yxfb_f32, {conv_size_b, {conv_size_y , conv_size_x}, conv_size_z}, true});
+    auto biases       = memory::create({eng, memory::format::x_f32,    {1          , {{out_siz_z}}              , 1          }, true});
+    auto biases_diff  = memory::create({eng, memory::format::x_f32,    {1          , {{out_siz_z}}              , 1          }, true});
     // buffers should be initialized with valid data
-    // *diff buffers must be filled with '0'
 
     auto conv_bw = convolution_backward::create({eng,
                                                  std::vector<primitive>{bw_output, weights_diff, biases_diff},
-                                             //   {out_off_y, out_off_x, out_off_z, out_off_b},
-                                             //   {out_siz_y, out_siz_x, out_siz_z, out_siz_b},
+                                             //   {out_off_b, {out_off_y, out_off_x}, out_off_z},
+                                             //   {out_siz_b, {out_siz_y, out_siz_x}, out_siz_z},
                                                  {bw_input, fw_input, weights, biases},
-                                             //  {in_off_y, in_off_x, in_off_z, in_off_b},
-                                                 {stride_y, stride_x, stride_z, stride_b},
+                                             //  {in_off_b, {in_off_y, in_off_x}, in_off_z},
+                                                 {stride_b, {stride_y, stride_x}, stride_z},
                                                  padding::zero
                                                });
 

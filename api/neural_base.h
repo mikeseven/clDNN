@@ -36,9 +36,9 @@ namespace neural {
 template<typename T> struct vector {
     std::vector<T> raw;
     class ref_vector {
+        std::vector<T> &raw_;
         size_t begin_;
         size_t end_;
-        std::vector<T> &raw_;
         ref_vector(std::vector<T> &raw, size_t begin, size_t end) : raw_(raw), begin_(begin), end_(end) {};
         friend struct vector<T>;
     public:
@@ -48,8 +48,8 @@ template<typename T> struct vector {
         operator T() const { return raw_[0]; }
         T operator[](size_t at) const { assert(at<end_-begin_); return raw_[begin_+at]; }
     } spatial, feature, batch;
-    bool operator==(const vector &rhs) { return rhs.spatial==spatial && rhs.feature==feature && rhs.batch==batch; }
-    bool operator!=(const vector &rhs) { return !(*this==rhs); }
+    bool operator==(const vector &rhs) const { return rhs.spatial==spatial && rhs.feature==feature && rhs.batch==batch; }
+    bool operator!=(const vector &rhs) const { return !(*this==rhs); }
     vector(const vector &arg)
         : raw(arg.raw)
         , spatial(raw, arg.spatial.begin_, arg.spatial.end_)
