@@ -135,13 +135,13 @@ struct relu_backward_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (processed_window_sizes);
-        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_forward_input_idx(forward_input_arg.size);
-        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_forward_output_grad_idx(forward_output_grad_arg.size);
-        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_forward_input_grad_idx(forward_input_grad_arg.size);
+        auto calc_forward_input_idx       = nd::choose_calucalte_idx(forward_input_arg.format);
+        auto calc_forward_output_grad_idx = nd::choose_calucalte_idx(forward_output_grad_arg.format);
+        auto calc_forward_input_grad_idx  = nd::choose_calucalte_idx(forward_input_grad_arg.format);
         for(auto pos : range) {
-            auto forward_input_idx  = calc_forward_input_idx (pos + forward_input_offset);
-            auto forward_output_grad_idx = calc_forward_output_grad_idx(pos + forward_output_grad_offset);
-            auto forward_input_grad_idx = calc_forward_input_grad_idx(pos + forward_input_grad_offset);
+            auto forward_input_idx       = calc_forward_input_idx      (forward_input_arg.size.raw, pos + forward_input_offset);
+            auto forward_output_grad_idx = calc_forward_output_grad_idx(forward_output_grad_arg.size.raw, pos + forward_output_grad_offset);
+            auto forward_input_grad_idx  = calc_forward_input_grad_idx (forward_input_grad_arg.size.raw, pos + forward_input_grad_offset);
 
             forward_input_grad[forward_input_grad_idx] = (forward_input[forward_input_idx] <= 0.0f ? 0.0f : 1.0f) * forward_output_grad[forward_output_grad_idx];
         }

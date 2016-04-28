@@ -60,20 +60,6 @@ struct fully_connected_reference : is_an_implementation {
         assert( 1 == input_buffer_size.batch.size()  );
         assert( 1 == input_buffer_size.feature[0]    );
 
-        // up-casts data format form 1D to 2D if necessary; DOES not copy memory, just redescribes 1D input buffer as 2D (x+batch) with batch=1
-
-        auto mem_arg_in = this_fc->argument.input[0].primitive.as<const memory&>().argument;
-        mem_arg_in.format = memory::format::xb_f32;
-        mem_arg_in.owns_memory = false;
-        auto& in_wrapper = memory::create(mem_arg_in);
-        in_wrapper(input);
-
-        auto mem_arg_out = this_fc->argument.output[0].as<const memory&>().argument;
-        mem_arg_out.format = memory::format::xb_f32;
-        mem_arg_out.owns_memory = false;
-        auto& out_wrapper = memory::create(mem_arg_out);
-        out_wrapper(output);
-
         namespace nd = ndimensional;
         //this_fc->output_memory(0).fill(0.0f);
         this_fc->argument.output[0].as<const memory&>().fill(0.0f);
@@ -86,10 +72,9 @@ struct fully_connected_reference : is_an_implementation {
         nd::value<uint32_t> range_input(input_buffer_size);
         nd::value<uint32_t> range_weight(weight_buffer_size);
 
-        // fc supports x_f32 and xb_f32 formats, we treat x_f32 as xb_f32 with b=1
-        auto calc_in_idx  = nd::choose_calucalte_idx(memory::format::xb_f32);
-        auto calc_out_idx = nd::choose_calucalte_idx(memory::format::xb_f32);
-        auto calc_w_idx   = nd::choose_calucalte_idx(memory::format::xb_f32);
+        auto calc_in_idx  = nd::choose_calucalte_idx(input_arg.format);
+        auto calc_out_idx = nd::choose_calucalte_idx(output_arg.format);
+        auto calc_w_idx   = nd::choose_calucalte_idx(weight_arg.format);
 
         std::vector<uint32_t> arg_weight_idx(3);
         for (auto pos_out : range_output){

@@ -51,6 +51,7 @@ size_t index<neural::memory::format::xb_f32>(std::vector<uint32_t> size, std::ve
 fptr choose_calucalte_idx(neural::memory::format::type arg){
     fptr ptr;
     switch (arg){
+        case neural::memory::format::type::x_f32: // treat x_f32 as xb_f32 with b=1
         case neural::memory::format::type::xb_f32:
             ptr = index<neural::memory::format::type::xb_f32>;
             break;
