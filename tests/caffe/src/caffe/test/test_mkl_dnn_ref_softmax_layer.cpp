@@ -18,13 +18,14 @@
 #include "caffe/test/test_gradient_check_util.hpp"
 
 namespace caffe {
+static auto engine =  neural::engine::reference;
 
 template <typename TypeParam>
-class MKL_DNNSoftmaxLayerTest : public MultiDeviceTest<TypeParam> {
+class MKL_DNN_Ref_SoftmaxLayerTest : public MultiDeviceTest<TypeParam> {
   typedef typename TypeParam::Dtype Dtype;
  protected:
-  MKL_DNNSoftmaxLayerTest()
-      : blob_bottom_(new Blob<Dtype>(1, 1000, 1, 1)),  // simple case TODO: batch support
+  MKL_DNN_Ref_SoftmaxLayerTest()
+      : blob_bottom_(new Blob<Dtype>(2, 10, 1, 1)),  // simple case TODO: batch support
         blob_top_(new Blob<Dtype>()) {
     // fill the values
     FillerParameter filler_param;
@@ -33,19 +34,19 @@ class MKL_DNNSoftmaxLayerTest : public MultiDeviceTest<TypeParam> {
     blob_bottom_vec_.push_back(blob_bottom_);
     blob_top_vec_.push_back(blob_top_);
   }
-  virtual ~MKL_DNNSoftmaxLayerTest() { delete blob_bottom_; delete blob_top_; }
+  virtual ~MKL_DNN_Ref_SoftmaxLayerTest() { delete blob_bottom_; delete blob_top_; }
   Blob<Dtype>* const blob_bottom_;
   Blob<Dtype>* const blob_top_;
   vector<Blob<Dtype>*> blob_bottom_vec_;
   vector<Blob<Dtype>*> blob_top_vec_;
 };
 
-TYPED_TEST_CASE(MKL_DNNSoftmaxLayerTest, ::testing::Types<CPUDevice<float> >);
+TYPED_TEST_CASE(MKL_DNN_Ref_SoftmaxLayerTest, ::testing::Types<CPUDevice<float> >);
 
-TYPED_TEST(MKL_DNNSoftmaxLayerTest, TestForward) {
+TYPED_TEST(MKL_DNN_Ref_SoftmaxLayerTest, TestForward) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
-  MKL_DNNSoftmaxLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNSoftmaxLayer<Dtype> layer(layer_param, engine);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Test sum
@@ -77,10 +78,10 @@ TYPED_TEST(MKL_DNNSoftmaxLayerTest, TestForward) {
 }
 
 #if 0  // TODO
-TYPED_TEST(MKL_DNNSoftmaxLayerTest, TestGradient) {
+TYPED_TEST(MKL_DNN_Ref_SoftmaxLayerTest, TestGradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
-  MKL_DNNSoftmaxLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNSoftmaxLayer<Dtype> layer(layer_param, engine);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);

@@ -28,16 +28,33 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
        << " shape(1) " << bottom[0]->shape(1)  << " shape(2) "  << bottom[0]->shape(2) << " shape(3) "
            << bottom[0]->shape(3) << "\n";
 
-  bottom_data_  = memory::create({engine_, memory::format::xb_f32, {batch , {{input_x }}, z}});
-  top_data_     = memory::create({engine_, memory::format::xb_f32, {batch , {{input_x }}, z}});
-  bottom_diff_  = memory::create({engine_, memory::format::xb_f32, {batch , {{input_x }}, z}});
-  top_diff_     = memory::create({engine_, memory::format::xb_f32, {batch , {{input_x }}, z}});
+  bottom_data_->layout_int = memory::format::xb_f32;
+  top_data_   ->layout_int = memory::format::xb_f32;
+  bottom_diff_->layout_int = memory::format::xb_f32;
+  top_diff_   ->layout_int = memory::format::xb_f32;
+  bottom_data_->memory_prv = memory::create({engine_, memory::format::xb_f32, {batch, {{input_x}}, z}});
+  top_data_   ->memory_prv = memory::create({engine_, memory::format::xb_f32, {batch, {{input_x}}, z}});
+  bottom_diff_->memory_prv = memory::create({engine_, memory::format::xb_f32, {batch, {{input_x}}, z}});
+  top_diff_   ->memory_prv = memory::create({engine_, memory::format::xb_f32, {batch, {{input_x}}, z}});
 
+  bottom_data_->layout_usr = memory::format::bx_f32;
+  top_data_   ->layout_usr = memory::format::bx_f32;
+  bottom_diff_->layout_usr = memory::format::bx_f32;
+  top_diff_   ->layout_usr = memory::format::bx_f32;
+  bottom_data_->memory_usr = memory::create({engine_, memory::format::bx_f32, {batch, {{input_x}}, z}});
+  top_data_   ->memory_usr = memory::create({engine_, memory::format::bx_f32, {batch, {{input_x}}, z}});
+  bottom_diff_->memory_usr = memory::create({engine_, memory::format::bx_f32, {batch, {{input_x}}, z}});
+  top_diff_   ->memory_usr = memory::create({engine_, memory::format::bx_f32, {batch, {{input_x}}, z}});
+
+  bottom_data_->create_conversions();
+  top_data_   ->create_conversions();
+  bottom_diff_->create_conversions();
+  top_diff_   ->create_conversions();
   softmaxFwd_ = normalization::softmax::create({engine_,
-                                                top_data_,
+                                                top_data_->memory_prv,
                                                 {0, {{0}}, 0},
                                                 {batch, {{input_x}}, 1u},
-                                                bottom_data_,
+                                                bottom_data_->memory_prv,
                                                 {0, {{0}}, 0},
                                                 });
   // TODO: softmax support in mkl-dnn
@@ -65,17 +82,17 @@ void MKL_DNNSoftmaxLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
 template <typename Dtype>
 void MKL_DNNSoftmaxLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
-  void* bottom_data = (void*)bottom[0]->prv_data();
-  void* top_data = NULL;
 
-  if (bottom_data) {
-    top_data = top[0]->mutable_prv_data();
+  auto bottom_data = bottom_data_->get_converted_prv(bottom[0], true);
+  void *top_data = nullptr;
+  if (top_data_->from_internal != nullptr) {
+    top[0]->set_prv_data(top_data_->internal_ptr, top_data_, false);
+    top_data = top_data_->internal_ptr;
   } else {
-    DLOG(INFO) << "Using cpu_data in MKL_DNNSoftmaxLayer.";
-    bottom_data = (void*)bottom[0]->cpu_data();
     top_data = top[0]->mutable_cpu_data();
+    DLOG(INFO) << "Using cpu_data for top in DnnPooling.";
   }
-  execute({bottom_data_(bottom_data), top_data_(top_data), softmaxFwd_});
+  execute({bottom_data_->memory_prv(bottom_data), top_data_->memory_prv(top_data), softmaxFwd_});
 }
 
 template <typename Dtype>

@@ -65,6 +65,7 @@ struct memory : is_a_primitive {
         scalar_f32, // single scalar, float32
         x_f32,
         xb_f32,     // 1D+batch, float32
+        bx_f32,     // 1D+batch, float32
         yxfb_f32,   // 3D+batch, float32
         fyxb_f32,
         xyfb_f32,

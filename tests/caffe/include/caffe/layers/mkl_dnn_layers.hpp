@@ -231,9 +231,7 @@ protected:
   Blob<size_t> max_idx_;
 private:
   neural::engine::type engine_;
-  size_t kernel_size[2],
-         kernel_stride[4];
-  int src_offset[2];
+
   shared_ptr<MKL_DNNData<Dtype> > fwd_top_data_, fwd_bottom_data_;
   shared_ptr<MKL_DNNDiff<Dtype> > bwd_top_diff_, bwd_bottom_diff_;
 
@@ -289,7 +287,12 @@ class MKL_DNNSoftmaxLayer : public Layer<Dtype> {
  public:
   explicit MKL_DNNSoftmaxLayer(const LayerParameter& param,
           neural::engine::type engine = neural::engine::reference)
-      : Layer<Dtype>(param), engine_(engine) {}
+      : Layer<Dtype>(param), engine_(engine),
+        top_data_    (new MKL_DNNData<Dtype>()),
+        bottom_data_ (new MKL_DNNData<Dtype>()),
+        top_diff_    (new MKL_DNNDiff<Dtype>()),
+        bottom_diff_ (new MKL_DNNDiff<Dtype>())
+      {}
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
@@ -318,8 +321,9 @@ class MKL_DNNSoftmaxLayer : public Layer<Dtype> {
  private:
   neural::engine::type engine_;
   primitive softmaxFwd_ = nullptr, softmaxBwd_ = nullptr;
-  primitive bottom_data_ = nullptr, top_data_ = nullptr, 
-            bottom_diff_ = nullptr, top_diff_ = nullptr;
+  shared_ptr<MKL_DNNData<Dtype> > top_data_, bottom_data_;
+  shared_ptr<MKL_DNNDiff<Dtype> > top_diff_, bottom_diff_;
+  
 };
 
 } // namespace caffe
