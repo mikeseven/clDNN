@@ -253,6 +253,13 @@ public:
     };
 };
 
+/////////////////////////
+template<neural::memory::format::type FORMAT>
+size_t index(std::vector<uint32_t> size, std::vector<uint32_t> pos);
+
+// todo rename or remove fptr
+typedef size_t (*fptr)(std::vector<uint32_t> size, std::vector<uint32_t> pos);
+DLL_SYM fptr choose_calucalte_idx(neural::memory::format::type arg);
 
 /////////////////////////
 template<typename T>

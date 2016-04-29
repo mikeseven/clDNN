@@ -104,10 +104,10 @@ void example_convolution_backward(){
                    conv_size_z = 1,
                    conv_size_b = 1;  // size of convolution window
 
-    const int32_t in_off_y = 0,
-                  in_off_x = 0,
-                  in_off_z = 0,
-                  in_off_b = 0;
+//    const int32_t in_off_y = 0,
+//                  in_off_x = 0,
+//                  in_off_z = 0,
+//                  in_off_b = 0;
 
     auto eng          = engine::reference;
     auto bw_output    = memory::create({eng, memory::format::yxfb_f32, {output_b   , {output_y    , output_x   }, output_z   }, true});

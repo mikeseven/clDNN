@@ -64,12 +64,12 @@ struct relu_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range ( output_size );
-        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (input_arg.size);
-        nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (output_arg.size);
+        auto calc_in_idx  = nd::choose_calucalte_idx(input_arg.format);
+        auto calc_out_idx = nd::choose_calucalte_idx(output_arg.format);
 
         for(auto pos : range) {
-            auto in_idx  = calc_in_idx (pos + input_offset );
-            auto out_idx = calc_out_idx(pos + output_offset);
+            auto in_idx  = calc_in_idx (input_arg.size.raw , pos + input_offset );
+            auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
 
             output[out_idx] = std::max( input[in_idx], 0.0f) + this_relu->argument.negative_slope * std::min( input[in_idx], 0.0f);
         }
