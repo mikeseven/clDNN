@@ -96,15 +96,15 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
 
     public:
 
-        jit_code(uint64_t output_width,
-                 uint64_t output_height,
-                 uint64_t output_feats,
-                 uint64_t input_width,
-                 uint64_t input_feats,
-                 uint64_t filter_height,
-                 uint64_t filter_width,
-                 uint64_t stride_x,
-                 uint64_t stride_y,
+        jit_code(uint32_t output_width,
+                 uint32_t output_height,
+                 uint32_t output_feats,
+                 uint32_t input_width,
+                 uint32_t input_feats,
+                 uint32_t filter_height,
+                 uint32_t filter_width,
+                 uint32_t stride_x,
+                 uint32_t stride_y,
                  bool apply_relu,
                  void* code_ptr = nullptr,
                  size_t code_size = 40 * Xbyak::DEFAULT_MAX_CODE_SIZE)
@@ -149,7 +149,7 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
                         {
                             for (uint64_t i = 0u; i < input_feats; ++i)
                             {
-                                auto filter_offset =
+                                size_t filter_offset =
                                     (kern_col * input_feats * output_features_per_iteration
                                     + i * output_features_per_iteration)
                                         * sizeof(float);
@@ -158,7 +158,7 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
 
                                 for (int j = 0; j < output_blocks; ++j)
                                 {
-                                    auto block_offset = j * stride_x;
+                                    size_t block_offset = j * stride_x;
                                     if (vertical) block_offset = j * stride_y * input_width;
                                     auto input_offset =
                                         (block_offset * input_feats
@@ -186,7 +186,7 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
                     }
                     for (int o = 0; o < output_blocks; ++o)
                     {
-                        auto output_offset = o * output_feats * sizeof(float);
+                        size_t output_offset = o * output_feats * sizeof(float);
                         if (vertical) output_offset *= output_width;
                         vmovaps(ptr[aux_output + output_offset], Ymm(2 * o));
                         vmovaps(ptr[aux_output + output_offset + register_width], Ymm(2 * o + 1));
@@ -241,7 +241,7 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
                     add(aux_output, output_feats * sizeof(float));
                 }
             }
-            for (uint64_t i = output_height / 6 * 6; i < output_height; ++i)
+            for (uint32_t i = output_height / 6 * 6; i < output_height; ++i)
             {
                 mov(aux_input_outer, input);
                 mov(aux_output, output);
@@ -258,25 +258,25 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
     jit_code code;
 
     jit_convolution_zxyn(
-        uint64_t batch,
+        uint32_t batch,
         bool apply_relu,
 
         float*   output,
-        uint64_t output_width,
-        uint64_t output_height,
-        uint64_t output_feature_maps,
+        uint32_t output_width,
+        uint32_t output_height,
+        uint32_t output_feature_maps,
 
         float*   input,
-        uint64_t input_width,
-        uint64_t input_height,
-        uint64_t input_feature_maps,
+        uint32_t input_width,
+        uint32_t input_height,
+        uint32_t input_feature_maps,
 
-        uint64_t stride_width,
-        uint64_t stride_height,
+        uint32_t stride_width,
+        uint32_t stride_height,
 
         float *  filter,
-        uint64_t filter_width,
-        uint64_t filter_height,
+        uint32_t filter_width,
+        uint32_t filter_height,
 
         float*   bias,
 
@@ -376,15 +376,15 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
     if(input_arg.format          != filter_arg.format)          throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
     if(filter_arg.size.raw.size()!= output_arg.size.raw.size()) throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
     if(bias_arg.size.raw.size()  != 3)                          throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
-    if(bias_arg.size.batch[0]    != output_size.feature[0])     throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
+    if(bias_arg.size.spatial[0]  != output_size.feature[0])     throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
                                                                                                                                                       // than this implementation will be format independent
 //    auto input  = static_cast<float*>(outer.input_memory(0).pointer);
 //    auto output = static_cast<float*>(outer.output_memory(0).pointer);
     auto input  = static_cast<float*>(outer.argument.input[0].primitive.as<const memory&>().pointer); //todo tmp solution
     auto output = static_cast<float*>(outer.argument.output[0].as<const memory&>().pointer);
 
-    auto filter = static_cast<float*>(outer.argument.weight.as<const memory_obselote&>().pointer);
-    auto bias   = static_cast<float*>(outer.argument.bias.as<const memory_obselote&>().pointer);
+    auto filter = static_cast<float*>(outer.argument.weight.as<const memory&>().pointer);
+    auto bias   = static_cast<float*>(outer.argument.bias.as<const memory&>().pointer);
 
     // general formula: output size = (input size - filter size) / step + 1
     for(size_t i = 0; i < input_offset.raw.size(); ++i){

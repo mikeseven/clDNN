@@ -74,8 +74,8 @@ struct pooling_reference : is_an_implementation {
         namespace nd = ndimensional;
         nd::value<uint32_t> range(output_size);
         nd::value<uint32_t> window_range(window);
-        auto calc_in_idx  = nd::choose_calucalte_idx(input_arg.format);
-        auto calc_out_idx = nd::choose_calucalte_idx(output_arg.format);
+        auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
+        auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
         switch( this_pooling->argument.mode ){
             case pooling::mode::max:
                 for(auto pos : range) {
