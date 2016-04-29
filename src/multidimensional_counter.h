@@ -259,7 +259,7 @@ size_t index(std::vector<uint32_t> size, std::vector<uint32_t> pos);
 
 // todo rename or remove fptr
 typedef size_t (*fptr)(std::vector<uint32_t> size, std::vector<uint32_t> pos);
-DLL_SYM fptr choose_calucalte_idx(neural::memory::format::type arg);
+DLL_SYM fptr choose_calculate_idx(neural::memory::format::type arg);
 
 inline bool is_out_of_range(const std::vector<uint32_t> size, const std::vector<uint32_t> pos){
     assert( pos.size() == size.size() );

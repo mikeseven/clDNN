@@ -123,8 +123,8 @@ namespace neural {
 
 				namespace nd = ndimensional;
 				nd::value<uint32_t> range (output_size);
-                auto calc_in_idx = nd::choose_calucalte_idx(input_format);
-				auto calc_out_idx = nd::choose_calucalte_idx(output_format);
+                auto calc_in_idx = nd::choose_calculate_idx(input_format);
+				auto calc_out_idx = nd::choose_calculate_idx(output_format);
 
 				for(auto pos : range) {
 					auto in_idx  = calc_in_idx(input_size.raw, pos);

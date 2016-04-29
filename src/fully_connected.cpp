@@ -72,9 +72,9 @@ struct fully_connected_reference : is_an_implementation {
         nd::value<uint32_t> range_input(input_buffer_size);
         nd::value<uint32_t> range_weight(weight_buffer_size);
 
-        auto calc_in_idx  = nd::choose_calucalte_idx(input_arg.format);
-        auto calc_out_idx = nd::choose_calucalte_idx(output_arg.format);
-        auto calc_w_idx   = nd::choose_calucalte_idx(weight_arg.format);
+        auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
+        auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
+        auto calc_w_idx   = nd::choose_calculate_idx(weight_arg.format);
 
         std::vector<uint32_t> arg_weight_idx(3);
         for (auto pos_out : range_output){

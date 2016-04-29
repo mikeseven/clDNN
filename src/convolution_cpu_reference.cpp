@@ -77,9 +77,9 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (input_arg.size);
     //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (output_arg.size);
     //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_win_idx (filter_arg.size);
-    auto calc_in_idx  = nd::choose_calucalte_idx(input_arg.format);
-    auto calc_out_idx = nd::choose_calucalte_idx(output_arg.format);
-    auto calc_win_idx = nd::choose_calucalte_idx(filter_arg.format);
+    auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
+    auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
+    auto calc_win_idx = nd::choose_calculate_idx(filter_arg.format);
 
     switch(padding){
         case padding::zero:
@@ -203,9 +203,9 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     nd::value<uint32_t> bias_range (bias_arg.size);
     nd::value<uint32_t> range (bw_input_size); //todo in/out size?
     nd::value<uint32_t> window_range (filter_arg.size);
-    auto calc_in_idx   = nd::choose_calucalte_idx(bw_input_arg.format);
-    auto calc_out_idx  = nd::choose_calucalte_idx(bw_output_arg.format);
-    auto calc_win_idx  = nd::choose_calucalte_idx(filter_arg.format);
+    auto calc_in_idx   = nd::choose_calculate_idx(bw_input_arg.format);
+    auto calc_out_idx  = nd::choose_calculate_idx(bw_output_arg.format);
+    auto calc_win_idx  = nd::choose_calculate_idx(filter_arg.format);
 
     switch(padding){
         case padding::zero:
