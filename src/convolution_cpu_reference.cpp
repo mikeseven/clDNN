@@ -74,23 +74,27 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     namespace nd = ndimensional;
     nd::value<uint32_t> range (output_size);
     nd::value<uint32_t> window_range (filter_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (input_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (output_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_win_idx (filter_arg.size);
+    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (input_arg.size);
+    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (output_arg.size);
+    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_win_idx (filter_arg.size);
+    auto calc_in_idx  = nd::choose_calucalte_idx(input_arg.format);
+    auto calc_out_idx = nd::choose_calucalte_idx(output_arg.format);
+    auto calc_win_idx = nd::choose_calucalte_idx(filter_arg.format);
+
     switch(padding){
         case padding::zero:
             for(auto pos : range) {
                 float acc = 0;
-                auto out_idx = calc_out_idx(pos + output_offset);
+                auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
 
                 for(auto win_pos : window_range){
                     const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos;
 
-                    if( calc_in_idx.is_out_of_range(arg_in_idx) )
+                    if( nd::is_out_of_range(input_arg.size, arg_in_idx) )
                         continue;
 
-                    auto in_idx  = calc_in_idx (arg_in_idx);
-                    auto win_idx = calc_win_idx(win_pos);
+                    auto in_idx  = calc_in_idx (input_arg.size.raw, {arg_in_idx.begin(), arg_in_idx.end()} );
+                    auto win_idx = calc_win_idx(filter_arg.size.raw, win_pos );
                     acc += input[in_idx] * filter[win_idx];
                 }
                 output[out_idx] = acc + bias[ pos[f_pos] ];
@@ -199,25 +203,24 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     nd::value<uint32_t> bias_range (bias_arg.size);
     nd::value<uint32_t> range (bw_input_size); //todo in/out size?
     nd::value<uint32_t> window_range (filter_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::   x_f32> calc_bias_idx(bias_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (bw_input_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (bw_output_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_win_idx (filter_arg.size);
+    auto calc_in_idx   = nd::choose_calucalte_idx(bw_input_arg.format);
+    auto calc_out_idx  = nd::choose_calucalte_idx(bw_output_arg.format);
+    auto calc_win_idx  = nd::choose_calucalte_idx(filter_arg.format);
 
     switch(padding){
         case padding::zero:
         {
             for(auto pos : range) {
-                auto in_idx = calc_in_idx(pos + bw_input_offset);
+                auto in_idx = calc_in_idx(bw_input_arg.size.raw , pos + bw_input_offset);
 
                 for(auto win_pos : window_range){
                     const std::vector<uint32_t> arg_out_idx = nd::value<uint32_t>(bw_output_offset) + pos*stride + win_pos;
 
-                    if( calc_out_idx.is_out_of_range(arg_out_idx) )
+                    if( nd::is_out_of_range(bw_output_arg.size, arg_out_idx) )
                         continue;
 
-                    auto out_idx = calc_out_idx(arg_out_idx);
-                    auto win_idx = calc_win_idx(win_pos);
+                    auto out_idx = calc_out_idx(bw_output_arg.size.raw, arg_out_idx);
+                    auto win_idx = calc_win_idx(filter_arg.size.raw, win_pos);
 
                     auto sensitivity = bw_input[in_idx] * weights[win_idx];
 
@@ -240,8 +243,7 @@ struct attach{
         auto key_bw = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
         auto val_fw = convolution_cpu_reference::create;
         auto val_bw = convolution_backward_cpu_reference::create;
-       // auto& conv_fw_implementation_map = singleton_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>         ::instance();
-       // auto& conv_bw_implementation_map = singleton_map<conv_bw_key, std::function<is_an_implementation *(convolution_backward &)>>::instance();
+
         conv_fw_implementation_map.insert( {key_fw, val_fw} ); //todo keys should be different
         conv_bw_implementation_map.insert( {key_bw, val_bw} );
     }
