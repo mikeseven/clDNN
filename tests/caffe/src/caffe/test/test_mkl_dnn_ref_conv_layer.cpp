@@ -12,6 +12,7 @@
 #include "caffe/test/test_gradient_check_util.hpp"
 
 namespace caffe {
+static auto engine =  neural::engine::reference;
 
 // Reference convolution for checking results:
 // accumulate through explicit loops over input, output, and filters.
@@ -206,7 +207,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSetupMKL_DNN) {
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
   shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_->num(), 2);
   EXPECT_EQ(this->blob_top_->channels(), 4);
@@ -219,7 +220,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSetupMKL_DNN) {
   // setting group should not change the shape
   convolution_param->set_num_output(3);
   convolution_param->set_group(3);
-  layer.reset(new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference));
+  layer.reset(new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_->num(), 2);
   EXPECT_EQ(this->blob_top_->channels(), 3);
@@ -245,7 +246,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolution) {
   convolution_param->mutable_bias_filler()->set_type("constant");
   convolution_param->mutable_bias_filler()->set_value(0.1);
   shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -286,7 +287,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolution_2outputs) {
   convolution_param->mutable_bias_filler()->set_type("constant");
   convolution_param->mutable_bias_filler()->set_value(0.1);
   shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -326,7 +327,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradient) {
   convolution_param->set_num_output(1);  // jrenieck: temporarily simplified, was:2
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
-  MKL_DNNConvolutionLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNConvolutionLayer<Dtype> layer(layer_param, engine);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
@@ -355,7 +356,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestDilatedConvolution) {
   convolution_param->mutable_bias_filler()->set_type("constant");
   convolution_param->mutable_bias_filler()->set_value(0.1);
   shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -392,7 +393,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, Test0DConvolution) {
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
   shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   vector<int> top_shape = this->blob_bottom_->shape();
   top_shape[3] = kNumOutput;
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -446,7 +447,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimple3DConvolution) {
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
   shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -498,7 +499,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestDilated3DConvolution) {
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
   shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -533,7 +534,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, Test1x1Convolution) {
   convolution_param->mutable_bias_filler()->set_type("constant");
   convolution_param->mutable_bias_filler()->set_value(0.1);
   shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -561,7 +562,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolutionGroup) {
   convolution_param->mutable_bias_filler()->set_type("constant");
   convolution_param->mutable_bias_filler()->set_value(0.1);
   shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -599,7 +600,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSobelConvolution) {
   convolution_param->set_num_output(1);
   convolution_param->set_bias_term(false);
   shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   layer->blobs().resize(1);
   layer->blobs()[0].reset(new Blob<Dtype>(1, 3, 3, 3));
   Dtype* weights = layer->blobs()[0]->mutable_cpu_data();
@@ -632,7 +633,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSobelConvolution) {
   convolution_param->set_stride_w(1);
   convolution_param->set_num_output(1);
   convolution_param->set_bias_term(false);
-  layer.reset(new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference));
+  layer.reset(new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   layer->blobs().resize(1);
   layer->blobs()[0].reset(new Blob<Dtype>(1, 3, 3, 1));
   Dtype* weights_1 = layer->blobs()[0]->mutable_cpu_data();
@@ -654,7 +655,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSobelConvolution) {
   convolution_param->set_stride_w(2);
   convolution_param->set_num_output(1);
   convolution_param->set_bias_term(false);
-  layer.reset(new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference));
+  layer.reset(new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   layer->blobs().resize(1);
   layer->blobs()[0].reset(new Blob<Dtype>(1, 1, 1, 3));
   Dtype* weights_2 = layer->blobs()[0]->mutable_cpu_data();
@@ -703,7 +704,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestNDAgainst2D) {
   bool copy_diff;
   bool reshape;
   {
-    MKL_DNNConvolutionLayer<Dtype> layer(layer_param, neural::engine::reference);
+    MKL_DNNConvolutionLayer<Dtype> layer(layer_param, engine);
     layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
     top_diff.ReshapeLike(*this->blob_top_);
     filler.Fill(&top_diff);
@@ -724,7 +725,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestNDAgainst2D) {
     caffe_set(weights.count(), Dtype(0), weights.mutable_cpu_diff());
     // Do SetUp and Forward; save Forward result in result_2d.
     convolution_param->set_force_nd_im2col(false);
-    MKL_DNNConvolutionLayer<Dtype> layer_2d(layer_param, neural::engine::reference);
+    MKL_DNNConvolutionLayer<Dtype> layer_2d(layer_param, engine);
     layer_2d.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
     ASSERT_EQ(1, layer_2d.blobs().size());
     copy_diff = false; reshape = false;
@@ -755,7 +756,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestNDAgainst2D) {
     caffe_set(weights.count(), Dtype(0), weights.mutable_cpu_diff());
     // Do SetUp and Forward; save Forward result in result_nd.
     convolution_param->set_force_nd_im2col(true);
-    MKL_DNNConvolutionLayer<Dtype> layer_nd(layer_param, neural::engine::reference);
+    MKL_DNNConvolutionLayer<Dtype> layer_nd(layer_param, engine);
     layer_nd.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
     ASSERT_EQ(1, layer_nd.blobs().size());
     copy_diff = false; reshape = false;
@@ -806,7 +807,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradient) {
   convolution_param->set_num_output(2);
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
-  MKL_DNNConvolutionLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNConvolutionLayer<Dtype> layer(layer_param, engine);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
@@ -831,7 +832,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestDilatedGradient) {
   convolution_param->set_num_output(2);
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
-  MKL_DNNConvolutionLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNConvolutionLayer<Dtype> layer(layer_param, engine);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
                                   this->blob_top_vec_);
@@ -861,7 +862,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradient3D) {
   convolution_param->set_num_output(2);
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
-  MKL_DNNConvolutionLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNConvolutionLayer<Dtype> layer(layer_param, engine);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
@@ -880,7 +881,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, Test1x1Gradient) {
   convolution_param->set_num_output(2);
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
-  MKL_DNNConvolutionLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNConvolutionLayer<Dtype> layer(layer_param, engine);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
@@ -897,7 +898,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradientGroup) {
   convolution_param->set_group(3);
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
-  MKL_DNNConvolutionLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNConvolutionLayer<Dtype> layer(layer_param, engine);
   GradientChecker<Dtype> checker(1e-2, 1e-3);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);

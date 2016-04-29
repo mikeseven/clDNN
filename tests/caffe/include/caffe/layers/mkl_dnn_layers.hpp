@@ -17,8 +17,20 @@ namespace caffe {
 using namespace neural;
 
 template <typename Dtype, bool is_diff>
-struct MKL_DNNMemoryDescriptor : PrvMemDescr, boost::enable_shared_from_this<MKL_DNNMemoryDescriptor<Dtype, is_diff> > {
-  MKL_DNNMemoryDescriptor() : layout_usr(memory::format::bfyx_f32), name("UKNOWN") {};
+struct MKL_DNNMemoryDescriptor : PrvMemDescr, 
+        boost::enable_shared_from_this<MKL_DNNMemoryDescriptor<Dtype, is_diff> > {
+  
+  MKL_DNNMemoryDescriptor() : 
+          layout_usr(memory::format::bfyx_f32),
+          layout_int(memory::format::yxfb_f32), 
+          name("UKNOWN") {};
+          
+  MKL_DNNMemoryDescriptor(neural::memory::format::type layout_usr, 
+          neural::memory::format::type layout_int) :
+          layout_usr(layout_usr),
+          layout_int(layout_int),
+          name("UKNOWN") {};
+  
   ~MKL_DNNMemoryDescriptor()
   {
     if(internal_ptr) CaffeFreeHost(internal_ptr, use_cuda);
@@ -28,8 +40,8 @@ struct MKL_DNNMemoryDescriptor : PrvMemDescr, boost::enable_shared_from_this<MKL
     return this->shared_from_this();
   }
 
-  memory::format::type layout_usr = memory::format::bfyx_f32;
-  memory::format::type layout_int = memory::format::yxfb_f32;
+  memory::format::type layout_usr;
+  memory::format::type layout_int;
   Dtype* internal_ptr;
   primitive memory_prv    = nullptr;
   primitive memory_usr    = nullptr;
@@ -58,11 +70,23 @@ struct MKL_DNNMemoryDescriptor : PrvMemDescr, boost::enable_shared_from_this<MKL
 
 template <typename Dtype>
 struct MKL_DNNData : MKL_DNNMemoryDescriptor<Dtype, false>
-{};
+{
+    MKL_DNNData() : MKL_DNNMemoryDescriptor<Dtype, false>() {}
+    
+    MKL_DNNData(neural::memory::format::type layout_usr, 
+          neural::memory::format::type layout_int) : 
+        MKL_DNNMemoryDescriptor<Dtype, false>(layout_usr, layout_int) {}
+};
 
 template <typename Dtype>
 struct MKL_DNNDiff : MKL_DNNMemoryDescriptor<Dtype, true>
-{};
+{
+    MKL_DNNDiff() : MKL_DNNMemoryDescriptor<Dtype, true>() {}
+    
+    MKL_DNNDiff(neural::memory::format::type layout_usr, 
+          neural::memory::format::type layout_int) : 
+        MKL_DNNMemoryDescriptor<Dtype, true>(layout_usr, layout_int) {}
+};
 
 template <typename Dtype>
 class MKL_DNNConvolutionLayer : public ConvolutionLayer<Dtype> {
@@ -288,11 +312,11 @@ class MKL_DNNSoftmaxLayer : public Layer<Dtype> {
   explicit MKL_DNNSoftmaxLayer(const LayerParameter& param,
           neural::engine::type engine = neural::engine::reference)
       : Layer<Dtype>(param), engine_(engine),
-        top_data_    (new MKL_DNNData<Dtype>()),
-        bottom_data_ (new MKL_DNNData<Dtype>()),
-        top_diff_    (new MKL_DNNDiff<Dtype>()),
-        bottom_diff_ (new MKL_DNNDiff<Dtype>())
-      {}
+        top_data_    (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        bottom_data_ (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        top_diff_    (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        bottom_diff_ (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)) {}
+      
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
@@ -323,8 +347,62 @@ class MKL_DNNSoftmaxLayer : public Layer<Dtype> {
   primitive softmaxFwd_ = nullptr, softmaxBwd_ = nullptr;
   shared_ptr<MKL_DNNData<Dtype> > top_data_, bottom_data_;
   shared_ptr<MKL_DNNDiff<Dtype> > top_diff_, bottom_diff_;
-  
 };
+
+/**
+ * @brief Also known as a "fully-connected" layer, computes an inner product
+ *        with a set of learned weights, and (optionally) adds biases.
+ *
+ * TODO(dox): thorough documentation for Forward, Backward, and proto params.
+ */
+template <typename Dtype>
+class MKL_DNNInnerProductLayer : public Layer<Dtype> {
+ public:
+  explicit MKL_DNNInnerProductLayer(const LayerParameter& param,
+          neural::engine::type engine = neural::engine::reference)
+      : Layer<Dtype>(param), engine_(engine),
+        top_data_    (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        bottom_data_ (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        weights_data_(new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        bias_data_   (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        weights_diff_(new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        bias_diff_   (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        top_diff_    (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        bottom_diff_ (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)) {}
+      
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline const char* type() const { return "MKL_DNNInnerProduct"; }
+  virtual inline int ExactNumBottomBlobs() const { return 1; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+
+  int M_;
+  int K_;
+  int N_;
+  bool bias_term_;
+  Blob<Dtype> bias_multiplier_;
+  bool transpose_;  ///< if true, assume transposed weights
+  
+ private:
+  neural::engine::type engine_;
+  primitive fcFwd_ = nullptr, fcBwd_ = nullptr;
+  shared_ptr<MKL_DNNData<Dtype> > top_data_, bottom_data_, weights_data_, bias_data_;
+  shared_ptr<MKL_DNNDiff<Dtype> > top_diff_, bottom_diff_, weights_diff_, bias_diff_;
+};
+
 
 } // namespace caffe
 #endif // #ifndef CAFFE_MKL_DNN_LAYERS_HPP_

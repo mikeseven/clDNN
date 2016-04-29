@@ -16,6 +16,7 @@ using std::min;
 using std::max;
 
 namespace caffe {
+static auto engine =  neural::engine::reference;
 
 template <typename TypeParam>
 class MKL_DNNLRNLayerTest : public MultiDeviceTest<TypeParam> {
@@ -116,7 +117,7 @@ TYPED_TEST_CASE(MKL_DNNLRNLayerTest, ::testing::Types<CPUDevice<float> >);
 TYPED_TEST(MKL_DNNLRNLayerTest, TestSetupAcrossChannels) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
-  MKL_DNNLRNLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNLRNLayer<Dtype> layer(layer_param, engine);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_->num(), 2);
   EXPECT_EQ(this->blob_top_->channels(), 7);
@@ -127,7 +128,7 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestSetupAcrossChannels) {
 TYPED_TEST(MKL_DNNLRNLayerTest, TestForwardAcrossChannels) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
-  MKL_DNNLRNLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNLRNLayer<Dtype> layer(layer_param, engine);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   Blob<Dtype> top_reference;
@@ -143,7 +144,7 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestForwardAcrossChannelsLargeRegion) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   layer_param.mutable_lrn_param()->set_local_size(15);
-  MKL_DNNLRNLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNLRNLayer<Dtype> layer(layer_param, engine);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   Blob<Dtype> top_reference;
@@ -158,7 +159,7 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestForwardAcrossChannelsLargeRegion) {
 TYPED_TEST(MKL_DNNLRNLayerTest, TestGradientAcrossChannels) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
-  MKL_DNNLRNLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNLRNLayer<Dtype> layer(layer_param, engine);
   GradientChecker<Dtype> checker(1e-2, 1e-2);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -180,7 +181,7 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestGradientAcrossChannelsLargeRegion) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   layer_param.mutable_lrn_param()->set_local_size(15);
-  MKL_DNNLRNLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNLRNLayer<Dtype> layer(layer_param, engine);
   GradientChecker<Dtype> checker(1e-2, 1e-2);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -206,7 +207,7 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestSetupWithinChannel) {
   layer_param.mutable_lrn_param()->set_norm_region(
       LRNParameter_NormRegion_WITHIN_CHANNEL);
   layer_param.mutable_lrn_param()->set_local_size(3);
-  MKL_DNNLRNLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNLRNLayer<Dtype> layer(layer_param, engine);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_->num(), 2);
   EXPECT_EQ(this->blob_top_->channels(), 7);
@@ -220,7 +221,7 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestForwardWithinChannel) {
   layer_param.mutable_lrn_param()->set_norm_region(
       LRNParameter_NormRegion_WITHIN_CHANNEL);
   layer_param.mutable_lrn_param()->set_local_size(3);
-  MKL_DNNLRNLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNLRNLayer<Dtype> layer(layer_param, engine);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   Blob<Dtype> top_reference;
@@ -238,7 +239,7 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestGradientWithinChannel) {
   layer_param.mutable_lrn_param()->set_norm_region(
       LRNParameter_NormRegion_WITHIN_CHANNEL);
   layer_param.mutable_lrn_param()->set_local_size(3);
-  MKL_DNNLRNLayer<Dtype> layer(layer_param, neural::engine::reference);
+  MKL_DNNLRNLayer<Dtype> layer(layer_param, engine);
   GradientChecker<Dtype> checker(1e-2, 1e-2);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);

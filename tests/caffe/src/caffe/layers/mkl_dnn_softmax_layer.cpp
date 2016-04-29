@@ -1,3 +1,4 @@
+#ifdef USE_MKL_DNN
 #include <algorithm>
 #include <vector>
 #include <iostream>
@@ -23,29 +24,17 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   auto batch =  bottom[0]->shape(0);
   auto input_x = bottom[0]->shape(1);
   auto output_x = input_x;
-  auto z = 1;
+  const auto z = 1;
 
-  std::cout << "softmax: b " << batch <<  " x: " << input_x
-       << " shape(1) " << bottom[0]->shape(1)  << " shape(2) "  << bottom[0]->shape(2) << " shape(3) "
-           << bottom[0]->shape(3) << "\n";
+  bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_int, {batch, {{input_x}}, z}});
+  top_data_   ->memory_prv = memory::create({engine_, top_data_   ->layout_int, {batch, {{input_x}}, z}});
+  bottom_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_int, {batch, {{input_x}}, z}});
+  top_diff_   ->memory_prv = memory::create({engine_, top_diff_   ->layout_int, {batch, {{input_x}}, z}});
 
-  bottom_data_->layout_int = memory::format::xb_f32;
-  top_data_   ->layout_int = memory::format::xb_f32;
-  bottom_diff_->layout_int = memory::format::xb_f32;
-  top_diff_   ->layout_int = memory::format::xb_f32;
-  bottom_data_->memory_prv = memory::create({engine_, memory::format::xb_f32, {batch, {{input_x}}, z}});
-  top_data_   ->memory_prv = memory::create({engine_, memory::format::xb_f32, {batch, {{input_x}}, z}});
-  bottom_diff_->memory_prv = memory::create({engine_, memory::format::xb_f32, {batch, {{input_x}}, z}});
-  top_diff_   ->memory_prv = memory::create({engine_, memory::format::xb_f32, {batch, {{input_x}}, z}});
-
-  bottom_data_->layout_usr = memory::format::bx_f32;
-  top_data_   ->layout_usr = memory::format::bx_f32;
-  bottom_diff_->layout_usr = memory::format::bx_f32;
-  top_diff_   ->layout_usr = memory::format::bx_f32;
-  bottom_data_->memory_usr = memory::create({engine_, memory::format::bx_f32, {batch, {{input_x}}, z}});
-  top_data_   ->memory_usr = memory::create({engine_, memory::format::bx_f32, {batch, {{input_x}}, z}});
-  bottom_diff_->memory_usr = memory::create({engine_, memory::format::bx_f32, {batch, {{input_x}}, z}});
-  top_diff_   ->memory_usr = memory::create({engine_, memory::format::bx_f32, {batch, {{input_x}}, z}});
+  bottom_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {batch, {{input_x}}, z}});
+  top_data_   ->memory_usr = memory::create({engine_, top_data_   ->layout_usr, {batch, {{input_x}}, z}});
+  bottom_diff_->memory_usr = memory::create({engine_, bottom_diff_->layout_usr, {batch, {{input_x}}, z}});
+  top_diff_   ->memory_usr = memory::create({engine_, top_diff_   ->layout_usr, {batch, {{input_x}}, z}});
 
   // Names are for debugging only
   bottom_data_->name = "fwd_bottom_data   @ " + this->layer_param_.name();
@@ -140,3 +129,4 @@ STUB_GPU(MKL_DNNSoftmaxLayer);
 INSTANTIATE_CLASS(MKL_DNNSoftmaxLayer);
 
 }  // namespace caffe
+#endif  // #ifdef USE_MKL_DNN
