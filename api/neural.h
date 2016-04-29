@@ -22,7 +22,6 @@
 
 #include "neural_base.h"
 #include <random>
-#include <type_traits>
 
 namespace neural {
 
