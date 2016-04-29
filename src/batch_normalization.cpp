@@ -29,25 +29,25 @@ namespace
 {
 
 // maps of available strides for specific formats
-static std::map<memory::format::type, std::tuple<neural::vector<uint32_t>, neural::vector<uint32_t>, neural::vector<uint32_t>, neural::vector<uint32_t>>> format_strides_map =
+static std::map<memory::format::type, std::tuple<std::vector<uint32_t>, std::vector<uint32_t>, std::vector<uint32_t>>> format_strides_map =
 {
-                                                                   // b, {x,y}, z
-    { memory::format::yxfb_f64, std::make_tuple(neural::vector<uint32_t>{3, {1,0}, 2}, neural::vector<uint32_t>{{2,3}}, neural::vector<uint32_t>{3},       neural::vector<uint32_t>{}) },
-    { memory::format::xyfb_f32, std::make_tuple(neural::vector<uint32_t>{3, {0,1}, 2}, neural::vector<uint32_t>{{2,3}}, neural::vector<uint32_t>{3},       neural::vector<uint32_t>{}) },
-    { memory::format::yxfb_f32, std::make_tuple(neural::vector<uint32_t>{3, {1,0}, 2}, neural::vector<uint32_t>{{2,3}}, neural::vector<uint32_t>{3},       neural::vector<uint32_t>{}) },
-    { memory::format::xyfb_f64, std::make_tuple(neural::vector<uint32_t>{3, {0,1}, 2}, neural::vector<uint32_t>{{2,3}}, neural::vector<uint32_t>{3},       neural::vector<uint32_t>{}) },
-    { memory::format::fyxb_f32, std::make_tuple(neural::vector<uint32_t>{3, {2,1}, 0}, neural::vector<uint32_t>{3},     neural::vector<uint32_t>{1,2,3},   neural::vector<uint32_t>{}) },
-    { memory::format::fyxb_f64, std::make_tuple(neural::vector<uint32_t>{3, {2,1}, 0}, neural::vector<uint32_t>{3},     neural::vector<uint32_t>{1,2,3},   neural::vector<uint32_t>{}) },
-    { memory::format::fxyb_f32, std::make_tuple(neural::vector<uint32_t>{3, {1,2}, 0}, neural::vector<uint32_t>{3},     neural::vector<uint32_t>{1,2,3},   neural::vector<uint32_t>{}) },
-    { memory::format::fxyb_f64, std::make_tuple(neural::vector<uint32_t>{3, {1,2}, 0}, neural::vector<uint32_t>{3},     neural::vector<uint32_t>{1,2,3},   neural::vector<uint32_t>{}) },
-    { memory::format::byxf_f32, std::make_tuple(neural::vector<uint32_t>{0, {2,1}, 3}, neural::vector<uint32_t>{3},     neural::vector<uint32_t>{},        neural::vector<uint32_t>{1,2,3}) },
-    { memory::format::byxf_f64, std::make_tuple(neural::vector<uint32_t>{0, {2,1}, 3}, neural::vector<uint32_t>{3},     neural::vector<uint32_t>{},        neural::vector<uint32_t>{1,2,3}) },
-    { memory::format::bxyf_f32, std::make_tuple(neural::vector<uint32_t>{0, {1,2}, 3}, neural::vector<uint32_t>{3},     neural::vector<uint32_t>{},        neural::vector<uint32_t>{1,2,3}) },
-    { memory::format::bxyf_f64, std::make_tuple(neural::vector<uint32_t>{0, {1,2}, 3}, neural::vector<uint32_t>{3},     neural::vector<uint32_t>{},        neural::vector<uint32_t>{1,2,3}) },
-    { memory::format::bfyx_f32, std::make_tuple(neural::vector<uint32_t>{0, {3,2}, 1}, neural::vector<uint32_t>{},      neural::vector<uint32_t>{{2,3}},   neural::vector<uint32_t>{1,2,3}) },
-    { memory::format::bfyx_f64, std::make_tuple(neural::vector<uint32_t>{0, {3,2}, 1}, neural::vector<uint32_t>{},      neural::vector<uint32_t>{{2,3}},   neural::vector<uint32_t>{1,2,3}) },
-    { memory::format::bfxy_f32, std::make_tuple(neural::vector<uint32_t>{0, {2,3}, 1}, neural::vector<uint32_t>{},      neural::vector<uint32_t>{{2,3}},   neural::vector<uint32_t>{1,2,3}) },
-    { memory::format::bfxy_f64, std::make_tuple(neural::vector<uint32_t>{0, {2,3}, 1}, neural::vector<uint32_t>{},      neural::vector<uint32_t>{{2,3}},   neural::vector<uint32_t>{1,2,3})},
+                     // raw sizes: b,f, {x,y}                  spatial_stride            single_average_stride             batch_stride
+    { memory::format::yxfb_f64, std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { memory::format::xyfb_f32, std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { memory::format::yxfb_f32, std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { memory::format::xyfb_f64, std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { memory::format::fyxb_f32, std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
+    { memory::format::fyxb_f64, std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
+    { memory::format::fxyb_f32, std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
+    { memory::format::fxyb_f64, std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
+    { memory::format::byxf_f32, std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { memory::format::byxf_f64, std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { memory::format::bxyf_f32, std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { memory::format::bxyf_f64, std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { memory::format::bfyx_f32, std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
+    { memory::format::bfyx_f64, std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
+    { memory::format::bfxy_f32, std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
+    { memory::format::bfxy_f64, std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3})},
 };
 
 
@@ -118,18 +118,18 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
         auto it = format_strides_map.find(input.argument.format);
         if(it==std::end(format_strides_map)) throw std::runtime_error("batch_normalization_training_forward_reference::implementation -> unknown BatchNorm format");
 
-        auto data_w = input.argument.size.raw[std::get<0>(it->second).raw[0]];
-        auto data_h = input.argument.size.raw[std::get<0>(it->second).raw[1]];
-        auto data_c = input.argument.size.raw[std::get<0>(it->second).raw[2]];
-        auto data_n = input.argument.size.raw[std::get<0>(it->second).raw[3]];
+        auto data_w = input.argument.size.raw[2];
+        auto data_h = input.argument.size.raw[3];
+        auto data_c = input.argument.size.raw[1];
+        auto data_n = input.argument.size.raw[0];
 
         auto spatial_location_stride = 1;
         auto element_stride = 1;
         auto batch_stride = 1;
 
-        for (auto index : std::get<1>(it->second).raw) spatial_location_stride *= input.argument.size.raw[index];
-        for (auto index : std::get<2>(it->second).raw) element_stride *= input.argument.size.raw[index];
-        for (auto index : std::get<3>(it->second).raw) batch_stride *= input.argument.size.raw[index];
+        for (auto index : std::get<0>(it->second)) spatial_location_stride *= input.argument.size.raw[index];
+        for (auto index : std::get<1>(it->second)) element_stride *= input.argument.size.raw[index];
+        for (auto index : std::get<2>(it->second)) batch_stride *= input.argument.size.raw[index];
 
         const auto spatial_size = (spatial) ? data_w * data_h : 1;
         const auto num_averages = (spatial) ? data_c : data_c * data_w * data_h;
@@ -174,7 +174,8 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
         // Compute and save moving averages.
         if(this_bn->output().size() > 3)
         {
-            auto& moving_mean = this_bn->output_memory(3);
+            //auto& moving_inv_std_dev = this_bn->output_memory(3);
+            auto& moving_mean = this_bn->argument.output[3].as<const memory&>();
             auto moving_mean_buffer = static_cast<T*>(moving_mean.pointer);
 
             // For first run, set data to zero.
@@ -190,7 +191,8 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
 
         if(this_bn->output().size() > 4)
         {
-            auto& moving_inv_std_dev = this_bn->output_memory(4);
+            //auto& moving_inv_std_dev = this_bn->output_memory(4);
+            auto& moving_inv_std_dev = this_bn->argument.output[4].as<const memory&>();
             auto moving_inv_std_dev_buffer = static_cast<T*>(moving_inv_std_dev.pointer);
 
             // For first run, set data to zero.
@@ -279,18 +281,18 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
         auto it = format_strides_map.find(input_grad.argument.format);
         if(it==std::end(format_strides_map)) throw std::runtime_error("batch_normalization_training_backward_reference::implementation -> unknown BatchNorm format");
 
-        auto data_w = input_grad.argument.size.raw[std::get<0>(it->second).raw[0]];
-        auto data_h = input_grad.argument.size.raw[std::get<0>(it->second).raw[1]];
-        auto data_c = input_grad.argument.size.raw[std::get<0>(it->second).raw[2]];
-        auto data_n = input_grad.argument.size.raw[std::get<0>(it->second).raw[3]];
+        auto data_w = input_grad.argument.size.raw[0];
+        auto data_h = input_grad.argument.size.raw[1];
+        auto data_c = input_grad.argument.size.raw[2];
+        auto data_n = input_grad.argument.size.raw[3];
 
         auto spatial_location_stride = 1;
         auto element_stride = 1;
         auto batch_stride = 1;
 
-        for (auto index : std::get<1>(it->second).raw) spatial_location_stride *= input_grad.argument.size.raw[index];
-        for (auto index : std::get<2>(it->second).raw) element_stride *= input_grad.argument.size.raw[index];
-        for (auto index : std::get<3>(it->second).raw) batch_stride *= input_grad.argument.size.raw[index];
+        for (auto index : std::get<0>(it->second)) spatial_location_stride *= input_grad.argument.size.raw[index];
+        for (auto index : std::get<1>(it->second)) element_stride *= input_grad.argument.size.raw[index];
+        for (auto index : std::get<2>(it->second)) batch_stride *= input_grad.argument.size.raw[index];
 
         const auto spatial_size = (spatial) ? data_w * data_h : 1;
         const auto num_averages = (spatial) ? data_c : data_c * data_w * data_h;
@@ -379,7 +381,7 @@ struct batch_normalization_inference_reference : is_an_implementation {
         auto& mean        = this_bn->argument.input[3].primitive.as<const memory&>();
         auto& inv_std_dev = this_bn->argument.input[4].primitive.as<const memory&>();
 
-        auto& output = this_bn->output_memory(0);
+        auto& output = this_bn->argument.output[0].as<const memory&>();
 
         auto input_buffer = static_cast<T*>(input.pointer);
         auto scale_buffer = static_cast<T*>(scale.pointer);
@@ -396,18 +398,18 @@ struct batch_normalization_inference_reference : is_an_implementation {
         auto it = format_strides_map.find(input.argument.format);
         if(it==std::end(format_strides_map)) throw std::runtime_error("batch_normalization_inference_reference::implementation -> unknown BatchNorm format");
 
-        auto data_w = input.argument.size.raw[std::get<0>(it->second).raw[0]];
-        auto data_h = input.argument.size.raw[std::get<0>(it->second).raw[1]];
-        auto data_c = input.argument.size.raw[std::get<0>(it->second).raw[2]];
-        auto data_n = input.argument.size.raw[std::get<0>(it->second).raw[3]];
+        auto data_w = input.argument.size.raw[0];
+        auto data_h = input.argument.size.raw[1];
+        auto data_c = input.argument.size.raw[2];
+        auto data_n = input.argument.size.raw[3];
 
         auto spatial_location_stride = 1;
         auto element_stride = 1;
         auto batch_stride = 1;
 
-        for (auto index : std::get<1>(it->second).raw) spatial_location_stride *= input.argument.size.raw[index];
-        for (auto index : std::get<2>(it->second).raw) element_stride *= input.argument.size.raw[index];
-        for (auto index : std::get<3>(it->second).raw) batch_stride *= input.argument.size.raw[index];
+        for (auto index : std::get<0>(it->second)) spatial_location_stride *= input.argument.size.raw[index];
+        for (auto index : std::get<1>(it->second)) element_stride *= input.argument.size.raw[index];
+        for (auto index : std::get<2>(it->second)) batch_stride *= input.argument.size.raw[index];
 
         const auto spatial_size = (spatial) ? data_w * data_h : 1;
         const auto num_averages = (spatial) ? data_c : data_c * data_w * data_h;
