@@ -149,7 +149,7 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
                         {
                             for (uint64_t i = 0u; i < input_feats; ++i)
                             {
-                                auto filter_offset =
+                                size_t filter_offset =
                                     (kern_col * input_feats * output_features_per_iteration
                                     + i * output_features_per_iteration)
                                         * sizeof(float);
@@ -158,7 +158,7 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
 
                                 for (int j = 0; j < output_blocks; ++j)
                                 {
-                                    auto block_offset = j * stride_x;
+                                    size_t block_offset = j * stride_x;
                                     if (vertical) block_offset = j * stride_y * input_width;
                                     auto input_offset =
                                         (block_offset * input_feats
@@ -186,7 +186,7 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
                     }
                     for (int o = 0; o < output_blocks; ++o)
                     {
-                        auto output_offset = o * output_feats * sizeof(float);
+                        size_t output_offset = o * output_feats * sizeof(float);
                         if (vertical) output_offset *= output_width;
                         vmovaps(ptr[aux_output + output_offset], Ymm(2 * o));
                         vmovaps(ptr[aux_output + output_offset + register_width], Ymm(2 * o + 1));
