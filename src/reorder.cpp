@@ -218,6 +218,8 @@ namespace neural {
 			{ std::make_tuple(engine::reference, memory::format::bfxy_f32, memory::format::bfyx_f32), reorder_reference::create },
 			{ std::make_tuple(engine::reference, memory::format::bfxy_f32, memory::format::bxyf_f32), reorder_reference::create },
 			{ std::make_tuple(engine::reference, memory::format::bfxy_f32, memory::format::bfxy_f32), reorder_reference::create },
+      { std::make_tuple(engine::reference, memory::format::bx_f32, memory::format::xb_f32), reorder_reference::create },
+      { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::bx_f32), reorder_reference::create },
 ///// f64
 			{ std::make_tuple(engine::reference, memory::format::yxfb_f64, memory::format::yxfb_f64), reorder_reference::create },
 			{ std::make_tuple(engine::reference, memory::format::yxfb_f64, memory::format::fyxb_f64), reorder_reference::create },

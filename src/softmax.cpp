@@ -58,7 +58,7 @@ struct softmax_reference : is_an_implementation {
 
         assert( 1 == output_size.feature.size() );
         assert( 1 == output_size.batch.size()   );
-        int batch_index = 1;
+        int batch_index = 0;
         std::vector<float> v_max( output_size.batch[0], -std::numeric_limits<float>::max() );
         std::vector<float> v_acc( output_size.batch[0] );
 

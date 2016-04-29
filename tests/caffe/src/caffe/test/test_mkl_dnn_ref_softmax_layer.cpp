@@ -25,7 +25,7 @@ class MKL_DNN_Ref_SoftmaxLayerTest : public MultiDeviceTest<TypeParam> {
   typedef typename TypeParam::Dtype Dtype;
  protected:
   MKL_DNN_Ref_SoftmaxLayerTest()
-      : blob_bottom_(new Blob<Dtype>(2, 10, 1, 1)),  // simple case TODO: batch support
+      : blob_bottom_(new Blob<Dtype>(32, 100, 1, 1)),
         blob_top_(new Blob<Dtype>()) {
     // fill the values
     FillerParameter filler_param;

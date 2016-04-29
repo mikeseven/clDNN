@@ -22,6 +22,7 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 
   auto batch =  bottom[0]->shape(0);
   auto input_x = bottom[0]->shape(1);
+  auto output_x = input_x;
   auto z = 1;
 
   std::cout << "softmax: b " << batch <<  " x: " << input_x
@@ -46,6 +47,12 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   bottom_diff_->memory_usr = memory::create({engine_, memory::format::bx_f32, {batch, {{input_x}}, z}});
   top_diff_   ->memory_usr = memory::create({engine_, memory::format::bx_f32, {batch, {{input_x}}, z}});
 
+  // Names are for debugging only
+  bottom_data_->name = "fwd_bottom_data   @ " + this->layer_param_.name();
+  top_data_->name =    "fwd_top_data      @ " + this->layer_param_.name();
+  top_diff_->name =    "bwd_top_diff      @ " + this->layer_param_.name();
+  bottom_diff_->name = "bwd_bottom_diff   @ " + this->layer_param_.name();
+
   bottom_data_->create_conversions();
   top_data_   ->create_conversions();
   bottom_diff_->create_conversions();
@@ -53,7 +60,7 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   softmaxFwd_ = normalization::softmax::create({engine_,
                                                 top_data_->memory_prv,
                                                 {0, {{0}}, 0},
-                                                {batch, {{input_x}}, 1u},
+                                                {batch, {{output_x}}, 1u},
                                                 bottom_data_->memory_prv,
                                                 {0, {{0}}, 0},
                                                 });
