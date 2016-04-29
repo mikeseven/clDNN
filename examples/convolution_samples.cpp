@@ -15,7 +15,6 @@
 */
 
 #include "api/neural.h"
-#include "neuralia_tools.h"
 
 // memory_obselote->memory_obselote convolution
 void example_convolution_ref_forward() {
