@@ -376,7 +376,7 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
     if(input_arg.format          != filter_arg.format)          throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
     if(filter_arg.size.raw.size()!= output_arg.size.raw.size()) throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
     if(bias_arg.size.raw.size()  != 3)                          throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
-    if(bias_arg.size.batch[0]    != output_size.feature[0])     throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
+    if(bias_arg.size.spatial[0]  != output_size.feature[0])     throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
                                                                                                                                                       // than this implementation will be format independent
 //    auto input  = static_cast<float*>(outer.input_memory(0).pointer);
 //    auto output = static_cast<float*>(outer.output_memory(0).pointer);

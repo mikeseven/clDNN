@@ -20,9 +20,9 @@
 
 int main()
 {
-    extern void example_softmax_forward();
+    extern void example_convolution_cpu_forward();
     try{
-        example_softmax_forward();
+        example_convolution_cpu_forward();
     } catch (std::exception &e) {
         std::cerr << e.what();
     } catch(...) {
