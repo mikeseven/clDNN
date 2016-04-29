@@ -96,15 +96,15 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
 
     public:
 
-        jit_code(uint64_t output_width,
-                 uint64_t output_height,
-                 uint64_t output_feats,
-                 uint64_t input_width,
-                 uint64_t input_feats,
-                 uint64_t filter_height,
-                 uint64_t filter_width,
-                 uint64_t stride_x,
-                 uint64_t stride_y,
+        jit_code(uint32_t output_width,
+                 uint32_t output_height,
+                 uint32_t output_feats,
+                 uint32_t input_width,
+                 uint32_t input_feats,
+                 uint32_t filter_height,
+                 uint32_t filter_width,
+                 uint32_t stride_x,
+                 uint32_t stride_y,
                  bool apply_relu,
                  void* code_ptr = nullptr,
                  size_t code_size = 40 * Xbyak::DEFAULT_MAX_CODE_SIZE)
@@ -241,7 +241,7 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
                     add(aux_output, output_feats * sizeof(float));
                 }
             }
-            for (uint64_t i = output_height / 6 * 6; i < output_height; ++i)
+            for (uint32_t i = output_height / 6 * 6; i < output_height; ++i)
             {
                 mov(aux_input_outer, input);
                 mov(aux_output, output);
@@ -258,25 +258,25 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
     jit_code code;
 
     jit_convolution_zxyn(
-        uint64_t batch,
+        uint32_t batch,
         bool apply_relu,
 
         float*   output,
-        uint64_t output_width,
-        uint64_t output_height,
-        uint64_t output_feature_maps,
+        uint32_t output_width,
+        uint32_t output_height,
+        uint32_t output_feature_maps,
 
         float*   input,
-        uint64_t input_width,
-        uint64_t input_height,
-        uint64_t input_feature_maps,
+        uint32_t input_width,
+        uint32_t input_height,
+        uint32_t input_feature_maps,
 
-        uint64_t stride_width,
-        uint64_t stride_height,
+        uint32_t stride_width,
+        uint32_t stride_height,
 
         float *  filter,
-        uint64_t filter_width,
-        uint64_t filter_height,
+        uint32_t filter_width,
+        uint32_t filter_height,
 
         float*   bias,
 
