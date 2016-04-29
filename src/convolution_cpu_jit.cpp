@@ -383,8 +383,8 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
     auto input  = static_cast<float*>(outer.argument.input[0].primitive.as<const memory&>().pointer); //todo tmp solution
     auto output = static_cast<float*>(outer.argument.output[0].as<const memory&>().pointer);
 
-    auto filter = static_cast<float*>(outer.argument.weight.as<const memory_obselote&>().pointer);
-    auto bias   = static_cast<float*>(outer.argument.bias.as<const memory_obselote&>().pointer);
+    auto filter = static_cast<float*>(outer.argument.weight.as<const memory&>().pointer);
+    auto bias   = static_cast<float*>(outer.argument.bias.as<const memory&>().pointer);
 
     // general formula: output size = (input size - filter size) / step + 1
     for(size_t i = 0; i < input_offset.raw.size(); ++i){

@@ -18,7 +18,7 @@
 #include "neuralia_tools.h"
 
 // memory_obselote->memory_obselote convolution
-void example_convolution_forward() {
+void example_convolution_ref_forward() {
     using namespace neural;
 
     const uint32_t output_y    = 16,
@@ -71,6 +71,7 @@ void example_convolution_forward() {
 }
 
 void example_convolution_cpu_forward() {
+    //todo this example doesn't work properly, validade data and implementation 
     using namespace neural;
 
     const uint32_t output_y    = 6,
@@ -104,7 +105,6 @@ void example_convolution_cpu_forward() {
     weights.as<const memory&>().fill(1.0f);
     biases.as<const memory&>().fill(1.0f);
 
-    save_data<float>("o_b", output);
     auto conv   = convolution::create( {engine::cpu,
                                         output,
                                         input,
@@ -113,12 +113,11 @@ void example_convolution_cpu_forward() {
                                         biases,
                                         padding::zero}
                                       );
-    save_data<float>("o_a", output);
 
     execute({conv});
 }
 
-void example_convolution_backward(){
+void example_convolution_ref_backward(){
     using namespace neural;
 
     const uint32_t output_y    = 2,
