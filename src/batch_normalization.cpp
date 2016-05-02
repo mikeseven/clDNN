@@ -203,8 +203,14 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
             for(uint32_t element = 0; element < moving_inv_std_dev.count(); ++element)
                 moving_inv_std_dev_buffer[element] = current_inv_std_dev_buffer[element] * actual_exp_avg_factor + moving_inv_std_dev_buffer[element] * (1.0f - actual_exp_avg_factor);
         }
-
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-value"
+#endif
         *request->minibatch_counter++;
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
     }
 };
 

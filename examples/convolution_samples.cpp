@@ -17,7 +17,7 @@
 #include "api/neural.h"
 
 // memory_obselote->memory_obselote convolution
-void example_convolution_forward() {
+void example_convolution_ref_forward() {
     using namespace neural;
 
     const uint32_t output_y    = 16,
@@ -69,7 +69,54 @@ void example_convolution_forward() {
     execute({conv});
 }
 
-void example_convolution_backward(){
+void example_convolution_cpu_forward() {
+    //todo this example doesn't work properly, validade data and implementation 
+    using namespace neural;
+
+    const uint32_t output_y    = 6,
+                   output_x    = 6,
+                   output_z    = 16,
+                   output_b    = 1,    // size of whole output buffer
+
+                   input_y     = 8+5,
+                   input_x     = 8+5,
+                   input_z     = 1,
+                   input_b     = 1,    // size of whole input buffer
+
+                   stride_y    = 1,
+                   stride_x    = 1,
+                   stride_z    = 1,
+                   stride_b    = 1,
+
+                   conv_size_y = 8,
+                   conv_size_x = 8,
+                   conv_size_ifm = input_z,
+                   conv_size_ofm = output_z;    // size of convolution window
+
+    auto input  = memory::create({engine::reference, memory::format::yxfb_f32, { input_b       ,{input_y     , input_x    }, input_z      }, true});
+    auto output = memory::create({engine::reference, memory::format::yxfb_f32, { output_b      ,{output_y    , output_x   }, output_z     }, true});
+    auto weights= memory::create({engine::reference, memory::format::yxfb_f32, { conv_size_ofm ,{conv_size_y , conv_size_x}, conv_size_ifm}, true});
+    auto biases = memory::create({engine::reference, memory::format::   x_f32, { 1             ,{{output_z}}               , 1            }, true});
+
+    // buffers should be initialized with valid data
+    input.as<const memory&>().fill(1.0f);
+    output.as<const memory&>().fill(1.0f);
+    weights.as<const memory&>().fill(1.0f);
+    biases.as<const memory&>().fill(1.0f);
+
+    auto conv   = convolution::create( {engine::cpu,
+                                        output,
+                                        input,
+                                        {stride_b, {stride_y, stride_x}, stride_z},
+                                        weights,
+                                        biases,
+                                        padding::zero}
+                                      );
+
+    execute({conv});
+}
+
+void example_convolution_ref_backward(){
     using namespace neural;
 
     const uint32_t output_y    = 2,
@@ -104,10 +151,10 @@ void example_convolution_backward(){
                    conv_size_z = 1,
                    conv_size_b = 1;  // size of convolution window
 
-    const int32_t in_off_y = 0,
-                  in_off_x = 0,
-                  in_off_z = 0,
-                  in_off_b = 0;
+//    const int32_t in_off_y = 0,
+//                  in_off_x = 0,
+//                  in_off_z = 0,
+//                  in_off_b = 0;
 
     auto eng          = engine::reference;
     auto bw_output    = memory::create({eng, memory::format::yxfb_f32, {output_b   , {output_y    , output_x   }, output_z   }, true});

@@ -33,18 +33,18 @@ void example_pooling_forward() {
     float out_buffer[output_y*output_x*output_z*output_b];
     // input buffer should be initialized with valid data
 
-    auto input  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {input_y, input_x, input_z, input_b}});
-    auto output = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {output_y, output_x, output_z, output_b}});
+    auto input  = memory::create({engine::reference, memory::format::yxfb_f32, { input_b ,{ input_y, input_x }, input_z }});
+    auto output = memory::create({engine::reference, memory::format::yxfb_f32, { output_b,{output_y, output_x}, output_z}});
 
     auto pool  = pooling::create( {engine::reference,
                                     pooling::mode::max,
                                     output,
-                                    {out_off_y, out_off_x, out_off_z, out_off_b},
-                                    {out_siz_y, out_siz_x, out_siz_z, out_siz_b},
+                                    {out_off_b, {out_off_y, out_off_x}, out_off_z},
+                                    {out_siz_b, {out_siz_y, out_siz_x}, out_siz_z},
                                     input,
-                                    {in_off_y, in_off_x, in_off_z, in_off_b},
-                                    {stride_y, stride_x, stride_z, stride_b},
-                                    {pooling_siz_y, pooling_siz_x, pooling_siz_z, pooling_siz_b},
+                                    { in_off_b, {in_off_y, in_off_x}, in_off_z},
+                                    { stride_b, {stride_y, stride_x}, stride_z},
+                                    {pooling_siz_b, {pooling_siz_y, pooling_siz_x}, pooling_siz_z},
                                     padding::zero}
                                   );
 
