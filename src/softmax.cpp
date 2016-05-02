@@ -58,30 +58,30 @@ struct softmax_reference : is_an_implementation {
 
         assert( 1 == output_size.feature.size() );
         assert( 1 == output_size.batch.size()   );
-        int batch_index = 1;
+        int batch_index = 0;
         std::vector<float> v_max( output_size.batch[0], -std::numeric_limits<float>::max() );
         std::vector<float> v_acc( output_size.batch[0] );
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
-        nd::calculate_idx<uint32_t, memory::format::xb_f32> calc_in_idx  (input_arg.size);
-        nd::calculate_idx<uint32_t, memory::format::xb_f32> calc_out_idx (output_arg.size);
+        auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
+        auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
 
         // find max val per batch
         for(auto pos : range) {
-            auto in_idx  = calc_in_idx (pos + input_offset );
+            auto in_idx  = calc_in_idx (input_arg.size.raw , pos + input_offset );
             v_max[ pos[batch_index] ] = std::max( v_max[pos[batch_index]], input[in_idx]);
         }
         for(auto pos : range) {
-            auto in_idx  = calc_in_idx (pos + input_offset );
-            auto out_idx = calc_out_idx(pos + output_offset);
+            auto in_idx  = calc_in_idx (input_arg.size.raw , pos + input_offset );
+            auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
 
             output[out_idx] = input[in_idx] - v_max[ pos[batch_index] ]; // subtracte max val from every data point per batch
             output[out_idx] = std::exp(output[out_idx]);  // exp
             v_acc[ pos[batch_index] ] += output[out_idx]; // sum eveything per batch
         }
         for(auto pos : range) {
-            auto out_idx = calc_out_idx(pos + output_offset);
+            auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
             output[out_idx] /= v_acc[ pos[batch_index] ]; // compute softmax
         }
     }

@@ -50,7 +50,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     if(input_arg.format          != filter_arg.format)          throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
     if(filter_arg.size.raw.size()!= output_arg.size.raw.size()) throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
     if(bias_arg.size.raw.size()  != 3)                          throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
-    if(bias_arg.size.batch[0]    != output_size.feature[0])     throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
+    if(bias_arg.size.spatial[0]  != output_size.feature[0])     throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
                                                                                                                                                         // than this implementation will be format independent
    // auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
    // auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
@@ -74,23 +74,27 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     namespace nd = ndimensional;
     nd::value<uint32_t> range (output_size);
     nd::value<uint32_t> window_range (filter_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (input_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (output_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_win_idx (filter_arg.size);
+    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (input_arg.size);
+    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (output_arg.size);
+    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_win_idx (filter_arg.size);
+    auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
+    auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
+    auto calc_win_idx = nd::choose_calculate_idx(filter_arg.format);
+
     switch(padding){
         case padding::zero:
             for(auto pos : range) {
                 float acc = 0;
-                auto out_idx = calc_out_idx(pos + output_offset);
+                auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
 
                 for(auto win_pos : window_range){
                     const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos;
 
-                    if( calc_in_idx.is_out_of_range(arg_in_idx) )
+                    if( nd::is_out_of_range(input_arg.size, arg_in_idx) )
                         continue;
 
-                    auto in_idx  = calc_in_idx (arg_in_idx);
-                    auto win_idx = calc_win_idx(win_pos);
+                    auto in_idx  = calc_in_idx (input_arg.size.raw, {arg_in_idx.begin(), arg_in_idx.end()} );
+                    auto win_idx = calc_win_idx(filter_arg.size.raw, win_pos );
                     acc += input[in_idx] * filter[win_idx];
                 }
                 output[out_idx] = acc + bias[ pos[f_pos] ];
@@ -199,25 +203,24 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     nd::value<uint32_t> bias_range (bias_arg.size);
     nd::value<uint32_t> range (bw_input_size); //todo in/out size?
     nd::value<uint32_t> window_range (filter_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::   x_f32> calc_bias_idx(bias_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (bw_input_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (bw_output_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_win_idx (filter_arg.size);
+    auto calc_in_idx   = nd::choose_calculate_idx(bw_input_arg.format);
+    auto calc_out_idx  = nd::choose_calculate_idx(bw_output_arg.format);
+    auto calc_win_idx  = nd::choose_calculate_idx(filter_arg.format);
 
     switch(padding){
         case padding::zero:
         {
             for(auto pos : range) {
-                auto in_idx = calc_in_idx(pos + bw_input_offset);
+                auto in_idx = calc_in_idx(bw_input_arg.size.raw , pos + bw_input_offset);
 
                 for(auto win_pos : window_range){
                     const std::vector<uint32_t> arg_out_idx = nd::value<uint32_t>(bw_output_offset) + pos*stride + win_pos;
 
-                    if( calc_out_idx.is_out_of_range(arg_out_idx) )
+                    if( nd::is_out_of_range(bw_output_arg.size, arg_out_idx) )
                         continue;
 
-                    auto out_idx = calc_out_idx(arg_out_idx);
-                    auto win_idx = calc_win_idx(win_pos);
+                    auto out_idx = calc_out_idx(bw_output_arg.size.raw, arg_out_idx);
+                    auto win_idx = calc_win_idx(filter_arg.size.raw, win_pos);
 
                     auto sensitivity = bw_input[in_idx] * weights[win_idx];
 
