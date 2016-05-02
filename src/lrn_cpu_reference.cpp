@@ -57,46 +57,32 @@ namespace neural {
         nd::value<uint32_t> range(output_size);
         nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx(input_arg.size);
         nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx(output_arg.size);
-        nd::value<uint32_t> window_range({1,{1,1},size});
+        nd::value<uint32_t> window_range({ 1,{1,1},size });
 
-        vector<int32_t> help_input_offset({input_offset});
+        vector<int32_t> help_input_offset({ input_offset });
 
         switch (padding) {
         case padding::zero:
             help_input_offset.feature[0] -= static_cast<int32_t>(size / 2);
-            for (auto pos : range) { // KUBA: czy mo¿na za³o¿yæ, ¿e range dla inputu jest dok³adnie takie samo, czy trzeba to weryfikowaæ?
+            for (auto pos : range) {
                 auto out_idx = calc_out_idx(pos + output_offset);
 
                 float acc = 0.0f;
-                float sum_of_products = 0.0f;
+                float value = 0.0f;
+
                 for (auto window_pos : window_range) {
                     auto input_pos = pos - help_input_offset + window_pos;
-                    
-                if (calc_in_idx.is_out_of_range(input_pos))
+
+                    if (calc_in_idx.is_out_of_range(input_pos))
                         continue;
-                auto input_index = calc_in_idx(input_pos);
-                    acc = input[input_index];
+                    auto input_index = calc_in_idx(input_pos);
+                    value = input[input_index];
+                    acc += value*value;
                 }
+                acc = acc * alpha + k;
+                acc = std::pow(acc, -beta);
                 output[out_idx] = acc;
             }
-            /*
-            for (auto pos : range) {
-                float acc = 0;
-                auto out_idx = calc_out_idx(pos + output_offset);
-
-                for (auto win_pos : window_range) {
-                    const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos;
-
-                    if (calc_in_idx.is_out_of_range(arg_in_idx))
-                        continue;
-
-                    auto in_idx = calc_in_idx(arg_in_idx);
-                    auto win_idx = calc_win_idx(win_pos);
-                    acc += input[in_idx] * filter[win_idx];
-                }
-                output[out_idx] = acc + bias[pos[f_pos]]; // todo need type traits for index of 'f' dimension
-            }
-            */
             break;
         default:
             throw std::runtime_error("Unknown padding mode in lrn");
