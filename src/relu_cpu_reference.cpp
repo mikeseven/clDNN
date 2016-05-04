@@ -38,10 +38,10 @@ void relu_cpu_reference::implementation(const void *ptr) {
     auto& input_arg = this_relu->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
     auto& output_arg = this_relu->argument.output[0].as<const memory&>().argument;
 
-    if (input_arg.format != memory::format::yxfb_f32)   throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
+    if (input_arg.format != memory::format::yxfb_f32)            throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
     if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
-    if (input_arg.format != output_arg.format)          throw std::runtime_error("ReLU input/output data format does not match.");
-    for (auto &x : input_offset.raw)  if (x < 0)                  throw std::runtime_error("ReLU negative input offset.");
+    if (input_arg.format != output_arg.format)                   throw std::runtime_error("ReLU input/output data format does not match.");
+    for (auto &x : input_offset.raw)  if (x < 0)                 throw std::runtime_error("ReLU negative input offset.");
 
     for (size_t i = 0; i < input_arg.size.raw.size(); ++i) {
         if (input_arg.size.raw[i]  < output_size.raw[i] + input_offset.raw[i]) throw std::runtime_error("ReLU input/output size does not match.");
@@ -58,12 +58,12 @@ void relu_cpu_reference::implementation(const void *ptr) {
 
     namespace nd = ndimensional;
     nd::value<uint32_t> range(output_size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx(input_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx(output_arg.size);
+    auto calc_in_idx = nd::choose_calculate_idx(input_arg.format);
+    auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
 
     for (auto pos : range) {
-        auto in_idx = calc_in_idx(pos + input_offset);
-        auto out_idx = calc_out_idx(pos + output_offset);
+        auto in_idx = calc_in_idx(input_arg.size.raw, pos + input_offset);
+        auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
 
         output[out_idx] = std::max(input[in_idx], 0.0f) + this_relu->argument.negative_slope * std::min(input[in_idx], 0.0f);
     }
@@ -116,19 +116,19 @@ void relu_backward_cpu_reference::implementation(const void *ptr)
 
     for (size_t i = 0; i < forward_output_grad_arg.size.raw.size(); ++i) {
         if (forward_output_grad_arg.size.raw[i] < processed_window_sizes.raw[i] + forward_output_grad_offset.raw[i]) throw std::runtime_error("ReLU backward: forward_output_grad size does not match the offset.");
-        if (forward_input_arg.size.raw[i]       < processed_window_sizes.raw[i] + forward_input_offset.raw[i]) throw std::runtime_error("ReLU backward: forward_input size does not match the offset.");
-        if (forward_input_grad_arg.size.raw[i]  < processed_window_sizes.raw[i] + forward_input_grad_offset.raw[i]) throw std::runtime_error("ReLU backward: forward_input_grad size does not match the offset.");
+        if (forward_input_arg.size.raw[i]       < processed_window_sizes.raw[i] + forward_input_offset.raw[i])       throw std::runtime_error("ReLU backward: forward_input size does not match the offset.");
+        if (forward_input_grad_arg.size.raw[i]  < processed_window_sizes.raw[i] + forward_input_grad_offset.raw[i])  throw std::runtime_error("ReLU backward: forward_input_grad size does not match the offset.");
     }
 
     namespace nd = ndimensional;
     nd::value<uint32_t> range(processed_window_sizes);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_forward_input_idx(forward_input_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_forward_output_grad_idx(forward_output_grad_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_forward_input_grad_idx(forward_input_grad_arg.size);
+    auto calc_forward_input_idx = nd::choose_calculate_idx(forward_input_arg.format);
+    auto calc_forward_output_grad_idx = nd::choose_calculate_idx(forward_output_grad_arg.format);
+    auto calc_forward_input_grad_idx = nd::choose_calculate_idx(forward_input_grad_arg.format);
     for (auto pos : range) {
-        auto forward_input_idx = calc_forward_input_idx(pos + forward_input_offset);
-        auto forward_output_grad_idx = calc_forward_output_grad_idx(pos + forward_output_grad_offset);
-        auto forward_input_grad_idx = calc_forward_input_grad_idx(pos + forward_input_grad_offset);
+        auto forward_input_idx = calc_forward_input_idx(forward_input_arg.size.raw, pos + forward_input_offset);
+        auto forward_output_grad_idx = calc_forward_output_grad_idx(forward_output_grad_arg.size.raw, pos + forward_output_grad_offset);
+        auto forward_input_grad_idx = calc_forward_input_grad_idx(forward_input_grad_arg.size.raw, pos + forward_input_grad_offset);
 
         forward_input_grad[forward_input_grad_idx] = (forward_input[forward_input_idx] <= 0.0f ? 0.0f : 1.0f) * forward_output_grad[forward_output_grad_idx];
     }
