@@ -75,6 +75,24 @@ relu_backward::arguments::arguments(neural::engine::type engine, primitive out, 
 
 // creates primitive with relu implementation that supports provided arguments
 primitive relu::create(relu::arguments arg) {
+    auto& input_offset = arg.input_offset;
+    auto& output_offset = arg.output_offset;
+    auto& output_size = arg.output_size;
+
+    //auto& input_arg  = this_relu->input_memory(0).argument;
+    //auto& output_arg = this_relu->output_memory(0).argument;
+    auto& input_arg = arg.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+    auto& output_arg = arg.output[0].as<const memory&>().argument;
+
+    if (input_arg.format != memory::format::yxfb_f32)               throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
+    if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("ReLU input/output number of dimension does not match.");
+    if (input_arg.format != output_arg.format)                      throw std::runtime_error("ReLU input/output data format does not match.");
+    for (auto &x : input_offset.raw)  if (x < 0)                    throw std::runtime_error("ReLU negative input offset.");
+
+    for (size_t i = 0; i < input_arg.size.raw.size(); ++i) {
+        if (input_arg.size.raw[i]  < output_size.raw[i] + input_offset.raw[i]) throw std::runtime_error("ReLU input/output size does not match.");
+        if (output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("ReLU sizes to small.");
+    }
     // wrap relu into RAII wrapper
     std::unique_ptr<relu> result(new relu(arg));
 
@@ -98,6 +116,37 @@ primitive relu::create(relu::arguments arg) {
 
 
 primitive relu_backward::create(relu_backward::arguments arg) {
+    if (arg.input.size() != 2)
+        throw std::runtime_error("ReLU backward: number of inputs is incorrect.");
+
+    if (arg.output.size() != 1)
+        throw std::runtime_error("ReLU backward: number of outputs is incorrect.");
+
+    //auto forward_output_grad_arg    = this_relu->input_memory(0).argument;
+    auto& forward_output_grad_arg = arg.input[0].primitive.as<const memory&>().argument;
+    auto& forward_output_grad_offset = arg.input_offset[0];
+
+    //auto forward_input_arg    = this_relu->input_memory(1).argument;
+    auto& forward_input_arg = arg.input[1].primitive.as<const memory&>().argument;
+    auto& forward_input_offset = arg.input_offset[1];
+
+    //auto forward_input_grad_arg    = this_relu->output_memory(0).argument;
+    auto& forward_input_grad_arg = arg.output[0].as<const memory&>().argument;
+    auto& forward_input_grad_offset = arg.output_offset;
+
+    auto& processed_window_sizes = arg.output_size;
+    if (forward_output_grad_arg.size.raw.size() != forward_input_arg.size.raw.size() || forward_input_arg.size.raw.size() != forward_input_grad_arg.size.raw.size())
+        throw std::runtime_error("ReLU backward: number of IO dimension does not match.");
+
+    if (forward_output_grad_arg.format != forward_input_arg.format || forward_input_arg.format != forward_input_grad_arg.format)
+        throw std::runtime_error("ReLU backward: IO data format does not match.");
+
+    for (size_t i = 0; i < forward_output_grad_arg.size.raw.size(); ++i) {
+        if (forward_output_grad_arg.size.raw[i] < processed_window_sizes.raw[i] + forward_output_grad_offset.raw[i])    throw std::runtime_error("ReLU backward: forward_output_grad size does not match the offset.");
+        if (forward_input_arg.size.raw[i]       < processed_window_sizes.raw[i] + forward_input_offset.raw[i])          throw std::runtime_error("ReLU backward: forward_input size does not match the offset.");
+        if (forward_input_grad_arg.size.raw[i]  < processed_window_sizes.raw[i] + forward_input_grad_offset.raw[i])     throw std::runtime_error("ReLU backward: forward_input_grad size does not match the offset.");
+    }
+
     // wrap relu into RAII wrapper
     std::unique_ptr<relu_backward> result(new relu_backward(arg));
 
