@@ -18,8 +18,12 @@
 #include <mutex>
 
 #include "pooling_cpu_avx2_batch24.h"
-#include "optimized_impl_consts.h"
 #include "pooling.h"
+
+const uint64_t BATCH_ACCEPTED_BLOCK = 24;                         //the batch size that is minimal required for usage with jit version
+const uint64_t BATCH_SHIFT = 8;                                   //the size of register used for shifting with batch layout / number if pics/floats that are processed at the same time
+const uint64_t BATCH_BLOCKS = BATCH_ACCEPTED_BLOCK / BATCH_SHIFT; //number of registers (blocks to process) in the batch format
+const uint64_t BUFFERS_ALIGNMENT = BATCH_SHIFT * sizeof(float);   //required alignment of all buffers used by jit primitives
 
 namespace {
  //todo begin remove
@@ -86,7 +90,6 @@ struct PoolingInfo {
  //todo end remove
 
 void naive(float* input, float* output, InputDimensions input_dims, PoolingInfo info) {
-    const uint64_t BATCH_SHIFT = 8;
     uint64_t batch_accs = BATCH_ACCEPTED_BLOCK / BATCH_SHIFT;
     uint64_t in_pixel_size = input_dims.feats * BATCH_ACCEPTED_BLOCK;
 
@@ -207,14 +210,17 @@ pooling_cpu_avx2_batch24::pooling_cpu_avx2_batch24(pooling &arg)
 pooling_cpu_avx2_batch24::~pooling_cpu_avx2_batch24() {};
 void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     auto this_pooling = static_cast<const pooling *>(ptr);
-    auto input        = static_cast<float*>(this_pooling->input_memory(0).pointer);
-    auto output       = static_cast<float*>(this_pooling->output_memory(0).pointer);
+    //auto input        = static_cast<float*>(this_pooling->argument.input[0].primitive.as<const memory&>().pointer);
+    //auto output       = static_cast<float*>(this_pooling->argument.output[0].as<const memory&>().pointer);
 
-    auto input_memory_arg  = this_pooling->input_memory(0).argument;
+    auto input = static_cast<float*>(this_pooling->argument.input[0].primitive.as<const memory&>().pointer);
+    auto output = static_cast<float*>(this_pooling->argument.output[0].as<const memory&>().pointer);
+
+    auto input_memory_arg  = this_pooling->argument.input[0].primitive.as<const memory&>().argument;
     auto input_buffer_size = input_memory_arg.size;
     auto input_offset      = this_pooling->argument.input_offset;
 
-    auto output_memory_arg = this_pooling->output_memory(0).argument;
+    auto output_memory_arg = this_pooling->argument.output[0].as<const memory&>().argument;
     auto output_buffer_size= output_memory_arg.size;
     auto output_offset     = this_pooling->argument.output_offset;
     auto output_size       = this_pooling->argument.output_size;
@@ -230,9 +236,9 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     //uint64_t width = output->get_length(NN_DATA_COORD_x);
     //uint64_t height = output->get_length(NN_DATA_COORD_y);
     //uint64_t batch_blocks = output->get_length(NN_DATA_COORD_n);
-    uint64_t width  = output_size[x_pos];
-    uint64_t height = output_size[y_pos];
-    uint64_t batch_blocks = output_size[b_pos];
+    uint64_t width  = output_size.raw[x_pos];
+    uint64_t height = output_size.raw[y_pos];
+    uint64_t batch_blocks = output_size.raw[b_pos];
 
     //assert(width == out_dims.width);
     //assert(height == out_dims.height);
@@ -252,12 +258,12 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     //uint64_t output_width = output->parent->lengths.t[NN_DATA_COORD_x];
     //uint64_t output_height = output->parent->lengths.t[NN_DATA_COORD_y];
     //uint64_t output_pixel_size = BATCH_ACCEPTED_BLOCK * output->parent->lengths.t[NN_DATA_COORD_z];
-    uint64_t input_width       = input_buffer_size[x_pos];
-    uint64_t input_height      = input_buffer_size[y_pos];
-    uint64_t input_pixel_size  = BATCH_ACCEPTED_BLOCK * output_buffer_size[f_pos]; //todo why out?
-    uint64_t output_width      = output_buffer_size[x_pos];
-    uint64_t output_height     = output_buffer_size[y_pos];
-    uint64_t output_pixel_size = BATCH_ACCEPTED_BLOCK * output_buffer_size[f_pos];
+    uint64_t input_width       = input_buffer_size.raw[x_pos];
+    uint64_t input_height      = input_buffer_size.raw[y_pos];
+    uint64_t input_pixel_size  = BATCH_ACCEPTED_BLOCK * output_buffer_size.raw[f_pos]; //todo why out?
+    uint64_t output_width      = output_buffer_size.raw[x_pos];
+    uint64_t output_height     = output_buffer_size.raw[y_pos];
+    uint64_t output_pixel_size = BATCH_ACCEPTED_BLOCK * output_buffer_size.raw[f_pos];
 
     uint64_t pool_b = 0u;
     uint64_t pool_out_row = 0u;
@@ -266,11 +272,11 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     InputDimensions in_dims = {make<InputHeight>(input_height),
                                make<InputWidth>(input_width),
                                //make<InputFeats>(out_dims.feats)};
-                               make<InputFeats>(output_size[f_pos])}; //todo why out?
+                               make<InputFeats>(output_size.raw[f_pos])}; //todo why out?
 
     //todo added, what is it?
-    PoolingDimensions pd(make<PoolingHeight>(window[1]), make<PoolingWidth>(window[0]));
-    Stride            ps({make<Rows>(stride[1]), make<Cols>(stride[0])});
+    PoolingDimensions pd(make<PoolingHeight>(window.raw[1]), make<PoolingWidth>(window.raw[0]));
+    Stride            ps({make<Rows>(stride.raw[1]), make<Cols>(stride.raw[0])});
     PoolingInfo info({pd,ps});
 
     std::mutex mtx; //todo remove
