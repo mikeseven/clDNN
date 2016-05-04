@@ -14,12 +14,13 @@
 // limitations under the License.
 */
 
-#include "tests/gtest/gtest.h"
-#include "tests/test_utils/test_common_tools.h"
 #include "api/neural.h"
+#include "tests/gtest/gtest.h"
+#include "test_utils/test_utils.h"
 
 using namespace neural;
 using namespace std;
+using namespace tests;
 
 class softmax_xb_f32_test_fixture: public ::testing::Test {
 public:
@@ -45,12 +46,10 @@ public:
 };
 
 TEST_F(softmax_xb_f32_test_fixture, input_same_values) {
-    using namespace neural;
 
 // in_buffer filled with same value == 1
     for(size_t i = 0; i < out_size; ++i) {
         in_buffer[i] = 1;
-        out_buffer[i] = 0;
         expected_buffer[i] = 0.1f;
     }
 
@@ -67,7 +66,6 @@ TEST_F(softmax_xb_f32_test_fixture, input_same_values) {
 }
 
 TEST_F(softmax_xb_f32_test_fixture, input_same_values_batch_wise) {
-    using namespace neural;
 
 // in_buffer filled with same value == 1..2 batch wise (softmax can only xb_f32 )
     for(size_t i = 0; i < output_x; ++i) {
@@ -77,7 +75,6 @@ TEST_F(softmax_xb_f32_test_fixture, input_same_values_batch_wise) {
 
     // fill with the expected
     for(size_t i = 0; i < out_size; ++i) {
-        out_buffer[i] = 0.0f;
         expected_buffer[i] = 0.1f;
     }
 
@@ -105,7 +102,6 @@ TEST_F(softmax_xb_f32_test_fixture, input_same_values_batch_wise) {
 
 
 TEST_F(softmax_xb_f32_test_fixture, values_batch_wise) {
-    using namespace neural;
 
     float in_buffer[in_size] = {
        //b0  b1
@@ -164,7 +160,6 @@ TEST_F(softmax_xb_f32_test_fixture, values_batch_wise) {
 
 
 TEST(softmax_xb_f32_test, basic_with_offsets) {
-    using namespace neural;
 
     const uint32_t output_x  = 7, output_b  = 3,  // size of whole output buffer
                    input_x   = 6, input_b   = 2,  // size of whole input buffer
