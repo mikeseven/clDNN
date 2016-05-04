@@ -105,7 +105,7 @@ size_t index<neural::memory::format::bfyx_f32>(std::vector<uint32_t> size, std::
 	return pos[3] + size[3] * (pos[2] + size[2] * (pos[1] + size[1] * pos[0]));
 };
 
-fptr choose_calucalte_idx(neural::memory::format::type arg){
+fptr choose_calculate_idx(neural::memory::format::type arg){
     fptr ptr;
     switch (arg){
         case neural::memory::format::type::x_f32: // treat x_f32 as xb_f32 with b=1

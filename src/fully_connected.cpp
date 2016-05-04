@@ -36,8 +36,9 @@ struct fully_connected_reference : is_an_implementation {
         //auto weight_buffer_size = this_fc->input_memory(1).argument.size;
         auto input  = static_cast<float*>(this_fc->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
         auto weight = static_cast<float*>(this_fc->argument.input[1].primitive.as<const memory&>().pointer);
+        auto bias   = static_cast<float*>(this_fc->argument.input[2].primitive.as<const memory&>().pointer);
         auto output = static_cast<float*>(this_fc->argument.output[0].as<const memory&>().pointer);
-        auto bias   = static_cast<float*>(this_fc->argument.output[0].as<const memory&>().pointer);
+
         auto& weight_buffer_size = this_fc->argument.input[1].primitive.as<const memory&>().argument.size;
 
         auto& input_arg  = this_fc->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
@@ -90,8 +91,10 @@ struct fully_connected_reference : is_an_implementation {
                     arg_weight_idx[data_index]  = pos_out[data_index];
                     arg_weight_idx[batch_index] = pos_in [data_index];
                     auto w_idx = calc_w_idx(weight_arg.size.raw, arg_weight_idx);
-                    output[out_idx + pos_in[batch_index]] += input[in_idx] * weight[w_idx] - bias[f_index];
+                    output[out_idx + pos_in[batch_index]] += input[in_idx] * weight[w_idx];
                 }
+                for (auto  b=0 ; b < range_input[batch_index] ; b++)
+                    output[out_idx + b] += bias[pos_out[data_index]];
         }
     }
 

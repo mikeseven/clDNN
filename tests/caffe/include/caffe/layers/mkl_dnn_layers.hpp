@@ -42,7 +42,7 @@ struct MKL_DNNMemoryDescriptor : PrvMemDescr,
 
   memory::format::type layout_usr;
   memory::format::type layout_int;
-  Dtype* internal_ptr;
+  Dtype* internal_ptr     = nullptr;
   primitive memory_prv    = nullptr;
   primitive memory_usr    = nullptr;
   primitive to_internal   = nullptr;

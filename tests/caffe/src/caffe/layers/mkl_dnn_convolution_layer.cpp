@@ -264,6 +264,14 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
     return (Dtype*) prv_ptr;
   }
 
+  {
+  DLOG(INFO) << "no convert       " << this->name << "\n";
+      auto usr_ptr = is_diff ? (Dtype *) blob->cpu_diff() : (Dtype *) blob->cpu_data();
+        for (auto i=0; i<blob->count(); i++)
+        DLOG(INFO) << usr_ptr[i] << " ";
+       DLOG(INFO) << " \n";
+  }
+
   return (is_diff ? (Dtype*) blob->cpu_diff() : (Dtype*) blob->cpu_data());
 }
 
