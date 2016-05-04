@@ -25,7 +25,21 @@ struct fully_connected_reference : is_an_implementation {
     fully_connected_reference(fully_connected &arg)
         : is_an_implementation(neural::type_id<fully_connected_reference>())
         , outer(arg)
-    {};
+    {
+        auto& input_arg = outer.argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+        auto& input_buffer_size = input_arg.size;
+
+        auto& output_arg = outer.argument.output[0].as<const memory&>().argument;
+        auto& output_buffer_size = output_arg.size;
+
+        auto& weight_arg = outer.argument.input[1].primitive.as<const memory&>().argument;
+
+        if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::runtime_error("Fully connected input/output number of dimension does not match.");
+        if (input_arg.format != output_arg.format)      throw std::runtime_error("Fully connected input/output data format does not match.");
+        if (weight_arg.format != memory::format::xb_f32 &&
+            weight_arg.format != memory::format::x_f32)
+            throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
+    };
     ~fully_connected_reference() {}
 
     static void implementation(const void *ptr) {
@@ -49,12 +63,6 @@ struct fully_connected_reference : is_an_implementation {
 
         auto& weight_arg = this_fc->argument.input[1].primitive.as<const memory&>().argument;
         //auto weight_arg = this_fc->input_memory(1).argument.format;
-
-        if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::runtime_error("Fully connected input/output number of dimension does not match.");
-        if (input_arg.format             != output_arg.format)      throw std::runtime_error("Fully connected input/output data format does not match.");
-        if (weight_arg.format            != memory::format::xb_f32 &&
-            weight_arg.format            != memory::format::x_f32)
-            throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
 
         assert( 1 == input_buffer_size.feature.size());
         assert( 1 == input_buffer_size.batch.size()  );
