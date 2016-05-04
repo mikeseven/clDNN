@@ -31,40 +31,40 @@ namespace
 // maps of available strides for specific formats
 static std::map< std::tuple<memory::format::type, bool>, std::tuple<std::vector<uint32_t>, std::vector<uint32_t>, std::vector<uint32_t>>> format_strides_map =
 {
-      // raw sizes: b,f, {x,y}                                                              spatial_stride         single_average_stride             batch_stride
-    { std::make_tuple(memory::format::yxfb_f64, true), std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::xyfb_f32, true), std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::yxfb_f32, true), std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::xyfb_f64, true), std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fyxb_f32, true), std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fyxb_f64, true), std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fxyb_f32, true), std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fxyb_f64, true), std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::byxf_f32, true), std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::byxf_f64, true), std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bxyf_f32, true), std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bxyf_f64, true), std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfyx_f32, true), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfyx_f64, true), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfxy_f32, true), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfxy_f64, true), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3})},
+      // raw sizes: b,f, {x,y}                 spatial                                  spatial_stride         single_average_stride             batch_stride
+    { std::make_tuple(memory::format::yxfb_f64, true),  std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::xyfb_f32, true),  std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::yxfb_f32, true),  std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::xyfb_f64, true),  std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::fyxb_f32, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::fyxb_f64, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::fxyb_f32, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::fxyb_f64, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::byxf_f32, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::byxf_f64, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::bxyf_f32, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::bxyf_f64, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::bfyx_f32, true),  std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::bfyx_f64, true),  std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::bfxy_f32, true),  std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::bfxy_f64, true),  std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3})},
 
-    { std::make_tuple(memory::format::yxfb_f64, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{0}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::xyfb_f32, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{0}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::yxfb_f32, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{0}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::xyfb_f64, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{0}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fyxb_f32, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{0}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fyxb_f64, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{0}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fxyb_f32, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{0}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fxyb_f64, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{0}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::byxf_f32, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{},  std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::byxf_f64, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{},  std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bxyf_f32, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{},  std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bxyf_f64, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{},  std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfyx_f32, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{},  std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfyx_f64, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{},  std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfxy_f32, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{},  std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfxy_f64, false), std::make_tuple(std::vector<uint32_t>{}, std::vector<uint32_t>{},  std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::yxfb_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::xyfb_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::yxfb_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::xyfb_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::fyxb_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::fyxb_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::fxyb_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::fxyb_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::byxf_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::byxf_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::bxyf_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::bxyf_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::bfyx_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::bfyx_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::bfxy_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::bfxy_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
 };
 
 
@@ -191,7 +191,7 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
         // Compute and save moving averages.
         if(this_bn->output().size() > 3)
         {
-            //auto& moving_inv_std_dev = this_bn->output_memory(3);
+            //auto& moving_mean = this_bn->output_memory(3);
             auto& moving_mean = this_bn->argument.output[3].as<const memory&>();
             auto moving_mean_buffer = static_cast<T*>(moving_mean.pointer);
 
@@ -297,11 +297,11 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
 
         auto it = format_strides_map.find(std::make_tuple(input_grad.argument.format, spatial));
         if(it==std::end(format_strides_map)) throw std::runtime_error("batch_normalization_training_backward_reference::implementation -> unknown BatchNorm format");
-
-        auto data_w = input_grad.argument.size.raw[0];
-        auto data_h = input_grad.argument.size.raw[1];
-        auto data_c = input_grad.argument.size.raw[2];
-        auto data_n = input_grad.argument.size.raw[3];
+        
+        auto data_w = input_grad.argument.size.raw[2];
+        auto data_h = input_grad.argument.size.raw[3];
+        auto data_c = input_grad.argument.size.raw[1];
+        auto data_n = input_grad.argument.size.raw[0];
 
         auto spatial_location_stride = 1;
         auto element_stride = 1;
@@ -415,10 +415,10 @@ struct batch_normalization_inference_reference : is_an_implementation {
         auto it = format_strides_map.find(std::make_tuple(input.argument.format, spatial));
         if(it==std::end(format_strides_map)) throw std::runtime_error("batch_normalization_inference_reference::implementation -> unknown BatchNorm format");
 
-        auto data_w = input.argument.size.raw[0];
-        auto data_h = input.argument.size.raw[1];
-        auto data_c = input.argument.size.raw[2];
-        auto data_n = input.argument.size.raw[3];
+        auto data_w = input.argument.size.raw[2];
+        auto data_h = input.argument.size.raw[3];
+        auto data_c = input.argument.size.raw[1];
+        auto data_n = input.argument.size.raw[0];
 
         auto spatial_location_stride = 1;
         auto element_stride = 1;

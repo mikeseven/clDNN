@@ -64,7 +64,6 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_true) {
     scale.as<const memory&>().fill<float>(1);
     bias.as<const memory&>().fill<float>(0);
 
-
     // Create primitive.
     auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 1.0, std::numeric_limits<float>::epsilon()});
 
@@ -137,7 +136,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     for(i = 0; i < 3; ++i)
         execute({bn});
 
-    // Find non zero value in avarages
+    // Find non zero value in averages
     if (input_size[2] == 1) {
         non_zero_value = 0;
     }
@@ -156,7 +155,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
 
     float current_inv_std_dev_buffer = 0;
     float inv_num_average_over = 1.0f / (input_size[0] * input_size[1] * input_size[3]);
-    
+
     for (i = 0; i < input_size[0] * input_size[1] * input_size[3] - 1; i++) {
         current_inv_std_dev_buffer += pow(current_average_memory.get_value<float>(non_zero_value), 2.0f) * inv_num_average_over;
     }
@@ -198,9 +197,9 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
     }
 
     // Input size count
-    uint32_t total_avarage_size = 1;
+    uint32_t total_average_size = 1;
     for (i = 0; i < 3; i++) {
-        total_avarage_size *= input_size[i];
+        total_average_size *= input_size[i];
     }
 
     // Create input buffers.
@@ -232,7 +231,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
     for(i = 0; i < 3; ++i)
         execute({bn});
 
-    for (i = 0; i < total_avarage_size; ++i){
+    for (i = 0; i < total_average_size; ++i){
         EXPECT_EQ(0.0f, static_cast<float*>(output_memory.pointer)[i]);
     }
 }
@@ -300,7 +299,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
 
     float mean = 10.0f / input_size[3];
 
-    // Find non zero value in avarages
+    // Find non zero value in averages
     if (input_size[2] == 1) {
         non_zero_value = 0;
     }
