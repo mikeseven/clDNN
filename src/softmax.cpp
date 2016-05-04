@@ -27,8 +27,24 @@ struct softmax_reference : is_an_implementation {
     const softmax &outer;
     softmax_reference(softmax &arg)
         : is_an_implementation(neural::type_id<softmax_reference>())
-        , outer(arg)
-    {};
+        , outer(arg) {
+        auto input_arg = outer.argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+        auto output_arg = outer.argument.output[0].as<const memory&>().argument;
+
+        auto input_offset = outer.argument.input_offset;
+        auto output_offset = outer.argument.output_offset;
+        auto output_size = outer.argument.output_size;
+
+        if (input_arg.format != memory::format::xb_f32) throw std::runtime_error("Softmax reference uses xb_f32 format."); // todo should be format independent
+        if (input_arg.format != output_arg.format) throw std::runtime_error("Softmax input/output data format does not match.");
+        if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("Softmax input/output number of dimensions do not match.");
+        for (auto &x : input_offset.raw)  if (x < 0)                  throw std::runtime_error("Softmax negative input offset.");
+
+        for (size_t i = 0; i < input_arg.size.raw.size(); ++i) {
+            if (input_arg.size.raw[i] < output_size.raw[i] + input_offset.raw[i]) throw std::runtime_error("Softmax input/output size does not match.");
+            if (output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("Softmax sizes too small.");
+        }
+    };
     ~softmax_reference() {}
 
     static void implementation(const void *ptr) {
@@ -46,15 +62,6 @@ struct softmax_reference : is_an_implementation {
         //auto output_arg = this_relu->output_memory(0).argument;
         auto input_arg  = this_softmax->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
         auto output_arg = this_softmax->argument.output[0].as<const memory&>().argument;
-
-        if(input_arg.format          != memory::format::xb_f32    ) throw std::runtime_error("Softmax reference uses xb_f32 format."); // todo should be format independent
-        if(input_arg.format          != output_arg.format         ) throw std::runtime_error("Softmax input/output data format does not match.");
-        if(input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("Softmax input/output number of dimension does not match.");
-
-        for(size_t i = 0; i < input_arg.size.raw.size(); ++i){
-            if( input_arg.size.raw[i] < output_size.raw[i] +  input_offset.raw[i]) throw std::runtime_error("Softmax input/output size does not match.");
-            if(output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("Softmax sizes to small.");
-        }
 
         assert( 1 == output_size.feature.size() );
         assert( 1 == output_size.batch.size()   );
