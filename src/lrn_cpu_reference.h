@@ -14,11 +14,19 @@
 // limitations under the License.
 */
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma once
 
-#include "tests/gtest/gtest.h"
+#include "lrn.h"
 
-TEST(dummy_test, dummies) {
-    EXPECT_EQ(0, 0);
-    //EXPECT_EQ(1, 0);
+namespace neural {
+    struct lrn_cpu_reference : is_an_implementation {
+        lrn_cpu_reference(normalization::response &arg);
+        ~lrn_cpu_reference();
+        static void implementation(const void *ptr);
+
+        static is_an_implementation *create(normalization::response &arg) { return new lrn_cpu_reference(arg); };
+        std::vector<task> work() { return{ task{ implementation, &outer } }; };
+
+        const normalization::response &outer;
+    };
 }

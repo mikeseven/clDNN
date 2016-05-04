@@ -20,14 +20,15 @@
 
 int main()
 {
-    extern void example_relu_forward();
-    try{
-        example_relu_forward();
-    } catch (std::exception &e) {
+    extern void example_lrn_forward();
+    try {
+        example_lrn_forward();
+    }
+    catch (std::exception &e) {
         std::cerr << e.what();
-    } catch(...) {
+    }
+    catch (...) {
         std::cerr << "Unknown exceptions.";
     }
-
     return 0;
 }
