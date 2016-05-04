@@ -18,8 +18,9 @@
 
 #include "tests/gtest/gtest.h"
 #include "api/neural.h"
-
+#include "multidimensional_counter.h"
 #include "test_utils/test_utils.h"
+#include <iostream>
 
 TEST(local_response_normalization, lrn_test) {
 
@@ -32,13 +33,13 @@ TEST(local_response_normalization, lrn_test) {
 
     const uint32_t px = 2, py = 2, pb = 1, pf = 7, psize = 3;
 
-    std::initializer_list<float> input_oracle = {
+    std::initializer_list<float> input_oracle_init = {
         -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 1.5f, 2.0f,   // b=0, x=0, y=0
         -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 1.5f, 2.0f,   // b=0, x=1, y=0
         -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 1.5f, 2.0f,   // b=0, x=0, y=1
         -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 1.5f, 2.0f};  // b=0, x=1, y=1
 
-    std::initializer_list<float> output_oracle = {
+    std::initializer_list<float> output_oracle_init = {
         -0.99998f, -0.49999f, 0.00000f, 0.49999f, 0.99995f, 1.49984f, 1.99981f,   // b=0, x=0, y=0
         -0.99998f, -0.49999f, 0.00000f, 0.49999f, 0.99995f, 1.49984f, 1.99981f,   // b=0, x=1, y=0
         -0.99998f, -0.49999f, 0.00000f, 0.49999f, 0.99995f, 1.49984f, 1.99981f,   // b=0, x=0, y=1
@@ -49,14 +50,37 @@ TEST(local_response_normalization, lrn_test) {
 
     auto input = memory::create({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }, true });
     auto output = memory::create({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }, true });
+    auto output_oracle = memory::create({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }, true });
 
-    set_values(input, input_oracle);
+    set_values(input, input_oracle_init);
+    set_values(output_oracle, output_oracle_init);
+
     auto lrn = normalization::response::create({ engine::reference, output, input, psize, padding::zero, pk, palpha, pbeta });
+
     // ------------------------------------------------------------------------------------------------
     // test run
     execute({ lrn });
+    
+    // analysis of results
+    float* buff = nullptr;
+    float* buff_oracle = nullptr;
 
-    EXPECT_EQ(0, 0);
+    bool   result = true;
+
+    try {
+
+        buff = static_cast<float*>(output.as<const memory&>().pointer);
+        buff_oracle = static_cast<float*>(output_oracle.as<const memory&>().pointer);
+
+        for (size_t i = 0; i < px*py*pb*pf; ++i) {
+            result &= values_comparison(buff[i], buff_oracle[i], 5.2e-04F);
+        }
+    }
+    catch (const std::exception& E) {
+        std::cout << E.what() << std::endl;
+    }
+
+    EXPECT_EQ(true, result);
     // ------------------------------------------------------------------------------------------------
     // test clean
 

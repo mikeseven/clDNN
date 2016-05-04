@@ -81,7 +81,7 @@ namespace neural {
                 }
                 acc = acc * alpha + k;
                 acc = std::pow(acc, -beta);
-                output[out_idx] = acc;
+                output[out_idx] = acc * input[out_idx];
             }
             break;
         default:
