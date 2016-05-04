@@ -37,6 +37,7 @@ struct fully_connected_reference : is_an_implementation {
         auto input  = static_cast<float*>(this_fc->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
         auto weight = static_cast<float*>(this_fc->argument.input[1].primitive.as<const memory&>().pointer);
         auto output = static_cast<float*>(this_fc->argument.output[0].as<const memory&>().pointer);
+        auto bias   = static_cast<float*>(this_fc->argument.output[0].as<const memory&>().pointer);
         auto& weight_buffer_size = this_fc->argument.input[1].primitive.as<const memory&>().argument.size;
 
         auto& input_arg  = this_fc->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
@@ -49,6 +50,8 @@ struct fully_connected_reference : is_an_implementation {
 
         auto& weight_arg = this_fc->argument.input[1].primitive.as<const memory&>().argument;
         //auto weight_arg = this_fc->input_memory(1).argument.format;
+
+        auto& bias_arg = this_fc->argument.input[2].primitive.as<const memory&>().argument;
 
         if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::runtime_error("Fully connected input/output number of dimension does not match.");
         if (input_arg.format             != output_arg.format)      throw std::runtime_error("Fully connected input/output data format does not match.");
@@ -64,8 +67,9 @@ struct fully_connected_reference : is_an_implementation {
         //this_fc->output_memory(0).fill(0.0f);
         this_fc->argument.output[0].as<const memory&>().fill(0.0f);
 
-        int data_index = 2;
-        int batch_index = 0;
+        const int data_index = 2;
+        const int f_index = 0;
+        const int batch_index = 0;
 
         nd::value<uint32_t> range_output(output_buffer_size);
         range_output[batch_index] = 1; //in every iteration whole batch is computed at once, so it has to be removed from the range
@@ -86,7 +90,7 @@ struct fully_connected_reference : is_an_implementation {
                     arg_weight_idx[data_index]  = pos_out[data_index];
                     arg_weight_idx[batch_index] = pos_in [data_index];
                     auto w_idx = calc_w_idx(weight_arg.size.raw, arg_weight_idx);
-                    output[out_idx + pos_in[batch_index]] += input[in_idx] * weight[w_idx];
+                    output[out_idx + pos_in[batch_index]] += input[in_idx] * weight[w_idx] - bias[f_index];
                 }
         }
     }
@@ -112,11 +116,12 @@ static std::map<implementation_key, std::function<is_an_implementation *(fully_c
 fully_connected::arguments::arguments( neural::engine::type   eng,
                                        primitive              out,
                                        primitive              in,
-                                       primitive              weights)
+                                       primitive              weights,
+                                       primitive              bias)
 : engine(eng)
 , output({out})
 , output_size(out.as<const memory&>().argument.size)
-, input({in, weights})
+, input({in, weights, bias})
 {
 };
 
