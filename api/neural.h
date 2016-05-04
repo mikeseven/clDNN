@@ -17,7 +17,6 @@
 #pragma once
 
 #include "neural_base.h"
-#include <random>
 
 namespace neural {
 
@@ -102,43 +101,14 @@ struct memory : is_a_primitive {
     }
     DLL_SYM size_t count() const;
 
-    template <class T> T* data_begin() const {return reinterpret_cast<T*>(pointer);}
-    template <class T> T* data_end() const {return data_begin<T>() + count();}
-
-    template <class T> void set_value(uint32_t index, T value) const {data_begin<T>()[index] = value;}
-    template <class T> T    get_value(uint32_t index) const {return data_begin<T>()[index];}
-
-    template <class T> void fill(T value) const
-    {
-        if(type_id<T>()->id != memory::traits(argument.format).type->id)
-            throw std::runtime_error("fill_memory: types do not match");
-
-        std::fill(data_begin<T>(), data_end<T>(), value);
-    }
-
-    template <class T> void fill() const
-    {
-        if(type_id<T>()->id != memory::traits(argument.format).type->id)
-            throw std::runtime_error("fill_memory: types do not match");
-
-        static std::mt19937 rng(1);
-        std::uniform_real_distribution<T> dist(-10, 10);
-        for(auto it1 = data_begin<T>(), it2 = data_end<T>(); it1 != it2; ++it1)
-            *it1 = static_cast<T>( dist(rng) );
-    }
-
-    template <class T> void debug_fill(int x) const //todo remove
-    {
-        for(auto it1 = data_begin<T>(), it2 = data_end<T>(); it1 != it2; ++it1){
-            *it1 = static_cast<T>( x++ );
-        }
-    }
-
     ~memory();
 private:
 
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
 };
+
+
+
 struct memory_obsolete : is_a_primitive {
 
     struct format_traits {
