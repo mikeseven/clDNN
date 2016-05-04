@@ -91,6 +91,54 @@ convolution_backward::arguments::arguments( neural::engine::type     eng,
 
 // creates primitive with convolution implementation that supports provided arguments
 primitive convolution::create(convolution::arguments arg) {
+    auto& output_size = arg.output_size;
+    auto& stride = arg.stride;
+
+    auto& input_arg = arg.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+    auto& output_arg = arg.output[0].as<const memory&>().argument;
+
+    auto& filter_arg = arg.weight.as<const memory&>().argument; //convolution filter
+    auto& bias_arg = arg.bias.as<const memory&>().argument;
+
+    auto& input_offset = arg.input_offset;
+    auto& output_offset = arg.output_offset;
+
+    if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Convolution input/output number of dimension does not match.");
+    if (stride.raw.size() != output_arg.size.raw.size())            throw std::runtime_error("Convolution stride/output number of dimension does not match.");
+    if (input_arg.format != memory::format::yxfb_f32)               throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
+    if (input_arg.format != output_arg.format)                      throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
+    if (input_arg.format != filter_arg.format)                      throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
+    if (filter_arg.size.raw.size() != output_arg.size.raw.size())   throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
+    if (bias_arg.size.raw.size() != 3)                              throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
+    if (bias_arg.size.batch[0] != output_size.feature[0])           throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
+                                                                                                                                                               // than this implementation will be format independent
+    if (arg.padding != padding::zero)                               throw std::runtime_error("Unknown padding mode in convolution.");
+    if (input_offset.raw.size() != input_arg.size.raw.size())       throw std::runtime_error("Convolution input offset/input number of dimension does not match.");
+    if (output_offset.raw.size() != input_arg.size.raw.size())      throw std::runtime_error("Convolution output offset/input number of dimension does not match.");
+
+    // general formula: output size = (input size - filter size + 2 * amount of padding) / step + 1
+    auto it_in = input_arg.size.spatial.cbegin();
+    auto it_f = filter_arg.size.spatial.cbegin();
+    auto it_out = output_size.spatial.cbegin();
+    auto it_str = stride.spatial.cbegin();
+    while (it_in != input_arg.size.spatial.cend()) {
+        if ((*it_in - *it_f) / *it_str + 1 != *it_out)
+            std::runtime_error("Convolution dimensions are wrong.");
+        it_in++, it_f++, it_out++, it_str++;
+    }
+
+    for (int i = 0; i < output_arg.size.raw.size(); i++)
+        if (output_arg.size.raw.at(i) < output_size.raw.at(i) + output_offset.raw.at(i))
+            throw std::runtime_error("Convolution output buffer size is too small.");
+
+    assert(1 == filter_arg.size.batch[0]);
+    assert(1 == output_size.feature.size());
+    assert(1 == output_size.batch.size());
+
+    // TODO: implement when feature map support added
+    //if (input_arg.size.feature != filter_arg.size.feature)
+    //    throw std::runtime_error("Convolution dimensions are wrong.");
+
     // wrap relu into RAII wrapper
     std::unique_ptr<convolution> result(new convolution(arg));
 
@@ -112,6 +160,60 @@ primitive convolution::create(convolution::arguments arg) {
     return result.release();
 }
 primitive convolution_backward::create(convolution_backward::arguments arg) {
+    auto& bw_input_size = arg.input_size;  // todo output or input?
+    auto& bw_input_offset = arg.input_offset;
+    
+    assert(1 == bw_input_size.feature.size());
+    assert(1 == bw_input_size.batch.size());
+    
+    auto& bw_input_arg = arg.input[0].primitive.as<const memory&>().argument;
+    auto& fw_input_arg = arg.input[1].primitive.as<const memory&>().argument;
+    auto& filter_arg = arg.input[2].primitive.as<const memory&>().argument;
+    auto& bias_arg = arg.input[3].primitive.as<const memory&>().argument;
+
+    auto& bw_output_arg = arg.output[0].as<const memory&>().argument;
+    auto& filter_diff_arg = arg.output[1].as<const memory&>().argument;
+    auto& bias_diff_arg = arg.output[2].as<const memory&>().argument;
+    
+    auto& stride = arg.stride;
+
+    if (bw_input_offset.raw.size() != bw_output_arg.size.raw.size())    throw std::runtime_error("Backward convolution bw_input_offset/bw_output number of dimension does not match.");
+    if (bw_input_size.raw.size() != bw_output_arg.size.raw.size())      throw std::runtime_error("Backward convolution bw_input/bw_output number of dimension does not match.");
+    if (stride.raw.size() != bw_output_arg.size.raw.size())             throw std::runtime_error("Backward convolution stride/bw_output number of dimension does not match.");
+    if (bw_input_size.raw.size() != fw_input_arg.size.raw.size())       throw std::runtime_error("Backward convolution bw_input/fw_output number of dimension does not match.");
+    if (filter_arg.size.raw.size() != bw_output_arg.size.raw.size())    throw std::runtime_error("Backward convolution filter size/bw_output number of dimension does not match.");
+    if (filter_arg.size.raw.size() != filter_diff_arg.size.raw.size())  throw std::runtime_error("Backward convolution weights/weights_diff number of dimension does not match.");
+    if (bw_input_arg.format != bw_output_arg.format)                    throw std::runtime_error("Backward convolution bw_input/bw_output data format does not match.");
+    if (bw_input_arg.format != filter_arg.format)                       throw std::runtime_error("Backward convolution bw_input/weights data format does not match.");
+    if (bw_input_arg.format != fw_input_arg.format)                     throw std::runtime_error("Backward convolution bw_input/fw_output data format does not match.");
+    if (bias_arg.size.raw.size() != 3 &&
+        bias_arg.size.batch[0] != 1 &&
+        bias_arg.size.feature[0] != 1)                                  throw std::runtime_error("Backward convolution biases isn't 1D vector.");
+    if (bias_arg.size.raw.size() != bias_diff_arg.size.raw.size())      throw std::runtime_error("Backward convolution bias/bias_diff number dimensions doesn't match.");
+    if (bias_arg.size.spatial[0] != bw_input_arg.size.feature[0])       throw std::runtime_error("Backward convolution biases/bw_input dimensions does not match.");
+    if (bias_arg.size != bias_diff_arg.size)                            throw std::runtime_error("Backward convolution bias/bias_diff size doesn't match.");
+
+    auto& bw_output_offset = arg.output_offset;
+    
+    // general formula: output size = (input size - filter size + 2 * amount of padding) / step + 1
+    auto it_in = fw_input_arg.size.spatial.cbegin();
+    auto it_f = filter_arg.size.spatial.cbegin();
+    auto it_out = bw_input_size.spatial.cbegin();
+    auto it_str = stride.spatial.cbegin();
+    while (it_in != fw_input_arg.size.spatial.cend()) {
+        if ((*it_in - *it_f) / *it_str + 1 != *it_out)
+            std::runtime_error("Backward convolution dimensions are wrong.");
+        it_in++, it_f++, it_out++, it_str++;
+    }
+
+    for (size_t i = 0; i < bw_output_offset.raw.size(); ++i) {
+        if (bw_input_arg.size.raw[i] < bw_input_size.raw[i] + bw_output_offset.raw[i])
+            throw std::runtime_error("Backward convolution bw_input buffer size is too small.");
+
+        if (bw_output_arg.size.raw[i] != fw_input_arg.size.raw[i])
+            throw std::runtime_error("Sizes of BW output and FW input buffers in convolution bw must be equal.");
+    }
+
     // wrap relu into RAII wrapper
     std::unique_ptr<convolution_backward> result(new convolution_backward(arg));
 
