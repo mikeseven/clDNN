@@ -43,22 +43,6 @@ void set_values( neural::primitive& prim, std::initializer_list<T> args ){
         *it++ = x;
 }
 
-
-// Checks equality of floats.
-// For values less than absoulte_error_limit, absolute error will be counted
-// for others, the relatve error will be counted.
-// Function returns false if error will exceed the threshold.
-// Default values:
-// relative_error_threshold = 1e-3
-// absolute_error_threshold = 1e-6
-// absoulte_error_limit = 1e-4
-inline bool are_equal(
-    const float item,
-    const float ref_item,
-    const float relative_error_threshold = 1e-3,
-    const float absolute_error_threshold = 1e-6,
-    const float absoulte_error_limit     = 1e-4) {
-
 template <typename T>
 bool values_comparison(T first, T second, T threshold) {
 
@@ -75,6 +59,22 @@ bool values_comparison(T first, T second, T threshold) {
         return false;
     return true;
 }
+
+// Checks equality of floats.
+// For values less than absoulte_error_limit, absolute error will be counted
+// for others, the relatve error will be counted.
+// Function returns false if error will exceed the threshold.
+// Default values:
+// relative_error_threshold = 1e-3
+// absolute_error_threshold = 1e-6
+// absoulte_error_limit = 1e-4
+inline bool are_equal(
+    const float item,
+    const float ref_item,
+    const float relative_error_threshold = 1e-3,
+    const float absolute_error_threshold = 1e-6,
+    const float absoulte_error_limit     = 1e-4) {
+
         if( fabs(item) < absoulte_error_limit) {
             if(fabs( item - ref_item ) > absolute_error_threshold) {
                 return false;
