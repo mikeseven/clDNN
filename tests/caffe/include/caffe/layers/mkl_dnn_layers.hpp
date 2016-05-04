@@ -364,9 +364,9 @@ class MKL_DNNInnerProductLayer : public Layer<Dtype> {
         top_data_    (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
         bottom_data_ (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
         weights_data_(new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
-        bias_data_   (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        bias_data_   (new MKL_DNNData<Dtype>(memory::format::x_f32, memory::format::x_f32)),
         weights_diff_(new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
-        bias_diff_   (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        bias_diff_   (new MKL_DNNDiff<Dtype>(memory::format::x_f32, memory::format::x_f32)),
         top_diff_    (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
         bottom_diff_ (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)) {}
       

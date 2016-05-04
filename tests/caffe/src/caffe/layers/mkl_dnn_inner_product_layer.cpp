@@ -7,9 +7,8 @@
 #include "caffe/util/math_functions.hpp"
 
 /* TODO
- *  BIAS support in MKL-DNN
  *
- * * fc without bias term ?
+ * support for fc with and without bias term ?
  *
  */
 
@@ -76,14 +75,14 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bot
   auto input_x = K_;
   auto weight_y = N_, bias_y = N_, output_x = N_;
   /* MKL-DNN setup */
-  bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_int, {batch, {{input_x}}, z}});
+  bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_int, {batch, {{input_x}},  z}});
   top_data_   ->memory_prv = memory::create({engine_, top_data_   ->layout_int, {batch, {{output_x}}, z}});
-  bottom_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_int, {batch, {{input_x}}, z}});
+  bottom_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_int, {batch, {{input_x}},  z}});
   top_diff_   ->memory_prv = memory::create({engine_, top_diff_   ->layout_int, {batch, {{output_x}}, z}});
 
-  bottom_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {batch, {{input_x}}, z}});
+  bottom_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {batch, {{input_x}},  z}});
   top_data_   ->memory_usr = memory::create({engine_, top_data_   ->layout_usr, {batch, {{output_x}}, z}});
-  bottom_diff_->memory_usr = memory::create({engine_, bottom_diff_->layout_usr, {batch, {{input_x}}, z}});
+  bottom_diff_->memory_usr = memory::create({engine_, bottom_diff_->layout_usr, {batch, {{input_x}},  z}});
   top_diff_   ->memory_usr = memory::create({engine_, top_diff_   ->layout_usr, {batch, {{output_x}}, z}});
 
   weights_data_->memory_prv = memory::create({engine_, bottom_data_->layout_int, {weight_y, {{input_x}}, z}});
@@ -120,7 +119,8 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bot
   fcFwd_ = fully_connected::create({ engine_,
                                      top_data_->memory_prv,
                                      bottom_data_->memory_prv,
-                                     weights_data_->memory_prv }
+                                     weights_data_->memory_prv /*,
+                                     bias_data_->memory_prv*/}
                                      );
   // TODO:
   // fcBwd =
@@ -164,22 +164,37 @@ void MKL_DNNInnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
     top_data = top_data_->internal_ptr;
   } else {
     top_data = top[0]->mutable_cpu_data();
-    DLOG(INFO) << "Using cpu_data for top in DnnPooling.";
+    DLOG(INFO) << "Using cpu_data for top in MKL_DNNInnerProductLayer.";
   }
 
   if (bias_term_) {
-  }
-
-  execute({ bottom_data_ ->memory_prv(bottom_data),
+      // biases are 1D, so actually conversion not necessary, but this is consistent..
+      auto bias = bottom_data_->get_converted_prv(this->blobs_[1].get(), true);
+      execute({ bottom_data_ ->memory_prv(bottom_data),
+                top_data_    ->memory_prv(top_data),
+                weights_data_->memory_prv(weight),
+                bias_data_   ->memory_prv(bias),
+                fcFwd_ });
+  } else
+  {
+    // TODO
+    NOT_IMPLEMENTED;
+#if 0
+    execute({ bottom_data_ ->memory_prv(bottom_data),
             top_data_    ->memory_prv(top_data),
-            weights_data_->memory_prv(weight),
+            weights_data_->memory_prv(weight)
             fcFwd_ });
+#endif
+  }
 }
 
 template <typename Dtype>
 void MKL_DNNInnerProductLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
+  // TODO
+    NOT_IMPLEMENTED;
+#if 0
   if (this->param_propagate_down_[0]) {
     const Dtype* top_diff = top[0]->cpu_diff();
     const Dtype* bottom_data = bottom[0]->cpu_data();
@@ -218,14 +233,27 @@ void MKL_DNNInnerProductLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& t
           (Dtype)0., bottom[0]->mutable_cpu_diff());
     }
   }
+
+#endif
 }
 
 #ifdef CPU_ONLY
 STUB_GPU(MKL_DNNInnerProductLayer);
+#else
+template <typename Dtype>
+void MKL_DNNInnerProductLayer<Dtype>::Forward_gpu(
+    const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top)
+  {NOT_IMPLEMENTED;}
+template <typename Dtype>
+void MKL_DNNInnerProductLayer<Dtype>::Backward_gpu(
+    const vector<Blob<Dtype>*>& top, const vector<bool>& propagate_down,
+    const vector<Blob<Dtype>*>& bottom)
+  {NOT_IMPLEMENTED;}
 #endif
 
+
 INSTANTIATE_CLASS(MKL_DNNInnerProductLayer);
-//REGISTER_LAYER_CLASS(InnerProduct);
+REGISTER_LAYER_CLASS(InnerProduct);
 
 }  // namespace caffe
 #endif  // #ifdef USE_MKL_DNN

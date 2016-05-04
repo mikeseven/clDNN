@@ -169,6 +169,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   bwd_bias_diff      ->name = "bwd_bias_diff     @ " + this->layer_param_.name();
 }
 
+// TODO: move this code to separate file
 template <typename Dtype, bool is_diff>
 void MKL_DNNMemoryDescriptor<Dtype, is_diff>::convert_from_prv(void* prv_ptr, void* cpu_ptr)
 {
