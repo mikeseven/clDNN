@@ -16,7 +16,7 @@
 
 #include "api/neural.h"
 
-// memory_obselote->memory_obselote convolution
+// memory_obsolete->memory_obsolete convolution
 void example_convolution_ref_forward() {
     using namespace neural;
 
