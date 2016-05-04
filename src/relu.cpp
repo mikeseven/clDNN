@@ -84,8 +84,8 @@ primitive relu::create(relu::arguments arg) {
     auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
     auto key = std::make_tuple(arg.engine, infmt, outfmt);
     //auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto it = relu_fw_implementation_map.find(key);
-    if (it == std::end(relu_fw_implementation_map)) throw std::runtime_error("not yet implemented");
+    auto it = relu_fw_implementation_map::instance().find(key);
+    if (it == std::end(relu_fw_implementation_map::instance())) throw std::runtime_error("not yet implemented");
 
     // create implementation & attach it to result
     auto implementation = it->second(*result);
@@ -107,8 +107,8 @@ primitive relu_backward::create(relu_backward::arguments arg) {
     auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
     auto key = std::make_tuple(arg.engine, infmt, outfmt);
     //    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto it = relu_bw_implementation_map.find(key);
-    if (it == std::end(relu_bw_implementation_map)) throw std::runtime_error("not yet implemented");
+    auto it = relu_bw_implementation_map::instance().find(key);
+    if (it == std::end(relu_bw_implementation_map::instance())) throw std::runtime_error("not yet implemented");
 
     // create implementation & attach it to result
     auto implementation = it->second(*result);

@@ -142,8 +142,8 @@ struct attach {
         auto val_fw = relu_cpu_reference::create;
         auto val_bw = relu_backward_cpu_reference::create;
 
-        relu_fw_implementation_map.insert( {key_fw, val_fw} ); //todo keys should be different
-        relu_bw_implementation_map.insert( {key_bw, val_bw} );
+        relu_fw_implementation_map::instance().insert( {key_fw, val_fw} ); //todo keys should be different
+        relu_bw_implementation_map::instance().insert( {key_bw, val_bw} );
     }
     ~attach() {}
 };

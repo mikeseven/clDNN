@@ -25,6 +25,6 @@ namespace neural {
     using relu_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
     using relu_bw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
-    #define relu_fw_implementation_map singleton_map<relu_fw_key, std::function<is_an_implementation *(relu &)>>::instance()
-    #define relu_bw_implementation_map singleton_map<relu_bw_key, std::function<is_an_implementation *(relu_backward &)>>::instance()
+    using relu_fw_implementation_map = singleton_map<relu_fw_key, std::function<is_an_implementation *(relu &)>>;
+    using relu_bw_implementation_map = singleton_map<relu_bw_key, std::function<is_an_implementation *(relu_backward &)>>;
 }
