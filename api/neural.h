@@ -20,10 +20,8 @@
 #   define NOMINMAX        // mscc compatibility
 #endif
 
-#include "xbyak/xbyak.h"
 #include "neural_base.h"
 #include <random>
-#include <type_traits>
 
 namespace neural {
 
@@ -310,7 +308,6 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
 };
 // reorder data, type is not changed
-//todo remove std::vectors and memory_obselote
 struct reorder : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -566,10 +563,10 @@ struct /*normalization*/softmax : is_a_primitive {
         std::vector<primitive_at> input;          // 1: input
         neural::vector<int32_t>   input_offset;
 
-        DLL_SYM arguments(neural::engine::type, neural::memory_obselote::format::type out_fmt, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
-        DLL_SYM arguments(neural::engine::type, neural::memory_obselote::format::type out_fmt,                                                                     primitive in);
-        DLL_SYM arguments(neural::engine::type, primitive                             out,     neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
-        DLL_SYM arguments(neural::engine::type, primitive                             out,                                                                         primitive in);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     primitive in);
+        DLL_SYM arguments(neural::engine::type, primitive                        out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
+        DLL_SYM arguments(neural::engine::type, primitive                        out,                                                                     primitive in);
     };
     const arguments argument;
 

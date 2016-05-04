@@ -18,6 +18,7 @@
 
 #include <memory>
 #include "convolution.h"
+#include "xbyak/xbyak.h"
 
 namespace neural {
     struct convolution_cpu_jit : is_an_implementation {

@@ -64,8 +64,8 @@ struct relu_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range ( output_size );
-        auto calc_in_idx  = nd::choose_calucalte_idx(input_arg.format);
-        auto calc_out_idx = nd::choose_calucalte_idx(output_arg.format);
+        auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
+        auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
 
         for(auto pos : range) {
             auto in_idx  = calc_in_idx (input_arg.size.raw , pos + input_offset );
@@ -135,9 +135,9 @@ struct relu_backward_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (processed_window_sizes);
-        auto calc_forward_input_idx       = nd::choose_calucalte_idx(forward_input_arg.format);
-        auto calc_forward_output_grad_idx = nd::choose_calucalte_idx(forward_output_grad_arg.format);
-        auto calc_forward_input_grad_idx  = nd::choose_calucalte_idx(forward_input_grad_arg.format);
+        auto calc_forward_input_idx       = nd::choose_calculate_idx(forward_input_arg.format);
+        auto calc_forward_output_grad_idx = nd::choose_calculate_idx(forward_output_grad_arg.format);
+        auto calc_forward_input_grad_idx  = nd::choose_calculate_idx(forward_input_grad_arg.format);
         for(auto pos : range) {
             auto forward_input_idx       = calc_forward_input_idx      (forward_input_arg.size.raw, pos + forward_input_offset);
             auto forward_output_grad_idx = calc_forward_output_grad_idx(forward_output_grad_arg.size.raw, pos + forward_output_grad_offset);
