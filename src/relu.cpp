@@ -14,11 +14,6 @@
 // limitations under the License.
 */
 
-#ifdef _MSC_VER
-//  disable min & max macros for MSVC
-#   define NOMINMAX
-#endif
-
 #include "multidimensional_counter.h"
 #include "relu.h"
 
