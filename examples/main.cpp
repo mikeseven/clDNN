@@ -20,14 +20,15 @@
 
 int main()
 {
-    extern void example_softmax_forward();
-    try{
-        example_softmax_forward();
-    } catch (std::exception &e) {
+    extern void example_lrn_forward();
+    try {
+        example_lrn_forward();
+    }
+    catch (std::exception &e) {
         std::cerr << e.what();
-    } catch(...) {
+    }
+    catch (...) {
         std::cerr << "Unknown exceptions.";
     }
-
     return 0;
 }

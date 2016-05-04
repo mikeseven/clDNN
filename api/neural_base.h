@@ -46,7 +46,8 @@ template<typename T> struct vector {
         typename std::vector<T>::iterator end()   { return raw_.begin()+end_; }
         size_t size() const { return end_-begin_; }
         operator T() const { return raw_[0]; }
-        T operator[](size_t at) const { assert(at<end_-begin_); return raw_[begin_+at]; }
+        T& operator[](size_t at) { assert(at<end_ - begin_); return raw_[begin_ + at]; }
+        T operator[](size_t at) const { assert(at<end_ - begin_); return raw_[begin_ + at]; }
     } spatial, feature, batch;
     bool operator==(const vector &rhs) const { return rhs.spatial==spatial && rhs.feature==feature && rhs.batch==batch; }
     bool operator!=(const vector &rhs) const { return !(*this==rhs); }

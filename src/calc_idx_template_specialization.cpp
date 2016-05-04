@@ -128,7 +128,7 @@ fptr choose_calucalte_idx(neural::memory::format::type arg){
 			ptr = index<neural::memory::format::type::bfyx_f32>;
 			break;
         default:
-            throw std::runtime_error("choose_calucalte_idx has no case for memory::format " + std::to_string(arg));
+            throw std::runtime_error("choose_calculate_idx has no case for memory::format " + std::to_string(arg));
     }
     return ptr;
 };
