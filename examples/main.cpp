@@ -30,14 +30,5 @@ int main()
     catch (...) {
         std::cerr << "Unknown exceptions.";
     }
-    /*extern void example_relu_forward();
-    try{
-        example_relu_forward();
-    } catch (std::exception &e) {
-        std::cerr << e.what();
-    } catch(...) {
-        std::cerr << "Unknown exceptions.";
-    }*/
-
     return 0;
 }

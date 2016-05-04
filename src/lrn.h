@@ -22,6 +22,7 @@ namespace neural {
     using lrn_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
     using lrn_bw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>; //todo
 
-    extern singleton_map<lrn_fw_key, std::function<is_an_implementation *(normalization::response &)>>         & lrn_fw_implementation_map;
+    using lrn_fw_implementation_map = singleton_map<lrn_fw_key, std::function<is_an_implementation *(normalization::response &)>>;
+//    extern singleton_map<lrn_fw_key, std::function<is_an_implementation *(normalization::response &)>>         & lrn_fw_implementation_map;
 //    extern singleton_map<lrn_bw_key, std::function<is_an_implementation *(normalization::response_backward &)>>& lrn_bw_implementation_map;
 }

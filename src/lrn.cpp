@@ -19,9 +19,6 @@
 
 namespace neural {
 
-singleton_map<lrn_fw_key, std::function<is_an_implementation *(normalization::response &)>>         & lrn_fw_implementation_map = singleton_map<lrn_fw_key, std::function<is_an_implementation *(normalization::response &)>>         ::instance();
-//singletion_map<lrn_bw_key, std::function<is_an_implementation *(normalization::response_backward &)>>& lrn_bw_implementation_map = singletion_map<lrn_bw_key, std::function<is_an_implementation *(normalization::response_backward &)>>::instance();
-
 normalization::response::arguments::arguments(
                  neural::engine::type aengine,
                  primitive aoutput,
@@ -41,7 +38,7 @@ normalization::response::arguments::arguments(
     , padding(apadding)
     , k(ak)
     , alpha(aalpha)
-    , beta(abeta) 
+    , beta(abeta)
 { };
 
 normalization::response::arguments::arguments(
@@ -81,8 +78,8 @@ primitive normalization::response::create(response::arguments arg) {
     lrn_fw_key key = std::make_tuple(arg.engine, infmt, outfmt);
 
 //    lrn_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto it = lrn_fw_implementation_map.find(key);
-    if(it==std::end(lrn_fw_implementation_map)) throw std::runtime_error("Not yet implemented.");
+    auto it = lrn_fw_implementation_map::instance().find(key);
+    if(it==std::end(lrn_fw_implementation_map::instance())) throw std::runtime_error("Not yet implemented.");
 
     // create implementation & attach it to result
     auto implementation = it->second(*result);
