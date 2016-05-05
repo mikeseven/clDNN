@@ -332,7 +332,7 @@ inline size_t calculate_idx_obselote<T>::operator()( const std::vector<T>& posit
         }() == true );
 
     // Number of iterations depends on length of position vector.
-    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory_obselote layout.
+    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory_obsolete layout.
     // If 'position' is shorter than 'size' than function returns offset to some block of data
     for(size_t i = 0; i != position.size(); ++i){
         auto idx = position.size() - 1 - i;
@@ -355,7 +355,7 @@ inline size_t calculate_idx_obselote<T>::operator()( const std::vector<negT>& po
         }() == true );
 
     // Number of iterations depends on length of position vector.
-    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory_obselote layout.
+    // 'position' can be shorter than 'size' because last numbers (with the highest indexes) coressponds data with linear memory_obsolete layout.
     // If 'position' is shorter than 'size' than function returns offset to some block of data
     for(size_t i = 0; i != position.size(); ++i){
         auto idx = position.size() - 1 - i;

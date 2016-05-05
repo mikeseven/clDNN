@@ -16,6 +16,7 @@
 
 #include "convolution_cpu_reference.h"
 #include "multidimensional_counter.h"
+#include "memory_utils.h"
 
 namespace neural {
 
@@ -194,9 +195,9 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     //this_bw_conv->output_memory(0).fill(0.0f);
     //this_bw_conv->output_memory(1).fill(0.0f);
     //this_bw_conv->output_memory(2).fill(0.0f);
-    this_bw_conv->argument.output[0].as<const memory&>().fill(0.0f);
-    this_bw_conv->argument.output[1].as<const memory&>().fill(0.0f);
-    this_bw_conv->argument.output[2].as<const memory&>().fill(0.0f);
+    fill(this_bw_conv->argument.output[0].as<const memory&>(), 0.0f);
+    fill(this_bw_conv->argument.output[1].as<const memory&>(), 0.0f);
+    fill(this_bw_conv->argument.output[2].as<const memory&>(), 0.0f);
 
     int f_pos = 1;
     namespace nd = ndimensional;

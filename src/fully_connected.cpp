@@ -17,7 +17,8 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
 #include "multidimensional_counter.h"
-#include<iostream>//todo: remove
+#include "memory_utils.h"
+
 namespace neural {
 
 struct fully_connected_reference : is_an_implementation {
@@ -62,7 +63,7 @@ struct fully_connected_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         //this_fc->output_memory(0).fill(0.0f);
-        this_fc->argument.output[0].as<const memory&>().fill(0.0f);
+        fill(this_fc->argument.output[0].as<const memory&>(), 0.0f);
 
         int data_index = 2;
         int batch_index = 0;

@@ -16,40 +16,9 @@
 
 #pragma once
 
-#ifdef _MSC_VER
-#   define NOMINMAX        // mscc compatibility
-#endif
-
 #include "neural_base.h"
-#include <random>
 
 namespace neural {
-
-#if defined(_MSC_VER)
-namespace {
-    extern "C" DLL_SYM void _cdecl nn_init();
-    extern "C" DLL_SYM void _cdecl nn_exit();
-
-    template<typename T = void> class lib_init_t {
-        lib_init_t() {
-            nn_init();
-        }
-        ~lib_init_t() {
-            nn_exit();
-        }
-
-        void operator=(lib_init_t const&) = delete;
-
-        public:
-        DLL_SYM static lib_init_t &instance() {
-            static lib_init_t instance_;
-            return instance_;
-        }
-    };
-
-    template class lib_init_t<void>;
-}
-#endif // _MSC_VER
 
 // data in memory in known format; format = {order, type} of values
 struct memory : is_a_primitive {
@@ -132,44 +101,15 @@ struct memory : is_a_primitive {
     }
     DLL_SYM size_t count() const;
 
-    template <class T> T* data_begin() const {return reinterpret_cast<T*>(pointer);}
-    template <class T> T* data_end() const {return data_begin<T>() + count();}
-
-    template <class T> void set_value(uint32_t index, T value) const {data_begin<T>()[index] = value;}
-    template <class T> T    get_value(uint32_t index) const {return data_begin<T>()[index];}
-
-    template <class T> void fill(T value) const
-    {
-        if(type_id<T>()->id != memory::traits(argument.format).type->id)
-            throw std::runtime_error("fill_memory: types do not match");
-
-        std::fill(data_begin<T>(), data_end<T>(), value);
-    }
-
-    template <class T> void fill() const
-    {
-        if(type_id<T>()->id != memory::traits(argument.format).type->id)
-            throw std::runtime_error("fill_memory: types do not match");
-
-        static std::mt19937 rng(1);
-        std::uniform_real_distribution<T> dist(-10, 10);
-        for(auto it1 = data_begin<T>(), it2 = data_end<T>(); it1 != it2; ++it1)
-            *it1 = static_cast<T>( dist(rng) );
-    }
-
-    template <class T> void debug_fill(int x) const //todo remove
-    {
-        for(auto it1 = data_begin<T>(), it2 = data_end<T>(); it1 != it2; ++it1){
-            *it1 = static_cast<T>( x++ );
-        }
-    }
-
     ~memory();
 private:
 
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
 };
-struct memory_obselote : is_a_primitive {
+
+
+
+struct memory_obsolete : is_a_primitive {
 
     struct format_traits {
         const uint8_t       dimension;
@@ -224,27 +164,27 @@ struct memory_obselote : is_a_primitive {
         case format::bfyx_f64:
         case format::bxyf_f64:
         case format::bfxy_f64: return {4, type_id<double>()};
-        default: throw std::runtime_error("unknown memory_obselote::format");
+        default: throw std::runtime_error("unknown memory_obsolete::format");
         }
     }
 
     struct arguments {
         neural::engine::type            engine;
-        neural::memory_obselote::format::type    format;
+        neural::memory_obsolete::format::type    format;
         std::vector<uint32_t>           size;
         bool                            owns_memory;
 
-        DLL_SYM arguments(neural::engine::type aengine, memory_obselote::format::type aformat, std::vector<uint32_t> asize);
-        DLL_SYM arguments(neural::engine::type aengine, memory_obselote::format::type aformat, std::vector<uint32_t> asize, bool aowns_memory);
+        DLL_SYM arguments(neural::engine::type aengine, memory_obsolete::format::type aformat, std::vector<uint32_t> asize);
+        DLL_SYM arguments(neural::engine::type aengine, memory_obsolete::format::type aformat, std::vector<uint32_t> asize, bool aowns_memory);
     };
     const arguments argument;
     mutable void *pointer;
 
     DLL_SYM static primitive create(arguments);
-    memory_obselote &operator()(void *ptr) { pointer = ptr; return *this; };
+    memory_obsolete &operator()(void *ptr) { pointer = ptr; return *this; };
     primitive clone() const { return create(argument); }
     void execute_argument(void *arg) const {
-        if(argument.owns_memory) throw std::runtime_error("memory_obselote::execute_argument: this a container with its own memory_obselote; cannot set new pointer");
+        if(argument.owns_memory) throw std::runtime_error("memory_obsolete::execute_argument: this a container with its own memory_obsolete; cannot set new pointer");
         else pointer = arg;
     }
     DLL_SYM size_t count() const;
@@ -257,7 +197,7 @@ struct memory_obselote : is_a_primitive {
 
     template <class T> void fill(T value) const
     {
-        if(type_id<T>()->id != memory_obselote::traits(argument.format).type->id)
+        if(type_id<T>()->id != memory_obsolete::traits(argument.format).type->id)
             throw std::runtime_error("fill_memory: types do not match");
 
         std::fill(data_begin<T>(), data_end<T>(), value);
@@ -265,7 +205,7 @@ struct memory_obselote : is_a_primitive {
 
     template <class T> void fill() const
     {
-        if(type_id<T>()->id != memory_obselote::traits(argument.format).type->id)
+        if(type_id<T>()->id != memory_obsolete::traits(argument.format).type->id)
             throw std::runtime_error("fill_memory: types do not match");
 
         static std::mt19937 rng(1);
@@ -281,10 +221,10 @@ struct memory_obselote : is_a_primitive {
         }
     }
 
-    ~memory_obselote();
+    ~memory_obsolete();
 private:
 
-    memory_obselote(arguments arg) : is_a_primitive(type_id<const memory_obselote>()), argument(arg), pointer(0) {};
+    memory_obsolete(arguments arg) : is_a_primitive(type_id<const memory_obsolete>()), argument(arg), pointer(0) {};
 };
 // file that is loaded and becomes a data
 struct file : is_a_primitive {
@@ -522,8 +462,8 @@ private:
 
 
 namespace normalization { /////////////////////////////////////////////////////////////////////////////////////////////
-                          // normalization of response
-                          //todo remove memory_obsolete
+// normalization of response
+//todo remove memory_obsolete
     struct /*normalization*/response : is_a_primitive {
         struct arguments {
             neural::engine::type        engine;
