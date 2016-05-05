@@ -17,7 +17,7 @@
 #include "api/neural.h"
 #include "memory_utils.h"
 
-// memory_obsolete->memory_obsolete convolution
+// memory->memory convolution
 void example_convolution_ref_forward() {
     using namespace neural;
 
@@ -71,7 +71,7 @@ void example_convolution_ref_forward() {
 }
 
 void example_convolution_cpu_forward() {
-    //todo this example doesn't work properly, validade data and implementation 
+    //todo this example doesn't work properly, validade data and implementation
     using namespace neural;
 
     const uint32_t output_y    = 6,
