@@ -298,7 +298,7 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
 
         auto it = format_strides_map.find(std::make_tuple(input_grad.argument.format, spatial));
         if(it==std::end(format_strides_map)) throw std::runtime_error("batch_normalization_training_backward_reference::implementation -> unknown BatchNorm format");
-        
+
         auto data_w = input_grad.argument.size.raw[2];
         auto data_h = input_grad.argument.size.raw[3];
         auto data_c = input_grad.argument.size.raw[1];
@@ -559,11 +559,7 @@ primitive batch_training_backward::create(batch_training_backward::arguments arg
     std::unique_ptr<batch_training_backward> result(new batch_training_backward(arg));
 
     // lookup in database; throw if not found
-    //auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
-
+    auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = training_backward_implementation_map.find(key);
     if(it==std::end(training_backward_implementation_map)) throw std::runtime_error("not yet implemented");
 
@@ -588,11 +584,7 @@ primitive batch_inference::create(batch_inference::arguments arg)
     std::unique_ptr<batch_inference> result(new batch_inference(arg));
 
     // lookup in database; throw if not found
-    //auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
-
+    auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = inference_implementation_map.find(key);
     if(it==std::end(inference_implementation_map)) throw std::runtime_error("not yet implemented");
 
