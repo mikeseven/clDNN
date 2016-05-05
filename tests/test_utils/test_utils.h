@@ -49,12 +49,14 @@ bool values_comparison(T first, T second, T threshold) {
     auto abs_first = std::abs(first);
     auto abs_second = std::abs(second);
     auto delta = std::abs(abs_first - abs_second);
-
-    if (abs_first == 0 || abs_second == 0 || delta < std::numeric_limits<T>::min())
+    auto type_min = std::numeric_limits<T>::min();
+    if (abs_first == 0 || abs_second == 0 || delta < type_min) {
         if (delta > threshold)
-        return false;
-    else if ((delta / abs_first) > threshold)
-        return false;
+            return false;
+    }
+    else
+        if ((delta / abs_first) > threshold)
+            return false;
     return true;
 }
 }
