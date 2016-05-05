@@ -151,10 +151,10 @@ class MKL_DNN_Ref_ConvLayerTest : public MultiDeviceTest<TypeParam> {
 
  protected:
   MKL_DNN_Ref_ConvLayerTest()
-      //: blob_bottom_(new Blob<Dtype>(2, 3, 6, 4)),
-        //blob_bottom_2_(new Blob<Dtype>(2, 3, 6, 4)),
-         : blob_bottom_(new Blob<Dtype>(1, 2, 2, 2)), // jrenieck: temporarily simplified
-        blob_bottom_2_(new Blob<Dtype>(1, 2, 2, 2)),
+      : blob_bottom_(new Blob<Dtype>(2, 3, 6, 4)),
+        blob_bottom_2_(new Blob<Dtype>(2, 3, 6, 4)),
+        // : blob_bottom_(new Blob<Dtype>(1, 3, 2, 2)), // jrenieck: temporarily simplified
+        //blob_bottom_2_(new Blob<Dtype>(1, 3, 2, 2)),
         blob_top_(new Blob<Dtype>()),
         blob_top_2_(new Blob<Dtype>()) {}
   virtual void SetUp() {
@@ -313,6 +313,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolution_2outputs) {
 #endif
 }
 
+#if 0
 TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
@@ -333,7 +334,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradient) {
       this->blob_top_vec_);
 }
 
-#if 0
+
 TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestDilatedConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   vector<int> bottom_shape;
@@ -548,7 +549,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, Test1x1Convolution) {
     EXPECT_NEAR(top_data[i], ref_top_data[i], 1e-4);
   }
 }
-
+#endif
 TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolutionGroup) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
@@ -576,7 +577,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolutionGroup) {
     EXPECT_NEAR(top_data[i], ref_top_data[i], 1e-4);
   }
 }
-#endif
+
 #if 0
 #if 0
 TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSobelConvolution) {
@@ -791,7 +792,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestNDAgainst2D) {
               backward_weight_result_nd.cpu_diff()[i]);
   }
 }
-#endif
+
 
 TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradient) {
   typedef typename TypeParam::Dtype Dtype;
@@ -812,7 +813,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradient) {
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
 }
-
+#endif
 #if 0
 TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestDilatedGradient) {
   typedef typename TypeParam::Dtype Dtype;

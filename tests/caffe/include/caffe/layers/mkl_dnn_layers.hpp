@@ -22,14 +22,12 @@ struct MKL_DNNMemoryDescriptor : PrvMemDescr,
   
   MKL_DNNMemoryDescriptor() : 
           layout_usr(memory::format::bfyx_f32),
-          layout_prv(memory::format::yxfb_f32), 
-          name("UKNOWN") {};
+          layout_prv(memory::format::yxfb_f32) {};
           
   MKL_DNNMemoryDescriptor(neural::memory::format::type layout_usr, 
           neural::memory::format::type layout_prv) :
           layout_usr(layout_usr),
-          layout_prv(layout_prv),
-          name("UKNOWN") {};
+          layout_prv(layout_prv) {};
   
   ~MKL_DNNMemoryDescriptor()
   {
@@ -42,12 +40,12 @@ struct MKL_DNNMemoryDescriptor : PrvMemDescr,
 
   memory::format::type layout_usr;
   memory::format::type layout_prv;
-  Dtype* prv_ptr     = nullptr;
-  primitive memory_prv    = nullptr;
-  primitive memory_usr    = nullptr;
-  primitive to_prv   = nullptr;
-  primitive from_prv = nullptr;
-  std::string name;  // for debugging purposes
+  Dtype* prv_ptr       = nullptr;
+  primitive memory_prv = nullptr;
+  primitive memory_usr = nullptr;
+  primitive to_prv     = nullptr;
+  primitive from_prv   = nullptr;
+  std::string name = "UNKNOWN";  // for debugging purposes
   bool use_cuda;
   void create_conversions() {
     if (layout_usr != layout_prv)
@@ -115,9 +113,12 @@ protected:
   virtual void compute_output_shape();
 
 private:
-  neural::engine::type engine_;
-  primitive convolution_fwd = nullptr;
+  neural::engine::type engine_;  
+  vector<primitive> convolution_fwd;
+  // TODO: use vector for convolution_bwd
   primitive convolution_bwd = nullptr;
+  
+  
   /* Fwd step */
   shared_ptr<MKL_DNNData<Dtype> > fwd_bottom_data, fwd_top_data, 
                                   fwd_filter_data, fwd_bias_data;

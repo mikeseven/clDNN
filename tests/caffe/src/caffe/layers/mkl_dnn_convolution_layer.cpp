@@ -89,16 +89,15 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   DLOG(INFO) << " weights: " << kw << " " << kh << " " << ic <<  " " << oc << "\n";
 
   // Forward setup
-  CHECK_EQ(g, 1);  // TODO
-  fwd_bottom_data->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {n, {ih, iw}, ic}});
-  fwd_top_data->memory_usr    = memory::create({engine_, memory::format::bfyx_f32, {n, {oh, ow}, oc }});
-  fwd_filter_data->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {oc, {kh, kw},  ic/g}});
+  fwd_bottom_data->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {n, {ih, iw},  ic}});
+  fwd_top_data->memory_usr    = memory::create({engine_, memory::format::bfyx_f32, {n, {oh, ow},  oc }});
+  fwd_filter_data->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {oc, {kh, kw}, ic}});
   fwd_bias_data->memory_usr   = memory::create({engine_, memory::format::x_f32,    {1, {{oc}}, 1}});
   fwd_bias_data->layout_usr   = memory::format::x_f32;
 
-  fwd_bottom_data->memory_prv = memory::create({engine_, memory::format::yxfb_f32, {n, {ih, iw}, ic}});
-  fwd_top_data->memory_prv    = memory::create({engine_, memory::format::yxfb_f32, {n, {oh, ow}, oc }});
-  fwd_filter_data->memory_prv = memory::create({engine_, memory::format::yxfb_f32, {oc, {kh, kw},  ic/g}});
+  fwd_bottom_data->memory_prv = memory::create({engine_, memory::format::yxfb_f32, {n, {ih, iw},  ic}});
+  fwd_top_data->memory_prv    = memory::create({engine_, memory::format::yxfb_f32, {n, {oh, ow},  oc }});
+  fwd_filter_data->memory_prv = memory::create({engine_, memory::format::yxfb_f32, {oc, {kh, kw}, ic}});
   fwd_bias_data->memory_prv   = memory::create({engine_, memory::format::x_f32,    {1, {{oc}}, 1}});
   fwd_bias_data->layout_prv = memory::format::x_f32;
 
@@ -107,34 +106,51 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   fwd_filter_data->create_conversions();
   fwd_bias_data->create_conversions();
 
+
+#if 0
+  convolution::arguments::arguments( neural::engine::type     eng,
+                                   primitive                out,
+                                   neural::vector<uint32_t> out_off,
+                                   neural::vector<uint32_t> out_siz,
+                                   primitive                in,
+                                   neural::vector<int32_t>  in_off,
+                                   neural::vector<uint32_t> strd,
+                                   primitive                weights,
+                                   primitive                biases,
+                                   neural::padding::type    padd)
+#endif
   //TODO: support for g>1
   std::vector<unsigned> top_sizes_g = {oh, ow, oc/g, n};
-  convolution_fwd = convolution::create( {engine_,
+  for (int i=0; i<g; i++)
+    convolution_fwd.push_back( convolution::create( {engine_,
                                         fwd_top_data->memory_prv,
-                                        //{0,0,0,0},
-                                        //top_sizes_g,
+                                        {0, {0, 0}, i*(oc/g)},
+                                        {n, {oh, ow}, oc/g},
                                         fwd_bottom_data->memory_prv,
-                                        //{0, {-pad_h_, -pad_w_}, 0},
+                                        {0, {-pad_h_, -pad_w_}, i*(ic/g)},
                                         {1, {stride_h_, stride_w_}, 1},
                                         fwd_filter_data->memory_prv,
                                         fwd_bias_data->memory_prv,
                                         padding::zero}
-                                      );
+                                      )
+                            );
+
+
 /*
  * Backward by setup
  */
 
-  bwd_bottom_diff->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {n, {ih, iw}, ic}});
-  bwd_top_diff->memory_usr    = memory::create({engine_, memory::format::bfyx_f32, {n, {oh, ow}, oc }});
-  bwd_filter_diff->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {oc, {kh, kw},  ic/g}});
-  bwd_bias_diff->memory_usr   = memory::create({engine_, memory::format::x_f32,    {1, {{oc}}, 1}});
-  bwd_bias_diff->layout_usr  = memory::format::x_f32;
+  bwd_bottom_diff->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {n,  {ih, iw}, ic}});
+  bwd_top_diff->memory_usr    = memory::create({engine_, memory::format::bfyx_f32, {n,  {oh, ow}, oc }});
+  bwd_filter_diff->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {oc, {kh, kw}, ic}});
+  bwd_bias_diff->memory_usr   = memory::create({engine_, memory::format::x_f32,    {1,  {{oc}},    1}});
+  bwd_bias_diff->layout_usr   = memory::format::x_f32;
 
-  bwd_bottom_diff->memory_prv = memory::create({engine_, memory::format::yxfb_f32, {n, {ih, iw}, ic}});
-  bwd_top_diff->memory_prv    = memory::create({engine_, memory::format::yxfb_f32, {n, {oh, ow}, oc }});
-  bwd_filter_diff->memory_prv = memory::create({engine_, memory::format::yxfb_f32, {oc, {kh, kw},  ic/g}});
+  bwd_bottom_diff->memory_prv = memory::create({engine_, memory::format::yxfb_f32, {n, {ih, iw},  ic}});
+  bwd_top_diff->memory_prv    = memory::create({engine_, memory::format::yxfb_f32, {n, {oh, ow},  oc }});
+  bwd_filter_diff->memory_prv = memory::create({engine_, memory::format::yxfb_f32, {oc, {kh, kw}, ic}});
   bwd_bias_diff->memory_prv   = memory::create({engine_, memory::format::x_f32,    {1, {{oc}}, 1}});
-  bwd_bias_diff->layout_prv = memory::format::x_f32;
+  bwd_bias_diff->layout_prv   = memory::format::x_f32;
 
   bwd_bottom_diff->create_conversions();
   bwd_top_diff->create_conversions();
@@ -307,10 +323,10 @@ void MKL_DNNConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
   ow = this->width_out_;
   oh = this->height_out_;
   oc = this->num_output_/g;
-  CHECK(top[0]->width()    == ow &&
-        top[0]->height()   == oh &&
-        top[0]->channels() == oc*g &&
-        top[0]->num()      == n) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(top[0]->width()   , ow) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(top[0]->height()  , oh) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(top[0]->channels(), oc*g) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(top[0]->num()     , n) << "Inclompatible shape of bottom with layer";
 
 
   auto bottom_data = fwd_bottom_data->get_converted_prv(bottom[0], true); //temporary false
@@ -325,11 +341,10 @@ void MKL_DNNConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
   else
     top_data = top[0]->mutable_cpu_data();
 
-  // for one group
-  CHECK_EQ(g,1);
-  execute({fwd_bottom_data->memory_prv(bottom_data), fwd_top_data->memory_prv(top_data),
-          fwd_filter_data->memory_prv(filter_data), fwd_bias_data->memory_prv(bias_data),
-          convolution_fwd});
+  for(auto& conv : convolution_fwd)
+    execute({fwd_bottom_data->memory_prv(bottom_data), fwd_top_data->memory_prv(top_data),
+            fwd_filter_data->memory_prv(filter_data), fwd_bias_data->memory_prv(bias_data),
+            conv});
 
 }
 
