@@ -77,20 +77,20 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bot
 
   std::cout << "input_x: " << input_x << "  output_x: "  << output_x <<  " batch: " << batch <<" \n";
   /* MKL-DNN setup */
-  bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_int, {batch, {{input_x}},  1}});
-  top_data_   ->memory_prv = memory::create({engine_, top_data_   ->layout_int, {batch, {{output_x}}, 1}});
-  bottom_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_int, {batch, {{input_x}},  1}});
-  top_diff_   ->memory_prv = memory::create({engine_, top_diff_   ->layout_int, {batch, {{output_x}}, 1}});
+  bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {batch, {{input_x}},  1}});
+  top_data_   ->memory_prv = memory::create({engine_, top_data_   ->layout_prv, {batch, {{output_x}}, 1}});
+  bottom_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_prv, {batch, {{input_x}},  1}});
+  top_diff_   ->memory_prv = memory::create({engine_, top_diff_   ->layout_prv, {batch, {{output_x}}, 1}});
 
   bottom_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {batch, {{input_x}},  1}});
   top_data_   ->memory_usr = memory::create({engine_, top_data_   ->layout_usr, {batch, {{output_x}}, 1}});
   bottom_diff_->memory_usr = memory::create({engine_, bottom_diff_->layout_usr, {batch, {{input_x}},  1}});
   top_diff_   ->memory_usr = memory::create({engine_, top_diff_   ->layout_usr, {batch, {{output_x}}, 1}});
 
-  weights_data_->memory_prv = memory::create({engine_, bottom_data_->layout_int, {input_x, {{output_x}}, 1}});
-  bias_data_   ->memory_prv = memory::create({engine_, bias_data_  ->layout_int, {1,        {{bias_x}}, 1}});
-  weights_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_int, {input_x, {{output_x}}, 1}});
-  bias_diff_   ->memory_prv = memory::create({engine_, bias_diff_  ->layout_int, {1,        {{bias_x}}, 1}});
+  weights_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {input_x, {{output_x}}, 1}});
+  bias_data_   ->memory_prv = memory::create({engine_, bias_data_  ->layout_prv, {1,        {{bias_x}}, 1}});
+  weights_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_prv, {input_x, {{output_x}}, 1}});
+  bias_diff_   ->memory_prv = memory::create({engine_, bias_diff_  ->layout_prv, {1,        {{bias_x}}, 1}});
 
   weights_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {input_x, {{output_x}}, 1}});
   bias_data_   ->memory_usr = memory::create({engine_, bias_data_  ->layout_usr, {1,        {{bias_x}}, 1}});
@@ -161,9 +161,9 @@ void MKL_DNNInnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
   auto bottom_data = bottom_data_->get_converted_prv(bottom[0], true);
   auto weight = weights_data_->get_converted_prv(this->blobs_[0].get(), true);
   void *top_data = nullptr;
-  if (top_data_->from_internal != nullptr) {
-    top[0]->set_prv_data(top_data_->internal_ptr, top_data_, false);
-    top_data = top_data_->internal_ptr;
+  if (top_data_->from_prv != nullptr) {
+    top[0]->set_prv_data(top_data_->prv_ptr, top_data_, false);
+    top_data = top_data_->prv_ptr;
   } else {
     top_data = top[0]->mutable_cpu_data();
     DLOG(INFO) << "Using cpu_data for top in MKL_DNNInnerProductLayer.";

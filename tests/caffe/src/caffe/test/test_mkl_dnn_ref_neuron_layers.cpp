@@ -18,11 +18,11 @@ namespace caffe {
 static auto engine =  neural::engine::reference;
 
 template <typename TypeParam>
-class MKL_DNNNeuronLayerTest : public MultiDeviceTest<TypeParam> {
+class MKL_DNN_Ref_NeuronLayerTest : public MultiDeviceTest<TypeParam> {
   typedef typename TypeParam::Dtype Dtype;
 
  protected:
-  MKL_DNNNeuronLayerTest()
+  MKL_DNN_Ref_NeuronLayerTest()
       : blob_bottom_(new Blob<Dtype>(2, 3, 4, 5)),
         blob_top_(new Blob<Dtype>()) {
     Caffe::set_random_seed(1701);
@@ -33,7 +33,7 @@ class MKL_DNNNeuronLayerTest : public MultiDeviceTest<TypeParam> {
     blob_bottom_vec_.push_back(blob_bottom_);
     blob_top_vec_.push_back(blob_top_);
   }
-  virtual ~MKL_DNNNeuronLayerTest() { delete blob_bottom_; delete blob_top_; }
+  virtual ~MKL_DNN_Ref_NeuronLayerTest() { delete blob_bottom_; delete blob_top_; }
   Blob<Dtype>* const blob_bottom_;
   Blob<Dtype>* const blob_top_;
   vector<Blob<Dtype>*> blob_bottom_vec_;
@@ -41,9 +41,9 @@ class MKL_DNNNeuronLayerTest : public MultiDeviceTest<TypeParam> {
 };
 
 // TODO: Currently only float support
-TYPED_TEST_CASE(MKL_DNNNeuronLayerTest, ::testing::Types<CPUDevice<float> >);
+TYPED_TEST_CASE(MKL_DNN_Ref_NeuronLayerTest, ::testing::Types<CPUDevice<float> >);
 
-TYPED_TEST(MKL_DNNNeuronLayerTest, TestReLU) {
+TYPED_TEST(MKL_DNN_Ref_NeuronLayerTest, TestReLU) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   MKL_DNNReLULayer<Dtype> layer(layer_param, engine);
@@ -58,7 +58,7 @@ TYPED_TEST(MKL_DNNNeuronLayerTest, TestReLU) {
   }
 }
 
-TYPED_TEST(MKL_DNNNeuronLayerTest, TestReLUGradient) {
+TYPED_TEST(MKL_DNN_Ref_NeuronLayerTest, TestReLUGradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   MKL_DNNReLULayer<Dtype> layer(layer_param, engine);

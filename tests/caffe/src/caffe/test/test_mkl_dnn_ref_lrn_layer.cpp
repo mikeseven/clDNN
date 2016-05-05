@@ -19,11 +19,11 @@ namespace caffe {
 static auto engine =  neural::engine::reference;
 
 template <typename TypeParam>
-class MKL_DNNLRNLayerTest : public MultiDeviceTest<TypeParam> {
+class MKL_DNN_Ref_LRNLayerTest : public MultiDeviceTest<TypeParam> {
   typedef typename TypeParam::Dtype Dtype;
 
  protected:
-  MKL_DNNLRNLayerTest()
+  MKL_DNN_Ref_LRNLayerTest()
       : epsilon_(Dtype(1e-5)),
         blob_bottom_(new Blob<Dtype>()),
         blob_top_(new Blob<Dtype>()) {}
@@ -37,7 +37,7 @@ class MKL_DNNLRNLayerTest : public MultiDeviceTest<TypeParam> {
     blob_bottom_vec_.push_back(blob_bottom_);
     blob_top_vec_.push_back(blob_top_);
   }
-  virtual ~MKL_DNNLRNLayerTest() { delete blob_bottom_; delete blob_top_; }
+  virtual ~MKL_DNN_Ref_LRNLayerTest() { delete blob_bottom_; delete blob_top_; }
   void ReferenceLRNForward(const Blob<Dtype>& blob_bottom,
       const LayerParameter& layer_param, Blob<Dtype>* blob_top);
 
@@ -49,7 +49,7 @@ class MKL_DNNLRNLayerTest : public MultiDeviceTest<TypeParam> {
 };
 
 template <typename TypeParam>
-void MKL_DNNLRNLayerTest<TypeParam>::ReferenceLRNForward(
+void MKL_DNN_Ref_LRNLayerTest<TypeParam>::ReferenceLRNForward(
     const Blob<Dtype>& blob_bottom, const LayerParameter& layer_param,
     Blob<Dtype>* blob_top) {
   typedef typename TypeParam::Dtype Dtype;
@@ -111,10 +111,10 @@ void MKL_DNNLRNLayerTest<TypeParam>::ReferenceLRNForward(
   }
 }
 
-TYPED_TEST_CASE(MKL_DNNLRNLayerTest, ::testing::Types<CPUDevice<float> >);
+TYPED_TEST_CASE(MKL_DNN_Ref_LRNLayerTest, ::testing::Types<CPUDevice<float> >);
 
 
-TYPED_TEST(MKL_DNNLRNLayerTest, TestSetupAcrossChannels) {
+TYPED_TEST(MKL_DNN_Ref_LRNLayerTest, TestSetupAcrossChannels) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   MKL_DNNLRNLayer<Dtype> layer(layer_param, engine);
@@ -124,8 +124,8 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestSetupAcrossChannels) {
   EXPECT_EQ(this->blob_top_->height(), 3);
   EXPECT_EQ(this->blob_top_->width(), 3);
 }
-#if 0
-TYPED_TEST(MKL_DNNLRNLayerTest, TestForwardAcrossChannels) {
+#if 1
+TYPED_TEST(MKL_DNN_Ref_LRNLayerTest, TestForwardAcrossChannels) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   MKL_DNNLRNLayer<Dtype> layer(layer_param, engine);
@@ -140,7 +140,7 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestForwardAcrossChannels) {
   }
 }
 #endif
-TYPED_TEST(MKL_DNNLRNLayerTest, TestForwardAcrossChannelsLargeRegion) {
+TYPED_TEST(MKL_DNN_Ref_LRNLayerTest, TestForwardAcrossChannelsLargeRegion) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   layer_param.mutable_lrn_param()->set_local_size(15);
@@ -156,7 +156,7 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestForwardAcrossChannelsLargeRegion) {
   }
 }
 #if 0
-TYPED_TEST(MKL_DNNLRNLayerTest, TestGradientAcrossChannels) {
+TYPED_TEST(MKL_DNN_Ref_LRNLayerTest, TestGradientAcrossChannels) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   MKL_DNNLRNLayer<Dtype> layer(layer_param, engine);
@@ -176,8 +176,8 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestGradientAcrossChannels) {
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
 }
-#endif
-TYPED_TEST(MKL_DNNLRNLayerTest, TestGradientAcrossChannelsLargeRegion) {
+
+TYPED_TEST(MKL_DNN_Ref_LRNLayerTest, TestGradientAcrossChannelsLargeRegion) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   layer_param.mutable_lrn_param()->set_local_size(15);
@@ -198,10 +198,10 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestGradientAcrossChannelsLargeRegion) {
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
       this->blob_top_vec_);
 }
-
+#endif
 
 #if 0
-TYPED_TEST(MKL_DNNLRNLayerTest, TestSetupWithinChannel) {
+TYPED_TEST(MKL_DNN_Ref_LRNLayerTest, TestSetupWithinChannel) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   layer_param.mutable_lrn_param()->set_norm_region(
@@ -215,7 +215,7 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestSetupWithinChannel) {
   EXPECT_EQ(this->blob_top_->width(), 3);
 }
 
-TYPED_TEST(MKL_DNNLRNLayerTest, TestForwardWithinChannel) {
+TYPED_TEST(MKL_DNN_Ref_LRNLayerTest, TestForwardWithinChannel) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   layer_param.mutable_lrn_param()->set_norm_region(
@@ -233,7 +233,7 @@ TYPED_TEST(MKL_DNNLRNLayerTest, TestForwardWithinChannel) {
   }
 }
 
-TYPED_TEST(MKL_DNNLRNLayerTest, TestGradientWithinChannel) {
+TYPED_TEST(MKL_DNN_Ref_LRNLayerTest, TestGradientWithinChannel) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   layer_param.mutable_lrn_param()->set_norm_region(

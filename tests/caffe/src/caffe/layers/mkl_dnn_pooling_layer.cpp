@@ -246,9 +246,9 @@ void MKL_DNNPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
     auto bottom_data = fwd_bottom_data_->get_converted_prv(bottom[0], true);
     void *top_data = nullptr;
-    if (fwd_top_data_->from_internal != nullptr) {
-      top[0]->set_prv_data(fwd_top_data_->internal_ptr, fwd_top_data_, false);
-      top_data = fwd_top_data_->internal_ptr;
+    if (fwd_top_data_->from_prv != nullptr) {
+      top[0]->set_prv_data(fwd_top_data_->prv_ptr, fwd_top_data_, false);
+      top_data = fwd_top_data_->prv_ptr;
     } else {
       top_data = top[0]->mutable_cpu_data();
       DLOG(INFO) << "Using cpu_data for top in DnnPooling.";
@@ -264,9 +264,9 @@ void MKL_DNNPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   {
     auto bottom_data = fwd_bottom_data_->get_converted_prv(bottom[0], true);
     void *top_data = nullptr;
-    if (fwd_top_data_->from_internal != nullptr) {
-      top[0]->set_prv_data(fwd_top_data_->internal_ptr, fwd_top_data_, false);
-      top_data = fwd_top_data_->internal_ptr;
+    if (fwd_top_data_->from_prv != nullptr) {
+      top[0]->set_prv_data(fwd_top_data_->prv_ptr, fwd_top_data_, false);
+      top_data = fwd_top_data_->prv_ptr;
     } else {
       top_data = top[0]->mutable_cpu_data();
       DLOG(INFO) << "Using cpu_data for top in DnnPooling.";
@@ -291,6 +291,8 @@ void MKL_DNNPoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   if (!propagate_down[0]) {
     return;
   }
+  NOT_IMPLEMENTED;
+#if 0
   // Different pooling methods. We explicitly do the switch outside the for
   // loop to save time, although this results in more codes.
 
@@ -308,11 +310,11 @@ void MKL_DNNPoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
    // pooling_res[dnnResourceDiffDst] = bwd_top_diff->get_converted_prv(top[0],
      ///       true);
 
-    if (bwd_bottom_diff_->from_internal != nullptr) {
-      bottom[0]->set_prv_diff(bwd_bottom_diff_->internal_ptr, bwd_bottom_diff_,
+    if (bwd_bottom_diff_->from_prv != nullptr) {
+      bottom[0]->set_prv_diff(bwd_bottom_diff_->prv_ptr, bwd_bottom_diff_,
               false);
       //pooling_res[dnnResourceDiffSrc] =
-        //      reinterpret_cast<void *>(bwd_bottom_diff->internal_ptr);
+        //      reinterpret_cast<void *>(bwd_bottom_diff->prv_ptr);
     } else {
       //pooling_res[dnnResourceDiffSrc] = bottom[0]->mutable_cpu_diff();
     }
@@ -332,6 +334,8 @@ void MKL_DNNPoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   default:
     LOG(FATAL) << "Unknown pooling method.";
   }
+
+#endif  // #if 0
 }
 
 

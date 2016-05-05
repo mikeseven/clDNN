@@ -22,18 +22,18 @@ struct MKL_DNNMemoryDescriptor : PrvMemDescr,
   
   MKL_DNNMemoryDescriptor() : 
           layout_usr(memory::format::bfyx_f32),
-          layout_int(memory::format::yxfb_f32), 
+          layout_prv(memory::format::yxfb_f32), 
           name("UKNOWN") {};
           
   MKL_DNNMemoryDescriptor(neural::memory::format::type layout_usr, 
-          neural::memory::format::type layout_int) :
+          neural::memory::format::type layout_prv) :
           layout_usr(layout_usr),
-          layout_int(layout_int),
+          layout_prv(layout_prv),
           name("UKNOWN") {};
   
   ~MKL_DNNMemoryDescriptor()
   {
-    if(internal_ptr) CaffeFreeHost(internal_ptr, use_cuda);
+    if(prv_ptr) CaffeFreeHost(prv_ptr, use_cuda);
   }
 
   shared_ptr<MKL_DNNMemoryDescriptor<Dtype, is_diff> > get_shared_ptr() {
@@ -41,21 +41,21 @@ struct MKL_DNNMemoryDescriptor : PrvMemDescr,
   }
 
   memory::format::type layout_usr;
-  memory::format::type layout_int;
-  Dtype* internal_ptr     = nullptr;
+  memory::format::type layout_prv;
+  Dtype* prv_ptr     = nullptr;
   primitive memory_prv    = nullptr;
   primitive memory_usr    = nullptr;
-  primitive to_internal   = nullptr;
-  primitive from_internal = nullptr;
+  primitive to_prv   = nullptr;
+  primitive from_prv = nullptr;
   std::string name;  // for debugging purposes
   bool use_cuda;
   void create_conversions() {
-    if (layout_usr != layout_int)
+    if (layout_usr != layout_prv)
     {
-        CaffeMallocHost((void**)&internal_ptr, sizeof(Dtype)*prv_count(), &use_cuda);
+        CaffeMallocHost((void**)&prv_ptr, sizeof(Dtype)*prv_count(), &use_cuda);
         // TODO: use the same engine as in the layer
-        to_internal   = reorder::create(reorder::arguments({engine::reference, memory_usr, memory_prv}));
-        from_internal = reorder::create(reorder::arguments({engine::reference, memory_prv, memory_usr}));
+        to_prv   = reorder::create(reorder::arguments({engine::reference, memory_usr, memory_prv}));
+        from_prv = reorder::create(reorder::arguments({engine::reference, memory_prv, memory_usr}));
     }
   }
 
@@ -74,8 +74,8 @@ struct MKL_DNNData : MKL_DNNMemoryDescriptor<Dtype, false>
     MKL_DNNData() : MKL_DNNMemoryDescriptor<Dtype, false>() {}
     
     MKL_DNNData(neural::memory::format::type layout_usr, 
-          neural::memory::format::type layout_int) : 
-        MKL_DNNMemoryDescriptor<Dtype, false>(layout_usr, layout_int) {}
+          neural::memory::format::type layout_prv) : 
+        MKL_DNNMemoryDescriptor<Dtype, false>(layout_usr, layout_prv) {}
 };
 
 template <typename Dtype>
@@ -84,15 +84,15 @@ struct MKL_DNNDiff : MKL_DNNMemoryDescriptor<Dtype, true>
     MKL_DNNDiff() : MKL_DNNMemoryDescriptor<Dtype, true>() {}
     
     MKL_DNNDiff(neural::memory::format::type layout_usr, 
-          neural::memory::format::type layout_int) : 
-        MKL_DNNMemoryDescriptor<Dtype, true>(layout_usr, layout_int) {}
+          neural::memory::format::type layout_prv) :
+        MKL_DNNMemoryDescriptor<Dtype, true>(layout_usr, layout_prv) {}
 };
 
 template <typename Dtype>
 class MKL_DNNConvolutionLayer : public ConvolutionLayer<Dtype> {
 public:
   explicit MKL_DNNConvolutionLayer(
-          const LayerParameter& param, 
+          const LayerParameter& param,
           neural::engine::type engine = neural::engine::reference);
 
   virtual inline const char* type() const { return "MKL_DNN_Convolution"; }
@@ -152,7 +152,12 @@ class MKL_DNNLRNLayer : public Layer<Dtype> {
  public:
   explicit MKL_DNNLRNLayer(const LayerParameter& param,
         neural::engine::type engine = neural::engine::reference)
-      : Layer<Dtype>(param), engine_(engine) {}
+      : Layer<Dtype>(param), engine_(engine),
+      fwd_top_data_    (new MKL_DNNData<Dtype>()),
+      fwd_bottom_data_ (new MKL_DNNData<Dtype>()),
+      bwd_top_diff_    (new MKL_DNNDiff<Dtype>()),
+      bwd_bottom_diff_ (new MKL_DNNDiff<Dtype>())
+      {}
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
@@ -167,12 +172,14 @@ class MKL_DNNLRNLayer : public Layer<Dtype> {
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
-      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+      const vector<bool>& propagate_down, 
+      const vector<Blob<Dtype>*>& bottom);
 
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+      const vector<bool>& propagate_down,
+      const vector<Blob<Dtype>*>& bottom);
 
   virtual void CrossChannelForward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
@@ -198,10 +205,10 @@ class MKL_DNNLRNLayer : public Layer<Dtype> {
 private:
   neural::engine::type engine_;
   primitive lrnFwd_ = nullptr, lrnBwd_ = nullptr;
-  shared_ptr<MKL_DNNData<Dtype> > fwd_top_data_;
-  shared_ptr<MKL_DNNDiff<Dtype> > bwd_bottom_diff_;
+  shared_ptr<MKL_DNNData<Dtype> > fwd_top_data_, fwd_bottom_data_;
+  shared_ptr<MKL_DNNDiff<Dtype> > bwd_top_diff_, bwd_bottom_diff_;
   Dtype *lrn_buffer_;
-  memory::format::type layout_usr_ = memory::format::bfyx_f32;
+  //memory::format::type layout_usr_ = memory::format::bfyx_f32;
 };
 
 
@@ -364,9 +371,9 @@ class MKL_DNNInnerProductLayer : public Layer<Dtype> {
         top_data_    (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
         bottom_data_ (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
         weights_data_(new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
-        bias_data_   (new MKL_DNNData<Dtype>(memory::format::x_f32, memory::format::x_f32)),
+        bias_data_   (new MKL_DNNData<Dtype>(memory::format::x_f32,  memory::format:: x_f32)),
         weights_diff_(new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
-        bias_diff_   (new MKL_DNNDiff<Dtype>(memory::format::x_f32, memory::format::x_f32)),
+        bias_diff_   (new MKL_DNNDiff<Dtype>(memory::format::x_f32,  memory::format:: x_f32)),
         top_diff_    (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
         bottom_diff_ (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)) {}
       

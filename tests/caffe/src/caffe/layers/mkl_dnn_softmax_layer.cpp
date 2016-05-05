@@ -26,10 +26,10 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   auto output_x = input_x;
   const auto z = 1;
 
-  bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_int, {batch, {{input_x}}, z}});
-  top_data_   ->memory_prv = memory::create({engine_, top_data_   ->layout_int, {batch, {{input_x}}, z}});
-  bottom_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_int, {batch, {{input_x}}, z}});
-  top_diff_   ->memory_prv = memory::create({engine_, top_diff_   ->layout_int, {batch, {{input_x}}, z}});
+  bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {batch, {{input_x}}, z}});
+  top_data_   ->memory_prv = memory::create({engine_, top_data_   ->layout_prv, {batch, {{input_x}}, z}});
+  bottom_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_prv, {batch, {{input_x}}, z}});
+  top_diff_   ->memory_prv = memory::create({engine_, top_diff_   ->layout_prv, {batch, {{input_x}}, z}});
 
   bottom_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {batch, {{input_x}}, z}});
   top_data_   ->memory_usr = memory::create({engine_, top_data_   ->layout_usr, {batch, {{input_x}}, z}});
@@ -81,9 +81,9 @@ void MKL_DNNSoftmaxLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
   auto bottom_data = bottom_data_->get_converted_prv(bottom[0], true);
   void *top_data = nullptr;
-  if (top_data_->from_internal != nullptr) {
-    top[0]->set_prv_data(top_data_->internal_ptr, top_data_, false);
-    top_data = top_data_->internal_ptr;
+  if (top_data_->from_prv != nullptr) {
+    top[0]->set_prv_data(top_data_->prv_ptr, top_data_, false);
+    top_data = top_data_->prv_ptr;
   } else {
     top_data = top[0]->mutable_cpu_data();
     DLOG(INFO) << "Using cpu_data for top in DnnPooling.";
