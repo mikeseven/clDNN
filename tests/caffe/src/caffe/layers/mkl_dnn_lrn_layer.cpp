@@ -67,7 +67,7 @@ void MKL_DNNLRNLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   lrnFwd_ = normalization::response::create({engine_,
           fwd_top_data_->memory_prv,
           fwd_bottom_data_->memory_prv,
-          size_, padding::zero, k_, alpha_, beta_});
+          size_, padding::zero, k_, alpha_/size_, beta_});
 
   //  TODO:
   lrnBwd_ = NULL;

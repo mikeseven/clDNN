@@ -15,7 +15,7 @@
 */
 
 #include "api/neural.h"
-#include "tests\test_utils\test_utils.h"
+#include "tests/test_utils/test_utils.h"
 void example_lrn_forward() {
 
     const uint32_t px = 2, py = 2, pb = 1, pf = 7, psize = 3;
