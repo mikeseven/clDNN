@@ -325,7 +325,7 @@ struct primitive_at {
     primitive_at(const neural::primitive aprimitive, const uint32_t pos) : primitive(aprimitive), at(pos) {}
 };
 
-struct memory_obsolete;
+struct memory;
 
 // is_a_primitive is a base class for all primitives exposing common interface; primiary user is a primitive wrapper
 class is_a_primitive {
@@ -342,11 +342,11 @@ public:
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
     virtual const std::vector<primitive_at>  &input()  const { throw std::runtime_error(std::string("no inputs in ")+_type_traits->name); };
     virtual const std::vector<primitive>     &output() const { throw std::runtime_error(std::string("no outputs in ")+_type_traits->name); };
-    const memory_obsolete &input_memory(uint32_t at) const {
+    const memory &input_memory(uint32_t at) const {
         auto prim = input()[at].primitive;
-        return (prim.id()==type_id<const memory_obsolete>()->id ? prim : prim.output[input()[at].at]).as<const memory_obsolete &>();
+        return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>();
     }
-    const memory_obsolete &output_memory(uint32_t at) const  { return output()[at].as<const memory_obsolete &>(); };
+    const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
     virtual void execute_argument(void *) const { throw std::runtime_error(std::string("execute-time argument not supported in")+_type_traits->name); }
     friend class primitive;
 
