@@ -344,7 +344,6 @@ private:
 
 namespace normalization { /////////////////////////////////////////////////////////////////////////////////////////////
 // normalization of response
-//todo remove memory_obsolete
     struct /*normalization*/response : is_a_primitive {
         struct arguments {
             neural::engine::type        engine;

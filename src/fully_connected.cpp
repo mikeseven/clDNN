@@ -42,7 +42,7 @@ struct fully_connected_reference : is_an_implementation {
         auto& output_arg = this_fc->output_memory(0).argument;
         auto& output_buffer_size = output_arg.size;
 
-        auto& weight_arg = this_fc->input_memory(1).argument.format;
+        auto& weight_arg = this_fc->input_memory(1).argument;
 
         if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::runtime_error("Fully connected input/output number of dimension does not match.");
         if (input_arg.format             != output_arg.format)      throw std::runtime_error("Fully connected input/output data format does not match.");
@@ -84,14 +84,12 @@ struct fully_connected_reference : is_an_implementation {
         }
     }
 
-
     std::vector<task> work() {
         return{ task{ implementation, &outer } };
     }
 
     static is_an_implementation *create(fully_connected &arg) { return new fully_connected_reference(arg); };
 };
-
 
 //                                    engine                output                        input
 using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
@@ -102,10 +100,10 @@ static std::map<implementation_key, std::function<is_an_implementation *(fully_c
     { std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create }
 };
 
-fully_connected::arguments::arguments( neural::engine::type   eng,
-                                       primitive              out,
-                                       primitive              in,
-                                       primitive              weights)
+fully_connected::arguments::arguments( neural::engine::type eng,
+                                       primitive            out,
+                                       primitive            in,
+                                       primitive            weights)
 : engine(eng)
 , output({out})
 , output_size(out.as<const memory&>().argument.size)
