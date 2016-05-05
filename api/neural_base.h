@@ -167,6 +167,17 @@ private:
     type_traits &operator=(const type_traits &);
 };
 
+// is_floating_point<T>
+// ...compile-time detection if type is floatinig-point [for non-C++11 compilers]
+template<typename T> struct is_floating_point        { static const bool value = false; };
+template<>           struct is_floating_point<float> { static const bool value = true; };
+template<>           struct is_floating_point<double>{ static const bool value = true; };
+#if defined HALF_HALF_HPP
+template<>           struct is_floating_point<half>  { static const bool value = true; };
+#endif
+
+DLL_SYM type_traits* typeid_register(size_t size, bool is_float, const char* cstr);
+
 // type_id()
 // ...returns pointer to type-traits
 #if defined _MSC_VER
@@ -181,18 +192,6 @@ template<typename T_type> __attribute__((noinline)) type_traits *type_id() {
     static type_traits *ti = typeid_register(sizeof(T_type), is_floating_point<T_type>::value, type_name.c_str());
     return ti;
 }
-
-
-// is_floating_point<T>
-// ...compile-time detection if type is floatinig-point [for non-C++11 compilers]
-template<typename T> struct is_floating_point        { static const bool value = false; };
-template<>           struct is_floating_point<float> { static const bool value = true; };
-template<>           struct is_floating_point<double>{ static const bool value = true; };
-#if defined HALF_HALF_HPP
-template<>           struct is_floating_point<half>  { static const bool value = true; };
-#endif
-
-DLL_SYM type_traits* typeid_register(size_t size, bool is_float, const char* cstr);
 
 class engine  { engine();  public: enum type { reference, cpu, any=static_cast<uint32_t>(-1) }; };
 class padding { padding(); public: enum type { zero }; };
