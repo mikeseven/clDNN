@@ -38,64 +38,6 @@ void example_009() {
         45, 46, 47 //b row f3 x1 y1
     };
 
-    float wyn_buffer[all_size] =
-    {//bfxy x=2, y=2, f=4, b=3
-        0, // b0 f0 x0 y0
-       24, // b0 f0 x0 y1
-       12, // b0 f0 x1 y0
-       36, // b0 f0 x1 y1
-        3, // b0 f1 x0 y0
-       27, // b0 f1 x0 y1
-       15, // b0 f1 x1 y0
-       39, // b0 f1 x1 y1
-
-        6, // b0 f2 x0 y0
-       30, // b0 f2 x0 y1
-       18, // b0 f2 x1 y0
-       42, // b0 f2 x1 y1
-        9, // b0 f3 x0 y0
-       33, // b0 f3 x0 y1
-       21, // b0 f3 x1 y0
-       45, // b0 f3 x1 y1
-
-        1, // b1 f0 x0 y0
-       25, // b1 f0 x0 y1
-       13, // b1 f0 x1 y0
-       37, // b1 f0 x1 y1
-        4, // b1 f1 x0 y0
-       28, // b1 f1 x0 y1
-       16, // b1 f1 x1 y0
-       40, // b1 f1 x1 y1
-
-        7, // b1 f2 x0 y0
-       31, // b1 f2 x0 y1
-       19, // b1 f2 x1 y0
-       43, // b1 f2 x1 y1
-       10, // b1 f3 x0 y0
-       34, // b1 f3 x0 y1
-       22, // b1 f3 x1 y0
-       46, // b1 f3 x1 y1
-
-        //3, // b2 f0 x0 y0 // should fail
-        2, // b2 f0 x0 y0
-       26, // b2 f0 x0 y1
-       14, // b2 f0 x1 y0
-       38, // b2 f0 x1 y1
-        5, // b2 f1 x0 y0
-       29, // b2 f1 x0 y1
-       17, // b2 f1 x1 y0
-       41, // b2 f1 x1 y1
-
-        8, // b2 f2 x0 y0
-       32, // b2 f2 x0 y1
-       20, // b2 f2 x1 y0
-       44, // b2 f2 x1 y1
-       11, // b2 f3 x0 y0
-       35, // b2 f3 x0 y1
-       23, // b2 f3 x1 y0
-       47, // b2 f3 x1 y1
-    };
-
 	// input buffer should be initialized with valid data
                                      //b  y  x  f
     neural::vector<uint32_t> in_sizes = { 3, {2, 2}, 4};
