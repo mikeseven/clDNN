@@ -33,10 +33,8 @@ void relu_cpu_reference::implementation(const void *ptr) {
     auto& output_offset = this_relu->argument.output_offset;
     auto& output_size = this_relu->argument.output_size;
 
-    //auto& input_arg  = this_relu->input_memory(0).argument;
-    //auto& output_arg = this_relu->output_memory(0).argument;
-    auto& input_arg = this_relu->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-    auto& output_arg = this_relu->argument.output[0].as<const memory&>().argument;
+    auto& input_arg  = this_relu->input_memory(0).argument;
+    auto& output_arg = this_relu->output_memory(0).argument;
 
     if (input_arg.format != memory::format::yxfb_f32)   throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
     if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
@@ -51,10 +49,8 @@ void relu_cpu_reference::implementation(const void *ptr) {
     assert(1 == output_size.feature.size());
     assert(1 == output_size.batch.size());
 
-    //auto input  = static_cast<float*>(this_relu->input_memory(0).pointer);
-    //auto output = static_cast<float*>(this_relu->output_memory(0).pointer);
-    auto input = static_cast<float*>(this_relu->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
-    auto output = static_cast<float*>(this_relu->argument.output[0].as<const memory&>().pointer);
+    auto input  = static_cast<float*>(this_relu->input_memory(0).pointer);
+    auto output = static_cast<float*>(this_relu->output_memory(0).pointer);
 
     namespace nd = ndimensional;
     nd::value<uint32_t> range(output_size);
@@ -87,26 +83,20 @@ void relu_backward_cpu_reference::implementation(const void *ptr)
     if (this_relu->output().size() != 1)
         throw std::runtime_error("ReLU backward: number of outputs is incorrect.");
 
-    //auto forward_output_grad = static_cast<float*>(this_relu->input_memory(0).pointer);
-    //auto forward_input       = static_cast<float*>(this_relu->input_memory(1).pointer);
-    //auto forward_input_grad  = static_cast<float*>(this_relu->output_memory(0).pointer);
-    auto forward_output_grad = static_cast<float*>(this_relu->argument.input[0].primitive.as<const memory&>().pointer);
-    auto forward_input = static_cast<float*>(this_relu->argument.input[1].primitive.as<const memory&>().pointer);
-    auto forward_input_grad = static_cast<float*>(this_relu->argument.output[0].as<const memory&>().pointer);
+    auto forward_output_grad = static_cast<float*>(this_relu->input_memory(0).pointer);
+    auto forward_input       = static_cast<float*>(this_relu->input_memory(1).pointer);
+    auto forward_input_grad  = static_cast<float*>(this_relu->output_memory(0).pointer);
 
-    //auto forward_output_grad_arg    = this_relu->input_memory(0).argument;
-    auto forward_output_grad_arg = this_relu->argument.input[0].primitive.as<const memory&>().argument;
+    auto& forward_output_grad_arg    = this_relu->input_memory(0).argument;
     auto forward_output_grad_offset = this_relu->argument.input_offset[0];
 
-    //auto forward_input_arg    = this_relu->input_memory(1).argument;
-    auto forward_input_arg = this_relu->argument.input[1].primitive.as<const memory&>().argument;
+    auto& forward_input_arg    = this_relu->input_memory(1).argument;
     auto forward_input_offset = this_relu->argument.input_offset[1];
 
-    //auto forward_input_grad_arg    = this_relu->output_memory(0).argument;
-    auto forward_input_grad_arg = this_relu->argument.output[0].as<const memory&>().argument;
+    auto& forward_input_grad_arg    = this_relu->output_memory(0).argument;
     auto forward_input_grad_offset = this_relu->argument.output_offset;
 
-    auto processed_window_sizes = this_relu->argument.output_size;
+    auto& processed_window_sizes = this_relu->argument.output_size;
 
     if (forward_output_grad_arg.size.raw.size() != forward_input_arg.size.raw.size() || forward_input_arg.size.raw.size() != forward_input_grad_arg.size.raw.size())
         throw std::runtime_error("ReLU backward: number of IO dimension does not match.");
