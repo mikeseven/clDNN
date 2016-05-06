@@ -1,4 +1,4 @@
-#ifdef USE_MKL_DNN
+#ifdef MKL_DNN_ENABLED
 #include <algorithm>
 #include <vector>
 
@@ -251,4 +251,4 @@ TYPED_TEST(MKL_DNN_Ref_LRNLayerTest, TestGradientWithinChannel) {
 }
 #endif
 }  // namespace caffe
-#endif  // #ifdef USE_MKL_DNN
+#endif  // #ifdef MKL_DNN_ENABLED

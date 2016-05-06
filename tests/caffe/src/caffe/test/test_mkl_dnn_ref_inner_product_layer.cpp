@@ -1,4 +1,4 @@
-#ifdef USE_MKL_DNN
+#ifdef MKL_DNN_ENABLED
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -412,4 +412,4 @@ TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestBackwardTranspose) {
 }
 #endif
 }  // namespace caffe
-#endif  // #ifdef USE_MKL_DNN
+#endif  // #ifdef MKL_DNN_ENABLED

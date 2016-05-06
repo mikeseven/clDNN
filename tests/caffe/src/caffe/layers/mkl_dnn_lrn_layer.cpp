@@ -1,4 +1,4 @@
-#ifdef USE_MKL_DNN
+#ifdef MKL_DNN_ENABLED
 #include <vector>
 
 #include "caffe/layer.hpp"
@@ -39,8 +39,8 @@ void MKL_DNNLRNLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   width_    = bottom[0]->width();
   num_      = bottom[0]->num();
 
-  std::cout << "n "  <<  num_ << "  c " << channels_  << "  w "  << width_  <<  "  h " << height_  << "\n";
-  std::cout << "size "  <<  size_ << "  a " << alpha_ << "  b "  << beta_  <<  "  k " << k_  << "\n";
+  //std::cout << "n "  <<  num_ << "  c " << channels_  << "  w "  << width_  <<  "  h " << height_  << "\n";
+  //std::cout << "size "  <<  size_ << "  a " << alpha_ << "  b "  << beta_  <<  "  k " << k_  << "\n";
 
   fwd_bottom_data_->memory_usr = memory::create({engine_, fwd_bottom_data_->layout_usr, {num_, {height_, width_}, channels_ }});
   fwd_top_data_->memory_usr    = memory::create({engine_, fwd_top_data_   ->layout_usr, {num_, {height_, width_}, channels_ }});
@@ -197,4 +197,4 @@ void MKL_DNNLRNLayer<Dtype>::CrossChannelBackward_gpu(
 
 INSTANTIATE_CLASS(MKL_DNNLRNLayer);
 }  // namespace caffe
-#endif  // #ifdef USE_MKL_DNN
+#endif  // #ifdef MKL_DNN_ENABLED

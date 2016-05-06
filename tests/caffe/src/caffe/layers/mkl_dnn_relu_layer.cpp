@@ -1,4 +1,4 @@
-#ifdef USE_MKL_DNN
+#ifdef MKL_DNN_ENABLED
 #include <algorithm>
 #include <vector>
 
@@ -90,4 +90,4 @@ void MKL_DNNReLULayer<Dtype>::Backward_gpu(
 
 INSTANTIATE_CLASS(MKL_DNNReLULayer);
 }  // namespace caffe
-#endif //#ifdef USE_MKL_DNN
+#endif //#ifdef MKL_DNN_ENABLED

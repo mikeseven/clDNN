@@ -1,4 +1,4 @@
-#ifdef USE_MKL_DNN
+#ifdef MKL_DNN_ENABLED
 #include <cmath>
 #include <vector>
 
@@ -91,4 +91,4 @@ TYPED_TEST(MKL_DNN_Ref_SoftmaxLayerTest, TestGradient) {
 
 }  // namespace caffe
 
-#endif  //#ifdef USE_MKL_DNN
+#endif  //#ifdef MKL_DNN_ENABLED

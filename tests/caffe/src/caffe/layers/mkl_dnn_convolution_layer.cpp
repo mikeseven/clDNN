@@ -1,4 +1,4 @@
-#ifdef USE_MKL_DNN
+#ifdef MKL_DNN_ENABLED
 #include <vector>
 
 #include "caffe/filler.hpp"
@@ -6,7 +6,7 @@
 #include "caffe/layers/mkl_dnn_layers.hpp"
 
 // Uncomment to see where the layout conversions are done
-#undef DLOG
+//#undef DLOG
 #ifndef DLOG
 #include <iostream>
 #define DLOG(x) std::cout
@@ -84,9 +84,9 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   kw = this->kernel_w_;
   kh = this->kernel_h_;
 
-  DLOG(INFO) << " input:   " << iw << " " << ih << " " << ic <<  " " << n << "\n";
-  DLOG(INFO) << " output:  " << ow << " " << oh << " " << oc <<  " " << n << "\n";
-  DLOG(INFO) << " weights: " << kw << " " << kh << " " << ic <<  " " << oc << "\n";
+  // DLOG(INFO) << " input:   " << iw << " " << ih << " " << ic <<  " " << n << "\n";
+  // DLOG(INFO) << " output:  " << ow << " " << oh << " " << oc <<  " " << n << "\n";
+  // DLOG(INFO) << " weights: " << kw << " " << kh << " " << ic <<  " " << oc << "\n";
 
   // Forward setup
   fwd_bottom_data->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {n, {ih, iw},  ic}});
@@ -194,18 +194,17 @@ void MKL_DNNMemoryDescriptor<Dtype, is_diff>::convert_from_prv(void* prv_ptr, vo
   CHECK(this->from_prv != nullptr);
 
   DLOG(INFO) << "convert priv =>           "  << this->name << " =>"  << "\n";
-
+  execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv});
+#ifdef CONVERSION_PRINT_DATA
       DLOG(INFO) << "Before conversion: ";
       for (auto i=0; i<this->prv_count(); i++)
         DLOG(INFO) << ((Dtype*)prv_ptr)[i] << " ";
       DLOG(INFO) << " \n";
-      execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv});
-
       DLOG(INFO) << "After  conversion: ";
       for (auto i=0; i<this->prv_count(); i++)
         DLOG(INFO) << ((Dtype*)cpu_ptr)[i] << " ";
       DLOG(INFO) << " \n\n";
-
+#endif  //  #ifdef CONVERSION_PRINT_DATA
 }
 
 template <typename Dtype, bool is_diff>
@@ -219,7 +218,8 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
       DLOG(INFO) << "convert      => priv                                => " << this->name << "\n";
       auto usr_ptr = is_diff ? (Dtype *) blob->cpu_diff() : (Dtype *) blob->cpu_data();
       execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr), this->to_prv});
-
+      DLOG(INFO) << "Done\n";
+#ifdef CONVERSION_PRINT_DATA
       DLOG(INFO) << "Before conversion: ";
       for (auto i=0; i<blob->count(); i++)
         DLOG(INFO) << usr_ptr[i] << " ";
@@ -228,7 +228,7 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
       for (auto i=0; i<blob->count(); i++)
         DLOG(INFO) << this->prv_ptr[i] << " ";
        DLOG(INFO) << " \n\n";
-
+#endif  //#ifdef CONVERSION_PRINT_DATA
       if (set_prv_ptr) {
         if(is_diff)
           blob->set_prv_diff(this->prv_ptr, get_shared_ptr(), true);
@@ -280,6 +280,7 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
     return (Dtype*) prv_ptr;
   }
 
+#ifdef CONVERSION_PRINT_DATA
   {
   DLOG(INFO) << "no convert       " << this->name << "\n";
       auto usr_ptr = is_diff ? (Dtype *) blob->cpu_diff() : (Dtype *) blob->cpu_data();
@@ -287,7 +288,7 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
         DLOG(INFO) << usr_ptr[i] << " ";
        DLOG(INFO) << " \n";
   }
-
+#endif //#ifdef CONVERSION_PRINT_DATA
   return (is_diff ? (Dtype*) blob->cpu_diff() : (Dtype*) blob->cpu_data());
 }
 
@@ -434,4 +435,4 @@ void MKL_DNNConvolutionLayer<Dtype>::Backward_gpu(
 
 INSTANTIATE_CLASS(MKL_DNNConvolutionLayer);
 }  // namespace caffe
-#endif // #ifdef USE_MKL_DNN
+#endif // #ifdef MKL_DNN_ENABLED

@@ -1,4 +1,4 @@
-#ifdef USE_MKL_DNN
+#ifdef MKL_DNN_ENABLED
 #include <algorithm>
 #include <vector>
 #include <iostream>
@@ -140,4 +140,4 @@ void MKL_DNNSoftmaxLayer<Dtype>::Backward_gpu(
 INSTANTIATE_CLASS(MKL_DNNSoftmaxLayer);
 
 }  // namespace caffe
-#endif  // #ifdef USE_MKL_DNN
+#endif  // #ifdef MKL_DNN_ENABLED

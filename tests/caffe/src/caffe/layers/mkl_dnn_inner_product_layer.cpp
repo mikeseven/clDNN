@@ -1,4 +1,4 @@
-#ifdef USE_MKL_DNN
+#ifdef MKL_DNN_ENABLED
 #include <vector>
 
 #include "caffe/filler.hpp"
@@ -75,7 +75,7 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bot
   auto input_x = K_;
   auto bias_x = N_, output_x = N_;
 
-  std::cout << "input_x: " << input_x << "  output_x: "  << output_x <<  " batch: " << batch <<" \n";
+  //std::cout << "input_x: " << input_x << "  output_x: "  << output_x <<  " batch: " << batch <<" \n";
   /* MKL-DNN setup */
   bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {batch, {{input_x}},  1}});
   top_data_   ->memory_prv = memory::create({engine_, top_data_   ->layout_prv, {batch, {{output_x}}, 1}});
@@ -257,4 +257,4 @@ void MKL_DNNInnerProductLayer<Dtype>::Backward_gpu(
 INSTANTIATE_CLASS(MKL_DNNInnerProductLayer);
 
 }  // namespace caffe
-#endif  // #ifdef USE_MKL_DNN
+#endif  // #ifdef MKL_DNN_ENABLED
