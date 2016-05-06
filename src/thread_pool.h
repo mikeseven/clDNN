@@ -146,14 +146,14 @@ struct nn_thread_worker {
     }
 
 #ifdef __linux__
-    void get_affinity_np(size_t cpusetsize, cpu_set_t *cpuset) {
+    void get_affinity_np( cpu_set_t *cpuset) {
         int err =  pthread_getaffinity_np(worker_thread.native_handle(), sizeof(cpu_set_t), cpuset);
         if(err != 0) {
             throw std::runtime_error(std::string("Error getting affinity of thread. pthread_getaffinity_np error code: ") + std::to_string(err));
         }
     }
 
-    void set_affinity_np(size_t cpusetsize, cpu_set_t *cpuset) {
+    void set_affinity_np( cpu_set_t *cpuset) {
         int err = pthread_setaffinity_np(worker_thread.native_handle(), sizeof(cpu_set_t), cpuset);
         if( err != 0 ) {
             throw std::runtime_error(std::string("Error setting affinity of thread. pthread_setaffinity_np error code: ") + std::to_string(err));
@@ -347,7 +347,7 @@ struct nn_thread_worker_pool {
         hw_platform.get_platform_info(hw_info);
 #if 0
         // Get original affinity of threads (assuming it is same for all threads)
-        threads[0]->get_affinity_np(sizeof(cpu_set_t), &m_original_cpuset);
+        threads[0]->get_affinity_np( &m_original_cpuset);
 
         // Create affinity mask by masking out bits responsible for logical threads to
         // avoid running more than one thread on the same physical core.
@@ -439,7 +439,7 @@ struct nn_thread_worker_pool {
 
 #ifdef __linux__
                 // Set affintiy of thread so only one thread per core (physical cores) are allowed
-                (**ready_thread).set_affinity_np(sizeof(cpu_set_t), &m_physical_cpuset);
+                (**ready_thread).set_affinity_np( &m_physical_cpuset);
 #else
                 // TODO: Windows
 #endif
@@ -453,7 +453,7 @@ struct nn_thread_worker_pool {
 #ifdef __linux__
             // Revert original affinity mask
             for( auto& thread : threads) {
-                (*thread).set_affinity_np(sizeof(cpu_set_t), &m_original_cpuset);
+                (*thread).set_affinity_np( &m_original_cpuset);
             }
 #else
             // TODO: Windows

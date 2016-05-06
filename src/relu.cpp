@@ -79,11 +79,7 @@ primitive relu::create(relu::arguments arg) {
     std::unique_ptr<relu> result(new relu(arg));
 
     // lookup in database; throw if not found
-    //todo tmp solution
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
-    //auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = relu_fw_implementation_map::instance().find(key);
     if (it == std::end(relu_fw_implementation_map::instance())) throw std::runtime_error("not yet implemented");
 
@@ -102,11 +98,7 @@ primitive relu_backward::create(relu_backward::arguments arg) {
     std::unique_ptr<relu_backward> result(new relu_backward(arg));
 
     // lookup in database; throw if not found
-    //todo tmp solution
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
-    //    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = relu_bw_implementation_map::instance().find(key);
     if (it == std::end(relu_bw_implementation_map::instance())) throw std::runtime_error("not yet implemented");
 

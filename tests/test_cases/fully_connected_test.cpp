@@ -19,6 +19,7 @@
 #include "multidimensional_counter.h"
 #include "tests/gtest/gtest.h"
 #include "test_utils/test_utils.h"
+#include "memory_utils.h"
 
 using namespace neural;
 using namespace tests;
@@ -55,10 +56,10 @@ TEST(fully_connected, xb_f32_batch_1) {
     execute({full_con_prim});
 
     auto& output_memory  = output_prim.as<const memory&>();
-    EXPECT_EQ( 1.5f,  output_memory.get_value<float>(0));
-    EXPECT_EQ( 0.75f, output_memory.get_value<float>(1));
-    EXPECT_EQ(-2.25f, output_memory.get_value<float>(2));
-    EXPECT_EQ( 3.0f,  output_memory.get_value<float>(3));
+    EXPECT_EQ( 1.5f,  get_value<float>(output_memory, 0));
+    EXPECT_EQ( 0.75f, get_value<float>(output_memory, 1));
+    EXPECT_EQ(-2.25f, get_value<float>(output_memory, 2));
+    EXPECT_EQ( 3.0f,  get_value<float>(output_memory, 3));
 }
 
 TEST(fully_connected, xb_f32_batch_2) {
@@ -95,14 +96,14 @@ TEST(fully_connected, xb_f32_batch_2) {
     execute({full_con_prim});
 
     auto& output_memory  = output_prim.as<const memory&>();
-    EXPECT_EQ( 1.5f,  output_memory.get_value<float>(0));
-    EXPECT_EQ( 3.0f,  output_memory.get_value<float>(1));
-    EXPECT_EQ( 0.75f, output_memory.get_value<float>(2));
-    EXPECT_EQ(-1.0f,  output_memory.get_value<float>(3));
-    EXPECT_EQ(-2.25f, output_memory.get_value<float>(4));
-    EXPECT_EQ(-0.25f, output_memory.get_value<float>(5));
-    EXPECT_EQ( 3.0f,  output_memory.get_value<float>(6));
-    EXPECT_EQ( 1.0f,  output_memory.get_value<float>(7));
+    EXPECT_EQ( 1.5f,  get_value<float>(output_memory, 0));
+    EXPECT_EQ( 3.0f,  get_value<float>(output_memory, 1));
+    EXPECT_EQ( 0.75f, get_value<float>(output_memory, 2));
+    EXPECT_EQ(-1.0f,  get_value<float>(output_memory, 3));
+    EXPECT_EQ(-2.25f, get_value<float>(output_memory, 4));
+    EXPECT_EQ(-0.25f, get_value<float>(output_memory, 5));
+    EXPECT_EQ( 3.0f,  get_value<float>(output_memory, 6));
+    EXPECT_EQ( 1.0f,  get_value<float>(output_memory, 7));
 }
 
 TEST(fully_connected, x_f32) {
@@ -140,8 +141,8 @@ TEST(fully_connected, x_f32) {
 
     execute({full_con_prim});
 
-    EXPECT_EQ( 1.5f,  output_memory.get_value<float>(0));
-    EXPECT_EQ( 0.75f, output_memory.get_value<float>(1));
-    EXPECT_EQ(-2.25f, output_memory.get_value<float>(2));
-    EXPECT_EQ( 3.0f,  output_memory.get_value<float>(3));
+    EXPECT_EQ( 1.5f,  get_value<float>(output_memory, 0));
+    EXPECT_EQ( 0.75f, get_value<float>(output_memory, 1));
+    EXPECT_EQ(-2.25f, get_value<float>(output_memory, 2));
+    EXPECT_EQ( 3.0f,  get_value<float>(output_memory, 3));
 }
