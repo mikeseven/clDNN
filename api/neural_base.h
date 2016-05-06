@@ -100,16 +100,16 @@ template<typename T> struct vector {
     bool operator!=(const vector &rhs) const { return !(*this==rhs); }
     vector(const vector &arg)
         : raw(arg.raw)
-        , spatial(raw, arg.spatial.begin_, arg.spatial.end_)
-        , feature(raw, arg.feature.begin_, arg.feature.end_)
         , batch  (raw, arg.batch.begin_,   arg.batch.end_)
+        , feature(raw, arg.feature.begin_, arg.feature.end_)
+        , spatial(raw, arg.spatial.begin_, arg.spatial.end_)
     {}
     vector &operator=(const vector &arg)  {
         raw = arg.raw;
         spatial.raw_ = arg.spatial.raw_; // todo what is it?
     }
-    vector() : raw(0), spatial(raw,0,0), feature(raw,0,0), batch(raw,0,0) {}
-    vector(size_t size) : raw(2+size), spatial(raw,2, 2+size), feature(raw,1,2), batch(raw,0,1) {}
+    vector() : raw(0), batch(raw,0,0), feature(raw,0,0), spatial(raw,0,0) {}
+    vector(size_t size): raw(2+size), batch(raw,0,1), feature(raw,1,2), spatial(raw,2, 2+size) {}
     vector(const T arg_batch, const std::vector<T> &arg_spatial, const T arg_feature)
         : batch(raw,0,1)
         , feature(raw,1,2)
