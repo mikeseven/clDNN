@@ -170,7 +170,7 @@ TEST(softmax_xb_f32_test, basic_with_offsets) {
             float expected = (b >= out_off_b && b < end_b) && (x >= out_off_x && x < end_x) //is in range ?
                 ? expected_value       // valid value that's in data range
                 : out_of_offset_value; // invalid value (non-signaling NaN) for skipped buffer positions (bof offsets)
-          EXPECT_TRUE(are_equal(value, expected));
+          EXPECT_TRUE(are_equal(value, expected))  << "Expected :" << expected << " actual :" << value;
         }
 
 };
