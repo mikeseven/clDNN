@@ -15,9 +15,9 @@
 set (TARGET_NAME "examples")
 
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX")
 endif()
 
 # Sources for test files

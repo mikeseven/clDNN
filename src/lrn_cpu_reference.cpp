@@ -39,25 +39,20 @@ namespace neural {
         auto& alpha = this_lrn->argument.alpha;
         auto& beta = this_lrn->argument.beta;
 
-        //auto input_arg  = this_lrn->input_memory(0).argument;
-        //auto output_arg = this_lrn->output_memory(0).argument;
-        auto input_arg = this_lrn->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-        auto output_arg = this_lrn->argument.output[0].as<const memory&>().argument;
+        auto input_arg  = this_lrn->input_memory(0).argument;
+        auto output_arg = this_lrn->output_memory(0).argument;
 
         if (input_arg.size.raw.size() != output_arg.size.raw.size())
             throw std::runtime_error("lrn input/output number of dimension does not match [iput size=" + std::to_string(input_arg.size.raw.size())
                                      + ", output size=" + std::to_string(output_arg.size.raw.size()));
 
-        //auto input  = static_cast<float*>(this_lrn->input_memory(0).pointer);
-        //auto output = static_cast<float*>(this_lrn->output_memory(0).pointer);
-        auto input = static_cast<float*>(this_lrn->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
-        auto output = static_cast<float*>(this_lrn->argument.output[0].as<const memory&>().pointer);
+        auto input  = static_cast<float*>(this_lrn->input_memory(0).pointer);
+        auto output = static_cast<float*>(this_lrn->output_memory(0).pointer);
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range(output_size);
 
-
-        auto calc_in_idx = nd::choose_calculate_idx(input_arg.format);
+        auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
         auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
 
         nd::value<uint32_t> window_range({ 1,{1,1},size });
@@ -100,7 +95,6 @@ namespace neural {
             throw std::runtime_error("Unknown padding mode in lrn");
         }
     }
-
 
     namespace {
         struct attach {

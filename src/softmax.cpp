@@ -33,19 +33,15 @@ struct softmax_reference : is_an_implementation {
 
     static void implementation(const void *ptr) {
         auto this_softmax = static_cast<const softmax *>(ptr);
-        //auto input        = static_cast<float*>(this_softmax->input_memory(0).pointer);
-        //auto output       = static_cast<float*>(this_softmax->output_memory(0).pointer);
-        auto input  = static_cast<float*>(this_softmax->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
-        auto output = static_cast<float*>(this_softmax->argument.output[0].as<const memory&>().pointer);
+        auto input        = static_cast<float*>(this_softmax->input_memory(0).pointer);
+        auto output       = static_cast<float*>(this_softmax->output_memory(0).pointer);
 
-        auto input_offset  = this_softmax->argument.input_offset;
-        auto output_offset = this_softmax->argument.output_offset;
-        auto output_size   = this_softmax->argument.output_size;
+        auto& input_offset  = this_softmax->argument.input_offset;
+        auto& output_offset = this_softmax->argument.output_offset;
+        auto& output_size   = this_softmax->argument.output_size;
 
-        //auto input_arg  = this_relu->input_memory(0).argument;
-        //auto output_arg = this_relu->output_memory(0).argument;
-        auto input_arg  = this_softmax->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-        auto output_arg = this_softmax->argument.output[0].as<const memory&>().argument;
+        auto& input_arg  = this_softmax->input_memory(0).argument;
+        auto& output_arg = this_softmax->output_memory(0).argument;
 
         if(input_arg.format          != memory::format::xb_f32    ) throw std::runtime_error("Softmax reference uses xb_f32 format."); // todo should be format independent
         if(input_arg.format          != output_arg.format         ) throw std::runtime_error("Softmax input/output data format does not match.");
@@ -126,11 +122,7 @@ primitive softmax::create(softmax::arguments arg) {
     std::unique_ptr<softmax> result(new softmax(arg));
 
     // lookup in database; throw if not found
-            //todo tmp solution
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt= result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
-   // auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = forward_implementation_map.find(key);
     if(it==std::end(forward_implementation_map)) throw std::runtime_error("not yet implemented");
 
