@@ -24,86 +24,71 @@ using namespace tests;
 
 class softmax_xb_f32_test_fixture: public ::testing::Test {
 public:
-    static const uint32_t output_x  = 10, output_b  = 2,  // size of whole output buffer
-                   input_x   = 10, input_b   = 2,  // size of whole input buffer
-                   in_size  = input_x*input_b,
-                   out_size  = output_x*output_b;
+    static const uint32_t
+        output_x  = 10, output_b  = 2,  // size of whole output buffer
+        input_x   = 10, input_b   = 2,  // size of whole input buffer
+        in_size   = input_x*input_b,
+        out_size  = output_x*output_b;
 
 
     float in_buffer[in_size];
     float out_buffer[out_size];
     float expected_buffer[out_size];
-    // input buffer should be initialized with valid data
 
     neural::primitive input  = memory::create({engine::cpu, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
     neural::primitive output = memory::create({engine::cpu, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
+    neural::primitive act    = normalization::softmax::create({engine::reference, output, input});
 
-    neural::primitive act    = normalization::softmax::create( {engine::reference,
-                                                   output,
-                                                   input,
-                                                  });
+    void compare_out_buffer_with_expected() {
+        for(size_t i = 0; i < out_size; ++i) {
+            // does output have expected values
+            EXPECT_TRUE(are_equal(out_buffer[i], expected_buffer[i]));
+        }
+    }
 
+    void compare_out_buffer_with_expected_batch_wise() {
+        for(size_t b = 0; b < output_b; ++b) {
+            float batch_wise_sum = 0;
+            for(size_t x = 0; x < output_x; ++x) {
+                auto idx = b+x*output_b;
+                batch_wise_sum += out_buffer[idx];
+                // does output have expected values
+                EXPECT_TRUE(are_equal(out_buffer[idx], expected_buffer[idx]));
+            }
+            // does it sum to 1 batch wise
+            EXPECT_TRUE(are_equal(batch_wise_sum, 1.0f));
+        }
+    }
 };
 
 TEST_F(softmax_xb_f32_test_fixture, input_same_values) {
-
-// in_buffer filled with same value == 1
+// in_buffer filled with same value == 1.0f
     for(size_t i = 0; i < out_size; ++i) {
-        in_buffer[i] = 1;
+              in_buffer[i] = 1.0f;
         expected_buffer[i] = 0.1f;
     }
-
     execute({input(in_buffer), output(out_buffer), act});
-
-    bool result = true;
-    float sum_result = 0;
-    for(size_t i = 0; i < out_size; ++i) {
-        result = result && (are_equal(out_buffer[i], expected_buffer[i]));
-        sum_result += out_buffer[i];
-    }
-    EXPECT_EQ(true, result);
-
+    compare_out_buffer_with_expected();
 }
 
 TEST_F(softmax_xb_f32_test_fixture, input_same_values_batch_wise) {
-
-// in_buffer filled with same value == 1..2 batch wise (softmax can only xb_f32 )
+// in_buffer filled with same value == 1..2 each batch accordingly (softmax can only xb_f32 )
     for(size_t i = 0; i < output_x; ++i) {
         for(size_t j = 0; j < output_b; ++j)
             in_buffer[j+i*output_b] = (j+i*output_b) % 2 +1.0f;
     }
-
-    // fill with the expected
-    for(size_t i = 0; i < out_size; ++i) {
+    // fill buffer with the expected 0.1f value
+    for(size_t i = 0; i < out_size; ++i)
         expected_buffer[i] = 0.1f;
-    }
 
     execute({input(in_buffer), output(out_buffer), act});
-
-    // does output have expected values
-    bool result = true;
-    float sum_result = 0;
-    for(size_t i = 0; i < out_size; ++i)
-        result = result && (are_equal(out_buffer[i], expected_buffer[i]));
-    EXPECT_EQ(true, result);
-
-    // does it sum to 1 batch wise ?
-    float one = 1.0f;
-    for(size_t j = 0; j < output_b; ++j) {
-        sum_result = 0;
-        for(size_t i = 0; i < output_x; ++i) {
-            sum_result += out_buffer[j+i*output_b];
-        }
-
-        EXPECT_EQ(true, are_equal(sum_result,one));
-    }
-
+    compare_out_buffer_with_expected_batch_wise();
 }
 
 
 TEST_F(softmax_xb_f32_test_fixture, values_batch_wise) {
 
-    float in_buffer[in_size] = {
+    float in_buf[in_size] = {
        //b0  b1
         2.0f, 2.0f, //x0
         2.0f, 2.0f, //x1
@@ -117,7 +102,7 @@ TEST_F(softmax_xb_f32_test_fixture, values_batch_wise) {
         2.0f, 2.0f  //x9
     };
 
-    float expected_buffer[out_size] = {
+    float exp_buf[out_size] = {
         0.02569957f,	 0.02569957f,
         0.02569957f,	 0.02569957f,
         0.02569957f,	 0.02569957f,
@@ -130,34 +115,16 @@ TEST_F(softmax_xb_f32_test_fixture, values_batch_wise) {
         0.02569957f,	 0.02569957f
 
     };
+    memcpy(in_buffer, in_buf, sizeof(in_buffer));
+    memcpy(expected_buffer, exp_buf, sizeof(expected_buffer));
 
-    // clean the out_buffer
-    for(size_t i = 0; i < out_size; ++i) {
-        out_buffer[i] = 0.0f;
-    }
+    // out_buffer filled with non-signaling NaN
+    for(size_t i = 0; i < out_size; ++i)
+        out_buffer[i] = NAN;
 
     execute({input(in_buffer), output(out_buffer), act});
-
-    // does output have expected values
-    bool result = true;
-    float sum_result = 0;
-    for(size_t i = 0; i < out_size; ++i)
-        result = result && (are_equal(out_buffer[i], expected_buffer[i]));
-    EXPECT_EQ(true, result);
-
-    // does it sum to 1 batch wise ?
-    float one = 1.0f;
-    for(size_t j = 0; j < output_b; ++j) {
-        sum_result = 0;
-        for(size_t i = 0; i < output_x; ++i) {
-            sum_result += out_buffer[j+i*output_b];
-        }
-
-        EXPECT_EQ(true, are_equal(sum_result,one));
-    }
-
+    compare_out_buffer_with_expected_batch_wise();
 }
-
 
 TEST(softmax_xb_f32_test, basic_with_offsets) {
 
@@ -175,35 +142,35 @@ TEST(softmax_xb_f32_test, basic_with_offsets) {
     auto input  = memory::create({engine::cpu, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
     auto output = memory::create({engine::cpu, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
 
-    auto act    = normalization::softmax::create( {engine::reference,
-                                                   output,
-                                                   {out_off_b, {{out_off_x}}, 0},
-                                                   {out_siz_b, {{out_siz_x}}, 1},
-                                                   input,
-                                                   {in_off_b, {{in_off_x}}, 0}
-                                                  });
-
+    auto act    = normalization::softmax::create({engine::reference,
+                                                  output,
+                                                  {out_off_b, {{out_off_x}}, 0},
+                                                  {out_siz_b, {{out_siz_x}}, 1},
+                                                  input,
+                                                  {in_off_b, {{in_off_x}}, 0}
+                                                 });
+    // in_buffer filled with same value == 1.0f
     for(size_t i = 0; i < input_x*input_b; ++i)
-        in_buffer[i] = 1;
+        in_buffer[i] = 1.0f;
 
-    float just_a_value = -1.0f;
+    const float out_of_offset_value = NAN;
+    // out_buffer filled with non-signaling NaN
     for(size_t i = 0; i < output_x*output_b; ++i)
-        out_buffer[i] = just_a_value;
+        out_buffer[i] = out_of_offset_value;
 
     execute({input(in_buffer), output(out_buffer), act});
 
-    bool result = true;
-    float expected_value = 0.2f;
+    auto expected_value = 0.2f;
+    auto end_b = out_off_b+out_siz_b;
+    auto end_x = out_off_x+out_siz_x;
 
-    result = true;
-    for(size_t i = 0; i < output_x; ++i)
-        for(size_t j = 0; j < output_b; ++j) {
-            float value = out_buffer[j+i*output_b];
-            if((j >= out_off_b && j < (out_off_b+out_siz_b)) && (i >= out_off_x && i < (out_off_x+out_siz_x)))
-                result = result && are_equal(value,expected_value); // positions concerning offsets and output size
-            else
-                result = result && are_equal(value,just_a_value); // skipped positions (bof offsets etc.)
+    for(size_t x = 0; x < output_x; ++x)
+        for(size_t b = 0; b < output_b; ++b) {
+            float value = out_buffer[b+x*output_b];
+            float expected = (b >= out_off_b && b < end_b) && (x >= out_off_x && x < end_x) //is in range ?
+                ? expected_value       // valid value that's in data range
+                : out_of_offset_value; // invalid value (non-signaling NaN) for skipped buffer positions (bof offsets)
+          EXPECT_TRUE(are_equal(value, expected));
         }
 
-    EXPECT_EQ(true, result);
 };
