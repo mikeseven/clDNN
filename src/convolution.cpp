@@ -95,11 +95,7 @@ primitive convolution::create(convolution::arguments arg) {
     std::unique_ptr<convolution> result(new convolution(arg));
 
     // lookup in database; throw if not found
-        //todo tmp solution
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt= result->argument.output[0].as<const memory&>().argument.format;
-    conv_fw_key key = std::make_tuple(arg.engine, infmt, outfmt);
- //   conv_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    conv_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = conv_fw_implementation_map.find(key);
     if(it==std::end(conv_fw_implementation_map)) throw std::runtime_error("Not yet implemented.");
 
@@ -116,11 +112,7 @@ primitive convolution_backward::create(convolution_backward::arguments arg) {
     std::unique_ptr<convolution_backward> result(new convolution_backward(arg));
 
     // lookup in database; throw if not found
-        //todo tmp solution
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt= result->argument.output[0].as<const memory&>().argument.format;
-    conv_bw_key key = std::make_tuple(arg.engine, infmt, outfmt);
-//    conv_bw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    conv_bw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = conv_bw_implementation_map.find(key);
     if(it==std::end(conv_bw_implementation_map)) throw std::runtime_error("Not yet implemented.");
 

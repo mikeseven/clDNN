@@ -35,18 +35,14 @@ struct pooling_reference : is_an_implementation {
 
     static void implementation(const void *ptr) {
         auto this_pooling = static_cast<const pooling *>(ptr);
-        //auto input        = static_cast<float*>(this_pooling->input_memory(0).pointer);
-        //auto output       = static_cast<float*>(this_pooling->output_memory(0).pointer);
-        auto input  = static_cast<float*>(this_pooling->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
-        auto output = static_cast<float*>(this_pooling->argument.output[0].as<const memory&>().pointer);
+        auto input        = static_cast<float*>(this_pooling->input_memory(0).pointer);
+        auto output       = static_cast<float*>(this_pooling->output_memory(0).pointer);
 
-        auto& input_arg  = this_pooling->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-         //auto& input_arg  = this_pooling->input_memory(0).argument;
+         auto& input_arg        = this_pooling->input_memory(0).argument;
         auto& input_buffer_size = input_arg.size;
         auto& input_offset      = this_pooling->argument.input_offset;
 
-        auto& output_arg = this_pooling->argument.output[0].as<const memory&>().argument;
-        //auto& output_arg = this_pooling->output_memory(0).argument;
+        auto& output_arg        = this_pooling->output_memory(0).argument;
         auto& output_buffer_size= output_arg.size;
         auto& output_offset     = this_pooling->argument.output_offset;
         auto& output_size       = this_pooling->argument.output_size;
@@ -223,11 +219,7 @@ primitive pooling::create(pooling::arguments arg) {
     std::unique_ptr<pooling> result(new pooling(arg));
 
     // lookup in database; throw if not found
-            //todo tmp solution
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt= result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
-//    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = implementation_map.find(key);
     if(it==std::end(implementation_map)) throw std::runtime_error("not yet implemented");
 

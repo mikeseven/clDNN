@@ -15,14 +15,14 @@
 */
 
 #include "api/neural.h"
-
+#include "memory_utils.h"
 
 void example_lrn_forward() {
 
     using namespace neural;
     auto input = memory::create({ engine::reference, memory::format::yxfb_f32,{ 8, {10, 10}, 3 }, true });
     auto output = memory::create({ engine::reference, memory::format::yxfb_f32,{ 8, {10, 10}, 3 }, true});
-//    fill<float>(input.as<const memory&>());
+    fill<float>(input.as<const memory&>());
     float pk = 1.f;
     uint32_t psize = 5;
     float palpha = 0.00002f;

@@ -15,8 +15,9 @@
 */
 
 #include "api/neural.h"
+#include "memory_utils.h"
 
-// memory_obselote->memory_obselote convolution
+// memory->memory convolution
 void example_convolution_ref_forward() {
     using namespace neural;
 
@@ -49,10 +50,10 @@ void example_convolution_ref_forward() {
     auto biases = memory::create({eng, memory::format::   x_f32, { 1            , {{output_z}}              , 1            }, true});
 
     // buffers should be initialized with valid data
-    input.as  <const memory&>().fill(1.0f);
-    output.as <const memory&>().fill(1.0f);
-    weights.as<const memory&>().fill(1.0f);
-    biases.as <const memory&>().fill(1.0f);
+    fill(input.as  <const memory&>(), 1.0f);
+    fill(output.as <const memory&>(), 1.0f);
+    fill(weights.as<const memory&>(), 1.0f);
+    fill(biases.as <const memory&>(), 1.0f);
 
     auto conv   = convolution::create( {eng,
                                         output,
@@ -70,7 +71,7 @@ void example_convolution_ref_forward() {
 }
 
 void example_convolution_cpu_forward() {
-    //todo this example doesn't work properly, validade data and implementation 
+    //todo this example doesn't work properly, validade data and implementation
     using namespace neural;
 
     const uint32_t output_y    = 6,
@@ -99,10 +100,10 @@ void example_convolution_cpu_forward() {
     auto biases = memory::create({engine::reference, memory::format::   x_f32, { 1             ,{{output_z}}               , 1            }, true});
 
     // buffers should be initialized with valid data
-    input.as<const memory&>().fill(1.0f);
-    output.as<const memory&>().fill(1.0f);
-    weights.as<const memory&>().fill(1.0f);
-    biases.as<const memory&>().fill(1.0f);
+    fill(input.as  <const memory&>(), 1.0f);
+    fill(output.as <const memory&>(), 1.0f);
+    fill(weights.as<const memory&>(), 1.0f);
+    fill(biases.as <const memory&>(), 1.0f);
 
     auto conv   = convolution::create( {engine::cpu,
                                         output,
