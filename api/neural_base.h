@@ -119,6 +119,15 @@ template<typename T> struct vector {
         raw.push_back(arg_feature);
         raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
     };
+    vector(const T arg_batch, const std::vector<T> &arg_spatial, const std::vector<T> &arg_feature)
+        : batch  (raw, 0, 1)
+        , feature(raw, 1, 1+arg_feature.size())
+        , spatial(raw, 1+arg_feature.size(), 1+arg_spatial.size())
+    {
+        raw.push_back(arg_batch);
+        raw.insert(raw.end(), arg_feature.begin(), arg_feature.end());
+        raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
+    };
     vector(const size_t len_batch, const size_t len_spatial, const size_t len_feature)
         : batch(raw,0,1)
         , feature(raw,1,2)
@@ -134,6 +143,15 @@ template<typename T> struct vector {
     {
         raw.push_back(1);
         raw.push_back(arg_feature);
+        raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
+    };
+    vector(const std::vector<T> &arg_spatial, const std::vector<T> &arg_feature)
+    : batch  (raw, 0, 1)
+    , feature(raw, 1, 1+arg_feature.size())
+    , spatial(raw, 1+arg_feature.end_, 1+arg_feature.end_)
+    {
+        raw.push_back(1);
+        raw.insert(raw.end(), arg_feature.begin(), arg_feature.end());
         raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
     };
     vector(const std::vector<T> &arg_spatial)
