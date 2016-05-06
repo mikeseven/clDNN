@@ -45,16 +45,16 @@ namespace neural {
             auto& output_offset = this_pooling->argument.output_offset;
             auto& output_size = this_pooling->argument.output_size;
 
-            auto& stride = this_pooling->argument.stride;
-            auto& window = this_pooling->argument.size;
+            auto& stride  = this_pooling->argument.stride;
+            auto& window  = this_pooling->argument.size;
             auto& padding = this_pooling->argument.padding;
 
-            if (padding::zero != padding)                       throw std::runtime_error("Pooling support only zero padding.");
-            if (input_arg.format != memory::format::yxfb_f32)      throw std::runtime_error("Pooling reference uses yxfb_f32 format."); //todo, only this format?
+            if (padding::zero != padding)                                      throw std::runtime_error("Pooling support only zero padding.");
+            if (input_arg.format != memory::format::yxfb_f32)                  throw std::runtime_error("Pooling reference uses yxfb_f32 format."); //todo, only this format?
             if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::runtime_error("Pooling input/output number of dimension does not match.");
-            if (stride.raw.size() != output_buffer_size.raw.size()) throw std::runtime_error("Pooling stride/output number of dimension does not match.");
-            if (window.raw.size() != output_buffer_size.raw.size()) throw std::runtime_error("Pooling window_size/output number of dimension does not match.");
-            if (input_arg.format != output_arg.format)             throw std::runtime_error("Pooling input/output data format does not match.");
+            if (stride.raw.size() != output_buffer_size.raw.size())            throw std::runtime_error("Pooling stride/output number of dimension does not match.");
+            if (window.raw.size() != output_buffer_size.raw.size())            throw std::runtime_error("Pooling window_size/output number of dimension does not match.");
+            if (input_arg.format != output_arg.format)                         throw std::runtime_error("Pooling input/output data format does not match.");
 
             // general formula: output size = (input size - window size) / step + 1
             for (size_t i = 0; i < input_offset.raw.size(); ++i) {
@@ -213,11 +213,11 @@ void pooling_cpu_reference::implementation(const void *ptr) {
             throw std::runtime_error("Unknown pooling mode.");
     }
 }
-
+*/
 //pooling_backward_cpu_reference::pooling_backward_cpu_reference(pooling_backward &arg)
 //    : is_an_implementation(neural::type_id<pooling_backward_cpu_reference>())
 //    , outer(arg) {};
-//pooling_backward_cpu_reference::~pooling_backward_cpu_reference() {};*/
+//pooling_backward_cpu_reference::~pooling_backward_cpu_reference() {};
 ///*static*/ void pooling_backward_cpu_reference::implementation(const void *ptr) {
 //}
 

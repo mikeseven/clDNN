@@ -27,6 +27,7 @@ const uint64_t BUFFERS_ALIGNMENT = BATCH_SHIFT * sizeof(float);   //required ali
 
 namespace {
  //todo begin remove
+/*
 struct InputHeight {};
 struct InputWidth {};
 struct InputFeats {};
@@ -87,22 +88,23 @@ struct PoolingInfo {
     PoolingDimensions dims;
     Stride stride;
 };
+*/
  //todo end remove
 
-void naive(float* input, float* output, InputDimensions input_dims, PoolingInfo info) {
+void naive(float* input, float* output, neural::vector<uint64_t> input_dims, neural::vector<uint64_t> pooling_dims, neural::vector<uint64_t> pooling_stride) {
     uint64_t batch_accs = BATCH_ACCEPTED_BLOCK / BATCH_SHIFT;
-    uint64_t in_pixel_size = input_dims.feats * BATCH_ACCEPTED_BLOCK;
+    uint64_t in_pixel_size = input_dims.raw[1] * BATCH_ACCEPTED_BLOCK;
 
-    auto feats = input_dims.feats;
-    std::memcpy(output, input, input_dims.feats * BATCH_ACCEPTED_BLOCK * sizeof(float));
-    for (uint64_t i = 0; i < info.dims.height; ++i)
+    auto feats = input_dims.raw[1];
+    std::memcpy(output, input, input_dims.raw[1] * BATCH_ACCEPTED_BLOCK * sizeof(float));
+    for (uint64_t i = 0; i < pooling_dims.raw[3]; ++i)
     {
-        for (uint64_t j = 0; j < info.dims.width; ++j)
+        for (uint64_t j = 0; j < pooling_dims.raw[2]; ++j)
         {
             if ((i == 0) && (j == 0)) continue;
             auto curr_output = output;
-            auto curr_input = input + (i * input_dims.width + j) * in_pixel_size;
-            for (uint64_t feat = 0u; feat < input_dims.feats; ++feat)
+            auto curr_input = input + (i * input_dims.raw[2] + j) * in_pixel_size;
+            for (uint64_t feat = 0u; feat < input_dims.raw[1]; ++feat)
             {
                 for (uint64_t acc_index = 0; acc_index < batch_accs; ++acc_index)
                 {
@@ -269,15 +271,22 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     uint64_t pool_out_row = 0u;
     uint64_t pool_out_col = 0u;
 
+    /*
     InputDimensions in_dims = {make<InputHeight>(input_height),
                                make<InputWidth>(input_width),
                                //make<InputFeats>(out_dims.feats)};
                                make<InputFeats>(output_size.raw[f_pos])}; //todo why out?
+    */
+
+    neural::vector<uint64_t> in_dims = { 1, {output_size.raw[f_pos], input_width}, input_height };
+
 
     //todo added, what is it?
-    PoolingDimensions pd(make<PoolingHeight>(window.raw[1]), make<PoolingWidth>(window.raw[0]));
-    Stride            ps({make<Rows>(stride.raw[1]), make<Cols>(stride.raw[0])});
-    PoolingInfo info({pd,ps});
+    //PoolingDimensions pd(make<PoolingHeight>(window.raw[1]), make<PoolingWidth>(window.raw[0]));
+    //Stride            ps({make<Rows>(stride.raw[1]), make<Cols>(stride.raw[0])});
+    neural::vector<uint64_t> pooling_dims = { 1,{ 1, window.raw[0] }, window.raw[1] };
+    neural::vector<uint64_t> pooling_stride = { 1,{ 1, stride.raw[0] }, stride.raw[1] };
+    //PoolingInfo info({pd,ps});
 
     std::mutex mtx; //todo remove
 
@@ -322,11 +331,11 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
             }
 
             auto curr_out_buffer = output + ((b * output_height + out_row) * output_width + out_col) * output_pixel_size;
-            auto in_base_row = out_row * info.stride.rows;
-            auto in_base_col = out_col * info.stride.cols;
+            auto in_base_row = out_row * pooling_stride.raw[3];
+            auto in_base_col = out_col * pooling_stride.raw[2];
             auto curr_in_base_buffer = input + ((b * input_height + in_base_row) * input_width + in_base_col) * input_pixel_size;
 
-            naive(curr_in_base_buffer, curr_out_buffer, in_dims, info);
+            naive(curr_in_base_buffer, curr_out_buffer, in_dims, pooling_dims, pooling_stride);
             return true;
         };
     size_t num_threads = 1; // todo
