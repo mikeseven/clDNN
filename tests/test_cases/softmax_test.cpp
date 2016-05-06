@@ -42,7 +42,8 @@ public:
     void compare_out_buffer_with_expected() {
         for(size_t i = 0; i < out_size; ++i) {
             // does output have expected values
-            EXPECT_TRUE(are_equal(out_buffer[i], expected_buffer[i])) << "Expected :" << expected_buffer[i] << " actual :" << out_buffer[i];
+            EXPECT_TRUE(are_equal(out_buffer[i], expected_buffer[i]))
+                << "At ["<< i <<  "] Expected : " << expected_buffer[i] << " actual : " << out_buffer[i];
         }
     }
 
@@ -53,10 +54,12 @@ public:
                 auto idx = b+x*output_b;
                 batch_wise_sum += out_buffer[idx];
                 // does output have expected values
-                EXPECT_TRUE(are_equal(out_buffer[idx], expected_buffer[idx]))  << "Expected :" << expected_buffer[idx] << " actual :" << out_buffer[idx];
+                EXPECT_TRUE(are_equal(out_buffer[idx], expected_buffer[idx]))
+                    << "At ["<< idx <<  "] Expected : " << expected_buffer[idx] << " actual : " << out_buffer[idx];
             }
             // does it sum to 1 batch wise
-            EXPECT_TRUE(are_equal(batch_wise_sum, 1.0f))  << "Expected :" << 1.0f << " actual :" << batch_wise_sum;
+            EXPECT_TRUE(are_equal(batch_wise_sum, 1.0f))
+                << "Expected : " << 1.0f << " actual : " << batch_wise_sum;
         }
     }
 };
@@ -166,11 +169,13 @@ TEST(softmax_xb_f32_test, basic_with_offsets) {
 
     for(size_t x = 0; x < output_x; ++x)
         for(size_t b = 0; b < output_b; ++b) {
-            float value = out_buffer[b+x*output_b];
+            auto idx = b+x*output_b;
+            float value = out_buffer[idx];
             float expected = (b >= out_off_b && b < end_b) && (x >= out_off_x && x < end_x) //is in range ?
                 ? expected_value       // valid value that's in data range
                 : out_of_offset_value; // invalid value (non-signaling NaN) for skipped buffer positions (bof offsets)
-          EXPECT_TRUE(are_equal(value, expected))  << "Expected :" << expected << " actual :" << value;
+          EXPECT_TRUE(are_equal(value, expected))
+              << "At ["<< idx <<  "] Expected : " << expected << " actual :" << value;
         }
 
 };
