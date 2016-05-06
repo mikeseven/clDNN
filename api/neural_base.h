@@ -176,7 +176,7 @@ template<>           struct is_floating_point<double>{ static const bool value =
 template<>           struct is_floating_point<half>  { static const bool value = true; };
 #endif
 
-DLL_SYM type_traits* typeid_register(size_t size, bool is_float, const char* cstr);
+DLL_SYM type_traits* typeid_register(size_t size, bool is_float, std::string str);
 
 // type_id()
 // ...returns pointer to type-traits
@@ -189,7 +189,7 @@ template<typename T_type> __attribute__((noinline)) type_traits *type_id() {
     static std::string signature =__PRETTY_FUNCTION__;
     static std::string type_name = signature.substr(signature.find('=', 0)+2, signature.find(']', 0)-signature.find('=', 0)-2);
 #endif
-    static type_traits *ti = typeid_register(sizeof(T_type), is_floating_point<T_type>::value, type_name.c_str());
+    static type_traits *ti = typeid_register(sizeof(T_type), is_floating_point<T_type>::value, type_name);
     return ti;
 }
 
@@ -369,6 +369,10 @@ inline size_t                       primitive::output::size() const { return get
 template<typename T> T primitive::as() const {
     // [C++1x] replace with static_assert
     assert(is_reference<T>::value == true);
+    auto t1 = type_id<typename remove_reference<T>::type>()->id;
+    auto t2 = _pointer->_type_traits->id;
+    t1;
+    t2;
     assert(type_id<typename remove_reference<T>::type>()->id == _pointer->_type_traits->id);
     return *reinterpret_cast<typename remove_reference<T>::type *>(_pointer.get());
 }
