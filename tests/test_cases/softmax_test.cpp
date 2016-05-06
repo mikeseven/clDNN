@@ -35,14 +35,14 @@ public:
     float out_buffer[out_size];
     float expected_buffer[out_size];
 
-    neural::primitive input  = memory::create({engine::cpu, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
-    neural::primitive output = memory::create({engine::cpu, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
+    neural::primitive input  = memory::create({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
+    neural::primitive output = memory::create({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
     neural::primitive act    = normalization::softmax::create({engine::reference, output, input});
 
     void compare_out_buffer_with_expected() {
         for(size_t i = 0; i < out_size; ++i) {
             // does output have expected values
-            EXPECT_TRUE(are_equal(out_buffer[i], expected_buffer[i]));
+            EXPECT_TRUE(are_equal(out_buffer[i], expected_buffer[i])) << "Expected :" << expected_buffer[i] << " actual :" << out_buffer[i];
         }
     }
 
@@ -53,10 +53,10 @@ public:
                 auto idx = b+x*output_b;
                 batch_wise_sum += out_buffer[idx];
                 // does output have expected values
-                EXPECT_TRUE(are_equal(out_buffer[idx], expected_buffer[idx]));
+                EXPECT_TRUE(are_equal(out_buffer[idx], expected_buffer[idx]))  << "Expected :" << expected_buffer[idx] << " actual :" << out_buffer[idx];
             }
             // does it sum to 1 batch wise
-            EXPECT_TRUE(are_equal(batch_wise_sum, 1.0f));
+            EXPECT_TRUE(are_equal(batch_wise_sum, 1.0f))  << "Expected :" << 1.0f << " actual :" << batch_wise_sum;
         }
     }
 };
@@ -115,8 +115,8 @@ TEST_F(softmax_xb_f32_test_fixture, values_batch_wise) {
         0.02569957f,	 0.02569957f
 
     };
-    memcpy(in_buffer, in_buf, sizeof(in_buffer));
-    memcpy(expected_buffer, exp_buf, sizeof(expected_buffer));
+    std::copy(in_buf, in_buf+in_size, in_buffer);
+    std::copy(exp_buf, exp_buf+in_size, expected_buffer);
 
     // out_buffer filled with non-signaling NaN
     for(size_t i = 0; i < out_size; ++i)
@@ -139,8 +139,8 @@ TEST(softmax_xb_f32_test, basic_with_offsets) {
     float out_buffer[output_x*output_b];
     // input buffer should be initialized with valid data
 
-    auto input  = memory::create({engine::cpu, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
-    auto output = memory::create({engine::cpu, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
+    auto input  = memory::create({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
+    auto output = memory::create({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
 
     auto act    = normalization::softmax::create({engine::reference,
                                                   output,
