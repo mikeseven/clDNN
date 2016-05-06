@@ -176,7 +176,7 @@ template<>           struct is_floating_point<double>{ static const bool value =
 template<>           struct is_floating_point<half>  { static const bool value = true; };
 #endif
 
-DLL_SYM type_traits* typeid_register(size_t size, bool is_float, std::string str);
+DLL_SYM type_traits* typeid_register(size_t size, bool is_float, const std::string& str);
 
 // type_id()
 // ...returns pointer to type-traits
