@@ -369,10 +369,6 @@ inline size_t                       primitive::output::size() const { return get
 template<typename T> T primitive::as() const {
     // [C++1x] replace with static_assert
     assert(is_reference<T>::value == true);
-    auto t1 = type_id<typename remove_reference<T>::type>()->id;
-    auto t2 = _pointer->_type_traits->id;
-    t1;
-    t2;
     assert(type_id<typename remove_reference<T>::type>()->id == _pointer->_type_traits->id);
     return *reinterpret_cast<typename remove_reference<T>::type *>(_pointer.get());
 }
