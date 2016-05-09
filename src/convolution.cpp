@@ -149,7 +149,7 @@ primitive convolution::create(convolution::arguments arg) {
         }
     }
 
-    for (int i = 0; i < output_arg.size.raw.size(); i++)
+    for (uint32_t i = 0; i < output_arg.size.raw.size(); i++)
         if (output_arg.size.raw.at(i) < output_size.raw.at(i) + output_offset.raw.at(i))
             throw std::runtime_error("Convolution output buffer size is too small.");
 
