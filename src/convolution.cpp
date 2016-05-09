@@ -16,6 +16,7 @@
 
 #include "multidimensional_counter.h"
 #include "convolution.h"
+#include <sstream>
 
 namespace neural {
 
@@ -105,26 +106,30 @@ primitive convolution::create(convolution::arguments arg) {
 
     if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Convolution input/output number of dimension does not match.");
     if (stride.raw.size() != output_arg.size.raw.size())            throw std::runtime_error("Convolution stride/output number of dimension does not match.");
-    if (input_arg.format != memory::format::yxfb_f32)               throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
     if (input_arg.format != output_arg.format)                      throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
     if (input_arg.format != filter_arg.format)                      throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
     if (filter_arg.size.raw.size() != output_arg.size.raw.size())   throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
     if (bias_arg.size.raw.size() != 3)                              throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
-    if (bias_arg.size.batch[0] != output_size.feature[0])           throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
+    if (bias_arg.size.batch[0] != output_size.feature[0])           throw std::runtime_error("Convolution biases/output feature maps number does not match.");
                                                                                                                                                                // than this implementation will be format independent
     if (arg.padding != padding::zero)                               throw std::runtime_error("Unknown padding mode in convolution.");
     if (input_offset.raw.size() != input_arg.size.raw.size())       throw std::runtime_error("Convolution input offset/input number of dimension does not match.");
     if (output_offset.raw.size() != input_arg.size.raw.size())      throw std::runtime_error("Convolution output offset/input number of dimension does not match.");
 
-    // general formula: output size = (input size - filter size + 2 * amount of padding) / step + 1
-    auto it_in = input_arg.size.spatial.cbegin();
-    auto it_f = filter_arg.size.spatial.cbegin();
-    auto it_out = output_size.spatial.cbegin();
-    auto it_str = stride.spatial.cbegin();
-    while (it_in != input_arg.size.spatial.cend()) {
-        if ((*it_in - *it_f) / *it_str + 1 != *it_out)
-            std::runtime_error("Convolution dimensions are wrong.");
-        it_in++, it_f++, it_out++, it_str++;
+    // output_size * stride_size + filter_arg.size + input_offset < input_arg.size
+    auto it_out_size = output_size.spatial.cbegin();
+    auto it_stride = stride.spatial.cbegin();
+    auto it_f_arg = filter_arg.size.spatial.cbegin();
+    auto it_in_off = input_offset.spatial.cbegin();
+    auto it_in_arg = input_arg.size.spatial.cbegin();
+
+    for (int i = 0; it_in_arg != input_arg.size.spatial.cend(); it_in_arg++, it_f_arg++, it_out_size++, it_stride++, it_in_off++, i++) {
+        if (*it_out_size * *it_stride + *it_f_arg + *it_in_off >= *it_in_arg) {
+            std::ostringstream ss;
+            ss << "Convolution dimensions are wrong in dimension " << i << ": " << "output_size * stride_size + filter_arg.size + input_offset < input_arg.size [" 
+               << *it_out_size << " * " << *it_stride << " + " << *it_f_arg <<" + "<< *it_in_off <<" >= "<< *it_in_arg << "]";
+                std::runtime_error(ss.str());
+        }
     }
 
     for (int i = 0; i < output_arg.size.raw.size(); i++)
@@ -195,15 +200,20 @@ primitive convolution_backward::create(convolution_backward::arguments arg) {
 
     auto& bw_output_offset = arg.output_offset;
     
-    // general formula: output size = (input size - filter size + 2 * amount of padding) / step + 1
-    auto it_in = fw_input_arg.size.spatial.cbegin();
-    auto it_f = filter_arg.size.spatial.cbegin();
-    auto it_out = bw_input_size.spatial.cbegin();
-    auto it_str = stride.spatial.cbegin();
-    while (it_in != fw_input_arg.size.spatial.cend()) {
-        if ((*it_in - *it_f) / *it_str + 1 != *it_out)
-            std::runtime_error("Backward convolution dimensions are wrong.");
-        it_in++, it_f++, it_out++, it_str++;
+    // output_size * stride_size + filter_arg.size + input_offset < input_arg.size
+    auto it_out_size = bw_input_size.spatial.cbegin();
+    auto it_stride = stride.spatial.cbegin();
+    auto it_f_arg = filter_arg.size.spatial.cbegin();
+    auto it_in_off = bw_output_offset.spatial.cbegin();
+    auto it_in_arg = fw_input_arg.size.spatial.cbegin();
+
+    for (int i = 0; it_in_arg != fw_input_arg.size.spatial.cend(); it_in_arg++, it_f_arg++, it_out_size++, it_stride++, it_in_off++, i++) {
+        if (*it_out_size * *it_stride + *it_f_arg + *it_in_off >= *it_in_arg) {
+            std::ostringstream ss;
+            ss << "Convolution dimensions are wrong in dimension " << i << ": " << "output_size * stride_size + filter_arg.size + input_offset < input_arg.size ["
+                << *it_out_size << " * " << *it_stride << " + " << *it_f_arg << " + " << *it_in_off << " >= " << *it_in_arg << "]";
+            std::runtime_error(ss.str());
+        }
     }
 
     for (size_t i = 0; i < bw_output_offset.raw.size(); ++i) {

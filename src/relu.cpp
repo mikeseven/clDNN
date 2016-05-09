@@ -84,7 +84,6 @@ primitive relu::create(relu::arguments arg) {
     auto& input_arg = arg.input[0].primitive.as<const memory&>().argument; //todo tmp solution
     auto& output_arg = arg.output[0].as<const memory&>().argument;
 
-    if (input_arg.format != memory::format::yxfb_f32)               throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
     if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("ReLU input/output number of dimension does not match.");
     if (input_arg.format != output_arg.format)                      throw std::runtime_error("ReLU input/output data format does not match.");
     for (auto &x : input_offset.raw)  if (x < 0)                    throw std::runtime_error("ReLU negative input offset.");

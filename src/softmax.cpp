@@ -35,7 +35,6 @@ struct softmax_reference : is_an_implementation {
         auto output_offset = outer.argument.output_offset;
         auto output_size = outer.argument.output_size;
 
-        if (input_arg.format != memory::format::xb_f32) throw std::runtime_error("Softmax reference uses xb_f32 format."); // todo should be format independent
         if (input_arg.format != output_arg.format) throw std::runtime_error("Softmax input/output data format does not match.");
         if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("Softmax input/output number of dimensions do not match.");
         for (auto &x : input_offset.raw)  if (x < 0)                  throw std::runtime_error("Softmax negative input offset.");
