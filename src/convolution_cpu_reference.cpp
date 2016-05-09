@@ -37,7 +37,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     auto& output_arg = this_conv->output_memory(0).argument;
 
     auto& filter_arg = this_conv->argument.weight.as<const memory&>().argument; //convolution filter
-    //auto& bias_arg   = this_conv->argument.bias.as<const memory&>().argument;
+
     auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
     auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
     auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory&>().pointer);
@@ -58,9 +58,6 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     namespace nd = ndimensional;
     nd::value<uint32_t> range (output_size);
     nd::value<uint32_t> window_range (filter_arg.size);
-    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (input_arg.size);
-    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (output_arg.size);
-    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_win_idx (filter_arg.size);
     auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
     auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
     auto calc_win_idx = nd::choose_calculate_idx(filter_arg.format);
@@ -103,36 +100,12 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     auto& padding          = this_bw_conv->argument.padding;
 
     auto& bw_input_arg     = this_bw_conv->input_memory(0).argument;
-    //auto& fw_input_arg     = this_bw_conv->input_memory(1).argument;
     auto& filter_arg       = this_bw_conv->input_memory(2).argument;
     auto& bias_arg         = this_bw_conv->input_memory(3).argument; //todo bias isn't needed in bw conv. It is only used to compare its size with bias_diff. Remove?
 
-    //auto& bw_output_arg    = this_bw_conv->output_memory(0).argument;
-    //auto& filter_diff_arg  = this_bw_conv->output_memory(1).argument;
-    //auto& bias_diff_arg    = this_bw_conv->output_memory(2).argument;
-
-    //auto& bw_input_arg     = this_bw_conv->argument.input[0].primitive.as<const memory&>().argument;
-    //auto& fw_input_arg     = this_bw_conv->argument.input[1].primitive.as<const memory&>().argument;
-    //auto& filter_arg       = this_bw_conv->argument.input[2].primitive.as<const memory&>().argument;
-    //auto& bias_arg         = this_bw_conv->argument.input[3].primitive.as<const memory&>().argument; //todo bias isn't needed in bw conv. It is only used to compare its size with bias_diff. Remove?
 
     auto& bw_output_arg    = this_bw_conv->argument.output[0].as<const memory&>().argument;
-    //auto& filter_diff_arg  = this_bw_conv->argument.output[1].as<const memory&>().argument;
-    //auto& bias_diff_arg    = this_bw_conv->argument.output[2].as<const memory&>().argument;
 
-    //auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer);
-    //auto fw_input     = static_cast<float*>(this_bw_conv->input_memory(1).pointer);
-    //auto weights      = static_cast<float*>(this_bw_conv->input_memory(2).pointer);
-    ////todo fw bias is used only for size check, is it needed?
-
-    //auto bw_output    = static_cast<float*>(this_bw_conv->output_memory(0).pointer);
-    //auto weights_diff = static_cast<float*>(this_bw_conv->output_memory(1).pointer);
-    //auto bias_diff    = static_cast<float*>(this_bw_conv->output_memory(2).pointer);
-
-    //auto input  = static_cast<float*>(this_conv->argument.input[0].primitive.as<const memory&>().pointer); //todo tmp solution
-    //auto output = static_cast<float*>(this_conv->argument.output[0].as<const memory&>().pointer);
-    //auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory&>().pointer);
-    //auto bias   = static_cast<float*>(this_conv->argument.bias.as<const memory&>().pointer);
     auto bw_input     = static_cast<float*>(this_bw_conv->argument.input[0].primitive.as<const memory&>().pointer);
     auto fw_input     = static_cast<float*>(this_bw_conv->argument.input[1].primitive.as<const memory&>().pointer);
     auto weights      = static_cast<float*>(this_bw_conv->argument.input[2].primitive.as<const memory&>().pointer);

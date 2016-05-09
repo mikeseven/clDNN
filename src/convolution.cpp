@@ -153,7 +153,7 @@ primitive convolution::create(convolution::arguments arg) {
         if (output_arg.size.raw.at(i) < output_size.raw.at(i) + output_offset.raw.at(i))
             throw std::runtime_error("Convolution output buffer size is too small.");
 
-    assert(1 == filter_arg.size.batch[0]);
+    t(1 == filter_arg.size.batch[0]);
     assert(1 == output_size.feature.size());
     assert(1 == output_size.batch.size());
 

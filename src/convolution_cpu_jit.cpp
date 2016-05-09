@@ -351,8 +351,6 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
     : is_an_implementation(neural::type_id<convolution_cpu_jit>())
     , outer(arg) {
 
-    //auto& input_offset  = outer.argument.input_offset;
-    //auto& output_offset = outer.argument.output_offset;
     auto& output_size   = outer.argument.output_size;
     auto& padding       = outer.argument.padding;
     auto& stride        = outer.argument.stride;
@@ -360,12 +358,9 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
     auto& input_arg  = outer.input_memory(0).argument;
 
     auto& filter_arg = outer.argument.weight.as<const memory&>().argument; //convolution filter
-    //auto& bias_arg   = outer.argument.bias.as<const memory&>().argument;
 
     assert( 2 == output_size.spatial.size() );
-                                                                                                                        // than this implementation will be format independent
-//    auto input  = static_cast<float*>(outer.input_memory(0).pointer);
-//    auto output = static_cast<float*>(outer.output_memory(0).pointer);
+
     auto input  = static_cast<float*>(outer.input_memory(0).pointer);
     auto output = static_cast<float*>(outer.output_memory(0).pointer);
 
