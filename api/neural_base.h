@@ -109,7 +109,7 @@ template<typename T> struct vector {
     }
     vector() : raw(0), spatial(raw,0,0), feature(raw,0,0), batch(raw,0,0) {}
     vector(size_t size) : raw(2+size), spatial(raw,2, 2+size), feature(raw,1,2), batch(raw,0,1) {}
-    vector(const T arg_batch, const std::vector<T> &arg_spatial, const T arg_feature)
+    vector(const T arg_batch, const std::vector<T> arg_spatial, const T arg_feature)
         : spatial(raw,2, 2+arg_spatial.size())
         , feature(raw,1,2)
         , batch(raw,0,1){
@@ -124,7 +124,7 @@ template<typename T> struct vector {
         raw.resize(arg_batch + arg_feature + arg_spatial);
     };
 
-    vector(const std::vector<T> &arg_spatial, const T arg_feature)
+    vector(const std::vector<T> arg_spatial, const T arg_feature)
         : spatial(raw,2,2+arg_spatial.size())
         , feature(raw,1,2)
         , batch(raw,0,1)
@@ -133,7 +133,7 @@ template<typename T> struct vector {
         raw.push_back(arg_feature);
         raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
     };
-    vector(const std::vector<T> &arg_spatial)
+    vector(const std::vector<T> arg_spatial)
         : spatial(raw,2,2+arg_spatial.size())
         , feature(raw,1,2)
         , batch(raw,0,1)
@@ -142,7 +142,7 @@ template<typename T> struct vector {
         raw.push_back(1);
         raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
     };
-    vector(const T arg_batch, const std::vector<T> &arg_spatial)
+    vector(const T arg_batch, const std::vector<T> arg_spatial)
         : spatial(raw,2, 2+arg_spatial.size())
         , feature(raw,1,2)
         , batch(raw,0,1)
@@ -277,7 +277,7 @@ class primitive {
 public:
     primitive(const is_a_primitive *raw) : _pointer(raw) {};
     primitive(const primitive &other) : _pointer(other._pointer) {};
-    any_value_type_lookup operator[] (const std::string &key) const;
+    any_value_type_lookup operator[] (const std::string &) const {}
     const primitive operator()(void *argument) const;
 #if defined __GNUC__
 #   pragma GCC diagnostic push
@@ -384,4 +384,5 @@ public:
 
 // execution of sequence of primitives
 DLL_SYM void execute(std::vector<primitive>);
+
 }
