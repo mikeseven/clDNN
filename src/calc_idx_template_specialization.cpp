@@ -81,7 +81,7 @@ size_t index<neural::memory::format::bfxy_f32>(std::vector<uint32_t> size, std::
     return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));
 };
 template<>
-size_t index<neural::memory::format::oixy_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
+size_t index<neural::memory::format::oixy_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(
         [&]() -> bool {
         for (size_t i = 0; i < pos.size(); ++i)
@@ -91,7 +91,7 @@ size_t index<neural::memory::format::oixy_f32>(std::vector<uint32_t> size, std::
     }() == true);
     assert(pos.size() == size.size());
 
-    return pos[0] + size[0] * (pos[1] + size[1] * (pos[2] + size[2] * pos[3]));
+    return pos[4] + size[4] * (pos[3] + size[3] * (pos[2] + size[2] * pos[1]));
 };
 fptr choose_calculate_idx(neural::memory::format::type arg){
     fptr ptr;

@@ -49,14 +49,13 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     assert( 1 == filter_arg.size.batch[0] );
     assert( output_size.feature[0] == filter_arg.size.feature[0] ); // memory::format oixy
 
-    if(input_arg.size.raw.size()   != output_arg.size.raw.size()) throw std::runtime_error("Convolution input/output number of dimension does not match.");
-    if(stride.raw.size()           != output_arg.size.raw.size()) throw std::runtime_error("Convolution stride/output number of dimension does not match.");
-    if(input_arg.format            != memory::format::yxfb_f32)   throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
-    if(input_arg.format            != output_arg.format)          throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
-    if(filter_arg.size.raw.size()  != 5)                          throw std::runtime_error("Convolution window_size != 5");
-    if(input_arg.size.raw.size()   != 4)                          throw std::runtime_error("Convolution input number of dimensions != 4");
-    if(bias_arg.size.raw.size()    != 3)                          throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
-    if(bias_arg.size.spatial[0]    != output_size.feature[0])     throw std::runtime_error("Convolution biases/output feature maps number does not match.");
+    if(input_arg.size.raw.size()   != output_arg.size.raw.size())  throw std::runtime_error("Convolution input/output number of dimension does not match.");
+    if(stride.raw.size()           != output_arg.size.raw.size())  throw std::runtime_error("Convolution stride/output number of dimension does not match.");
+    if(input_arg.format            != memory::format::yxfb_f32)    throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
+    if(input_arg.format            != output_arg.format)           throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
+    if(filter_arg.size.raw.size()  != output_arg.size.raw.size()+1)throw std::runtime_error("Convolution window_size != 5");
+    if(bias_arg.size.raw.size()    != 3)                           throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
+    if(bias_arg.size.spatial[0]    != output_size.feature[0])      throw std::runtime_error("Convolution biases/output feature maps number does not match.");
 
     // todo remove
     if(filter_arg.format != memory::format::oixy_f32) throw std::runtime_error("conv weights arent oixy_f32 format");   // only yxfb_f32 format is supported
@@ -109,13 +108,14 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                     auto in_idx  = calc_in_idx (input_arg.size.raw, {arg_in_idx.begin(), arg_in_idx.end()} );
                     std::copy(win_pos_cropped.rbegin(), win_pos_cropped.rend(), win_pos.rbegin()); // assign ifm and {spatials} at proper positions (batch and ofm fields will be untouched)
 
-
                     auto win_idx = calc_win_idx(filter_arg.size.raw, win_pos );
-//                    auto win_idx = calc_win_idx(filter_arg.size.raw, win_pos );
 
-                    std::cout << "O: " << pos << "/t" << out_idx << "/t/t" << win_pos_cropped << "/t" << win_idx;
+                    nd::value<uint32_t>in_pos({arg_in_idx.begin(), arg_in_idx.end()});
+                    std::cout << pos << "\t" << out_idx << "\t\t" << win_pos << "\t" << win_idx << "\t\t" << in_pos << "\t" << in_idx << std::endl; //todo remove
+
                     acc += input[in_idx] * filter[win_idx];
                 }
+                std::cout << std::endl; //todo remove
                 output[out_idx] = acc + bias[ pos[f_pos] ];
             }
         }
