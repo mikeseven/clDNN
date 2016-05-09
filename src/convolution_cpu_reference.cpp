@@ -39,16 +39,19 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     auto& filter_arg = this_conv->argument.weight.as<const memory&>().argument; //convolution filter
     auto& bias_arg   = this_conv->argument.bias.as<const memory&>().argument;
 
-    assert( 1 == output_size.feature.size()  );
-    assert( 1 == output_size.batch.size()    );
-    assert( 1 == filter_arg.size.batch.size());
-    assert( 1 == filter_arg.size.batch[0]    );
+    assert( 1 == output_size.feature.size() );
+    assert( 1 == output_size.batch.size() );
+    assert( 2 == filter_arg.size.feature.size());
+    assert( 1 == filter_arg.size.batch.size() );
+    assert( 1 == filter_arg.size.batch[0] );
+    assert( 1 == filter_arg.size.batch[0] );
+    assert( 1 == filter_arg.size.batch[0] );
+    assert( output_size.feature[0] == filter_arg.size.feature[0] ); // memory::format oixy
 
     if(input_arg.size.raw.size()   != output_arg.size.raw.size()) throw std::runtime_error("Convolution input/output number of dimension does not match.");
     if(stride.raw.size()           != output_arg.size.raw.size()) throw std::runtime_error("Convolution stride/output number of dimension does not match.");
     if(input_arg.format            != memory::format::yxfb_f32)   throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
     if(input_arg.format            != output_arg.format)          throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
-    if(input_arg.format            != filter_arg.format)          throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
     if(filter_arg.size.raw.size()  != 5)                          throw std::runtime_error("Convolution window_size != 5");
     if(input_arg.size.raw.size()   != 4)                          throw std::runtime_error("Convolution input number of dimensions != 4");
     if(bias_arg.size.raw.size()    != 3)                          throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
@@ -74,21 +77,35 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     //        throw std::runtime_error("Convolution output buffer size is to small.");
     //}
 
-    int f_pos = 1; // neural::vector format is b,f,spatials
+    const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
     namespace nd = ndimensional;
     nd::value<uint32_t> range (output_size);
-    nd::value<uint32_t> window_range (filter_arg.size);
+    // window range neural::vector is: {b}, {ofm, ifm} {spatials}
+    // ofm - output feature maps
+    // ifm - input feature maps
+    // b = 1, always
+    // Ofm is given by outer loops so iterate in the inner loop through: {ifm, spatials}
+    nd::value<uint32_t> window_range ({filter_arg.size.raw.cbegin()+2, filter_arg.size.raw.cend()});
     auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
     auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
     auto calc_win_idx = nd::choose_calculate_idx(filter_arg.format);
 
     switch(padding){
         case padding::zero:
+        {
+            vector<int32_t> input_offset_consitent_with_weights(input_offset.batch.size(), input_offset.spatial.size(), input_offset.feature.size()+1);
+            // {b}, {ofm, ifm}, {spatials}
+            input_offset_consitent_with_weights.raw[0] = input_offset.raw[0];
+            input_offset_consitent_with_weights.raw[1] = output_offset.raw[1];
+            std::copy(input_offset.raw.begin()+1, input_offset.raw.end(), input_offset_consitent_with_weights.raw.begin()+2);
+
+            nd::value<uint32_t> win_pos2(filter_arg.size.raw.size()); //zero initialized nd::value
             for(auto pos : range) {
                 float acc = 0;
                 auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
 
                 for(auto win_pos : window_range){
+                    const std::vector<int32_t> arg_in_idx2 = nd::value<int32_t>(input_offset_consitent_with_weights) + pos;//*stride + win_pos;
                     const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos;
 
                     if( nd::is_out_of_range(input_arg.size, arg_in_idx) )
@@ -100,6 +117,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                 }
                 output[out_idx] = acc + bias[ pos[f_pos] ];
             }
+        }
             break;
         default:
             throw std::runtime_error("Unknown padding mode in convolution.");

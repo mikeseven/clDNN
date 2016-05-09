@@ -66,7 +66,8 @@ struct memory : is_a_primitive {
         case format::byxf_f32:
         case format::bfyx_f32:
         case format::bxyf_f32:
-		case format::bfxy_f32: return {4, type_id<float>()};
+        case format::bfxy_f32:
+        case format::oixy_f32: return {4, type_id<float>()};
         case format::scalar_f64:
         case format::   x_f64: return {1, type_id<double>()};
         case format::yxfb_f64:

@@ -129,9 +129,9 @@ template<typename T> struct vector {
         raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
     };
     vector(const size_t len_batch, const size_t len_spatial, const size_t len_feature)
-        : batch(raw,0,1)
-        , feature(raw,1,2)
-        , spatial(raw,2, 2+len_spatial)
+        : batch  (raw , 0                    , len_batch)
+        , feature(raw , len_batch            , len_batch+len_feature)
+        , spatial(raw , len_batch+len_feature, len_batch+len_feature+len_spatial)
     {
         raw.resize(len_batch + len_feature + len_spatial);
     };
