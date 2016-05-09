@@ -16,6 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
+#include "memory_utils.h"
 
 void example_fully_connected() {
     using namespace neural;
@@ -35,8 +36,8 @@ void example_fully_connected() {
     auto& input_memory = input.as<const memory&>();
     auto& weights_memory = weights.as<const memory&>();
 
-    input_memory.fill(1.0f);
-    weights_memory.fill(1.0f);
+    fill(input_memory, 1.0f);
+    fill(weights_memory, 1.0f);
 
     auto act = fully_connected::create({ engine::reference,
                                          output,

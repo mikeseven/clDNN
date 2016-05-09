@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-
 #pragma once
 
 #include <vector>
@@ -24,15 +23,62 @@
 #include <exception>
 #include <cassert>
 
-#include "dll.h"
 
-// [TODO]
-//      compiler-agnostic compile-time assertions for C++98
-//      generic format-traits (type, sizeof, etc), currenly float32 assumed in file.cpp
+// exporting symbols form dynamic library
+#ifdef EXPORT_NEURAL_SYMBOLS
+#   if defined(_MSC_VER)
+       //  Microsoft
+#      define DLL_SYM __declspec(dllexport)
+#   elif defined(__GNUC__)
+       //  GCC
+#      define DLL_SYM __attribute__((visibility("default")))
+#   else
+#      define DLL_SYM
+#      pragma warning Unknown dynamic link import/export semantics.
+#   endif
+#else //import dll
+#   if defined(_MSC_VER)
+       //  Microsoft
+#      define DLL_SYM __declspec(dllimport)
+#   elif defined(__GNUC__)
+       //  GCC
+#      define DLL_SYM
+#   else
+#      define DLL_SYM
+#      pragma warning Unknown dynamic link import/export semantics.
+#   endif
+#endif
+
 
 namespace neural {
 
-// vector in spatial+feature+batch space
+#if defined(_MSC_VER)
+namespace {
+// (de)initializing global constructors within MKL-DNN
+extern "C" DLL_SYM void _cdecl nn_init();
+extern "C" DLL_SYM void _cdecl nn_exit();
+
+template<typename T = void> class lib_init_t {
+    lib_init_t() { nn_init(); }
+    ~lib_init_t() { nn_exit(); }
+    void operator=(lib_init_t const&) = delete;
+public:
+    DLL_SYM static lib_init_t &instance() {
+        static lib_init_t instance_;
+        return instance_;
+    }
+};
+
+//...by singleton injected into application
+template class lib_init_t<void>;
+
+} //namespace {
+#endif // _MSC_VER
+
+
+// neural::vector
+// ...is a container for storing data size of or position within multi-dimensional data.
+// It is split into 3 parts: scalar:batch, vector:spatial, scalar:features.
 template<typename T> struct vector {
     std::vector<T> raw;
     class ref_vector {
@@ -107,7 +153,9 @@ template<typename T> struct vector {
     };
 };
 
-// minimal RTTI-independent type traits
+// type_traits
+// ...contains unique id, size, traits & name of particular type
+// part of minimal RTTI-independent runtime type traits
 struct type_traits {
     const size_t          id;
     const size_t          size;
@@ -119,7 +167,8 @@ private:
     type_traits &operator=(const type_traits &);
 };
 
-// [C++1x] replace with std:: versions
+// is_floating_point<T>
+// ...compile-time detection if type is floatinig-point [for non-C++11 compilers]
 template<typename T> struct is_floating_point        { static const bool value = false; };
 template<>           struct is_floating_point<float> { static const bool value = true; };
 template<>           struct is_floating_point<double>{ static const bool value = true; };
@@ -127,24 +176,20 @@ template<>           struct is_floating_point<double>{ static const bool value =
 template<>           struct is_floating_point<half>  { static const bool value = true; };
 #endif
 
-DLL_SYM type_traits* typeid_register(size_t size, bool is_float, const char* cstr);
+DLL_SYM type_traits* typeid_register(size_t size, bool is_float, const std::string& str);
 
-//todo type id and const type id should be equall
-template<typename T_type>
+// type_id()
+// ...returns pointer to type-traits
 #if defined _MSC_VER
-__declspec(noinline)
-#else
-__attribute__((noinline))
-#endif
-auto type_id() -> type_traits * {
-#if defined _MSC_VER
+template<typename T_type> __declspec(noinline)      type_traits *type_id() {
     static std::string signature = __FUNCSIG__;
     static std::string type_name = signature.substr(signature.find('<', 0)+1, signature.find('>', 0)-signature.find('<', 0)-1);
 #else
+template<typename T_type> __attribute__((noinline)) type_traits *type_id() {
     static std::string signature =__PRETTY_FUNCTION__;
     static std::string type_name = signature.substr(signature.find('=', 0)+2, signature.find(']', 0)-signature.find('=', 0)-2);
 #endif
-    static type_traits *ti = typeid_register(sizeof(T_type), is_floating_point<T_type>::value, type_name.c_str());
+    static type_traits *ti = typeid_register(sizeof(T_type), is_floating_point<T_type>::value, type_name);
     return ti;
 }
 
@@ -156,16 +201,16 @@ class any_value {
     std::tuple<size_t, void *> _value;
 public:
     template<typename T> any_value &operator=(const T &arg) {
-        //assert(type_id(T)==std::get<0>(_value));
+        assert(type_id<T>()->id==std::get<0>(_value));
         std::get<1>(_value) = arg;
         return *this;
     }
     template<typename T> operator T() const{
-        //assert(type_id(T)==std::get<0>(_value));
+        assert(type_id<T>()->id==std::get<0>(_value));
         return std::get<1>(_value);
     }
     template<typename T> const T& as() const {
-        //assert(type_id(T())->id==std::get<0>(_value)->id);
+        assert(type_id<T>()->id==std::get<0>(_value));
         return *reinterpret_cast<T *>(std::get<1>(_value));
     }
 };
@@ -279,7 +324,7 @@ struct primitive_at {
     primitive_at(const neural::primitive aprimitive, const uint32_t pos) : primitive(aprimitive), at(pos) {}
 };
 
-struct memory_obselote;
+struct memory;
 
 // is_a_primitive is a base class for all primitives exposing common interface; primiary user is a primitive wrapper
 class is_a_primitive {
@@ -296,11 +341,11 @@ public:
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
     virtual const std::vector<primitive_at>  &input()  const { throw std::runtime_error(std::string("no inputs in ")+_type_traits->name); };
     virtual const std::vector<primitive>     &output() const { throw std::runtime_error(std::string("no outputs in ")+_type_traits->name); };
-    const memory_obselote &input_memory(uint32_t at) const {
+    const memory &input_memory(uint32_t at) const {
         auto prim = input()[at].primitive;
-        return (prim.id()==type_id<const memory_obselote>()->id ? prim : prim.output[input()[at].at]).as<const memory_obselote &>();
+        return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>();
     }
-    const memory_obselote &output_memory(uint32_t at) const  { return output()[at].as<const memory_obselote &>(); };
+    const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
     virtual void execute_argument(void *) const { throw std::runtime_error(std::string("execute-time argument not supported in")+_type_traits->name); }
     friend class primitive;
 

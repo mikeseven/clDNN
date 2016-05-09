@@ -15,6 +15,7 @@
 */
 
 #include "api/neural.h"
+#include "memory_utils.h"
 
 // memory->memory relu
 void example_relu_forward() {
@@ -22,7 +23,7 @@ void example_relu_forward() {
 
     auto input  = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
     auto output = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
-    input.as<const memory&>().fill<float>();
+    fill<float>(input.as<const memory&>());
 
     auto act = relu::create({engine::reference, output, input});
 
@@ -34,7 +35,6 @@ void example_relu_backward() {
 
     auto forward_input       = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
     auto forward_output_grad = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
-
     auto forward_input_grad  = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
 
     auto act = relu_backward::create({engine::reference, {forward_input_grad}, {forward_output_grad, forward_input}});

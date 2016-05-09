@@ -65,8 +65,6 @@ if(UNIX)
   endif()
   add_definitions(-fPIC)
   add_definitions(-fno-operator-names)
-else () # mscc
-  add_definitions(/WX)
 endif()
 
 if(UNIX)

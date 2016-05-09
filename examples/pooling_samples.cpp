@@ -16,7 +16,7 @@
 
 #include "api/neural.h"
 
-// memory_obselote->memory_obselote max pooling
+// memory->memory max pooling
 void example_pooling_forward() {
     using namespace neural;
 

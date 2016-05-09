@@ -18,6 +18,7 @@
 
 #include "tests/gtest/gtest.h"
 #include "api/neural.h"
+#include "memory_utils.h"
 
 namespace{
     auto calc_idx = [](std::vector<uint32_t> yxfb_pos, std::vector<uint32_t>& buf_size_bfyx) -> uint32_t{
@@ -36,7 +37,7 @@ TEST(relu_f32_fw, basic) {
 
     auto input  = memory::create({engine::reference, memory::format::yxfb_f32, { b, {y, x}, f}, true});
     auto output = memory::create({engine::reference, memory::format::yxfb_f32, { b, {y, x}, f}});
-    input.as<const memory&>().fill<float>();
+    fill<float>(input.as<const memory&>());
 
     auto act = relu::create({engine::reference, output, input});
     auto buf = static_cast<float*>(input.as<const memory&>().pointer);
@@ -89,7 +90,7 @@ TEST(relu_f32_fw, offsets) {
 
     auto input  = memory::create({engine::reference, memory::format::yxfb_f32, in_buf_size, true});
     auto output = memory::create({engine::reference, memory::format::yxfb_f32, out_buf_size, true});
-    input.as<const memory&>().fill<float>();
+    fill<float>(input.as<const memory&>());
 
     auto act = relu::create( {engine::reference,
                               output,
@@ -137,8 +138,8 @@ TEST(relu_f32_bw, basic) {
     auto fw_input  = memory::create({engine::reference, memory::format::yxfb_f32, {b, {y, x}, f}, true});
     auto bw_input  = memory::create({engine::reference, memory::format::yxfb_f32, {b, {y, x}, f}, true});
     auto bw_output = memory::create({engine::reference, memory::format::yxfb_f32, {b, {y, x}, f}, true});
-    fw_input.as<const memory&>().fill<float>();
-    bw_input.as<const memory&>().fill<float>();
+    fill<float>(fw_input.as<const memory&>());
+    fill<float>(bw_input.as<const memory&>());
 
     auto act = relu_backward::create({engine::reference, {bw_output}, {bw_input, fw_input}});
     execute({act});
@@ -194,8 +195,8 @@ TEST(relu_f32_bw, offsets) {
     auto fw_input  = memory::create({engine::reference, memory::format::yxfb_f32, fw_in_buf_size, true});
     auto bw_input  = memory::create({engine::reference, memory::format::yxfb_f32, bw_in_buf_size, true});
     auto bw_output = memory::create({engine::reference, memory::format::yxfb_f32, bw_out_buf_size,true});
-    fw_input.as<const memory&>().fill<float>();
-    bw_input.as<const memory&>().fill<float>();
+    fill<float>(fw_input.as<const memory&>());
+    fill<float>(bw_input.as<const memory&>());
 
     vector<uint32_t> fw_in_off = {fw_in_off_b, {fw_in_off_y, fw_in_off_x}, fw_in_off_f};
     vector<uint32_t> bw_in_off = {bw_in_off_b, {bw_in_off_y, bw_in_off_x}, bw_in_off_f};
