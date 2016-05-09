@@ -14,6 +14,7 @@
 // limitations under the License.
 */
 
+#include <iterator>
 #include "convolution_cpu_reference.h"
 #include "multidimensional_counter.h"
 #include "memory_utils.h"
@@ -85,7 +86,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     // ifm - input feature maps
     // b = 1, always
     // Ofm is given by outer loops so iterate in the inner loop through: {ifm, spatials}
-    nd::value<uint32_t> window_range ({filter_arg.size.raw.cbegin()+2, filter_arg.size.raw.cend()});
+    nd::value<uint32_t> window_range_cropped ({filter_arg.size.raw.cbegin()+2, filter_arg.size.raw.cend()});
     auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
     auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
     auto calc_win_idx = nd::choose_calculate_idx(filter_arg.format);
@@ -93,26 +94,26 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     switch(padding){
         case padding::zero:
         {
-            vector<int32_t> input_offset_consitent_with_weights(input_offset.batch.size(), input_offset.spatial.size(), input_offset.feature.size()+1);
-            // {b}, {ofm, ifm}, {spatials}
-            input_offset_consitent_with_weights.raw[0] = input_offset.raw[0];
-            input_offset_consitent_with_weights.raw[1] = output_offset.raw[1];
-            std::copy(input_offset.raw.begin()+1, input_offset.raw.end(), input_offset_consitent_with_weights.raw.begin()+2);
-
-            nd::value<uint32_t> win_pos2(filter_arg.size.raw.size()); //zero initialized nd::value
+            nd::value<uint32_t> win_pos(filter_arg.size.raw.size()); //zero initialized nd::value
             for(auto pos : range) {
                 float acc = 0;
                 auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
 
-                for(auto win_pos : window_range){
-                    const std::vector<int32_t> arg_in_idx2 = nd::value<int32_t>(input_offset_consitent_with_weights) + pos;//*stride + win_pos;
-                    const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos;
+                win_pos[1] = pos[f_pos]; // assign ofm
+                for(auto win_pos_cropped : window_range_cropped){
+                    const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos_cropped;
 
                     if( nd::is_out_of_range(input_arg.size, arg_in_idx) )
                         continue;
 
                     auto in_idx  = calc_in_idx (input_arg.size.raw, {arg_in_idx.begin(), arg_in_idx.end()} );
+                    std::copy(win_pos_cropped.rbegin(), win_pos_cropped.rend(), win_pos.rbegin()); // assign ifm and {spatials} at proper positions (batch and ofm fields will be untouched)
+
+
                     auto win_idx = calc_win_idx(filter_arg.size.raw, win_pos );
+//                    auto win_idx = calc_win_idx(filter_arg.size.raw, win_pos );
+
+                    std::cout << "O: " << pos << "/t" << out_idx << "/t/t" << win_pos_cropped << "/t" << win_idx;
                     acc += input[in_idx] * filter[win_idx];
                 }
                 output[out_idx] = acc + bias[ pos[f_pos] ];
