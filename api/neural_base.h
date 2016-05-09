@@ -277,7 +277,7 @@ class primitive {
 public:
     primitive(const is_a_primitive *raw) : _pointer(raw) {};
     primitive(const primitive &other) : _pointer(other._pointer) {};
-    any_value_type_lookup operator[] (const std::string &) const {}
+    any_value_type_lookup operator[] (const std::string &arg) const;
     const primitive operator()(void *argument) const;
 #if defined __GNUC__
 #   pragma GCC diagnostic push
@@ -362,9 +362,10 @@ inline size_t                       primitive::input::size() const { return get_
 inline const primitive              primitive::operator()(void *argument) const { _pointer->execute_argument(argument); return *this; }
 inline const std::vector<task> &    primitive::work() { return _pointer->_work; }
 inline size_t                       primitive::id() const { return _pointer->_type_traits->id; }
-
 inline const primitive              primitive::output::operator[](uint32_t at) const { return get_base()->_pointer.get()->output()[at]; }
 inline size_t                       primitive::output::size() const { return get_base()->_pointer.get()->output().size(); }
+inline any_value_type_lookup        primitive::operator[](const std::string &key) const { return any_value_type_lookup(_pointer->_map, key); }
+
 
 template<typename T> T primitive::as() const {
     // [C++1x] replace with static_assert
