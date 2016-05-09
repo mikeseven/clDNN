@@ -16,6 +16,7 @@
 
 #include "convolution_cpu_reference.h"
 #include "multidimensional_counter.h"
+#include "memory_utils.h"
 
 namespace neural {
 
@@ -32,18 +33,13 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     auto& padding       = this_conv->argument.padding;
     auto& stride        = this_conv->argument.stride;
 
-    //auto input_arg  = this_relu->input_memory(0).argument;
-    //auto output_arg = this_relu->output_memory(0).argument;
-    auto input_arg  = this_conv->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-    auto output_arg = this_conv->argument.output[0].as<const memory&>().argument;
+    auto& input_arg  = this_conv->input_memory(0).argument;
+    auto& output_arg = this_conv->output_memory(0).argument;
 
     auto& filter_arg = this_conv->argument.weight.as<const memory&>().argument; //convolution filter
     //auto& bias_arg   = this_conv->argument.bias.as<const memory&>().argument;
-
-   // auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
-   // auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
-    auto input  = static_cast<float*>(this_conv->argument.input[0].primitive.as<const memory&>().pointer); //todo tmp solution
-    auto output = static_cast<float*>(this_conv->argument.output[0].as<const memory&>().pointer);
+    auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
+    auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
     auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory&>().pointer);
     auto bias   = static_cast<float*>(this_conv->argument.bias.as<const memory&>().pointer);
 
@@ -106,19 +102,19 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     auto& stride           = this_bw_conv->argument.stride;
     auto& padding          = this_bw_conv->argument.padding;
 
-    //auto& bw_input_arg     = this_bw_conv->input_memory(0).argument;
+    auto& bw_input_arg     = this_bw_conv->input_memory(0).argument;
     //auto& fw_input_arg     = this_bw_conv->input_memory(1).argument;
-    //auto& filter_arg       = this_bw_conv->input_memory(2).argument;
-    //auto& bias_arg         = this_bw_conv->input_memory(3).argument; //todo bias isn't needed in bw conv. It is only used to compare its size with bias_diff. Remove?
+    auto& filter_arg       = this_bw_conv->input_memory(2).argument;
+    auto& bias_arg         = this_bw_conv->input_memory(3).argument; //todo bias isn't needed in bw conv. It is only used to compare its size with bias_diff. Remove?
 
     //auto& bw_output_arg    = this_bw_conv->output_memory(0).argument;
     //auto& filter_diff_arg  = this_bw_conv->output_memory(1).argument;
     //auto& bias_diff_arg    = this_bw_conv->output_memory(2).argument;
 
-    auto& bw_input_arg     = this_bw_conv->argument.input[0].primitive.as<const memory&>().argument;
+    //auto& bw_input_arg     = this_bw_conv->argument.input[0].primitive.as<const memory&>().argument;
     //auto& fw_input_arg     = this_bw_conv->argument.input[1].primitive.as<const memory&>().argument;
-    auto& filter_arg       = this_bw_conv->argument.input[2].primitive.as<const memory&>().argument;
-    auto& bias_arg         = this_bw_conv->argument.input[3].primitive.as<const memory&>().argument; //todo bias isn't needed in bw conv. It is only used to compare its size with bias_diff. Remove?
+    //auto& filter_arg       = this_bw_conv->argument.input[2].primitive.as<const memory&>().argument;
+    //auto& bias_arg         = this_bw_conv->argument.input[3].primitive.as<const memory&>().argument; //todo bias isn't needed in bw conv. It is only used to compare its size with bias_diff. Remove?
 
     auto& bw_output_arg    = this_bw_conv->argument.output[0].as<const memory&>().argument;
     //auto& filter_diff_arg  = this_bw_conv->argument.output[1].as<const memory&>().argument;
@@ -145,15 +141,12 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     auto weights_diff = static_cast<float*>(this_bw_conv->argument.output[1].as<const memory&>().pointer);
     auto bias_diff    = static_cast<float*>(this_bw_conv->argument.output[2].as<const memory&>().pointer);
 
-        // initializie gradients with 0
-    //this_bw_conv->output_memory(0).fill(0.0f);
-    //this_bw_conv->output_memory(1).fill(0.0f);
-    //this_bw_conv->output_memory(2).fill(0.0f);
-    this_bw_conv->argument.output[0].as<const memory&>().fill(0.0f);
-    this_bw_conv->argument.output[1].as<const memory&>().fill(0.0f);
-    this_bw_conv->argument.output[2].as<const memory&>().fill(0.0f);
+    // initializie gradients with 0
+    fill(this_bw_conv->output_memory(0), 0.0f);
+    fill(this_bw_conv->output_memory(1), 0.0f);
+    fill(this_bw_conv->output_memory(2), 0.0f);
 
-    int f_pos = 1;
+    const int F_POS = 1;
     namespace nd = ndimensional;
     nd::value<uint32_t> bias_range (bias_arg.size);
     nd::value<uint32_t> range (bw_input_size); //todo in/out size?
@@ -182,7 +175,7 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
                     bw_output[out_idx] += sensitivity;
                     weights_diff[win_idx] += fw_input[out_idx] * sensitivity;
                 }
-                bias_diff[ pos[f_pos] ] += bw_input[in_idx];
+                bias_diff[ pos[F_POS] ] += bw_input[in_idx];
             }
             break;
         }

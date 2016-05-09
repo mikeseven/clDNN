@@ -39,25 +39,20 @@ namespace neural {
         auto& alpha = this_lrn->argument.alpha;
         auto& beta = this_lrn->argument.beta;
 
-        //auto input_arg  = this_lrn->input_memory(0).argument;
-        //auto output_arg = this_lrn->output_memory(0).argument;
-        auto input_arg = this_lrn->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-        auto output_arg = this_lrn->argument.output[0].as<const memory&>().argument;
+        auto input_arg  = this_lrn->input_memory(0).argument;
+        auto output_arg = this_lrn->output_memory(0).argument;
 
         if (input_arg.size.raw.size() != output_arg.size.raw.size())
             throw std::runtime_error("lrn input/output number of dimension does not match [iput size=" + std::to_string(input_arg.size.raw.size())
                                      + ", output size=" + std::to_string(output_arg.size.raw.size()));
 
-        //auto input  = static_cast<float*>(this_lrn->input_memory(0).pointer);
-        //auto output = static_cast<float*>(this_lrn->output_memory(0).pointer);
-        auto input = static_cast<float*>(this_lrn->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
-        auto output = static_cast<float*>(this_lrn->argument.output[0].as<const memory&>().pointer);
+        auto input  = static_cast<float*>(this_lrn->input_memory(0).pointer);
+        auto output = static_cast<float*>(this_lrn->output_memory(0).pointer);
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range(output_size);
 
-
-        auto calc_in_idx = nd::choose_calculate_idx(input_arg.format);
+        auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
         auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
 
         nd::value<uint32_t> window_range({ 1,{1,1},size });
@@ -78,17 +73,20 @@ namespace neural {
             for (auto pos : range) {
                 auto in_idx = calc_in_idx(input_arg.size.raw, pos + input_offset);
                 auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
+
                 float acc = 0.0f;
                 float value = 0.0f;
 
                 for (auto window_pos : window_range) {
 
-                    auto input_pos = pos - help_input_offset + window_pos;
+                    auto input_pos = pos + help_input_offset + window_pos;
 
-                    if (nd::is_out_of_range(input_arg.size, input_pos))
+                    if (nd::is_out_of_range(input_arg.size, input_pos)) 
                         continue;
+
                     auto input_index = calc_in_idx(input_arg.size.raw, input_pos);
                     value = input[input_index];
+
                     acc += value*value;
                 }
                 acc = acc * alpha + k;
@@ -100,7 +98,6 @@ namespace neural {
             throw std::runtime_error("Unknown padding mode in lrn");
         }
     }
-
 
     namespace {
         struct attach {

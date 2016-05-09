@@ -96,16 +96,16 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
 
     public:
 
-        jit_code(uint32_t output_width,
+        jit_code(bool apply_relu,
+                 uint32_t output_width,
                  uint32_t output_height,
                  uint32_t output_feats,
                  uint32_t input_width,
                  uint32_t input_feats,
-                 uint32_t filter_height,
                  uint32_t filter_width,
+                 uint32_t filter_height,
                  uint32_t stride_x,
                  uint32_t stride_y,
-                 bool apply_relu,
                  void* code_ptr = nullptr,
                  size_t code_size = 40 * Xbyak::DEFAULT_MAX_CODE_SIZE)
             : Xbyak::CodeGenerator(code_size, code_ptr)
@@ -271,23 +271,23 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
         uint32_t input_height,
         uint32_t input_feature_maps,
 
-        uint32_t stride_width,
-        uint32_t stride_height,
-
         float *  filter,
         uint32_t filter_width,
         uint32_t filter_height,
 
+        uint32_t stride_width,
+        uint32_t stride_height,
+
         float*   bias,
 
         void* code_ptr = nullptr)
-            : code(output_width, output_height, output_feature_maps,
-                   input_width, input_feature_maps,
-                   filter_height, filter_width,
-                   stride_width, stride_height,
-                   apply_relu,
-                   code_ptr),
-             is_an_implementation(neural::type_id<jit_convolution_zxyn>())
+            : is_an_implementation(neural::type_id<jit_convolution_zxyn>()),
+            code(apply_relu,
+                 output_width, output_height, output_feature_maps,
+                 input_width, input_feature_maps,
+                 filter_width, filter_height,
+                 stride_width, stride_height,
+                 code_ptr)
     {
         assert(output_feature_maps % output_features_per_iteration == 0);
 
@@ -357,10 +357,7 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
     auto& padding       = outer.argument.padding;
     auto& stride        = outer.argument.stride;
 
-   //auto input_arg  = this_relu->input_memory(0).argument;
-    //auto output_arg = this_relu->output_memory(0).argument;
-    auto input_arg  = outer.argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-    auto output_arg = outer.argument.output[0].as<const memory&>().argument;
+    auto& input_arg  = outer.input_memory(0).argument;
 
     auto& filter_arg = outer.argument.weight.as<const memory&>().argument; //convolution filter
     //auto& bias_arg   = outer.argument.bias.as<const memory&>().argument;
@@ -369,16 +366,16 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
                                                                                                                         // than this implementation will be format independent
 //    auto input  = static_cast<float*>(outer.input_memory(0).pointer);
 //    auto output = static_cast<float*>(outer.output_memory(0).pointer);
-    auto input  = static_cast<float*>(outer.argument.input[0].primitive.as<const memory&>().pointer); //todo tmp solution
-    auto output = static_cast<float*>(outer.argument.output[0].as<const memory&>().pointer);
+    auto input  = static_cast<float*>(outer.input_memory(0).pointer);
+    auto output = static_cast<float*>(outer.output_memory(0).pointer);
 
     auto filter = static_cast<float*>(outer.argument.weight.as<const memory&>().pointer);
     auto bias   = static_cast<float*>(outer.argument.bias.as<const memory&>().pointer);
 
-    const int b_pos = 0;
-    const int f_pos = 1;
-    const int y_pos = 2;
-    const int x_pos = 3;
+    const int B_POS = 0;
+    const int F_POS = 1;
+    const int Y_POS = 2;
+    const int X_POS = 3;
 
     switch(padding){
         case padding::zero:
@@ -386,21 +383,21 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
             // todo jit conv works in xyzb format?
             // todo how to handle offsets?
             jit_convolution_zxyn* tmp_jit_convolution_zxyn = new jit_convolution_zxyn(
-                output_size.raw[ b_pos ], // batch??
+                output_size.raw[ B_POS ], // batch??
                 false, //activaction function: relu
                 output,
-                output_size.raw[ x_pos ],
-                output_size.raw[ y_pos ],
-                output_size.raw[ f_pos ],
+                output_size.raw[ X_POS ],
+                output_size.raw[ Y_POS ],
+                output_size.raw[ F_POS ],
                 input,
-                input_arg.size.raw[ x_pos ],
-                input_arg.size.raw[ y_pos ],
-                input_arg.size.raw[ f_pos ],
-                stride.raw[ x_pos ],
-                stride.raw[ y_pos ],
+                input_arg.size.raw[ X_POS ],
+                input_arg.size.raw[ Y_POS ],
+                input_arg.size.raw[ F_POS ],
                 filter,
-                filter_arg.size.raw[ x_pos ],
-                filter_arg.size.raw[ y_pos ],
+                filter_arg.size.raw[ X_POS ],
+                filter_arg.size.raw[ Y_POS ],
+                stride.raw[ X_POS ],
+                stride.raw[ Y_POS ],
                 bias
                 );
 

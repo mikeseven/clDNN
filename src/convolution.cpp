@@ -59,6 +59,23 @@ convolution::arguments::arguments( neural::engine::type     eng,
     , bias(biases)
     , padding(padd) {};
 
+convolution::arguments::arguments( neural::engine::type     eng,
+                                   primitive                out,
+                                   primitive                in,
+                                   primitive                weights,
+                                   primitive                biases,
+                                   neural::padding::type    padd)
+    : engine(eng)
+    , output({out})
+    , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
+    , output_size(out.as<const memory&>().argument.size)
+    , input({in})
+    , input_offset(in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size())
+    , stride(1u, std::vector<uint32_t>(in.as<const memory&>().argument.size.spatial.size(), 1u), 1u)
+    , weight(weights)
+    , bias(biases)
+    , padding(padd) {};
+
 convolution_backward::arguments::arguments( neural::engine::type     eng,
                                             std::vector<primitive>   out,
                                             neural::vector<uint32_t> out_off,
@@ -126,7 +143,7 @@ primitive convolution::create(convolution::arguments arg) {
     for (int i = 0; it_in_arg != input_arg.size.spatial.cend(); it_in_arg++, it_f_arg++, it_out_size++, it_stride++, it_in_off++, i++) {
         if (*it_out_size * *it_stride + *it_f_arg + *it_in_off >= *it_in_arg) {
             std::ostringstream ss;
-            ss << "Convolution dimensions are wrong in dimension " << i << ": " << "output_size * stride_size + filter_arg.size + input_offset < input_arg.size [" 
+            ss << "Convolution dimensions are wrong in dimension " << i << ": " << "output_size * stride_size + filter_arg.size + input_offset < input_arg.size ["
                << *it_out_size << " * " << *it_stride << " + " << *it_f_arg <<" + "<< *it_in_off <<" >= "<< *it_in_arg << "]";
                 std::runtime_error(ss.str());
         }
@@ -148,11 +165,7 @@ primitive convolution::create(convolution::arguments arg) {
     std::unique_ptr<convolution> result(new convolution(arg));
 
     // lookup in database; throw if not found
-        //todo tmp solution
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt= result->argument.output[0].as<const memory&>().argument.format;
-    conv_fw_key key = std::make_tuple(arg.engine, infmt, outfmt);
- //   conv_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    conv_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = conv_fw_implementation_map.find(key);
     if(it==std::end(conv_fw_implementation_map)) throw std::runtime_error("Not yet implemented.");
 
@@ -167,10 +180,10 @@ primitive convolution::create(convolution::arguments arg) {
 primitive convolution_backward::create(convolution_backward::arguments arg) {
     auto& bw_input_size = arg.input_size;  // todo output or input?
     auto& bw_input_offset = arg.input_offset;
-    
+
     assert(1 == bw_input_size.feature.size());
     assert(1 == bw_input_size.batch.size());
-    
+
     auto& bw_input_arg = arg.input[0].primitive.as<const memory&>().argument;
     auto& fw_input_arg = arg.input[1].primitive.as<const memory&>().argument;
     auto& filter_arg = arg.input[2].primitive.as<const memory&>().argument;
@@ -179,7 +192,7 @@ primitive convolution_backward::create(convolution_backward::arguments arg) {
     auto& bw_output_arg = arg.output[0].as<const memory&>().argument;
     auto& filter_diff_arg = arg.output[1].as<const memory&>().argument;
     auto& bias_diff_arg = arg.output[2].as<const memory&>().argument;
-    
+
     auto& stride = arg.stride;
 
     if (bw_input_offset.raw.size() != bw_output_arg.size.raw.size())    throw std::runtime_error("Backward convolution bw_input_offset/bw_output number of dimension does not match.");
@@ -199,7 +212,7 @@ primitive convolution_backward::create(convolution_backward::arguments arg) {
     if (bias_arg.size != bias_diff_arg.size)                            throw std::runtime_error("Backward convolution bias/bias_diff size doesn't match.");
 
     auto& bw_output_offset = arg.output_offset;
-    
+
     // output_size * stride_size + filter_arg.size + input_offset < input_arg.size
     auto it_out_size = bw_input_size.spatial.cbegin();
     auto it_stride = stride.spatial.cbegin();
@@ -228,11 +241,7 @@ primitive convolution_backward::create(convolution_backward::arguments arg) {
     std::unique_ptr<convolution_backward> result(new convolution_backward(arg));
 
     // lookup in database; throw if not found
-        //todo tmp solution
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt= result->argument.output[0].as<const memory&>().argument.format;
-    conv_bw_key key = std::make_tuple(arg.engine, infmt, outfmt);
-//    conv_bw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    conv_bw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = conv_bw_implementation_map.find(key);
     if(it==std::end(conv_bw_implementation_map)) throw std::runtime_error("Not yet implemented.");
 

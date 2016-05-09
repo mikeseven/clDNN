@@ -79,9 +79,7 @@ primitive relu::create(relu::arguments arg) {
     auto& output_offset = arg.output_offset;
     auto& output_size = arg.output_size;
 
-    //auto& input_arg  = this_relu->input_memory(0).argument;
-    //auto& output_arg = this_relu->output_memory(0).argument;
-    auto& input_arg = arg.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+    auto& input_arg  = arg.input[0].primitive.as<const memory&>().argument;
     auto& output_arg = arg.output[0].as<const memory&>().argument;
 
     if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("ReLU input/output number of dimension does not match.");
@@ -96,11 +94,7 @@ primitive relu::create(relu::arguments arg) {
     std::unique_ptr<relu> result(new relu(arg));
 
     // lookup in database; throw if not found
-    //todo tmp solution
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
-    //auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = relu_fw_implementation_map::instance().find(key);
     if (it == std::end(relu_fw_implementation_map::instance())) throw std::runtime_error("not yet implemented");
 
@@ -121,16 +115,13 @@ primitive relu_backward::create(relu_backward::arguments arg) {
     if (arg.output.size() != 1)
         throw std::runtime_error("ReLU backward: number of outputs is incorrect.");
 
-    //auto forward_output_grad_arg    = this_relu->input_memory(0).argument;
-    auto& forward_output_grad_arg = arg.input[0].primitive.as<const memory&>().argument;
+    auto forward_output_grad_arg    = arg.input[0].primitive.as<const memory&>().argument;
     auto& forward_output_grad_offset = arg.input_offset[0];
 
-    //auto forward_input_arg    = this_relu->input_memory(1).argument;
-    auto& forward_input_arg = arg.input[1].primitive.as<const memory&>().argument;
+    auto forward_input_arg    = arg.input[1].primitive.as<const memory&>().argument;
     auto& forward_input_offset = arg.input_offset[1];
 
-    //auto forward_input_grad_arg    = this_relu->output_memory(0).argument;
-    auto& forward_input_grad_arg = arg.output[0].as<const memory&>().argument;
+    auto forward_input_grad_arg    = arg.output[0].as<const memory&>().argument;
     auto& forward_input_grad_offset = arg.output_offset;
 
     auto& processed_window_sizes = arg.output_size;
@@ -150,11 +141,7 @@ primitive relu_backward::create(relu_backward::arguments arg) {
     std::unique_ptr<relu_backward> result(new relu_backward(arg));
 
     // lookup in database; throw if not found
-    //todo tmp solution
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
-    //    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = relu_bw_implementation_map::instance().find(key);
     if (it == std::end(relu_bw_implementation_map::instance())) throw std::runtime_error("not yet implemented");
 

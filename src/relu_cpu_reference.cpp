@@ -29,33 +29,29 @@ relu_cpu_reference::~relu_cpu_reference() {}
 void relu_cpu_reference::implementation(const void *ptr) {
     auto this_relu = static_cast<const relu *>(ptr);
 
-    auto& input_offset = this_relu->argument.input_offset;
+    auto& input_offset  = this_relu->argument.input_offset;
     auto& output_offset = this_relu->argument.output_offset;
-    auto& output_size = this_relu->argument.output_size;
+    auto& output_size   = this_relu->argument.output_size;
 
-    //auto& input_arg  = this_relu->input_memory(0).argument;
-    //auto& output_arg = this_relu->output_memory(0).argument;
-    auto& input_arg = this_relu->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-    auto& output_arg = this_relu->argument.output[0].as<const memory&>().argument;
+    auto& input_arg  = this_relu->input_memory(0).argument;
+    auto& output_arg = this_relu->output_memory(0).argument;
 
-    assert(1 == output_size.feature.size());
-    assert(1 == output_size.batch.size());
+    assert( 1 == output_size.feature.size() );
+    assert( 1 == output_size.batch.size()   );
 
-    //auto input  = static_cast<float*>(this_relu->input_memory(0).pointer);
-    //auto output = static_cast<float*>(this_relu->output_memory(0).pointer);
-    auto input = static_cast<float*>(this_relu->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
-    auto output = static_cast<float*>(this_relu->argument.output[0].as<const memory&>().pointer);
+    auto input  = static_cast<float*>(this_relu->input_memory(0).pointer);
+    auto output = static_cast<float*>(this_relu->output_memory(0).pointer);
 
     namespace nd = ndimensional;
-    nd::value<uint32_t> range(output_size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx(input_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx(output_arg.size);
+    nd::value<uint32_t> range ( output_size );
+    auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
+    auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
 
-    for (auto pos : range) {
-        auto in_idx = calc_in_idx(pos + input_offset);
-        auto out_idx = calc_out_idx(pos + output_offset);
+    for(auto pos : range) {
+        auto in_idx  = calc_in_idx (input_arg.size.raw , pos + input_offset );
+        auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
 
-        output[out_idx] = std::max(input[in_idx], 0.0f) + this_relu->argument.negative_slope * std::min(input[in_idx], 0.0f);
+        output[out_idx] = std::max( input[in_idx], 0.0f) + this_relu->argument.negative_slope * std::min( input[in_idx], 0.0f);
     }
 }
 
@@ -71,36 +67,30 @@ void relu_backward_cpu_reference::implementation(const void *ptr)
 {
     auto this_relu = static_cast<const relu_backward *>(ptr);
 
-    //auto forward_output_grad = static_cast<float*>(this_relu->input_memory(0).pointer);
-    //auto forward_input       = static_cast<float*>(this_relu->input_memory(1).pointer);
-    //auto forward_input_grad  = static_cast<float*>(this_relu->output_memory(0).pointer);
-    auto forward_output_grad = static_cast<float*>(this_relu->argument.input[0].primitive.as<const memory&>().pointer);
-    auto forward_input = static_cast<float*>(this_relu->argument.input[1].primitive.as<const memory&>().pointer);
-    auto forward_input_grad = static_cast<float*>(this_relu->argument.output[0].as<const memory&>().pointer);
+    auto forward_output_grad = static_cast<float*>(this_relu->input_memory(0).pointer);
+    auto forward_input       = static_cast<float*>(this_relu->input_memory(1).pointer);
+    auto forward_input_grad  = static_cast<float*>(this_relu->output_memory(0).pointer);
 
-    //auto forward_output_grad_arg    = this_relu->input_memory(0).argument;
-    auto forward_output_grad_arg = this_relu->argument.input[0].primitive.as<const memory&>().argument;
-    auto forward_output_grad_offset = this_relu->argument.input_offset[0];
+    auto& forward_output_grad_arg    = this_relu->input_memory(0).argument;
+    auto& forward_output_grad_offset = this_relu->argument.input_offset[0];
 
-    //auto forward_input_arg    = this_relu->input_memory(1).argument;
-    auto forward_input_arg = this_relu->argument.input[1].primitive.as<const memory&>().argument;
-    auto forward_input_offset = this_relu->argument.input_offset[1];
+    auto& forward_input_arg    = this_relu->input_memory(1).argument;
+    auto& forward_input_offset = this_relu->argument.input_offset[1];
 
-    //auto forward_input_grad_arg    = this_relu->output_memory(0).argument;
-    auto forward_input_grad_arg = this_relu->argument.output[0].as<const memory&>().argument;
-    auto forward_input_grad_offset = this_relu->argument.output_offset;
+    auto& forward_input_grad_arg    = this_relu->output_memory(0).argument;
+    auto& forward_input_grad_offset = this_relu->argument.output_offset;
 
-    auto processed_window_sizes = this_relu->argument.output_size;
+    auto& processed_window_sizes = this_relu->argument.output_size;
 
     namespace nd = ndimensional;
-    nd::value<uint32_t> range(processed_window_sizes);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_forward_input_idx(forward_input_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_forward_output_grad_idx(forward_output_grad_arg.size);
-    nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_forward_input_grad_idx(forward_input_grad_arg.size);
-    for (auto pos : range) {
-        auto forward_input_idx = calc_forward_input_idx(pos + forward_input_offset);
-        auto forward_output_grad_idx = calc_forward_output_grad_idx(pos + forward_output_grad_offset);
-        auto forward_input_grad_idx = calc_forward_input_grad_idx(pos + forward_input_grad_offset);
+    nd::value<uint32_t> range (processed_window_sizes);
+    auto calc_forward_input_idx       = nd::choose_calculate_idx(forward_input_arg.format);
+    auto calc_forward_output_grad_idx = nd::choose_calculate_idx(forward_output_grad_arg.format);
+    auto calc_forward_input_grad_idx  = nd::choose_calculate_idx(forward_input_grad_arg.format);
+    for(auto pos : range) {
+        auto forward_input_idx       = calc_forward_input_idx      (forward_input_arg.size.raw, pos + forward_input_offset);
+        auto forward_output_grad_idx = calc_forward_output_grad_idx(forward_output_grad_arg.size.raw, pos + forward_output_grad_offset);
+        auto forward_input_grad_idx  = calc_forward_input_grad_idx (forward_input_grad_arg.size.raw, pos + forward_input_grad_offset);
 
         forward_input_grad[forward_input_grad_idx] = (forward_input[forward_input_idx] <= 0.0f ? 0.0f : 1.0f) * forward_output_grad[forward_output_grad_idx];
     }

@@ -15,6 +15,7 @@
 */
 
 #include "api/neural.h"
+#include "memory_utils.h"
 #include <algorithm>
 #include <numeric>
 #include <tuple>
@@ -152,8 +153,8 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
         const auto num_averages = (spatial) ? data_c : data_c * data_w * data_h;
         const T inv_num_average_over = static_cast<T>(1.0 / (data_n * spatial_size));
 
-        current_mean.fill<T>(0);
-        current_inv_std_dev.fill<T>(0);
+        fill<T>(current_mean, 0);
+        fill<T>(current_inv_std_dev, 0);
 
         auto compute_io_data_offset = [&element_stride, &batch_stride, &spatial_location_stride](int element, int batch, int spatial_location)
         {
@@ -196,7 +197,7 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
             auto moving_mean_buffer = static_cast<T*>(moving_mean.pointer);
 
             // For first run, set data to zero.
-            if(*request->minibatch_counter == 0) moving_mean.fill<T>(0);
+            if(*request->minibatch_counter == 0) fill<T>(moving_mean, 0);
 
             // Compute avg factor for moving average basing on number of already computed averages [factor<=0], or using user provided [factor>0] factor.
             T actual_exp_avg_factor = (exp_avg_factor > 0.0f) ? exp_avg_factor : 1.0f / (1.0f + *request->minibatch_counter);
@@ -213,7 +214,7 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
             auto moving_inv_std_dev_buffer = static_cast<T*>(moving_inv_std_dev.pointer);
 
             // For first run, set data to zero.
-            if(*request->minibatch_counter == 0) moving_inv_std_dev.fill<T>(0);
+            if(*request->minibatch_counter == 0) fill<T>(moving_inv_std_dev, 0);
 
             // Compute avg factor for moving average basing on number of already computed averages [factor<=0], or using user provided [factor>0] factor.
             T actual_exp_avg_factor = (exp_avg_factor > 0.0f) ? exp_avg_factor : 1.0f / (1.0f + *request->minibatch_counter);
@@ -297,7 +298,7 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
 
         auto it = format_strides_map.find(std::make_tuple(input_grad.argument.format, spatial));
         if(it==std::end(format_strides_map)) throw std::runtime_error("batch_normalization_training_backward_reference::implementation -> unknown BatchNorm format");
-        
+
         auto data_w = input_grad.argument.size.raw[2];
         auto data_h = input_grad.argument.size.raw[3];
         auto data_c = input_grad.argument.size.raw[1];
@@ -315,9 +316,9 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
         const auto num_averages = (spatial) ? data_c : data_c * data_w * data_h;
         const T inv_num_average_over = static_cast<T>(1.0 / (data_n * spatial_size));
 
-        scale_grad.fill<T>(0);
-        bias_grad.fill<T>(0);
-        input_grad.fill<T>(0);
+        fill<T>(scale_grad, 0);
+        fill<T>(bias_grad, 0);
+        fill<T>(input_grad, 0);
 
         auto compute_io_data_offset = [&element_stride, &batch_stride, &spatial_location_stride](int element, int batch, int spatial_location)
         {
@@ -558,11 +559,7 @@ primitive batch_training_backward::create(batch_training_backward::arguments arg
     std::unique_ptr<batch_training_backward> result(new batch_training_backward(arg));
 
     // lookup in database; throw if not found
-    //auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
-
+    auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = training_backward_implementation_map.find(key);
     if(it==std::end(training_backward_implementation_map)) throw std::runtime_error("not yet implemented");
 
@@ -587,11 +584,7 @@ primitive batch_inference::create(batch_inference::arguments arg)
     std::unique_ptr<batch_inference> result(new batch_inference(arg));
 
     // lookup in database; throw if not found
-    //auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
-
+    auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = inference_implementation_map.find(key);
     if(it==std::end(inference_implementation_map)) throw std::runtime_error("not yet implemented");
 
