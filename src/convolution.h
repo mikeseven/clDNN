@@ -23,7 +23,7 @@
 
 namespace neural{
     //                                           engine                          output                  input
-    using conv_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
+    using conv_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>; //todo add weights format
     using conv_bw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>; //todo
 
     #define conv_fw_implementation_map singleton_map<conv_fw_key, std::function<is_an_implementation *(convolution &)>>::instance()
