@@ -64,8 +64,8 @@ namespace neural {
 
             // general formula: output size = (input size - window size) / step + 1
             for (size_t i = 0; i < input_offset.raw.size(); ++i) {
-                if (output_size.raw[i] < (static_cast<int32_t>(input_buffer_size.raw[i]) - input_offset.raw[i]) / (stride.raw[i] + 1))
-                    throw std::runtime_error("Output size of pooling is to small.");
+                //if (output_size.raw[i] < (static_cast<int32_t>(input_buffer_size.raw[i]) - input_offset.raw[i]) / (stride.raw[i] + 1))
+                //    throw std::runtime_error("Output size of pooling is to small.");
 
                 if (output_buffer_size.raw[i] < output_size.raw[i] + output_offset.raw[i])
                     throw std::runtime_error("Pooling output buffer size is to small.");
