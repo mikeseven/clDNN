@@ -213,8 +213,8 @@ void relu_backward_cpu_avx2::implementation(const void *ptr)
 namespace {
 struct attach {
     attach() {
-        auto key_fw = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
-        auto key_bw = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
+        auto key_fw = std::make_tuple(engine::cpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
+        auto key_bw = std::make_tuple(engine::cpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
         auto val_fw = relu_cpu_avx2::create;
         auto val_bw = relu_backward_cpu_avx2::create;
 

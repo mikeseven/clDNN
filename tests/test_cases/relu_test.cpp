@@ -47,12 +47,39 @@ TEST(relu_f32_fw, basic) {
     for(size_t i = 0; i < y*x*f*b; ++i)
         buf[i] = (buf[i] > 0)? -buf[i] : buf[i];
 
-    auto act2 = relu::create({engine::reference, output, output});
+    //auto act2 = relu::create({engine::reference, output, output});
     execute({act});
 
     bool result = false;
     // every element should be 0.0f
     for(size_t i = 0; i < y*x*f*b; ++i)
+        result = result || buf[i];
+
+    EXPECT_EQ(false, result);
+}
+
+TEST(relu_f32_fw, intrinsics_avx2) {
+    const uint32_t y = 8, x = 8, f = 3, b = 2;
+
+    auto input = memory::create({ engine::cpu, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto output = memory::create({ engine::cpu, memory::format::yxfb_f32,{ b,{ y, x }, f } });
+    input.as<const memory&>().fill<float>();
+
+    auto act = relu::create({ engine::reference, output, input });
+    auto buf = static_cast<float*>(input.as<const memory&>().pointer);
+    // write output to input buffer
+    execute({ output(buf), act });
+
+    // multiply all positive intigers by -1
+    for (size_t i = 0; i < y*x*f*b; ++i)
+        buf[i] = (buf[i] > 0) ? -buf[i] : buf[i];
+
+    //auto act2 = relu::create({engine::reference, output, output});
+    execute({ act });
+
+    bool result = false;
+    // every element should be 0.0f
+    for (size_t i = 0; i < y*x*f*b; ++i)
         result = result || buf[i];
 
     EXPECT_EQ(false, result);
@@ -149,6 +176,29 @@ TEST(relu_f32_bw, basic) {
 
     bool result = true;
     for(size_t i = 0; i < y*x*f*b; ++i)
+        result &= (((fw_input_buf[i] > 0) * bw_input_buf[i]) == bw_output_buf[i]);
+
+    EXPECT_EQ(true, result);
+}
+
+TEST(relu_f32_bw, intrinsics_avx2) {
+    const uint32_t y = 8, x = 8, f = 3, b = 2;
+
+    auto fw_input = memory::create({ engine::cpu, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto bw_input = memory::create({ engine::cpu, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto bw_output = memory::create({ engine::cpu, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    fw_input.as<const memory&>().fill<float>();
+    bw_input.as<const memory&>().fill<float>();
+
+    auto act = relu_backward::create({ engine::reference,{ bw_output },{ bw_input, fw_input } });
+    execute({ act });
+
+    auto fw_input_buf = static_cast<float*>(fw_input.as<const memory&>().pointer);
+    auto bw_input_buf = static_cast<float*>(bw_input.as<const memory&>().pointer);
+    auto bw_output_buf = static_cast<float*>(bw_output.as<const memory&>().pointer);
+
+    bool result = true;
+    for (size_t i = 0; i < y*x*f*b; ++i)
         result &= (((fw_input_buf[i] > 0) * bw_input_buf[i]) == bw_output_buf[i]);
 
     EXPECT_EQ(true, result);
