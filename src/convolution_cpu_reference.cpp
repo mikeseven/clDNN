@@ -132,20 +132,10 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                                                     );
 
                         auto out_idx = calc_out_idx(output_arg.size.raw, pos_with_modified_ofm + output_offset);
-                        nd::value<uint32_t>tmp_win_pos([&](){
-                                                        auto vec = std::vector<uint32_t>({0, ofm});
-                                                        auto* win_pos_ptr = dynamic_cast<std::vector<uint32_t>*>(&win_pos);
-                                                        vec.insert(vec.end(), win_pos_ptr->begin(), win_pos_ptr->end());
-                                                        return vec;
-                                                     }());
-
-                        nd::value<uint32_t>in_pos({arg_in_idx.begin(), arg_in_idx.end()});
-                        std::cout << pos_with_modified_ofm << "\t" << out_idx << "\t\t" << tmp_win_pos << "\t" << win_idx << "\t" << filter[win_idx] << "\t\t" << in_pos << "\t" << in_idx << "\t" << input[in_idx] << std::endl; //todo remove
 
                         output[out_idx] += input[in_idx] * filter[win_idx];
                     }
                 }
-                std::cout << std::endl; //todo remove
             }
         }
             break;
