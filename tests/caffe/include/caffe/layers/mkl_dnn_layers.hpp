@@ -114,7 +114,9 @@ protected:
 
 private:
   neural::engine::type engine_;  
-  vector<primitive> convolution_fwd;
+  vector<primitive> convolution_fwd_;
+  vector<primitive> filters_;
+  vector<primitive> biases_;
   // TODO: use vector for convolution_bwd
   primitive convolution_bwd = nullptr;
   

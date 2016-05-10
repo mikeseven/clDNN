@@ -1,4 +1,4 @@
-#ifdef MKL_DNN_ENABLED
+#ifdef MKL_DNN_ENABLED_OFF // TODO
 #include <vector>
 
 #include "gtest/gtest.h"
