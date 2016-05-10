@@ -72,12 +72,7 @@ primitive normalization::response::create(response::arguments arg) {
     std::unique_ptr<response> result(new response(arg));
 
     // lookup in database; throw if not found
-    //todo tmp solution
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
-    lrn_fw_key key = std::make_tuple(arg.engine, infmt, outfmt);
-
-//    lrn_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    lrn_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = lrn_fw_implementation_map::instance().find(key);
     if(it==std::end(lrn_fw_implementation_map::instance())) throw std::runtime_error("Not yet implemented.");
 

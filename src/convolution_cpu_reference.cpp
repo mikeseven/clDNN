@@ -16,6 +16,7 @@
 
 #include "convolution_cpu_reference.h"
 #include "multidimensional_counter.h"
+#include "memory_utils.h"
 
 namespace neural {
 
@@ -32,10 +33,8 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     auto& padding       = this_conv->argument.padding;
     auto& stride        = this_conv->argument.stride;
 
-    //auto input_arg  = this_relu->input_memory(0).argument;
-    //auto output_arg = this_relu->output_memory(0).argument;
-    auto input_arg  = this_conv->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-    auto output_arg = this_conv->argument.output[0].as<const memory&>().argument;
+    auto& input_arg  = this_conv->input_memory(0).argument;
+    auto& output_arg = this_conv->output_memory(0).argument;
 
     auto& filter_arg = this_conv->argument.weight.as<const memory&>().argument; //convolution filter
     auto& bias_arg   = this_conv->argument.bias.as<const memory&>().argument;
@@ -50,12 +49,10 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     if(input_arg.format          != filter_arg.format)          throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
     if(filter_arg.size.raw.size()!= output_arg.size.raw.size()) throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
     if(bias_arg.size.raw.size()  != 3)                          throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
-    if(bias_arg.size.spatial[0]  != output_size.feature[0])     throw std::runtime_error("Convolution biases/output feature maps number does not match."); // todo need type traits for index of 'z' dimension
-                                                                                                                                                        // than this implementation will be format independent
-   // auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
-   // auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
-    auto input  = static_cast<float*>(this_conv->argument.input[0].primitive.as<const memory&>().pointer); //todo tmp solution
-    auto output = static_cast<float*>(this_conv->argument.output[0].as<const memory&>().pointer);
+    if(bias_arg.size.spatial[0]  != output_size.feature[0])     throw std::runtime_error("Convolution biases/output feature maps number does not match.");
+
+    auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
+    auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
     auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory&>().pointer);
     auto bias   = static_cast<float*>(this_conv->argument.bias.as<const memory&>().pointer);
 
@@ -74,9 +71,6 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     namespace nd = ndimensional;
     nd::value<uint32_t> range (output_size);
     nd::value<uint32_t> window_range (filter_arg.size);
-    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_in_idx  (input_arg.size);
-    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_out_idx (output_arg.size);
-    //nd::calculate_idx<uint32_t, memory::format::yxfb_f32> calc_win_idx (filter_arg.size);
     auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
     auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
     auto calc_win_idx = nd::choose_calculate_idx(filter_arg.format);
@@ -118,23 +112,14 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     auto& stride           = this_bw_conv->argument.stride;
     auto& padding          = this_bw_conv->argument.padding;
 
-    //auto& bw_input_arg     = this_bw_conv->input_memory(0).argument;
-    //auto& fw_input_arg     = this_bw_conv->input_memory(1).argument;
-    //auto& filter_arg       = this_bw_conv->input_memory(2).argument;
-    //auto& bias_arg         = this_bw_conv->input_memory(3).argument; //todo bias isn't needed in bw conv. It is only used to compare its size with bias_diff. Remove?
+    auto& bw_input_arg     = this_bw_conv->input_memory(0).argument;
+    auto& fw_input_arg     = this_bw_conv->input_memory(1).argument;
+    auto& filter_arg       = this_bw_conv->input_memory(2).argument;
+    auto& bias_arg         = this_bw_conv->input_memory(3).argument; //todo bias isn't needed in bw conv. It is only used to compare its size with bias_diff. Remove?
 
-    //auto& bw_output_arg    = this_bw_conv->output_memory(0).argument;
-    //auto& filter_diff_arg  = this_bw_conv->output_memory(1).argument;
-    //auto& bias_diff_arg    = this_bw_conv->output_memory(2).argument;
-
-    auto& bw_input_arg     = this_bw_conv->argument.input[0].primitive.as<const memory&>().argument;
-    auto& fw_input_arg     = this_bw_conv->argument.input[1].primitive.as<const memory&>().argument;
-    auto& filter_arg       = this_bw_conv->argument.input[2].primitive.as<const memory&>().argument;
-    auto& bias_arg         = this_bw_conv->argument.input[3].primitive.as<const memory&>().argument; //todo bias isn't needed in bw conv. It is only used to compare its size with bias_diff. Remove?
-
-    auto& bw_output_arg    = this_bw_conv->argument.output[0].as<const memory&>().argument;
-    auto& filter_diff_arg  = this_bw_conv->argument.output[1].as<const memory&>().argument;
-    auto& bias_diff_arg    = this_bw_conv->argument.output[2].as<const memory&>().argument;
+    auto& bw_output_arg    = this_bw_conv->output_memory(0).argument;
+    auto& filter_diff_arg  = this_bw_conv->output_memory(1).argument;
+    auto& bias_diff_arg    = this_bw_conv->output_memory(2).argument;
 
     assert( 1 == bw_input_size.feature.size() );
     assert( 1 == bw_input_size.batch.size()   );
@@ -154,26 +139,14 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     if(bias_arg.size.spatial[0]   != bw_input_arg.size.feature[0])    throw std::runtime_error("Backward convolution biases/bw_input dimensions does not match.");
     if(bias_arg.size              != bias_diff_arg.size)              throw std::runtime_error("Backward convolution bias/bias_diff size doesn't match.");
 
-    //auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer);
-    //auto fw_input     = static_cast<float*>(this_bw_conv->input_memory(1).pointer);
-    //auto weights      = static_cast<float*>(this_bw_conv->input_memory(2).pointer);
-    ////todo fw bias is used only for size check, is it needed?
+    auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer);
+    auto fw_input     = static_cast<float*>(this_bw_conv->input_memory(1).pointer);
+    auto weights      = static_cast<float*>(this_bw_conv->input_memory(2).pointer);
+    //todo fw bias is used only for size check, is it needed?
 
-    //auto bw_output    = static_cast<float*>(this_bw_conv->output_memory(0).pointer);
-    //auto weights_diff = static_cast<float*>(this_bw_conv->output_memory(1).pointer);
-    //auto bias_diff    = static_cast<float*>(this_bw_conv->output_memory(2).pointer);
-
-    //auto input  = static_cast<float*>(this_conv->argument.input[0].primitive.as<const memory&>().pointer); //todo tmp solution
-    //auto output = static_cast<float*>(this_conv->argument.output[0].as<const memory&>().pointer);
-    //auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory&>().pointer);
-    //auto bias   = static_cast<float*>(this_conv->argument.bias.as<const memory&>().pointer);
-    auto bw_input     = static_cast<float*>(this_bw_conv->argument.input[0].primitive.as<const memory&>().pointer);
-    auto fw_input     = static_cast<float*>(this_bw_conv->argument.input[1].primitive.as<const memory&>().pointer);
-    auto weights      = static_cast<float*>(this_bw_conv->argument.input[2].primitive.as<const memory&>().pointer);
-
-    auto bw_output    = static_cast<float*>(this_bw_conv->argument.output[0].as<const memory&>().pointer);
-    auto weights_diff = static_cast<float*>(this_bw_conv->argument.output[1].as<const memory&>().pointer);
-    auto bias_diff    = static_cast<float*>(this_bw_conv->argument.output[2].as<const memory&>().pointer);
+    auto bw_output    = static_cast<float*>(this_bw_conv->output_memory(0).pointer);
+    auto weights_diff = static_cast<float*>(this_bw_conv->output_memory(1).pointer);
+    auto bias_diff    = static_cast<float*>(this_bw_conv->output_memory(2).pointer);
 
     //todo review conditions below
     for(size_t i = 0; i < bw_output_offset.raw.size(); ++i){
@@ -190,15 +163,12 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
             throw std::runtime_error("Sizes of BW output and FW input buffers in convolution bw must be equal.");
     }
 
-        // initializie gradients with 0
-    //this_bw_conv->output_memory(0).fill(0.0f);
-    //this_bw_conv->output_memory(1).fill(0.0f);
-    //this_bw_conv->output_memory(2).fill(0.0f);
-    this_bw_conv->argument.output[0].as<const memory&>().fill(0.0f);
-    this_bw_conv->argument.output[1].as<const memory&>().fill(0.0f);
-    this_bw_conv->argument.output[2].as<const memory&>().fill(0.0f);
+    // initializie gradients with 0
+    fill(this_bw_conv->output_memory(0), 0.0f);
+    fill(this_bw_conv->output_memory(1), 0.0f);
+    fill(this_bw_conv->output_memory(2), 0.0f);
 
-    int f_pos = 1;
+    const int F_POS = 1;
     namespace nd = ndimensional;
     nd::value<uint32_t> bias_range (bias_arg.size);
     nd::value<uint32_t> range (bw_input_size); //todo in/out size?
@@ -227,7 +197,7 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
                     bw_output[out_idx] += sensitivity;
                     weights_diff[win_idx] += fw_input[out_idx] * sensitivity;
                 }
-                bias_diff[ pos[f_pos] ] += bw_input[in_idx];
+                bias_diff[ pos[F_POS] ] += bw_input[in_idx];
             }
             break;
         }
