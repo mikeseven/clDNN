@@ -96,7 +96,7 @@ void naive(float* input, float* output, neural::vector<uint64_t> input_dims, neu
     uint64_t in_pixel_size = input_dims.raw[1] * BATCH_ACCEPTED_BLOCK;
 
 //    auto feats = input_dims.raw[1];
-    std::memcpy(output, input, input_dims.raw[1] * BATCH_ACCEPTED_BLOCK * sizeof(float));
+    //std::memcpy(output, input, input_dims.raw[1] * BATCH_ACCEPTED_BLOCK * sizeof(float));
     for (uint64_t i = 0; i < pooling_dims.raw[3]; ++i)
     {
         for (uint64_t j = 0; j < pooling_dims.raw[2]; ++j)
@@ -117,7 +117,7 @@ void naive(float* input, float* output, neural::vector<uint64_t> input_dims, neu
             }
         }
     }
-    }
+}
 
 //struct packed_arguments{
 //    float* input;
@@ -206,31 +206,21 @@ void naive(float* input, float* output, neural::vector<uint64_t> input_dims, neu
 }
 
 namespace neural {
-/*
+
 pooling_cpu_avx2_batch24::pooling_cpu_avx2_batch24(pooling &arg)
     : is_an_implementation(neural::type_id<pooling_cpu_avx2_batch24>())
     , outer(arg) {};
 pooling_cpu_avx2_batch24::~pooling_cpu_avx2_batch24() {};
 void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
-*/
-    pooling_cpu_avx2_batch24::pooling_cpu_avx2_batch24(pooling &arg)
-    : is_an_implementation(neural::type_id<pooling_cpu_avx2_batch24>())
-    , outer(arg) {};
-
-    void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
-
     auto this_pooling = static_cast<const pooling *>(ptr);
+    auto input  = static_cast<float*>(this_pooling->input_memory(0).pointer);
+    auto output = static_cast<float*>(this_pooling->output_memory(0).pointer);
 
-    //auto input        = static_cast<float*>(this_pooling->argument.input[0].primitive.as<const memory&>().pointer);
-    //auto output       = static_cast<float*>(this_pooling->argument.output[0].as<const memory&>().pointer);
-    auto input = static_cast<float*>(this_pooling->argument.input[0].primitive.as<const memory&>().pointer);
-    auto output = static_cast<float*>(this_pooling->argument.output[0].as<const memory&>().pointer);
-
-    auto input_memory_arg  = this_pooling->argument.input[0].primitive.as<const memory&>().argument;
+    auto input_memory_arg  = this_pooling->input_memory(0).argument;
     auto input_buffer_size = input_memory_arg.size;
     auto input_offset      = this_pooling->argument.input_offset;
 
-    auto output_memory_arg = this_pooling->argument.output[0].as<const memory&>().argument;
+    auto output_memory_arg = this_pooling->output_memory(0).argument;
     auto output_buffer_size= output_memory_arg.size;
     auto output_offset     = this_pooling->argument.output_offset;
     auto output_size       = this_pooling->argument.output_size;
@@ -239,10 +229,10 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     auto window            = this_pooling->argument.size;
     //auto padding           = this_pooling->argument.padding;
 
-    int b_pos = 3; // todo typetraits
-    int f_pos = 2;
-    int x_pos = 1;
-    int y_pos = 0;
+    int b_pos = 0; // todo typetraits
+    int f_pos = 1;
+    int x_pos = 2;
+    int y_pos = 3;
     //uint64_t width = output->get_length(NN_DATA_COORD_x);
     //uint64_t height = output->get_length(NN_DATA_COORD_y);
     //uint64_t batch_blocks = output->get_length(NN_DATA_COORD_n);
@@ -279,12 +269,12 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     uint64_t pool_out_row = 0u;
     uint64_t pool_out_col = 0u;
 
-    /*
-    InputDimensions in_dims = {make<InputHeight>(input_height),
-                               make<InputWidth>(input_width),
-                               //make<InputFeats>(out_dims.feats)};
-                               make<InputFeats>(output_size.raw[f_pos])}; //todo why out?
-    */
+
+    //InputDimensions in_dims = {make<InputHeight>(input_height),
+    //                           make<InputWidth>(input_width),
+    //                           //make<InputFeats>(out_dims.feats)};
+    //                           make<InputFeats>(output_size.raw[f_pos])}; //todo why out?
+
 
     neural::vector<uint64_t> in_dims = { 1, {output_size.raw[f_pos], input_width}, input_height };
 
@@ -356,7 +346,6 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
 //    for(auto &x: jobs)
 //        x.callback(x.data);
 }
-pooling_cpu_avx2_batch24::~pooling_cpu_avx2_batch24() {};
 
 namespace{
 struct attach{
