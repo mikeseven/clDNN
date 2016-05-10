@@ -7,6 +7,8 @@
 #include "caffe/util/math_functions.hpp"
 #include "caffe/layers/mkl_dnn_layers.hpp"
 
+// TODO: 4D input ???
+
 namespace caffe {
 template <> void MKL_DNNSoftmaxLayer<double>::LayerSetUp(const vector<Blob<double>*>& bottom,
       const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
@@ -37,10 +39,10 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   top_diff_   ->memory_usr = memory::create({engine_, top_diff_   ->layout_usr, {batch, {{input_x}}, z}});
 
   // Names are for debugging only
-  bottom_data_->name = "fwd_bottom_data   @ " + this->layer_param_.name();
-  top_data_->name =    "fwd_top_data      @ " + this->layer_param_.name();
-  top_diff_->name =    "bwd_top_diff      @ " + this->layer_param_.name();
-  bottom_diff_->name = "bwd_bottom_diff   @ " + this->layer_param_.name();
+  bottom_data_->name = "fwd_bottom_data   @ " + this->layer_param_.name() + " ";
+  top_data_->name =    "fwd_top_data      @ " + this->layer_param_.name() + " ";
+  top_diff_->name =    "bwd_top_diff      @ " + this->layer_param_.name() + " ";
+  bottom_diff_->name = "bwd_bottom_diff   @ " + this->layer_param_.name() + " ";
 
   bottom_data_->create_conversions();
   top_data_   ->create_conversions();

@@ -122,16 +122,18 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   auto out_off_x = 0;
   auto out_off_z = 0;
 
+  //std::cout << "iw "  <<  iw << "  ih " << ih << "  c "  << c  <<  "  n " << n  << "\n";
+  //std::cout << "ow "  <<  ow << "  oh " << oh << "  in_off_x "  << in_off_x  <<  "  in_off_y " << in_off_y  << "\n";
 
-  fwd_bottom_data_->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {n, {ih, iw}, c}});
-  fwd_top_data_->memory_usr    = memory::create({engine_, memory::format::bfyx_f32, {n, {oh, ow}, c }});
-  fwd_bottom_data_->memory_prv = memory::create({engine_, memory::format::yxfb_f32, {n, {ih, iw}, c}});
-  fwd_top_data_->memory_prv    = memory::create({engine_, memory::format::yxfb_f32, {n, {oh, ow}, c }});
+  fwd_bottom_data_->memory_usr = memory::create({engine_, fwd_bottom_data_->layout_usr, {n, {ih, iw}, c }});
+  fwd_top_data_->memory_usr    = memory::create({engine_, fwd_top_data_   ->layout_usr, {n, {oh, ow}, c }});
+  fwd_bottom_data_->memory_prv = memory::create({engine_, fwd_bottom_data_->layout_prv, {n, {ih, iw}, c }});
+  fwd_top_data_->memory_prv    = memory::create({engine_, fwd_top_data_   ->layout_prv, {n, {oh, ow}, c }});
 
-  bwd_bottom_diff_->memory_usr = memory::create({engine_, memory::format::bfyx_f32, {n, {ih, iw}, c}});
-  bwd_top_diff_->memory_usr    = memory::create({engine_, memory::format::bfyx_f32, {n, {oh, ow}, c }});
-  bwd_bottom_diff_->memory_prv = memory::create({engine_, memory::format::yxfb_f32, {n, {ih, iw}, c}});
-  bwd_top_diff_->memory_prv    = memory::create({engine_, memory::format::yxfb_f32, {n, {oh, ow}, c }});
+  bwd_bottom_diff_->memory_usr = memory::create({engine_, bwd_bottom_diff_->layout_usr, {n, {ih, iw}, c }});
+  bwd_top_diff_->memory_usr    = memory::create({engine_, bwd_top_diff_   ->layout_usr, {n, {oh, ow}, c }});
+  bwd_bottom_diff_->memory_prv = memory::create({engine_, bwd_bottom_diff_->layout_prv, {n, {ih, iw}, c }});
+  bwd_top_diff_->memory_prv    = memory::create({engine_, bwd_top_diff_   ->layout_prv, {n, {oh, ow}, c }});
 
 
   // Names are for debugging only
@@ -145,7 +147,7 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   bwd_top_diff_   ->create_conversions();
   bwd_bottom_diff_->create_conversions();
 
-  auto mode = pooling::mode::max;
+  pooling::mode::type mode;
   switch (this->layer_param_.pooling_param().pool()) {
     case PoolingParameter_PoolMethod_MAX:
       mode = pooling::mode::max;

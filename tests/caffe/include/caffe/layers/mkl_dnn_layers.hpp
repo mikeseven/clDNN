@@ -18,19 +18,19 @@ using namespace neural;
 
 template <typename Dtype, bool is_diff>
 struct MKL_DNNMemoryDescriptor : PrvMemDescr, 
-        boost::enable_shared_from_this<MKL_DNNMemoryDescriptor<Dtype, is_diff> > {
+    boost::enable_shared_from_this<MKL_DNNMemoryDescriptor<Dtype, is_diff> > {
   
   MKL_DNNMemoryDescriptor() : 
-          layout_usr(memory::format::bfyx_f32),
-          layout_prv(memory::format::yxfb_f32) {};
+    layout_usr(memory::format::bfyx_f32),
+    layout_prv(memory::format::yxfb_f32) {};
           
-  MKL_DNNMemoryDescriptor(neural::memory::format::type layout_usr, 
-          neural::memory::format::type layout_prv) :
-          layout_usr(layout_usr),
-          layout_prv(layout_prv) {};
+  MKL_DNNMemoryDescriptor(
+    neural::memory::format::type layout_usr, 
+    neural::memory::format::type layout_prv) :
+    layout_usr(layout_usr),
+    layout_prv(layout_prv) {};
   
-  ~MKL_DNNMemoryDescriptor()
-  {
+  ~MKL_DNNMemoryDescriptor() {
     if(prv_ptr) CaffeFreeHost(prv_ptr, use_cuda);
   }
 
@@ -371,9 +371,9 @@ class MKL_DNNInnerProductLayer : public Layer<Dtype> {
       : Layer<Dtype>(param), engine_(engine),
         top_data_    (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
         bottom_data_ (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
-        weights_data_(new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        weights_data_(new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::bx_f32)),
         bias_data_   (new MKL_DNNData<Dtype>(memory::format::x_f32,  memory::format:: x_f32)),
-        weights_diff_(new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        weights_diff_(new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::bx_f32)),
         bias_diff_   (new MKL_DNNDiff<Dtype>(memory::format::x_f32,  memory::format:: x_f32)),
         top_diff_    (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
         bottom_diff_ (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)) {}
@@ -409,6 +409,8 @@ class MKL_DNNInnerProductLayer : public Layer<Dtype> {
   primitive fcFwd_ = nullptr, fcBwd_ = nullptr;
   shared_ptr<MKL_DNNData<Dtype> > top_data_, bottom_data_, weights_data_, bias_data_;
   shared_ptr<MKL_DNNDiff<Dtype> > top_diff_, bottom_diff_, weights_diff_, bias_diff_;
+  
+  primitive  bottom_data_xb_ = nullptr;
 };
 
 

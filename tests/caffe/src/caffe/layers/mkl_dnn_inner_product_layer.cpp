@@ -77,6 +77,7 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bot
 
   //std::cout << "input_x: " << input_x << "  output_x: "  << output_x <<  " batch: " << batch <<" \n";
   /* MKL-DNN setup */
+
   bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {batch, {{input_x}},  1}});
   top_data_   ->memory_prv = memory::create({engine_, top_data_   ->layout_prv, {batch, {{output_x}}, 1}});
   bottom_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_prv, {batch, {{input_x}},  1}});
@@ -88,25 +89,25 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bot
   top_diff_   ->memory_usr = memory::create({engine_, top_diff_   ->layout_usr, {batch, {{output_x}}, 1}});
 
   weights_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {input_x, {{output_x}}, 1}});
-  bias_data_   ->memory_prv = memory::create({engine_, bias_data_  ->layout_prv, {1,        {{bias_x}}, 1}});
+  bias_data_   ->memory_prv = memory::create({engine_, bias_data_  ->layout_prv, {1,        {{bias_x}},  1}});
   weights_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_prv, {input_x, {{output_x}}, 1}});
-  bias_diff_   ->memory_prv = memory::create({engine_, bias_diff_  ->layout_prv, {1,        {{bias_x}}, 1}});
+  bias_diff_   ->memory_prv = memory::create({engine_, bias_diff_  ->layout_prv, {1,        {{bias_x}},  1}});
 
   weights_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {input_x, {{output_x}}, 1}});
-  bias_data_   ->memory_usr = memory::create({engine_, bias_data_  ->layout_usr, {1,        {{bias_x}}, 1}});
+  bias_data_   ->memory_usr = memory::create({engine_, bias_data_  ->layout_usr, {1,        {{bias_x}},  1}});
   weights_diff_->memory_usr = memory::create({engine_, bottom_diff_->layout_usr, {input_x, {{output_x}}, 1}});
-  bias_diff_   ->memory_usr = memory::create({engine_, bias_diff_  ->layout_usr, {1,        {{bias_x}}, 1}});
+  bias_diff_   ->memory_usr = memory::create({engine_, bias_diff_  ->layout_usr, {1,        {{bias_x}},  1}});
 
   // Names are for debugging only
-  bottom_data_->name = "fwd_bottom_data   @ " + this->layer_param_.name();
-  top_data_   ->name = "fwd_top_data      @ " + this->layer_param_.name();
-  top_diff_   ->name = "bwd_top_diff      @ " + this->layer_param_.name();
-  bottom_diff_->name = "bwd_bottom_diff   @ " + this->layer_param_.name();
+  bottom_data_ ->name = "fwd_bottom_data   @ " + this->layer_param_.name() + "  ";
+  top_data_    ->name = "fwd_top_data      @ " + this->layer_param_.name() + "  ";
+  top_diff_    ->name = "bwd_top_diff      @ " + this->layer_param_.name() + "  ";
+  bottom_diff_ ->name = "bwd_bottom_diff   @ " + this->layer_param_.name() + "  ";
 
-  weights_data_->name = "weights_data      @ " + this->layer_param_.name();
-  bias_data_   ->name = "bias_data         @ " + this->layer_param_.name();
-  weights_diff_->name = "weights_diff      @ " + this->layer_param_.name();
-  bias_diff_   ->name = "bias_diff         @ " + this->layer_param_.name();
+  weights_data_->name = "weights_data      @ " + this->layer_param_.name() + "  ";
+  bias_data_   ->name = "bias_data         @ " + this->layer_param_.name() + "  ";
+  weights_diff_->name = "weights_diff      @ " + this->layer_param_.name() + "  ";
+  bias_diff_   ->name = "bias_diff         @ " + this->layer_param_.name() + "  ";
 
   bottom_data_->create_conversions();
   top_data_   ->create_conversions();
@@ -117,6 +118,7 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bot
   bias_data_   ->create_conversions();
   weights_diff_->create_conversions();
   bias_diff_   ->create_conversions();
+
 
   fcFwd_ = fully_connected::create({ engine_,
                                      top_data_->memory_prv,
@@ -158,6 +160,38 @@ template <typename Dtype>
 void MKL_DNNInnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
 
+  // TODO: is this temporary?
+  if(bottom[0]->get_prv_descriptor_data() != nullptr) {
+    CHECK_EQ((bottom[0]->get_prv_descriptor_data())->get_descr_type(),
+               PrvMemDescr::PRV_DESCR_MKL_DNN);
+    auto bottom_descr =  boost::static_pointer_cast<MKL_DNNData<Dtype> >
+               (bottom[0]->get_prv_descriptor_data());
+
+    if(bottom_descr->layout_prv == neural::memory::format::yxfb_f32 &&
+            bottom_data_xb_ == nullptr) {
+      auto n = bottom[0]->shape(0);
+      auto c = bottom[0]->shape(1);
+      auto h = bottom[0]->shape(2);
+      auto w = bottom[0]->shape(3);
+      bottom_data_->layout_usr = neural::memory::format::bfyx_f32;
+      bottom_data_->layout_prv = neural::memory::format::fyxb_f32;
+      bottom_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {n, {{h, w}}, c}});
+      bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {n, {{h, w}}, c}});
+
+      bottom_data_->create_conversions();
+
+      // Fake buffer for casting fyxb => xb
+      bottom_data_xb_ =  memory::create({engine_, neural::memory::format::xb_f32, {n, {{w*h*c}}, 1}});
+
+      fcFwd_ = fully_connected::create({ engine_,
+                                         top_data_->memory_prv,
+                                         bottom_data_xb_,
+                                         weights_data_->memory_prv,
+                                         bias_data_->memory_prv}
+                                         );
+    }
+  }
+
   auto bottom_data = bottom_data_->get_converted_prv(bottom[0], true);
   auto weight = weights_data_->get_converted_prv(this->blobs_[0].get(), true);
   void *top_data = nullptr;
@@ -172,7 +206,8 @@ void MKL_DNNInnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
   if (bias_term_) {
       // biases are 1D, so actually conversion not necessary, but this is consistent..
       auto bias = bias_data_->get_converted_prv(this->blobs_[1].get(), true);
-      execute({ bottom_data_ ->memory_prv(bottom_data),
+
+      execute({ (bottom_data_xb_ != nullptr) ? bottom_data_xb_(bottom_data) : bottom_data_->memory_prv(bottom_data),
                 top_data_    ->memory_prv(top_data),
                 weights_data_->memory_prv(weight),
                 bias_data_   ->memory_prv(bias),

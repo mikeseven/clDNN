@@ -6,7 +6,7 @@
 #include "caffe/layers/mkl_dnn_layers.hpp"
 
 // Uncomment to see where the layout conversions are done
-//#undef DLOG
+#undef DLOG
 #ifndef DLOG
 #include <iostream>
 #define DLOG(x) std::cout
@@ -258,8 +258,8 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
             return converted_in_fwd->prv_ptr;
           }
         }
-        DLOG(INFO) << "convert priv => priv      " << current_descr->name << " => " << this->name  << "\n";
-
+        DLOG(INFO) << "convert priv => priv      " << current_descr->name << " => " << this->name  
+                   << "  || layouts: " << current_descr->layout_prv  << " => " << this->layout_prv<< "\n";
         neural::primitive convert = reorder::create(reorder::arguments({engine::reference, current_descr->memory_prv, this->memory_prv}));
         execute({current_descr->memory_prv(current_descr->prv_ptr),
                  this->memory_prv(this->prv_ptr), convert});
@@ -273,7 +273,7 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
         return this->prv_ptr;
       }
       else if(current_descr.get() != this) {
-        DLOG(INFO) << "layout OK                 " << current_descr->name << " == " << this->name;
+        DLOG(INFO) << "layout OK                 " << current_descr->name << " == " << this->name << "\n";
       }
     }
 

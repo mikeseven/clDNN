@@ -21,14 +21,21 @@ void MKL_DNNReLULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   Dtype negative_slope = this->layer_param_.relu_param().negative_slope();
 
-//  CHECK_EQ(top[0]->shape(), bottom[0]->shape());
+  //auto s = bottom[0]->shape();
+  //auto n = s[0];
+  //auto c = s[1];
+  //auto h = s[2];
+  //auto w = s[3];
 
-  auto s = bottom[0]->shape();
-  // TODO: change format?
-  bottom_data_  = memory::create({engine_, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
-  top_data_     = memory::create({engine_, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
-  bottom_diff_  = memory::create({engine_, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
-  top_diff_     = memory::create({engine_, memory::format::yxfb_f32, {s[3], {s[1],s[0]}, s[2]}});
+  //std::cout << "n "  <<  n << "  c " << c << "  h "  << h  <<  "  w " << w  << "\n";
+
+  //if (h == 0) h = 1;
+  //if (w == 0) w = 1;
+  const int count = bottom[0]->count();
+  bottom_data_  = memory::create({engine_, memory::format::yxfb_f32, {count, {1, 1}, 1 }});
+  top_data_     = memory::create({engine_, memory::format::yxfb_f32, {count, {1, 1}, 1 }});
+  bottom_diff_  = memory::create({engine_, memory::format::yxfb_f32, {count, {1, 1}, 1 }});
+  top_diff_     = memory::create({engine_, memory::format::yxfb_f32, {count, {1, 1}, 1 }});
 
   reluFwd_ = relu::create({engine_, top_data_, bottom_data_, negative_slope});
   reluBwd_ = relu_backward::create({engine_, {bottom_diff_}, {top_diff_, bottom_data_}, negative_slope});
