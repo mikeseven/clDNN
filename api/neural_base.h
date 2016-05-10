@@ -110,7 +110,7 @@ template<typename T> struct vector {
     }
     vector() : raw(0), batch(raw,0,0), feature(raw,0,0), spatial(raw,0,0) {}
     vector(size_t size): raw(2+size), batch(raw,0,1), feature(raw,1,2), spatial(raw,2, 2+size) {}
-    vector(const T arg_batch, const std::vector<T> &arg_spatial, const T arg_feature)
+    vector(const T arg_batch, const std::vector<T> arg_spatial, const T arg_feature)
         : batch(raw,0,1)
         , feature(raw,1,2)
         , spatial(raw,2, 2+arg_spatial.size())
@@ -135,8 +135,7 @@ template<typename T> struct vector {
     {
         raw.resize(len_batch + len_feature + len_spatial);
     };
-
-    vector(const std::vector<T> &arg_spatial, const T arg_feature)
+    vector(const std::vector<T> arg_spatial, const T arg_feature)
         : batch(raw,0,1)
         , feature(raw,1,2)
         , spatial(raw,2,2+arg_spatial.size())
@@ -145,16 +144,16 @@ template<typename T> struct vector {
         raw.push_back(arg_feature);
         raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
     };
-    vector(const std::vector<T> &arg_spatial, const std::vector<T> &arg_feature)
-    : batch  (raw, 0, 1)
-    , feature(raw, 1, 1+arg_feature.size())
-    , spatial(raw, 1+arg_feature.end_, 1+arg_feature.end_)
+    vector(const std::vector<T> &arg_spatial, const std::vector<T> arg_feature)
+        : batch  (raw, 0, 1)
+        , feature(raw, 1, 1+arg_feature.size())
+        , spatial(raw, 1+arg_feature.end_, 1+arg_feature.end_)
     {
         raw.push_back(1);
         raw.insert(raw.end(), arg_feature.begin(), arg_feature.end());
         raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
     };
-    vector(const std::vector<T> &arg_spatial)
+    vector(const std::vector<T> arg_spatial)
         : batch(raw,0,1)
         , feature(raw,1,2)
         , spatial(raw,2,2+arg_spatial.size())
@@ -163,7 +162,7 @@ template<typename T> struct vector {
         raw.push_back(1);
         raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
     };
-    vector(const T arg_batch, const std::vector<T> &arg_spatial)
+    vector(const T arg_batch, const std::vector<T> arg_spatial)
         : batch(raw,0,1)
         , feature(raw,1,2)
         , spatial(raw,2, 2+arg_spatial.size())
@@ -298,7 +297,7 @@ class primitive {
 public:
     primitive(const is_a_primitive *raw) : _pointer(raw) {};
     primitive(const primitive &other) : _pointer(other._pointer) {};
-    any_value_type_lookup operator[] (const std::string &key) const;
+    any_value_type_lookup operator[] (const std::string &arg) const;
     const primitive operator()(void *argument) const;
 #if defined __GNUC__
 #   pragma GCC diagnostic push
@@ -383,9 +382,10 @@ inline size_t                       primitive::input::size() const { return get_
 inline const primitive              primitive::operator()(void *argument) const { _pointer->execute_argument(argument); return *this; }
 inline const std::vector<task> &    primitive::work() { return _pointer->_work; }
 inline size_t                       primitive::id() const { return _pointer->_type_traits->id; }
-
 inline const primitive              primitive::output::operator[](uint32_t at) const { return get_base()->_pointer.get()->output()[at]; }
 inline size_t                       primitive::output::size() const { return get_base()->_pointer.get()->output().size(); }
+inline any_value_type_lookup        primitive::operator[](const std::string &key) const { return any_value_type_lookup(_pointer->_map, key); }
+
 
 template<typename T> T primitive::as() const {
     // [C++1x] replace with static_assert
@@ -405,4 +405,5 @@ public:
 
 // execution of sequence of primitives
 DLL_SYM void execute(std::vector<primitive>);
+
 }
