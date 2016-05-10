@@ -18,7 +18,7 @@
 #include "multidimensional_counter.h"
 
 namespace neural {
-
+/*
     struct pooling_reference : is_an_implementation {
         const pooling &outer;
         pooling_reference(pooling &arg)
@@ -28,6 +28,12 @@ namespace neural {
         ~pooling_reference() {}
 
         static void implementation(const void *ptr) {
+        */
+    pooling_cpu_reference::pooling_cpu_reference(pooling &arg)
+        : is_an_implementation(neural::type_id<pooling_cpu_reference>())
+        , outer(arg) {};
+    pooling_cpu_reference::~pooling_cpu_reference() {};
+    void pooling_cpu_reference::implementation(const void *ptr) {
             auto this_pooling = static_cast<const pooling *>(ptr);
             //auto input        = static_cast<float*>(this_pooling->input_memory(0).pointer);
             //auto output       = static_cast<float*>(this_pooling->output_memory(0).pointer);
@@ -115,13 +121,13 @@ namespace neural {
             default:
                 throw std::runtime_error("Unknown pooling mode.");
             }
-        }
-
+        //}
+        /*
         std::vector<task> work() {
             return{ task{ implementation, &outer } };
         }
 
-        static is_an_implementation *create(pooling &arg) { return new pooling_reference(arg); };
+        static is_an_implementation *create(pooling &arg) { return new pooling_reference(arg); };*/
     };
 
 /*pooling_cpu_reference::pooling_cpu_reference(pooling &arg)
@@ -228,7 +234,7 @@ struct attach{
         auto val_fw = pooling_cpu_reference::create;
   //      auto val_bw = pooling_backward_cpu_reference::create;
 
-        pool_fw_implementation_map.insert( {key, val_fw} );
+        pool_fw_implementation_map::instance().insert( {key, val_fw} );
   //      pool_bw_implementation_map.insert( {key, val_bw} );
     }
     ~attach(){}

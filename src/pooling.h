@@ -25,6 +25,7 @@ namespace neural{
     using pool_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
     using pool_bw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>; //todo
 
-    extern singleton_map<pool_fw_key, std::function<is_an_implementation *(pooling &)>>         & pool_fw_implementation_map;
+    //extern singleton_map<pool_fw_key, std::function<is_an_implementation *(pooling &)>>         & pool_fw_implementation_map;
+    using pool_fw_implementation_map = singleton_map<pool_fw_key, std::function<is_an_implementation *(pooling &)>>;
 //    extern singleton_map<pool_bw_key, std::function<is_an_implementation *(pooling_backward &)>>& pool_bw_implementation_map;
 }

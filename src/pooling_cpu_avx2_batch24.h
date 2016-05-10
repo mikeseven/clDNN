@@ -28,6 +28,11 @@ namespace neural {
         std::vector<task> work() { return {task{implementation, &outer}}; };
 
         const pooling &outer;
+        /*static is_an_implementation *create(pooling &arg) { return new pooling_cpu_avx2_batch24(arg); };
+        std::vector<task> work() { return pool_avx2_ptr->work(); };
+
+        std::unique_ptr<is_an_implementation> pool_avx2_ptr;
+        const pooling &outer;*/
     };
     //struct pooling_backward_cpu_reference : is_an_implementation {
     //    pooling_backward_cpu_reference(pooling_backward &arg);

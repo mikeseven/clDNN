@@ -95,7 +95,7 @@ void naive(float* input, float* output, neural::vector<uint64_t> input_dims, neu
     uint64_t batch_accs = BATCH_ACCEPTED_BLOCK / BATCH_SHIFT;
     uint64_t in_pixel_size = input_dims.raw[1] * BATCH_ACCEPTED_BLOCK;
 
-    auto feats = input_dims.raw[1];
+//    auto feats = input_dims.raw[1];
     std::memcpy(output, input, input_dims.raw[1] * BATCH_ACCEPTED_BLOCK * sizeof(float));
     for (uint64_t i = 0; i < pooling_dims.raw[3]; ++i)
     {
@@ -206,15 +206,23 @@ void naive(float* input, float* output, neural::vector<uint64_t> input_dims, neu
 }
 
 namespace neural {
+/*
 pooling_cpu_avx2_batch24::pooling_cpu_avx2_batch24(pooling &arg)
     : is_an_implementation(neural::type_id<pooling_cpu_avx2_batch24>())
     , outer(arg) {};
 pooling_cpu_avx2_batch24::~pooling_cpu_avx2_batch24() {};
 void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
+*/
+    pooling_cpu_avx2_batch24::pooling_cpu_avx2_batch24(pooling &arg)
+    : is_an_implementation(neural::type_id<pooling_cpu_avx2_batch24>())
+    , outer(arg) {};
+
+    void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
+
     auto this_pooling = static_cast<const pooling *>(ptr);
+
     //auto input        = static_cast<float*>(this_pooling->argument.input[0].primitive.as<const memory&>().pointer);
     //auto output       = static_cast<float*>(this_pooling->argument.output[0].as<const memory&>().pointer);
-
     auto input = static_cast<float*>(this_pooling->argument.input[0].primitive.as<const memory&>().pointer);
     auto output = static_cast<float*>(this_pooling->argument.output[0].as<const memory&>().pointer);
 
@@ -229,7 +237,7 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
 
     auto stride            = this_pooling->argument.stride;
     auto window            = this_pooling->argument.size;
-    auto padding           = this_pooling->argument.padding;
+    //auto padding           = this_pooling->argument.padding;
 
     int b_pos = 3; // todo typetraits
     int f_pos = 2;
@@ -238,8 +246,8 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     //uint64_t width = output->get_length(NN_DATA_COORD_x);
     //uint64_t height = output->get_length(NN_DATA_COORD_y);
     //uint64_t batch_blocks = output->get_length(NN_DATA_COORD_n);
-    uint64_t width  = output_size.raw[x_pos];
-    uint64_t height = output_size.raw[y_pos];
+    //uint64_t width  = output_size.raw[x_pos];
+    //uint64_t height = output_size.raw[y_pos];
     uint64_t batch_blocks = output_size.raw[b_pos];
 
     //assert(width == out_dims.width);
@@ -338,7 +346,7 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
             naive(curr_in_base_buffer, curr_out_buffer, in_dims, pooling_dims, pooling_stride);
             return true;
         };
-    size_t num_threads = 1; // todo
+//    size_t num_threads = 1; // todo
 
     pull_job();
 //   // std::vector<nn_multithreaded_request> jobs(device->thread_pool.get_num_threads(), {thread_job, nullptr});
@@ -348,15 +356,15 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
 //    for(auto &x: jobs)
 //        x.callback(x.data);
 }
+pooling_cpu_avx2_batch24::~pooling_cpu_avx2_batch24() {};
+
 namespace{
 struct attach{
     attach(){
         auto key = std::make_tuple(engine::cpu, memory::format::yxfb_f32, memory::format::yxfb_f32); //todo is this key ok?
         auto val_fw = pooling_cpu_avx2_batch24::create;
-  //      auto val_bw = pooling_cpu_avx2_batch24::create;
 
-        pool_fw_implementation_map.insert( {key, val_fw} );
-  //      pool_bw_implementation_map.insert( {key, val_bw} );
+        pool_fw_implementation_map::instance().insert( {key, val_fw} );
     }
     ~attach(){}
 };

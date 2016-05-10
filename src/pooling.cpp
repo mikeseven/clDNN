@@ -18,7 +18,7 @@
 #include "pooling.h"
 
 namespace neural {
-
+/*
 struct pooling_reference : is_an_implementation {
     const pooling &outer;
     pooling_reference(pooling &arg)
@@ -123,7 +123,7 @@ struct pooling_reference : is_an_implementation {
 
     static is_an_implementation *create(pooling &arg) { return new pooling_reference(arg); };
 };
-
+*/
 pooling::arguments::arguments( neural::engine::type     eng,
                                pooling::mode::type      p_mode,
                                memory::format::type     o_frmt,
@@ -203,27 +203,15 @@ pooling::arguments::arguments( neural::engine::type     eng,
     , size(siz)
     , padding(padd) {};
 
-//                                    engine          output                  input
-using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
-
-// map of available implementations
-static std::map<implementation_key, std::function<is_an_implementation *(pooling &)>> implementation_map = {
-    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), pooling_cpu_reference::create}
-};
-
 // creates primitive with pooling implementation that supports provided arguments
 primitive pooling::create(pooling::arguments arg) {
     // wrap relu into RAII wrapper
     std::unique_ptr<pooling> result(new pooling(arg));
 
     // lookup in database; throw if not found
-            //todo tmp solution
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt= result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
-//    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto it = implementation_map.find(key);
-    if(it==std::end(implementation_map)) throw std::runtime_error("not yet implemented");
+    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto it = pool_fw_implementation_map::instance().find(key);
+    if(it==std::end(pool_fw_implementation_map::instance())) throw std::runtime_error("not yet implemented");
 
     // create implementation & attach it to result
     auto implementation = it->second(*result);
