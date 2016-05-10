@@ -46,8 +46,6 @@ struct fully_connected_reference : is_an_implementation {
 
         auto& weight_arg = this_fc->input_memory(1).argument;
 
-        auto& bias_arg = this_fc->argument.input[2].primitive.as<const memory&>().argument;
-
         if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::runtime_error("Fully connected input/output number of dimension does not match.");
         if (input_arg.format             != output_arg.format)      throw std::runtime_error("Fully connected input/output data format does not match.");
         if (weight_arg.format            != memory::format::xb_f32 &&
@@ -85,7 +83,7 @@ struct fully_connected_reference : is_an_implementation {
                     auto w_idx = calc_w_idx(weight_arg.size.raw, arg_weight_idx);
                     output[out_idx + pos_in[BATCH_INDEX]] += input[in_idx] * weight[w_idx];
                 }
-                for (auto  b=0 ; b < range_input[BATCH_INDEX] ; b++)
+                for (auto  b=0u; b < range_input[BATCH_INDEX]; b++)
                     output[out_idx + b] += bias[pos_out[DATA_INDEX]];
         }
     }
