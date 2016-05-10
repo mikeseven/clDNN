@@ -49,17 +49,21 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     assert( 1 == filter_arg.size.batch[0] );
     assert( output_size.feature[0] == filter_arg.size.feature[0] ); // memory::format oixy
 
-    if(input_arg.size.raw.size()   != output_arg.size.raw.size())  throw std::runtime_error("Convolution input/output number of dimension does not match.");
-    if(stride.raw.size()           != output_arg.size.raw.size())  throw std::runtime_error("Convolution stride/output number of dimension does not match.");
-    if(input_arg.format            != memory::format::yxfb_f32)    throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
-    if(input_arg.format            != output_arg.format)           throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
-    if(filter_arg.size.raw.size()  != output_arg.size.raw.size()+1)throw std::runtime_error("Convolution window_size != 5");
-    if(bias_arg.size.raw.size()    != 3)                           throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
-    if(bias_arg.size.spatial[0]    != output_size.feature[0])      throw std::runtime_error("Convolution biases/output feature maps number does not match.");
+    if(input_arg.size.raw.size()  != output_arg.size.raw.size())  throw std::runtime_error("Convolution input/output number of dimension does not match.");
+    if(stride.raw.size()          != output_arg.size.raw.size())  throw std::runtime_error("Convolution stride/output number of dimension does not match.");
+    if(input_arg.format           != memory::format::yxfb_f32)    throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
+    if(input_arg.format           != output_arg.format)           throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
+    if(filter_arg.size.raw.size() != output_arg.size.raw.size()+1)throw std::runtime_error("Convolution window_size != 5");
+    if(bias_arg.size.raw.size()   != 3)                           throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
+    if(bias_arg.size.spatial[0]   != output_size.feature[0])      throw std::runtime_error("Convolution biases/output feature maps number does not match.");
+    if(output_arg.size.feature[0]-output_offset.feature[0] != output_size.feature[0]
+        || output_size.feature[0] != filter_arg.size.feature[0])
+        throw std::runtime_error("Convolution weights/output feature maps number does not match.");
+    if(input_arg.size.feature[0] - input_offset.feature[0] != filter_arg.size.feature[1])
+        throw std::runtime_error("Convolution weights/input feature maps number does not match.");
 
     // todo remove
-    if(filter_arg.format != memory::format::oixy_f32) throw std::runtime_error("conv weights arent oixy_f32 format");   // only yxfb_f32 format is supported
-
+    if(filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");   // only yxfb_f32 format is supported
 
     auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
     auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
@@ -79,12 +83,15 @@ void convolution_cpu_reference::implementation(const void *ptr) {
 
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
     namespace nd = ndimensional;
-    nd::value<uint32_t> range (output_size);
-    // window range neural::vector is: {b}, {ofm, ifm} {spatials}
+    nd::value<uint32_t> range (output_size.raw);
+
+    // weights neural::vector is: {b}, {ofm, ifm} {spatials}
     // ofm - output feature maps
     // ifm - input feature maps
-    // b = 1, always
-    // Ofm is given by outer loops so iterate in the inner loop through: {ifm, spatials}
+    // b = 1 always
+    // (weights can't have batch so it is equall to 1)
+    // Ofm and batch is cropped, ofm will be hold manually
+    // Batch is included in output size
     nd::value<uint32_t> window_range_cropped ({filter_arg.size.raw.cbegin()+2, filter_arg.size.raw.cend()});
     auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
     auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
@@ -93,30 +100,45 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     switch(padding){
         case padding::zero:
         {
-            nd::value<uint32_t> win_pos(filter_arg.size.raw.size()); //zero initialized nd::value
             for(auto pos : range) {
-                float acc = 0;
                 auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
+                output[out_idx] = bias[pos[f_pos]];
+            }
 
-                win_pos[1] = pos[f_pos]; // assign ofm
-                for(auto win_pos_cropped : window_range_cropped){
-                    const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos_cropped;
+            // Ofm in weights and feature maps in output size is the same.
+            // Iteration through ofm will be done in weights loop
+            // so feature maps here are modified to not iterate 2 times through the same data.
+            range[1] = 1;
 
-                    if( nd::is_out_of_range(input_arg.size, arg_in_idx) )
-                        continue;
+            for(auto pos : range) { // {b}, {1}, {spatials}
+                for(auto win_pos : window_range_cropped){ // {ifm}, {spatials}
+                    for(uint32_t ofm = output_offset.feature[0]; ofm < output_offset.feature[0]+output_size.feature[0]; ++ofm){ // ofm
+                        auto pos_with_modified_ofm(pos); // assign current ofm to output position
+                        pos_with_modified_ofm[1] = ofm;
 
-                    auto in_idx  = calc_in_idx (input_arg.size.raw, {arg_in_idx.begin(), arg_in_idx.end()} );
-                    std::copy(win_pos_cropped.rbegin(), win_pos_cropped.rend(), win_pos.rbegin()); // assign ifm and {spatials} at proper positions (batch and ofm fields will be untouched)
+                        std::vector<uint32_t> arg_in_idx = pos*stride + input_offset + win_pos;
 
-                    auto win_idx = calc_win_idx(filter_arg.size.raw, win_pos );
+                        if( nd::is_out_of_range(input_arg.size, arg_in_idx) )
+                            continue;
 
-                    nd::value<uint32_t>in_pos({arg_in_idx.begin(), arg_in_idx.end()});
-                    std::cout << pos << "\t" << out_idx << "\t\t" << win_pos << "\t" << win_idx << "\t\t" << in_pos << "\t" << in_idx << std::endl; //todo remove
+                        auto in_idx  = calc_in_idx ( input_arg.size.raw, {arg_in_idx.begin(), arg_in_idx.end()} );
+                        auto win_idx = calc_win_idx( filter_arg.size.raw,
+                                                     [&](){
+                                                        auto vec = std::vector<uint32_t>({0, ofm});
+                                                        auto* win_pos_ptr = dynamic_cast<std::vector<uint32_t>*>(&win_pos);
+                                                        vec.insert(vec.end(), win_pos_ptr->begin(), win_pos_ptr->end());
+                                                        return vec;
+                                                     }()
+                                                    );
 
-                    acc += input[in_idx] * filter[win_idx];
+                        auto out_idx = calc_out_idx(output_arg.size.raw, pos_with_modified_ofm + output_offset);
+                       // nd::value<uint32_t>in_pos({arg_in_idx.begin(), arg_in_idx.end()});
+                       // std::cout << pos << "\t" << out_idx << "\t\t" << win_pos << "\t" << win_idx << "\t\t" << in_pos << "\t" << in_idx << std::endl; //todo remove
+
+                        output[out_idx] += input[in_idx] * filter[win_idx];
+                    }
                 }
-                std::cout << std::endl; //todo remove
-                output[out_idx] = acc + bias[ pos[f_pos] ];
+                //std::cout << std::endl; //todo remove
             }
         }
             break;

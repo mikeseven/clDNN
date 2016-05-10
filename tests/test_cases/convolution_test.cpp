@@ -49,7 +49,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     auto input  = memory::create({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}, true});
     auto output = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
-    auto weights= memory::create({engine::reference, memory::format::oixy_f32, {1, {2, 2},{1, 1}}, true});
+    auto weights= memory::create({engine::reference, memory::format::oiyx_f32, {1, {2, 2},{1, 1}}, true});
     auto biases = memory::create({engine::reference, memory::format::   x_f32, {1, {{1}} , 1}, true});
 
     set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f, 0.5f, -1.0f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f});
@@ -88,7 +88,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
 //  3.65 -5.36
     auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{2, {2, 2}, 1}, true });
     auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{2, {1, 1}, 1}, true });
-    auto weights = memory::create({ engine::reference, memory::format::oixy_f32,{1, {2, 2},{1, 1}}, true });
+    auto weights = memory::create({ engine::reference, memory::format::oiyx_f32,{1, {2, 2},{1, 1}}, true });
     auto biases  = memory::create({ engine::reference, memory::format::   x_f32,{1, {{1}} , 1}, true });
 
     set_values(input,  { 0.5f, 2.3f, 1.5f, -0.4f, 2.0f, 1.0f, -4.0f, 3.0f });
@@ -103,11 +103,11 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
     EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 0));
     EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 1));
 }
-/*
-TEST(convolution_f32_fw, basic_wsiz2x1x2_in1x1x2_nopad) {
-//  Filter : 2x1x2
-//  Input  : 1x1x2
-//  Output : 1x2x1
+
+TEST(convolution_f32_fw, ofm_wsiz2x1x2x1_in1x2x1_nopad) {
+//  Filter : 1x2x1x2x1
+//  Input  : 1x1x2x1
+//  Output : 1x2x1x1
 //
 //  Input:
 //  1.0    2.0
@@ -123,16 +123,16 @@ TEST(convolution_f32_fw, basic_wsiz2x1x2_in1x1x2_nopad) {
 //   5.1  f=0
 //  -5.2  f=1
 
-    auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{{2}}, 1}, true });
-    auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{{1}}, 2}, true });
-    auto weights = memory::create({ engine::reference, memory::format::oixy_f32,{3 ,{{2}},{2, 1}}, true });
+    auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 1}, 1}, true });
+    auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 2}, true });
+    auto weights = memory::create({ engine::reference, memory::format::oiyx_f32,{1 ,{2, 1},{2, 1}}, true });
     auto biases  = memory::create({ engine::reference, memory::format::   x_f32,{1 ,{{2}}, 1}, true });
 
     set_values(input,   { 1.0f, 2.0f });
     set_values(weights, { 1.0f, 2.0f, -1.0f, -2.0f });
     set_values(biases,  { 0.1f, -0.2f});
 
-    auto conv = convolution::create({ engine::reference, output, input, { 1, {2, 2}, 1 }, weights, biases, padding::zero });
+    auto conv = convolution::create({ engine::reference, output, input, { 1, {5, 5}, 1 }, weights, biases, padding::zero });
 
     execute({ conv });
 
@@ -140,7 +140,50 @@ TEST(convolution_f32_fw, basic_wsiz2x1x2_in1x1x2_nopad) {
     EXPECT_FLOAT_EQ(5.1f, get_value<float>(output_memory, 0));
     EXPECT_FLOAT_EQ(-5.2f, get_value<float>(output_memory, 1));
 }
-*/
+
+TEST(convolution_f32_fw, ofm_wsiz3x2x2x1_in2x2x1_nopad) {
+//  Filter : 1x3x2x2x1
+//  Input  : 1x2x2x1
+//  Output : 1x3x1x1
+//
+//  Input:
+//  1.0    2.0  f=0
+//  3.0    4.0  f=1
+//
+// Filter:
+//   1.0    1.0  f=0
+//   1.0    1.0
+//   2.0    2.0  f=1
+//   2.0    2.0
+//   3.0    3.0  f=2
+//   3.0    3.0
+//  Bias:
+//   -5     -6     -7
+//
+//  Output:
+//    5.0  f=0
+//   14.0  f=1
+//   23.0  f=2
+
+    auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 1}, 2}, true });
+    auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 3}, true });
+    auto weights = memory::create({ engine::reference, memory::format::oiyx_f32,{1 ,{2, 1},{3, 2}}, true });
+    auto biases  = memory::create({ engine::reference, memory::format::   x_f32,{1 ,{{3}}, 1}, true });
+
+    set_values(input,   { 1.0f, 3.0f, 2.0f, 4.0f });
+    set_values(weights, { 1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 3.0f });
+    set_values(biases,  { -5.0f, -6.0f, -7.0f});
+
+    auto conv = convolution::create({ engine::reference, output, input, { 1, {5, 5}, 1 }, weights, biases, padding::zero });
+
+    execute({ conv });
+
+    auto& output_memory = output.as<const memory&>();
+    EXPECT_FLOAT_EQ(5.0f, get_value<float>(output_memory, 0));
+    EXPECT_FLOAT_EQ(14.0f, get_value<float>(output_memory, 1));
+    EXPECT_FLOAT_EQ(23.0f, get_value<float>(output_memory, 2));
+}
+
 TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
     //  Filter : 2x2x1x3
     //  Stride : 2x2
@@ -165,7 +208,7 @@ TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
 
     auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 2}, 1}, true });
     auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 3}, true });
-    auto weights = memory::create({ engine::reference, memory::format::oixy_f32,{3 ,{2, 2},{1, 1}}, true });
+    auto weights = memory::create({ engine::reference, memory::format::oiyx_f32,{3 ,{2, 2},{1, 1}}, true });
     auto biases  = memory::create({ engine::reference, memory::format::   x_f32,{1 ,{{3 }}, 1}, true });
 
     set_values(input,   { -2.3f, -0.1f, 3.1f, 1.9f });
@@ -206,7 +249,7 @@ TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //  12.25
     auto input  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
     auto output = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {1, 1}, 1}, true});
-    auto weights= memory::create({engine::reference, memory::format::oixy_f32, { 1, {3, 3},{1, 1}}, true});
+    auto weights= memory::create({engine::reference, memory::format::oiyx_f32, { 1, {3, 3},{1, 1}}, true});
     auto biases = memory::create({engine::reference, memory::format::   x_f32, { 1, {{1}} , 1}, true});
 
     set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f});
@@ -247,7 +290,7 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //   rnd  -7.25
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
-    auto weights= memory::create({engine::cpu, memory::format::oixy_f32, {1 ,{3, 3},{1, 1}}, true});
+    auto weights= memory::create({engine::cpu, memory::format::oiyx_f32, {1 ,{3, 3},{1, 1}}, true});
     auto biases = memory::create({engine::cpu, memory::format::   x_f32, {1 ,{{1}} , 1}, true});
 
     set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f});

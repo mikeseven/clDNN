@@ -40,7 +40,7 @@ struct memory : is_a_primitive {
         bfyx_f32,
         bxyf_f32,
         bfxy_f32,
-        oixy_f32,   // format used only for weights: o - output feature maps, i - input feature maps. Batch is always omitted during calculations, but it must be preasent due to compatibility reaseons.
+        oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps. Batch is always omitted during calculations, but it must be preasent due to compatibility reaseons.
         scalar_f64, // single scalar, float64
         x_f64,
         yxfb_f64,   // 3D+batch, float64
@@ -67,7 +67,7 @@ struct memory : is_a_primitive {
         case format::bfyx_f32:
         case format::bxyf_f32:
         case format::bfxy_f32:
-        case format::oixy_f32: return {4, type_id<float>()};
+        case format::oiyx_f32: return {4, type_id<float>()};
         case format::scalar_f64:
         case format::   x_f64: return {1, type_id<double>()};
         case format::yxfb_f64:

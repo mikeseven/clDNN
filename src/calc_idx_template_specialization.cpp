@@ -81,7 +81,7 @@ size_t index<neural::memory::format::bfxy_f32>(std::vector<uint32_t> size, std::
     return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));
 };
 template<>
-size_t index<neural::memory::format::oixy_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+size_t index<neural::memory::format::oiyx_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(
         [&]() -> bool {
         for (size_t i = 0; i < pos.size(); ++i)
@@ -109,8 +109,8 @@ fptr choose_calculate_idx(neural::memory::format::type arg){
         case neural::memory::format::type::bfxy_f32:
             ptr = index<neural::memory::format::type::bfxy_f32>;
             break;
-        case neural::memory::format::type::oixy_f32:
-            ptr = index<neural::memory::format::type::oixy_f32>;
+        case neural::memory::format::type::oiyx_f32:
+            ptr = index<neural::memory::format::type::oiyx_f32>;
             break;
         default:
             throw std::runtime_error("choose_calculate_idx has no case for memory::format " + std::to_string(arg));

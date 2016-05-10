@@ -46,7 +46,7 @@ void TEST() {
 
     auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 1}, 1}, true });
     auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 2}, true });
-    auto weights = memory::create({ engine::reference, memory::format::oixy_f32,{1 ,{2, 1},{2, 1}}, true });
+    auto weights = memory::create({ engine::reference, memory::format::oiyx_f32,{1 ,{2, 1},{2, 1}}, true });
     auto biases  = memory::create({ engine::reference, memory::format::   x_f32,{1 ,{{2}}, 1}, true });
 
     set_values(input,   { 1.0f, 2.0f });
