@@ -96,7 +96,7 @@ void naive(float* input, float* output, neural::vector<uint64_t> input_dims, neu
     uint64_t in_pixel_size = input_dims.raw[1] * BATCH_ACCEPTED_BLOCK;
 
 //    auto feats = input_dims.raw[1];
-    std::memcpy(output, input, input_dims.raw[1] * sizeof(float));
+    std::memcpy(output, input, input_dims.raw[1] * BATCH_ACCEPTED_BLOCK * sizeof(float));
     for (uint64_t i = 0; i < pooling_dims.raw[3]; ++i)
     {
         for (uint64_t j = 0; j < pooling_dims.raw[2]; ++j)
@@ -260,10 +260,10 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     //uint64_t output_pixel_size = BATCH_ACCEPTED_BLOCK * output->parent->lengths.t[NN_DATA_COORD_z];
     uint64_t input_width       = input_buffer_size.raw[x_pos];
     uint64_t input_height      = input_buffer_size.raw[y_pos];
-    uint64_t input_pixel_size  = BATCH_ACCEPTED_BLOCK * output_buffer_size.raw[f_pos]; //todo why out?
+    uint64_t input_pixel_size  = batch_blocks * input_buffer_size.raw[f_pos]; //todo why out?
     uint64_t output_width      = output_buffer_size.raw[x_pos];
     uint64_t output_height     = output_buffer_size.raw[y_pos];
-    uint64_t output_pixel_size = BATCH_ACCEPTED_BLOCK * output_buffer_size.raw[f_pos];
+    uint64_t output_pixel_size = batch_blocks * output_buffer_size.raw[f_pos];
 
     uint64_t pool_b = 0u;
     uint64_t pool_out_row = 0u;
@@ -276,14 +276,14 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     //                           make<InputFeats>(output_size.raw[f_pos])}; //todo why out?
 
 
-    neural::vector<uint64_t> in_dims = { 1, {output_size.raw[f_pos], input_width}, input_height };
+    neural::vector<uint64_t> in_dims = { 1,{ input_height, input_width }, output_size.raw[f_pos] };
 
 
     //todo added, what is it?
     //PoolingDimensions pd(make<PoolingHeight>(window.raw[1]), make<PoolingWidth>(window.raw[0]));
     //Stride            ps({make<Rows>(stride.raw[1]), make<Cols>(stride.raw[0])});
-    neural::vector<uint64_t> pooling_dims = { 1,{ 1, window.raw[0] }, window.raw[1] };
-    neural::vector<uint64_t> pooling_stride = { 1,{ 1, stride.raw[0] }, stride.raw[1] };
+    neural::vector<uint64_t> pooling_dims = { 1,{ window.raw[0], window.raw[1] }, 1 };
+    neural::vector<uint64_t> pooling_stride = { 1,{ stride.raw[0], stride.raw[1] }, 1 };
     //PoolingInfo info({pd,ps});
 
     std::mutex mtx; //todo remove
