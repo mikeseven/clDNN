@@ -63,7 +63,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
         throw std::runtime_error("Convolution weights/input feature maps number does not match.");
 
     // todo remove
-    if(filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");   // only yxfb_f32 format is supported
+    if(filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");
 
     auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
     auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
@@ -132,13 +132,20 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                                                     );
 
                         auto out_idx = calc_out_idx(output_arg.size.raw, pos_with_modified_ofm + output_offset);
-                       // nd::value<uint32_t>in_pos({arg_in_idx.begin(), arg_in_idx.end()});
-                       // std::cout << pos << "\t" << out_idx << "\t\t" << win_pos << "\t" << win_idx << "\t\t" << in_pos << "\t" << in_idx << std::endl; //todo remove
+                        nd::value<uint32_t>tmp_win_pos([&](){
+                                                        auto vec = std::vector<uint32_t>({0, ofm});
+                                                        auto* win_pos_ptr = dynamic_cast<std::vector<uint32_t>*>(&win_pos);
+                                                        vec.insert(vec.end(), win_pos_ptr->begin(), win_pos_ptr->end());
+                                                        return vec;
+                                                     }());
+
+                        nd::value<uint32_t>in_pos({arg_in_idx.begin(), arg_in_idx.end()});
+                        std::cout << pos_with_modified_ofm << "\t" << out_idx << "\t\t" << tmp_win_pos << "\t" << win_idx << "\t" << filter[win_idx] << "\t\t" << in_pos << "\t" << in_idx << "\t" << input[in_idx] << std::endl; //todo remove
 
                         output[out_idx] += input[in_idx] * filter[win_idx];
                     }
                 }
-                //std::cout << std::endl; //todo remove
+                std::cout << std::endl; //todo remove
             }
         }
             break;

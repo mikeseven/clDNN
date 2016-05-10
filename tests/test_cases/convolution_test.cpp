@@ -113,8 +113,8 @@ TEST(convolution_f32_fw, ofm_wsiz2x1x2x1_in1x2x1_nopad) {
 //  1.0    2.0
 //
 // Filter:
-//   1.0    2.0  f=0
-//  -1.0   -2.0  f=1
+//   1.0    2.0  ofm=0
+//  -1.0   -2.0  ofm=1
 //
 //  Bias:
 //  0.1 -0.2
@@ -151,19 +151,21 @@ TEST(convolution_f32_fw, ofm_wsiz3x2x2x1_in2x2x1_nopad) {
 //  3.0    4.0  f=1
 //
 // Filter:
-//   1.0    1.0  f=0
-//   1.0    1.0
-//   2.0    2.0  f=1
-//   2.0    2.0
-//   3.0    3.0  f=2
-//   3.0    3.0
+//   1.0    2.0  ifm=0  ofm=0
+//   3.0    4.0  ifm=1
+//
+//   5.0    6.0  ifm=0  ofm=1
+//   7.0    8.0  ifm=1
+//
+//   9.0   10.0  ifm=0  ofm=2
+//  11.0   12.0  ifm=1
 //  Bias:
 //   -5     -6     -7
 //
 //  Output:
-//    5.0  f=0
-//   14.0  f=1
-//   23.0  f=2
+//   25.0  f=0
+//   64,0  f=1
+//  103.0  f=2
 
     auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 1}, 2}, true });
     auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 3}, true });
@@ -171,7 +173,7 @@ TEST(convolution_f32_fw, ofm_wsiz3x2x2x1_in2x2x1_nopad) {
     auto biases  = memory::create({ engine::reference, memory::format::   x_f32,{1 ,{{3}}, 1}, true });
 
     set_values(input,   { 1.0f, 3.0f, 2.0f, 4.0f });
-    set_values(weights, { 1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 3.0f });
+    set_values(weights, { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f });
     set_values(biases,  { -5.0f, -6.0f, -7.0f});
 
     auto conv = convolution::create({ engine::reference, output, input, { 1, {5, 5}, 1 }, weights, biases, padding::zero });
@@ -179,9 +181,9 @@ TEST(convolution_f32_fw, ofm_wsiz3x2x2x1_in2x2x1_nopad) {
     execute({ conv });
 
     auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(5.0f, get_value<float>(output_memory, 0));
-    EXPECT_FLOAT_EQ(14.0f, get_value<float>(output_memory, 1));
-    EXPECT_FLOAT_EQ(23.0f, get_value<float>(output_memory, 2));
+    EXPECT_FLOAT_EQ( 25.0f, get_value<float>(output_memory, 0));
+    EXPECT_FLOAT_EQ( 64.0f, get_value<float>(output_memory, 1));
+    EXPECT_FLOAT_EQ(103.0f, get_value<float>(output_memory, 2));
 }
 
 TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {

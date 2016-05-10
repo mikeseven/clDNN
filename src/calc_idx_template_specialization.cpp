@@ -90,6 +90,7 @@ size_t index<neural::memory::format::oiyx_f32>(std::vector<uint32_t> size, std::
         return true;
     }() == true);
     assert(pos.size() == size.size());
+    assert(1 == size[0]); // batch
 
     return pos[4] + size[4] * (pos[3] + size[3] * (pos[2] + size[2] * pos[1]));
 };
