@@ -96,7 +96,7 @@ void naive(float* input, float* output, neural::vector<uint64_t> input_dims, neu
     uint64_t in_pixel_size = input_dims.raw[1] * BATCH_ACCEPTED_BLOCK;
 
 //    auto feats = input_dims.raw[1];
-    //std::memcpy(output, input, input_dims.raw[1] * BATCH_ACCEPTED_BLOCK * sizeof(float));
+    std::memcpy(output, input, input_dims.raw[1] * sizeof(float));
     for (uint64_t i = 0; i < pooling_dims.raw[3]; ++i)
     {
         for (uint64_t j = 0; j < pooling_dims.raw[2]; ++j)
