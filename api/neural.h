@@ -163,7 +163,18 @@ private:
 
 
 
-// reorder data, type is not changed
+// neural::reorder
+//
+// Changes how data is ordered in memory. Value type is not changed & all information is preserved. 
+// Corresponding values are bitwise equal before/after reorder.
+//
+//
+// Examples:
+//
+//  Reorder yxfb_f32 to byxf_f32 on user-specified buffers on reference engine.
+//    neural::primitive input   = memory::create({engine::reference, memory::format::yxfb_f32, {16, {4, 8}, 1}});
+//    neural::primitive output  = memory::create({engine::reference, memory::format::byxf_f32, {16, {4, 8}, 1}});
+//    neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,input,output});
 struct reorder : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -188,7 +199,9 @@ private:
 
 
 
-// direct convolution
+// neural::convolution
+//
+// TODO
 struct convolution : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
@@ -226,7 +239,9 @@ private:
 
 
 
-//  direct convolution, backward
+// neural::convolution_backward
+//
+// TODO
 struct convolution_backward : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
@@ -261,7 +276,9 @@ private:
 
 
 
-// fully connected
+// neural::fully_connected
+//
+// TODO
 struct fully_connected : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -292,7 +309,9 @@ private:
 
 
 
-// activation relu
+// neural::relu
+//
+// TODO
 struct relu : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
@@ -328,7 +347,9 @@ private:
 
 
 
-// activation relu, backward
+// neural::relu_backward
+//
+// TODO
 struct relu_backward : is_a_primitive {
     struct arguments {
         neural::engine::type                   engine;
@@ -360,7 +381,9 @@ private:
 
 
 
-// pooling
+// neural::pooling
+//
+// TODO
 struct pooling : is_a_primitive {
     class mode { mode(); public: enum type { max, average }; };
 
@@ -406,7 +429,11 @@ private:
 
 
 namespace normalization { /////////////////////////////////////////////////////////////////////////////////////////////
-// normalization of response
+
+
+// neural::normalization::response
+//
+// TODO
 struct /*normalization*/response : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -442,7 +469,9 @@ private:
 
 
 
-// normalization: softmax
+// neural::normalization::softmax
+//
+// TODO
 struct /*normalization*/softmax : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
@@ -474,7 +503,9 @@ private:
 
 
 
-// normalization: batch, training - forward
+// neural::normalization::batch_training_forward
+//
+// TODO
 struct /*normalization*/batch_training_forward : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -502,7 +533,9 @@ private:
 
 
 
-// normalization: batch, training, backward
+// neural::normalization::batch_training_backward
+//
+// TODO
 struct /*normalization*/batch_training_backward : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -528,7 +561,9 @@ private:
 
 
 
-// normalization: batch, inference
+// neural::normalization::batch_inference
+//
+// TODO
 struct /*normalization*/batch_inference : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -556,7 +591,9 @@ private:
 
 
 
-// direct convolution + relu
+// neural::convolution_relu
+//
+// TODO
 struct convolution_relu : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -592,7 +629,9 @@ private:
 
 
 
-// fully connected + relu
+// neural::fully_connected_relu
+//
+// TODO
 struct fully_connected_relu : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
