@@ -107,8 +107,8 @@ static std::map<implementation_key, std::function<is_an_implementation *(fully_c
 fully_connected::arguments::arguments( neural::engine::type eng,
                                        primitive            out,
                                        primitive            in,
-                                       primitive              weights,
-                                       primitive              bias)
+                                       primitive            weights,
+                                       primitive            bias)
 : engine(eng)
 , output({out})
 , output_size(out.as<const memory&>().argument.size)
