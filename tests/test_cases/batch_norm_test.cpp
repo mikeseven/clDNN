@@ -18,6 +18,8 @@
 #include "tests/gtest/gtest.h"
 #include "api/neural.h"
 #include "multidimensional_counter.h"
+#include "memory_utils.h"
+#include <random>
 
 using namespace neural;
 
@@ -60,9 +62,9 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_true) {
     auto& current_average_memory = current_average.as<const memory&>();
 
     // Initialize input buffers.
-    input.as<const memory&>().fill<float>(1);
-    scale.as<const memory&>().fill<float>(1);
-    bias.as<const memory&>().fill<float>(0);
+    fill<float>(input.as<const memory&>(), 1);
+    fill<float>(scale.as<const memory&>(), 1);
+    fill<float>(bias.as <const memory&>(), 0);
 
     // Create primitive.
     auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 1.0, std::numeric_limits<float>::epsilon()});
@@ -120,9 +122,9 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     auto& current_average_memory = current_average.as<const memory&>();
 
     // Initialize input buffers.
-    input.as<const memory&>().fill<float>(0);
-    scale.as<const memory&>().fill<float>(1);
-    bias.as<const memory&>().fill<float>(0);
+    fill<float>(input.as<const memory&>(), 0);
+    fill<float>(scale.as<const memory&>(), 1);
+    fill<float>(bias.as <const memory&>(), 0);
 
     // Put non zero value in random place in input
     std::uniform_int_distribution<uint32_t> dist_input(0, total_input_size - 1);
@@ -157,19 +159,19 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     float inv_num_average_over = 1.0f / (input_size[0] * input_size[1] * input_size[3]);
 
     for (i = 0; i < input_size[0] * input_size[1] * input_size[3] - 1; i++) {
-        current_inv_std_dev_buffer += pow(current_average_memory.get_value<float>(non_zero_value), 2.0f) * inv_num_average_over;
+        current_inv_std_dev_buffer += pow(get_value<float>(current_average_memory, non_zero_value), 2.0f) * inv_num_average_over;
     }
-    current_inv_std_dev_buffer += pow(10.0f - current_average_memory.get_value<float>(non_zero_value), 2.0f) * inv_num_average_over;
+    current_inv_std_dev_buffer += pow(10.0f - get_value<float>(current_average_memory, non_zero_value), 2.0f) * inv_num_average_over;
     current_inv_std_dev_buffer = pow(current_inv_std_dev_buffer + 1.0f, -0.5f);
 
     int iterator;
     for (i = 0; i < input_size[0] * input_size[1]; i++) {
         iterator = i * (total_input_size / (input_size[0] * input_size[1]));
         for (j = 0; j < input_size[3]; j++) {
-            expected_output[iterator + (non_zero_value * input_size[3]) + j] = - current_average_memory.get_value<float>(non_zero_value) * current_inv_std_dev_buffer;
+            expected_output[iterator + (non_zero_value * input_size[3]) + j] = - get_value<float>(current_average_memory, non_zero_value) * current_inv_std_dev_buffer;
         }
     }
-    expected_output[random_input_non_zero] = (10.0f - current_average_memory.get_value<float>(non_zero_value)) * current_inv_std_dev_buffer;
+    expected_output[random_input_non_zero] = (10.0f - get_value<float>(current_average_memory, non_zero_value)) * current_inv_std_dev_buffer;
 
     for (i = 0; i < total_input_size; ++i) {
         EXPECT_EQ(expected_output[i], static_cast<float*>(output_memory.pointer)[i]);
@@ -219,9 +221,9 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
     auto& current_average_memory = current_average.as<const memory&>();
 
     // Initialize input buffers.
-    input.as<const memory&>().fill<float>(1);
-    scale.as<const memory&>().fill<float>(1);
-    bias.as<const memory&>().fill<float>(0);
+    fill<float>(input.as<const memory&>(), 1);
+    fill<float>(scale.as<const memory&>(), 1);
+    fill<float>(bias.as <const memory&>(), 0);
 
 
     // Create primitive.
@@ -281,9 +283,9 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     auto& current_average_memory = current_average.as<const memory&>();
 
     // Initialize input buffers.
-    input.as<const memory&>().fill<float>(0);
-    scale.as<const memory&>().fill<float>(1);
-    bias.as<const memory&>().fill<float>(0);
+    fill<float>(input.as<const memory&>(), 0);
+    fill<float>(scale.as<const memory&>(), 1);
+    fill<float>(bias.as <const memory&>(), 0);
 
     // Put non zero value in random place in input
     std::uniform_int_distribution<uint32_t> dist_input(0, total_input_size - 1);
@@ -320,16 +322,16 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     float inv_num_average_over = 1.0f / input_size[3];
 
     for (i = 0; i < input_size[3] - 1; i++) {
-        current_inv_std_dev_buffer += pow(current_average_memory.get_value<float>(non_zero_value), 2.0f) * inv_num_average_over;
+        current_inv_std_dev_buffer += pow(get_value<float>(current_average_memory, non_zero_value), 2.0f) * inv_num_average_over;
     }
-    current_inv_std_dev_buffer += pow(10.0f - current_average_memory.get_value<float>(non_zero_value), 2.0f) * inv_num_average_over;
+    current_inv_std_dev_buffer += pow(10.0f - get_value<float>(current_average_memory, non_zero_value), 2.0f) * inv_num_average_over;
     current_inv_std_dev_buffer = pow(current_inv_std_dev_buffer + 1.0f, -0.5f);
 
     for (j = 0; j < input_size[3]; j++) {
-        expected_output[(non_zero_value * input_size[3]) + j] = - current_average_memory.get_value<float>(non_zero_value) * current_inv_std_dev_buffer;
+        expected_output[(non_zero_value * input_size[3]) + j] = - get_value<float>(current_average_memory, non_zero_value) * current_inv_std_dev_buffer;
     }
 
-    expected_output[random_input_non_zero] = (10.0f - current_average_memory.get_value<float>(non_zero_value)) * current_inv_std_dev_buffer;
+    expected_output[random_input_non_zero] = (10.0f - get_value<float>(current_average_memory, non_zero_value)) * current_inv_std_dev_buffer;
 
     for (i = 0; i < total_input_size; ++i) {
         EXPECT_EQ(expected_output[i], static_cast<float*>(output_memory.pointer)[i]);

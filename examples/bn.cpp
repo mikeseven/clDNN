@@ -15,6 +15,7 @@
 */
 
 #include "api/neural.h"
+#include "memory_utils.h"
 #include <limits>
 
 using namespace neural;
@@ -22,21 +23,21 @@ using namespace neural;
 void spatial_bn_trivial_example_forward_training_float()
 {
     // Create input buffers.
-    auto input               = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {16, 32, 64, 128}, true});
-    auto scale               = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto bias                = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
+    auto input               = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
+    auto scale               = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto bias                = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
 
     // Create output buffers.
-    auto output              = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {16, 32, 64, 128}, true});
-    auto current_average     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto current_inv_std_dev = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto moving_average      = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto moving_inv_std_dev  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
+    auto output              = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
+    auto current_average     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto current_inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto moving_average      = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto moving_inv_std_dev  = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
 
     // Initialize input buffers.
-    input.as<const memory_obselote&>().fill<float>(0);
-    scale.as<const memory_obselote&>().fill<float>(0);
-    bias.as<const memory_obselote&>().fill<float>(0);
+    fill<float>(input.as<const memory&>(), 0);
+    fill<float>(scale.as<const memory&>(), 0);
+    fill<float>(bias.as<const memory&>(), 0);
 
     // Create primitive.
     auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 0.0, std::numeric_limits<float>::epsilon()});
@@ -49,21 +50,21 @@ void spatial_bn_trivial_example_forward_training_float()
 void spatial_bn_trivial_example_forward_training_double()
 {
     // Create input buffers.
-    auto input               = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, {16, 32, 64, 128}, true});
-    auto scale               = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto bias                = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
+    auto input               = memory::create({engine::reference, memory::format::yxfb_f64, {128, {16, 32}, 64}, true});
+    auto scale               = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto bias                = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
 
     // Create output buffers.
-    auto output              = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, {16, 32, 64, 128}, true});
-    auto current_average     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto current_inv_std_dev = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto moving_average      = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto moving_inv_std_dev  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
+    auto output              = memory::create({engine::reference, memory::format::yxfb_f64, {128, {16, 32}, 64}, true});
+    auto current_average     = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto current_inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto moving_average      = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto moving_inv_std_dev  = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
 
     // Initialize input buffers.
-    input.as<const memory_obselote&>().fill<double>(0);
-    scale.as<const memory_obselote&>().fill<double>(0);
-    bias.as<const memory_obselote&>().fill<double>(0);
+    fill<double>(input.as<const memory&>(), 0);
+    fill<double>(scale.as<const memory&>(), 0);
+    fill<double>(bias.as<const memory&>(), 0);
 
     // Create primitive.
     auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 0.0, std::numeric_limits<double>::epsilon()});
@@ -76,25 +77,25 @@ void spatial_bn_trivial_example_forward_training_double()
 void spatial_bn_trivial_example_backward_training_float()
 {
     // Create input buffers.
-    auto forward_input       = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {16, 32, 64, 128}, true});
-    auto forward_scale       = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto forward_bias        = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto output_grad         = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {16, 32, 64, 128}, true});
-    auto current_mean        = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto current_inv_std_dev = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
+    auto forward_input       = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
+    auto forward_scale       = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto forward_bias        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto output_grad         = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
+    auto current_mean        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto current_inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
 
     // Create output buffers.
-    auto input_grad = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {16, 32, 64, 128}, true});
-    auto scale_grad = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto bias_grad  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
+    auto input_grad = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
+    auto scale_grad = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto bias_grad  = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
 
     // Initialize input buffers.
-    forward_input.as<const memory_obselote&>().fill<float>(0);
-    forward_scale.as<const memory_obselote&>().fill<float>(0);
-    forward_bias.as<const memory_obselote&>().fill<float>(0);
-    output_grad.as<const memory_obselote&>().fill<float>(0);
-    current_mean.as<const memory_obselote&>().fill<float>(0);
-    current_inv_std_dev.as<const memory_obselote&>().fill<float>(0);
+    fill<float>(forward_input.as<const memory&>(), 0);
+    fill<float>(forward_scale.as<const memory&>(), 0);
+    fill<float>(forward_bias.as<const memory&>(), 0);
+    fill<float>(output_grad.as<const memory&>(), 0);
+    fill<float>(current_mean.as<const memory&>(), 0);
+    fill<float>(current_inv_std_dev.as<const memory&>(), 0);
 
     // Create primitive.
     auto bn = normalization::batch_training_backward::create({engine::reference, {input_grad, scale_grad, bias_grad}, {forward_input, forward_scale, forward_bias, output_grad, current_mean, current_inv_std_dev}, true});
@@ -107,25 +108,25 @@ void spatial_bn_trivial_example_backward_training_float()
 void spatial_bn_trivial_example_backward_training_double()
 {
     // Create input buffers.
-    auto forward_input       = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, {16, 32, 64, 128}, true});
-    auto forward_scale       = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto forward_bias        = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto output_grad         = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, {16, 32, 64, 128}, true});
-    auto current_mean        = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto current_inv_std_dev = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
+    auto forward_input       = memory::create({engine::reference, memory::format::yxfb_f64, {128, {16, 32}, 64}, true});
+    auto forward_scale       = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto forward_bias        = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto output_grad         = memory::create({engine::reference, memory::format::yxfb_f64, {128, {16, 32}, 64}, true});
+    auto current_mean        = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto current_inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
 
     // Create output buffers.
-    auto input_grad = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, {16, 32, 64, 128}, true});
-    auto scale_grad = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto bias_grad  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
+    auto input_grad = memory::create({engine::reference, memory::format::yxfb_f64, {128, {16, 32}, 64}, true});
+    auto scale_grad = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto bias_grad  = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
 
     // Initialize input buffers.
-    forward_input.as<const memory_obselote&>().fill<double>(0);
-    forward_scale.as<const memory_obselote&>().fill<double>(0);
-    forward_bias.as<const memory_obselote&>().fill<double>(0);
-    output_grad.as<const memory_obselote&>().fill<double>(0);
-    current_mean.as<const memory_obselote&>().fill<double>(0);
-    current_inv_std_dev.as<const memory_obselote&>().fill<double>(0);
+    fill<double>(forward_input.as<const memory&>(), 0);
+    fill<double>(forward_scale.as<const memory&>(), 0);
+    fill<double>(forward_bias.as<const memory&>(), 0);
+    fill<double>(output_grad.as<const memory&>(), 0);
+    fill<double>(current_mean.as<const memory&>(), 0);
+    fill<double>(current_inv_std_dev.as<const memory&>(), 0);
 
     // Create primitive.
     auto bn = normalization::batch_training_backward::create({engine::reference, {input_grad, scale_grad, bias_grad}, {forward_input, forward_scale, forward_bias, output_grad, current_mean, current_inv_std_dev}, true});
@@ -138,21 +139,21 @@ void spatial_bn_trivial_example_backward_training_double()
 void spatial_bn_trivial_example_inference_float()
 {
     // Create input buffers.
-    auto input       = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {16, 32, 64, 128}, true});
-    auto scale       = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto bias        = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto average     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto inv_std_dev = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
+    auto input       = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
+    auto scale       = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto bias        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto average     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
 
     // Create output buffer.
-    auto output      = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {16, 32, 64, 128}, true});
+    auto output      = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
 
     // Initialize input buffers.
-    input.as<const memory_obselote&>().fill<float>(0);
-    scale.as<const memory_obselote&>().fill<float>(0);
-    bias.as<const memory_obselote&>().fill<float>(0);
-    average.as<const memory_obselote&>().fill<float>(0);
-    inv_std_dev.as<const memory_obselote&>().fill<float>(0);
+    fill<float>(input.as<const memory&>(), 0);
+    fill<float>(scale.as<const memory&>(), 0);
+    fill<float>(bias.as<const memory&>(), 0);
+    fill<float>(average.as<const memory&>(), 0);
+    fill<float>(inv_std_dev.as<const memory&>(), 0);
 
     // Create primitive.
     auto bn = normalization::batch_inference::create({engine::reference, {output}, {input, scale, bias, average, inv_std_dev}, true});
@@ -165,21 +166,21 @@ void spatial_bn_trivial_example_inference_float()
 void spatial_bn_trivial_example_inference_double()
 {
     // Create input buffers.
-    auto input       = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, {16, 32, 64, 128}, true});
-    auto scale       = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto bias        = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto average     = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto inv_std_dev = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
+    auto input       = memory::create({engine::reference, memory::format::yxfb_f64, {128, {16, 32}, 64}, true});
+    auto scale       = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto bias        = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto average     = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
 
     // Create output buffer.
-    auto output      = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, {16, 32, 64, 128}, true});
+    auto output      = memory::create({engine::reference, memory::format::yxfb_f64, {128, {16, 32}, 64}, true});
 
     // Initialize input buffers.
-    input.as<const memory_obselote&>().fill<double>(0);
-    scale.as<const memory_obselote&>().fill<double>(0);
-    bias.as<const memory_obselote&>().fill<double>(0);
-    average.as<const memory_obselote&>().fill<double>(0);
-    inv_std_dev.as<const memory_obselote&>().fill<double>(0);
+    fill<double>(input.as<const memory&>(), 0);
+    fill<double>(scale.as<const memory&>(), 0);
+    fill<double>(bias.as<const memory&>(), 0);
+    fill<double>(average.as<const memory&>(), 0);
+    fill<double>(inv_std_dev.as<const memory&>(), 0);
 
     // Create primitive.
     auto bn = normalization::batch_inference::create({engine::reference, {output}, {input, scale, bias, average, inv_std_dev}, true});
@@ -194,27 +195,27 @@ void spatial_bn_complex_example_training_float()
     // TODO: after string keys have been implemented, move buffer creation to primitives' constructors and reference them by primitive-string lookups.
 
     // Create data buffers that have to be initialized before training starts.
-    auto forward_input       = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {16, 32, 64, 128}, true});
-    auto forward_scale       = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto forward_bias        = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
+    auto forward_input       = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
+    auto forward_scale       = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto forward_bias        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
 
     // Create intermediate buffers that will be computed during forward training pass.
-    auto current_mean        = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto current_inv_std_dev = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto moving_mean         = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto moving_inv_std_dev  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
+    auto current_mean        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto current_inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto moving_mean         = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto moving_inv_std_dev  = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
 
     // Create output buffers.
-    auto forward_output      = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {16, 32, 64, 128}, true});
-    //auto forward_output_grad = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {16, 32, 64, 128}, true}); // same as forward_output
-    auto forward_input_grad  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, {16, 32, 64, 128}, true});
-    auto forward_scale_grad  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
-    auto forward_bias_grad   = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f32, { 1,  1, 64,   1}, true});
+    auto forward_output      = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
+    //auto forward_output_grad = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true}); // same as forward_output
+    auto forward_input_grad  = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
+    auto forward_scale_grad  = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto forward_bias_grad   = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
 
     // Initialize input buffers for forward training primitive which will initialize other buffers.
-    forward_input.as<const memory_obselote&>().fill<float>(0);
-    forward_scale.as<const memory_obselote&>().fill<float>(0);
-    forward_bias.as<const memory_obselote&>().fill<float>(0);
+    fill<float>(forward_input.as<const memory&>(), 0);
+    fill<float>(forward_scale.as<const memory&>(), 0);
+    fill<float>(forward_bias.as<const memory&>(), 0);
 
     // Create primitives.
     auto bn_train_fw  = normalization::batch_training_forward::create({engine::reference, {forward_output, current_mean, current_inv_std_dev, moving_mean, moving_inv_std_dev}, {forward_input, forward_scale, forward_bias}, true, 0.0, std::numeric_limits<float>::epsilon()});
@@ -249,27 +250,27 @@ void spatial_bn_complex_example_training_double()
     // TODO: after string keys have been implemented, move buffer creation to primitives' constructors and reference them by primitive-string lookups.
 
     // Create data buffers that have to be initialized before training starts.
-    auto forward_input       = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, {16, 32, 64, 128}, true});
-    auto forward_scale       = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto forward_bias        = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
+    auto forward_input       = memory::create({engine::reference, memory::format::yxfb_f64, {128, {16, 32}, 64}, true});
+    auto forward_scale       = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto forward_bias        = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
 
     // Create intermediate buffers that will be computed during forward training pass.
-    auto current_mean        = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto current_inv_std_dev = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto moving_mean         = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto moving_inv_std_dev  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
+    auto current_mean        = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto current_inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto moving_mean         = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto moving_inv_std_dev  = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
 
     // Create output buffers.
-    auto forward_output      = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, {16, 32, 64, 128}, true});
-    //auto forward_output_grad = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, {16, 32, 64, 128}, true}); // same as forward_output
-    auto forward_input_grad  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, {16, 32, 64, 128}, true});
-    auto forward_scale_grad  = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
-    auto forward_bias_grad   = memory_obselote::create({engine::cpu, memory_obselote::format::yxfb_f64, { 1,  1, 64,   1}, true});
+    auto forward_output      = memory::create({engine::reference, memory::format::yxfb_f64, {128, {16, 32}, 64}, true});
+    //auto forward_output_grad = memory::create({engine::reference, memory::format::yxfb_f64, {128, {16, 32}, 64}, true}); // same as forward_output
+    auto forward_input_grad  = memory::create({engine::reference, memory::format::yxfb_f64, {128, {16, 32}, 64}, true});
+    auto forward_scale_grad  = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
+    auto forward_bias_grad   = memory::create({engine::reference, memory::format::yxfb_f64, {1, {1, 1}, 64}, true});
 
     // Initialize input buffers for forward training primitive which will initialize other buffers.
-    forward_input.as<const memory_obselote&>().fill<double>(0);
-    forward_scale.as<const memory_obselote&>().fill<double>(0);
-    forward_bias.as<const memory_obselote&>().fill<double>(0);
+    fill<double>(forward_input.as<const memory&>(), 0);
+    fill<double>(forward_scale.as<const memory&>(), 0);
+    fill<double>(forward_bias.as<const memory&>(), 0);
 
     // Create primitives.
     auto bn_train_fw  = normalization::batch_training_forward::create({engine::reference, {forward_output, current_mean, current_inv_std_dev, moving_mean, moving_inv_std_dev}, {forward_input, forward_scale, forward_bias}, true, 0.0, std::numeric_limits<float>::epsilon()});

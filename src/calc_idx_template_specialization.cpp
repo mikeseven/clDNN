@@ -17,6 +17,11 @@
 
 namespace ndimensional{
 
+// This template has no body. it has to be specialized for every format. Every specialization should be placed in this file.
+// Because of above reasons template is placed in cpp file.
+template<neural::memory::format::type FORMAT>
+size_t index(std::vector<uint32_t> size, std::vector<uint32_t> pos);
+
 template<>
 size_t index<neural::memory::format::yxfb_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(
@@ -62,7 +67,6 @@ size_t index<neural::memory::format::xb_f32>(std::vector<uint32_t> size, std::ve
     // vectors v_size and stride use format: b, f, spatials(x)
     return pos[0] + size[0]*pos[2];
 };
-
 template<>
 size_t index<neural::memory::format::bx_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(
@@ -91,7 +95,6 @@ size_t index<neural::memory::format::bxyf_f32>(std::vector<uint32_t> size, std::
 
 	return pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + size[3] * pos[0]));
 };
-
 template<>
 size_t index<neural::memory::format::bfxy_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
 	assert(

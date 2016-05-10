@@ -73,7 +73,7 @@ TEST(local_response_normalization, lrn_test) {
         buff_oracle = static_cast<float*>(output_oracle.as<const memory&>().pointer);
 
         for (size_t i = 0; i < px*py*pb*pf; ++i) {
-            EXPECT_NEAR(buff[i], buff_oracle[i], 1e-03F);
+            EXPECT_NEAR(buff[i], buff_oracle[i], 1e-04F);
         }
     }
     catch (const std::exception& E) {

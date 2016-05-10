@@ -108,9 +108,7 @@ primitive file::create(file::arguments arg) {
         // crete result with output owning memory, load data into it
         auto result = std::unique_ptr<file>(new file({arg.engine, arg.name, memory::create({arg.engine, header.format, *size, true})}));
 
-            //todo tmp solution
-        auto &buffer = result->argument.output[0].as<const memory&>();
-        //auto &buffer = result->output_memory(0);
+        auto &buffer = result->output_memory(0);
         auto count = buffer.count()*memory::traits(buffer.argument.format).type->size;
         in.read(static_cast<char *>(buffer.pointer), count);
 

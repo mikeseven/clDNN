@@ -17,7 +17,8 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
 #include "multidimensional_counter.h"
-#include<iostream>//todo: remove
+#include "memory_utils.h"
+
 namespace neural {
 
 struct fully_connected_reference : is_an_implementation {
@@ -30,27 +31,20 @@ struct fully_connected_reference : is_an_implementation {
 
     static void implementation(const void *ptr) {
         auto this_fc = static_cast<const fully_connected *>(ptr);
-        //auto input = static_cast<float*>(this_fc->input_memory(0).pointer);
-        //auto output = static_cast<float*>(this_fc->output_memory(0).pointer);
-        //auto weight = static_cast<float*>(this_fc->input_memory(1).pointer);
-        //auto weight_buffer_size = this_fc->input_memory(1).argument.size;
-        auto input  = static_cast<float*>(this_fc->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
-        auto weight = static_cast<float*>(this_fc->argument.input[1].primitive.as<const memory&>().pointer);
+        auto input = static_cast<float*>(this_fc->input_memory(0).pointer);
+        auto output = static_cast<float*>(this_fc->output_memory(0).pointer);
+        auto weight = static_cast<float*>(this_fc->input_memory(1).pointer);
+        auto& weight_buffer_size = this_fc->input_memory(1).argument.size;
         auto bias   = static_cast<float*>(this_fc->argument.input[2].primitive.as<const memory&>().pointer);
-        auto output = static_cast<float*>(this_fc->argument.output[0].as<const memory&>().pointer);
 
-        auto& weight_buffer_size = this_fc->argument.input[1].primitive.as<const memory&>().argument.size;
 
-        auto& input_arg  = this_fc->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-        //auto& input_arg = this_fc->input_memory(0).argument;
+        auto& input_arg = this_fc->input_memory(0).argument;
         auto& input_buffer_size = input_arg.size;
 
-        auto& output_arg = this_fc->argument.output[0].as<const memory&>().argument;
-        //auto& output_arg = this_fc->output_memory(0).argument;
+        auto& output_arg = this_fc->output_memory(0).argument;
         auto& output_buffer_size = output_arg.size;
 
-        auto& weight_arg = this_fc->argument.input[1].primitive.as<const memory&>().argument;
-        //auto weight_arg = this_fc->input_memory(1).argument.format;
+        auto& weight_arg = this_fc->input_memory(1).argument;
 
         auto& bias_arg = this_fc->argument.input[2].primitive.as<const memory&>().argument;
 
@@ -65,15 +59,13 @@ struct fully_connected_reference : is_an_implementation {
         assert( 1 == input_buffer_size.feature[0]    );
 
         namespace nd = ndimensional;
-        //this_fc->output_memory(0).fill(0.0f);
-        this_fc->argument.output[0].as<const memory&>().fill(0.0f);
+        fill(this_fc->output_memory(0), 0.0f);
 
-        const int data_index = 2;
-        const int f_index = 0;
-        const int batch_index = 0;
+        const int DATA_INDEX = 2;
+        const int BATCH_INDEX = 0;
 
         nd::value<uint32_t> range_output(output_buffer_size);
-        range_output[batch_index] = 1; //in every iteration whole batch is computed at once, so it has to be removed from the range
+        range_output[BATCH_INDEX] = 1; //in every iteration whole batch is computed at once, so it has to be removed from the range
         nd::value<uint32_t> range_input(input_buffer_size);
         nd::value<uint32_t> range_weight(weight_buffer_size);
 
@@ -88,16 +80,15 @@ struct fully_connected_reference : is_an_implementation {
                 for (auto pos_in : range_input){
                     auto in_idx = calc_in_idx(input_arg.size.raw, pos_in);
 
-                    arg_weight_idx[data_index]  = pos_out[data_index];
-                    arg_weight_idx[batch_index] = pos_in [data_index];
+                    arg_weight_idx[DATA_INDEX]  = pos_out[DATA_INDEX];
+                    arg_weight_idx[BATCH_INDEX] = pos_in [DATA_INDEX];
                     auto w_idx = calc_w_idx(weight_arg.size.raw, arg_weight_idx);
-                    output[out_idx + pos_in[batch_index]] += input[in_idx] * weight[w_idx];
+                    output[out_idx + pos_in[BATCH_INDEX]] += input[in_idx] * weight[w_idx];
                 }
-                for (auto  b=0 ; b < range_input[batch_index] ; b++)
-                    output[out_idx + b] += bias[pos_out[data_index]];
+                for (auto  b=0 ; b < range_input[BATCH_INDEX] ; b++)
+                    output[out_idx + b] += bias[pos_out[DATA_INDEX]];
         }
     }
-
 
     std::vector<task> work() {
         return{ task{ implementation, &outer } };
@@ -105,7 +96,6 @@ struct fully_connected_reference : is_an_implementation {
 
     static is_an_implementation *create(fully_connected &arg) { return new fully_connected_reference(arg); };
 };
-
 
 //                                    engine                output                        input
 using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
@@ -116,9 +106,9 @@ static std::map<implementation_key, std::function<is_an_implementation *(fully_c
     { std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create }
 };
 
-fully_connected::arguments::arguments( neural::engine::type   eng,
-                                       primitive              out,
-                                       primitive              in,
+fully_connected::arguments::arguments( neural::engine::type eng,
+                                       primitive            out,
+                                       primitive            in,
                                        primitive              weights,
                                        primitive              bias)
 : engine(eng)
@@ -134,13 +124,7 @@ primitive fully_connected::create(fully_connected::arguments arg) {
     std::unique_ptr<fully_connected> result(new fully_connected(arg));
 
     // lookup in database; throw if not found
-
-        //todo tmp solution
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt= result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
-
-   // auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
+    auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
     auto it = implementation_map.find(key);
     if (it == std::end(implementation_map)) throw std::runtime_error("not yet implemented");
 
