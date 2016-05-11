@@ -56,10 +56,10 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     if(filter_arg.size.raw.size() != output_arg.size.raw.size()+1)throw std::runtime_error("Convolution window_size != 5");
     if(bias_arg.size.raw.size()   != 3)                           throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
     if(bias_arg.size.spatial[0]   != output_size.feature[0])      throw std::runtime_error("Convolution biases/output feature maps number does not match.");
-    if(output_arg.size.feature[0]-output_offset.feature[0] != output_size.feature[0]
+    if(output_size.feature[0] + output_offset.feature[0] > output_arg.size.feature[0]
         || output_size.feature[0] != filter_arg.size.feature[0])
         throw std::runtime_error("Convolution weights/output feature maps number does not match.");
-    if(input_arg.size.feature[0] - input_offset.feature[0] != filter_arg.size.feature[1])
+    if(input_arg.size.feature[0] - input_offset.feature[0] < filter_arg.size.feature[1])
         throw std::runtime_error("Convolution weights/input feature maps number does not match.");
 
     // todo remove
@@ -124,14 +124,14 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                         auto in_idx  = calc_in_idx ( input_arg.size.raw, {arg_in_idx.begin(), arg_in_idx.end()} );
                         auto win_idx = calc_win_idx( filter_arg.size.raw,
                                                      [&](){
-                                                        auto vec = std::vector<uint32_t>({0, ofm});
+                                                        auto vec = std::vector<uint32_t>({0, ofm-output_offset.feature[0]});
                                                         auto* win_pos_ptr = dynamic_cast<std::vector<uint32_t>*>(&win_pos);
                                                         vec.insert(vec.end(), win_pos_ptr->begin(), win_pos_ptr->end());
                                                         return vec;
                                                      }()
                                                     );
 
-                        auto out_idx = calc_out_idx(output_arg.size.raw, pos_with_modified_ofm + output_offset);
+                        auto out_idx = calc_out_idx(output_arg.size.raw, pos_with_modified_ofm );
 
                         output[out_idx] += input[in_idx] * filter[win_idx];
                     }

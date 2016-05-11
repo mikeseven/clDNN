@@ -8,11 +8,14 @@
 using namespace neural;
 
 namespace caffe {
-template <> void MKL_DNNReLULayer<double>::LayerSetUp(const vector<Blob<double>*>& bottom,
+template <> void MKL_DNNReLULayer<double>::LayerSetUp(
+      const vector<Blob<double>*>& bottom,
       const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
-template <> void MKL_DNNReLULayer<double>::Forward_cpu(const vector<Blob<double>*>& bottom,
+template <> void MKL_DNNReLULayer<double>::Forward_cpu(
+    const vector<Blob<double>*>& bottom,
     const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
-template <> void MKL_DNNReLULayer<double>::Backward_cpu(const vector<Blob<double>*>& top,
+template <> void MKL_DNNReLULayer<double>::Backward_cpu(
+    const vector<Blob<double>*>& top,
     const vector<bool>& propagate_down,
     const vector<Blob<double>*>& bottom) {NOT_IMPLEMENTED;}
 
@@ -21,16 +24,6 @@ void MKL_DNNReLULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   Dtype negative_slope = this->layer_param_.relu_param().negative_slope();
 
-  //auto s = bottom[0]->shape();
-  //auto n = s[0];
-  //auto c = s[1];
-  //auto h = s[2];
-  //auto w = s[3];
-
-  //std::cout << "n "  <<  n << "  c " << c << "  h "  << h  <<  "  w " << w  << "\n";
-
-  //if (h == 0) h = 1;
-  //if (w == 0) w = 1;
   const int count = bottom[0]->count();
   bottom_data_  = memory::create({engine_, memory::format::yxfb_f32, {count, {1, 1}, 1 }});
   top_data_     = memory::create({engine_, memory::format::yxfb_f32, {count, {1, 1}, 1 }});

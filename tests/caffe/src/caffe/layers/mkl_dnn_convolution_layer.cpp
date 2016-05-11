@@ -216,7 +216,7 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
       DLOG(INFO) << "convert      => priv                                => " << this->name << "\n";
       auto usr_ptr = is_diff ? (Dtype *) blob->cpu_diff() : (Dtype *) blob->cpu_data();
       execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr), this->to_prv});
-      DLOG(INFO) << "Done\n";
+      //DLOG(INFO) << "Done\n";
 #ifdef CONVERSION_PRINT_DATA
       DLOG(INFO) << "Before conversion: ";
       for (auto i=0; i<blob->count(); i++)
