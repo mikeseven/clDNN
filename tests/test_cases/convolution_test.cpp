@@ -278,11 +278,7 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
     auto biases_diff  = memory::create({engine::reference, memory::format::x_f32,    {1 ,{{1}} , 1}, true});
 
     auto& bw_output_mem    = bw_output.as<const memory&>();
-    auto& bw_input_mem     = bw_input.as<const memory&>();
-    auto& fw_input_mem     = fw_input.as<const memory&>();
-    auto& weights_mem      = weights.as<const memory&>();
     auto& weights_diff_mem = weights_diff.as<const memory&>();
-    auto& biases_mem       = biases.as<const memory&>();
     auto& biases_diff_mem  = biases_diff.as<const memory&>();
 
     set_values( fw_input, {-0.5f, 1.5f, 1.0f, 1.0f, -0.5f, 2.0f, 1.0f, 2.0f, 3.0f});
@@ -366,11 +362,7 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
     auto biases_diff  = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
 
     auto& bw_output_mem    = bw_output.as<const memory&>();
-    auto& bw_input_mem     = bw_input.as<const memory&>();
-    auto& fw_input_mem     = fw_input.as<const memory&>();
-    auto& weights_mem      = weights.as<const memory&>();
     auto& weights_diff_mem = weights_diff.as<const memory&>();
-    auto& biases_mem       = biases.as<const memory&>();
     auto& biases_diff_mem  = biases_diff.as<const memory&>();
 
     set_values( fw_input, {-0.5f, 1.5f, 1.0f,-0.5f});
