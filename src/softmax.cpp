@@ -28,8 +28,6 @@ struct softmax_reference : is_an_implementation {
     softmax_reference(softmax &arg)
         : is_an_implementation(neural::type_id<softmax_reference>())
         , outer(arg) {
-        //auto input        = static_cast<float*>(outer.input_memory(0).pointer);
-        //auto output       = static_cast<float*>(outer.output_memory(0).pointer);
 
         auto& input_offset  = outer.argument.input_offset;
         auto& output_offset = outer.argument.output_offset;

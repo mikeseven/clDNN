@@ -83,7 +83,6 @@ primitive relu::create(relu::arguments arg) {
     auto& output_arg = arg.output[0].as<const memory&>().argument;
 
     if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("ReLU input/output number of dimension does not match.");
-    if (input_arg.format != output_arg.format)                      throw std::runtime_error("ReLU input/output data format does not match.");
     for (auto &x : input_offset.raw)  if (x < 0)                    throw std::runtime_error("ReLU negative input offset.");
 
     for (size_t i = 0; i < input_arg.size.raw.size(); ++i) {
@@ -115,13 +114,13 @@ primitive relu_backward::create(relu_backward::arguments arg) {
     if (arg.output.size() != 1)
         throw std::runtime_error("ReLU backward: number of outputs is incorrect.");
 
-    auto forward_output_grad_arg    = arg.input[0].primitive.as<const memory&>().argument;
+    auto& forward_output_grad_arg    = arg.input[0].primitive.as<const memory&>().argument;
     auto& forward_output_grad_offset = arg.input_offset[0];
 
-    auto forward_input_arg    = arg.input[1].primitive.as<const memory&>().argument;
+    auto& forward_input_arg    = arg.input[1].primitive.as<const memory&>().argument;
     auto& forward_input_offset = arg.input_offset[1];
 
-    auto forward_input_grad_arg    = arg.output[0].as<const memory&>().argument;
+    auto& forward_input_grad_arg    = arg.output[0].as<const memory&>().argument;
     auto& forward_input_grad_offset = arg.output_offset;
 
     auto& processed_window_sizes = arg.output_size;
