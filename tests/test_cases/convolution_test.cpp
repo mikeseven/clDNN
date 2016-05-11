@@ -104,7 +104,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
     EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 1));
 }
 
-TEST(convolution_f32_fw, ofm_wsiz2x1x2x1_in1x2x1_nopad) {
+TEST(convolution_f32_fw, basic_ofm_wsiz2x1x2x1_in1x2x1_nopad) {
 //  Filter : 1x2x1x2x1
 //  Input  : 1x1x2x1
 //  Output : 1x2x1x1
@@ -141,7 +141,7 @@ TEST(convolution_f32_fw, ofm_wsiz2x1x2x1_in1x2x1_nopad) {
     EXPECT_FLOAT_EQ(-5.2f, get_value<float>(output_memory, 1));
 }
 
-TEST(convolution_f32_fw, ofm_wsiz3x2x2x1_in2x2x1_nopad) {
+TEST(convolution_f32_fw, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad) {
 //  Filter : 1x3x2x2x1
 //  Input  : 1x2x2x1
 //  Output : 1x3x1x1
@@ -186,35 +186,35 @@ TEST(convolution_f32_fw, ofm_wsiz3x2x2x1_in2x2x1_nopad) {
     EXPECT_FLOAT_EQ(103.0f, get_value<float>(output_memory, 2));
 }
 
-TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
-    //  Filter : 2x2x1x3
-    //  Stride : 2x2
-    //  Input  : 2x2x1x1
-    //  Output : 1x1x3x1
-    //
-    //  Input:
-    //  -2.3 -0.1
-    //   3.1  1.9
-    //
-     // Filter:
-    //  -1.1  1.5    0.1  0.2    2.0  -1.0
-    //   0.5 -0.5    0.4  0.7    2.5  -1.5
-    //
-    //  Bias:
-    //  0.1 -0.2 0.3
-    //
-    //  Output:
-    //     0.7
-    //   2.12
-    // 3.08
+TEST(convolution_f32_fw, basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
+//  Filter : 2x2x1x3
+//  Stride : 2x2
+//  Input  : 2x2x1x1
+//  Output : 1x1x3x1
+//
+//  Input:
+//  -2.3 -0.1
+//   3.1  1.9
+//
+//  Filter:
+//  -1.1  1.5       0.1  0.2        2.0  -1.0
+//   0.5 -0.5       0.4  0.7        2.5  -1.5
+//
+//  Bias:
+//  0.1 -0.2 0.3
+//
+//  Output:
+//   0.7
+//   2.12
+//   3.08
 
     auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 2}, 1}, true });
     auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 3}, true });
-    auto weights = memory::create({ engine::reference, memory::format::oiyx_f32,{3 ,{2, 2},{1, 1}}, true });
+    auto weights = memory::create({ engine::reference, memory::format::oiyx_f32,{1 ,{2, 2},{3, 1}}, true });
     auto biases  = memory::create({ engine::reference, memory::format::   x_f32,{1 ,{{3 }}, 1}, true });
 
     set_values(input,   { -2.3f, -0.1f, 3.1f, 1.9f });
-    set_values(weights, { -1.1f, 0.1f, 2.0f, 1.5f, 0.2f, -1.0f, 0.5f, 0.4f, 2.5f, -0.5f, 0.7f, -1.5f });
+    set_values(weights, { -1.1f, 1.5f, 0.5f, -0.5f, 0.1f, 0.2f, 0.4f, 0.7f, 2.0f, -1.0f, 2.5f, -1.5f });
     set_values(biases,  { 0.1f, -0.2f, 0.3f });
 
     auto conv = convolution::create({ engine::reference, output, input, { 1, {2, 2}, 1 }, weights, biases, padding::zero });
@@ -222,9 +222,9 @@ TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
     execute({ conv });
 
     auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(3.08f, get_value<float>(output_memory, 0));
-    EXPECT_FLOAT_EQ(2.12f, get_value<float>(output_memory, 1));
-    EXPECT_FLOAT_EQ(0.7f, get_value<float>(output_memory, 2));
+    EXPECT_TRUE(are_equal(3.08f, get_value<float>(output_memory, 0)));
+    EXPECT_TRUE(are_equal(2.12f, get_value<float>(output_memory, 1)));
+    EXPECT_TRUE(are_equal(0.7f , get_value<float>(output_memory, 2)));
 }
 
 TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {

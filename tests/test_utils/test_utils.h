@@ -33,7 +33,7 @@ bool values_comparison(T first, T second, T threshold) {
             return false;
     } else if ((delta / abs_first) > threshold)
         return false;
-    
+
     return true;
 }
 
