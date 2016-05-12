@@ -121,28 +121,32 @@ primitive convolution::create(convolution::arguments arg) {
     auto& input_offset = arg.input_offset;
     auto& output_offset = arg.output_offset;
 
-    if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Convolution input/output number of dimension does not match.");
-    if (stride.raw.size() != output_arg.size.raw.size())            throw std::runtime_error("Convolution stride/output number of dimension does not match.");
-    if (input_arg.format != filter_arg.format)                      throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
-    if (filter_arg.size.raw.size() != output_arg.size.raw.size())   throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
-    if (bias_arg.size.raw.size() != 3)                              throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
-    if (bias_arg.size.spatial[0] != output_size.feature[0])         throw std::runtime_error("Convolution biases/output feature maps number does not match.");
-
-    if (arg.padding != padding::zero)                               throw std::runtime_error("Unknown padding mode in convolution.");
-    if (input_offset.raw.size() != input_arg.size.raw.size())       throw std::runtime_error("Convolution input offset/input number of dimension does not match.");
-    if (output_offset.raw.size() != input_arg.size.raw.size())      throw std::runtime_error("Convolution output offset/input number of dimension does not match.");
+    if(input_arg.size.raw.size()  != output_arg.size.raw.size())  throw std::runtime_error("Convolution input/output number of dimension does not match.");
+    if(stride.raw.size()          != output_arg.size.raw.size())  throw std::runtime_error("Convolution stride/output number of dimension does not match.");
+    if(input_arg.format           != memory::format::yxfb_f32)    throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
+    if(input_arg.format           != output_arg.format)           throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
+    if(filter_arg.size.raw.size() != output_arg.size.raw.size()+1)throw std::runtime_error("Convolution window_size != 5");
+    if(bias_arg.size.raw.size()   != 3)                           throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
+    if(bias_arg.size.spatial[0]   != output_size.feature[0])      throw std::runtime_error("Convolution biases/output feature maps number does not match.");
+    if(arg.padding                != padding::zero)               throw std::runtime_error("Unknown padding mode in convolution.");
+    if(input_offset.raw.size()    != input_arg.size.raw.size())   throw std::runtime_error("Convolution input offset/input number of dimension does not match.");
+    if(output_offset.raw.size()   != input_arg.size.raw.size())   throw std::runtime_error("Convolution output offset/input number of dimension does not match.");
 
     for (uint32_t i = 0; i < output_arg.size.raw.size(); i++)
         if (output_arg.size.raw.at(i) < output_size.raw.at(i) + output_offset.raw.at(i))
             throw std::runtime_error("Convolution output buffer size is too small.");
 
-    assert(1 == filter_arg.size.batch[0]);
-    assert(1 == output_size.feature.size());
-    assert(1 == output_size.batch.size());
+    assert( 1 == output_size.feature.size() );
+    assert( 1 == output_size.batch.size() );
+    assert( 2 == filter_arg.size.feature.size());
+    assert( 1 == filter_arg.size.batch.size() );
+    assert( 1 == filter_arg.size.batch[0] );
 
-    // TODO: implement when feature map support added
-    //if (input_arg.size.feature != filter_arg.size.feature)
-    //    throw std::runtime_error("Convolution dimensions are wrong.");
+    if(output_arg.size.feature[0]-output_offset.feature[0] > output_size.feature[0]
+        || output_size.feature[0] > filter_arg.size.feature[0])
+        throw std::runtime_error("Convolution weights/output feature maps number does not match.");
+    if(input_arg.size.feature[0] - input_offset.feature[0] > filter_arg.size.feature[1])
+        throw std::runtime_error("Convolution weights/input feature maps number does not match.");
 
     // wrap relu into RAII wrapper
     std::unique_ptr<convolution> result(new convolution(arg));
