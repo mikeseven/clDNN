@@ -91,7 +91,7 @@ class MKL_DNNConvolutionLayer : public ConvolutionLayer<Dtype> {
 public:
   explicit MKL_DNNConvolutionLayer(
           const LayerParameter& param,
-          neural::engine::type engine = neural::engine::reference);
+          neural::engine::type engine);
 
   virtual inline const char* type() const { return "MKL_DNN_Convolution"; }
   virtual ~MKL_DNNConvolutionLayer();
@@ -154,7 +154,7 @@ template <typename Dtype>
 class MKL_DNNLRNLayer : public Layer<Dtype> {
  public:
   explicit MKL_DNNLRNLayer(const LayerParameter& param,
-        neural::engine::type engine = neural::engine::reference)
+        neural::engine::type engine)
       : Layer<Dtype>(param), engine_(engine),
       fwd_top_data_    (new MKL_DNNData<Dtype>()),
       fwd_bottom_data_ (new MKL_DNNData<Dtype>()),
@@ -210,8 +210,6 @@ private:
   primitive lrnFwd_ = nullptr, lrnBwd_ = nullptr;
   shared_ptr<MKL_DNNData<Dtype> > fwd_top_data_, fwd_bottom_data_;
   shared_ptr<MKL_DNNDiff<Dtype> > bwd_top_diff_, bwd_bottom_diff_;
-  Dtype *lrn_buffer_;
-  //memory::format::type layout_usr_ = memory::format::bfyx_f32;
 };
 
 
@@ -219,7 +217,7 @@ template <typename Dtype>
 class MKL_DNNPoolingLayer : public Layer<Dtype> {
 public:
   explicit MKL_DNNPoolingLayer(const LayerParameter& param,
-          neural::engine::type engine = neural::engine::reference)
+          neural::engine::type engine)
     : Layer<Dtype>(param), engine_(engine),
       fwd_top_data_    (new MKL_DNNData<Dtype>()),
       fwd_bottom_data_ (new MKL_DNNData<Dtype>()),
@@ -232,7 +230,7 @@ public:
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
                        const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "MKL_DNN_DnnPooling"; }
+  virtual inline const char* type() const { return "MKL_DNN_Pooling"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int MinTopBlobs() const { return 1; }
   // MAX POOL layers can output an extra top blob for the mask;
@@ -283,7 +281,7 @@ public:
    *     the value @f$ \nu @f$ by which negative values are multiplied.
    */
   explicit MKL_DNNReLULayer(const LayerParameter& param,
-          neural::engine::type engine = neural::engine::reference)
+          neural::engine::type engine)
     : NeuronLayer<Dtype>(param), engine_(engine) {}
 
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
@@ -320,7 +318,7 @@ template <typename Dtype>
 class MKL_DNNSoftmaxLayer : public Layer<Dtype> {
  public:
   explicit MKL_DNNSoftmaxLayer(const LayerParameter& param,
-          neural::engine::type engine = neural::engine::reference)
+          neural::engine::type engine)
       : Layer<Dtype>(param), engine_(engine),
         top_data_    (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
         bottom_data_ (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
@@ -369,7 +367,7 @@ template <typename Dtype>
 class MKL_DNNInnerProductLayer : public Layer<Dtype> {
  public:
   explicit MKL_DNNInnerProductLayer(const LayerParameter& param,
-          neural::engine::type engine = neural::engine::reference)
+          neural::engine::type engine)
       : Layer<Dtype>(param), engine_(engine),
         top_data_    (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
         bottom_data_ (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
@@ -385,7 +383,7 @@ class MKL_DNNInnerProductLayer : public Layer<Dtype> {
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "MKL_DNNInnerProduct"; }
+  virtual inline const char* type() const { return "MKL_DNN_InnerProduct"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
 
