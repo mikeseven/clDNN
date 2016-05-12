@@ -92,7 +92,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     // (weights can't have batch so it is equall to 1)
     // Ofm and batch is cropped, ofm will be hold manually
     // Batch is included in output size
-    nd::value<uint32_t> window_range_cropped ({filter_arg.size.raw.cbegin()+2, filter_arg.size.raw.cend()});
+    nd::value<uint32_t> window_range_truncated ({filter_arg.size.raw.cbegin()+2, filter_arg.size.raw.cend()});
     auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
     auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
     auto calc_win_idx = nd::choose_calculate_idx(filter_arg.format);
@@ -111,7 +111,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
             range[1] = 1;
 
             for(auto pos : range) { // {b}, {1}, {spatials}
-                for(auto win_pos : window_range_cropped){ // {ifm}, {spatials}
+                for(auto win_pos : window_range_truncated){ // {ifm}, {spatials}
                     for(uint32_t ofm = output_offset.feature[0]; ofm < output_offset.feature[0]+output_size.feature[0]; ++ofm){ // ofm
                         auto pos_with_modified_ofm(pos); // assign current ofm to output position
                         pos_with_modified_ofm[1] = ofm;
