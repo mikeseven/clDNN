@@ -57,9 +57,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_true) {
     auto moving_inv_std_dev  = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
     auto current_average     = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
 
-    auto& input_memory = input.as<const memory&>();
     auto& output_memory = output.as<const memory&>();
-    auto& current_average_memory = current_average.as<const memory&>();
 
     // Initialize input buffers.
     fill<float>(input.as<const memory&>(), 1);
@@ -216,9 +214,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
     auto current_average     = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
     auto current_inv_std_dev = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
 
-    auto& input_memory = input.as<const memory&>();
     auto& output_memory = output.as<const memory&>();
-    auto& current_average_memory = current_average.as<const memory&>();
 
     // Initialize input buffers.
     fill<float>(input.as<const memory&>(), 1);
@@ -299,7 +295,6 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     for(i = 0; i < 3; ++i)
         execute({bn});
 
-    float mean = 10.0f / input_size[3];
 
     // Find non zero value in averages
     if (input_size[2] == 1) {
