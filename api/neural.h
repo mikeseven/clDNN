@@ -171,10 +171,10 @@ private:
 //
 // Examples:
 //
-//  Reorder yxfb_f32 to byxf_f32 on user-specified buffers on reference engine.
-//    neural::primitive input   = memory::create({engine::reference, memory::format::yxfb_f32, {16, {4, 8}, 1}});
-//    neural::primitive output  = memory::create({engine::reference, memory::format::byxf_f32, {16, {4, 8}, 1}});
-//    neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,input,output});
+//   Reorder yxfb_f32 to byxf_f32 on user-specified buffers on reference engine.
+//     neural::primitive input   = memory::create({engine::reference, memory::format::yxfb_f32, {16, {4, 8}, 1}});
+//     neural::primitive output  = memory::create({engine::reference, memory::format::byxf_f32, {16, {4, 8}, 1}});
+//     neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,input,output});
 struct reorder : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -201,7 +201,25 @@ private:
 
 // neural::convolution
 //
-// TODO
+// Performs forward spatial convolution with weight sharing.
+// Parameters are defined in context of "direct" convolution, but actual algorithm is not implied.
+// Look into docs/size_offset_stride_padding.html for description how size, offsets, stride & padding parameter work.
+//
+//
+// Example:
+//
+//   In batch 24 convolve 224x224 3-feature-map user-specified inputs into 96-feature-map user-specified outputs.
+//     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+//     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {96, {224, 224}, 24}});
+//     auto weight = file::create({engine::cpu, "weight.nnb"});
+//     auto bias   = file::create({engine::cpu, "bias.nnb"});
+//     auto conv   = convolution::create({engine::cpu, output, input, weight, bias, padding::zero});
+//
+//   As above, but convolution allocated it's output buffer.
+//     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+//     auto weight = file::create({engine::cpu, "weight.nnb"});
+//     auto bias   = file::create({engine::cpu, "bias.nnb"});
+//     auto conv   = convolution::create({engine::cpu, memory::format::yxfb_f32, input, weight, bias, padding::zero});
 struct convolution : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
@@ -218,6 +236,7 @@ struct convolution : is_a_primitive {
         DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     primitive in,                                 neural::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     primitive in,                                 uint32_t                 stride, primitive weights, primitive biases, neural::padding::type);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     primitive in,                                                                  primitive weights, primitive biases, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, primitive                    out,                                                                         primitive in,                                 neural::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, primitive                    out,                                                                         primitive in,                                                                  primitive weights, primitive biases, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, primitive                    out,     neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
@@ -241,7 +260,23 @@ private:
 
 // neural::convolution_backward
 //
-// TODO
+// Performs backward spatial convolution with weight sharing.
+// Parameters are defined in context of "direct" convolution, but actual algorithm is not implied.
+//
+//
+// Examples:
+//
+//   Backward pass 
+//     auto bw_output    = memory::create({eng, memory::format::yxfb_f32, {1, {2, 2}, 1}});
+//     auto bw_input     = memory::create({eng, memory::format::yxfb_f32, {1, {3, 3}, 1}});
+//     auto fw_input     = memory::create({eng, memory::format::yxfb_f32, {1, {2, 2}, 1}});
+//     auto weights      = memory::create({eng, memory::format::yxfb_f32, {1, {2, 2}, 1}});
+//     auto weights_diff = memory::create({eng, memory::format::yxfb_f32, {1, {2, 2}, 1}});
+//     auto biases       = memory::create({eng, memory::format::x_f32,    {1, {{1}} , 1}});
+//     auto biases_diff  = memory::create({eng, memory::format::x_f32,    {1, {{1}} , 1}});
+//     auto conv_bw = convolution_backward::create({engine::reference, 
+//         std::vector<primitive>{bw_output, weights_diff, biases_diff}, 
+//         {bw_input, fw_input, weights, biases}, {1, {1, 1}, 1}, padding::zero});
 struct convolution_backward : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;

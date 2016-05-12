@@ -14,15 +14,15 @@
 // limitations under the License.
 */
 
-#if 0
 #include "api/neural.h"
 
+#if 0
 // convolution->relu->pooling->lrn with weights & biases from file
 void example_003() {
     char *data_buffer = nullptr;
     using namespace neural;
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {224, 224, 3,  24}});
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {112, 112, 96, 24}});
+    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {96, {112, 112}, 24}});
     auto weight = file::create({engine::cpu, "weight.nnb"});
     auto bias   = file::create({engine::cpu, "bias.nnb"});
 
@@ -33,5 +33,5 @@ void example_003() {
 
     execute({input(data_buffer), output(data_buffer), conv, act, pool, lrn});
 }
-#endif
 
+#endif
