@@ -22,11 +22,11 @@ namespace neural {
     struct relu_cpu_avx2 : is_an_implementation {
         relu_cpu_avx2(relu &arg);
         ~relu_cpu_avx2();
-        static void implementation(const void *ptr);
 
         static is_an_implementation *create(relu &arg) { return new relu_cpu_avx2(arg); };
-        std::vector<task> work() { return {task{implementation, &outer}}; };
+        std::vector<task> work() { return relu_ptr->work(); };
 
+        std::unique_ptr<is_an_implementation> relu_ptr;
         const relu &outer;
     };
 

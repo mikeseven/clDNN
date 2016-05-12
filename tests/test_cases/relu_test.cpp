@@ -62,11 +62,11 @@ TEST(relu_f32_fw, basic) {
 TEST(relu_f32_fw, intrinsics_avx2) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
-    auto input = memory::create({ engine::cpu, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
-    auto output = memory::create({ engine::cpu, memory::format::yxfb_f32,{ b,{ y, x }, f } });
-    input.as<const memory&>().fill<float>();
+    auto input = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto output = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f } });
+    fill<float>(input.as<const memory&>());
 
-    auto act = relu::create({ engine::reference, output, input });
+    auto act = relu::create({ engine::cpu, output, input });
     auto buf = static_cast<float*>(input.as<const memory&>().pointer);
     // write output to input buffer
     execute({ output(buf), act });
@@ -74,7 +74,6 @@ TEST(relu_f32_fw, intrinsics_avx2) {
     // multiply all positive intigers by -1
     for (size_t i = 0; i < y*x*f*b; ++i)
         buf[i] = (buf[i] > 0) ? -buf[i] : buf[i];
-
     //auto act2 = relu::create({engine::reference, output, output});
     execute({ act });
 
@@ -185,11 +184,11 @@ TEST(relu_f32_bw, basic) {
 TEST(relu_f32_bw, intrinsics_avx2) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
-    auto fw_input = memory::create({ engine::cpu, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
-    auto bw_input = memory::create({ engine::cpu, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
-    auto bw_output = memory::create({ engine::cpu, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
-    fw_input.as<const memory&>().fill<float>();
-    bw_input.as<const memory&>().fill<float>();
+    auto fw_input = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto bw_input = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto bw_output = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    fill<float>(fw_input.as<const memory&>());
+    fill<float>(bw_input.as<const memory&>());
 
     auto act = relu_backward::create({ engine::reference,{ bw_output },{ bw_input, fw_input } });
     execute({ act });

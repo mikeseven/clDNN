@@ -54,74 +54,121 @@ void backward_inner_macro(float *forward_input, float *backward_input, float *ba
 }
 
 
+// process chunks of data
+struct relu_avx2_worker : public neural::is_an_implementation
+{
+    std::vector<neural::task> tasks;
+
+    #pragma pack(push, 1)
+    struct task_data_t {
+        const relu *relu_layer;
+        size_t offset;
+        size_t size;
+    };
+    #pragma pack(pop)
+
+    std::vector<task_data_t> task_data;
+
+    relu_avx2_worker(const void *outher) : is_an_implementation(neural::type_id<relu_avx2_worker>()) {
+        auto relu_layer = static_cast<const relu *>(outher);
+
+        auto output_mem_count = relu_layer->output_memory(0).count();
+
+        //todo: determine chunks of data from analysis
+        size_t chunks_count = 2;
+
+        auto chunk_size = output_mem_count/chunks_count;
+
+        tasks.resize(chunks_count);
+        task_data.resize(chunks_count);
+        for (auto i = 0u; i < tasks.size(); ++i) {
+            auto offset = i * chunk_size;
+            auto size = (i < chunks_count-1) ? (i+1) * chunk_size - offset : output_mem_count - offset;
+
+            task_data[i] = {relu_layer, offset, size};
+            tasks[i] = { reinterpret_cast<void(*)(const void*)>(chunk_processor), &task_data[i] };
+            task_data_t *td = (task_data_t*)(tasks[i].data);
+            int a=0;a++;
+        }
+    }
+
+    static void chunk_processor(const task_data_t *task_data) {
+        auto input = static_cast<float*>(task_data->relu_layer->input_memory(0).pointer);
+        auto output = static_cast<float*>(task_data->relu_layer->output_memory(0).pointer);
+        //auto input = static_cast<float*>(this_relu->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
+        //auto output = static_cast<float*>(this_relu->argument.output[0].as<const memory&>().pointer);
+
+        //auto output_mem_count = task_data->relu_layer->argument.output[0].as<const memory&>().count();
+        input += task_data->offset;
+        output += task_data->offset;
+        auto output_mem_count = task_data->size;
+
+        auto full_passes = output_mem_count / (C_num_max_acc * C_simd_width);
+        auto partial_pass_size = output_mem_count % (C_num_max_acc * C_simd_width) / C_simd_width;
+
+        for (uint32_t pass = 0; pass < full_passes; ++pass)
+        {
+            forward_inner_macro<C_num_max_acc>(input, output);
+
+            input += C_num_max_acc * C_simd_width;
+            output += C_num_max_acc * C_simd_width;
+        }
+
+        switch (partial_pass_size)
+        {
+            case  1: forward_inner_macro< 1>(input, output); break;
+            case  2: forward_inner_macro< 2>(input, output); break;
+            case  3: forward_inner_macro< 3>(input, output); break;
+            case  4: forward_inner_macro< 4>(input, output); break;
+            case  5: forward_inner_macro< 5>(input, output); break;
+            case  6: forward_inner_macro< 6>(input, output); break;
+            case  7: forward_inner_macro< 7>(input, output); break;
+            case  8: forward_inner_macro< 8>(input, output); break;
+            case  9: forward_inner_macro< 9>(input, output); break;
+            case 10: forward_inner_macro<10>(input, output); break;
+            case 11: forward_inner_macro<11>(input, output); break;
+            case 12: forward_inner_macro<12>(input, output); break;
+            case 13: forward_inner_macro<13>(input, output); break;
+            case 14: forward_inner_macro<14>(input, output); break; //C_num_max_acc - 1
+        }
+    }
+
+    std::vector<neural::task> work() {
+        return this->tasks;
+    }
+};
+
+
 relu_cpu_avx2::relu_cpu_avx2(relu &arg)
     : is_an_implementation(neural::type_id<relu_cpu_avx2>())
     , outer(arg)
-{};
-
-
-relu_cpu_avx2::~relu_cpu_avx2() {}
-
-
-void relu_cpu_avx2::implementation(const void *ptr) {
-    auto this_relu = static_cast<const relu *>(ptr);
+{
+    auto this_relu = static_cast<const relu *>(&outer);
 
     auto& input_offset = this_relu->argument.input_offset;
     auto& output_offset = this_relu->argument.output_offset;
     auto& output_size = this_relu->argument.output_size;
 
-    //auto& input_mem_arg  = this_relu->input_memory(0).argument;
-    //auto& output_mem_arg = this_relu->output_memory(0).argument;
-    auto& input_mem_arg = this_relu->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-    auto& output_mem_arg = this_relu->argument.output[0].as<const memory&>().argument;
+    auto& input_mem_arg  = this_relu->input_memory(0).argument;
+    auto& output_mem_arg = this_relu->output_memory(0).argument;
 
     if (input_mem_arg.format != memory::format::yxfb_f32)                throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
     if (input_mem_arg.format != output_mem_arg.format)                   throw std::runtime_error("ReLU input/output data format does not match.");
     if (input_mem_arg.size.raw.size() != output_mem_arg.size.raw.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
-    for (auto &x : input_offset.raw)                         if (x == 0) throw std::runtime_error("ReLU input offset must be equal to zero.");
-    for (auto &x : output_offset.raw)                        if (x == 0) throw std::runtime_error("ReLU output offset must be equal to zero.");
+    for (auto &x : input_offset.raw)                          if (x > 0) throw std::runtime_error("ReLU input offset must be equal to zero.");
+    for (auto &x : output_offset.raw)                         if (x > 0) throw std::runtime_error("ReLU output offset must be equal to zero.");
 
     assert(1 == this_relu->argument.input.size());
     assert(1 == this_relu->argument.output.size());
     assert(1 == output_size.feature.size());
     assert(1 == output_size.batch.size());
 
-    //auto input  = static_cast<float*>(this_relu->input_memory(0).pointer);
-    //auto output = static_cast<float*>(this_relu->output_memory(0).pointer);
-    auto input = static_cast<float*>(this_relu->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
-    auto output = static_cast<float*>(this_relu->argument.output[0].as<const memory&>().pointer);
+    relu_avx2_worker* tmp_relu_avx2_worker = new relu_avx2_worker(this_relu);
+    relu_ptr.reset(tmp_relu_avx2_worker);
+};
 
-    auto output_mem_count = this_relu->argument.output[0].as<const memory&>().count();
 
-    auto full_passes = output_mem_count / (C_num_max_acc * C_simd_width);
-    auto partial_pass_size = output_mem_count % (C_num_max_acc * C_simd_width) / C_simd_width;
-
-    for (uint32_t pass = 0; pass < full_passes; ++pass)
-    {
-        forward_inner_macro<C_num_max_acc>(input, output);
-
-        input += C_num_max_acc * C_simd_width;
-        output += C_num_max_acc * C_simd_width;
-    }
-
-    switch (partial_pass_size)
-    {
-        case  1: forward_inner_macro< 1>(input, output); break;
-        case  2: forward_inner_macro< 2>(input, output); break;
-        case  3: forward_inner_macro< 3>(input, output); break;
-        case  4: forward_inner_macro< 4>(input, output); break;
-        case  5: forward_inner_macro< 5>(input, output); break;
-        case  6: forward_inner_macro< 6>(input, output); break;
-        case  7: forward_inner_macro< 7>(input, output); break;
-        case  8: forward_inner_macro< 8>(input, output); break;
-        case  9: forward_inner_macro< 9>(input, output); break;
-        case 10: forward_inner_macro<10>(input, output); break;
-        case 11: forward_inner_macro<11>(input, output); break;
-        case 12: forward_inner_macro<12>(input, output); break;
-        case 13: forward_inner_macro<13>(input, output); break;
-        case 14: forward_inner_macro<14>(input, output); break; //C_num_max_acc - 1
-    }
-}
+relu_cpu_avx2::~relu_cpu_avx2() {}
 
 
 relu_backward_cpu_avx2::relu_backward_cpu_avx2(relu_backward &arg)
@@ -143,14 +190,13 @@ void relu_backward_cpu_avx2::implementation(const void *ptr)
     if (this_relu->output().size() != 1)
         throw std::runtime_error("ReLU backward: number of outputs is incorrect.");
 
-    //auto backward_input = static_cast<float*>(this_relu->input_memory(0).pointer);
-    //auto forward_input       = static_cast<float*>(this_relu->input_memory(1).pointer);
-    //auto backward_output  = static_cast<float*>(this_relu->output_memory(0).pointer);
-    auto backward_input = static_cast<float*>(this_relu->argument.input[0].primitive.as<const memory&>().pointer);
-    auto forward_input = static_cast<float*>(this_relu->argument.input[1].primitive.as<const memory&>().pointer);
-    auto backward_output = static_cast<float*>(this_relu->argument.output[0].as<const memory&>().pointer);
+    auto backward_input   = static_cast<float*>(this_relu->input_memory(0).pointer);
+    auto forward_input    = static_cast<float*>(this_relu->input_memory(1).pointer);
+    auto backward_output  = static_cast<float*>(this_relu->output_memory(0).pointer);
+    //auto backward_input = static_cast<float*>(this_relu->argument.input[0].primitive.as<const memory&>().pointer);
+    //auto forward_input = static_cast<float*>(this_relu->argument.input[1].primitive.as<const memory&>().pointer);
+    //auto backward_output = static_cast<float*>(this_relu->argument.output[0].as<const memory&>().pointer);
 
-    //auto forward_output_grad_arg    = this_relu->input_memory(0).argument;
     auto forward_output_grad_arg = this_relu->argument.input[0].primitive.as<const memory&>().argument;
     auto forward_output_grad_offset = this_relu->argument.input_offset[0];
 
