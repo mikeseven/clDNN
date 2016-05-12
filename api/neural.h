@@ -27,7 +27,7 @@ namespace neural {
 // Primitive that describes data in memory in known format.
 // Used to describe both user-allocated data buffers and internal ones.
 // Format defines both layout in memory and reresentation of single value.
-// Format is identified by enumeration. 
+// Format is identified by enumeration.
 // For each format there one can:
 //  - determine number of dimensions & value format using traits
 //  - convert coordinates to a memory offset
@@ -35,7 +35,7 @@ namespace neural {
 //
 // Examples:
 //
-//   Create memory avaialble to 'cpu' engine, with memory format yxfb_f32. 
+//   Create memory avaialble to 'cpu' engine, with memory format yxfb_f32.
 //   It will have 3 feature maps, resolution 224x224 and batch 24.
 //     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
 struct memory : is_a_primitive {
@@ -57,6 +57,7 @@ struct memory : is_a_primitive {
         bfyx_f32,
         bxyf_f32,
         bfxy_f32,
+        oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
         scalar_f64, // single scalar, float64
         x_f64,
         yxfb_f64,   // 3D+batch, float64
@@ -82,7 +83,8 @@ struct memory : is_a_primitive {
         case format::byxf_f32:
         case format::bfyx_f32:
         case format::bxyf_f32:
-		case format::bfxy_f32: return {4, type_id<float>()};
+        case format::bfxy_f32:
+        case format::oiyx_f32: return {4, type_id<float>()};
         case format::scalar_f64:
         case format::   x_f64: return {1, type_id<double>()};
         case format::yxfb_f64:
@@ -165,7 +167,7 @@ private:
 
 // neural::reorder
 //
-// Changes how data is ordered in memory. Value type is not changed & all information is preserved. 
+// Changes how data is ordered in memory. Value type is not changed & all information is preserved.
 // Corresponding values are bitwise equal before/after reorder.
 //
 //
