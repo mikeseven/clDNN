@@ -167,8 +167,7 @@ void MKL_DNNLRNLayer<Dtype>::CrossChannelBackward_cpu(
     bottom_data = reinterpret_cast<const void*>(bottom[0]->cpu_data());
     bottom_diff = reinterpret_cast<void*>(bottom[0]->mutable_cpu_diff());
   }
-
-
+   // TODO
 }
 
 

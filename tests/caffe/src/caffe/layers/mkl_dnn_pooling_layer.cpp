@@ -122,18 +122,15 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   auto out_off_x = 0;
   auto out_off_z = 0;
 
-  //std::cout << "iw "  <<  iw << "  ih " << ih << "  c "  << c  <<  "  n " << n  << "\n";
-  //std::cout << "ow "  <<  ow << "  oh " << oh << "  in_off_x "  << in_off_x  <<  "  in_off_y " << in_off_y  << "\n";
+  fwd_bottom_data_->memory_usr = memory::create({engine_, fwd_bottom_data_->layout_usr, {n, {ih, iw}, c}});
+  fwd_top_data_->memory_usr    = memory::create({engine_, fwd_top_data_   ->layout_usr, {n, {oh, ow}, c}});
+  fwd_bottom_data_->memory_prv = memory::create({engine_, fwd_bottom_data_->layout_prv, {n, {ih, iw}, c}});
+  fwd_top_data_->memory_prv    = memory::create({engine_, fwd_top_data_   ->layout_prv, {n, {oh, ow}, c}});
 
-  fwd_bottom_data_->memory_usr = memory::create({engine_, fwd_bottom_data_->layout_usr, {n, {ih, iw}, c }});
-  fwd_top_data_->memory_usr    = memory::create({engine_, fwd_top_data_   ->layout_usr, {n, {oh, ow}, c }});
-  fwd_bottom_data_->memory_prv = memory::create({engine_, fwd_bottom_data_->layout_prv, {n, {ih, iw}, c }});
-  fwd_top_data_->memory_prv    = memory::create({engine_, fwd_top_data_   ->layout_prv, {n, {oh, ow}, c }});
-
-  bwd_bottom_diff_->memory_usr = memory::create({engine_, bwd_bottom_diff_->layout_usr, {n, {ih, iw}, c }});
-  bwd_top_diff_->memory_usr    = memory::create({engine_, bwd_top_diff_   ->layout_usr, {n, {oh, ow}, c }});
-  bwd_bottom_diff_->memory_prv = memory::create({engine_, bwd_bottom_diff_->layout_prv, {n, {ih, iw}, c }});
-  bwd_top_diff_->memory_prv    = memory::create({engine_, bwd_top_diff_   ->layout_prv, {n, {oh, ow}, c }});
+  bwd_bottom_diff_->memory_usr = memory::create({engine_, bwd_bottom_diff_->layout_usr, {n, {ih, iw}, c}});
+  bwd_top_diff_->memory_usr    = memory::create({engine_, bwd_top_diff_   ->layout_usr, {n, {oh, ow}, c}});
+  bwd_bottom_diff_->memory_prv = memory::create({engine_, bwd_bottom_diff_->layout_prv, {n, {ih, iw}, c}});
+  bwd_top_diff_->memory_prv    = memory::create({engine_, bwd_top_diff_   ->layout_prv, {n, {oh, ow}, c}});
 
 
   // Names are for debugging only
@@ -160,17 +157,17 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       NOT_IMPLEMENTED;
   }
   poolingFwd_ = pooling::create( {engine::reference,
-                                    mode,
-                                    fwd_top_data_->memory_prv,
-                                    {out_off_b, {out_off_y, out_off_x}, out_off_z},
-                                    {n,         {oh,        ow},        c},
-                                    fwd_bottom_data_->memory_prv,
-                                    {in_off_b,  {in_off_y, in_off_x},   in_off_z},
-                                    {1,         {stride_h_, stride_w_}, 1},
-                                    {1,         {kernel_h_, kernel_w_}, 1},
-                                    padding::zero}
-                                  );
+                                  mode,
+                                  fwd_top_data_->memory_prv,
+                                  {out_off_b, {out_off_y, out_off_x}, out_off_z},
+                                  {n,         {oh,        ow},        c},
+                                  fwd_bottom_data_->memory_prv,
+                                  {in_off_b,  {in_off_y, in_off_x},   in_off_z},
+                                  {1,         {stride_h_, stride_w_}, 1},
+                                  {1,         {kernel_h_, kernel_w_}, 1},
+                                  padding::zero} );
 
+  // TODO:
   poolingBwd_ = NULL;
 }
 
@@ -244,7 +241,6 @@ void MKL_DNNPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       (max_idx_.mutable_cpu_data());
 
     caffe_set<size_t>(top_count, -1, mask);
-    //pooling_res[dnnResourceWorkspace] = reinterpret_cast<void*>(mask);
 
     auto bottom_data = fwd_bottom_data_->get_converted_prv(bottom[0], true);
     void *top_data = nullptr;
@@ -259,11 +255,10 @@ void MKL_DNNPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     execute({fwd_bottom_data_->memory_prv(bottom_data),
              fwd_top_data_->memory_prv(top_data),
              poolingFwd_});
-
     }
     break;
   case PoolingParameter_PoolMethod_AVE:
-  {
+    {
     auto bottom_data = fwd_bottom_data_->get_converted_prv(bottom[0], true);
     void *top_data = nullptr;
     if (fwd_top_data_->from_prv != nullptr) {
@@ -277,7 +272,7 @@ void MKL_DNNPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     execute({fwd_bottom_data_->memory_prv(bottom_data),
              fwd_top_data_->memory_prv(top_data),
              poolingFwd_});
-  }
+    }
     break;
   case PoolingParameter_PoolMethod_STOCHASTIC:
     NOT_IMPLEMENTED;
@@ -294,52 +289,8 @@ void MKL_DNNPoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     return;
   }
   NOT_IMPLEMENTED;
-#if 0
-  // Different pooling methods. We explicitly do the switch outside the for
-  // loop to save time, although this results in more codes.
 
-  const size_t* mask = NULL;  // suppress warnings about uninitialized variables
-
-  switch (this->layer_param_.pooling_param().pool()) {
-  case PoolingParameter_PoolMethod_MAX:
-    // The main loop
-    mask = (top.size() > 1) ?
-      reinterpret_cast<const size_t*>(top[1]->cpu_data()) :
-      (max_idx_.cpu_data());
-
-//    pooling_res[dnnResourceWorkspace] =
-  //          reinterpret_cast<void *>(const_cast<size_t*>(mask));
-   // pooling_res[dnnResourceDiffDst] = bwd_top_diff->get_converted_prv(top[0],
-     ///       true);
-
-    if (bwd_bottom_diff_->from_prv != nullptr) {
-      bottom[0]->set_prv_diff(bwd_bottom_diff_->prv_ptr, bwd_bottom_diff_,
-              false);
-      //pooling_res[dnnResourceDiffSrc] =
-        //      reinterpret_cast<void *>(bwd_bottom_diff->prv_ptr);
-    } else {
-      //pooling_res[dnnResourceDiffSrc] = bottom[0]->mutable_cpu_diff();
-    }
-    //caffe_set(bottom[0]->count(), Dtype(0),
-      //      reinterpret_cast<Dtype *>(pooling_res[dnnResourceDiffSrc]));
-
-    //e = dnnExecute<Dtype>(poolingBwd, pooling_res);
-
-
-    break;
-  case PoolingParameter_PoolMethod_AVE:
-    NOT_IMPLEMENTED;
-    break;
-  case PoolingParameter_PoolMethod_STOCHASTIC:
-    NOT_IMPLEMENTED;
-    break;
-  default:
-    LOG(FATAL) << "Unknown pooling method.";
-  }
-
-#endif  // #if 0
 }
-
 
 #ifdef CPU_ONLY
 STUB_GPU(MKL_DNNPoolingLayer);

@@ -6,15 +6,15 @@
 #include "caffe/layers/mkl_dnn_layers.hpp"
 
 // Uncomment to see where the layout conversions are done
-#undef DLOG
+//#undef DLOG
 #ifndef DLOG
 #include <iostream>
 #define DLOG(x) std::cout
 #endif
 
 /*  TODO
- *  groups support
  *  biast_term_ support
+ *  backward support
  *  separate backwards for input, weight, bias
  *  1d, 3d conv
  */
@@ -84,10 +84,6 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   kw = this->kernel_w_;
   kh = this->kernel_h_;
 
-  // DLOG(INFO) << " input:   " << iw << " " << ih << " " << ic <<  " " << n << "\n";
-  // DLOG(INFO) << " output:  " << ow << " " << oh << " " << oc <<  " " << n << "\n";
-  // DLOG(INFO) << " weights: " << kw << " " << kh << " " << ic <<  " " << oc << "\n";
-
   // Forward setup
   fwd_bottom_data->memory_usr = memory::create({engine_, fwd_bottom_data->layout_usr, {n, {ih, iw},  ic}});
   fwd_top_data   ->memory_usr = memory::create({engine_, fwd_top_data   ->layout_usr, {n, {oh, ow},  oc }});
@@ -104,36 +100,21 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   fwd_filter_data->create_conversions();
   fwd_bias_data  ->create_conversions();
 
-
-#if 0
-  convolution::arguments::arguments( neural::engine::type     eng,
-                                   primitive                out,
-                                   neural::vector<uint32_t> out_off,
-                                   neural::vector<uint32_t> out_siz,
-                                   primitive                in,
-                                   neural::vector<int32_t>  in_off,
-                                   neural::vector<uint32_t> strd,
-                                   primitive                weights,
-                                   primitive                biases,
-                                   neural::padding::type    padd)
-#endif
-  //TODO: support for g>1
-
   for (int i=0; i<g; i++) {
     filters_.push_back(memory::create({engine_, fwd_filter_data->layout_prv, {1, {kh, kw}, {oc/g, ic/g}}}));
-    biases_.push_back(memory::create({engine_,   fwd_bias_data  ->layout_prv, {1, {{oc/g}}, 1}}));
-    convolution_fwd_.push_back( convolution::create( {engine_,
-                                        fwd_top_data->memory_prv,
-                                        {0, {0, 0}, i*(oc/g)},
-                                        {n, {oh, ow}, oc/g},
-                                        fwd_bottom_data->memory_prv,
-                                        {0, {-pad_h_, -pad_w_}, i*(ic/g)},
-                                        {1, {stride_h_, stride_w_}, 1},
-                                        filters_[i],
-                                        biases_[i],
-                                        padding::zero}
-                                      )
-                            );
+    biases_. push_back(memory::create({engine_, fwd_bias_data  ->layout_prv, {1, {{oc/g}}, 1}}));
+    convolution_fwd_.push_back(
+      convolution::create({engine_,
+                           fwd_top_data->memory_prv,
+                           {0, {0, 0}, i*(oc/g)},
+                           {n, {oh, ow}, oc/g},
+                           fwd_bottom_data->memory_prv,
+                           {0, {-pad_h_, -pad_w_}, i*(ic/g)},
+                           {1, {stride_h_, stride_w_}, 1},
+                           filters_[i],
+                           biases_[i],
+                           padding::zero}
+                         ));
   }
 
 /*
@@ -155,7 +136,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   bwd_filter_diff->create_conversions();
   bwd_bias_diff->create_conversions();
 
-  // TODO: support for groups
+  // TODO:
   convolution_bwd = convolution_backward::create({ engine_,
                                               std::vector<primitive>({bwd_bottom_diff->memory_prv,
                                                                       bwd_filter_diff->memory_prv,
@@ -194,21 +175,22 @@ void MKL_DNNMemoryDescriptor<Dtype, is_diff>::convert_from_prv(void* prv_ptr, vo
   DLOG(INFO) << "convert priv =>           "  << this->name << " =>"  << "\n";
   execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv});
 #ifdef CONVERSION_PRINT_DATA
-      DLOG(INFO) << "Before conversion: ";
-      for (auto i=0; i<this->prv_count(); i++)
-        DLOG(INFO) << ((Dtype*)prv_ptr)[i] << " ";
-      DLOG(INFO) << " \n";
-      DLOG(INFO) << "After  conversion: ";
-      for (auto i=0; i<this->prv_count(); i++)
-        DLOG(INFO) << ((Dtype*)cpu_ptr)[i] << " ";
-      DLOG(INFO) << " \n\n";
-#endif  //  #ifdef CONVERSION_PRINT_DATA
+  DLOG(INFO) << "Before conversion: ";
+  for (auto i=0; i<this->prv_count(); i++)
+    DLOG(INFO) << ((Dtype*)prv_ptr)[i] << " ";
+  DLOG(INFO) << " \n";
+  DLOG(INFO) << "After  conversion: ";
+  for (auto i=0; i<this->prv_count(); i++)
+    DLOG(INFO) << ((Dtype*)cpu_ptr)[i] << " ";
+  DLOG(INFO) << " \n\n";
+#endif
 }
 
 template <typename Dtype, bool is_diff>
 Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
   Blob<Dtype>* blob, bool set_prv_ptr, MKL_DNNMemoryDescriptor<Dtype, is_diff>* converted_in_fwd) {
-  if (this->to_prv != nullptr)
+
+  if (this->to_prv != nullptr)  // Checking is conversion is required
   {
     const Dtype* prv_ptr = is_diff ?  blob->prv_diff() : blob->prv_data();
     if(prv_ptr == NULL)
@@ -216,17 +198,17 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
       DLOG(INFO) << "convert      => priv                                => " << this->name << "\n";
       auto usr_ptr = is_diff ? (Dtype *) blob->cpu_diff() : (Dtype *) blob->cpu_data();
       execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr), this->to_prv});
-      //DLOG(INFO) << "Done\n";
+
 #ifdef CONVERSION_PRINT_DATA
       DLOG(INFO) << "Before conversion: ";
       for (auto i=0; i<blob->count(); i++)
         DLOG(INFO) << usr_ptr[i] << " ";
-       DLOG(INFO) << " \n";
+      DLOG(INFO) << " \n";
       DLOG(INFO) << "After  conversion: ";
       for (auto i=0; i<blob->count(); i++)
         DLOG(INFO) << this->prv_ptr[i] << " ";
-       DLOG(INFO) << " \n\n";
-#endif  //#ifdef CONVERSION_PRINT_DATA
+      DLOG(INFO) << " \n\n";
+#endif
       if (set_prv_ptr) {
         if(is_diff)
           blob->set_prv_diff(this->prv_ptr, get_shared_ptr(), true);
@@ -241,17 +223,16 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
       shared_ptr<PrvMemDescr> prv_mem_descriptor =
           is_diff ? (blob->get_prv_descriptor_diff()) : (blob->get_prv_descriptor_data());
 
+      CHECK(prv_mem_descriptor != nullptr);
       CHECK(prv_mem_descriptor->get_descr_type() == PrvMemDescr::PRV_DESCR_MKL_DNN);
 
       shared_ptr<MKL_DNNMemoryDescriptor<Dtype, is_diff> > current_descr =
         boost::static_pointer_cast<MKL_DNNMemoryDescriptor<Dtype, is_diff> > (prv_mem_descriptor);
 
       if(current_descr->layout_prv != this->layout_prv) {
-        if(converted_in_fwd != nullptr)
-        {
+        if(converted_in_fwd != nullptr) {
           // hack for reusing previously done conversion
-          if(converted_in_fwd->layout_prv == this->layout_prv)
-          {
+          if(converted_in_fwd->layout_prv == this->layout_prv) {
             DLOG(INFO) << "layout OK                 " << converted_in_fwd->name << " == " << this->name  << "\n";
             return converted_in_fwd->prv_ptr;
           }
@@ -278,15 +259,6 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
     return (Dtype*) prv_ptr;
   }
 
-#ifdef CONVERSION_PRINT_DATA
-  {
-  DLOG(INFO) << "no convert       " << this->name << "\n";
-      auto usr_ptr = is_diff ? (Dtype *) blob->cpu_diff() : (Dtype *) blob->cpu_data();
-        for (auto i=0; i<blob->count(); i++)
-        DLOG(INFO) << usr_ptr[i] << " ";
-       DLOG(INFO) << " \n";
-  }
-#endif //#ifdef CONVERSION_PRINT_DATA
   return (is_diff ? (Dtype*) blob->cpu_diff() : (Dtype*) blob->cpu_data());
 }
 
@@ -314,47 +286,56 @@ void MKL_DNNConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
   ih = this->height_;
   ic = this->channels_/g;
 
-  CHECK(bottom[0]->width()    == iw &&
-        bottom[0]->height()   == ih &&
-        bottom[0]->channels() == ic*g &&
-        bottom[0]->num()      == n) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(bottom[0]->width()   , iw  ) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(bottom[0]->height()  , ih  ) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(bottom[0]->channels(), ic*g) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(bottom[0]->num()     , n   ) << "Inclompatible shape of bottom with layer";
 
   ow = this->width_out_;
   oh = this->height_out_;
   oc = this->num_output_/g;
-  CHECK_EQ(top[0]->width()   , ow) << "Inclompatible shape of bottom with layer";
-  CHECK_EQ(top[0]->height()  , oh) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(top[0]->width()   , ow)   << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(top[0]->height()  , oh)   << "Inclompatible shape of bottom with layer";
   CHECK_EQ(top[0]->channels(), oc*g) << "Inclompatible shape of bottom with layer";
-  CHECK_EQ(top[0]->num()     , n) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(top[0]->num()     , n)    << "Inclompatible shape of bottom with layer";
 
+  CHECK_EQ(convolution_fwd_.size(), g);
+  CHECK_EQ(filters_.size(), g);
+  CHECK_EQ(biases_.size(), g);
 
-  auto bottom_data = fwd_bottom_data->get_converted_prv(bottom[0], true); //temporary false
+  auto bottom_data   = fwd_bottom_data->get_converted_prv(bottom[0], true);
   float* filter_data = fwd_filter_data->get_converted_prv(this->blobs_[0].get(), true);
-  float* bias_data   = fwd_bias_data  ->get_converted_prv(this->blobs_[1].get(), true);
   Dtype* top_data;
-  if (fwd_top_data->from_prv != nullptr)
-  {
+  if (fwd_top_data->from_prv != nullptr) {
     top_data = fwd_top_data->prv_ptr;
     top[0]->set_prv_data(fwd_top_data->prv_ptr, fwd_top_data, false);
-  }
-  else
+  } else {
     top_data = top[0]->mutable_cpu_data();
-
-  int i=0;
-  for(auto& conv : convolution_fwd_)
-  {
-    execute({fwd_bottom_data->memory_prv(bottom_data), fwd_top_data->memory_prv(top_data),
-            filters_[i](filter_data + i* this->weight_offset_), biases_[i](bias_data + i*oc),
-            conv});
-    i++;
   }
 
+  if(this->bias_term_) {
+    float* bias_data   = fwd_bias_data  ->get_converted_prv(this->blobs_[1].get(), true);
+    for(int i=0; i<g; i++) {
+      execute({fwd_bottom_data->memory_prv(bottom_data), fwd_top_data->memory_prv(top_data),
+              filters_[i](filter_data + i* this->weight_offset_), biases_[i](bias_data + i*oc),
+              convolution_fwd_[i]});
+    }
+  } else {
+    NOT_IMPLEMENTED;  // TODO, not supported currently
+    for(int i=0; i<g; i++) {
+      execute({fwd_bottom_data->memory_prv(bottom_data), fwd_top_data->memory_prv(top_data),
+              filters_[i](filter_data + i* this->weight_offset_),
+              convolution_fwd_[i]});
+    }
+  }
 }
 
 template <typename Dtype>
 void MKL_DNNConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom)
 {
+  NOT_IMPLEMENTED;  // This is WIP - not tested
+
   size_t n, g;
   size_t iw, ih, ic;
   size_t ow, oh, oc;
@@ -365,18 +346,18 @@ void MKL_DNNConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& to
   ih = this->height_;
   ic = this->channels_/g;
 
-  CHECK(bottom[0]->width()    == iw &&
-        bottom[0]->height()   == ih &&
-        bottom[0]->channels() == ic*g &&
-        bottom[0]->num()      == n) << "Incompatible shape of bottom with layer";
+  CHECK_EQ(bottom[0]->width()   , iw  ) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(bottom[0]->height()  , ih  ) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(bottom[0]->channels(), ic*g) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(bottom[0]->num()     , n   ) << "Inclompatible shape of bottom with layer";
 
   ow = this->width_out_;
   oh = this->height_out_;
   oc = this->num_output_/g;
-  CHECK(top[0]->width()    == ow &&
-        top[0]->height()   == oh &&
-        top[0]->channels() == oc*g &&
-        top[0]->num()      == n) << "Incompatible shape of bottom with layer";
+  CHECK_EQ(top[0]->width()   , ow  ) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(top[0]->height()  , oh  ) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(top[0]->channels(), oc*g) << "Inclompatible shape of bottom with layer";
+  CHECK_EQ(top[0]->num()     , n   ) << "Inclompatible shape of bottom with layer";
 
   // TODO: why can't we do it separately?
   if (propagate_down[0] || this->param_propagate_down(0) || this->param_propagate_down(1))

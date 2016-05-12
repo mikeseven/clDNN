@@ -55,7 +55,7 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                                                 bottom_data_->memory_prv,
                                                 {0, {{0}}, 0},
                                                 });
-  // TODO: softmax support in mkl-dnn
+  // TODO: softmax backward support in mkl-dnn
   //softmaxBwd_ = normalization::softmax_backward::create({engine::reference, {bottom_diff_}, {top_diff_, bottom_data_}, negative_slope});
 }
 
@@ -98,29 +98,6 @@ void MKL_DNNSoftmaxLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
   NOT_IMPLEMENTED;
-  /*
-  const Dtype* top_diff = top[0]->cpu_diff();
-  const Dtype* top_data = top[0]->cpu_data();
-  Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
-  Dtype* scale_data = scale_.mutable_cpu_data();
-  int channels = top[0]->shape(softmax_axis_);
-  int dim = top[0]->count() / outer_num_;
-  caffe_copy(top[0]->count(), top_diff, bottom_diff);
-  for (int i = 0; i < outer_num_; ++i) {
-    // compute dot(top_diff, top_data) and subtract them from the bottom diff
-    for (int k = 0; k < inner_num_; ++k) {
-      scale_data[k] = caffe_cpu_strided_dot<Dtype>(channels,
-          bottom_diff + i * dim + k, inner_num_,
-          top_data + i * dim + k, inner_num_);
-    }
-    // subtraction
-    caffe_cpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, channels, inner_num_, 1,
-        -1., sum_multiplier_.cpu_data(), scale_data, 1., bottom_diff + i * dim);
-  }
-  // elementwise multiplication
-  caffe_mul(top[0]->count(), bottom_diff, top_data, bottom_diff);
-
-   */
 }
 
 
