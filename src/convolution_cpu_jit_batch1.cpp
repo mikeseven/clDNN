@@ -17,115 +17,634 @@
 #include "convolution_cpu_jit_batch1.h"
 #include "multidimensional_counter.h"
 #include "memory_utils.h"
+#include "xbyak/xbyak_util.h"
 
 #include <thread>
 
+#pragma warning( disable : 4267 ) 
+
+const size_t C_simd_width = sizeof(__m256);
+const size_t C_slice_size = C_simd_width*2;
+
 namespace neural {
+
+
+    class convolution_generator : public ::Xbyak::CodeGenerator
+    {
+    public:
+        convolution_generator(    
+            int activation,
+            size_t input_width,
+            size_t input_height,
+            size_t input_depth,
+            size_t inner_loop_iterations,
+            size_t kernel_width,
+            size_t kernel_height,
+            size_t kernel_ifmap,
+            size_t output_width,
+            size_t output_height,
+            size_t output_depth,
+            size_t block_size,
+            size_t out_fm_pckg_size,
+            size_t num_blocks_full,
+            size_t partial_block_size,
+            size_t stride_x,
+            size_t stride_y);
+
+        ~convolution_generator() {}
+
+        convolution_generator_callback_t* generator_callback = nullptr;
+    };
+
+    convolution_generator::convolution_generator(
+        int activation,
+        size_t input_width,
+        size_t input_height,
+        size_t input_depth,
+        size_t inner_loop_iterations,
+        size_t kernel_width,
+        size_t kernel_height,
+        size_t kernel_ifmap,
+        size_t output_width,
+        size_t output_height,
+        size_t output_depth,
+        size_t block_size,
+        size_t out_fm_pckg_size,
+        size_t num_blocks_full,
+        size_t partial_block_size,
+        size_t stride_x,
+        size_t stride_y)
+    {
+        if(activation)
+            activation = activation;
+
+        using namespace ::Xbyak;
+        util::Cpu Current_cpu;
+
+        if(Current_cpu.has(util::Cpu::tAVX2))
+        {
+            // Precomputed constants.
+            // size_t kernel_depth_size = input_fmap_view_length * C_slice_size;
+
+            size_t input_row_size = input_width * input_depth;
+            size_t output_row_size = output_width * output_depth;
+
+            size_t input_image_size = input_row_size*input_height;
+            size_t output_image_size = output_row_size*output_height;
+
+            size_t weight_offset = kernel_ifmap * kernel_width * kernel_height * C_slice_size;
+
+            size_t innermost_unroll_factor = 1;
+            if(inner_loop_iterations % 4 == 0)
+            {
+                innermost_unroll_factor = 4;
+            }
+            else if(inner_loop_iterations % 3 == 0)
+            {
+                innermost_unroll_factor = 3;
+            }
+            else if(inner_loop_iterations % 2 == 0)
+            {
+                innermost_unroll_factor = 2;
+            }
+
+            // Helpers for assembly variables.
+            // After stackframe setup we'll have following stack layout:
+
+#ifdef _WIN32
+            // [RBP + 48]: stack param 1, etc..
+            // [RBP + 48]: stack param 0
+            // [RBP + 40]: shadowspace entry 3
+            // [RBP + 32]: shadowspace entry 2
+            // [RBP + 24]: shadowspace entry 1
+            // [RBP + 16]: shadowspace entry 0
+            // [RBP +  8]: return address
+            // [RBP     ]: caller RBP
+            // [RBP -  8]: local variable 0
+            // [RBP - 16]: local variable 1, etc..
+            size_t stack_arg_qwords = 5;
+            const Reg64&   regarg_input_ptr                      = rcx;
+            const Reg64&   regarg_weights_ptr                    = rdx;
+            const Reg64&   regarg_bias_ptr                       = r8;
+            const Reg64&   regarg_output_ptr                     = r9;
+            const Address& stackarg_input_fmap_view_start        = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_input_fmap_view_end          = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_input_column_view_start      = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_input_row_view_start         = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_kernel_input_fmap_view_start = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_kernel_out_fmap_view_start   = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_column_view_start     = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_row_view_start        = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_row_view_end          = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_fm_view_start         = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_fm_view_end           = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_image_view_start      = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_image_view_end        = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+#else
+            // [RBP + 24]: stack param 1, etc..
+            // [RBP + 16]: stack param 0
+            // [RBP +  8]: return address
+            // [RBP     ]: caller RBP
+            // [RBP -  8]: local variable 0
+            // [RBP - 16]: local variable 1, etc..
+            // We are ignoring red zone here, our code is exception-proof :P
+            size_t stack_arg_qwords = 1;
+            const Reg64&   regarg_input_ptr                      = rdi;
+            const Reg64&   regarg_weights_ptr                    = rsi;
+            const Reg64&   regarg_bias_ptr                       = rdx;
+            const Reg64&   regarg_output_ptr                     = rcx;
+            const Reg64&   regarg_input_fmap_view_start          = r8;
+            const Reg64&   regarg_input_fmap_view_end            = r9;
+            const Address& stackarg_input_column_view_start      = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_input_row_view_start         = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_kernel_input_fmap_view_start = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_kernel_out_fmap_view_start   = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_column_view_start     = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_column_view_end       = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_row_view_start        = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_row_view_end          = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_fm_view_start         = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_fm_view_end           = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_image_view_start      = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+            const Address& stackarg_output_image_view_end        = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
+#endif
+
+            size_t stack_local_qwords = 0;
+            const Address& stack_input_ptr             = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_weights_ptr           = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_bias_ptr              = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_output_ptr            = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_input_fmap_view_start = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_input_fmap_view_end   = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+
+            const Address& stack_current_image       = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_current_output_fm   = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_current_output_row  = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_current_input_row   = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_current_kernel_fm   = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+
+            const Address& stack_current_block       = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+
+            const Address& stack_current_kernel_row  = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+
+            const Address& stack_input_image_offset  = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_output_image_offset = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+
+            const Address& stack_input_offset_base   = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_output_offset_base  = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_kernel_offset_base  = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+
+            const Address& stack_input_ptr_base      = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_output_ptr_base     = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_kernel_ptr_base     = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+            const Address& stack_bias_ptr_base       = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
+
+            // ASSEMBLY STARTS HERE.
+
+            // Prologue.
+            push(rbp);
+            mov(rbp, rsp);
+            sub(rsp, stack_local_qwords * sizeof(size_t));
+            push(rbx);
+            push(r12); 
+            push(r13); 
+            push(r14); 
+            push(r15);
+
+            mov(rax, qword[regarg_input_ptr]);
+            mov(stack_input_ptr, rax);
+
+            mov(rax, qword[regarg_weights_ptr]);
+            mov(stack_weights_ptr, rax);
+
+            mov(rax, qword[regarg_bias_ptr]);
+            mov(stack_bias_ptr, rax);
+
+            mov(rax, qword[regarg_output_ptr]);
+            mov(stack_output_ptr, rax);
+
+#ifdef _WIN32
+            mov(rax, stackarg_input_fmap_view_start);
+            mov(stack_input_fmap_view_start, rax);
+
+            mov(rax, stackarg_input_fmap_view_end);
+            mov(stack_input_fmap_view_end, rax);
+#else
+            mov(stack_input_fmap_view_start, regarg_input_fmap_view_start);
+            mov(stack_input_fmap_view_end, regarg_input_fmap_view_end);
+#endif
+
+            // Main code.
+            mov(r15, inner_loop_iterations);
+
+            mov(rax, stackarg_output_image_view_start);
+            mov(stack_current_image, rax);
+            L("batch_loop_start");
+            mov(rax, stackarg_output_image_view_end);
+            cmp(stack_current_image, rax);
+            ja("batch_loop_end", T_NEAR);
+
+            mov(rax, input_image_size);
+            mul(stack_current_image);
+            mov(stack_input_image_offset, rax);
+
+            mov(rax, output_image_size);
+            mul(stack_current_image);
+            mov(stack_output_image_offset, rax);
+
+            mov(rax, stackarg_output_fm_view_start);
+            mov(stack_current_output_fm, rax);
+            mov(rax, stackarg_kernel_out_fmap_view_start);
+            mov(stack_current_kernel_fm, rax);
+            L("outfm_loop_start");
+            mov(rax, stackarg_output_fm_view_end);
+            cmp(stack_current_output_fm, rax);
+            ja("outfm_loop_end", T_NEAR);
+
+            mov(rax, stackarg_output_row_view_start);
+            mov(stack_current_output_row, rax);
+            mov(stack_current_input_row, 0);
+            L("output_row_start");
+            mov(rax, stackarg_output_row_view_end);
+            cmp(stack_current_output_row, rax);
+            ja("output_row_end", T_NEAR);
+
+            // inp_h = input_row * kernel_stride_y + input_row_view_start
+            mov(rax, stride_y);             
+            mul(stack_current_input_row);
+            add(rax, stackarg_input_row_view_start);
+
+            // inp_offset1 = inp_h * input_row_size
+            mov(rdx, rax);
+            mov(rax, input_row_size);
+            mul(rdx);
+
+            // save inp_offset1
+            mov(rcx, rax);
+
+            // inp_offset_base = inp_offset1 + input_column_view_start * num_input_feature_maps + input_image_offset + input_fmap_view_start
+            mov(rax, input_depth);
+            mul(stackarg_input_column_view_start);
+            add(rax, stack_input_image_offset);
+            add(rax, rcx);
+            mov(rcx, stack_input_fmap_view_start);
+            add(rax, rcx);
+            mov(stack_input_offset_base, rax);
+
+            // out_offset1  = output_row * output_row_size
+            mov(rax, output_row_size);
+            mul(stack_current_output_row);
+
+            // save out_offset1
+            mov(rcx, rax);
+
+            // out_offset = out_offset1 + output_column_view_start * num_output_feature_maps + output_image_offset + current_output_fm
+            mov(rax, output_depth);
+            mul(stackarg_output_column_view_start);
+            add(rax, stack_output_image_offset);
+            add(rax, rcx);
+            add(rax, stack_current_output_fm);
+            mov(stack_output_offset_base, rax);
+
+            // kernel_offset = (kernel_feature_map / C_slice_size) * weight_offset + kernel_input_fmap_view_start * C_slice_size
+            mov(rdx, stack_current_kernel_fm);
+            shr(rdx, static_cast<uint32_t>(log2(C_slice_size)));
+            mov(rax, weight_offset);
+            mul(rdx);
+            mov(rdx, stackarg_kernel_input_fmap_view_start);
+            shl(rdx, static_cast<uint32_t>(log2(C_slice_size)));
+            add(rax, rdx);
+            mov(stack_kernel_offset_base, rax);
+
+            // Main column block loop.
+            auto inner_macro = [&](size_t block_size)
+            {
+                auto make_unique = [&](std::string string) {return string + std::to_string(block_size);};
+
+                mov(rax, stack_kernel_offset_base);
+                shl(rax, 2);
+                add(rax, stack_weights_ptr);
+                mov(stack_kernel_ptr_base, rax);
+
+                mov(rax, stack_input_offset_base);
+                shl(rax, 2);
+                add(rax, stack_input_ptr);
+                mov(stack_input_ptr_base, rax);
+
+                mov(rax, stack_output_offset_base);
+                shl(rax, 2);
+                add(rax, stack_output_ptr);
+                mov(stack_output_ptr_base, rax);
+
+                mov(rax, stack_current_kernel_fm);
+                shl(rax, 2);
+                add(rax, stack_bias_ptr);
+                mov(stack_bias_ptr_base, rax);
+
+                for(size_t acc = 0; acc < block_size; ++acc)
+                {
+                    if(out_fm_pckg_size == 16)
+                    {
+                        vxorps(Ymm(acc * 2 + 0), Ymm(acc * 2 + 0));
+                        vxorps(Ymm(acc * 2 + 1), Ymm(acc * 2 + 1));
+                    }
+                    else if(out_fm_pckg_size == 8)
+                    {
+                        vxorps(Ymm(acc), Ymm(acc));
+                    }
+                    else if(out_fm_pckg_size == 3)
+                    {
+                        vxorps(Ymm(acc * 3 + 0), Ymm(acc * 3 + 0));
+                        vxorps(Ymm(acc * 3 + 1), Ymm(acc * 3 + 1));
+                        vxorps(Ymm(acc * 3 + 2), Ymm(acc * 3 + 2));
+                    }
+                }
+
+                // convolution inner loops
+                mov(stack_current_kernel_row, 0);
+                L(make_unique("kernel_height_start"));
+                cmp(stack_current_kernel_row, kernel_height);
+                jae(make_unique("kernel_height_end"), T_NEAR);
+
+                mov(r13, stack_input_ptr_base);
+                mov(r14, stack_kernel_ptr_base);
+
+                mov(r12, 0);
+                mov(r8, kernel_width);
+                align(16);        L(make_unique("kernel_width_start"));
+                cmp(r12, r8);
+                jae(make_unique("kernel_width_end"), T_NEAR);
+
+                mov(r10, r13);
+                mov(r11, r14);
+
+                if(inner_loop_iterations/innermost_unroll_factor > 1)
+                {
+                    mov(r9, 0);
+                    align(16);            L(make_unique("kernel_idepth_start"));
+                    cmp(r9, r15);
+                    jae(make_unique("kernel_idepth_end"), T_NEAR);
+                }
+                for(size_t inner_unroll = 0; inner_unroll < innermost_unroll_factor; ++inner_unroll)
+                {
+                    if(out_fm_pckg_size == 16)
+                    {
+                        vmovaps(Ymm(14), byte[r11 + inner_unroll * C_slice_size * sizeof(float)]);
+                        vmovaps(Ymm(15), byte[r11 + inner_unroll * C_slice_size * sizeof(float) + C_simd_width*sizeof(float)]);
+
+                        for(size_t acc = 0; acc < block_size; ++acc)
+                        {
+                            vbroadcastss(Ymm(13), byte[r10 + inner_unroll * sizeof(float) + acc * input_depth * stride_x * sizeof(float)]);
+                            vfmadd231ps(Ymm(acc * 2 + 0), Ymm(13), Ymm(14));
+                            vfmadd231ps(Ymm(acc * 2 + 1), Ymm(13), Ymm(15));
+                        }
+                    }
+                    else if(out_fm_pckg_size == 8)
+                    {
+                        vmovaps(Ymm(15), byte[r11 + inner_unroll * C_slice_size * sizeof(float)]);
+
+                        for(size_t acc = 0; acc < block_size; ++acc)
+                        {
+                            vbroadcastss(Ymm(14), byte[r10 + inner_unroll * sizeof(float) + acc * input_depth * stride_x * sizeof(float)]);
+                            vfmadd231ps(Ymm(acc), Ymm(14), Ymm(15));
+                        }
+                    }
+                    else if(out_fm_pckg_size == 3)
+                    {
+                        vmovss(Xmm(13), byte[r11 + inner_unroll * C_slice_size * sizeof(float)]);
+                        vmovss(Xmm(14), byte[r11 + inner_unroll * C_slice_size * sizeof(float) + 1 * sizeof(float)]);
+                        vmovss(Xmm(15), byte[r11 + inner_unroll * C_slice_size * sizeof(float) + 2 * sizeof(float)]);
+
+                        for(size_t acc = 0; acc < block_size; ++acc)
+                        {
+                            vbroadcastss(Ymm(12), byte[r10 + inner_unroll * sizeof(float) + acc * input_depth * stride_x * sizeof(float)]);
+                            vfmadd231ps(Ymm(acc * 3 + 0), Ymm(12), Ymm(13));
+                            vfmadd231ps(Ymm(acc * 3 + 1), Ymm(12), Ymm(14));
+                            vfmadd231ps(Ymm(acc * 3 + 2), Ymm(12), Ymm(15));
+                        }
+                    }
+                }
+
+                if(inner_loop_iterations/innermost_unroll_factor > 1)
+                {
+                    add(r10, innermost_unroll_factor * sizeof(float));
+                    add(r11, innermost_unroll_factor * C_slice_size * sizeof(float));
+
+                    add(r9, innermost_unroll_factor);
+                    jmp(make_unique("kernel_idepth_start"), T_NEAR);
+                    L(make_unique("kernel_idepth_end"));
+                }
+
+                add(r13, input_depth * sizeof(float));
+                add(r14, kernel_ifmap * C_slice_size * sizeof(float));
+
+                inc(r12);
+                jmp(make_unique("kernel_width_start"), T_NEAR);
+                L(make_unique("kernel_width_end"));
+
+                add(stack_input_ptr_base, input_row_size * sizeof(float));
+                add(stack_kernel_ptr_base, kernel_ifmap * C_slice_size * kernel_width * sizeof(float));
+
+                inc(stack_current_kernel_row);
+                jmp(make_unique("kernel_height_start"), T_NEAR);
+                L(make_unique("kernel_height_end"));
+
+                mov(rax, stack_output_ptr_base);
+                mov(rcx, stack_bias_ptr_base);
+
+                if(out_fm_pckg_size == 16)
+                {
+                    vxorps(Ymm(13), Ymm(13));
+                    vmovups(Ymm(14), byte[rcx                               ]);
+                    vmovups(Ymm(15), byte[rcx + C_simd_width * sizeof(float)]);
+                    for(int acc = 0; acc < block_size; ++acc)
+                    {
+                        vaddps(Ymm(acc * 2 + 0), Ymm(14));
+                        vaddps(Ymm(acc * 2 + 1), Ymm(15));
+
+                        /*if(activation == NN_ACTIVATION_FUNCTION_RELU)
+                        {
+                            vmaxps(Ymm(acc * 2 + 0), Ymm(13));
+                            vmaxps(Ymm(acc * 2 + 1), Ymm(13));
+                        }*/
+
+                        vmovups(byte[rax + (acc * output_depth               ) * sizeof(float)], Ymm(acc * 2 + 0));
+                        vmovups(byte[rax + (acc * output_depth + C_simd_width) * sizeof(float)], Ymm(acc * 2 + 1));
+                    }
+                }
+                else if(out_fm_pckg_size == 8)
+                {
+                    vxorps(Ymm(14), Ymm(14));
+                    vmovups(Ymm(15), byte[rcx]);
+                    for(int acc = 0; acc < block_size; ++acc)
+                    {
+                        vaddps(Ymm(acc), Ymm(15));
+
+                        /*if(activation == NN_ACTIVATION_FUNCTION_RELU)
+                        {
+                            vmaxps(Ymm(acc), Ymm(14));
+                        }*/
+
+                        vmovups(byte[rax + acc * output_depth * sizeof(float)], Ymm(acc));
+                    }
+                }
+                else if(out_fm_pckg_size == 3)
+                {
+                    vxorps(Ymm(12), Ymm(12));
+                    vmovss(Xmm(13), byte[rcx + 0 * sizeof(float)]);
+                    vmovss(Xmm(14), byte[rcx + 1 * sizeof(float)]);
+                    vmovss(Xmm(15), byte[rcx + 2 * sizeof(float)]);
+                    for(int acc = 0; acc < block_size; ++acc)
+                    {
+                        vaddss(Xmm(acc * 3 + 0), Xmm(13));
+                        vaddss(Xmm(acc * 3 + 1), Xmm(14));
+                        vaddss(Xmm(acc * 3 + 2), Xmm(15));
+
+                        /*if(activation == NN_ACTIVATION_FUNCTION_RELU)
+                        {
+                            vmaxss(Xmm(acc * 3 + 0), Xmm(12));
+                            vmaxss(Xmm(acc * 3 + 1), Xmm(12));
+                            vmaxss(Xmm(acc * 3 + 2), Xmm(12));
+                        }*/
+
+                        vmovss(byte[rax + (acc * output_depth + 0) * sizeof(float)], Xmm(acc * 3 + 0));
+                        vmovss(byte[rax + (acc * output_depth + 1) * sizeof(float)], Xmm(acc * 3 + 1));
+                        vmovss(byte[rax + (acc * output_depth + 2) * sizeof(float)], Xmm(acc * 3 + 2));
+                    }
+                }
+                else
+                    throw std::runtime_error("unknown package size");
+            };
+
+            if(num_blocks_full != 0) {
+                mov(stack_current_block, 0);
+                L("block_start");
+                cmp(stack_current_block, num_blocks_full);
+                jae("block_end", T_NEAR);
+
+                inner_macro(block_size);
+
+                mov(rax, block_size * input_depth * stride_x);
+                add(stack_input_offset_base, rax);
+
+                mov(rax, block_size * output_depth);
+                add(stack_output_offset_base, rax);
+
+                inc(stack_current_block);
+                jmp("block_start", T_NEAR);
+                L("block_end");
+            }
+
+            if(partial_block_size != 0) {
+                inner_macro(partial_block_size);
+            }
+
+            inc(stack_current_output_row);
+            inc(stack_current_input_row);
+            jmp("output_row_start", T_NEAR);
+            L("output_row_end");
+
+            add(stack_current_output_fm, C_slice_size);
+            add(stack_current_kernel_fm, C_slice_size);
+            jmp("outfm_loop_start", T_NEAR);
+            L("outfm_loop_end");
+
+            inc(stack_current_image);
+            jmp("batch_loop_start", T_NEAR);
+            L("batch_loop_end");
+
+            // Epilogue.
+            pop(r15);
+            pop(r14);
+            pop(r13);
+            pop(r12);
+            pop(rbx);
+            mov(rsp, rbp);
+            pop(rbp);
+            ret();
+
+            // ASSEMBLY ENDS HERE.
+
+            generator_callback = getCode<convolution_generator_callback_t*>();
+        }
+        else
+            throw std::runtime_error("AVX2 not supported by this machine.");
+    }
+
+    template<class gen_type, class ... types>
+    gen_type* get_generator(types ... args)
+    {
+        static std::map<std::tuple<types...>, gen_type*> generator_map;
+        static std::mutex map_mutex;
+
+        auto arg_tuple = std::tuple<types...>(args...);
+
+        auto generator = generator_map.find(arg_tuple);
+
+        if(generator != generator_map.end())
+        {
+            return generator->second;
+        }
+        else
+        {
+            auto new_generator = new gen_type(args...);
+            generator_map.insert(std::pair<std::tuple<types...>, gen_type*>(arg_tuple, new_generator));
+            return new_generator;
+        }
+    }
+
 
 convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
         : is_an_implementation(neural::type_id<convolution_cpu_jit_batch1>())
 {
     if(arg.argument.input_offset.raw[0])
         tasks.push_back({nullptr, nullptr});
-    /*size_t num_threads = 0;
-    size_t outpfmap_length = output_buffer->view_end.t[NN_DATA_COORD_z] - output_buffer->view_begin.t[NN_DATA_COORD_z] + 1;
-    size_t outpcol_length = output_buffer->view_end.t[NN_DATA_COORD_x] - output_buffer->view_begin.t[NN_DATA_COORD_x] + 1;
-    size_t outprow_length = output_buffer->view_end.t[NN_DATA_COORD_y] - output_buffer->view_begin.t[NN_DATA_COORD_y] + 1;
 
-    size_t output_row_package_size;
-    size_t output_fmap_package_size;
-    size_t output_col_package_size;
+    // Get pointers for pointers to buffers!
+    auto input_ptr = reinterpret_cast<float**>(&arg.input_memory(0).pointer);
+    auto output_ptr = reinterpret_cast<float**>(&arg.output_memory(0).pointer);
+    auto weights_ptr = reinterpret_cast<float**>(&arg.argument.weight.as<const memory&>().pointer);
+    auto bias_ptr = reinterpret_cast<float**>(&arg.argument.bias.as<const memory&>().pointer);
 
-    size_t num_output_fm_items;
-    size_t num_output_fm_items_remainder;
-    size_t num_col_items;
-    size_t num_row_items;
-    size_t total_workers;
+    // Get input buffer sizes.
+    size_t input_width = arg.input_memory(0).argument.size.spatial[0];
+    size_t input_height = arg.input_memory(0).argument.size.spatial[1];
+    size_t input_depth = arg.input_memory(0).argument.size.feature[0];
 
-    auto compute_thread_bounds = [&](size_t row_size, size_t fmap_size, size_t col_size, bool spawn_across_column)
-    {
-        output_row_package_size = row_size;
-        output_fmap_package_size = fmap_size;
-        output_col_package_size = (spawn_across_column) ? col_size : outpcol_length;
+    // Get input offsets.
+    size_t inpfmap_begin = arg.argument.input_offset.feature[0];
+    size_t inpfmap_end = input_depth - 1;
+    size_t inpfmap_length = inpfmap_end - inpfmap_begin + 1;
 
-        num_output_fm_items = outpfmap_length / output_fmap_package_size;
-        num_output_fm_items_remainder = outpfmap_length % output_fmap_package_size;
+    // Get output offsets.
+    size_t outbatch_begin = arg.argument.output_offset.batch[0];
+    size_t outbatch_end = outbatch_begin + arg.argument.output_size.batch[0];
 
-        if(num_output_fm_items_remainder) ++num_output_fm_items;
+    // Get output buffer sizes.
+    size_t output_width = arg.output_memory(0).argument.size.spatial[0];
+    size_t output_height = arg.output_memory(0).argument.size.spatial[1];
+    size_t output_depth = arg.output_memory(0).argument.size.feature[0];
 
-        num_col_items = outpcol_length / output_col_package_size;
-        num_row_items = outprow_length / output_row_package_size;
+    // Get 'views' sizes for output.
+    size_t outpcol_length = arg.argument.output_size.spatial[0];
+    size_t outprow_length = arg.argument.output_size.spatial[1];
+    size_t outpfmap_length = arg.argument.output_size.feature[0];
 
-        if(outprow_length % output_row_package_size)
-            throw std::runtime_error("convolution needs aligned output height");
+    size_t kernel_width = arg.argument.weight.as<const memory &>().argument.size.spatial[0];
+    size_t kernel_height = arg.argument.weight.as<const memory &>().argument.size.spatial[1];
+    size_t kernel_ifmap = arg.argument.weight.as<const memory &>().argument.size.feature[1];
+    size_t stride_col = arg.argument.stride.raw[0];
+    size_t stride_row = arg.argument.stride.raw[1];
 
-        if(outpcol_length % output_col_package_size)
-            throw std::runtime_error("convolution needs aligned output width");
+    // Make these variable basing on number of threads - this naive case won't be optimal.
+    size_t output_row_package_size = 4;
+    size_t output_fmap_package_size = 16;
+    size_t output_col_package_size = outpcol_length;
 
-        total_workers = num_output_fm_items * num_row_items * num_col_items;
-    };
-
-    compute_thread_bounds(4, convolution_f32_impl::C_slice_size, 0, false);
-
-    if(num_threads * 4 > total_workers)
-    {
-        if(outpcol_length % 960 == 0) compute_thread_bounds(4, convolution_f32_impl::C_slice_size, 960, true);
-        else                          compute_thread_bounds(2, convolution_f32_impl::C_slice_size, 0, false);
-    }
-
-    if(num_threads * 4 > total_workers)
-    {
-        if(outpcol_length % 480 == 0) compute_thread_bounds(4, convolution_f32_impl::C_slice_size, 480, true);
-        else                          compute_thread_bounds(2, convolution_f32_impl::C_slice_size, 0, false);
-    }
-
-    if(num_threads * 4 > total_workers)
-    {
-        if(outpcol_length % 240 == 0) compute_thread_bounds(4, convolution_f32_impl::C_slice_size, 240, true);
-        else                          compute_thread_bounds(2, convolution_f32_impl::C_slice_size, 0, false);
-    }
-
-    if(num_threads * 4 > total_workers)
-    {
-        if(outpcol_length % 120 == 0) compute_thread_bounds(4, convolution_f32_impl::C_slice_size, 120, true);
-        else                          compute_thread_bounds(2, convolution_f32_impl::C_slice_size, 0, false);
-    }
-
-    if(num_threads * 4 > total_workers)
-    {
-        if(outpcol_length % 60 == 0)  compute_thread_bounds(4, convolution_f32_impl::C_slice_size, 60, true);
-        else                          compute_thread_bounds(2, convolution_f32_impl::C_slice_size, 0, false);
-    }
-
-    if(num_threads * 4 > total_workers)
-    {
-        if(outpcol_length % 30 == 0)  compute_thread_bounds(4, convolution_f32_impl::C_slice_size, 30, true);
-        else                          compute_thread_bounds(2, convolution_f32_impl::C_slice_size, 0, false);
-    }
-
-    if(num_threads * 4 > total_workers)
-    {
-        if(outpcol_length % 30 == 0)  compute_thread_bounds(2, convolution_f32_impl::C_slice_size, 30, true);
-        else                          compute_thread_bounds(1, convolution_f32_impl::C_slice_size, 0, false);
-    }
-
-    if(num_threads * 4 > total_workers)
-    {
-        if(outpcol_length % 30 == 0)  {
-            std::cout << "minimal case occured" << std::endl;
-            compute_thread_bounds(1, convolution_f32_impl::C_slice_size, 30, true);
-        }
-    }
-
-    // Full cores utilization version.
-    std::vector<nn::workload_data<> *> input_views(total_workers);
-    std::vector<nn::workload_data<> *> weight_views(total_workers);
-    std::vector<nn::workload_data<> *> bias_views(total_workers);
-    std::vector<nn::workload_data<> *> output_views(total_workers);
-
-    const auto cpp_master_input = input_buffer;
-    const auto cpp_master_output = output_buffer;
-    const auto cpp_master_weights = weights_buffer;
+    size_t num_output_fm_items = outpfmap_length / output_fmap_package_size;
+    size_t num_output_fm_items_remainder = outpfmap_length % output_fmap_package_size;
+    size_t num_col_items = outpcol_length / output_col_package_size;
+    size_t num_row_items = outprow_length / output_row_package_size;
 
     // Fill slave work items.
     for (auto output_fm_item = 0u; output_fm_item < num_output_fm_items; ++output_fm_item)
@@ -136,237 +655,95 @@ convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
             { 
                 auto item_in_pool = col_item * num_output_fm_items * num_row_items + row_item * num_output_fm_items + output_fm_item;
 
-                // Replace nn_workload_datas pointers with views.
-                nn_workload_data_coords_t input_view_begin(
-                    0,
-                    col_item * output_col_package_size * stride_x,
-                    row_item * output_row_package_size * stride_y,
-                    0,
-                    0,
-                    0
-                    );
-                nn_workload_data_coords_t input_view_end(
-                    cpp_master_input->get_length(NN_DATA_COORD_n) - 1,
-                    cpp_master_input->get_length(NN_DATA_COORD_x) - 1,
-                    cpp_master_input->get_length(NN_DATA_COORD_y) - 1,
-                    cpp_master_input->get_length(NN_DATA_COORD_z) - 1,
-                    cpp_master_input->get_length(NN_DATA_COORD_p) - 1,
-                    cpp_master_input->get_length(NN_DATA_COORD_q) - 1
-                    );
+                size_t input_view_begin_col = arg.argument.input_offset.spatial[0] + col_item * output_col_package_size * stride_col;
+                size_t input_view_begin_row = arg.argument.input_offset.spatial[1] + row_item * output_row_package_size * stride_row;
 
-                nn_workload_data_coords_t output_view_begin(
-                    0,
-                    col_item * output_col_package_size,
-                    row_item * output_row_package_size,
-                    output_fm_item * output_fmap_package_size,
-                    0,
-                    0
-                    );
-                nn_workload_data_coords_t output_view_end(
-                    cpp_master_output->get_length(NN_DATA_COORD_n) - 1,
-                    (col_item+1) * output_col_package_size - 1,
-                    (row_item+1) * output_row_package_size - 1,
-                    (output_fm_item+1) * output_fmap_package_size - 1,
-                    cpp_master_output->get_length(NN_DATA_COORD_p) - 1,
-                    cpp_master_output->get_length(NN_DATA_COORD_q) - 1
-                    );
+                size_t output_view_begin_col = arg.argument.output_offset.spatial[0] + col_item * output_col_package_size;
+                size_t output_view_begin_row = arg.argument.output_offset.spatial[1] + row_item * output_row_package_size;
+                size_t output_view_begin_map = arg.argument.output_offset.feature[0] + output_fm_item * output_fmap_package_size;
 
-                nn_workload_data_coords_t weights_view_begin(
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    output_fm_item
-                    );
-                nn_workload_data_coords_t weights_view_end(
-                    cpp_master_weights->get_length(NN_DATA_COORD_n) - 1,
-                    cpp_master_weights->get_length(NN_DATA_COORD_x) - 1,
-                    cpp_master_weights->get_length(NN_DATA_COORD_y) - 1,
-                    cpp_master_weights->get_length(NN_DATA_COORD_z) - 1,
-                    cpp_master_weights->get_length(NN_DATA_COORD_p) - 1,
-                    output_fm_item
-                    );
+                size_t output_view_end_col = arg.argument.output_offset.spatial[0] + (col_item+1) * output_col_package_size - 1;
+                size_t output_view_end_row = arg.argument.output_offset.spatial[1] + (row_item+1) * output_row_package_size - 1;
+                size_t output_view_end_map = arg.argument.output_offset.feature[0] + (output_fm_item+1) * output_fmap_package_size - 1;
+
+                size_t weights_view_begin_slice = output_fm_item;
+
+                size_t bias_view_begin_map = output_fm_item * output_fmap_package_size;
+                size_t bias_view_end_map = (output_fm_item+1) * output_fmap_package_size - 1;
 
                 if(output_fm_item+1 == num_output_fm_items && num_output_fm_items_remainder)
                 {
                     // Case where we need to process only remaining FMaps.
-                    output_view_end.t[NN_DATA_COORD_z] = output_view_begin.t[NN_DATA_COORD_z] + num_output_fm_items_remainder - 1;
-                    weights_view_end.t[NN_DATA_COORD_p] = num_output_fm_items_remainder - 1;
+                    output_view_end_map = output_view_begin_map + num_output_fm_items_remainder - 1;
+                    weights_view_begin_slice = num_output_fm_items_remainder - 1;
+                    bias_view_end_map = bias_view_begin_map + num_output_fm_items_remainder - 1;
                 }
 
-                input_views[item_in_pool] =
-                    new nn::workload_data<>(const_cast<nn::workload_data<>&>(*cpp_master_input), input_view_begin, input_view_end);
+                size_t output_fmaps_view_length = output_view_end_map - output_view_begin_map + 1;
+                size_t block_size = (output_fmaps_view_length == 3) 
+                    ? 4 
+                    : ((output_fmaps_view_length == 8)
+                       ? 14
+                       : 6);
 
-                output_views[item_in_pool] =
-                    new nn::workload_data<>(*cpp_master_output, output_view_begin, output_view_end);
+                size_t out_fm_pckg_size = (output_fmaps_view_length == 3) 
+                    ? 3 
+                    : ((output_fmaps_view_length == 8)
+                       ? 8
+                       : 16);
 
-                weight_views[item_in_pool] =
-                    new nn::workload_data<>(const_cast<nn::workload_data<>&>(*cpp_master_weights), weights_view_begin, weights_view_end);
+                size_t output_column_view_length = output_view_end_col - output_view_begin_col + 1;
+                size_t num_blocks_full      = output_column_view_length / block_size;
+                size_t partial_block_size   = output_column_view_length % block_size;
 
-                // Use biases.
-                if (bias_buffer != nullptr)
+                precompiled_request_handles[item_in_pool].input_ptr                    = input_ptr;                 
+                precompiled_request_handles[item_in_pool].weights_ptr                  = weights_ptr;
+                precompiled_request_handles[item_in_pool].bias_ptr                     = bias_ptr;
+                precompiled_request_handles[item_in_pool].output_ptr                   = output_ptr;
+                precompiled_request_handles[item_in_pool].input_fmap_view_start        = inpfmap_begin;
+                precompiled_request_handles[item_in_pool].input_fmap_view_end          = inpfmap_end;
+                precompiled_request_handles[item_in_pool].input_column_view_start      = input_view_begin_col;
+                precompiled_request_handles[item_in_pool].input_row_view_start         = input_view_begin_row;
+                precompiled_request_handles[item_in_pool].kernel_input_fmap_view_start = 0;
+                precompiled_request_handles[item_in_pool].kernel_out_fmap_view_start   = 0;
+                precompiled_request_handles[item_in_pool].output_column_view_start     = output_view_begin_col;
+                precompiled_request_handles[item_in_pool].output_row_view_start        = output_view_begin_row;
+                precompiled_request_handles[item_in_pool].output_row_view_end          = output_view_end_row;
+                precompiled_request_handles[item_in_pool].output_fm_view_start         = output_view_begin_map;
+                precompiled_request_handles[item_in_pool].output_fm_view_end           = output_view_end_map;
+                precompiled_request_handles[item_in_pool].output_image_view_start      = outbatch_begin;
+                precompiled_request_handles[item_in_pool].output_image_view_end        = outbatch_end;
+                precompiled_request_handles[item_in_pool].padding                      = arg.argument.padding;
+
+
+                auto jit_callback = 
+                    get_generator<convolution_generator>(
+                        0,
+                        input_width,
+                        input_height,
+                        input_depth,
+                        inpfmap_length,
+                        kernel_width,
+                        kernel_height,
+                        kernel_ifmap,
+                        output_width,
+                        output_height,
+                        output_depth,
+                        block_size,
+                        out_fm_pckg_size,
+                        num_blocks_full,
+                        partial_block_size,
+                        stride_col,
+                        stride_row)->generator_callback;
+
+                tasks.push_back(
                 {
-                    const auto cpp_master_biases = bias_buffer;
-
-                    nn_workload_data_coords_t bias_view_begin(
-                        0,
-                        output_fm_item * output_fmap_package_size,
-                        0,
-                        0,
-                        0,
-                        0
-                        );
-                    nn_workload_data_coords_t bias_view_end(
-                        cpp_master_biases->get_length(NN_DATA_COORD_n) - 1,
-                        (output_fm_item+1) * output_fmap_package_size - 1,
-                        cpp_master_biases->get_length(NN_DATA_COORD_y) - 1,
-                        cpp_master_biases->get_length(NN_DATA_COORD_z) - 1,
-                        cpp_master_biases->get_length(NN_DATA_COORD_p) - 1,
-                        cpp_master_biases->get_length(NN_DATA_COORD_q) - 1
-                        );
-
-                    if(output_fm_item+1 == num_output_fm_items && num_output_fm_items_remainder)
-                    {
-                        // Case where we need to process only remaining FMaps.
-                        bias_view_end.t[NN_DATA_COORD_x] = bias_view_begin.t[NN_DATA_COORD_x] + num_output_fm_items_remainder - 1;
-                    }
-
-                    bias_views[item_in_pool] =
-                        new nn::workload_data<>(const_cast<nn::workload_data<>&>(*cpp_master_biases), bias_view_begin, bias_view_end);
-                } else {
-                    bias_views[item_in_pool] = nullptr;
-                }
+                    reinterpret_cast<void(*)(const void*)>(jit_callback),
+                    &precompiled_request_handles[item_in_pool]
+                });
             }
         }
     }
-
-    // Create job vector from created views..
-    precompiled_jobs.clear();
-    precompiled_jobs.resize(num_threads);
-    precompiled_request_handles.clear();
-    precompiled_request_handles.resize(num_threads);
-
-    for(auto& joblist : precompiled_request_handles)
-        joblist.resize(total_workers/num_threads);
-
-    for(size_t jobs_left = total_workers%num_threads; jobs_left; --jobs_left)
-        precompiled_request_handles[jobs_left].resize(precompiled_request_handles[jobs_left].size() + 1);
-
-    size_t item_in_pool = 0;
-
-    for (size_t thread = 0u; thread < num_threads; ++thread)
-    {
-        for (size_t item_in_thread = 0u; item_in_thread < precompiled_request_handles[thread].size(); ++item_in_thread)
-        {
-            auto& input_view = input_views[item_in_pool];
-            auto& weights = weight_views[item_in_pool];
-            auto& bias = bias_views[item_in_pool];
-            auto& output_view = output_views[item_in_pool];
-
-            auto input_ptr = static_cast<float*>(input_view->parent->data_buffer);
-            auto weights_ptr = static_cast<float*>(weights->parent->data_buffer);
-            auto bias_ptr = static_cast<float*>(bias->parent->data_buffer);
-            auto output_ptr = static_cast<float*>(output_view->parent->data_buffer);
-
-            size_t input_width = input_view->parent->lengths.t[NN_DATA_COORD_x];
-            size_t input_height = input_view->parent->lengths.t[NN_DATA_COORD_y];
-            size_t input_depth = input_view->parent->lengths.t[NN_DATA_COORD_z];
-
-            size_t output_width = output_view->parent->lengths.t[NN_DATA_COORD_x];
-            size_t output_height = output_view->parent->lengths.t[NN_DATA_COORD_y];
-            size_t output_depth = output_view->parent->lengths.t[NN_DATA_COORD_z];
-
-            size_t kernel_width = weights->parent->lengths.t[NN_DATA_COORD_x];
-            size_t kernel_height = weights->parent->lengths.t[NN_DATA_COORD_y];
-
-            size_t kernel_input_fmap_view_start = weights->view_begin.t[NN_DATA_COORD_z];
-
-            size_t input_fmap_view_start = input_view->view_begin.t[NN_DATA_COORD_z];
-            size_t input_fmap_view_end = input_view->view_end.t[NN_DATA_COORD_z];
-
-            size_t output_fm_view_start = output_view->view_begin.t[NN_DATA_COORD_z];
-            size_t output_fm_view_end = output_view->view_end.t[NN_DATA_COORD_z];
-
-            size_t output_row_view_start = output_view->view_begin.t[NN_DATA_COORD_y];
-            size_t output_row_view_end = output_view->view_end.t[NN_DATA_COORD_y];
-
-            size_t output_column_view_start = output_view->view_begin.t[NN_DATA_COORD_x];
-            size_t output_column_view_end = output_view->view_end.t[NN_DATA_COORD_x];
-
-            size_t input_column_view_start = input_view->view_begin.t[NN_DATA_COORD_x];
-            size_t input_row_view_start = input_view->view_begin.t[NN_DATA_COORD_y];
-
-            size_t kernel_out_fmap_view_start = weights->view_begin.t[NN_DATA_COORD_q];
-
-            size_t output_image_view_start = output_view->view_begin.t[NN_DATA_COORD_n];
-            size_t output_image_view_end = output_view->view_end.t[NN_DATA_COORD_n];
-
-            size_t kernel_ifmap = weights->parent->lengths.t[NN_DATA_COORD_z];
-
-            size_t output_fmaps_view_length = output_fm_view_end - output_fm_view_start + 1;
-            size_t input_fmap_view_length = input_fmap_view_end - input_fmap_view_start + 1;
-            size_t block_size = (output_fmaps_view_length == 3) 
-                ? 4 
-                : ((output_fmaps_view_length == 8)
-                   ? 14
-                   : 6);
-
-            size_t out_fm_pckg_size = (output_fmaps_view_length == 3) 
-                ? 3 
-                : ((output_fmaps_view_length == 8)
-                   ? 8
-                   : 16);
-
-            size_t output_column_view_length = output_column_view_end - output_column_view_start + 1;
-            size_t num_blocks_full      = output_column_view_length / block_size;
-            size_t partial_block_size   = output_column_view_length % block_size;
-
-            precompiled_request_handles[thread][item_in_thread].input_ptr                    = input_ptr;                 
-            precompiled_request_handles[thread][item_in_thread].weights_ptr                  = weights_ptr;
-            precompiled_request_handles[thread][item_in_thread].bias_ptr                     = bias_ptr;
-            precompiled_request_handles[thread][item_in_thread].output_ptr                   = output_ptr;
-            precompiled_request_handles[thread][item_in_thread].input_fmap_view_start        = input_fmap_view_start;
-            precompiled_request_handles[thread][item_in_thread].input_fmap_view_end          = input_fmap_view_end;
-            precompiled_request_handles[thread][item_in_thread].input_column_view_start      = input_column_view_start - center_offset_x;
-            precompiled_request_handles[thread][item_in_thread].input_row_view_start         = input_row_view_start - center_offset_y;
-            precompiled_request_handles[thread][item_in_thread].kernel_input_fmap_view_start = kernel_input_fmap_view_start;
-            precompiled_request_handles[thread][item_in_thread].kernel_out_fmap_view_start   = kernel_out_fmap_view_start * layer::convolution_f32_impl::C_slice_size;
-            precompiled_request_handles[thread][item_in_thread].output_column_view_start     = output_column_view_start;
-            precompiled_request_handles[thread][item_in_thread].output_column_view_end       = output_column_view_end;
-            precompiled_request_handles[thread][item_in_thread].output_row_view_start        = output_row_view_start;
-            precompiled_request_handles[thread][item_in_thread].output_row_view_end          = output_row_view_end;
-            precompiled_request_handles[thread][item_in_thread].output_fm_view_start         = output_fm_view_start;
-            precompiled_request_handles[thread][item_in_thread].output_fm_view_end           = output_fm_view_end;
-            precompiled_request_handles[thread][item_in_thread].output_image_view_start      = output_image_view_start;
-            precompiled_request_handles[thread][item_in_thread].output_image_view_end        = output_image_view_end;
-            precompiled_request_handles[thread][item_in_thread].padding                      = padding;
-            precompiled_request_handles[thread][item_in_thread].jit_callback                 = 
-                layer::convolution_f32_impl::get_generator<layer::convolution_f32_impl::convolution_generator>(
-                    activation.function,
-                    input_width,
-                    input_height,
-                    input_depth,
-                    input_fmap_view_end - input_fmap_view_start + 1,
-                    kernel_width,
-                    kernel_height,
-                    kernel_ifmap,
-                    output_width,
-                    output_height,
-                    output_depth,
-                    block_size,
-                    out_fm_pckg_size,
-                    num_blocks_full,
-                    partial_block_size,
-                    stride_x,
-                    stride_y)->generator_callback;
-
-
-            ++item_in_pool;
-        }
-
-        precompiled_jobs[thread] = {convolution_f32_impl::unpack_convolve_callback_handle, &precompiled_request_handles[thread]};
-    }*/
 };
 
 convolution_cpu_jit_batch1::~convolution_cpu_jit_batch1() 

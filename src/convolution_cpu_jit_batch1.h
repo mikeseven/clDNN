@@ -19,8 +19,55 @@
 #include "convolution.h"
 
 namespace neural {
+
+    typedef void (convolution_generator_callback_t)(
+        float* input_ptr, 
+        float* weights_ptr, 
+        float* bias_ptr, 
+        float* output_ptr,
+        size_t input_fmap_view_start,
+        size_t input_fmap_view_end,
+        size_t input_column_view_start,
+        size_t input_row_view_start,
+        size_t kernel_input_fmap_view_start,
+        size_t kernel_out_fmap_view_start,
+        size_t output_column_view_start,
+        size_t output_row_view_start,
+        size_t output_row_view_end,
+        size_t output_fm_view_start,
+        size_t output_fm_view_end,
+        size_t output_image_view_start,
+        size_t output_image_view_end,
+        size_t padding);
+
+    struct parameters_convolution_f32_precompiled_jit
+    {
+        float**                            input_ptr; 
+        float**                            weights_ptr; 
+        float**                            bias_ptr; 
+        float**                            output_ptr;
+        size_t                             input_fmap_view_start;
+        size_t                             input_fmap_view_end;
+        size_t                             input_column_view_start;
+        size_t                             input_row_view_start;
+        size_t                             kernel_input_fmap_view_start;
+        size_t                             kernel_out_fmap_view_start;
+        size_t                             output_column_view_start;
+        size_t                             output_column_view_end;
+        size_t                             output_row_view_start;
+        size_t                             output_row_view_end;
+        size_t                             output_fm_view_start;
+        size_t                             output_fm_view_end;
+        size_t                             output_image_view_start;
+        size_t                             output_image_view_end;
+        neural::padding::type              padding;
+    };
+
+
     class convolution_cpu_jit_batch1 : is_an_implementation {
         std::vector<task> tasks;
+
+        std::vector<parameters_convolution_f32_precompiled_jit> precompiled_request_handles;
 
     public:
         convolution_cpu_jit_batch1(convolution &arg);
