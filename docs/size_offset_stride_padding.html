@@ -1,0 +1,42 @@
+<html>
+<head>
+  <title>MKL-DNN arguments: size, offset, stride & padding</title>
+  <link rel="stylesheet" type="text/css" href="css/mkldnn_style1.css">
+</head>
+<body>
+  <h1>MKL DNN</h1>
+  <hr> <hr>
+  
+  <h2>Buffer </h2>
+  <p> The buffer is memory decribed by vector of lenghts definig it in  n-dimmentional space. In example (images below) space is 2-D.  </p>
+  <img src="img/grid.svg" alt="size"><br><hr>
+  
+  <h2>Size</h2>
+  <p> The  <b>size</b> parameter is a vector which contains lenght of each dimension of memory space where calculations were performed or saved.<br>
+      Usually it is used for defining output size and it must meet requirement: size &le; buffer_size <br>
+      Also it can be used to define pooling and/or convolution filter size.
+  </p>
+  <img src="img/params_size.svg" alt="size"><br><hr>
+  
+  <h2>Offset</h2>
+  <p>The  <b>offset</b> parameter is a vector defining shift relative to beginning of buffer. </p>
+  <img src="img/params_offset.svg" alt="offset"><br><hr>
+  
+  <h2>Stride</h2>
+  <p>The <b>stride</b> parameter defines shift in input buffer between adiacent calculations of output values. </p>
+  <img src="img/params_stride.svg" alt="stride"><br>
+  <img src="img/params_input_output_stride1.svg" alt="stride"><br>
+  <img src="img/params_input_output_stride2.svg" alt="stride"><br><hr>
+  
+  <h2>Padding</h2>
+  <p>Padding determines how to treat data accesses "outside" buffer. 
+     Can be explicit (there's memory "outside" buffer that contain values), or implicit (algorithm detects accesses to padding region, does not access memory and uses zeros instead).</p>
+  <img src="img/proc_zero_padding.svg" alt="stride"><br><hr>
+  
+  <h2>Example of convolution</h2>
+  <p>In each step of convolution values of the mask are scalary multiplied by the values of input and then all of these multiplications are added together and placed in the output buffer.</p>
+  <img src="img/proc_convolution.svg" alt="stride"><br><hr>
+
+  
+</body>
+</html>

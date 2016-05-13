@@ -27,7 +27,7 @@ namespace neural {
 // Primitive that describes data in memory in known format.
 // Used to describe both user-allocated data buffers and internal ones.
 // Format defines both layout in memory and reresentation of single value.
-// Format is identified by enumeration. 
+// Format is identified by enumeration.
 // For each format there one can:
 //  - determine number of dimensions & value format using traits
 //  - convert coordinates to a memory offset
@@ -35,7 +35,7 @@ namespace neural {
 //
 // Examples:
 //
-//   Create memory avaialble to 'cpu' engine, with memory format yxfb_f32. 
+//   Create memory avaialble to 'cpu' engine, with memory format yxfb_f32.
 //   It will have 3 feature maps, resolution 224x224 and batch 24.
 //     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
 struct memory : is_a_primitive {
@@ -57,6 +57,7 @@ struct memory : is_a_primitive {
         bfyx_f32,
         bxyf_f32,
         bfxy_f32,
+        oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
         scalar_f64, // single scalar, float64
         x_f64,
         yxfb_f64,   // 3D+batch, float64
@@ -82,7 +83,8 @@ struct memory : is_a_primitive {
         case format::byxf_f32:
         case format::bfyx_f32:
         case format::bxyf_f32:
-		case format::bfxy_f32: return {4, type_id<float>()};
+        case format::bfxy_f32:
+        case format::oiyx_f32: return {4, type_id<float>()};
         case format::scalar_f64:
         case format::   x_f64: return {1, type_id<double>()};
         case format::yxfb_f64:
@@ -163,7 +165,18 @@ private:
 
 
 
-// reorder data, type is not changed
+// neural::reorder
+//
+// Changes how data is ordered in memory. Value type is not changed & all information is preserved.
+// Corresponding values are bitwise equal before/after reorder.
+//
+//
+// Examples:
+//
+//  Reorder yxfb_f32 to byxf_f32 on user-specified buffers on reference engine.
+//    neural::primitive input   = memory::create({engine::reference, memory::format::yxfb_f32, {16, {4, 8}, 1}});
+//    neural::primitive output  = memory::create({engine::reference, memory::format::byxf_f32, {16, {4, 8}, 1}});
+//    neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,input,output});
 struct reorder : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -188,7 +201,9 @@ private:
 
 
 
-// direct convolution
+// neural::convolution
+//
+// TODO
 struct convolution : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
@@ -226,7 +241,9 @@ private:
 
 
 
-//  direct convolution, backward
+// neural::convolution_backward
+//
+// TODO
 struct convolution_backward : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
@@ -261,7 +278,9 @@ private:
 
 
 
-// fully connected
+// neural::fully_connected
+//
+// TODO
 struct fully_connected : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -292,7 +311,9 @@ private:
 
 
 
-// activation relu
+// neural::relu
+//
+// TODO
 struct relu : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
@@ -328,7 +349,9 @@ private:
 
 
 
-// activation relu, backward
+// neural::relu_backward
+//
+// TODO
 struct relu_backward : is_a_primitive {
     struct arguments {
         neural::engine::type                   engine;
@@ -360,7 +383,9 @@ private:
 
 
 
-// pooling
+// neural::pooling
+//
+// TODO
 struct pooling : is_a_primitive {
     class mode { mode(); public: enum type { max, average }; };
 
@@ -406,7 +431,11 @@ private:
 
 
 namespace normalization { /////////////////////////////////////////////////////////////////////////////////////////////
-// normalization of response
+
+
+// neural::normalization::response
+//
+// TODO
 struct /*normalization*/response : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -442,7 +471,9 @@ private:
 
 
 
-// normalization: softmax
+// neural::normalization::softmax
+//
+// TODO
 struct /*normalization*/softmax : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
@@ -474,7 +505,9 @@ private:
 
 
 
-// normalization: batch, training - forward
+// neural::normalization::batch_training_forward
+//
+// TODO
 struct /*normalization*/batch_training_forward : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -502,7 +535,9 @@ private:
 
 
 
-// normalization: batch, training, backward
+// neural::normalization::batch_training_backward
+//
+// TODO
 struct /*normalization*/batch_training_backward : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -528,7 +563,9 @@ private:
 
 
 
-// normalization: batch, inference
+// neural::normalization::batch_inference
+//
+// TODO
 struct /*normalization*/batch_inference : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -556,7 +593,9 @@ private:
 
 
 
-// direct convolution + relu
+// neural::convolution_relu
+//
+// TODO
 struct convolution_relu : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -592,7 +631,9 @@ private:
 
 
 
-// fully connected + relu
+// neural::fully_connected_relu
+//
+// TODO
 struct fully_connected_relu : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
