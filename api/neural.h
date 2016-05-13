@@ -107,6 +107,29 @@ private:
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
 };
 
+struct execution_resource_cpu : is_a_execution_resource {
+    struct arguments {
+        uint64_t threadpool_size;
+
+        DLL_SYM arguments(uint64_t arg_threadpool_size);
+        DLL_SYM arguments(                            );
+    };
+    arguments argument;
+
+    nn_thread_worker_pool thread_pool;
+
+    DLL_SYM static execution_resource create(arguments);
+
+    void run_engine(const std::vector<task>& requests) {thread_pool.push_job(requests);}
+    neural::engine::type engine() const {return neural::engine::cpu;}
+
+private:
+    execution_resource_cpu(arguments arg) 
+        : is_a_execution_resource(type_id<execution_resource_cpu>())
+        , argument(arg) 
+        , thread_pool(arg.threadpool_size) {};
+};
+
 // file that is loaded and becomes a data
 struct file : is_a_primitive {
     struct arguments {

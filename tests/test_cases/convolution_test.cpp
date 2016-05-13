@@ -47,10 +47,13 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 //  8   6
 //  0.5 9
 
-    auto input  = memory::create({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}, true});
-    auto output = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
-    auto weights= memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
-    auto biases = memory::create({engine::reference, memory::format::   x_f32, {1, {{1}} , 1}, true});
+    auto engine_resource = execution_resource_cpu::create({std::thread::hardware_concurrency()});
+    auto input           = memory::create({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}, true});
+    auto output          = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
+    auto weights         = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
+    auto biases          = memory::create({engine::reference, memory::format::   x_f32, {1, {{1}} , 1}, true});
+
+    auto& output_memory  = output.as<const memory&>();
 
     set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f, 0.5f, -1.0f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f});
     set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f});
@@ -58,9 +61,15 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     auto conv = convolution::create({engine::reference, output, input, {1, {2, 2}, 1}, weights, biases, padding::zero});
 
+    fill<float>(output_memory, 0);
     execute({conv});
-
-    auto& output_memory = output.as<const memory&>();
+    EXPECT_FLOAT_EQ(8.0f, get_value<float>(output_memory, 0));
+    EXPECT_FLOAT_EQ(0.5f, get_value<float>(output_memory, 1));
+    EXPECT_FLOAT_EQ(6.0f, get_value<float>(output_memory, 2));
+    EXPECT_FLOAT_EQ(9.0f, get_value<float>(output_memory, 3));
+    
+    fill<float>(output_memory, 0);
+    execute({conv}, engine_resource);
     EXPECT_FLOAT_EQ(8.0f, get_value<float>(output_memory, 0));
     EXPECT_FLOAT_EQ(0.5f, get_value<float>(output_memory, 1));
     EXPECT_FLOAT_EQ(6.0f, get_value<float>(output_memory, 2));
@@ -87,11 +96,13 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
     //  Output:
     //  3.65 -5.36
     //
+    auto engine_resource = execution_resource_cpu::create({std::thread::hardware_concurrency()});
+    auto input           = memory::create({ engine::reference, memory::format::yxfb_f32,{2, {2, 2}, 1}, true });
+    auto output          = memory::create({ engine::reference, memory::format::yxfb_f32,{2, {1, 1}, 1}, true });
+    auto weights         = memory::create({ engine::reference, memory::format::yxfb_f32,{1, {2, 2}, 1}, true });
+    auto biases          = memory::create({ engine::reference, memory::format::   x_f32,{1, {{1}} , 1}, true });
 
-    auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{2, {2, 2}, 1}, true });
-    auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{2, {1, 1}, 1}, true });
-    auto weights = memory::create({ engine::reference, memory::format::yxfb_f32,{1, {2, 2}, 1}, true });
-    auto biases  = memory::create({ engine::reference, memory::format::   x_f32,{1, {{1}} , 1}, true });
+    auto& output_memory  = output.as<const memory&>();
 
     set_values(input,  { 0.5f, 2.3f, 1.5f, -0.4f, 2.0f, 1.0f, -4.0f, 3.0f });
     set_values(weights,{ -1.2f, 1.5f, 0.5f, -0.5f });
@@ -99,9 +110,13 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
 
     auto conv = convolution::create({ engine::reference, output, input, { 1, {2, 2}, 1 }, weights, biases, padding::zero });
 
+    fill<float>(output_memory, 0);
     execute({ conv });
+    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 0));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 1));
 
-    auto& output_memory = output.as<const memory&>();
+    fill<float>(output_memory, 0);
+    execute({ conv }, engine_resource);
     EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 0));
     EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 1));
 }
@@ -127,11 +142,13 @@ TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
     //     0.7
     //   2.12
     // 3.08
+    auto engine_resource = execution_resource_cpu::create({std::thread::hardware_concurrency()});
+    auto input           = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 2}, 1}, true });
+    auto output          = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 3}, true });
+    auto weights         = memory::create({ engine::reference, memory::format::yxfb_f32,{3 ,{2, 2}, 1}, true });
+    auto biases          = memory::create({ engine::reference, memory::format::   x_f32,{1 ,{{3 }}, 1}, true });
 
-    auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 2}, 1}, true });
-    auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 3}, true });
-    auto weights = memory::create({ engine::reference, memory::format::yxfb_f32,{3 ,{2, 2}, 1}, true });
-    auto biases  = memory::create({ engine::reference, memory::format::   x_f32,{1 ,{{3 }}, 1}, true });
+    auto& output_memory  = output.as<const memory&>();
 
     set_values(input,   { -2.3f, -0.1f, 3.1f, 1.9f });
     set_values(weights, { -1.1f, 0.1f, 2.0f, 1.5f, 0.2f, -1.0f, 0.5f, 0.4f, 2.5f, -0.5f, 0.7f, -1.5f });
@@ -139,9 +156,14 @@ TEST(convolution_f32_fw, DISABLED_basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
 
     auto conv = convolution::create({ engine::reference, output, input, { 1, {2, 2}, 1 }, weights, biases, padding::zero });
 
+    fill<float>(output_memory, 0);
     execute({ conv });
+    EXPECT_FLOAT_EQ(3.08f, get_value<float>(output_memory, 0));
+    EXPECT_FLOAT_EQ(2.12f, get_value<float>(output_memory, 1));
+    EXPECT_FLOAT_EQ(0.7f, get_value<float>(output_memory, 2));
 
-    auto& output_memory = output.as<const memory&>();
+    fill<float>(output_memory, 0);
+    execute({ conv }, engine_resource);
     EXPECT_FLOAT_EQ(3.08f, get_value<float>(output_memory, 0));
     EXPECT_FLOAT_EQ(2.12f, get_value<float>(output_memory, 1));
     EXPECT_FLOAT_EQ(0.7f, get_value<float>(output_memory, 2));
@@ -169,19 +191,26 @@ TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //
 //  Output:
 //  12.25
-    auto input  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
-    auto output = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {1, 1}, 1}, true});
-    auto weights= memory::create({engine::reference, memory::format::yxfb_f32, { 1, {3, 3}, 1}, true});
-    auto biases = memory::create({engine::reference, memory::format::   x_f32, { 1, {{1}} , 1}, true});
+    auto engine_resource = execution_resource_cpu::create({std::thread::hardware_concurrency()});
+    auto input           = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto output          = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {1, 1}, 1}, true});
+    auto weights         = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {3, 3}, 1}, true});
+    auto biases          = memory::create({engine::reference, memory::format::   x_f32, { 1, {{1}} , 1}, true});
+
+    auto& output_memory  = output.as<const memory&>();
 
     set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f});
     set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f});
     set_values(biases , {2.0f});
 
     auto conv = convolution::create({engine::reference, output, input, {1, {2, 2}, 1}, weights, biases, padding::zero});
+    
+    fill<float>(output_memory, 0);
     execute({conv});
+    EXPECT_FLOAT_EQ(12.25f, get_value<float>(output_memory, 0));
 
-    auto& output_memory = output.as<const memory&>();
+    fill<float>(output_memory, 0);
+    execute({conv}, engine_resource);
     EXPECT_FLOAT_EQ(12.25f, get_value<float>(output_memory, 0));
 }
 
@@ -210,10 +239,13 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //   Output:
 //   rnd   rnd
 //   rnd  -7.25
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
-    auto weights= memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{3, 3}, 1}, true});
-    auto biases = memory::create({engine::cpu, memory::format::   x_f32, {1 ,{{1}} , 1}, true});
+    auto engine_resource = execution_resource_cpu::create({std::thread::hardware_concurrency()});
+    auto input           = memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
+    auto output          = memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
+    auto weights         = memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{3, 3}, 1}, true});
+    auto biases          = memory::create({engine::cpu, memory::format::   x_f32, {1 ,{{1}} , 1}, true});
+
+    auto& output_memory  = output.as<const memory&>();
 
     set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f});
     set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f});
@@ -229,9 +261,13 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
                                      weights,
                                      biases,
                                      padding::zero});
+    
+    fill<float>(output_memory, 0);
     execute({conv});
+    EXPECT_FLOAT_EQ(-7.25f, get_value<float>(output_memory, 3));
 
-    auto& output_memory = output.as<const memory&>();
+    fill<float>(output_memory, 0);
+    execute({conv}, engine_resource);
     EXPECT_FLOAT_EQ(-7.25f, get_value<float>(output_memory, 3));
 }
 
@@ -269,13 +305,14 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
 //
 //   Bias grad
 //   10
-    auto bw_output    = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{3, 3}, 1}, true});
-    auto bw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
-    auto fw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{3, 3}, 1}, true});
-    auto weights      = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
-    auto weights_diff = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
-    auto biases       = memory::create({engine::reference, memory::format::x_f32,    {1 ,{{1}} , 1}, true});
-    auto biases_diff  = memory::create({engine::reference, memory::format::x_f32,    {1 ,{{1}} , 1}, true});
+    auto engine_resource = execution_resource_cpu::create({std::thread::hardware_concurrency()});
+    auto bw_output       = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{3, 3}, 1}, true});
+    auto bw_input        = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
+    auto fw_input        = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{3, 3}, 1}, true});
+    auto weights         = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
+    auto weights_diff    = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
+    auto biases          = memory::create({engine::reference, memory::format::x_f32,    {1 ,{{1}} , 1}, true});
+    auto biases_diff     = memory::create({engine::reference, memory::format::x_f32,    {1 ,{{1}} , 1}, true});
 
     auto& bw_output_mem    = bw_output.as<const memory&>();
     auto& bw_input_mem     = bw_input.as<const memory&>();
@@ -296,9 +333,40 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
                                                  {1, {1, 1}, 1},
                                                  padding::zero});
 
+    fill<float>(bw_output_mem, 0);
+    fill<float>(weights_diff_mem, 0);
+    fill<float>(biases_diff_mem, 0);
     execute({conv_bw});
 
     bool results_equal = true;
+    results_equal &= -2.0f == get_value<float>(bw_output_mem, 0);
+    results_equal &= -0.5f == get_value<float>(bw_output_mem, 1);
+    results_equal &=  7.0f == get_value<float>(bw_output_mem, 2);
+    results_equal &= -5.5f == get_value<float>(bw_output_mem, 3);
+    results_equal &=  5.0f == get_value<float>(bw_output_mem, 4);
+    results_equal &= 17.0f == get_value<float>(bw_output_mem, 5);
+    results_equal &=  1.5f == get_value<float>(bw_output_mem, 6);
+    results_equal &=  6.5f == get_value<float>(bw_output_mem, 7);
+    results_equal &=  6.0f == get_value<float>(bw_output_mem, 8);
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong output gradient";
+
+    results_equal = true;
+    results_equal &= -7.00f == get_value<float>(weights_diff_mem, 0);
+    results_equal &= 35.00f == get_value<float>(weights_diff_mem, 1);
+    results_equal &=  5.50f == get_value<float>(weights_diff_mem, 2);
+    results_equal &= 32.25f == get_value<float>(weights_diff_mem, 3);
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong weights gradient";
+
+    results_equal = true;
+    results_equal &= 10.0f == get_value<float>(biases_diff_mem, 0);
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
+
+    fill<float>(bw_output_mem, 0);
+    fill<float>(weights_diff_mem, 0);
+    fill<float>(biases_diff_mem, 0);
+    execute({conv_bw}, engine_resource);
+
+    results_equal = true;
     results_equal &= -2.0f == get_value<float>(bw_output_mem, 0);
     results_equal &= -0.5f == get_value<float>(bw_output_mem, 1);
     results_equal &=  7.0f == get_value<float>(bw_output_mem, 2);
@@ -357,13 +425,14 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
 //
 //  Bias grad
 //  -3
-    auto bw_output    = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
-    auto bw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 1}, true});
-    auto fw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
-    auto weights      = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
-    auto weights_diff = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
-    auto biases       = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
-    auto biases_diff  = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
+    auto engine_resource = execution_resource_cpu::create({std::thread::hardware_concurrency()});
+    auto bw_output       = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
+    auto bw_input        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 1}, true});
+    auto fw_input        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
+    auto weights         = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
+    auto weights_diff    = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
+    auto biases          = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
+    auto biases_diff     = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
 
     auto& bw_output_mem    = bw_output.as<const memory&>();
     auto& bw_input_mem     = bw_input.as<const memory&>();
@@ -383,9 +452,41 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
                                                  {bw_input, fw_input, weights, biases},
                                                  {1, {1, 1}, 1},
                                                  padding::zero});
+    
+    fill<float>(bw_output_mem, 0);
+    fill<float>(weights_diff_mem, 0);
+    fill<float>(biases_diff_mem, 0);
     execute({conv_bw});
 
     bool results_equal = true;
+    results_equal &= -4.0f == get_value<float>(bw_output_mem, 0);
+    results_equal &=  7.0f == get_value<float>(bw_output_mem, 1);
+    results_equal &=  1.0f == get_value<float>(bw_output_mem, 2);
+    results_equal &=  3.0f == get_value<float>(bw_output_mem, 3);
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong output gradient";
+
+    results_equal = true;
+    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 0);
+    results_equal &= 10.5f == get_value<float>(weights_diff_mem, 1);
+    results_equal &=  0.0f == get_value<float>(weights_diff_mem, 2);
+    results_equal &=  1.0f == get_value<float>(weights_diff_mem, 3);
+    results_equal &= -1.5f == get_value<float>(weights_diff_mem, 4);
+    results_equal &=  0.0f == get_value<float>(weights_diff_mem, 5);
+    results_equal &=  0.0f == get_value<float>(weights_diff_mem, 6);
+    results_equal &=  0.0f == get_value<float>(weights_diff_mem, 7);
+    results_equal &=  0.0f == get_value<float>(weights_diff_mem, 8);
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong weights gradient";
+
+    results_equal = true;
+    results_equal &= 2.0f == get_value<float>(biases_diff_mem, 0);
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
+
+    fill<float>(bw_output_mem, 0);
+    fill<float>(weights_diff_mem, 0);
+    fill<float>(biases_diff_mem, 0);
+    execute({conv_bw}, engine_resource);
+
+    results_equal = true;
     results_equal &= -4.0f == get_value<float>(bw_output_mem, 0);
     results_equal &=  7.0f == get_value<float>(bw_output_mem, 1);
     results_equal &=  1.0f == get_value<float>(bw_output_mem, 2);
@@ -451,13 +552,14 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
 //  Bias grad
 //  -3
     using namespace neural;
-    auto bw_output    = memory::create({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}, true});
-    auto bw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
-    auto fw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}, true});
-    auto weights      = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
-    auto weights_diff = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
-    auto biases       = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
-    auto biases_diff  = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
+    auto engine_resource = execution_resource_cpu::create({std::thread::hardware_concurrency()});
+    auto bw_output       = memory::create({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}, true});
+    auto bw_input        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
+    auto fw_input        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}, true});
+    auto weights         = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
+    auto weights_diff    = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
+    auto biases          = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
+    auto biases_diff     = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
 
     auto& bw_output_mem    = bw_output.as<const memory&>();
     auto& bw_input_mem     = bw_input.as<const memory&>();
@@ -492,9 +594,53 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
                                                  {0, {1, 1}, 0},
                                                  {1, {1, 1}, 1},
                                                  padding::zero});
+    
+    fill<float>(bw_output_mem, 0);
+    fill<float>(weights_diff_mem, 0);
+    fill<float>(biases_diff_mem, 0);
     execute({conv_bw});
 
     bool results_equal = true;
+    results_equal &=  0.0f == get_value<float>(bw_output_mem, 0);
+    results_equal &=  0.0f == get_value<float>(bw_output_mem, 1);
+    results_equal &=  0.0f == get_value<float>(bw_output_mem, 2);
+    results_equal &=  0.0f == get_value<float>(bw_output_mem, 3);
+    results_equal &=  0.0f == get_value<float>(bw_output_mem, 4);
+    results_equal &=  2.0f == get_value<float>(bw_output_mem, 5);
+    results_equal &=  2.0f == get_value<float>(bw_output_mem, 6);
+    results_equal &=  2.0f == get_value<float>(bw_output_mem, 7);
+    results_equal &=  0.0f == get_value<float>(bw_output_mem, 8);
+    results_equal &=  2.0f == get_value<float>(bw_output_mem, 9);
+    results_equal &= -4.0f == get_value<float>(bw_output_mem, 10);
+    results_equal &=  7.0f == get_value<float>(bw_output_mem, 11);
+    results_equal &=  0.0f == get_value<float>(bw_output_mem, 12);
+    results_equal &=  2.0f == get_value<float>(bw_output_mem, 13);
+    results_equal &=  1.0f == get_value<float>(bw_output_mem, 14);
+    results_equal &=  3.0f == get_value<float>(bw_output_mem, 15);
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong output gradient";
+
+    results_equal = true;
+    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 0);
+    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 1);
+    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 2);
+    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 3);
+    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 4);
+    results_equal &= 10.5f == get_value<float>(weights_diff_mem, 5);
+    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 6);
+    results_equal &=  1.0f == get_value<float>(weights_diff_mem, 7);
+    results_equal &= -1.5f == get_value<float>(weights_diff_mem, 8);
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong weights gradient";
+
+    results_equal = true;
+    results_equal &= 2.0f == get_value<float>(biases_diff_mem, 0);
+    EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
+
+    fill<float>(bw_output_mem, 0);
+    fill<float>(weights_diff_mem, 0);
+    fill<float>(biases_diff_mem, 0);
+    execute({conv_bw}, engine_resource);
+
+    results_equal = true;
     results_equal &=  0.0f == get_value<float>(bw_output_mem, 0);
     results_equal &=  0.0f == get_value<float>(bw_output_mem, 1);
     results_equal &=  0.0f == get_value<float>(bw_output_mem, 2);

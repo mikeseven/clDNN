@@ -14,20 +14,19 @@
 // limitations under the License.
 */
 
-#include "neural.h"
+#pragma once
+
+#include "convolution.h"
 
 namespace neural {
+    class convolution_cpu_jit_batch1 : is_an_implementation {
+        std::vector<task> tasks;
 
-void execute(std::vector<primitive> list, execution_resource& execution_resource) {
-    for(auto &item : list)
-        execution_resource.run_engine(item.work());
+    public:
+        convolution_cpu_jit_batch1(convolution &arg);
+        ~convolution_cpu_jit_batch1();
+
+        static is_an_implementation *create(convolution &arg) { return new convolution_cpu_jit_batch1(arg); };
+        std::vector<task> work() { return this->tasks; };
+    };
 }
-
-void execute(std::vector<primitive> list) 
-{
-    static nn_thread_worker_pool thread_pool_default;
-    for(auto &item : list)
-        thread_pool_default.push_job(item.work());
-}
-
-};
