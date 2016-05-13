@@ -137,6 +137,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   bwd_bias_diff->create_conversions();
 
   // TODO:
+#if 0
   convolution_bwd = convolution_backward::create({ engine_,
                                               std::vector<primitive>({bwd_bottom_diff->memory_prv,
                                                                       bwd_filter_diff->memory_prv,
@@ -151,7 +152,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
                                                {1, {stride_h_, stride_w_}, 1},
                                               padding::zero
                                             });
-
+#endif
 
   // Names are for debugging purposes only. TODO: Consider removing this.
   fwd_bottom_data    ->name = "fwd_bottom_data   @ " + this->layer_param_.name();
