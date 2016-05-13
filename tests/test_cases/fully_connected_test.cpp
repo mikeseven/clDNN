@@ -38,8 +38,12 @@ TEST(fully_connected, xb_f32_batch_1) {
 //   0.5    -0.5 -2
 //  -0.5     1    1.5
 //
+//
+//  Biases:
+//   1.0, 2.0, 3.0, 4.0
+//
 //  Output:
-//   1.5    0.75    -2.25   3
+//   2.5    2.75    0.75   7
 
     const uint32_t output_x  = 4, output_b  = 1,  // size of whole output buffer
                    input_x   = 3, input_b   = 1,  // size of whole input buffer
@@ -54,7 +58,7 @@ TEST(fully_connected, xb_f32_batch_1) {
     set_values(input_prim  , {-0.5f, 2.0f, 0.5f});
     set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
     set_values(bias_prim   , {1.0f, 2.0f, 3.0f, 4.0f});
-    
+
     execute({full_con_prim});
 
     auto& output_memory  = output_prim.as<const memory&>();
@@ -79,9 +83,12 @@ TEST(fully_connected, xb_f32_batch_2) {
 //   0.5    -0.5 -2
 //  -0.5     1    1.5
 //
+//  Biases:
+//   1.0, 2.0, 3.0, 4.0
+//
 //  Output:
-//   1.5    0.75    -2.25   3
-//   3     -1       -0.25   1
+//   2.5    2.75     0.75   7
+//   4      1        2.75   5
 
     const uint32_t output_x  = 4, output_b  = 2,  // size of whole output buffer
                    input_x   = 3, input_b   = 2,  // size of whole input buffer
@@ -125,8 +132,10 @@ TEST(fully_connected, x_f32) {
 //   0.5    -0.5 -2
 //  -0.5     1    1.5
 //
+//  Biases:
+//   1.0, 2.0, 3.0, 4.0
 //  Output:
-//   1.5    0.75    -2.25   3
+//   2.5    2.75    0.75   7
 
     const uint32_t output_x  = 4,                 // size of whole output buffer
                    input_x   = 3,                 // size of whole input buffer

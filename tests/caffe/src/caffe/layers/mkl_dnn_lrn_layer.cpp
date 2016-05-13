@@ -149,12 +149,13 @@ template <typename Dtype>
 void MKL_DNNLRNLayer<Dtype>::CrossChannelBackward_cpu(
     const vector<Blob<Dtype>*>& top, const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
+  // TODO
+  NOT_IMPLEMENTED;
+#if 0
   const void* top_diff = reinterpret_cast<const void*>(top[0]->prv_diff());
   const void* bottom_data =
       reinterpret_cast<const void*>(bottom[0]->prv_data());
   void* bottom_diff = NULL;
-
-  NOT_IMPLEMENTED;
 
   if (top_diff && bottom_data) {
     bottom_diff = reinterpret_cast<void*>(bottom[0]->mutable_prv_diff());
@@ -167,7 +168,7 @@ void MKL_DNNLRNLayer<Dtype>::CrossChannelBackward_cpu(
     bottom_data = reinterpret_cast<const void*>(bottom[0]->cpu_data());
     bottom_diff = reinterpret_cast<void*>(bottom[0]->mutable_cpu_diff());
   }
-   // TODO
+#endif
 }
 
 

@@ -21,8 +21,6 @@ template <> void MKL_DNNSoftmaxLayer<double>::Backward_cpu(const vector<Blob<dou
 template <typename Dtype>
 void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-  Dtype negative_slope = this->layer_param_.relu_param().negative_slope();
-
   auto batch =  bottom[0]->shape(0);
   auto input_x = bottom[0]->shape(1);
   auto output_x = input_x;
@@ -56,7 +54,6 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                                                 {0, {{0}}, 0},
                                                 });
   // TODO: softmax backward support in mkl-dnn
-  //softmaxBwd_ = normalization::softmax_backward::create({engine::reference, {bottom_diff_}, {top_diff_, bottom_data_}, negative_slope});
 }
 
 

@@ -289,7 +289,7 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //
 //   Output:
 //   rnd   rnd
-//   rnd  -7.25
+//   rnd   2.0
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
     auto weights= memory::create({engine::cpu, memory::format::oiyx_f32, {1 ,{3, 3},{1, 1}}, true});
