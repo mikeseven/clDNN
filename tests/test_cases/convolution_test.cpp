@@ -312,7 +312,7 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     execute({conv});
 
     auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(-7.25f, get_value<float>(output_memory, 3));
+    EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_memory, 3));
 }
 
 TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
