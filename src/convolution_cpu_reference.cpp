@@ -38,29 +38,8 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     auto& output_arg = this_conv->output_memory(0).argument;
 
     auto& filter_arg = this_conv->argument.weight.as<const memory&>().argument; //convolution filter
-    auto& bias_arg   = this_conv->argument.bias.as<const memory&>().argument;
 
-    assert( 1 == output_size.feature.size() );
-    assert( 1 == output_size.batch.size() );
-    assert( 2 == filter_arg.size.feature.size());
-    assert( 1 == filter_arg.size.batch.size() );
-    assert( 1 == filter_arg.size.batch[0] );
-    assert( 1 == filter_arg.size.batch[0] );
-    assert( 1 == filter_arg.size.batch[0] );
     assert( output_size.feature[0] == filter_arg.size.feature[0] ); // memory::format oixy
-
-    if(input_arg.size.raw.size()  != output_arg.size.raw.size())  throw std::runtime_error("Convolution input/output number of dimension does not match.");
-    if(stride.raw.size()          != output_arg.size.raw.size())  throw std::runtime_error("Convolution stride/output number of dimension does not match.");
-    if(input_arg.format           != memory::format::yxfb_f32)    throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
-    if(input_arg.format           != output_arg.format)           throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
-    if(filter_arg.size.raw.size() != output_arg.size.raw.size()+1)throw std::runtime_error("Convolution window_size != 5");
-    if(bias_arg.size.raw.size()   != 3)                           throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
-    if(bias_arg.size.spatial[0]   != output_size.feature[0])      throw std::runtime_error("Convolution biases/output feature maps number does not match.");
-    if(output_size.feature[0] + output_offset.feature[0] > output_arg.size.feature[0]
-        || output_size.feature[0] != filter_arg.size.feature[0])
-        throw std::runtime_error("Convolution weights/output feature maps number does not match.");
-    if(input_arg.size.feature[0] - input_offset.feature[0] < filter_arg.size.feature[1])
-        throw std::runtime_error("Convolution weights/input feature maps number does not match.");
 
     // todo remove
     if(filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");
@@ -69,17 +48,6 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
     auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory&>().pointer);
     auto bias   = static_cast<float*>(this_conv->argument.bias.as<const memory&>().pointer);
-
-    //for(size_t i = 0; i < input_offset.raw.size(); ++i){
-    //    // general formula: output size = (input size - filter size) / step + 1
-    //    if(output_size[i] <
-    //        std::abs(static_cast<int32_t>(input_arg.size[i] - input_offset[i] - filter_arg.size[i])) / stride[i] + 1) //todo is it safe?
-    //        if(filter_arg.size[i] <= output_size[i])
-    //            throw std::runtime_error("Output size of convolution is to small.");
-
-    //    if(output_arg.size[i] < output_size[i] + output_offset[i])
-    //        throw std::runtime_error("Convolution output buffer size is to small.");
-    //}
 
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
     namespace nd = ndimensional;
@@ -92,7 +60,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     // (weights can't have batch so it is equall to 1)
     // Ofm and batch is cropped, ofm will be hold manually
     // Batch is included in output size
-    nd::value<uint32_t> window_range_cropped ({filter_arg.size.raw.cbegin()+2, filter_arg.size.raw.cend()});
+    nd::value<uint32_t> window_range_truncated ({filter_arg.size.raw.cbegin()+2, filter_arg.size.raw.cend()});
     auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
     auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
     auto calc_win_idx = nd::choose_calculate_idx(filter_arg.format);
@@ -111,7 +79,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
             range[1] = 1;
 
             for(auto pos : range) { // {b}, {1}, {spatials}
-                for(auto win_pos : window_range_cropped){ // {ifm}, {spatials}
+                for(auto win_pos : window_range_truncated){ // {ifm}, {spatials}
                     for(uint32_t ofm = output_offset.feature[0]; ofm < output_offset.feature[0]+output_size.feature[0]; ++ofm){ // ofm
                         auto pos_with_modified_ofm(pos); // assign current ofm to output position
                         pos_with_modified_ofm[1] = ofm;

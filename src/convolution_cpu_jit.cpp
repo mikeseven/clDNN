@@ -351,41 +351,21 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
     : is_an_implementation(neural::type_id<convolution_cpu_jit>())
     , outer(arg) {
 
-    auto& input_offset  = outer.argument.input_offset;
-    auto& output_offset = outer.argument.output_offset;
     auto& output_size   = outer.argument.output_size;
     auto& padding       = outer.argument.padding;
     auto& stride        = outer.argument.stride;
 
     auto& input_arg  = outer.input_memory(0).argument;
-    auto& output_arg = outer.output_memory(0).argument;
 
     auto& filter_arg = outer.argument.weight.as<const memory&>().argument; //convolution filter
-    auto& bias_arg   = outer.argument.bias.as<const memory&>().argument;
 
-    assert( 1 == output_size.feature.size() );
-    assert( 1 == output_size.batch.size()   );
     assert( 2 == output_size.spatial.size() );
 
-    if(input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("Convolution input/output number of dimension does not match.");
-    if(stride.raw.size()         != output_arg.size.raw.size()) throw std::runtime_error("Convolution stride/output number of dimension does not match.");
-    if(input_arg.format          != memory::format::yxfb_f32)   throw std::runtime_error("Convolution reference uses yxfb_f32 format.");             // only yxfb_f32 format is supported
-    if(input_arg.format          != output_arg.format)          throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
-    if(input_arg.format          != filter_arg.format)          throw std::runtime_error("Convolution input/weights data format does not match.");   // only yxfb_f32 format is supported
-    if(filter_arg.size.raw.size()!= output_arg.size.raw.size()) throw std::runtime_error("Convolution window_size/output number of dimension does not match.");
-    if(bias_arg.size.raw.size()  != 3)                          throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
-    if(bias_arg.size.spatial[0]  != output_size.feature[0])     throw std::runtime_error("Convolution biases/output feature maps number does not match.");
     auto input  = static_cast<float*>(outer.input_memory(0).pointer);
     auto output = static_cast<float*>(outer.output_memory(0).pointer);
 
     auto filter = static_cast<float*>(outer.argument.weight.as<const memory&>().pointer);
     auto bias   = static_cast<float*>(outer.argument.bias.as<const memory&>().pointer);
-
-    // general formula: output size = (input size - filter size) / step + 1
-    for(size_t i = 0; i < input_offset.raw.size(); ++i){
-        if(output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i])
-            throw std::runtime_error("Convolution output buffer size is to small.");
-    }
 
     const int B_POS = 0;
     const int F_POS = 1;

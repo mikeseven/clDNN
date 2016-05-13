@@ -139,9 +139,7 @@ TEST(fully_connected, x_f32) {
 
     auto full_con_prim = fully_connected::create({ engine::reference, output_prim, input_prim, weights_prim, bias_prim });
 
-    auto& input_memory   = input_prim.as<const memory&>();
     auto& output_memory  = output_prim.as<const memory&>();
-    auto& weights_memory = weights_prim.as<const memory&>();
 
     set_values(input_prim  , {-0.5f, 2.0f, 0.5f});
     set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});

@@ -91,6 +91,8 @@ template<typename T> struct vector {
     public:
         typename std::vector<T>::iterator begin() { return raw_.begin()+begin_; }
         typename std::vector<T>::iterator end()   { return raw_.begin()+end_; }
+        typename std::vector<T>::const_iterator cbegin() const { return raw_.cbegin() + begin_; }
+        typename std::vector<T>::const_iterator cend() const { return raw_.cbegin() + end_; }
         size_t size() const { return end_-begin_; }
         operator T() const { return raw_[0]; }
         T& operator[](size_t at) { assert(at<end_ - begin_); return raw_[begin_ + at]; }

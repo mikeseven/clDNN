@@ -46,12 +46,6 @@ struct fully_connected_reference : is_an_implementation {
 
         auto& weight_arg = this_fc->input_memory(1).argument;
 
-        if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::runtime_error("Fully connected input/output number of dimension does not match.");
-        if (input_arg.format             != output_arg.format)      throw std::runtime_error("Fully connected input/output data format does not match.");
-        if (weight_arg.format            != memory::format::xb_f32 &&
-            weight_arg.format            != memory::format::x_f32)
-            throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
-
         assert( 1 == input_buffer_size.feature.size());
         assert( 1 == input_buffer_size.batch.size()  );
         assert( 1 == input_buffer_size.feature[0]    );
@@ -118,6 +112,14 @@ fully_connected::arguments::arguments( neural::engine::type eng,
 
 // creates primitive with fully_connected implementation that supports provided arguments
 primitive fully_connected::create(fully_connected::arguments arg) {
+    auto& input_arg = arg.input[0].primitive.as<const memory&>().argument;
+    auto& output_arg = arg.output[0].as<const memory&>().argument;
+    auto& weight_arg = arg.input[1].primitive.as<const memory&>().argument;
+
+    if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Fully connected input/output number of dimension does not match.");
+    if (weight_arg.format != memory::format::xb_f32 &&
+        weight_arg.format != memory::format::x_f32)                 throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
+
     // wrap relu into RAII wrapper
     std::unique_ptr<fully_connected> result(new fully_connected(arg));
 
