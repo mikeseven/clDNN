@@ -49,6 +49,7 @@ struct memory : is_a_primitive {
         scalar_f32, // single scalar, float32
         x_f32,
         xb_f32,     // 1D+batch, float32
+        bx_f32,     // 1D+batch, float32
         yxfb_f32,   // 3D+batch, float32
         fyxb_f32,
         xyfb_f32,
@@ -286,13 +287,12 @@ struct fully_connected : is_a_primitive {
         neural::engine::type        engine;
         std::vector<primitive>      output;
         neural::vector<uint32_t>    output_size;
-        std::vector<primitive_at>   input;
+        std::vector<primitive_at>   input;  // 3: {input, weights, bias}
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_siz, primitive in, primitive weights);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                   primitive in, primitive weights);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,                                       primitive in, primitive weights);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,     neural::vector<uint32_t> out_siz, primitive in, primitive weights);
-
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_siz, primitive in, primitive weights, primitive bias);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                   primitive in, primitive weights, primitive bias);
+        DLL_SYM arguments(neural::engine::type, primitive                    out,                                       primitive in, primitive weights, primitive bias);
+        DLL_SYM arguments(neural::engine::type, primitive                    out,     neural::vector<uint32_t> out_siz, primitive in, primitive weights, primitive bias);
     };
     const arguments argument;
 
