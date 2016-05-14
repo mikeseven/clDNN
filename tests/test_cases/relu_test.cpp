@@ -68,13 +68,13 @@ TEST(relu_f32_fw, intrinsics_avx2) {
 
     auto act = relu::create({ engine::cpu, output, input });
     auto buf = static_cast<float*>(input.as<const memory&>().pointer);
+
     // write output to input buffer
     execute({ output(buf), act });
 
     // multiply all positive intigers by -1
     for (size_t i = 0; i < y*x*f*b; ++i)
         buf[i] = (buf[i] > 0) ? -buf[i] : buf[i];
-    //auto act2 = relu::create({engine::reference, output, output});
     execute({ act });
 
     bool result = false;
