@@ -18,7 +18,8 @@
 namespace ndimensional{
 
 // This template has no body. it has to be specialized for every format. Every specialization should be placed in this file.
-// Because of above reasons template is placed in cpp file.
+// index<T> is used only in by one function in whole project 'choose_calculate_idx', which is defined in this file.
+// Because of above reasons this template is placed in cpp file.
 template<neural::memory::format::type FORMAT>
 size_t index(std::vector<uint32_t> size, std::vector<uint32_t> pos);
 
@@ -38,6 +39,21 @@ size_t index<neural::memory::format::yxfb_f32>(std::vector<uint32_t> size, std::
     return pos[0] + size[0] * (pos[1] + size[1]*(pos[3] + size[3] * pos[2]));
 };
 template<>
+size_t index<neural::memory::format::fyxb_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+    assert(
+    [&]() -> bool {
+    for(size_t i = 0; i < pos.size(); ++i)
+        if(size[i] <= pos[i]) return false;
+
+        return true;
+    }() == true );
+    assert(pos.size() == size.size());
+
+    // strides for fyxb format
+    // vectors v_size and stride use format: b, f, spatials(y,x...)
+    return pos[0] + size[0] * (pos[3] + size[3]*(pos[2] + size[2] * pos[1]));
+};
+template<>
 size_t index<neural::memory::format::xb_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(
     [&]() -> bool {
@@ -52,32 +68,75 @@ size_t index<neural::memory::format::xb_f32>(std::vector<uint32_t> size, std::ve
     // vectors v_size and stride use format: b, f, spatials(x)
     return pos[0] + size[0]*pos[2];
 };
+template<>
+size_t index<neural::memory::format::bx_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+    assert(
+    [&]() -> bool {
+    for(size_t i = 0; i < pos.size(); ++i)
+        if(size[i] <= pos[i]) return false;
+
+        return true;
+    }() == true );
+    assert(pos.size() == size.size());
+
+    return pos[2] + size[2]*pos[0];
+};
+
 // NOT TESTED!
 template<>
 size_t index<neural::memory::format::bxyf_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
-	assert(
-		[&]() -> bool {
-		for (size_t i = 0; i < pos.size(); ++i)
-			if (size[i] <= pos[i]) return false;
+    assert(
+        [&]() -> bool {
+        for (size_t i = 0; i < pos.size(); ++i)
+            if (size[i] <= pos[i]) return false;
 
-		return true;
-	}() == true);
-	assert(pos.size() == size.size());
+        return true;
+    }() == true);
+    assert(pos.size() == size.size());
 
-	return pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + size[3] * pos[0]));
+    return pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + size[3] * pos[0]));
 };
 template<>
 size_t index<neural::memory::format::bfxy_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
-	assert(
-		[&]() -> bool {
-		for (size_t i = 0; i < pos.size(); ++i)
-			if (size[i] <= pos[i]) return false;
+    assert(
+        [&]() -> bool {
+        for (size_t i = 0; i < pos.size(); ++i)
+            if (size[i] <= pos[i]) return false;
 
-		return true;
-	}() == true);
-	assert(pos.size() == size.size());
+        return true;
+    }() == true);
+    assert(pos.size() == size.size());
 
-	return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));
+    return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));
+};
+
+template<>
+size_t index<neural::memory::format::oiyx_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+    assert(
+        [&]() -> bool {
+        for (size_t i = 0; i < pos.size(); ++i)
+            if (size[i] <= pos[i]) return false;
+
+        return true;
+    }() == true);
+    assert(pos.size() == size.size());
+    assert(1 == size[0]); // batch
+
+    return pos[4] + size[4] * (pos[3] + size[3] * (pos[2] + size[2] * pos[1]));
+};
+
+template<>
+size_t index<neural::memory::format::bfyx_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
+  assert(
+    [&]() -> bool {
+    for (size_t i = 0; i < pos.size(); ++i)
+      if (size[i] <= pos[i]) return false;
+
+    return true;
+  }() == true);
+  assert(pos.size() == size.size());
+
+  return pos[3] + size[3] * (pos[2] + size[2] * (pos[1] + size[1] * pos[0]));
 };
 
 fptr choose_calculate_idx(neural::memory::format::type arg){
@@ -87,15 +146,28 @@ fptr choose_calculate_idx(neural::memory::format::type arg){
         case neural::memory::format::type::xb_f32:
             ptr = index<neural::memory::format::type::xb_f32>;
             break;
+        case neural::memory::format::type::bx_f32:
+            ptr = index<neural::memory::format::type::bx_f32>;
+            break;
         case neural::memory::format::type::yxfb_f32:
             ptr = index<neural::memory::format::type::yxfb_f32>;
             break;
-		case neural::memory::format::type::bxyf_f32:
-			ptr = index<neural::memory::format::type::bxyf_f32>;
-			break;
-		case neural::memory::format::type::bfxy_f32:
-			ptr = index<neural::memory::format::type::bfxy_f32>;
-			break;
+        case neural::memory::format::type::bxyf_f32:
+            ptr = index<neural::memory::format::type::bxyf_f32>;
+            break;
+        case neural::memory::format::type::bfxy_f32:
+            ptr = index<neural::memory::format::type::bfxy_f32>;
+            break;
+        case neural::memory::format::type::oiyx_f32:
+            ptr = index<neural::memory::format::type::oiyx_f32>;
+            break;
+        case neural::memory::format::type::fyxb_f32:
+           ptr = index<neural::memory::format::type::fyxb_f32>;
+           break;
+        case neural::memory::format::type::bfyx_f32:
+           ptr = index<neural::memory::format::type::bfyx_f32>;
+           break;
+
         default:
             throw std::runtime_error("choose_calculate_idx has no case for memory::format " + std::to_string(arg));
     }

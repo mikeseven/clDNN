@@ -36,16 +36,6 @@ void relu_cpu_reference::implementation(const void *ptr) {
     auto& input_arg  = this_relu->input_memory(0).argument;
     auto& output_arg = this_relu->output_memory(0).argument;
 
-    if(input_arg.format          != memory::format::yxfb_f32)   throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
-    if(input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
-    if(input_arg.format          != output_arg.format)          throw std::runtime_error("ReLU input/output data format does not match.");
-    for(auto &x : input_offset.raw)  if(x < 0)                  throw std::runtime_error("ReLU negative input offset.");
-
-    for(size_t i = 0; i < input_arg.size.raw.size(); ++i){
-        if(input_arg.size.raw[i]  < output_size.raw[i] +  input_offset.raw[i]) throw std::runtime_error("ReLU input/output size does not match.");
-        if(output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("ReLU sizes to small.");
-    }
-
     assert( 1 == output_size.feature.size() );
     assert( 1 == output_size.batch.size()   );
 
@@ -77,12 +67,6 @@ void relu_backward_cpu_reference::implementation(const void *ptr)
 {
     auto this_relu = static_cast<const relu_backward *>(ptr);
 
-    if(this_relu->input().size() != 2)
-        throw std::runtime_error("ReLU backward: number of inputs is incorrect.");
-
-    if(this_relu->output().size() != 1)
-        throw std::runtime_error("ReLU backward: number of outputs is incorrect.");
-
     auto forward_output_grad = static_cast<float*>(this_relu->input_memory(0).pointer);
     auto forward_input       = static_cast<float*>(this_relu->input_memory(1).pointer);
     auto forward_input_grad  = static_cast<float*>(this_relu->output_memory(0).pointer);
@@ -97,18 +81,6 @@ void relu_backward_cpu_reference::implementation(const void *ptr)
     auto& forward_input_grad_offset = this_relu->argument.output_offset;
 
     auto& processed_window_sizes = this_relu->argument.output_size;
-
-    if(forward_output_grad_arg.size.raw.size() != forward_input_arg.size.raw.size() || forward_input_arg.size.raw.size() != forward_input_grad_arg.size.raw.size())
-        throw std::runtime_error("ReLU backward: number of IO dimension does not match.");
-
-    if(forward_output_grad_arg.format != forward_input_arg.format || forward_input_arg.format != forward_input_grad_arg.format)
-        throw std::runtime_error("ReLU backward: IO data format does not match.");
-
-    for(size_t i = 0; i < forward_output_grad_arg.size.raw.size(); ++i){
-        if(forward_output_grad_arg.size.raw[i] < processed_window_sizes.raw[i] + forward_output_grad_offset.raw[i]) throw std::runtime_error("ReLU backward: forward_output_grad size does not match the offset.");
-        if(forward_input_arg.size.raw[i]       < processed_window_sizes.raw[i] + forward_input_offset.raw[i]      ) throw std::runtime_error("ReLU backward: forward_input size does not match the offset.");
-        if(forward_input_grad_arg.size.raw[i]  < processed_window_sizes.raw[i] + forward_input_grad_offset.raw[i] ) throw std::runtime_error("ReLU backward: forward_input_grad size does not match the offset.");
-    }
 
     namespace nd = ndimensional;
     nd::value<uint32_t> range (processed_window_sizes);

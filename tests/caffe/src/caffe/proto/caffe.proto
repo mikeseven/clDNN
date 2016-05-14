@@ -593,7 +593,8 @@ message ConvolutionParameter {
     DEFAULT = 0;
     CAFFE = 1;
     CUDNN = 2;
-    MKL_DNN = 3;
+    MKL_DNN_REF = 3;
+    MKL_DNN_CPU = 4;
   }
   optional Engine engine = 15 [default = DEFAULT];
 
@@ -813,6 +814,13 @@ message InnerProductParameter {
   // all preceding axes are retained in the output.
   // May be negative to index from the end (e.g., -1 for the last axis).
   optional int32 axis = 5 [default = 1];
+  enum Engine {
+    DEFAULT = 0;
+    CAFFE = 1;
+    MKL_DNN_REF = 2;
+    MKL_DNN_CPU = 3;
+  }
+  optional Engine engine = 6 [default = DEFAULT];
 }
 
 // Message that stores parameters used by LogLayer
@@ -840,7 +848,8 @@ message LRNParameter {
     DEFAULT = 0;
     CAFFE = 1;
     CUDNN = 2;
-    MKL_DNN = 3;
+    MKL_DNN_REF = 3;
+    MKL_DNN_CPU = 4;
   }
   optional Engine engine = 6 [default = DEFAULT];
 }
@@ -885,7 +894,8 @@ message PoolingParameter {
     DEFAULT = 0;
     CAFFE = 1;
     CUDNN = 2;
-    MKL_DNN = 3;
+    MKL_DNN_REF = 3;
+    MKL_DNN_CPU = 4;
   }
   optional Engine engine = 11 [default = DEFAULT];
   // If global_pooling then it will pool over the size of the bottom by doing
@@ -955,7 +965,8 @@ message ReLUParameter {
     DEFAULT = 0;
     CAFFE = 1;
     CUDNN = 2;
-    MKL_DNN = 3;
+    MKL_DNN_REF = 3;
+    MKL_DNN_CPU = 4;
   }
   optional Engine engine = 2 [default = DEFAULT];
 }
@@ -1050,6 +1061,8 @@ message SoftmaxParameter {
     DEFAULT = 0;
     CAFFE = 1;
     CUDNN = 2;
+    MKL_DNN_REF = 3;
+    MKL_DNN_CPU = 4;
   }
   optional Engine engine = 1 [default = DEFAULT];
 
