@@ -74,7 +74,7 @@ struct relu_avx2_worker : public neural::is_an_implementation
         __m256 zero = _mm256_setzero_ps();
 
         if(vector_size == C_simd_width) {
-            __m256 dst = _mm256_max_ps(zero, _mm256_load_ps(input));
+            __m256 dst = _mm256_max_ps(zero, _mm256_loadu_ps(input));
             _mm256_storeu_ps(output, dst);
         }
         else {
@@ -90,8 +90,8 @@ struct relu_avx2_worker : public neural::is_an_implementation
         __m256 zero = _mm256_setzero_ps();
 
         if(vector_size == C_simd_width) {
-            __m256 dst = _mm256_cmp_ps(zero, _mm256_load_ps(forward_input), _CMP_LT_OQ);
-            dst = _mm256_and_ps(dst, _mm256_load_ps(backward_input));
+            __m256 dst = _mm256_cmp_ps(zero, _mm256_loadu_ps(forward_input), _CMP_LT_OQ);
+            dst = _mm256_and_ps(dst, _mm256_loadu_ps(backward_input));
             _mm256_storeu_ps(backward_output, dst);
         }
         else {
