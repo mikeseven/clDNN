@@ -190,7 +190,7 @@ TEST(relu_f32_bw, intrinsics_avx2) {
     fill<float>(fw_input.as<const memory&>());
     fill<float>(bw_input.as<const memory&>());
 
-    auto act = relu_backward::create({ engine::reference,{ bw_output },{ bw_input, fw_input } });
+    auto act = relu_backward::create({ engine::cpu, { bw_output }, { bw_input, fw_input } });
     execute({ act });
 
     auto fw_input_buf = static_cast<float*>(fw_input.as<const memory&>().pointer);
