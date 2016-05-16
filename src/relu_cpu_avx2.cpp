@@ -50,8 +50,7 @@ struct relu_avx2_worker : public neural::is_an_implementation
 
         auto output_mem_count = relu_layer->output_memory(0).count();
 
-        //todo: determine chunks of data from analysis
-        auto chunks_count = 1u;
+        auto chunks_count = 18u;
 
         auto chunk_size = output_mem_count/chunks_count;
 
