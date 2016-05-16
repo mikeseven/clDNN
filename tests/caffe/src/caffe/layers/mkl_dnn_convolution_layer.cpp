@@ -24,7 +24,7 @@ namespace caffe {
 template <typename Dtype>
 MKL_DNNConvolutionLayer<Dtype>::MKL_DNNConvolutionLayer(
   const LayerParameter& param, neural::engine::type engine)
-      : ConvolutionLayer<Dtype>(param),
+      : ConvolutionLayer<Dtype>(param), engine_(engine),
         fwd_bottom_data  (new MKL_DNNData<Dtype>(memory::format::bfyx_f32, memory::format::yxfb_f32)),
         fwd_top_data     (new MKL_DNNData<Dtype>(memory::format::bfyx_f32, memory::format::yxfb_f32)),
         fwd_filter_data  (new MKL_DNNData<Dtype>(memory::format::oiyx_f32, memory::format::oiyx_f32)),
@@ -32,8 +32,8 @@ MKL_DNNConvolutionLayer<Dtype>::MKL_DNNConvolutionLayer(
         bwd_top_diff     (new MKL_DNNDiff<Dtype>(memory::format::bfyx_f32, memory::format::yxfb_f32)),
         bwd_bottom_diff  (new MKL_DNNDiff<Dtype>(memory::format::bfyx_f32, memory::format::yxfb_f32)),
         bwd_filter_diff  (new MKL_DNNDiff<Dtype>(memory::format::oiyx_f32, memory::format::oiyx_f32)),
-        bwd_bias_diff    (new MKL_DNNDiff<Dtype>(memory::format::x_f32,    memory::format::x_f32)),
-        engine_(engine) {}
+        bwd_bias_diff    (new MKL_DNNDiff<Dtype>(memory::format::x_f32,    memory::format::x_f32))
+        {}
 
 template <typename Dtype>
 void MKL_DNNConvolutionLayer<Dtype>::compute_output_shape() {
