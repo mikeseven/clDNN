@@ -142,10 +142,10 @@ primitive convolution::create(convolution::arguments arg) {
     assert( 1 == filter_arg.size.batch.size() );
     assert( 1 == filter_arg.size.batch[0] );
 
-    if(output_arg.size.feature[0]-output_offset.feature[0] > output_size.feature[0]
+    if(output_size.feature[0] + output_offset.feature[0] > output_arg.size.feature[0]
         || output_size.feature[0] > filter_arg.size.feature[0])
         throw std::runtime_error("Convolution weights/output feature maps number does not match.");
-    if(input_arg.size.feature[0] - input_offset.feature[0] > filter_arg.size.feature[1])
+    if(input_arg.size.feature[0] - input_offset.feature[0] < filter_arg.size.feature[1])
         throw std::runtime_error("Convolution weights/input feature maps number does not match.");
 
     // wrap relu into RAII wrapper

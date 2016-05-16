@@ -337,8 +337,11 @@ int test() {
         caffe_net.Forward(bottom_vec, &iter_loss);
     loss += iter_loss;
     int idx = 0;
-    for (int j = 0; j < result.size(); ++j) {
+    //for (int j = 0; j < result.size(1); ++j) {
+    int j=1;
       const float* result_vec = result[j]->cpu_data();
+      float max_score = 0;
+      int idx_max_score = 0;
       for (int k = 0; k < result[j]->count(); ++k, ++idx) {
         const float score = result_vec[k];
         if (i == 0) {
@@ -349,10 +352,16 @@ int test() {
         }
         const std::string& output_name = caffe_net.blob_names()[
             caffe_net.output_blob_indices()[j]];
-        LOG(INFO) << "Batch " << i << ", " << output_name << " = " << score;
+        //LOG(INFO) << "Batch " << i << ", " << output_name << " = " << score;
+        if(score > max_score) {
+          max_score = score;
+          idx_max_score = k;
+        }
       }
-    }
+      LOG(INFO) << "Batch " << j << " lable_id: " << idx_max_score << " score: " << max_score;
+    //}
   }
+#if 0
   loss /= FLAGS_iterations;
   LOG(INFO) << "Loss: " << loss;
   for (int i = 0; i < test_score.size(); ++i) {
@@ -368,7 +377,7 @@ int test() {
     }
     LOG(INFO) << output_name << " = " << mean_score << loss_msg_stream.str();
   }
-
+#endif
   return 0;
 }
 RegisterBrewFunction(test);
@@ -490,13 +499,13 @@ int compare() {
   caffe_net_ref.Forward(vector<Blob<float>*>(), &initial_loss);
   LOG(INFO) << "Initial loss: " << initial_loss;
   LOG(INFO) << "Performing Backward - REF";
-  caffe_net_ref.Backward();
+  //caffe_net_ref.Backward();
 
   LOG(INFO) << "\n\nPerforming Forward";
   caffe_net.Forward(vector<Blob<float>*>(), &initial_loss);
   LOG(INFO) << "Initial loss: " << initial_loss;
   LOG(INFO) << "Performing Backward";
-  caffe_net.Backward();
+  // caffe_net.Backward();
 
   const vector<shared_ptr<Layer<float> > >& layers = caffe_net.layers();
   const vector<vector<Blob<float>*> >& bottom_vecs = caffe_net.bottom_vecs();
@@ -552,12 +561,13 @@ int compare() {
 
   // Data layer from reference:
   layers_ref[0]->Forward(bottom_vecs_ref[0], top_vecs_ref[0]);
+  layers_ref[1]->Forward(bottom_vecs_ref[1], top_vecs_ref[1]);
   // Reuse data layer output from reference net
-  const_cast< vector<vector<Blob<float>*> >& > (bottom_vecs)[1] = bottom_vecs_ref[1];
+  const_cast< vector<vector<Blob<float>*> >& > (bottom_vecs)[2] = bottom_vecs_ref[2];
 
   LOG(INFO) << "\n\nPerforming Forward - collect data for comparison";
   // start after the data layer
-  for (int i = 1; i < layers.size(); ++i) {
+  for (int i = 2; i < layers.size(); ++i) {
 
     CHECK_EQ(layers[i]->layer_param().name(), layers_ref[i]->layer_param().name());
 
@@ -567,24 +577,34 @@ int compare() {
 
   LOG(INFO) << "\n\nCompare fwd output, layer by layer";
   // start after the data layer
-  for (int i = 1; i < layers.size(); ++i) {
+  for (int i = 2; i < layers.size(); ++i) {
 
     CHECK_EQ(layers[i]->layer_param().name(), layers_ref[i]->layer_param().name());
 
     // compare vs reference
-    const float max_allowed_error = 0.05; // 1%
+    const float max_allowed_error = 0.01; // 10%
     const float very_small_value = 0.0001; // ;-)
     const float* data =    top_vecs[i][0]->cpu_data();
     const float* ref = top_vecs_ref[i][0]->cpu_data();
 
     CHECK_EQ(top_vecs_ref[i][0]->count(), top_vecs[i][0]->count());
+    int has_err=0;
     for (int j = 0; j < top_vecs_ref[i][0]->count(); ++j) {
       float err = (fabs(ref[j]) < very_small_value)  ? (fabs(data[j] - ref[j])) : (fabs( (data[j] - ref[j]) / ref[j]));
-      if (err > max_allowed_error) LOG(INFO) <<
-                                  "Forward: Error " << err << " at offset " << j <<  " vals: " << data[j] << " should be " << ref[j]
+      if (err > max_allowed_error) {
+        LOG(INFO) << "Forward: Error " << err << " at offset " << j <<  " vals: " << data[j] << " should be " << ref[j]
                                   << " layer: " << i << " name: " << layers[i]->layer_param().name();
+        has_err++;
+        if (has_err > 10) break;
+      }
     }
+    if(has_err) break;
   }
+
+
+  // ************************************** RETURN
+  return 0;
+  // ************************************** RETURN
 
   LOG(INFO) << "\n\nPerforming Backward - collect data for comparison";
   // Loss layer (we need loss based on the same labels)

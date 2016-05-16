@@ -289,7 +289,7 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //
 //   Output:
 //   rnd   rnd
-//   rnd  -7.25
+//   rnd   2.0
     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
     auto weights= memory::create({engine::cpu, memory::format::oiyx_f32, {1 ,{3, 3},{1, 1}}, true});
@@ -312,7 +312,7 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     execute({conv});
 
     auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(-7.25f, get_value<float>(output_memory, 3));
+    EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_memory, 3));
 }
 
 TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
