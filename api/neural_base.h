@@ -372,9 +372,7 @@ public:
     friend class primitive;
 
     // to be removed when new thread queue will be done
-    friend struct nn_semaphore;
-    friend struct nn_thread_worker;
-    friend struct nn_thread_worker_pool;
+    friend class nn_thread_worker;
 };
 
 // implementations of inline functions from primitive
