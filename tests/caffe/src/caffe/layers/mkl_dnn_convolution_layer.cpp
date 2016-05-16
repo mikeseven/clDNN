@@ -100,7 +100,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   fwd_filter_data->create_conversions();
   fwd_bias_data  ->create_conversions();
 
-  for (int i=0; i<g; i++) {
+  for (unsigned i=0; i<g; i++) {
     filters_.push_back(memory::create({engine_, fwd_filter_data->layout_prv, {1, {kh, kw}, {oc/g, ic/g}}}));
     biases_. push_back(memory::create({engine_, fwd_bias_data  ->layout_prv, {1, {{oc/g}}, 1}}));
     convolution_fwd_.push_back(
@@ -109,7 +109,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
                            {0, {0, 0}, i*(oc/g)},
                            {n, {oh, ow}, oc/g},
                            fwd_bottom_data->memory_prv,
-                           {0, {-pad_h_, -pad_w_}, i*(ic/g)},
+                           {0, {-pad_h_, -pad_w_}, static_cast<int>(i*(ic/g))},
                            {1, {stride_h_, stride_w_}, 1},
                            filters_[i],
                            biases_[i],

@@ -134,16 +134,16 @@ private:
   shared_ptr<MKL_DNNDiff<Dtype> > bwd_bias_diff;
 
  // TODO: temp. compatibility vs. older cafe
- size_t width_,
-        height_,
-        width_out_,
-        height_out_,
-        kernel_w_,
-        kernel_h_,
-        stride_w_,
-        stride_h_;
- int    pad_w_,
-        pad_h_;
+ uint32_t width_,
+          height_,
+          width_out_,
+          height_out_,
+          kernel_w_,
+          kernel_h_,
+          stride_w_,
+          stride_h_;
+ int      pad_w_,
+          pad_h_;
 };
 
 /**
@@ -194,15 +194,15 @@ class MKL_DNNLRNLayer : public Layer<Dtype> {
   virtual void CrossChannelBackward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
-  int size_;
+  uint32_t size_;
   int pre_pad_;
   Dtype alpha_;
   Dtype beta_;
   Dtype k_;
-  int num_;
-  int channels_;
-  int height_;
-  int width_;
+  uint32_t num_;
+  uint32_t channels_;
+  uint32_t height_;
+  uint32_t width_;
   // Fields used for normalization ACROSS_CHANNELS
   // scale_ stores the intermediate summing results
 private:
@@ -252,8 +252,8 @@ protected:
                             const vector<bool>& propagate_down,
                             const vector<Blob<Dtype>*>& bottom);
 
-  int kernel_h_, kernel_w_;
-  int stride_h_, stride_w_;
+  uint32_t kernel_h_, kernel_w_;
+  uint32_t stride_h_, stride_w_;
   int pad_h_, pad_w_;
   int channels_;
   int height_, width_;
