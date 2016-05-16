@@ -99,19 +99,14 @@ namespace neural {
 
             static void implementation(const void *ptr) {
                 auto this_reorder = static_cast<const reorder *>(ptr);
-                //auto input = static_cast<float*>(this_reorder->input_memory(0).pointer);
-                //auto output = static_cast<float*>(this_reorder->output_memory(0).pointer);
-                auto input = static_cast<float*>(this_reorder->argument.input[0].primitive.as<const memory&>().pointer);
-                auto output = static_cast<float*>(this_reorder->argument.output[0].as<const memory&>().pointer);
+                auto input = static_cast<float*>(this_reorder->input_memory(0).pointer);
+                auto output = static_cast<float*>(this_reorder->output_memory(0).pointer);
 
-                //auto& input_memory_arg  = this_reorder->input_memory(0).argument;
-                auto& input_memory_arg = this_reorder->argument.input[0].primitive.as<const memory&>().argument;
+                auto& input_memory_arg  = this_reorder->input_memory(0).argument;
                 auto& input_format = input_memory_arg.format;
 
-                //auto output_memory_arg = this_reorder->output_memory(0).argument;
-                auto& output_memory_arg = this_reorder->argument.output[0].as<const memory&>().argument;
-                auto output_format= output_memory_arg.format;
-                //auto range_format= output_memory_arg.format;
+                auto& output_memory_arg = this_reorder->output_memory(0).argument;
+                auto& output_format= output_memory_arg.format;
 
                 if (input_format == output_format)
                     return;
@@ -218,6 +213,8 @@ namespace neural {
             { std::make_tuple(engine::reference, memory::format::bfxy_f32, memory::format::bfyx_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::bfxy_f32, memory::format::bxyf_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::bfxy_f32, memory::format::bfxy_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::bx_f32, memory::format::xb_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::bx_f32), reorder_reference::create },
 ///// f64
             { std::make_tuple(engine::reference, memory::format::yxfb_f64, memory::format::yxfb_f64), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::yxfb_f64, memory::format::fyxb_f64), reorder_reference::create },

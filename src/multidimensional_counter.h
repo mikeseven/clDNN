@@ -76,25 +76,25 @@ public:
     value(neural::vector<T> arg) : std::vector<T>(arg.raw) {};
     value(std::initializer_list<T> il) : std::vector<T>(il) {};
 
-    value &operator+=(const std::vector<   T> &arg) { std::transform(std::vector<T>::begin(), std::vector<T>::end(), arg.cbegin(), std::vector<T>::begin(), std::plus <T>());      return *this; }
-    value &operator+=(const std::vector<negT> &arg) { std::transform(std::vector<T>::begin(), std::vector<T>::end(), arg.cbegin(), std::vector<T>::begin(), std::plus <T>());      return *this; }
-    value &operator-=(const std::vector<   T> &arg) { std::transform(std::vector<T>::begin(), std::vector<T>::end(), arg.cbegin(), std::vector<T>::begin(), std::minus<T>());      return *this; }
-    value &operator-=(const std::vector<negT> &arg) { std::transform(std::vector<T>::begin(), std::vector<T>::end(), arg.cbegin(), std::vector<T>::begin(), std::minus<T>());      return *this; }
-    value &operator*=(const std::vector<   T> &arg) { std::transform(std::vector<T>::begin(), std::vector<T>::end(), arg.cbegin(), std::vector<T>::begin(), std::multiplies<T>()); return *this; }
-    value &operator*=(const std::vector<negT> &arg) { std::transform(std::vector<T>::begin(), std::vector<T>::end(), arg.cbegin(), std::vector<T>::begin(), std::multiplies<T>()); return *this; }
+    value &operator+=(const std::vector<   T> &arg) { std::transform(arg.crbegin(), arg.crend(), std::vector<T>::rbegin(), std::vector<T>::rbegin(), std::plus <T>());      return *this; }
+    value &operator+=(const std::vector<negT> &arg) { std::transform(arg.crbegin(), arg.crend(), std::vector<T>::rbegin(), std::vector<T>::rbegin(), std::plus <T>());      return *this; }
+    value &operator-=(const std::vector<   T> &arg) { std::transform(arg.crbegin(), arg.crend(), std::vector<T>::rbegin(), std::vector<T>::rbegin(), std::minus<T>());      return *this; }
+    value &operator-=(const std::vector<negT> &arg) { std::transform(arg.crbegin(), arg.crend(), std::vector<T>::rbegin(), std::vector<T>::rbegin(), std::minus<T>());      return *this; }
+    value &operator*=(const std::vector<   T> &arg) { std::transform(arg.crbegin(), arg.crend(), std::vector<T>::rbegin(), std::vector<T>::rbegin(), std::multiplies<T>()); return *this; }
+    value &operator*=(const std::vector<negT> &arg) { std::transform(arg.crbegin(), arg.crend(), std::vector<T>::rbegin(), std::vector<T>::rbegin(), std::multiplies<T>()); return *this; }
     value  operator+ (const std::vector<   T> &arg) { value result=*this; return result+=arg; }
     value  operator+ (const std::vector<negT> &arg) { value result=*this; return result+=arg; }
-    value  operator- (const std::vector<   T> &arg) { value result = *this; return result -= arg; }
-    value  operator- (const std::vector<negT> &arg) { value result = *this; return result -= arg; }
+    value  operator- (const std::vector<   T> &arg) { value result=*this; return result-=arg; }
+    value  operator- (const std::vector<negT> &arg) { value result=*this; return result-=arg; }
     value  operator* (const std::vector<   T> &arg) { value result=*this; return result*=arg; }
     value  operator* (const std::vector<negT> &arg) { value result=*this; return result*=arg; }
 
-    value &operator+=(const neural::vector<   T> &arg) { std::transform(std::vector<T>::begin(), std::vector<T>::end(), arg.raw.cbegin(), std::vector<T>::begin(), std::plus <T>());      return *this; }
-    value &operator+=(const neural::vector<negT> &arg) { std::transform(std::vector<T>::begin(), std::vector<T>::end(), arg.raw.cbegin(), std::vector<T>::begin(), std::plus <T>());      return *this; }
-    value &operator-=(const neural::vector<   T> &arg) { std::transform(std::vector<T>::begin(), std::vector<T>::end(), arg.raw.cbegin(), std::vector<T>::begin(), std::minus<T>());      return *this; }
-    value &operator-=(const neural::vector<negT> &arg) { std::transform(std::vector<T>::begin(), std::vector<T>::end(), arg.raw.cbegin(), std::vector<T>::begin(), std::minus<T>());      return *this; }
-    value &operator*=(const neural::vector<   T> &arg) { std::transform(std::vector<T>::begin(), std::vector<T>::end(), arg.raw.cbegin(), std::vector<T>::begin(), std::multiplies<T>()); return *this; }
-    value &operator*=(const neural::vector<negT> &arg) { std::transform(std::vector<T>::begin(), std::vector<T>::end(), arg.raw.cbegin(), std::vector<T>::begin(), std::multiplies<T>()); return *this; }
+    value &operator+=(const neural::vector<   T> &arg) { std::transform(arg.raw.crbegin(), arg.raw.crend(), std::vector<T>::rbegin(), std::vector<T>::rbegin(), std::plus <T>());      return *this; }
+    value &operator+=(const neural::vector<negT> &arg) { std::transform(arg.raw.crbegin(), arg.raw.crend(), std::vector<T>::rbegin(), std::vector<T>::rbegin(), std::plus <T>());      return *this; }
+    value &operator-=(const neural::vector<   T> &arg) { std::transform(arg.raw.crbegin(), arg.raw.crend(), std::vector<T>::rbegin(), std::vector<T>::rbegin(), std::minus<T>());      return *this; }
+    value &operator-=(const neural::vector<negT> &arg) { std::transform(arg.raw.crbegin(), arg.raw.crend(), std::vector<T>::rbegin(), std::vector<T>::rbegin(), std::minus<T>());      return *this; }
+    value &operator*=(const neural::vector<   T> &arg) { std::transform(arg.raw.crbegin(), arg.raw.crend(), std::vector<T>::rbegin(), std::vector<T>::rbegin(), std::multiplies<T>()); return *this; }
+    value &operator*=(const neural::vector<negT> &arg) { std::transform(arg.raw.crbegin(), arg.raw.crend(), std::vector<T>::rbegin(), std::vector<T>::rbegin(), std::multiplies<T>()); return *this; }
     value  operator+ (const neural::vector<   T> &arg) { value result = *this; return result += arg; }
     value  operator+ (const neural::vector<negT> &arg) { value result = *this; return result += arg; }
     value  operator- (const neural::vector<   T> &arg) { value result = *this; return result -= arg; }

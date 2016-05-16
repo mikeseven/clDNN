@@ -78,7 +78,8 @@ template class lib_init_t<void>;
 
 // neural::vector
 // ...is a container for storing data size of or position within multi-dimensional data.
-// It is split into 3 parts: scalar:batch, vector:spatial, scalar:features.
+// It is split into 3 parts: vector:batch, vector:spatial, vector:features.
+// In most use cases batch and features are scalars. Features is a vector eg. for weights in convolution.
 template<typename T> struct vector {
     std::vector<T> raw;
     class ref_vector {
@@ -90,62 +91,83 @@ template<typename T> struct vector {
     public:
         typename std::vector<T>::iterator begin() { return raw_.begin()+begin_; }
         typename std::vector<T>::iterator end()   { return raw_.begin()+end_; }
+        typename std::vector<T>::const_iterator cbegin() const { return raw_.cbegin() + begin_; }
+        typename std::vector<T>::const_iterator cend() const { return raw_.cbegin() + end_; }
         size_t size() const { return end_-begin_; }
         operator T() const { return raw_[0]; }
         T& operator[](size_t at) { assert(at<end_ - begin_); return raw_[begin_ + at]; }
         T operator[](size_t at) const { assert(at<end_ - begin_); return raw_[begin_ + at]; }
-    } spatial, feature, batch;
+    } batch, feature, spatial;
     bool operator==(const vector &rhs) const { return rhs.spatial==spatial && rhs.feature==feature && rhs.batch==batch; }
     bool operator!=(const vector &rhs) const { return !(*this==rhs); }
     vector(const vector &arg)
         : raw(arg.raw)
-        , spatial(raw, arg.spatial.begin_, arg.spatial.end_)
-        , feature(raw, arg.feature.begin_, arg.feature.end_)
         , batch  (raw, arg.batch.begin_,   arg.batch.end_)
+        , feature(raw, arg.feature.begin_, arg.feature.end_)
+        , spatial(raw, arg.spatial.begin_, arg.spatial.end_)
     {}
     vector &operator=(const vector &arg)  {
         raw = arg.raw;
-        spatial.raw_ = arg.spatial.raw_;
+        spatial.raw_ = arg.spatial.raw_; // todo what is it?
     }
-    vector() : raw(0), spatial(raw,0,0), feature(raw,0,0), batch(raw,0,0) {}
-    vector(size_t size) : raw(2+size), spatial(raw,2, 2+size), feature(raw,1,2), batch(raw,0,1) {}
+    vector() : raw(0), batch(raw,0,0), feature(raw,0,0), spatial(raw,0,0) {}
+    vector(size_t size): raw(2+size), batch(raw,0,1), feature(raw,1,2), spatial(raw,2, 2+size) {}
     vector(const T arg_batch, const std::vector<T> arg_spatial, const T arg_feature)
-        : spatial(raw,2, 2+arg_spatial.size())
+        : batch(raw,0,1)
         , feature(raw,1,2)
-        , batch(raw,0,1){
+        , spatial(raw,2, 2+arg_spatial.size())
+    {
         raw.push_back(arg_batch);
         raw.push_back(arg_feature);
         raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
     };
-    vector(const size_t arg_batch, const size_t arg_spatial, const size_t arg_feature)
-        : spatial(raw,2, 2+arg_spatial)
-        , feature(raw,1,2)
-        , batch(raw,0,1) {
-        raw.resize(arg_batch + arg_feature + arg_spatial);
+    vector(const T arg_batch, const std::vector<T> &arg_spatial, const std::vector<T> &arg_feature)
+        : batch  (raw, 0, 1)
+        , feature(raw, 1, 1+arg_feature.size())
+        , spatial(raw, 1+arg_feature.size(), 1+arg_spatial.size())
+    {
+        raw.push_back(arg_batch);
+        raw.insert(raw.end(), arg_feature.begin(), arg_feature.end());
+        raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
     };
-
+    vector(const size_t len_batch, const size_t len_spatial, const size_t len_feature)
+        : batch  (raw , 0                    , len_batch)
+        , feature(raw , len_batch            , len_batch+len_feature)
+        , spatial(raw , len_batch+len_feature, len_batch+len_feature+len_spatial)
+    {
+        raw.resize(len_batch + len_feature + len_spatial);
+    };
     vector(const std::vector<T> arg_spatial, const T arg_feature)
-        : spatial(raw,2,2+arg_spatial.size())
+        : batch(raw,0,1)
         , feature(raw,1,2)
-        , batch(raw,0,1)
+        , spatial(raw,2,2+arg_spatial.size())
     {
         raw.push_back(1);
         raw.push_back(arg_feature);
         raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
     };
+    vector(const std::vector<T> &arg_spatial, const std::vector<T> arg_feature)
+        : batch  (raw, 0, 1)
+        , feature(raw, 1, 1+arg_feature.size())
+        , spatial(raw, 1+arg_feature.end_, 1+arg_feature.end_)
+    {
+        raw.push_back(1);
+        raw.insert(raw.end(), arg_feature.begin(), arg_feature.end());
+        raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
+    };
     vector(const std::vector<T> arg_spatial)
-        : spatial(raw,2,2+arg_spatial.size())
+        : batch(raw,0,1)
         , feature(raw,1,2)
-        , batch(raw,0,1)
+        , spatial(raw,2,2+arg_spatial.size())
     {
         raw.push_back(1);
         raw.push_back(1);
         raw.insert(raw.end(), arg_spatial.begin(), arg_spatial.end());
     };
     vector(const T arg_batch, const std::vector<T> arg_spatial)
-        : spatial(raw,2, 2+arg_spatial.size())
+        : batch(raw,0,1)
         , feature(raw,1,2)
-        , batch(raw,0,1)
+        , spatial(raw,2, 2+arg_spatial.size())
     {
         raw.push_back(arg_batch);
         raw.push_back(1);
