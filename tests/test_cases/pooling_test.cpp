@@ -89,6 +89,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad_cpu) {
 
     for(int i = 0; i <24; i++){
         EXPECT_EQ(get_value<float>(output_memory_cpu, i), get_value<float>(output_memory, i));
+        std::cout << "cpu: " << get_value<float>(output_memory_cpu, i) << "\tref: " << get_value<float>(output_memory, i) << "\n";
     }
 }
 

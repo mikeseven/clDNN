@@ -282,7 +282,7 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     //todo added, what is it?
     //PoolingDimensions pd(make<PoolingHeight>(window.raw[1]), make<PoolingWidth>(window.raw[0]));
     //Stride            ps({make<Rows>(stride.raw[1]), make<Cols>(stride.raw[0])});
-    neural::vector<uint64_t> pooling_dims = { 1, { window.raw[0], window.raw[1] }, 1 };
+    neural::vector<uint64_t> pooling_dims = { 1, { window.raw[2], window.raw[3] }, 1 };
     neural::vector<uint64_t> pooling_stride = { 1, { stride.raw[0], stride.raw[1] }, 1 };
     //PoolingInfo info({pd,ps});
 
