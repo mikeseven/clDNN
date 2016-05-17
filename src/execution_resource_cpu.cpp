@@ -18,7 +18,7 @@
 
 namespace neural {
 
-execution_resource_cpu::arguments::arguments(uint64_t arg_threadpool_size)
+execution_resource_cpu::arguments::arguments(uint32_t arg_threadpool_size)
     : threadpool_size(arg_threadpool_size) {}
 
 execution_resource_cpu::arguments::arguments()

@@ -20,7 +20,24 @@
 
 namespace neural {
 
-// data in memory in known format; format = {order, type} of values
+
+
+// neural::memory
+//
+// Primitive that describes data in memory in known format.
+// Used to describe both user-allocated data buffers and internal ones.
+// Format defines both layout in memory and reresentation of single value.
+// Format is identified by enumeration.
+// For each format there one can:
+//  - determine number of dimensions & value format using traits
+//  - convert coordinates to a memory offset
+//
+//
+// Examples:
+//
+//   Create memory avaialble to 'cpu' engine, with memory format yxfb_f32.
+//   It will have 3 feature maps, resolution 224x224 and batch 24.
+//     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
 struct memory : is_a_primitive {
 
     struct format_traits {
@@ -32,6 +49,7 @@ struct memory : is_a_primitive {
         scalar_f32, // single scalar, float32
         x_f32,
         xb_f32,     // 1D+batch, float32
+        bx_f32,     // 1D+batch, float32
         yxfb_f32,   // 3D+batch, float32
         fyxb_f32,
         xyfb_f32,
@@ -40,6 +58,8 @@ struct memory : is_a_primitive {
         bfyx_f32,
         bxyf_f32,
         bfxy_f32,
+        oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
+        os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
         scalar_f64, // single scalar, float64
         x_f64,
         yxfb_f64,   // 3D+batch, float64
@@ -65,7 +85,9 @@ struct memory : is_a_primitive {
         case format::byxf_f32:
         case format::bfyx_f32:
         case format::bxyf_f32:
-		case format::bfxy_f32: return {4, type_id<float>()};
+        case format::bfxy_f32:
+        case format::oiyx_f32: 
+        case format::os_yxi_sv16_f32: return {4, type_id<float>()};
         case format::scalar_f64:
         case format::   x_f64: return {1, type_id<double>()};
         case format::yxfb_f64:
@@ -107,11 +129,12 @@ private:
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
 };
 
+
 struct execution_resource_cpu : is_a_execution_resource {
     struct arguments {
-        uint64_t threadpool_size;
+        uint32_t threadpool_size;
 
-        DLL_SYM arguments(uint64_t arg_threadpool_size);
+        DLL_SYM arguments(uint32_t arg_threadpool_size);
         DLL_SYM arguments(                            );
     };
     arguments argument;
@@ -130,7 +153,18 @@ private:
         , thread_pool(arg.threadpool_size) {};
 };
 
-// file that is loaded and becomes a data
+// neural::file
+//
+// File that is loaded and becomes a data.
+//
+//
+// Examples:
+//
+//   Load data from file into memory available to CPU.
+//     auto weight = file::create({engine::cpu, "weight.nnb"});
+//
+//   Load data from file into memory available to CPU & validate that format is yxfb_f32, 96 feature maps, 3D data [224x224x3].
+//     auto weight = file::create({engine::cpu, "weight.nnb"}, memory::format::yxfb_f32, {96, {224, 224, 3}}});
 struct file : is_a_primitive {
     struct arguments {
         neural::engine::type    engine;
@@ -151,7 +185,22 @@ private:
     file(arguments arg) : is_a_primitive(type_id<const file>()), argument(arg) {};
     const std::vector<primitive>     &output() const { return argument.output; };
 };
-// reorder data, type is not changed
+
+
+
+
+// neural::reorder
+//
+// Changes how data is ordered in memory. Value type is not changed & all information is preserved.
+// Corresponding values are bitwise equal before/after reorder.
+//
+//
+// Examples:
+//
+//   Reorder yxfb_f32 to byxf_f32 on user-specified buffers on reference engine.
+//     neural::primitive input   = memory::create({engine::reference, memory::format::yxfb_f32, {16, {4, 8}, 1}});
+//     neural::primitive output  = memory::create({engine::reference, memory::format::byxf_f32, {16, {4, 8}, 1}});
+//     neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,input,output});
 struct reorder : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -159,8 +208,8 @@ struct reorder : is_a_primitive {
         std::vector<primitive_at>   input;  // 1: {input}
 
         DLL_SYM arguments(neural::engine::type engine, primitive_at input, primitive output);
-		DLL_SYM arguments(neural::engine::type engine, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input);
-	};
+        DLL_SYM arguments(neural::engine::type engine, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input);
+    };
     const arguments argument;
 
     struct query_entry : is_a_query_entry { reorder::arguments arguments; };
@@ -172,7 +221,31 @@ private:
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
-// direct convolution
+
+
+
+
+// neural::convolution
+//
+// Performs forward spatial convolution with weight sharing.
+// Parameters are defined in context of "direct" convolution, but actual algorithm is not implied.
+// Look into docs/size_offset_stride_padding.html for description how size, offsets, stride & padding parameter work.
+//
+//
+// Example:
+//
+//   In batch 24 convolve 224x224 3-feature-map user-specified inputs into 96-feature-map user-specified outputs.
+//     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+//     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {96, {224, 224}, 24}});
+//     auto weight = file::create({engine::cpu, "weight.nnb"});
+//     auto bias   = file::create({engine::cpu, "bias.nnb"});
+//     auto conv   = convolution::create({engine::cpu, output, input, weight, bias, padding::zero});
+//
+//   As above, but convolution allocated it's output buffer.
+//     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+//     auto weight = file::create({engine::cpu, "weight.nnb"});
+//     auto bias   = file::create({engine::cpu, "bias.nnb"});
+//     auto conv   = convolution::create({engine::cpu, memory::format::yxfb_f32, input, weight, bias, padding::zero});
 struct convolution : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
@@ -189,7 +262,9 @@ struct convolution : is_a_primitive {
         DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     primitive in,                                 neural::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     primitive in,                                 uint32_t                 stride, primitive weights, primitive biases, neural::padding::type);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     primitive in,                                                                  primitive weights, primitive biases, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, primitive                    out,                                                                         primitive in,                                 neural::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
+        DLL_SYM arguments(neural::engine::type, primitive                    out,                                                                         primitive in,                                                                  primitive weights, primitive biases, neural::padding::type);
         DLL_SYM arguments(neural::engine::type, primitive                    out,     neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, primitive weights, primitive biases, neural::padding::type);
     };
     const arguments argument;
@@ -205,13 +280,36 @@ private:
 
     std::unique_ptr<is_an_implementation> _private;
 };
+
+
+
+
+// neural::convolution_backward
+//
+// Performs backward spatial convolution with weight sharing.
+// Parameters are defined in context of "direct" convolution, but actual algorithm is not implied.
+//
+//
+// Examples:
+//
+//   Backward pass:
+//     auto bw_output    = memory::create({eng, memory::format::yxfb_f32, {1, {2, 2}, 1}});
+//     auto bw_input     = memory::create({eng, memory::format::yxfb_f32, {1, {3, 3}, 1}});
+//     auto fw_input     = memory::create({eng, memory::format::yxfb_f32, {1, {2, 2}, 1}});
+//     auto weights      = memory::create({eng, memory::format::yxfb_f32, {1, {2, 2}, 1}});
+//     auto weights_diff = memory::create({eng, memory::format::yxfb_f32, {1, {2, 2}, 1}});
+//     auto biases       = memory::create({eng, memory::format::x_f32,    {1, {{1}} , 1}});
+//     auto biases_diff  = memory::create({eng, memory::format::x_f32,    {1, {{1}} , 1}});
+//     auto conv_bw = convolution_backward::create({engine::reference, 
+//         std::vector<primitive>{bw_output, weights_diff, biases_diff}, 
+//         {bw_input, fw_input, weights, biases}, {1, {1, 1}, 1}, padding::zero});
 struct convolution_backward : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
-        std::vector<primitive>    output;         // 3: {bw_output, weight_diff, bias diff}
+        std::vector<primitive>    output;         // 3: {backward output, weight diff, bias diff}
         neural::vector<uint32_t>  output_offset;
         neural::vector<uint32_t>  input_size;
-        std::vector<primitive_at> input;          // 4: {bw_input, fw_input, filter, bias}
+        std::vector<primitive_at> input;          // 4: {backward input, forward input, filter, bias}
         neural::vector<int32_t>   input_offset;
         neural::vector<uint32_t>  stride;
         neural::padding::type     padding;
@@ -235,19 +333,30 @@ private:
 
     std::unique_ptr<is_an_implementation> _private;
 };
-// fully connected
+
+
+
+
+// neural::fully_connected
+//
+// Forward pass of fully connected layer.
+//
+//
+// Example:
+//    6 input neurons 7 output neurons.
+//     auto input   = memory::create({engine::reference, memory::format::xb_f32, { 1, {{6}},  1} });
+//     auto output  = memory::create({engine::reference, memory::format::xb_f32, { 1, {{7}},  1} });
+//     auto weights = memory::create({engine::reference, memory::format::xy_f32, { 1, {6, 7}, 1} });
+//     auto biases  = memory::create({engine::reference, memory::format::x_f32,  { 1, {{7}},  1} });
+//     auto act = fully_connected::create({engine::reference, output, input, weights, biases});
 struct fully_connected : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
         std::vector<primitive>      output;
-        neural::vector<uint32_t>    output_size;
-        std::vector<primitive_at>   input;
+        std::vector<primitive_at>   input;  // 3: {input, weights, bias}
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_siz, primitive in, primitive weights);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                   primitive in, primitive weights);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,                                       primitive in, primitive weights);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,     neural::vector<uint32_t> out_siz, primitive in, primitive weights);
-
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, primitive in, primitive weights, primitive bias);
+        DLL_SYM arguments(neural::engine::type, primitive                    out,     primitive in, primitive weights, primitive bias);
     };
     const arguments argument;
 
@@ -262,16 +371,27 @@ private:
 
     std::unique_ptr<is_an_implementation> _private;
 };
-// relu activation
-// [TODO] need to activation base class ?
-// [TODO] "any" on slope ?
+
+
+
+
+// neural::relu
+//
+// Activiation using rectified linear unit, forward pass.
+//
+//
+// Example:
+//   Perform max(x,0) activation on user specified buffers.
+//     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {224, 224, 3, 24}});
+//     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {224, 224, 3, 24}});
+//     auto act    = relu::create({engine::cpu, output, input});
 struct relu : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
         std::vector<primitive>    output;
         neural::vector<uint32_t>  output_offset;
         neural::vector<uint32_t>  output_size;
-        std::vector<primitive_at> input;          // 1: input
+        std::vector<primitive_at> input;            // 1: {input}
         neural::vector<int32_t>   input_offset;
         float                     negative_slope;
 
@@ -296,6 +416,21 @@ private:
 
     std::unique_ptr<is_an_implementation> _private;
 };
+
+
+
+
+// neural::relu_backward
+//
+// Activiation using rectified linear unit, backward pass.
+//
+//
+// Example:
+//   Backward pass:
+//     auto forward_input       = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
+//     auto forward_output_grad = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
+//     auto forward_input_grad  = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
+//     auto act = relu_backward::create({engine::reference, {forward_input_grad}, {forward_output_grad, forward_input}});
 struct relu_backward : is_a_primitive {
     struct arguments {
         neural::engine::type                   engine;
@@ -323,7 +458,25 @@ private:
 
     std::unique_ptr<is_an_implementation> _private;
 };
-// pooling
+
+
+
+
+// neural::pooling
+//
+// Pooling, forward.
+//
+//
+// Example:
+//   2x2 max pooling with stride 1 and offset.
+//     auto input  = memory::create({engine::reference, memory::format::yxfb_f32, { 2, {6, 6}, 2}});
+//     auto output = memory::create({engine::reference, memory::format::yxfb_f32, { 3, {7, 7}, 3}});
+//     auto pool  = pooling::create( {engine::reference, pooling::mode::max,
+//                                     output, {0,{1,2},1}, {2,{5,5},2},    // output primitive, offset, size
+//                                     input, {0,{0,0},0},                  // input primitive, offset
+//                                     {1,{1,1},1},                         // stride
+//                                     {1,{2, 2},1},                        // pooling size
+//                                     padding::zero});                     // padding mode
 struct pooling : is_a_primitive {
     class mode { mode(); public: enum type { max, average }; };
 
@@ -333,7 +486,7 @@ struct pooling : is_a_primitive {
         std::vector<primitive>    output;
         neural::vector<uint32_t>  output_offset;
         neural::vector<uint32_t>  output_size;
-        std::vector<primitive_at> input;          // 1: input
+        std::vector<primitive_at> input;          // 1: {input}
         neural::vector<int32_t>   input_offset;
         neural::vector<uint32_t>  stride;
         neural::vector<uint32_t>  size;
@@ -365,70 +518,87 @@ private:
 };
 
 
+
+
+
 namespace normalization { /////////////////////////////////////////////////////////////////////////////////////////////
-// normalization of response
-    struct /*normalization*/response : is_a_primitive {
-        struct arguments {
-            neural::engine::type        engine;
-            std::vector<primitive>      output;
-            vector<uint32_t>            output_offset;
-            vector<uint32_t>            output_size;
-            std::vector<primitive_at>   input;          // 1: input
-            vector<int32_t>             input_offset;
-            uint32_t                    size;
-            neural::padding::type       padding;
-            float                       k;
-            float                       alpha;
-            float                       beta;
 
-            DLL_SYM arguments(neural::engine::type _engine, primitive _output, primitive _input, uint32_t  _size, neural::padding::type _padding, float _k, float _alpha, float _beta);
-            DLL_SYM arguments(neural::engine::type _engine, primitive _output, vector<uint32_t> _output_offset, vector<uint32_t> _output_size, primitive _input, vector<int32_t> _input_offset, uint32_t _input_size, neural::padding::type _padding, float _k, float _alfa, float _beta);
 
-        };
-        const arguments argument;
+// neural::normalization::response
+//
+// TODO
+struct /*normalization*/response : is_a_primitive {
+    struct arguments {
+        neural::engine::type        engine;
+        std::vector<primitive>      output;
+        vector<uint32_t>            output_offset;
+        vector<uint32_t>            output_size;
+        std::vector<primitive_at>   input;          // 1: input
+        vector<int32_t>             input_offset;
+        uint32_t                    size;
+        neural::padding::type       padding;
+        float                       k;
+        float                       alpha;
+        float                       beta;
 
-        struct query_entry : is_a_query_entry { response::arguments arguments; };
-        static std::vector<query_entry> query(arguments);
-        DLL_SYM static primitive create(arguments);
-        primitive clone() const { return create(argument); }
-    private:
-        response(arguments arg) : is_a_primitive(type_id<const response>()), argument(arg) {};
-        const std::vector<primitive_at>  &input() const { return argument.input; };
-        const std::vector<primitive>     &output() const { return argument.output; };
+        DLL_SYM arguments(neural::engine::type _engine, primitive _output, primitive _input, uint32_t  _size, neural::padding::type _padding, float _k, float _alpha, float _beta);
+        DLL_SYM arguments(neural::engine::type _engine, primitive _output, vector<uint32_t> _output_offset, vector<uint32_t> _output_size, primitive _input, vector<int32_t> _input_offset, uint32_t _input_size, neural::padding::type _padding, float _k, float _alfa, float _beta);
 
-        std::unique_ptr<is_an_implementation> _private;
     };
+    const arguments argument;
+
+    struct query_entry : is_a_query_entry { response::arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    DLL_SYM static primitive create(arguments);
+    primitive clone() const { return create(argument); }
+private:
+    response(arguments arg) : is_a_primitive(type_id<const response>()), argument(arg) {};
+    const std::vector<primitive_at>  &input() const { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+
+    std::unique_ptr<is_an_implementation> _private;
+};
 
 
-    struct /*normalization*/softmax : is_a_primitive {
-        struct arguments {
-            neural::engine::type      engine;
-            std::vector<primitive>    output;
-            neural::vector<uint32_t>  output_offset;
-            neural::vector<uint32_t>  output_size;
-            std::vector<primitive_at> input;          // 1: input
-            neural::vector<int32_t>   input_offset;
 
-            DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
-            DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, primitive in);
-            DLL_SYM arguments(neural::engine::type, primitive                             out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
-            DLL_SYM arguments(neural::engine::type, primitive                             out, primitive in);
-        };
-        const arguments argument;
 
-        struct query_entry : is_a_query_entry { softmax::arguments arguments; };
-        static std::vector<query_entry> query(arguments);
-        DLL_SYM static primitive create(arguments);
-        primitive clone() const { return create(argument); }
-    private:
-        softmax(arguments arg) : is_a_primitive(type_id<const softmax>()), argument(arg) {};
-        const std::vector<primitive_at>  &input() const { return argument.input; };
-        const std::vector<primitive>     &output() const { return argument.output; };
+// neural::normalization::softmax
+//
+// TODO
+struct /*normalization*/softmax : is_a_primitive {
+    struct arguments {
+        neural::engine::type      engine;
+        std::vector<primitive>    output;
+        neural::vector<uint32_t>  output_offset;
+        neural::vector<uint32_t>  output_size;
+        std::vector<primitive_at> input;          // 1: input
+        neural::vector<int32_t>   input_offset;
 
-        std::unique_ptr<is_an_implementation> _private;
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, primitive in);
+        DLL_SYM arguments(neural::engine::type, primitive                             out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
+        DLL_SYM arguments(neural::engine::type, primitive                             out, primitive in);
     };
+    const arguments argument;
 
-// batch normalization training - forward
+    struct query_entry : is_a_query_entry { softmax::arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    DLL_SYM static primitive create(arguments);
+    primitive clone() const { return create(argument); }
+private:
+    softmax(arguments arg) : is_a_primitive(type_id<const softmax>()), argument(arg) {};
+    const std::vector<primitive_at>  &input() const { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+
+    std::unique_ptr<is_an_implementation> _private;
+};
+
+
+
+
+// neural::normalization::batch_training_forward
+//
+// TODO
 struct /*normalization*/batch_training_forward : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -453,7 +623,12 @@ private:
     batch_training_forward(arguments arg) : is_a_primitive(type_id<const batch_training_forward>()), argument(arg) {};
 };
 
-// batch normalization training - backward
+
+
+
+// neural::normalization::batch_training_backward
+//
+// TODO
 struct /*normalization*/batch_training_backward : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -476,7 +651,12 @@ private:
     batch_training_backward(arguments arg) : is_a_primitive(type_id<const batch_training_backward>()), argument(arg) {};
 };
 
-// batch normalization inference
+
+
+
+// neural::normalization::batch_inference
+//
+// TODO
 struct /*normalization*/batch_inference : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -501,7 +681,12 @@ private:
 
 };//normalization /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// direct convolution+relu
+
+
+
+// neural::convolution_relu
+//
+// TODO
 struct convolution_relu : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -534,7 +719,12 @@ private:
     std::unique_ptr<is_an_implementation> _private;
 };
 
-// fully connected + relu
+
+
+
+// neural::fully_connected_relu
+//
+// TODO
 struct fully_connected_relu : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;

@@ -25,20 +25,19 @@ namespace neural {
         float* weights_ptr, 
         float* bias_ptr, 
         float* output_ptr,
-        size_t input_fmap_view_start,
-        size_t input_fmap_view_end,
-        size_t input_column_view_start,
-        size_t input_row_view_start,
-        size_t kernel_input_fmap_view_start,
-        size_t kernel_out_fmap_view_start,
-        size_t output_column_view_start,
-        size_t output_row_view_start,
-        size_t output_row_view_end,
-        size_t output_fm_view_start,
-        size_t output_fm_view_end,
-        size_t output_image_view_start,
-        size_t output_image_view_end,
-        size_t padding);
+        uint64_t input_fmap_view_start,
+        uint64_t input_fmap_view_end,
+        uint64_t input_column_view_start,
+        uint64_t input_row_view_start,
+        uint64_t kernel_input_fmap_view_start,
+        uint64_t kernel_out_fmap_view_start,
+        uint64_t output_column_view_start,
+        uint64_t output_row_view_start,
+        uint64_t output_row_view_end,
+        uint64_t output_fm_view_start,
+        uint64_t output_fm_view_end,
+        uint64_t output_image_view_start,
+        uint64_t output_image_view_end);
 
     struct parameters_convolution_f32_precompiled_jit
     {
@@ -46,21 +45,22 @@ namespace neural {
         float**                            weights_ptr; 
         float**                            bias_ptr; 
         float**                            output_ptr;
-        size_t                             input_fmap_view_start;
-        size_t                             input_fmap_view_end;
-        size_t                             input_column_view_start;
-        size_t                             input_row_view_start;
-        size_t                             kernel_input_fmap_view_start;
-        size_t                             kernel_out_fmap_view_start;
-        size_t                             output_column_view_start;
-        size_t                             output_column_view_end;
-        size_t                             output_row_view_start;
-        size_t                             output_row_view_end;
-        size_t                             output_fm_view_start;
-        size_t                             output_fm_view_end;
-        size_t                             output_image_view_start;
-        size_t                             output_image_view_end;
+        uint64_t                           input_fmap_view_start;
+        uint64_t                           input_fmap_view_end;
+        uint64_t                           input_column_view_start;
+        uint64_t                           input_row_view_start;
+        uint64_t                           kernel_input_fmap_view_start;
+        uint64_t                           kernel_out_fmap_view_start;
+        uint64_t                           output_column_view_start;
+        uint64_t                           output_column_view_end;
+        uint64_t                           output_row_view_start;
+        uint64_t                           output_row_view_end;
+        uint64_t                           output_fm_view_start;
+        uint64_t                           output_fm_view_end;
+        uint64_t                           output_image_view_start;
+        uint64_t                           output_image_view_end;
         neural::padding::type              padding;
+        convolution_generator_callback_t*  callback;
     };
 
 
@@ -74,6 +74,6 @@ namespace neural {
         ~convolution_cpu_jit_batch1();
 
         static is_an_implementation *create(convolution &arg) { return new convolution_cpu_jit_batch1(arg); };
-		task_package work() { return this->tasks; };
+        task_package work() { return this->tasks; };
     };
 }

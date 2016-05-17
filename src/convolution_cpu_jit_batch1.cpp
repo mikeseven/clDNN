@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
+#define XBYAK_NO_OP_NAMES
+#define XBYAK_USE_MMAP_ALLOCATOR
 
 #include "convolution_cpu_jit_batch1.h"
 #include "multidimensional_counter.h"
@@ -21,35 +23,39 @@
 
 #include <thread>
 
-#pragma warning( disable : 4267 ) 
+const int C_simd_width = sizeof(__m256)/sizeof(float);
+const int C_slice_size = C_simd_width*2;
 
-const size_t C_simd_width = sizeof(__m256);
-const size_t C_slice_size = C_simd_width*2;
+#define UINT64GUARD(func, constarg, vararg)            \
+    if((vararg) > UINT32_MAX) {                         \
+        mov(rax, vararg);                               \
+        func(constarg, rax);                            \
+    } else {                                            \
+        func(constarg, static_cast<uint32_t>(vararg));  \
+    }
 
 namespace neural {
-
 
     class convolution_generator : public ::Xbyak::CodeGenerator
     {
     public:
         convolution_generator(    
-            int activation,
-            size_t input_width,
-            size_t input_height,
-            size_t input_depth,
-            size_t inner_loop_iterations,
-            size_t kernel_width,
-            size_t kernel_height,
-            size_t kernel_ifmap,
-            size_t output_width,
-            size_t output_height,
-            size_t output_depth,
-            size_t block_size,
-            size_t out_fm_pckg_size,
-            size_t num_blocks_full,
-            size_t partial_block_size,
-            size_t stride_x,
-            size_t stride_y);
+            uint64_t input_width,
+            uint64_t input_height,
+            uint64_t input_depth,
+            uint64_t inner_loop_iterations,
+            uint64_t kernel_width,
+            uint64_t kernel_height,
+            uint64_t kernel_ifmap,
+            uint64_t output_width,
+            uint64_t output_height,
+            uint64_t output_depth,
+            uint64_t block_size,
+            uint64_t out_fm_pckg_size,
+            uint64_t num_blocks_full,
+            uint64_t partial_block_size,
+            uint64_t stride_x,
+            uint64_t stride_y);
 
         ~convolution_generator() {}
 
@@ -57,27 +63,23 @@ namespace neural {
     };
 
     convolution_generator::convolution_generator(
-        int activation,
-        size_t input_width,
-        size_t input_height,
-        size_t input_depth,
-        size_t inner_loop_iterations,
-        size_t kernel_width,
-        size_t kernel_height,
-        size_t kernel_ifmap,
-        size_t output_width,
-        size_t output_height,
-        size_t output_depth,
-        size_t block_size,
-        size_t out_fm_pckg_size,
-        size_t num_blocks_full,
-        size_t partial_block_size,
-        size_t stride_x,
-        size_t stride_y)
+        uint64_t input_width,
+        uint64_t input_height,
+        uint64_t input_depth,
+        uint64_t inner_loop_iterations,
+        uint64_t kernel_width,
+        uint64_t kernel_height,
+        uint64_t kernel_ifmap,
+        uint64_t output_width,
+        uint64_t output_height,
+        uint64_t output_depth,
+        uint64_t block_size,
+        uint64_t out_fm_pckg_size,
+        uint64_t num_blocks_full,
+        uint64_t partial_block_size,
+        uint64_t stride_x,
+        uint64_t stride_y)
     {
-        if(activation)
-            activation = activation;
-
         using namespace ::Xbyak;
         util::Cpu Current_cpu;
 
@@ -85,16 +87,15 @@ namespace neural {
         {
             // Precomputed constants.
             // size_t kernel_depth_size = input_fmap_view_length * C_slice_size;
+            uint64_t input_row_size = input_width * input_depth;
+            uint64_t output_row_size = output_width * output_depth;
 
-            size_t input_row_size = input_width * input_depth;
-            size_t output_row_size = output_width * output_depth;
+            uint64_t input_image_size = input_row_size*input_height;
+            uint64_t output_image_size = output_row_size*output_height;
 
-            size_t input_image_size = input_row_size*input_height;
-            size_t output_image_size = output_row_size*output_height;
+            uint64_t weight_offset = kernel_ifmap * kernel_width * kernel_height * C_slice_size;
 
-            size_t weight_offset = kernel_ifmap * kernel_width * kernel_height * C_slice_size;
-
-            size_t innermost_unroll_factor = 1;
+            uint64_t innermost_unroll_factor = 1;
             if(inner_loop_iterations % 4 == 0)
             {
                 innermost_unroll_factor = 4;
@@ -122,7 +123,7 @@ namespace neural {
             // [RBP     ]: caller RBP
             // [RBP -  8]: local variable 0
             // [RBP - 16]: local variable 1, etc..
-            size_t stack_arg_qwords = 5;
+            uint64_t stack_arg_qwords = 5;
             const Reg64&   regarg_input_ptr                      = rcx;
             const Reg64&   regarg_weights_ptr                    = rdx;
             const Reg64&   regarg_bias_ptr                       = r8;
@@ -148,7 +149,7 @@ namespace neural {
             // [RBP -  8]: local variable 0
             // [RBP - 16]: local variable 1, etc..
             // We are ignoring red zone here, our code is exception-proof :P
-            size_t stack_arg_qwords = 1;
+            uint64_t stack_arg_qwords = 1;
             const Reg64&   regarg_input_ptr                      = rdi;
             const Reg64&   regarg_weights_ptr                    = rsi;
             const Reg64&   regarg_bias_ptr                       = rdx;
@@ -160,7 +161,6 @@ namespace neural {
             const Address& stackarg_kernel_input_fmap_view_start = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
             const Address& stackarg_kernel_out_fmap_view_start   = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
             const Address& stackarg_output_column_view_start     = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
-            const Address& stackarg_output_column_view_end       = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
             const Address& stackarg_output_row_view_start        = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
             const Address& stackarg_output_row_view_end          = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
             const Address& stackarg_output_fm_view_start         = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
@@ -169,7 +169,7 @@ namespace neural {
             const Address& stackarg_output_image_view_end        = qword[rbp + (++stack_arg_qwords * sizeof(size_t))];
 #endif
 
-            size_t stack_local_qwords = 0;
+            uint64_t stack_local_qwords = 0;
             const Address& stack_input_ptr             = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
             const Address& stack_weights_ptr           = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
             const Address& stack_bias_ptr              = qword[rbp - (++stack_local_qwords * sizeof(size_t))];
@@ -204,24 +204,17 @@ namespace neural {
             // Prologue.
             push(rbp);
             mov(rbp, rsp);
-            sub(rsp, stack_local_qwords * sizeof(size_t));
+            UINT64GUARD(sub, rsp, stack_local_qwords * sizeof(size_t));
             push(rbx);
             push(r12); 
             push(r13); 
             push(r14); 
             push(r15);
 
-            mov(rax, qword[regarg_input_ptr]);
-            mov(stack_input_ptr, rax);
-
-            mov(rax, qword[regarg_weights_ptr]);
-            mov(stack_weights_ptr, rax);
-
-            mov(rax, qword[regarg_bias_ptr]);
-            mov(stack_bias_ptr, rax);
-
-            mov(rax, qword[regarg_output_ptr]);
-            mov(stack_output_ptr, rax);
+            mov(stack_input_ptr, regarg_input_ptr);
+            mov(stack_weights_ptr, regarg_weights_ptr);
+            mov(stack_bias_ptr, regarg_bias_ptr);
+            mov(stack_output_ptr, regarg_output_ptr);
 
 #ifdef _WIN32
             mov(rax, stackarg_input_fmap_view_start);
@@ -341,7 +334,7 @@ namespace neural {
                 add(rax, stack_bias_ptr);
                 mov(stack_bias_ptr_base, rax);
 
-                for(size_t acc = 0; acc < block_size; ++acc)
+                for(uint32_t acc = 0; acc < block_size; ++acc)
                 {
                     if(out_fm_pckg_size == 16)
                     {
@@ -363,7 +356,8 @@ namespace neural {
                 // convolution inner loops
                 mov(stack_current_kernel_row, 0);
                 L(make_unique("kernel_height_start"));
-                cmp(stack_current_kernel_row, kernel_height);
+                mov(rax, kernel_height);
+                cmp(stack_current_kernel_row, rax);
                 jae(make_unique("kernel_height_end"), T_NEAR);
 
                 mov(r13, stack_input_ptr_base);
@@ -385,14 +379,14 @@ namespace neural {
                     cmp(r9, r15);
                     jae(make_unique("kernel_idepth_end"), T_NEAR);
                 }
-                for(size_t inner_unroll = 0; inner_unroll < innermost_unroll_factor; ++inner_unroll)
+                for(uint32_t inner_unroll = 0; inner_unroll < innermost_unroll_factor; ++inner_unroll)
                 {
                     if(out_fm_pckg_size == 16)
                     {
-                        vmovaps(Ymm(14), byte[r11 + inner_unroll * C_slice_size * sizeof(float)]);
-                        vmovaps(Ymm(15), byte[r11 + inner_unroll * C_slice_size * sizeof(float) + C_simd_width*sizeof(float)]);
+                        vmovups(Ymm(14), byte[r11 + inner_unroll * C_slice_size * sizeof(float)]);
+                        vmovups(Ymm(15), byte[r11 + inner_unroll * C_slice_size * sizeof(float) + C_simd_width*sizeof(float)]);
 
-                        for(size_t acc = 0; acc < block_size; ++acc)
+                        for(uint32_t acc = 0; acc < block_size; ++acc)
                         {
                             vbroadcastss(Ymm(13), byte[r10 + inner_unroll * sizeof(float) + acc * input_depth * stride_x * sizeof(float)]);
                             vfmadd231ps(Ymm(acc * 2 + 0), Ymm(13), Ymm(14));
@@ -401,9 +395,9 @@ namespace neural {
                     }
                     else if(out_fm_pckg_size == 8)
                     {
-                        vmovaps(Ymm(15), byte[r11 + inner_unroll * C_slice_size * sizeof(float)]);
+                        vmovups(Ymm(15), byte[r11 + inner_unroll * C_slice_size * sizeof(float)]);
 
-                        for(size_t acc = 0; acc < block_size; ++acc)
+                        for(uint32_t acc = 0; acc < block_size; ++acc)
                         {
                             vbroadcastss(Ymm(14), byte[r10 + inner_unroll * sizeof(float) + acc * input_depth * stride_x * sizeof(float)]);
                             vfmadd231ps(Ymm(acc), Ymm(14), Ymm(15));
@@ -415,7 +409,7 @@ namespace neural {
                         vmovss(Xmm(14), byte[r11 + inner_unroll * C_slice_size * sizeof(float) + 1 * sizeof(float)]);
                         vmovss(Xmm(15), byte[r11 + inner_unroll * C_slice_size * sizeof(float) + 2 * sizeof(float)]);
 
-                        for(size_t acc = 0; acc < block_size; ++acc)
+                        for(uint32_t acc = 0; acc < block_size; ++acc)
                         {
                             vbroadcastss(Ymm(12), byte[r10 + inner_unroll * sizeof(float) + acc * input_depth * stride_x * sizeof(float)]);
                             vfmadd231ps(Ymm(acc * 3 + 0), Ymm(12), Ymm(13));
@@ -427,23 +421,23 @@ namespace neural {
 
                 if(inner_loop_iterations/innermost_unroll_factor > 1)
                 {
-                    add(r10, innermost_unroll_factor * sizeof(float));
-                    add(r11, innermost_unroll_factor * C_slice_size * sizeof(float));
+                    UINT64GUARD(add, r10, innermost_unroll_factor * sizeof(float));
+                    UINT64GUARD(add, r11, innermost_unroll_factor * C_slice_size * sizeof(float));
+                    UINT64GUARD(add, r9, innermost_unroll_factor);
 
-                    add(r9, innermost_unroll_factor);
                     jmp(make_unique("kernel_idepth_start"), T_NEAR);
                     L(make_unique("kernel_idepth_end"));
                 }
 
-                add(r13, input_depth * sizeof(float));
-                add(r14, kernel_ifmap * C_slice_size * sizeof(float));
+                UINT64GUARD(add, r13, input_depth * sizeof(float));
+                UINT64GUARD(add, r14, kernel_ifmap * C_slice_size * sizeof(float));
 
                 inc(r12);
                 jmp(make_unique("kernel_width_start"), T_NEAR);
                 L(make_unique("kernel_width_end"));
 
-                add(stack_input_ptr_base, input_row_size * sizeof(float));
-                add(stack_kernel_ptr_base, kernel_ifmap * C_slice_size * kernel_width * sizeof(float));
+                UINT64GUARD(add, stack_input_ptr_base, input_row_size * sizeof(float));
+                UINT64GUARD(add, stack_kernel_ptr_base, kernel_ifmap * C_slice_size * kernel_width * sizeof(float));
 
                 inc(stack_current_kernel_row);
                 jmp(make_unique("kernel_height_start"), T_NEAR);
@@ -457,7 +451,7 @@ namespace neural {
                     vxorps(Ymm(13), Ymm(13));
                     vmovups(Ymm(14), byte[rcx                               ]);
                     vmovups(Ymm(15), byte[rcx + C_simd_width * sizeof(float)]);
-                    for(int acc = 0; acc < block_size; ++acc)
+                    for(uint32_t acc = 0; acc < block_size; ++acc)
                     {
                         vaddps(Ymm(acc * 2 + 0), Ymm(14));
                         vaddps(Ymm(acc * 2 + 1), Ymm(15));
@@ -476,7 +470,7 @@ namespace neural {
                 {
                     vxorps(Ymm(14), Ymm(14));
                     vmovups(Ymm(15), byte[rcx]);
-                    for(int acc = 0; acc < block_size; ++acc)
+                    for(uint32_t acc = 0; acc < block_size; ++acc)
                     {
                         vaddps(Ymm(acc), Ymm(15));
 
@@ -494,7 +488,7 @@ namespace neural {
                     vmovss(Xmm(13), byte[rcx + 0 * sizeof(float)]);
                     vmovss(Xmm(14), byte[rcx + 1 * sizeof(float)]);
                     vmovss(Xmm(15), byte[rcx + 2 * sizeof(float)]);
-                    for(int acc = 0; acc < block_size; ++acc)
+                    for(uint32_t acc = 0; acc < block_size; ++acc)
                     {
                         vaddss(Xmm(acc * 3 + 0), Xmm(13));
                         vaddss(Xmm(acc * 3 + 1), Xmm(14));
@@ -519,16 +513,13 @@ namespace neural {
             if(num_blocks_full != 0) {
                 mov(stack_current_block, 0);
                 L("block_start");
-                cmp(stack_current_block, num_blocks_full);
+                UINT64GUARD(cmp, stack_current_block, num_blocks_full);
                 jae("block_end", T_NEAR);
 
                 inner_macro(block_size);
 
-                mov(rax, block_size * input_depth * stride_x);
-                add(stack_input_offset_base, rax);
-
-                mov(rax, block_size * output_depth);
-                add(stack_output_offset_base, rax);
+                UINT64GUARD(add, stack_input_offset_base, block_size * input_depth * stride_x);
+                UINT64GUARD(add, stack_output_offset_base, block_size * output_depth);
 
                 inc(stack_current_block);
                 jmp("block_start", T_NEAR);
@@ -594,12 +585,42 @@ namespace neural {
     }
 
 
+    void unpack_convolve_callback_handle(
+        void* void_handle)
+    {
+        parameters_convolution_f32_precompiled_jit& handle = *reinterpret_cast<parameters_convolution_f32_precompiled_jit*>(void_handle);
+
+        auto output_fm_view_length = handle.output_fm_view_end - handle.output_fm_view_start + 1;
+
+        if(   output_fm_view_length % C_slice_size != 0 
+           && output_fm_view_length != C_simd_width 
+           && output_fm_view_length != 3) 
+            throw std::runtime_error("unknown ofm view mode - convolution");
+
+        handle.callback(
+            *handle.input_ptr, 
+            *handle.weights_ptr, 
+            *handle.bias_ptr, 
+            *handle.output_ptr,
+            handle.input_fmap_view_start,
+            handle.input_fmap_view_end,
+            handle.input_column_view_start,
+            handle.input_row_view_start,
+            handle.kernel_input_fmap_view_start,
+            handle.kernel_out_fmap_view_start,
+            handle.output_column_view_start,
+            handle.output_row_view_start,
+            handle.output_row_view_end,
+            handle.output_fm_view_start,
+            handle.output_fm_view_end,
+            handle.output_image_view_start,
+            handle.output_image_view_end);
+    }
+
+
 convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
         : is_an_implementation(neural::type_id<convolution_cpu_jit_batch1>())
 {
-    if(arg.argument.input_offset.raw[0])
-        tasks.push_back({nullptr, nullptr});
-
     // Get pointers for pointers to buffers!
     auto input_ptr = reinterpret_cast<float**>(&arg.input_memory(0).pointer);
     auto output_ptr = reinterpret_cast<float**>(&arg.output_memory(0).pointer);
@@ -607,94 +628,89 @@ convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
     auto bias_ptr = reinterpret_cast<float**>(&arg.argument.bias.as<const memory&>().pointer);
 
     // Get input buffer sizes.
-    size_t input_width = arg.input_memory(0).argument.size.spatial[0];
-    size_t input_height = arg.input_memory(0).argument.size.spatial[1];
-    size_t input_depth = arg.input_memory(0).argument.size.feature[0];
+    uint64_t input_width = arg.input_memory(0).argument.size.spatial[1];
+    uint64_t input_height = arg.input_memory(0).argument.size.spatial[0];
+    uint64_t input_depth = arg.input_memory(0).argument.size.feature[0];
 
     // Get input offsets.
-    size_t inpfmap_begin = arg.argument.input_offset.feature[0];
-    size_t inpfmap_end = input_depth - 1;
-    size_t inpfmap_length = inpfmap_end - inpfmap_begin + 1;
+    uint64_t inpfmap_begin = arg.argument.input_offset.feature[0];
+    uint64_t inpfmap_end = input_depth - 1;
+    uint64_t inpfmap_length = inpfmap_end - inpfmap_begin + 1;
 
     // Get output offsets.
-    size_t outbatch_begin = arg.argument.output_offset.batch[0];
-    size_t outbatch_end = outbatch_begin + arg.argument.output_size.batch[0];
+    uint64_t outbatch_begin = arg.argument.output_offset.batch[0];
+    uint64_t outbatch_end = outbatch_begin + arg.argument.output_size.batch[0] - 1;
 
     // Get output buffer sizes.
-    size_t output_width = arg.output_memory(0).argument.size.spatial[0];
-    size_t output_height = arg.output_memory(0).argument.size.spatial[1];
-    size_t output_depth = arg.output_memory(0).argument.size.feature[0];
+    uint64_t output_width = arg.output_memory(0).argument.size.spatial[1];
+    uint64_t output_height = arg.output_memory(0).argument.size.spatial[0];
+    uint64_t output_depth = arg.output_memory(0).argument.size.feature[0];
 
     // Get 'views' sizes for output.
-    size_t outpcol_length = arg.argument.output_size.spatial[0];
-    size_t outprow_length = arg.argument.output_size.spatial[1];
-    size_t outpfmap_length = arg.argument.output_size.feature[0];
+    uint64_t outpcol_length = arg.argument.output_size.spatial[1];
+    uint64_t outprow_length = arg.argument.output_size.spatial[0];
+    uint64_t outpfmap_length = arg.argument.output_size.feature[0];
 
-    size_t kernel_width = arg.argument.weight.as<const memory &>().argument.size.spatial[0];
-    size_t kernel_height = arg.argument.weight.as<const memory &>().argument.size.spatial[1];
-    size_t kernel_ifmap = arg.argument.weight.as<const memory &>().argument.size.feature[1];
-    size_t stride_col = arg.argument.stride.raw[0];
-    size_t stride_row = arg.argument.stride.raw[1];
+    uint64_t kernel_width = arg.argument.weight.as<const memory &>().argument.size.spatial[1];
+    uint64_t kernel_height = arg.argument.weight.as<const memory &>().argument.size.spatial[0];
+    uint64_t kernel_ifmap = arg.argument.weight.as<const memory &>().argument.size.feature[1];
+    uint64_t stride_col = arg.argument.stride.raw[3];
+    uint64_t stride_row = arg.argument.stride.raw[2];
 
     // Make these variable basing on number of threads - this naive case won't be optimal.
-    size_t output_row_package_size = 4;
-    size_t output_fmap_package_size = 16;
-    size_t output_col_package_size = outpcol_length;
+    uint64_t output_row_package_size = outprow_length;
+    uint64_t output_fmap_package_size = 16;
+    uint64_t output_col_package_size = outpcol_length;
 
-    size_t num_output_fm_items = outpfmap_length / output_fmap_package_size;
-    size_t num_output_fm_items_remainder = outpfmap_length % output_fmap_package_size;
-    size_t num_col_items = outpcol_length / output_col_package_size;
-    size_t num_row_items = outprow_length / output_row_package_size;
+    uint64_t num_output_fm_items = outpfmap_length / output_fmap_package_size;
+    uint64_t num_output_fm_items_remainder = outpfmap_length % output_fmap_package_size;
+    uint64_t num_col_items = outpcol_length / output_col_package_size;
+    uint64_t num_row_items = outprow_length / output_row_package_size;
+
+    precompiled_request_handles.resize(num_output_fm_items * num_col_items * num_row_items);
 
     // Fill slave work items.
-    for (auto output_fm_item = 0u; output_fm_item < num_output_fm_items; ++output_fm_item)
+    for (uint64_t output_fm_item = 0u; output_fm_item < num_output_fm_items; ++output_fm_item)
     {
-        for (auto row_item = 0u; row_item < num_row_items; ++row_item)
+        for (uint64_t row_item = 0u; row_item < num_row_items; ++row_item)
         {
-            for (auto col_item = 0u; col_item < num_col_items; ++col_item)
+            for (uint64_t col_item = 0u; col_item < num_col_items; ++col_item)
             { 
-                auto item_in_pool = col_item * num_output_fm_items * num_row_items + row_item * num_output_fm_items + output_fm_item;
+                uint64_t item_in_pool = col_item * num_output_fm_items * num_row_items + row_item * num_output_fm_items + output_fm_item;
 
-                size_t input_view_begin_col = arg.argument.input_offset.spatial[0] + col_item * output_col_package_size * stride_col;
-                size_t input_view_begin_row = arg.argument.input_offset.spatial[1] + row_item * output_row_package_size * stride_row;
+                uint64_t input_view_begin_col = arg.argument.input_offset.spatial[1] + col_item * output_col_package_size * stride_col;
+                uint64_t input_view_begin_row = arg.argument.input_offset.spatial[0] + row_item * output_row_package_size * stride_row;
 
-                size_t output_view_begin_col = arg.argument.output_offset.spatial[0] + col_item * output_col_package_size;
-                size_t output_view_begin_row = arg.argument.output_offset.spatial[1] + row_item * output_row_package_size;
-                size_t output_view_begin_map = arg.argument.output_offset.feature[0] + output_fm_item * output_fmap_package_size;
+                uint64_t output_view_begin_col = arg.argument.output_offset.spatial[1] + col_item * output_col_package_size;
+                uint64_t output_view_begin_row = arg.argument.output_offset.spatial[0] + row_item * output_row_package_size;
+                uint64_t output_view_begin_map = arg.argument.output_offset.feature[0] + output_fm_item * output_fmap_package_size;
 
-                size_t output_view_end_col = arg.argument.output_offset.spatial[0] + (col_item+1) * output_col_package_size - 1;
-                size_t output_view_end_row = arg.argument.output_offset.spatial[1] + (row_item+1) * output_row_package_size - 1;
-                size_t output_view_end_map = arg.argument.output_offset.feature[0] + (output_fm_item+1) * output_fmap_package_size - 1;
-
-                size_t weights_view_begin_slice = output_fm_item;
-
-                size_t bias_view_begin_map = output_fm_item * output_fmap_package_size;
-                size_t bias_view_end_map = (output_fm_item+1) * output_fmap_package_size - 1;
+                uint64_t output_view_end_col = arg.argument.output_offset.spatial[1] + (col_item+1) * output_col_package_size - 1;
+                uint64_t output_view_end_row = arg.argument.output_offset.spatial[0] + (row_item+1) * output_row_package_size - 1;
+                uint64_t output_view_end_map = arg.argument.output_offset.feature[0] + (output_fm_item+1) * output_fmap_package_size - 1;
 
                 if(output_fm_item+1 == num_output_fm_items && num_output_fm_items_remainder)
                 {
                     // Case where we need to process only remaining FMaps.
                     output_view_end_map = output_view_begin_map + num_output_fm_items_remainder - 1;
-                    weights_view_begin_slice = num_output_fm_items_remainder - 1;
-                    bias_view_end_map = bias_view_begin_map + num_output_fm_items_remainder - 1;
                 }
 
-                size_t output_fmaps_view_length = output_view_end_map - output_view_begin_map + 1;
-                size_t block_size = (output_fmaps_view_length == 3) 
+                uint64_t output_fmaps_view_length = output_view_end_map - output_view_begin_map + 1;
+                uint64_t block_size = (output_fmaps_view_length == 3) 
                     ? 4 
                     : ((output_fmaps_view_length == 8)
                        ? 14
                        : 6);
 
-                size_t out_fm_pckg_size = (output_fmaps_view_length == 3) 
+                uint64_t out_fm_pckg_size = (output_fmaps_view_length == 3) 
                     ? 3 
                     : ((output_fmaps_view_length == 8)
                        ? 8
                        : 16);
 
-                size_t output_column_view_length = output_view_end_col - output_view_begin_col + 1;
-                size_t num_blocks_full      = output_column_view_length / block_size;
-                size_t partial_block_size   = output_column_view_length % block_size;
+                uint64_t output_column_view_length = output_view_end_col - output_view_begin_col + 1;
+                uint64_t num_blocks_full      = output_column_view_length / block_size;
+                uint64_t partial_block_size   = output_column_view_length % block_size;
 
                 precompiled_request_handles[item_in_pool].input_ptr                    = input_ptr;                 
                 precompiled_request_handles[item_in_pool].weights_ptr                  = weights_ptr;
@@ -705,7 +721,7 @@ convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
                 precompiled_request_handles[item_in_pool].input_column_view_start      = input_view_begin_col;
                 precompiled_request_handles[item_in_pool].input_row_view_start         = input_view_begin_row;
                 precompiled_request_handles[item_in_pool].kernel_input_fmap_view_start = 0;
-                precompiled_request_handles[item_in_pool].kernel_out_fmap_view_start   = 0;
+                precompiled_request_handles[item_in_pool].kernel_out_fmap_view_start   = output_fm_item * C_slice_size;
                 precompiled_request_handles[item_in_pool].output_column_view_start     = output_view_begin_col;
                 precompiled_request_handles[item_in_pool].output_row_view_start        = output_view_begin_row;
                 precompiled_request_handles[item_in_pool].output_row_view_end          = output_view_end_row;
@@ -714,31 +730,28 @@ convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
                 precompiled_request_handles[item_in_pool].output_image_view_start      = outbatch_begin;
                 precompiled_request_handles[item_in_pool].output_image_view_end        = outbatch_end;
                 precompiled_request_handles[item_in_pool].padding                      = arg.argument.padding;
-
-
-                auto jit_callback = 
+                precompiled_request_handles[item_in_pool].callback                     = 
                     get_generator<convolution_generator>(
-                        0,
-                        input_width,
-                        input_height,
-                        input_depth,
-                        inpfmap_length,
-                        kernel_width,
-                        kernel_height,
-                        kernel_ifmap,
-                        output_width,
-                        output_height,
-                        output_depth,
-                        block_size,
-                        out_fm_pckg_size,
-                        num_blocks_full,
-                        partial_block_size,
-                        stride_col,
-                        stride_row)->generator_callback;
+                    input_width,
+                    input_height,
+                    input_depth,
+                    inpfmap_length,
+                    kernel_width,
+                    kernel_height,
+                    kernel_ifmap,
+                    output_width,
+                    output_height,
+                    output_depth,
+                    block_size,
+                    out_fm_pckg_size,
+                    num_blocks_full,
+                    partial_block_size,
+                    stride_col,
+                    stride_row)->generator_callback;
 
                 tasks.push_back(
                 {
-                    reinterpret_cast<void(*)(const void*)>(jit_callback),
+                    reinterpret_cast<void(*)(const void*)>(unpack_convolve_callback_handle),
                     &precompiled_request_handles[item_in_pool]
                 });
             }

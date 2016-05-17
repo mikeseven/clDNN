@@ -73,17 +73,20 @@ namespace neural {
             for (auto pos : range) {
                 auto in_idx = calc_in_idx(input_arg.size.raw, pos + input_offset);
                 auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
+
                 float acc = 0.0f;
                 float value = 0.0f;
 
                 for (auto window_pos : window_range) {
 
-                    auto input_pos = pos - help_input_offset + window_pos;
+                    auto input_pos = pos + help_input_offset + window_pos;
 
-                    if (nd::is_out_of_range(input_arg.size, input_pos))
+                    if (nd::is_out_of_range(input_arg.size, input_pos)) 
                         continue;
+
                     auto input_index = calc_in_idx(input_arg.size.raw, input_pos);
                     value = input[input_index];
+
                     acc += value*value;
                 }
                 acc = acc * alpha + k;
