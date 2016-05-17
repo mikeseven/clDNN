@@ -106,21 +106,21 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
     CHECK_LT((pooled_width_ - 1) * stride_w_, bottom[0]->height() + pad_w_);
   }
 
-  auto iw = bottom[0]->width();
-  auto ih = bottom[0]->height();
-  auto c  = bottom[0]->channels();
-  auto n  = bottom[0]->num();
-  auto ow = pooled_width_;
-  auto oh = pooled_height_;
+  uint32_t iw = bottom[0]->width();
+  uint32_t ih = bottom[0]->height();
+  uint32_t c  = bottom[0]->channels();
+  uint32_t n  = bottom[0]->num();
+  uint32_t ow = pooled_width_;
+  uint32_t oh = pooled_height_;
 
   auto in_off_b = 0;
   auto in_off_x = -pad_w_;
   auto in_off_y = -pad_h_;
   auto in_off_z = 0;
-  auto out_off_b = 0;
-  auto out_off_y = 0;
-  auto out_off_x = 0;
-  auto out_off_z = 0;
+  const uint32_t out_off_b = 0;
+  const uint32_t out_off_y = 0;
+  const uint32_t out_off_x = 0;
+  const uint32_t out_off_z = 0;
 
   fwd_bottom_data_->memory_usr = memory::create({engine_, fwd_bottom_data_->layout_usr, {n, {ih, iw}, c}});
   fwd_top_data_->memory_usr    = memory::create({engine_, fwd_top_data_   ->layout_usr, {n, {oh, ow}, c}});
