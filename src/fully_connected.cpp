@@ -84,7 +84,7 @@ struct fully_connected_reference : is_an_implementation {
         }
     }
 
-    std::vector<task> work() {
+	task_package work() {
         return{ task{ implementation, &outer } };
     }
 

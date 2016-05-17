@@ -1,5 +1,6 @@
 #include "thread_pool.h"
 #include <algorithm>
+#include <iostream>
 
 namespace neural
 {
@@ -42,37 +43,16 @@ namespace neural
 	}
 
 
-	/*void nn_thread_worker_pool::push_job(taskp& requests)
+	void nn_thread_worker_pool::push_job(const task_package& requests)
 	{
 		{
 			std::lock_guard<std::mutex> ul(mtx_wake);
-			current_request = &requests.t;
-			remain_task_count = requests.t.size();
-			taskcount = requests.t.size();
+			current_request = &requests.tsk;
+			remain_task_count = requests.tsk.size();
+			taskcount  = remain_task_count;
 			current_task_id = 0;
-			enable_thread_mod = requests.use_hp ? 1 : num_threads_per_core;
-			window_size = requests.window_size;
-
-			cv_wake.notify_all();
-		}
-
-		std::unique_lock<std::mutex> ul(mtx_wake);
-		cv_endtasks.wait(ul, [this] {return (remain_task_count == 0 && active_threads == 0); });
-		current_request = nullptr;
-	}*/
-
-	void nn_thread_worker_pool::push_job(const std::vector<task>& requests)
-	{
-		{
-			std::lock_guard<std::mutex> ul(mtx_wake);
-			current_request = &requests;
-			remain_task_count = requests.size();
-			taskcount = requests.size();
-			current_task_id = 0;
-			
-			enable_thread_mod = 1; // !!!
-			window_size = 1;       // !!!
-
+			enable_thread_mod = requests.use_hyper_threading ? 1 : num_threads_per_core;
+			window_size = requests.batch_size;
 			cv_wake.notify_all();
 		}
 
@@ -80,6 +60,27 @@ namespace neural
 		cv_endtasks.wait(ul, [this] {return (remain_task_count == 0 && active_threads == 0); });
 		current_request = nullptr;
 	}
+
+	//void nn_thread_worker_pool::push_job(const std::vector<task>& requests)
+	//{
+	//	std::cout << "------------" << requests.size() << std::endl;
+	//	{
+	//		std::lock_guard<std::mutex> ul(mtx_wake);
+	//		current_request = &requests;
+	//		remain_task_count = requests.size();
+	//		taskcount = requests.size();
+	//		current_task_id = 0;
+	//		
+	//		enable_thread_mod = 1; // !!!
+	//		window_size = 1;       // !!!
+
+	//		cv_wake.notify_all();
+	//	}
+
+	//	std::unique_lock<std::mutex> ul(mtx_wake);
+	//	cv_endtasks.wait(ul, [this] {return (remain_task_count == 0 && active_threads == 0); });
+	//	current_request = nullptr;
+	//}
 
 
 

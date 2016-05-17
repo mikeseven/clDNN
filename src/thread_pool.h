@@ -14,13 +14,28 @@ namespace neural
 		const void *data;
 	};
 
-	//struct taskp
-	//{
-	//	bool use_hp;
-	//	int window_size;
-	//	std::vector<task> t;
-	//	taskp() : use_hp(true), window_size(1) {};
-	//};
+	struct task_package
+	{
+		bool use_hyper_threading = true;
+		int batch_size = 1;
+		std::vector<task> tsk;
+
+		task_package(const std::vector<task>& _tsk) : tsk(_tsk) {};  //!!!
+		task_package(const task _task) : tsk{ _task } {};  //!!!
+
+		task_package(){};
+		task_package(const task_package& tp) : tsk(tp.tsk), use_hyper_threading(tp.use_hyper_threading), batch_size(tp.batch_size){};
+		task_package& operator=(const task_package& tp)
+		{
+			if (this != &tp)
+			{
+				tsk = tp.tsk;
+				use_hyper_threading = tp.use_hyper_threading;
+				batch_size = tp.batch_size;
+			}
+			return *this;
+		}
+	};
 
 
 	class nn_thread_worker_pool
@@ -55,8 +70,8 @@ namespace neural
 		nn_thread_worker_pool(size_t arg_num_threads = 0);
 		~nn_thread_worker_pool();
 
-		//void push_job(taskp& requests);
-		void push_job(const std::vector<task>& requests);
+		void push_job(const task_package& requests);
+		//void push_job(const std::vector<task>& requests);
 	};
 };
 

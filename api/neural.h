@@ -120,7 +120,7 @@ struct execution_resource_cpu : is_a_execution_resource {
 
     DLL_SYM static execution_resource create(arguments);
 
-    void run_engine(const std::vector<task>& requests) {thread_pool.push_job(requests);}
+    void run_engine(const task_package& requests) {thread_pool.push_job(requests);}
     neural::engine::type engine() const {return neural::engine::cpu;}
 
 private:

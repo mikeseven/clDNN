@@ -134,7 +134,7 @@ namespace neural {
                 }
             }
 
-            std::vector<task> work() {
+            task_package work() {
                 return{ task{ implementation, &outer } };
             }
 
