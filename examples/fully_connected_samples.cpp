@@ -32,17 +32,20 @@ void example_fully_connected() {
     auto input   = memory::create({ engine::reference, memory::format::xb_f32,{ input_b , {{input_x }}, 1 } });
     auto output  = memory::create({ engine::reference, memory::format::xb_f32,{ output_b, {{output_x}}, 1 } });
     auto weights = memory::create({ engine::reference, memory::format::xb_f32,{ weight_y, {{weight_x}}, 1 } });
+    auto biases  = memory::create({ engine::reference, memory::format::x_f32, { 1,        {{output_x}}, 1 } });
 
     auto& input_memory = input.as<const memory&>();
     auto& weights_memory = weights.as<const memory&>();
+    auto& biases_memory  = biases.as<const memory&>();
 
     fill(input_memory, 1.0f);
     fill(weights_memory, 1.0f);
-
+    fill(biases_memory, 1.0f);
     auto act = fully_connected::create({ engine::reference,
                                          output,
                                          input,
-                                         weights }
+                                         weights,
+                                         biases}
                                       );
 
     execute({ input(in_buffer), output(out_buffer), weights(weight_buffer), act });

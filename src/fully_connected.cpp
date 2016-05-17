@@ -35,6 +35,8 @@ struct fully_connected_reference : is_an_implementation {
         auto output = static_cast<float*>(this_fc->output_memory(0).pointer);
         auto weight = static_cast<float*>(this_fc->input_memory(1).pointer);
         auto& weight_buffer_size = this_fc->input_memory(1).argument.size;
+        auto bias   = static_cast<float*>(this_fc->argument.input[2].primitive.as<const memory&>().pointer);
+
 
         auto& input_arg = this_fc->input_memory(0).argument;
         auto& input_buffer_size = input_arg.size;
@@ -75,6 +77,8 @@ struct fully_connected_reference : is_an_implementation {
                     auto w_idx = calc_w_idx(weight_arg.size.raw, arg_weight_idx);
                     output[out_idx + pos_in[BATCH_INDEX]] += input[in_idx] * weight[w_idx];
                 }
+                for (auto  b=0u; b < range_input[BATCH_INDEX]; b++)
+                    output[out_idx + b] += bias[pos_out[DATA_INDEX]];
         }
     }
 
@@ -97,11 +101,12 @@ static std::map<implementation_key, std::function<is_an_implementation *(fully_c
 fully_connected::arguments::arguments( neural::engine::type eng,
                                        primitive            out,
                                        primitive            in,
-                                       primitive            weights)
+                                       primitive            weights,
+                                       primitive            bias)
 : engine(eng)
 , output({out})
 , output_size(out.as<const memory&>().argument.size)
-, input({in, weights})
+, input({in, weights, bias})
 {
 };
 
