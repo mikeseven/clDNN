@@ -24,7 +24,7 @@ void example_000() {
     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {96, {224, 224}, 24}});
     auto weight = file::create({engine::cpu, "weight.nnb"});
     auto bias   = file::create({engine::cpu, "bias.nnb"});
-    auto conv  = convolution::create({engine::cpu, output, input, weight, bias, padding::zero});
+    auto conv   = convolution::create({engine::cpu, output, input, weight, bias, padding::zero});
 
     conv["engine"].s();     // std::string("cpu")
     conv["engine"].u64();   // uint64_t(1)

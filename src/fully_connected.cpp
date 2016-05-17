@@ -105,7 +105,6 @@ fully_connected::arguments::arguments( neural::engine::type eng,
                                        primitive            bias)
 : engine(eng)
 , output({out})
-, output_size(out.as<const memory&>().argument.size)
 , input({in, weights, bias})
 {
 };
