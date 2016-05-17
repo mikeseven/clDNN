@@ -18,9 +18,10 @@
 
 #pragma once
 
-#include <random>
 #include "api/neural.h"
+#include <iostream>
 #include <limits>
+#include <random>
 
 namespace tests{
 
@@ -62,19 +63,22 @@ bool values_comparison(T first, T second, T threshold) {
 // absolute_error_threshold = 1e-6
 // absoulte_error_limit = 1e-4
 inline bool are_equal(
-    const float item,
     const float ref_item,
+    const float item,
     const float relative_error_threshold = 1e-3,
     const float absolute_error_threshold = 1e-6,
     const float absoulte_error_limit     = 1e-4) {
 
         if( fabs(item) < absoulte_error_limit) {
             if(fabs( item - ref_item ) > absolute_error_threshold) {
+                std::cout << "Ref val: " << ref_item << "\tSecond val: " << item << std::endl;
                 return false;
             }
         } else
-            if(fabs(item - ref_item) / fabs(ref_item) > relative_error_threshold)
+            if(fabs(item - ref_item) / fabs(ref_item) > relative_error_threshold){
+                std::cout << "Ref val: " << ref_item << "\tSecond val: " << item << std::endl;
                 return false;
+        }
 
         return true;
 }
