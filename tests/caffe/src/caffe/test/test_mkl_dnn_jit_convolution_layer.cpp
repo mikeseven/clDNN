@@ -1,4 +1,4 @@
-#ifdef MKL_DNN_ENABLED_OFF // TODO
+#ifdef MKL_DNN_ENABLED
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -273,46 +273,6 @@ TYPED_TEST(MKL_DNN_JIT_ConvLayerTest, TestSimpleConvolution) {
 }
 
 #if 0
-TYPED_TEST(MKL_DNN_JIT_ConvLayerTest, TestSimpleConvolution_2outputs) {
-  typedef typename TypeParam::Dtype Dtype;
-  this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
-  this->blob_top_vec_.push_back(this->blob_top_2_);
-  LayerParameter layer_param;
-  ConvolutionParameter* convolution_param =
-      layer_param.mutable_convolution_param();
-  convolution_param->add_kernel_size(1); // jrenieck: temporarily simplified, was:3
-  convolution_param->add_stride(1);      // jrenieck: temporarily simplified, was:2
-  convolution_param->set_num_output(2);  // jrenieck: temporarily simplified, was:4
-  convolution_param->mutable_weight_filler()->set_type("gaussian");
-  convolution_param->mutable_bias_filler()->set_type("constant");
-  convolution_param->mutable_bias_filler()->set_value(0.1);
-  shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
-  layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
-  layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
-  // Check against reference convolution.
-  const Dtype* top_data;
-  const Dtype* ref_top_data;
-  caffe_conv(this->blob_bottom_, convolution_param, layer->blobs(),
-      this->MakeReferenceTop(this->blob_top_));
-  top_data = this->blob_top_->cpu_data();
-  ref_top_data = this->ref_blob_top_->cpu_data();
-  for (int i = 0; i < this->blob_top_->count(); ++i) {
-    //std::cout << i << " \n";
-    EXPECT_NEAR(top_data[i], ref_top_data[i], 1e-4);
-  }
-
-#if 0   // TODO: improve conv so that it runs on all buffers in bottom vector
-  caffe_conv(this->blob_bottom_2_, convolution_param, layer->blobs(),
-      this->MakeReferenceTop(this->blob_top_2_));
-  top_data = this->blob_top_2_->cpu_data();
-  ref_top_data = this->ref_blob_top_->cpu_data();
-  for (int i = 0; i < this->blob_top_->count(); ++i) {
-    EXPECT_NEAR(top_data[i], ref_top_data[i], 1e-4);
-  }
-#endif
-}
-
 TYPED_TEST(MKL_DNN_JIT_ConvLayerTest, TestGradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;

@@ -163,7 +163,7 @@ void PoolingCodeGeneratorForward<Dtype>::Create_callback(
   Callback = &Naive;
 }
 
-#if defined __x86_64__ || defined _M_X64
+#if defined USE_XBYAK
 // Here we have specialized versions for supported formats in x64 architectures.
 template <>
 void PoolingCodeGeneratorForward<float>::Create_callback(
@@ -792,7 +792,7 @@ void PoolingCodeGeneratorBackward<Dtype>::Create_callback(
   Callback = &Naive;
 }
 
-#if defined __x86_64__ || defined _M_X64
+#if defined USE_XBYAK
 // Here we have specialized versions for supported formats in x64 architectures.
 /*
 template <>
@@ -823,4 +823,3 @@ INSTANTIATE_CLASS(PoolingCodeGeneratorForward);
 INSTANTIATE_CLASS(PoolingCodeGeneratorBackward);
 
 }  // namespace caffe
-

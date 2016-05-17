@@ -3,7 +3,8 @@
 
 #include <vector>
 
-#if defined __x86_64__ || defined _M_X64
+#if 0 //defined __x86_64__ || defined _M_X64
+# define USE_XBYAK
 # define XBYAK_NO_OP_NAMES
 # define XBYAK_USE_MMAP_ALLOCATOR
 # include "../xbyak/xbyak_util.h"
@@ -22,7 +23,7 @@ class Blob;
 
 template <typename Dtype>
 class PoolingCodeGeneratorForward
-#if defined __x86_64__ || defined _M_X64
+#if defined USE_XBYAK
   : public ::Xbyak::CodeGenerator
 #endif
 {
@@ -65,7 +66,7 @@ class PoolingCodeGeneratorForward
 
 template <typename Dtype>
 class PoolingCodeGeneratorBackward
-#if defined __x86_64__ || defined _M_X64
+#if defined USE_XBYAK
   : public ::Xbyak::CodeGenerator
 #endif
 {
