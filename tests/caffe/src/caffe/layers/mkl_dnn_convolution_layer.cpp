@@ -33,7 +33,16 @@ MKL_DNNConvolutionLayer<Dtype>::MKL_DNNConvolutionLayer(
         bwd_bottom_diff  (new MKL_DNNDiff<Dtype>(memory::format::bfyx_f32, memory::format::yxfb_f32)),
         bwd_filter_diff  (new MKL_DNNDiff<Dtype>(memory::format::oiyx_f32, memory::format::oiyx_f32)),
         bwd_bias_diff    (new MKL_DNNDiff<Dtype>(memory::format::x_f32,    memory::format::x_f32))
-        {}
+        {
+          if(engine_ == neural::engine::cpu) {
+            fwd_bottom_data->layout_prv = memory::format::byxf_f32;
+            bwd_bottom_diff->layout_prv = memory::format::byxf_f32;
+            fwd_top_data   ->layout_prv = memory::format::byxf_f32;
+            bwd_top_diff   ->layout_prv = memory::format::byxf_f32;
+            fwd_filter_data->layout_prv = memory::format::os_yxi_sv16_f32;
+            bwd_filter_diff->layout_prv = memory::format::os_yxi_sv16_f32;
+          }
+        }
 
 template <typename Dtype>
 void MKL_DNNConvolutionLayer<Dtype>::compute_output_shape() {
