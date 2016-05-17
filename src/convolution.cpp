@@ -24,7 +24,7 @@ convolution::arguments::arguments( neural::engine::type     eng,
                                    primitive                out,
                                    neural::vector<uint32_t> out_off,
                                    neural::vector<uint32_t> out_siz,
-                                   std::vector<primitive>   in,
+                                   std::vector<primitive_at>in,
                                    neural::vector<int32_t>  in_off,
                                    neural::vector<uint32_t> strd,
                                    neural::padding::type    padd)
@@ -39,7 +39,7 @@ convolution::arguments::arguments( neural::engine::type     eng,
 
 convolution::arguments::arguments( neural::engine::type     eng,
                                    primitive                out,
-                                   std::vector<primitive>   in,
+                                   std::vector<primitive_at>in,
                                    neural::vector<uint32_t> strd,
                                    neural::padding::type    padd)
     : engine(eng)
@@ -47,21 +47,21 @@ convolution::arguments::arguments( neural::engine::type     eng,
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)
     , input(in)
-    , input_offset(in[0].as<const memory&>().argument.size.batch.size(), in[0].as<const memory&>().argument.size.spatial.size(), in[0].as<const memory&>().argument.size.feature.size())
+    , input_offset(in[0].primitive.as<const memory&>().argument.size.batch.size(), in[0].primitive.as<const memory&>().argument.size.spatial.size(), in[0].primitive.as<const memory&>().argument.size.feature.size())
     , stride(strd)
     , padding(padd) {};
 
 convolution::arguments::arguments( neural::engine::type     eng,
                                    primitive                out,
-                                   std::vector<primitive>   in,
+                                   std::vector<primitive_at>in,
                                    neural::padding::type    padd)
     : engine(eng)
     , output({out})
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)
     , input(in)
-    , input_offset(in[0].as<const memory&>().argument.size.batch.size(), in[0].as<const memory&>().argument.size.spatial.size(), in[0].as<const memory&>().argument.size.feature.size())
-    , stride(1u, std::vector<uint32_t>(in[0].as<const memory&>().argument.size.spatial.size(), 1u), 1u)
+    , input_offset(in[0].primitive.as<const memory&>().argument.size.batch.size(), in[0].primitive.as<const memory&>().argument.size.spatial.size(), in[0].primitive.as<const memory&>().argument.size.feature.size())
+    , stride(1u, std::vector<uint32_t>(in[0].primitive.as<const memory&>().argument.size.spatial.size(), 1u), 1u)
     , padding(padd) {};
 
 convolution_backward::arguments::arguments( neural::engine::type     eng,
@@ -103,8 +103,8 @@ primitive convolution::create(convolution::arguments arg) {
     auto& input_arg = arg.input[0].primitive.as<const memory&>().argument; //todo tmp solution
     auto& output_arg = arg.output[0].as<const memory&>().argument;
 
-    auto& filter_arg = arg.weight.as<const memory&>().argument; //convolution filter
-    auto& bias_arg = arg.bias.as<const memory&>().argument;
+    auto& filter_arg = arg.input[1].primitive.as<const memory&>().argument; //convolution filter
+    auto& bias_arg = arg.input[2].primitive.as<const memory&>().argument;
 
     auto& input_offset = arg.input_offset;
     auto& output_offset = arg.output_offset;

@@ -624,8 +624,8 @@ convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
     // Get pointers for pointers to buffers!
     auto input_ptr = reinterpret_cast<float**>(&arg.input_memory(0).pointer);
     auto output_ptr = reinterpret_cast<float**>(&arg.output_memory(0).pointer);
-    auto weights_ptr = reinterpret_cast<float**>(&arg.argument.weight.as<const memory&>().pointer);
-    auto bias_ptr = reinterpret_cast<float**>(&arg.argument.bias.as<const memory&>().pointer);
+    auto weights_ptr = reinterpret_cast<float**>(&arg.argument.input[1].primitive.as<const memory&>().pointer);
+    auto bias_ptr = reinterpret_cast<float**>(&arg.argument.input[2].primitive.as<const memory&>().pointer);
 
     // Get input buffer sizes.
     uint64_t input_width = arg.input_memory(0).argument.size.spatial[1];
@@ -651,9 +651,9 @@ convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
     uint64_t outprow_length = arg.argument.output_size.spatial[0];
     uint64_t outpfmap_length = arg.argument.output_size.feature[0];
 
-    uint64_t kernel_width = arg.argument.weight.as<const memory &>().argument.size.spatial[1];
-    uint64_t kernel_height = arg.argument.weight.as<const memory &>().argument.size.spatial[0];
-    uint64_t kernel_ifmap = arg.argument.weight.as<const memory &>().argument.size.feature[1];
+    uint64_t kernel_width = arg.argument.input[1].primitive.as<const memory &>().argument.size.spatial[1];
+    uint64_t kernel_height = arg.argument.input[1].primitive.as<const memory &>().argument.size.spatial[0];
+    uint64_t kernel_ifmap = arg.argument.input[1].primitive.as<const memory &>().argument.size.feature[1];
     uint64_t stride_col = arg.argument.stride.raw[3];
     uint64_t stride_row = arg.argument.stride.raw[2];
 
