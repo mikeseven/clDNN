@@ -24,56 +24,44 @@ convolution::arguments::arguments( neural::engine::type     eng,
                                    primitive                out,
                                    neural::vector<uint32_t> out_off,
                                    neural::vector<uint32_t> out_siz,
-                                   primitive                in,
+                                   std::vector<primitive>   in,
                                    neural::vector<int32_t>  in_off,
                                    neural::vector<uint32_t> strd,
-                                   primitive                weights,
-                                   primitive                biases,
                                    neural::padding::type    padd)
     : engine(eng)
     , output({out})
     , output_offset(out_off)
     , output_size(out_siz)
-    , input({in})
+    , input(in)
     , input_offset(in_off)
     , stride(strd)
-    , weight(weights)
-    , bias(biases)
     , padding(padd) {};
 
 convolution::arguments::arguments( neural::engine::type     eng,
                                    primitive                out,
-                                   primitive                in,
+                                   std::vector<primitive>   in,
                                    neural::vector<uint32_t> strd,
-                                   primitive                weights,
-                                   primitive                biases,
                                    neural::padding::type    padd)
     : engine(eng)
     , output({out})
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)
-    , input({in})
-    , input_offset(in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size())
+    , input(in)
+    , input_offset(in[0].as<const memory&>().argument.size.batch.size(), in[0].as<const memory&>().argument.size.spatial.size(), in[0].as<const memory&>().argument.size.feature.size())
     , stride(strd)
-    , weight(weights)
-    , bias(biases)
     , padding(padd) {};
 
 convolution::arguments::arguments( neural::engine::type     eng,
                                    primitive                out,
-                                   primitive                in,
-                                   primitive                weights,
-                                   primitive                biases,
+                                   std::vector<primitive>   in,
                                    neural::padding::type    padd)
     : engine(eng)
     , output({out})
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)
-    , input({in})
-    , input_offset(in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size())
-    , stride(1u, std::vector<uint32_t>(in.as<const memory&>().argument.size.spatial.size(), 1u), 1u)
-    , weight(weights)
-    , bias(biases)
+    , input(in)
+    , input_offset(in[0].as<const memory&>().argument.size.batch.size(), in[0].as<const memory&>().argument.size.spatial.size(), in[0].as<const memory&>().argument.size.feature.size())
+    , stride(1u, std::vector<uint32_t>(in[0].as<const memory&>().argument.size.spatial.size(), 1u), 1u)
     , padding(padd) {};
 
 convolution_backward::arguments::arguments( neural::engine::type     eng,
