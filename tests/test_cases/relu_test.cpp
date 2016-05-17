@@ -48,7 +48,6 @@ TEST(relu_f32_fw, basic) {
     for(size_t i = 0; i < y*x*f*b; ++i)
         buf[i] = (buf[i] > 0)? -buf[i] : buf[i];
 
-    //auto act2 = relu::create({engine::reference, output, output});
     execute({act});
 
     bool result = false;

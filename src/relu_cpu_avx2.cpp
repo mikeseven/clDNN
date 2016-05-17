@@ -158,10 +158,9 @@ relu_cpu_avx2::relu_cpu_avx2(relu &arg)
     auto& input_mem_arg  = this_relu->input_memory(0).argument;
     auto& output_mem_arg = this_relu->output_memory(0).argument;
 
-    if (input_mem_arg.format != memory::format::yxfb_f32)                throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
-    if (input_mem_arg.format != output_mem_arg.format)                   throw std::runtime_error("ReLU input/output data format does not match.");
-    for (auto &x : input_offset.raw)                          if (x > 0) throw std::runtime_error("ReLU input offset must be equal to zero.");
-    for (auto &x : output_offset.raw)                         if (x > 0) throw std::runtime_error("ReLU output offset must be equal to zero.");
+    if (input_mem_arg.format != output_mem_arg.format) throw std::runtime_error("ReLU input/output data format does not match.");
+    for (auto &x : input_offset.raw)       if (x != 0) throw std::runtime_error("ReLU input offset must be equal to zero.");
+    for (auto &x : output_offset.raw)       if (x > 0) throw std::runtime_error("ReLU output offset must be equal to zero.");
 
     assert(1 == this_relu->argument.input.size());
     assert(1 == this_relu->argument.output.size());
