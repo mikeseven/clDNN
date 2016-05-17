@@ -14,7 +14,12 @@
 // limitations under the License.
 */
 
+#define XBYAK_NO_OP_NAMES
+#define XBYAK_USE_MMAP_ALLOCATOR
+
 #include "convolution_cpu_jit.h"
+
+#include "xbyak/xbyak.h"
 
 #include <cstddef>
 #include <functional>
