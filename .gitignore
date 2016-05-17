@@ -15,3 +15,10 @@ nbproject/*
 CMakeCache.txt
 compile_commands.json
 **/Makefile
+
+MKL-DNN.config
+MKL-DNN.creator
+MKL-DNN.creator.user
+MKL-DNN.files
+MKL-DNN.includes
+
