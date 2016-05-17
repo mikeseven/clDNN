@@ -27,7 +27,7 @@ void example_lrn_forward() {
     uint32_t psize = 5;
     float palpha = 0.00002f;
     float pbeta = 0.75f;
-    auto lrn = normalization::response::create({ engine::reference, output, input, psize, padding::zero, pk, palpha, pbeta});
+    auto lrn = normalization::response::create({ engine::cpu, output, input, psize, padding::zero, pk, palpha, pbeta});
 
     execute({ lrn });
 }
