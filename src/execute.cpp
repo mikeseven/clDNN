@@ -14,16 +14,20 @@
 // limitations under the License.
 */
 
-#include "api/neural_base.h"
-#include "thread_pool.h"
+#include "neural.h"
 
 namespace neural {
 
-nn_thread_worker_pool thread_pool;
-
-void execute(std::vector<primitive> list) {
+void execute(std::vector<primitive> list, execution_resource& execution_resource) {
     for(auto &item : list)
-        thread_pool.push_job(item.work());
+        execution_resource.run_engine(item.work());
+}
+
+void execute(std::vector<primitive> list) 
+{
+    static nn_thread_worker_pool thread_pool_default;
+    for(auto &item : list)
+        thread_pool_default.push_job(item.work());
 }
 
 };

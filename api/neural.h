@@ -59,6 +59,7 @@ struct memory : is_a_primitive {
         bxyf_f32,
         bfxy_f32,
         oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
+        os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
         scalar_f64, // single scalar, float64
         x_f64,
         yxfb_f64,   // 3D+batch, float64
@@ -85,7 +86,8 @@ struct memory : is_a_primitive {
         case format::bfyx_f32:
         case format::bxyf_f32:
         case format::bfxy_f32:
-        case format::oiyx_f32: return {4, type_id<float>()};
+        case format::oiyx_f32: 
+        case format::os_yxi_sv16_f32: return {4, type_id<float>()};
         case format::scalar_f64:
         case format::   x_f64: return {1, type_id<double>()};
         case format::yxfb_f64:
@@ -128,7 +130,28 @@ private:
 };
 
 
+struct execution_resource_cpu : is_a_execution_resource {
+    struct arguments {
+        uint32_t threadpool_size;
 
+        DLL_SYM arguments(uint32_t arg_threadpool_size);
+        DLL_SYM arguments(                            );
+    };
+    arguments argument;
+
+    nn_thread_worker_pool thread_pool;
+
+    DLL_SYM static execution_resource create(arguments);
+
+    void run_engine(const std::vector<task>& requests) {thread_pool.push_job(requests);}
+    neural::engine::type engine() const {return neural::engine::cpu;}
+
+private:
+    execution_resource_cpu(arguments arg) 
+        : is_a_execution_resource(type_id<execution_resource_cpu>())
+        , argument(arg) 
+        , thread_pool(arg.threadpool_size) {};
+};
 
 // neural::file
 //
