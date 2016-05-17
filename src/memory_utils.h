@@ -34,7 +34,9 @@ template <class T> void fill(const memory &that, T value) {
 template <class T> void fill(const primitive &that, T value){
     fill(that.as<const memory&>(), value);
 }
-
+template <class T> void fill(const memory &that){
+    fill_rng<T>(that, 1, -10, 10);
+}
 template <class T, class RNG = std::mt19937> void fill_rng(const memory &that, uint32_t seed, T dist_start, T dist_end) {
     if(type_id<T>()->id != memory::traits(that.argument.format).type->id) throw std::runtime_error("fill_memory: types do not match");
     static RNG rng(seed);
@@ -43,6 +45,5 @@ template <class T, class RNG = std::mt19937> void fill_rng(const memory &that, u
 }
 template <class T> void fill(const primitive &that){
     fill<float>(that.as<const memory&>());
-}
 }
 } // namespace neural
