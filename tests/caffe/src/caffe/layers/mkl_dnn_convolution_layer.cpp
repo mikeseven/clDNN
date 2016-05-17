@@ -24,7 +24,7 @@ namespace caffe {
 template <typename Dtype>
 MKL_DNNConvolutionLayer<Dtype>::MKL_DNNConvolutionLayer(
   const LayerParameter& param, neural::engine::type engine)
-      : ConvolutionLayer<Dtype>(param),
+      : ConvolutionLayer<Dtype>(param), engine_(engine),
         fwd_bottom_data  (new MKL_DNNData<Dtype>(memory::format::bfyx_f32, memory::format::yxfb_f32)),
         fwd_top_data     (new MKL_DNNData<Dtype>(memory::format::bfyx_f32, memory::format::yxfb_f32)),
         fwd_filter_data  (new MKL_DNNData<Dtype>(memory::format::oiyx_f32, memory::format::oiyx_f32)),
@@ -32,8 +32,8 @@ MKL_DNNConvolutionLayer<Dtype>::MKL_DNNConvolutionLayer(
         bwd_top_diff     (new MKL_DNNDiff<Dtype>(memory::format::bfyx_f32, memory::format::yxfb_f32)),
         bwd_bottom_diff  (new MKL_DNNDiff<Dtype>(memory::format::bfyx_f32, memory::format::yxfb_f32)),
         bwd_filter_diff  (new MKL_DNNDiff<Dtype>(memory::format::oiyx_f32, memory::format::oiyx_f32)),
-        bwd_bias_diff    (new MKL_DNNDiff<Dtype>(memory::format::x_f32,    memory::format::x_f32)),
-        engine_(engine) {}
+        bwd_bias_diff    (new MKL_DNNDiff<Dtype>(memory::format::x_f32,    memory::format::x_f32))
+        {}
 
 template <typename Dtype>
 void MKL_DNNConvolutionLayer<Dtype>::compute_output_shape() {
@@ -100,7 +100,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   fwd_filter_data->create_conversions();
   fwd_bias_data  ->create_conversions();
 
-  for (int i=0; i<g; i++) {
+  for (unsigned i=0; i<g; i++) {
     filters_.push_back(memory::create({engine_, fwd_filter_data->layout_prv, {1, {kh, kw}, {oc/g, ic/g}}}));
     biases_. push_back(memory::create({engine_, fwd_bias_data  ->layout_prv, {1, {{oc/g}}, 1}}));
     convolution_fwd_.push_back(
@@ -109,7 +109,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
                            {0, {0, 0}, i*(oc/g)},
                            {n, {oh, ow}, oc/g},
                            fwd_bottom_data->memory_prv,
-                           {0, {-pad_h_, -pad_w_}, i*(ic/g)},
+                           {0, {-pad_h_, -pad_w_}, static_cast<int>(i*(ic/g))},
                            {1, {stride_h_, stride_w_}, 1},
                            filters_[i],
                            biases_[i],

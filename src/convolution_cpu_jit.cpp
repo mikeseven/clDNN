@@ -20,6 +20,7 @@
 #include <functional>
 #include <utility>
 
+//todo add support for situation when data pointer is unknown during creation
 namespace{
 #ifdef __linux__
 #define nn_jit_param_reg rdi
@@ -96,16 +97,16 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
 
     public:
 
-        jit_code(bool apply_relu,
-                 uint32_t output_width,
-                 uint32_t output_height,
-                 uint32_t output_feats,
-                 uint32_t input_width,
-                 uint32_t input_feats,
-                 uint32_t filter_width,
-                 uint32_t filter_height,
-                 uint32_t stride_x,
-                 uint32_t stride_y,
+        jit_code(uint64_t output_width,
+                 uint64_t output_height,
+                 uint64_t output_feats,
+                 uint64_t input_width,
+                 uint64_t input_feats,
+                 uint64_t filter_height,
+                 uint64_t filter_width,
+                 uint64_t stride_x,
+                 uint64_t stride_y,
+                 bool apply_relu,
                  void* code_ptr = nullptr,
                  size_t code_size = 40 * Xbyak::DEFAULT_MAX_CODE_SIZE)
             : Xbyak::CodeGenerator(code_size, code_ptr)
@@ -149,16 +150,16 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
                         {
                             for (uint64_t i = 0u; i < input_feats; ++i)
                             {
-                                size_t filter_offset =
+                                auto filter_offset =
                                     (kern_col * input_feats * output_features_per_iteration
                                     + i * output_features_per_iteration)
                                         * sizeof(float);
-                                vmovaps(ymm13, ptr [aux_filter + filter_offset]);
-                                vmovaps(ymm14, ptr [aux_filter + filter_offset + register_width]);
+                                vmovups(ymm13, ptr [aux_filter + filter_offset]);
+                                vmovups(ymm14, ptr [aux_filter + filter_offset + register_width]);
 
                                 for (int j = 0; j < output_blocks; ++j)
                                 {
-                                    size_t block_offset = j * stride_x;
+                                    auto block_offset = j * stride_x;
                                     if (vertical) block_offset = j * stride_y * input_width;
                                     auto input_offset =
                                         (block_offset * input_feats
@@ -186,10 +187,10 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
                     }
                     for (int o = 0; o < output_blocks; ++o)
                     {
-                        size_t output_offset = o * output_feats * sizeof(float);
+                        auto output_offset = o * output_feats * sizeof(float);
                         if (vertical) output_offset *= output_width;
-                        vmovaps(ptr[aux_output + output_offset], Ymm(2 * o));
-                        vmovaps(ptr[aux_output + output_offset + register_width], Ymm(2 * o + 1));
+                        vmovups(ptr[aux_output + output_offset], Ymm(2 * o));
+                        vmovups(ptr[aux_output + output_offset + register_width], Ymm(2 * o + 1));
                     }
                 };
 
@@ -241,7 +242,7 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
                     add(aux_output, output_feats * sizeof(float));
                 }
             }
-            for (uint32_t i = output_height / 6 * 6; i < output_height; ++i)
+            for (uint64_t i = output_height / 6 * 6; i < output_height; ++i)
             {
                 mov(aux_input_outer, input);
                 mov(aux_output, output);
@@ -258,36 +259,36 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
     jit_code code;
 
     jit_convolution_zxyn(
-        uint32_t batch,
+        uint64_t batch,
         bool apply_relu,
 
         float*   output,
-        uint32_t output_width,
-        uint32_t output_height,
-        uint32_t output_feature_maps,
+        uint64_t output_width,
+        uint64_t output_height,
+        uint64_t output_feature_maps,
 
         float*   input,
-        uint32_t input_width,
-        uint32_t input_height,
-        uint32_t input_feature_maps,
+        uint64_t input_width,
+        uint64_t input_height,
+        uint64_t input_feature_maps,
+
+        uint64_t stride_width,
+        uint64_t stride_height,
 
         float *  filter,
-        uint32_t filter_width,
-        uint32_t filter_height,
-
-        uint32_t stride_width,
-        uint32_t stride_height,
+        uint64_t filter_width,
+        uint64_t filter_height,
 
         float*   bias,
 
         void* code_ptr = nullptr)
-            : is_an_implementation(neural::type_id<jit_convolution_zxyn>()),
-            code(apply_relu,
-                 output_width, output_height, output_feature_maps,
-                 input_width, input_feature_maps,
-                 filter_width, filter_height,
-                 stride_width, stride_height,
-                 code_ptr)
+            : is_an_implementation(neural::type_id<jit_convolution_zxyn>())
+            , code(output_width, output_height, output_feature_maps,
+                   input_width, input_feature_maps,
+                   filter_height, filter_width,
+                   stride_width, stride_height,
+                   apply_relu,
+                   code_ptr)
     {
         assert(output_feature_maps % output_features_per_iteration == 0);
 
@@ -354,9 +355,7 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
     auto& output_size   = outer.argument.output_size;
     auto& padding       = outer.argument.padding;
     auto& stride        = outer.argument.stride;
-
     auto& input_arg  = outer.input_memory(0).argument;
-
     auto& filter_arg = outer.argument.weight.as<const memory&>().argument; //convolution filter
 
     assert( 2 == output_size.spatial.size() );
@@ -367,10 +366,10 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
     auto filter = static_cast<float*>(outer.argument.weight.as<const memory&>().pointer);
     auto bias   = static_cast<float*>(outer.argument.bias.as<const memory&>().pointer);
 
-    const int B_POS = 0;
-    const int F_POS = 1;
-    const int Y_POS = 2;
-    const int X_POS = 3;
+    const int b_pos = 0;
+    const int f_pos = 1;
+    const int y_pos = 2;
+    const int x_pos = 3;
 
     switch(padding){
         case padding::zero:
@@ -378,21 +377,21 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
             // todo jit conv works in xyzb format?
             // todo how to handle offsets?
             jit_convolution_zxyn* tmp_jit_convolution_zxyn = new jit_convolution_zxyn(
-                output_size.raw[ B_POS ], // batch??
+                output_size.raw[ b_pos ], // batch??
                 false, //activaction function: relu
                 output,
-                output_size.raw[ X_POS ],
-                output_size.raw[ Y_POS ],
-                output_size.raw[ F_POS ],
+                output_size.raw[ x_pos ],
+                output_size.raw[ y_pos ],
+                output_size.raw[ f_pos ],
                 input,
-                input_arg.size.raw[ X_POS ],
-                input_arg.size.raw[ Y_POS ],
-                input_arg.size.raw[ F_POS ],
+                input_arg.size.raw[ x_pos ],
+                input_arg.size.raw[ y_pos ],
+                input_arg.size.raw[ f_pos ],
+                stride.raw[ x_pos ],
+                stride.raw[ y_pos ],
                 filter,
-                filter_arg.size.raw[ X_POS ],
-                filter_arg.size.raw[ Y_POS ],
-                stride.raw[ X_POS ],
-                stride.raw[ Y_POS ],
+                filter_arg.size.raw[ x_pos+1 ], // todo enum for bfxy
+                filter_arg.size.raw[ y_pos+1 ], // +1 because feature in weights is 2d
                 bias
                 );
 

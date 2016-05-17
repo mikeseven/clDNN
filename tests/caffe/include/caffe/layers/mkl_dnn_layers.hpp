@@ -134,16 +134,16 @@ private:
   shared_ptr<MKL_DNNDiff<Dtype> > bwd_bias_diff;
 
  // TODO: temp. compatibility vs. older cafe
- size_t width_,
-        height_,
-        width_out_,
-        height_out_,
-        kernel_w_,
-        kernel_h_,
-        stride_w_,
-        stride_h_;
- int    pad_w_,
-        pad_h_;
+ uint32_t width_,
+          height_,
+          width_out_,
+          height_out_,
+          kernel_w_,
+          kernel_h_,
+          stride_w_,
+          stride_h_;
+ int      pad_w_,
+          pad_h_;
 };
 
 /**
@@ -194,15 +194,15 @@ class MKL_DNNLRNLayer : public Layer<Dtype> {
   virtual void CrossChannelBackward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
-  int size_;
+  uint32_t size_;
   int pre_pad_;
   Dtype alpha_;
   Dtype beta_;
   Dtype k_;
-  int num_;
-  int channels_;
-  int height_;
-  int width_;
+  uint32_t num_;
+  uint32_t channels_;
+  uint32_t height_;
+  uint32_t width_;
   // Fields used for normalization ACROSS_CHANNELS
   // scale_ stores the intermediate summing results
 private:
@@ -252,8 +252,8 @@ protected:
                             const vector<bool>& propagate_down,
                             const vector<Blob<Dtype>*>& bottom);
 
-  int kernel_h_, kernel_w_;
-  int stride_h_, stride_w_;
+  uint32_t kernel_h_, kernel_w_;
+  uint32_t stride_h_, stride_w_;
   int pad_h_, pad_w_;
   int channels_;
   int height_, width_;
@@ -373,10 +373,10 @@ class MKL_DNNInnerProductLayer : public Layer<Dtype> {
         bottom_data_ (new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
         weights_data_(new MKL_DNNData<Dtype>(memory::format::bx_f32, memory::format::bx_f32)),
         bias_data_   (new MKL_DNNData<Dtype>(memory::format::x_f32,  memory::format:: x_f32)),
-        weights_diff_(new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::bx_f32)),
-        bias_diff_   (new MKL_DNNDiff<Dtype>(memory::format::x_f32,  memory::format:: x_f32)),
         top_diff_    (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
-        bottom_diff_ (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)) {}
+        bottom_diff_ (new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::xb_f32)),
+        weights_diff_(new MKL_DNNDiff<Dtype>(memory::format::bx_f32, memory::format::bx_f32)),
+        bias_diff_   (new MKL_DNNDiff<Dtype>(memory::format::x_f32,  memory::format:: x_f32)) {}
       
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
