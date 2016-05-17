@@ -109,8 +109,8 @@ void naive(float* input, float* output, neural::vector<uint64_t> input_dims, neu
                 for (uint64_t acc_index = 0; acc_index < batch_accs; ++acc_index)
                 {
                     auto result = _mm256_max_ps(_mm256_load_ps(curr_output), _mm256_load_ps(curr_input));
-                    _mm256_store_ps(curr_output, result);
-
+                    _mm256_storeu_ps(curr_output, result);
+                    
                     curr_output += BATCH_SHIFT;
                     curr_input += BATCH_SHIFT;
                 }
@@ -283,7 +283,7 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     //PoolingDimensions pd(make<PoolingHeight>(window.raw[1]), make<PoolingWidth>(window.raw[0]));
     //Stride            ps({make<Rows>(stride.raw[1]), make<Cols>(stride.raw[0])});
     neural::vector<uint64_t> pooling_dims = { 1, { window.raw[2], window.raw[3] }, 1 };
-    neural::vector<uint64_t> pooling_stride = { 1, { stride.raw[0], stride.raw[1] }, 1 };
+    neural::vector<uint64_t> pooling_stride = { 1, { stride.raw[2], stride.raw[3] }, 1 };
     //PoolingInfo info({pd,ps});
 
     std::mutex mtx; //todo remove
