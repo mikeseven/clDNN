@@ -56,7 +56,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f});
     set_values(biases , {2.0f});
 
-    auto conv = convolution::create({engine::reference, output, input, {1, {2, 2}, 1}, weights, biases, padding::zero});
+    auto conv = convolution::create({engine::reference, output, {input, weights, biases}, {1, {2, 2}, 1}, padding::zero});
 
     execute({conv});
 
@@ -95,7 +95,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
     set_values(weights,{ -1.2f, 1.5f, 0.5f, -0.5f });
     set_values(biases, { -1.0f });
 
-    auto conv = convolution::create({ engine::reference, output, input, { 1, {2, 2}, 1 }, weights, biases, padding::zero });
+    auto conv = convolution::create({ engine::reference, output, {input, weights, biases}, { 1, {2, 2}, 1 }, padding::zero });
 
     execute({ conv });
 
@@ -132,7 +132,7 @@ TEST(convolution_f32_fw, basic_ofm_wsiz2x1x2x1_in1x2x1_nopad) {
     set_values(weights, { 1.0f, 2.0f, -1.0f, -2.0f });
     set_values(biases,  { 0.1f, -0.2f});
 
-    auto conv = convolution::create({ engine::reference, output, input, { 1, {5, 5}, 1 }, weights, biases, padding::zero });
+    auto conv = convolution::create({ engine::reference, output, {input, weights, biases}, { 1, {5, 5}, 1 }, padding::zero });
 
     execute({ conv });
 
@@ -176,7 +176,7 @@ TEST(convolution_f32_fw, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad) {
     set_values(weights, { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f });
     set_values(biases,  { -5.0f, -6.0f, -7.0f});
 
-    auto conv = convolution::create({ engine::reference, output, input, { 1, {5, 5}, 1 }, weights, biases, padding::zero });
+    auto conv = convolution::create({ engine::reference, output, {input, weights, biases}, { 1, {5, 5}, 1 }, padding::zero });
 
     execute({ conv });
 
@@ -217,7 +217,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
     set_values(weights, { -1.1f, 1.5f, 0.5f, -0.5f, 0.1f, 0.2f, 0.4f, 0.7f, 2.0f, -1.0f, 2.5f, -1.5f });
     set_values(biases,  { 0.1f, -0.2f, 0.3f });
 
-    auto conv = convolution::create({ engine::reference, output, input, { 1, {2, 2}, 1 }, weights, biases, padding::zero });
+    auto conv = convolution::create({ engine::reference, output, {input, weights, biases}, { 1, {2, 2}, 1 }, padding::zero });
 
     execute({ conv });
 
@@ -258,7 +258,7 @@ TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f});
     set_values(biases , {2.0f});
 
-    auto conv = convolution::create({engine::reference, output, input, {1, {2, 2}, 1}, weights, biases, padding::zero});
+    auto conv = convolution::create({engine::reference, output, {input, weights, biases}, {1, {2, 2}, 1}, padding::zero});
     execute({conv});
 
     auto& output_memory = output.as<const memory&>();
@@ -303,11 +303,9 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
                                      output,
                                      {0, {1, 1}, 0},
                                      {1, {1, 1}, 1},
-                                     input,
+                                     {input, weights, biases},
                                      {0, {-1, -1}, 0},
                                      {1, { 2,  2}, 1},
-                                     weights,
-                                     biases,
                                      padding::zero});
     execute({conv});
 
@@ -615,7 +613,7 @@ TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     auto& weights_memory = weights.as<const memory&>();
     auto& biases_memory  = biases.as<const memory&>();
 
-    auto conv = convolution::create({engine::cpu, output, input, {1, {2, 2}, 1}, weights, biases, padding::zero});
+    auto conv = convolution::create({engine::cpu, output, {input, weights, biases}, {1, {2, 2}, 1}, padding::zero});
 
     auto& kernel_sizes = weights_memory.argument.size;
     size_t num_input_kernel_elements = kernel_sizes.spatial[0] * kernel_sizes.spatial[1] * kernel_sizes.feature[1];
@@ -659,7 +657,7 @@ TEST(convolution_f32_fw, optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     auto& weights_memory = weights.as<const memory&>();
     auto& biases_memory  = biases.as<const memory&>();
 
-    auto conv = convolution::create({engine::cpu, output, input, {1, {2, 2}, 1}, weights, biases, padding::zero});
+    auto conv = convolution::create({engine::cpu, output, {input, weights, biases}, {1, {2, 2}, 1}, padding::zero});
 
     auto& kernel_sizes = weights_memory.argument.size;
     auto& output_sizes = output_memory.argument.size;
@@ -735,8 +733,8 @@ TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x
     auto reorder_output_to_tmp_ref  = reorder::create({engine::reference, output, temp_output});
 
     // Main convolutions.
-    auto opt_conv = convolution::create({engine::cpu, output, input, {1, {2, 3}, 1}, weights, biases, padding::zero});
-    auto ref_conv = convolution::create({engine::reference, ref_output, ref_input, {1, {2, 3}, 1}, ref_weights, ref_biases, padding::zero});
+    auto opt_conv = convolution::create({engine::cpu, output, {input, weights, biases}, {1, {2, 3}, 1}, padding::zero});
+    auto ref_conv = convolution::create({engine::reference, ref_output, {ref_input, ref_weights, ref_biases}, {1, {2, 3}, 1}, padding::zero});
 
     // Initialize data.
     fill_rng<float>(input_memory, 10, -5.0f, 5.0f);

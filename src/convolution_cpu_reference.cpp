@@ -37,7 +37,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     auto& input_arg  = this_conv->input_memory(0).argument;
     auto& output_arg = this_conv->output_memory(0).argument;
 
-    auto& filter_arg = this_conv->argument.weight.as<const memory&>().argument; //convolution filter
+    auto& filter_arg = this_conv->argument.input[1].primitive.as<const memory&>().argument; //convolution filter
 
     assert( output_size.feature[0] == filter_arg.size.feature[0] ); // memory::format oixy
 
@@ -46,8 +46,8 @@ void convolution_cpu_reference::implementation(const void *ptr) {
 
     auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
     auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
-    auto filter = static_cast<float*>(this_conv->argument.weight.as<const memory&>().pointer);
-    auto bias   = static_cast<float*>(this_conv->argument.bias.as<const memory&>().pointer);
+    auto filter = static_cast<float*>(this_conv->argument.input[1].primitive.as<const memory&>().pointer);
+    auto bias   = static_cast<float*>(this_conv->argument.input[2].primitive.as<const memory&>().pointer);
 
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
     namespace nd = ndimensional;
