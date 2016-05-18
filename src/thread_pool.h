@@ -14,24 +14,24 @@ namespace neural
 		const void *data;
 	};
 
-	struct task_package
+	struct task_group
 	{
-		bool use_hyper_threading = true;
-		int batch_size = 1;
+		bool use_hyper_threading = true;	
+		int task_count_per_thread = 1;		// portion of tasks which get every thread for processing per iteration
 		std::vector<task> tsk;
 
-		task_package(const std::vector<task>& _tsk) : tsk(_tsk) {};  //!!!
-		task_package(const task _task) : tsk{ _task } {};  //!!!
+		task_group(const std::vector<task>& _tsk) : tsk(_tsk) {};	// workaround, could be remove in future
+		task_group(const task _task) : tsk{ _task } {};				// workaround, could be remove in future
 
-		task_package(){};
-		task_package(const task_package& tp) : tsk(tp.tsk), use_hyper_threading(tp.use_hyper_threading), batch_size(tp.batch_size){};
-		task_package& operator=(const task_package& tp)
+		task_group(){};
+		task_group(const task_group& tp) : tsk(tp.tsk), use_hyper_threading(tp.use_hyper_threading), task_count_per_thread(tp.task_count_per_thread){};
+		task_group& operator=(const task_group& tp)
 		{
 			if (this != &tp)
 			{
 				tsk = tp.tsk;
 				use_hyper_threading = tp.use_hyper_threading;
-				batch_size = tp.batch_size;
+				task_count_per_thread = tp.task_count_per_thread;
 			}
 			return *this;
 		}
@@ -42,8 +42,7 @@ namespace neural
 	{
 		size_t taskcount;
 		std::atomic<size_t> current_task_id;
-		std::atomic<size_t> remain_task_count;
-
+		
 		int active_threads;
 		int num_threads_per_core;
 		
@@ -51,27 +50,22 @@ namespace neural
 		std::condition_variable cv_wake;
 		std::condition_variable cv_endtasks;
 
-		int window_size;
-		int enable_thread_mod;
+		int thread_batch_size;
+		int enable_thread_denom;
 		const std::vector<task>* current_request;
 		volatile bool stop;
 
 		std::vector<std::thread> threads;
 
-
-		bool is_thread_enable(uint32_t threadId)
-		{
-			return (threadId % enable_thread_mod) == 0;
-		}
-
+		bool is_thread_enable(uint32_t threadId);
 		void process_task(uint32_t threadId);
 
 	public:
 		nn_thread_worker_pool(size_t arg_num_threads = 0);
 		~nn_thread_worker_pool();
 
-		void push_job(const task_package& requests);
-		//void push_job(const std::vector<task>& requests);
+		// push	tasks for processing
+		void push_job(const task_group& requests);
 	};
 };
 

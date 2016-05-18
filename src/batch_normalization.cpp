@@ -90,7 +90,7 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
 
     ~batch_normalization_training_forward_reference() {}
 
-    task_package work()
+    task_group work()
     {
         requests.push_back({&outer, &minibatch_counter});
         return {task{implementation, &requests[0]}};
@@ -252,7 +252,7 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
 
     ~batch_normalization_training_backward_reference() {}
 
-    task_package work()
+    task_group work()
     {
         requests.push_back({&outer});
         return {task{implementation, &requests[0]}};
@@ -374,7 +374,7 @@ struct batch_normalization_inference_reference : is_an_implementation {
 
     ~batch_normalization_inference_reference() {}
 
-    task_package work()
+    task_group work()
     {
         requests.push_back({&outer});
         return {task{implementation, &requests[0]}};

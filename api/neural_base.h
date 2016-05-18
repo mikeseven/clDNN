@@ -291,7 +291,7 @@ public:
     virtual ~is_a_execution_resource() {};
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
 
-    virtual void run_engine(const task_package& requests) = 0;
+    virtual void run_engine(const task_group& requests) = 0;
     virtual neural::engine::type engine() const = 0;
 };
 
@@ -303,7 +303,7 @@ public:
     execution_resource(const execution_resource &other) : _pointer(other._pointer) {};
 
     neural::engine::type engine() { return _pointer->engine(); }
-    void run_engine(const task_package& requests) { _pointer->run_engine(requests);}
+    void run_engine(const task_group& requests) { _pointer->run_engine(requests);}
 };
 
 // cheap to copy handle with reference counting
@@ -354,7 +354,7 @@ public:
 #endif
     template<typename T> T as() const;
     template<typename T> operator T() { return as<T>(); }
-    const task_package &work();
+    const task_group &work();
     size_t id() const;
     bool operator==(const primitive &other) const { return _pointer==other._pointer; }
     bool operator!=(const primitive &other) const { return !(*this==other); }
@@ -377,7 +377,7 @@ class is_a_primitive {
 protected:
     type_traits                     *_type_traits;
     std::map<std::string, any_value> _map;
-    task_package                _work;
+    task_group                _work;
     is_a_primitive(type_traits *traits) : _type_traits(traits) {}
 public:
     virtual ~is_a_primitive() {};
@@ -401,7 +401,7 @@ public:
 inline const primitive_at           primitive::input::operator[] (uint32_t at) const { return get_base()->_pointer->input()[at]; }
 inline size_t                       primitive::input::size() const { return get_base()->_pointer->input().size(); }
 inline const primitive              primitive::operator()(void *argument) const { _pointer->execute_argument(argument); return *this; }
-inline const task_package &    primitive::work() { return _pointer->_work; }
+inline const task_group &    primitive::work() { return _pointer->_work; }
 inline size_t                       primitive::id() const { return _pointer->_type_traits->id; }
 inline const primitive              primitive::output::operator[](uint32_t at) const { return get_base()->_pointer.get()->output()[at]; }
 inline size_t                       primitive::output::size() const { return get_base()->_pointer.get()->output().size(); }
@@ -420,7 +420,7 @@ class is_an_implementation {
 protected:
     is_an_implementation(const type_traits *arg) : _type_traits(arg) {};
 public:
-    virtual task_package work() = 0;
+    virtual task_group work() = 0;
     virtual ~is_an_implementation() {};
 };
 

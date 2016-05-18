@@ -135,7 +135,7 @@ namespace neural {
                 }
             }
 
-            task_package work() {
+            task_group work() {
                 return{ task{ implementation, &outer } };
             }
 

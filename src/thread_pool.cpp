@@ -6,16 +6,18 @@ namespace neural
 {
 
 	nn_thread_worker_pool::nn_thread_worker_pool(size_t arg_num_threads)
-		:taskcount(0), current_task_id(0), stop(false), current_request(nullptr), num_threads_per_core(2), enable_thread_mod(1), window_size(1)
+		:taskcount(0), current_task_id(0), stop(false), current_request(nullptr), num_threads_per_core(2), enable_thread_denom(1), thread_batch_size(1)
 	{
 		unsigned int num_logic_cores = std::thread::hardware_concurrency();
 		unsigned int num_threads = arg_num_threads == 0 ? num_logic_cores : static_cast<unsigned int>(arg_num_threads);
 		active_threads = num_threads;
 
+		// creating threads
 		for (unsigned int thread_id = 0; thread_id < num_threads; ++thread_id)
 		{
 			std::thread nthread(&nn_thread_worker_pool::process_task, this, thread_id);
 
+			// Setting affinity mask for thread. Will be finished in future
 			/*GROUP_AFFINITY ga;
 			GROUP_AFFINITY pga;
 			auto idx = thread_id;
@@ -24,8 +26,9 @@ namespace neural
 
 			auto a = SetThreadGroupAffinity(thread->worker_thread.native_handle(), &ga, &pga);
 			auto b = SetThreadAffinityMask(thread->worker_thread.native_handle(), ga.Mask);
-*/
 			//auto err = GetLastError();
+			*/
+
 			threads.push_back(std::move(nthread));
 		}
 		/*std::unique_lock<std::mutex> ul(mtx_wake);
@@ -37,81 +40,64 @@ namespace neural
 		{
 			std::lock_guard<std::mutex> ul(mtx_wake);
 			stop = true;
+			// wake up all thread for terminating
 			cv_wake.notify_all();
 		}
 		std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
 	}
 
 
-	void nn_thread_worker_pool::push_job(const task_package& requests)
+	void nn_thread_worker_pool::push_job(const task_group& requests)
 	{
 		{
 			std::lock_guard<std::mutex> ul(mtx_wake);
 			current_request = &requests.tsk;
-			remain_task_count = requests.tsk.size();
-			taskcount  = remain_task_count;
+			taskcount  = requests.tsk.size();
 			current_task_id = 0;
-			enable_thread_mod = requests.use_hyper_threading ? 1 : num_threads_per_core;
-			window_size = requests.batch_size;
+			enable_thread_denom = requests.use_hyper_threading ? 1 : num_threads_per_core;
+			thread_batch_size = requests.task_count_per_thread;
 			cv_wake.notify_all();
 		}
 
 		std::unique_lock<std::mutex> ul(mtx_wake);
-		cv_endtasks.wait(ul, [this] {return (remain_task_count == 0 && active_threads == 0); });
+		// waiting when all threads finish the job
+		cv_endtasks.wait(ul, [this] {return (current_task_id >= taskcount && active_threads == 0); });
 		current_request = nullptr;
 	}
 
-	//void nn_thread_worker_pool::push_job(const std::vector<task>& requests)
-	//{
-	//	std::cout << "------------" << requests.size() << std::endl;
-	//	{
-	//		std::lock_guard<std::mutex> ul(mtx_wake);
-	//		current_request = &requests;
-	//		remain_task_count = requests.size();
-	//		taskcount = requests.size();
-	//		current_task_id = 0;
-	//		
-	//		enable_thread_mod = 1; // !!!
-	//		window_size = 1;       // !!!
+	inline bool nn_thread_worker_pool::is_thread_enable(uint32_t threadId)
+	{
+		return (threadId % enable_thread_denom) == 0;
+	};
 
-	//		cv_wake.notify_all();
-	//	}
-
-	//	std::unique_lock<std::mutex> ul(mtx_wake);
-	//	cv_endtasks.wait(ul, [this] {return (remain_task_count == 0 && active_threads == 0); });
-	//	current_request = nullptr;
-	//}
-
-
-
+	// main loop of task processing
 	void nn_thread_worker_pool::process_task(uint32_t threadId)
 	{
 		while (true)
 		{
 			std::unique_lock<std::mutex> ul(mtx_wake);
 			active_threads--;
+			// notify thread pool that thread, probably, is going to sleep
 			cv_endtasks.notify_one();
+			// thread waiting for events: new job (in that case current_task_id < taskcount) or  terminate (stop -> true) 
+			// is_thread_enable allow to enable only one thread per physical CPU if it's needed
 			cv_wake.wait(ul, [this, threadId] { return (is_thread_enable(threadId) && current_task_id < taskcount) || stop; });
 			active_threads++;
 			ul.unlock();
 
-			if (stop)
+			if (stop) 
 				return;
 
 			while (true)
 			{
-				size_t nextTaskId = current_task_id.fetch_add(window_size);
-
-				if (nextTaskId >= taskcount + window_size - 1)
+				size_t nextTaskId = current_task_id.fetch_add(thread_batch_size);   // get index of first element for processing by increasing atomic variable by value of task count per thread
+				if (nextTaskId >= taskcount + thread_batch_size - 1)				// exit in case when all tasks done
 					break;
 
-				size_t endTaskId = nextTaskId + window_size;
-				endTaskId = endTaskId > taskcount ? taskcount : endTaskId;
+				size_t endTaskId = nextTaskId + thread_batch_size;					// calculate index last element for processing
+				endTaskId = endTaskId > taskcount ? taskcount : endTaskId;			// check bound
 				for (size_t i = nextTaskId; i < endTaskId; ++i)
-				{
-					(*current_request)[i].callback((*current_request)[i].data);
-					remain_task_count--;
-				}
+					(*current_request)[i].callback((*current_request)[i].data);		// task processing 
 			}
 		}
 	}

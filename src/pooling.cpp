@@ -119,7 +119,7 @@ struct pooling_reference : is_an_implementation {
         }
     }
 
-	task_package work() {
+	task_group work() {
         return {task{implementation, &outer}};
     }
 
