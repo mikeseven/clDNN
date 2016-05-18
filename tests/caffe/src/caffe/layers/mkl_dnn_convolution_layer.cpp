@@ -117,11 +117,11 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
                            fwd_top_data->memory_prv,
                            {0, {0, 0}, i*(oc/g)},
                            {n, {oh, ow}, oc/g},
-                           fwd_bottom_data->memory_prv,
+                           { fwd_bottom_data->memory_prv,
+                             filters_[i],
+                             biases_ [i] },
                            {0, {-pad_h_, -pad_w_}, static_cast<int>(i*(ic/g))},
                            {1, {stride_h_, stride_w_}, 1},
-                           filters_[i],
-                           biases_[i],
                            padding::zero}
                          ));
   }
