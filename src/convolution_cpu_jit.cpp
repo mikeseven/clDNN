@@ -118,6 +118,7 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
             , scalar_registers_to_preserve({nn_jit_dangerous_reg1, nn_jit_dangerous_reg2, r11, r12, r13, r14, r15})
             , vector_registers_to_preserve({xmm6, xmm7, xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15})
         {
+
             using Xbyak::Ymm;
 
             preamble();
@@ -220,14 +221,14 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
                 {
                     generate_for_single_output_block("horizontal_full", 6, false);
 
-                    add(aux_output, 6 * output_feats * sizeof(float));
-                    add(aux_input_outer, 6 * input_feats * stride_x * sizeof(float));
+                    add(aux_output, static_cast<uint32_t>(6 * output_feats * sizeof(float)));
+                    add(aux_input_outer, static_cast<uint32_t>(6 * input_feats * stride_x * sizeof(float)));
                 }
                 dec(left_out_blocks);
                 jnz("output_block");
 
-                add(input, input_feats * input_width * stride_y * sizeof(float));
-                add(output, output_feats * output_width * sizeof(float));
+                add(input, static_cast<uint32_t>(input_feats * input_width * stride_y * sizeof(float)));
+                add(output, static_cast<uint32_t>(output_feats * output_width * sizeof(float)));
 
             }
             dec(left_out_rows);
@@ -239,20 +240,20 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
             {
                 mov(aux_input_outer, input);
                 mov(aux_output, output);
-                add(aux_output, (i * output_width + output_width / 6) * 6 * output_feats * sizeof(float));
-                add(aux_input_outer, (i * input_width * stride_y + output_width / 6 * stride_x) * 6 * input_feats * sizeof(float));
+                add(aux_output, static_cast<uint32_t>((i * output_width + output_width / 6) * 6 * output_feats * sizeof(float)));
+                add(aux_input_outer, static_cast<uint32_t>((i * input_width * stride_y + output_width / 6 * stride_x) * 6 * input_feats * sizeof(float)));
                 for (uint64_t j = 0u; j < output_height % 6; ++j)
                 {
                     generate_for_single_output_block("vertical_full_" + std::to_string(i) + "_" + std::to_string(j), 6, true);
-                    add(aux_output, output_feats * sizeof(float));
+                    add(aux_output, static_cast<uint32_t>(output_feats * sizeof(float)));
                 }
             }
             for (uint64_t i = output_height / 6 * 6; i < output_height; ++i)
             {
                 mov(aux_input_outer, input);
                 mov(aux_output, output);
-                add(aux_output, (i * output_width + output_width / 6 * 6) * output_feats * sizeof(float));
-                add(aux_input_outer, (i * input_width * stride_y + output_width / 6 * stride_x * 6) * input_feats * sizeof(float));
+                add(aux_output, static_cast<uint32_t>((i * output_width + output_width / 6 * 6) * output_feats * sizeof(float)));
+                add(aux_input_outer, static_cast<uint32_t>((i * input_width * stride_y + output_width / 6 * stride_x * 6) * input_feats * sizeof(float)));
                 generate_for_single_output_block("horizontal_partial_" + std::to_string(i), output_width % 6, false);
             }
 
@@ -361,15 +362,15 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
     auto& padding       = outer.argument.padding;
     auto& stride        = outer.argument.stride;
     auto& input_arg  = outer.input_memory(0).argument;
-    auto& filter_arg = outer.argument.weight.as<const memory&>().argument; //convolution filter
+    auto& filter_arg = outer.argument.input[1].primitive.as<const memory&>().argument; //convolution filter
 
     assert( 2 == output_size.spatial.size() );
 
     auto input  = static_cast<float*>(outer.input_memory(0).pointer);
     auto output = static_cast<float*>(outer.output_memory(0).pointer);
 
-    auto filter = static_cast<float*>(outer.argument.weight.as<const memory&>().pointer);
-    auto bias   = static_cast<float*>(outer.argument.bias.as<const memory&>().pointer);
+    auto filter = static_cast<float*>(outer.argument.input[1].primitive.as<const memory&>().pointer);
+    auto bias   = static_cast<float*>(outer.argument.input[2].primitive.as<const memory&>().pointer);
 
     const int b_pos = 0;
     const int f_pos = 1;
