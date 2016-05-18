@@ -16,8 +16,9 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "tests/gtest/gtest.h"
 #include "api/neural.h"
+#include "tests/gtest/gtest.h"
+#include "test_utils/test_utils.h"
 #include "memory_utils.h"
 
 namespace{
@@ -61,27 +62,28 @@ TEST(relu_f32_fw, basic) {
 TEST(relu_f32_fw, intrinsics_avx2) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
-    auto input = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
-    auto output = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f } });
-    fill<float>(input.as<const memory&>());
+    // Optimized data
+    auto input  = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto output = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto& input_memory  = input.as<const memory&>();
+    auto& output_memory = output.as<const memory&>();
 
-    auto act = relu::create({ engine::cpu, output, input });
-    auto buf = static_cast<float*>(input.as<const memory&>().pointer);
+    // Reference data
+    auto ref_output = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto& ref_output_memory = ref_output.as<const memory&>();
 
-    // write output to input buffer
-    execute({ output(buf), act });
+    // Initialize input data
+    fill<float>(input_memory);
 
-    // multiply all positive intigers by -1
-    for (size_t i = 0; i < y*x*f*b; ++i)
-        buf[i] = (buf[i] > 0) ? -buf[i] : buf[i];
-    execute({ act });
+    // Relu primitives
+    auto opt_relu = relu::create({ engine::cpu, output, input });
+    auto ref_relu = relu::create({ engine::reference, ref_output, input });
 
-    bool result = false;
-    // every element should be 0.0f
-    for (size_t i = 0; i < y*x*f*b; ++i)
-        result = result || buf[i];
+    execute({output, opt_relu});
+    execute({ref_output, ref_relu});
 
-    EXPECT_EQ(false, result);
+    for(int output_element = 0; output_element < output_memory.count(); ++output_element)
+        EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(output_memory, output_element)));
 }
 
 TEST(relu_f32_fw, offsets) {
@@ -183,24 +185,31 @@ TEST(relu_f32_bw, basic) {
 TEST(relu_f32_bw, intrinsics_avx2) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
-    auto fw_input = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
-    auto bw_input = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    // Optimized data
+    auto fw_input  = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto bw_input  = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
     auto bw_output = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
-    fill<float>(fw_input.as<const memory&>());
-    fill<float>(bw_input.as<const memory&>());
+    auto& fw_input_memory  = fw_input.as<const memory&>();
+    auto& bw_input_memory  = bw_input.as<const memory&>();
+    auto& bw_output_memory = bw_output.as<const memory&>();
 
-    auto act = relu_backward::create({ engine::cpu, { bw_output }, { bw_input, fw_input } });
-    execute({ act });
+    // Reference data
+    auto ref_bw_output = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto& ref_bw_output_memory = ref_bw_output.as<const memory&>();
 
-    auto fw_input_buf = static_cast<float*>(fw_input.as<const memory&>().pointer);
-    auto bw_input_buf = static_cast<float*>(bw_input.as<const memory&>().pointer);
-    auto bw_output_buf = static_cast<float*>(bw_output.as<const memory&>().pointer);
+    // Initialize input data
+    fill<float>(fw_input_memory);
+    fill<float>(bw_input_memory);
 
-    bool result = true;
-    for (size_t i = 0; i < y*x*f*b; ++i)
-        result &= (((fw_input_buf[i] > 0) * bw_input_buf[i]) == bw_output_buf[i]);
+    // Relu primitives
+    auto opt_relu = relu_backward::create({ engine::cpu, { bw_output }, { bw_input, fw_input } });
+    auto ref_relu = relu_backward::create({ engine::reference, { ref_bw_output }, { bw_input, fw_input } });
 
-    EXPECT_EQ(true, result);
+    execute({bw_output, opt_relu});
+    execute({ref_bw_output, ref_relu});
+
+    for(int output_element = 0; output_element < bw_output_memory.count(); ++output_element)
+        EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_bw_output_memory, output_element), get_value<float>(bw_output_memory, output_element)));
 }
 
 TEST(relu_f32_bw, offsets) {
