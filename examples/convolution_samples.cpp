@@ -59,11 +59,9 @@ void example_convolution_ref_forward() {
                                         output,
 //                                        {out_off_b, {out_off_y, out_off_x}, out_off_z},
 //                                        {out_siz_b, {out_siz_y, out_siz_x}, out_siz_z},
-                                        input,
+                                        {input, weights, biases},
 //                                        {in_off_b, {in_off_y, in_off_x}, in_off_z},
                                         {stride_b, {stride_y, stride_x}, stride_z},
-                                        weights,
-                                        biases,
                                         padding::zero}
                                       );
 
@@ -107,10 +105,8 @@ void example_convolution_cpu_forward() {
 
     auto conv   = convolution::create( {eng,
                                         output,
-                                        input,
+                                        {input, weights, biases},
                                         {stride_b, {stride_y, stride_x}, stride_z},
-                                        weights,
-                                        biases,
                                         padding::zero}
                                       );
 

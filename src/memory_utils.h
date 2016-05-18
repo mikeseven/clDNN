@@ -34,12 +34,14 @@ template <class T> void fill(const memory &that, T value) {
 template <class T> void fill(const primitive &that, T value){
     fill(that.as<const memory&>(), value);
 }
-
-template <class T> void fill(const memory &that) {
+template <class T, class RNG = std::mt19937> void fill_rng(const memory &that, uint32_t seed, T dist_start, T dist_end) {
     if(type_id<T>()->id != memory::traits(that.argument.format).type->id) throw std::runtime_error("fill_memory: types do not match");
-    static std::mt19937 rng(1); // TODO: fix this; no ability to specifi distribution, generator, thread-order-depended results
-    std::uniform_real_distribution<T> dist(-10, 10);
+    static RNG rng(seed);
+    std::uniform_real_distribution<T> dist(dist_start, dist_end);
     for(auto it1 = data_begin<T>(that), it2 = data_end<T>(that); it1 != it2; ++it1) *it1 = static_cast<T>( dist(rng) );
+}
+template <class T> void fill(const memory &that){
+    fill_rng<T>(that, 1, -10, 10);
 }
 template <class T> void fill(const primitive &that){
     fill<float>(that.as<const memory&>());
