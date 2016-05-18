@@ -61,7 +61,7 @@ namespace neural
 		std::atomic<size_t> current_task_id;
 		
 		int active_threads;
-		int num_threads_per_core;
+		int num_logical_per_physical_core;
 		
 		std::mutex mtx_wake;
 		std::condition_variable cv_wake;

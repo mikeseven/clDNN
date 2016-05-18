@@ -22,7 +22,13 @@ namespace neural
 {
 
 	nn_thread_worker_pool::nn_thread_worker_pool(size_t arg_num_threads)
-		:taskcount(0), current_task_id(0), stop(false), current_request(nullptr), num_threads_per_core(2), enable_thread_denom(1), thread_batch_size(1)
+		:taskcount(0), 
+		current_task_id(0), 
+		num_logical_per_physical_core(2),			 // deafult number of logical core per physical.  Should be obtained by argument or through OS API
+		thread_batch_size(1), 
+		enable_thread_denom(1), 
+		current_request(nullptr), 
+		stop(false)
 	{
 		unsigned int num_logic_cores = std::thread::hardware_concurrency();
 		unsigned int num_threads = arg_num_threads == 0 ? num_logic_cores : static_cast<unsigned int>(arg_num_threads);
@@ -70,7 +76,7 @@ namespace neural
 			current_request = &requests.tsk;
 			taskcount  = requests.tsk.size();
 			current_task_id = 0;
-			enable_thread_denom = requests.use_hyper_threading ? 1 : num_threads_per_core;
+			enable_thread_denom = requests.use_hyper_threading ? 1 : num_logical_per_physical_core;
 			thread_batch_size = requests.task_count_per_thread;
 			cv_wake.notify_all();
 		}
