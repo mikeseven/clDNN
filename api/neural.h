@@ -255,8 +255,6 @@ struct convolution : is_a_primitive {
         std::vector<primitive_at> input;            // 3 : {input, weight, bias}
         neural::vector<int32_t>   input_offset;
         neural::vector<uint32_t>  stride;
-//        primitive                 weight;
-//        primitive                 bias;
         neural::padding::type     padding;
 
         DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type);
@@ -427,9 +425,9 @@ private:
 //
 // Example:
 //   Backward pass:
-//     auto forward_input       = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
-//     auto forward_output_grad = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
-//     auto forward_input_grad  = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}, true});
+//     auto forward_input       = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}});
+//     auto forward_output_grad = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}});
+//     auto forward_input_grad  = memory::create({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}});
 //     auto act = relu_backward::create({engine::reference, {forward_input_grad}, {forward_output_grad, forward_input}});
 struct relu_backward : is_a_primitive {
     struct arguments {
@@ -471,7 +469,7 @@ private:
 //   2x2 max pooling with stride 1 and offset.
 //     auto input  = memory::create({engine::reference, memory::format::yxfb_f32, { 2, {6, 6}, 2}});
 //     auto output = memory::create({engine::reference, memory::format::yxfb_f32, { 3, {7, 7}, 3}});
-//     auto pool  = pooling::create( {engine::reference, pooling::mode::max,
+//     auto pool  = pooling::create({engine::reference, pooling::mode::max,
 //                                     output, {0,{1,2},1}, {2,{5,5},2},    // output primitive, offset, size
 //                                     input, {0,{0,0},0},                  // input primitive, offset
 //                                     {1,{1,1},1},                         // stride
@@ -526,7 +524,24 @@ namespace normalization { //////////////////////////////////////////////////////
 
 // neural::normalization::response
 //
-// TODO
+// Forward local response normalization as described in chapter 3.3 of "ImageNet Classification with Deep Convolutional 
+// Neural Networks" by Khrizevsky, Sutskever, Hinton. see: http://www.cs.toronto.edu/~fritz/absps/imagenet.pdf
+// Alogrithm:
+//   b(i,x,y) = a(i,x,y) / (k+alpha*sum(min(N-1, i+n/2); j=max(0,i-n/2); a(j,x,y)^2))
+// Where:
+//   b(i,x,y) : value at x, y from i-th feature map after normalization
+//   b(i,x,y) : value at x, y from i-th feature map before normalization
+//   N : number of feature maps
+//   n : size of normalization
+//   k, alpha, beta : hyper parameters (equal to 2, 10e-4, 0.75 in paper)
+//
+//
+// Example:
+//
+//   LRN on ragion of 3 with [k,alpha,beta] = [1,1,0.75]
+//     auto  input = memory::create({ engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 7}});
+//     auto output = memory::create({ engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 7}});
+//     auto lrn = normalization::response::create({engine::reference, output, input, 3, padding::zero, 1.0f, 1.0f, 0.75f});
 struct /*normalization*/response : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -564,7 +579,13 @@ private:
 
 // neural::normalization::softmax
 //
-// TODO
+// Normalizes results so they sum to 1.
+// Algorithm:
+//   b = e^a/sum(N-1; j=0; e^j)
+// Where:
+//   N : number of values to normalize
+//   b : value after normalization
+//   a : value before normalization
 struct /*normalization*/softmax : is_a_primitive {
     struct arguments {
         neural::engine::type      engine;
@@ -598,7 +619,23 @@ private:
 
 // neural::normalization::batch_training_forward
 //
-// TODO
+// Performs batch normalization as discribed in "Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift"
+// by Ioffe, Szegedy, see: http://arxiv.org/abs/1502.03167
+// This is forward pass ran during training.
+//
+//
+// Example:
+//   Normalize 320x240, 3 feature maps images in batch 16.
+//     auto input               = memory::create({ engine::reference, memory::format::yxfb_f32, {16, {240, 320}, 3}});
+//     auto bias                = memory::create({ engine::reference, memory::format::yxfb_f32, { 1, {  1,   1}, 3}});
+//     auto scale               = memory::create({ engine::reference, memory::format::yxfb_f32, { 1, {  1,   1}, 3}});
+//     auto output              = memory::create({ engine::reference, memory::format::yxfb_f32, {16, {240, 320}, 3}});
+//     auto current_inv_std_dev = memory::create({ engine::reference, memory::format::yxfb_f32, { 1, {  1,   1}, 3}});
+//     auto moving_average      = memory::create({ engine::reference, memory::format::yxfb_f32, { 1, {  1,   1}, 3}});
+//     auto moving_inv_std_dev  = memory::create({ engine::reference, memory::format::yxfb_f32, { 1, {  1,   1}, 3}});
+//     auto current_average     = memory::create({ engine::reference, memory::format::yxfb_f32, { 1, {  1,   1}, 3}});
+//     auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, 1.0, std::numeric_limits<float>::epsilon()});
+
 struct /*normalization*/batch_training_forward : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -628,7 +665,21 @@ private:
 
 // neural::normalization::batch_training_backward
 //
-// TODO
+// Backward pass fo batch normalization.
+//
+//
+// Example:
+//   Backward pass of batch normalization on 16x32 images with 64 feature maps and batch 128.
+//     auto forward_input       = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
+//     auto forward_scale       = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+//     auto forward_bias        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+//     auto output_grad         = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
+//     auto current_mean        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+//     auto current_inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+//     auto input_grad = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
+//     auto scale_grad = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+//     auto bias_grad  = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+//     auto bn = normalization::batch_training_backward::create({engine::reference, {input_grad, scale_grad, bias_grad}, {forward_input, forward_scale, forward_bias, output_grad, current_mean, current_inv_std_dev}});
 struct /*normalization*/batch_training_backward : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -656,7 +707,19 @@ private:
 
 // neural::normalization::batch_inference
 //
-// TODO
+// Batch normalization, forward pass for inference.
+//
+//
+// Example:
+//   Inference pass of batch normalization on 16x32 images with 64 feature maps and batch 128.
+//     auto input       = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
+//     auto scale       = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+//     auto bias        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+//     auto average     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+//     auto inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+//     auto output      = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
+//     auto bn = normalization::batch_inference::create({engine::reference, {output}, {input, scale, bias, average, inv_std_dev}, true});
+
 struct /*normalization*/batch_inference : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
@@ -686,14 +749,23 @@ private:
 
 // neural::convolution_relu
 //
-// TODO
+// Fused layer: convolution fused with relu.
+//
+//
+// Example:
+//   In batch 24 convolve & relu-activate 224x224 3-feature-map user-specified inputs into 96-feature-map user-specified outputs.
+//     auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+//     auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {96, {224, 224}, 24}});
+//     auto weight = file::create({engine::cpu, "weight.nnb"});
+//     auto bias   = file::create({engine::cpu, "bias.nnb"});
+//     auto conv   = convolution_relu::create({engine::cpu, output, input, weight, bias, padding::zero, 0.0f});
 struct convolution_relu : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
         std::vector<primitive>      output;
         vector<uint32_t>            output_offset;
         vector<uint32_t>            output_size;
-        std::vector<primitive_at>   input;          // 3: input, filter, bias
+        std::vector<primitive_at>   input;          // 3: {input, filter, bias}
         vector<int32_t>             input_offset;
         vector<uint32_t>            input_stride;
         neural::padding::type       padding;
@@ -724,14 +796,24 @@ private:
 
 // neural::fully_connected_relu
 //
-// TODO
+// Fused layer: fully connected fused with relu.
+//
+//
+// Example:
+//    6 input neurons 7 output neurons with relu activation.
+//     auto input   = memory::create({engine::reference, memory::format::xb_f32, { 1, {{6}},  1} });
+//     auto output  = memory::create({engine::reference, memory::format::xb_f32, { 1, {{7}},  1} });
+//     auto weights = memory::create({engine::reference, memory::format::xy_f32, { 1, {6, 7}, 1} });
+//     auto biases  = memory::create({engine::reference, memory::format::x_f32,  { 1, {{7}},  1} });
+//     auto act = fully_connected_relu::create({engine::reference, output, input, weights, biases, 0.0f});
+
 struct fully_connected_relu : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
         std::vector<primitive>      output;
         vector<uint32_t>            output_offset;
         vector<uint32_t>            output_size;
-        std::vector<primitive_at>   input;          // 3: input, filter, bias
+        std::vector<primitive_at>   input;          // 3: {input, filter, bias}
         vector<int32_t>             input_offset;
         vector<uint32_t>            input_stride;
         float                       negative_slope;
