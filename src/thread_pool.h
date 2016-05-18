@@ -16,10 +16,10 @@ namespace neural
 
 	struct task_group
 	{
-		bool use_hyper_threading = true;	
-		int task_count_per_thread = 1;		// portion of tasks which get every thread for processing per iteration
 		std::vector<task> tsk;
-
+		bool use_hyper_threading = true;	
+		int task_count_per_thread = 1;								// portion of tasks which obtain every thread for processing per iteration
+		
 		task_group(const std::vector<task>& _tsk) : tsk(_tsk) {};	// workaround, could be remove in future
 		task_group(const task _task) : tsk{ _task } {};				// workaround, could be remove in future
 
