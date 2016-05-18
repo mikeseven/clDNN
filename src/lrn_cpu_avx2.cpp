@@ -14,6 +14,8 @@
 // limitations under the License.
 */
 
+
+
 #include "multidimensional_counter.h"
 #include "lrn_cpu_avx2.h"
 
@@ -27,6 +29,7 @@ namespace neural {
 
     void lrn_cpu_avx2::implementation(const void *ptr) {
 
+
         auto this_lrn = static_cast<const normalization::response *>(ptr);
 
         auto& input_offset = this_lrn->argument.input_offset;
@@ -34,7 +37,6 @@ namespace neural {
         auto& output_size = this_lrn->argument.output_size;
         auto& padding = this_lrn->argument.padding;
         auto& size = this_lrn->argument.size;
-
         auto& k = this_lrn->argument.k;
         auto& alpha = this_lrn->argument.alpha;
         auto& beta = this_lrn->argument.beta;
@@ -92,3 +94,4 @@ namespace neural {
     }
 
 }
+

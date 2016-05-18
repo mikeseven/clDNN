@@ -20,6 +20,17 @@
 
 int main()
 {
+    extern void example_lrn_forward();
+    try {
+        example_lrn_forward();
+    }
+    catch (std::exception &e) {
+        std::cerr << e.what();
+    }
+    catch (...) {
+        std::cerr << "Unknown exceptions.";
+    }
+/*
     extern void example_convolution_cpu_forward();
     try {
         example_convolution_cpu_forward();
@@ -30,5 +41,6 @@ int main()
     catch (...) {
         std::cerr << "Unknown exceptions.";
     }
+*/
     return 0;
 }

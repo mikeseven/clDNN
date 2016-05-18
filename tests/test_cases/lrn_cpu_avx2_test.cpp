@@ -22,7 +22,7 @@
 #include "test_utils/test_utils.h"
 #include <iostream>
 
-TEST(local_response_normalization, lrn_reference_test) {
+TEST(local_response_normalization, lrn_cpu_avx2_test) {
 
     using namespace neural;
     using namespace tests;
@@ -48,14 +48,14 @@ TEST(local_response_normalization, lrn_reference_test) {
     // lrn parameters:
     const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
 
-    auto input = memory::create({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }, true });
-    auto output = memory::create({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }, true });
-    auto output_oracle = memory::create({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }, true });
+    auto input = memory::create({ engine::cpu, memory::format::yxfb_f32,{ pb,{ px, py }, pf }, true });
+    auto output = memory::create({ engine::cpu, memory::format::yxfb_f32,{ pb,{ px, py }, pf }, true });
+    auto output_oracle = memory::create({ engine::cpu, memory::format::yxfb_f32,{ pb,{ px, py }, pf }, true });
 
     set_values(input, input_oracle_init);
     set_values(output_oracle, output_oracle_init);
 
-    auto lrn = normalization::response::create({ engine::reference, output, input, psize, padding::zero, pk, palpha, pbeta });
+    auto lrn = normalization::response::create({ engine::cpu, output, input, psize, padding::zero, pk, palpha, pbeta });
 
     // ------------------------------------------------------------------------------------------------
     // test run
