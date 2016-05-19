@@ -50,8 +50,7 @@ struct relu_avx2_worker : public neural::is_an_implementation
 
         auto output_mem_count = relu_layer->output_memory(0).count();
 
-        //todo: determine chunks of data from analysis
-        auto chunks_count = 1u;
+        auto chunks_count = 18u;
 
         auto chunk_size = output_mem_count/chunks_count;
 
@@ -156,14 +155,8 @@ relu_cpu_avx2::relu_cpu_avx2(relu &arg)
     auto& output_offset = this_relu->argument.output_offset;
     auto& output_size = this_relu->argument.output_size;
 
-    auto& input_mem_arg  = this_relu->input_memory(0).argument;
-    auto& output_mem_arg = this_relu->output_memory(0).argument;
-
-    if (input_mem_arg.format != memory::format::yxfb_f32)                throw std::runtime_error("ReLU reference uses yxfb_f32 format.");
-    if (input_mem_arg.format != output_mem_arg.format)                   throw std::runtime_error("ReLU input/output data format does not match.");
-    if (input_mem_arg.size.raw.size() != output_mem_arg.size.raw.size()) throw std::runtime_error("ReLU input/output number of dimension does not match.");
-    for (auto &x : input_offset.raw)                          if (x > 0) throw std::runtime_error("ReLU input offset must be equal to zero.");
-    for (auto &x : output_offset.raw)                         if (x > 0) throw std::runtime_error("ReLU output offset must be equal to zero.");
+    for (auto &x : input_offset.raw)  if (x != 0) throw std::runtime_error("ReLU input offset must be equal to zero.");
+    for (auto &x : output_offset.raw) if (x > 0) throw std::runtime_error("ReLU output offset must be equal to zero.");
 
     assert(1 == this_relu->argument.input.size());
     assert(1 == this_relu->argument.output.size());
@@ -180,36 +173,6 @@ relu_backward_cpu_avx2::relu_backward_cpu_avx2(relu_backward &arg)
 , outer(arg)
 {
     auto this_relu = static_cast<const relu_backward *>(&outer);
-
-    if (this_relu->input().size() != 2)
-        throw std::runtime_error("ReLU backward: number of inputs is incorrect.");
-
-    if (this_relu->output().size() != 1)
-        throw std::runtime_error("ReLU backward: number of outputs is incorrect.");
-
-    auto forward_output_grad_arg = this_relu->argument.input[0].primitive.as<const memory&>().argument;
-    auto forward_output_grad_offset = this_relu->argument.input_offset[0];
-
-    auto forward_input_arg = this_relu->argument.input[1].primitive.as<const memory&>().argument;
-    auto forward_input_offset = this_relu->argument.input_offset[1];
-
-    auto forward_input_grad_arg = this_relu->argument.output[0].as<const memory&>().argument;
-    auto forward_input_grad_offset = this_relu->argument.output_offset;
-
-    auto processed_window_sizes = this_relu->argument.output_size;
-
-    if (forward_output_grad_arg.size.raw.size() != forward_input_arg.size.raw.size() || forward_input_arg.size.raw.size() != forward_input_grad_arg.size.raw.size())
-        throw std::runtime_error("ReLU backward: number of IO dimension does not match.");
-
-    if (forward_output_grad_arg.format != forward_input_arg.format || forward_input_arg.format != forward_input_grad_arg.format)
-        throw std::runtime_error("ReLU backward: IO data format does not match.");
-
-    for (size_t i = 0; i < forward_output_grad_arg.size.raw.size(); ++i) {
-        if (forward_output_grad_arg.size.raw[i] < processed_window_sizes.raw[i] + forward_output_grad_offset.raw[i]) throw std::runtime_error("ReLU backward: backward_input size does not match the offset.");
-        if (forward_input_arg.size.raw[i]       < processed_window_sizes.raw[i] + forward_input_offset.raw[i])       throw std::runtime_error("ReLU backward: forward_input size does not match the offset.");
-        if (forward_input_grad_arg.size.raw[i]  < processed_window_sizes.raw[i] + forward_input_grad_offset.raw[i])  throw std::runtime_error("ReLU backward: backward_output size does not match the offset.");
-    }
-
     relu_ptr.reset(new relu_avx2_worker(this_relu, false));
 };
 

@@ -14,17 +14,21 @@
 
 namespace caffe {
 
-template <> void MKL_DNNInnerProductLayer<double>::LayerSetUp(const vector<Blob<double>*>& bottom,
-      const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
-template <> void MKL_DNNInnerProductLayer<double>::Forward_cpu(const vector<Blob<double>*>& bottom,
-    const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
-template <> void MKL_DNNInnerProductLayer<double>::Backward_cpu(const vector<Blob<double>*>& top,
-    const vector<bool>& propagate_down,
-    const vector<Blob<double>*>& bottom) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNInnerProductLayer<double>::LayerSetUp(
+  const vector<Blob<double>*>& bottom,
+  const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNInnerProductLayer<double>::Forward_cpu(
+  const vector<Blob<double>*>& bottom,
+  const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNInnerProductLayer<double>::Backward_cpu(
+  const vector<Blob<double>*>& top,
+  const vector<bool>& propagate_down,
+  const vector<Blob<double>*>& bottom) {NOT_IMPLEMENTED;}
 
 template <typename Dtype>
-void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
-      const vector<Blob<Dtype>*>& top) {
+void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(
+  const vector<Blob<Dtype>*>& bottom,
+  const vector<Blob<Dtype>*>& top) {
   const int num_output = this->layer_param_.inner_product_param().num_output();
   bias_term_ = this->layer_param_.inner_product_param().bias_term();
   // TODO: is it recently added parameter???
@@ -70,13 +74,9 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bot
   }  // parameter initialization
   this->param_propagate_down_.resize(this->blobs_.size(), true);
 
-
-  auto batch = bottom[0]->count(0, axis); // TODO: is this ok?
-  auto input_x = K_;
-  auto bias_x = N_, output_x = N_;
-
-  //std::cout << "input_x: " << input_x << "  output_x: "  << output_x <<  " batch: " << batch <<" \n";
-  /* MKL-DNN setup */
+  uint32_t batch = bottom[0]->count(0, axis); // TODO: is this ok?
+  uint32_t input_x = K_;
+  uint32_t bias_x = N_, output_x = N_;
 
   bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {batch, {{input_x}},  1}});
   top_data_   ->memory_prv = memory::create({engine_, top_data_   ->layout_prv, {batch, {{output_x}}, 1}});
@@ -170,10 +170,10 @@ void MKL_DNNInnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 
     if(bottom_descr->layout_prv == neural::memory::format::yxfb_f32 &&
             bottom_data_xb_ == nullptr) {
-      auto n = bottom[0]->shape(0);
-      auto c = bottom[0]->shape(1);
-      auto h = bottom[0]->shape(2);
-      auto w = bottom[0]->shape(3);
+      uint32_t n = bottom[0]->shape(0);
+      uint32_t c = bottom[0]->shape(1);
+      uint32_t h = bottom[0]->shape(2);
+      uint32_t w = bottom[0]->shape(3);
       bottom_data_->layout_usr = neural::memory::format::bfyx_f32;
       bottom_data_->layout_prv = neural::memory::format::fyxb_f32;
       bottom_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {n, {{h, w}}, c}});

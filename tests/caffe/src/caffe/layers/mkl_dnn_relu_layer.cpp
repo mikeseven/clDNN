@@ -24,14 +24,19 @@ void MKL_DNNReLULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   Dtype negative_slope = this->layer_param_.relu_param().negative_slope();
 
-  const int count = bottom[0]->count();
-  bottom_data_  = memory::create({engine_, memory::format::yxfb_f32, {count, {1, 1}, 1}});
-  top_data_     = memory::create({engine_, memory::format::yxfb_f32, {count, {1, 1}, 1}});
-  bottom_diff_  = memory::create({engine_, memory::format::yxfb_f32, {count, {1, 1}, 1}});
-  top_diff_     = memory::create({engine_, memory::format::yxfb_f32, {count, {1, 1}, 1}});
+  const uint32_t count = bottom[0]->count();
+  bottom_data_ = memory::create({engine_, memory::format::yxfb_f32,
+    {count, {1, 1}, 1}});
+  top_data_    = memory::create({engine_, memory::format::yxfb_f32,
+    {count, {1, 1}, 1}});
+  bottom_diff_ = memory::create({engine_, memory::format::yxfb_f32,
+    {count, {1, 1}, 1}});
+  top_diff_    = memory::create({engine_, memory::format::yxfb_f32,
+    {count, {1, 1}, 1}});
 
   reluFwd_ = relu::create({engine_, top_data_, bottom_data_, negative_slope});
-  reluBwd_ = relu_backward::create({engine_, {bottom_diff_}, {top_diff_, bottom_data_}, negative_slope});
+  reluBwd_ = relu_backward::create({engine_, {bottom_diff_},
+    {top_diff_, bottom_data_}, negative_slope});
 }
 
 template <typename Dtype>
@@ -70,7 +75,8 @@ void MKL_DNNReLULayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
       bottom_diff = (void*)bottom[0]->mutable_cpu_diff();
     }
 
-    execute({ top_diff_(top_diff), bottom_data_(bottom_data), bottom_diff_(bottom_diff), reluBwd_});
+    execute({ top_diff_(top_diff), bottom_data_(bottom_data),
+              bottom_diff_(bottom_diff), reluBwd_});
   }
 }
 

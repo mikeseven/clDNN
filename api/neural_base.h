@@ -15,6 +15,8 @@
 */
 #pragma once
 
+#include "thread_pool.h"
+
 #include <vector>
 #include <string>
 #include <memory>
@@ -124,7 +126,7 @@ template<typename T> struct vector {
     vector(const T arg_batch, const std::vector<T> &arg_spatial, const std::vector<T> &arg_feature)
         : batch  (raw, 0, 1)
         , feature(raw, 1, 1+arg_feature.size())
-        , spatial(raw, 1+arg_feature.size(), 1+arg_spatial.size())
+        , spatial(raw, 1+arg_feature.size(), 1+arg_feature.size()+arg_spatial.size())
     {
         raw.push_back(arg_batch);
         raw.insert(raw.end(), arg_feature.begin(), arg_feature.end());
@@ -149,7 +151,7 @@ template<typename T> struct vector {
     vector(const std::vector<T> &arg_spatial, const std::vector<T> arg_feature)
         : batch  (raw, 0, 1)
         , feature(raw, 1, 1+arg_feature.size())
-        , spatial(raw, 1+arg_feature.end_, 1+arg_feature.end_)
+        , spatial(raw, 1+arg_feature.size(), 1+arg_feature.size()+arg_spatial.size())
     {
         raw.push_back(1);
         raw.insert(raw.end(), arg_feature.begin(), arg_feature.end());
@@ -277,12 +279,32 @@ public:
     any_value_type_lookup operator[](std::string key) const { return any_value_type_lookup(_map, key); }
 };
 
-// task to be performed in form of callback & data for it
-struct task {
-    void (*callback)(const void *);
-    const void *data;
+class is_a_execution_resource {
+    is_a_execution_resource(const is_a_execution_resource &);
+    is_a_execution_resource &operator=(const is_a_execution_resource &);
+
+protected:
+    type_traits                     *_type_traits;
+    std::map<std::string, any_value> _map;
+    is_a_execution_resource(type_traits *traits) : _type_traits(traits) {}
+public:
+    virtual ~is_a_execution_resource() {};
+    virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
+
+    virtual void run_engine(const std::vector<task>& requests) = 0;
+    virtual neural::engine::type engine() const = 0;
 };
 
+class execution_resource {
+    std::shared_ptr<is_a_execution_resource> _pointer;
+
+public:
+    execution_resource(is_a_execution_resource *raw) : _pointer(raw) {};
+    execution_resource(const execution_resource &other) : _pointer(other._pointer) {};
+
+    neural::engine::type engine() { return _pointer->engine(); }
+    void run_engine(const std::vector<task>& requests) { _pointer->run_engine(requests);}
+};
 
 // cheap to copy handle with reference counting
 class is_a_primitive;
@@ -377,7 +399,6 @@ public:
     friend struct nn_thread_worker_pool;
 };
 
-
 // implementations of inline functions from primitive
 inline const primitive_at           primitive::input::operator[] (uint32_t at) const { return get_base()->_pointer->input()[at]; }
 inline size_t                       primitive::input::size() const { return get_base()->_pointer->input().size(); }
@@ -406,6 +427,7 @@ public:
 };
 
 // execution of sequence of primitives
+DLL_SYM void execute(std::vector<primitive>, execution_resource&);
 DLL_SYM void execute(std::vector<primitive>);
 
 }

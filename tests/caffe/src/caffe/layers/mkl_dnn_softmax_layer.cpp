@@ -10,21 +10,24 @@
 // TODO: 4D input ???
 
 namespace caffe {
-template <> void MKL_DNNSoftmaxLayer<double>::LayerSetUp(const vector<Blob<double>*>& bottom,
-      const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
-template <> void MKL_DNNSoftmaxLayer<double>::Forward_cpu(const vector<Blob<double>*>& bottom,
-    const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
-template <> void MKL_DNNSoftmaxLayer<double>::Backward_cpu(const vector<Blob<double>*>& top,
-    const vector<bool>& propagate_down,
-    const vector<Blob<double>*>& bottom) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNSoftmaxLayer<double>::LayerSetUp(
+  const vector<Blob<double>*>& bottom,
+  const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNSoftmaxLayer<double>::Forward_cpu(
+  const vector<Blob<double>*>& bottom,
+  const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNSoftmaxLayer<double>::Backward_cpu(
+  const vector<Blob<double>*>& top,
+  const vector<bool>& propagate_down,
+  const vector<Blob<double>*>& bottom) {NOT_IMPLEMENTED;}
 
 template <typename Dtype>
 void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-  auto batch =  bottom[0]->shape(0);
-  auto input_x = bottom[0]->shape(1);
-  auto output_x = input_x;
-  const auto z = 1;
+  uint32_t batch =  bottom[0]->shape(0);
+  uint32_t input_x = bottom[0]->shape(1);
+  uint32_t output_x = input_x;
+  const uint32_t z = 1;
 
   bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {batch, {{input_x}}, z}});
   top_data_   ->memory_prv = memory::create({engine_, top_data_   ->layout_prv, {batch, {{input_x}}, z}});
