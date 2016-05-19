@@ -188,7 +188,6 @@ namespace{
     /*
     float fma_clocks() { return fma_clock_count; }
     */
-
     const float fma_clock_count = 0.0f;
 
     jit_convolution_generic(
@@ -233,7 +232,6 @@ namespace{
                 std::set<std::tuple<int64_t, int64_t>> exists;
                 std::map<std::tuple<int64_t,int64_t,int64_t,int64_t>, op_data_t> sorted;
                 auto at_pos = 0;
-    /*
                 for(auto byi=0; byi<block_height; ++byi)
                     for(auto bxi=0; bxi<block_width; ++bxi) {
                         auto y=by*block_height+byi;
@@ -265,22 +263,20 @@ namespace{
                             }
                         }
                     }
-    */
-    /*
                 std::set<std::tuple<int64_t, int64_t>> first;
                 for(auto it = sorted.begin(); it!=sorted.end(); ++it) {
-                    auto at = std::make_tuple(std::get<2>(it->first), std::get<3>(it->first));
-                    if(first.find(at)==first.end()) {
-                        first.insert(at);
+                    auto local_at = std::make_tuple(std::get<2>(it->first), std::get<3>(it->first));
+                    if(first.find(local_at)==first.end()) {
+                        first.insert(local_at);
                         it->second.type = 0;
                     }
                 }
 
                 std::set<std::tuple<int64_t, int64_t>> last;
                 for(auto it = sorted.rbegin(); it!=sorted.rend(); ++it) {
-                    auto at = std::make_tuple(std::get<2>(it->first), std::get<3>(it->first));
-                    if(last.find(at)==last.end()) {
-                        last.insert(at);
+                    auto local_at = std::make_tuple(std::get<2>(it->first), std::get<3>(it->first));
+                    if(last.find(local_at)==last.end()) {
+                        last.insert(local_at);
                         it->second.type = 2;
                     }
                 }
@@ -296,9 +292,8 @@ namespace{
                     , filter_feature_blocks*sizeof(float)
                 };
 
-                tasks[at].callback        = reinterpret_cast<void (*)(void *)>(code.getCode());
-                tasks[at].request_handle  = &op_array[at];
-    */
+                tasks[at].callback = reinterpret_cast<void (*)(const void *)>(code.getCode());
+                tasks[at].data     = &op_array[at];
             }
     }
 
@@ -318,7 +313,7 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
     auto output_ptr  = reinterpret_cast<float*>(&arg.output_memory(0).pointer);
     auto input_ptr   = reinterpret_cast<float*>(&arg.input_memory(0).pointer);
     auto weights_ptr = reinterpret_cast<float*>(&arg.input_memory(1).pointer);
-    auto bias_ptr    = reinterpret_cast<float*>(&arg.input_memory(2).pointer);
+    auto bias_ptr    = reinterpret_cast<float*>(&arg.input_memory(2).pointer); //todo add support for biases
 
     auto& stride      = outer.argument.stride;
     auto& output_size = outer.argument.output_size;
