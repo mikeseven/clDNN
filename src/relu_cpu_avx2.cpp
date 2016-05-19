@@ -153,15 +153,14 @@ relu_cpu_avx2::relu_cpu_avx2(relu &arg)
 
     auto& input_offset = this_relu->argument.input_offset;
     auto& output_offset = this_relu->argument.output_offset;
-    auto& output_size = this_relu->argument.output_size;
 
     for (auto &x : input_offset.raw)  if (x != 0) throw std::runtime_error("ReLU input offset must be equal to zero.");
     for (auto &x : output_offset.raw) if (x > 0) throw std::runtime_error("ReLU output offset must be equal to zero.");
 
     assert(1 == this_relu->argument.input.size());
     assert(1 == this_relu->argument.output.size());
-    assert(1 == output_size.feature.size());
-    assert(1 == output_size.batch.size());
+    assert(1 == this_relu->argument.output_size.feature.size());
+    assert(1 == this_relu->argument.output_size.batch.size());
 
     relu_ptr.reset(new relu_avx2_worker(this_relu, true));
 };
