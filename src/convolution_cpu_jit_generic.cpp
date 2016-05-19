@@ -98,7 +98,7 @@ namespace{
 
                     align(4);
                     L(op_internal_loop_);
-                        for(uint64_t n=0; n<input_features_per_iteration; ++n) code_op_type_block(n);
+                        for(uint64_t n=0; n<input_features_per_iteration; ++n) code_op_type_block(static_cast<int>(n));
                         add(rbx,    batch_size*output_features_per_iteration*input_features_per_iteration);
                         add(rcx, sizeof(float)*output_features_per_iteration*input_features_per_iteration);
                         dec(rdx);
@@ -115,13 +115,13 @@ namespace{
                 jb("op_loop");
             };
 
-            auto code_prologue_load         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovaps(Ymm(n),  ptr [rax+32*n] );};
-            auto code_prologue_zero         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vxorps(Ymm(n), Ymm(n), Ymm(n));};
-            auto code_epilogue_store        = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovaps(ptr [rax+32*n], Ymm(n));};
+            auto code_prologue_load         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovaps(Ymm(static_cast<int>(n)),  ptr [rax+32*n] );};
+            auto code_prologue_zero         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vxorps(Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)));};
+            auto code_epilogue_store        = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovaps(ptr [rax+32*n], Ymm(static_cast<int>(n)));};
             auto code_epilogue_relu_store   = [&]() {
                 vxorps(ymm15, ymm15, ymm15);
-                for(uint64_t n=0; n<accumulators_count; ++n) vmaxps(Ymm(n), Ymm(n), ymm15);
-                for(uint64_t n=0; n<accumulators_count; ++n) vmovaps(ptr [rax+32*n], Ymm(n));
+                for(uint64_t n=0; n<accumulators_count; ++n) vmaxps(Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)), ymm15);
+                for(uint64_t n=0; n<accumulators_count; ++n) vmovaps(ptr [rax+32*n], Ymm(static_cast<int>(n)));
             };
 
             // <- code starts here
