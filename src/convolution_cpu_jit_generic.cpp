@@ -127,13 +127,21 @@ namespace{
             // <- code starts here
 
             // lists of registers to preserve on call
+#ifdef _WIN32
             auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbx, rdi, r11, r12, r13, r14, r15};
+#else
+            auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbp, rbx, r11, r12, r13, r14, r15};
+#endif
+
             auto preserve_registers_xmm     = std::vector<Xbyak::Xmm>{xmm6, xmm7, xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15};
 
             // preserve registers on stack
             for(auto &reg : preserve_registers_scalar) push(reg);
             for(auto &reg : preserve_registers_xmm)    {auto offset = (&reg - &(preserve_registers_xmm[0])+1)*16; vmovdqu(ptr [rsp-offset], reg);}
 
+#ifdef __unix__
+            mov(rcx, rdi);
+#endif
             mov(r15, rcx);  // really a op_array_t *
             mov(r9,  ptr [r15+offsetof(op_array_t, output_feature_block_stride)]);
             mov(r10, ptr [r15+offsetof(op_array_t, filter_feature_blocks)]);
