@@ -28,12 +28,6 @@
 
 namespace neural {
 
-// task to be performed in form of callback & data for it
-struct task {
-    void (*callback)(const void *);
-    const void *data;
-};
-
 /* This file contains internal device structure implementation as well as thread pool class.
 
 Thread pool usage:

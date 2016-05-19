@@ -20,6 +20,7 @@
 #include "tests/gtest/gtest.h"
 #include "test_utils/test_utils.h"
 #include "memory_utils.h"
+#include <thread>
 
 using namespace neural;
 using namespace tests;
@@ -602,7 +603,7 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
 
 TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
-    auto engine_resource = execution_resource_cpu::create({std::thread::hardware_concurrency()});
+    auto engine_resource = worker_cpu::create({std::thread::hardware_concurrency()});
     auto input           = memory::create({engine::cpu, memory::format::       byxf_f32,    {1, {4, 4}, 1}, true});
     auto output          = memory::create({engine::cpu, memory::format::       byxf_f32,   {1, {2, 2}, 16}, true});
     auto weights         = memory::create({engine::cpu, memory::format::os_yxi_sv16_f32, {{2, 2}, {16, 1}}, true});
@@ -645,7 +646,7 @@ TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 TEST(convolution_f32_fw, optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     // This implementation will use two jobs, each for one slice, so make sure it will test MT path, no matter what underlying HW we have.
-    auto engine_resource = execution_resource_cpu::create({2});
+    auto engine_resource = worker_cpu::create({2});
 
     auto input           = memory::create({engine::cpu, memory::format::       byxf_f32,    {1, {4, 4}, 1}, true});
     auto output          = memory::create({engine::cpu, memory::format::       byxf_f32,   {1, {2, 2}, 32}, true});
@@ -709,7 +710,7 @@ TEST(convolution_f32_fw, optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x12x3x2_nopad) {
 
     // This implementation will use two jobs, each for one slice, so make sure it will test MT path, no matter what underlying HW we have.
-    auto engine_resource = execution_resource_cpu::create({2});
+    auto engine_resource = worker_cpu::create({2});
 
     // Optimized data.
     auto input   = memory::create({engine::cpu, memory::format::       byxf_f32,  {2, {11, 12}, 3}, true}); auto& input_memory   = input.as<const memory&>();

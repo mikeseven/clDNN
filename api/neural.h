@@ -130,29 +130,6 @@ private:
 };
 
 
-struct execution_resource_cpu : is_a_execution_resource {
-    struct arguments {
-        uint32_t threadpool_size;
-
-        DLL_SYM arguments(uint32_t arg_threadpool_size);
-        DLL_SYM arguments(                            );
-    };
-    arguments argument;
-
-    nn_thread_worker_pool thread_pool;
-
-    DLL_SYM static execution_resource create(arguments);
-
-    void run_engine(const std::vector<task>& requests) {thread_pool.push_job(requests);}
-    neural::engine::type engine() const {return neural::engine::cpu;}
-
-private:
-    execution_resource_cpu(arguments arg) 
-        : is_a_execution_resource(type_id<execution_resource_cpu>())
-        , argument(arg) 
-        , thread_pool(arg.threadpool_size) {};
-};
-
 // neural::file
 //
 // File that is loaded and becomes a data.
@@ -835,5 +812,35 @@ private:
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 };
+
+
+
+
+// neural::worker_cpu
+//
+// Worker for executing primitives for engine::cpu.
+// Internally implemented as thread pool.
+struct nn_thread_worker_pool;
+struct worker_cpu : is_a_worker {
+    struct arguments {
+        uint32_t thread_pool_size;
+
+        DLL_SYM arguments(uint32_t arg_threadpool_size);
+        DLL_SYM arguments(                            );
+    };
+    arguments argument;
+
+    std::unique_ptr<nn_thread_worker_pool> thread_pool;
+
+    DLL_SYM static worker create(arguments);
+
+    void execute(const std::vector<task>& requests);
+    neural::engine::type engine() const {return neural::engine::cpu;}
+
+private:
+    worker_cpu(arguments arg);
+};
+
+
 
 }

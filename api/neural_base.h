@@ -15,8 +15,6 @@
 */
 #pragma once
 
-#include "thread_pool.h"
-
 #include <vector>
 #include <string>
 #include <memory>
@@ -24,6 +22,7 @@
 #include <map>
 #include <exception>
 #include <cassert>
+
 
 
 // exporting symbols form dynamic library
@@ -53,6 +52,12 @@
 
 
 namespace neural {
+
+// task to be performed in form of callback & data for it
+struct task {
+    void (*callback)(const void *);
+    const void *data;
+};
 
 #if defined(_MSC_VER)
 namespace {
@@ -279,31 +284,31 @@ public:
     any_value_type_lookup operator[](std::string key) const { return any_value_type_lookup(_map, key); }
 };
 
-class is_a_execution_resource {
-    is_a_execution_resource(const is_a_execution_resource &);
-    is_a_execution_resource &operator=(const is_a_execution_resource &);
+class is_a_worker {
+    is_a_worker(const is_a_worker &);
+    is_a_worker &operator=(const is_a_worker &);
 
 protected:
     type_traits                     *_type_traits;
     std::map<std::string, any_value> _map;
-    is_a_execution_resource(type_traits *traits) : _type_traits(traits) {}
+    is_a_worker(type_traits *traits) : _type_traits(traits) {}
 public:
-    virtual ~is_a_execution_resource() {};
+    virtual ~is_a_worker() {};
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
 
-    virtual void run_engine(const std::vector<task>& requests) = 0;
+    virtual void execute(const std::vector<task>& requests) = 0;
     virtual neural::engine::type engine() const = 0;
 };
 
-class execution_resource {
-    std::shared_ptr<is_a_execution_resource> _pointer;
+class worker {
+    std::shared_ptr<is_a_worker> _pointer;
 
 public:
-    execution_resource(is_a_execution_resource *raw) : _pointer(raw) {};
-    execution_resource(const execution_resource &other) : _pointer(other._pointer) {};
+    worker(is_a_worker *raw) : _pointer(raw) {};
+    worker(const worker &other) : _pointer(other._pointer) {};
 
     neural::engine::type engine() { return _pointer->engine(); }
-    void run_engine(const std::vector<task>& requests) { _pointer->run_engine(requests);}
+    void execute(const std::vector<task>& requests) { _pointer->execute(requests);}
 };
 
 // cheap to copy handle with reference counting
@@ -427,7 +432,7 @@ public:
 };
 
 // execution of sequence of primitives
-DLL_SYM void execute(std::vector<primitive>, execution_resource&);
+DLL_SYM void execute(std::vector<primitive>, worker&);
 DLL_SYM void execute(std::vector<primitive>);
 
 }
