@@ -126,7 +126,7 @@ template<typename T> struct vector {
     vector(const T arg_batch, const std::vector<T> &arg_spatial, const std::vector<T> &arg_feature)
         : batch  (raw, 0, 1)
         , feature(raw, 1, 1+arg_feature.size())
-        , spatial(raw, 1+arg_feature.size(), 1+arg_spatial.size())
+        , spatial(raw, 1+arg_feature.size(), 1+arg_feature.size()+arg_spatial.size())
     {
         raw.push_back(arg_batch);
         raw.insert(raw.end(), arg_feature.begin(), arg_feature.end());

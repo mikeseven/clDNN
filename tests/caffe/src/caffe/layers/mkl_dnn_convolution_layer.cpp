@@ -33,7 +33,16 @@ MKL_DNNConvolutionLayer<Dtype>::MKL_DNNConvolutionLayer(
         bwd_bottom_diff  (new MKL_DNNDiff<Dtype>(memory::format::bfyx_f32, memory::format::yxfb_f32)),
         bwd_filter_diff  (new MKL_DNNDiff<Dtype>(memory::format::oiyx_f32, memory::format::oiyx_f32)),
         bwd_bias_diff    (new MKL_DNNDiff<Dtype>(memory::format::x_f32,    memory::format::x_f32))
-        {}
+        {
+          if(engine_ == neural::engine::cpu) {
+            fwd_bottom_data->layout_prv = memory::format::byxf_f32;
+            bwd_bottom_diff->layout_prv = memory::format::byxf_f32;
+            fwd_top_data   ->layout_prv = memory::format::byxf_f32;
+            bwd_top_diff   ->layout_prv = memory::format::byxf_f32;
+            fwd_filter_data->layout_prv = memory::format::os_yxi_sv16_f32;
+            bwd_filter_diff->layout_prv = memory::format::os_yxi_sv16_f32;
+          }
+        }
 
 template <typename Dtype>
 void MKL_DNNConvolutionLayer<Dtype>::compute_output_shape() {
@@ -108,11 +117,11 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
                            fwd_top_data->memory_prv,
                            {0, {0, 0}, i*(oc/g)},
                            {n, {oh, ow}, oc/g},
-                           fwd_bottom_data->memory_prv,
+                           { fwd_bottom_data->memory_prv,
+                             filters_[i],
+                             biases_ [i] },
                            {0, {-pad_h_, -pad_w_}, static_cast<int>(i*(ic/g))},
                            {1, {stride_h_, stride_w_}, 1},
-                           filters_[i],
-                           biases_[i],
                            padding::zero}
                          ));
   }

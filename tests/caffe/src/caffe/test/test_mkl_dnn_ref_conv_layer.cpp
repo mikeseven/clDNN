@@ -195,7 +195,6 @@ class MKL_DNN_Ref_ConvLayerTest : public MultiDeviceTest<TypeParam> {
 // TODO: Currently only float support
 TYPED_TEST_CASE(MKL_DNN_Ref_ConvLayerTest, ::testing::Types<CPUDevice<float> >);
 
-#if 0
 TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSetupMKL_DNN) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
@@ -231,7 +230,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSetupMKL_DNN) {
   EXPECT_EQ(this->blob_top_2_->height(), 2);
   EXPECT_EQ(this->blob_top_2_->width(), 1);
 }
-#endif
+
 TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolution) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
@@ -271,7 +270,6 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolution) {
   }
 #endif
 }
-
 
 #if 0
 TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradient) {
@@ -511,7 +509,6 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, Test1x1Convolution) {
 }
 #endif
 
-#if 1
 TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolutionGroup) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
@@ -539,9 +536,9 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolutionGroup) {
     EXPECT_NEAR(top_data[i], ref_top_data[i], 1e-4);
   }
 }
-#endif
 
-#if 0
+
+
 #if 0
 TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSobelConvolution) {
   // Test separable convolution by computing the Sobel operator
@@ -832,7 +829,7 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradient3D) {
       this->blob_top_vec_);
 }
 #endif
-
+#if 0
 TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, Test1x1Gradient) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
