@@ -19,6 +19,7 @@
 #include "convolution_cpu_jit_generic.h"
 #include "memory_utils.h"
 #include "xbyak/xbyak_util.h"
+#include <cstddef>
 #include <set>
 
 namespace{
@@ -97,7 +98,7 @@ namespace{
 
                     align(4);
                     L(op_internal_loop_);
-                        for(int n=0; n<input_features_per_iteration; ++n) code_op_type_block(n);
+                        for(uint64_t n=0; n<input_features_per_iteration; ++n) code_op_type_block(n);
                         add(rbx,    batch_size*output_features_per_iteration*input_features_per_iteration);
                         add(rcx, sizeof(float)*output_features_per_iteration*input_features_per_iteration);
                         dec(rdx);
@@ -114,13 +115,13 @@ namespace{
                 jb("op_loop");
             };
 
-            auto code_prologue_load         = [&]() { for(int n=0; n<accumulators_count; ++n) vmovaps(Ymm(n),  ptr [rax+32*n] );};
-            auto code_prologue_zero         = [&]() { for(int n=0; n<accumulators_count; ++n) vxorps(Ymm(n), Ymm(n), Ymm(n));};
-            auto code_epilogue_store        = [&]() { for(int n=0; n<accumulators_count; ++n) vmovaps(ptr [rax+32*n], Ymm(n));};
+            auto code_prologue_load         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovaps(Ymm(n),  ptr [rax+32*n] );};
+            auto code_prologue_zero         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vxorps(Ymm(n), Ymm(n), Ymm(n));};
+            auto code_epilogue_store        = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovaps(ptr [rax+32*n], Ymm(n));};
             auto code_epilogue_relu_store   = [&]() {
                 vxorps(ymm15, ymm15, ymm15);
-                for(int n=0; n<accumulators_count; ++n) vmaxps(Ymm(n), Ymm(n), ymm15);
-                for(int n=0; n<accumulators_count; ++n) vmovaps(ptr [rax+32*n], Ymm(n));
+                for(uint64_t n=0; n<accumulators_count; ++n) vmaxps(Ymm(n), Ymm(n), ymm15);
+                for(uint64_t n=0; n<accumulators_count; ++n) vmovaps(ptr [rax+32*n], Ymm(n));
             };
 
             // <- code starts here
@@ -134,9 +135,9 @@ namespace{
             for(auto &reg : preserve_registers_xmm)    {auto offset = (&reg - &(preserve_registers_xmm[0])+1)*16; vmovdqu(ptr [rsp-offset], reg);}
 
             mov(r15, rcx);  // really a op_array_t *
-            mov(r9,  ptr [r15+offsetof(op_array_t,output_feature_block_stride)]);
-            mov(r10, ptr [r15+offsetof(op_array_t,filter_feature_blocks)]);
-            mov(r13, ptr [r15+offsetof(op_array_t,output_feature_blocks)]);
+            mov(r9,  ptr [r15+offsetof(op_array_t, output_feature_block_stride)]);
+            mov(r10, ptr [r15+offsetof(op_array_t, filter_feature_blocks)]);
+            mov(r13, ptr [r15+offsetof(op_array_t, output_feature_blocks)]);
 
             // "init" ops: initial zeroing of accumulators (instead of loading them)
             imul(r14, ptr [r15+offsetof(op_array_t,count)], sizeof(op_data_t));
@@ -222,8 +223,8 @@ namespace{
         op_array.resize(job_count);
 
         const auto filter_radius = (filter_size-1)/2;
-        for(auto by=0; by<blocks_in_column; ++by)
-            for(auto bx=0; bx<blocks_in_row; ++bx) {
+        for(uint64_t by=0; by<blocks_in_column; ++by)
+            for(uint64_t bx=0; bx<blocks_in_row; ++bx) {
 
                 auto output_block_stride = output_features_per_iteration*batch_size;
                 auto filter_feature_blocks = output_features_per_iteration*input_feature_maps;
@@ -232,8 +233,8 @@ namespace{
                 std::set<std::tuple<int64_t, int64_t>> exists;
                 std::map<std::tuple<int64_t,int64_t,int64_t,int64_t>, op_data_t> sorted;
                 auto at_pos = 0;
-                for(auto byi=0; byi<block_height; ++byi)
-                    for(auto bxi=0; bxi<block_width; ++bxi) {
+                for(uint64_t byi=0; byi<block_height; ++byi)
+                    for(uint64_t bxi=0; bxi<block_width; ++bxi) {
                         auto y=by*block_height+byi;
                         auto x=bx*block_width +bxi;
                         if(y>=output_height || x>=output_width) continue;
@@ -245,7 +246,7 @@ namespace{
                                 int64_t kxr=kx-filter_radius;
                                 int64_t sx=x*stride_width+kxr;
                                 if(sx<0 || static_cast<uint64_t>(sx)>=input_width) continue;
-                                auto at_tuple = std::make_tuple(x,y);
+                                //auto at_tuple = std::make_tuple(x,y); todo why unused?
 
                                 auto output_block = output_feature_blocks*(x + output_width*y);
                                 auto filter_block = output_feature_blocks*(kx + filter_size*ky);
@@ -313,14 +314,14 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
     auto output_ptr  = reinterpret_cast<float*>(&arg.output_memory(0).pointer);
     auto input_ptr   = reinterpret_cast<float*>(&arg.input_memory(0).pointer);
     auto weights_ptr = reinterpret_cast<float*>(&arg.input_memory(1).pointer);
-    auto bias_ptr    = reinterpret_cast<float*>(&arg.input_memory(2).pointer); //todo add support for biases
+    //auto bias_ptr    = reinterpret_cast<float*>(&arg.input_memory(2).pointer); //todo add support for biases
 
     auto& stride      = outer.argument.stride;
     auto& output_size = outer.argument.output_size;
     auto& input_arg   = outer.input_memory(0).argument;
     auto& weights_arg = outer.input_memory(1).argument; //convolution filter
 
-    const int b_pos = 0;
+    //const int b_pos = 0;
     const int f_pos = 1;
     const int y_pos = 2;
     const int x_pos = 3;
@@ -372,7 +373,7 @@ struct attach
     attach()
     {
         //auto key_fw = std::make_tuple(engine::cpu, memory::format::byxf_f32, memory::format::byxf_f32);
-        auto val_fw = convolution_cpu_jit_generic::create;
+        //auto val_fw = convolution_cpu_jit_generic::create;
 
         //conv_fw_implementation_map.insert( {key_fw, val_fw} );
     }
