@@ -46,7 +46,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
 
     set_values(input_prim, {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f});
 
-    execute({pool_prim});
+    execute({pool_prim}).sync();
 
     auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(2.0f, get_value<float>(output_memory, 0));
@@ -75,7 +75,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
 
     set_values(input_prim, {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f});
 
-    execute({pool_prim});
+    execute({pool_prim}).sync();
 
     auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(2.0f, get_value<float>(output_memory, 0));
@@ -108,7 +108,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
 
     set_values(input_prim, {-0.25f, 1.00f, 0.50f, 0.25f, 2.00f, 1.50f, -0.50f, -0.75f, 0.00f, -1.00f, 0.50f, 0.25f, 0.50f, -2.00f, -1.50f, -2.50f});
 
-    execute({pool_prim});
+    execute({pool_prim}).sync();
 
     auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(2.0f, get_value<float>(output_memory, 0));
@@ -151,7 +151,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
 
     set_values(input_prim, {-0.5f, 0.5f, -1.5f, 0.0f, 0.5f, 0.0f, -0.5f, 0.5f, 0.0f, -0.5f, 0.0f, -0.5f, 1.0f, -2.0f, 0.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -2.0f, 1.0f, 1.5f, 0.0f, -1.0f, -0.5f, -2.0f, 0.5f, -0.5f, -1.0f, 1.0f, -0.5f, -0.5f, 1.5f, -0.5f, 0.0f});
 
-    execute({pool_prim});
+    execute({pool_prim}).sync();
 
     auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ( 1.0f, get_value<float>(output_memory,  0)); EXPECT_EQ( 0.0f, get_value<float>(output_memory,  2));
@@ -188,7 +188,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz4x4_wstr1x1_i2x2x1x1_inoffs1) {
 
     set_values(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
 
-    execute({pool_prim});
+    execute({pool_prim}).sync();
 
     auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(1.0f, get_value<float>(output_memory, 0));
@@ -218,7 +218,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i2x2x1x1_inoffs1) {
 
     set_values(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
 
-    execute({pool_prim});
+    execute({pool_prim}).sync();
 
     auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(1.0f, get_value<float>(output_memory, 0));
@@ -251,7 +251,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_inoffs1) {
 
     set_values(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
 
-    execute({pool_prim});
+    execute({pool_prim}).sync();
 
     auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(0.0f, get_value<float>(output_memory, 0));
@@ -296,7 +296,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_inoffs1) {
 
     set_values(input_prim, {-0.5f, 0.5f, -1.5f, 0.5f, 0.5f, -0.5f, -0.5f, -0.5f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.5f, -1.0f});
 
-    execute({pool_prim});
+    execute({pool_prim}).sync();
 
     auto& output_memory = output_prim.as<const memory&>();
     EXPECT_EQ(0.0f, get_value<float>(output_memory,  0)); EXPECT_EQ(0.0f, get_value<float>(output_memory,  2));
@@ -391,7 +391,7 @@ TEST(pooling_forward, advanced_max_yxfb) {
                         break;
                     }
 
-                execute({pool_prim});
+                execute({pool_prim}).sync();
 
                 // Check it!
                 for(uint32_t output_index = 0; output_index < output_memory.count(); ++output_index)

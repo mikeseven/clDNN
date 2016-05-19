@@ -834,7 +834,7 @@ struct worker_cpu : is_a_worker {
 
     DLL_SYM static worker create(arguments);
 
-    void execute(const std::vector<task>& requests);
+    void execute(const std::vector<task>& requests) const;
     neural::engine::type engine() const {return neural::engine::cpu;}
 
 private:
@@ -843,4 +843,4 @@ private:
 
 
 
-}
+} // namespace neural
