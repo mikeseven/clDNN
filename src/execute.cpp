@@ -15,12 +15,13 @@
 */
 
 #include "neural.h"
+#include "thread_pool.h"
 
 namespace neural {
 
-void execute(std::vector<primitive> list, execution_resource& execution_resource) {
+void execute(std::vector<primitive> list, worker& worker) {
     for(auto &item : list)
-        execution_resource.run_engine(item.work());
+        worker.execute(item.work());
 }
 
 void execute(std::vector<primitive> list) 

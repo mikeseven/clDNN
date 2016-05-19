@@ -22,6 +22,7 @@
 #include "xbyak/xbyak_util.h"
 
 #include <thread>
+#include <mutex>
 
 const int C_simd_width = sizeof(__m256)/sizeof(float);
 const int C_slice_size = C_simd_width*2;
