@@ -21,8 +21,8 @@
 namespace neural {
 
 async_result execute(std::vector<primitive> list, worker arg_worker) {
-    std::shared_ptr<uint32_t> primitive_count(new uint32_t(static_cast<uint32_t>(list.size())));
-    auto thread_function = [](std::vector<primitive> list, worker arg_worker, std::shared_ptr<uint32_t> primitive_count) {
+    std::shared_ptr<volatile uint32_t> primitive_count(new uint32_t(static_cast<uint32_t>(list.size())));
+    auto thread_function = [](std::vector<primitive> list, worker arg_worker, std::shared_ptr<volatile uint32_t> primitive_count) {
         for(auto &item : list) {
             arg_worker.execute(item.work());
             --*primitive_count;
