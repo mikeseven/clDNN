@@ -98,4 +98,3 @@ include_directories(${CMAKE_SOURCE_DIR}/xbyak)
 add_subdirectory(src)
 add_subdirectory(examples)
 add_subdirectory(tests)
-
