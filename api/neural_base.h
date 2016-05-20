@@ -433,8 +433,8 @@ public:
 
 // asynchronous result
 class async_result {
-    std::shared_ptr<uint32_t> _tasks_left;
-    async_result(std::shared_ptr<uint32_t> arg) : _tasks_left(arg) {}
+    std::shared_ptr<volatile uint32_t> _tasks_left;
+    async_result(std::shared_ptr<volatile uint32_t> arg) : _tasks_left(arg) {}
 
     // execution of sequence of primitives
     friend DLL_SYM async_result execute(std::vector<primitive>, worker);
