@@ -31,7 +31,7 @@ void example_003() {
     auto pool   = pooling::create({engine::cpu, pooling::mode::max, memory::format::yxfb_f32, act, 3, 2, padding::zero});
     auto lrn    = normalization::response::create({engine::cpu, output, pool, 5, padding::zero, 1.0f, 0.00002f, 0.75f });
 
-    execute({input(data_buffer), output(data_buffer), conv, act, pool, lrn});
+    execute({input(data_buffer), output(data_buffer), conv, act, pool, lrn}).sync();
 }
 
 #endif

@@ -254,7 +254,7 @@ void MKL_DNNPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
     execute({fwd_bottom_data_->memory_prv(bottom_data),
              fwd_top_data_->memory_prv(top_data),
-             poolingFwd_});
+             poolingFwd_}).sync();
     }
     break;
   case PoolingParameter_PoolMethod_AVE:
@@ -271,7 +271,7 @@ void MKL_DNNPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
     execute({fwd_bottom_data_->memory_prv(bottom_data),
              fwd_top_data_->memory_prv(top_data),
-             poolingFwd_});
+             poolingFwd_}).sync();
     }
     break;
   case PoolingParameter_PoolMethod_STOCHASTIC:

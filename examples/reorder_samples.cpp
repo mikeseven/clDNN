@@ -51,7 +51,7 @@ void example_009() {
 
     try
     {
-        execute({input(in_buffer), reorder});
+        execute({input(in_buffer), reorder}).sync();
     }
     catch (const std::exception& ex)
     {
