@@ -16,20 +16,20 @@
 
 #include "neural.h"
 #include "thread_pool.h"
-#include <future>
+#include <thread>
 
 namespace neural {
 
 async_result execute(std::vector<primitive> list, worker arg_worker) {
     std::shared_ptr<uint32_t> primitive_count(new uint32_t(static_cast<uint32_t>(list.size())));
-    std::async(std::launch::async, 
-        [list, primitive_count, arg_worker]{ 
-            for(auto &item : list) {
-                arg_worker.execute(item.work());
-                --*primitive_count;
-            }
+    auto thread_function = [](std::vector<primitive> list, worker arg_worker, std::shared_ptr<uint32_t> primitive_count) {
+        for(auto &item : list) {
+            arg_worker.execute(item.work());
+            --*primitive_count;
         }
-    );
+    };
+
+    std::thread(thread_function, list, arg_worker, primitive_count).detach();
     return primitive_count;
 }
 
