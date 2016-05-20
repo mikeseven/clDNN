@@ -222,7 +222,17 @@ template<typename T_type> __attribute__((noinline)) type_traits *type_id() {
     return ti;
 }
 
-class engine  { engine();  public: enum type { reference, cpu, any=static_cast<uint32_t>(-1) }; };
+class engine  { engine();  public: enum type { 
+    // engines
+      reference                     // naive & easy to debug implementation for validation
+    , cpu                           // optimized CPU implementation
+    , any=static_cast<uint32_t>(-1) // 'any' engine for querries
+
+    // attributies
+    , lazy = 0x80000000             // lazy evaluation
+}; };
+inline engine::type operator|(engine::type a, engine::type b) { return static_cast<engine::type>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b)); };
+
 class padding { padding(); public: enum type { zero }; };
 
 // value in any format
@@ -386,7 +396,6 @@ protected:
     is_a_primitive(type_traits *traits) : _type_traits(traits) {}
 public:
     virtual ~is_a_primitive() {};
-    virtual primitive clone() const = 0;
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
     virtual const std::vector<primitive_at>  &input()  const { throw std::runtime_error(std::string("no inputs in ")+_type_traits->name); };
     virtual const std::vector<primitive>     &output() const { throw std::runtime_error(std::string("no outputs in ")+_type_traits->name); };
