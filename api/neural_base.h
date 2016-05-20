@@ -443,7 +443,7 @@ public:
     uint32_t tasks_left() { return *_tasks_left; };
     void sync() { while(tasks_left()); }
 };
-friend DLL_SYM async_result execute(std::vector<primitive>, worker);
-friend DLL_SYM async_result execute(std::vector<primitive>);
+DLL_SYM async_result execute(std::vector<primitive>, worker);
+DLL_SYM async_result execute(std::vector<primitive>);
 
 }
