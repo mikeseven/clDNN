@@ -82,7 +82,20 @@ size_t index<neural::memory::format::bx_f32>(std::vector<uint32_t> size, std::ve
     return pos[2] + size[2]*pos[0];
 };
 
-// NOT TESTED!
+template<>
+size_t index<neural::memory::format::byxf_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
+    assert(
+        [&]() -> bool {
+        for (size_t i = 0; i < pos.size(); ++i)
+            if (size[i] <= pos[i]) return false;
+
+        return true;
+    }() == true);
+    assert(pos.size() == size.size());
+
+    return pos[1] + size[1] * (pos[3] + size[3] * (pos[2] + size[2] * pos[0]));
+};
+
 template<>
 size_t index<neural::memory::format::bxyf_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
     assert(
@@ -95,19 +108,6 @@ size_t index<neural::memory::format::bxyf_f32>(std::vector<uint32_t> size, std::
     assert(pos.size() == size.size());
 
     return pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + size[3] * pos[0]));
-};
-template<>
-size_t index<neural::memory::format::bfxy_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
-    assert(
-        [&]() -> bool {
-        for (size_t i = 0; i < pos.size(); ++i)
-            if (size[i] <= pos[i]) return false;
-
-        return true;
-    }() == true);
-    assert(pos.size() == size.size());
-
-    return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));
 };
 
 template<>
@@ -123,6 +123,40 @@ size_t index<neural::memory::format::oiyx_f32>(std::vector<uint32_t> size, std::
     assert(1 == size[0]); // batch
 
     return pos[4] + size[4] * (pos[3] + size[3] * (pos[2] + size[2] * pos[1]));
+};
+
+template<>
+size_t index<neural::memory::format::os_yxi_sv16_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+    assert(
+        [&]() -> bool {
+        for (size_t i = 0; i < pos.size(); ++i)
+            if (size[i] <= pos[i]) return false;
+
+        return true;
+    }() == true);
+    assert(pos.size() == size.size());
+    assert(1 == size[0]); // batch
+
+    uint32_t slice_id = pos[1] / 16;
+    uint32_t id_in_slice = pos[1] % 16;
+
+    //return id_in_slice + pos[2] * 16 + pos[4] * 16 * size[2] + pos[3] * 16 * size[2] * size[4] + slice_id * 16 * size[2] * size[4] * size[3];
+    return id_in_slice + 16 * (pos[2] + size[2] * (pos[4] + size[4] * (pos[3] + slice_id * size[3])));
+};
+
+// NOT TESTED!
+template<>
+size_t index<neural::memory::format::bfxy_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
+    assert(
+        [&]() -> bool {
+        for (size_t i = 0; i < pos.size(); ++i)
+            if (size[i] <= pos[i]) return false;
+
+        return true;
+    }() == true);
+    assert(pos.size() == size.size());
+
+    return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));
 };
 
 template<>
@@ -155,11 +189,17 @@ fptr choose_calculate_idx(neural::memory::format::type arg){
         case neural::memory::format::type::bxyf_f32:
             ptr = index<neural::memory::format::type::bxyf_f32>;
             break;
+        case neural::memory::format::type::byxf_f32:
+            ptr = index<neural::memory::format::type::byxf_f32>;
+            break;
         case neural::memory::format::type::bfxy_f32:
             ptr = index<neural::memory::format::type::bfxy_f32>;
             break;
         case neural::memory::format::type::oiyx_f32:
             ptr = index<neural::memory::format::type::oiyx_f32>;
+            break;
+        case neural::memory::format::type::os_yxi_sv16_f32:
+            ptr = index<neural::memory::format::type::os_yxi_sv16_f32>;
             break;
         case neural::memory::format::type::fyxb_f32:
            ptr = index<neural::memory::format::type::fyxb_f32>;
