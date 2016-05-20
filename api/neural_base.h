@@ -386,7 +386,6 @@ protected:
     is_a_primitive(type_traits *traits) : _type_traits(traits) {}
 public:
     virtual ~is_a_primitive() {};
-    virtual primitive clone() const = 0;
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
     virtual const std::vector<primitive_at>  &input()  const { throw std::runtime_error(std::string("no inputs in ")+_type_traits->name); };
     virtual const std::vector<primitive>     &output() const { throw std::runtime_error(std::string("no outputs in ")+_type_traits->name); };
