@@ -53,7 +53,7 @@ void MKL_DNNReLULayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     top_data = top[0]->mutable_cpu_data();
   }
 
-  execute({bottom_data_(bottom_data), top_data_(top_data), reluFwd_});
+  execute({bottom_data_(bottom_data), top_data_(top_data), reluFwd_}).sync();
 }
 
 template <typename Dtype>
@@ -76,7 +76,7 @@ void MKL_DNNReLULayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     }
 
     execute({ top_diff_(top_diff), bottom_data_(bottom_data),
-              bottom_diff_(bottom_diff), reluBwd_});
+              bottom_diff_(bottom_diff), reluBwd_}).sync();
   }
 }
 
