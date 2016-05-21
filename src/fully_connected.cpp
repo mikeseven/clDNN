@@ -16,6 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
+#include "fully_connected.h"
 #include "multidimensional_counter.h"
 #include "memory_utils.h"
 
@@ -92,11 +93,11 @@ struct fully_connected_reference : is_an_implementation {
 //                                    engine                output                        input
 using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
-// map of available implementations
-static std::map<implementation_key, std::function<is_an_implementation *(fully_connected &)>> implementation_map = {
-    { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create },
-    { std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create }
-};
+//// map of available implementations
+//static std::map<implementation_key, std::function<is_an_implementation *(fully_connected &)>> implementation_map = {
+//    { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create },
+//    { std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create }
+//};
 
 fully_connected::arguments::arguments( neural::engine::type eng,
                                        primitive            out,
@@ -126,8 +127,8 @@ primitive fully_connected::create(fully_connected::arguments arg) {
     if(0 == (arg.engine & engine::lazy)) {
         // lookup in database; throw if not found
         auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = implementation_map.find(key);
-        if (it == std::end(implementation_map)) throw std::runtime_error("not yet implemented");
+        auto it = fully_con_implementation_map::instance().find(key);
+        if (it == std::end(fully_con_implementation_map::instance())) throw std::runtime_error("not yet implemented");
 
         // create implementation & attach it to result
         auto implementation = it->second(*result);
@@ -137,6 +138,25 @@ primitive fully_connected::create(fully_connected::arguments arg) {
 
     // release RAII wrapper, return naked pointer
     return result.release();
+}
+
+namespace {
+	struct attach {
+		attach() {
+			fully_con_implementation_map::instance().insert({ std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create });
+			fully_con_implementation_map::instance().insert({ std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create });
+}
+		~attach() {}
+};
+
+
+#ifdef __GNUC__
+__attribute__((visibility("default"))) //todo meybe dll_sym?
+#elif _MSC_VER
+#   pragma section(".nn_init$m", read, write)
+#endif
+attach attach_impl;
+
 }
 
 }
