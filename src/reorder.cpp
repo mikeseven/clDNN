@@ -37,6 +37,8 @@ namespace neural {
                 case memory::format::  xb_f32: return {'x','b'};
                 case memory::format::yxfb_f32: return {'y','x','f','b'};
                 case memory::format::byxf_f32: return {'b','y','x','f'};
+                case memory::format::bfyx_f32: return {'b','f','y','x'};
+                case memory::format::fyxb_f32: return {'f','y','x','b'};
                 default: throw std::runtime_error("unknown memory::format");
                 };
             };
@@ -136,9 +138,25 @@ namespace neural {
             { std::make_tuple(engine::reference, memory::format::os_yxi_sv16_f32, memory::format::oiyx_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::x_f32, memory::format::x_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::fyxb_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::byxf_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::bfyx_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::yxfb_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::byxf_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::bfyx_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::yxfb_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::fyxb_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::bfyx_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::yxfb_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::fyxb_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::byxf_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::yxfb_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::byxf_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::bfyx_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::bx_f32, memory::format::xb_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::bx_f32), reorder_reference::create },
         };
