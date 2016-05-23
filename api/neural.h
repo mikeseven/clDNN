@@ -52,6 +52,7 @@ struct memory : is_a_primitive {
         yxfb_f32,   // 3D+batch, float32
         byxf_f32,   // for convolution_cpu_jit_batch1
         bfyx_f32,   // used in Caffe
+        fyxb_f32,   // used in Caffe
         oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
         os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
         any=static_cast<uint32_t>(-1)
@@ -65,6 +66,7 @@ struct memory : is_a_primitive {
         case format::byxf_f32:
         case format::bfyx_f32:
         case format::oiyx_f32: 
+        case format::fyxb_f32:
         case format::os_yxi_sv16_f32: return {4, type_id<float>()};
         default: throw std::runtime_error("unknown memory::format");
         }

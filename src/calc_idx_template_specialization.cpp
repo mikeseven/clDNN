@@ -72,13 +72,17 @@ template<> size_t index<neural::memory::format::bx_f32>(std::vector<uint32_t> si
     return pos[2] + size[2]*pos[0];
 };
 
-template<>
-size_t index<neural::memory::format::bfyx_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
-    assert(is_in_range(size, pos));
 
-  return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));
+template<> size_t index<neural::memory::format::bfyx_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
+    assert(is_in_range(size, pos));
+    return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));
 };
 
+
+template<> size_t index<neural::memory::format::fyxb_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+    assert(is_in_range(size, pos));
+    return pos[0] + size[0] * (pos[2] + size[2]*(pos[3] + size[3] * pos[1]));
+}
 
 
 fptr choose_calculate_idx(neural::memory::format::type arg){
@@ -105,6 +109,9 @@ fptr choose_calculate_idx(neural::memory::format::type arg){
             break;
         case neural::memory::format::type::bfyx_f32:
            ptr = index<neural::memory::format::type::bfyx_f32>;
+           break;
+        case neural::memory::format::type::fyxb_f32:
+           ptr = index<neural::memory::format::type::fyxb_f32>;
            break;
 
         default:
