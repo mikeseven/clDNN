@@ -59,7 +59,7 @@ TEST(local_response_normalization, lrn_test) {
 
     // ------------------------------------------------------------------------------------------------
     // test run
-    execute({ lrn });
+    execute({ lrn }).sync();
     
     // analysis of results
     float* buff = nullptr;

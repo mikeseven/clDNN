@@ -125,15 +125,18 @@ primitive softmax::create(softmax::arguments arg) {
     // wrap softmax into RAII wrapper
     std::unique_ptr<softmax> result(new softmax(arg));
 
-    // lookup in database; throw if not found
-    auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto it = forward_implementation_map.find(key);
-    if(it==std::end(forward_implementation_map)) throw std::runtime_error("not yet implemented");
+    // create implementation for non-lazy evaluation
+    if(0 == (arg.engine & engine::lazy)) {
+        // lookup in database; throw if not found
+        auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+        auto it = forward_implementation_map.find(key);
+        if(it==std::end(forward_implementation_map)) throw std::runtime_error("not yet implemented");
 
-    // create implementation & attach it to result
-    auto implementation = it->second(*result);
-    result->_private.reset(implementation);
-    result->_work = implementation->work();
+        // create implementation & attach it to result
+        auto implementation = it->second(*result);
+        result->_private.reset(implementation);
+        result->_work = implementation->work();
+    }
 
     // release RAII wrapper, return naked pointer
     return result.release();

@@ -56,6 +56,6 @@ void example_006() {
     primitive conv  = convolution::create(best->arguments);
 
     // execution
-    execute({input(in_ptr), output(out_ptr), conv});
+    execute({input(in_ptr), output(out_ptr), conv}).sync();
 }
 #endif

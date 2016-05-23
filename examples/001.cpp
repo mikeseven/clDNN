@@ -29,6 +29,6 @@ void example_001() {
     auto conv   = convolution::create({engine::cpu, memory::format::yxfb_f32, input, weight, bias, padding::zero});
     auto act    = relu::create({engine::cpu, output, conv});
 
-    execute({input(data_buffer), output(data_buffer), conv, act});
+    execute({input(data_buffer), output(data_buffer), conv, act}).sync();
 }
 #endif
