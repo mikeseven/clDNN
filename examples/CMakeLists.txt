@@ -20,11 +20,6 @@ elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX")
 endif()
 
-if(UNIX) # security definitions for executable
-  add_definitions(-fPIE)
-  add_definitions(-pie)
-endif()
-
 # Sources for test files
 set (MAIN_SRC   ${CMAKE_SOURCE_DIR}/examples/main.cpp)
 
