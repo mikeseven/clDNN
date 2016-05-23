@@ -17,6 +17,11 @@ add_subdirectory (gtest)
 set (APP_NAME "tests")
 # Sources for test files
 
+if(UNIX) # security definitions for executable
+  add_definitions(-fPIE)
+  add_definitions(-pie)
+endif()
+
 file (GLOB TEST_CASES_SRC
       test_cases/*.cpp)
       
