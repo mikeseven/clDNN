@@ -72,6 +72,13 @@ template<> size_t index<neural::memory::format::bx_f32>(std::vector<uint32_t> si
     return pos[2] + size[2]*pos[0];
 };
 
+template<>
+size_t index<neural::memory::format::bfyx_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
+    assert(is_in_range(size, pos));
+
+  return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));
+};
+
 
 
 fptr choose_calculate_idx(neural::memory::format::type arg){
@@ -96,6 +103,9 @@ fptr choose_calculate_idx(neural::memory::format::type arg){
         case neural::memory::format::type::os_yxi_sv16_f32:
             ptr = index<neural::memory::format::type::os_yxi_sv16_f32>;
             break;
+        case neural::memory::format::type::bfyx_f32:
+           ptr = index<neural::memory::format::type::bfyx_f32>;
+           break;
 
         default:
             throw std::runtime_error("choose_calculate_idx has no case for memory::format " + std::to_string(arg));
