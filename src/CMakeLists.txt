@@ -30,12 +30,16 @@ file (GLOB LIBRARY_SRC
        ${CMAKE_SOURCE_DIR}/src/*.h
        ${CMAKE_SOURCE_DIR}/src/*.cpp
       )
+file (GLOB LIBRARY_SRC_GPU
+       ${CMAKE_SOURCE_DIR}/src/gpu/*.cpp
+      )
 
 # Create named folders for the sources within the .vcproj
 # Empty name lists them directly under the .vcproj
 
 source_group("api" FILES ${API_HEADERS})
 source_group("src" FILES ${LIBRARY_SRC})
+source_group("src\\gpu" FILES ${LIBRARY_SRC_GPU})
 
 # Properties->C/C++->General->Additional Include Directories
 include_directories (${CMAKE_SOURCE_DIR}
@@ -45,6 +49,7 @@ include_directories (${CMAKE_SOURCE_DIR}
 # Create library file from sources.
 add_library(${TARGET_NAME} SHARED
             ${LIBRARY_SRC}
+            ${LIBRARY_SRC_GPU}
             ${API_HEADERS})
 
 if(UNIX)

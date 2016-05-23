@@ -226,6 +226,7 @@ class engine  { engine();  public: enum type {
     // engines
       reference                     // naive & easy to debug implementation for validation
     , cpu                           // optimized CPU implementation
+    , gpu                           // GPU implementation
     , any=static_cast<uint32_t>(-1) // 'any' engine for querries
 
     // attributies

@@ -161,3 +161,47 @@ TEST(fully_connected, x_f32) {
     EXPECT_EQ( 0.75f, get_value<float>(output_memory,2));
     EXPECT_EQ( 7.0f,  get_value<float>(output_memory,3));
 }
+
+TEST(fully_connected_gpu, x_f32) {
+    //  Input  : 3x1
+    //  Output : 4x1
+    //  Weights: 4x3
+    //
+    //  Input:
+    //  -0.5     2    0.5
+    //
+    //  Weights:
+    //   1.5     1    0.5
+    //  -1       0    0.5
+    //   0.5    -0.5 -2
+    //  -0.5     1    1.5
+    //
+    //  Biases:
+    //   1.0, 2.0, 3.0, 4.0
+    //  Output:
+    //   2.5    2.75    0.75   7
+
+    const uint32_t output_x = 4,                 // size of whole output buffer
+        input_x = 3,                 // size of whole input buffer
+        weight_x = 4, weight_y = 3;  // size of whole weights buffer
+
+    auto input_prim = memory::create({ engine::gpu, memory::format::x_f32,{ 1       ,{ { input_x } }, 1 } , true });
+    auto output_prim = memory::create({ engine::gpu, memory::format::x_f32,{ 1       ,{ { output_x } }, 1 } , true });
+    auto weights_prim = memory::create({ engine::gpu, memory::format::xb_f32,{ weight_y,{ { weight_x } }, 1 } , true });
+    auto bias_prim = memory::create({ engine::gpu, memory::format::x_f32,{ 1,{ { output_x } }, 1 } , true });
+
+    auto full_con_prim = fully_connected::create({ engine::gpu, output_prim, input_prim, weights_prim, bias_prim });
+
+    auto& output_memory = output_prim.as<const memory&>();
+
+    set_values(input_prim, { -0.5f, 2.0f, 0.5f });
+    set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
+    set_values(bias_prim, { 1.0f, 2.0f, 3.0f, 4.0f });
+
+    execute({ full_con_prim }).sync();
+
+    EXPECT_EQ(2.5f, get_value<float>(output_memory, 0));
+    EXPECT_EQ(2.75f, get_value<float>(output_memory, 1));
+    EXPECT_EQ(0.75f, get_value<float>(output_memory, 2));
+    EXPECT_EQ(7.0f, get_value<float>(output_memory, 3));
+}
