@@ -116,12 +116,12 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
       convolution::create({engine_,
                            fwd_top_data->memory_prv,
                            {0, {0, 0}, i*(oc/g)},
-                           {n, {oh, ow}, oc/g},
+                           {n, {ow, oh}, oc/g},
                            { fwd_bottom_data->memory_prv,
                              filters_[i],
                              biases_ [i] },
-                           {0, {-pad_h_, -pad_w_}, static_cast<int>(i*(ic/g))},
-                           {1, {stride_h_, stride_w_}, 1},
+                           {0, {-pad_w_, -pad_h_}, static_cast<int>(i*(ic/g))},
+                           {1, {stride_w_, stride_h_}, 1},
                            padding::zero}
                          ));
   }
@@ -158,7 +158,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
                                                fwd_filter_data->memory_prv,
                                                fwd_bias_data->memory_prv},
                                           //  {in_off_y, in_off_x, in_off_z, in_off_b},
-                                               {1, {stride_h_, stride_w_}, 1},
+                                               {1, {stride_w_, stride_h_}, 1},
                                               padding::zero
                                             });
 #endif
