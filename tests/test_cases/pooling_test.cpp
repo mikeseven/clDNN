@@ -72,8 +72,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad_cpu) {
     auto output_prim = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 1, 1 }, 1 }, true });
     auto pool_prim   = pooling::create({ engine::reference, pooling::mode::max, output_prim, input_prim,{ 1,{ 1, 1 }, 1 },{ 1,{ 8, 8 }, 1 }, padding::type::zero });
 
-    auto input_prim_cpu  = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 8, 8 }, 1 }, true });
-    auto output_prim_cpu = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 1, 1 }, 1 }, true });
+    auto input_prim_cpu  = memory::create({ engine::reference, memory::format::bs_yxf_bv24_f32,{ 24,{ 8, 8 }, 1 }, true });
+    auto output_prim_cpu = memory::create({ engine::reference, memory::format::bs_yxf_bv24_f32,{ 24,{ 1, 1 }, 1 }, true });
     auto pool_prim_cpu   = pooling::create({ engine::cpu, pooling::mode::max, output_prim_cpu, input_prim_cpu,{ 1,{ 1, 1 }, 1 },{ 1,{ 8, 8 }, 1 }, padding::type::zero });
 
     fill<float>(input_prim.as <const memory&>(), 0);
@@ -81,8 +81,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad_cpu) {
     set_values(input_prim,     { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f, -2.0f });
     set_values(input_prim_cpu, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f, -2.0f });
 
-    execute({ pool_prim });
-    execute({ pool_prim_cpu });
+    execute({ pool_prim }).sync();
+    execute({ pool_prim_cpu }).sync();
 
     auto& output_memory     = output_prim.as<const memory&>();
     auto& output_memory_cpu = output_prim_cpu.as<const memory&>();
@@ -142,32 +142,48 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad_cpu) {
     //  [ 2.0,  1.5]
     //  [ 2.0,  1.5]
 
-    auto input_prim  = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 3, 3 }, 1 }, true });
-    auto output_prim = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 2, 2 }, 1 }, true });
-    auto pool_prim   = pooling::create({ engine::reference, pooling::mode::max, output_prim, input_prim,{ 1,{ 1, 1 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
+    // This implementation will use two jobs, each for one slice, so make sure it will test MT path, no matter what underlying HW we have.
+    auto engine_resource = worker_cpu::create({ 2 });
 
-    auto input_prim_cpu  = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 3, 3 }, 1 }, true });
-    auto output_prim_cpu = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 2, 2 }, 1 }, true });
-    auto pool_prim_cpu   = pooling::create({ engine::cpu, pooling::mode::max, output_prim_cpu, input_prim_cpu,{ 1,{ 1, 1 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
+    // Reference data.
+    auto input_prim  = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 24, 24 }, 8 }, true });
+    auto output_prim = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 23, 23 }, 8 }, true }); auto& output_memory = output_prim.as<const memory&>();
 
+    // Optimized data.
+    auto input_prim_cpu  = memory::create({ engine::reference, memory::format::bs_yxf_bv24_f32,{ 24,{ 24, 24 }, 8 }, true });
+    auto output_prim_cpu = memory::create({ engine::reference, memory::format::bs_yxf_bv24_f32,{ 24,{ 23, 23 }, 8 }, true });
+
+    // Temporary data for optimized results in reference space.
+    auto temp_output = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 23, 23 }, 8 }, true }); auto& temp_output_memory = temp_output.as<const memory&>();
+
+    // Reordering primitives.
+    auto reorder_input_to_ref      = reorder::create({ engine::reference, input_prim_cpu, input_prim });
+    auto reorder_output_to_tmp_ref = reorder::create({ engine::reference, output_prim_cpu, temp_output });
+
+    // Main pooling.
+    auto pool_prim     = pooling::create({ engine::reference, pooling::mode::max, output_prim, input_prim,  { 1,{ 1, 1 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
+    auto pool_prim_cpu = pooling::create({ engine::cpu, pooling::mode::max, output_prim_cpu, input_prim_cpu,{ 1,{ 1, 1 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
+
+    // Initialize data.
     fill<float>(input_prim.as <const memory&>(), 0);
     fill<float>(input_prim_cpu.as <const memory&>(), 0);
     set_values(input_prim, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f });
     set_values(input_prim_cpu, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f });
 
-    execute({ pool_prim });
-    execute({ pool_prim_cpu });
+    execute(
+    {
+        pool_prim_cpu,
+        reorder_output_to_tmp_ref,
+        reorder_input_to_ref,
+        pool_prim,
+    }, engine_resource).sync();
 
-    auto& output_memory     = output_prim.as<const memory&>();
-    auto& output_memory_cpu = output_prim_cpu.as<const memory&>();
-
-    auto output_size = output_prim.as<const memory&>().count();
-    for (int i = 0; i <output_size; i++) {
-        EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory, i), get_value<float>(output_memory_cpu, i))) << " at index " << i << "\n";
+    for (int i = 0; i < output_memory.count(); i++) {
+        EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory, i), get_value<float>(temp_output_memory, i))) << " at index " << i << "\n";
+        //std::cout << i << " " << get_value<float>(output_memory, i) << " " << get_value<float>(temp_output_memory, i) <<"\n";
     }
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
 //  Brief test description.
 //
@@ -200,7 +216,52 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
     EXPECT_EQ(0.5f, get_value<float>(output_memory, 2));
     EXPECT_EQ(0.5f, get_value<float>(output_memory, 3));
 }
+/*
+TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad_cpu) {
+    //  Brief test description.
+    //
+    //  Pool window: 2x2
+    //  Pool stride: 2x2
+    //  Pool mode: max
+    //  Padding: none
+    //
+    //  Input data:
+    //  [-0.25,  1.00,  0.50,  0.25]
+    //  [ 2.00,  1.50, -0.50, -0.75]
+    //  [ 0.00, -1.00,  0.50,  0.25]
+    //  [ 0.50, -2.00, -1.50, -2.50]
+    //
+    //  Expected output:
+    //  [ 2.0,  0.5]
+    //  [ 0.5,  0.5]
 
+    auto input_prim  = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 4, 4 }, 1 }, true });
+    auto output_prim = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 2, 2 }, 1 }, true });
+    auto pool_prim   = pooling::create({ engine::reference, pooling::mode::max, output_prim, input_prim,{ 1,{ 2, 2 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
+
+    auto input_prim_cpu  = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 4, 4 }, 1 }, true });
+    auto output_prim_cpu = memory::create({ engine::reference, memory::format::yxfb_f32,{ 24,{ 2, 2 }, 1 }, true });
+    auto pool_prim_cpu   = pooling::create({ engine::cpu, pooling::mode::max, output_prim_cpu, input_prim_cpu,{ 1,{ 2, 2 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
+
+    fill<float>(input_prim.as <const memory&>(), 0);
+    fill<float>(input_prim_cpu.as <const memory&>(), 0);
+    set_values(input_prim, { -0.25f, 1.00f, 0.50f, 0.25f, 2.00f, 1.50f, -0.50f, -0.75f, 0.00f, -1.00f, 0.50f, 0.25f, 0.50f, -2.00f, -1.50f, -2.50f });
+    set_values(input_prim_cpu, { -0.25f, 1.00f, 0.50f, 0.25f, 2.00f, 1.50f, -0.50f, -0.75f, 0.00f, -1.00f, 0.50f, 0.25f, 0.50f, -2.00f, -1.50f, -2.50f });
+
+    execute({ pool_prim });
+    execute({ pool_prim_cpu });
+
+    auto& output_memory = output_prim.as<const memory&>();
+    auto& output_memory_cpu = output_prim_cpu.as<const memory&>();
+
+    auto output_size = output_prim.as<const memory&>().count();
+    for (int i = 0; i < output_size; i++) {
+        EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory, i), get_value<float>(output_memory_cpu, i))) << " at index " << i << "\n";
+    }
+}*/
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
 //  Brief test description.
 //

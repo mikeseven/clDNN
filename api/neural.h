@@ -60,6 +60,7 @@ struct memory : is_a_primitive {
         bfxy_f32,
         oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
         os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
+        bs_yxf_bv24_f32,
         scalar_f64, // single scalar, float64
         x_f64,
         yxfb_f64,   // 3D+batch, float64
@@ -87,6 +88,7 @@ struct memory : is_a_primitive {
         case format::bxyf_f32:
         case format::bfxy_f32:
         case format::oiyx_f32: 
+        case format::bs_yxf_bv24_f32:
         case format::os_yxi_sv16_f32: return {4, type_id<float>()};
         case format::scalar_f64:
         case format::   x_f64: return {1, type_id<double>()};

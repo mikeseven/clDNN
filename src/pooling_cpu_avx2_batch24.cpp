@@ -110,7 +110,7 @@ void naive(float* input, float* output, neural::vector<uint64_t> input_dims, neu
                 {
                     auto result = _mm256_max_ps(_mm256_load_ps(curr_output), _mm256_load_ps(curr_input));
                     _mm256_storeu_ps(curr_output, result);
-                    
+
                     curr_output += BATCH_SHIFT;
                     curr_input += BATCH_SHIFT;
                 }
@@ -350,7 +350,7 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
 namespace{
 struct attach{
     attach(){
-        auto key = std::make_tuple(engine::cpu, memory::format::yxfb_f32, memory::format::yxfb_f32); //todo is this key ok?
+        auto key = std::make_tuple(engine::cpu, memory::format::bs_yxf_bv24_f32, memory::format::bs_yxf_bv24_f32); //todo is this key ok?
         auto val_fw = pooling_cpu_avx2_batch24::create;
 
         pool_fw_implementation_map::instance().insert( {key, val_fw} );
