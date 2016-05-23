@@ -27,7 +27,7 @@ void example_relu_forward() {
 
     auto act = relu::create({engine::reference, output, input});
 
-    execute({act});
+    execute({act}).sync();
 }
 
 void example_relu_backward() {
@@ -39,5 +39,5 @@ void example_relu_backward() {
 
     auto act = relu_backward::create({engine::reference, {forward_input_grad}, {forward_output_grad, forward_input}});
 
-    execute({act});
+    execute({act}).sync();
 }

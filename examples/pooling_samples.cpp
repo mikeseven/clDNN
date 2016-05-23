@@ -48,7 +48,7 @@ void example_pooling_forward() {
                                     padding::zero}
                                   );
 
-    execute({input(in_buffer), output(out_buffer), pool});
+    execute({input(in_buffer), output(out_buffer), pool}).sync();
 }
 
 void example_pooling_backward(){

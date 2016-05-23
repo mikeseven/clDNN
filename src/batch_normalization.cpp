@@ -529,18 +529,20 @@ primitive batch_training_forward::create(batch_training_forward::arguments arg)
     // wrap batch norm into RAII wrapper
     std::unique_ptr<batch_training_forward> result(new batch_training_forward(arg));
 
-    // lookup in database; throw if not found
-    //auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
+    // create implementation for non-lazy evaluation
+    if(0 == (arg.engine & engine::lazy)) {
+        // lookup in database; throw if not found
+        auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
+        auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
+        auto key = std::make_tuple(arg.engine, infmt, outfmt);
 
-    auto it = training_forward_implementation_map.find(key);
-    if(it==std::end(training_forward_implementation_map)) throw std::runtime_error("not yet implemented");
+        auto it = training_forward_implementation_map.find(key);
+        if(it==std::end(training_forward_implementation_map)) throw std::runtime_error("not yet implemented");
 
-    // create implementation & attach it to result
-    auto implementation = it->second(*result);
-    result->_work = implementation->work();
+        // create implementation & attach it to result
+        auto implementation = it->second(*result);
+        result->_work = implementation->work();
+    }
 
     // release RAII wrapper, return naked pointer
     return result.release();
@@ -558,14 +560,17 @@ primitive batch_training_backward::create(batch_training_backward::arguments arg
     // wrap batch norm into RAII wrapper
     std::unique_ptr<batch_training_backward> result(new batch_training_backward(arg));
 
-    // lookup in database; throw if not found
-    auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto it = training_backward_implementation_map.find(key);
-    if(it==std::end(training_backward_implementation_map)) throw std::runtime_error("not yet implemented");
+    // create implementation for non-lazy evaluation
+    if(0 == (arg.engine & engine::lazy)) {
+        // lookup in database; throw if not found
+        auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
+        auto it = training_backward_implementation_map.find(key);
+        if(it==std::end(training_backward_implementation_map)) throw std::runtime_error("not yet implemented");
 
-    // create implementation & attach it to result
-    auto implementation = it->second(*result);
-    result->_work = implementation->work();
+        // create implementation & attach it to result
+        auto implementation = it->second(*result);
+        result->_work = implementation->work();
+    }
 
     // release RAII wrapper, return naked pointer
     return result.release();
@@ -583,14 +588,17 @@ primitive batch_inference::create(batch_inference::arguments arg)
     // wrap batch norm into RAII wrapper
     std::unique_ptr<batch_inference> result(new batch_inference(arg));
 
-    // lookup in database; throw if not found
-    auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto it = inference_implementation_map.find(key);
-    if(it==std::end(inference_implementation_map)) throw std::runtime_error("not yet implemented");
+    // create implementation for non-lazy evaluation
+    if(0 == (arg.engine & engine::lazy)) {
+        // lookup in database; throw if not found
+        auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
+        auto it = inference_implementation_map.find(key);
+        if(it==std::end(inference_implementation_map)) throw std::runtime_error("not yet implemented");
 
-    // create implementation & attach it to result
-    auto implementation = it->second(*result);
-    result->_work = implementation->work();
+        // create implementation & attach it to result
+        auto implementation = it->second(*result);
+        result->_work = implementation->work();
+    }
 
     // release RAII wrapper, return naked pointer
     return result.release();
