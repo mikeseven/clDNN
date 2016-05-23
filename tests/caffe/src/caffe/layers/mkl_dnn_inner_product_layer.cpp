@@ -176,8 +176,8 @@ void MKL_DNNInnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
       uint32_t w = bottom[0]->shape(3);
       bottom_data_->layout_usr = neural::memory::format::bfyx_f32;
       bottom_data_->layout_prv = neural::memory::format::fyxb_f32;
-      bottom_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {n, {{h, w}}, c}});
-      bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {n, {{h, w}}, c}});
+      bottom_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {n, {{w, h}}, c}});
+      bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {n, {{w, h}}, c}});
 
       bottom_data_->create_conversions();
 

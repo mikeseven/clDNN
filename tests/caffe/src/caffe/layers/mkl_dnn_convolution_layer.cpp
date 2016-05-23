@@ -94,14 +94,14 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   kh = this->kernel_h_;
 
   // Forward setup
-  fwd_bottom_data->memory_usr = memory::create({engine_, fwd_bottom_data->layout_usr, {n, {ih, iw},  ic}});
-  fwd_top_data   ->memory_usr = memory::create({engine_, fwd_top_data   ->layout_usr, {n, {oh, ow},  oc }});
-  fwd_filter_data->memory_usr = memory::create({engine_, fwd_filter_data->layout_usr, {1, {kh, kw}, {oc, ic/g}}});
+  fwd_bottom_data->memory_usr = memory::create({engine_, fwd_bottom_data->layout_usr, {n, {iw, ih},  ic}});
+  fwd_top_data   ->memory_usr = memory::create({engine_, fwd_top_data   ->layout_usr, {n, {ow, oh},  oc }});
+  fwd_filter_data->memory_usr = memory::create({engine_, fwd_filter_data->layout_usr, {1, {kw, kh}, {oc, ic/g}}});
   fwd_bias_data  ->memory_usr = memory::create({engine_, fwd_bias_data  ->layout_usr, {1, {{oc}}, 1}});
 
-  fwd_bottom_data->memory_prv = memory::create({engine_, fwd_bottom_data->layout_prv, {n, {ih, iw},  ic}});
-  fwd_top_data   ->memory_prv = memory::create({engine_, fwd_top_data   ->layout_prv, {n, {oh, ow},  oc }});
-  fwd_filter_data->memory_prv = memory::create({engine_, fwd_filter_data->layout_prv, {1, {kh, kw}, {oc, ic/g}}});
+  fwd_bottom_data->memory_prv = memory::create({engine_, fwd_bottom_data->layout_prv, {n, {iw, ih},  ic}});
+  fwd_top_data   ->memory_prv = memory::create({engine_, fwd_top_data   ->layout_prv, {n, {ow, oh},  oc }});
+  fwd_filter_data->memory_prv = memory::create({engine_, fwd_filter_data->layout_prv, {1, {kw, kh}, {oc, ic/g}}});
   fwd_bias_data  ->memory_prv = memory::create({engine_, fwd_bias_data  ->layout_prv, {1, {{oc}}, 1}});
 
   fwd_bottom_data->create_conversions();
@@ -110,7 +110,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   fwd_bias_data  ->create_conversions();
 
   for (unsigned i=0; i<g; i++) {
-    filters_.push_back(memory::create({engine_, fwd_filter_data->layout_prv, {1, {kh, kw}, {oc/g, ic/g}}}));
+    filters_.push_back(memory::create({engine_, fwd_filter_data->layout_prv, {1, {kw, kh}, {oc/g, ic/g}}}));
     biases_. push_back(memory::create({engine_, fwd_bias_data  ->layout_prv, {1, {{oc/g}}, 1}}));
     convolution_fwd_.push_back(
       convolution::create({engine_,
@@ -130,14 +130,14 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
  * Backward by setup
  */
 
-  bwd_bottom_diff->memory_usr = memory::create({engine_, bwd_bottom_diff->layout_usr, {n,  {ih, iw}, ic}});
-  bwd_top_diff   ->memory_usr = memory::create({engine_, bwd_top_diff   ->layout_usr, {n,  {oh, ow}, oc}});
-  bwd_filter_diff->memory_usr = memory::create({engine_, bwd_filter_diff->layout_usr, {oc, {kh, kw}, ic}});
+  bwd_bottom_diff->memory_usr = memory::create({engine_, bwd_bottom_diff->layout_usr, {n,  {iw, ih}, ic}});
+  bwd_top_diff   ->memory_usr = memory::create({engine_, bwd_top_diff   ->layout_usr, {n,  {ow, oh}, oc}});
+  bwd_filter_diff->memory_usr = memory::create({engine_, bwd_filter_diff->layout_usr, {oc, {kw, kh}, ic}});
   bwd_bias_diff  ->memory_usr = memory::create({engine_, bwd_bias_diff  ->layout_usr, {1,  {{oc}},    1}});
 
-  bwd_bottom_diff->memory_prv = memory::create({engine_, bwd_bottom_diff->layout_prv, {n,  {ih, iw}, ic}});
-  bwd_top_diff   ->memory_prv = memory::create({engine_, bwd_top_diff   ->layout_prv, {n,  {oh, ow}, oc}});
-  bwd_filter_diff->memory_prv = memory::create({engine_, bwd_filter_diff->layout_prv, {oc, {kh, kw}, ic}});
+  bwd_bottom_diff->memory_prv = memory::create({engine_, bwd_bottom_diff->layout_prv, {n,  {iw, ih}, ic}});
+  bwd_top_diff   ->memory_prv = memory::create({engine_, bwd_top_diff   ->layout_prv, {n,  {ow, oh}, oc}});
+  bwd_filter_diff->memory_prv = memory::create({engine_, bwd_filter_diff->layout_prv, {oc, {kw, kh}, ic}});
   bwd_bias_diff  ->memory_prv = memory::create({engine_, bwd_bias_diff  ->layout_prv, {1,  {{oc}},    1}});
 
   bwd_bottom_diff->create_conversions();
