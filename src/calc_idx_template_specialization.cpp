@@ -86,38 +86,20 @@ template<> size_t index<neural::memory::format::fyxb_f32>(std::vector<uint32_t> 
 
 
 fptr choose_calculate_idx(neural::memory::format::type arg){
-    fptr ptr;
     switch (arg){
         case neural::memory::format::type::x_f32: // treat x_f32 as xb_f32 with b=1
-        case neural::memory::format::type::xb_f32:
-            ptr = index<neural::memory::format::type::xb_f32>;
-            break;
-        case neural::memory::format::type::bx_f32:
-            ptr = index<neural::memory::format::type::bx_f32>;
-            break;
-        case neural::memory::format::type::yxfb_f32:
-            ptr = index<neural::memory::format::type::yxfb_f32>;
-            break;
-        case neural::memory::format::type::byxf_f32:
-            ptr = index<neural::memory::format::type::byxf_f32>;
-            break;
-        case neural::memory::format::type::oiyx_f32:
-            ptr = index<neural::memory::format::type::oiyx_f32>;
-            break;
-        case neural::memory::format::type::os_yxi_sv16_f32:
-            ptr = index<neural::memory::format::type::os_yxi_sv16_f32>;
-            break;
-        case neural::memory::format::type::bfyx_f32:
-           ptr = index<neural::memory::format::type::bfyx_f32>;
-           break;
-        case neural::memory::format::type::fyxb_f32:
-           ptr = index<neural::memory::format::type::fyxb_f32>;
-           break;
+        case neural::memory::format::type::xb_f32:          return index<neural::memory::format::type::xb_f32>;
+        case neural::memory::format::type::bx_f32:          return index<neural::memory::format::type::bx_f32>;
+        case neural::memory::format::type::yxfb_f32:        return index<neural::memory::format::type::yxfb_f32>;
+        case neural::memory::format::type::byxf_f32:        return index<neural::memory::format::type::byxf_f32>;
+        case neural::memory::format::type::oiyx_f32:        return index<neural::memory::format::type::oiyx_f32>;
+        case neural::memory::format::type::os_yxi_sv16_f32: return index<neural::memory::format::type::os_yxi_sv16_f32>;
+        case neural::memory::format::type::bfyx_f32:        return index<neural::memory::format::type::bfyx_f32>;
+        case neural::memory::format::type::fyxb_f32:        return index<neural::memory::format::type::fyxb_f32>;
 
         default:
             throw std::runtime_error("choose_calculate_idx has no case for memory::format " + std::to_string(arg));
     }
-    return ptr;
 };
 
 }
