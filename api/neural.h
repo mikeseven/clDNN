@@ -116,7 +116,6 @@ struct memory : is_a_primitive {
 
     DLL_SYM static primitive create(arguments);
     memory &operator()(void *ptr) { pointer = ptr; return *this; };
-    primitive clone() const { return create(argument); }
     void execute_argument(void *arg) const {
         if(argument.owns_memory) throw std::runtime_error("memory::execute_argument: this a container with its own memory; cannot set new pointer");
         else pointer = arg;
@@ -157,7 +156,6 @@ struct file : is_a_primitive {
 
     DLL_SYM static primitive create(arguments);
     file &operator()(void *);
-    primitive clone() const { return create(argument); }
 private:
     file(arguments arg) : is_a_primitive(type_id<const file>()), argument(arg) {};
     const std::vector<primitive>     &output() const { return argument.output; };
@@ -192,7 +190,6 @@ struct reorder : is_a_primitive {
     struct query_entry : is_a_query_entry { reorder::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     DLL_SYM static primitive create(arguments);
-    primitive clone() const { return create(argument); }
 private:
     reorder(arguments arg) : is_a_primitive(type_id<const reorder>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
@@ -247,7 +244,6 @@ struct convolution : is_a_primitive {
     struct query_entry : is_a_query_entry { convolution::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     DLL_SYM static primitive create(arguments);
-    primitive clone() const { return create(argument); }
 private:
     convolution(arguments arg) : is_a_primitive(type_id<const convolution>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
@@ -300,7 +296,6 @@ struct convolution_backward : is_a_primitive {
     struct query_entry : is_a_query_entry { convolution::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     DLL_SYM static primitive create(arguments);
-    primitive clone() const { return create(argument); }
 private:
     convolution_backward(arguments arg) : is_a_primitive(type_id<const convolution_backward>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
@@ -338,7 +333,6 @@ struct fully_connected : is_a_primitive {
     struct query_entry : is_a_query_entry { fully_connected::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     DLL_SYM static primitive create(arguments);
-    primitive clone() const { return create(argument); }
 private:
     fully_connected(arguments arg) : is_a_primitive(type_id<const fully_connected>()), argument(arg) {};
     const std::vector<primitive_at>  &input()  const { return argument.input;  };
@@ -383,7 +377,6 @@ struct relu : is_a_primitive {
     struct query_entry : is_a_query_entry { relu::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     DLL_SYM static primitive create(arguments);
-    primitive clone() const { return create(argument); }
 private:
     relu(arguments arg) : is_a_primitive(type_id<const relu>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
@@ -426,7 +419,6 @@ struct relu_backward : is_a_primitive {
     DLL_SYM static primitive create(arguments);
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
-    primitive clone() const { return create(argument); }
 
 private:
     relu_backward(arguments arg) : is_a_primitive(type_id<const relu_backward>()), argument(arg) {};
@@ -483,7 +475,6 @@ struct pooling : is_a_primitive {
     struct query_entry : is_a_query_entry { pooling::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     DLL_SYM static primitive create(arguments);
-    primitive clone() const { return create(argument); }
 private:
     pooling(arguments arg) : is_a_primitive(type_id<const pooling>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
@@ -542,7 +533,6 @@ struct /*normalization*/response : is_a_primitive {
     struct query_entry : is_a_query_entry { response::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     DLL_SYM static primitive create(arguments);
-    primitive clone() const { return create(argument); }
 private:
     response(arguments arg) : is_a_primitive(type_id<const response>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const { return argument.input; };
@@ -582,7 +572,6 @@ struct /*normalization*/softmax : is_a_primitive {
     struct query_entry : is_a_query_entry { softmax::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     DLL_SYM static primitive create(arguments);
-    primitive clone() const { return create(argument); }
 private:
     softmax(arguments arg) : is_a_primitive(type_id<const softmax>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const { return argument.input; };
@@ -629,7 +618,6 @@ struct /*normalization*/batch_training_forward : is_a_primitive {
     struct query_entry : is_a_query_entry { batch_training_forward::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     DLL_SYM static primitive create(arguments);
-    primitive clone() const { return create(argument); }
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 
@@ -671,7 +659,6 @@ struct /*normalization*/batch_training_backward : is_a_primitive {
     struct query_entry : is_a_query_entry { batch_training_backward::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     DLL_SYM static primitive create(arguments);
-    primitive clone() const { return create(argument); }
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 
@@ -711,7 +698,6 @@ struct /*normalization*/batch_inference : is_a_primitive {
     struct query_entry : is_a_query_entry { batch_inference::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     DLL_SYM static primitive create(arguments);
-    primitive clone() const { return create(argument); }
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 
@@ -759,7 +745,6 @@ struct convolution_relu : is_a_primitive {
     struct query_entry : is_a_query_entry { convolution_relu::arguments arguments; };
     static std::vector<query_entry> query(arguments);
     DLL_SYM static primitive create(arguments);
-    primitive clone() const { return create(argument); }
 private:
     convolution_relu(arguments arg) : is_a_primitive(type_id<const convolution_relu>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
@@ -806,7 +791,6 @@ struct fully_connected_relu : is_a_primitive {
     struct query_entry : is_a_query_entry { neural::fully_connected_relu::arguments arguments; };
     static std::vector<query_entry> query(neural::fully_connected_relu::arguments);
     DLL_SYM static primitive create(neural::fully_connected_relu::arguments);
-    primitive clone() const { return create(neural::fully_connected_relu::argument); }
 private:
     fully_connected_relu(fully_connected_relu::arguments arg) : is_a_primitive(type_id<const fully_connected_relu>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
@@ -834,7 +818,7 @@ struct worker_cpu : is_a_worker {
 
     DLL_SYM static worker create(arguments);
 
-    void execute(const std::vector<task>& requests);
+    void execute(const std::vector<task>& requests) const;
     neural::engine::type engine() const {return neural::engine::cpu;}
 
 private:
@@ -843,4 +827,4 @@ private:
 
 
 
-}
+} // namespace neural

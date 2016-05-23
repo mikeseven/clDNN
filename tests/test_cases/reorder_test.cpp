@@ -134,7 +134,7 @@ TEST_F(Reorder_test_fixture,reorder_test_basic) {
 
     try
     {
-        execute({input(in_buffer), reorder});
+        execute({input(in_buffer), reorder}).sync();
     }
     catch (const std::exception& ex)
     {
@@ -160,10 +160,10 @@ TEST_F(Reorder_test_fixture,reorder_test_output_as_input_2pass) {
     float* buf_out2 = nullptr;
     try
     {
-        execute({input(in_buffer), reorder});
+        execute({input(in_buffer), reorder}).sync();
         buf_out = static_cast<float*>(output.as<const memory&>().pointer);
 
-        execute({input2(buf_out), reorder2});
+        execute({input2(buf_out), reorder2}).sync();
         buf_out2 = static_cast<float*>(output2.as<const memory&>().pointer);
     }
     catch (const std::exception& ex)

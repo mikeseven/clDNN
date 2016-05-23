@@ -65,7 +65,7 @@ void example_convolution_ref_forward() {
                                         padding::zero}
                                       );
 
-    execute({conv});
+    execute({conv}).sync();
 }
 
 void example_convolution_cpu_forward() {
@@ -110,7 +110,7 @@ void example_convolution_cpu_forward() {
                                         padding::zero}
                                       );
 
-    execute({conv});
+    execute({conv}).sync();
 }
 
 void example_convolution_ref_backward(){

@@ -198,15 +198,18 @@ primitive convolution_backward::create(convolution_backward::arguments arg) {
     // wrap relu into RAII wrapper
     std::unique_ptr<convolution_backward> result(new convolution_backward(arg));
 
-    // lookup in database; throw if not found
-    conv_bw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto it = conv_bw_implementation_map.find(key);
-    if(it==std::end(conv_bw_implementation_map)) throw std::runtime_error("Not yet implemented.");
+    // create implementation for non-lazy evaluation
+    if(0 == (arg.engine & engine::lazy)) {
+        // lookup in database; throw if not found
+        conv_bw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+        auto it = conv_bw_implementation_map.find(key);
+        if(it==std::end(conv_bw_implementation_map)) throw std::runtime_error("Not yet implemented.");
 
-    // create implementation & attach it to result
-    auto implementation = it->second(*result);
-    result->_private.reset(implementation);
-    result->_work = implementation->work();
+        // create implementation & attach it to result
+        auto implementation = it->second(*result);
+        result->_private.reset(implementation);
+        result->_work = implementation->work();
+    }
 
     // release RAII wrapper, return naked pointer
     return result.release();
