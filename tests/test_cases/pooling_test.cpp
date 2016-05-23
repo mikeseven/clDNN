@@ -161,10 +161,6 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad_cpu) {
     auto& output_memory     = output_prim.as<const memory&>();
     auto& output_memory_cpu = output_prim_cpu.as<const memory&>();
 
-    /*EXPECT_EQ(get_value<float>(output_memory_cpu, 0), get_value<float>(output_memory, 0));
-    EXPECT_EQ(get_value<float>(output_memory_cpu, 1), get_value<float>(output_memory, 1));
-    EXPECT_EQ(get_value<float>(output_memory_cpu, 2), get_value<float>(output_memory, 2));
-    EXPECT_EQ(get_value<float>(output_memory_cpu, 3), get_value<float>(output_memory, 3));*/
     auto output_size = output_prim.as<const memory&>().count();
     for (int i = 0; i <output_size; i++) {
         EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory, i), get_value<float>(output_memory_cpu, i))) << " at index " << i << "\n";
