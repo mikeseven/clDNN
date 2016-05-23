@@ -108,7 +108,7 @@ void naive(float* input, float* output, neural::vector<uint64_t> input_dims, neu
             {
                 for (uint64_t acc_index = 0; acc_index < batch_accs; ++acc_index)
                 {
-                    auto result = _mm256_max_ps(_mm256_load_ps(curr_output), _mm256_load_ps(curr_input));
+                    auto result = _mm256_max_ps(_mm256_loadu_ps(curr_output), _mm256_loadu_ps(curr_input));
                     _mm256_storeu_ps(curr_output, result);
 
                     curr_output += BATCH_SHIFT;
