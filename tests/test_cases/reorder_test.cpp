@@ -28,7 +28,7 @@ public:
 
   	static const uint32_t all_size = 48; //dim_y*dim_x*dim_f*dim_b;
 	memory::format::type in_layout = memory::format::yxfb_f32;
-    memory::format::type out_layout = memory::format::bfxy_f32;
+    memory::format::type out_layout = memory::format::byxf_f32; 
 
     float in_buffer[all_size] =
     {// yxfb
@@ -54,69 +54,55 @@ public:
     };
 
     float wyn_buffer[all_size] =
-    {//bfxy x=2, y=2, f=4, b=3
-        0, // b0 f0 x0 y0
-       24, // b0 f0 x0 y1
-       12, // b0 f0 x1 y0
-       36, // b0 f0 x1 y1
-        3, // b0 f1 x0 y0
-       27, // b0 f1 x0 y1
-       15, // b0 f1 x1 y0
-       39, // b0 f1 x1 y1
-
-        6, // b0 f2 x0 y0
-       30, // b0 f2 x0 y1
-       18, // b0 f2 x1 y0
-       42, // b0 f2 x1 y1
-        9, // b0 f3 x0 y0
-       33, // b0 f3 x0 y1
-       21, // b0 f3 x1 y0
-       45, // b0 f3 x1 y1
-
-        1, // b1 f0 x0 y0
-       25, // b1 f0 x0 y1
-       13, // b1 f0 x1 y0
-       37, // b1 f0 x1 y1
-        4, // b1 f1 x0 y0
-       28, // b1 f1 x0 y1
-       16, // b1 f1 x1 y0
-       40, // b1 f1 x1 y1
-
-        7, // b1 f2 x0 y0
-       31, // b1 f2 x0 y1
-       19, // b1 f2 x1 y0
-       43, // b1 f2 x1 y1
-       10, // b1 f3 x0 y0
-       34, // b1 f3 x0 y1
-       22, // b1 f3 x1 y0
-       46, // b1 f3 x1 y1
-
-        //3, // b2 f0 x0 y0 // should fail
-        2, // b2 f0 x0 y0
-       26, // b2 f0 x0 y1
-       14, // b2 f0 x1 y0
-       38, // b2 f0 x1 y1
-        5, // b2 f1 x0 y0
-       29, // b2 f1 x0 y1
-       17, // b2 f1 x1 y0
-       41, // b2 f1 x1 y1
-
-        8, // b2 f2 x0 y0
-       32, // b2 f2 x0 y1
-       20, // b2 f2 x1 y0
-       44, // b2 f2 x1 y1
-       11, // b2 f3 x0 y0
-       35, // b2 f3 x0 y1
-       23, // b2 f3 x1 y0
-       47, // b2 f3 x1 y1
-    };
-
-    float wyn_buffer_fail[all_size] =
-    {//bfxy x=2, y=2, f=4, b=3
-        0,24,12,36,3,27,15,39,6,30,18,42,9,33,21,45,1,25,13,37,4,28,16,40,7,
-        31,19,43,10,34,22,46,
-        3, // b2 f0 x0 y0 // should fail (2 is OK)
-        26,14,38,5,29,17,41,8,32,20,44,11,35,23,47
+    {// byxf_f32 x=2, y=2, f=4, b=3
+        0, // b0 y0 x0 f0
+        3, // b0 y0 x0 f1
+        6, // b0 y0 x0 f2
+        9, // b0 y0 x0 f3
+       12, // b0 y0 x1 f0
+       15, // b0 y0 x1 f1
+       18, // b0 y0 x1 f2
+       21, // b0 y0 x1 f3
+       24, // b0 y1 x0 f0
+       27, // b0 y1 x0 f1
+       30, // b0 y1 x0 f2
+       33, // b0 y1 x0 f3
+       36, // b0 y1 x1 f0
+       39, // b0 y1 x1 f1
+       42, // b0 y1 x1 f2
+       45, // b0 y1 x1 f3
+        1, // b1 y0 x0 f0
+        4, // b1 y0 x0 f1
+        7, // b1 y0 x0 f2
+       10, // b1 y0 x0 f3
+       13, // b1 y0 x1 f0
+       16, // b1 y0 x1 f1
+       19, // b1 y0 x1 f2
+       22, // b1 y0 x1 f3
+       25, // b1 y1 x0 f0
+       28, // b1 y1 x0 f1
+       31, // b1 y1 x0 f2
+       34, // b1 y1 x0 f3
+       37, // b1 y1 x1 f0
+       40, // b1 y1 x1 f1
+       43, // b1 y1 x1 f2
+       46, // b1 y1 x1 f3
+        2, // b2 y0 x0 f0
+        5, // b2 y0 x0 f1
+        8, // b2 y0 x0 f2
+       11, // b2 y0 x0 f3
+       14, // b2 y0 x1 f0
+       17, // b2 y0 x1 f1
+       20, // b2 y0 x1 f2
+       23, // b2 y0 x1 f3
+       26, // b2 y1 x0 f0
+       29, // b2 y1 x0 f1
+       32, // b2 y1 x0 f2
+       35, // b2 y1 x0 f3
+       38, // b2 y1 x1 f0
+       41, // b2 y1 x1 f1
+       44, // b2 y1 x1 f2
+       47, // b2 y1 x1 f3
     };
 
 	// input buffer should be initialized with valid data

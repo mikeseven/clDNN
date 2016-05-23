@@ -33,39 +33,11 @@ namespace
 static std::map< std::tuple<memory::format::type, bool>, std::tuple<std::vector<uint32_t>, std::vector<uint32_t>, std::vector<uint32_t>>> format_strides_map =
 {
       // raw sizes: b,f, {x,y}                 spatial                                  spatial_stride         single_average_stride             batch_stride
-    { std::make_tuple(memory::format::yxfb_f64, true),  std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::xyfb_f32, true),  std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
     { std::make_tuple(memory::format::yxfb_f32, true),  std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::xyfb_f64, true),  std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fyxb_f32, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fyxb_f64, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fxyb_f32, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fxyb_f64, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
     { std::make_tuple(memory::format::byxf_f32, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::byxf_f64, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bxyf_f32, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bxyf_f64, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfyx_f32, true),  std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfyx_f64, true),  std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfxy_f32, true),  std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfxy_f64, true),  std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3})},
 
-    { std::make_tuple(memory::format::yxfb_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::xyfb_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
     { std::make_tuple(memory::format::yxfb_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::xyfb_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fyxb_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fyxb_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fxyb_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fxyb_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
     { std::make_tuple(memory::format::byxf_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::byxf_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bxyf_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bxyf_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfyx_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfyx_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfxy_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfxy_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
 };
 
 
@@ -273,7 +245,6 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
 
         auto& forward_input       = this_bn->argument.input[0].primitive.as<const memory&>();
         auto& forward_scale       = this_bn->argument.input[1].primitive.as<const memory&>();
-        // auto& forward_bias        = this_bn->input_memory(2); // not required
         auto& output_grad         = this_bn->argument.input[3].primitive.as<const memory&>();
         auto& current_mean        = this_bn->argument.input[4].primitive.as<const memory&>();
         auto& current_inv_std_dev = this_bn->argument.input[5].primitive.as<const memory&>();
@@ -284,7 +255,6 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
 
         auto forward_input_buffer         = static_cast<T*>(forward_input.pointer);
         auto forward_scale_buffer         = static_cast<T*>(forward_scale.pointer);
-        //auto forward_bias_buffer          = static_cast<T*>(forward_bias.pointer); // not required
         auto output_grad_buffer           = static_cast<T*>(output_grad.pointer);
         auto current_mean_buffer          = static_cast<T*>(current_mean.pointer);
         auto current_inv_std_dev_buffer   = static_cast<T*>(current_inv_std_dev.pointer);
@@ -453,62 +423,19 @@ struct batch_normalization_inference_reference : is_an_implementation {
 using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
 // maps of available implementations
-static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_training_forward &)>> training_forward_implementation_map =
-{
+static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_training_forward &)>> training_forward_implementation_map = {
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::xyfb_f32, memory::format::xyfb_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fxyb_f32, memory::format::fxyb_f32), batch_normalization_training_forward_reference<float>::create},
     {std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bxyf_f32, memory::format::bxyf_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfxy_f32, memory::format::bfxy_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::yxfb_f64, memory::format::yxfb_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f64, memory::format::fyxb_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::xyfb_f64, memory::format::xyfb_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::fxyb_f64, memory::format::fxyb_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::byxf_f64, memory::format::byxf_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f64, memory::format::bfyx_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bxyf_f64, memory::format::bxyf_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bfxy_f64, memory::format::bfxy_f64), batch_normalization_training_forward_reference<double>::create},
 };
-static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_training_backward &)>> training_backward_implementation_map =
-{
+
+static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_training_backward &)>> training_backward_implementation_map = {
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::xyfb_f32, memory::format::xyfb_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fxyb_f32, memory::format::fxyb_f32), batch_normalization_training_backward_reference<float>::create},
     {std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bxyf_f32, memory::format::bxyf_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfxy_f32, memory::format::bfxy_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::yxfb_f64, memory::format::yxfb_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f64, memory::format::fyxb_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::xyfb_f64, memory::format::xyfb_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::fxyb_f64, memory::format::fxyb_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::byxf_f64, memory::format::byxf_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f64, memory::format::bfyx_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bxyf_f64, memory::format::bxyf_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bfxy_f64, memory::format::bfxy_f64), batch_normalization_training_backward_reference<double>::create},
 };
-static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_inference &)>> inference_implementation_map =
-{
+
+static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_inference &)>> inference_implementation_map = {
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::xyfb_f32, memory::format::xyfb_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fxyb_f32, memory::format::fxyb_f32), batch_normalization_inference_reference<float>::create},
     {std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bxyf_f32, memory::format::bxyf_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfxy_f32, memory::format::bfxy_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::yxfb_f64, memory::format::yxfb_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f64, memory::format::fyxb_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::xyfb_f64, memory::format::xyfb_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::fxyb_f64, memory::format::fxyb_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::byxf_f64, memory::format::byxf_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f64, memory::format::bfyx_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bxyf_f64, memory::format::bxyf_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bfxy_f64, memory::format::bfxy_f64), batch_normalization_inference_reference<double>::create},
 };
 
 } // namespace {
