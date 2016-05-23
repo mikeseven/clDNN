@@ -46,58 +46,28 @@ struct memory : is_a_primitive {
     };
 
     class format { format(); public: enum type {
-        scalar_f32, // single scalar, float32
         x_f32,
         xb_f32,     // 1D+batch, float32
         bx_f32,     // 1D+batch, float32
         yxfb_f32,   // 3D+batch, float32
-        fyxb_f32,
-        xyfb_f32,
-        fxyb_f32,
-        byxf_f32,
-        bfyx_f32,
-        bxyf_f32,
-        bfxy_f32,
+        byxf_f32,   // for convolution_cpu_jit_batch1
+        bfyx_f32,   // used in Caffe
+        fyxb_f32,   // used in Caffe
         oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
         os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
-        scalar_f64, // single scalar, float64
-        x_f64,
-        yxfb_f64,   // 3D+batch, float64
-        fyxb_f64,
-        xyfb_f64,
-        fxyb_f64,
-        byxf_f64,
-        bfyx_f64,
-        bxyf_f64,
-        bfxy_f64,
         any=static_cast<uint32_t>(-1)
     }; };
 
     static const format_traits traits(format::type fmt) {
         switch(fmt) {
-        case format::scalar_f32:
         case format::   x_f32: return {1, type_id<float>()};
-		case format::  xb_f32: return {2, type_id<float>()};
+        case format::  xb_f32: return {2, type_id<float>()};
         case format::yxfb_f32:
-        case format::fyxb_f32:
-        case format::xyfb_f32:
-        case format::fxyb_f32:
         case format::byxf_f32:
         case format::bfyx_f32:
-        case format::bxyf_f32:
-        case format::bfxy_f32:
         case format::oiyx_f32: 
+        case format::fyxb_f32:
         case format::os_yxi_sv16_f32: return {4, type_id<float>()};
-        case format::scalar_f64:
-        case format::   x_f64: return {1, type_id<double>()};
-        case format::yxfb_f64:
-        case format::fyxb_f64:
-        case format::xyfb_f64:
-        case format::fxyb_f64:
-        case format::byxf_f64:
-        case format::bfyx_f64:
-        case format::bxyf_f64:
-        case format::bfxy_f64: return {4, type_id<double>()};
         default: throw std::runtime_error("unknown memory::format");
         }
     }

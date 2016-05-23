@@ -13,7 +13,7 @@ void example_009() {
 
   	const uint32_t all_size = dim_y*dim_x*dim_f*dim_b;
 	auto in_layout = memory::format::yxfb_f32;
-    auto out_layout = memory::format::bfxy_f32;
+    auto out_layout = memory::format::byxf_f32;
 
     float in_buffer[all_size] =
     {// yxfb
