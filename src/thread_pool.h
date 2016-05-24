@@ -22,7 +22,7 @@
 #include <vector>
 #include <atomic>
 #include <condition_variable>
-#include "neural_base.h"
+#include "neural.h"
 
 namespace neural 
 {
