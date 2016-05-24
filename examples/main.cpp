@@ -22,17 +22,23 @@
 #include <cstdint>
 #include <iostream>
 #include <iomanip>
-#include <intrin.h>
+#include <nmmintrin.h>
 #include <array>
 #include <random>
 #include <algorithm>
 #include <set>
 #include <map>
-#include <Windows.h>
 #include <cstddef>
+#include "memory_utils.h"
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 const int64_t   input_width             = 64;   // data = input|output
 const int64_t   input_height            = 64;   // data = input|output
-const int64_t   input_feature_maps      = 4;
+const int64_t   input_feature_maps      = 8;
+//const int64_t   input_feature_maps      = 4;
 const int64_t   input_view_start_x      = 0;
 const int64_t   input_view_start_y      = 0;
 const int64_t   output_feature_maps     = 32;
@@ -122,7 +128,6 @@ void validate(
                             << "error at [b,x,y,f] = [" << b << "," << xo << "," << yo << "," << fo << "]\n"
                             << "\tvalid  = " << valid << "\n"
                             << "\ttested = " << tested << std::endl;
-                        __debugbreak();
                     }
                 }
         }
@@ -135,54 +140,71 @@ template<typename T> T *align(T *pointer, size_t align) {
 
 int main()
 {
+    using namespace neural;
+
     extern void example_convolution_cpu_forward();
 
-    std::cout << "initializing buffers" << std::endl;
-
-    // allocate memory buffers
-    const uint64_t batch_size = 24;
-    const auto align_size = 64;
-    const auto align_size_in_float = align_size/sizeof(float);
-    const auto output_buffer_size = output_height*output_width*output_feature_maps*batch_size;
-    const auto  input_buffer_size =  input_height* input_width* input_feature_maps*batch_size;
-    const auto filter_buffer_size = filter_size*filter_size*output_feature_maps*input_feature_maps;
-
-    std::unique_ptr<float> output_container = std::move(std::unique_ptr<float>(new float[output_buffer_size+align_size_in_float]));
-    std::unique_ptr<float>  input_container = std::move(std::unique_ptr<float>(new float[ input_buffer_size+align_size_in_float]));
-    std::unique_ptr<float> filter_container = std::move(std::unique_ptr<float>(new float[filter_buffer_size+align_size_in_float]));
-
-    const auto output = align(output_container.get(), align_size);
-    const auto  input = align( input_container.get(), align_size);
-    const auto filter = align(filter_container.get(), align_size);
-
-    // generate convolution code using jit and create job set
-    //auto job_set = make_jit_convolution(
-    //      output, output_width, output_height, output_feature_maps
-    //    ,  input,  input_width,  input_height,  input_feature_maps, stride_width, stride_height
-    //    ,  input_view_start_x, input_view_start_y
-    //    , filter, filter_size
-    //    , block_width, block_height
-    //);
-
-    // initialized inputs & filter with pseudorandom values
-    std::mt19937 engine(0xdeadf00d);
-    std::normal_distribution<float> distribution(0.0f, 1.0f);
-    auto lambda = [&]{return distribution(engine);};
-    std::fill    (output, output+output_buffer_size, 0.0f);
-    std::generate( input,  input+ input_buffer_size, lambda);
-    std::generate(filter, filter+filter_buffer_size, lambda);
-
-    validate(
-            output, output_width, output_height, output_feature_maps, 24
-        , 0, 0, output_width, output_height
-        ,  input, input_width, input_height, input_feature_maps, stride_width, stride_height
-        , 0, 0
-        , filter, filter_size
-        , batch_size
-    );
-
     try {
-        example_convolution_cpu_forward();
+        std::cout << "initializing buffers" << std::endl;
+
+        // allocate memory buffers
+        const uint64_t batch_size = 24;
+        const auto align_size = 64;
+        const auto align_size_in_float = align_size/sizeof(float);
+        const auto output_buffer_size = output_height*output_width*output_feature_maps*batch_size;
+        const auto  input_buffer_size =  input_height* input_width* input_feature_maps*batch_size;
+        const auto filter_buffer_size = filter_size*filter_size*output_feature_maps*input_feature_maps;
+
+        std::unique_ptr<float> output_container = std::move(std::unique_ptr<float>(new float[output_buffer_size+align_size_in_float]));
+        std::unique_ptr<float>  input_container = std::move(std::unique_ptr<float>(new float[ input_buffer_size+align_size_in_float]));
+        std::unique_ptr<float> filter_container = std::move(std::unique_ptr<float>(new float[filter_buffer_size+align_size_in_float]));
+
+        const auto output = align(output_container.get(), align_size);
+        const auto  input = align( input_container.get(), align_size);
+        const auto filter = align(filter_container.get(), align_size);
+
+        // generate convolution code using jit and create job set
+        //auto job_set = make_jit_convolution(
+        //      output, output_width, output_height, output_feature_maps
+        //    ,  input,  input_width,  input_height,  input_feature_maps, stride_width, stride_height
+        //    ,  input_view_start_x, input_view_start_y
+        //    , filter, filter_size
+        //    , block_width, block_height
+        //);
+
+        auto input_p  = memory::describe({neural::engine::reference, memory::format::tmp_format, { 24 , {input_height  , input_width }, input_feature_maps}});
+        auto output_p = memory::describe({neural::engine::reference, memory::format::tmp_format, { 24 , {output_height , output_width}, output_feature_maps}});
+        auto weights_p= memory::describe({neural::engine::reference, memory::format::oiyx_f32, { 1  , {filter_size   , filter_size }, {output_feature_maps, input_feature_maps}}});
+        auto biases_p = memory::allocate({neural::engine::reference, memory::format::   x_f32, { 1  , {{output_feature_maps}}  , 1 }});
+        fill(biases_p, 0.0f);
+
+        // initialized inputs & filter with pseudorandom values
+        std::mt19937 engine(0xdeadf00d);
+        std::normal_distribution<float> distribution(0.0f, 1.0f);
+        auto lambda = [&]{return distribution(engine);};
+        std::fill    (output, output+output_buffer_size, 0.0f);
+        std::generate( input,  input+ input_buffer_size, lambda);
+        std::generate(filter, filter+filter_buffer_size, lambda);
+
+        auto conv   = convolution::create( {neural::engine::cpu,
+                                            output_p,
+                                            {input_p, weights_p, biases_p},
+                                            {1, {stride_height, stride_width}, 1},
+                                            padding::zero}
+                                          );
+
+        execute({output_p(output), input_p(input), weights_p(filter), conv}).sync();
+
+        validate(
+                output, output_width, output_height, output_feature_maps, 24
+            , 0, 0, output_width, output_height
+            ,  input, input_width, input_height, input_feature_maps, stride_width, stride_height
+            , 0, 0
+            , filter, filter_size
+            , batch_size
+        );
+
+          //  example_convolution_cpu_forward();
     }
     catch (std::exception &e) {
         std::cerr << e.what();

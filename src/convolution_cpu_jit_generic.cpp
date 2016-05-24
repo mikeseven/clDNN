@@ -335,7 +335,7 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
     const int x_pos = 3;
 
     assert( 2 == output_size.spatial.size() );
-    assert( weights_arg.size.raw[ x_pos ] == weights_arg.size.raw[ y_pos ] ); //todo what is weights format?
+    assert( weights_arg.size.spatial[0] == weights_arg.size.spatial[1] ); //todo what is weights format?
     assert( input_arg.size.feature % jit_convolution_generic::input_features_per_iteration ==0 && "input feature count is not multiple of input_features_per_iteration");
     assert( output_size.feature    % jit_convolution_generic::output_features_per_iteration==0 && "output feature count is not multiple of output_features_per_iteration");
 
@@ -380,7 +380,7 @@ struct attach
 {
     attach()
     {
-        auto key_fw = std::make_tuple(engine::cpu, memory::format::bfxy_f32, memory::format::bfxy_f32); //todo check
+        auto key_fw = std::make_tuple(engine::cpu, memory::format::tmp_format, memory::format::tmp_format); //todo check
         auto val_fw = convolution_cpu_jit_generic::create;
 
         conv_fw_implementation_map.insert( {key_fw, val_fw} );
