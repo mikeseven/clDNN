@@ -26,8 +26,8 @@ void example_005() {
 
     uint32_t batch_size = 24;
 
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {227, 227, 3,  batch_size}});
-    auto output = memory::create({engine::cpu, memory::format::xb_f32, {1000, batch_size}});
+    auto input  = memory::describe({engine::cpu, memory::format::yxfb_f32, {227, 227, 3,  batch_size}});
+    auto output = memory::describe({engine::cpu, memory::format::xb_f32, {1000, batch_size}});
 
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     auto conv_relu1 = convolution_relu::create({engine::cpu, memory::format::yxfb_f32, input, 2, file::create({engine::cpu, "weight1.nnb"}), file::create({engine::cpu, "bias1.nnb"}), padding::zero, 0.0f});

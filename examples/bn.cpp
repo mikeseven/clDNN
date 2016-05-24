@@ -23,16 +23,16 @@ using namespace neural;
 void spatial_bn_trivial_example_forward_training_float()
 {
     // Create input buffers.
-    auto input               = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
-    auto scale               = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto bias                = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto input               = memory::allocate({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
+    auto scale               = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto bias                = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
 
     // Create output buffers.
-    auto output              = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
-    auto current_average     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto current_inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto moving_average      = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto moving_inv_std_dev  = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto output              = memory::allocate({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
+    auto current_average     = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto current_inv_std_dev = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto moving_average      = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto moving_inv_std_dev  = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
 
     // Initialize input buffers.
     fill<float>(input.as<const memory&>(), 0);
@@ -50,17 +50,17 @@ void spatial_bn_trivial_example_forward_training_float()
 void spatial_bn_trivial_example_backward_training_float()
 {
     // Create input buffers.
-    auto forward_input       = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
-    auto forward_scale       = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto forward_bias        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto output_grad         = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
-    auto current_mean        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto current_inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto forward_input       = memory::allocate({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
+    auto forward_scale       = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto forward_bias        = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto output_grad         = memory::allocate({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
+    auto current_mean        = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto current_inv_std_dev = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
 
     // Create output buffers.
-    auto input_grad = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
-    auto scale_grad = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto bias_grad  = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto input_grad = memory::allocate({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
+    auto scale_grad = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto bias_grad  = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
 
     // Initialize input buffers.
     fill<float>(forward_input.as<const memory&>(), 0);
@@ -81,14 +81,14 @@ void spatial_bn_trivial_example_backward_training_float()
 void spatial_bn_trivial_example_inference_float()
 {
     // Create input buffers.
-    auto input       = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
-    auto scale       = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto bias        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto average     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto input       = memory::allocate({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
+    auto scale       = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto bias        = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto average     = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto inv_std_dev = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
 
     // Create output buffer.
-    auto output      = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
+    auto output      = memory::allocate({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
 
     // Initialize input buffers.
     fill<float>(input.as<const memory&>(), 0);
@@ -110,22 +110,22 @@ void spatial_bn_complex_example_training_float()
     // TODO: after string keys have been implemented, move buffer creation to primitives' constructors and reference them by primitive-string lookups.
 
     // Create data buffers that have to be initialized before training starts.
-    auto forward_input       = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
-    auto forward_scale       = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto forward_bias        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto forward_input       = memory::allocate({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
+    auto forward_scale       = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto forward_bias        = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
 
     // Create intermediate buffers that will be computed during forward training pass.
-    auto current_mean        = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto current_inv_std_dev = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto moving_mean         = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto moving_inv_std_dev  = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto current_mean        = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto current_inv_std_dev = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto moving_mean         = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto moving_inv_std_dev  = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
 
     // Create output buffers.
-    auto forward_output      = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
-    //auto forward_output_grad = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true}); // same as forward_output
-    auto forward_input_grad  = memory::create({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}, true});
-    auto forward_scale_grad  = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
-    auto forward_bias_grad   = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}, true});
+    auto forward_output      = memory::allocate({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
+    //auto forward_output_grad = memory::allocate({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}}); // same as forward_output
+    auto forward_input_grad  = memory::allocate({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
+    auto forward_scale_grad  = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
+    auto forward_bias_grad   = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
 
     // Initialize input buffers for forward training primitive which will initialize other buffers.
     fill<float>(forward_input.as<const memory&>(), 0);

@@ -29,10 +29,10 @@ void example_fully_connected() {
     float out_buffer[output_x*output_b];
     float weight_buffer[weight_x*weight_y];
 
-    auto input   = memory::create({ engine::reference, memory::format::xb_f32,{ input_b , {{input_x }}, 1 } });
-    auto output  = memory::create({ engine::reference, memory::format::xb_f32,{ output_b, {{output_x}}, 1 } });
-    auto weights = memory::create({ engine::reference, memory::format::xb_f32,{ weight_y, {{weight_x}}, 1 } });
-    auto biases  = memory::create({ engine::reference, memory::format::x_f32, { 1,        {{output_x}}, 1 } });
+    auto input   = memory::describe({ engine::reference, memory::format::xb_f32,{ input_b , {{input_x }}, 1 } });
+    auto output  = memory::describe({ engine::reference, memory::format::xb_f32,{ output_b, {{output_x}}, 1 } });
+    auto weights = memory::describe({ engine::reference, memory::format::xb_f32,{ weight_y, {{weight_x}}, 1 } });
+    auto biases  = memory::describe({ engine::reference, memory::format::x_f32, { 1,        {{output_x}}, 1 } });
 
     auto& input_memory = input.as<const memory&>();
     auto& weights_memory = weights.as<const memory&>();

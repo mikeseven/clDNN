@@ -111,8 +111,8 @@ public:
                                     //b=3 f=4 x=2 y=2
 	neural::vector<uint32_t> out_sizes = { dim_b, {dim_y, dim_x}, dim_f };
 
-    neural::primitive input   = memory::create({engine::reference, in_layout, in_sizes});
-    neural::primitive output  = memory::create({engine::reference, out_layout, out_sizes, true});
+    neural::primitive input   = memory::describe({engine::reference, in_layout, in_sizes});
+    neural::primitive output  = memory::allocate({engine::reference, out_layout, out_sizes});
     neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,input,output});
 };
 
@@ -138,8 +138,8 @@ TEST_F(Reorder_test_fixture,reorder_test_basic) {
 
 TEST_F(Reorder_test_fixture,reorder_test_output_as_input_2pass) {
 
-    auto input2  = memory::create({engine::reference, out_layout, out_sizes});
-    auto output2 = memory::create({engine::reference, in_layout, in_sizes, true});
+    auto input2  = memory::describe({engine::reference, out_layout, out_sizes});
+    auto output2 = memory::allocate({engine::reference, in_layout, in_sizes});
     auto reorder2    = reorder::create({engine::reference,input2,output2});
 
     float* buf_out = nullptr;

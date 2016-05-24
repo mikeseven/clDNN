@@ -36,8 +36,8 @@ using namespace neural;
 TEST(relu_f32_fw, basic) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
-    auto input  = memory::create({engine::reference, memory::format::yxfb_f32, { b, {y, x}, f}, true});
-    auto output = memory::create({engine::reference, memory::format::yxfb_f32, { b, {y, x}, f}});
+    auto input  = memory::allocate({engine::reference, memory::format::yxfb_f32, { b, {y, x}, f}});
+    auto output = memory::describe({engine::reference, memory::format::yxfb_f32, { b, {y, x}, f}});
     fill<float>(input.as<const memory&>());
 
     auto act = relu::create({engine::reference, output, input});
@@ -63,13 +63,13 @@ TEST(relu_f32_fw, intrinsics_avx2) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
     // Optimized data
-    auto input  = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
-    auto output = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto input  = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }});
+    auto output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }});
     auto& input_memory  = input.as<const memory&>();
     auto& output_memory = output.as<const memory&>();
 
     // Reference data
-    auto ref_output = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto ref_output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }});
     auto& ref_output_memory = ref_output.as<const memory&>();
 
     // Initialize input data
@@ -115,8 +115,8 @@ TEST(relu_f32_fw, offsets) {
     vector<uint32_t> in_buf_size  = {input_b , { input_x , input_y}, input_f  };
     vector<uint32_t> out_buf_size = {output_b, {output_x, output_y}, output_f };
 
-    auto input  = memory::create({engine::reference, memory::format::yxfb_f32, in_buf_size, true});
-    auto output = memory::create({engine::reference, memory::format::yxfb_f32, out_buf_size, true});
+    auto input  = memory::allocate({engine::reference, memory::format::yxfb_f32, in_buf_size});
+    auto output = memory::allocate({engine::reference, memory::format::yxfb_f32, out_buf_size});
     fill<float>(input.as<const memory&>());
 
     auto act = relu::create( {engine::reference,
@@ -163,9 +163,9 @@ TEST(relu_f32_fw, offsets) {
 TEST(relu_f32_bw, basic) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
-    auto fw_input  = memory::create({engine::reference, memory::format::yxfb_f32, {b, {y, x}, f}, true});
-    auto bw_input  = memory::create({engine::reference, memory::format::yxfb_f32, {b, {y, x}, f}, true});
-    auto bw_output = memory::create({engine::reference, memory::format::yxfb_f32, {b, {y, x}, f}, true});
+    auto fw_input  = memory::allocate({engine::reference, memory::format::yxfb_f32, {b, {y, x}, f}});
+    auto bw_input  = memory::allocate({engine::reference, memory::format::yxfb_f32, {b, {y, x}, f}});
+    auto bw_output = memory::allocate({engine::reference, memory::format::yxfb_f32, {b, {y, x}, f}});
     fill<float>(fw_input.as<const memory&>());
     fill<float>(bw_input.as<const memory&>());
 
@@ -187,15 +187,15 @@ TEST(relu_f32_bw, intrinsics_avx2) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
     // Optimized data
-    auto fw_input  = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
-    auto bw_input  = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
-    auto bw_output = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto fw_input  = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }});
+    auto bw_input  = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }});
+    auto bw_output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }});
     auto& fw_input_memory  = fw_input.as<const memory&>();
     auto& bw_input_memory  = bw_input.as<const memory&>();
     auto& bw_output_memory = bw_output.as<const memory&>();
 
     // Reference data
-    auto ref_bw_output = memory::create({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }, true });
+    auto ref_bw_output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ b,{ y, x }, f }});
     auto& ref_bw_output_memory = ref_bw_output.as<const memory&>();
 
     // Initialize input data
@@ -250,9 +250,9 @@ TEST(relu_f32_bw, offsets) {
     vector<uint32_t> bw_in_buf_size  = {output_b, {output_x, output_y}, output_f};
     vector<uint32_t> bw_out_buf_size = {output_b, {output_x, output_y}, output_f};
 
-    auto fw_input  = memory::create({engine::reference, memory::format::yxfb_f32, fw_in_buf_size, true});
-    auto bw_input  = memory::create({engine::reference, memory::format::yxfb_f32, bw_in_buf_size, true});
-    auto bw_output = memory::create({engine::reference, memory::format::yxfb_f32, bw_out_buf_size,true});
+    auto fw_input  = memory::allocate({engine::reference, memory::format::yxfb_f32, fw_in_buf_size});
+    auto bw_input  = memory::allocate({engine::reference, memory::format::yxfb_f32, bw_in_buf_size});
+    auto bw_output = memory::allocate({engine::reference, memory::format::yxfb_f32, bw_out_buf_size});
     fill<float>(fw_input.as<const memory&>());
     fill<float>(bw_input.as<const memory&>());
 
