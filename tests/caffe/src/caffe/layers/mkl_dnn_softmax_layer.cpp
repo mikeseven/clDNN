@@ -90,7 +90,7 @@ void MKL_DNNSoftmaxLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     top_data = top[0]->mutable_cpu_data();
     DLOG(INFO) << "Using cpu_data for top in DnnPooling.";
   }
-  execute({bottom_data_->memory_prv(bottom_data), top_data_->memory_prv(top_data), softmaxFwd_}).sync();
+  execute({bottom_data_->memory_prv(bottom_data), top_data_->memory_prv(top_data), softmaxFwd_}).wait();
 }
 
 template <typename Dtype>

@@ -59,7 +59,7 @@ TEST(fully_connected, xb_f32_batch_1) {
     set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
     set_values(bias_prim   , {1.0f, 2.0f, 3.0f, 4.0f});
 
-    execute({full_con_prim}).sync();
+    execute({full_con_prim}).wait();
 
     auto& output_memory  = output_prim.as<const memory&>();
     EXPECT_EQ( 2.5f,  get_value<float>(output_memory, 0));
@@ -104,7 +104,7 @@ TEST(fully_connected, xb_f32_batch_2) {
     set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
     set_values(bias_prim   , {1.0f, 2.0f, 3.0f, 4.0f});
 
-    execute({full_con_prim}).sync();
+    execute({full_con_prim}).wait();
 
     auto& output_memory  = output_prim.as<const memory&>();
     EXPECT_EQ( 2.5f,  get_value<float>(output_memory,0));
@@ -154,7 +154,7 @@ TEST(fully_connected, x_f32) {
     set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
     set_values(bias_prim   , {1.0f, 2.0f, 3.0f, 4.0f});
 
-    execute({full_con_prim}).sync();
+    execute({full_con_prim}).wait();
 
     EXPECT_EQ( 2.5f,  get_value<float>(output_memory,0));
     EXPECT_EQ( 2.75f, get_value<float>(output_memory,1));

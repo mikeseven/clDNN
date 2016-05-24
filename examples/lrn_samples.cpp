@@ -29,5 +29,5 @@ void example_lrn_forward() {
     float pbeta = 0.75f;
     auto lrn = normalization::response::create({ engine::reference, output, input, psize, padding::zero, pk, palpha, pbeta});
 
-    execute({ lrn }).sync();
+    execute({ lrn }).wait();
 }

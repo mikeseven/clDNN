@@ -69,7 +69,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_true) {
 
     // Run few times.
     for(i = 0; i < 3; ++i)
-        execute({bn}).sync();
+        execute({bn}).wait();
 
     for (i = 0; i < input_size[2]; ++i){
         EXPECT_EQ(0.0f, static_cast<float*>(output_memory.pointer)[i]);
@@ -134,7 +134,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
 
     // Run few times.
     for(i = 0; i < 3; ++i)
-        execute({bn}).sync();
+        execute({bn}).wait();
 
     // Find non zero value in averages
     if (input_size[2] == 1) {
@@ -227,7 +227,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
 
     // Run few times.
     for(i = 0; i < 3; ++i)
-        execute({bn}).sync();
+        execute({bn}).wait();
 
     for (i = 0; i < total_average_size; ++i){
         EXPECT_EQ(0.0f, static_cast<float*>(output_memory.pointer)[i]);
@@ -293,7 +293,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
 
     // Run few times.
     for(i = 0; i < 3; ++i)
-        execute({bn}).sync();
+        execute({bn}).wait();
 
 
     // Find non zero value in averages

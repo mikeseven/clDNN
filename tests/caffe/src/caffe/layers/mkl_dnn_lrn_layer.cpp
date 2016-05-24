@@ -127,7 +127,7 @@ void MKL_DNNLRNLayer<Dtype>::CrossChannelForward_cpu(
 
   execute({fwd_bottom_data_->memory_prv(bottom_data),
            fwd_top_data_->memory_prv(top_data),
-           lrnFwd_}).sync();
+           lrnFwd_}).wait();
 }
 
 template <typename Dtype>
