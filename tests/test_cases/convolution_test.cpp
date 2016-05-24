@@ -626,7 +626,7 @@ TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
         fill<float>(weights_memory, weight_val);
         fill<float>(biases_memory, bias_val);
 
-        execute({conv}, engine_resource).wait();
+        execute({conv}, {engine_resource}).wait();
 
         // This test was just a sum of uniform values in whole window. 
         // So each output value should be: number of input elements of 3d kernel (times input and kernel values) + bias value.
@@ -676,7 +676,7 @@ TEST(convolution_f32_fw, optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
         for(int bias_element = 0; bias_element < biases_memory.count(); ++bias_element)
             set_value<float>(biases_memory, bias_element, (bias_element < biases_memory.count()/2) ? bias_val_slice0 : bias_val_slice1);
 
-        execute({conv}, engine_resource).wait();
+        execute({conv}, {engine_resource}).wait();
 
         // This test was just a sum of uniform values in whole window. 
         // So each output value should be: number of input elements of 3d kernel (times input and kernel values) + bias value.
@@ -750,7 +750,7 @@ TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x
         reorder_weights_to_ref, 
         reorder_biases_to_ref, 
         ref_conv,
-    }, engine_resource).wait();
+    }, {engine_resource}).wait();
 
     for(int output_element = 0; output_element < temp_output_memory.count(); ++output_element)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(temp_output_memory, output_element), 0.0005f)); 

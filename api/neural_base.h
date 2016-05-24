@@ -446,13 +446,11 @@ class async_result {
     async_result(std::shared_ptr<volatile uint32_t> arg) : _tasks_left(arg) {}
 
     // execution of sequence of primitives
-    friend DLL_SYM async_result execute(std::vector<primitive>, worker);
-    friend DLL_SYM async_result execute(std::vector<primitive>);
+    friend DLL_SYM async_result execute(std::vector<primitive>, std::vector<worker>);
 public:
     uint32_t tasks_left() { return *_tasks_left; };
     void wait() { while(tasks_left()); }
 };
-DLL_SYM async_result execute(std::vector<primitive>, worker);
-DLL_SYM async_result execute(std::vector<primitive>);
+DLL_SYM async_result execute(std::vector<primitive> primitives, std::vector<worker> workers=std::vector<worker>());
 
 }

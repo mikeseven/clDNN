@@ -20,22 +20,23 @@
 
 namespace neural {
 
-async_result execute(std::vector<primitive> list, worker arg_worker) {
-    std::shared_ptr<volatile uint32_t> primitive_count(new uint32_t(static_cast<uint32_t>(list.size())));
-    auto thread_function = [](std::vector<primitive> list, worker arg_worker, std::shared_ptr<volatile uint32_t> primitive_count) {
-        for(auto &item : list) {
-            arg_worker.execute(item.work());
+async_result execute(std::vector<primitive> primitives, std::vector<worker> workers) {
+
+    if(0==workers.size()) {
+        static auto cpu_worker = worker_cpu::create({});
+        workers.push_back(cpu_worker);
+    }
+    assert(1==workers.size()); // currently only one worker at time
+
+    std::shared_ptr<volatile uint32_t> primitive_count(new uint32_t(static_cast<uint32_t>(primitives.size())));
+    auto thread_function = [](std::vector<primitive> primitives, std::vector<worker> workers, std::shared_ptr<volatile uint32_t> primitive_count) {
+        for(auto &item : primitives) {
+            workers[0].execute(item.work());
             --*primitive_count;
         }
     };
-
-    std::thread(thread_function, list, arg_worker, primitive_count).detach();
+    std::thread(thread_function, primitives, workers, primitive_count).detach();
     return primitive_count;
-}
-
-async_result execute(std::vector<primitive> list) {
-    static auto default_worker = worker_cpu::create({});
-    return execute(list, default_worker);
 }
 
 } // namespace neural
