@@ -42,7 +42,7 @@ void example_softmax_forward() {
                                                    {in_off_b, {{in_off_x}}, 0}
                                                   });
 
-    execute({input(in_buffer), output(out_buffer), sftmax}).sync();
+    execute({input(in_buffer), output(out_buffer), sftmax}).wait();
 }
 
 void example_softmax_backward(){

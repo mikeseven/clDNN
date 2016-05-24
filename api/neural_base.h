@@ -450,7 +450,7 @@ class async_result {
     friend DLL_SYM async_result execute(std::vector<primitive>);
 public:
     uint32_t tasks_left() { return *_tasks_left; };
-    void sync() { while(tasks_left()); }
+    void wait() { while(tasks_left()); }
 };
 DLL_SYM async_result execute(std::vector<primitive>, worker);
 DLL_SYM async_result execute(std::vector<primitive>);

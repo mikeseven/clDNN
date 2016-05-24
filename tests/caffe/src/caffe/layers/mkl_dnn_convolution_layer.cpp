@@ -183,7 +183,7 @@ void MKL_DNNMemoryDescriptor<Dtype, is_diff>::convert_from_prv(void* prv_ptr, vo
   CHECK(this->from_prv != nullptr);
 
   DLOG(INFO) << "convert priv =>           "  << this->name << " =>"  << "\n";
-  execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv}).sync();
+  execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv}).wait();
 #ifdef CONVERSION_PRINT_DATA
   DLOG(INFO) << "Before conversion: ";
   for (auto i=0; i<this->prv_count(); i++)
@@ -207,7 +207,7 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
     {
       DLOG(INFO) << "convert      => priv                                => " << this->name << "\n";
       auto usr_ptr = is_diff ? (Dtype *) blob->cpu_diff() : (Dtype *) blob->cpu_data();
-      execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr), this->to_prv}).sync();
+      execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr), this->to_prv}).wait();
 
 #ifdef CONVERSION_PRINT_DATA
       DLOG(INFO) << "Before conversion: ";
@@ -251,7 +251,7 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
                    << "  || layouts: " << current_descr->layout_prv  << " => " << this->layout_prv<< "\n";
         neural::primitive convert = reorder::create(reorder::arguments({engine::reference, current_descr->memory_prv, this->memory_prv}));
         execute({current_descr->memory_prv(current_descr->prv_ptr),
-                 this->memory_prv(this->prv_ptr), convert}).sync();
+                 this->memory_prv(this->prv_ptr), convert}).wait();
 
         if (set_prv_ptr) {
           if(is_diff)
@@ -328,14 +328,14 @@ void MKL_DNNConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
     for(int i=0; i<g; i++) {
       execute({fwd_bottom_data->memory_prv(bottom_data), fwd_top_data->memory_prv(top_data),
               filters_[i](filter_data + i* this->weight_offset_), biases_[i](bias_data + i*oc),
-              convolution_fwd_[i]}).sync();
+              convolution_fwd_[i]}).wait();
     }
   } else {
     NOT_IMPLEMENTED;  // TODO, not supported currently
     for(int i=0; i<g; i++) {
       execute({fwd_bottom_data->memory_prv(bottom_data), fwd_top_data->memory_prv(top_data),
               filters_[i](filter_data + i* this->weight_offset_),
-              convolution_fwd_[i]}).sync();
+              convolution_fwd_[i]}).wait();
     }
   }
 }
@@ -408,7 +408,7 @@ void MKL_DNNConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& to
                 fwd_filter_data->memory_prv(filter_data), fwd_bias_data->memory_prv(bias_data),  //inputs
         bwd_bottom_diff->memory_prv(bottom_diff), bwd_filter_diff->memory_prv(filter_diff), bwd_bias_diff->memory_prv(bias_diff), //outputs
         convolution_bwd
-    }).sync();
+    }).wait();
   }
 }
 

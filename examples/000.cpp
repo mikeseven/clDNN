@@ -36,5 +36,5 @@ void example_000() {
     conv["name"].s();       // std::string("convolution")
     conv["info_short"].s(); // std::string("direct convolution")
 
-    execute({input(in_ptr), output(out_ptr), conv}).sync();
+    execute({input(in_ptr), output(out_ptr), conv}).wait();
 }

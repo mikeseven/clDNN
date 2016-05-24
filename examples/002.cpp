@@ -30,6 +30,6 @@ void example_002() {
     auto act    = relu::create({engine::cpu, memory::format::yxfb_f32, conv});
     auto pool   = pooling::create({engine::cpu, pooling::mode::max, output, act, 2});
 
-    execute({input(data_buffer), output(data_buffer), conv, act, pool}).sync();
+    execute({input(data_buffer), output(data_buffer), conv, act, pool}).wait();
 }
 #endif

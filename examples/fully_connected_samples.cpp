@@ -48,5 +48,5 @@ void example_fully_connected() {
                                          biases}
                                       );
 
-    execute({ input(in_buffer), output(out_buffer), weights(weight_buffer), act }).sync();
+    execute({ input(in_buffer), output(out_buffer), weights(weight_buffer), act }).wait();
 }

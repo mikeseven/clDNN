@@ -45,6 +45,6 @@ void example_005() {
     auto fc_relu8    = fully_connected_relu::create({engine::cpu, memory::format::yxfb_f32, fc_relu7, file::create({engine::cpu, "weight8.nnb"}), file::create({engine::cpu, "bias8.nnb"}), 0.0f});
     auto soft_max   = normalization::softmax::create({engine::cpu, output, fc_relu8});
 
-    execute({input(input_buffer), output(input_buffer), conv_relu1, pool1, lrn1, conv_relu2, pool2, lrn2, conv_relu3, conv_relu4, conv_relu5, pool5, fc_relu6, fc_relu7, fc_relu8, soft_max}).sync();
+    execute({input(input_buffer), output(input_buffer), conv_relu1, pool1, lrn1, conv_relu2, pool2, lrn2, conv_relu3, conv_relu4, conv_relu5, pool5, fc_relu6, fc_relu7, fc_relu8, soft_max}).wait();
 }
 #endif
