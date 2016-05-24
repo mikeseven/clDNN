@@ -44,10 +44,10 @@ void example_convolution_ref_forward() {
 //    const int32_t in_off_y = 0, in_off_x = 0, in_off_z = 0, in_off_b = 0;
 
     auto eng    = engine::reference;
-    auto input  = memory::create({eng, memory::format::yxfb_f32, { input_b  , {input_y    , input_x    }, input_z                       }, true});
-    auto output = memory::create({eng, memory::format::yxfb_f32, { output_b , {output_y   , output_x   }, output_z                      }, true});
-    auto weights= memory::create({eng, memory::format::oiyx_f32, { 1        , {conv_size_y, conv_size_x}, {conv_size_ofm, conv_size_ifm}}, true});
-    auto biases = memory::create({eng, memory::format::   x_f32, { 1        , {{output_z}}              , 1                             }, true});
+    auto input  = memory::allocate({eng, memory::format::yxfb_f32, { input_b  , {input_y    , input_x    }, input_z                       }});
+    auto output = memory::allocate({eng, memory::format::yxfb_f32, { output_b , {output_y   , output_x   }, output_z                      }});
+    auto weights= memory::allocate({eng, memory::format::oiyx_f32, { 1        , {conv_size_y, conv_size_x}, {conv_size_ofm, conv_size_ifm}}});
+    auto biases = memory::allocate({eng, memory::format::   x_f32, { 1        , {{output_z}}              , 1                             }});
 
     // buffers should be initialized with valid data
     fill(input.as  <const memory&>(), 1.0f);
@@ -65,7 +65,7 @@ void example_convolution_ref_forward() {
                                         padding::zero}
                                       );
 
-    execute({conv});
+    execute({conv}).wait();
 }
 
 void example_convolution_cpu_forward() {
@@ -92,10 +92,10 @@ void example_convolution_cpu_forward() {
                    conv_size_ofm = output_z;    // size of convolution window
 
     auto eng    = engine::cpu;
-    auto input  = memory::create({eng, memory::format::yxfb_f32, { input_b , {input_y , input_x }, input_z }, true});
-    auto output = memory::create({eng, memory::format::yxfb_f32, { output_b, {output_y, output_x}, output_z}, true});
-    auto weights= memory::create({eng, memory::format::oiyx_f32, { 1       , {conv_size_y, conv_size_x}, {conv_size_ofm, conv_size_ifm}}, true});
-    auto biases = memory::create({eng, memory::format::   x_f32, { 1       , {{output_z}}        , 1       }, true});
+    auto input  = memory::allocate({eng, memory::format::yxfb_f32, { input_b , {input_y , input_x }, input_z }});
+    auto output = memory::allocate({eng, memory::format::yxfb_f32, { output_b, {output_y, output_x}, output_z}});
+    auto weights= memory::allocate({eng, memory::format::oiyx_f32, { 1       , {conv_size_y, conv_size_x}, {conv_size_ofm, conv_size_ifm}}});
+    auto biases = memory::allocate({eng, memory::format::   x_f32, { 1       , {{output_z}}        , 1       }});
 
     // buffers should be initialized with valid data
     fill(input.as<const memory&>()  , 1.0f);
@@ -110,7 +110,7 @@ void example_convolution_cpu_forward() {
                                         padding::zero}
                                       );
 
-    execute({conv});
+    execute({conv}).wait();
 }
 
 void example_convolution_ref_backward(){
@@ -154,13 +154,13 @@ void example_convolution_ref_backward(){
 //                  in_off_b = 0;
 
     auto eng          = engine::reference;
-    auto bw_output    = memory::create({eng, memory::format::yxfb_f32, {output_b   , {output_y    , output_x   }, output_z   }, true});
-    auto bw_input     = memory::create({eng, memory::format::yxfb_f32, {input_b    , {input_y     , input_x    }, input_z    }, true});
-    auto fw_input     = memory::create({eng, memory::format::yxfb_f32, {output_b   , {output_y    , output_x   }, output_z   }, true});
-    auto weights      = memory::create({eng, memory::format::yxfb_f32, {conv_size_b, {conv_size_y , conv_size_x}, conv_size_z}, true});
-    auto weights_diff = memory::create({eng, memory::format::yxfb_f32, {conv_size_b, {conv_size_y , conv_size_x}, conv_size_z}, true});
-    auto biases       = memory::create({eng, memory::format::x_f32,    {1          , {{out_siz_z}}              , 1          }, true});
-    auto biases_diff  = memory::create({eng, memory::format::x_f32,    {1          , {{out_siz_z}}              , 1          }, true});
+    auto bw_output    = memory::allocate({eng, memory::format::yxfb_f32, {output_b   , {output_y    , output_x   }, output_z   }});
+    auto bw_input     = memory::allocate({eng, memory::format::yxfb_f32, {input_b    , {input_y     , input_x    }, input_z    }});
+    auto fw_input     = memory::allocate({eng, memory::format::yxfb_f32, {output_b   , {output_y    , output_x   }, output_z   }});
+    auto weights      = memory::allocate({eng, memory::format::yxfb_f32, {conv_size_b, {conv_size_y , conv_size_x}, conv_size_z}});
+    auto weights_diff = memory::allocate({eng, memory::format::yxfb_f32, {conv_size_b, {conv_size_y , conv_size_x}, conv_size_z}});
+    auto biases       = memory::allocate({eng, memory::format::x_f32,    {1          , {{out_siz_z}}              , 1          }});
+    auto biases_diff  = memory::allocate({eng, memory::format::x_f32,    {1          , {{out_siz_z}}              , 1          }});
     // buffers should be initialized with valid data
 
     auto conv_bw = convolution_backward::create({eng,

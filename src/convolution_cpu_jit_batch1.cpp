@@ -22,6 +22,7 @@
 #include "xbyak/xbyak_util.h"
 
 #include <thread>
+#include <mutex>
 
 const int C_simd_width = sizeof(__m256)/sizeof(float);
 const int C_slice_size = C_simd_width*2;
@@ -628,8 +629,8 @@ convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
     auto bias_ptr = reinterpret_cast<float**>(&arg.argument.input[2].primitive.as<const memory&>().pointer);
 
     // Get input buffer sizes.
-    uint64_t input_width = arg.input_memory(0).argument.size.spatial[1];
-    uint64_t input_height = arg.input_memory(0).argument.size.spatial[0];
+    uint64_t input_width = arg.input_memory(0).argument.size.spatial[0];
+    uint64_t input_height = arg.input_memory(0).argument.size.spatial[1];
     uint64_t input_depth = arg.input_memory(0).argument.size.feature[0];
 
     // Get input offsets.
@@ -642,20 +643,20 @@ convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
     uint64_t outbatch_end = outbatch_begin + arg.argument.output_size.batch[0] - 1;
 
     // Get output buffer sizes.
-    uint64_t output_width = arg.output_memory(0).argument.size.spatial[1];
-    uint64_t output_height = arg.output_memory(0).argument.size.spatial[0];
+    uint64_t output_width = arg.output_memory(0).argument.size.spatial[0];
+    uint64_t output_height = arg.output_memory(0).argument.size.spatial[1];
     uint64_t output_depth = arg.output_memory(0).argument.size.feature[0];
 
     // Get 'views' sizes for output.
-    uint64_t outpcol_length = arg.argument.output_size.spatial[1];
-    uint64_t outprow_length = arg.argument.output_size.spatial[0];
+    uint64_t outpcol_length = arg.argument.output_size.spatial[0];
+    uint64_t outprow_length = arg.argument.output_size.spatial[1];
     uint64_t outpfmap_length = arg.argument.output_size.feature[0];
 
-    uint64_t kernel_width = arg.argument.input[1].primitive.as<const memory &>().argument.size.spatial[1];
-    uint64_t kernel_height = arg.argument.input[1].primitive.as<const memory &>().argument.size.spatial[0];
+    uint64_t kernel_width = arg.argument.input[1].primitive.as<const memory &>().argument.size.spatial[0];
+    uint64_t kernel_height = arg.argument.input[1].primitive.as<const memory &>().argument.size.spatial[1];
     uint64_t kernel_ifmap = arg.argument.input[1].primitive.as<const memory &>().argument.size.feature[1];
-    uint64_t stride_col = arg.argument.stride.raw[3];
-    uint64_t stride_row = arg.argument.stride.raw[2];
+    uint64_t stride_col = arg.argument.stride.raw[2];
+    uint64_t stride_row = arg.argument.stride.raw[3];
 
     // Make these variable basing on number of threads - this naive case won't be optimal.
     uint64_t output_row_package_size = outprow_length;
@@ -678,15 +679,15 @@ convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
             { 
                 uint64_t item_in_pool = col_item * num_output_fm_items * num_row_items + row_item * num_output_fm_items + output_fm_item;
 
-                uint64_t input_view_begin_col = arg.argument.input_offset.spatial[1] + col_item * output_col_package_size * stride_col;
-                uint64_t input_view_begin_row = arg.argument.input_offset.spatial[0] + row_item * output_row_package_size * stride_row;
+                uint64_t input_view_begin_col = arg.argument.input_offset.spatial[0] + col_item * output_col_package_size * stride_col;
+                uint64_t input_view_begin_row = arg.argument.input_offset.spatial[1] + row_item * output_row_package_size * stride_row;
 
-                uint64_t output_view_begin_col = arg.argument.output_offset.spatial[1] + col_item * output_col_package_size;
-                uint64_t output_view_begin_row = arg.argument.output_offset.spatial[0] + row_item * output_row_package_size;
+                uint64_t output_view_begin_col = arg.argument.output_offset.spatial[0] + col_item * output_col_package_size;
+                uint64_t output_view_begin_row = arg.argument.output_offset.spatial[1] + row_item * output_row_package_size;
                 uint64_t output_view_begin_map = arg.argument.output_offset.feature[0] + output_fm_item * output_fmap_package_size;
 
-                uint64_t output_view_end_col = arg.argument.output_offset.spatial[1] + (col_item+1) * output_col_package_size - 1;
-                uint64_t output_view_end_row = arg.argument.output_offset.spatial[0] + (row_item+1) * output_row_package_size - 1;
+                uint64_t output_view_end_col = arg.argument.output_offset.spatial[0] + (col_item+1) * output_col_package_size - 1;
+                uint64_t output_view_end_row = arg.argument.output_offset.spatial[1] + (row_item+1) * output_row_package_size - 1;
                 uint64_t output_view_end_map = arg.argument.output_offset.feature[0] + (output_fm_item+1) * output_fmap_package_size - 1;
 
                 if(output_fm_item+1 == num_output_fm_items && num_output_fm_items_remainder)

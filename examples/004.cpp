@@ -25,8 +25,8 @@ void example_004() {
     uint32_t batch_size = 24;
 
     using namespace neural;
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {227, 227, 3,  batch_size}});
-    auto output = memory::create({engine::cpu, memory::format::xb_f32, {1000, batch_size}});
+    auto input  = memory::describe({engine::cpu, memory::format::yxfb_f32, {227, 227, 3,  batch_size}});
+    auto output = memory::describe({engine::cpu, memory::format::xb_f32, {1000, batch_size}});
 
     // [227x227x3xB] convolution->relu->pooling->lrn [27x27x96xB]
     auto conv1  = convolution::create({engine::cpu, memory::format::yxfb_f32, input, 2, file::create({engine::cpu, "weight1.nnb"}), file::create({engine::cpu, "bias1.nnb"}), padding::zero});
@@ -68,6 +68,6 @@ void example_004() {
     // [1000xB] softmax [1000xB]
     auto sftmax = normalization::softmax::create({engine::cpu, output, relu8});
 
-    execute({input(input_buffer), output(input_buffer), conv1, relu1, pool1, lrn1, conv2, relu2, pool2, lrn2, conv3, relu3, conv4, relu4, conv5, relu5, pool5, fc6, relu6, fc7, relu7, fc8, relu8, sftmax});
+    execute({input(input_buffer), output(input_buffer), conv1, relu1, pool1, lrn1, conv2, relu2, pool2, lrn2, conv3, relu3, conv4, relu4, conv5, relu5, pool5, fc6, relu6, fc7, relu7, fc8, relu8, sftmax}).wait();
 }
 #endif

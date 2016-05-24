@@ -42,15 +42,15 @@ void MKL_DNNLRNLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   //std::cout << "n "  <<  num_ << "  c " << channels_  << "  w "  << width_  <<  "  h " << height_  << "\n";
   //std::cout << "size "  <<  size_ << "  a " << alpha_ << "  b "  << beta_  <<  "  k " << k_  << "\n";
 
-  fwd_bottom_data_->memory_usr = memory::create({engine_, fwd_bottom_data_->layout_usr, {num_, {height_, width_}, channels_ }});
-  fwd_top_data_->memory_usr    = memory::create({engine_, fwd_top_data_   ->layout_usr, {num_, {height_, width_}, channels_ }});
-  fwd_bottom_data_->memory_prv = memory::create({engine_, fwd_bottom_data_->layout_prv, {num_, {height_, width_}, channels_ }});
-  fwd_top_data_->memory_prv    = memory::create({engine_, fwd_top_data_   ->layout_prv, {num_, {height_, width_}, channels_ }});
+  fwd_bottom_data_->memory_usr = memory::describe({engine_, fwd_bottom_data_->layout_usr, {num_, {width_, height_}, channels_ }});
+  fwd_top_data_->memory_usr    = memory::describe({engine_, fwd_top_data_   ->layout_usr, {num_, {width_, height_}, channels_ }});
+  fwd_bottom_data_->memory_prv = memory::describe({engine_, fwd_bottom_data_->layout_prv, {num_, {width_, height_}, channels_ }});
+  fwd_top_data_->memory_prv    = memory::describe({engine_, fwd_top_data_   ->layout_prv, {num_, {width_, height_}, channels_ }});
 
-  bwd_bottom_diff_->memory_usr = memory::create({engine_, bwd_bottom_diff_->layout_usr, {num_, {height_, width_}, channels_ }});
-  bwd_top_diff_->memory_usr    = memory::create({engine_, bwd_top_diff_   ->layout_usr, {num_, {height_, width_}, channels_ }});
-  bwd_bottom_diff_->memory_prv = memory::create({engine_, bwd_bottom_diff_->layout_prv, {num_, {height_, width_}, channels_ }});
-  bwd_top_diff_->memory_prv    = memory::create({engine_, bwd_top_diff_   ->layout_prv, {num_, {height_, width_}, channels_ }});
+  bwd_bottom_diff_->memory_usr = memory::describe({engine_, bwd_bottom_diff_->layout_usr, {num_, {width_, height_}, channels_ }});
+  bwd_top_diff_->memory_usr    = memory::describe({engine_, bwd_top_diff_   ->layout_usr, {num_, {width_, height_}, channels_ }});
+  bwd_bottom_diff_->memory_prv = memory::describe({engine_, bwd_bottom_diff_->layout_prv, {num_, {width_, height_}, channels_ }});
+  bwd_top_diff_->memory_prv    = memory::describe({engine_, bwd_top_diff_   ->layout_prv, {num_, {width_, height_}, channels_ }});
 
 
   // Names are for debugging only
@@ -127,7 +127,7 @@ void MKL_DNNLRNLayer<Dtype>::CrossChannelForward_cpu(
 
   execute({fwd_bottom_data_->memory_prv(bottom_data),
            fwd_top_data_->memory_prv(top_data),
-           lrnFwd_});
+           lrnFwd_}).wait();
 }
 
 template <typename Dtype>

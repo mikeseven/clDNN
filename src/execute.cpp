@@ -15,19 +15,28 @@
 */
 
 #include "neural.h"
+#include "thread_pool.h"
+#include <thread>
 
 namespace neural {
 
-void execute(std::vector<primitive> list, execution_resource& execution_resource) {
-    for(auto &item : list)
-        execution_resource.run_engine(item.work());
+async_result execute(std::vector<primitive> primitives, std::vector<worker> workers) {
+
+    if(0==workers.size()) {
+        static auto cpu_worker = worker_cpu::create({});
+        workers.push_back(cpu_worker);
+    }
+    assert(1==workers.size()); // currently only one worker at time
+
+    std::shared_ptr<volatile uint32_t> primitive_count(new uint32_t(static_cast<uint32_t>(primitives.size())));
+    auto thread_function = [](std::vector<primitive> primitives, std::vector<worker> workers, std::shared_ptr<volatile uint32_t> primitive_count) {
+        for(auto &item : primitives) {
+            workers[0].execute(item.work());
+            --*primitive_count;
+        }
+    };
+    std::thread(thread_function, primitives, workers, primitive_count).detach();
+    return primitive_count;
 }
 
-void execute(std::vector<primitive> list) 
-{
-    static nn_thread_worker_pool thread_pool_default;
-    for(auto &item : list)
-        thread_pool_default.push_job(item.work());
-}
-
-};
+} // namespace neural

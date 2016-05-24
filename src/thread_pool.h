@@ -22,39 +22,10 @@
 #include <vector>
 #include <atomic>
 #include <condition_variable>
+#include "neural_base.h"
 
 namespace neural 
 {
-	// task to be performed in form of callback & data for it
-	struct task {
-		void(*callback)(const void *);
-		const void *data;
-	};
-
-	struct task_group
-	{
-		std::vector<task> tsk;
-		bool use_hyper_threading = true;	
-		int task_count_per_thread = 1;								// portion of tasks which obtain every thread for processing per iteration
-		
-		task_group(const std::vector<task>& _tsk) : tsk(_tsk) {};	// workaround, could be remove in future
-		task_group(const task _task) : tsk{ _task } {};				// workaround, could be remove in future
-
-		task_group(){};
-		task_group(const task_group& tp) : tsk(tp.tsk), use_hyper_threading(tp.use_hyper_threading), task_count_per_thread(tp.task_count_per_thread){};
-		task_group& operator=(const task_group& tp)
-		{
-			if (this != &tp)
-			{
-				tsk = tp.tsk;
-				use_hyper_threading = tp.use_hyper_threading;
-				task_count_per_thread = tp.task_count_per_thread;
-			}
-			return *this;
-		}
-	};
-
-
 	class nn_thread_worker_pool
 	{
 		size_t taskcount;

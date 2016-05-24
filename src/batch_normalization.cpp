@@ -33,39 +33,14 @@ namespace
 static std::map< std::tuple<memory::format::type, bool>, std::tuple<std::vector<uint32_t>, std::vector<uint32_t>, std::vector<uint32_t>>> format_strides_map =
 {
       // raw sizes: b,f, {x,y}                 spatial                                  spatial_stride         single_average_stride             batch_stride
-    { std::make_tuple(memory::format::yxfb_f64, true),  std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::xyfb_f32, true),  std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
     { std::make_tuple(memory::format::yxfb_f32, true),  std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::xyfb_f64, true),  std::make_tuple(std::vector<uint32_t>{0,1}, std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fyxb_f32, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fyxb_f64, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fxyb_f32, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fxyb_f64, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{0,2,3}, std::vector<uint32_t>{}) },
     { std::make_tuple(memory::format::byxf_f32, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::byxf_f64, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bxyf_f32, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bxyf_f64, true),  std::make_tuple(std::vector<uint32_t>{0},   std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::fyxb_f32, true),  std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
     { std::make_tuple(memory::format::bfyx_f32, true),  std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfyx_f64, true),  std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfxy_f32, true),  std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfxy_f64, true),  std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3})},
-
-    { std::make_tuple(memory::format::yxfb_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::xyfb_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
     { std::make_tuple(memory::format::yxfb_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::xyfb_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fyxb_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fyxb_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fxyb_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
-    { std::make_tuple(memory::format::fxyb_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
     { std::make_tuple(memory::format::byxf_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::byxf_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bxyf_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bxyf_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfyx_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfyx_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfxy_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
-    { std::make_tuple(memory::format::bfxy_f64, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{},      std::vector<uint32_t>{1,2,3}) },
+    { std::make_tuple(memory::format::fyxb_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{0},     std::vector<uint32_t>{}) },
+    { std::make_tuple(memory::format::bfyx_f32, false), std::make_tuple(std::vector<uint32_t>{},    std::vector<uint32_t>{2,3},   std::vector<uint32_t>{1,2,3}) }
 };
 
 
@@ -273,7 +248,6 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
 
         auto& forward_input       = this_bn->argument.input[0].primitive.as<const memory&>();
         auto& forward_scale       = this_bn->argument.input[1].primitive.as<const memory&>();
-        // auto& forward_bias        = this_bn->input_memory(2); // not required
         auto& output_grad         = this_bn->argument.input[3].primitive.as<const memory&>();
         auto& current_mean        = this_bn->argument.input[4].primitive.as<const memory&>();
         auto& current_inv_std_dev = this_bn->argument.input[5].primitive.as<const memory&>();
@@ -284,7 +258,6 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
 
         auto forward_input_buffer         = static_cast<T*>(forward_input.pointer);
         auto forward_scale_buffer         = static_cast<T*>(forward_scale.pointer);
-        //auto forward_bias_buffer          = static_cast<T*>(forward_bias.pointer); // not required
         auto output_grad_buffer           = static_cast<T*>(output_grad.pointer);
         auto current_mean_buffer          = static_cast<T*>(current_mean.pointer);
         auto current_inv_std_dev_buffer   = static_cast<T*>(current_inv_std_dev.pointer);
@@ -453,62 +426,25 @@ struct batch_normalization_inference_reference : is_an_implementation {
 using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
 // maps of available implementations
-static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_training_forward &)>> training_forward_implementation_map =
-{
+static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_training_forward &)>> training_forward_implementation_map = {
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::xyfb_f32, memory::format::xyfb_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fxyb_f32, memory::format::fxyb_f32), batch_normalization_training_forward_reference<float>::create},
     {std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bxyf_f32, memory::format::bxyf_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfxy_f32, memory::format::bfxy_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::yxfb_f64, memory::format::yxfb_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f64, memory::format::fyxb_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::xyfb_f64, memory::format::xyfb_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::fxyb_f64, memory::format::fxyb_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::byxf_f64, memory::format::byxf_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f64, memory::format::bfyx_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bxyf_f64, memory::format::bxyf_f64), batch_normalization_training_forward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bfxy_f64, memory::format::bfxy_f64), batch_normalization_training_forward_reference<double>::create},
+    {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_training_forward_reference<float>::create},
+    {std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_training_forward_reference<float>::create}
 };
-static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_training_backward &)>> training_backward_implementation_map =
-{
+
+static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_training_backward &)>> training_backward_implementation_map = {
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::xyfb_f32, memory::format::xyfb_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fxyb_f32, memory::format::fxyb_f32), batch_normalization_training_backward_reference<float>::create},
     {std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bxyf_f32, memory::format::bxyf_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfxy_f32, memory::format::bfxy_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::yxfb_f64, memory::format::yxfb_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f64, memory::format::fyxb_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::xyfb_f64, memory::format::xyfb_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::fxyb_f64, memory::format::fxyb_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::byxf_f64, memory::format::byxf_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f64, memory::format::bfyx_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bxyf_f64, memory::format::bxyf_f64), batch_normalization_training_backward_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bfxy_f64, memory::format::bfxy_f64), batch_normalization_training_backward_reference<double>::create},
+    {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_training_backward_reference<float>::create},
+    {std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_training_backward_reference<float>::create}
 };
-static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_inference &)>> inference_implementation_map =
-{
+
+static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_inference &)>> inference_implementation_map = {
     {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::xyfb_f32, memory::format::xyfb_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fxyb_f32, memory::format::fxyb_f32), batch_normalization_inference_reference<float>::create},
     {std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bxyf_f32, memory::format::bxyf_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfxy_f32, memory::format::bfxy_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::yxfb_f64, memory::format::yxfb_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f64, memory::format::fyxb_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::xyfb_f64, memory::format::xyfb_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::fxyb_f64, memory::format::fxyb_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::byxf_f64, memory::format::byxf_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f64, memory::format::bfyx_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bxyf_f64, memory::format::bxyf_f64), batch_normalization_inference_reference<double>::create},
-    {std::make_tuple(engine::reference, memory::format::bfxy_f64, memory::format::bfxy_f64), batch_normalization_inference_reference<double>::create},
+    {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_inference_reference<float>::create},
+    {std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_inference_reference<float>::create}
 };
 
 } // namespace {
@@ -529,18 +465,20 @@ primitive batch_training_forward::create(batch_training_forward::arguments arg)
     // wrap batch norm into RAII wrapper
     std::unique_ptr<batch_training_forward> result(new batch_training_forward(arg));
 
-    // lookup in database; throw if not found
-    //auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-    auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
-    auto key = std::make_tuple(arg.engine, infmt, outfmt);
+    // create implementation for non-lazy evaluation
+    if(0 == (arg.engine & engine::lazy)) {
+        // lookup in database; throw if not found
+        auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
+        auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
+        auto key = std::make_tuple(arg.engine, infmt, outfmt);
 
-    auto it = training_forward_implementation_map.find(key);
-    if(it==std::end(training_forward_implementation_map)) throw std::runtime_error("not yet implemented");
+        auto it = training_forward_implementation_map.find(key);
+        if(it==std::end(training_forward_implementation_map)) throw std::runtime_error("not yet implemented");
 
-    // create implementation & attach it to result
-    auto implementation = it->second(*result);
-    result->_work = implementation->work();
+        // create implementation & attach it to result
+        auto implementation = it->second(*result);
+        result->_work = implementation->work();
+    }
 
     // release RAII wrapper, return naked pointer
     return result.release();
@@ -558,14 +496,17 @@ primitive batch_training_backward::create(batch_training_backward::arguments arg
     // wrap batch norm into RAII wrapper
     std::unique_ptr<batch_training_backward> result(new batch_training_backward(arg));
 
-    // lookup in database; throw if not found
-    auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto it = training_backward_implementation_map.find(key);
-    if(it==std::end(training_backward_implementation_map)) throw std::runtime_error("not yet implemented");
+    // create implementation for non-lazy evaluation
+    if(0 == (arg.engine & engine::lazy)) {
+        // lookup in database; throw if not found
+        auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
+        auto it = training_backward_implementation_map.find(key);
+        if(it==std::end(training_backward_implementation_map)) throw std::runtime_error("not yet implemented");
 
-    // create implementation & attach it to result
-    auto implementation = it->second(*result);
-    result->_work = implementation->work();
+        // create implementation & attach it to result
+        auto implementation = it->second(*result);
+        result->_work = implementation->work();
+    }
 
     // release RAII wrapper, return naked pointer
     return result.release();
@@ -583,14 +524,17 @@ primitive batch_inference::create(batch_inference::arguments arg)
     // wrap batch norm into RAII wrapper
     std::unique_ptr<batch_inference> result(new batch_inference(arg));
 
-    // lookup in database; throw if not found
-    auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-    auto it = inference_implementation_map.find(key);
-    if(it==std::end(inference_implementation_map)) throw std::runtime_error("not yet implemented");
+    // create implementation for non-lazy evaluation
+    if(0 == (arg.engine & engine::lazy)) {
+        // lookup in database; throw if not found
+        auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
+        auto it = inference_implementation_map.find(key);
+        if(it==std::end(inference_implementation_map)) throw std::runtime_error("not yet implemented");
 
-    // create implementation & attach it to result
-    auto implementation = it->second(*result);
-    result->_work = implementation->work();
+        // create implementation & attach it to result
+        auto implementation = it->second(*result);
+        result->_work = implementation->work();
+    }
 
     // release RAII wrapper, return naked pointer
     return result.release();

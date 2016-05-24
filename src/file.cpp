@@ -54,12 +54,12 @@ template<typename T_type, typename... T_args> std::unique_ptr<T_type> make_uniqu
 file::arguments::arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize)
     : engine(aengine)
     , name(aname)
-    , output{{memory::create({aengine, aformat, asize, true})}} {}
+    , output{{memory::allocate({aengine, aformat, asize})}} {}
 
 file::arguments::arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat)
     : engine(aengine)
     , name(aname)
-    , output{{memory::create({aengine, aformat, std::vector<uint32_t>()})}} {}
+    , output{{memory::describe({aengine, aformat, std::vector<uint32_t>()})}} {}
 
 file::arguments::arguments(neural::engine::type aengine, std::string aname, primitive aoutput)
     : engine(aengine)
@@ -106,7 +106,7 @@ primitive file::create(file::arguments arg) {
         }
 
         // crete result with output owning memory, load data into it
-        auto result = std::unique_ptr<file>(new file({arg.engine, arg.name, memory::create({arg.engine, header.format, *size, true})}));
+        auto result = std::unique_ptr<file>(new file({arg.engine, arg.name, memory::allocate({arg.engine, header.format, *size})}));
 
         auto &buffer = result->output_memory(0);
         auto count = buffer.count()*memory::traits(buffer.argument.format).type->size;

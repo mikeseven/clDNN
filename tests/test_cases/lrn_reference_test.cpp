@@ -48,9 +48,9 @@ TEST(local_response_normalization, lrn_test) {
     // lrn parameters:
     const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
 
-    auto input = memory::create({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }, true });
-    auto output = memory::create({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }, true });
-    auto output_oracle = memory::create({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }, true });
+    auto input = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }});
+    auto output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }});
+    auto output_oracle = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }});
 
     set_values(input, input_oracle_init);
     set_values(output_oracle, output_oracle_init);
@@ -59,7 +59,7 @@ TEST(local_response_normalization, lrn_test) {
 
     // ------------------------------------------------------------------------------------------------
     // test run
-    execute({ lrn });
+    execute({ lrn }).wait();
     
     // analysis of results
     float* buff = nullptr;
