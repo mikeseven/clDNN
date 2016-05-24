@@ -222,7 +222,17 @@ template<typename T_type> __attribute__((noinline)) type_traits *type_id() {
     return ti;
 }
 
-class engine  { engine();  public: enum type { reference, cpu, any=static_cast<uint32_t>(-1) }; };
+class engine  { engine();  public: enum type { 
+    // engines
+      reference                     // naive & easy to debug implementation for validation
+    , cpu                           // optimized CPU implementation
+    , any=static_cast<uint32_t>(-1) // 'any' engine for querries
+
+    // attributies
+    , lazy = 0x80000000             // lazy evaluation
+}; };
+inline engine::type operator|(engine::type a, engine::type b) { return static_cast<engine::type>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b)); };
+
 class padding { padding(); public: enum type { zero }; };
 
 // value in any format
@@ -296,7 +306,7 @@ public:
     virtual ~is_a_worker() {};
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
 
-    virtual void execute(const std::vector<task>& requests) = 0;
+    virtual void execute(const std::vector<task>& requests) const = 0;
     virtual neural::engine::type engine() const = 0;
 };
 
@@ -308,7 +318,7 @@ public:
     worker(const worker &other) : _pointer(other._pointer) {};
 
     neural::engine::type engine() { return _pointer->engine(); }
-    void execute(const std::vector<task>& requests) { _pointer->execute(requests);}
+    void execute(const std::vector<task>& requests) const { _pointer->execute(requests);}
 };
 
 // cheap to copy handle with reference counting
@@ -359,7 +369,7 @@ public:
 #endif
     template<typename T> T as() const;
     template<typename T> operator T() { return as<T>(); }
-    const std::vector<task> &work();
+    const std::vector<task> &work() const;
     size_t id() const;
     bool operator==(const primitive &other) const { return _pointer==other._pointer; }
     bool operator!=(const primitive &other) const { return !(*this==other); }
@@ -386,7 +396,6 @@ protected:
     is_a_primitive(type_traits *traits) : _type_traits(traits) {}
 public:
     virtual ~is_a_primitive() {};
-    virtual primitive clone() const = 0;
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
     virtual const std::vector<primitive_at>  &input()  const { throw std::runtime_error(std::string("no inputs in ")+_type_traits->name); };
     virtual const std::vector<primitive>     &output() const { throw std::runtime_error(std::string("no outputs in ")+_type_traits->name); };
@@ -408,7 +417,7 @@ public:
 inline const primitive_at           primitive::input::operator[] (uint32_t at) const { return get_base()->_pointer->input()[at]; }
 inline size_t                       primitive::input::size() const { return get_base()->_pointer->input().size(); }
 inline const primitive              primitive::operator()(void *argument) const { _pointer->execute_argument(argument); return *this; }
-inline const std::vector<task> &    primitive::work() { return _pointer->_work; }
+inline const std::vector<task> &    primitive::work() const { return _pointer->_work; }
 inline size_t                       primitive::id() const { return _pointer->_type_traits->id; }
 inline const primitive              primitive::output::operator[](uint32_t at) const { return get_base()->_pointer.get()->output()[at]; }
 inline size_t                       primitive::output::size() const { return get_base()->_pointer.get()->output().size(); }
@@ -431,8 +440,17 @@ public:
     virtual ~is_an_implementation() {};
 };
 
-// execution of sequence of primitives
-DLL_SYM void execute(std::vector<primitive>, worker&);
-DLL_SYM void execute(std::vector<primitive>);
+// asynchronous result
+class async_result {
+    std::shared_ptr<volatile uint32_t> _tasks_left;
+    async_result(std::shared_ptr<volatile uint32_t> arg) : _tasks_left(arg) {}
+
+    // execution of sequence of primitives
+    friend DLL_SYM async_result execute(std::vector<primitive>, std::vector<worker>);
+public:
+    uint32_t tasks_left() { return *_tasks_left; };
+    void wait() { while(tasks_left()); }
+};
+DLL_SYM async_result execute(std::vector<primitive> primitives, std::vector<worker> workers=std::vector<worker>());
 
 }

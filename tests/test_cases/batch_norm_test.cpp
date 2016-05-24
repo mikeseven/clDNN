@@ -46,16 +46,16 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_true) {
     };
 
     // Create input buffers.
-    auto input               = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto bias                = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
-    auto scale               = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
+    auto input               = memory::allocate({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }});
+    auto bias                = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }});
+    auto scale               = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }});
 
     // Create output buffers.
-    auto output              = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto current_inv_std_dev = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
-    auto moving_average      = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
-    auto moving_inv_std_dev  = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
-    auto current_average     = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
+    auto output              = memory::allocate({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }});
+    auto current_inv_std_dev = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }});
+    auto moving_average      = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }});
+    auto moving_inv_std_dev  = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }});
+    auto current_average     = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }});
 
     auto& output_memory = output.as<const memory&>();
 
@@ -69,7 +69,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_true) {
 
     // Run few times.
     for(i = 0; i < 3; ++i)
-        execute({bn});
+        execute({bn}).wait();
 
     for (i = 0; i < input_size[2]; ++i){
         EXPECT_EQ(0.0f, static_cast<float*>(output_memory.pointer)[i]);
@@ -104,16 +104,16 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     }
 
     // Create input buffers.
-    auto input               = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto bias                = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
-    auto scale               = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
+    auto input               = memory::allocate({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }});
+    auto bias                = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }});
+    auto scale               = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }});
 
     // Create output buffers.
-    auto output              = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto current_inv_std_dev = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
-    auto moving_average      = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
-    auto moving_inv_std_dev  = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
-    auto current_average     = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }, true });
+    auto output              = memory::allocate({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }});
+    auto current_inv_std_dev = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }});
+    auto moving_average      = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }});
+    auto moving_inv_std_dev  = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }});
+    auto current_average     = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, {             1,             1 }, input_size[2] }});
 
     auto& input_memory = input.as<const memory&>();
     auto& output_memory = output.as<const memory&>();
@@ -134,7 +134,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
 
     // Run few times.
     for(i = 0; i < 3; ++i)
-        execute({bn});
+        execute({bn}).wait();
 
     // Find non zero value in averages
     if (input_size[2] == 1) {
@@ -203,16 +203,16 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
     }
 
     // Create input buffers.
-    auto input               = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto scale               = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto bias                = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto input               = memory::allocate({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }});
+    auto scale               = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }});
+    auto bias                = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }});
 
     // Create output buffers.
-    auto output              = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto moving_average      = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto moving_inv_std_dev  = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto current_average     = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto current_inv_std_dev = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto output              = memory::allocate({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }});
+    auto moving_average      = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }});
+    auto moving_inv_std_dev  = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }});
+    auto current_average     = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }});
+    auto current_inv_std_dev = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }});
 
     auto& output_memory = output.as<const memory&>();
 
@@ -227,7 +227,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
 
     // Run few times.
     for(i = 0; i < 3; ++i)
-        execute({bn});
+        execute({bn}).wait();
 
     for (i = 0; i < total_average_size; ++i){
         EXPECT_EQ(0.0f, static_cast<float*>(output_memory.pointer)[i]);
@@ -263,16 +263,16 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     uint32_t total_input_size = total_average_size * input_size[3];
 
     // Create input buffers.
-    auto input               = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto scale               = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto bias                = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto input               = memory::allocate({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }});
+    auto scale               = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }});
+    auto bias                = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }});
 
     // Create output buffers.
-    auto output              = memory::create({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto moving_average      = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto moving_inv_std_dev  = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto current_average     = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
-    auto current_inv_std_dev = memory::create({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }, true });
+    auto output              = memory::allocate({ engine::reference, memory::format::yxfb_f32, { input_size[3], { input_size[1], input_size[0] }, input_size[2] }});
+    auto moving_average      = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }});
+    auto moving_inv_std_dev  = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }});
+    auto current_average     = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }});
+    auto current_inv_std_dev = memory::allocate({ engine::reference, memory::format::yxfb_f32, {             1, { input_size[1], input_size[0] }, input_size[2] }});
 
     auto& input_memory = input.as<const memory&>();
     auto& output_memory = output.as<const memory&>();
@@ -293,7 +293,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
 
     // Run few times.
     for(i = 0; i < 3; ++i)
-        execute({bn});
+        execute({bn}).wait();
 
 
     // Find non zero value in averages

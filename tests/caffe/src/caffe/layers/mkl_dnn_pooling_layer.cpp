@@ -122,15 +122,15 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   const uint32_t out_off_x = 0;
   const uint32_t out_off_z = 0;
 
-  fwd_bottom_data_->memory_usr = memory::create({engine_, fwd_bottom_data_->layout_usr, {n, {ih, iw}, c}});
-  fwd_top_data_->memory_usr    = memory::create({engine_, fwd_top_data_   ->layout_usr, {n, {oh, ow}, c}});
-  fwd_bottom_data_->memory_prv = memory::create({engine_, fwd_bottom_data_->layout_prv, {n, {ih, iw}, c}});
-  fwd_top_data_->memory_prv    = memory::create({engine_, fwd_top_data_   ->layout_prv, {n, {oh, ow}, c}});
+  fwd_bottom_data_->memory_usr = memory::describe({engine_, fwd_bottom_data_->layout_usr, {n, {iw, ih}, c}});
+  fwd_top_data_->memory_usr    = memory::describe({engine_, fwd_top_data_   ->layout_usr, {n, {ow, oh}, c}});
+  fwd_bottom_data_->memory_prv = memory::describe({engine_, fwd_bottom_data_->layout_prv, {n, {iw, ih}, c}});
+  fwd_top_data_->memory_prv    = memory::describe({engine_, fwd_top_data_   ->layout_prv, {n, {ow, oh}, c}});
 
-  bwd_bottom_diff_->memory_usr = memory::create({engine_, bwd_bottom_diff_->layout_usr, {n, {ih, iw}, c}});
-  bwd_top_diff_->memory_usr    = memory::create({engine_, bwd_top_diff_   ->layout_usr, {n, {oh, ow}, c}});
-  bwd_bottom_diff_->memory_prv = memory::create({engine_, bwd_bottom_diff_->layout_prv, {n, {ih, iw}, c}});
-  bwd_top_diff_->memory_prv    = memory::create({engine_, bwd_top_diff_   ->layout_prv, {n, {oh, ow}, c}});
+  bwd_bottom_diff_->memory_usr = memory::describe({engine_, bwd_bottom_diff_->layout_usr, {n, {iw, ih}, c}});
+  bwd_top_diff_->memory_usr    = memory::describe({engine_, bwd_top_diff_   ->layout_usr, {n, {ow, oh}, c}});
+  bwd_bottom_diff_->memory_prv = memory::describe({engine_, bwd_bottom_diff_->layout_prv, {n, {iw, ih}, c}});
+  bwd_top_diff_->memory_prv    = memory::describe({engine_, bwd_top_diff_   ->layout_prv, {n, {ow, oh}, c}});
 
 
   // Names are for debugging only
@@ -159,12 +159,12 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   poolingFwd_ = pooling::create( {engine::reference,
                                   mode,
                                   fwd_top_data_->memory_prv,
-                                  {out_off_b, {out_off_y, out_off_x}, out_off_z},
-                                  {n,         {oh,        ow},        c},
+                                  {out_off_b, {out_off_x, out_off_y}, out_off_z},
+                                  {n,         {ow,        oh},        c},
                                   fwd_bottom_data_->memory_prv,
-                                  {in_off_b,  {in_off_y, in_off_x},   in_off_z},
-                                  {1,         {stride_h_, stride_w_}, 1},
-                                  {1,         {kernel_h_, kernel_w_}, 1},
+                                  {in_off_b,  {in_off_x, in_off_y},   in_off_z},
+                                  {1,         {stride_w_, stride_h_}, 1},
+                                  {1,         {kernel_w_, kernel_h_}, 1},
                                   padding::zero} );
 
   // TODO:
@@ -254,7 +254,7 @@ void MKL_DNNPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
     execute({fwd_bottom_data_->memory_prv(bottom_data),
              fwd_top_data_->memory_prv(top_data),
-             poolingFwd_});
+             poolingFwd_}).wait();
     }
     break;
   case PoolingParameter_PoolMethod_AVE:
@@ -271,7 +271,7 @@ void MKL_DNNPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
     execute({fwd_bottom_data_->memory_prv(bottom_data),
              fwd_top_data_->memory_prv(top_data),
-             poolingFwd_});
+             poolingFwd_}).wait();
     }
     break;
   case PoolingParameter_PoolMethod_STOCHASTIC:
