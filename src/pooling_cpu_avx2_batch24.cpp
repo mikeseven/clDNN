@@ -276,7 +276,7 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     //                           make<InputFeats>(output_size.raw[f_pos])}; //todo why out?
 
 
-    neural::vector<uint64_t> in_dims = { 1, { input_height, input_width }, output_size.raw[f_pos] };
+    neural::vector<uint64_t> in_dims = { 1, { input_width, input_height }, output_size.raw[f_pos] };
 
 
     //todo added, what is it?
