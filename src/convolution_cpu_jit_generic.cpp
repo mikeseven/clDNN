@@ -76,9 +76,9 @@ namespace{
             auto code_op_type = [&](uint8_t type, std::function<void()> prologue, std::function<void()> epilogue) {
 
                 auto code_op_type_block = [&](int n) {
-                    vmovaps(ymm12, ptr [rbx+n*96]   );
-                    vmovaps(ymm13, ptr [rbx+n*96+32]);
-                    vmovaps(ymm14, ptr [rbx+n*96+64]);
+                    vmovups(ymm12, ptr [rbx+n*96]   );
+                    vmovups(ymm13, ptr [rbx+n*96+32]);
+                    vmovups(ymm14, ptr [rbx+n*96+64]);
                     vbroadcastss(ymm15, ptr [rcx+(n*output_features_per_iteration+0)*sizeof(float)]); vfmadd231ps(ymm0, ymm12, ymm15); vfmadd231ps(ymm1,  ymm13, ymm15); vfmadd231ps(ymm2,  ymm14, ymm15);
                     vbroadcastss(ymm15, ptr [rcx+(n*output_features_per_iteration+1)*sizeof(float)]); vfmadd231ps(ymm3, ymm12, ymm15); vfmadd231ps(ymm4,  ymm13, ymm15); vfmadd231ps(ymm5,  ymm14, ymm15);
                     vbroadcastss(ymm15, ptr [rcx+(n*output_features_per_iteration+2)*sizeof(float)]); vfmadd231ps(ymm6, ymm12, ymm15); vfmadd231ps(ymm7,  ymm13, ymm15); vfmadd231ps(ymm8,  ymm14, ymm15);
@@ -115,13 +115,13 @@ namespace{
                 jb("op_loop");
             };
 
-            auto code_prologue_load         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovaps(Ymm(static_cast<int>(n)),  ptr [rax+32*n] );};
+            auto code_prologue_load         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovups(Ymm(static_cast<int>(n)),  ptr [rax+32*n] );};
             auto code_prologue_zero         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vxorps(Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)));};
-            auto code_epilogue_store        = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovaps(ptr [rax+32*n], Ymm(static_cast<int>(n)));};
+            auto code_epilogue_store        = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovups(ptr [rax+32*n], Ymm(static_cast<int>(n)));};
             auto code_epilogue_relu_store   = [&]() {
                 vxorps(ymm15, ymm15, ymm15);
                 for(uint64_t n=0; n<accumulators_count; ++n) vmaxps(Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)), ymm15);
-                for(uint64_t n=0; n<accumulators_count; ++n) vmovaps(ptr [rax+32*n], Ymm(static_cast<int>(n)));
+                for(uint64_t n=0; n<accumulators_count; ++n) vmovups(ptr [rax+32*n], Ymm(static_cast<int>(n)));
             };
 
             // <- code starts here
