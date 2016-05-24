@@ -40,8 +40,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
 //  Expected output:
 //  [ 2.0]
 
-    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {3, 3}, 1}, true});
-    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {1, 1}, 1}, true});
+    auto input_prim  = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {3, 3}, 1}});
+    auto output_prim = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {1, 1}, 1}});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {1, {1, 1}, 1}, {1, {3, 3}, 1}, padding::type::zero});
 
     set_values(input_prim, {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f});
@@ -110,8 +110,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
 //  [ 2.0,  1.5]
 //  [ 2.0,  1.5]
 
-    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {3, 3}, 1}, true});
-    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto input_prim  = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {3, 3}, 1}});
+    auto output_prim = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {1, {1, 1}, 1}, {1, {2, 2}, 1}, padding::type::zero});
 
     set_values(input_prim, {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f});
@@ -202,8 +202,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
 //  [ 2.0,  0.5]
 //  [ 0.5,  0.5]
 
-    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {4, 4}, 1}, true});
-    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto input_prim  = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {4, 4}, 1}});
+    auto output_prim = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, { 1, {2, 2}, 1}, { 1, {2, 2}, 1}, padding::type::zero});
 
     set_values(input_prim, {-0.25f, 1.00f, 0.50f, 0.25f, 2.00f, 1.50f, -0.50f, -0.75f, 0.00f, -1.00f, 0.50f, 0.25f, 0.50f, -2.00f, -1.50f, -2.50f});
@@ -290,8 +290,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
 //  [ 0.5,  1.0]         [ 1.0,  0.5]
 //  [-0.5,  1.5]         [ 1.0,  0.0]
 
-    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 2, {3, 3}, 2}, true});
-    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 2, {2, 2}, 2}, true});
+    auto input_prim  = memory::allocate({engine::reference, memory::format::yxfb_f32, { 2, {3, 3}, 2}});
+    auto output_prim = memory::allocate({engine::reference, memory::format::yxfb_f32, { 2, {2, 2}, 2}});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {1, {1, 1}, 1}, { 1, {2, 2}, 1}, padding::type::zero});
 
     set_values(input_prim, {-0.5f, 0.5f, -1.5f, 0.0f, 0.5f, 0.0f, -0.5f, 0.5f, 0.0f, -0.5f, 0.0f, -0.5f, 1.0f, -2.0f, 0.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -2.0f, 1.0f, 1.5f, 0.0f, -1.0f, -0.5f, -2.0f, 0.5f, -0.5f, -1.0f, 1.0f, -0.5f, -0.5f, 1.5f, -0.5f, 0.0f});
@@ -327,8 +327,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz4x4_wstr1x1_i2x2x1x1_inoffs1) {
 //  Expected output:
 //  [ 1.0]
 
-    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
-    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto input_prim  = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}});
+    auto output_prim = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {0 ,{-1, -1}, 0}, { 1, {1, 1}, 1}, { 1, {4, 4}, 1}, padding::type::zero});
 
     set_values(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
@@ -357,8 +357,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i2x2x1x1_inoffs1) {
 //  [ 1.0,  1.0]
 //  [ 1.0,  1.0]
 
-    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
-    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto input_prim  = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}});
+    auto output_prim = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {0, {-1, -1}, 0}, {1, {1, 1}, 1}, {1, {3, 3}, 1}, padding::type::zero});
 
     set_values(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
@@ -390,8 +390,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_inoffs1) {
 //  [ 0.0,  0.5]
 //  [ 1.0,  0.0]
 
-    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
-    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
+    auto input_prim  = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}});
+    auto output_prim = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}});
     auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {0, {-1, -1}, 0}, {1, {2, 2}, 1}, {1, {2, 2}, 1}, padding::type::zero});
 
     set_values(input_prim, {-0.5f, 0.5f, 1.0f, -1.0f});
@@ -435,8 +435,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_inoffs1) {
 //  [ 0.5,  0.0]             [ 0.5,  0.0]
 //  [ 0.0,  1.0]             [ 1.0,  0.0]
 
-    auto input_prim  = memory::create({engine::reference, memory::format::yxfb_f32, {2, {2, 2}, 2}, true});
-    auto output_prim = memory::create({engine::reference, memory::format::yxfb_f32, {2, {2, 2}, 2}, true});
+    auto input_prim  = memory::allocate({engine::reference, memory::format::yxfb_f32, {2, {2, 2}, 2}});
+    auto output_prim = memory::allocate({engine::reference, memory::format::yxfb_f32, {2, {2, 2}, 2}});
     auto pool_prim   = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, {0, {-1, -1}, 0}, {1, {2, 2}, 1}, {1, {2, 2}, 1}, padding::type::zero});
 
     set_values(input_prim, {-0.5f, 0.5f, -1.5f, 0.5f, 0.5f, -0.5f, -0.5f, -0.5f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.5f, -1.0f});
@@ -510,8 +510,8 @@ TEST(pooling_forward, advanced_max_yxfb) {
                     }
                 }
 
-                auto input_prim  = memory::create({engine::reference, format, input_sizes, true});
-                auto output_prim = memory::create({engine::reference, format, output_sizes, true});
+                auto input_prim  = memory::allocate({engine::reference, format, input_sizes});
+                auto output_prim = memory::allocate({engine::reference, format, output_sizes});
 
                 auto pool_prim = pooling::create({engine::reference, pooling::mode::max, output_prim, input_prim, input_offsets, pooling_window_strides, pooling_window_sizes, padding::type::zero});
 

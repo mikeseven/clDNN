@@ -35,8 +35,8 @@ public:
     float out_buffer[out_size];
     float expected_buffer[out_size];
 
-    neural::primitive input  = memory::create({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
-    neural::primitive output = memory::create({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
+    neural::primitive input  = memory::describe({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
+    neural::primitive output = memory::describe({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
     neural::primitive act    = normalization::softmax::create({engine::reference, output, input});
 
     void compare_out_buffer_with_expected() {
@@ -142,8 +142,8 @@ TEST(softmax_xb_f32_test, basic_with_offsets) {
     float out_buffer[output_x*output_b];
     // input buffer should be initialized with valid data
 
-    auto input  = memory::create({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
-    auto output = memory::create({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
+    auto input  = memory::describe({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
+    auto output = memory::describe({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
 
     auto act    = normalization::softmax::create({engine::reference,
                                                   output,

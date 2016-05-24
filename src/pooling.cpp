@@ -136,7 +136,7 @@ pooling::arguments::arguments( neural::engine::type     eng,
                                neural::padding::type    padd)
     : engine(eng)
     , mode(p_mode)
-    , output( {memory::create({eng, o_frmt, out_siz, true})} )
+    , output( {memory::allocate({eng, o_frmt, out_siz})} )
     , output_offset(out_off)
     , output_size(out_siz)
     , input({in})

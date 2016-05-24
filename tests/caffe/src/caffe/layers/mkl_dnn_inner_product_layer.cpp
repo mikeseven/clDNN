@@ -78,25 +78,25 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(
   uint32_t input_x = K_;
   uint32_t bias_x = N_, output_x = N_;
 
-  bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {batch, {{input_x}},  1}});
-  top_data_   ->memory_prv = memory::create({engine_, top_data_   ->layout_prv, {batch, {{output_x}}, 1}});
-  bottom_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_prv, {batch, {{input_x}},  1}});
-  top_diff_   ->memory_prv = memory::create({engine_, top_diff_   ->layout_prv, {batch, {{output_x}}, 1}});
+  bottom_data_->memory_prv = memory::describe({engine_, bottom_data_->layout_prv, {batch, {{input_x}},  1}});
+  top_data_   ->memory_prv = memory::describe({engine_, top_data_   ->layout_prv, {batch, {{output_x}}, 1}});
+  bottom_diff_->memory_prv = memory::describe({engine_, bottom_diff_->layout_prv, {batch, {{input_x}},  1}});
+  top_diff_   ->memory_prv = memory::describe({engine_, top_diff_   ->layout_prv, {batch, {{output_x}}, 1}});
 
-  bottom_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {batch, {{input_x}},  1}});
-  top_data_   ->memory_usr = memory::create({engine_, top_data_   ->layout_usr, {batch, {{output_x}}, 1}});
-  bottom_diff_->memory_usr = memory::create({engine_, bottom_diff_->layout_usr, {batch, {{input_x}},  1}});
-  top_diff_   ->memory_usr = memory::create({engine_, top_diff_   ->layout_usr, {batch, {{output_x}}, 1}});
+  bottom_data_->memory_usr = memory::describe({engine_, bottom_data_->layout_usr, {batch, {{input_x}},  1}});
+  top_data_   ->memory_usr = memory::describe({engine_, top_data_   ->layout_usr, {batch, {{output_x}}, 1}});
+  bottom_diff_->memory_usr = memory::describe({engine_, bottom_diff_->layout_usr, {batch, {{input_x}},  1}});
+  top_diff_   ->memory_usr = memory::describe({engine_, top_diff_   ->layout_usr, {batch, {{output_x}}, 1}});
 
-  weights_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {input_x, {{output_x}}, 1}});
-  bias_data_   ->memory_prv = memory::create({engine_, bias_data_  ->layout_prv, {1,        {{bias_x}},  1}});
-  weights_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_prv, {input_x, {{output_x}}, 1}});
-  bias_diff_   ->memory_prv = memory::create({engine_, bias_diff_  ->layout_prv, {1,        {{bias_x}},  1}});
+  weights_data_->memory_prv = memory::describe({engine_, bottom_data_->layout_prv, {input_x, {{output_x}}, 1}});
+  bias_data_   ->memory_prv = memory::describe({engine_, bias_data_  ->layout_prv, {1,        {{bias_x}},  1}});
+  weights_diff_->memory_prv = memory::describe({engine_, bottom_diff_->layout_prv, {input_x, {{output_x}}, 1}});
+  bias_diff_   ->memory_prv = memory::describe({engine_, bias_diff_  ->layout_prv, {1,        {{bias_x}},  1}});
 
-  weights_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {input_x, {{output_x}}, 1}});
-  bias_data_   ->memory_usr = memory::create({engine_, bias_data_  ->layout_usr, {1,        {{bias_x}},  1}});
-  weights_diff_->memory_usr = memory::create({engine_, bottom_diff_->layout_usr, {input_x, {{output_x}}, 1}});
-  bias_diff_   ->memory_usr = memory::create({engine_, bias_diff_  ->layout_usr, {1,        {{bias_x}},  1}});
+  weights_data_->memory_usr = memory::describe({engine_, bottom_data_->layout_usr, {input_x, {{output_x}}, 1}});
+  bias_data_   ->memory_usr = memory::describe({engine_, bias_data_  ->layout_usr, {1,        {{bias_x}},  1}});
+  weights_diff_->memory_usr = memory::describe({engine_, bottom_diff_->layout_usr, {input_x, {{output_x}}, 1}});
+  bias_diff_   ->memory_usr = memory::describe({engine_, bias_diff_  ->layout_usr, {1,        {{bias_x}},  1}});
 
   // Names are for debugging only
   bottom_data_ ->name = "fwd_bottom_data   @ " + this->layer_param_.name() + "  ";
@@ -176,13 +176,13 @@ void MKL_DNNInnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
       uint32_t w = bottom[0]->shape(3);
       bottom_data_->layout_usr = neural::memory::format::bfyx_f32;
       bottom_data_->layout_prv = neural::memory::format::fyxb_f32;
-      bottom_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {n, {{h, w}}, c}});
-      bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {n, {{h, w}}, c}});
+      bottom_data_->memory_usr = memory::describe({engine_, bottom_data_->layout_usr, {n, {{w, h}}, c}});
+      bottom_data_->memory_prv = memory::describe({engine_, bottom_data_->layout_prv, {n, {{w, h}}, c}});
 
       bottom_data_->create_conversions();
 
       // Fake buffer for casting fyxb => xb
-      bottom_data_xb_ =  memory::create({engine_, neural::memory::format::xb_f32, {n, {{w*h*c}}, 1}});
+      bottom_data_xb_ =  memory::describe({engine_, neural::memory::format::xb_f32, {n, {{w*h*c}}, 1}});
 
       fcFwd_ = fully_connected::create({ engine_,
                                          top_data_->memory_prv,

@@ -25,13 +25,13 @@ void MKL_DNNReLULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   Dtype negative_slope = this->layer_param_.relu_param().negative_slope();
 
   const uint32_t count = bottom[0]->count();
-  bottom_data_ = memory::create({engine_, memory::format::yxfb_f32,
+  bottom_data_ = memory::describe({engine_, memory::format::yxfb_f32,
     {count, {1, 1}, 1}});
-  top_data_    = memory::create({engine_, memory::format::yxfb_f32,
+  top_data_    = memory::describe({engine_, memory::format::yxfb_f32,
     {count, {1, 1}, 1}});
-  bottom_diff_ = memory::create({engine_, memory::format::yxfb_f32,
+  bottom_diff_ = memory::describe({engine_, memory::format::yxfb_f32,
     {count, {1, 1}, 1}});
-  top_diff_    = memory::create({engine_, memory::format::yxfb_f32,
+  top_diff_    = memory::describe({engine_, memory::format::yxfb_f32,
     {count, {1, 1}, 1}});
 
   reluFwd_ = relu::create({engine_, top_data_, bottom_data_, negative_slope});
