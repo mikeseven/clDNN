@@ -15,6 +15,7 @@
 */
 
 #pragma once
+#include <iostream> //todo remove
 
 #include <cstdint>
 #include <algorithm>
@@ -136,7 +137,7 @@ struct nn_thread_worker {
 
 private:
     // Main worker thread routine.
-    void task_loop() 
+    void task_loop()
     {
         // Aquire wake mutex so no other thread can incorrectly interfere in thread values.
         std::unique_lock<std::mutex> wake_lock(wake_mutex);
@@ -196,8 +197,8 @@ public:
 // Thread pool implementation.
 struct nn_thread_worker_pool {
     // Basic constructor.
-    nn_thread_worker_pool() 
-    { 
+    nn_thread_worker_pool()
+    {
         uint32_t num_threads = std::thread::hardware_concurrency();
         for (uint32_t thread_id = 0; thread_id < num_threads; ++thread_id) {
             auto thread = std::unique_ptr<nn_thread_worker>(new nn_thread_worker(thread_id, &semaphore));
@@ -205,8 +206,8 @@ struct nn_thread_worker_pool {
         }
     }
 
-    nn_thread_worker_pool(uint32_t arg_num_threads) 
-    { 
+    nn_thread_worker_pool(uint32_t arg_num_threads)
+    {
         uint32_t num_threads = arg_num_threads;
         for (uint32_t thread_id = 0; thread_id < num_threads; ++thread_id) {
             auto thread = std::unique_ptr<nn_thread_worker>(new nn_thread_worker(thread_id, &semaphore));
@@ -256,6 +257,8 @@ struct nn_thread_worker_pool {
         } else {
             // Singlethreaded pool... run tasks sequentially by itself.
             for (auto& request : requests) {
+                static unsigned x =0;
+                std::cout << x++ <<std::endl;//todo remove
                 request.callback(request.data);
             }
         }

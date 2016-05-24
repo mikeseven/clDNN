@@ -35,44 +35,21 @@
 #include <Windows.h>
 #endif
 
-const int64_t   input_width             = 64;   // data = input|output
-const int64_t   input_height            = 64;   // data = input|output
-const int64_t   input_feature_maps      = 8;
-//const int64_t   input_feature_maps      = 4;
-const int64_t   input_view_start_x      = 0;
-const int64_t   input_view_start_y      = 0;
-const int64_t   output_feature_maps     = 32;
-const int64_t   output_view_start_x     = 0;
-const int64_t   output_view_start_y     = 0;
-const int64_t   output_view_width       = 50;
-const int64_t   output_view_height      = 50;
-const int64_t   filter_size             = 11;    // filter size is the same for both axes
-const int64_t   block_width             = 3;
-const int64_t   block_height            = 3;
-const int64_t   stride_width            = 4;
-const int64_t   stride_height           = 4;
+const uint32_t   input_view_start_x      = 0;
+const uint32_t   input_view_start_y      = 0;
+const uint32_t   input_width             = 24;   // data = input|output
+const uint32_t   input_height            = 24;   // data = input|output
+const uint32_t   input_feature_maps      = 8;
+const uint32_t   output_feature_maps     = 4;
+const uint32_t   filter_size             = 3;    // filter size is the same for both axes
+const uint32_t   block_width             = 1;
+const uint32_t   block_height            = 1;
+const uint32_t   stride_width            = 1;
+const uint32_t   stride_height           = 1;
 // derived configuration
-const int64_t   output_width            = (input_width +stride_width -1)/stride_width;
-const int64_t   output_height           = (input_height+stride_height-1)/stride_height;
+const uint32_t   output_width            = (input_width +stride_width -1)/stride_width;
+const uint32_t   output_height           = (input_height+stride_height-1)/stride_height;
 const auto      core_count              = 1;
-//jit_convolution *make_jit_convolution(
-//    float *output, uint64_t output_width, uint64_t output_height, uint64_t output_feature_maps
-//, float * input, uint64_t  input_width, uint64_t  input_height, uint64_t  input_feature_maps, uint64_t stride_width, uint64_t stride_height
-//, uint64_t input_view_start_x, uint64_t input_view_start_y
-//, float *filter, uint64_t filter_size
-//, uint64_t block_width, uint64_t block_height
-//) {
-//    if(input_feature_maps!=3) {
-//        assert( input_feature_maps%jit_convolution_generic:: input_features_per_iteration==0 && "input feature count is not multiple of input_features_per_iteration");
-//        assert(output_feature_maps%jit_convolution_generic::output_features_per_iteration==0 && "output feature count is not multiple of output_features_per_iteration");
-//        return new jit_convolution_generic(
-//              output, output_width, output_height, output_feature_maps
-//            ,  input,  input_width,  input_height,  input_feature_maps, stride_width, stride_height
-//            , filter,  filter_size
-//            , block_width, block_height
-//        );
-//    }
-//}
 
 // validation code
 void validate(
@@ -163,15 +140,6 @@ int main()
         const auto  input = align( input_container.get(), align_size);
         const auto filter = align(filter_container.get(), align_size);
 
-        // generate convolution code using jit and create job set
-        //auto job_set = make_jit_convolution(
-        //      output, output_width, output_height, output_feature_maps
-        //    ,  input,  input_width,  input_height,  input_feature_maps, stride_width, stride_height
-        //    ,  input_view_start_x, input_view_start_y
-        //    , filter, filter_size
-        //    , block_width, block_height
-        //);
-
         auto input_p  = memory::describe({neural::engine::reference, memory::format::tmp_format, { 24 , {input_height  , input_width }, input_feature_maps}});
         auto output_p = memory::describe({neural::engine::reference, memory::format::tmp_format, { 24 , {output_height , output_width}, output_feature_maps}});
         auto weights_p= memory::describe({neural::engine::reference, memory::format::oiyx_f32, { 1  , {filter_size   , filter_size }, {output_feature_maps, input_feature_maps}}});
@@ -186,6 +154,12 @@ int main()
         std::generate( input,  input+ input_buffer_size, lambda);
         std::generate(filter, filter+filter_buffer_size, lambda);
 
+        //set pointers
+        execute(
+            {output_p(output), input_p(input), weights_p(filter)}
+           //, engine_resource
+        ).sync();
+
         auto conv   = convolution::create( {neural::engine::cpu,
                                             output_p,
                                             {input_p, weights_p, biases_p},
@@ -193,7 +167,11 @@ int main()
                                             padding::zero}
                                           );
 
-        execute({output_p(output), input_p(input), weights_p(filter), conv}).sync();
+        auto engine_resource = worker_cpu::create({1});
+        execute(
+            {conv}
+           //, engine_resource
+        ).sync();
 
         validate(
                 output, output_width, output_height, output_feature_maps, 24

@@ -22,7 +22,7 @@
 #include <cstddef>
 #include <set>
 
-namespace{
+//namespace {
     template<typename T> class reverse_t {
         T& ref;
     public:
@@ -127,10 +127,10 @@ namespace{
             // <- code starts here
 
             // lists of registers to preserve on call
-#ifdef _WIN32
-            auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbx, rdi, r11, r12, r13, r14, r15};
-#else
+#ifdef __unix__
             auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbp, rbx, r11, r12, r13, r14, r15};
+#elif _WIN32
+            auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbx, rdi, r11, r12, r13, r14, r15};
 #endif
 
             auto preserve_registers_xmm     = std::vector<Xbyak::Xmm>{xmm6, xmm7, xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15};
@@ -140,9 +140,11 @@ namespace{
             for(auto &reg : preserve_registers_xmm)    {auto offset = (&reg - &(preserve_registers_xmm[0])+1)*16; vmovdqu(ptr [rsp-offset], reg);}
 
 #ifdef __unix__
-            mov(rcx, rdi);
-#endif
+            mov(r15, rdi);
+#elif _WIN32
             mov(r15, rcx);  // really a op_array_t *
+#endif
+
             mov(r9,  ptr [r15+offsetof(op_array_t, output_feature_block_stride)]);
             mov(r10, ptr [r15+offsetof(op_array_t, filter_feature_blocks)]);
             mov(r13, ptr [r15+offsetof(op_array_t, output_feature_blocks)]);
@@ -311,7 +313,7 @@ namespace{
     };
     ~jit_convolution_generic(){};
 };
-}
+//}
 
 namespace neural {
 
