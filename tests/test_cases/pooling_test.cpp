@@ -166,16 +166,14 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad_cpu) {
 
     // Initialize data.
     fill<float>(input_prim.as <const memory&>(), 0);
-    fill<float>(input_prim_cpu.as <const memory&>(), 0);
     set_values(input_prim,     { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f });
-    set_values(input_prim_cpu, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f });
 
     execute(
     {
-        pool_prim_cpu,
-        reorder_output_to_tmp_ref,
-        reorder_input_to_ref,
         pool_prim,
+        reorder_input_to_ref,
+        pool_prim_cpu,
+        reorder_output_to_tmp_ref
     }, engine_resource).sync();
 
     for (int i = 0; i < output_memory.count(); i++) {

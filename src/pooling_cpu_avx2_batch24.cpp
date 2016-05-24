@@ -216,17 +216,17 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
     auto input  = static_cast<float*>(this_pooling->input_memory(0).pointer);
     auto output = static_cast<float*>(this_pooling->output_memory(0).pointer);
 
-    auto input_memory_arg  = this_pooling->input_memory(0).argument;
-    auto input_buffer_size = input_memory_arg.size;
-    auto input_offset      = this_pooling->argument.input_offset;
-
-    auto output_memory_arg = this_pooling->output_memory(0).argument;
-    auto output_buffer_size= output_memory_arg.size;
-    auto output_offset     = this_pooling->argument.output_offset;
-    auto output_size       = this_pooling->argument.output_size;
-
-    auto stride            = this_pooling->argument.stride;
-    auto window            = this_pooling->argument.size;
+    auto& input_memory_arg  = this_pooling->input_memory(0).argument;
+    auto& input_buffer_size = input_memory_arg.size;
+//    auto& input_offset      = this_pooling->argument.input_offset;
+        
+    auto& output_memory_arg = this_pooling->output_memory(0).argument;
+    auto& output_buffer_size= output_memory_arg.size;
+  //  auto& output_offset     = this_pooling->argument.output_offset;
+    auto& output_size       = this_pooling->argument.output_size;
+        
+    auto& stride            = this_pooling->argument.stride;
+    auto& window            = this_pooling->argument.size;
     //auto padding           = this_pooling->argument.padding;
 
     int b_pos = 0; // todo typetraits
