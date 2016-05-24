@@ -31,8 +31,8 @@ void example_softmax_forward() {
     float out_buffer[output_x*output_b];
     // input buffer should be initialized with valid data
 
-    auto input  = memory::create({engine::reference, memory::format::xb_f32, {input_b , {{input_x }}, z}});
-    auto output = memory::create({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, z}});
+    auto input  = memory::describe({engine::reference, memory::format::xb_f32, {input_b , {{input_x }}, z}});
+    auto output = memory::describe({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, z}});
 
     auto sftmax = normalization::softmax::create( {engine::reference,
                                                    output,

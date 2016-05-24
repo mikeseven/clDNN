@@ -122,15 +122,15 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   const uint32_t out_off_x = 0;
   const uint32_t out_off_z = 0;
 
-  fwd_bottom_data_->memory_usr = memory::create({engine_, fwd_bottom_data_->layout_usr, {n, {iw, ih}, c}});
-  fwd_top_data_->memory_usr    = memory::create({engine_, fwd_top_data_   ->layout_usr, {n, {ow, oh}, c}});
-  fwd_bottom_data_->memory_prv = memory::create({engine_, fwd_bottom_data_->layout_prv, {n, {iw, ih}, c}});
-  fwd_top_data_->memory_prv    = memory::create({engine_, fwd_top_data_   ->layout_prv, {n, {ow, oh}, c}});
+  fwd_bottom_data_->memory_usr = memory::describe({engine_, fwd_bottom_data_->layout_usr, {n, {iw, ih}, c}});
+  fwd_top_data_->memory_usr    = memory::describe({engine_, fwd_top_data_   ->layout_usr, {n, {ow, oh}, c}});
+  fwd_bottom_data_->memory_prv = memory::describe({engine_, fwd_bottom_data_->layout_prv, {n, {iw, ih}, c}});
+  fwd_top_data_->memory_prv    = memory::describe({engine_, fwd_top_data_   ->layout_prv, {n, {ow, oh}, c}});
 
-  bwd_bottom_diff_->memory_usr = memory::create({engine_, bwd_bottom_diff_->layout_usr, {n, {iw, ih}, c}});
-  bwd_top_diff_->memory_usr    = memory::create({engine_, bwd_top_diff_   ->layout_usr, {n, {ow, oh}, c}});
-  bwd_bottom_diff_->memory_prv = memory::create({engine_, bwd_bottom_diff_->layout_prv, {n, {iw, ih}, c}});
-  bwd_top_diff_->memory_prv    = memory::create({engine_, bwd_top_diff_   ->layout_prv, {n, {ow, oh}, c}});
+  bwd_bottom_diff_->memory_usr = memory::describe({engine_, bwd_bottom_diff_->layout_usr, {n, {iw, ih}, c}});
+  bwd_top_diff_->memory_usr    = memory::describe({engine_, bwd_top_diff_   ->layout_usr, {n, {ow, oh}, c}});
+  bwd_bottom_diff_->memory_prv = memory::describe({engine_, bwd_bottom_diff_->layout_prv, {n, {iw, ih}, c}});
+  bwd_top_diff_->memory_prv    = memory::describe({engine_, bwd_top_diff_   ->layout_prv, {n, {ow, oh}, c}});
 
 
   // Names are for debugging only

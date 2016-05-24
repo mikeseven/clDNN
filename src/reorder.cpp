@@ -168,7 +168,7 @@ namespace neural {
         , input({_in}) {}
     reorder::arguments::arguments(neural::engine::type _engine, neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in)
         : engine(_engine)
-        , output( {memory::create({_engine, _out_layout, _out_sizes, true})} )
+        , output( {memory::allocate({_engine, _out_layout, _out_sizes})} )
         , input({_in}) {}
 
     // creates primitive with reorder implementation that supports provided arguments

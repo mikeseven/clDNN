@@ -44,8 +44,8 @@ void example_009() {
                                      //b  f  x  y
     neural::vector<uint32_t> out_sizes= { 2, {4, 2}, 3};
 
-    auto input  = memory::create({engine::reference, in_layout, in_sizes});
-    auto output = memory::create({engine::reference, out_layout, out_sizes, true});
+    auto input  = memory::describe({engine::reference, in_layout, in_sizes});
+    auto output = memory::allocate({engine::reference, out_layout, out_sizes});
 
     auto reorder    = reorder::create(reorder::arguments{engine::reference,input,output});
 

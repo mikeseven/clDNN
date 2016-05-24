@@ -21,8 +21,8 @@
 void example_003() {
     char *data_buffer = nullptr;
     using namespace neural;
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {96, {112, 112}, 24}});
+    auto input  = memory::describe({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+    auto output = memory::describe({engine::cpu, memory::format::yxfb_f32, {96, {112, 112}, 24}});
     auto weight = file::create({engine::cpu, "weight.nnb"});
     auto bias   = file::create({engine::cpu, "bias.nnb"});
 
