@@ -20,8 +20,8 @@
 void example_lrn_forward() {
 
     using namespace neural;
-    auto input = memory::create({ engine::reference, memory::format::yxfb_f32,{ 8, {10, 10}, 3 }, true });
-    auto output = memory::create({ engine::reference, memory::format::yxfb_f32,{ 8, {10, 10}, 3 }, true});
+    auto input = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 8, {10, 10}, 3 }});
+    auto output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 8, {10, 10}, 3 }});
     fill<float>(input.as<const memory&>());
     float pk = 1.f;
     uint32_t psize = 5;

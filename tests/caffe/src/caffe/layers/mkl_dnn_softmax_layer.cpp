@@ -29,15 +29,15 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   uint32_t output_x = input_x;
   const uint32_t z = 1;
 
-  bottom_data_->memory_prv = memory::create({engine_, bottom_data_->layout_prv, {batch, {{input_x}}, z}});
-  top_data_   ->memory_prv = memory::create({engine_, top_data_   ->layout_prv, {batch, {{input_x}}, z}});
-  bottom_diff_->memory_prv = memory::create({engine_, bottom_diff_->layout_prv, {batch, {{input_x}}, z}});
-  top_diff_   ->memory_prv = memory::create({engine_, top_diff_   ->layout_prv, {batch, {{input_x}}, z}});
+  bottom_data_->memory_prv = memory::describe({engine_, bottom_data_->layout_prv, {batch, {{input_x}}, z}});
+  top_data_   ->memory_prv = memory::describe({engine_, top_data_   ->layout_prv, {batch, {{input_x}}, z}});
+  bottom_diff_->memory_prv = memory::describe({engine_, bottom_diff_->layout_prv, {batch, {{input_x}}, z}});
+  top_diff_   ->memory_prv = memory::describe({engine_, top_diff_   ->layout_prv, {batch, {{input_x}}, z}});
 
-  bottom_data_->memory_usr = memory::create({engine_, bottom_data_->layout_usr, {batch, {{input_x}}, z}});
-  top_data_   ->memory_usr = memory::create({engine_, top_data_   ->layout_usr, {batch, {{input_x}}, z}});
-  bottom_diff_->memory_usr = memory::create({engine_, bottom_diff_->layout_usr, {batch, {{input_x}}, z}});
-  top_diff_   ->memory_usr = memory::create({engine_, top_diff_   ->layout_usr, {batch, {{input_x}}, z}});
+  bottom_data_->memory_usr = memory::describe({engine_, bottom_data_->layout_usr, {batch, {{input_x}}, z}});
+  top_data_   ->memory_usr = memory::describe({engine_, top_data_   ->layout_usr, {batch, {{input_x}}, z}});
+  bottom_diff_->memory_usr = memory::describe({engine_, bottom_diff_->layout_usr, {batch, {{input_x}}, z}});
+  top_diff_   ->memory_usr = memory::describe({engine_, top_diff_   ->layout_usr, {batch, {{input_x}}, z}});
 
   // Names are for debugging only
   bottom_data_->name = "fwd_bottom_data   @ " + this->layer_param_.name() + " ";

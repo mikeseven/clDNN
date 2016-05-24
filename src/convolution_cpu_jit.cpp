@@ -373,8 +373,8 @@ convolution_cpu_jit::convolution_cpu_jit(convolution &arg)
 
     const int b_pos = 0;
     const int f_pos = 1;
-    const int y_pos = 2;
-    const int x_pos = 3;
+    const int x_pos = 2;
+    const int y_pos = 3;
 
     switch(padding){
         case padding::zero:
