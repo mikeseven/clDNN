@@ -59,6 +59,30 @@ struct task {
     const void *data;
 };
 
+
+struct task_group {
+	std::vector<task> tsk;
+	bool use_hyper_threading = true;
+	int task_count_per_thread = 1;								// portion of tasks which obtain every thread for processing per iteration
+
+	task_group(const std::vector<task>& _tsk) : tsk(_tsk) {};	// workaround, could be remove in future
+	task_group(const task _task) : tsk{ _task } {};				// workaround, could be remove in future
+
+	task_group() {};
+	task_group(const task_group& tp) : tsk(tp.tsk), use_hyper_threading(tp.use_hyper_threading), task_count_per_thread(tp.task_count_per_thread) {};
+	task_group& operator=(const task_group& tp)
+	{
+		if (this != &tp)
+		{
+			tsk = tp.tsk;
+			use_hyper_threading = tp.use_hyper_threading;
+			task_count_per_thread = tp.task_count_per_thread;
+		}
+		return *this;
+	}
+};
+
+
 #if defined(_MSC_VER)
 namespace {
 // (de)initializing global constructors within MKL-DNN
@@ -306,7 +330,7 @@ public:
     virtual ~is_a_worker() {};
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
 
-    virtual void execute(const std::vector<task>& requests) const = 0;
+    virtual void execute(const neural::task_group& requests) const = 0;
     virtual neural::engine::type engine() const = 0;
 };
 
@@ -318,7 +342,7 @@ public:
     worker(const worker &other) : _pointer(other._pointer) {};
 
     neural::engine::type engine() { return _pointer->engine(); }
-    void execute(const std::vector<task>& requests) const { _pointer->execute(requests);}
+    void execute(const neural::task_group& requests) const { _pointer->execute(requests);}
 };
 
 // cheap to copy handle with reference counting
@@ -369,7 +393,7 @@ public:
 #endif
     template<typename T> T as() const;
     template<typename T> operator T() { return as<T>(); }
-    const std::vector<task> &work() const;
+    const neural::task_group &work() const;
     size_t id() const;
     bool operator==(const primitive &other) const { return _pointer==other._pointer; }
     bool operator!=(const primitive &other) const { return !(*this==other); }
@@ -392,7 +416,7 @@ class is_a_primitive {
 protected:
     type_traits                     *_type_traits;
     std::map<std::string, any_value> _map;
-    std::vector<task>                _work;
+    task_group						_work;
     is_a_primitive(type_traits *traits) : _type_traits(traits) {}
 public:
     virtual ~is_a_primitive() {};
@@ -408,16 +432,14 @@ public:
     friend class primitive;
 
     // to be removed when new thread queue will be done
-    friend struct nn_semaphore;
-    friend struct nn_thread_worker;
-    friend struct nn_thread_worker_pool;
+	friend class nn_thread_worker_pool;
 };
 
 // implementations of inline functions from primitive
 inline const primitive_at           primitive::input::operator[] (uint32_t at) const { return get_base()->_pointer->input()[at]; }
 inline size_t                       primitive::input::size() const { return get_base()->_pointer->input().size(); }
 inline const primitive              primitive::operator()(void *argument) const { _pointer->execute_argument(argument); return *this; }
-inline const std::vector<task> &    primitive::work() const { return _pointer->_work; }
+inline const task_group&			primitive::work() const { return _pointer->_work; }
 inline size_t                       primitive::id() const { return _pointer->_type_traits->id; }
 inline const primitive              primitive::output::operator[](uint32_t at) const { return get_base()->_pointer.get()->output()[at]; }
 inline size_t                       primitive::output::size() const { return get_base()->_pointer.get()->output().size(); }
@@ -436,7 +458,7 @@ class is_an_implementation {
 protected:
     is_an_implementation(const type_traits *arg) : _type_traits(arg) {};
 public:
-    virtual std::vector<task> work() = 0;
+    virtual task_group work() = 0;
     virtual ~is_an_implementation() {};
 };
 

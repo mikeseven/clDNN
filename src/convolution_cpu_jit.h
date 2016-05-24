@@ -25,7 +25,7 @@ namespace neural {
         ~convolution_cpu_jit();
 
         static is_an_implementation *create(convolution &arg) { return new convolution_cpu_jit(arg); };
-        std::vector<task> work() { return jit_conv_ptr->work(); };
+        task_group work() { return jit_conv_ptr->work(); };
 
         std::unique_ptr<is_an_implementation> jit_conv_ptr;
         const convolution &outer;
