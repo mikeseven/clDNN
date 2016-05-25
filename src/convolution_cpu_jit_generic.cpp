@@ -22,7 +22,7 @@
 #include <cstddef>
 #include <set>
 
-//namespace {
+namespace {
     template<typename T> class reverse_t {
         T& ref;
     public:
@@ -326,7 +326,7 @@
     };
     ~jit_convolution_generic(){};
 };
-//}
+}
 
 namespace neural {
 
@@ -334,27 +334,6 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
     : is_an_implementation(neural::type_id<convolution_cpu_jit_generic>())
     , outer(arg)
 {
-    //auto ptr_to_output_ptr  = static_cast<float*>(&arg.output_memory(0).pointer);
-    //auto ptr_to_input_ptr   = static_cast<float*>(&arg.input_memory(0).pointer);
-    //auto ptr_to_weights_ptr = static_cast<float*>(&arg.input_memory(1).pointer);
-    //auto bias_ptr    = reinterpret_cast<float*>(arg.input_memory(2).pointer); //todo add support for biases
-
-    auto ptr_to_output_ptr2  = static_cast<float*>(arg.output_memory(0).pointer);
-    auto ptr_to_input_ptr2   = static_cast<float*>(arg. input_memory(0).pointer);
-    auto ptr_to_weights_ptr2 = static_cast<float*>(arg. input_memory(1).pointer);
-
-    auto ptr_to_output_ptr  = reinterpret_cast<float*>(&arg.output_memory(0).pointer);
-    auto ptr_to_input_ptr   = reinterpret_cast<float*>(&arg. input_memory(0).pointer);
-    auto ptr_to_weights_ptr = reinterpret_cast<float*>(&arg. input_memory(1).pointer);
-
-    auto x0 = reinterpret_cast<float*>(arg.output_memory(0).pointer);
-    auto x1 = arg.output_memory(0).pointer;
-    auto x2 = reinterpret_cast<float*>(&arg.output_memory(0).pointer);
-    auto x3 = &arg.output_memory(0).pointer;
-    auto x4  = reinterpret_cast<float*>(&arg.output_memory(0).pointer);
-    auto x5  = static_cast<float*>(arg.output_memory(0).pointer);
-    auto x6  = &arg.output_memory(0).pointer;
-
     auto& stride      = outer.argument.stride;
     auto& output_size = outer.argument.output_size;
     auto& input_arg   = outer.input_memory(0).argument;
@@ -376,17 +355,17 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
             // todo jit conv format?
             // todo how to handle offsets?
             jit_convolution_generic* jit_convolution_generic_ptr = new jit_convolution_generic(
-                &ptr_to_output_ptr,
+                reinterpret_cast<float**>(&arg.output_memory(0).pointer),
                 output_size.raw[ x_pos ],
                 output_size.raw[ y_pos ],
                 output_size.raw[ f_pos ],
-                &ptr_to_input_ptr,
+                reinterpret_cast<float**>(&arg.input_memory(0).pointer),
                 input_arg.size.raw[ x_pos ],
                 input_arg.size.raw[ y_pos ],
                 input_arg.size.raw[ f_pos ],
                 stride.raw[ x_pos ],
                 stride.raw[ y_pos ],
-                &ptr_to_weights_ptr,
+                reinterpret_cast<float**>(&arg.input_memory(1).pointer),
                 weights_arg.size.raw[ x_pos+1 ], // filter is square x == y
                 1, // magic number, block w
                 1  // magic number, block h
