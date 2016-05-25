@@ -35,9 +35,9 @@
     struct jit_convolution_generic : public neural::is_an_implementation {
 #pragma pack(push, 1)
     struct op_data_t {
-        float *output;
-        float *input;
-        float *filter;
+        uint64_t output_offset;
+        uint64_t input_offset;
+        uint64_t filter_offset;
         int8_t type; // 0:init, 1:normal, 2:finalize
     };
 
@@ -47,6 +47,9 @@
         uint64_t output_feature_block_stride;
         uint64_t output_feature_blocks;
         uint64_t filter_feature_blocks;
+        float **output;
+        float **input;
+        float **filter;
     };
 #pragma pack(pop)
 
@@ -128,9 +131,9 @@
 
             // lists of registers to preserve on call
 #ifdef __unix__
-            auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbp, rbx, r11, r12, r13, r14, r15};
+            auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbp, rbx, r11, r12, r13, r14, r15};//todo rsi?
 #elif _WIN32
-            auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbx, rdi, r11, r12, r13, r14, r15};
+            auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbx, rsi, rdi, r11, r12, r13, r14, r15};
 #endif
 
             auto preserve_registers_xmm     = std::vector<Xbyak::Xmm>{xmm6, xmm7, xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15};
@@ -144,6 +147,7 @@
 #elif _WIN32
             mov(r15, rcx);  // really a op_array_t *
 #endif
+            mov(rsi, r15);
 
             mov(r9,  ptr [r15+offsetof(op_array_t, output_feature_block_stride)]);
             mov(r10, ptr [r15+offsetof(op_array_t, filter_feature_blocks)]);
@@ -158,9 +162,15 @@
             align(4);
             L("op_loop");
                 mov(r8, r13);
-                mov(rax, ptr [r15+offsetof(op_data_t,output)]);
-                mov(r11, ptr [r15+offsetof(op_data_t,input)]);
-                mov(r12, ptr [r15+offsetof(op_data_t,filter)]);
+                mov(rax, ptr [rsi+offsetof(op_array_t,output)]);
+                mov(rax, ptr [rax]);
+                add(rax, ptr [r15+offsetof(op_data_t,output_offset)]);
+                mov(r11, ptr [rsi+offsetof(op_array_t,input)]);
+                mov(r11, ptr [r11]);
+                add(r11, ptr [r15+offsetof(op_data_t,input_offset)]);
+                mov(r12, ptr [rsi+offsetof(op_array_t,filter)]);
+                mov(r12, ptr [r12]);
+                add(r12, ptr [r15+offsetof(op_data_t,filter_offset)]);
                 cmp(byte [r15+offsetof(op_data_t,type)], 1);
                 jne("op_type_02", T_NEAR);
 
@@ -202,9 +212,9 @@
     const float fma_clock_count = 0.0f;
 
     jit_convolution_generic(
-          float *output, uint64_t output_width, uint64_t output_height, uint64_t output_feature_maps
-        , float * input, uint64_t  input_width, uint64_t  input_height, uint64_t  input_feature_maps,uint64_t stride_width, uint64_t stride_height
-        , float *filter, uint64_t filter_size
+          float **output, uint64_t output_width, uint64_t output_height, uint64_t output_feature_maps
+        , float ** input, uint64_t  input_width, uint64_t  input_height, uint64_t  input_feature_maps,uint64_t stride_width, uint64_t stride_height
+        , float **filter, uint64_t filter_size
         , uint64_t block_width, uint64_t block_height
     ) : is_an_implementation(neural::type_id<jit_convolution_generic>())
     {
@@ -264,9 +274,9 @@
                                 sorted.insert({
                                     std::make_tuple(at_pos, at_pos, x,y),
                                     {
-                                        output + output_block_stride*output_block
-                                        , input + batch_size*input_feature_maps*((x*stride_width+kx-filter_radius) + input_width*(y*stride_height+ky-filter_radius))
-                                        , filter + filter_feature_blocks*filter_block
+                                        sizeof(float)*output_block_stride*output_block
+                                        , sizeof(float)*batch_size*input_feature_maps*((x*stride_width+kx-filter_radius) + input_width*(y*stride_height+ky-filter_radius))
+                                        , sizeof(float)*filter_feature_blocks*filter_block
                                         , 1
                                     }
                                 });
@@ -301,6 +311,9 @@
                     , output_block_stride*sizeof(float)
                     , output_feature_maps/output_features_per_iteration
                     , filter_feature_blocks*sizeof(float)
+                    , output
+                    , input
+                    , filter
                 };
 
                 tasks[at].callback = reinterpret_cast<void (*)(const void *)>(code.getCode());
@@ -321,10 +334,26 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
     : is_an_implementation(neural::type_id<convolution_cpu_jit_generic>())
     , outer(arg)
 {
-    auto output_ptr  = static_cast<float*>(arg.output_memory(0).pointer);
-    auto input_ptr   = static_cast<float*>(arg.input_memory(0).pointer);
-    auto weights_ptr = static_cast<float*>(arg.input_memory(1).pointer);
+    //auto ptr_to_output_ptr  = static_cast<float*>(&arg.output_memory(0).pointer);
+    //auto ptr_to_input_ptr   = static_cast<float*>(&arg.input_memory(0).pointer);
+    //auto ptr_to_weights_ptr = static_cast<float*>(&arg.input_memory(1).pointer);
     //auto bias_ptr    = reinterpret_cast<float*>(arg.input_memory(2).pointer); //todo add support for biases
+
+    auto ptr_to_output_ptr2  = static_cast<float*>(arg.output_memory(0).pointer);
+    auto ptr_to_input_ptr2   = static_cast<float*>(arg. input_memory(0).pointer);
+    auto ptr_to_weights_ptr2 = static_cast<float*>(arg. input_memory(1).pointer);
+
+    auto ptr_to_output_ptr  = reinterpret_cast<float*>(&arg.output_memory(0).pointer);
+    auto ptr_to_input_ptr   = reinterpret_cast<float*>(&arg. input_memory(0).pointer);
+    auto ptr_to_weights_ptr = reinterpret_cast<float*>(&arg. input_memory(1).pointer);
+
+    auto x0 = reinterpret_cast<float*>(arg.output_memory(0).pointer);
+    auto x1 = arg.output_memory(0).pointer;
+    auto x2 = reinterpret_cast<float*>(&arg.output_memory(0).pointer);
+    auto x3 = &arg.output_memory(0).pointer;
+    auto x4  = reinterpret_cast<float*>(&arg.output_memory(0).pointer);
+    auto x5  = static_cast<float*>(arg.output_memory(0).pointer);
+    auto x6  = &arg.output_memory(0).pointer;
 
     auto& stride      = outer.argument.stride;
     auto& output_size = outer.argument.output_size;
@@ -347,17 +376,17 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
             // todo jit conv format?
             // todo how to handle offsets?
             jit_convolution_generic* jit_convolution_generic_ptr = new jit_convolution_generic(
-                output_ptr,
+                &ptr_to_output_ptr,
                 output_size.raw[ x_pos ],
                 output_size.raw[ y_pos ],
                 output_size.raw[ f_pos ],
-                input_ptr,
+                &ptr_to_input_ptr,
                 input_arg.size.raw[ x_pos ],
                 input_arg.size.raw[ y_pos ],
                 input_arg.size.raw[ f_pos ],
                 stride.raw[ x_pos ],
                 stride.raw[ y_pos ],
-                weights_ptr,
+                &ptr_to_weights_ptr,
                 weights_arg.size.raw[ x_pos+1 ], // filter is square x == y
                 1, // magic number, block w
                 1  // magic number, block h
