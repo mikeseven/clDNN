@@ -101,6 +101,8 @@ private:
 };
 
 
+
+
 // neural::file
 //
 // File that is loaded and becomes a data.
@@ -789,9 +791,8 @@ struct worker_cpu : is_a_worker {
     std::unique_ptr<nn_thread_worker_pool> thread_pool;
 
     DLL_SYM static worker create(arguments);
-
-    void execute(const neural::task_group& requests) const;
-    neural::engine::type engine() const {return neural::engine::cpu;}
+    DLL_SYM void execute(const neural::task_group& requests) const;
+    DLL_SYM neural::engine::type engine() const {return neural::engine::cpu;}
 
 private:
     worker_cpu(arguments arg);
