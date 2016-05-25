@@ -78,16 +78,19 @@ template<typename T>
 T* end(PtrWrapper<T> ptr) { return ptr.end(); }*/
 
 const std::string kernelCode =
-"__kernel void Fully_Connected_GPU(const __global float* input, uint input_size, const __global float* weights, uint4 weight_size, __global float* bias, __global float* pDst)\n"
+"__kernel void Fully_Connected_GPU(const __global float* input, uint4 input_size, const __global float* weights, uint4 weight_size, __global float* bias, __global float* pDst)\n"
 "{\n"
 "    const int x = get_global_id(0);\n"
 "\n"
 "    pDst[x] = 0;\n"
-"    for (uint i = 0; i < input_size; i++)\n"
+"    uint outXIdx = x / input_size[0];\n"
+"    uint inputBatchIdx = x % input_size[0];\n"
+"    uint weightYIdx = outXIdx * weight_size[0];\n"
+"    for (uint i = 0; i < input_size[2]; i++)\n"
 "    {\n"
-"        pDst[x] += input[i] * weights[(x * weight_size.x) + i];\n"
+"        pDst[x] += input[i * input_size[0] + inputBatchIdx] * weights[weightYIdx + i];\n"
 "    }\n"
-"    pDst[x] += bias[x];\n"
+"    pDst[x] += bias[outXIdx];\n"
 "};\n";
 
 // simple ocl implementation
@@ -211,11 +214,7 @@ namespace neural {
             assert(1 == input_buffer_size.batch.size());
             assert(1 == input_buffer_size.feature[0]);
 
-            uint32_t input_bufSize = 1;
-            for (auto i : input_buffer_size.raw)
-            {
-                input_bufSize *= i;
-            }
+            cl_uint4 inputSizes = GetSizes(input_arg.size);
             cl::Buffer inBuffer = CreateBufferWithGoodSize<float>(this_fc->input_memory(0));
 
             // weights
@@ -247,7 +246,7 @@ namespace neural {
             
             auto programKernel = cl::KernelFunctor <
                 cl::Buffer,
-                uint32_t,
+                cl_uint4,
                 cl::Buffer,
                 cl_uint4,
                 cl::Buffer,
@@ -259,7 +258,7 @@ namespace neural {
                     cl::NDRange(output_bufSize),
                     cl::NDRange(output_bufSize)),
                 inBuffer,
-                input_bufSize,
+                inputSizes,
                 weightBuffer,
                 weightSizes,
                 biasBuffer,
