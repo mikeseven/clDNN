@@ -34,7 +34,7 @@ namespace {
 
     struct jit_convolution_generic : public neural::is_an_implementation {
 #pragma pack(push, 1)
-    struct op_data_t {
+    struct op_data_t { //todo offsets can be 32bit, does it impact performance?
         uint64_t output_offset;
         uint64_t input_offset;
         uint64_t filter_offset;
@@ -266,7 +266,6 @@ namespace {
                                 int64_t kxr=kx-filter_radius;
                                 int64_t sx=x*stride_width+kxr;
                                 if(sx<0 || static_cast<uint64_t>(sx)>=input_width) continue;
-                                //auto at_tuple = std::make_tuple(x,y); todo why unused?
 
                                 auto output_block = output_feature_blocks*(x + output_width*y);
                                 auto filter_block = output_feature_blocks*(kx + filter_size*ky);
