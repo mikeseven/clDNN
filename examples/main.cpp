@@ -35,21 +35,23 @@
 #include <Windows.h>
 #endif
 
+const uint32_t   input_width             = 40;   // data = input|output
+const uint32_t   input_height            = 40;   // data = input|output
+const uint32_t   input_feature_maps      = 8;
 const uint32_t   input_view_start_x      = 0;
 const uint32_t   input_view_start_y      = 0;
-const uint32_t   input_width             = 24;   // data = input|output
-const uint32_t   input_height            = 24;   // data = input|output
-const uint32_t   input_feature_maps      = 8;
-const uint32_t   output_feature_maps     = 4;
-const uint32_t   filter_size             = 3;    // filter size is the same for both axes
-const uint32_t   block_width             = 1;
-const uint32_t   block_height            = 1;
 const uint32_t   stride_width            = 1;
 const uint32_t   stride_height           = 1;
-// derived configuration
 const uint32_t   output_width            = (input_width +stride_width -1)/stride_width;
 const uint32_t   output_height           = (input_height+stride_height-1)/stride_height;
-const auto      core_count              = 1;
+const uint32_t   output_feature_maps     = 4;
+const uint32_t   output_view_start_x     = 0;
+const uint32_t   output_view_start_y     = 0;
+const uint32_t   output_view_width       = (input_width +stride_width -1)/stride_width;
+const uint32_t   output_view_height      = (input_height+stride_height-1)/stride_height;
+const uint32_t   filter_size             = 5;    // filter size is the same for both axes
+const uint32_t   block_width             = 1;
+const uint32_t   block_height            = 1;
 
 // validation code
 void validate(
@@ -72,20 +74,20 @@ void validate(
 
     const int64_t filter_radius = (filter_size-1)/2;
     const auto output_feature_blocks    = output_feature_maps/output_features_per_iteration;
-    for(int64_t b=0; b<batch_size; ++b) {
-        for(int64_t y=0; y<output_view_height; ++y) {
-            for(int64_t x=0; x<output_view_width; ++x)
-                for(int64_t fo=0; fo<output_feature_maps; ++fo) {
+    for(uint64_t b=0; b<batch_size; ++b) {
+        for(uint64_t y=0; y<output_view_height; ++y) {
+            for(uint64_t x=0; x<output_view_width; ++x)
+                for(uint64_t fo=0; fo<output_feature_maps; ++fo) {
                     int64_t foi = fo%output_features_per_iteration;
                     int64_t fob = fo/output_features_per_iteration;
                     float valid = 0.0f;
-                    for(int64_t yk=0; yk<filter_size; ++yk) {
-                        int64_t ys = input_view_start_y + y*stride_height+yk-filter_radius;
-                        if(ys<0 || ys>=input_height) continue;
-                        for(int64_t xk=0; xk<filter_size; ++xk) {
-                            int64_t xs = input_view_start_x + x*stride_height+xk-filter_radius;
-                            if(xs<0 || xs>=input_width) continue;
-                            for(int64_t fi=0; fi<input_feature_maps; ++fi) {
+                    for(uint64_t yk=0; yk<filter_size; ++yk) {
+                        int64_t ys = static_cast<int64_t>(input_view_start_y) + y*stride_height+yk-filter_radius;
+                        if(ys<0 || static_cast<uint64_t>(ys)>=input_height) continue;
+                        for(uint64_t xk=0; xk<filter_size; ++xk) {
+                            int64_t xs = static_cast<int64_t>(input_view_start_x) + x*stride_height+xk-filter_radius;
+                            if(xs<0 || static_cast<uint64_t>(xs)>=input_width) continue;
+                            for(uint64_t fi=0; fi<input_feature_maps; ++fi) {
                                 float value  = input[b + batch_size*(fi + input_feature_maps*(xs + input_width*ys))];
                                 float weight = filter[foi + output_features_per_iteration*(fi + input_feature_maps*(fob + output_feature_blocks*(xk + filter_size*yk)))];
                                 valid  = static_cast<float>(double(value)*weight + valid);
@@ -105,6 +107,7 @@ void validate(
                             << "error at [b,x,y,f] = [" << b << "," << xo << "," << yo << "," << fo << "]\n"
                             << "\tvalid  = " << valid << "\n"
                             << "\ttested = " << tested << std::endl;
+                        __debugbreak();
                     }
                 }
         }
@@ -174,7 +177,7 @@ int main()
         ).sync();
 
         validate(
-                output, output_width, output_height, output_feature_maps, 24
+                output, output_width, output_height, output_feature_maps, 4
             , 0, 0, output_width, output_height
             ,  input, input_width, input_height, input_feature_maps, stride_width, stride_height
             , 0, 0

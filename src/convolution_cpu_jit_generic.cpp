@@ -321,10 +321,10 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
     : is_an_implementation(neural::type_id<convolution_cpu_jit_generic>())
     , outer(arg)
 {
-    auto output_ptr  = reinterpret_cast<float*>(&arg.output_memory(0).pointer);
-    auto input_ptr   = reinterpret_cast<float*>(&arg.input_memory(0).pointer);
-    auto weights_ptr = reinterpret_cast<float*>(&arg.input_memory(1).pointer);
-    //auto bias_ptr    = reinterpret_cast<float*>(&arg.input_memory(2).pointer); //todo add support for biases
+    auto output_ptr  = static_cast<float*>(arg.output_memory(0).pointer);
+    auto input_ptr   = static_cast<float*>(arg.input_memory(0).pointer);
+    auto weights_ptr = static_cast<float*>(arg.input_memory(1).pointer);
+    //auto bias_ptr    = reinterpret_cast<float*>(arg.input_memory(2).pointer); //todo add support for biases
 
     auto& stride      = outer.argument.stride;
     auto& output_size = outer.argument.output_size;
