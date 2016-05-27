@@ -85,6 +85,16 @@ template<> size_t index<neural::memory::format::fyxb_f32>(std::vector<uint32_t> 
 }
 
 
+template<> size_t index<neural::memory::format::tmp_format>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+    assert(is_in_range(size, pos));
+//output[b + batch_size*(fo + output_feature_maps*(xo + output_width*yo))];
+
+    // BFXY represents buffer size, wbile bfxy represents current position
+    const int B = size[0];   const int F = size[1];   const int X = size[2];   const int Y = size[3];
+    const int b =  pos[0];   const int f =  pos[1];   const int x =  pos[2];   const int y =  pos[3];
+
+    return b%24 + B * (f%4 + F*(x + X*y)); //todo what with b>23, and f > 3
+}
 fptr choose_calculate_idx(neural::memory::format::type arg){
     switch (arg){
         case neural::memory::format::type::x_f32: // treat x_f32 as xb_f32 with b=1
@@ -96,6 +106,7 @@ fptr choose_calculate_idx(neural::memory::format::type arg){
         case neural::memory::format::type::os_yxi_sv16_f32: return index<neural::memory::format::type::os_yxi_sv16_f32>;
         case neural::memory::format::type::bfyx_f32:        return index<neural::memory::format::type::bfyx_f32>;
         case neural::memory::format::type::fyxb_f32:        return index<neural::memory::format::type::fyxb_f32>;
+        case neural::memory::format::type::tmp_format:      return index<neural::memory::format::type::tmp_format>;
 
         default:
             throw std::runtime_error("choose_calculate_idx has no case for memory::format " + std::to_string(arg));

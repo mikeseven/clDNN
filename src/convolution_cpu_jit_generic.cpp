@@ -123,11 +123,10 @@ namespace {
             auto code_prologue_load         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovups(Ymm(static_cast<int>(n)),  ptr [rax+32*n] );};
             auto code_prologue_zero         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vxorps(Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)));};
             auto code_epilogue_store        = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovups(ptr [rax+32*n], Ymm(static_cast<int>(n)));};
-            auto code_prologue_load_bias    = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovups(Ymm(static_cast<int>(n)), ptr [rbp+32*n] );};
             auto code_epilogue_bias_than_relu_store   = [&]() {
                 vxorps(ymm15, ymm15, ymm15);
                 for(uint64_t n=0; n<accumulators_count; ++n) {
-                    vaddps(Ymm(static_cast<int>(n)), ptr [rdi/*+32*n*/] );
+                    //vaddps(Ymm(static_cast<int>(n)), ptr [rdi/*+32*n*/] ); //todo
                     vmaxps(Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)), ymm15);
                 }
                 for(uint64_t n=0; n<accumulators_count; ++n) vmovups(ptr [rax+32*n], Ymm(static_cast<int>(n)));
