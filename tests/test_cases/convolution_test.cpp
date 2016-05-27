@@ -840,7 +840,6 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
         ).sync();
 
         long err_count = 0;//todo remove
-        auto calc_out_idx = ndimensional::choose_calculate_idx(output_p.as<const memory&>().argument.format);
 
         const int64_t filter_radius = (filter_size-1)/2;
         const auto output_feature_blocks    = output_feature_maps/output_features_per_iteration;
@@ -871,8 +870,7 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
                         if(valid<0) valid = 0;
                         auto yo = y+output_view_y;
                         auto xo = x+output_view_x;
-                        auto tested = calc_out_idx(output_p.as<const memory&>().argument.size.raw, {b, fo, xo, yo});
-                                //output[b + batch_size*(fo + output_feature_maps*(xo + output_width*yo))];
+                        auto tested = output[b + batch_size*(fo + output_feature_maps*(xo + output_width*yo))];
                         EXPECT_EQ(true, tests::are_equal(valid, tested)) << "at [b,x,y,f] = [" << b << "," << xo << "," << yo << "," << fo << "]\n" <<
                             std::endl << "error count: " << ++err_count << //todo remove
                                                                             std::endl;
