@@ -38,6 +38,7 @@ namespace {
         uint64_t output_offset;
         uint64_t input_offset;
         uint64_t filter_offset;
+        uint64_t bias_offset;
         int8_t type; // 0:init, 1:normal, 2:finalize
     };
 
@@ -50,6 +51,7 @@ namespace {
         float **output;
         float **input;
         float **filter;
+        float **bias;
     };
 #pragma pack(pop)
 
@@ -121,9 +123,13 @@ namespace {
             auto code_prologue_load         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovups(Ymm(static_cast<int>(n)),  ptr [rax+32*n] );};
             auto code_prologue_zero         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vxorps(Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)));};
             auto code_epilogue_store        = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovups(ptr [rax+32*n], Ymm(static_cast<int>(n)));};
-            auto code_epilogue_relu_store   = [&]() {
+            auto code_prologue_load_bias    = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovups(Ymm(static_cast<int>(n)), ptr [rbp+32*n] );};
+            auto code_epilogue_bias_than_relu_store   = [&]() {
                 vxorps(ymm15, ymm15, ymm15);
-                for(uint64_t n=0; n<accumulators_count; ++n) vmaxps(Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)), ymm15);
+                for(uint64_t n=0; n<accumulators_count; ++n) {
+                    vaddps(Ymm(static_cast<int>(n)), ptr [rdi/*+32*n*/] );
+                    vmaxps(Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)), ymm15);
+                }
                 for(uint64_t n=0; n<accumulators_count; ++n) vmovups(ptr [rax+32*n], Ymm(static_cast<int>(n)));
             };
 
@@ -131,7 +137,7 @@ namespace {
 
             // lists of registers to preserve on call
 #ifdef __unix__
-            auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbp, rbx, r11, r12, r13, r14, r15};//todo rsi?
+            auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbp, rbx, r11, r12, r13, r14, r15};
 #elif _WIN32
             auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbx, rsi, rdi, r11, r12, r13, r14, r15};
 #endif
@@ -171,6 +177,9 @@ namespace {
                 mov(r12, ptr [rsi+offsetof(op_array_t,filter)]);
                 mov(r12, ptr [r12]);
                 add(r12, ptr [r15+offsetof(op_data_t,filter_offset)]);
+                mov(rdi, ptr [rsi+offsetof(op_array_t,bias)]);
+                mov(rdi, ptr [rdi]);
+                add(rdi, ptr [r15+offsetof(op_data_t,bias_offset)]);
                 cmp(byte [r15+offsetof(op_data_t,type)], 1);
                 jne("op_type_02", T_NEAR);
 
@@ -188,7 +197,7 @@ namespace {
                 code_op_type(0, code_prologue_zero, code_epilogue_store);
 
                 // initial = load -> calculation -> relu -> store
-                code_op_type(2, code_prologue_load, code_epilogue_relu_store);
+                code_op_type(2, code_prologue_load, code_epilogue_bias_than_relu_store);
 
             L("end");
 
@@ -215,6 +224,7 @@ namespace {
           float **output, uint64_t output_width, uint64_t output_height, uint64_t output_feature_maps
         , float ** input, uint64_t  input_width, uint64_t  input_height, uint64_t  input_feature_maps,uint64_t stride_width, uint64_t stride_height
         , float **filter, uint64_t filter_size
+        , float **  bias
         , uint64_t block_width, uint64_t block_height
     ) : is_an_implementation(neural::type_id<jit_convolution_generic>())
     {
@@ -276,6 +286,7 @@ namespace {
                                         sizeof(float)*output_block_stride*output_block
                                         , sizeof(float)*batch_size*input_feature_maps*((x*stride_width+kx-filter_radius) + input_width*(y*stride_height+ky-filter_radius))
                                         , sizeof(float)*filter_feature_blocks*filter_block
+                                        , 0 //todo bias offset
                                         , 1
                                     }
                                 });
@@ -313,6 +324,7 @@ namespace {
                     , output
                     , input
                     , filter
+                    , bias
                 };
 
                 tasks[at].callback = reinterpret_cast<void (*)(const void *)>(code.getCode());
@@ -366,6 +378,7 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
                 stride.raw[ y_pos ],
                 reinterpret_cast<float**>(&arg.input_memory(1).pointer),
                 weights_arg.size.raw[ x_pos+1 ], // filter is square x == y
+                reinterpret_cast<float**>(&arg.input_memory(2).pointer),
                 1, // magic number, block w
                 1  // magic number, block h
                 );

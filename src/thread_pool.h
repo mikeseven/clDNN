@@ -15,7 +15,6 @@
 */
 
 #pragma once
-#include <iostream> //todo remove
 
 #include <cstdint>
 #include <algorithm>
@@ -257,8 +256,6 @@ struct nn_thread_worker_pool {
         } else {
             // Singlethreaded pool... run tasks sequentially by itself.
             for (auto& request : requests) {
-                static unsigned x =0;
-                std::cout << x++ <<std::endl;//todo remove
                 request.callback(request.data);
             }
         }

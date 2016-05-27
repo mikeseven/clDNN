@@ -100,7 +100,7 @@ primitive convolution::create(convolution::arguments arg) {
     auto& output_size = arg.output_size;
     auto& stride = arg.stride;
 
-    auto& input_arg = arg.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+    auto& input_arg = arg.input[0].primitive.as<const memory&>().argument;
     auto& output_arg = arg.output[0].as<const memory&>().argument;
 
     auto& filter_arg = arg.input[1].primitive.as<const memory&>().argument; //convolution filter
