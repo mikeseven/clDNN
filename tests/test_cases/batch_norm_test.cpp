@@ -174,6 +174,8 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     for (i = 0; i < total_input_size; ++i) {
         EXPECT_EQ(expected_output[i], static_cast<float*>(output_memory.pointer)[i]);
     }
+
+    delete[] expected_output;
 }
 
 TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
@@ -331,4 +333,6 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     for (i = 0; i < total_input_size; ++i) {
         EXPECT_EQ(expected_output[i], static_cast<float*>(output_memory.pointer)[i]);
     }
+
+    delete[] expected_output;
 }
