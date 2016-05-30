@@ -29,14 +29,4 @@ namespace neural {
 
         const pooling &outer;
     };
-    //struct pooling_backward_cpu_reference : is_an_implementation {
-    //    pooling_backward_cpu_reference(pooling_backward &arg);
-    //    ~pooling_backward_cpu_reference();
-    //    static void implementation(const void *ptr);
-
-    //    static is_an_implementation *create(pooling_backward &arg) { return new pooling_backward_cpu_reference(arg); };
-    //    std::vector<task> work() { return {task{implementation, &outer}}; };
-
-    //    const pooling_backward &outer;
-    //};
 }
