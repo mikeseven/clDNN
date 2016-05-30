@@ -19,7 +19,7 @@
 
 namespace neural {
 
-void worker_cpu::execute(const std::vector<task>& requests) const {thread_pool->push_job(requests);}
+void worker_cpu::execute(const task_group& requests) const {thread_pool->push_job(requests);}
 
 worker_cpu::worker_cpu(neural::worker_cpu::arguments arg)
     : is_a_worker(type_id<neural::worker_cpu>())
