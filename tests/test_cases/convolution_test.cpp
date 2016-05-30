@@ -637,7 +637,7 @@ TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
         execute({conv}, engine_resource).sync();
 
-        // This test was just a sum of uniform values in whole window. 
+        // This test was just a sum of uniform values in whole window.
         // So each output value should be: number of input elements of 3d kernel (times input and kernel values) + bias value.
         float expected_value = num_input_kernel_elements * input_val * weight_val + bias_val;
         for(size_t output_element = 0; output_element < num_output_elements; ++output_element)
@@ -686,7 +686,7 @@ TEST(convolution_f32_fw, optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
         execute({conv}, engine_resource).sync();
 
-        // This test was just a sum of uniform values in whole window. 
+        // This test was just a sum of uniform values in whole window.
         // So each output value should be: number of input elements of 3d kernel (times input and kernel values) + bias value.
         float expected_value_slice0 = num_input_kernel_elements * input_val * weight_val_slice0 + bias_val_slice0;
         float expected_value_slice1 = num_input_kernel_elements * input_val * weight_val_slice1 + bias_val_slice1;
@@ -754,14 +754,14 @@ TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x
     {
         opt_conv,
         reorder_output_to_tmp_ref,
-        reorder_input_to_ref, 
-        reorder_weights_to_ref, 
-        reorder_biases_to_ref, 
+        reorder_input_to_ref,
+        reorder_weights_to_ref,
+        reorder_biases_to_ref,
         ref_conv,
     }, engine_resource).sync();
 
     for(size_t output_element = 0; output_element < temp_output_memory.count(); ++output_element)
-        EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(temp_output_memory, output_element), 0.0005f)); 
+        EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(temp_output_memory, output_element), 0.0005f));
 }
 
 TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
@@ -774,7 +774,7 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
     const uint32_t stride_height       = 1;
     const uint32_t output_width        = (input_width +stride_width -1)/stride_width;
     const uint32_t output_height       = (input_height+stride_height-1)/stride_height;
-    const uint32_t output_feature_maps = 4;
+    const uint32_t output_feature_maps = 8;
     const uint32_t output_view_x       = 0;
     const uint32_t output_view_y       = 0;
     const uint32_t output_view_width   = (input_width +stride_width -1)/stride_width;
@@ -804,7 +804,7 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
 
         auto input_p  = memory::describe({neural::engine::reference, memory::format::tmp_format_output, { 24 , {input_width , input_height }, input_feature_maps}});
         auto output_p = memory::describe({neural::engine::reference, memory::format::tmp_format_output, { 24 , {output_width, output_height}, output_feature_maps}});
-        auto weights_p= memory::describe({neural::engine::reference, memory::format::oiyx_f32, { 1  , {filter_size   , filter_size }, {output_feature_maps, input_feature_maps}}});
+        auto weights_p= memory::describe({neural::engine::reference, memory::format::tmp_format_weights_slice4, { 1  , {filter_size   , filter_size }, {output_feature_maps, input_feature_maps}}});
         auto biases_p = memory::describe({neural::engine::reference, memory::format::   x_f32, { 1  , {{output_feature_maps}}  , 1 }});
 
         // initialized inputs & filter with pseudorandom values
@@ -840,7 +840,9 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
         ).sync();
 
         long err_count = 0;//todo remove
-        auto calc_out_idx = ndimensional::choose_calculate_idx(output_p.as<const memory&>().argument.format);
+//        auto calc_out_idx = ndimensional::choose_calculate_idx( output_p.as<const memory&>().argument.format);
+//        auto calc_in_idx  = ndimensional::choose_calculate_idx(  input_p.as<const memory&>().argument.format);
+//        auto calc_w_idx   = ndimensional::choose_calculate_idx(weights_p.as<const memory&>().argument.format);
 
         const int64_t filter_radius = (filter_size-1)/2;
         const auto output_feature_blocks    = output_feature_maps/output_features_per_iteration;
@@ -859,7 +861,9 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
                                 if(xs<0 || static_cast<uint64_t>(xs)>=input_width) continue;
                                 for(uint64_t fi=0; fi<input_feature_maps; ++fi) {
                                     float value  = input[b + batch_size*(fi + input_feature_maps*(xs + input_width*ys))];
+                                    //float value  = input[calc_in_idx(input_p.as<const memory&>().argument.size.raw, {b, fi, xs, ys})];
                                     float weight = filter[foi + output_features_per_iteration*(fi + input_feature_maps*(fob + output_feature_blocks*(xk + filter_size*yk)))];
+                                    //float weight  = filter[calc_w_idx(weights_p.as<const memory&>().argument.size.raw, {0, fo, fi, xk, yk})];
                                     valid  = static_cast<float>(double(value)*weight + valid);
                                 }
     #if 0
@@ -871,8 +875,8 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
                         if(valid<0) valid = 0;
                         auto yo = y+output_view_y;
                         auto xo = x+output_view_x;
-                        auto tested = calc_out_idx(output_p.as<const memory&>().argument.size.raw, {b, fo, xo, yo});
-                                //output[b + batch_size*(fo + output_feature_maps*(xo + output_width*yo))];
+                        auto tested = //output[calc_out_idx(output_p.as<const memory&>().argument.size.raw, {b, fo, xo, yo})];
+                                      output[b + batch_size*(fo + output_feature_maps*(xo + output_width*yo))];
                         EXPECT_EQ(true, tests::are_equal(valid, tested)) << "at [b,x,y,f] = [" << b << "," << xo << "," << yo << "," << fo << "]\n" <<
                             std::endl << "error count: " << ++err_count << //todo remove
                                                                             std::endl;

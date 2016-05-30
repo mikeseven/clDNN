@@ -89,37 +89,57 @@ template<> size_t index<neural::memory::format::tmp_format_output>(std::vector<u
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
-    const int B = size[0];   const int F = size[1];   const int X = size[2];
-    const int b =  pos[0];   const int f =  pos[1];   const int x =  pos[2];   const int y =  pos[3];
+    const size_t B = size[0];   const size_t F = size[1];   const size_t X = size[2];
+    const size_t b =  pos[0];   const size_t f =  pos[1];   const size_t x =  pos[2];   const size_t y =  pos[3];
 
-    assert(24 == B /*&& 4 == F*/); //todo remove, what with b>23, and f > 3
-    //output[b + batch_size*(fo + output_feature_maps*(xo + output_width*yo))];
-    return b%24 + B * (f%4 + F*(x + X*y));
+    assert(24 == B); //todo remove, what with b>23
+    return b%24 + B * (f + F*(x + X*y));
+
+//    return b/24*B*F*X*Y + (b%24 + B * (f + F*(x + X*y)));
 }
+
+
 template<> size_t index<neural::memory::format::tmp_format_input>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
-    const int B = size[0];   const int F = size[1];   const int X = size[2];
-    const int b =  pos[0];   const int f =  pos[1];   const int x =  pos[2];   const int y =  pos[3];
+    const size_t B = size[0];   const size_t F = size[1];   const size_t X = size[2];
+    const size_t b =  pos[0];   const size_t f =  pos[1];   const size_t x =  pos[2];   const size_t y =  pos[3];
 
-    assert(24 == B /*&& 4 == F*/); //todo remove, what with b>23, and f > 3
-    //input[b + batch_size*(fi + input_feature_maps*(xs + input_width*ys))]
+    assert(24 == B); //todo remove, what with b>23
     return b%24 + B * (f + F*(x + X*y));
 }
+
+
+template<> size_t index<neural::memory::format::tmp_format_weights_slice4>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+    assert(is_in_range(size, pos));
+
+    // BFXY represents buffer size, wbile bfxy represents current position
+    const size_t B = size[0];   const size_t Fo = size[1];   const size_t Fi = size[2];   const size_t X = size[3];
+    const size_t b =  pos[0];   const size_t fo =  pos[1];   const size_t fi =  pos[2];   const size_t x =  pos[3];   const size_t y =  pos[4];
+    const size_t slice_block = fo/4;    const size_t slice_element = fo%4;
+
+    assert(1 == B); // Weights doesnt use batch, but the field must exist.
+    assert(size[3] == size[4]); // X == Y
+    assert(0 == Fo%4);
+    return slice_element + 4*(fi + Fi*(slice_block + Fo/4*(x + X*y)));
+}
+
+
 fptr choose_calculate_idx(neural::memory::format::type arg){
     switch (arg){
         case neural::memory::format::type::x_f32: // treat x_f32 as xb_f32 with b=1
-        case neural::memory::format::type::xb_f32:            return index<neural::memory::format::type::xb_f32>;
-        case neural::memory::format::type::bx_f32:            return index<neural::memory::format::type::bx_f32>;
-        case neural::memory::format::type::yxfb_f32:          return index<neural::memory::format::type::yxfb_f32>;
-        case neural::memory::format::type::byxf_f32:          return index<neural::memory::format::type::byxf_f32>;
-        case neural::memory::format::type::oiyx_f32:          return index<neural::memory::format::type::oiyx_f32>;
-        case neural::memory::format::type::os_yxi_sv16_f32:   return index<neural::memory::format::type::os_yxi_sv16_f32>;
-        case neural::memory::format::type::bfyx_f32:          return index<neural::memory::format::type::bfyx_f32>;
-        case neural::memory::format::type::fyxb_f32:          return index<neural::memory::format::type::fyxb_f32>;
-        case neural::memory::format::type::tmp_format_output: return index<neural::memory::format::type::tmp_format_output>;
-        case neural::memory::format::type::tmp_format_input:  return index<neural::memory::format::type::tmp_format_input>;
+        case neural::memory::format::type::xb_f32:             return index<neural::memory::format::type::xb_f32>;
+        case neural::memory::format::type::bx_f32:             return index<neural::memory::format::type::bx_f32>;
+        case neural::memory::format::type::yxfb_f32:           return index<neural::memory::format::type::yxfb_f32>;
+        case neural::memory::format::type::byxf_f32:           return index<neural::memory::format::type::byxf_f32>;
+        case neural::memory::format::type::oiyx_f32:           return index<neural::memory::format::type::oiyx_f32>;
+        case neural::memory::format::type::os_yxi_sv16_f32:    return index<neural::memory::format::type::os_yxi_sv16_f32>;
+        case neural::memory::format::type::bfyx_f32:           return index<neural::memory::format::type::bfyx_f32>;
+        case neural::memory::format::type::fyxb_f32:           return index<neural::memory::format::type::fyxb_f32>;
+        case neural::memory::format::type::tmp_format_output:  return index<neural::memory::format::type::tmp_format_output>;
+        case neural::memory::format::type::tmp_format_input:   return index<neural::memory::format::type::tmp_format_input>;
+        case neural::memory::format::type::tmp_format_weights_slice4: return index<neural::memory::format::type::tmp_format_weights_slice4>;
 
         default:
             throw std::runtime_error("choose_calculate_idx has no case for memory::format " + std::to_string(arg));
