@@ -122,7 +122,7 @@ namespace neural {
                 }
             }
 
-            std::vector<task> work() {
+            task_group work() {
                 return{ task{ implementation, &outer } };
             }
 

@@ -212,7 +212,7 @@ void MKL_DNNInnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
                 top_data_    ->memory_prv(top_data),
                 weights_data_->memory_prv(weight),
                 bias_data_   ->memory_prv(bias),
-                fcFwd_ }).sync();
+                fcFwd_ }).wait();
   } else {
     // TODO
     NOT_IMPLEMENTED;
@@ -220,7 +220,7 @@ void MKL_DNNInnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
     execute({ bottom_data_ ->memory_prv(bottom_data),
             top_data_    ->memory_prv(top_data),
             weights_data_->memory_prv(weight)
-            fcFwd_ }).sync();
+            fcFwd_ }).wait();
 #endif
   }
 }

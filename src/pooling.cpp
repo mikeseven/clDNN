@@ -117,7 +117,7 @@ struct pooling_reference : is_an_implementation {
         }
     }
 
-    std::vector<task> work() {
+	task_group work() {
         return {task{implementation, &outer}};
     }
 

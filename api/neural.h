@@ -777,7 +777,7 @@ private:
 //
 // Worker for executing primitives for engine::cpu.
 // Internally implemented as thread pool.
-struct nn_thread_worker_pool;
+class nn_thread_worker_pool;
 struct worker_cpu : is_a_worker {
     struct arguments {
         uint32_t thread_pool_size;
@@ -791,7 +791,7 @@ struct worker_cpu : is_a_worker {
 
     DLL_SYM static worker create(arguments);
 
-    void execute(const std::vector<task>& requests) const;
+    void execute(const neural::task_group& requests) const;
     neural::engine::type engine() const {return neural::engine::cpu;}
 
 private:

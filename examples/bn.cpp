@@ -44,7 +44,7 @@ void spatial_bn_trivial_example_forward_training_float()
 
     // Run few times.
     for(int i = 0; i < 3; ++i)
-        execute({bn}).sync();
+        execute({bn}).wait();
 }
 
 void spatial_bn_trivial_example_backward_training_float()
@@ -75,7 +75,7 @@ void spatial_bn_trivial_example_backward_training_float()
 
     // Run few times.
     for(int i = 0; i < 3; ++i)
-        execute({bn}).sync();
+        execute({bn}).wait();
 }
 
 void spatial_bn_trivial_example_inference_float()
@@ -102,7 +102,7 @@ void spatial_bn_trivial_example_inference_float()
 
     // Run few times.
     for(int i = 0; i < 3; ++i)
-        execute({bn}).sync();
+        execute({bn}).wait();
 }
 
 void spatial_bn_complex_example_training_float()
@@ -140,12 +140,12 @@ void spatial_bn_complex_example_training_float()
     // Run few times.
     for(int i = 0; i < 3; ++i)
     {
-        execute({bn_train_fw}).sync();
+        execute({bn_train_fw}).wait();
 
         // TODO: add some simple error function instead of directly connecting forward and backward pass by forward_output primitive
         // ....
 
-        execute({bn_train_bck}).sync();
+        execute({bn_train_bck}).wait();
 
         // TODO: add SGD primitive
         // ...
@@ -156,6 +156,6 @@ void spatial_bn_complex_example_training_float()
     // Run few times.
     for(int i = 0; i < 3; ++i)
     {
-        execute({bn_infer}).sync();
+        execute({bn_infer}).wait();
     }
 }
