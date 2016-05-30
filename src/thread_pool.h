@@ -26,38 +26,6 @@
 
 namespace neural 
 {
-#if defined _WIN32
-	#include <windows.h>
-	class nn_thread_worker_pool
-	{
-		size_t taskcount;
-		std::atomic<size_t> current_task_id;
-
-		std::atomic<size_t> active_threads;
-		int num_threads_per_core;
-
-		std::mutex mtx_wake;
-		HANDLE ehWake;
-		HANDLE ehSleep;
-
-		int thread_batch_size;
-		int enable_thread_denom;
-		const std::vector<task>* current_request;
-		volatile bool stop;
-
-		std::vector<std::thread> threads;
-
-		bool is_thread_enable(uint32_t threadId);
-		void process_task(uint32_t threadId);
-
-	public:
-		nn_thread_worker_pool(size_t arg_num_threads = 0);
-		~nn_thread_worker_pool();
-
-		// push	tasks for processing
-		void push_job(const task_group& requests);
-	};
-#else
     class nn_thread_worker_pool
     {
         size_t taskcount;
@@ -87,7 +55,6 @@ namespace neural
         // push    tasks for processing
         void push_job(const task_group& requests);
     };
-#endif
 };
 
 
