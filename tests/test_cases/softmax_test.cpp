@@ -17,6 +17,8 @@
 #include "api/neural.h"
 #include "tests/gtest/gtest.h"
 #include "test_utils/test_utils.h"
+#include "memory_utils.h"
+#include <numeric>
 
 using namespace neural;
 using namespace std;
@@ -179,3 +181,23 @@ TEST(softmax_xb_f32_test, basic_with_offsets) {
         }
 
 };
+
+TEST(softmax_xb_f32_fw, intrinsics_avx2_batch1) {
+    const uint32_t x = 1000, b = 1;
+
+    auto input  = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
+    auto output = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
+    auto& input_memory  = input.as<const memory&>();
+    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer);
+
+    // Initialize input data
+    fill<float>(input_memory);
+
+    auto softmax = normalization::softmax::create({engine::cpu, output, input});
+
+    execute({output, softmax}).wait();
+
+    auto sum = accumulate(output_memory_ptr, output_memory_ptr + x, 0.0f);
+
+    EXPECT_EQ(true, tests::are_equal(sum, 1.0f));
+}
