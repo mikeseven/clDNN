@@ -18,35 +18,22 @@
 #include "multidimensional_counter.h"
 
 namespace neural {
-/*
-    struct pooling_reference : is_an_implementation {
-        const pooling &outer;
-        pooling_reference(pooling &arg)
-            : is_an_implementation(neural::type_id<pooling_reference>())
-            , outer(arg)
-        {};
-        ~pooling_reference() {}
 
-        static void implementation(const void *ptr) {
-        */
     pooling_cpu_reference::pooling_cpu_reference(pooling &arg)
         : is_an_implementation(neural::type_id<pooling_cpu_reference>())
         , outer(arg) {};
     pooling_cpu_reference::~pooling_cpu_reference() {};
     void pooling_cpu_reference::implementation(const void *ptr) {
             auto this_pooling = static_cast<const pooling *>(ptr);
-            //auto input        = static_cast<float*>(this_pooling->input_memory(0).pointer);
-            //auto output       = static_cast<float*>(this_pooling->output_memory(0).pointer);
-            auto input = static_cast<float*>(this_pooling->argument.input[0].primitive.as<const memory&>().pointer);  //todo tmp solution
+            auto input = static_cast<float*>(this_pooling->argument.input[0].primitive.as<const memory&>().pointer);
             auto output = static_cast<float*>(this_pooling->argument.output[0].as<const memory&>().pointer);
 
-            auto& input_arg = this_pooling->argument.input[0].primitive.as<const memory&>().argument; //todo tmp solution
-                                                                                                      //auto& input_arg  = this_pooling->input_memory(0).argument;
+            auto& input_arg = this_pooling->argument.input[0].primitive.as<const memory&>().argument;
+
             auto& input_buffer_size = input_arg.size;
             auto& input_offset = this_pooling->argument.input_offset;
 
             auto& output_arg = this_pooling->argument.output[0].as<const memory&>().argument;
-            //auto& output_arg = this_pooling->output_memory(0).argument;
             auto& output_buffer_size = output_arg.size;
             auto& output_offset = this_pooling->argument.output_offset;
             auto& output_size = this_pooling->argument.output_size;
@@ -64,9 +51,6 @@ namespace neural {
 
             // general formula: output size = (input size - window size) / step + 1
             for (size_t i = 0; i < input_offset.raw.size(); ++i) {
-                //if (output_size.raw[i] < (static_cast<int32_t>(input_buffer_size.raw[i]) - input_offset.raw[i]) / (stride.raw[i] + 1))
-                //    throw std::runtime_error("Output size of pooling is to small.");
-
                 if (output_buffer_size.raw[i] < output_size.raw[i] + output_offset.raw[i])
                     throw std::runtime_error("Pooling output buffer size is to small.");
             }
@@ -121,131 +105,33 @@ namespace neural {
             default:
                 throw std::runtime_error("Unknown pooling mode.");
             }
-        //}
-        /*
-        std::vector<task> work() {
-            return{ task{ implementation, &outer } };
-        }
-
-        static is_an_implementation *create(pooling &arg) { return new pooling_reference(arg); };*/
     };
 
-/*pooling_cpu_reference::pooling_cpu_reference(pooling &arg)
-        : is_an_implementation(neural::type_id<pooling_cpu_reference>())
-        , outer(arg) {};
-pooling_cpu_reference::~pooling_cpu_reference() {};
-void pooling_cpu_reference::implementation(const void *ptr) {
-    auto this_pooling = static_cast<const pooling *>(ptr);
-    auto input        = static_cast<float*>(this_pooling->input_memory(0).pointer);
-    auto output       = static_cast<float*>(this_pooling->output_memory(0).pointer);
 
-    auto input_memory_arg  = this_pooling->input_memory(0).argument;
-    auto input_buffer_size = input_memory_arg.size;
-    auto input_offset      = this_pooling->argument.input_offset;
+namespace
+{
 
-    auto output_memory_arg = this_pooling->output_memory(0).argument;
-    auto output_buffer_size= output_memory_arg.size;
-    auto output_offset     = this_pooling->argument.output_offset;
-    auto output_size       = this_pooling->argument.output_size;
-
-    auto stride            = this_pooling->argument.stride;
-    auto window            = this_pooling->argument.size;
-    auto padding           = this_pooling->argument.padding;
-
-    if(padding::zero            != padding)                   throw std::runtime_error("Padding is not supported.");
-    if(input_memory_arg.format  != memory::format::yxfb_f32)  throw std::runtime_error("Pooling reference uses yxfb_f32 format."); //todo, only this format?
-    if(input_buffer_size.size() != output_buffer_size.size()) throw std::runtime_error("Pooling input/output number of dimension does not match.");
-    if(stride.size()            != output_buffer_size.size()) throw std::runtime_error("Pooling stride/output number of dimension does not match.");
-    if(window.size()            != output_buffer_size.size()) throw std::runtime_error("Pooling window_size/output number of dimension does not match.");
-    if(input_memory_arg.format  != output_memory_arg.format)  throw std::runtime_error("Pooling input/output data format does not match.");
-
-    // general formula: output size = (input size - window size) / step + 1
-    for(size_t i = 0; i < input_offset.size(); ++i){
-        if(output_size[i] < (static_cast<int32_t>(input_buffer_size[i]) - input_offset[i]) / (stride[i] + 1) )
-            throw std::runtime_error("Output size of pooling is to small.");
-
-        if(output_buffer_size[i] < output_size[i] + output_offset[i])
-            throw std::runtime_error("Pooling output buffer size is to small.");
-    }
-
-    namespace nd = ndimensional;
-    nd::value<uint32_t> range(output_size);
-    nd::value<uint32_t> window_range(window);
-    nd::calculate_idx<uint32_t> calc_in_idx(input_buffer_size);
-    nd::calculate_idx<uint32_t> calc_out_idx(output_buffer_size);
-    switch( this_pooling->argument.mode ){
-        case pooling::mode::max:
-            for(auto pos : range) {
-                auto out_idx = calc_out_idx(pos + output_offset);
-
-                float acc = -std::numeric_limits<float>::max();
-                for(auto win_pos : window_range){
-                    const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos;
-
-                    if( calc_in_idx.is_out_of_range(arg_in_idx) )
-                    {
-                        // Pad with zero.
-                        acc = std::max(acc, 0.0f);
-                        continue;
-                    }
-
-                    auto in_idx = calc_in_idx(arg_in_idx);
-                    acc = std::max(acc, input[in_idx]);
-                }
-                output[out_idx] = acc;
-            }
-            break;
-        case pooling::mode::average:
+    struct attach
+    {
+        attach()
         {
-            auto window_elements = std::accumulate(window.cbegin(), window.cend(), 1, std::multiplies<uint32_t>());
-            for(auto pos : range) {
-                auto out_idx = calc_out_idx(pos + output_offset);
+            auto key_fw = std::make_tuple(engine::cpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
+            auto val_fw = pooling_cpu_reference::create;
 
-                float acc = 0.0f;
-                for(auto win_pos : window_range){
-                    const std::vector<int32_t> arg_in_idx = nd::value<int32_t>(input_offset) + pos*stride + win_pos;
-
-                    if( calc_in_idx.is_out_of_range(arg_in_idx) )
-                        continue;
-
-                    auto in_idx = calc_in_idx(arg_in_idx);
-                    acc += input[in_idx];
-                }
-                output[out_idx] = acc/window_elements;
-            }
+            pool_fw_implementation_map::instance().insert( {key_fw, val_fw} );
         }
-            break;
-        default:
-            throw std::runtime_error("Unknown pooling mode.");
-    }
-}
-*/
-//pooling_backward_cpu_reference::pooling_backward_cpu_reference(pooling_backward &arg)
-//    : is_an_implementation(neural::type_id<pooling_backward_cpu_reference>())
-//    , outer(arg) {};
-//pooling_backward_cpu_reference::~pooling_backward_cpu_reference() {};
-///*static*/ void pooling_backward_cpu_reference::implementation(const void *ptr) {
-//}
 
-namespace{
-struct attach{
-    attach(){
-        auto key = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
-        auto val_fw = pooling_cpu_reference::create;
-  //      auto val_bw = pooling_backward_cpu_reference::create;
-
-        pool_fw_implementation_map::instance().insert( {key, val_fw} );
-  //      pool_bw_implementation_map.insert( {key, val_bw} );
-    }
-    ~attach(){}
-};
+        ~attach()
+        {
+        }
+    };
 
 #ifdef __GNUC__
-    __attribute__((constructor))
+    __attribute__((visibility("default")))
 #elif _MSC_VER
 #   pragma section(".nn_init$m", read, write)
 #endif
-attach attach_impl;
+    attach attach_impl;
 
 }
 }
