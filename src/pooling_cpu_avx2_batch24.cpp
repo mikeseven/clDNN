@@ -33,7 +33,7 @@ int x_pos = 2;
 int y_pos = 3;
 
 
-void naive(float* input, float* output, neural::vector<uint32_t> input_dims, neural::vector<uint32_t> pooling_dims, neural::vector<uint32_t> pooling_stride) {
+void naive(float* input, float* output, neural::vector<uint32_t> input_dims, neural::vector<uint32_t> pooling_dims) {
     const uint64_t batch_accs = BATCH_ACCEPTED_BLOCK / BATCH_SHIFT;
     const uint64_t in_pixel_size = input_dims.raw[1] * BATCH_ACCEPTED_BLOCK;
 
@@ -124,7 +124,6 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr)
     auto this_handle        = static_cast<const parameters_pooling_f32*>(ptr);
     auto this_pooling       = static_cast<const pooling *>(this_handle->pooling_data);
 
-    auto& stride            = this_pooling->argument.stride;
     auto& window            = this_pooling->argument.size;
 
     auto& input_memory_arg  = this_pooling->input_memory(0).argument;
@@ -136,25 +135,33 @@ void pooling_cpu_avx2_batch24::implementation(const void *ptr)
     uint64_t input_offset = this_handle->input_offset;
     uint64_t output_offset = this_handle->output_offset;
 
-    naive(*input + input_offset, *output + output_offset, input_buffer_size, window, stride);
+    naive(*input + input_offset, *output + output_offset, input_buffer_size, window);
 }
 
-namespace{
-struct attach{
-    attach(){
-        auto key = std::make_tuple(engine::cpu, memory::format::bs_yxf_bv24_f32, memory::format::bs_yxf_bv24_f32); //todo is this key ok?
-        auto val_fw = pooling_cpu_avx2_batch24::create;
+namespace
+{
 
-        pool_fw_implementation_map::instance().insert( {key, val_fw} );
-    }
-    ~attach(){}
-};
+    struct attach
+    {
+        attach()
+        {
+            auto key_fw = std::make_tuple(engine::cpu, memory::format::bs_yxf_bv24_f32, memory::format::bs_yxf_bv24_f32);
+            auto val_fw = pooling_cpu_avx2_batch24::create;
+
+            pool_fw_implementation_map::instance().insert( {key_fw, val_fw} );
+        }
+
+        ~attach()
+        {
+        }
+    };
 
 #ifdef __GNUC__
-    __attribute__((constructor))
+    __attribute__((visibility("default")))
 #elif _MSC_VER
 #   pragma section(".nn_init$m", read, write)
 #endif
-attach attach_impl;
+    attach attach_impl;
+
 }
 }
