@@ -64,6 +64,7 @@ public:
     }
 };
 
+
 async_result execute(std::vector<primitive> primitives, std::vector<worker> workers) {
     if(0==workers.size()) {
         static auto cpu_worker = worker_cpu::create({});

@@ -20,7 +20,116 @@
 
 namespace neural
 {
+#if defined _WIN32
 
+	nn_thread_worker_pool::nn_thread_worker_pool(size_t arg_num_threads)
+		:taskcount(0), current_task_id(0), stop(false), current_request(nullptr), num_threads_per_core(2), enable_thread_denom(1), thread_batch_size(1)
+	{
+		unsigned int num_logic_cores = std::thread::hardware_concurrency();
+		unsigned int num_threads = arg_num_threads == 0 ? num_logic_cores : static_cast<unsigned int>(arg_num_threads);
+		active_threads = num_threads;
+
+		ehWake = CreateEvent(NULL, TRUE, FALSE, TEXT("WakeEvent"));
+		ehSleep = CreateEvent(NULL, FALSE, FALSE, TEXT("ehSleep"));
+		//Sleep(100); 
+
+		// creating threads
+		for (unsigned int thread_id = 0; thread_id < num_threads; ++thread_id)
+		{
+			std::thread nthread(&nn_thread_worker_pool::process_task, this, thread_id);
+
+			// Setting affinity mask for thread. Will be finished in future
+			/*GROUP_AFFINITY ga;
+			GROUP_AFFINITY pga;
+			auto idx = thread_id;
+			ga.Group = idx / 64;
+			ga.Mask = 1i64 << (idx % 64);
+
+			auto a = SetThreadGroupAffinity(thread->worker_thread.native_handle(), &ga, &pga);
+			auto b = SetThreadAffinityMask(thread->worker_thread.native_handle(), ga.Mask);
+			//auto err = GetLastError();
+			*/
+
+			threads.push_back(std::move(nthread));
+		}
+
+		do
+		{
+			WaitForSingleObject(ehSleep, INFINITE);
+		} while (active_threads != 0);
+	}
+
+	nn_thread_worker_pool::~nn_thread_worker_pool()
+	{
+		stop = true;
+		SetEvent(ehWake);
+		std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
+		CloseHandle(ehWake);
+		CloseHandle(ehSleep);
+	}
+
+
+	void nn_thread_worker_pool::push_job(const task_group& requests)
+	{
+		{
+			std::lock_guard<std::mutex> ul(mtx_wake);
+			current_request = &requests.tsk;
+			taskcount = requests.tsk.size();
+			current_task_id = 0;
+			enable_thread_denom = requests.use_hyper_threading ? 1 : num_threads_per_core;
+			thread_batch_size = requests.task_count_per_thread;
+		}
+
+		ResetEvent(ehSleep);
+		SetEvent(ehWake);
+		do
+		{
+			WaitForSingleObject(ehSleep, INFINITE);
+		} while (active_threads != 0);
+
+		current_request = nullptr;
+	}
+
+	inline bool nn_thread_worker_pool::is_thread_enable(uint32_t threadId)
+	{
+		return (threadId % enable_thread_denom) == 0;
+	};
+
+	// main loop of task processing
+	void nn_thread_worker_pool::process_task(uint32_t )
+	{
+		while (true)
+		{
+			ResetEvent(ehWake);
+			active_threads--;
+			SetEvent(ehSleep);
+			WaitForSingleObject(ehWake, INFINITE);
+			active_threads++;
+
+			if (stop)
+				return;
+
+			while (true)
+			{
+				size_t nextTaskId = current_task_id.fetch_add(thread_batch_size);   // get index of first element for processing by increasing atomic variable by value of task count per thread
+				if (nextTaskId >= taskcount + thread_batch_size - 1)				// exit in case when all tasks done
+					break;
+
+				size_t endTaskId = nextTaskId + thread_batch_size;					// calculate index last element for processing
+				endTaskId = endTaskId > taskcount ? taskcount : endTaskId;			// check bound
+				for (size_t i = nextTaskId; i < endTaskId; ++i)
+					(*current_request)[i].callback((*current_request)[i].data);		// task processing 
+			}
+
+
+		}
+	}
+
+
+
+
+
+#else
 	nn_thread_worker_pool::nn_thread_worker_pool(size_t arg_num_threads)
 		:taskcount(0), 
 		current_task_id(0), 
@@ -123,5 +232,5 @@ namespace neural
 			}
 		}
 	}
-
+#endif
 }

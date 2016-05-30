@@ -788,14 +788,19 @@ struct worker_cpu : is_a_worker {
     };
     arguments argument;
 
-    std::unique_ptr<nn_thread_worker_pool> thread_pool;
+    const bool owns_pool;
+    const std::unique_ptr<nn_thread_worker_pool> thread_pool;
 
     DLL_SYM static worker create(arguments);
+    DLL_SYM static worker create(arguments, nn_thread_worker_pool &);
     DLL_SYM void execute(const neural::task_group& requests) const;
     DLL_SYM neural::engine::type engine() const {return neural::engine::cpu;}
 
+    ~worker_cpu(); 
+
 private:
     worker_cpu(arguments arg);
+    worker_cpu(arguments arg, nn_thread_worker_pool &);
 };
 
 
