@@ -401,7 +401,7 @@ struct attach
 {
     attach()
     {
-        auto key_fw = std::make_tuple(engine::cpu, memory::format::tmp_format, memory::format::tmp_format); //todo check
+        auto key_fw = std::make_tuple(engine::cpu, memory::format::tmp_format_output, memory::format::tmp_format_output); //todo check
         auto val_fw = convolution_cpu_jit_generic::create;
 
         conv_fw_implementation_map.insert( {key_fw, val_fw} );
