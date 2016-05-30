@@ -765,8 +765,8 @@ TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x
 }
 
 TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
-    const uint32_t input_width         = 40;   // data = input|output
-    const uint32_t input_height        = 40;   // data = input|output
+    const uint32_t input_width         = 1;   // data = input|output
+    const uint32_t input_height        = 1;   // data = input|output
     const uint32_t input_feature_maps  = 8;
     const uint32_t input_view_start_x  = 0;
     const uint32_t input_view_start_y  = 0;
@@ -774,7 +774,7 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
     const uint32_t stride_height       = 1;
     const uint32_t output_width        = (input_width +stride_width -1)/stride_width;
     const uint32_t output_height       = (input_height+stride_height-1)/stride_height;
-    const uint32_t output_feature_maps = 8;
+    const uint32_t output_feature_maps = 4;
     const uint32_t output_view_x       = 0;
     const uint32_t output_view_y       = 0;
     const uint32_t output_view_width   = (input_width +stride_width -1)/stride_width;
@@ -814,11 +814,12 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
         std::fill    (output, output+output_buffer_size, 0.0f);
         std::fill    (  bias,   bias+  bias_buffer_size, 0.0f);
 //        for(long x = 0; x < bias_buffer_size; ++x){
-//            bias[x] = x%2? 1 : 2;
+//            bias[x] = x;// x%2? 1 : 2;
 //        }
 //        std::fill    ( input,  input+ input_buffer_size, 0.0f);
 //        std::fill    (filter, filter+filter_buffer_size, 0.0f);
         std::generate( input,  input+ input_buffer_size, lambda);
+        std::generate( bias,  bias+ bias_buffer_size, lambda);
         std::generate(filter, filter+filter_buffer_size, lambda);
 
         //set pointers
@@ -880,11 +881,14 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
                         EXPECT_EQ(true, tests::are_equal(valid, tested)) << "at [b,x,y,f] = [" << b << "," << xo << "," << yo << "," << fo << "]\n" <<
                             std::endl << "error count: " << ++err_count << //todo remove
                                                                             std::endl;
+//                        EXPECT_NEAR(valid, tested, 0.0001) << "at [b,x,y,f] = [" << b << "," << xo << "," << yo << "," << fo << "]\n" <<
+//                            std::endl << "error count: " << ++err_count << //todo remove
+//                                                                            std::endl;
                     }
             }
         }
     } catch (std::exception &e) {
-        std::cerr << e.what();
+        EXPECT_EQ(true, false) << e.what();
     } catch (...) {
         std::cerr << "Unknown exceptions.";
     }
