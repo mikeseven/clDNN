@@ -25,7 +25,7 @@ namespace neural {
         static void implementation(const void *ptr);
 
         static is_an_implementation *create(pooling &arg) { return new pooling_cpu_reference(arg); };
-        std::vector<task> work() { return {task{implementation, &outer}}; };
+        task_group work() { return {task{implementation, &outer}}; };
 
         const pooling &outer;
     };

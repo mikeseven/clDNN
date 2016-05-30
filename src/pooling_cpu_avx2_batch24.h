@@ -19,15 +19,29 @@
 #include "pooling.h"
 
 namespace neural {
-    struct pooling_cpu_avx2_batch24 : is_an_implementation {
+
+    struct parameters_pooling_f32
+    {
+        void**   input_ptr; 
+        void**   output_ptr;
+        uint64_t input_offset;    
+        uint64_t output_offset;
+        pooling* pooling_data;
+    };
+
+    class pooling_cpu_avx2_batch24 : is_an_implementation 
+    {
+        std::vector<task> tasks;
+        std::vector<parameters_pooling_f32> tasks_parameters;
+        const pooling &outer;
+
+    public:
         pooling_cpu_avx2_batch24(pooling &arg);
         ~pooling_cpu_avx2_batch24();
         static void implementation(const void *ptr);
 
         static is_an_implementation *create(pooling &arg) { return new pooling_cpu_avx2_batch24(arg); };
-        std::vector<task> work() { return {task{implementation, &outer}}; };
-
-        const pooling &outer;
+        task_group work() { return this->tasks; };
     };
     //struct pooling_backward_cpu_reference : is_an_implementation {
     //    pooling_backward_cpu_reference(pooling_backward &arg);

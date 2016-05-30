@@ -26,77 +26,18 @@ const uint64_t BATCH_BLOCKS = BATCH_ACCEPTED_BLOCK / BATCH_SHIFT; //number of re
 const uint64_t BUFFERS_ALIGNMENT = BATCH_SHIFT * sizeof(float);   //required alignment of all buffers used by jit primitives
 
 namespace {
- //todo begin remove
-/*
-struct InputHeight {};
-struct InputWidth {};
-struct InputFeats {};
-struct Rows {};
-struct Cols {};
-struct PoolingWidth {};
-struct PoolingHeight {};
 
-template <typename T_What, typename T>
-struct Value
-{
-    T value;
-    Value(T_What, T value) : value(value) {}
-
-    template <typename T_Other>
-    Value(const Value<T_What, T_Other>& other) : value(other.value) {}
+int b_pos = 0; // todo typetraits
+int f_pos = 1;
+int x_pos = 2;
+int y_pos = 3;
 
 
-    operator T() const { return value; }
+void naive(float* input, float* output, neural::vector<uint32_t> input_dims, neural::vector<uint32_t> pooling_dims, neural::vector<uint32_t> pooling_stride) {
+    const uint64_t batch_accs = BATCH_ACCEPTED_BLOCK / BATCH_SHIFT;
+    const uint64_t in_pixel_size = input_dims.raw[1] * BATCH_ACCEPTED_BLOCK;
 
-    Value<T_What, T> operator+(const Value<T_What, T>& other) { return Value<T_What, T>(T_What(), value + other.value); }
-    Value<T_What, T> operator-(const Value<T_What, T>& other) { return Value<T_What, T>(T_What(), value - other.value); }
-    Value<T_What, T> operator*(const Value<T_What, T>& other) { return Value<T_What, T>(T_What(), value * other.value); }
-    Value<T_What, T> operator/(const Value<T_What, T>& other) { return Value<T_What, T>(T_What(), value / other.value); }
-};
-
-template <typename T_Height, typename T_Width>
-struct Dimensions2D
-{
-    Value<T_Height, uint64_t> height;
-    Value<T_Width, uint64_t> width;
-    Dimensions2D(Value<T_Height, uint64_t> height, Value<T_Width, uint64_t> width)
-        : height(height)
-        , width(width)
-    {}
-
-    uint64_t size() const { return height * width; }
-};
-
-template <typename T_Height, typename T_Width, typename T_Feats>
-struct Dimensions3D : Dimensions2D<T_Height, T_Width>
-{
-    Value<T_Feats, uint64_t> feats;
-    Dimensions3D(Value<T_Height, uint64_t> height,
-                 Value<T_Width, uint64_t> width,
-                 Value<T_Feats, uint64_t> feats)
-        : Dimensions2D<T_Height, T_Width>(height, width)
-        , feats(feats)
-    {}
-    uint64_t size() const { return Dimensions2D<T_Height, T_Width>::size() * feats; }
-};
-typedef Dimensions3D<InputHeight, InputWidth, InputFeats> InputDimensions;
-
-template <typename T_What, typename T> Value<T_What, T> make(T val) { return Value<T_What, T>(T_What(), val); }
-typedef Dimensions2D<PoolingHeight, PoolingWidth> PoolingDimensions;
-struct Stride { Value<Rows, uint64_t> rows; Value<Cols, uint64_t> cols; };
-struct PoolingInfo {
-    PoolingDimensions dims;
-    Stride stride;
-};
-*/
- //todo end remove
-
-void naive(float* input, float* output, neural::vector<uint64_t> input_dims, neural::vector<uint64_t> pooling_dims, neural::vector<uint64_t> pooling_stride) {
-    uint64_t batch_accs = BATCH_ACCEPTED_BLOCK / BATCH_SHIFT;
-    uint64_t in_pixel_size = input_dims.raw[1] * BATCH_ACCEPTED_BLOCK;
-
-//    auto feats = input_dims.raw[1];
-    std::memcpy(output, input, input_dims.raw[1] * BATCH_ACCEPTED_BLOCK * sizeof(float));
+    std::memcpy(output, input, in_pixel_size * sizeof(float));
     for (uint64_t i = 0; i < pooling_dims.raw[3]; ++i)
     {
         for (uint64_t j = 0; j < pooling_dims.raw[2]; ++j)
@@ -118,233 +59,84 @@ void naive(float* input, float* output, neural::vector<uint64_t> input_dims, neu
         }
     }
 }
-
-//struct packed_arguments{
-//    float* input;
-//    float* output;
-//    uint64_t input_height;
-//    uint64_t input_width;
-//    uint64_t pool_out_row;
-//    uint64_t pool_out_col;
-//    uint64_t pool_b;
-//    uint64_t output_height;
-//    uint64_t output_width;
-//    uint64_t batch_blocks;
-//    uint64_t input_pixel_size;
-//    uint64_t output_pixel_size;
-//    PoolingInfo& info;
-//    InputDimensions& in_dims;
-//    std::mutex& mtx;
-//};
-//
-//bool pull_job( float* input,
-//               float* output,
-//               uint64_t input_height,
-//               uint64_t input_width,
-//               uint64_t pool_out_row,
-//               uint64_t pool_out_col,
-//               uint64_t pool_b,
-//               uint64_t output_height,
-//               uint64_t output_width,
-//               uint64_t batch_blocks,
-//               uint64_t input_pixel_size,
-//               uint64_t output_pixel_size,
-//               PoolingInfo& info,
-//               InputDimensions& in_dims,
-//               std::mutex& mtx){
-//    uint64_t b = 0u;
-//    uint64_t out_row = 0u;
-//    uint64_t out_col = 0u;
-//    {
-//        std::unique_lock<std::mutex> guard(mtx);
-//        out_row = pool_out_row;
-//        out_col = pool_out_col;
-//        b = pool_b;
-//        if (out_row >= output_height) return false;
-//
-//        ++pool_b;
-//        if (pool_b >= batch_blocks) {
-//            pool_out_col++;
-//            pool_b = 0;
-//        }
-//        if (pool_out_col >= output_width) {
-//            pool_b = 0;
-//            pool_out_col = 0;
-//            ++pool_out_row;
-//        }
-//    }
-//
-//    auto curr_out_buffer = output + ((b * output_height + out_row) * output_width + out_col) * output_pixel_size;
-//    auto in_base_row = out_row * info.stride.rows;
-//    auto in_base_col = out_col * info.stride.cols;
-//    auto curr_in_base_buffer = input + ((b * input_height + in_base_row) * input_width + in_base_col) * input_pixel_size;
-//
-//    naive(curr_in_base_buffer, curr_out_buffer, in_dims, info);
-//    return true;
-//};
-//
-//void thread_job(const void* ptr) {
-//    auto tmp = reinterpret_cast<const packed_arguments*>(ptr);
-//
-//    while(pull_job( tmp->input,
-//                    tmp->output,
-//                    tmp->input_height,
-//                    tmp->input_width,
-//                    tmp->pool_out_row,
-//                    tmp->pool_out_col,
-//                    tmp->pool_b,
-//                    tmp->output_height,
-//                    tmp->output_width,
-//                    tmp->batch_blocks,
-//                    tmp->input_pixel_size,
-//                    tmp->output_pixel_size,
-//                    tmp->info,
-//                    tmp->in_dims,
-//                    tmp->mtx
-//                   ) );
-//};
 }
 
 namespace neural {
 
 pooling_cpu_avx2_batch24::pooling_cpu_avx2_batch24(pooling &arg)
     : is_an_implementation(neural::type_id<pooling_cpu_avx2_batch24>())
-    , outer(arg) {};
+    , outer(arg)
+{
+    uint64_t output_view_width  = arg.argument.output_size.raw[x_pos];
+    uint64_t output_view_height = arg.argument.output_size.raw[y_pos];
+
+    uint64_t input_width  = arg.input_memory(0).argument.size.raw[x_pos];
+    uint64_t input_height = arg.input_memory(0).argument.size.raw[y_pos];
+    uint64_t input_depth  = arg.input_memory(0).argument.size.raw[f_pos];
+
+    uint64_t output_width  = arg.output_memory(0).argument.size.raw[x_pos];
+    uint64_t output_height = arg.output_memory(0).argument.size.raw[y_pos];
+    uint64_t output_depth  = arg.output_memory(0).argument.size.raw[f_pos];
+
+    uint64_t column_end = arg.argument.output_offset.raw[x_pos] + output_view_width;
+    uint64_t row_end    = arg.argument.output_offset.raw[y_pos] + output_view_height;
+
+    uint64_t row_begin    = arg.argument.output_offset.raw[y_pos];
+    uint64_t column_begin = arg.argument.output_offset.raw[x_pos];
+
+    uint64_t input_pixel_size  = BATCH_ACCEPTED_BLOCK * input_depth;
+    uint64_t output_pixel_size = BATCH_ACCEPTED_BLOCK * output_depth;
+
+    if(arg.input_memory(0).argument.size.raw[b_pos] != arg.output_memory(0).argument.size.raw[b_pos])
+        throw std::runtime_error("blabla");
+
+    uint64_t num_batch_packages = arg.input_memory(0).argument.size.raw[b_pos] / BATCH_ACCEPTED_BLOCK;
+
+    auto& stride = arg.argument.stride;
+
+    for(uint64_t batch = 0; batch < num_batch_packages; ++batch)
+        for(uint64_t row = row_begin; row < row_end; ++row)
+            for(uint64_t column = column_begin; column < column_end; ++column)
+            {
+                uint64_t output_offset = ((batch * output_height + row) * output_width + column) * output_pixel_size;
+                uint64_t in_base_row = row * stride.raw[3];
+                uint64_t in_base_col = column * stride.raw[2];
+                uint64_t input_offset = ((batch * input_height + in_base_row) * input_width + in_base_col) * input_pixel_size;
+
+                tasks_parameters.push_back(
+                    parameters_pooling_f32
+                    {
+                        &arg.input_memory(0).pointer,
+                        &arg.output_memory(0).pointer,
+                        input_offset,
+                        output_offset,
+                        &arg
+                    });
+            }
+
+    for(auto& parameter : tasks_parameters)
+        tasks.push_back(task{implementation, &parameter});
+};
+
 pooling_cpu_avx2_batch24::~pooling_cpu_avx2_batch24() {};
-void pooling_cpu_avx2_batch24::implementation(const void *ptr) {
-    auto this_pooling = static_cast<const pooling *>(ptr);
-    auto input  = static_cast<float*>(this_pooling->input_memory(0).pointer);
-    auto output = static_cast<float*>(this_pooling->output_memory(0).pointer);
+void pooling_cpu_avx2_batch24::implementation(const void *ptr) 
+{
+    auto this_handle        = static_cast<const parameters_pooling_f32*>(ptr);
+    auto this_pooling       = static_cast<const pooling *>(this_handle->pooling_data);
+
+    auto& stride            = this_pooling->argument.stride;
+    auto& window            = this_pooling->argument.size;
 
     auto& input_memory_arg  = this_pooling->input_memory(0).argument;
     auto& input_buffer_size = input_memory_arg.size;
-//    auto& input_offset      = this_pooling->argument.input_offset;
-        
-    auto& output_memory_arg = this_pooling->output_memory(0).argument;
-    auto& output_buffer_size= output_memory_arg.size;
-  //  auto& output_offset     = this_pooling->argument.output_offset;
-    auto& output_size       = this_pooling->argument.output_size;
-        
-    auto& stride            = this_pooling->argument.stride;
-    auto& window            = this_pooling->argument.size;
-    //auto padding           = this_pooling->argument.padding;
 
-    int b_pos = 0; // todo typetraits
-    int f_pos = 1;
-    int x_pos = 2;
-    int y_pos = 3;
-    //uint64_t width = output->get_length(NN_DATA_COORD_x);
-    //uint64_t height = output->get_length(NN_DATA_COORD_y);
-    //uint64_t batch_blocks = output->get_length(NN_DATA_COORD_n);
-    //uint64_t width  = output_size.raw[x_pos];
-    //uint64_t height = output_size.raw[y_pos];
-    uint64_t batch_blocks = output_size.raw[b_pos];
+    auto input  = reinterpret_cast<float**>(this_handle->input_ptr);
+    auto output = reinterpret_cast<float**>(this_handle->output_ptr);
 
-    //assert(width == out_dims.width);
-    //assert(height == out_dims.height);
-    //assert(output->get_length(NN_DATA_COORD_z) == out_dims.feats);
-    //assert(input->get_length(NN_DATA_COORD_z) == out_dims.feats);
+    uint64_t input_offset = this_handle->input_offset;
+    uint64_t output_offset = this_handle->output_offset;
 
-    //assert(output->get_length(NN_DATA_COORD_p) == BATCH_ACCEPTED_BLOCK); // wtf? coord p?
-
-    //if (input->get_length() != input->parent->lengths)                    // there are no views
-    //    throw std::runtime_error("view on input in max pooling batch 24n");
-    //if (output->get_length() != output->parent->lengths)
-    //    throw std::runtime_error("view on output in max pooling batch 24n");
-
-    //uint64_t input_width = input->parent->lengths.t[NN_DATA_COORD_x];
-    //uint64_t input_height = input->parent->lengths.t[NN_DATA_COORD_y];
-    //uint64_t input_pixel_size = BATCH_ACCEPTED_BLOCK * out_dims.feats;
-    //uint64_t output_width = output->parent->lengths.t[NN_DATA_COORD_x];
-    //uint64_t output_height = output->parent->lengths.t[NN_DATA_COORD_y];
-    //uint64_t output_pixel_size = BATCH_ACCEPTED_BLOCK * output->parent->lengths.t[NN_DATA_COORD_z];
-    uint64_t input_width       = input_buffer_size.raw[x_pos];
-    uint64_t input_height      = input_buffer_size.raw[y_pos];
-    uint64_t input_pixel_size  = BATCH_ACCEPTED_BLOCK * input_buffer_size.raw[f_pos]; //todo why out?
-    uint64_t output_width      = output_buffer_size.raw[x_pos];
-    uint64_t output_height     = output_buffer_size.raw[y_pos];
-    uint64_t output_pixel_size = BATCH_ACCEPTED_BLOCK * output_buffer_size.raw[f_pos];
-
-    uint64_t pool_b = 0u;
-    uint64_t pool_out_row = 0u;
-    uint64_t pool_out_col = 0u;
-
-
-    //InputDimensions in_dims = {make<InputHeight>(input_height),
-    //                           make<InputWidth>(input_width),
-    //                           //make<InputFeats>(out_dims.feats)};
-    //                           make<InputFeats>(output_size.raw[f_pos])}; //todo why out?
-
-
-    neural::vector<uint64_t> in_dims = { 1, { input_width, input_height }, output_size.raw[f_pos] };
-
-
-    //todo added, what is it?
-    //PoolingDimensions pd(make<PoolingHeight>(window.raw[1]), make<PoolingWidth>(window.raw[0]));
-    //Stride            ps({make<Rows>(stride.raw[1]), make<Cols>(stride.raw[0])});
-    neural::vector<uint64_t> pooling_dims = { 1, { window.raw[2], window.raw[3] }, 1 };
-    neural::vector<uint64_t> pooling_stride = { 1, { stride.raw[2], stride.raw[3] }, 1 };
-    //PoolingInfo info({pd,ps});
-
-    std::mutex mtx; //todo remove
-
-    //packed_arguments args{
-    //    input,
-    //    output,
-    //    input_height,
-    //    input_width,
-    //    pool_out_row,
-    //    pool_out_col,
-    //    pool_b,
-    //    output_height,
-    //    output_width,
-    //    batch_blocks,
-    //    input_pixel_size,
-    //    output_pixel_size,
-    //    info,
-    //    in_dims,
-    //    mtx};
-
-    auto pull_job = [&]{
-            uint64_t b = 0u;
-            uint64_t out_row = 0u;
-            uint64_t out_col = 0u;
-            {
-                std::unique_lock<std::mutex> guard(mtx);
-                out_row = pool_out_row;
-                out_col = pool_out_col;
-                b = pool_b;
-                if (out_row >= output_height) return false;
-
-                ++pool_b;
-                if (pool_b >= batch_blocks) {
-                    pool_out_col++;
-                    pool_b = 0;
-                }
-                if (pool_out_col >= output_width) {
-                    pool_b = 0;
-                    pool_out_col = 0;
-                    ++pool_out_row;
-                }
-            }
-
-            auto curr_out_buffer = output + ((b * output_height + out_row) * output_width + out_col) * output_pixel_size;
-            auto in_base_row = out_row * pooling_stride.raw[3];
-            auto in_base_col = out_col * pooling_stride.raw[2];
-            auto curr_in_base_buffer = input + ((b * input_height + in_base_row) * input_width + in_base_col) * input_pixel_size;
-
-            naive(curr_in_base_buffer, curr_out_buffer, in_dims, pooling_dims, pooling_stride);
-            return true;
-        };
-//    size_t num_threads = 1; // todo
-
-    pull_job();
-//   // std::vector<nn_multithreaded_request> jobs(device->thread_pool.get_num_threads(), {thread_job, nullptr});
-//    std::vector<task> jobs(num_threads, {thread_job, nullptr});
-//
-//    // device->thread_pool.push_job(jobs);
-//    for(auto &x: jobs)
-//        x.callback(x.data);
+    naive(*input + input_offset, *output + output_offset, input_buffer_size, window, stride);
 }
 
 namespace{
