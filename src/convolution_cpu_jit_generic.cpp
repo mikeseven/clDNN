@@ -38,7 +38,6 @@ namespace {
         uint64_t output_offset;
         uint64_t input_offset;
         uint64_t filter_offset;
-        uint64_t bias_offset;
         int8_t type; // 0:init, 1:normal, 2:finalize
     };
 
@@ -122,23 +121,7 @@ namespace {
 
             auto code_prologue_load         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovups(Ymm(static_cast<int>(n)),  ptr [rax+32*n] );};
             auto code_prologue_zero         = [&]() {
-                    nop();
-                    nop();
-                    nop();
-                    nop();
-                    nop();
-                    nop();
-                    nop();
-                    nop();
-                    nop();
-                    nop();
-                    nop();
-                    nop();
-                    nop();
-                    nop();
                 for(uint64_t n=0; n<output_features_per_iteration; ++n) {
-//                    lea(rbp, ptr [r8*4 + static_cast<int>(n)]);
-//                    neg(rbp);
                     vbroadcastss(Ymm(static_cast<int>(n*3)), ptr [rdi]);
                     vmovaps(Ymm(static_cast<int>(n*3+1)), Ymm(static_cast<int>(n*3)));
                     vmovaps(Ymm(static_cast<int>(n*3+2)), Ymm(static_cast<int>(n*3)));
@@ -149,7 +132,6 @@ namespace {
             auto code_epilogue_relu_store   = [&]() {
                 vxorps(ymm15, ymm15, ymm15);
                 for(uint64_t n=0; n<accumulators_count; ++n) {
-                    //vaddps(Ymm(static_cast<int>(n)), ptr [rdi/*+32*n*/] ); //todo
                     vmaxps(Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)), ymm15);
                 }
                 for(uint64_t n=0; n<accumulators_count; ++n) vmovups(ptr [rax+32*n], Ymm(static_cast<int>(n)));
@@ -161,7 +143,7 @@ namespace {
 #ifdef __unix__
             auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbp, rbx, r11, r12, r13, r14, r15};
 #elif _WIN32
-            auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbx, rsi, rdi, r11, r12, r13, r14, r15}; //todo rbp?
+            auto preserve_registers_scalar  = std::vector<Xbyak::Reg64>{rbx, rsi, rdi, r11, r12, r13, r14, r15};
 #endif
 
             auto preserve_registers_xmm     = std::vector<Xbyak::Xmm>{xmm6, xmm7, xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15};
@@ -307,7 +289,6 @@ namespace {
                                         sizeof(float)*output_block_stride*output_block
                                         , sizeof(float)*batch_size*input_feature_maps*((x*stride_width+kx-filter_radius) + input_width*(y*stride_height+ky-filter_radius))
                                         , sizeof(float)*filter_feature_blocks*filter_block
-                                        , 0 //todo bias offset
                                         , 1
                                     }
                                 });
@@ -384,7 +365,6 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
     switch(arg.argument.padding){
         case padding::zero:
         {
-            // todo jit conv format?
             // todo how to handle offsets?
             jit_convolution_generic* jit_convolution_generic_ptr = new jit_convolution_generic(
                 reinterpret_cast<float**>(&arg.output_memory(0).pointer),

@@ -116,7 +116,7 @@ template<> size_t index<neural::memory::format::tmp_format_weights_slice4>(std::
 
     // BFXY represents buffer size, wbile bfxy represents current position
     const size_t B = size[0];   const size_t Fo = size[1];   const size_t Fi = size[2];   const size_t X = size[3];
-    const size_t b =  pos[0];   const size_t fo =  pos[1];   const size_t fi =  pos[2];   const size_t x =  pos[3];   const size_t y =  pos[4];
+                                const size_t fo =  pos[1];   const size_t fi =  pos[2];   const size_t x =  pos[3];   const size_t y =  pos[4];
     const size_t slice_block = fo/4;    const size_t slice_element = fo%4;
 
     assert(1 == B); // Weights doesnt use batch, but the field must exist.
