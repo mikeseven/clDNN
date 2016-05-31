@@ -16,28 +16,17 @@
 
 #pragma once
 
-#include "relu.h"
+#include "pooling.h"
 
 namespace neural {
-    struct relu_cpu_reference : is_an_implementation {
-        relu_cpu_reference(relu &arg);
-        ~relu_cpu_reference();
+    struct pooling_cpu_reference : is_an_implementation {
+        pooling_cpu_reference(pooling &arg);
+        ~pooling_cpu_reference();
         static void implementation(const void *ptr);
 
-        static is_an_implementation *create(relu &arg) { return new relu_cpu_reference(arg); };
+        static is_an_implementation *create(pooling &arg) { return new pooling_cpu_reference(arg); };
         task_group work() { return {task{implementation, &outer}}; };
 
-        const relu &outer;
-    };
-
-    struct relu_backward_cpu_reference : is_an_implementation {
-        relu_backward_cpu_reference(relu_backward &arg);
-        ~relu_backward_cpu_reference();
-        static void implementation(const void *ptr);
-
-        static is_an_implementation *create(relu_backward &arg) { return new relu_backward_cpu_reference(arg); };
-        task_group work() { return {task{implementation, &outer}}; };
-
-        const relu_backward &outer;
+        const pooling &outer;
     };
 }
