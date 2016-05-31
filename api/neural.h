@@ -69,6 +69,7 @@ struct memory : is_a_primitive {
         case format::byxf_f32:
         case format::bfyx_f32:
         case format::oiyx_f32: 
+        case format::fyxb_f32:
         case format::bs_yxf_bv24_f32:
         case format::os_yxi_sv16_f32: return {4, type_id<float>()};
         default: throw std::runtime_error("unknown memory::format");
