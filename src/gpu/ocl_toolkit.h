@@ -23,10 +23,10 @@
 // we want exceptions
 #define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_HPP_TARGET_OPENCL_VERSION 200
-#include <CL/cl2.hpp>
+#include "cl2.hpp"
 #pragma warning(pop)
-#include <map>
 #include <numeric>
+#include <mutex>
 #include "api/neural.h"
 
 namespace neural {
@@ -42,6 +42,11 @@ private:
     std::unique_ptr<cl::Program> program;
 
     ocl_toolkit() {
+        std::call_once(ocl_initialized, initialize_opencl);
+    }
+
+    static std::once_flag ocl_initialized;
+    static void initialize_opencl() {
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
         cl::Platform plat;
@@ -71,14 +76,6 @@ private:
         return *program.get();
     }
 
-    template<typename T>
-    static buffer_type create_buffer(cl_mem_flags flags, const neural::memory& mem) {
-
-        auto data_bufSize = get_buffer_size(mem);
-
-        return cl::Buffer(flags, sizeof(T) * data_bufSize, mem.pointer);
-    }
-
 public:
     using buffer_type = cl::Buffer;
 
@@ -94,17 +91,23 @@ public:
 
     template<typename T>
     static buffer_type create_input_buffer(const neural::memory& mem) {
-        return create_buffer<T>(CL_MEM_READ_ONLY | CL_MEM_HOST_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, mem);
+        auto data_bufSize = get_buffer_size(mem);
+
+        return cl::Buffer(CL_MEM_READ_ONLY | CL_MEM_HOST_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(T) * data_bufSize, mem.pointer);
     }
 
     template<typename T>
     static buffer_type create_output_buffer(const neural::memory& mem) {
-        return create_buffer<T>(CL_MEM_WRITE_ONLY | CL_MEM_HOST_READ_ONLY, mem);
+        auto data_bufSize = get_buffer_size(mem);
+
+        return cl::Buffer(CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY, sizeof(T) * data_bufSize);
     }
 
     template<typename T>
     static buffer_type create_inout_buffer(const neural::memory& mem) {
-        return create_buffer<T>(CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, mem);
+        auto data_bufSize = get_buffer_size(mem);
+
+        return cl::Buffer(CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(T) * data_bufSize, mem.pointer);
     }
 
     template<typename T>
@@ -146,5 +149,4 @@ public:
         return toolkit;
     }
 };
-
 }
