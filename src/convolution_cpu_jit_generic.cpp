@@ -122,16 +122,31 @@ namespace {
 
             auto code_prologue_load         = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovups(Ymm(static_cast<int>(n)),  ptr [rax+32*n] );};
             auto code_prologue_zero         = [&]() {
+                    nop();
+                    nop();
+                    nop();
+                    nop();
+                    nop();
+                    nop();
+                    nop();
+                    nop();
+                    nop();
+                    nop();
+                    nop();
+                    nop();
+                    nop();
+                    nop();
                 for(uint64_t n=0; n<output_features_per_iteration; ++n) {
-                    lea(rbp, ptr [r8*4 + static_cast<int>(n)]);
-                    neg(rbp);
-                    vbroadcastss(Ymm(static_cast<int>(n*3)), ptr [rdi+rbp*sizeof(float)]);
+//                    lea(rbp, ptr [r8*4 + static_cast<int>(n)]);
+//                    neg(rbp);
+                    vbroadcastss(Ymm(static_cast<int>(n*3)), ptr [rdi]);
                     vmovaps(Ymm(static_cast<int>(n*3+1)), Ymm(static_cast<int>(n*3)));
                     vmovaps(Ymm(static_cast<int>(n*3+2)), Ymm(static_cast<int>(n*3)));
+                    add(rdi, sizeof(float));
                 }
             };
             auto code_epilogue_store        = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovups(ptr [rax+32*n], Ymm(static_cast<int>(n)));};
-            auto code_epilogue_bias_than_relu_store   = [&]() {
+            auto code_epilogue_relu_store   = [&]() {
                 vxorps(ymm15, ymm15, ymm15);
                 for(uint64_t n=0; n<accumulators_count; ++n) {
                     //vaddps(Ymm(static_cast<int>(n)), ptr [rdi/*+32*n*/] ); //todo
@@ -200,12 +215,10 @@ namespace {
                 // initial = zeroing -> calculation -> store
                 mov(rdi, ptr [rsi+offsetof(op_array_t,bias)]);
                 mov(rdi, ptr [rdi]);
-                imul(rbp, r13, 4*sizeof(float));
-                add(rdi, rbp);
                 code_op_type(0, code_prologue_zero, code_epilogue_store);
 
                 // initial = load -> calculation -> relu -> store
-                code_op_type(2, code_prologue_load, code_epilogue_bias_than_relu_store);
+                code_op_type(2, code_prologue_load, code_epilogue_relu_store);
 
             L("end");
 
