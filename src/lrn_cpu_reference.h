@@ -25,7 +25,7 @@ namespace neural {
         static void implementation(const void *ptr);
 
         static is_an_implementation *create(normalization::response &arg) { return new lrn_cpu_reference(arg); };
-		task_group work() { return{ task{ implementation, &outer } }; };
+        task_group work() { return{ task{ implementation, &outer } }; };
 
         const normalization::response &outer;
     };

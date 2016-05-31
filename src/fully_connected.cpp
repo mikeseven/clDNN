@@ -82,7 +82,7 @@ struct fully_connected_reference : is_an_implementation {
         }
     }
 
-	task_group work() {
+    task_group work() {
         return{ task{ implementation, &outer } };
     }
 
