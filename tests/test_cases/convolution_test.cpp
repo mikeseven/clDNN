@@ -782,115 +782,88 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
     const uint32_t filter_size         = 5;    // filter size is the same for both axes
     const uint32_t output_features_per_iteration = 4;
 
-    try {
     // allocate memory buffers
-        const uint64_t batch_size = 24;
-        const auto align_size = 64;
-        const auto align_size_in_float = align_size/sizeof(float);
-        const auto output_buffer_size = output_height*output_width*output_feature_maps*batch_size;
-        const auto filter_buffer_size = filter_size*filter_size*output_feature_maps*input_feature_maps;
-        const auto  input_buffer_size =  input_height* input_width* input_feature_maps*batch_size;
-        const auto   bias_buffer_size = output_feature_maps;
+    const uint64_t batch_size = 24;
+    const auto align_size = 64;
+    const auto align_size_in_float = align_size/sizeof(float);
+    const auto output_buffer_size = output_height*output_width*output_feature_maps*batch_size;
+    const auto filter_buffer_size = filter_size*filter_size*output_feature_maps*input_feature_maps;
+    const auto  input_buffer_size =  input_height* input_width* input_feature_maps*batch_size;
+    const auto   bias_buffer_size = output_feature_maps;
 
-        std::unique_ptr<float> output_container = std::move(std::unique_ptr<float>(new float[output_buffer_size+align_size_in_float]));
-        std::unique_ptr<float> filter_container = std::move(std::unique_ptr<float>(new float[filter_buffer_size+align_size_in_float]));
-        std::unique_ptr<float>  input_container = std::move(std::unique_ptr<float>(new float[ input_buffer_size+align_size_in_float]));
-        std::unique_ptr<float>   bias_container = std::move(std::unique_ptr<float>(new float[  bias_buffer_size+align_size_in_float]));
+    std::unique_ptr<float> output_container = std::move(std::unique_ptr<float>(new float[output_buffer_size+align_size_in_float]));
+    std::unique_ptr<float> filter_container = std::move(std::unique_ptr<float>(new float[filter_buffer_size+align_size_in_float]));
+    std::unique_ptr<float>  input_container = std::move(std::unique_ptr<float>(new float[ input_buffer_size+align_size_in_float]));
+    std::unique_ptr<float>   bias_container = std::move(std::unique_ptr<float>(new float[  bias_buffer_size+align_size_in_float]));
 
-        const auto output = align(output_container.get(), align_size);
-        const auto filter = align(filter_container.get(), align_size);
-        const auto  input = align( input_container.get(), align_size);
-        const auto   bias = align(  bias_container.get(), align_size);
+    const auto output = align(output_container.get(), align_size);
+    const auto filter = align(filter_container.get(), align_size);
+    const auto  input = align( input_container.get(), align_size);
+    const auto   bias = align(  bias_container.get(), align_size);
 
-        auto input_p  = memory::describe({neural::engine::reference, memory::format::tmp_format_output, { 24 , {input_width , input_height }, input_feature_maps}});
-        auto output_p = memory::describe({neural::engine::reference, memory::format::tmp_format_output, { 24 , {output_width, output_height}, output_feature_maps}});
-        auto weights_p= memory::describe({neural::engine::reference, memory::format::tmp_format_weights_slice4, { 1  , {filter_size   , filter_size }, {output_feature_maps, input_feature_maps}}});
-        auto biases_p = memory::describe({neural::engine::reference, memory::format::   x_f32, { 1  , {{output_feature_maps}}  , 1 }});
+    auto input_p  = memory::describe({neural::engine::reference, memory::format::tmp_format_output, { 24 , {input_width , input_height }, input_feature_maps}});
+    auto output_p = memory::describe({neural::engine::reference, memory::format::tmp_format_output, { 24 , {output_width, output_height}, output_feature_maps}});
+    auto weights_p= memory::describe({neural::engine::reference, memory::format::tmp_format_weights_slice4, { 1  , {filter_size   , filter_size }, {output_feature_maps, input_feature_maps}}});
+    auto biases_p = memory::describe({neural::engine::reference, memory::format::   x_f32, { 1  , {{output_feature_maps}}  , 1 }});
 
-        // initialized inputs & filter with pseudorandom values
-        std::mt19937 engine(0xdeadf00d);
-        std::normal_distribution<float> distribution(0.0f, 1.0f);
-        auto lambda = [&]{return distribution(engine);};
-        std::fill    (output, output+output_buffer_size, 0.0f);
-//        std::fill    ( input,  input+ input_buffer_size, 0.0f);
-//        std::fill    (  bias,   bias+  bias_buffer_size, 1.0f);
-//        std::fill    (filter, filter+filter_buffer_size, 0.0f);
+    // initialized inputs & filter with pseudorandom values
+    std::mt19937 engine(0xdeadf00d);
+    std::normal_distribution<float> distribution(0.0f, 1.0f);
+    auto lambda = [&]{return distribution(engine);};
+    std::fill    (output, output+output_buffer_size, 0.0f);
+    std::generate( input,  input+ input_buffer_size, lambda);
+    std::generate( bias,  bias+ bias_buffer_size, lambda);
+    std::generate(filter, filter+filter_buffer_size, lambda);
 
-//        for(long x = 0; x < bias_buffer_size; ++x){
-//            bias[x] = x;// x%2? 1 : 2;
-//        }
-        std::generate( input,  input+ input_buffer_size, lambda);
-        std::generate( bias,  bias+ bias_buffer_size, lambda);
-        std::generate(filter, filter+filter_buffer_size, lambda);
+    //set pointers
+    execute(
+        {output_p(output), input_p(input), weights_p(filter), biases_p(bias)}
+    ).sync();
 
-        //set pointers
-        execute(
-            {output_p(output), input_p(input), weights_p(filter), biases_p(bias)}
-        ).sync();
+    auto conv   = convolution::create( {neural::engine::cpu,
+                                        output_p,
+                                        {input_p, weights_p, biases_p},
+                                        {1, {stride_height, stride_width}, 1},
+                                        padding::zero}
+                                        );
 
-        auto conv   = convolution::create( {neural::engine::cpu,
-                                            output_p,
-                                            {input_p, weights_p, biases_p},
-                                            {1, {stride_height, stride_width}, 1},
-                                            padding::zero}
-                                          );
+    auto engine_resource = worker_cpu::create({1});
+    execute(
+        {conv}
+        , engine_resource
+    ).sync();
 
-        auto engine_resource = worker_cpu::create({1});
-        execute(
-            {conv}
-           , engine_resource
-        ).sync();
-
-        long err_count = 0;//todo remove
-//        auto calc_out_idx = ndimensional::choose_calculate_idx( output_p.as<const memory&>().argument.format);
-//        auto calc_in_idx  = ndimensional::choose_calculate_idx(  input_p.as<const memory&>().argument.format);
-//        auto calc_w_idx   = ndimensional::choose_calculate_idx(weights_p.as<const memory&>().argument.format);
-
-        const int64_t filter_radius = (filter_size-1)/2;
-        const auto output_feature_blocks    = output_feature_maps/output_features_per_iteration;
-        for(uint64_t b=0; b<batch_size; ++b) {
-            for(uint64_t y=0; y<output_view_height; ++y) {
-                for(uint64_t x=0; x<output_view_width; ++x)
-                    for(uint64_t fo=0; fo<output_feature_maps; ++fo) {
-                        int64_t foi = fo%output_features_per_iteration;
-                        int64_t fob = fo/output_features_per_iteration;
-                        float valid = bias[fo];
-                        for(uint64_t yk=0; yk<filter_size; ++yk) {
-                            int64_t ys = static_cast<int64_t>(input_view_start_y) + y*stride_height+yk-filter_radius;
-                            if(ys<0 || static_cast<uint64_t>(ys)>=input_height) continue;
-                            for(uint64_t xk=0; xk<filter_size; ++xk) {
-                                int64_t xs = static_cast<int64_t>(input_view_start_x) + x*stride_height+xk-filter_radius;
-                                if(xs<0 || static_cast<uint64_t>(xs)>=input_width) continue;
-                                for(uint64_t fi=0; fi<input_feature_maps; ++fi) {
-                                    float value  = input[b + batch_size*(fi + input_feature_maps*(xs + input_width*ys))];
-                                    //float value  = input[calc_in_idx(input_p.as<const memory&>().argument.size.raw, {b, fi, xs, ys})];
-                                    float weight = filter[foi + output_features_per_iteration*(fi + input_feature_maps*(fob + output_feature_blocks*(xk + filter_size*yk)))];
-                                    //float weight  = filter[calc_w_idx(weights_p.as<const memory&>().argument.size.raw, {0, fo, fi, xk, yk})];
-                                    valid  = static_cast<float>(double(value)*weight + valid);
-                                }
-    #if 0
-                                std::cout << "[yo=" << yo << ",xo=" << xo << ",fo=" << fo << ",yk=" << yk << ",xk=" << xk << "]: " << valid;
-                                std::cout << std::endl;
-    #endif
+    const int64_t filter_radius = (filter_size-1)/2;
+    const auto output_feature_blocks    = output_feature_maps/output_features_per_iteration;
+    for(uint64_t b=0; b<batch_size; ++b) {
+        for(uint64_t y=0; y<output_view_height; ++y) {
+            for(uint64_t x=0; x<output_view_width; ++x)
+                for(uint64_t fo=0; fo<output_feature_maps; ++fo) {
+                    int64_t foi = fo%output_features_per_iteration;
+                    int64_t fob = fo/output_features_per_iteration;
+                    float valid = bias[fo];
+                    for(uint64_t yk=0; yk<filter_size; ++yk) {
+                        int64_t ys = static_cast<int64_t>(input_view_start_y) + y*stride_height+yk-filter_radius;
+                        if(ys<0 || static_cast<uint64_t>(ys)>=input_height) continue;
+                        for(uint64_t xk=0; xk<filter_size; ++xk) {
+                            int64_t xs = static_cast<int64_t>(input_view_start_x) + x*stride_height+xk-filter_radius;
+                            if(xs<0 || static_cast<uint64_t>(xs)>=input_width) continue;
+                            for(uint64_t fi=0; fi<input_feature_maps; ++fi) {
+                                float value  = input[b + batch_size*(fi + input_feature_maps*(xs + input_width*ys))];
+                                float weight = filter[foi + output_features_per_iteration*(fi + input_feature_maps*(fob + output_feature_blocks*(xk + filter_size*yk)))];
+                                valid  = static_cast<float>(double(value)*weight + valid);
                             }
+#if 0
+                            std::cout << "[yo=" << yo << ",xo=" << xo << ",fo=" << fo << ",yk=" << yk << ",xk=" << xk << "]: " << valid;
+                            std::cout << std::endl;
+#endif
                         }
-                        if(valid<0) valid = 0;
-                        auto yo = y+output_view_y;
-                        auto xo = x+output_view_x;
-                        auto tested = //output[calc_out_idx(output_p.as<const memory&>().argument.size.raw, {b, fo, xo, yo})];
-                                      output[b + batch_size*(fo + output_feature_maps*(xo + output_width*yo))];
-                        EXPECT_EQ(true, tests::are_equal(valid, tested)) << "at [b,x,y,f] = [" << b << "," << xo << "," << yo << "," << fo << "]\n" <<
-                            std::endl << "error count: " << ++err_count << //todo remove
-                                                                            std::endl;
-//                        EXPECT_NEAR(valid, tested, 0.0001) << "at [b,x,y,f] = [" << b << "," << xo << "," << yo << "," << fo << "]\n" <<
-//                            std::endl << "error count: " << ++err_count << //todo remove
-//                                                                            std::endl;
                     }
-            }
+                    if(valid<0) valid = 0;
+                    auto yo = y+output_view_y;
+                    auto xo = x+output_view_x;
+                    auto tested = output[b + batch_size*(fo + output_feature_maps*(xo + output_width*yo))];
+                    EXPECT_EQ(true, tests::are_equal(valid, tested)) << "at [b,x,y,f] = [" << b << "," << xo << "," << yo << "," << fo << "]\n" << std::endl;
+                }
         }
-    } catch (std::exception &e) {
-        EXPECT_EQ(true, false) << e.what();
-    } catch (...) {
-        std::cerr << "Unknown exceptions.";
-    }
 }
