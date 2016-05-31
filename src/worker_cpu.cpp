@@ -24,7 +24,18 @@ void worker_cpu::execute(const task_group& requests) const {thread_pool->push_jo
 worker_cpu::worker_cpu(neural::worker_cpu::arguments arg)
     : is_a_worker(type_id<neural::worker_cpu>())
     , argument(arg) 
+    , owns_pool(true)
     , thread_pool(new nn_thread_worker_pool(arg.thread_pool_size)) {};
+
+worker_cpu::worker_cpu(neural::worker_cpu::arguments arg, nn_thread_worker_pool &pool)
+    : is_a_worker(type_id<neural::worker_cpu>())
+    , argument(arg) 
+    , owns_pool(false)
+    , thread_pool(&pool) {};
+
+worker_cpu::~worker_cpu() {
+//    __debugbreak();
+}
 
 worker_cpu::arguments::arguments(uint32_t arg_threadpool_size)
     : thread_pool_size(arg_threadpool_size) {}
