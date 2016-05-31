@@ -136,6 +136,10 @@ namespace neural {
         static std::map<implementation_key, std::function<is_an_implementation *(reorder &)>> implementation_map = {
             { std::make_tuple(engine::reference, memory::format::oiyx_f32, memory::format::os_yxi_sv16_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::os_yxi_sv16_f32, memory::format::oiyx_f32), reorder_reference::create },
+            
+            { std::make_tuple(engine::reference, memory::format::bs_yxf_bv24_f32, memory::format::yxfb_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::bs_yxf_bv24_f32), reorder_reference::create },
+
             { std::make_tuple(engine::reference, memory::format::x_f32, memory::format::x_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::fyxb_f32), reorder_reference::create },
