@@ -20,18 +20,17 @@
 #include "pooling_cpu_avx2_batch24.h"
 #include "pooling.h"
 
+
+namespace {
 const uint64_t BATCH_ACCEPTED_BLOCK = 24;                         //the batch size that is minimal required for usage with jit version
 const uint64_t BATCH_SHIFT = 8;                                   //the size of register used for shifting with batch layout / number if pics/floats that are processed at the same time
 const uint64_t BATCH_BLOCKS = BATCH_ACCEPTED_BLOCK / BATCH_SHIFT; //number of registers (blocks to process) in the batch format
 const uint64_t BUFFERS_ALIGNMENT = BATCH_SHIFT * sizeof(float);   //required alignment of all buffers used by jit primitives
 
-namespace {
-
 int b_pos = 0; // todo typetraits
 int f_pos = 1;
 int x_pos = 2;
 int y_pos = 3;
-
 
 void naive(float* input, float* output, neural::vector<uint32_t> input_dims, neural::vector<uint32_t> pooling_dims) {
     const uint64_t batch_accs = BATCH_ACCEPTED_BLOCK / BATCH_SHIFT;
@@ -88,7 +87,7 @@ pooling_cpu_avx2_batch24::pooling_cpu_avx2_batch24(pooling &arg)
     uint64_t output_pixel_size = BATCH_ACCEPTED_BLOCK * output_depth;
 
     if(arg.input_memory(0).argument.size.raw[b_pos] != arg.output_memory(0).argument.size.raw[b_pos])
-        throw std::runtime_error("blabla");
+        throw std::runtime_error("Pooling batch24: input and output batches doesn't match");
 
     uint64_t num_batch_packages = arg.input_memory(0).argument.size.raw[b_pos] / BATCH_ACCEPTED_BLOCK;
 
