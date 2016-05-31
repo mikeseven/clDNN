@@ -19,14 +19,7 @@
 #include "multidimensional_counter.h"
 #include "memory_utils.h"
 #include "fully_connected.h"
-
-#pragma warning (push)
-#pragma warning(disable : 4100)
-#pragma warning(disable : 4505)
-// we want exceptions
-#define CL_HPP_ENABLE_EXCEPTIONS
-#include <CL/cl2.hpp>
-#pragma warning (pop)
+#include "ocl_toolkit.h"
 
 #include <iostream>
 #include <fstream>
@@ -77,47 +70,20 @@ T* begin(PtrWrapper<T> ptr) { return ptr.begin(); }
 template<typename T>
 T* end(PtrWrapper<T> ptr) { return ptr.end(); }*/
 
-const std::string kernelCode =
-"__kernel void Fully_Connected_GPU(const __global float* input, uint4 input_size, const __global float* weights, uint4 weight_size, __global float* bias, __global float* pDst)\n"
-"{\n"
-"    const int x = get_global_id(0);\n"
-"\n"
-"    pDst[x] = 0;\n"
-"    uint outXIdx = x / input_size[0];\n"
-"    uint inputBatchIdx = x % input_size[0];\n"
-"    uint weightYIdx = outXIdx * weight_size[0];\n"
-"    for (uint i = 0; i < input_size[2]; i++)\n"
-"    {\n"
-"        pDst[x] += input[i * input_size[0] + inputBatchIdx] * weights[weightYIdx + i];\n"
-"    }\n"
-"    pDst[x] += bias[outXIdx];\n"
-"};\n";
+const std::string kernelCode = R"__krnl(
+__kernel void Fully_Connected_GPU(const __global float* input, uint4 input_size, const __global float* weights, uint4 weight_size, __global float* bias, __global float* pDst)
+    const int x = get_global_id(0);
 
-// simple ocl implementation
-void initOCLDevice()
-{
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-    cl::Platform plat;
-    for (auto &p : platforms)
+    pDst[x] = 0;
+    uint outXIdx = x / input_size[0];
+    uint inputBatchIdx = x % input_size[0];
+    uint weightYIdx = outXIdx * weight_size[0];
+    for (uint i = 0; i < input_size[2]; i++)
     {
-        std::string platver = p.getInfo<CL_PLATFORM_VERSION>();
-        if (platver.find("OpenCL 2.") != std::string::npos)
-        {
-            plat = p;
-        }
+        pDst[x] += input[i * input_size[0] + inputBatchIdx] * weights[weightYIdx + i];
     }
-    if (plat() == 0)
-    {
-        throw std::runtime_error("No OpenCL 2.0 platform found.");
-    }
-
-    cl::Platform newP = cl::Platform::setDefault(plat);
-    if (newP != plat) 
-    {
-        throw std::runtime_error("Error setting default platform.");
-    }
-}
+    pDst[x] += bias[outXIdx];
+};)__krnl";
 
 void loadFile(const char *filePath, std::vector<char> &outFile)
 {
@@ -136,57 +102,6 @@ void loadFile(const char *filePath, std::vector<char> &outFile)
         throw std::runtime_error("Cannot open kernel file.");
 }
 
-void compileKernel(cl::Program &outProgram)
-{
-    try {
-        outProgram.build("-cl-std=CL2.0");
-    }
-    catch (...) {
-        // Print build info for all devices
-        cl_int buildErr = CL_SUCCESS;
-        auto buildInfo = outProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(&buildErr);
-        for (auto &pair : buildInfo) 
-        {
-            std::cerr << pair.second << std::endl << std::endl;
-        }
-    }
-}
-
-template<typename T>
-cl::Buffer CreateBufferWithGoodSize(const neural::memory &mem)
-{
-    auto data = static_cast<T*>(mem.pointer);
-    auto& data_arg = mem.argument;
-    auto& data_size = data_arg.size;
-
-    cl_int err;
-    cl::size_type data_bufSize = 1;
-    // 
-    for (auto i : data_size.raw)
-    {
-        data_bufSize *= i;
-    }
-
-    return cl::Buffer(CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(float) * data_bufSize, data, &err);
-}
-
-cl_uint4 GetSizes(const neural::vector<uint32_t> size)
-{
-    if (size.raw.size() < 4)
-    {
-        cl_uint4 x = { 0 };
-        for (int i = 0; i < size.raw.size(); i++)
-        {
-            x.s[i] = size.raw[i];
-        }
-        return x;
-    }
-    else
-    {
-        throw std::runtime_error("Want to get size, but this is not a vector of sizes, because size is greater than 4!");
-    }
-}
-
 namespace neural {
 
     struct fully_connected_gpu : is_an_implementation {
@@ -198,60 +113,48 @@ namespace neural {
         ~fully_connected_gpu() {}
 
         static void implementation(const void *ptr) {
-            initOCLDevice();
-            //std::vector<char> kernelFile;
-            //loadFile("fully_connected_gpu.cl", kernelFile);
-            cl::Program kernel(kernelCode);//&kernelFile[0]);
-            compileKernel(kernel);
+
+            auto& toolkit = ocl_toolkit::get();
 
             auto this_fc = static_cast<const fully_connected *>(ptr);
 
             // input
-            auto& input_arg = this_fc->input_memory(0).argument;
-            auto& input_buffer_size = input_arg.size;
+            auto& input_mem = this_fc->input_memory(0);
+            auto& input_buffer_size = input_mem.argument.size;
 
             assert(1 == input_buffer_size.feature.size());
             assert(1 == input_buffer_size.batch.size());
             assert(1 == input_buffer_size.feature[0]);
 
-            cl_uint4 inputSizes = GetSizes(input_arg.size);
-            cl::Buffer inBuffer = CreateBufferWithGoodSize<float>(this_fc->input_memory(0));
+            auto inputSizes = toolkit.get_memory_sizes(input_mem);
+            auto inBuffer = toolkit.create_input_buffer<float>(input_mem);
 
             // weights
-            cl::Buffer weightBuffer = CreateBufferWithGoodSize<float>(this_fc->input_memory(1));
+            auto& weight_mem = this_fc->input_memory(1);
+            auto weightBuffer = toolkit.create_input_buffer<float>(weight_mem);
 
-            auto& weight_arg = this_fc->input_memory(1).argument;
-            cl_uint4 weightSizes = GetSizes(weight_arg.size);
+            auto weightSizes = toolkit.get_memory_sizes(weight_mem);
 
             // bias
-            cl::Buffer biasBuffer = CreateBufferWithGoodSize<float>(this_fc->input_memory(2));
+            auto biasBuffer = toolkit.create_input_buffer<float>(this_fc->input_memory(2));
 
             // output
-            auto output = static_cast<float*>(this_fc->output_memory(0).pointer);
-            auto& output_arg = this_fc->output_memory(0).argument;
+            auto& output_mem = this_fc->output_memory(0);
+            auto& output_arg = output_mem.argument;
             auto& output_buffer_size = output_arg.size;
 
-            cl::size_type output_bufSize = 1;
-            for (auto i : output_buffer_size.raw)
-            {
-                output_bufSize *= i;
-            }
+            auto output_bufSize = std::accumulate(std::begin(output_buffer_size.raw), std::end(output_buffer_size.raw), static_cast<cl::size_type>(1), std::multiplies<cl::size_type>());
             
-            std::vector<float> _out(output_bufSize, 0.0f);
+            auto _outBuffer = toolkit.create_output_buffer<float>(this_fc->output_memory(0));
 
-            cl::Buffer _outBuffer = CreateBufferWithGoodSize<float>(this_fc->output_memory(0));
-
-            cl::DeviceCommandQueue cmdQueue = cl::DeviceCommandQueue::makeDefault(cl::Context::getDefault(), cl::Device::getDefault());
-
-            
-            auto programKernel = cl::KernelFunctor <
-                cl::Buffer,
+            auto programKernel = toolkit.getKernel <
+                ocl_toolkit::buffer_type,
                 cl_uint4,
-                cl::Buffer,
+                ocl_toolkit::buffer_type,
                 cl_uint4,
-                cl::Buffer,
-                cl::Buffer
-                >(kernel, "Fully_Connected_GPU");
+                ocl_toolkit::buffer_type,
+                ocl_toolkit::buffer_type
+                > ("Fully_Connected_GPU");
 
             programKernel(
                 cl::EnqueueArgs(
@@ -265,19 +168,17 @@ namespace neural {
                 _outBuffer                
             );
 
-            // TODO: get rid of this copy, use custom iterators to enable cl::copy to output directly to "output".
-            cl::copy(_outBuffer, begin(_out), end(_out));
-            for (int i = 0; i < output_bufSize; i++)
-            {
-                output[i] = _out[i];
-            }
+            toolkit.read_buffer<float>(_outBuffer, output_mem);
         }
 
-        std::vector<task> work() {
+        std::vector<task> work() override {
             return{ task{ implementation, &outer } };
         }
 
-        static is_an_implementation *create(fully_connected &arg) { return new fully_connected_gpu(arg); };
+        static is_an_implementation *create(fully_connected &arg) {
+            ocl_toolkit::get().add_kernel(kernelCode);
+            return new fully_connected_gpu(arg);
+        };
     };
 
 namespace {
