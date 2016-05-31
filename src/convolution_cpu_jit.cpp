@@ -345,7 +345,7 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
         for (auto i = 0u; i < tasks.size(); ++i)
             tasks[i] = {reinterpret_cast<void(*)(const void*)>(code.getCode()), &op_data[i]};
     }
-    std::vector<neural::task> work() {
+	neural::task_group work() {
         return this->tasks;
     };
 };

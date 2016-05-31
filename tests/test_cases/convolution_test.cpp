@@ -68,7 +68,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     auto conv = convolution::create({engine::reference, output, {input, weights, biases}, {1, {2, 2}, 1}, padding::zero});
 
-    execute({conv}).sync();
+    execute({conv}).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ(8.0f, get_value<float>(output_memory, 0));
@@ -107,7 +107,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
 
     auto conv = convolution::create({ engine::reference, output, {input, weights, biases}, { 1, {2, 2}, 1 }, padding::zero });
 
-    execute({ conv }).sync();
+    execute({ conv }).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 0));
@@ -144,7 +144,7 @@ TEST(convolution_f32_fw, basic_ofm_wsiz2x1x2x1_in1x2x1_nopad) {
 
     auto conv = convolution::create({ engine::reference, output, {input, weights, biases}, { 1, {5, 5}, 1 }, padding::zero });
 
-    execute({ conv }).sync();
+    execute({ conv }).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ(5.1f, get_value<float>(output_memory, 0));
@@ -188,7 +188,7 @@ TEST(convolution_f32_fw, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad) {
 
     auto conv = convolution::create({ engine::reference, output, {input, weights, biases}, { 1, {5, 5}, 1 }, padding::zero });
 
-    execute({ conv }).sync();
+    execute({ conv }).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ( 25.0f, get_value<float>(output_memory, 0));
@@ -229,7 +229,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
 
     auto conv = convolution::create({ engine::reference, output, {input, weights, biases}, { 1, {2, 2}, 1 }, padding::zero });
 
-    execute({ conv }).sync();
+    execute({ conv }).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_TRUE(are_equal(3.08f, get_value<float>(output_memory, 0)));
@@ -269,7 +269,7 @@ TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     set_values(biases , {2.0f});
 
     auto conv = convolution::create({engine::reference, output, {input, weights, biases}, {1, {2, 2}, 1}, padding::zero});
-    execute({conv}).sync();
+    execute({conv}).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ(12.25f, get_value<float>(output_memory, 0));
@@ -317,7 +317,7 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
                                      {0, {-1, -1}, 0},
                                      {1, { 2,  2}, 1},
                                      padding::zero});
-    execute({conv}).sync();
+    execute({conv}).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_memory, 3));
@@ -380,7 +380,7 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
                                                  {1, {1, 1}, 1},
                                                  padding::zero});
 
-    execute({conv_bw}).sync();
+    execute({conv_bw}).wait();
 
     bool results_equal = true;
     results_equal &= -2.0f == get_value<float>(bw_output_mem, 0);
@@ -463,7 +463,7 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
                                                  {bw_input, fw_input, weights, biases},
                                                  {1, {1, 1}, 1},
                                                  padding::zero});
-    execute({conv_bw}).sync();
+    execute({conv_bw}).wait();
 
     bool results_equal = true;
     results_equal &= -4.0f == get_value<float>(bw_output_mem, 0);
@@ -572,7 +572,7 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
                                                  {0, {1, 1}, 0},
                                                  {1, {1, 1}, 1},
                                                  padding::zero});
-    execute({conv_bw}).sync();
+    execute({conv_bw}).wait();
 
     bool results_equal = true;
     results_equal &=  0.0f == get_value<float>(bw_output_mem, 0);
@@ -636,7 +636,7 @@ TEST(convolution_f32_fw, DISABLED_optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
         fill<float>(weights_memory, weight_val);
         fill<float>(biases_memory, bias_val);
 
-        execute({conv}, engine_resource).sync();
+        execute({conv}, {engine_resource}).wait();
 
         // This test was just a sum of uniform values in whole window.
         // So each output value should be: number of input elements of 3d kernel (times input and kernel values) + bias value.
@@ -685,7 +685,7 @@ TEST(convolution_f32_fw, DISABLED_optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nop
         for(size_t bias_element = 0; bias_element < biases_memory.count(); ++bias_element)
             set_value<float>(biases_memory, static_cast<uint32_t>(bias_element), (bias_element < biases_memory.count()/2) ? bias_val_slice0 : bias_val_slice1);
 
-        execute({conv}, engine_resource).sync();
+        execute({conv}, {engine_resource}).wait();
 
         // This test was just a sum of uniform values in whole window.
         // So each output value should be: number of input elements of 3d kernel (times input and kernel values) + bias value.
@@ -759,7 +759,7 @@ TEST(convolution_f32_fw, DISABLED_naive_comparison_optimized_2slice_wsiz3x3_wstr
         reorder_weights_to_ref,
         reorder_biases_to_ref,
         ref_conv,
-    }, engine_resource).sync();
+    }, {engine_resource}).wait();
 
     for(size_t output_element = 0; output_element < temp_output_memory.count(); ++output_element)
         EXPECT_EQ(true, tests::are_equal(static_cast<float*>(ref_output_memory.pointer)[output_element],

@@ -16,18 +16,17 @@
 
 #pragma once
 
-#include <memory>
-#include "convolution.h"
+#include "pooling.h"
 
 namespace neural {
-    struct convolution_cpu_jit : is_an_implementation {
-        convolution_cpu_jit(convolution &arg);
-        ~convolution_cpu_jit();
+    struct pooling_cpu_reference : is_an_implementation {
+        pooling_cpu_reference(pooling &arg);
+        ~pooling_cpu_reference();
+        static void implementation(const void *ptr);
 
-        static is_an_implementation *create(convolution &arg) { return new convolution_cpu_jit(arg); };
-        task_group work() { return jit_conv_ptr->work(); };
+        static is_an_implementation *create(pooling &arg) { return new pooling_cpu_reference(arg); };
+        task_group work() { return {task{implementation, &outer}}; };
 
-        std::unique_ptr<is_an_implementation> jit_conv_ptr;
-        const convolution &outer;
+        const pooling &outer;
     };
 }

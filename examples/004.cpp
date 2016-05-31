@@ -68,6 +68,6 @@ void example_004() {
     // [1000xB] softmax [1000xB]
     auto sftmax = normalization::softmax::create({engine::cpu, output, relu8});
 
-    execute({input(input_buffer), output(input_buffer), conv1, relu1, pool1, lrn1, conv2, relu2, pool2, lrn2, conv3, relu3, conv4, relu4, conv5, relu5, pool5, fc6, relu6, fc7, relu7, fc8, relu8, sftmax}).sync();
+    execute({input(input_buffer), output(input_buffer), conv1, relu1, pool1, lrn1, conv2, relu2, pool2, lrn2, conv3, relu3, conv4, relu4, conv5, relu5, pool5, fc6, relu6, fc7, relu7, fc8, relu8, sftmax}).wait();
 }
 #endif

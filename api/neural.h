@@ -60,6 +60,7 @@ struct memory : is_a_primitive {
         tmp_format_input,         // for convolution_cpu_generic
         tmp_format_weights_slice4,       // for convolution_cpu_generic
         os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
+        bs_yxf_bv24_f32,
         any=static_cast<uint32_t>(-1)
     }; };
 
@@ -72,6 +73,7 @@ struct memory : is_a_primitive {
         case format::bfyx_f32:
         case format::oiyx_f32: 
         case format::fyxb_f32:
+        case format::bs_yxf_bv24_f32:
         case format::tmp_format_output:
         case format::tmp_format_input:
         case format::tmp_format_weights_slice4:
@@ -105,6 +107,8 @@ private:
 
     memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
 };
+
+
 
 
 // neural::file
@@ -782,7 +786,7 @@ private:
 //
 // Worker for executing primitives for engine::cpu.
 // Internally implemented as thread pool.
-struct nn_thread_worker_pool;
+class nn_thread_worker_pool;
 struct worker_cpu : is_a_worker {
     struct arguments {
         uint32_t thread_pool_size;
@@ -792,15 +796,19 @@ struct worker_cpu : is_a_worker {
     };
     arguments argument;
 
-    std::unique_ptr<nn_thread_worker_pool> thread_pool;
+    const bool owns_pool;
+    const std::unique_ptr<nn_thread_worker_pool> thread_pool;
 
     DLL_SYM static worker create(arguments);
+    DLL_SYM static worker create(arguments, nn_thread_worker_pool &);
+    DLL_SYM void execute(const neural::task_group& requests) const;
+    DLL_SYM neural::engine::type engine() const {return neural::engine::cpu;}
 
-    void execute(const std::vector<task>& requests) const;
-    neural::engine::type engine() const {return neural::engine::cpu;}
+    ~worker_cpu(); 
 
 private:
     worker_cpu(arguments arg);
+    worker_cpu(arguments arg, nn_thread_worker_pool &);
 };
 
 

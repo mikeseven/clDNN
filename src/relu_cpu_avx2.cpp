@@ -140,7 +140,7 @@ struct relu_avx2_worker : public neural::is_an_implementation
         calculate_activation_result(output_mem_count % C_simd_width, forward_input, backward_input, backward_output);
     }
 
-    std::vector<neural::task> work() {
+    neural::task_group work() {
         return this->tasks;
     }
 };

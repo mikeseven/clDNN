@@ -14,20 +14,16 @@
 // limitations under the License.
 */
 
+#pragma once
+
 #include "api/neural.h"
-#include "memory_utils.h"
+#include "implementation_map.h"
+#include "pooling_cpu_reference.h"
 
-void example_lrn_forward() {
+namespace neural{
+    //                                           engine                          output                  input
+    using pool_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
+    using pool_bw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>; //todo
 
-    using namespace neural;
-    auto input = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 8, {10, 10}, 3 }});
-    auto output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 8, {10, 10}, 3 }});
-    fill<float>(input.as<const memory&>());
-    float pk = 1.f;
-    uint32_t psize = 5;
-    float palpha = 0.00002f;
-    float pbeta = 0.75f;
-    auto lrn = normalization::response::create({ engine::reference, output, input, psize, padding::zero, pk, palpha, pbeta});
-
-    execute({ lrn }).wait();
+    using pool_fw_implementation_map = singleton_map<pool_fw_key, std::function<is_an_implementation *(pooling &)>>;
 }
