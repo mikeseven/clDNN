@@ -17,8 +17,6 @@
 #pragma once
 
 #include <thread>
-#include <mutex>
-#include <cassert>
 #include <vector>
 #include <atomic>
 #include <condition_variable>
@@ -28,18 +26,18 @@ namespace neural
 {
     class nn_thread_worker_pool
     {
-        size_t taskcount;
+        uint32_t taskcount;
         std::atomic<size_t> current_task_id;
         
-        int active_threads;
-        int num_logical_per_physical_core;
+        uint32_t active_threads;
+        uint32_t num_logical_per_physical_core;
         
         std::mutex mtx_wake;
         std::condition_variable cv_wake;
         std::condition_variable cv_endtasks;
 
-        int thread_batch_size;
-        int enable_thread_denom;
+        uint32_t thread_batch_size;
+        uint32_t enable_thread_denom;
         const std::vector<task>* current_request;
         volatile bool stop;
 
@@ -49,7 +47,7 @@ namespace neural
         void process_task(uint32_t threadId);
 
     public:
-        nn_thread_worker_pool(size_t arg_num_threads = 0);
+        nn_thread_worker_pool(uint32_t arg_num_threads = 0);
         ~nn_thread_worker_pool();
 
         // push    tasks for processing
