@@ -72,6 +72,7 @@ T* end(PtrWrapper<T> ptr) { return ptr.end(); }*/
 
 const std::string kernelCode = R"__krnl(
 __kernel void Fully_Connected_GPU(const __global float* input, uint4 input_size, const __global float* weights, uint4 weight_size, __global float* bias, __global float* pDst)
+{
     const int x = get_global_id(0);
 
     pDst[x] = 0;
@@ -83,7 +84,7 @@ __kernel void Fully_Connected_GPU(const __global float* input, uint4 input_size,
         pDst[x] += input[i * input_size[0] + inputBatchIdx] * weights[weightYIdx + i];
     }
     pDst[x] += bias[outXIdx];
-};)__krnl";
+})__krnl";
 
 void loadFile(const char *filePath, std::vector<char> &outFile)
 {
