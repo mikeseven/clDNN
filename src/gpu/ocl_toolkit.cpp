@@ -18,5 +18,31 @@
 #include "ocl_toolkit.h"
 
 namespace neural {
+
 std::once_flag ocl_toolkit::ocl_initialized;
+void ocl_toolkit::initialize_opencl() {
+    std::vector<cl::Platform> platforms;
+    cl::Platform::get(&platforms);
+    cl::Platform plat;
+    for (auto& p : platforms) {
+        std::string platver = p.getInfo<CL_PLATFORM_VERSION>();
+        if (platver.find("OpenCL 2.") != std::string::npos) {
+            plat = p;
+        }
+    }
+
+    if (plat() == nullptr) {
+        throw std::runtime_error("No OpenCL 2.0 platform found.");
+    }
+
+    cl::Platform newP = cl::Platform::setDefault(plat);
+    if (newP != plat) {
+        throw std::runtime_error("Error setting default platform.");
+    }
+}
+
+ocl_toolkit& ocl_toolkit::get() {
+    static ocl_toolkit toolkit;
+    return toolkit;
+}
 }

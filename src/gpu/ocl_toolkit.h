@@ -46,26 +46,7 @@ private:
     }
 
     static std::once_flag ocl_initialized;
-    static void initialize_opencl() {
-        std::vector<cl::Platform> platforms;
-        cl::Platform::get(&platforms);
-        cl::Platform plat;
-        for (auto& p : platforms) {
-            std::string platver = p.getInfo<CL_PLATFORM_VERSION>();
-            if (platver.find("OpenCL 2.") != std::string::npos) {
-                plat = p;
-            }
-        }
-
-        if (plat() == nullptr) {
-            throw std::runtime_error("No OpenCL 2.0 platform found.");
-        }
-
-        cl::Platform newP = cl::Platform::setDefault(plat);
-        if (newP != plat) {
-            throw std::runtime_error("Error setting default platform.");
-        }
-    }
+    static void initialize_opencl();
 
     const cl::Program& get_program() {
         if (!program || program_modified) {
@@ -144,9 +125,6 @@ public:
         return x;
     }
 
-    static ocl_toolkit& get() {
-        static ocl_toolkit toolkit;
-        return toolkit;
-    }
+    static ocl_toolkit& get();
 };
 }
