@@ -24,6 +24,7 @@ using namespace neural;
 using namespace std;
 using namespace tests;
 
+
 class softmax_xb_f32_test_fixture: public ::testing::Test {
 public:
     static const uint32_t
@@ -179,7 +180,6 @@ TEST(softmax_xb_f32_test, basic_with_offsets) {
           EXPECT_TRUE(are_equal(value, expected))
               << "At ["<< idx <<  "] Expected : " << expected << " actual :" << value;
         }
-
 };
 
 TEST(softmax_xb_f32_fw, intrinsics_avx2_batch1) {
@@ -200,4 +200,60 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch1) {
     auto sum = accumulate(output_memory_ptr, output_memory_ptr + x, 0.0f);
 
     EXPECT_EQ(true, tests::are_equal(sum, 1.0f));
+}
+
+TEST(softmax_xb_f32_fw, intrinsics_avx2_batch8) {
+    const uint32_t x = 1000, b = 8;
+
+    auto input  = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
+    auto output = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
+    auto& input_memory  = input.as<const memory&>();
+    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer);
+
+    // Initialize input data
+    fill<float>(input_memory);
+
+    auto softmax = normalization::softmax::create({engine::cpu, output, input});
+
+    execute({output, softmax}).wait();
+
+    bool result = true;
+    for(int b_idx = 0; b_idx < b; ++b_idx) {
+        float sum = 0;
+        for(int x_idx = 0; x_idx < x; ++x_idx) {
+            sum += output_memory_ptr[x_idx * b + b_idx];
+        }
+        result = tests::are_equal(sum, 1.0f);
+        if(!result) break;
+    }
+
+    EXPECT_EQ(true, result);
+}
+
+TEST(softmax_xb_f32_fw, intrinsics_avx2_batch48) {
+    const uint32_t x = 1000, b = 48;
+
+    auto input  = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
+    auto output = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
+    auto& input_memory  = input.as<const memory&>();
+    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer);
+
+    // Initialize input data
+    fill<float>(input_memory);
+
+    auto softmax = normalization::softmax::create({engine::cpu, output, input});
+
+    execute({output, softmax}).wait();
+
+    bool result = true;
+    for(int b_idx = 0; b_idx < b; ++b_idx) {
+        float sum = 0;
+        for(int x_idx = 0; x_idx < x; ++x_idx) {
+            sum += output_memory_ptr[x_idx * b + b_idx];
+        }
+        result = tests::are_equal(sum, 1.0f);
+        if(!result) break;
+    }
+
+    EXPECT_EQ(true, result);
 }

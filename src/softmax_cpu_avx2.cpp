@@ -48,6 +48,9 @@ static const auto C_max_acc_batch1  = 12u;
 static const auto C_max_acc_batch8  = 12u;
 static const auto C_max_acc_batch48 = 12u;
 
+static const auto C_batch8_size = C_simd_width;
+static const auto C_batch48_size = 6 * C_simd_width;
+
 static const auto C_data_stride_batch1 = C_simd_width * C_max_acc_batch1;
 
 
@@ -85,10 +88,10 @@ struct softmax_avx2_worker : public neural::is_an_implementation
                 run_softmax_work_item_latency(softmax_layer);
                 break;
             case 8:
-                //run_softmax_work_item_batch8(input, output);
+                run_softmax_work_item_batch8(softmax_layer);
                 break;
             case 48:
-                //run_softmax_work_item_batch48(input, output);
+                run_softmax_work_item_batch48(softmax_layer);
                 break;
             default:
                 break;
@@ -401,6 +404,214 @@ __pragma(warning(pop))
                 case 6: softmax_finalize_subsimd<6>(output_buffer, subsimd_sum); break;
                 case 7: softmax_finalize_subsimd<7>(output_buffer, subsimd_sum); break;
                 default: NN_UNREACHABLE_CODE;
+            }
+        }
+    }
+
+    void run_softmax_work_item_batch8(const softmax *softmax_layer) {
+        const auto input_arg = softmax_layer->argument.input[0].primitive.as<const memory&>().argument;
+
+        const auto input_width  = input_arg.size.spatial[0];
+        const auto output_width  = softmax_layer->argument.output_size.spatial[0];
+
+        const auto num_full_blocks = output_width / C_max_acc_batch8;
+        const auto partial_block_size = output_width % C_max_acc_batch8;
+
+        // Find max value for each image. We will use 1 accumulator (1*8=8) so each image has its own avx component.
+        {
+            auto input_buffer = static_cast<float*>(softmax_layer->input_memory(0).pointer);
+            auto output_buffer = static_cast<float*>(softmax_layer->output_memory(0).pointer);
+
+            __m256 max_values;
+            uint32_t input = 0;
+            max_values = _mm256_load_ps(input_buffer + (input++) * C_batch8_size);
+
+            while(input < input_width)
+                max_values = _mm256_max_ps(max_values, _mm256_load_ps(input_buffer + (input++) * C_batch8_size));
+
+            for(uint32_t output = 0; output < output_width; ++output)
+            {
+                    _mm256_storeu_ps(
+                        output_buffer + output * C_batch8_size,
+                        _mm256_sub_ps(
+                            _mm256_load_ps(input_buffer + output * C_batch8_size),
+                            max_values));
+            }
+        }
+
+        __m256 acc_sum = _mm256_setzero_ps();
+
+        {
+            auto input_buffer = static_cast<float*>(softmax_layer->input_memory(0).pointer);
+            auto output_buffer = static_cast<float*>(softmax_layer->output_memory(0).pointer);
+
+            for (auto block = 0u; block < num_full_blocks; ++block)
+            {
+                // Run computation.
+                softmax_compute_block<C_max_acc_batch8, C_batch8_size>(output_buffer, acc_sum);
+            }
+
+            switch (partial_block_size)
+            {
+                case  0: break;
+                case  1: softmax_compute_block< 1, C_batch8_size>(output_buffer, acc_sum); break;
+                case  2: softmax_compute_block< 2, C_batch8_size>(output_buffer, acc_sum); break;
+                case  3: softmax_compute_block< 3, C_batch8_size>(output_buffer, acc_sum); break;
+                case  4: softmax_compute_block< 4, C_batch8_size>(output_buffer, acc_sum); break;
+                case  5: softmax_compute_block< 5, C_batch8_size>(output_buffer, acc_sum); break;
+                case  6: softmax_compute_block< 6, C_batch8_size>(output_buffer, acc_sum); break;
+                case  7: softmax_compute_block< 7, C_batch8_size>(output_buffer, acc_sum); break;
+                case  8: softmax_compute_block< 8, C_batch8_size>(output_buffer, acc_sum); break;
+                case  9: softmax_compute_block< 9, C_batch8_size>(output_buffer, acc_sum); break;
+                case 10: softmax_compute_block<10, C_batch8_size>(output_buffer, acc_sum); break;
+                case 11: softmax_compute_block<11, C_batch8_size>(output_buffer, acc_sum); break;
+                case 12: softmax_compute_block<12, C_batch8_size>(output_buffer, acc_sum); break;
+                case 13: softmax_compute_block<13, C_batch8_size>(output_buffer, acc_sum); break;
+                case 14: softmax_compute_block<14, C_batch8_size>(output_buffer, acc_sum); break;
+                default: NN_UNREACHABLE_CODE;
+            }
+        }
+
+        acc_sum = _mm256_div_ps(_mm256_set1_ps(1.0f), acc_sum);
+
+        {
+            auto output_buffer = static_cast<float*>(softmax_layer->output_memory(0).pointer);
+
+            for (auto block = 0u; block < num_full_blocks; ++block)
+            {
+                // Run computation.
+                softmax_finalize_block<C_max_acc_batch8, C_batch8_size>(output_buffer, acc_sum);
+            }
+
+            switch (partial_block_size)
+            {
+                case  0: break;
+                case  1: softmax_finalize_block< 1, C_batch8_size>(output_buffer, acc_sum); break;
+                case  2: softmax_finalize_block< 2, C_batch8_size>(output_buffer, acc_sum); break;
+                case  3: softmax_finalize_block< 3, C_batch8_size>(output_buffer, acc_sum); break;
+                case  4: softmax_finalize_block< 4, C_batch8_size>(output_buffer, acc_sum); break;
+                case  5: softmax_finalize_block< 5, C_batch8_size>(output_buffer, acc_sum); break;
+                case  6: softmax_finalize_block< 6, C_batch8_size>(output_buffer, acc_sum); break;
+                case  7: softmax_finalize_block< 7, C_batch8_size>(output_buffer, acc_sum); break;
+                case  8: softmax_finalize_block< 8, C_batch8_size>(output_buffer, acc_sum); break;
+                case  9: softmax_finalize_block< 9, C_batch8_size>(output_buffer, acc_sum); break;
+                case 10: softmax_finalize_block<10, C_batch8_size>(output_buffer, acc_sum); break;
+                case 11: softmax_finalize_block<11, C_batch8_size>(output_buffer, acc_sum); break;
+                case 12: softmax_finalize_block<12, C_batch8_size>(output_buffer, acc_sum); break;
+                case 13: softmax_finalize_block<13, C_batch8_size>(output_buffer, acc_sum); break;
+                case 14: softmax_finalize_block<14, C_batch8_size>(output_buffer, acc_sum); break;
+                default: NN_UNREACHABLE_CODE;
+            }
+        }
+    }
+
+    void run_softmax_work_item_batch48(const softmax *softmax_layer) {
+        const auto input_arg = softmax_layer->argument.input[0].primitive.as<const memory&>().argument;
+
+        const auto input_width  = input_arg.size.spatial[0];
+        const auto output_width  = softmax_layer->argument.output_size.spatial[0];
+
+        const auto num_full_blocks = output_width / C_max_acc_batch48;
+        const auto partial_block_size = output_width % C_max_acc_batch48;
+        const auto num_batch_packages = 6;
+
+        // Find max value for each image. We will use 6 accumulators (6*8=48) so each image has its own avx component.
+        {
+            auto input_buffer = static_cast<float*>(softmax_layer->input_memory(0).pointer);
+            auto output_buffer = static_cast<float*>(softmax_layer->output_memory(0).pointer);
+
+            __m256 max_values[num_batch_packages];
+            uint32_t input = 0;
+
+            //#pragma unroll(num_batch_packages)
+            for(auto acc = 0u; acc < num_batch_packages; ++acc)
+                max_values[acc] = _mm256_load_ps(input_buffer + input * C_batch48_size + acc * C_simd_width);
+
+            ++input;
+
+            for(;input < input_width; ++input)
+                //#pragma unroll(num_batch_packages)
+                for(auto acc = 0u; acc < num_batch_packages; ++acc)
+                    max_values[acc] = _mm256_max_ps(max_values[acc], _mm256_load_ps(input_buffer + input * C_batch48_size + acc * C_simd_width));
+
+            for(uint32_t output = 0; output < output_width; ++output)
+            {
+                //#pragma unroll(num_batch_packages)
+                for(auto acc = 0u; acc < num_batch_packages; ++acc)
+                    _mm256_storeu_ps(
+                        output_buffer + output * C_batch48_size + acc * C_simd_width,
+                        _mm256_sub_ps(
+                            _mm256_load_ps(input_buffer + output * C_batch48_size + acc * C_simd_width),
+                            max_values[acc]));
+            }
+        }
+
+        for (uint32_t batch_package = 0; batch_package < num_batch_packages; ++batch_package)
+        {
+            const auto output_view_start = batch_package * C_batch8_size;
+
+            __m256 acc_sum = _mm256_setzero_ps();
+
+            {
+                auto output_buffer = static_cast<float*>(softmax_layer->output_memory(0).pointer) + output_view_start;
+
+                for (auto block = 0u; block < num_full_blocks; ++block)
+                {
+                    // Run computation.
+                    softmax_compute_block<C_max_acc_batch48, C_batch48_size>(output_buffer, acc_sum);
+                }
+
+                switch (partial_block_size)
+                {
+                    case  0: break;
+                    case  1: softmax_compute_block< 1, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  2: softmax_compute_block< 2, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  3: softmax_compute_block< 3, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  4: softmax_compute_block< 4, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  5: softmax_compute_block< 5, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  6: softmax_compute_block< 6, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  7: softmax_compute_block< 7, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  8: softmax_compute_block< 8, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  9: softmax_compute_block< 9, C_batch48_size>(output_buffer, acc_sum); break;
+                    case 10: softmax_compute_block<10, C_batch48_size>(output_buffer, acc_sum); break;
+                    case 11: softmax_compute_block<11, C_batch48_size>(output_buffer, acc_sum); break;
+                    case 12: softmax_compute_block<12, C_batch48_size>(output_buffer, acc_sum); break;
+                    case 13: softmax_compute_block<13, C_batch48_size>(output_buffer, acc_sum); break;
+                    case 14: softmax_compute_block<14, C_batch48_size>(output_buffer, acc_sum); break;
+                    default: NN_UNREACHABLE_CODE;
+                }
+            }
+
+            acc_sum = _mm256_div_ps(_mm256_set1_ps(1.0f), acc_sum);
+
+            {
+                auto output_buffer = static_cast<float*>(softmax_layer->output_memory(0).pointer) + output_view_start;
+
+                for (auto block = 0u; block < num_full_blocks; ++block)
+                {
+                    // Run computation.
+                    softmax_finalize_block<C_max_acc_batch48, C_batch48_size>(output_buffer, acc_sum);
+                }
+
+                switch (partial_block_size)
+                {
+                    case  0: break;
+                    case  1: softmax_finalize_block< 1, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  2: softmax_finalize_block< 2, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  3: softmax_finalize_block< 3, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  4: softmax_finalize_block< 4, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  5: softmax_finalize_block< 5, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  6: softmax_finalize_block< 6, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  7: softmax_finalize_block< 7, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  8: softmax_finalize_block< 8, C_batch48_size>(output_buffer, acc_sum); break;
+                    case  9: softmax_finalize_block< 9, C_batch48_size>(output_buffer, acc_sum); break;
+                    case 10: softmax_finalize_block<10, C_batch48_size>(output_buffer, acc_sum); break;
+                    case 11: softmax_finalize_block<11, C_batch48_size>(output_buffer, acc_sum); break;
+                    case 12: softmax_finalize_block<12, C_batch48_size>(output_buffer, acc_sum); break;
+                    case 13: softmax_finalize_block<13, C_batch48_size>(output_buffer, acc_sum); break;
+                    case 14: softmax_finalize_block<14, C_batch48_size>(output_buffer, acc_sum); break;
+                    default: NN_UNREACHABLE_CODE;
+                }
             }
         }
     }
