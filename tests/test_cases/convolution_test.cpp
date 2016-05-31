@@ -610,7 +610,7 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }
 
-TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
+TEST(convolution_f32_fw, DISABLED_optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     auto engine_resource = worker_cpu::create({std::thread::hardware_concurrency()});
     auto input           = memory::allocate({engine::cpu, memory::format::       byxf_f32,    {1, {4, 4}, 1}});
@@ -622,6 +622,7 @@ TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     auto& input_memory   = input.as<const memory&>();
     auto& weights_memory = weights.as<const memory&>();
     auto& biases_memory  = biases.as<const memory&>();
+    auto output_ptr = static_cast<float*>(output_memory.pointer);
 
     auto conv = convolution::create({engine::cpu, output, {input, weights, biases}, {1, {2, 2}, 1}, padding::zero});
 
@@ -641,7 +642,7 @@ TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
         // So each output value should be: number of input elements of 3d kernel (times input and kernel values) + bias value.
         float expected_value = num_input_kernel_elements * input_val * weight_val + bias_val;
         for(size_t output_element = 0; output_element < num_output_elements; ++output_element)
-            EXPECT_EQ(true, tests::are_equal(expected_value, get_value<float>(output_memory, output_element)));
+            EXPECT_EQ(true, tests::are_equal(expected_value, output_ptr[output_element]));
     };
 
     run_subtest(1.0f, 1.0f, 1.0f);
@@ -652,7 +653,7 @@ TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     run_subtest(2.0f, 2.0f, 2.0f);
 }
 
-TEST(convolution_f32_fw, optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
+TEST(convolution_f32_fw, DISABLED_optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     // This implementation will use two jobs, each for one slice, so make sure it will test MT path, no matter what underlying HW we have.
     auto engine_resource = worker_cpu::create({2});
@@ -679,10 +680,10 @@ TEST(convolution_f32_fw, optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
         // Weights and biases are grouped by slices, so we can easily initialize them with different values.
         for(size_t weight_element = 0; weight_element < weights_memory.count(); ++weight_element)
-            set_value<float>(weights_memory, weight_element, (weight_element < weights_memory.count()/2) ? weight_val_slice0 : weight_val_slice1);
+            set_value<float>(weights_memory, static_cast<uint32_t>(weight_element), (weight_element < weights_memory.count()/2) ? weight_val_slice0 : weight_val_slice1);
 
         for(size_t bias_element = 0; bias_element < biases_memory.count(); ++bias_element)
-            set_value<float>(biases_memory, bias_element, (bias_element < biases_memory.count()/2) ? bias_val_slice0 : bias_val_slice1);
+            set_value<float>(biases_memory, static_cast<uint32_t>(bias_element), (bias_element < biases_memory.count()/2) ? bias_val_slice0 : bias_val_slice1);
 
         execute({conv}, engine_resource).sync();
 
@@ -715,7 +716,7 @@ TEST(convolution_f32_fw, optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     run_subtest(3.0f, 1.0f, 1.0f, 2.0f, 2.0f);
 }
 
-TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x12x3x2_nopad) {
+TEST(convolution_f32_fw, DISABLED_naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x12x3x2_nopad) {
 
     // This implementation will use two jobs, each for one slice, so make sure it will test MT path, no matter what underlying HW we have.
     auto engine_resource = worker_cpu::create({2});
@@ -761,10 +762,12 @@ TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x
     }, engine_resource).sync();
 
     for(size_t output_element = 0; output_element < temp_output_memory.count(); ++output_element)
-        EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(temp_output_memory, output_element), 0.0005f));
+        EXPECT_EQ(true, tests::are_equal(static_cast<float*>(ref_output_memory.pointer)[output_element],
+                                         static_cast<float*>(temp_output_memory.pointer)[output_element],
+                                         0.0005f));
 }
 
-TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
+TEST(convolution_f32_fw, DISABLED_optimized_generic_vs_for_loop_implementation) {
     const uint32_t input_width         = 40;   // data = input|output
     const uint32_t input_height        = 40;   // data = input|output
     const uint32_t input_feature_maps  = 8;
@@ -866,4 +869,5 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
                     EXPECT_EQ(true, tests::are_equal(valid, tested)) << "at [b,x,y,f] = [" << b << "," << xo << "," << yo << "," << fo << "]\n" << std::endl;
                 }
         }
+    }
 }

@@ -83,7 +83,7 @@ TEST(relu_f32_fw, intrinsics_avx2) {
     execute({ref_output, ref_relu}).sync();
 
     for(size_t output_element = 0; output_element < output_memory.count(); ++output_element)
-        EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(output_memory, output_element)));
+        EXPECT_EQ(true, tests::are_equal(static_cast<float*>(ref_output_memory.pointer)[output_element], static_cast<float*>(output_memory.pointer)[output_element]));
 }
 
 TEST(relu_f32_fw, offsets) {
@@ -210,7 +210,7 @@ TEST(relu_f32_bw, intrinsics_avx2) {
     execute({ref_bw_output, ref_relu}).sync();
 
     for(size_t output_element = 0; output_element < bw_output_memory.count(); ++output_element)
-        EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_bw_output_memory, output_element), get_value<float>(bw_output_memory, output_element)));
+        EXPECT_EQ(true, tests::are_equal(static_cast<float*>(ref_bw_output_memory.pointer)[output_element], static_cast<float*>(bw_output_memory.pointer)[output_element]));
 }
 
 TEST(relu_f32_bw, offsets) {
