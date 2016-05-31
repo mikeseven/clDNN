@@ -24,7 +24,7 @@ namespace neural {
 		~fully_connected_forward_cpu_avx2();
 
 		static is_an_implementation *create(fully_connected &arg) { return new fully_connected_forward_cpu_avx2(arg); };
-		std::vector<task> work() { return fully_connected_ptr->work(); };
+		std::vector<task> work();// { return fully_connected_ptr->work(); };
 
 		std::unique_ptr<is_an_implementation> fully_connected_ptr;
 		const fully_connected &outer;
