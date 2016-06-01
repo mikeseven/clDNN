@@ -101,11 +101,11 @@ template<> size_t index<neural::memory::format::yx_fo_fi_fo4_f32>(std::vector<ui
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
-    const size_t B = size[0];   const size_t Fo = size[1];   const size_t Fi = size[2];   const size_t X = size[3];
-                                const size_t fo =  pos[1];   const size_t fi =  pos[2];   const size_t x =  pos[3];   const size_t y =  pos[4];
+    const size_t Fo = size[1];   const size_t Fi = size[2];   const size_t X = size[3];
+    const size_t fo =  pos[1];   const size_t fi =  pos[2];   const size_t x =  pos[3];   const size_t y =  pos[4];
     const size_t slice_block = fo/4;    const size_t slice_element = fo%4;
 
-    assert(1 == B); // Weights doesnt use batch, but the field must exist.
+    assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
     assert(size[3] == size[4]); // X == Y
     assert(0 == Fo%4);
     return slice_element + 4*(fi + Fi*(slice_block + Fo/4*(x + X*y)));
