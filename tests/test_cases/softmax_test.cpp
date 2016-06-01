@@ -224,7 +224,7 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch1_ref_compare) {
     execute({output, opt_softmax}).wait();
     execute({ref_output, ref_softmax}).wait();
 
-    for(int output_element = 0; output_element < output_memory.count(); ++output_element)
+    for(uint32_t output_element = 0; output_element < output_memory.count(); ++output_element)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(output_memory, output_element)));
 }
 
@@ -245,9 +245,9 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch8_sum_to_one) {
 
     // Addition per batch
     bool result = true;
-    for(int b_idx = 0; b_idx < b; ++b_idx) {
+    for(uint32_t b_idx = 0; b_idx < b; ++b_idx) {
         float sum = 0;
-        for(int x_idx = 0; x_idx < x; ++x_idx) {
+        for(uint32_t x_idx = 0; x_idx < x; ++x_idx) {
             sum += output_memory_ptr[x_idx * b + b_idx];
         }
         result = tests::are_equal(sum, 1.0f);
@@ -280,7 +280,7 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch8_ref_compare) {
     execute({output, opt_softmax}).wait();
     execute({ref_output, ref_softmax}).wait();
 
-    for(int output_element = 0; output_element < output_memory.count(); ++output_element)
+    for(uint32_t output_element = 0; output_element < output_memory.count(); ++output_element)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(output_memory, output_element)));
 }
 
@@ -301,9 +301,9 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch48_sum_to_one) {
 
     // Addition per batch
     bool result = true;
-    for(int b_idx = 0; b_idx < b; ++b_idx) {
+    for(uint32_t b_idx = 0; b_idx < b; ++b_idx) {
         float sum = 0;
-        for(int x_idx = 0; x_idx < x; ++x_idx) {
+        for(uint32_t x_idx = 0; x_idx < x; ++x_idx) {
             sum += output_memory_ptr[x_idx * b + b_idx];
         }
         result = tests::are_equal(sum, 1.0f);
@@ -336,6 +336,6 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch48_ref_compare) {
     execute({output, opt_softmax}).wait();
     execute({ref_output, ref_softmax}).wait();
 
-    for(int output_element = 0; output_element < output_memory.count(); ++output_element)
+    for(uint32_t output_element = 0; output_element < output_memory.count(); ++output_element)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(output_memory, output_element)));
 }

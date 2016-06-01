@@ -118,8 +118,10 @@ struct softmax_avx2_worker : public neural::is_an_implementation
             acc5, acc6, acc7, acc8, acc9,
             acc10, acc11, acc12, acc13, acc14;
 
-//__pragma(warning(push))
+#if defined _MSC_VER
+__pragma(warning(push))
 __pragma(warning(disable:4127))
+#endif
 
         // Load outputs and perform multiplication.
         if (T_SIZE >=  1)  acc0 = _mm256_mul_ps(_mm256_loadu_ps(output_ptr +  0 * T_batch_width), acc_sum);
@@ -155,7 +157,9 @@ __pragma(warning(disable:4127))
         if (T_SIZE >= 14) _mm256_storeu_ps(output_ptr + 13 * T_batch_width, acc13);
         if (T_SIZE >= 15) _mm256_storeu_ps(output_ptr + 14 * T_batch_width, acc14);
 
-//__pragma(warning(pop))
+#if defined _MSC_VER
+__pragma(warning(pop))
+#endif
 
         output_ptr += T_batch_width*T_SIZE;
     }
@@ -170,6 +174,11 @@ __pragma(warning(disable:4127))
         __m256  acc0, acc1, acc2, acc3, acc4,
                 acc5, acc6, acc7, acc8, acc9,
                 acc10, acc11, acc12, acc13, acc14;
+
+#if defined _MSC_VER
+__pragma(warning(push))
+__pragma(warning(disable:4127))
+#endif
 
         // Load inputs and perform e^x
         if (T_SIZE >=  1)  acc0 = _inner_mm256_exp_ps(_mm256_loadu_ps(output_ptr +  0 * T_batch_width));
@@ -221,6 +230,10 @@ __pragma(warning(disable:4127))
         if (T_SIZE >= 13) acc_sum = _mm256_add_ps(acc12, acc_sum);
         if (T_SIZE >= 14) acc_sum = _mm256_add_ps(acc13, acc_sum);
         if (T_SIZE >= 15) acc_sum = _mm256_add_ps(acc14, acc_sum);
+
+#if defined _MSC_VER
+__pragma(warning(pop))
+#endif
 
         output_ptr += T_batch_width*T_SIZE;
     }
