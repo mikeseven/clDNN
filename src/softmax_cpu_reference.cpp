@@ -22,7 +22,25 @@ namespace normalization {
 
 softmax_cpu_reference::softmax_cpu_reference(softmax &arg)
     : is_an_implementation(neural::type_id<softmax_cpu_reference>())
+<<<<<<< HEAD
     , outer(arg) {}
+=======
+    , outer(arg) {
+
+    auto& input_offset  = outer.argument.input_offset;
+    auto& output_offset = outer.argument.output_offset;
+    auto& output_size   = outer.argument.output_size;
+
+    auto& input_arg  = outer.input_memory(0).argument;
+    auto& output_arg = outer.output_memory(0).argument;
+    for (auto &x : input_offset.raw) if (x < 0) throw std::runtime_error("Softmax negative input offset.");
+
+    for(size_t i = 0; i < input_arg.size.raw.size(); ++i){
+        if( input_arg.size.raw[i] < output_size.raw[i] +  input_offset.raw[i]) throw std::runtime_error("Softmax input/output size does not match.");
+        if(output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("Softmax sizes too small.");
+    }
+};
+>>>>>>> 820a3d28fd75b823e9e673f8e33a588d70695ead
 
 softmax_cpu_reference::~softmax_cpu_reference() {}
 
