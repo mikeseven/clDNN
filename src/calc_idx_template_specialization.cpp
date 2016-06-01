@@ -85,21 +85,7 @@ template<> size_t index<neural::memory::format::fyxb_f32>(std::vector<uint32_t> 
 }
 
 
-template<> size_t index<neural::memory::format::tmp_format_output>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
-    assert(is_in_range(size, pos));
-
-    // BFXY represents buffer size, wbile bfxy represents current position
-    const size_t B = size[0];   const size_t F = size[1];   const size_t X = size[2];
-    const size_t b =  pos[0];   const size_t f =  pos[1];   const size_t x =  pos[2];   const size_t y =  pos[3];
-
-    assert(24 == B); //todo remove, what with b>23
-    return b%24 + B * (f + F*(x + X*y));
-
-//    return b/24*B*F*X*Y + (b%24 + B * (f + F*(x + X*y)));
-}
-
-
-template<> size_t index<neural::memory::format::tmp_format_input>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+template<> size_t index<neural::memory::format::byxf_b24_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
@@ -111,7 +97,7 @@ template<> size_t index<neural::memory::format::tmp_format_input>(std::vector<ui
 }
 
 
-template<> size_t index<neural::memory::format::tmp_format_weights_slice4>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+template<> size_t index<neural::memory::format::yx_fo_fi_fo4_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
@@ -156,9 +142,8 @@ fptr choose_calculate_idx(neural::memory::format::type arg){
         case neural::memory::format::type::bfyx_f32:           return index<neural::memory::format::type::bfyx_f32>;
         case neural::memory::format::type::fyxb_f32:           return index<neural::memory::format::type::fyxb_f32>;
         case neural::memory::format::type::bs_yxf_bv24_f32:    return index<neural::memory::format::type::bs_yxf_bv24_f32>;
-        case neural::memory::format::type::tmp_format_output:  return index<neural::memory::format::type::tmp_format_output>;
-        case neural::memory::format::type::tmp_format_input:   return index<neural::memory::format::type::tmp_format_input>;
-        case neural::memory::format::type::tmp_format_weights_slice4: return index<neural::memory::format::type::tmp_format_weights_slice4>;
+        case neural::memory::format::type::byxf_b24_f32:  return index<neural::memory::format::type::byxf_b24_f32>;
+        case neural::memory::format::type::yx_fo_fi_fo4_f32: return index<neural::memory::format::type::yx_fo_fi_fo4_f32>;
             break;
         default:
             throw std::runtime_error("choose_calculate_idx has no case for memory::format " + std::to_string(arg));
