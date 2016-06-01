@@ -50,6 +50,8 @@ public:
         if(!is_lazy()) start();
     }
 
+    async_execution() { wait(); }
+
     size_t tasks_left() { return _tasks_left; }
 
     void wait() {
