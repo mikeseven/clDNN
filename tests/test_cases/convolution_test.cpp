@@ -879,17 +879,15 @@ TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
 
     // allocate memory buffers
     const uint64_t batch_size = 24;
-    const auto align_size = 64;
-    const auto align_size_in_float = align_size/sizeof(float);
     const auto output_buffer_size = output_height*output_width*output_feature_maps*batch_size;
     const auto filter_buffer_size = filter_size*filter_size*output_feature_maps*input_feature_maps;
     const auto  input_buffer_size =  input_height* input_width* input_feature_maps*batch_size;
     const auto   bias_buffer_size = output_feature_maps;
 
-    std::unique_ptr<float> output_container = std::move(std::unique_ptr<float>(new float[output_buffer_size+align_size_in_float]));
-    std::unique_ptr<float> filter_container = std::move(std::unique_ptr<float>(new float[filter_buffer_size+align_size_in_float]));
-    std::unique_ptr<float>  input_container = std::move(std::unique_ptr<float>(new float[ input_buffer_size+align_size_in_float]));
-    std::unique_ptr<float>   bias_container = std::move(std::unique_ptr<float>(new float[  bias_buffer_size+align_size_in_float]));
+    std::unique_ptr<float> output_container = std::move(std::unique_ptr<float>(new float[output_buffer_size]));
+    std::unique_ptr<float> filter_container = std::move(std::unique_ptr<float>(new float[filter_buffer_size]));
+    std::unique_ptr<float>  input_container = std::move(std::unique_ptr<float>(new float[ input_buffer_size]));
+    std::unique_ptr<float>   bias_container = std::move(std::unique_ptr<float>(new float[  bias_buffer_size]));
 
     const auto output =output_container.get();
     const auto filter =filter_container.get();
