@@ -818,10 +818,12 @@ TEST(convolution_f32_fw, DISABLED_optimized_generic_vs_for_loop_implementation) 
     std::generate( bias,  bias+ bias_buffer_size, lambda);
     std::generate(filter, filter+filter_buffer_size, lambda);
 
+    auto engine_resource = worker_cpu::create({2});
+
     //set pointers
     execute(
-        {output_p(output), input_p(input), weights_p(filter), biases_p(bias)}
-    ).sync();
+    {output_p(output), input_p(input), weights_p(filter), biases_p(bias)}
+    , {engine_resource}).wait();
 
     auto conv   = convolution::create( {neural::engine::cpu,
                                         output_p,
@@ -830,11 +832,9 @@ TEST(convolution_f32_fw, DISABLED_optimized_generic_vs_for_loop_implementation) 
                                         padding::zero}
                                         );
 
-    auto engine_resource = worker_cpu::create({1});
     execute(
         {conv}
-        , engine_resource
-    ).sync();
+    , {engine_resource}).wait();
 
     const int64_t filter_radius = (filter_size-1)/2;
     const auto output_feature_blocks    = output_feature_maps/output_features_per_iteration;
