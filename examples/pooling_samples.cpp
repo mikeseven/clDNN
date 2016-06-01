@@ -33,8 +33,8 @@ void example_pooling_forward() {
     float out_buffer[output_y*output_x*output_z*output_b];
     // input buffer should be initialized with valid data
 
-    auto input  = memory::create({engine::reference, memory::format::yxfb_f32, { input_b ,{ input_y, input_x }, input_z }});
-    auto output = memory::create({engine::reference, memory::format::yxfb_f32, { output_b,{output_y, output_x}, output_z}});
+    auto input  = memory::describe({engine::reference, memory::format::yxfb_f32, { input_b ,{ input_y, input_x }, input_z }});
+    auto output = memory::describe({engine::reference, memory::format::yxfb_f32, { output_b,{output_y, output_x}, output_z}});
 
     auto pool  = pooling::create( {engine::reference,
                                     pooling::mode::max,
@@ -48,7 +48,7 @@ void example_pooling_forward() {
                                     padding::zero}
                                   );
 
-    execute({input(in_buffer), output(out_buffer), pool}).sync();
+    execute({input(in_buffer), output(out_buffer), pool}).wait();
 }
 
 void example_pooling_backward(){

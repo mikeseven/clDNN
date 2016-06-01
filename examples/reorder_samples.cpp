@@ -13,7 +13,7 @@ void example_009() {
 
   	const uint32_t all_size = dim_y*dim_x*dim_f*dim_b;
 	auto in_layout = memory::format::yxfb_f32;
-    auto out_layout = memory::format::bfxy_f32;
+    auto out_layout = memory::format::byxf_f32;
 
     float in_buffer[all_size] =
     {// yxfb
@@ -44,14 +44,14 @@ void example_009() {
                                      //b  f  x  y
     neural::vector<uint32_t> out_sizes= { 2, {4, 2}, 3};
 
-    auto input  = memory::create({engine::reference, in_layout, in_sizes});
-    auto output = memory::create({engine::reference, out_layout, out_sizes, true});
+    auto input  = memory::describe({engine::reference, in_layout, in_sizes});
+    auto output = memory::allocate({engine::reference, out_layout, out_sizes});
 
     auto reorder    = reorder::create(reorder::arguments{engine::reference,input,output});
 
     try
     {
-        execute({input(in_buffer), reorder}).sync();
+        execute({input(in_buffer), reorder}).wait();
     }
     catch (const std::exception& ex)
     {

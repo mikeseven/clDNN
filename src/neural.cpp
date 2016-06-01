@@ -19,17 +19,20 @@
 
 namespace neural {
 
-static std::map<std::string, std::shared_ptr<type_traits>> register_map;
-
 type_traits* typeid_register(size_t size, bool is_float, const std::string& str){
+    
+    static std::map<std::string, std::shared_ptr<type_traits>> register_map;
+
     auto it = register_map.find(str);
     if( register_map.end() != it )
         return it->second.get();
 
     std::shared_ptr<type_traits> tt_ptr = std::make_shared<type_traits>(0, size, is_float, str.c_str());
-    *const_cast<size_t *>(&tt_ptr->id) = reinterpret_cast<size_t>(tt_ptr.get());
-
-    register_map.emplace(str, tt_ptr);
+    if(tt_ptr)
+    {
+        *const_cast<size_t *>(&tt_ptr->id) = reinterpret_cast<size_t>(tt_ptr.get());
+        register_map.emplace(str, tt_ptr);
+    }
 
     return tt_ptr.get();
 }

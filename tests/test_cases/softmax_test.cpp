@@ -35,8 +35,8 @@ public:
     float out_buffer[out_size];
     float expected_buffer[out_size];
 
-    neural::primitive input  = memory::create({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
-    neural::primitive output = memory::create({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
+    neural::primitive input  = memory::describe({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
+    neural::primitive output = memory::describe({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
     neural::primitive act    = normalization::softmax::create({engine::reference, output, input});
 
     void compare_out_buffer_with_expected() {
@@ -70,7 +70,7 @@ TEST_F(softmax_xb_f32_test_fixture, input_same_values) {
               in_buffer[i] = 1.0f;
         expected_buffer[i] = 0.1f;
     }
-    execute({input(in_buffer), output(out_buffer), act}).sync();
+    execute({input(in_buffer), output(out_buffer), act}).wait();
     compare_out_buffer_with_expected();
 }
 
@@ -84,7 +84,7 @@ TEST_F(softmax_xb_f32_test_fixture, input_same_values_batch_wise) {
     for(size_t i = 0; i < out_size; ++i)
         expected_buffer[i] = 0.1f;
 
-    execute({input(in_buffer), output(out_buffer), act}).sync();
+    execute({input(in_buffer), output(out_buffer), act}).wait();
     compare_out_buffer_with_expected_batch_wise();
 }
 
@@ -125,7 +125,7 @@ TEST_F(softmax_xb_f32_test_fixture, values_batch_wise) {
     for(size_t i = 0; i < out_size; ++i)
         out_buffer[i] = NAN;
 
-    execute({input(in_buffer), output(out_buffer), act}).sync();
+    execute({input(in_buffer), output(out_buffer), act}).wait();
     compare_out_buffer_with_expected_batch_wise();
 }
 
@@ -142,8 +142,8 @@ TEST(softmax_xb_f32_test, basic_with_offsets) {
     float out_buffer[output_x*output_b];
     // input buffer should be initialized with valid data
 
-    auto input  = memory::create({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
-    auto output = memory::create({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
+    auto input  = memory::describe({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
+    auto output = memory::describe({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
 
     auto act    = normalization::softmax::create({engine::reference,
                                                   output,
@@ -161,7 +161,7 @@ TEST(softmax_xb_f32_test, basic_with_offsets) {
     for(size_t i = 0; i < output_x*output_b; ++i)
         out_buffer[i] = out_of_offset_value;
 
-    execute({input(in_buffer), output(out_buffer), act}).sync();
+    execute({input(in_buffer), output(out_buffer), act}).wait();
 
     auto expected_value = 0.2f;
     auto end_b = out_off_b+out_siz_b;

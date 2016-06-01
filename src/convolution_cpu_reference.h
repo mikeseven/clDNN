@@ -25,7 +25,7 @@ namespace neural {
         static void implementation(const void *ptr);
 
         static is_an_implementation *create(convolution &arg) { return new convolution_cpu_reference(arg); };
-        std::vector<task> work() { return {task{implementation, &outer}}; };
+		task_group work() { return {task{implementation, &outer}}; };
 
         const convolution &outer;
     };
@@ -35,7 +35,7 @@ namespace neural {
         static void implementation(const void *ptr);
 
         static is_an_implementation *create(convolution_backward &arg) { return new convolution_backward_cpu_reference(arg); };
-        std::vector<task> work() { return {task{implementation, &outer}}; };
+		task_group work() { return {task{implementation, &outer}}; };
 
         const convolution_backward &outer;
     };

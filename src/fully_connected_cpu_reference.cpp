@@ -83,7 +83,7 @@ namespace neural {
             }
         }
 
-        std::vector<task> work() {
+        task_group work() override {
             return{ task{ implementation, &outer } };
         }
 

@@ -172,7 +172,7 @@ namespace neural {
             toolkit.read_buffer<float>(_outBuffer, output_mem);
         }
 
-        std::vector<task> work() override {
+        task_group work() override {
             return{ task{ implementation, &outer } };
         }
 

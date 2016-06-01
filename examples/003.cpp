@@ -21,8 +21,8 @@
 void example_003() {
     char *data_buffer = nullptr;
     using namespace neural;
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {96, {112, 112}, 24}});
+    auto input  = memory::describe({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+    auto output = memory::describe({engine::cpu, memory::format::yxfb_f32, {96, {112, 112}, 24}});
     auto weight = file::create({engine::cpu, "weight.nnb"});
     auto bias   = file::create({engine::cpu, "bias.nnb"});
 
@@ -31,7 +31,7 @@ void example_003() {
     auto pool   = pooling::create({engine::cpu, pooling::mode::max, memory::format::yxfb_f32, act, 3, 2, padding::zero});
     auto lrn    = normalization::response::create({engine::cpu, output, pool, 5, padding::zero, 1.0f, 0.00002f, 0.75f });
 
-    execute({input(data_buffer), output(data_buffer), conv, act, pool, lrn}).sync();
+    execute({input(data_buffer), output(data_buffer), conv, act, pool, lrn}).wait();
 }
 
 #endif

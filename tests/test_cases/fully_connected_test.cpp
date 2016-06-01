@@ -49,17 +49,17 @@ TEST(fully_connected, xb_f32_batch_1) {
                    input_x   = 3, input_b   = 1,  // size of whole input buffer
                    weight_x  = 4, weight_y  = 3;  // size of whole weights buffer
 
-    auto input_prim   = memory::create({ engine::reference, memory::format::xb_f32,{ input_b , {{input_x }}, {1} } , true });
-    auto output_prim  = memory::create({ engine::reference, memory::format::xb_f32,{ output_b, {{output_x}}, {1} } , true });
-    auto weights_prim = memory::create({ engine::reference, memory::format::xb_f32,{ weight_y, {{weight_x}}, {1} } , true });
-    auto bias_prim    = memory::create({ engine::reference, memory::format::x_f32, { 1,        {{output_x}}, {1} } , true });
+    auto input_prim   = memory::allocate({ engine::reference, memory::format::xb_f32,{ input_b , {{input_x }}, {1} } });
+    auto output_prim  = memory::allocate({ engine::reference, memory::format::xb_f32,{ output_b, {{output_x}}, {1} } });
+    auto weights_prim = memory::allocate({ engine::reference, memory::format::xb_f32,{ weight_y, {{weight_x}}, {1} } });
+    auto bias_prim    = memory::allocate({ engine::reference, memory::format::x_f32, { 1,        {{output_x}}, {1} } });
     auto full_con_prim = fully_connected::create({ engine::reference, output_prim, input_prim, weights_prim,  bias_prim});
 
     set_values(input_prim  , {-0.5f, 2.0f, 0.5f});
     set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
     set_values(bias_prim   , {1.0f, 2.0f, 3.0f, 4.0f});
 
-    execute({full_con_prim}).sync();
+    execute({full_con_prim}).wait();
 
     auto& output_memory  = output_prim.as<const memory&>();
     EXPECT_EQ( 2.5f,  get_value<float>(output_memory, 0));
@@ -94,17 +94,17 @@ TEST(fully_connected, xb_f32_batch_2) {
                    input_x   = 3, input_b   = 2,  // size of whole input buffer
                    weight_x  = 4, weight_y  = 3;  // size of whole weights buffer
 
-    auto input_prim   = memory::create({ engine::reference, memory::format::xb_f32,{ input_b , {{input_x }}, 1}, true });
-    auto output_prim  = memory::create({ engine::reference, memory::format::xb_f32,{ output_b, {{output_x}}, 1}, true });
-    auto weights_prim = memory::create({ engine::reference, memory::format::xb_f32,{ weight_y, {{weight_x}}, 1}, true });
-    auto bias_prim    = memory::create({ engine::reference, memory::format::x_f32, { 1,        {{output_x}}, 1} , true });
+    auto input_prim   = memory::allocate({ engine::reference, memory::format::xb_f32,{ input_b , {{input_x }}, 1}});
+    auto output_prim  = memory::allocate({ engine::reference, memory::format::xb_f32,{ output_b, {{output_x}}, 1}});
+    auto weights_prim = memory::allocate({ engine::reference, memory::format::xb_f32,{ weight_y, {{weight_x}}, 1}});
+    auto bias_prim    = memory::allocate({ engine::reference, memory::format::x_f32, { 1,        {{output_x}}, 1} });
     auto full_con_prim = fully_connected::create({ engine::reference, output_prim, input_prim, weights_prim, bias_prim });
 
     set_values(input_prim  , {-0.5f, 1.0f, 2.0f, 1.5f, 0.5f, 0.0f});
     set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
     set_values(bias_prim   , {1.0f, 2.0f, 3.0f, 4.0f});
 
-    execute({full_con_prim}).sync();
+    execute({full_con_prim}).wait();
 
     auto& output_memory  = output_prim.as<const memory&>();
     EXPECT_EQ( 2.5f,  get_value<float>(output_memory,0));
@@ -141,10 +141,10 @@ TEST(fully_connected, x_f32) {
                    input_x   = 3,                 // size of whole input buffer
                    weight_x  = 4, weight_y  = 3;  // size of whole weights buffer
 
-    auto input_prim   = memory::create({ engine::reference, memory::format:: x_f32, {1       , {{input_x }}, 1 } , true });
-    auto output_prim  = memory::create({ engine::reference, memory::format:: x_f32, {1       , {{output_x}}, 1 } , true });
-    auto weights_prim = memory::create({ engine::reference, memory::format::xb_f32, {weight_y, {{weight_x}}, 1 } , true });
-    auto bias_prim    = memory::create({ engine::reference, memory::format:: x_f32, {1,        {{output_x}}, 1 } , true });
+    auto input_prim   = memory::allocate({ engine::reference, memory::format:: x_f32, {1       , {{input_x }}, 1 } });
+    auto output_prim  = memory::allocate({ engine::reference, memory::format:: x_f32, {1       , {{output_x}}, 1 } });
+    auto weights_prim = memory::allocate({ engine::reference, memory::format::xb_f32, {weight_y, {{weight_x}}, 1 } });
+    auto bias_prim    = memory::allocate({ engine::reference, memory::format:: x_f32, {1,        {{output_x}}, 1 } });
 
     auto full_con_prim = fully_connected::create({ engine::reference, output_prim, input_prim, weights_prim, bias_prim });
 
@@ -154,7 +154,7 @@ TEST(fully_connected, x_f32) {
     set_values(weights_prim, {1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f});
     set_values(bias_prim   , {1.0f, 2.0f, 3.0f, 4.0f});
 
-    execute({full_con_prim}).sync();
+    execute({full_con_prim}).wait();
 
     EXPECT_EQ( 2.5f,  get_value<float>(output_memory,0));
     EXPECT_EQ( 2.75f, get_value<float>(output_memory,1));

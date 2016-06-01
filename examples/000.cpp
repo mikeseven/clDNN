@@ -20,8 +20,8 @@
 void example_000() {
     char *in_ptr = nullptr, *out_ptr = nullptr;
     using namespace neural;
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {96, {224, 224}, 24}});
+    auto input  = memory::describe({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+    auto output = memory::describe({engine::cpu, memory::format::yxfb_f32, {96, {224, 224}, 24}});
     auto weight = file::create({engine::cpu, "weight.nnb"});
     auto bias   = file::create({engine::cpu, "bias.nnb"});
     auto conv   = convolution::create({engine::cpu, output, {input, weight, bias}, padding::zero});
@@ -36,5 +36,5 @@ void example_000() {
     conv["name"].s();       // std::string("convolution")
     conv["info_short"].s(); // std::string("direct convolution")
 
-    execute({input(in_ptr), output(out_ptr), conv}).sync();
+    execute({input(in_ptr), output(out_ptr), conv}).wait();
 }
