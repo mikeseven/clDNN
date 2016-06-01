@@ -54,24 +54,12 @@ static const auto C_batch48_size = 6 * C_simd_width;
 static const auto C_data_stride_batch1 = C_simd_width * C_max_acc_batch1;
 
 
-static __m256i simd_masks[] = {
-    _mm256_setr_epi32(-1,  0,  0,  0,  0,  0,  0, 0),
-    _mm256_setr_epi32(-1, -1,  0,  0,  0,  0,  0, 0),
-    _mm256_setr_epi32(-1, -1, -1,  0,  0,  0,  0, 0),
-    _mm256_setr_epi32(-1, -1, -1, -1,  0,  0,  0, 0),
-    _mm256_setr_epi32(-1, -1, -1, -1, -1,  0,  0, 0),
-    _mm256_setr_epi32(-1, -1, -1, -1, -1, -1,  0, 0),
-    _mm256_setr_epi32(-1, -1, -1, -1, -1, -1, -1, 0)
-};
-
 // process chunks of data
 struct softmax_avx2_worker : public neural::is_an_implementation
 {
     #pragma pack(push, 1)
     struct task_data_t {
         const softmax *softmax_layer;
-        size_t offset;
-        size_t size;
     };
     #pragma pack(pop)
 
@@ -81,24 +69,19 @@ struct softmax_avx2_worker : public neural::is_an_implementation
     softmax_avx2_worker(const void *outher) : is_an_implementation(neural::type_id<softmax_avx2_worker>()) {
         auto softmax_layer = static_cast<const softmax *>(outher);
 
+        tasks.resize(1);
+        task_data.resize(1);
+
+        task_data[0] = {softmax_layer};
+
         auto batch_size = softmax_layer->input_memory(0).argument.size.batch[0];
-        switch (batch_size)
-        {
-            case 1:
-                run_softmax_work_item_latency(softmax_layer);
-                break;
-            case 8:
-                run_softmax_work_item_batch8(softmax_layer);
-                break;
-            case 48:
-                run_softmax_work_item_batch48(softmax_layer);
-                break;
-            default:
-                break;
-        }
+
+        if(batch_size == 1)       tasks[0] = { reinterpret_cast<void(*)(const void*)>(run_softmax_work_item_latency), &task_data[0] };
+        else if(batch_size == 8)  tasks[0] = { reinterpret_cast<void(*)(const void*)>(run_softmax_work_item_batch8),  &task_data[0] };
+        else if(batch_size == 48) tasks[0] = { reinterpret_cast<void(*)(const void*)>(run_softmax_work_item_batch48), &task_data[0] };
     }
 
-    inline __m256 _inner_mm256_exp_ps(__m256 arg)
+    static inline __m256 _inner_mm256_exp_ps(__m256 arg)
     {
         __m256 mask = _mm256_cmp_ps(arg, _mm256_set1_ps(-87.336f), _CMP_GT_OQ);
 
@@ -125,7 +108,7 @@ struct softmax_avx2_worker : public neural::is_an_implementation
     }
 
     template<uint32_t T_SIZE, uint32_t T_batch_width>
-    void softmax_finalize_block(float* &output_ptr, __m256 &acc_sum)
+    static void softmax_finalize_block(float* &output_ptr, __m256 &acc_sum)
     {
         // We are not using table of registers and unroll pragmas
         // due to compiler which have issues with register allocation
@@ -135,7 +118,7 @@ struct softmax_avx2_worker : public neural::is_an_implementation
             acc5, acc6, acc7, acc8, acc9,
             acc10, acc11, acc12, acc13, acc14;
 
-__pragma(warning(push))
+//__pragma(warning(push))
 __pragma(warning(disable:4127))
 
         // Load outputs and perform multiplication.
@@ -172,13 +155,13 @@ __pragma(warning(disable:4127))
         if (T_SIZE >= 14) _mm256_storeu_ps(output_ptr + 13 * T_batch_width, acc13);
         if (T_SIZE >= 15) _mm256_storeu_ps(output_ptr + 14 * T_batch_width, acc14);
 
-__pragma(warning(pop))
+//__pragma(warning(pop))
 
         output_ptr += T_batch_width*T_SIZE;
     }
 
     template<uint32_t T_SIZE, uint32_t T_batch_width>
-    void softmax_compute_block(float* &output_ptr, __m256 &acc_sum)
+    static void softmax_compute_block(float* &output_ptr, __m256 &acc_sum)
     {
         // We are not using table of registers and unroll pragmas
         // due to compiler which have issues with register allocation
@@ -187,9 +170,6 @@ __pragma(warning(pop))
         __m256  acc0, acc1, acc2, acc3, acc4,
                 acc5, acc6, acc7, acc8, acc9,
                 acc10, acc11, acc12, acc13, acc14;
-
-__pragma(warning(push))
-__pragma(warning(disable:4127))
 
         // Load inputs and perform e^x
         if (T_SIZE >=  1)  acc0 = _inner_mm256_exp_ps(_mm256_loadu_ps(output_ptr +  0 * T_batch_width));
@@ -242,13 +222,11 @@ __pragma(warning(disable:4127))
         if (T_SIZE >= 14) acc_sum = _mm256_add_ps(acc13, acc_sum);
         if (T_SIZE >= 15) acc_sum = _mm256_add_ps(acc14, acc_sum);
 
-__pragma(warning(pop))
-
         output_ptr += T_batch_width*T_SIZE;
     }
 
     template<uint32_t T_NUM_ITERATIONS>
-    void softmax_compute_subsimd(
+    static void softmax_compute_subsimd(
         float* &output_ptr,
         float &acc_sum)
     {
@@ -263,7 +241,7 @@ __pragma(warning(pop))
     }
 
     template<uint32_t T_NUM_ITERATIONS>
-    void softmax_finalize_subsimd(
+    static void softmax_finalize_subsimd(
         float* &output_ptr,
         float &acc_sum)
     {
@@ -277,7 +255,8 @@ __pragma(warning(pop))
         }
     }
 
-    void run_softmax_work_item_latency(const softmax *softmax_layer) {
+    static void run_softmax_work_item_latency(const task_data_t *data) {
+        const softmax *softmax_layer = data->softmax_layer;
         const auto input_arg = softmax_layer->argument.input[0].primitive.as<const memory&>().argument;
 
         const auto input_width  = input_arg.size.spatial[0];
@@ -408,11 +387,12 @@ __pragma(warning(pop))
         }
     }
 
-    void run_softmax_work_item_batch8(const softmax *softmax_layer) {
+    static void run_softmax_work_item_batch8(const task_data_t *data) {
+        const softmax *softmax_layer = data->softmax_layer;
         const auto input_arg = softmax_layer->argument.input[0].primitive.as<const memory&>().argument;
 
         const auto input_width  = input_arg.size.spatial[0];
-        const auto output_width  = softmax_layer->argument.output_size.spatial[0];
+        const auto output_width = softmax_layer->argument.output_size.spatial[0];
 
         const auto num_full_blocks = output_width / C_max_acc_batch8;
         const auto partial_block_size = output_width % C_max_acc_batch8;
@@ -442,7 +422,6 @@ __pragma(warning(pop))
         __m256 acc_sum = _mm256_setzero_ps();
 
         {
-            auto input_buffer = static_cast<float*>(softmax_layer->input_memory(0).pointer);
             auto output_buffer = static_cast<float*>(softmax_layer->output_memory(0).pointer);
 
             for (auto block = 0u; block < num_full_blocks; ++block)
@@ -505,11 +484,12 @@ __pragma(warning(pop))
         }
     }
 
-    void run_softmax_work_item_batch48(const softmax *softmax_layer) {
+    static void run_softmax_work_item_batch48(const task_data_t *data) {
+        const softmax *softmax_layer = data->softmax_layer;
         const auto input_arg = softmax_layer->argument.input[0].primitive.as<const memory&>().argument;
 
         const auto input_width  = input_arg.size.spatial[0];
-        const auto output_width  = softmax_layer->argument.output_size.spatial[0];
+        const auto output_width = softmax_layer->argument.output_size.spatial[0];
 
         const auto num_full_blocks = output_width / C_max_acc_batch48;
         const auto partial_block_size = output_width % C_max_acc_batch48;
@@ -523,20 +503,17 @@ __pragma(warning(pop))
             __m256 max_values[num_batch_packages];
             uint32_t input = 0;
 
-            //#pragma unroll(num_batch_packages)
             for(auto acc = 0u; acc < num_batch_packages; ++acc)
                 max_values[acc] = _mm256_load_ps(input_buffer + input * C_batch48_size + acc * C_simd_width);
 
             ++input;
 
             for(;input < input_width; ++input)
-                //#pragma unroll(num_batch_packages)
                 for(auto acc = 0u; acc < num_batch_packages; ++acc)
                     max_values[acc] = _mm256_max_ps(max_values[acc], _mm256_load_ps(input_buffer + input * C_batch48_size + acc * C_simd_width));
 
             for(uint32_t output = 0; output < output_width; ++output)
             {
-                //#pragma unroll(num_batch_packages)
                 for(auto acc = 0u; acc < num_batch_packages; ++acc)
                     _mm256_storeu_ps(
                         output_buffer + output * C_batch48_size + acc * C_simd_width,
@@ -634,7 +611,9 @@ softmax_cpu_avx2::softmax_cpu_avx2(softmax &arg)
 
     for (auto &x : input_offset.raw)  if (x != 0) throw std::runtime_error("softmax input offset must be equal to zero.");
     for (auto &x : output_offset.raw) if (x > 0)  throw std::runtime_error("softmax output offset must be equal to zero.");
-    //TODO: compare input output x and b size
+
+    auto batch_size = this_softmax->input_memory(0).argument.size.batch[0];
+    if(batch_size != 1 && batch_size != 8 && batch_size != 48) throw std::runtime_error("softmax batch size must be equal to 1 or 8 or 48.");
 
     assert(1 == this_softmax->argument.input.size());
     assert(1 == this_softmax->argument.output.size());
