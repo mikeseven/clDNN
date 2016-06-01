@@ -867,15 +867,15 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
 }
 
 TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
-    const uint32_t input_width         = 1;   // data = input|output
-    const uint32_t input_height        = 2;   // data = input|output
+    const uint32_t input_width         = 20;   // data = input|output
+    const uint32_t input_height        = 20;   // data = input|output
     const uint32_t input_feature_maps  = 8;
     const uint32_t stride_width        = 2;
     const uint32_t stride_height       = 2;
     const uint32_t output_width        = (input_width +stride_width -1)/stride_width;
     const uint32_t output_height       = (input_height+stride_height-1)/stride_height;
-    const uint32_t output_feature_maps = 4;
-    const uint32_t filter_size         = 3;    // filter size is the same for both axes
+    const uint32_t output_feature_maps = 8;
+    const uint32_t filter_size         = 2;    // filter size is the same for both axes
 
     // allocate memory buffers
     const uint64_t batch_size = 24;
@@ -902,7 +902,7 @@ TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
     auto output_optimized_in_ref_format = memory::allocate({neural::engine::reference, memory::format::yxfb_f32, { 24 , {output_width, output_height}, output_feature_maps}});
 
     // Set pointers
-    execute({output_optimized(output), input_optimized(input), weights_optimized(filter), biases(bias)}).wait();
+    execute({output_optimized(output), input_optimized(input), weights_optimized(filter), biases(bias)});
 
     // Fill primitives with random data
     fill<float>(weights_optimized, 1.0f);
