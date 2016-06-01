@@ -28,12 +28,6 @@
 using namespace neural;
 using namespace tests;
 
-namespace{
-template<typename T> T *align(T *pointer, size_t align) {
-    return reinterpret_cast<T *>((reinterpret_cast<uintptr_t>(pointer)+align-1)/align*align);
-};
-}
-/*
 TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 //  Filter : 2x2
 //  Stride : 2x2
@@ -767,7 +761,6 @@ TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x
                                          0.0005f));
 }
 
- */
 TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
     const uint32_t input_width         = 20;   // data = input|output
     const uint32_t input_height        = 20;   // data = input|output
@@ -800,10 +793,10 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
     std::unique_ptr<float>  input_container = std::move(std::unique_ptr<float>(new float[ input_buffer_size+align_size_in_float]));
     std::unique_ptr<float>   bias_container = std::move(std::unique_ptr<float>(new float[  bias_buffer_size+align_size_in_float]));
 
-    const auto output = align(output_container.get(), align_size);
-    const auto filter = align(filter_container.get(), align_size);
-    const auto  input = align( input_container.get(), align_size);
-    const auto   bias = align(  bias_container.get(), align_size);
+    const auto output = output_container.get();
+    const auto filter = filter_container.get();
+    const auto  input =  input_container.get();
+    const auto   bias =   bias_container.get();
 
     auto input_p  = memory::describe({neural::engine::reference, memory::format::byxf_b24_f32, { 24 , {input_width , input_height }, input_feature_maps}});
     auto output_p = memory::describe({neural::engine::reference, memory::format::byxf_b24_f32, { 24 , {output_width, output_height}, output_feature_maps}});
@@ -874,14 +867,14 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
 }
 
 TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
-    const uint32_t input_width         = 10;   // data = input|output
-    const uint32_t input_height        = 10;   // data = input|output
-    const uint32_t input_feature_maps  = 16;
+    const uint32_t input_width         = 1;   // data = input|output
+    const uint32_t input_height        = 2;   // data = input|output
+    const uint32_t input_feature_maps  = 8;
     const uint32_t stride_width        = 2;
     const uint32_t stride_height       = 2;
     const uint32_t output_width        = (input_width +stride_width -1)/stride_width;
     const uint32_t output_height       = (input_height+stride_height-1)/stride_height;
-    const uint32_t output_feature_maps = 8;
+    const uint32_t output_feature_maps = 4;
     const uint32_t filter_size         = 3;    // filter size is the same for both axes
 
     // allocate memory buffers
@@ -898,51 +891,26 @@ TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
     std::unique_ptr<float>  input_container = std::move(std::unique_ptr<float>(new float[ input_buffer_size+align_size_in_float]));
     std::unique_ptr<float>   bias_container = std::move(std::unique_ptr<float>(new float[  bias_buffer_size+align_size_in_float]));
 
-    const auto output = align(output_container.get(), align_size);
-//    const auto filter = align(filter_container.get(), align_size);
-//    const auto  input = align( input_container.get(), align_size);
-//    const auto   bias = align(  bias_container.get(), align_size);
+    const auto output =output_container.get();
+    const auto filter =filter_container.get();
+    const auto  input = input_container.get();
+    const auto   bias =  bias_container.get();
 
     // Memory descriptors for optimized convolution
     auto output_optimized = memory::describe({neural::engine::reference, memory::format::byxf_b24_f32    , { 24 , {output_width, output_height}, output_feature_maps}});
-//    auto input_optimized  = memory::describe({neural::engine::reference, memory::format::byxf_b24_f32    , { 24 , {input_width , input_height }, input_feature_maps}});
-//    auto weights_optimized= memory::describe({neural::engine::reference, memory::format::yx_fo_fi_fo4_f32, { 1  , {filter_size   , filter_size}, {output_feature_maps, input_feature_maps}}});
- //   auto biases           = memory::describe({neural::engine::reference, memory::format::x_f32           , { 1  , {{output_feature_maps}}      , 1 }});
-//    auto output_optimized_in_ref_format = memory::allocate({neural::engine::reference, memory::format::yxfb_f32, { 24 , {output_width, output_height}, output_feature_maps}});
+    auto input_optimized  = memory::describe({neural::engine::reference, memory::format::byxf_b24_f32    , { 24 , {input_width , input_height }, input_feature_maps}});
+    auto weights_optimized= memory::describe({neural::engine::reference, memory::format::yx_fo_fi_fo4_f32, { 1  , {filter_size   , filter_size}, {output_feature_maps, input_feature_maps}}});
+    auto biases           = memory::describe({neural::engine::reference, memory::format::x_f32           , { 1  , {{output_feature_maps}}      , 1 }});
+    auto output_optimized_in_ref_format = memory::allocate({neural::engine::reference, memory::format::yxfb_f32, { 24 , {output_width, output_height}, output_feature_maps}});
 
     // Set pointers
-//    try{
-    execute({output_optimized(output)});
-//    } catch(std::exception &e){
-//        std::cout << e.what();
-//    }
+    execute({output_optimized(output), input_optimized(input), weights_optimized(filter), biases(bias)}).wait();
 
-    std::cout << "test1\n";
-    std::cout << "test2\n";
-//    try{
-//        execute({input_optimized(input)});
-//    } catch(std::exception &e){
-//    std::cout << e.what();
-//    }
-
-//    try{
-//        execute({weights_optimized(filter)});
-//    } catch(std::exception &e){
-//        std::cout << e.what();
-//    }
-
-//    try{
-//        execute({biases(bias)});
-//    } catch(std::exception &e){
-//        std::cout << e.what();
-//    }
-
-    /*
     // Fill primitives with random data
-    fill<float>(biases           );
-    fill<float>(weights_optimized);
-    fill<float>(output_optimized );
-    fill<float>(input_optimized  );
+    fill<float>(weights_optimized, 1.0f);
+    fill<float>(output_optimized , 1.0f);
+    fill<float>(input_optimized  , 1.0f);
+    fill<float>(biases           , 1.0f);
 
     auto conv_optimized   = convolution::create( {neural::engine::cpu,
                                                  output_optimized,
@@ -955,6 +923,7 @@ TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
     auto input_ref  = memory::allocate({neural::engine::reference, memory::format::yxfb_f32, { 24 , {input_width , input_height }, input_feature_maps}});
     auto output_ref = memory::allocate({neural::engine::reference, memory::format::yxfb_f32, { 24 , {output_width, output_height}, output_feature_maps}});
     auto weights_ref= memory::allocate({neural::engine::reference, memory::format::oiyx_f32, { 1  , {filter_size , filter_size  }, {output_feature_maps, input_feature_maps}}});
+
     // the same bias primitive is used in both implementations
     auto conv_ref   = convolution::create( {neural::engine::reference,
                                             output_ref,
@@ -964,19 +933,22 @@ TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
                                            );
 
     // Reordering primitives.
-    auto reorder_input_optimized_to_ref   = reorder::create({engine::reference, input_ref, input_optimized});
-    auto reorder_weights_optimized_to_ref = reorder::create({engine::reference, weights_ref, weights_optimized});
+    auto reorder_input_optimized_to_ref   = reorder::create({engine::reference, input_optimized, input_ref});
+    auto reorder_weights_optimized_to_ref = reorder::create({engine::reference, weights_optimized, weights_ref});
 
-    auto reorder_output_optimized_ref_format = reorder::create({engine::reference, output_optimized_in_ref_format, output_optimized});
+    auto reorder_output_optimized_ref_format = reorder::create({engine::reference, output_optimized, output_optimized_in_ref_format});
 
     auto engine_resource = worker_cpu::create({4});
      execute(
      { reorder_input_optimized_to_ref, reorder_weights_optimized_to_ref // copy input/weigts
      , conv_optimized, conv_ref                                         // run both convolutions
-     , reorder_output_optimized_ref_format                              // copy optimized output to another buffer in reference output's format, so we can compare them
+     , reorder_output_optimized_ref_format }                            // copy optimized output to another buffer in reference output's format, so we can compare them
      , {engine_resource}).wait();
 
+     auto& output_mem_optimized = output_optimized.as<const memory&>();
+     auto& output_mem_ref       = output_ref.as<const memory&>();
      for(size_t i = 0; i < output_buffer_size; ++i)
-       EXPECT_EQ(true, tests::are_equal(static_cast<float*>(output_ref.pointer)[i], static_cast<float*>(output_optimized_in_ref_format.pointer)[i])) << "at index " << i;
-*/
+       EXPECT_EQ(true, tests::are_equal(static_cast<float*>(output_mem_ref.pointer)[i],
+                                        static_cast<float*>(output_mem_optimized.pointer)[i]))
+               << "at index " << i;
 }

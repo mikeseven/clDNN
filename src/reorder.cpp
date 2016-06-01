@@ -140,6 +140,12 @@ namespace neural {
             { std::make_tuple(engine::reference, memory::format::bs_yxf_bv24_f32, memory::format::yxfb_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::bs_yxf_bv24_f32), reorder_reference::create },
 
+            { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::byxf_b24_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::byxf_b24_f32, memory::format::yxfb_f32), reorder_reference::create },
+
+            { std::make_tuple(engine::reference, memory::format::yx_fo_fi_fo4_f32, memory::format::oiyx_f32), reorder_reference::create },
+            { std::make_tuple(engine::reference, memory::format::oiyx_f32, memory::format::yx_fo_fi_fo4_f32), reorder_reference::create },
+
             { std::make_tuple(engine::reference, memory::format::x_f32, memory::format::x_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), reorder_reference::create },
             { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::fyxb_f32), reorder_reference::create },
@@ -166,7 +172,7 @@ namespace neural {
         };
 
     }
-    reorder::arguments::arguments(neural::engine::type _engine, primitive_at _in, primitive _out)
+    reorder::arguments::arguments(neural::engine::type _engine, primitive_at _in, primitive _out) //todo Artur fix arguments order
         : engine(_engine)
         , output({_out})
         , input({_in}) {}
