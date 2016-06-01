@@ -85,6 +85,25 @@ template<> size_t index<neural::memory::format::fyxb_f32>(std::vector<uint32_t> 
 }
 
 
+template<>
+size_t index<neural::memory::format::bs_yxf_bv24_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
+    assert(
+        [&]() -> bool {
+        for (size_t i = 0; i < pos.size(); ++i)
+            if (size[i] <= pos[i]) return false;
+
+        return true;
+    }() == true);
+    assert(pos.size() == size.size());
+    assert(size[0] % 24 == 0); // batch
+
+    uint32_t slice_id = pos[0] / 24;
+    uint32_t id_in_slice = pos[0] % 24;
+
+    auto idx = id_in_slice + 24 * (pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + slice_id * size[3])));
+    return idx;
+};
+
 fptr choose_calculate_idx(neural::memory::format::type arg){
     switch (arg){
         case neural::memory::format::type::x_f32: // treat x_f32 as xb_f32 with b=1
@@ -96,7 +115,8 @@ fptr choose_calculate_idx(neural::memory::format::type arg){
         case neural::memory::format::type::os_yxi_sv16_f32: return index<neural::memory::format::type::os_yxi_sv16_f32>;
         case neural::memory::format::type::bfyx_f32:        return index<neural::memory::format::type::bfyx_f32>;
         case neural::memory::format::type::fyxb_f32:        return index<neural::memory::format::type::fyxb_f32>;
-
+        case neural::memory::format::type::bs_yxf_bv24_f32: return index<neural::memory::format::type::bs_yxf_bv24_f32>;
+            break;
         default:
             throw std::runtime_error("choose_calculate_idx has no case for memory::format " + std::to_string(arg));
     }
