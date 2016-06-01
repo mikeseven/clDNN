@@ -61,25 +61,25 @@ struct task {
 
 
 struct task_group {
-	std::vector<task> tsk;
-	bool use_hyper_threading = true;
-	int task_count_per_thread = 1;								// portion of tasks which obtain every thread for processing per iteration
+    std::vector<task> tsk;
+    bool use_hyper_threading = true;
+    int task_count_per_thread = 1;                              // portion of tasks which obtain every thread for processing per iteration
 
-	task_group(const std::vector<task>& _tsk) : tsk(_tsk) {};	// workaround, could be remove in future
-	task_group(const task _task) : tsk{ _task } {};				// workaround, could be remove in future
+    task_group(const std::vector<task>& _tsk) : tsk(_tsk) {};   // workaround, could be remove in future
+    task_group(const task _task) : tsk{ _task } {};             // workaround, could be remove in future
 
-	task_group() {};
-	task_group(const task_group& tp) : tsk(tp.tsk), use_hyper_threading(tp.use_hyper_threading), task_count_per_thread(tp.task_count_per_thread) {};
-	task_group& operator=(const task_group& tp)
-	{
-		if (this != &tp)
-		{
-			tsk = tp.tsk;
-			use_hyper_threading = tp.use_hyper_threading;
-			task_count_per_thread = tp.task_count_per_thread;
-		}
-		return *this;
-	}
+    task_group() {};
+    task_group(const task_group& tp) : tsk(tp.tsk), use_hyper_threading(tp.use_hyper_threading), task_count_per_thread(tp.task_count_per_thread) {};
+    task_group& operator=(const task_group& tp)
+    {
+        if (this != &tp)
+        {
+            tsk = tp.tsk;
+            use_hyper_threading = tp.use_hyper_threading;
+            task_count_per_thread = tp.task_count_per_thread;
+        }
+        return *this;
+    }
 };
 
 
@@ -248,7 +248,7 @@ template<typename T_type> __attribute__((noinline)) type_traits *type_id() {
 
 class engine  { engine();  public: enum type { 
     // engines
-      reference                     // naive & easy to debug implementation for validation
+      reference=1                   // naive & easy to debug implementation for validation
     , cpu                           // optimized CPU implementation
     , any=static_cast<uint32_t>(-1) // 'any' engine for querries
 
@@ -256,6 +256,7 @@ class engine  { engine();  public: enum type {
     , lazy = 0x80000000             // lazy evaluation
 }; };
 inline engine::type operator|(engine::type a, engine::type b) { return static_cast<engine::type>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b)); };
+inline engine::type operator&(engine::type a, engine::type b) { return static_cast<engine::type>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b)); };
 
 class padding { padding(); public: enum type { zero }; };
 
@@ -341,7 +342,7 @@ public:
     worker(is_a_worker *raw) : _pointer(raw) {};
     worker(const worker &other) : _pointer(other._pointer) {};
 
-    neural::engine::type engine() { return _pointer->engine(); }
+    neural::engine::type engine() const { return _pointer->engine(); }
     void execute(const neural::task_group& requests) const { _pointer->execute(requests);}
 };
 
@@ -416,7 +417,7 @@ class is_a_primitive {
 protected:
     type_traits                     *_type_traits;
     std::map<std::string, any_value> _map;
-    task_group						_work;
+    task_group                        _work;
     is_a_primitive(type_traits *traits) : _type_traits(traits) {}
 public:
     virtual ~is_a_primitive() {};
@@ -432,14 +433,14 @@ public:
     friend class primitive;
 
     // to be removed when new thread queue will be done
-	friend class nn_thread_worker_pool;
+    friend class nn_thread_worker_pool;
 };
 
 // implementations of inline functions from primitive
 inline const primitive_at           primitive::input::operator[] (uint32_t at) const { return get_base()->_pointer->input()[at]; }
 inline size_t                       primitive::input::size() const { return get_base()->_pointer->input().size(); }
 inline const primitive              primitive::operator()(void *argument) const { _pointer->execute_argument(argument); return *this; }
-inline const task_group&			primitive::work() const { return _pointer->_work; }
+inline const task_group&            primitive::work() const { return _pointer->_work; }
 inline size_t                       primitive::id() const { return _pointer->_type_traits->id; }
 inline const primitive              primitive::output::operator[](uint32_t at) const { return get_base()->_pointer.get()->output()[at]; }
 inline size_t                       primitive::output::size() const { return get_base()->_pointer.get()->output().size(); }
@@ -463,15 +464,16 @@ public:
 };
 
 // asynchronous result
+class async_execution;
 class async_result {
-    std::shared_ptr<volatile uint32_t> _tasks_left;
-    async_result(std::shared_ptr<volatile uint32_t> arg) : _tasks_left(arg) {}
+    std::shared_ptr<async_execution> _execution;
+    async_result(std::shared_ptr<async_execution> arg) : _execution(arg) {}
 
     // execution of sequence of primitives
     friend DLL_SYM async_result execute(std::vector<primitive>, std::vector<worker>);
 public:
-    uint32_t tasks_left() { return *_tasks_left; };
-    void wait() { while(tasks_left()); }
+    DLL_SYM size_t tasks_left(); 
+    DLL_SYM void wait();
 };
 DLL_SYM async_result execute(std::vector<primitive> primitives, std::vector<worker> workers=std::vector<worker>());
 

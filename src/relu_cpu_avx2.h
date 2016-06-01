@@ -35,7 +35,7 @@ namespace neural {
         ~relu_backward_cpu_avx2();
 
         static is_an_implementation *create(relu_backward &arg) { return new relu_backward_cpu_avx2(arg); };
-		task_group work() { return relu_ptr->work(); };
+        task_group work() { return relu_ptr->work(); };
 
         std::unique_ptr<is_an_implementation> relu_ptr;
         const relu_backward &outer;

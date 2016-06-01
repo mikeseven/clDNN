@@ -16,17 +16,14 @@
 
 #pragma once
 
-#include "lrn.h"
+#include "api/neural.h"
+#include "implementation_map.h"
+#include "pooling_cpu_reference.h"
 
-namespace neural {
-    struct lrn_cpu_reference : is_an_implementation {
-        lrn_cpu_reference(normalization::response &arg);
-        ~lrn_cpu_reference();
-        static void implementation(const void *ptr);
+namespace neural{
+    //                                           engine                          output                  input
+    using pool_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
+    using pool_bw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>; //todo
 
-        static is_an_implementation *create(normalization::response &arg) { return new lrn_cpu_reference(arg); };
-        task_group work() { return{ task{ implementation, &outer } }; };
-
-        const normalization::response &outer;
-    };
+    using pool_fw_implementation_map = singleton_map<pool_fw_key, std::function<is_an_implementation *(pooling &)>>;
 }
