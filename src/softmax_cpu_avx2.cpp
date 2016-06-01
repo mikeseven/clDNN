@@ -417,17 +417,17 @@ __pragma(warning(pop))
 
             __m256 max_values;
             uint32_t input = 0;
-            max_values = _mm256_load_ps(input_buffer + (input++) * C_batch8_size);
+            max_values = _mm256_loadu_ps(input_buffer + (input++) * C_batch8_size);
 
             while(input < input_width)
-                max_values = _mm256_max_ps(max_values, _mm256_load_ps(input_buffer + (input++) * C_batch8_size));
+                max_values = _mm256_max_ps(max_values, _mm256_loadu_ps(input_buffer + (input++) * C_batch8_size));
 
             for(uint32_t output = 0; output < output_width; ++output)
             {
                     _mm256_storeu_ps(
                         output_buffer + output * C_batch8_size,
                         _mm256_sub_ps(
-                            _mm256_load_ps(input_buffer + output * C_batch8_size),
+                            _mm256_loadu_ps(input_buffer + output * C_batch8_size),
                             max_values));
             }
         }
@@ -517,13 +517,13 @@ __pragma(warning(pop))
             uint32_t input = 0;
 
             for(auto acc = 0u; acc < num_batch_packages; ++acc)
-                max_values[acc] = _mm256_load_ps(input_buffer + input * C_batch48_size + acc * C_simd_width);
+                max_values[acc] = _mm256_loadu_ps(input_buffer + input * C_batch48_size + acc * C_simd_width);
 
             ++input;
 
             for(;input < input_width; ++input)
                 for(auto acc = 0u; acc < num_batch_packages; ++acc)
-                    max_values[acc] = _mm256_max_ps(max_values[acc], _mm256_load_ps(input_buffer + input * C_batch48_size + acc * C_simd_width));
+                    max_values[acc] = _mm256_max_ps(max_values[acc], _mm256_loadu_ps(input_buffer + input * C_batch48_size + acc * C_simd_width));
 
             for(uint32_t output = 0; output < output_width; ++output)
             {
@@ -531,7 +531,7 @@ __pragma(warning(pop))
                     _mm256_storeu_ps(
                         output_buffer + output * C_batch48_size + acc * C_simd_width,
                         _mm256_sub_ps(
-                            _mm256_load_ps(input_buffer + output * C_batch48_size + acc * C_simd_width),
+                            _mm256_loadu_ps(input_buffer + output * C_batch48_size + acc * C_simd_width),
                             max_values[acc]));
             }
         }
