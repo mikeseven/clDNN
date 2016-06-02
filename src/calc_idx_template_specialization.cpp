@@ -97,7 +97,7 @@ template<> size_t index<neural::memory::format::byxf_b24_f32>(std::vector<uint32
 }
 
 
-template<> size_t index<neural::memory::format::yx_fo_fi_fo4_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+template<> size_t index<neural::memory::format::yxoi_o4_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position

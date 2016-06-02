@@ -19,8 +19,6 @@
 
 int main()
 {
-    using namespace neural;
-
     extern void example_convolution_cpu_forward();
 
     try {

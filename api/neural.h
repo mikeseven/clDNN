@@ -57,7 +57,7 @@ struct memory : is_a_primitive {
         fyxb_f32,   // used in Caffe
         oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
         byxf_b24_f32,        // for convolution_cpu_generic
-        yx_fo_fi_fo4_f32,       // for convolution_cpu_generic
+        yxoi_o4_f32,       // for convolution_cpu_generic
         os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
         bs_yxf_bv24_f32,
         any=static_cast<uint32_t>(-1)
@@ -70,11 +70,11 @@ struct memory : is_a_primitive {
         case format::yxfb_f32:
         case format::byxf_f32:
         case format::bfyx_f32:
-        case format::oiyx_f32: 
+        case format::oiyx_f32:
         case format::fyxb_f32:
         case format::bs_yxf_bv24_f32:
         case format::byxf_b24_f32:
-        case format::yx_fo_fi_fo4_f32:
+        case format::yxoi_o4_f32:
         case format::os_yxi_sv16_f32: return {4, type_id<float>()};
         default: throw std::runtime_error("unknown memory::format");
         }
@@ -251,8 +251,8 @@ private:
 //     auto weights_diff = memory::describe({eng, memory::format::yxfb_f32, {1, {2, 2}, 1}});
 //     auto biases       = memory::describe({eng, memory::format::x_f32,    {1, {{1}} , 1}});
 //     auto biases_diff  = memory::describe({eng, memory::format::x_f32,    {1, {{1}} , 1}});
-//     auto conv_bw = convolution_backward::create({engine::reference, 
-//         std::vector<primitive>{bw_output, weights_diff, biases_diff}, 
+//     auto conv_bw = convolution_backward::create({engine::reference,
+//         std::vector<primitive>{bw_output, weights_diff, biases_diff},
 //         {bw_input, fw_input, weights, biases}, {1, {1, 1}, 1}, padding::zero});
 struct convolution_backward : is_a_primitive {
     struct arguments {
@@ -472,7 +472,7 @@ namespace normalization { //////////////////////////////////////////////////////
 
 // neural::normalization::response
 //
-// Forward local response normalization as described in chapter 3.3 of "ImageNet Classification with Deep Convolutional 
+// Forward local response normalization as described in chapter 3.3 of "ImageNet Classification with Deep Convolutional
 // Neural Networks" by Khrizevsky, Sutskever, Hinton. see: http://www.cs.toronto.edu/~fritz/absps/imagenet.pdf
 // Alogrithm:
 //   b(i,x,y) = a(i,x,y) / (k+alpha*sum(min(N-1, i+n/2); j=max(0,i-n/2); a(j,x,y)^2))
@@ -802,7 +802,7 @@ struct worker_cpu : is_a_worker {
     DLL_SYM void execute(const neural::task_group& requests) const;
     DLL_SYM neural::engine::type engine() const {return neural::engine::cpu;}
 
-    ~worker_cpu(); 
+    ~worker_cpu();
 
 private:
     worker_cpu(arguments arg);
