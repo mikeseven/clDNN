@@ -17,12 +17,12 @@
 #define XBYAK_NO_OP_NAMES
 #define XBYAK_USE_MMAP_ALLOCATOR
 
-#include "convolution_cpu_jit.h"
-#include "xbyak/xbyak.h"
-
 #include <cstddef>
 #include <functional>
 #include <utility>
+
+#include "convolution_cpu_jit.h"
+#include "xbyak/xbyak.h"
 
 //todo add support for situation when data pointer is unknown during creation
 namespace{
@@ -346,7 +346,7 @@ struct jit_convolution_zxyn : public neural::is_an_implementation
             tasks[i] = {reinterpret_cast<void(*)(const void*)>(code.getCode()), &op_data[i]};
     }
 	neural::task_group work() {
-        return this->tasks;
+        return {this->tasks, neural::schedule::split};
     };
 };
 }

@@ -867,14 +867,14 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
 }
 
 TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
-    const uint32_t input_width         = 20;   // data = input|output
-    const uint32_t input_height        = 20;   // data = input|output
+    const uint32_t input_width         = 6;   // data = input|output
+    const uint32_t input_height        = 6;   // data = input|output
     const uint32_t input_feature_maps  = 8;
     const uint32_t stride_width        = 2;
     const uint32_t stride_height       = 2;
     const uint32_t output_width        = (input_width +stride_width -1)/stride_width;
     const uint32_t output_height       = (input_height+stride_height-1)/stride_height;
-    const uint32_t output_feature_maps = 8;
+    const uint32_t output_feature_maps = 4;
     const uint32_t filter_size         = 2;    // filter size is the same for both axes
 
     // allocate memory buffers

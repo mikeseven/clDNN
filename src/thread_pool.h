@@ -38,6 +38,7 @@ namespace neural
 
         uint32_t thread_batch_size;
         uint32_t enable_thread_denom;
+        uint32_t num_threads;
         const std::vector<task>* current_request;
         volatile bool stop;
 

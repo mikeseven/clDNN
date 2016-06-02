@@ -27,12 +27,11 @@ nn_thread_worker_pool::nn_thread_worker_pool(uint32_t arg_num_threads)
     , current_task_id(0) 
     , num_logical_per_physical_core(2)  // deafult number of logical core per physical.  Should be obtained by argument or through OS API
     , thread_batch_size(1) 
-    , enable_thread_denom(1) 
+    , enable_thread_denom(1)
+    , num_threads(arg_num_threads == 0 ? std::thread::hardware_concurrency() : arg_num_threads)
     , current_request(nullptr) 
     , stop(false)
 {
-    auto num_logic_cores = std::thread::hardware_concurrency();
-    auto num_threads = arg_num_threads == 0 ? num_logic_cores : (arg_num_threads);
     active_threads = num_threads;
 
     // creating threads
@@ -59,11 +58,11 @@ nn_thread_worker_pool::~nn_thread_worker_pool() {
 void nn_thread_worker_pool::push_job(const task_group& requests) {
     {
         std::lock_guard<std::mutex> ul(mtx_wake);
-        current_request = &requests.tsk;
-        taskcount  = static_cast<uint32_t>(requests.tsk.size());
+        current_request = &requests.tasks;
+        taskcount  = static_cast<uint32_t>(requests.tasks.size());
         current_task_id = 0;
-        enable_thread_denom = requests.use_hyper_threading ? 1 : num_logical_per_physical_core;
-        thread_batch_size = requests.task_count_per_thread;
+        enable_thread_denom = requests.schedule==schedule::single ? num_threads : 1;
+        thread_batch_size = requests.schedule==schedule::unordered ? 1 : (taskcount+num_threads)/num_threads;
         cv_wake.notify_all();
     }
     std::unique_lock<std::mutex> ul(mtx_wake);
