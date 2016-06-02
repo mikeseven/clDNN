@@ -347,8 +347,8 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
 
     //const int b_pos = 0;
     const int f_pos = 1;
-    const int y_pos = 2;
-    const int x_pos = 3;
+    const int x_pos = 2;
+    const int y_pos = 3;
 
     assert( 2 == output_size.spatial.size() );
     assert( weights_arg.size.spatial[0] == weights_arg.size.spatial[1] ); //todo what is weights format?
