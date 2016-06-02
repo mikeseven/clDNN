@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "api/neural.h"
+#include "memory.h"
 
 #include <functional>
 #include <numeric>
@@ -32,7 +32,13 @@ size_t memory::count() const {
 }
 
 memory::~memory() {
-    if(argument.owns_memory) delete[] static_cast<char *>(pointer);
+    if (!argument.owns_memory) return;
+
+    auto key = argument.engine;
+    auto it = allocators_map::instance().find(key);
+    if (it == std::end(allocators_map::instance())) return;
+
+    it->second.deallocate(pointer, count()*memory::traits(argument.format).type->size);
 }
 
 primitive memory::describe(memory::arguments arg){
@@ -40,10 +46,38 @@ primitive memory::describe(memory::arguments arg){
 }
 
 primitive memory::allocate(memory::arguments arg){
+    auto key = arg.engine;
+    auto it = allocators_map::instance().find(key);
+    if(it == std::end(allocators_map::instance())) throw std::runtime_error("Memory allocator is not yet implemented.");
+
     auto result = std::unique_ptr<memory>(new memory(arg));
-    result->pointer = new char[result->count()*memory::traits(arg.format).type->size];
+    result->pointer = it->second.allocate(result->count()*memory::traits(arg.format).type->size);
+//    result->pointer = new char[result->count()*memory::traits(arg.format).type->size];
     const_cast<memory::arguments &>(result->argument).owns_memory = true;
     return result.release();
+}
+
+namespace {
+    struct attach {
+        attach() {
+            memory_allocator default_allocator {
+                [](size_t size) { return new char[size]; },
+                [](void* pointer, size_t) { delete[] static_cast<char *>(pointer); }
+            };
+
+            allocators_map::instance().insert({ engine::reference, default_allocator });
+            allocators_map::instance().insert({ engine::cpu, default_allocator });
+        }
+        ~attach() {}
+    };
+
+#ifdef __GNUC__
+    __attribute__((visibility("default"))) //todo meybe dll_sym?
+#elif _MSC_VER
+#   pragma section(".nn_init$m", read, write)
+#endif
+    attach attach_impl;
+
 }
 
 } // namespace neural
