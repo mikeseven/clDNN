@@ -272,33 +272,34 @@ TYPED_TEST(MKL_DNN_CPU_ConvLayerTest, TestSimpleConvolution) {
 #endif
 }
 
-TYPED_TEST(MKL_DNN_CPU_ConvLayerTest, TestGenericJitConvolutionBatch24) {
-    const uint32_t input_width         = 15;
-    const uint32_t input_height        = 15;
-    const uint32_t input_feature_maps  = 8;
-    const uint32_t stride              = 2;
-    const uint32_t output_width        = (input_width +stride-1)/stride;
-    const uint32_t output_height       = (input_height+stride-1)/stride;
-    const uint32_t output_feature_maps = 4;
-    const uint32_t filter_size         = 5;    // filter size is the same for both axes
-    const uint32_t batch_size          = 24;
+TYPED_TEST(MKL_DNN_CPU_ConvLayerTest, DISABLED_TestGenericJitConvolutionBatch24) {
+  typedef typename TypeParam::Dtype Dtype;
+  const uint32_t input_width         = 15;
+  const uint32_t input_height        = 15;
+  const uint32_t input_feature_maps  = 8;
+  const uint32_t stride              = 2;
+  const uint32_t output_width        = (input_width +stride-1)/stride;
+  const uint32_t output_height       = (input_height+stride-1)/stride;
+  const uint32_t output_feature_maps = 4;
+  const uint32_t filter_size         = 5;    // filter size is the same for both axes
+  const uint32_t batch_size          = 24;
 
     Blob<float> bottom(batch_size, output_feature_maps, output_width, output_height);
     Blob<float> top   (batch_size, input_feature_maps , input_width , input_height );
 
-    LayerParameter layer_param;
-    ConvolutionParameter* convolution_param = layer_param.mutable_convolution_param();
-    convolution_param->add_kernel_size(filter_size);
-    convolution_param->set_num_output(output_feature_maps);
-    convolution_param->mutable_weight_filler()->set_type("gaussian");
-    convolution_param->mutable_bias_filler()->set_type("constant");
-    convolution_param->mutable_bias_filler()->set_value(0.0);
-    convolution_param->add_stride(stride);
+  LayerParameter layer_param;
+  ConvolutionParameter* convolution_param = layer_param.mutable_convolution_param();
+  convolution_param->add_kernel_size(filter_size);
+  convolution_param->set_num_output(output_feature_maps);
+  convolution_param->mutable_weight_filler()->set_type("gaussian");
+  convolution_param->mutable_bias_filler()->set_type("constant");
+  convolution_param->mutable_bias_filler()->set_value(0.0);
+  convolution_param->add_stride(stride);
 
-    shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference )); //jgrzybek todo change
-    layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
-    layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
+  shared_ptr<Layer<Dtype> > layer(
+    new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::reference )); //jgrzybek todo change
+  layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
+  layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
   const Dtype* top_data;
   const Dtype* ref_top_data;

@@ -607,7 +607,7 @@ __pragma(warning(pop))
     }
 
     task_group work() {
-        return this->tasks;
+        return {this->tasks, schedule::unordered};
     }
 };
 

@@ -251,7 +251,7 @@ namespace {
 
         static jit_code code(input_feature_maps);
 
-        tasks.tsk.resize(job_count);
+        tasks.tasks.resize(job_count);
         op_data.resize(job_count);
         op_array.resize(job_count);
 
@@ -329,8 +329,8 @@ namespace {
                     , bias
                 };
 
-                tasks.tsk[at].callback = reinterpret_cast<void (*)(const void *)>(code.getCode());
-                tasks.tsk[at].data     = &op_array[at];
+                tasks.tasks[at].callback = reinterpret_cast<void (*)(const void *)>(code.getCode());
+                tasks.tasks[at].data     = &op_array[at];
             }
     }
 

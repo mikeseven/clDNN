@@ -346,6 +346,6 @@ TEST(pooling_forward, naive_comparison_optimized_max_bs_yxf_bv24_f32_wsiz2x2_wst
         reorder_output_to_tmp_ref
     }, {engine_resource}).wait();
 
-    for (size_t i = 0; i < output_memory_ref.count(); i++)
+    for (uint32_t i = 0; i < static_cast<uint32_t>(output_memory_ref.count()); i++)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(temp_output_memory, i))) << " at index " << i << "\n";
 }
