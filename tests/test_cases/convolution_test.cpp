@@ -801,7 +801,7 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
     auto input_p  = memory::describe({neural::engine::reference, memory::format::byxf_b24_f32, { 24 , {input_width , input_height }, input_feature_maps}});
     auto output_p = memory::describe({neural::engine::reference, memory::format::byxf_b24_f32, { 24 , {output_width, output_height}, output_feature_maps}});
     auto weights_p= memory::describe({neural::engine::reference, memory::format::yxoi_o4_f32 , { 1  , {filter_size   , filter_size }, {output_feature_maps, input_feature_maps}}});
-    auto biases_p = memory::describe({neural::engine::reference, memory::format:x_f32        , { 1  , {{output_feature_maps}}  , 1 }});
+    auto biases_p = memory::describe({neural::engine::reference, memory::format::x_f32       , { 1  , {{output_feature_maps}}  , 1 }});
 
     // initialized inputs & filter with pseudorandom values
     std::mt19937 engine(0xdeadf00d);
