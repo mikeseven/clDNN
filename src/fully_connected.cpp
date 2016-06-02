@@ -83,7 +83,7 @@ struct fully_connected_reference : is_an_implementation {
     }
 
     task_group work() {
-        return{ task{ implementation, &outer } };
+        return {{task{ implementation, &outer}}, schedule::single};
     }
 
     static is_an_implementation *create(fully_connected &arg) { return new fully_connected_reference(arg); };

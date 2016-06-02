@@ -141,7 +141,7 @@ struct relu_avx2_worker : public neural::is_an_implementation
     }
 
     neural::task_group work() {
-        return this->tasks;
+        return {this->tasks, schedule::unordered};
     }
 };
 

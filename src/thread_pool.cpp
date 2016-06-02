@@ -59,11 +59,11 @@ nn_thread_worker_pool::~nn_thread_worker_pool() {
 void nn_thread_worker_pool::push_job(const task_group& requests) {
     {
         std::lock_guard<std::mutex> ul(mtx_wake);
-        current_request = &requests.tsk;
-        taskcount  = static_cast<uint32_t>(requests.tsk.size());
+        current_request = &requests.tasks;
+        taskcount  = static_cast<uint32_t>(requests.tasks.size());
         current_task_id = 0;
-        enable_thread_denom = requests.use_hyper_threading ? 1 : num_logical_per_physical_core;
-        thread_batch_size = requests.task_count_per_thread;
+        enable_thread_denom = requests.schedule==schedule::single ? 1 : num_logical_per_physical_core;
+        thread_batch_size = requests.schedule==schedule::unordered ? 1 : (taskcount+std::thread::hardware_concurrency()-1)/std::thread::hardware_concurrency();
         cv_wake.notify_all();
     }
     std::unique_lock<std::mutex> ul(mtx_wake);

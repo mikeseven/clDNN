@@ -123,7 +123,7 @@ namespace neural {
             }
 
             task_group work() {
-                return{ task{ implementation, &outer } };
+                return {{task{implementation, &outer}}, schedule::unordered};
             }
 
             static is_an_implementation *create(reorder &arg) { return new reorder_reference(arg); };

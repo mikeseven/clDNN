@@ -68,7 +68,7 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
     task_group work()
     {
         requests.push_back({&outer, &minibatch_counter});
-        return {task{implementation, &requests[0]}};
+        return {{task{implementation, &requests[0]}}, schedule::single};
     }
 
     static is_an_implementation *create(normalization::batch_training_forward &arg) { return new batch_normalization_training_forward_reference(arg); };
@@ -230,7 +230,7 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
     task_group work()
     {
         requests.push_back({&outer});
-        return {task{implementation, &requests[0]}};
+        return {{task{implementation, &requests[0]}}, schedule::single};
     }
 
     static is_an_implementation *create(normalization::batch_training_backward &arg) { return new batch_normalization_training_backward_reference(arg); };
@@ -350,7 +350,7 @@ struct batch_normalization_inference_reference : is_an_implementation {
     task_group work()
     {
         requests.push_back({&outer});
-        return {task{implementation, &requests[0]}};
+        return {{task{implementation, &requests[0]}}, schedule::single};
     }
 
     static is_an_implementation *create(normalization::batch_inference &arg) { return new batch_normalization_inference_reference(arg); };

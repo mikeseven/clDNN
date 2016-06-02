@@ -26,7 +26,7 @@ namespace normalization {
         static void implementation(const void *ptr);
 
         static is_an_implementation *create(softmax &arg) { return new softmax_cpu_reference(arg); };
-        task_group work() { return {task{implementation, &outer}}; };
+        task_group work() { return {{task{implementation, &outer}}, schedule::single}; };
 
         const softmax &outer;
     };

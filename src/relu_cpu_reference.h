@@ -25,7 +25,7 @@ namespace neural {
         static void implementation(const void *ptr);
 
         static is_an_implementation *create(relu &arg) { return new relu_cpu_reference(arg); };
-        task_group work() { return {task{implementation, &outer}}; };
+        task_group work() { return {{task{implementation, &outer}}, schedule::unordered}; };
 
         const relu &outer;
     };
@@ -36,7 +36,7 @@ namespace neural {
         static void implementation(const void *ptr);
 
         static is_an_implementation *create(relu_backward &arg) { return new relu_backward_cpu_reference(arg); };
-        task_group work() { return {task{implementation, &outer}}; };
+        task_group work() { return {{task{implementation, &outer}}, schedule::unordered}; };
 
         const relu_backward &outer;
     };
