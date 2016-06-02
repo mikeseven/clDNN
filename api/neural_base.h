@@ -67,11 +67,11 @@ struct schedule { enum type {
 }; };
 
 struct task_group {
-    std::vector<task> tasks;
-    schedule::type schedule;
+    std::vector<task>       tasks;
+    neural::schedule::type  schedule;
 
     task_group() {};
-    task_group(const std::vector<task>& arg_tasks, schedule::type arg_schedule) 
+    task_group(const std::vector<task>& arg_tasks, neural::schedule::type arg_schedule) 
         : tasks(arg_tasks)
         , schedule(arg_schedule)
     {};   // workaround, could be remove in future
