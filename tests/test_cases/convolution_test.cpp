@@ -856,7 +856,6 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
 #endif
                         }
                     }
-                    if(valid<0) valid = 0;
                     auto yo = y+output_view_y;
                     auto xo = x+output_view_x;
                     auto tested = output[b + batch_size*(fo + output_feature_maps*(xo + output_width*yo))];
@@ -905,10 +904,10 @@ TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
     execute({output_optimized(output), input_optimized(input), weights_optimized(filter), biases(bias)});
 
     // Fill primitives with random data
-    fill<float>(weights_optimized, 1.0f);
-    fill<float>(output_optimized , 1.0f);
-    fill<float>(input_optimized  , 1.0f);
-    fill<float>(biases           , 1.0f);
+    fill<float>(weights_optimized);
+    fill<float>(output_optimized );
+    fill<float>(input_optimized  );
+    fill<float>(biases           );
 
     auto conv_optimized   = convolution::create( {neural::engine::cpu,
                                                  output_optimized,

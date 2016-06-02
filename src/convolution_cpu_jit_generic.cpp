@@ -129,13 +129,6 @@ namespace {
                 }
             };
             auto code_epilogue_store        = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovups(ptr [rax+32*n], Ymm(static_cast<int>(n)));};
-            auto code_epilogue_relu_store   = [&]() {
-                vxorps(ymm15, ymm15, ymm15);
-                for(uint64_t n=0; n<accumulators_count; ++n) {
-                    vmaxps(Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)), ymm15);
-                }
-                for(uint64_t n=0; n<accumulators_count; ++n) vmovups(ptr [rax+32*n], Ymm(static_cast<int>(n)));
-            };
 
             // <- code starts here
 
@@ -200,7 +193,7 @@ namespace {
                 code_op_type(0, code_prologue_zero, code_epilogue_store);
 
                 // initial = load -> calculation -> relu -> store
-                code_op_type(2, code_prologue_load, code_epilogue_relu_store);
+                code_op_type(2, code_prologue_load, code_epilogue_store);
 
             L("end");
 

@@ -198,7 +198,7 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch1_sum_to_one) {
 
     auto sum = accumulate(output_memory_ptr, output_memory_ptr + x, 0.0f);
 
-    EXPECT_EQ(true, tests::are_equal(sum, 1.0f));
+    EXPECT_EQ(true, tests::are_equal(sum, 1.0f, 1e-3, 1e-5));
 }
 
 TEST(softmax_xb_f32_fw, intrinsics_avx2_batch1_ref_compare) {
