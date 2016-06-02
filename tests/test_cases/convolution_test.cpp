@@ -757,8 +757,8 @@ TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x
 
     for(size_t output_element = 0; output_element < temp_output_memory.count(); ++output_element)
         EXPECT_EQ(true, tests::are_equal(static_cast<float*>(ref_output_memory.pointer)[output_element],
-                                         static_cast<float*>(temp_output_memory.pointer)[output_element],
-                                         0.0005f));
+                                         static_cast<float*>(temp_output_memory.pointer)[output_element]
+                                         ,1e-3, 1e-4));
 }
 
 TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
@@ -947,6 +947,6 @@ TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
      auto& output_mem_ref       = output_ref.as<const memory&>();
      for(size_t i = 0; i < output_buffer_size; ++i)
        EXPECT_EQ(true, tests::are_equal(static_cast<float*>(output_mem_ref.pointer)[i],
-                                        static_cast<float*>(output_mem_optimized.pointer)[i]))
-               << "at index " << i;
+                                        static_cast<float*>(output_mem_optimized.pointer)[i]
+                                        , 1e-3, 1e-4)) << "at index " << i;
 }
