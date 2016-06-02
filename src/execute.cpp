@@ -29,8 +29,14 @@ class async_execution {
     void start() {
         _tasks_left = _primitives.size();
         auto thread_function = [&]() {
-            for(auto &item : _primitives) {
-                _workers[0].execute(item.work());
+            // here async_execution object exists
+            const auto primitives_count = _primitives.size();
+
+            // It is possible that async_execution will be deleted just after '--_task_left;'.
+            // It imght occur after last iteration, but 'for()' loop will run again to find out that exit condition was met.
+            // Because of this case we cannot use members from async_execution in 'for()' clause itself.
+            for(size_t at=0; at<primitives_count; ++at) {
+                _workers[0].execute(_primitives[at].work());
                 --_tasks_left;
             }
         };
@@ -49,6 +55,8 @@ public:
         // for non-lazy - start execution immediately
         if(!is_lazy()) start();
     }
+
+    ~async_execution() { wait(); }
 
     size_t tasks_left() { return _tasks_left; }
 
