@@ -170,29 +170,31 @@ static void fillrand(primitive& mr)
     auto it = static_cast<float*>(mem.pointer);
     auto size = mem.argument.size.spatial[0] * mem.argument.size.batch[0];
     for (int i = 0; i < size; i++)
-        *it++ = (rand() % 10 - 10) / 2.0f;
+        *it++ = (rand() % 20 - 10) / 2.0f;
 };
 
-TEST(fully_connected_avx2_simd, x_f32) {
-    //  Input  : 3x1
-    //  Output : 4x1
-    //  Weights: 4x3
-    //
-    //  Input:
-    //  -0.5     2    0.5
-    //
-    //  Weights:
-    //   1.5     1    0.5
-    //  -1       0    0.5
-    //   0.5    -0.5 -2
-    //  -0.5     1    1.5
-    //
-    //  Biases:
-    //   1.0, 2.0, 3.0, 4.0
-    //  Output:
-    //   2.5    2.75    0.75   7
+static void TransposeMatrix(primitive& dst, primitive& src)
+{
+	auto& mem_src = src.as<const neural::memory&>();
+	auto& mem_dst = dst.as<const neural::memory&>();
+	auto size = mem_src.argument.size.spatial[0] * mem_dst.argument.size.batch[0];
+	auto width = mem_src.argument.size.spatial[0];
+	auto length = mem_dst.argument.size.batch[0];
 
-    const uint32_t output_x = 16,                 // size of whole output buffer
+	auto memp_src = static_cast<float*>(mem_src.pointer);
+	auto memp_dst = static_cast<float*>(mem_dst.pointer);
+	
+	for (int i = 0; i < size; i++)
+	{
+		auto x = i / length;
+		auto y = i % length;
+		memp_dst[x + y * width] = memp_src[i];
+	}
+};
+
+TEST(fully_connected_avx2_batch1, x_f32) 
+{
+    const uint32_t output_x = 129,                 // size of whole output buffer
                    input_x = 3,                 // size of whole input buffer
                    weight_x = output_x, weight_y = input_x;  // size of whole weights buffer
 
@@ -200,6 +202,7 @@ TEST(fully_connected_avx2_simd, x_f32) {
     auto output_prim    = memory::create({ engine::reference, memory::format::x_f32,{ 1       ,{ { output_x } }, 1 } , true });
     auto output_prim_ref= memory::create({ engine::reference, memory::format:: x_f32,{ 1       ,{ { output_x } }, 1 } , true });
     auto weights_prim   = memory::create({ engine::reference, memory::format::xb_f32,{ weight_y,{ { weight_x } }, 1 } , true });
+	auto weights_prim_tr= memory::create({ engine::reference, memory::format::xb_f32,{ weight_y,{ { weight_x } }, 1 } , true });
     auto bias_prim      = memory::create({ engine::reference, memory::format:: x_f32,{ 1,       { { output_x } }, 1 } , true });
 
     auto full_con_prim_ref = fully_connected::create({ engine::reference, output_prim_ref, input_prim, weights_prim, bias_prim });
@@ -210,23 +213,73 @@ TEST(fully_connected_avx2_simd, x_f32) {
     fillrand(input_prim);
     fillrand(weights_prim);
     fillrand(bias_prim);
+	TransposeMatrix(weights_prim_tr, weights_prim);
+
     
     execute({ full_con_prim_ref }).sync();
 
-    auto full_con_prim = fully_connected::create({ engine::cpu, output_prim, input_prim, weights_prim, bias_prim });
+    auto full_con_prim = fully_connected::create({ engine::cpu, output_prim, input_prim, weights_prim_tr, bias_prim });
     execute({ full_con_prim }).sync();
     auto& output_memory = output_prim.as<const memory&>();
 
     auto it_ref = static_cast<float*>(output_memory_ref.pointer);
     auto it = static_cast<float*>(output_memory.pointer);
 
-    for (int i = 0; i < output_x; i++)
-    {
-        if (!are_equal(it_ref[i], it[i]))
-        {
-            std::cout << "error " << i << std::endl;
-        }
-    }
+	for (int i = 0; i < output_memory_ref.count(); i++)
+		EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i))) << " at index " << i << "\n";
 }
+
+#include <chrono>
+#include <thread>
+
+TEST(fully_connected_avx2_batch8, x_f32) 
+{
+    const uint32_t output_x = 13,     output_b = 8,            // size of whole output buffer
+                     input_x = 3,      input_b  = 8,           // size of whole input buffer
+                 weight_x = output_x, weight_y = input_x;  // size of whole weights buffer
+
+    auto input_prim     = memory::create({ engine::reference, memory::format:: x_f32,{ input_b ,{ { input_x } }, 1 } , true });
+    auto output_prim    = memory::create({ engine::reference, memory::format:: x_f32,{ output_b,{ { output_x } }, 1 } , true });
+    auto output_prim_ref= memory::create({ engine::reference, memory::format:: x_f32,{ output_b,{ { output_x } }, 1 } , true });
+    auto weights_prim   = memory::create({ engine::reference, memory::format::xb_f32,{ weight_y,{ { weight_x } }, 1 } , true });
+    auto weights_prim_tr= memory::create({ engine::reference, memory::format::xb_f32,{ weight_y,{ { weight_x } }, 1 } , true });
+    auto bias_prim      = memory::create({ engine::reference, memory::format:: x_f32,{ 1,       { { output_x } }, 1 } , true });
+
+    auto full_con_prim_ref = fully_connected::create({ engine::reference, output_prim_ref, input_prim, weights_prim, bias_prim });
+
+    auto& output_memory_ref = output_prim_ref.as<const memory&>();
+
+    srand(0);
+    fillrand(input_prim);
+    fillrand(weights_prim);
+    fillrand(bias_prim);
+    TransposeMatrix(weights_prim_tr, weights_prim);
+
+
+    execute({ full_con_prim_ref }).sync();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+
+    auto full_con_prim = fully_connected::create({ engine::cpu, output_prim, input_prim, weights_prim_tr, bias_prim });
+    execute({ full_con_prim }).sync();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    
+    auto& output_memory = output_prim.as<const memory&>();
+
+    auto it_ref = static_cast<float*>(output_memory_ref.pointer);
+    auto it = static_cast<float*>(output_memory.pointer);
+
+    //for (int i = 0; i < output_memory_ref.count(); i++)
+    //    std::cout << " " << *it_ref++;
+
+    //for (int i = 0; i < output_memory.count(); i++)
+    //    std::cout << " " << *it++;
+
+    for (int i = 0; i < output_memory_ref.count(); i++)
+        EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i))) << " at index " << i << "\n";
+}
+
+
 
 

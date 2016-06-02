@@ -84,6 +84,253 @@ namespace neural {
 		NN_ACTIVATION_FUNCTION_LAST = NN_ACTIVATION_FUNCTION_TANH
 	} NN_ACTIVATION_FUNCTION;
 
+
+    template<uint32_t T_SIZE, NN_ACTIVATION_FUNCTION T_FUNCTION, bool T_NEED_BIAS_COPY>
+    void fully_connected_compute_block_batch8(
+        float* input_buffer,
+        float* output_ptr,
+        float* bias_ptr,
+        float* weights_buffer,
+        uint32_t input_width)
+    {
+        // We are not using table of registers and unroll pragmas
+        // due to compiler which have issues with register allocation
+        // and needs special, obvious treatment. Template immediate
+        // arguments matching will remove all conditions in this code.
+        __m256  acc0, acc1, acc2, acc3, acc4,
+            acc5, acc6, acc7, acc8, acc9,
+            acc10, acc11, acc12, acc13, acc14;
+
+        if (T_NEED_BIAS_COPY)
+        {
+            if (T_SIZE >=  1)  acc0 = _mm256_setzero_ps();
+            if (T_SIZE >=  2)  acc1 = _mm256_setzero_ps();
+            if (T_SIZE >=  3)  acc2 = _mm256_setzero_ps();
+            if (T_SIZE >=  4)  acc3 = _mm256_setzero_ps();
+            if (T_SIZE >=  5)  acc4 = _mm256_setzero_ps();
+            if (T_SIZE >=  6)  acc5 = _mm256_setzero_ps();
+            if (T_SIZE >=  7)  acc6 = _mm256_setzero_ps();
+            if (T_SIZE >=  8)  acc7 = _mm256_setzero_ps();
+            if (T_SIZE >=  9)  acc8 = _mm256_setzero_ps();
+            if (T_SIZE >= 10)  acc9 = _mm256_setzero_ps();
+            if (T_SIZE >= 11) acc10 = _mm256_setzero_ps();
+            if (T_SIZE >= 12) acc11 = _mm256_setzero_ps();
+            if (T_SIZE >= 13) acc12 = _mm256_setzero_ps();
+            if (T_SIZE >= 14) acc13 = _mm256_setzero_ps();
+            if (T_SIZE >= 15) acc14 = _mm256_setzero_ps();
+        }
+        else
+        {
+            if (T_SIZE >=  1)  acc0 = _mm256_load_ps(output_ptr +  0 * C_batch8_size);
+            if (T_SIZE >=  2)  acc1 = _mm256_load_ps(output_ptr +  1 * C_batch8_size);
+            if (T_SIZE >=  3)  acc2 = _mm256_load_ps(output_ptr +  2 * C_batch8_size);
+            if (T_SIZE >=  4)  acc3 = _mm256_load_ps(output_ptr +  3 * C_batch8_size);
+            if (T_SIZE >=  5)  acc4 = _mm256_load_ps(output_ptr +  4 * C_batch8_size);
+            if (T_SIZE >=  6)  acc5 = _mm256_load_ps(output_ptr +  5 * C_batch8_size);
+            if (T_SIZE >=  7)  acc6 = _mm256_load_ps(output_ptr +  6 * C_batch8_size);
+            if (T_SIZE >=  8)  acc7 = _mm256_load_ps(output_ptr +  7 * C_batch8_size);
+            if (T_SIZE >=  9)  acc8 = _mm256_load_ps(output_ptr +  8 * C_batch8_size);
+            if (T_SIZE >= 10)  acc9 = _mm256_load_ps(output_ptr +  9 * C_batch8_size);
+            if (T_SIZE >= 11) acc10 = _mm256_load_ps(output_ptr + 10 * C_batch8_size);
+            if (T_SIZE >= 12) acc11 = _mm256_load_ps(output_ptr + 11 * C_batch8_size);
+            if (T_SIZE >= 13) acc12 = _mm256_load_ps(output_ptr + 12 * C_batch8_size);
+            if (T_SIZE >= 14) acc13 = _mm256_load_ps(output_ptr + 13 * C_batch8_size);
+            if (T_SIZE >= 15) acc14 = _mm256_load_ps(output_ptr + 14 * C_batch8_size);
+        }
+
+        auto input_ptr = &input_buffer[0];
+
+        const auto input_ptr_end = &input_buffer[input_width*C_batch8_size];
+
+        while (input_ptr < input_ptr_end)
+        {
+            // Do MADs.
+            __m256 input = _mm256_load_ps(input_ptr);
+            if (T_SIZE >=  1)  acc0 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer +  0),  acc0);
+            if (T_SIZE >=  2)  acc1 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer +  1),  acc1);
+            if (T_SIZE >=  3)  acc2 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer +  2),  acc2);
+            if (T_SIZE >=  4)  acc3 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer +  3),  acc3);
+            if (T_SIZE >=  5)  acc4 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer +  4),  acc4);
+            if (T_SIZE >=  6)  acc5 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer +  5),  acc5);
+            if (T_SIZE >=  7)  acc6 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer +  6),  acc6);
+            if (T_SIZE >=  8)  acc7 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer +  7),  acc7);
+            if (T_SIZE >=  9)  acc8 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer +  8),  acc8);
+            if (T_SIZE >= 10)  acc9 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer +  9),  acc9);
+            if (T_SIZE >= 11) acc10 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer + 10), acc10);
+            if (T_SIZE >= 12) acc11 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer + 11), acc11);
+            if (T_SIZE >= 13) acc12 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer + 12), acc12);
+            if (T_SIZE >= 14) acc13 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer + 13), acc13);
+            if (T_SIZE >= 15) acc14 = _mm256_fmadd_ps(input, _mm256_broadcast_ss(weights_buffer + 14), acc14);
+
+            // Increment pointers.
+            input_ptr += C_batch8_size;
+            //weights_buffer += C_max_acc_batch8;
+            weights_buffer += T_SIZE;
+        }
+
+        if (T_NEED_BIAS_COPY)
+        {
+            // Add biases.
+            if (T_SIZE >=  1)  acc0 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr +  0),  acc0);
+            if (T_SIZE >=  2)  acc1 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr +  1),  acc1);
+            if (T_SIZE >=  3)  acc2 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr +  2),  acc2);
+            if (T_SIZE >=  4)  acc3 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr +  3),  acc3);
+            if (T_SIZE >=  5)  acc4 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr +  4),  acc4);
+            if (T_SIZE >=  6)  acc5 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr +  5),  acc5);
+            if (T_SIZE >=  7)  acc6 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr +  6),  acc6);
+            if (T_SIZE >=  8)  acc7 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr +  7),  acc7);
+            if (T_SIZE >=  9)  acc8 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr +  8),  acc8);
+            if (T_SIZE >= 10)  acc9 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr +  9),  acc9);
+            if (T_SIZE >= 11) acc10 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 10), acc10);
+            if (T_SIZE >= 12) acc11 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 11), acc11);
+            if (T_SIZE >= 13) acc12 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 12), acc12);
+            if (T_SIZE >= 14) acc13 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 13), acc13);
+            if (T_SIZE >= 15) acc14 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 14), acc14);
+        }
+
+        if (T_FUNCTION == NN_ACTIVATION_FUNCTION_RELU)
+        {
+            // Perform ReLU.
+            if (T_SIZE >=  1)  acc0 = _mm256_max_ps(_mm256_setzero_ps(),  acc0);
+            if (T_SIZE >=  2)  acc1 = _mm256_max_ps(_mm256_setzero_ps(),  acc1);
+            if (T_SIZE >=  3)  acc2 = _mm256_max_ps(_mm256_setzero_ps(),  acc2);
+            if (T_SIZE >=  4)  acc3 = _mm256_max_ps(_mm256_setzero_ps(),  acc3);
+            if (T_SIZE >=  5)  acc4 = _mm256_max_ps(_mm256_setzero_ps(),  acc4);
+            if (T_SIZE >=  6)  acc5 = _mm256_max_ps(_mm256_setzero_ps(),  acc5);
+            if (T_SIZE >=  7)  acc6 = _mm256_max_ps(_mm256_setzero_ps(),  acc6);
+            if (T_SIZE >=  8)  acc7 = _mm256_max_ps(_mm256_setzero_ps(),  acc7);
+            if (T_SIZE >=  9)  acc8 = _mm256_max_ps(_mm256_setzero_ps(),  acc8);
+            if (T_SIZE >= 10)  acc9 = _mm256_max_ps(_mm256_setzero_ps(),  acc9);
+            if (T_SIZE >= 11) acc10 = _mm256_max_ps(_mm256_setzero_ps(), acc10);
+            if (T_SIZE >= 12) acc11 = _mm256_max_ps(_mm256_setzero_ps(), acc11);
+            if (T_SIZE >= 13) acc12 = _mm256_max_ps(_mm256_setzero_ps(), acc12);
+            if (T_SIZE >= 14) acc13 = _mm256_max_ps(_mm256_setzero_ps(), acc13);
+            if (T_SIZE >= 15) acc14 = _mm256_max_ps(_mm256_setzero_ps(), acc14);
+        }
+
+        // Store results.
+        if (T_SIZE >=  1) _mm256_store_ps(output_ptr +  0 * C_batch8_size,  acc0);
+        if (T_SIZE >=  2) _mm256_store_ps(output_ptr +  1 * C_batch8_size,  acc1);
+        if (T_SIZE >=  3) _mm256_store_ps(output_ptr +  2 * C_batch8_size,  acc2);
+        if (T_SIZE >=  4) _mm256_store_ps(output_ptr +  3 * C_batch8_size,  acc3);
+        if (T_SIZE >=  5) _mm256_store_ps(output_ptr +  4 * C_batch8_size,  acc4);
+        if (T_SIZE >=  6) _mm256_store_ps(output_ptr +  5 * C_batch8_size,  acc5);
+        if (T_SIZE >=  7) _mm256_store_ps(output_ptr +  6 * C_batch8_size,  acc6);
+        if (T_SIZE >=  8) _mm256_store_ps(output_ptr +  7 * C_batch8_size,  acc7);
+        if (T_SIZE >=  9) _mm256_store_ps(output_ptr +  8 * C_batch8_size,  acc8);
+        if (T_SIZE >= 10) _mm256_store_ps(output_ptr +  9 * C_batch8_size,  acc9);
+        if (T_SIZE >= 11) _mm256_store_ps(output_ptr + 10 * C_batch8_size, acc10);
+        if (T_SIZE >= 12) _mm256_store_ps(output_ptr + 11 * C_batch8_size, acc11);
+        if (T_SIZE >= 13) _mm256_store_ps(output_ptr + 12 * C_batch8_size, acc12);
+        if (T_SIZE >= 14) _mm256_store_ps(output_ptr + 13 * C_batch8_size, acc13);
+        if (T_SIZE >= 15) _mm256_store_ps(output_ptr + 14 * C_batch8_size, acc14);
+    }
+
+
+
+
+
+    template <NN_ACTIVATION_FUNCTION T_FUNCTION, bool T_NEED_BIAS_COPY>
+    void run_fully_connected_work_item_internal_batch8(const void *ptr) 
+    {
+        //const auto input_width = input->parent->lengths.t[NN_DATA_COORD_x];
+        //const auto output_width = output->view_end.t[NN_DATA_COORD_x] - output->view_begin.t[NN_DATA_COORD_x] + 1;
+
+        //const auto num_full_blocks = output_width / C_max_acc_batch8;
+        //const auto partial_block_size = output_width % C_max_acc_batch8;
+
+        //auto input_buffer = static_cast<float*>(input->parent->data_buffer);
+        //auto output_buffer = static_cast<float*>(output->parent->data_buffer);
+        //auto weights_buffer = static_cast<float*>(weights->parent->data_buffer);
+
+        //// Output views.
+        //const auto output_view_start = output->view_begin.t[NN_DATA_COORD_x];
+        //const auto output_view_batch_offset = output_view_start * C_batch8_size;
+
+        //// Weight views (for output-related weights).
+        //auto weight_view_start =
+        //    output_view_start / C_max_acc_batch8 * input_width * C_max_acc_batch8;
+
+        //auto weights_ptr = &weights_buffer[weight_view_start];
+        //auto output_ptr = &output_buffer[output_view_batch_offset];
+
+        auto this_fc = static_cast<const fully_connected *>(ptr);
+        auto input_buffer  = static_cast<float*>(this_fc->input_memory(0).pointer);
+        auto output_buffer = static_cast<float*>(this_fc->output_memory(0).pointer);
+        auto weight_buffer = static_cast<float*>(this_fc->input_memory(1).pointer);
+        auto bias_buffer = static_cast<float*>(this_fc->argument.input[2].primitive.as<const memory&>().pointer);
+
+        auto& input_arg = this_fc->input_memory(0).argument;
+        auto& input_buffer_size = input_arg.size;
+
+        auto& output_arg = this_fc->output_memory(0).argument;
+        auto& output_buffer_size = output_arg.size;
+
+        auto& weight_arg = this_fc->input_memory(1).argument;
+
+        assert(1 == input_buffer_size.feature.size());
+        assert(1 == input_buffer_size.batch.size());
+        assert(1 == input_buffer_size.feature[0]);
+
+        // what da f...???
+        const auto input_width = input_buffer_size.spatial[0];
+        const auto output_width = output_buffer_size.spatial[0];
+        const auto output_length = output_width; // !!!!!!!!!!!!!!!
+       
+        auto weights_ptr = weight_buffer;
+        auto output_ptr = output_buffer;
+        auto bias_ptr = bias_buffer;
+
+        const auto num_full_blocks = output_width / C_max_acc_batch8;
+        const auto partial_block_size = output_width % C_max_acc_batch8;
+     /*   
+        float* bias_ptr = nullptr;
+        if (T_NEED_BIAS_COPY)
+        {
+            auto biases_buffer = static_cast<float*>(bias->parent->data_buffer);
+            bias_ptr = &biases_buffer[output_view_start];
+        }
+*/
+        for (auto block = 0u; block < num_full_blocks; ++block)
+        {
+            // Run computation.
+            fully_connected_compute_block_batch8<C_max_acc_batch8, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width);
+
+            // Increment pointers.
+            output_ptr += C_data_stride_batch8;
+            weights_ptr += input_width*C_max_acc_batch8;
+
+            if (T_NEED_BIAS_COPY)
+            {
+                bias_ptr += C_max_acc_batch8;
+            }
+        }
+
+        switch (partial_block_size)
+        {
+        case  0: break;
+        case  1: fully_connected_compute_block_batch8< 1, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width); break;
+        case  2: fully_connected_compute_block_batch8< 2, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width); break;
+        case  3: fully_connected_compute_block_batch8< 3, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width); break;
+        case  4: fully_connected_compute_block_batch8< 4, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width); break;
+        case  5: fully_connected_compute_block_batch8< 5, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width); break;
+        case  6: fully_connected_compute_block_batch8< 6, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width); break;
+        case  7: fully_connected_compute_block_batch8< 7, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width); break;
+        case  8: fully_connected_compute_block_batch8< 8, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width); break;
+        case  9: fully_connected_compute_block_batch8< 9, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width); break;
+        case 10: fully_connected_compute_block_batch8<10, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width); break;
+        case 11: fully_connected_compute_block_batch8<11, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width); break;
+        case 12: fully_connected_compute_block_batch8<12, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width); break;
+        default:
+            NN_UNREACHABLE_CODE;
+        }
+    }
+
+
+// ---------------------------------------------------------------------------------------------------------------------------------------
+
+
+
 	template<uint32_t T_NUM_ITERATIONS, NN_ACTIVATION_FUNCTION T_FUNCTION, bool T_NEED_BIAS_COPY>
 	void fully_connected_compute_subsimd_latency(
 		float* input_buffer,
@@ -134,8 +381,8 @@ namespace neural {
 
 			++output_buffer;
 			++bias_buffer;
-			//++weights_buffer; // !!!!!!!!!!!!!????????????????????????????????
-			weights_buffer = weights_ptr;
+			++weights_buffer; // !!!!!!!!!!!!!????????????????????????????????
+			//weights_buffer = weights_ptr;
 		}
 	}
 
@@ -318,7 +565,7 @@ namespace neural {
 		// what da f...???
 		const auto input_width = input_buffer_size.spatial[0];
 		const auto output_width = output_buffer_size.spatial[0];
-		const auto output_length = 1; // !!!!!!!!!!!!!!!
+		const auto output_length = output_width; // !!!!!!!!!!!!!!!
 
 		// ----------------------------------------------------------------------
 
@@ -391,10 +638,10 @@ namespace neural {
 		case 1:
 			run_fully_connected_work_item_internal_latency<NN_ACTIVATION_FUNCTION_NONE, true>(ptr);
 			break;
-	/*	case 8:
+		case 8:
 			run_fully_connected_work_item_internal_batch8<NN_ACTIVATION_FUNCTION_NONE, true>(ptr);
 			break;
-		case 48:
+	/*	case 48:
 			run_fully_connected_work_item_internal_batch48<NN_ACTIVATION_FUNCTION_NONE, true>(ptr);
 			break;*/
 		default:
