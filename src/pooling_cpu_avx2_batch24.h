@@ -41,6 +41,6 @@ namespace neural {
         static void implementation(const void *ptr);
 
         static is_an_implementation *create(pooling &arg) { return new pooling_cpu_avx2_batch24(arg); };
-        task_group work() { return this->tasks; };
+        task_group work() { return {this->tasks, schedule::unordered}; };
     };
 }

@@ -100,7 +100,7 @@ primitive convolution::create(convolution::arguments arg) {
     auto& output_size = arg.output_size;
     auto& stride = arg.stride;
 
-    auto& input_arg = arg.input[0].primitive.as<const memory&>().argument; //todo tmp solution
+    auto& input_arg = arg.input[0].primitive.as<const memory&>().argument;
     auto& output_arg = arg.output[0].as<const memory&>().argument;
 
     auto& filter_arg = arg.input[1].primitive.as<const memory&>().argument; //convolution filter
@@ -111,7 +111,6 @@ primitive convolution::create(convolution::arguments arg) {
 
     if(input_arg.size.raw.size()  != output_arg.size.raw.size())  throw std::runtime_error("Convolution input/output number of dimension does not match.");
     if(stride.raw.size()          != output_arg.size.raw.size())  throw std::runtime_error("Convolution stride/output number of dimension does not match.");
-    if(input_arg.format           != output_arg.format)           throw std::runtime_error("Convolution input/output data format does not match.");    // only yxfb_f32 format is supported
     if(filter_arg.size.raw.size() != output_arg.size.raw.size()+1)throw std::runtime_error("Convolution window_size != 5");
     if(bias_arg.size.raw.size()   != 3)                           throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
     if(bias_arg.size.spatial[0]   != output_size.feature[0])      throw std::runtime_error("Convolution biases/output feature maps number does not match.");

@@ -60,26 +60,21 @@ struct task {
 };
 
 
-struct task_group {
-    std::vector<task> tsk;
-    bool use_hyper_threading = true;
-    int task_count_per_thread = 1;                              // portion of tasks which obtain every thread for processing per iteration
+struct schedule { enum type { 
+      single        // single-thread execution, for reference implementations
+    , unordered     // first come, first served
+    , split         // split task list among worker threads
+}; };
 
-    task_group(const std::vector<task>& _tsk) : tsk(_tsk) {};   // workaround, could be remove in future
-    task_group(const task _task) : tsk{ _task } {};             // workaround, could be remove in future
+struct task_group {
+    std::vector<task>       tasks;
+    neural::schedule::type  schedule;
 
     task_group() {};
-    task_group(const task_group& tp) : tsk(tp.tsk), use_hyper_threading(tp.use_hyper_threading), task_count_per_thread(tp.task_count_per_thread) {};
-    task_group& operator=(const task_group& tp)
-    {
-        if (this != &tp)
-        {
-            tsk = tp.tsk;
-            use_hyper_threading = tp.use_hyper_threading;
-            task_count_per_thread = tp.task_count_per_thread;
-        }
-        return *this;
-    }
+    task_group(const std::vector<task>& arg_tasks, neural::schedule::type arg_schedule) 
+        : tasks(arg_tasks)
+        , schedule(arg_schedule)
+    {};   // workaround, could be remove in future
 };
 
 
@@ -418,7 +413,7 @@ class is_a_primitive {
 protected:
     type_traits                     *_type_traits;
     std::map<std::string, any_value> _map;
-    task_group                        _work;
+    task_group                       _work;
     is_a_primitive(type_traits *traits) : _type_traits(traits) {}
 public:
     virtual ~is_a_primitive() {};

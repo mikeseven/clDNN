@@ -173,7 +173,7 @@ namespace neural {
         }
 
         task_group work() override {
-            return{ task{ implementation, &outer } };
+            return{ { task{ implementation, &outer } }, schedule::single };
         }
 
         static is_an_implementation *create(fully_connected &arg) { return new fully_connected_gpu(arg); };

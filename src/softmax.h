@@ -16,17 +16,14 @@
 
 #pragma once
 
-#include "pooling.h"
+#include "api/neural.h"
+#include "implementation_map.h"
 
 namespace neural {
-    struct pooling_cpu_reference : is_an_implementation {
-        pooling_cpu_reference(pooling &arg);
-        ~pooling_cpu_reference();
-        static void implementation(const void *ptr);
+namespace normalization {
+    //                                           engine                        output                         input
+    using softmax_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
-        static is_an_implementation *create(pooling &arg) { return new pooling_cpu_reference(arg); };
-        task_group work() { return {{task{implementation, &outer}}, schedule::single}; };
-
-        const pooling &outer;
-    };
+    using softmax_fw_implementation_map = singleton_map<softmax_fw_key, std::function<is_an_implementation *(softmax &)>>;
+}
 }

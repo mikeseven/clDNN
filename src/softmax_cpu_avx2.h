@@ -16,17 +16,19 @@
 
 #pragma once
 
-#include "pooling.h"
+#include "softmax.h"
 
 namespace neural {
-    struct pooling_cpu_reference : is_an_implementation {
-        pooling_cpu_reference(pooling &arg);
-        ~pooling_cpu_reference();
-        static void implementation(const void *ptr);
+namespace normalization {
+    struct softmax_cpu_avx2 : is_an_implementation {
+        softmax_cpu_avx2(softmax &arg);
+        ~softmax_cpu_avx2();
 
-        static is_an_implementation *create(pooling &arg) { return new pooling_cpu_reference(arg); };
-        task_group work() { return {{task{implementation, &outer}}, schedule::single}; };
+        static is_an_implementation *create(softmax &arg) { return new softmax_cpu_avx2(arg); };
+        task_group work() { return softmax_ptr->work(); };
 
-        const pooling &outer;
+        std::unique_ptr<is_an_implementation> softmax_ptr;
+        const softmax &outer;
     };
+}
 }
