@@ -321,8 +321,8 @@ TEST(pooling_forward, naive_comparison_optimized_max_bs_yxf_bv24_f32_wsiz2x2_wst
     auto output_prim_ref = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 48,{ 5, 5 }, 4 }}); auto& output_memory_ref = output_prim_ref.as<const memory&>();
 
     // Optimized data.
-    auto input_prim_cpu  = memory::allocate({ engine::reference, memory::format::bs_yxf_bv24_f32,{ 48,{ 6, 6 }, 4 }}); auto& input_memory_cpu = input_prim_cpu.as<const memory&>();
-    auto output_prim_cpu = memory::allocate({ engine::reference, memory::format::bs_yxf_bv24_f32,{ 48,{ 5, 5 }, 4 }}); auto& output_memory_cpu = output_prim_cpu.as<const memory&>();
+    auto input_prim_cpu  = memory::allocate({ engine::reference, memory::format::bs_yxf_bv24_f32,{ 48,{ 6, 6 }, 4 }});
+    auto output_prim_cpu = memory::allocate({ engine::reference, memory::format::bs_yxf_bv24_f32,{ 48,{ 5, 5 }, 4 }});
 
     // Temporary data for optimized results in reference space.
     auto temp_output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 48,{ 5, 5 }, 4 }}); auto& temp_output_memory = temp_output.as<const memory&>();
@@ -346,6 +346,6 @@ TEST(pooling_forward, naive_comparison_optimized_max_bs_yxf_bv24_f32_wsiz2x2_wst
         reorder_output_to_tmp_ref
     }, {engine_resource}).wait();
 
-    for (int i = 0; i < output_memory_ref.count(); i++)
+    for (size_t i = 0; i < output_memory_ref.count(); i++)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(temp_output_memory, i))) << " at index " << i << "\n";
 }

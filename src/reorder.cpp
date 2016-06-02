@@ -129,44 +129,8 @@ namespace neural {
             static is_an_implementation *create(reorder &arg) { return new reorder_reference(arg); };
         };
 
-        //                                    engine                input                       output
-        using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
-
-        // map of available implementations
-        static std::map<implementation_key, std::function<is_an_implementation *(reorder &)>> implementation_map = {
-            { std::make_tuple(engine::reference, memory::format::oiyx_f32, memory::format::os_yxi_sv16_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::os_yxi_sv16_f32, memory::format::oiyx_f32), reorder_reference::create },
-            
-            { std::make_tuple(engine::reference, memory::format::bs_yxf_bv24_f32, memory::format::yxfb_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::bs_yxf_bv24_f32), reorder_reference::create },
-
-            { std::make_tuple(engine::reference, memory::format::x_f32, memory::format::x_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::fyxb_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::byxf_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::bfyx_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::yxfb_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::byxf_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::bfyx_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::yxfb_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::fyxb_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::bfyx_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::yxfb_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::fyxb_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::byxf_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::yxfb_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::byxf_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::bfyx_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::bx_f32, memory::format::xb_f32), reorder_reference::create },
-            { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::bx_f32), reorder_reference::create },
-        };
-
-    }
-    reorder::arguments::arguments(neural::engine::type _engine, primitive_at _in, primitive _out)
+   }
+    reorder::arguments::arguments(neural::engine::type _engine, primitive_at _in, primitive _out) //todo Artur fix arguments order
         : engine(_engine)
         , output({_out})
         , input({_in}) {}
@@ -182,13 +146,12 @@ namespace neural {
 
         // create implementation for non-lazy evaluation
         if(0 == (arg.engine & engine::lazy)) {
-            // lookup in database; throw if not found
-            auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-            auto it = implementation_map.find(key);
-            if (it == std::end(implementation_map)) throw std::runtime_error("not yet implemented");
+            if(arg.input[0].primitive.as<const memory&>().argument.size.raw.size() != arg.output[0].as<const memory&>().argument.size.raw.size())
+    //            throw std::runtime_error("Number of dimensions in reorder does not match. Meybe you want to use reshape primitive?"); //todo reshape
+                throw std::runtime_error("Number of dimensions in reorder does not match.");
 
             // create implementation & attach it to result
-            auto implementation = it->second(*result);
+            auto implementation = reorder_reference::create(*result);
             result->_work = implementation->work();
         }
 
