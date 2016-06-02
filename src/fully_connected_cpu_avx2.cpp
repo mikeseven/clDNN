@@ -103,18 +103,17 @@ namespace neural {
 			if (!T_NEED_BIAS_COPY)
 			{
 				acc0 = *output_ptr;
-			}
+			}  
 
 			auto input_ptr = &input_buffer[0];
-			const auto input_ptr_end = &input_buffer[input_width];
+			const auto input_ptr_end = &input_buffer[input_width ];
 
 			while (input_ptr < input_ptr_end)
 			{
 				// Do MADs.
 				acc0 += (*input_ptr) * (*weights_ptr);
-
-				// Increment pointers.
 				++input_ptr;
+
 				weights_ptr += output_length;
 			}
 
@@ -124,18 +123,18 @@ namespace neural {
 				acc0 += *bias_ptr;
 			}
 
-			if (T_FUNCTION == NN_ACTIVATION_FUNCTION_RELU)
-			{
-				// Perform ReLU.
-				acc0 = std::max(0.0f, acc0);
-			}
+			//if (T_FUNCTION == NN_ACTIVATION_FUNCTION_RELU)
+			//{
+			//	// Perform ReLU.
+			//	acc0 = std::max(0.0f, acc0);
+			//}
 
 			// Store results.
 			*output_ptr = acc0;
 
 			++output_buffer;
 			++bias_buffer;
-			//++weights_buffer;
+			//++weights_buffer; // !!!!!!!!!!!!!????????????????????????????????
 			weights_buffer = weights_ptr;
 		}
 	}
@@ -295,7 +294,8 @@ namespace neural {
 	}
 
 
-	static void implementation(const void *ptr)
+	template <NN_ACTIVATION_FUNCTION T_FUNCTION, bool T_NEED_BIAS_COPY>
+	static void run_fully_connected_work_item_internal_latency(const void *ptr)
 	{
 		auto this_fc = static_cast<const fully_connected *>(ptr);
 		auto input_buffer  = static_cast<float*>(this_fc->input_memory(0).pointer);
@@ -305,7 +305,7 @@ namespace neural {
 		
 		auto& input_arg = this_fc->input_memory(0).argument;
 		auto& input_buffer_size = input_arg.size;
-
+		
 		auto& output_arg = this_fc->output_memory(0).argument;
 		auto& output_buffer_size = output_arg.size;
 
@@ -330,19 +330,14 @@ namespace neural {
 		auto output_ptr = output_buffer;
 		auto bias_ptr = bias_buffer;
 
+			for (auto block = 0u; block < num_full_blocks; ++block)
+			{
+				// Run computation.
+				fully_connected_compute_block_latency<C_max_acc_batch1, NN_ACTIVATION_FUNCTION_NONE, true>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width, output_length);
+			}
 
-		for (auto block = 0u; block < num_full_blocks; ++block)
-		{
-			// Run computation.
-			fully_connected_compute_block_latency<C_max_acc_batch1, NN_ACTIVATION_FUNCTION_NONE, true>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width, output_length);
-		}
-
-		constexpr NN_ACTIVATION_FUNCTION T_FUNCTION = NN_ACTIVATION_FUNCTION_NONE;
-		constexpr bool T_NEED_BIAS_COPY = true;
-
-
-		switch (partial_block_size)
-		{
+			switch (partial_block_size)
+			{
 			case  0: break;
 			case  1: fully_connected_compute_block_latency< 1, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width, output_length); break;
 			case  2: fully_connected_compute_block_latency< 2, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width, output_length); break;
@@ -360,10 +355,10 @@ namespace neural {
 			case 14: fully_connected_compute_block_latency<14, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width, output_length); break;
 			default:
 				NN_UNREACHABLE_CODE;
-		}
+			}
 
-		switch (subsimd_block_size)
-		{
+			switch (subsimd_block_size)
+			{
 			case 0: break;
 			case 1: fully_connected_compute_subsimd_latency<1, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width, output_length); break;
 			case 2: fully_connected_compute_subsimd_latency<2, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width, output_length); break;
@@ -374,10 +369,40 @@ namespace neural {
 			case 7: fully_connected_compute_subsimd_latency<7, T_FUNCTION, T_NEED_BIAS_COPY>(input_buffer, output_ptr, bias_ptr, weights_ptr, input_width, output_length); break;
 			default:
 				NN_UNREACHABLE_CODE;
-		}
-
-
+			}
+		
 	}
+
+
+
+
+	static void implementation(const void *ptr)
+	{
+		auto this_fc = static_cast<const fully_connected *>(ptr);
+		auto& input_arg = this_fc->input_memory(0).argument;
+		auto& input_buffer_size = input_arg.size;
+		
+		auto batch_size = input_buffer_size.batch[0];
+		if (!(batch_size == 1 || batch_size == 8 || batch_size == 48))  throw std::runtime_error("Batch size not supported");
+
+
+		switch (batch_size)
+		{
+		case 1:
+			run_fully_connected_work_item_internal_latency<NN_ACTIVATION_FUNCTION_NONE, true>(ptr);
+			break;
+	/*	case 8:
+			run_fully_connected_work_item_internal_batch8<NN_ACTIVATION_FUNCTION_NONE, true>(ptr);
+			break;
+		case 48:
+			run_fully_connected_work_item_internal_batch48<NN_ACTIVATION_FUNCTION_NONE, true>(ptr);
+			break;*/
+		default:
+			break;
+		}
+	}
+
+
 
     static void implementation_cpu(const void *ptr) {
       	auto this_fc = static_cast<const fully_connected *>(ptr);
