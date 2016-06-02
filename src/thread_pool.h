@@ -22,16 +22,16 @@
 #include <condition_variable>
 #include "neural.h"
 
-namespace neural 
+namespace neural
 {
     class nn_thread_worker_pool
     {
         uint32_t taskcount;
         std::atomic<size_t> current_task_id;
-        
+
         uint32_t active_threads;
         uint32_t num_logical_per_physical_core;
-        
+
         std::mutex mtx_wake;
         std::condition_variable cv_wake;
         std::condition_variable cv_endtasks;

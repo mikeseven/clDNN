@@ -14,21 +14,21 @@
 // limitations under the License.
 */
 
-#include "api/neural.h"
-#include <iostream>
+#pragma once
 
-int main()
-{
-    extern void example_convolution_cpu_forward();
+#include "softmax.h"
 
-    try {
-        example_convolution_cpu_forward();
-    }
-    catch (std::exception &e) {
-        std::cerr << e.what();
-    }
-    catch (...) {
-        std::cerr << "Unknown exceptions.";
-    }
-    return 0;
+namespace neural {
+namespace normalization {
+    struct softmax_cpu_avx2 : is_an_implementation {
+        softmax_cpu_avx2(softmax &arg);
+        ~softmax_cpu_avx2();
+
+        static is_an_implementation *create(softmax &arg) { return new softmax_cpu_avx2(arg); };
+        task_group work() { return softmax_ptr->work(); };
+
+        std::unique_ptr<is_an_implementation> softmax_ptr;
+        const softmax &outer;
+    };
+}
 }

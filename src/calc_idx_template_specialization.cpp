@@ -85,6 +85,33 @@ template<> size_t index<neural::memory::format::fyxb_f32>(std::vector<uint32_t> 
 }
 
 
+template<> size_t index<neural::memory::format::byxf_b24_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+    assert(is_in_range(size, pos));
+
+    // BFXY represents buffer size, wbile bfxy represents current position
+    const size_t B = size[0];   const size_t F = size[1];   const size_t X = size[2];
+    const size_t b =  pos[0];   const size_t f =  pos[1];   const size_t x =  pos[2];   const size_t y =  pos[3];
+
+    assert(24 == B); //todo remove, what with b>23
+    return b%24 + B * (f + F*(x + X*y));
+}
+
+
+template<> size_t index<neural::memory::format::yxoi_o4_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+    assert(is_in_range(size, pos));
+
+    // BFXY represents buffer size, wbile bfxy represents current position
+    const size_t Fo = size[1];   const size_t Fi = size[2];   const size_t X = size[3];
+    const size_t fo =  pos[1];   const size_t fi =  pos[2];   const size_t x =  pos[3];   const size_t y =  pos[4];
+    const size_t slice_block = fo/4;    const size_t slice_element = fo%4;
+
+    assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
+    assert(size[3] == size[4]); // X == Y
+    assert(0 == Fo%4);
+    return slice_element + 4*(fi + Fi*(slice_block + Fo/4*(x + X*y)));
+}
+
+
 template<>
 size_t index<neural::memory::format::bs_yxf_bv24_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
     assert(
@@ -103,19 +130,20 @@ size_t index<neural::memory::format::bs_yxf_bv24_f32>(std::vector<uint32_t> size
     auto idx = id_in_slice + 24 * (pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + slice_id * size[3])));
     return idx;
 };
-
 fptr choose_calculate_idx(neural::memory::format::type arg){
     switch (arg){
         case neural::memory::format::type::x_f32: // treat x_f32 as xb_f32 with b=1
-        case neural::memory::format::type::xb_f32:          return index<neural::memory::format::type::xb_f32>;
-        case neural::memory::format::type::bx_f32:          return index<neural::memory::format::type::bx_f32>;
-        case neural::memory::format::type::yxfb_f32:        return index<neural::memory::format::type::yxfb_f32>;
-        case neural::memory::format::type::byxf_f32:        return index<neural::memory::format::type::byxf_f32>;
-        case neural::memory::format::type::oiyx_f32:        return index<neural::memory::format::type::oiyx_f32>;
-        case neural::memory::format::type::os_yxi_sv16_f32: return index<neural::memory::format::type::os_yxi_sv16_f32>;
-        case neural::memory::format::type::bfyx_f32:        return index<neural::memory::format::type::bfyx_f32>;
-        case neural::memory::format::type::fyxb_f32:        return index<neural::memory::format::type::fyxb_f32>;
-        case neural::memory::format::type::bs_yxf_bv24_f32: return index<neural::memory::format::type::bs_yxf_bv24_f32>;
+        case neural::memory::format::type::xb_f32:             return index<neural::memory::format::type::xb_f32>;
+        case neural::memory::format::type::bx_f32:             return index<neural::memory::format::type::bx_f32>;
+        case neural::memory::format::type::yxfb_f32:           return index<neural::memory::format::type::yxfb_f32>;
+        case neural::memory::format::type::byxf_f32:           return index<neural::memory::format::type::byxf_f32>;
+        case neural::memory::format::type::oiyx_f32:           return index<neural::memory::format::type::oiyx_f32>;
+        case neural::memory::format::type::os_yxi_sv16_f32:    return index<neural::memory::format::type::os_yxi_sv16_f32>;
+        case neural::memory::format::type::bfyx_f32:           return index<neural::memory::format::type::bfyx_f32>;
+        case neural::memory::format::type::fyxb_f32:           return index<neural::memory::format::type::fyxb_f32>;
+        case neural::memory::format::type::bs_yxf_bv24_f32:    return index<neural::memory::format::type::bs_yxf_bv24_f32>;
+        case neural::memory::format::type::byxf_b24_f32:       return index<neural::memory::format::type::byxf_b24_f32>;
+        case neural::memory::format::type::yxoi_o4_f32:        return index<neural::memory::format::type::yxoi_o4_f32>;
             break;
         default:
             throw std::runtime_error("choose_calculate_idx has no case for memory::format " + std::to_string(arg));
