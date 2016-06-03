@@ -23,6 +23,105 @@ using namespace neural;
 
 namespace caffe {
 
+// *** Conversion methods for MKL_DNNMemory class
+// TODO: move this code to separate file?
+template <typename Dtype, bool is_diff>
+void MKL_DNNMemory<Dtype, is_diff>::convert_from_prv(void* prv_ptr, void* cpu_ptr)
+{
+  CHECK(prv_ptr);
+  CHECK(cpu_ptr);
+  CHECK(this->from_prv != nullptr);
+
+  DLOG(INFO) << "convert priv =>           "  << this->name << " =>"  << "\n";
+  execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv}).wait();
+#ifdef CONVERSION_PRINT_DATA
+  DLOG(INFO) << "Before conversion: ";
+  for (auto i=0; i<this->prv_count(); i++)
+    DLOG(INFO) << ((Dtype*)prv_ptr)[i] << " ";
+  DLOG(INFO) << " \n";
+  DLOG(INFO) << "After  conversion: ";
+  for (auto i=0; i<this->prv_count(); i++)
+    DLOG(INFO) << ((Dtype*)cpu_ptr)[i] << " ";
+  DLOG(INFO) << " \n\n";
+#endif
+}
+
+template <typename Dtype, bool is_diff>
+Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
+  Blob<Dtype>* blob, bool set_prv_ptr, MKL_DNNMemory<Dtype, is_diff>* converted_in_fwd) {
+
+  if (this->to_prv != nullptr)  // Checking is conversion is required
+  {
+    const Dtype* prv_ptr = is_diff ?  blob->prv_diff() : blob->prv_data();
+    if(prv_ptr == NULL)
+    {
+      DLOG(INFO) << "convert      => priv                                => " << this->name << "\n";
+      auto usr_ptr = is_diff ? (Dtype *) blob->cpu_diff() : (Dtype *) blob->cpu_data();
+      execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr), this->to_prv}).wait();
+
+#ifdef CONVERSION_PRINT_DATA
+      DLOG(INFO) << "Before conversion: ";
+      for (auto i=0; i<blob->count(); i++)
+        DLOG(INFO) << usr_ptr[i] << " ";
+      DLOG(INFO) << " \n";
+      DLOG(INFO) << "After  conversion: ";
+      for (auto i=0; i<blob->count(); i++)
+        DLOG(INFO) << this->prv_ptr[i] << " ";
+      DLOG(INFO) << " \n\n";
+#endif
+      if (set_prv_ptr) {
+        if(is_diff)
+          blob->set_prv_diff(this->prv_ptr, get_shared_ptr(), true);
+        else
+          blob->set_prv_data(this->prv_ptr, get_shared_ptr(), true);
+      }
+      return this->prv_ptr;
+    }
+    else
+    {
+      // Make sure the layout is fine
+      shared_ptr<PrvMemDescr> prv_mem_descriptor =
+          is_diff ? (blob->get_prv_descriptor_diff()) : (blob->get_prv_descriptor_data());
+
+      CHECK(prv_mem_descriptor != nullptr);
+      CHECK(prv_mem_descriptor->get_descr_type() == PrvMemDescr::PRV_DESCR_MKL_DNN);
+
+      shared_ptr<MKL_DNNMemory<Dtype, is_diff> > current_descr =
+        boost::static_pointer_cast<MKL_DNNMemory<Dtype, is_diff> > (prv_mem_descriptor);
+
+      if(current_descr->layout_prv != this->layout_prv) {
+        if(converted_in_fwd != nullptr) {
+          // hack for reusing previously done conversion
+          if(converted_in_fwd->layout_prv == this->layout_prv) {
+            DLOG(INFO) << "layout OK                 " << converted_in_fwd->name << " == " << this->name  << "\n";
+            return converted_in_fwd->prv_ptr;
+          }
+        }
+        DLOG(INFO) << "convert priv => priv      " << current_descr->name << " => " << this->name
+                   << "  || layouts: " << current_descr->layout_prv  << " => " << this->layout_prv<< "\n";
+        neural::primitive convert = reorder::create(reorder::arguments({engine::reference, current_descr->memory_prv, this->memory_prv}));
+        execute({current_descr->memory_prv(current_descr->prv_ptr),
+                 this->memory_prv(this->prv_ptr), convert}).wait();
+
+        if (set_prv_ptr) {
+          if(is_diff)
+            blob->set_prv_diff(this->prv_ptr, get_shared_ptr(), true);
+          else
+            blob->set_prv_data(this->prv_ptr, get_shared_ptr(), true);
+        }
+        return this->prv_ptr;
+      }
+      else if(current_descr.get() != this) {
+        DLOG(INFO) << "layout OK                 " << current_descr->name << " == " << this->name << "\n";
+      }
+    }
+
+    return (Dtype*) prv_ptr;
+  }
+
+  return (is_diff ? (Dtype*) blob->cpu_diff() : (Dtype*) blob->cpu_data());
+}
+
 template <typename Dtype>
 void MKL_DNNConvolutionLayer<Dtype>::compute_output_shape() {
   ConvolutionLayer<Dtype>::compute_output_shape();
@@ -176,103 +275,6 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   bwd_bias_diff      ->name = "bwd_bias_diff     @ " + this->layer_param_.name();
 }
 
-// TODO: move this code to separate file
-template <typename Dtype, bool is_diff>
-void MKL_DNNMemory<Dtype, is_diff>::convert_from_prv(void* prv_ptr, void* cpu_ptr)
-{
-  CHECK(prv_ptr);
-  CHECK(cpu_ptr);
-  CHECK(this->from_prv != nullptr);
-
-  DLOG(INFO) << "convert priv =>           "  << this->name << " =>"  << "\n";
-  execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv}).wait();
-#ifdef CONVERSION_PRINT_DATA
-  DLOG(INFO) << "Before conversion: ";
-  for (auto i=0; i<this->prv_count(); i++)
-    DLOG(INFO) << ((Dtype*)prv_ptr)[i] << " ";
-  DLOG(INFO) << " \n";
-  DLOG(INFO) << "After  conversion: ";
-  for (auto i=0; i<this->prv_count(); i++)
-    DLOG(INFO) << ((Dtype*)cpu_ptr)[i] << " ";
-  DLOG(INFO) << " \n\n";
-#endif
-}
-
-template <typename Dtype, bool is_diff>
-Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
-  Blob<Dtype>* blob, bool set_prv_ptr, MKL_DNNMemory<Dtype, is_diff>* converted_in_fwd) {
-
-  if (this->to_prv != nullptr)  // Checking is conversion is required
-  {
-    const Dtype* prv_ptr = is_diff ?  blob->prv_diff() : blob->prv_data();
-    if(prv_ptr == NULL)
-    {
-      DLOG(INFO) << "convert      => priv                                => " << this->name << "\n";
-      auto usr_ptr = is_diff ? (Dtype *) blob->cpu_diff() : (Dtype *) blob->cpu_data();
-      execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr), this->to_prv}).wait();
-
-#ifdef CONVERSION_PRINT_DATA
-      DLOG(INFO) << "Before conversion: ";
-      for (auto i=0; i<blob->count(); i++)
-        DLOG(INFO) << usr_ptr[i] << " ";
-      DLOG(INFO) << " \n";
-      DLOG(INFO) << "After  conversion: ";
-      for (auto i=0; i<blob->count(); i++)
-        DLOG(INFO) << this->prv_ptr[i] << " ";
-      DLOG(INFO) << " \n\n";
-#endif
-      if (set_prv_ptr) {
-        if(is_diff)
-          blob->set_prv_diff(this->prv_ptr, get_shared_ptr(), true);
-        else
-          blob->set_prv_data(this->prv_ptr, get_shared_ptr(), true);
-      }
-      return this->prv_ptr;
-    }
-    else
-    {
-      // Make sure the layout is fine
-      shared_ptr<PrvMemDescr> prv_mem_descriptor =
-          is_diff ? (blob->get_prv_descriptor_diff()) : (blob->get_prv_descriptor_data());
-
-      CHECK(prv_mem_descriptor != nullptr);
-      CHECK(prv_mem_descriptor->get_descr_type() == PrvMemDescr::PRV_DESCR_MKL_DNN);
-
-      shared_ptr<MKL_DNNMemory<Dtype, is_diff> > current_descr =
-        boost::static_pointer_cast<MKL_DNNMemory<Dtype, is_diff> > (prv_mem_descriptor);
-
-      if(current_descr->layout_prv != this->layout_prv) {
-        if(converted_in_fwd != nullptr) {
-          // hack for reusing previously done conversion
-          if(converted_in_fwd->layout_prv == this->layout_prv) {
-            DLOG(INFO) << "layout OK                 " << converted_in_fwd->name << " == " << this->name  << "\n";
-            return converted_in_fwd->prv_ptr;
-          }
-        }
-        DLOG(INFO) << "convert priv => priv      " << current_descr->name << " => " << this->name
-                   << "  || layouts: " << current_descr->layout_prv  << " => " << this->layout_prv<< "\n";
-        neural::primitive convert = reorder::create(reorder::arguments({engine::reference, current_descr->memory_prv, this->memory_prv}));
-        execute({current_descr->memory_prv(current_descr->prv_ptr),
-                 this->memory_prv(this->prv_ptr), convert}).wait();
-
-        if (set_prv_ptr) {
-          if(is_diff)
-            blob->set_prv_diff(this->prv_ptr, get_shared_ptr(), true);
-          else
-            blob->set_prv_data(this->prv_ptr, get_shared_ptr(), true);
-        }
-        return this->prv_ptr;
-      }
-      else if(current_descr.get() != this) {
-        DLOG(INFO) << "layout OK                 " << current_descr->name << " == " << this->name << "\n";
-      }
-    }
-
-    return (Dtype*) prv_ptr;
-  }
-
-  return (is_diff ? (Dtype*) blob->cpu_diff() : (Dtype*) blob->cpu_data());
-}
 
 template <>
 void MKL_DNNConvolutionLayer<double>::Forward_cpu(const vector<Blob<double>*>& bottom,

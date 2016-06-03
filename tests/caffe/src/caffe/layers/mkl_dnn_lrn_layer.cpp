@@ -1,6 +1,7 @@
 #ifdef MKL_DNN_ENABLED
 #include <vector>
 
+#include "boost/make_shared.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/layers/mkl_dnn_layers.hpp"
 #include "caffe/util/math_functions.hpp"
@@ -42,15 +43,37 @@ void MKL_DNNLRNLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   //std::cout << "n "  <<  num_ << "  c " << channels_  << "  w "  << width_  <<  "  h " << height_  << "\n";
   //std::cout << "size "  <<  size_ << "  a " << alpha_ << "  b "  << beta_  <<  "  k " << k_  << "\n";
 
-  fwd_bottom_data_->memory_usr = memory::describe({engine_, fwd_bottom_data_->layout_usr, {num_, {width_, height_}, channels_ }});
-  fwd_top_data_->memory_usr    = memory::describe({engine_, fwd_top_data_   ->layout_usr, {num_, {width_, height_}, channels_ }});
-  fwd_bottom_data_->memory_prv = memory::describe({engine_, fwd_bottom_data_->layout_prv, {num_, {width_, height_}, channels_ }});
-  fwd_top_data_->memory_prv    = memory::describe({engine_, fwd_top_data_   ->layout_prv, {num_, {width_, height_}, channels_ }});
+  // Choose layout according to the engine
+  switch (engine_) {
+    case  neural::engine::cpu:
+      prv_layout_in_out_ = memory::format::byxf_f32;
+    break;
+    case neural::engine::reference:
+      prv_layout_in_out_ = memory::format::yxfb_f32;
+    break;
+    default:
+      CHECK(0) << "Wrong mkl-dnn engine";
+  }
 
-  bwd_bottom_diff_->memory_usr = memory::describe({engine_, bwd_bottom_diff_->layout_usr, {num_, {width_, height_}, channels_ }});
-  bwd_top_diff_->memory_usr    = memory::describe({engine_, bwd_top_diff_   ->layout_usr, {num_, {width_, height_}, channels_ }});
-  bwd_bottom_diff_->memory_prv = memory::describe({engine_, bwd_bottom_diff_->layout_prv, {num_, {width_, height_}, channels_ }});
-  bwd_top_diff_->memory_prv    = memory::describe({engine_, bwd_top_diff_   ->layout_prv, {num_, {width_, height_}, channels_ }});
+  fwd_bottom_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {num_, {width_, height_}, channels_ }}),
+          memory::describe({engine_, prv_layout_in_out_, {num_, {width_, height_}, channels_ }}));
+
+  fwd_top_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {num_, {width_, height_}, channels_ }}),
+          memory::describe({engine_, prv_layout_in_out_, {num_, {width_, height_}, channels_ }}));
+
+  bwd_bottom_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {num_, {width_, height_}, channels_ }}),
+          memory::describe({engine_, prv_layout_in_out_, {num_, {width_, height_}, channels_ }}));
+
+  bwd_top_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {num_, {width_, height_}, channels_ }}),
+          memory::describe({engine_, prv_layout_in_out_, {num_, {width_, height_}, channels_ }}));
 
 
   // Names are for debugging only
@@ -58,11 +81,6 @@ void MKL_DNNLRNLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   fwd_top_data_->name =    "fwd_top_data      @ " + this->layer_param_.name();
   bwd_top_diff_->name =    "bwd_top_diff      @ " + this->layer_param_.name();
   bwd_bottom_diff_->name = "bwd_bottom_diff   @ " + this->layer_param_.name();
-
-  fwd_bottom_data_->create_conversions();
-  fwd_top_data_   ->create_conversions();
-  bwd_top_diff_   ->create_conversions();
-  bwd_bottom_diff_->create_conversions();
 
   lrnFwd_ = normalization::response::create({engine_,
           fwd_top_data_->memory_prv,

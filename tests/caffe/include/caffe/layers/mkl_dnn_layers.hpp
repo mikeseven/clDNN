@@ -187,12 +187,8 @@ class MKL_DNNLRNLayer : public Layer<Dtype> {
  public:
   explicit MKL_DNNLRNLayer(const LayerParameter& param,
         neural::engine::type engine)
-      : Layer<Dtype>(param), engine_(engine),
-      fwd_top_data_    (new MKL_DNNData<Dtype>()),
-      fwd_bottom_data_ (new MKL_DNNData<Dtype>()),
-      bwd_top_diff_    (new MKL_DNNDiff<Dtype>()),
-      bwd_bottom_diff_ (new MKL_DNNDiff<Dtype>())
-      {}
+      : Layer<Dtype>(param), engine_(engine) {}
+
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
@@ -239,6 +235,8 @@ class MKL_DNNLRNLayer : public Layer<Dtype> {
   // scale_ stores the intermediate summing results
 private:
   neural::engine::type engine_;
+  neural::memory::format::type prv_layout_in_out_;
+  const neural::memory::format::type usr_layout_in_out_ = memory::format::bfyx_f32;
   primitive lrnFwd_ = nullptr, lrnBwd_ = nullptr;
   shared_ptr<MKL_DNNData<Dtype> > fwd_top_data_, fwd_bottom_data_;
   shared_ptr<MKL_DNNDiff<Dtype> > bwd_top_diff_, bwd_bottom_diff_;
