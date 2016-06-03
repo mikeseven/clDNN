@@ -74,6 +74,6 @@ namespace neural {
         ~convolution_cpu_jit_batch1();
 
         static is_an_implementation *create(convolution &arg) { return new convolution_cpu_jit_batch1(arg); };
-        task_group work() { return this->tasks; };
+        task_group work() { return {this->tasks, schedule::split}; };
     };
 }

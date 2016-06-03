@@ -16,11 +16,11 @@
 
 #include "api/neural.h"
 #include <iostream>
-#include "tests/test_utils/test_utils.h"
 
 int main()
 {
     extern void example_convolution_cpu_forward();
+
     try {
         example_convolution_cpu_forward();
     }

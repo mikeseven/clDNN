@@ -10,7 +10,6 @@
 #include "caffe/util/math_functions.hpp"
 
 /* TODO:
- * Average pooling
  * backward
  * using of max_idx_ / topmask
  */
@@ -156,7 +155,8 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
     default:
       NOT_IMPLEMENTED;
   }
-  poolingFwd_ = pooling::create( {engine::reference,
+
+  poolingFwd_ = pooling::create( {engine_,
                                   mode,
                                   fwd_top_data_->memory_prv,
                                   {out_off_b, {out_off_x, out_off_y}, out_off_z},
@@ -219,9 +219,6 @@ void MKL_DNNPoolingLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   }
 }
 
-
-// TODO(Yangqing): Is there a faster way to do pooling in the channel-first
-// case?
 template <typename Dtype>
 void MKL_DNNPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
