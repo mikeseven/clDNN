@@ -1,0 +1,133 @@
+<!-- saved from url=(0014)about:internet -->
+<html>
+<head>
+<title>MKL-DNN memory formats</title>
+</head>
+<body>
+<h1>MKL DNN</h1>
+<hr> <hr>
+
+<h2>Memory format</h2>
+<p>
+Multi-dimensional data is stored in one-dimensional memory in certain memory format. So format is essentially a mapping function to 1D space.
+<br>
+Memory format is identified by enumeration of type: <tt>memory::format::type</tt> within <tt>neural</tt> namespace. Currently most names of enumeration entries are build by concatenation of 1-letter acronyms:
+<ul>
+<li><tt>x</tt> : spatial coordinate 'x'</li>
+<li><tt>y</tt> : spatial coordinate 'y'</li>
+<li><tt>z</tt> : spatial coordinate 'z'</li>
+<li><tt>b</tt> : batch</li>
+<li><tt>f</tt> : feature map</li>
+<li><tt>i</tt> : input feature map</li>
+<li><tt>o</tt> : output feature map</li>
+</ul>
+
+Suffix in name means:
+<ul>
+<li><tt>_f##</tt> : ##-bit floating point</li>
+<li><tt>_i##</tt> : ##-bit signed integer (unused now)</li>
+<li><tt>_u##</tt> : ##-bit unsigned integer (unused now)</li>
+</ul>
+</p>
+
+<h2><tt>x_f32</tt></h2>
+<p>
+1D sequence of 32-bit floating point numbers.
+<br>
+<tt>index(x) = x</tt>
+</p>
+
+<h2><tt>xb_f32</tt></h2>
+<p>
+2D sequence of 32-bit floating point numbers. Order in memory is batch first, then spatial coordinate 'x'. For size[b=2,x=3] data is stored in memory as follows:
+<tt>[b0,x0] [b1,x0] [b0,x1] [b1,x1] [b0,x2] [b1,x2]</tt>
+<br>
+<tt><b>index(b,x)</b> = b+x*size.b</tt>
+</p>
+
+
+<h2><tt>bx_f32</tt></h2>
+<p>
+2D sequence of 32-bit floating point numbers. Order in memory is spatial coordinate 'x' then batch. For size[b=2,x=3] data is stored in memory as follows:
+<tt>0[b0,x0] 1[b0,x1] 2[b0,x2] 3[b1,x0] 4[b1,x1] 5[b1,x2]</tt>
+<br>
+<tt><b>index(b,x)</b> = x+b*size.x</tt>
+</p>
+
+
+<h2><tt>yxfb_f32</tt></h2>
+<p>
+4D sequence of 32-bit floating point numbers. Order in memory is batch, feature map, spatial coordinate 'x' and then spatial coordinate 'y'. For size[b=2,x=3,y=2,f=3] data is stored in memory as follows:<div id="yxfb_f32_example"></div>
+<script language="javascript" type="text/javascript">
+<!--
+var result = "<tt>"; var index = 0; 
+for(var y=0; y<2; ++y) for(var x=0; x<3; ++x) for(var f=0; f<3; ++f) for(var b=0; b<2; ++b) { result += index + "[b"+b+",x"+x+",y"+y+",f"+f+"] "; ++index;}
+document.getElementById('yxfb_f32_example').innerHTML = result+"</tt>";
+//--></script>
+<tt><b>index(b,x,y,f)</b> = b+size.b*(f+size.f*(x+size.x*y))</tt>
+</p>
+
+
+<h2><tt>byxf_f32</tt></h2>
+<p>
+4D sequence of 32-bit floating point numbers. Order in memory is feature map, spatial coordinate 'x', spatial coordinate 'y' and then batch. For size[b=2,x=3,y=2,f=3] data is stored in memory as follows:<div id="byxf_f32_example"></div>
+<script language="javascript" type="text/javascript">
+<!--
+var result = "<tt>"; var index = 0; 
+for(var b=0; b<2; ++b) for(var y=0; y<2; ++y) for(var x=0; x<3; ++x) for(var f=0; f<3; ++f) { result += index + "[b"+b+",x"+x+",y"+y+",f"+f+"] "; ++index;}
+document.getElementById('byxf_f32_example').innerHTML = result+"</tt>";
+//--></script>
+<tt><b>index(b,x,y,f)</b> = f+size.f*(x+size.x*(y+size.y*b))</tt>
+</p>
+
+
+<h2><tt>bfyx_f32</tt></h2>
+<p>
+4D sequence of 32-bit floating point numbers. Order in memory is spatial coordinate 'x', spatial coordinate 'y', feature map and then batch. For size[b=2,x=3,y=2,f=3] data is stored in memory as follows:<div id="bfyx_f32_example"></div>
+<script language="javascript" type="text/javascript">
+<!--
+var result = "<tt>"; var index = 0; 
+for(var b=0; b<2; ++b) for(var f=0; f<3; ++f) for(var y=0; y<2; ++y) for(var x=0; x<3; ++x) { result += index + "[b"+b+",x"+x+",y"+y+",f"+f+"] "; ++index;}
+document.getElementById('bfyx_f32_example').innerHTML = result+"</tt>";
+//--></script>
+<tt><b>index(b,x,y,f)</b> = x+size.x*(y+size.y*(f+size.f*b))</tt>
+</p>
+
+
+<h2><tt>fyxb_f32</tt></h2>
+<p>
+4D sequence of 32-bit floating point numbers. Order in memory is batch, spatial coordinate 'x', spatial coordinate 'y' and then feature map. For size[b=2,x=3,y=2,f=3] data is stored in memory as follows:<div id="fyxb_f32_example"></div>
+<script language="javascript" type="text/javascript">
+<!--
+var result = "<tt>"; var index = 0; 
+for(var f=0; f<3; ++f) for(var y=0; y<2; ++y) for(var x=0; x<3; ++x) for(var b=0; b<2; ++b) { result += index + "[b"+b+",x"+x+",y"+y+",f"+f+"] "; ++index;}
+document.getElementById('fyxb_f32_example').innerHTML = result+"</tt>";
+//--></script>
+<tt><b>index(b,x,y,f)</b> = b+size.b*(x+size.x*(y+size.y*f))</tt>
+</p>
+
+
+<h2><tt>oiyx_f32</tt></h2>
+<p>
+4D sequence of 32-bit floating point numbers. Order in memory is spatial coordinate 'x', spatial coordinate 'y', input feature map and then output feature map. For size[x=3,y=2,i=3,o=2] data is stored in memory as follows:<div id="oiyx_f32_example"></div>
+<script language="javascript" type="text/javascript">
+<!--
+var result = "<tt>"; var index = 0; 
+for(var o=0; o<3; ++o) for(var i=0; i<3; ++i) for(var y=0; y<2; ++y) for(var x=0; x<3; ++x) { result += index + "[x"+x+",y"+y+",i"+i+",o"+o+"] "; ++index;}
+document.getElementById('oiyx_f32_example').innerHTML = result+"</tt>";
+//--></script>
+<tt><b>index(x,y,i,o)</b> = x+size.x*(y+size.y*(i+size.i*o))</tt>
+</p>
+
+
+<h2><tt>byxf_b24_f32</tt></h2>
+<p><b>TODO</b></p>
+
+<h2><tt>yxoi_o4_f32</tt></h2>
+<p><b>TODO</b></p>
+
+<h2><tt>oyxi_o16_f32</tt></h2>
+<p><b>TODO</b></p>
+
+</body>
+</html>

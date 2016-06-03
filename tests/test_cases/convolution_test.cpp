@@ -609,7 +609,7 @@ TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     auto engine_resource = worker_cpu::create({std::thread::hardware_concurrency()});
     auto input           = memory::allocate({engine::cpu, memory::format::       byxf_f32,    {1, {4, 4}, 1}});
     auto output          = memory::allocate({engine::cpu, memory::format::       byxf_f32,   {1, {2, 2}, 16}});
-    auto weights         = memory::allocate({engine::cpu, memory::format::os_yxi_sv16_f32, {{2, 2}, {16, 1}}});
+    auto weights         = memory::allocate({engine::cpu, memory::format::oyxi_o16_f32, {{2, 2}, {16, 1}}});
     auto biases          = memory::allocate({engine::cpu, memory::format::          x_f32,   {1, {{16}} , 1}});
 
     auto& output_memory  = output.as<const memory&>();
@@ -654,7 +654,7 @@ TEST(convolution_f32_fw, optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     auto input           = memory::allocate({engine::cpu, memory::format::       byxf_f32,    {1, {4, 4}, 1}});
     auto output          = memory::allocate({engine::cpu, memory::format::       byxf_f32,   {1, {2, 2}, 32}});
-    auto weights         = memory::allocate({engine::cpu, memory::format::os_yxi_sv16_f32, {{2, 2}, {32, 1}}});
+    auto weights         = memory::allocate({engine::cpu, memory::format::oyxi_o16_f32, {{2, 2}, {32, 1}}});
     auto biases          = memory::allocate({engine::cpu, memory::format::          x_f32,   {1, {{32}} , 1}});
 
     auto& output_memory  = output.as<const memory&>();
@@ -718,7 +718,7 @@ TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x
     // Optimized data.
     auto input   = memory::allocate({engine::cpu, memory::format::       byxf_f32,  {2, {11, 12}, 3}}); auto& input_memory   = input.as<const memory&>();
     auto output  = memory::allocate({engine::cpu, memory::format::       byxf_f32,   {2, {5, 4}, 32}});
-    auto weights = memory::allocate({engine::cpu, memory::format::os_yxi_sv16_f32, {{3, 2}, {32, 3}}}); auto& weights_memory = weights.as<const memory&>();
+    auto weights = memory::allocate({engine::cpu, memory::format::oyxi_o16_f32, {{3, 2}, {32, 3}}}); auto& weights_memory = weights.as<const memory&>();
     auto biases  = memory::allocate({engine::cpu, memory::format::          x_f32,   {1, {{32}} , 1}}); auto& biases_memory  = biases.as<const memory&>();
 
     // Reference data.

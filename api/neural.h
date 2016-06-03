@@ -48,18 +48,18 @@ struct memory : is_a_primitive {
     };
 
     class format { format(); public: enum type {
+        // See docs/memory_formats.html for format descriptions. Please keep document & this list in sync.
         x_f32,
-        xb_f32,     // 1D+batch, float32
-        bx_f32,     // 1D+batch, float32
-        yxfb_f32,   // 3D+batch, float32
-        byxf_f32,   // for convolution_cpu_jit_batch1
-        bfyx_f32,   // used in Caffe
-        fyxb_f32,   // used in Caffe
-        oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
-        byxf_b24_f32,        // for convolution_cpu_generic
-        yxoi_o4_f32,       // for convolution_cpu_generic
-        os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
-        bs_yxf_bv24_f32,
+        xb_f32,         // 1D+batch, float32
+        bx_f32,         // 1D+batch, float32
+        yxfb_f32,       // 3D+batch, float32
+        byxf_f32,       // for convolution_cpu_jit_batch1
+        bfyx_f32,       // used in Caffe
+        fyxb_f32,       // used in Caffe
+        oiyx_f32,       // format used only for weights: o - output feature maps, i - input feature maps
+        byxf_b24_f32,   // for convolution_cpu_generic
+        yxoi_o4_f32,    // for convolution_cpu_generic
+        oyxi_o16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
         any=static_cast<uint32_t>(-1)
     }; };
 
@@ -72,10 +72,9 @@ struct memory : is_a_primitive {
         case format::bfyx_f32:
         case format::oiyx_f32:
         case format::fyxb_f32:
-        case format::bs_yxf_bv24_f32:
         case format::byxf_b24_f32:
         case format::yxoi_o4_f32:
-        case format::os_yxi_sv16_f32: return {4, type_id<float>()};
+        case format::oyxi_o16_f32: return {4, type_id<float>()};
         default: throw std::runtime_error("unknown memory::format");
         }
     }
