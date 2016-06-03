@@ -38,7 +38,7 @@ memory::~memory() {
     auto it = allocators_map::instance().find(key);
     if (it == std::end(allocators_map::instance())) return;
 
-    it->second.deallocate(pointer, count()*memory::traits(argument.format).type->size);
+    it->second.deallocate(pointer, argument);
 }
 
 primitive memory::describe(memory::arguments arg){
@@ -51,8 +51,7 @@ primitive memory::allocate(memory::arguments arg){
     if(it == std::end(allocators_map::instance())) throw std::runtime_error("Memory allocator is not yet implemented.");
 
     auto result = std::unique_ptr<memory>(new memory(arg));
-    result->pointer = it->second.allocate(result->count()*memory::traits(arg.format).type->size);
-//    result->pointer = new char[result->count()*memory::traits(arg.format).type->size];
+    result->pointer = it->second.allocate(arg);
     const_cast<memory::arguments &>(result->argument).owns_memory = true;
     return result.release();
 }
@@ -61,8 +60,12 @@ namespace {
     struct attach {
         attach() {
             memory_allocator default_allocator {
-                [](size_t size) { return new char[size]; },
-                [](void* pointer, size_t) { delete[] static_cast<char *>(pointer); }
+                [](memory::arguments arg) {
+                    auto count = std::accumulate(arg.size.raw.begin(), arg.size.raw.end(), size_t(1), std::multiplies<size_t>());
+                    auto elem_size = memory::traits(arg.format).type->size;
+                    return new char[count*elem_size];
+                },
+                [](void* pointer, memory::arguments) { delete[] static_cast<char *>(pointer); }
             };
 
             allocators_map::instance().insert({ engine::reference, default_allocator });

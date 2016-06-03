@@ -22,8 +22,8 @@
 namespace neural {
 
     struct memory_allocator {
-        std::function<void*(size_t)> allocate;
-        std::function<void(void*, size_t)> deallocate;
+        std::function<void*(memory::arguments arg)> allocate;
+        std::function<void(void*, memory::arguments)> deallocate;
     };
 
     using allocators_map = singleton_map<engine::type, memory_allocator>;
