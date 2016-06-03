@@ -103,10 +103,10 @@ template<> size_t index<neural::memory::format::yxoi_o4_f32>(std::vector<uint32_
 template<> size_t index<neural::memory::format::byxf_b24_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
     assert(is_in_range(size, pos));
 
-    const size_t B = size[0];   const size_t F = size[1];   const size_t X = size[2];   const size_t Y = size[3];
+                                const size_t F = size[1];   const size_t X = size[2];   const size_t Y = size[3];
     const size_t b =  pos[0];   const size_t f =  pos[1];   const size_t x =  pos[2];   const size_t y =  pos[3];
 
-    assert(B%24==0); // batch must be a multiple of 24
+    assert(size[0]%24==0); // batch must be a multiple of 24
     return b%24 + 24 * (f + F * (x + X * (y + (b/24) * Y)));
 };
 
