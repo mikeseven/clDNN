@@ -27,8 +27,8 @@ void example_006() {
     char *out_ptr = nullptr;
 
     // map & load resources
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {224, 224, 3,  24}});
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {224, 224, 96, 24}});
+    auto input  = memory::describe({engine::cpu, memory::format::yxfb_f32, {224, 224, 3,  24}});
+    auto output = memory::describe({engine::cpu, memory::format::yxfb_f32, {224, 224, 96, 24}});
     auto weight = file::create({engine::cpu, "weight.nnb"});
     auto bias   = file::create({engine::cpu, "bias.nnb"});
 
@@ -56,6 +56,6 @@ void example_006() {
     primitive conv  = convolution::create(best->arguments);
 
     // execution
-    execute({input(in_ptr), output(out_ptr), conv}).sync();
+    execute({input(in_ptr), output(out_ptr), conv}).wait();
 }
 #endif

@@ -16,20 +16,19 @@
 
 #pragma once
 
-#include "fully_connected.h"
+#include "softmax.h"
 
 namespace neural {
-	struct fully_connected_forward_cpu_avx2 : is_an_implementation {
-		fully_connected_forward_cpu_avx2(fully_connected &arg);
-		~fully_connected_forward_cpu_avx2();
+namespace normalization {
+    struct softmax_cpu_reference : is_an_implementation {
+        softmax_cpu_reference(softmax &arg);
+        ~softmax_cpu_reference();
+        static void implementation(const void *ptr);
 
-		static is_an_implementation *create(fully_connected &arg) { return new fully_connected_forward_cpu_avx2(arg); };
-        task_group work();// { return fully_connected_ptr->work(); };
+        static is_an_implementation *create(softmax &arg) { return new softmax_cpu_reference(arg); };
+        task_group work() { return {{task{implementation, &outer}}, schedule::single}; };
 
-		std::unique_ptr<is_an_implementation> fully_connected_ptr;
-		const fully_connected &outer;
-	};
-
+        const softmax &outer;
+    };
 }
-
-
+}

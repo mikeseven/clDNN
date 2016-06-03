@@ -565,6 +565,8 @@ namespace neural {
 		// what da f...???
 		const auto input_width = input_buffer_size.spatial[0];
 		const auto output_width = output_buffer_size.spatial[0];
+        
+    
 		const auto output_length = output_width; // !!!!!!!!!!!!!!!
 
 		// ----------------------------------------------------------------------
@@ -704,9 +706,9 @@ namespace neural {
         }
     }
 
-    std::vector<task> fully_connected_forward_cpu_avx2::work() 
+    task_group fully_connected_forward_cpu_avx2::work()
     {
-        return{ task{ implementation, &outer } };
+        return{ { task{ implementation, &outer } }, schedule::single };
     }
 
 

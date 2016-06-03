@@ -83,8 +83,8 @@ struct fully_connected_reference : is_an_implementation {
         }
     }
 
-    std::vector<task> work() {
-        return{ task{ implementation, &outer } };
+    task_group work() {
+        return {{task{ implementation, &outer}}, schedule::single};
     }
 
     static is_an_implementation *create(fully_connected &arg) { return new fully_connected_reference(arg); };

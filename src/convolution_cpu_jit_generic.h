@@ -16,20 +16,17 @@
 
 #pragma once
 
-#include "fully_connected.h"
+#include "convolution.h"
 
 namespace neural {
-	struct fully_connected_forward_cpu_avx2 : is_an_implementation {
-		fully_connected_forward_cpu_avx2(fully_connected &arg);
-		~fully_connected_forward_cpu_avx2();
+    struct convolution_cpu_jit_generic : is_an_implementation {
+        convolution_cpu_jit_generic(convolution &arg);
+        ~convolution_cpu_jit_generic();
 
-		static is_an_implementation *create(fully_connected &arg) { return new fully_connected_forward_cpu_avx2(arg); };
-        task_group work();// { return fully_connected_ptr->work(); };
+        static is_an_implementation *create(convolution &arg) { return new convolution_cpu_jit_generic(arg); };
+        task_group work() { return jit_conv_ptr->work(); };
 
-		std::unique_ptr<is_an_implementation> fully_connected_ptr;
-		const fully_connected &outer;
-	};
-
+        std::unique_ptr<is_an_implementation> jit_conv_ptr;
+        const convolution &outer;
+    };
 }
-
-

@@ -20,7 +20,10 @@
 #include "tests/gtest/gtest.h"
 #include "test_utils/test_utils.h"
 #include "memory_utils.h"
+#include <algorithm>
 #include <thread>
+
+#include "multidimensional_counter.h"//todo remove
 
 using namespace neural;
 using namespace tests;
@@ -48,10 +51,10 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 //  8   6
 //  0.5 9
 
-    auto input  = memory::create({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}, true});
-    auto output = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
-    auto weights= memory::create({engine::reference, memory::format::oiyx_f32, {1, {2, 2},{1, 1}}, true});
-    auto biases = memory::create({engine::reference, memory::format::   x_f32, {1, {{1}} , 1}, true});
+    auto input  = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}});
+    auto output = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}});
+    auto weights= memory::allocate({engine::reference, memory::format::oiyx_f32, {1, {2, 2},{1, 1}}});
+    auto biases = memory::allocate({engine::reference, memory::format::   x_f32, {1, {{1}} , 1}});
 
     set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f, 0.5f, -1.0f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f});
     set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f});
@@ -59,7 +62,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     auto conv = convolution::create({engine::reference, output, {input, weights, biases}, {1, {2, 2}, 1}, padding::zero});
 
-    execute({conv}).sync();
+    execute({conv}).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ(8.0f, get_value<float>(output_memory, 0));
@@ -87,10 +90,10 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
 //
 //  Output:
 //  3.65 -5.36
-    auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{2, {2, 2}, 1}, true });
-    auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{2, {1, 1}, 1}, true });
-    auto weights = memory::create({ engine::reference, memory::format::oiyx_f32,{1, {2, 2},{1, 1}}, true });
-    auto biases  = memory::create({ engine::reference, memory::format::   x_f32,{1, {{1}} , 1}, true });
+    auto input   = memory::allocate({ engine::reference, memory::format::yxfb_f32,{2, {2, 2}, 1}});
+    auto output  = memory::allocate({ engine::reference, memory::format::yxfb_f32,{2, {1, 1}, 1}});
+    auto weights = memory::allocate({ engine::reference, memory::format::oiyx_f32,{1, {2, 2},{1, 1}}});
+    auto biases  = memory::allocate({ engine::reference, memory::format::   x_f32,{1, {{1}} , 1}});
 
     set_values(input,  { 0.5f, 2.3f, 1.5f, -0.4f, 2.0f, 1.0f, -4.0f, 3.0f });
     set_values(weights,{ -1.2f, 1.5f, 0.5f, -0.5f });
@@ -98,7 +101,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
 
     auto conv = convolution::create({ engine::reference, output, {input, weights, biases}, { 1, {2, 2}, 1 }, padding::zero });
 
-    execute({ conv }).sync();
+    execute({ conv }).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 0));
@@ -124,10 +127,10 @@ TEST(convolution_f32_fw, basic_ofm_wsiz2x1x2x1_in1x2x1_nopad) {
 //   5.1  f=0
 //  -5.2  f=1
 
-    auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 1}, 1}, true });
-    auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 2}, true });
-    auto weights = memory::create({ engine::reference, memory::format::oiyx_f32,{1 ,{2, 1},{2, 1}}, true });
-    auto biases  = memory::create({ engine::reference, memory::format::   x_f32,{1 ,{{2}}, 1}, true });
+    auto input   = memory::allocate({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 1}, 1}});
+    auto output  = memory::allocate({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 2}});
+    auto weights = memory::allocate({ engine::reference, memory::format::oiyx_f32,{1 ,{2, 1},{2, 1}}});
+    auto biases  = memory::allocate({ engine::reference, memory::format::   x_f32,{1 ,{{2}}, 1}});
 
     set_values(input,   { 1.0f, 2.0f });
     set_values(weights, { 1.0f, 2.0f, -1.0f, -2.0f });
@@ -135,7 +138,7 @@ TEST(convolution_f32_fw, basic_ofm_wsiz2x1x2x1_in1x2x1_nopad) {
 
     auto conv = convolution::create({ engine::reference, output, {input, weights, biases}, { 1, {5, 5}, 1 }, padding::zero });
 
-    execute({ conv }).sync();
+    execute({ conv }).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ(5.1f, get_value<float>(output_memory, 0));
@@ -168,10 +171,10 @@ TEST(convolution_f32_fw, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad) {
 //   64,0  f=1
 //  103.0  f=2
 
-    auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 1}, 2}, true });
-    auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 3}, true });
-    auto weights = memory::create({ engine::reference, memory::format::oiyx_f32,{1 ,{2, 1},{3, 2}}, true });
-    auto biases  = memory::create({ engine::reference, memory::format::   x_f32,{1 ,{{3}}, 1}, true });
+    auto input   = memory::allocate({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 1}, 2}});
+    auto output  = memory::allocate({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 3}});
+    auto weights = memory::allocate({ engine::reference, memory::format::oiyx_f32,{1 ,{2, 1},{3, 2}}});
+    auto biases  = memory::allocate({ engine::reference, memory::format::   x_f32,{1 ,{{3}}, 1}});
 
     set_values(input,   { 1.0f, 3.0f, 2.0f, 4.0f });
     set_values(weights, { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f });
@@ -179,7 +182,7 @@ TEST(convolution_f32_fw, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad) {
 
     auto conv = convolution::create({ engine::reference, output, {input, weights, biases}, { 1, {5, 5}, 1 }, padding::zero });
 
-    execute({ conv }).sync();
+    execute({ conv }).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ( 25.0f, get_value<float>(output_memory, 0));
@@ -209,10 +212,10 @@ TEST(convolution_f32_fw, basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
 //   2.12
 //   3.08
 
-    auto input   = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 2}, 1}, true });
-    auto output  = memory::create({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 3}, true });
-    auto weights = memory::create({ engine::reference, memory::format::oiyx_f32,{1 ,{2, 2},{3, 1}}, true });
-    auto biases  = memory::create({ engine::reference, memory::format::   x_f32,{1 ,{{3 }}, 1}, true });
+    auto input   = memory::allocate({ engine::reference, memory::format::yxfb_f32,{1 ,{2, 2}, 1}});
+    auto output  = memory::allocate({ engine::reference, memory::format::yxfb_f32,{1 ,{1, 1}, 3}});
+    auto weights = memory::allocate({ engine::reference, memory::format::oiyx_f32,{1 ,{2, 2},{3, 1}}});
+    auto biases  = memory::allocate({ engine::reference, memory::format::   x_f32,{1 ,{{3 }}, 1}});
 
     set_values(input,   { -2.3f, -0.1f, 3.1f, 1.9f });
     set_values(weights, { -1.1f, 1.5f, 0.5f, -0.5f, 0.1f, 0.2f, 0.4f, 0.7f, 2.0f, -1.0f, 2.5f, -1.5f });
@@ -220,7 +223,7 @@ TEST(convolution_f32_fw, basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
 
     auto conv = convolution::create({ engine::reference, output, {input, weights, biases}, { 1, {2, 2}, 1 }, padding::zero });
 
-    execute({ conv }).sync();
+    execute({ conv }).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_TRUE(are_equal(3.08f, get_value<float>(output_memory, 0)));
@@ -250,17 +253,17 @@ TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //
 //  Output:
 //  12.25
-    auto input  = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}, true});
-    auto output = memory::create({engine::reference, memory::format::yxfb_f32, { 1, {1, 1}, 1}, true});
-    auto weights= memory::create({engine::reference, memory::format::oiyx_f32, { 1, {3, 3},{1, 1}}, true});
-    auto biases = memory::create({engine::reference, memory::format::   x_f32, { 1, {{1}} , 1}, true});
+    auto input  = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {2, 2}, 1}});
+    auto output = memory::allocate({engine::reference, memory::format::yxfb_f32, { 1, {1, 1}, 1}});
+    auto weights= memory::allocate({engine::reference, memory::format::oiyx_f32, { 1, {3, 3},{1, 1}}});
+    auto biases = memory::allocate({engine::reference, memory::format::   x_f32, { 1, {{1}} , 1}});
 
     set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f});
     set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f});
     set_values(biases , {2.0f});
 
     auto conv = convolution::create({engine::reference, output, {input, weights, biases}, {1, {2, 2}, 1}, padding::zero});
-    execute({conv}).sync();
+    execute({conv}).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ(12.25f, get_value<float>(output_memory, 0));
@@ -291,10 +294,10 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //   Output:
 //   rnd   rnd
 //   rnd   2.0
-    auto input  = memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
-    auto output = memory::create({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
-    auto weights= memory::create({engine::cpu, memory::format::oiyx_f32, {1 ,{3, 3},{1, 1}}, true});
-    auto biases = memory::create({engine::cpu, memory::format::   x_f32, {1 ,{{1}} , 1}, true});
+    auto input  = memory::allocate({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}});
+    auto output = memory::allocate({engine::cpu, memory::format::yxfb_f32, {1 ,{2, 2}, 1}});
+    auto weights= memory::allocate({engine::cpu, memory::format::oiyx_f32, {1 ,{3, 3},{1, 1}}});
+    auto biases = memory::allocate({engine::cpu, memory::format::   x_f32, {1 ,{{1}} , 1}});
 
     set_values(input  , {-0.5f, 1.0f, 0.5f, 2.0f});
     set_values(weights, {-2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f});
@@ -308,7 +311,7 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
                                      {0, {-1, -1}, 0},
                                      {1, { 2,  2}, 1},
                                      padding::zero});
-    execute({conv}).sync();
+    execute({conv}).wait();
 
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_memory, 3));
@@ -348,13 +351,13 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
 //
 //   Bias grad
 //   10
-    auto bw_output    = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{3, 3}, 1}, true});
-    auto bw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
-    auto fw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{3, 3}, 1}, true});
-    auto weights      = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
-    auto weights_diff = memory::create({engine::reference, memory::format::yxfb_f32, {1 ,{2, 2}, 1}, true});
-    auto biases       = memory::create({engine::reference, memory::format::x_f32,    {1 ,{{1}} , 1}, true});
-    auto biases_diff  = memory::create({engine::reference, memory::format::x_f32,    {1 ,{{1}} , 1}, true});
+    auto bw_output    = memory::allocate({engine::reference, memory::format::yxfb_f32, {1 ,{3, 3}, 1}});
+    auto bw_input     = memory::allocate({engine::reference, memory::format::yxfb_f32, {1 ,{2, 2}, 1}});
+    auto fw_input     = memory::allocate({engine::reference, memory::format::yxfb_f32, {1 ,{3, 3}, 1}});
+    auto weights      = memory::allocate({engine::reference, memory::format::yxfb_f32, {1 ,{2, 2}, 1}});
+    auto weights_diff = memory::allocate({engine::reference, memory::format::yxfb_f32, {1 ,{2, 2}, 1}});
+    auto biases       = memory::allocate({engine::reference, memory::format::x_f32,    {1 ,{{1}} , 1}});
+    auto biases_diff  = memory::allocate({engine::reference, memory::format::x_f32,    {1 ,{{1}} , 1}});
 
     auto& bw_output_mem    = bw_output.as<const memory&>();
     auto& weights_diff_mem = weights_diff.as<const memory&>();
@@ -371,7 +374,7 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
                                                  {1, {1, 1}, 1},
                                                  padding::zero});
 
-    execute({conv_bw}).sync();
+    execute({conv_bw}).wait();
 
     bool results_equal = true;
     results_equal &= -2.0f == get_value<float>(bw_output_mem, 0);
@@ -432,13 +435,13 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
 //
 //  Bias grad
 //  -3
-    auto bw_output    = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
-    auto bw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 1}, true});
-    auto fw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
-    auto weights      = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
-    auto weights_diff = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
-    auto biases       = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
-    auto biases_diff  = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
+    auto bw_output    = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}});
+    auto bw_input     = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 1}});
+    auto fw_input     = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}});
+    auto weights      = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}});
+    auto weights_diff = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}});
+    auto biases       = memory::allocate({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}});
+    auto biases_diff  = memory::allocate({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}});
 
     auto& bw_output_mem    = bw_output.as<const memory&>();
     auto& weights_diff_mem = weights_diff.as<const memory&>();
@@ -454,7 +457,7 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
                                                  {bw_input, fw_input, weights, biases},
                                                  {1, {1, 1}, 1},
                                                  padding::zero});
-    execute({conv_bw}).sync();
+    execute({conv_bw}).wait();
 
     bool results_equal = true;
     results_equal &= -4.0f == get_value<float>(bw_output_mem, 0);
@@ -522,13 +525,13 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
 //  Bias grad
 //  -3
     using namespace neural;
-    auto bw_output    = memory::create({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}, true});
-    auto bw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}, true});
-    auto fw_input     = memory::create({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}, true});
-    auto weights      = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
-    auto weights_diff = memory::create({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}, true});
-    auto biases       = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
-    auto biases_diff  = memory::create({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}, true});
+    auto bw_output    = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}});
+    auto bw_input     = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 1}});
+    auto fw_input     = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {4, 4}, 1}});
+    auto weights      = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}});
+    auto weights_diff = memory::allocate({engine::reference, memory::format::yxfb_f32, {1, {3, 3}, 1}});
+    auto biases       = memory::allocate({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}});
+    auto biases_diff  = memory::allocate({engine::reference, memory::format::x_f32,    {1, {{1}} , 1}});
 
     auto& bw_output_mem    = bw_output.as<const memory&>();
     auto& bw_input_mem     = bw_input.as<const memory&>();
@@ -563,7 +566,7 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
                                                  {0, {1, 1}, 0},
                                                  {1, {1, 1}, 1},
                                                  padding::zero});
-    execute({conv_bw}).sync();
+    execute({conv_bw}).wait();
 
     bool results_equal = true;
     results_equal &=  0.0f == get_value<float>(bw_output_mem, 0);
@@ -604,15 +607,16 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
 TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     auto engine_resource = worker_cpu::create({std::thread::hardware_concurrency()});
-    auto input           = memory::create({engine::cpu, memory::format::       byxf_f32,    {1, {4, 4}, 1}, true});
-    auto output          = memory::create({engine::cpu, memory::format::       byxf_f32,   {1, {2, 2}, 16}, true});
-    auto weights         = memory::create({engine::cpu, memory::format::os_yxi_sv16_f32, {{2, 2}, {16, 1}}, true});
-    auto biases          = memory::create({engine::cpu, memory::format::          x_f32,   {1, {{16}} , 1}, true});
+    auto input           = memory::allocate({engine::cpu, memory::format::       byxf_f32,    {1, {4, 4}, 1}});
+    auto output          = memory::allocate({engine::cpu, memory::format::       byxf_f32,   {1, {2, 2}, 16}});
+    auto weights         = memory::allocate({engine::cpu, memory::format::os_yxi_sv16_f32, {{2, 2}, {16, 1}}});
+    auto biases          = memory::allocate({engine::cpu, memory::format::          x_f32,   {1, {{16}} , 1}});
 
     auto& output_memory  = output.as<const memory&>();
     auto& input_memory   = input.as<const memory&>();
     auto& weights_memory = weights.as<const memory&>();
     auto& biases_memory  = biases.as<const memory&>();
+    auto output_ptr = static_cast<float*>(output_memory.pointer);
 
     auto conv = convolution::create({engine::cpu, output, {input, weights, biases}, {1, {2, 2}, 1}, padding::zero});
 
@@ -626,13 +630,13 @@ TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
         fill<float>(weights_memory, weight_val);
         fill<float>(biases_memory, bias_val);
 
-        execute({conv}, engine_resource).sync();
+        execute({conv}, {engine_resource}).wait();
 
-        // This test was just a sum of uniform values in whole window. 
+        // This test was just a sum of uniform values in whole window.
         // So each output value should be: number of input elements of 3d kernel (times input and kernel values) + bias value.
         float expected_value = num_input_kernel_elements * input_val * weight_val + bias_val;
-        for(int output_element = 0; output_element < num_output_elements; ++output_element)
-            EXPECT_EQ(true, tests::are_equal(expected_value, get_value<float>(output_memory, output_element)));
+        for(size_t output_element = 0; output_element < num_output_elements; ++output_element)
+            EXPECT_EQ(true, tests::are_equal(expected_value, output_ptr[output_element]));
     };
 
     run_subtest(1.0f, 1.0f, 1.0f);
@@ -648,10 +652,10 @@ TEST(convolution_f32_fw, optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     // This implementation will use two jobs, each for one slice, so make sure it will test MT path, no matter what underlying HW we have.
     auto engine_resource = worker_cpu::create({2});
 
-    auto input           = memory::create({engine::cpu, memory::format::       byxf_f32,    {1, {4, 4}, 1}, true});
-    auto output          = memory::create({engine::cpu, memory::format::       byxf_f32,   {1, {2, 2}, 32}, true});
-    auto weights         = memory::create({engine::cpu, memory::format::os_yxi_sv16_f32, {{2, 2}, {32, 1}}, true});
-    auto biases          = memory::create({engine::cpu, memory::format::          x_f32,   {1, {{32}} , 1}, true});
+    auto input           = memory::allocate({engine::cpu, memory::format::       byxf_f32,    {1, {4, 4}, 1}});
+    auto output          = memory::allocate({engine::cpu, memory::format::       byxf_f32,   {1, {2, 2}, 32}});
+    auto weights         = memory::allocate({engine::cpu, memory::format::os_yxi_sv16_f32, {{2, 2}, {32, 1}}});
+    auto biases          = memory::allocate({engine::cpu, memory::format::          x_f32,   {1, {{32}} , 1}});
 
     auto& output_memory  = output.as<const memory&>();
     auto& input_memory   = input.as<const memory&>();
@@ -663,22 +667,21 @@ TEST(convolution_f32_fw, optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     auto& kernel_sizes = weights_memory.argument.size;
     auto& output_sizes = output_memory.argument.size;
     size_t num_input_kernel_elements = kernel_sizes.spatial[0] * kernel_sizes.spatial[1] * kernel_sizes.feature[1];
-    size_t num_output_elements = output_memory.count();
 
     auto run_subtest = [&](float input_val, float weight_val_slice0, float weight_val_slice1, float bias_val_slice0, float bias_val_slice1)
     {
         fill<float>(input_memory, input_val);
 
         // Weights and biases are grouped by slices, so we can easily initialize them with different values.
-        for(int weight_element = 0; weight_element < weights_memory.count(); ++weight_element)
-            set_value<float>(weights_memory, weight_element, (weight_element < weights_memory.count()/2) ? weight_val_slice0 : weight_val_slice1);
+        for(size_t weight_element = 0; weight_element < weights_memory.count(); ++weight_element)
+            set_value<float>(weights_memory, static_cast<uint32_t>(weight_element), (weight_element < weights_memory.count()/2) ? weight_val_slice0 : weight_val_slice1);
 
-        for(int bias_element = 0; bias_element < biases_memory.count(); ++bias_element)
-            set_value<float>(biases_memory, bias_element, (bias_element < biases_memory.count()/2) ? bias_val_slice0 : bias_val_slice1);
+        for(size_t bias_element = 0; bias_element < biases_memory.count(); ++bias_element)
+            set_value<float>(biases_memory, static_cast<uint32_t>(bias_element), (bias_element < biases_memory.count()/2) ? bias_val_slice0 : bias_val_slice1);
 
-        execute({conv}, engine_resource).sync();
+        execute({conv}, {engine_resource}).wait();
 
-        // This test was just a sum of uniform values in whole window. 
+        // This test was just a sum of uniform values in whole window.
         // So each output value should be: number of input elements of 3d kernel (times input and kernel values) + bias value.
         float expected_value_slice0 = num_input_kernel_elements * input_val * weight_val_slice0 + bias_val_slice0;
         float expected_value_slice1 = num_input_kernel_elements * input_val * weight_val_slice1 + bias_val_slice1;
@@ -713,19 +716,19 @@ TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x
     auto engine_resource = worker_cpu::create({2});
 
     // Optimized data.
-    auto input   = memory::create({engine::cpu, memory::format::       byxf_f32,  {2, {11, 12}, 3}, true}); auto& input_memory   = input.as<const memory&>();
-    auto output  = memory::create({engine::cpu, memory::format::       byxf_f32,   {2, {5, 4}, 32}, true}); auto& output_memory  = output.as<const memory&>();
-    auto weights = memory::create({engine::cpu, memory::format::os_yxi_sv16_f32, {{3, 2}, {32, 3}}, true}); auto& weights_memory = weights.as<const memory&>();
-    auto biases  = memory::create({engine::cpu, memory::format::          x_f32,   {1, {{32}} , 1}, true}); auto& biases_memory  = biases.as<const memory&>();
+    auto input   = memory::allocate({engine::cpu, memory::format::       byxf_f32,  {2, {11, 12}, 3}}); auto& input_memory   = input.as<const memory&>();
+    auto output  = memory::allocate({engine::cpu, memory::format::       byxf_f32,   {2, {5, 4}, 32}});
+    auto weights = memory::allocate({engine::cpu, memory::format::os_yxi_sv16_f32, {{3, 2}, {32, 3}}}); auto& weights_memory = weights.as<const memory&>();
+    auto biases  = memory::allocate({engine::cpu, memory::format::          x_f32,   {1, {{32}} , 1}}); auto& biases_memory  = biases.as<const memory&>();
 
     // Reference data.
-    auto ref_input   = memory::create({engine::cpu, memory::format::yxfb_f32,  {2, {11, 12}, 3}, true}); auto& ref_input_memory   = ref_input.as<const memory&>();
-    auto ref_output  = memory::create({engine::cpu, memory::format::yxfb_f32,   {2, {5, 4}, 32}, true}); auto& ref_output_memory  = ref_output.as<const memory&>();
-    auto ref_weights = memory::create({engine::cpu, memory::format::oiyx_f32, {{3, 2}, {32, 3}}, true}); auto& ref_weights_memory = ref_weights.as<const memory&>();
-    auto ref_biases  = memory::create({engine::cpu, memory::format::   x_f32,   {1, {{32}} , 1}, true}); auto& ref_biases_memory  = ref_biases.as<const memory&>();
+    auto ref_input   = memory::allocate({engine::cpu, memory::format::yxfb_f32,  {2, {11, 12}, 3}});
+    auto ref_output  = memory::allocate({engine::cpu, memory::format::yxfb_f32,   {2, {5, 4}, 32}}); auto& ref_output_memory  = ref_output.as<const memory&>();
+    auto ref_weights = memory::allocate({engine::cpu, memory::format::oiyx_f32, {{3, 2}, {32, 3}}});
+    auto ref_biases  = memory::allocate({engine::cpu, memory::format::   x_f32,   {1, {{32}} , 1}});
 
     // Temporary data for optimized results in reference space.
-    auto temp_output  = memory::create({engine::cpu, memory::format::yxfb_f32, {2, {5, 4}, 32},  true}); auto& temp_output_memory = temp_output.as<const memory&>();
+    auto temp_output  = memory::allocate({engine::cpu, memory::format::yxfb_f32, {2, {5, 4}, 32}}); auto& temp_output_memory = temp_output.as<const memory&>();
 
     // Reordering primitives.
     auto reorder_input_to_ref   = reorder::create({engine::reference, input, ref_input});
@@ -746,12 +749,204 @@ TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x
     {
         opt_conv,
         reorder_output_to_tmp_ref,
-        reorder_input_to_ref, 
-        reorder_weights_to_ref, 
-        reorder_biases_to_ref, 
+        reorder_input_to_ref,
+        reorder_weights_to_ref,
+        reorder_biases_to_ref,
         ref_conv,
-    }, engine_resource).sync();
+    }, {engine_resource}).wait();
 
-    for(int output_element = 0; output_element < temp_output_memory.count(); ++output_element)
-        EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(temp_output_memory, output_element), 0.0005f)); 
+    for(size_t output_element = 0; output_element < temp_output_memory.count(); ++output_element)
+        EXPECT_EQ(true, tests::are_equal(static_cast<float*>(ref_output_memory.pointer)[output_element],
+                                         static_cast<float*>(temp_output_memory.pointer)[output_element],
+                                         0.0005f));
+}
+
+TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
+    const uint32_t input_width         = 20;   // data = input|output
+    const uint32_t input_height        = 20;   // data = input|output
+    const uint32_t input_feature_maps  = 8;
+    const uint32_t input_view_start_x  = 0;
+    const uint32_t input_view_start_y  = 0;
+    const uint32_t stride_width        = 1;
+    const uint32_t stride_height       = 1;
+    const uint32_t output_width        = (input_width +stride_width -1)/stride_width;
+    const uint32_t output_height       = (input_height+stride_height-1)/stride_height;
+    const uint32_t output_feature_maps = 8;
+    const uint32_t output_view_x       = 0;
+    const uint32_t output_view_y       = 0;
+    const uint32_t output_view_width   = (input_width +stride_width -1)/stride_width;
+    const uint32_t output_view_height  = (input_height+stride_height-1)/stride_height;
+    const uint32_t filter_size         = 5;    // filter size is the same for both axes
+    const uint32_t output_features_per_iteration = 4;
+
+    // allocate memory buffers
+    const uint64_t batch_size = 24;
+    const auto align_size = 64;
+    const auto align_size_in_float = align_size/sizeof(float);
+    const auto output_buffer_size = output_height*output_width*output_feature_maps*batch_size;
+    const auto filter_buffer_size = filter_size*filter_size*output_feature_maps*input_feature_maps;
+    const auto  input_buffer_size =  input_height* input_width* input_feature_maps*batch_size;
+    const auto   bias_buffer_size = output_feature_maps;
+
+    std::unique_ptr<float> output_container = std::move(std::unique_ptr<float>(new float[output_buffer_size+align_size_in_float]));
+    std::unique_ptr<float> filter_container = std::move(std::unique_ptr<float>(new float[filter_buffer_size+align_size_in_float]));
+    std::unique_ptr<float>  input_container = std::move(std::unique_ptr<float>(new float[ input_buffer_size+align_size_in_float]));
+    std::unique_ptr<float>   bias_container = std::move(std::unique_ptr<float>(new float[  bias_buffer_size+align_size_in_float]));
+
+    const auto output = output_container.get();
+    const auto filter = filter_container.get();
+    const auto  input =  input_container.get();
+    const auto   bias =   bias_container.get();
+
+    auto input_p  = memory::describe({neural::engine::reference, memory::format::byxf_b24_f32, { 24 , {input_width , input_height }, input_feature_maps}});
+    auto output_p = memory::describe({neural::engine::reference, memory::format::byxf_b24_f32, { 24 , {output_width, output_height}, output_feature_maps}});
+    auto weights_p= memory::describe({neural::engine::reference, memory::format::yxoi_o4_f32 , { 1  , {filter_size   , filter_size }, {output_feature_maps, input_feature_maps}}});
+    auto biases_p = memory::describe({neural::engine::reference, memory::format::x_f32       , { 1  , {{output_feature_maps}}  , 1 }});
+
+    // initialized inputs & filter with pseudorandom values
+    std::mt19937 engine(0xdeadf00d);
+    std::normal_distribution<float> distribution(0.0f, 1.0f);
+    auto lambda = [&]{return distribution(engine);};
+    std::fill    (output, output+output_buffer_size, 0.0f);
+    std::generate( input,  input+ input_buffer_size, lambda);
+    std::generate( bias,  bias+ bias_buffer_size, lambda);
+    std::generate(filter, filter+filter_buffer_size, lambda);
+
+    auto engine_resource = worker_cpu::create({2});
+
+    //set pointers
+    execute(
+    {output_p(output), input_p(input), weights_p(filter), biases_p(bias)}
+    , {engine_resource}).wait();
+
+    auto conv   = convolution::create( {neural::engine::cpu,
+                                        output_p,
+                                        {input_p, weights_p, biases_p},
+                                        {1, {stride_height, stride_width}, 1},
+                                        padding::zero}
+                                        );
+
+    execute(
+        {conv}
+    , {engine_resource}).wait();
+
+    const int64_t filter_radius = (filter_size-1)/2;
+    const auto output_feature_blocks    = output_feature_maps/output_features_per_iteration;
+    for(uint64_t b=0; b<batch_size; ++b) {
+        for(uint64_t y=0; y<output_view_height; ++y) {
+            for(uint64_t x=0; x<output_view_width; ++x)
+                for(uint64_t fo=0; fo<output_feature_maps; ++fo) {
+                    int64_t foi = fo%output_features_per_iteration;
+                    int64_t fob = fo/output_features_per_iteration;
+                    float valid = bias[fo];
+                    for(uint64_t yk=0; yk<filter_size; ++yk) {
+                        int64_t ys = static_cast<int64_t>(input_view_start_y) + y*stride_height+yk-filter_radius;
+                        if(ys<0 || static_cast<uint64_t>(ys)>=input_height) continue;
+                        for(uint64_t xk=0; xk<filter_size; ++xk) {
+                            int64_t xs = static_cast<int64_t>(input_view_start_x) + x*stride_height+xk-filter_radius;
+                            if(xs<0 || static_cast<uint64_t>(xs)>=input_width) continue;
+                            for(uint64_t fi=0; fi<input_feature_maps; ++fi) {
+                                float value  = input[b + batch_size*(fi + input_feature_maps*(xs + input_width*ys))];
+                                float weight = filter[foi + output_features_per_iteration*(fi + input_feature_maps*(fob + output_feature_blocks*(xk + filter_size*yk)))];
+                                valid  = static_cast<float>(double(value)*weight + valid);
+                            }
+#if 0
+                            std::cout << "[yo=" << yo << ",xo=" << xo << ",fo=" << fo << ",yk=" << yk << ",xk=" << xk << "]: " << valid;
+                            std::cout << std::endl;
+#endif
+                        }
+                    }
+                    if(valid<0) valid = 0;
+                    auto yo = y+output_view_y;
+                    auto xo = x+output_view_x;
+                    auto tested = output[b + batch_size*(fo + output_feature_maps*(xo + output_width*yo))];
+                    EXPECT_EQ(true, tests::are_equal(valid, tested)) << "at [b,x,y,f] = [" << b << "," << xo << "," << yo << "," << fo << "]\n" << std::endl;
+                }
+        }
+    }
+}
+
+TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
+    const uint32_t input_width         = 6;   // data = input|output
+    const uint32_t input_height        = 6;   // data = input|output
+    const uint32_t input_feature_maps  = 8;
+    const uint32_t stride_width        = 2;
+    const uint32_t stride_height       = 2;
+    const uint32_t output_width        = (input_width +stride_width -1)/stride_width;
+    const uint32_t output_height       = (input_height+stride_height-1)/stride_height;
+    const uint32_t output_feature_maps = 4;
+    const uint32_t filter_size         = 2;    // filter size is the same for both axes
+
+    // allocate memory buffers
+    const uint64_t batch_size = 24;
+    const auto output_buffer_size = output_height*output_width*output_feature_maps*batch_size;
+    const auto filter_buffer_size = filter_size*filter_size*output_feature_maps*input_feature_maps;
+    const auto  input_buffer_size =  input_height* input_width* input_feature_maps*batch_size;
+    const auto   bias_buffer_size = output_feature_maps;
+
+    std::unique_ptr<float> output_container = std::move(std::unique_ptr<float>(new float[output_buffer_size]));
+    std::unique_ptr<float> filter_container = std::move(std::unique_ptr<float>(new float[filter_buffer_size]));
+    std::unique_ptr<float>  input_container = std::move(std::unique_ptr<float>(new float[ input_buffer_size]));
+    std::unique_ptr<float>   bias_container = std::move(std::unique_ptr<float>(new float[  bias_buffer_size]));
+
+    const auto output =output_container.get();
+    const auto filter =filter_container.get();
+    const auto  input = input_container.get();
+    const auto   bias =  bias_container.get();
+
+    // Memory descriptors for optimized convolution
+    auto output_optimized = memory::describe({neural::engine::reference, memory::format::byxf_b24_f32, { 24 , {output_width, output_height}, output_feature_maps}});
+    auto input_optimized  = memory::describe({neural::engine::reference, memory::format::byxf_b24_f32, { 24 , {input_width , input_height }, input_feature_maps}});
+    auto weights_optimized= memory::describe({neural::engine::reference, memory::format::yxoi_o4_f32 , { 1  , {filter_size   , filter_size}, {output_feature_maps, input_feature_maps}}});
+    auto biases           = memory::describe({neural::engine::reference, memory::format::x_f32       , { 1  , {{output_feature_maps}}      , 1 }});
+    auto output_optimized_in_ref_format = memory::allocate({neural::engine::reference, memory::format::yxfb_f32, { 24 , {output_width, output_height}, output_feature_maps}});
+
+    // Set pointers
+    execute({output_optimized(output), input_optimized(input), weights_optimized(filter), biases(bias)});
+
+    // Fill primitives with random data
+    fill<float>(weights_optimized, 1.0f);
+    fill<float>(output_optimized , 1.0f);
+    fill<float>(input_optimized  , 1.0f);
+    fill<float>(biases           , 1.0f);
+
+    auto conv_optimized   = convolution::create( {neural::engine::cpu,
+                                                 output_optimized,
+                                                 {input_optimized, weights_optimized, biases},
+                                                 {1, {stride_height, stride_width}, 1},
+                                                 padding::zero}
+                                                );
+
+     // Memory for reference convolution
+    auto input_ref  = memory::allocate({neural::engine::reference, memory::format::yxfb_f32, { 24 , {input_width , input_height }, input_feature_maps}});
+    auto output_ref = memory::allocate({neural::engine::reference, memory::format::yxfb_f32, { 24 , {output_width, output_height}, output_feature_maps}});
+    auto weights_ref= memory::allocate({neural::engine::reference, memory::format::oiyx_f32, { 1  , {filter_size , filter_size  }, {output_feature_maps, input_feature_maps}}});
+
+    // the same bias primitive is used in both implementations
+    auto conv_ref   = convolution::create( {neural::engine::reference,
+                                            output_ref,
+                                            {input_ref, weights_ref, biases},
+                                            {1, {stride_height, stride_width}, 1},
+                                            padding::zero}
+                                           );
+
+    // Reordering primitives.
+    auto reorder_input_optimized_to_ref   = reorder::create({engine::reference, input_optimized, input_ref});
+    auto reorder_weights_optimized_to_ref = reorder::create({engine::reference, weights_optimized, weights_ref});
+
+    auto reorder_output_optimized_ref_format = reorder::create({engine::reference, output_optimized, output_optimized_in_ref_format});
+
+    auto engine_resource = worker_cpu::create({4});
+     execute(
+     { reorder_input_optimized_to_ref, reorder_weights_optimized_to_ref // copy input/weigts
+     , conv_optimized, conv_ref                                         // run both convolutions
+     , reorder_output_optimized_ref_format }                            // copy optimized output to another buffer in reference output's format, so we can compare them
+     , {engine_resource}).wait();
+
+     auto& output_mem_optimized = output_optimized.as<const memory&>();
+     auto& output_mem_ref       = output_ref.as<const memory&>();
+     for(size_t i = 0; i < output_buffer_size; ++i)
+       EXPECT_EQ(true, tests::are_equal(static_cast<float*>(output_mem_ref.pointer)[i],
+                                        static_cast<float*>(output_mem_optimized.pointer)[i]))
+               << "at index " << i;
 }

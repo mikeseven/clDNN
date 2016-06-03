@@ -17,10 +17,13 @@
 #include "api/neural.h"
 #include "tests/gtest/gtest.h"
 #include "test_utils/test_utils.h"
+#include "memory_utils.h"
+#include <numeric>
 
 using namespace neural;
 using namespace std;
 using namespace tests;
+
 
 class softmax_xb_f32_test_fixture: public ::testing::Test {
 public:
@@ -35,8 +38,8 @@ public:
     float out_buffer[out_size];
     float expected_buffer[out_size];
 
-    neural::primitive input  = memory::create({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
-    neural::primitive output = memory::create({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
+    neural::primitive input  = memory::describe({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
+    neural::primitive output = memory::describe({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
     neural::primitive act    = normalization::softmax::create({engine::reference, output, input});
 
     void compare_out_buffer_with_expected() {
@@ -70,7 +73,7 @@ TEST_F(softmax_xb_f32_test_fixture, input_same_values) {
               in_buffer[i] = 1.0f;
         expected_buffer[i] = 0.1f;
     }
-    execute({input(in_buffer), output(out_buffer), act}).sync();
+    execute({input(in_buffer), output(out_buffer), act}).wait();
     compare_out_buffer_with_expected();
 }
 
@@ -84,10 +87,9 @@ TEST_F(softmax_xb_f32_test_fixture, input_same_values_batch_wise) {
     for(size_t i = 0; i < out_size; ++i)
         expected_buffer[i] = 0.1f;
 
-    execute({input(in_buffer), output(out_buffer), act}).sync();
+    execute({input(in_buffer), output(out_buffer), act}).wait();
     compare_out_buffer_with_expected_batch_wise();
 }
-
 
 TEST_F(softmax_xb_f32_test_fixture, values_batch_wise) {
 
@@ -125,7 +127,7 @@ TEST_F(softmax_xb_f32_test_fixture, values_batch_wise) {
     for(size_t i = 0; i < out_size; ++i)
         out_buffer[i] = NAN;
 
-    execute({input(in_buffer), output(out_buffer), act}).sync();
+    execute({input(in_buffer), output(out_buffer), act}).wait();
     compare_out_buffer_with_expected_batch_wise();
 }
 
@@ -142,8 +144,8 @@ TEST(softmax_xb_f32_test, basic_with_offsets) {
     float out_buffer[output_x*output_b];
     // input buffer should be initialized with valid data
 
-    auto input  = memory::create({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
-    auto output = memory::create({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
+    auto input  = memory::describe({engine::reference, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
+    auto output = memory::describe({engine::reference, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
 
     auto act    = normalization::softmax::create({engine::reference,
                                                   output,
@@ -161,7 +163,7 @@ TEST(softmax_xb_f32_test, basic_with_offsets) {
     for(size_t i = 0; i < output_x*output_b; ++i)
         out_buffer[i] = out_of_offset_value;
 
-    execute({input(in_buffer), output(out_buffer), act}).sync();
+    execute({input(in_buffer), output(out_buffer), act}).wait();
 
     auto expected_value = 0.2f;
     auto end_b = out_off_b+out_siz_b;
@@ -177,5 +179,163 @@ TEST(softmax_xb_f32_test, basic_with_offsets) {
           EXPECT_TRUE(are_equal(value, expected))
               << "At ["<< idx <<  "] Expected : " << expected << " actual :" << value;
         }
-
 };
+
+TEST(softmax_xb_f32_fw, intrinsics_avx2_batch1_sum_to_one) {
+    const uint32_t x = 1000, b = 1;
+
+    auto input  = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
+    auto output = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
+    auto& input_memory  = input.as<const memory&>();
+    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer);
+
+    // Initialize input data
+    fill<float>(input_memory);
+
+    auto softmax = normalization::softmax::create({engine::cpu, output, input});
+
+    execute({output, softmax}).wait();
+
+    auto sum = accumulate(output_memory_ptr, output_memory_ptr + x, 0.0f);
+
+    EXPECT_EQ(true, tests::are_equal(sum, 1.0f));
+}
+
+TEST(softmax_xb_f32_fw, intrinsics_avx2_batch1_ref_compare) {
+    const uint32_t x = 100, b = 1;
+
+    // Optimized data
+    auto input  = memory::allocate({ engine::reference, memory::format::xb_f32, {b, {x}} });
+    auto output = memory::allocate({ engine::reference, memory::format::xb_f32, {b, {x}} });
+    auto& input_memory  = input.as<const memory&>();
+    auto& output_memory = output.as<const memory&>();
+
+    // Reference data
+    auto ref_output = memory::allocate({ engine::reference, memory::format::xb_f32,{b, {x}} });
+    auto& ref_output_memory = ref_output.as<const memory&>();
+
+    // Initialize input data
+    fill<float>(input_memory);
+
+    // Softmax primitives
+    auto opt_softmax = normalization::softmax::create({ engine::cpu, output, input });
+    auto ref_softmax = normalization::softmax::create({ engine::reference, ref_output, input });
+
+    execute({output, opt_softmax}).wait();
+    execute({ref_output, ref_softmax}).wait();
+
+    for(uint32_t output_element = 0; output_element < output_memory.count(); ++output_element)
+        EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(output_memory, output_element)));
+}
+
+TEST(softmax_xb_f32_fw, intrinsics_avx2_batch8_sum_to_one) {
+    const uint32_t x = 1000, b = 8;
+
+    auto input  = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
+    auto output = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
+    auto& input_memory  = input.as<const memory&>();
+    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer);
+
+    // Initialize input data
+    fill<float>(input_memory);
+
+    auto softmax = normalization::softmax::create({engine::cpu, output, input});
+
+    execute({output, softmax}).wait();
+
+    // Addition per batch
+    bool result = true;
+    for(uint32_t b_idx = 0; b_idx < b; ++b_idx) {
+        float sum = 0;
+        for(uint32_t x_idx = 0; x_idx < x; ++x_idx) {
+            sum += output_memory_ptr[x_idx * b + b_idx];
+        }
+        result = tests::are_equal(sum, 1.0f);
+        if(!result) break;
+    }
+
+    EXPECT_EQ(true, result);
+}
+
+TEST(softmax_xb_f32_fw, intrinsics_avx2_batch8_ref_compare) {
+    const uint32_t x = 100, b = 8;
+
+    // Optimized data
+    auto input  = memory::allocate({ engine::reference, memory::format::xb_f32, {b, {x}} });
+    auto output = memory::allocate({ engine::reference, memory::format::xb_f32, {b, {x}} });
+    auto& input_memory  = input.as<const memory&>();
+    auto& output_memory = output.as<const memory&>();
+
+    // Reference data
+    auto ref_output = memory::allocate({ engine::reference, memory::format::xb_f32,{b, {x}} });
+    auto& ref_output_memory = ref_output.as<const memory&>();
+
+    // Initialize input data
+    fill<float>(input_memory);
+
+    // Softmax primitives
+    auto opt_softmax = normalization::softmax::create({ engine::cpu, output, input });
+    auto ref_softmax = normalization::softmax::create({ engine::reference, ref_output, input });
+
+    execute({output, opt_softmax}).wait();
+    execute({ref_output, ref_softmax}).wait();
+
+    for(uint32_t output_element = 0; output_element < output_memory.count(); ++output_element)
+        EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(output_memory, output_element)));
+}
+
+TEST(softmax_xb_f32_fw, intrinsics_avx2_batch48_sum_to_one) {
+    const uint32_t x = 1000, b = 48;
+
+    auto input  = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
+    auto output = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
+    auto& input_memory  = input.as<const memory&>();
+    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer);
+
+    // Initialize input data
+    fill<float>(input_memory);
+
+    auto softmax = normalization::softmax::create({engine::cpu, output, input});
+
+    execute({output, softmax}).wait();
+
+    // Addition per batch
+    bool result = true;
+    for(uint32_t b_idx = 0; b_idx < b; ++b_idx) {
+        float sum = 0;
+        for(uint32_t x_idx = 0; x_idx < x; ++x_idx) {
+            sum += output_memory_ptr[x_idx * b + b_idx];
+        }
+        result = tests::are_equal(sum, 1.0f);
+        if(!result) break;
+    }
+
+    EXPECT_EQ(true, result);
+}
+
+TEST(softmax_xb_f32_fw, intrinsics_avx2_batch48_ref_compare) {
+    const uint32_t x = 100, b = 48;
+
+    // Optimized data
+    auto input  = memory::allocate({ engine::reference, memory::format::xb_f32, {b, {x}} });
+    auto output = memory::allocate({ engine::reference, memory::format::xb_f32, {b, {x}} });
+    auto& input_memory  = input.as<const memory&>();
+    auto& output_memory = output.as<const memory&>();
+
+    // Reference data
+    auto ref_output = memory::allocate({ engine::reference, memory::format::xb_f32,{b, {x}} });
+    auto& ref_output_memory = ref_output.as<const memory&>();
+
+    // Initialize input data
+    fill<float>(input_memory);
+
+    // Softmax primitives
+    auto opt_softmax = normalization::softmax::create({ engine::cpu, output, input });
+    auto ref_softmax = normalization::softmax::create({ engine::reference, ref_output, input });
+
+    execute({output, opt_softmax}).wait();
+    execute({ref_output, ref_softmax}).wait();
+
+    for(uint32_t output_element = 0; output_element < output_memory.count(); ++output_element)
+        EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(output_memory, output_element)));
+}

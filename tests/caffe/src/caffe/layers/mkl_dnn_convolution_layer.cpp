@@ -94,15 +94,15 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   kh = this->kernel_h_;
 
   // Forward setup
-  fwd_bottom_data->memory_usr = memory::create({engine_, fwd_bottom_data->layout_usr, {n, {ih, iw},  ic}});
-  fwd_top_data   ->memory_usr = memory::create({engine_, fwd_top_data   ->layout_usr, {n, {oh, ow},  oc }});
-  fwd_filter_data->memory_usr = memory::create({engine_, fwd_filter_data->layout_usr, {1, {kh, kw}, {oc, ic/g}}});
-  fwd_bias_data  ->memory_usr = memory::create({engine_, fwd_bias_data  ->layout_usr, {1, {{oc}}, 1}});
+  fwd_bottom_data->memory_usr = memory::describe({engine_, fwd_bottom_data->layout_usr, {n, {iw, ih},  ic}});
+  fwd_top_data   ->memory_usr = memory::describe({engine_, fwd_top_data   ->layout_usr, {n, {ow, oh},  oc }});
+  fwd_filter_data->memory_usr = memory::describe({engine_, fwd_filter_data->layout_usr, {1, {kw, kh}, {oc, ic/g}}});
+  fwd_bias_data  ->memory_usr = memory::describe({engine_, fwd_bias_data  ->layout_usr, {1, {{oc}}, 1}});
 
-  fwd_bottom_data->memory_prv = memory::create({engine_, fwd_bottom_data->layout_prv, {n, {ih, iw},  ic}});
-  fwd_top_data   ->memory_prv = memory::create({engine_, fwd_top_data   ->layout_prv, {n, {oh, ow},  oc }});
-  fwd_filter_data->memory_prv = memory::create({engine_, fwd_filter_data->layout_prv, {1, {kh, kw}, {oc, ic/g}}});
-  fwd_bias_data  ->memory_prv = memory::create({engine_, fwd_bias_data  ->layout_prv, {1, {{oc}}, 1}});
+  fwd_bottom_data->memory_prv = memory::describe({engine_, fwd_bottom_data->layout_prv, {n, {iw, ih},  ic}});
+  fwd_top_data   ->memory_prv = memory::describe({engine_, fwd_top_data   ->layout_prv, {n, {ow, oh},  oc }});
+  fwd_filter_data->memory_prv = memory::describe({engine_, fwd_filter_data->layout_prv, {1, {kw, kh}, {oc, ic/g}}});
+  fwd_bias_data  ->memory_prv = memory::describe({engine_, fwd_bias_data  ->layout_prv, {1, {{oc}}, 1}});
 
   fwd_bottom_data->create_conversions();
   fwd_top_data   ->create_conversions();
@@ -110,18 +110,18 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   fwd_bias_data  ->create_conversions();
 
   for (unsigned i=0; i<g; i++) {
-    filters_.push_back(memory::create({engine_, fwd_filter_data->layout_prv, {1, {kh, kw}, {oc/g, ic/g}}}));
-    biases_. push_back(memory::create({engine_, fwd_bias_data  ->layout_prv, {1, {{oc/g}}, 1}}));
+    filters_.push_back(memory::describe({engine_, fwd_filter_data->layout_prv, {1, {kw, kh}, {oc/g, ic/g}}}));
+    biases_. push_back(memory::describe({engine_, fwd_bias_data  ->layout_prv, {1, {{oc/g}}, 1}}));
     convolution_fwd_.push_back(
       convolution::create({engine_,
                            fwd_top_data->memory_prv,
                            {0, {0, 0}, i*(oc/g)},
-                           {n, {oh, ow}, oc/g},
+                           {n, {ow, oh}, oc/g},
                            { fwd_bottom_data->memory_prv,
                              filters_[i],
                              biases_ [i] },
-                           {0, {-pad_h_, -pad_w_}, static_cast<int>(i*(ic/g))},
-                           {1, {stride_h_, stride_w_}, 1},
+                           {0, {-pad_w_, -pad_h_}, static_cast<int>(i*(ic/g))},
+                           {1, {stride_w_, stride_h_}, 1},
                            padding::zero}
                          ));
   }
@@ -130,15 +130,15 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
  * Backward by setup
  */
 
-  bwd_bottom_diff->memory_usr = memory::create({engine_, bwd_bottom_diff->layout_usr, {n,  {ih, iw}, ic}});
-  bwd_top_diff   ->memory_usr = memory::create({engine_, bwd_top_diff   ->layout_usr, {n,  {oh, ow}, oc}});
-  bwd_filter_diff->memory_usr = memory::create({engine_, bwd_filter_diff->layout_usr, {oc, {kh, kw}, ic}});
-  bwd_bias_diff  ->memory_usr = memory::create({engine_, bwd_bias_diff  ->layout_usr, {1,  {{oc}},    1}});
+  bwd_bottom_diff->memory_usr = memory::describe({engine_, bwd_bottom_diff->layout_usr, {n,  {iw, ih}, ic}});
+  bwd_top_diff   ->memory_usr = memory::describe({engine_, bwd_top_diff   ->layout_usr, {n,  {ow, oh}, oc}});
+  bwd_filter_diff->memory_usr = memory::describe({engine_, bwd_filter_diff->layout_usr, {oc, {kw, kh}, ic}});
+  bwd_bias_diff  ->memory_usr = memory::describe({engine_, bwd_bias_diff  ->layout_usr, {1,  {{oc}},    1}});
 
-  bwd_bottom_diff->memory_prv = memory::create({engine_, bwd_bottom_diff->layout_prv, {n,  {ih, iw}, ic}});
-  bwd_top_diff   ->memory_prv = memory::create({engine_, bwd_top_diff   ->layout_prv, {n,  {oh, ow}, oc}});
-  bwd_filter_diff->memory_prv = memory::create({engine_, bwd_filter_diff->layout_prv, {oc, {kh, kw}, ic}});
-  bwd_bias_diff  ->memory_prv = memory::create({engine_, bwd_bias_diff  ->layout_prv, {1,  {{oc}},    1}});
+  bwd_bottom_diff->memory_prv = memory::describe({engine_, bwd_bottom_diff->layout_prv, {n,  {iw, ih}, ic}});
+  bwd_top_diff   ->memory_prv = memory::describe({engine_, bwd_top_diff   ->layout_prv, {n,  {ow, oh}, oc}});
+  bwd_filter_diff->memory_prv = memory::describe({engine_, bwd_filter_diff->layout_prv, {oc, {kw, kh}, ic}});
+  bwd_bias_diff  ->memory_prv = memory::describe({engine_, bwd_bias_diff  ->layout_prv, {1,  {{oc}},    1}});
 
   bwd_bottom_diff->create_conversions();
   bwd_top_diff->create_conversions();
@@ -158,7 +158,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
                                                fwd_filter_data->memory_prv,
                                                fwd_bias_data->memory_prv},
                                           //  {in_off_y, in_off_x, in_off_z, in_off_b},
-                                               {1, {stride_h_, stride_w_}, 1},
+                                               {1, {stride_w_, stride_h_}, 1},
                                               padding::zero
                                             });
 #endif
@@ -183,7 +183,7 @@ void MKL_DNNMemoryDescriptor<Dtype, is_diff>::convert_from_prv(void* prv_ptr, vo
   CHECK(this->from_prv != nullptr);
 
   DLOG(INFO) << "convert priv =>           "  << this->name << " =>"  << "\n";
-  execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv}).sync();
+  execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv}).wait();
 #ifdef CONVERSION_PRINT_DATA
   DLOG(INFO) << "Before conversion: ";
   for (auto i=0; i<this->prv_count(); i++)
@@ -207,7 +207,7 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
     {
       DLOG(INFO) << "convert      => priv                                => " << this->name << "\n";
       auto usr_ptr = is_diff ? (Dtype *) blob->cpu_diff() : (Dtype *) blob->cpu_data();
-      execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr), this->to_prv}).sync();
+      execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr), this->to_prv}).wait();
 
 #ifdef CONVERSION_PRINT_DATA
       DLOG(INFO) << "Before conversion: ";
@@ -251,7 +251,7 @@ Dtype* MKL_DNNMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
                    << "  || layouts: " << current_descr->layout_prv  << " => " << this->layout_prv<< "\n";
         neural::primitive convert = reorder::create(reorder::arguments({engine::reference, current_descr->memory_prv, this->memory_prv}));
         execute({current_descr->memory_prv(current_descr->prv_ptr),
-                 this->memory_prv(this->prv_ptr), convert}).sync();
+                 this->memory_prv(this->prv_ptr), convert}).wait();
 
         if (set_prv_ptr) {
           if(is_diff)
@@ -328,14 +328,14 @@ void MKL_DNNConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
     for(int i=0; i<g; i++) {
       execute({fwd_bottom_data->memory_prv(bottom_data), fwd_top_data->memory_prv(top_data),
               filters_[i](filter_data + i* this->weight_offset_), biases_[i](bias_data + i*oc),
-              convolution_fwd_[i]}).sync();
+              convolution_fwd_[i]}).wait();
     }
   } else {
     NOT_IMPLEMENTED;  // TODO, not supported currently
     for(int i=0; i<g; i++) {
       execute({fwd_bottom_data->memory_prv(bottom_data), fwd_top_data->memory_prv(top_data),
               filters_[i](filter_data + i* this->weight_offset_),
-              convolution_fwd_[i]}).sync();
+              convolution_fwd_[i]}).wait();
     }
   }
 }
@@ -408,7 +408,7 @@ void MKL_DNNConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& to
                 fwd_filter_data->memory_prv(filter_data), fwd_bias_data->memory_prv(bias_data),  //inputs
         bwd_bottom_diff->memory_prv(bottom_diff), bwd_filter_diff->memory_prv(filter_diff), bwd_bias_diff->memory_prv(bias_diff), //outputs
         convolution_bwd
-    }).sync();
+    }).wait();
   }
 }
 

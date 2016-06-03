@@ -27,13 +27,6 @@ memory::arguments::arguments(neural::engine::type aengine, memory::format::type 
     , size(asize)
     , owns_memory(false) {}
 
-memory::arguments::arguments(neural::engine::type aengine, memory::format::type aformat, vector<uint32_t> asize, bool aowns_memory)
-    : engine(aengine)
-    , format(aformat)
-    , size(asize)
-    , owns_memory(aowns_memory) {}
-
-
 size_t memory::count() const {
     return std::accumulate(argument.size.raw.begin(), argument.size.raw.end(), size_t(1), std::multiplies<size_t>());
 }
@@ -42,11 +35,14 @@ memory::~memory() {
     if(argument.owns_memory) delete[] static_cast<char *>(pointer);
 }
 
-primitive memory::create(memory::arguments arg){
+primitive memory::describe(memory::arguments arg){
+    return new memory(arg);
+}
+
+primitive memory::allocate(memory::arguments arg){
     auto result = std::unique_ptr<memory>(new memory(arg));
-    if(arg.owns_memory) {
-        result->pointer = new char[result->count()*memory::traits(arg.format).type->size];
-    }
+    result->pointer = new char[result->count()*memory::traits(arg.format).type->size];
+    const_cast<memory::arguments &>(result->argument).owns_memory = true;
     return result.release();
 }
 

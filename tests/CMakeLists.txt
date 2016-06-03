@@ -17,6 +17,12 @@ add_subdirectory (gtest)
 set (APP_NAME "tests")
 # Sources for test files
 
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wno-error=conversion-null")
+elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /WX")
+endif()
+
 file (GLOB TEST_CASES_SRC
       test_cases/*.cpp)
       
