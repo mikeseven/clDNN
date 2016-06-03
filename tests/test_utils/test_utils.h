@@ -72,12 +72,12 @@ inline bool are_equal(
         float diff = fabs(item - ref_item);
         if( diff < absoulte_error_limit) {
             if( diff > absolute_error_threshold) {
-      //          std::cout << "Ref val: " << ref_item << "\tSecond val: " << item << std::endl; //todo remove
+                std::cout << "Ref val: " << ref_item << "\tSecond val: " << item << std::endl; //todo remove
                 return false;
             }
         } else
             if( diff / fabs(ref_item) > relative_error_threshold){
- //               std::cout << "Ref val: " << ref_item << "\tSecond val: " << item << std::endl;
+                std::cout << "Ref val: " << ref_item << "\tSecond val: " << item << std::endl;
                 return false;
         }
 
