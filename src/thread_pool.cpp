@@ -56,16 +56,13 @@ nn_thread_worker_pool::~nn_thread_worker_pool() {
 
 
 void nn_thread_worker_pool::push_job(const task_group& requests) {
-    {
-        std::lock_guard<std::mutex> ul(mtx_wake);
-        current_request = &requests.tasks;
-        taskcount  = static_cast<uint32_t>(requests.tasks.size());
-        current_task_id = 0;
-        enable_thread_denom = requests.schedule==schedule::single ? num_threads : 1;
-        thread_batch_size = requests.schedule==schedule::unordered ? 1 : (taskcount+num_threads)/num_threads;
-        cv_wake.notify_all();
-    }
     std::unique_lock<std::mutex> ul(mtx_wake);
+    current_request = &requests.tasks;
+    taskcount  = static_cast<uint32_t>(requests.tasks.size());
+    current_task_id = 0;
+    enable_thread_denom = requests.schedule==schedule::single ? num_threads : 1;
+    thread_batch_size = requests.schedule==schedule::unordered ? 1 : (taskcount+num_threads-1)/num_threads;
+    cv_wake.notify_all();
 
     // waiting when all threads finish the job
     cv_endtasks.wait(ul, [this] {return (current_task_id >= taskcount && active_threads == 0); });
