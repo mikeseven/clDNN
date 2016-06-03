@@ -176,7 +176,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
     case  neural::engine::cpu:
     {
       prv_layout_in_out_ = memory::format::byxf_f32;
-      prv_layout_filter_ = memory::format::os_yxi_sv16_f32;
+      prv_layout_filter_ = memory::format::oyxi_o16_f32;
       if((n % 24 == 0) && (ic % 8 == 0)) {
         prv_layout_in_out_ = memory::format::byxf_b24_f32;
         prv_layout_filter_ = memory::format::yxoi_o4_f32;

@@ -126,7 +126,7 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   switch (engine_) {
     case  neural::engine::cpu:
       CHECK_EQ(n%24, 0) << "Optimized Pooling supports only batch that is multiple of 24";
-      prv_layout_in_out_ = memory::format::bs_yxf_bv24_f32;
+      prv_layout_in_out_ = memory::format::byxf_b24_f32;
     break;
     case neural::engine::reference:
       prv_layout_in_out_ = memory::format::yxfb_f32;
