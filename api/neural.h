@@ -50,6 +50,9 @@ struct memory : is_a_primitive {
     class format { format(); public: enum type {
         x_f32,
         xb_f32,     // 1D+batch, float32
+        oi_f32,
+        io_f32,
+        io_i13_f32,
         bx_f32,     // 1D+batch, float32
         yxfb_f32,   // 3D+batch, float32
         byxf_f32,   // for convolution_cpu_jit_batch1
@@ -66,6 +69,9 @@ struct memory : is_a_primitive {
     static const format_traits traits(format::type fmt) {
         switch(fmt) {
         case format::   x_f32: return {1, type_id<float>()};
+        case format::  oi_f32:
+        case format::  io_f32:
+        case format::  io_i13_f32:
         case format::  xb_f32: return {2, type_id<float>()};
         case format::yxfb_f32:
         case format::byxf_f32:

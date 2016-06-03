@@ -14,6 +14,7 @@
 // limitations under the License.
  */
 #include "multidimensional_counter.h"
+#include <iostream>
 
 namespace ndimensional{
 
@@ -97,6 +98,47 @@ template<> size_t index<neural::memory::format::byxf_b24_f32>(std::vector<uint32
 }
 
 
+template<> size_t index<neural::memory::format::oi_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+    assert(is_in_range(size, pos));
+
+    // BFXY represents buffer size, wbile bfxy represents current position
+    const size_t Fo = size[1];   const size_t Fi = size[2]; 
+    const size_t fo =  pos[1];   const size_t fi =  pos[2]; 
+    
+    assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
+    assert(1 == size[3]); 
+       
+    return fi + fo * Fi;
+}
+
+template<> size_t index<neural::memory::format::io_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+    assert(is_in_range(size, pos));
+
+    // BFXY represents buffer size, wbile bfxy represents current position
+    const size_t Fo = size[1];   const size_t Fi = size[2]; 
+    const size_t fo =  pos[1];   const size_t fi =  pos[2]; 
+
+    assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
+    assert(1 == size[3]); 
+
+    return fo + fi * Fo;
+}
+
+template<> size_t index<neural::memory::format::io_i13_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
+    assert(is_in_range(size, pos));
+
+    // BFXY represents buffer size, wbile bfxy represents current position
+    const size_t Fo = size[1];   const size_t Fi = size[2]; 
+    const size_t fo =  pos[1];   const size_t fi =  pos[2]; 
+
+    assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
+    assert(1 == size[3]); 
+    assert(0 == Fo%13 ); 
+
+     return fo%13 + fi * 13 +(13*Fi)*(fo/13);
+ }
+
+
 template<> size_t index<neural::memory::format::yxoi_o4_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(is_in_range(size, pos));
 
@@ -134,6 +176,9 @@ fptr choose_calculate_idx(neural::memory::format::type arg){
     switch (arg){
         case neural::memory::format::type::x_f32: // treat x_f32 as xb_f32 with b=1
         case neural::memory::format::type::xb_f32:             return index<neural::memory::format::type::xb_f32>;
+        case neural::memory::format::type::oi_f32:             return index<neural::memory::format::type::oi_f32>;
+        case neural::memory::format::type::io_f32:             return index<neural::memory::format::type::io_f32>;
+        case neural::memory::format::type::io_i13_f32:          return index<neural::memory::format::type::io_i13_f32>;
         case neural::memory::format::type::bx_f32:             return index<neural::memory::format::type::bx_f32>;
         case neural::memory::format::type::yxfb_f32:           return index<neural::memory::format::type::yxfb_f32>;
         case neural::memory::format::type::byxf_f32:           return index<neural::memory::format::type::byxf_f32>;

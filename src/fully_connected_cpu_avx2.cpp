@@ -164,8 +164,8 @@ namespace neural {
 
             // Increment pointers.
             input_ptr += C_batch8_size;
-            //weights_buffer += C_max_acc_batch8;
-            weights_buffer += T_SIZE;
+            weights_buffer += C_max_acc_batch8;
+            //weights_buffer += T_SIZE;
         }
 
         if (T_NEED_BIAS_COPY)
@@ -271,6 +271,7 @@ namespace neural {
         assert(1 == input_buffer_size.feature.size());
         assert(1 == input_buffer_size.batch.size());
         assert(1 == input_buffer_size.feature[0]);
+        assert(0 == output_buffer_size.spatial[0] % C_max_acc_batch8);
 
         // what da f...???
         const auto input_width = input_buffer_size.spatial[0];

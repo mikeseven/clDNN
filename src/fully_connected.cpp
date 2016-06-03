@@ -66,15 +66,15 @@ struct fully_connected_reference : is_an_implementation {
         auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
         auto calc_w_idx   = nd::choose_calculate_idx(weight_arg.format);
 
-        std::vector<uint32_t> arg_weight_idx(3);
+        std::vector<uint32_t> arg_weight_idx(4);
         for (auto pos_out : range_output){
                 auto out_idx = calc_out_idx(output_arg.size.raw, pos_out);
 
                 for (auto pos_in : range_input){
                     auto in_idx = calc_in_idx(input_arg.size.raw, pos_in);
 
-                    arg_weight_idx[DATA_INDEX]  = pos_out[DATA_INDEX];
-                    arg_weight_idx[BATCH_INDEX] = pos_in [DATA_INDEX];
+                    arg_weight_idx[1]  = pos_out[DATA_INDEX];
+                    arg_weight_idx[2] = pos_in [DATA_INDEX];
                     auto w_idx = calc_w_idx(weight_arg.size.raw, arg_weight_idx);
                     output[out_idx + pos_in[BATCH_INDEX]] += input[in_idx] * weight[w_idx];
                 }
@@ -112,8 +112,8 @@ primitive fully_connected::create(fully_connected::arguments arg) {
     auto& weight_arg = arg.input[1].primitive.as<const memory&>().argument;
 
     if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Fully connected input/output number of dimension does not match.");
-    if (weight_arg.format != memory::format::xb_f32 &&
-        weight_arg.format != memory::format::x_f32)                 throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
+    //if (weight_arg.format != memory::format::oi_f32)                throw std::runtime_error("Fully connected weight format is not oi_f32.");
+    
 
     // wrap relu into RAII wrapper
     std::unique_ptr<fully_connected> result(new fully_connected(arg));
