@@ -19,16 +19,6 @@ using namespace neural;
 template <typename Dtype, bool is_diff>
 struct MKL_DNNMemory : PrvMemDescr, 
     boost::enable_shared_from_this<MKL_DNNMemory<Dtype, is_diff> > {
-  
-  MKL_DNNMemory() : 
-    layout_usr(memory::format::bfyx_f32),
-    layout_prv(memory::format::yxfb_f32) {};
-     
-  MKL_DNNMemory(
-    neural::memory::format::type layout_usr, 
-    neural::memory::format::type layout_prv) :
-    layout_usr(layout_usr),
-    layout_prv(layout_prv) {};
 
     MKL_DNNMemory(
       const neural::memory::format::type layout_usr,
@@ -40,7 +30,13 @@ struct MKL_DNNMemory : PrvMemDescr,
         memory_usr(memory_usr),
         memory_prv(memory_prv)
     {
-        create_conversions();
+      if (layout_usr != layout_prv)
+      {
+        CaffeMallocHost((void**)&prv_ptr, sizeof(Dtype)*prv_count(), &use_cuda);
+        // TODO: use the same engine as in the layer
+        to_prv   = reorder::create(reorder::arguments({engine::reference, memory_usr, memory_prv}));
+        from_prv = reorder::create(reorder::arguments({engine::reference, memory_prv, memory_usr}));
+      }
     };
     
   ~MKL_DNNMemory() {
@@ -60,15 +56,6 @@ struct MKL_DNNMemory : PrvMemDescr,
   primitive from_prv   = nullptr;
   std::string name = "UNKNOWN";  // for debugging purposes
   bool use_cuda;
-  void create_conversions() {
-    if (layout_usr != layout_prv)
-    {
-        CaffeMallocHost((void**)&prv_ptr, sizeof(Dtype)*prv_count(), &use_cuda);
-        // TODO: use the same engine as in the layer
-        to_prv   = reorder::create(reorder::arguments({engine::reference, memory_usr, memory_prv}));
-        from_prv = reorder::create(reorder::arguments({engine::reference, memory_prv, memory_usr}));
-    }
-  }
 
   virtual size_t prv_count() {
       return (memory_prv.as<const neural::memory&>().count());
@@ -82,12 +69,6 @@ struct MKL_DNNMemory : PrvMemDescr,
 template <typename Dtype>
 struct MKL_DNNData : MKL_DNNMemory<Dtype, false>
 {
-    MKL_DNNData() : MKL_DNNMemory<Dtype, false>() {}
-    
-    MKL_DNNData(neural::memory::format::type layout_usr, 
-          neural::memory::format::type layout_prv) : 
-        MKL_DNNMemory<Dtype, false>(layout_usr, layout_prv) {}
-    
     MKL_DNNData(
       const neural::memory::format::type layout_usr,
       const neural::memory::format::type layout_prv,
@@ -99,12 +80,6 @@ struct MKL_DNNData : MKL_DNNMemory<Dtype, false>
 template <typename Dtype>
 struct MKL_DNNDiff : MKL_DNNMemory<Dtype, true>
 {
-    MKL_DNNDiff() : MKL_DNNMemory<Dtype, true>() {}
-    
-    MKL_DNNDiff(neural::memory::format::type layout_usr, 
-          neural::memory::format::type layout_prv) :
-        MKL_DNNMemory<Dtype, true>(layout_usr, layout_prv) {}
-    
     MKL_DNNDiff(
       const neural::memory::format::type layout_usr,
       const neural::memory::format::type layout_prv,
