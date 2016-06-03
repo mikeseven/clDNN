@@ -3,6 +3,7 @@
 #include <cfloat>
 #include <vector>
 
+#include "boost/make_shared.hpp"
 #include "caffe/common.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/layers/mkl_dnn_layers.hpp"
@@ -121,27 +122,43 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   const uint32_t out_off_x = 0;
   const uint32_t out_off_z = 0;
 
-  fwd_bottom_data_->memory_usr = memory::describe({engine_, fwd_bottom_data_->layout_usr, {n, {iw, ih}, c}});
-  fwd_top_data_->memory_usr    = memory::describe({engine_, fwd_top_data_   ->layout_usr, {n, {ow, oh}, c}});
-  fwd_bottom_data_->memory_prv = memory::describe({engine_, fwd_bottom_data_->layout_prv, {n, {iw, ih}, c}});
-  fwd_top_data_->memory_prv    = memory::describe({engine_, fwd_top_data_   ->layout_prv, {n, {ow, oh}, c}});
+  // Choose layout according to the engine
+  switch (engine_) {
+    case  neural::engine::cpu:
+      CHECK_EQ(n%24, 0) << "Optimized Pooling supports only batch that is multiple of 24";
+      prv_layout_in_out_ = memory::format::bs_yxf_bv24_f32;
+    break;
+    case neural::engine::reference:
+      prv_layout_in_out_ = memory::format::yxfb_f32;
+    break;
+    default:
+      CHECK(0) << "Wrong mkl-dnn engine";
+  }
+  fwd_bottom_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {n, {iw, ih}, c}}),
+          memory::describe({engine_, prv_layout_in_out_, {n, {iw, ih}, c}}));
 
-  bwd_bottom_diff_->memory_usr = memory::describe({engine_, bwd_bottom_diff_->layout_usr, {n, {iw, ih}, c}});
-  bwd_top_diff_->memory_usr    = memory::describe({engine_, bwd_top_diff_   ->layout_usr, {n, {ow, oh}, c}});
-  bwd_bottom_diff_->memory_prv = memory::describe({engine_, bwd_bottom_diff_->layout_prv, {n, {iw, ih}, c}});
-  bwd_top_diff_->memory_prv    = memory::describe({engine_, bwd_top_diff_   ->layout_prv, {n, {ow, oh}, c}});
+  fwd_top_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {n, {ow, oh}, c}}),
+          memory::describe({engine_, prv_layout_in_out_, {n, {ow, oh}, c}}));
 
+  bwd_bottom_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {n, {iw, ih}, c}}),
+          memory::describe({engine_, prv_layout_in_out_, {n, {iw, ih}, c}}));
+
+  bwd_top_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {n, {ow, oh}, c}}),
+          memory::describe({engine_, prv_layout_in_out_, {n, {ow, oh}, c}}));
 
   // Names are for debugging only
   fwd_bottom_data_->name = "fwd_bottom_data   @ " + this->layer_param_.name();
   fwd_top_data_->name =    "fwd_top_data      @ " + this->layer_param_.name();
   bwd_top_diff_->name =    "bwd_top_diff      @ " + this->layer_param_.name();
   bwd_bottom_diff_->name = "bwd_bottom_diff   @ " + this->layer_param_.name();
-
-  fwd_bottom_data_->create_conversions();
-  fwd_top_data_   ->create_conversions();
-  bwd_top_diff_   ->create_conversions();
-  bwd_bottom_diff_->create_conversions();
 
   pooling::mode::type mode;
   switch (this->layer_param_.pooling_param().pool()) {

@@ -248,19 +248,7 @@ class MKL_DNNPoolingLayer : public Layer<Dtype> {
 public:
   explicit MKL_DNNPoolingLayer(const LayerParameter& param,
           neural::engine::type engine)
-    : Layer<Dtype>(param), engine_(engine),
-      fwd_top_data_    (new MKL_DNNData<Dtype>()),
-      fwd_bottom_data_ (new MKL_DNNData<Dtype>()),
-      bwd_top_diff_    (new MKL_DNNDiff<Dtype>()),
-      bwd_bottom_diff_ (new MKL_DNNDiff<Dtype>())
-  {
-    if(engine_ == neural::engine::cpu) {
-        fwd_bottom_data_->layout_prv = memory::format::bs_yxf_bv24_f32;
-        fwd_top_data_   ->layout_prv = memory::format::bs_yxf_bv24_f32;
-        bwd_top_diff_   ->layout_prv = memory::format::bs_yxf_bv24_f32;
-        bwd_bottom_diff_->layout_prv = memory::format::bs_yxf_bv24_f32;
-    }
-  }
+    : Layer<Dtype>(param), engine_(engine) { }
 
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                           const vector<Blob<Dtype>*>& top);
@@ -300,7 +288,8 @@ protected:
   Blob<size_t> max_idx_;
 private:
   neural::engine::type engine_;
-
+  neural::memory::format::type prv_layout_in_out_;
+  const neural::memory::format::type usr_layout_in_out_ = memory::format::bfyx_f32;
   shared_ptr<MKL_DNNData<Dtype> > fwd_top_data_, fwd_bottom_data_;
   shared_ptr<MKL_DNNDiff<Dtype> > bwd_top_diff_, bwd_bottom_diff_;
 
