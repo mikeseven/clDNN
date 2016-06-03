@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-#include <string>
 #include "multidimensional_counter.h"
 #include "lrn_cpu_avx2.h"
 #include <immintrin.h>
@@ -243,44 +242,27 @@ namespace neural {
                 }
             }
         }
+        neural::task_group work() {
+            return{ this->tasks, schedule::unordered };
+        }
     };
 
     lrn_cpu_avx2::lrn_cpu_avx2(normalization::response &arg)
         : is_an_implementation(neural::type_id<lrn_cpu_avx2>())
-        , outer(arg) {};
+        , outer(arg) {
 
-    lrn_cpu_avx2::~lrn_cpu_avx2() {};
-
-    void lrn_cpu_avx2::implementation(const void *ptr) {
-
-        auto this_lrn = static_cast<const normalization::response *>(ptr);
+        auto this_lrn = static_cast<const normalization::response *>(&outer);
 
         auto& input_offset = this_lrn->argument.input_offset;
         auto& output_offset = this_lrn->argument.output_offset;
-        auto& output_size = this_lrn->argument.output_size;
-        auto& padding = this_lrn->argument.padding;
-        auto& size = this_lrn->argument.size;
-        auto& k = this_lrn->argument.k;
-        auto& alpha = this_lrn->argument.alpha;
-        auto& beta = this_lrn->argument.beta;
 
-        auto& input_arg = this_lrn->input_memory(0).argument;
-        auto& output_arg = this_lrn->output_memory(0).argument;
+        for (auto &x : input_offset.raw)  if (x != 0) throw std::runtime_error("ReLU input offset must be equal to zero.");
+        for (auto &x : output_offset.raw) if (x > 0) throw std::runtime_error("ReLU output offset must be equal to zero.");
 
-        if (input_arg.size.raw.size() != output_arg.size.raw.size())
-            throw std::runtime_error("lrn input/output number of dimension does not match [iput size=" + std::to_string(input_arg.size.raw.size())
-                + ", output size=" + std::to_string(output_arg.size.raw.size()));
+        lrn_ptr.reset(new lrn_cpu_avx2_worker(this_lrn));
+    };
 
-        namespace nd = ndimensional;
-
-        switch (padding) {
-        case padding::zero:
-
-            break;
-        default:
-            throw std::runtime_error("Unknown padding mode in lrn");
-        }
-    }
+    lrn_cpu_avx2::~lrn_cpu_avx2() {};
 
     namespace {
         struct attach {
