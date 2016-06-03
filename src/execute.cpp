@@ -68,7 +68,7 @@ public:
             start();
         }
         // wait for completion
-        while(_tasks_left); 
+        while(_tasks_left) std::this_thread::yield();
     }
 };
 
