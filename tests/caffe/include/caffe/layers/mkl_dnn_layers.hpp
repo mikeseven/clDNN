@@ -93,7 +93,7 @@ public:
           const LayerParameter& param,
           neural::engine::type engine);
 
-  virtual inline const char* type() const { return "MKL_DNN_Convolution"; }
+  virtual inline const char* type() const { return "Convolution"; }
   virtual ~MKL_DNNConvolutionLayer();
 
 protected:
@@ -167,7 +167,7 @@ class MKL_DNNLRNLayer : public Layer<Dtype> {
       const vector<Blob<Dtype>*>& top);
   virtual ~MKL_DNNLRNLayer();
 
-  virtual inline const char* type() const { return "MKL_DNN_LRN"; }
+  virtual inline const char* type() const { return "LRN"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
 
@@ -223,14 +223,21 @@ public:
       fwd_bottom_data_ (new MKL_DNNData<Dtype>()),
       bwd_top_diff_    (new MKL_DNNDiff<Dtype>()),
       bwd_bottom_diff_ (new MKL_DNNDiff<Dtype>())
-  {}
+  {
+    if(engine_ == neural::engine::cpu) {
+        fwd_bottom_data_->layout_prv = memory::format::bs_yxf_bv24_f32;
+        fwd_top_data_   ->layout_prv = memory::format::bs_yxf_bv24_f32;
+        bwd_top_diff_   ->layout_prv = memory::format::bs_yxf_bv24_f32;
+        bwd_bottom_diff_->layout_prv = memory::format::bs_yxf_bv24_f32;
+    }
+  }
 
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                           const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
                        const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "MKL_DNN_Pooling"; }
+  virtual inline const char* type() const { return "Pooling"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int MinTopBlobs() const { return 1; }
   // MAX POOL layers can output an extra top blob for the mask;
@@ -287,7 +294,7 @@ public:
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
                           const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "MKL_DNN_ReLU"; }
+  virtual inline const char* type() const { return "ReLU"; }
 
 protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
@@ -328,7 +335,7 @@ class MKL_DNNSoftmaxLayer : public Layer<Dtype> {
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "MKL_DNN_Softmax"; }
+  virtual inline const char* type() const { return "Softmax"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
@@ -383,7 +390,7 @@ class MKL_DNNInnerProductLayer : public Layer<Dtype> {
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "MKL_DNN_InnerProduct"; }
+  virtual inline const char* type() const { return "InnerProduct"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
 

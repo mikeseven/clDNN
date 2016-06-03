@@ -14,33 +14,16 @@
 // limitations under the License.
 */
 
+#pragma once
+
 #include "api/neural.h"
-#include <iostream>
+#include "implementation_map.h"
 
-int main()
-{
-    extern void example_lrn_forward();
-    try {
-        example_lrn_forward();
-    }
-    catch (std::exception &e) {
-        std::cerr << e.what();
-    }
-    catch (...) {
-        std::cerr << "Unknown exceptions.";
-    }
-/*
-    extern void example_convolution_cpu_forward();
+namespace neural {
+namespace normalization {
+    //                                           engine                        output                         input
+    using softmax_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
-    try {
-        example_convolution_cpu_forward();
-    }
-    catch (std::exception &e) {
-        std::cerr << e.what();
-    }
-    catch (...) {
-        std::cerr << "Unknown exceptions.";
-    }
-*/
-    return 0;
+    using softmax_fw_implementation_map = singleton_map<softmax_fw_key, std::function<is_an_implementation *(softmax &)>>;
+}
 }

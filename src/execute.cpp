@@ -29,8 +29,14 @@ class async_execution {
     void start() {
         _tasks_left = _primitives.size();
         auto thread_function = [&]() {
-            for(auto &item : _primitives) {
-                _workers[0].execute(item.work());
+            // here async_execution object exists
+            const auto primitives_count = _primitives.size();
+
+            // It is possible that async_execution will be deleted just after '--_task_left;'.
+            // It imght occur after last iteration, but 'for()' loop will run again to find out that exit condition was met.
+            // Because of this case we cannot use members from async_execution in 'for()' clause itself.
+            for(size_t at=0; at<primitives_count; ++at) {
+                _workers[0].execute(_primitives[at].work());
                 --_tasks_left;
             }
         };
@@ -50,6 +56,8 @@ public:
         if(!is_lazy()) start();
     }
 
+    ~async_execution() { wait(); }
+
     size_t tasks_left() { return _tasks_left; }
 
     void wait() {
@@ -60,22 +68,20 @@ public:
             start();
         }
         // wait for completion
-        while(_tasks_left); 
+        while(_tasks_left) std::this_thread::yield();
     }
 };
 
 
-void execute(std::vector<primitive> list, worker& worker) {
-    for(auto &item : list)
-        worker.execute(item.work());
-}
+async_result execute(std::vector<primitive> primitives, std::vector<worker> workers) {
+    if(0==workers.size()) {
+        static auto cpu_worker = worker_cpu::create({});
+        workers.push_back(cpu_worker);
+    }
+    assert(1==workers.size()); // currently only one worker at time
 
     // all workers must lazy or all workers must be non-lazy
-    std::shared_ptr<volatile uint32_t> primitive_count(new uint32_t(static_cast<uint32_t>(primitives.size())));
-    auto thread_function = [](std::vector<primitive> primitives, std::vector<worker> workers, std::shared_ptr<volatile uint32_t> primitive_count) {
-    static nn_thread_worker_pool thread_pool_default;
-        for(auto &item : primitives) {
-            workers[0].execute(item.work());
+    return std::make_shared<async_execution>(primitives, workers);
 }
 
 

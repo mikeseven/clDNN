@@ -21,13 +21,14 @@
 
 namespace neural {
     struct lrn_cpu_avx2 : is_an_implementation {
+
         lrn_cpu_avx2(normalization::response &arg);
         ~lrn_cpu_avx2();
-        static void implementation(const void *ptr);
 
         static is_an_implementation *create(normalization::response &arg) { return new lrn_cpu_avx2(arg); };
-        task_group work() { return{ task{ implementation, &outer } }; };
+        task_group work() { return lrn_ptr->work(); };
 
+        std::unique_ptr<is_an_implementation> lrn_ptr;
         const normalization::response &outer;
     };
 }
