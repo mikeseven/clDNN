@@ -17,32 +17,45 @@ namespace caffe {
 using namespace neural;
 
 template <typename Dtype, bool is_diff>
-struct MKL_DNNMemoryDescriptor : PrvMemDescr, 
-    boost::enable_shared_from_this<MKL_DNNMemoryDescriptor<Dtype, is_diff> > {
+struct MKL_DNNMemory : PrvMemDescr, 
+    boost::enable_shared_from_this<MKL_DNNMemory<Dtype, is_diff> > {
   
-  MKL_DNNMemoryDescriptor() : 
+  MKL_DNNMemory() : 
     layout_usr(memory::format::bfyx_f32),
     layout_prv(memory::format::yxfb_f32) {};
-          
-  MKL_DNNMemoryDescriptor(
+     
+  MKL_DNNMemory(
     neural::memory::format::type layout_usr, 
     neural::memory::format::type layout_prv) :
     layout_usr(layout_usr),
     layout_prv(layout_prv) {};
-  
-  ~MKL_DNNMemoryDescriptor() {
+
+    MKL_DNNMemory(
+      const neural::memory::format::type layout_usr,
+      const neural::memory::format::type layout_prv,
+      neural::primitive memory_usr,
+      neural::primitive memory_prv) :
+        layout_usr(layout_usr),
+        layout_prv(layout_prv),
+        memory_usr(memory_usr),
+        memory_prv(memory_prv)
+    {
+        create_conversions();
+    };
+    
+  ~MKL_DNNMemory() {
     if(prv_ptr) CaffeFreeHost(prv_ptr, use_cuda);
   }
 
-  shared_ptr<MKL_DNNMemoryDescriptor<Dtype, is_diff> > get_shared_ptr() {
+  shared_ptr<MKL_DNNMemory<Dtype, is_diff> > get_shared_ptr() {
     return this->shared_from_this();
   }
 
   memory::format::type layout_usr;
   memory::format::type layout_prv;
-  Dtype* prv_ptr       = nullptr;
-  primitive memory_prv = nullptr;
   primitive memory_usr = nullptr;
+  primitive memory_prv = nullptr;
+  Dtype* prv_ptr       = nullptr;
   primitive to_prv     = nullptr;
   primitive from_prv   = nullptr;
   std::string name = "UNKNOWN";  // for debugging purposes
@@ -63,37 +76,50 @@ struct MKL_DNNMemoryDescriptor : PrvMemDescr,
   virtual void convert_from_prv(void* prv_ptr, void* cpu_ptr);
   virtual PrvDescrType get_descr_type() {return PRV_DESCR_MKL_DNN;};
   Dtype* get_converted_prv(Blob<Dtype>* blob, bool set_prv_ptr, 
-          MKL_DNNMemoryDescriptor<Dtype, is_diff>* converted_in_fwd=nullptr);
+          MKL_DNNMemory<Dtype, is_diff>* converted_in_fwd=nullptr);
 };
 
 template <typename Dtype>
-struct MKL_DNNData : MKL_DNNMemoryDescriptor<Dtype, false>
+struct MKL_DNNData : MKL_DNNMemory<Dtype, false>
 {
-    MKL_DNNData() : MKL_DNNMemoryDescriptor<Dtype, false>() {}
+    MKL_DNNData() : MKL_DNNMemory<Dtype, false>() {}
     
     MKL_DNNData(neural::memory::format::type layout_usr, 
           neural::memory::format::type layout_prv) : 
-        MKL_DNNMemoryDescriptor<Dtype, false>(layout_usr, layout_prv) {}
+        MKL_DNNMemory<Dtype, false>(layout_usr, layout_prv) {}
+    
+    MKL_DNNData(
+      const neural::memory::format::type layout_usr,
+      const neural::memory::format::type layout_prv,
+      neural::primitive memory_usr,
+      neural::primitive memory_prv) :
+        MKL_DNNMemory<Dtype, false>(layout_usr, layout_prv, memory_usr, memory_prv) {}
 };
 
 template <typename Dtype>
-struct MKL_DNNDiff : MKL_DNNMemoryDescriptor<Dtype, true>
+struct MKL_DNNDiff : MKL_DNNMemory<Dtype, true>
 {
-    MKL_DNNDiff() : MKL_DNNMemoryDescriptor<Dtype, true>() {}
+    MKL_DNNDiff() : MKL_DNNMemory<Dtype, true>() {}
     
     MKL_DNNDiff(neural::memory::format::type layout_usr, 
           neural::memory::format::type layout_prv) :
-        MKL_DNNMemoryDescriptor<Dtype, true>(layout_usr, layout_prv) {}
+        MKL_DNNMemory<Dtype, true>(layout_usr, layout_prv) {}
+    
+    MKL_DNNDiff(
+      const neural::memory::format::type layout_usr,
+      const neural::memory::format::type layout_prv,
+      neural::primitive memory_usr,
+      neural::primitive memory_prv) :
+        MKL_DNNMemory<Dtype, true>(layout_usr, layout_prv, memory_usr, memory_prv){}
 };
 
 template <typename Dtype>
 class MKL_DNNConvolutionLayer : public ConvolutionLayer<Dtype> {
 public:
-  explicit MKL_DNNConvolutionLayer(
-          const LayerParameter& param,
-          neural::engine::type engine);
+    explicit MKL_DNNConvolutionLayer(
+      const LayerParameter& param, neural::engine::type engine)
+      : ConvolutionLayer<Dtype>(param), engine_(engine) {}
 
-  virtual inline const char* type() const { return "Convolution"; }
   virtual ~MKL_DNNConvolutionLayer();
 
 protected:
@@ -113,7 +139,13 @@ protected:
   virtual void compute_output_shape();
 
 private:
-  neural::engine::type engine_;  
+  neural::engine::type engine_;
+
+  neural::memory::format::type prv_layout_in_out_;
+  neural::memory::format::type prv_layout_filter_;
+  const neural::memory::format::type usr_layout_in_out_ = memory::format::bfyx_f32;
+  const neural::memory::format::type usr_layout_filter_ = memory::format::oiyx_f32;
+  const neural::memory::format::type layout_bias_       = memory::format::x_f32;
   vector<primitive> convolution_fwd_;
   vector<primitive> filters_;
   vector<primitive> biases_;
