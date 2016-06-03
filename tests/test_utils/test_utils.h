@@ -69,13 +69,14 @@ inline bool are_equal(
     const float absolute_error_threshold = 1e-6,
     const float absoulte_error_limit     = 1e-4) {
 
-        if( fabs(item) < absoulte_error_limit) {
-            if(fabs( item - ref_item ) > absolute_error_threshold) {
-                std::cout << "Ref val: " << ref_item << "\tSecond val: " << item << std::endl;
+        float diff = fabs(item - ref_item);
+        if( diff < absoulte_error_limit) {
+            if( diff > absolute_error_threshold) {
+                std::cout << "Ref val: " << ref_item << "\tSecond val: " << item << std::endl; //todo remove
                 return false;
             }
         } else
-            if(fabs(item - ref_item) / fabs(ref_item) > relative_error_threshold){
+            if( diff / fabs(ref_item) > relative_error_threshold){
                 std::cout << "Ref val: " << ref_item << "\tSecond val: " << item << std::endl;
                 return false;
         }

@@ -129,13 +129,6 @@ namespace {
                 }
             };
             auto code_epilogue_store        = [&]() { for(uint64_t n=0; n<accumulators_count; ++n) vmovups(ptr [rax+32*n], Ymm(static_cast<int>(n)));};
-            auto code_epilogue_relu_store   = [&]() {
-                vxorps(ymm15, ymm15, ymm15);
-                for(uint64_t n=0; n<accumulators_count; ++n) {
-                    vmaxps(Ymm(static_cast<int>(n)), Ymm(static_cast<int>(n)), ymm15);
-                }
-                for(uint64_t n=0; n<accumulators_count; ++n) vmovups(ptr [rax+32*n], Ymm(static_cast<int>(n)));
-            };
 
             // <- code starts here
 
@@ -200,7 +193,7 @@ namespace {
                 code_op_type(0, code_prologue_zero, code_epilogue_store);
 
                 // initial = load -> calculation -> relu -> store
-                code_op_type(2, code_prologue_load, code_epilogue_relu_store);
+                code_op_type(2, code_prologue_load, code_epilogue_store);
 
             L("end");
 
@@ -215,6 +208,7 @@ namespace {
         };
     };
 
+	jit_code code;
     std::vector<std::vector<op_data_t>> op_data;
     std::vector<op_array_t> op_array;
 
@@ -230,6 +224,7 @@ namespace {
         , float **  bias
         , uint64_t block_width, uint64_t block_height
     ) : is_an_implementation(neural::type_id<jit_convolution_generic>())
+	  , code(input_feature_maps)
     {
         // create tasks list
         assert(input_feature_maps  % input_features_per_iteration ==0 && "input feature map count is not a multiple of features-per-iteration");
@@ -248,8 +243,6 @@ namespace {
         const auto blocks_in_column = (output_height+block_height-1)/block_height;
         const auto blocks_in_row    = (output_width +block_width -1)/block_width;
         const auto job_count        = blocks_in_column*blocks_in_row;
-
-        static jit_code code(input_feature_maps);
 
         tasks.tasks.resize(job_count);
         op_data.resize(job_count);
@@ -354,8 +347,8 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
 
     //const int b_pos = 0;
     const int f_pos = 1;
-    const int y_pos = 2;
-    const int x_pos = 3;
+    const int x_pos = 2;
+    const int y_pos = 3;
 
     assert( 2 == output_size.spatial.size() );
     assert( weights_arg.size.spatial[0] == weights_arg.size.spatial[1] ); //todo what is weights format?
