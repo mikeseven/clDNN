@@ -61,7 +61,7 @@ public:
                     << "At ["<< idx <<  "] Expected : " << expected_buffer[idx] << " actual : " << out_buffer[idx];
             }
             // does it sum to 1 batch wise
-            EXPECT_TRUE(are_equal(batch_wise_sum, 1.0f))
+            EXPECT_TRUE(are_equal(batch_wise_sum, 1.0f, 1e-3f, 1e-5f))
                 << "Expected : " << 1.0f << " actual : " << batch_wise_sum;
         }
     }
@@ -198,7 +198,7 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch1_sum_to_one) {
 
     auto sum = accumulate(output_memory_ptr, output_memory_ptr + x, 0.0f);
 
-    EXPECT_EQ(true, tests::are_equal(sum, 1.0f));
+    EXPECT_EQ(true, tests::are_equal(sum, 1.0f, 1e-3f, 1e-5f));
 }
 
 TEST(softmax_xb_f32_fw, intrinsics_avx2_batch1_ref_compare) {
@@ -250,7 +250,7 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch8_sum_to_one) {
         for(uint32_t x_idx = 0; x_idx < x; ++x_idx) {
             sum += output_memory_ptr[x_idx * b + b_idx];
         }
-        result = tests::are_equal(sum, 1.0f);
+        result = tests::are_equal(sum, 1.0f, 1e-3f, 1e-5f);
         if(!result) break;
     }
 
@@ -306,7 +306,7 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch48_sum_to_one) {
         for(uint32_t x_idx = 0; x_idx < x; ++x_idx) {
             sum += output_memory_ptr[x_idx * b + b_idx];
         }
-        result = tests::are_equal(sum, 1.0f);
+        result = tests::are_equal(sum, 1.0f, 1e-3f, 1e-5f);
         if(!result) break;
     }
 
