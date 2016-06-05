@@ -20,6 +20,7 @@
 #include "tests/gtest/gtest.h"
 #include "test_utils/test_utils.h"
 #include "memory_utils.h"
+#include <thread>
 
 using namespace neural;
 using namespace tests;
@@ -291,4 +292,50 @@ TEST(fully_connected_avx2_batch8, x_f32)
 
     for (int i = 0; i < output_memory_ref.count(); i++)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i))) << " at index " << i << "\n";
+}
+
+
+
+TEST(fully_connected_avx2_batch48, x_f32) 
+{
+    const uint32_t output_x = 80,        output_b = 48,              // size of whole output buffer
+                   input_x = 8,         input_b = 48,    // size of whole input buffer
+                   weight_x = output_x, weight_y = input_x;  // size of whole weights buffer
+
+    auto input_prim     = memory::allocate({ engine::reference, memory::format:: x_f32,       { input_b       ,{ { input_x } }, 1 }});
+
+    auto output_prim_ref= memory::allocate({ engine::reference, memory::format::x_f32,      { output_b       ,{ { output_x } }, 1 }});
+    auto output_prim    = memory::allocate({ engine::reference, memory::format::x_f32,      { output_b       ,{ { output_x } }, 1 }});
+
+    auto weights_prim   = memory::allocate({ engine::reference, memory::format::oi_f32,     { 1, {{1}}, { weight_x, weight_y } }});
+    auto weights_prim_tr = memory::allocate({ engine::reference, memory::format::io_i13_f2,{ 1,{{1}}, { weight_x, weight_y } }});
+    auto bias_prim      = memory::allocate({ engine::reference, memory::format:: x_f32,{ 1,       { { output_x } }, 1 }});
+
+    auto& output_memory_ref = output_prim_ref.as<const memory&>();
+    auto& output_memory = output_prim.as<const memory&>();
+    auto it_ref = static_cast<float*>(output_memory_ref.pointer);
+    auto it = static_cast<float*>(output_memory.pointer);
+
+    auto w1 = static_cast<float*>( (weights_prim.as<const memory&>()).pointer);
+    auto w2 = static_cast<float*>( (weights_prim_tr.as<const memory&>()).pointer);
+
+    auto full_con_prim_ref = fully_connected::create({ engine::reference, output_prim_ref , input_prim, weights_prim, bias_prim });
+    auto full_con_prim = fully_connected::create({ engine::cpu, output_prim, input_prim, weights_prim_tr, bias_prim });
+
+    srand(0);
+    fillrand(input_prim);
+    fillrand(weights_prim);
+    fillrand(bias_prim);
+    fillzero(output_prim);
+    auto reorder = reorder::create({engine::reference, weights_prim, weights_prim_tr});
+
+    execute({ reorder}).wait();
+
+    execute({ full_con_prim_ref }).wait();
+    execute({ full_con_prim }).wait();
+    
+
+    for (int i = 0; i < output_memory_ref.count(); i++)
+        EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i))) << " at index " << i << "\n";
+
 }

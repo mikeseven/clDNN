@@ -86,6 +86,381 @@ namespace neural {
 
 
     template<uint32_t T_SIZE, NN_ACTIVATION_FUNCTION T_FUNCTION, bool T_NEED_BIAS_COPY>
+    inline void fully_connected_compute_block_batch48(
+        float* input_buffer,
+        float* output_ptr,
+        float* bias_ptr,
+        float* weights_buffer,
+        uint32_t input_width,
+        bool first_run,
+        bool last_run)
+    {
+        // We are not using table of registers and unroll pragmas
+        // due to compiler which have issues with register allocation
+        // and needs special, obvious treatment. Template immediate
+        // arguments matching will remove all conditions in this code.
+        __m256  acc0, acc1, acc2, acc3, acc4,
+            acc5, acc6, acc7, acc8, acc9,
+            acc10, acc11;
+ 
+        
+        if (first_run)
+        {
+            if (T_NEED_BIAS_COPY)
+            {
+                if (T_SIZE >= 1)
+                {
+                    acc0 = _mm256_setzero_ps();
+                    acc1 = _mm256_setzero_ps();
+                    acc2 = _mm256_setzero_ps();
+                    acc3 = _mm256_setzero_ps();
+                    acc4 = _mm256_setzero_ps();
+                    acc5 = _mm256_setzero_ps();
+                }
+
+                if (T_SIZE >= 2)
+                {
+                    acc6 = _mm256_setzero_ps();
+                    acc7 = _mm256_setzero_ps();
+                    acc8 = _mm256_setzero_ps();
+                    acc9 = _mm256_setzero_ps();
+                    acc10 = _mm256_setzero_ps();
+                    acc11 = _mm256_setzero_ps();
+                }
+            }
+            else
+            {
+                if (T_SIZE >= 1)
+                {
+                    acc0 = _mm256_load_ps(output_ptr + 0 * C_batch48_size + 0 * C_simd_width);
+                    acc1 = _mm256_load_ps(output_ptr + 0 * C_batch48_size + 1 * C_simd_width);
+                    acc2 = _mm256_load_ps(output_ptr + 0 * C_batch48_size + 2 * C_simd_width);
+                    acc3 = _mm256_load_ps(output_ptr + 0 * C_batch48_size + 3 * C_simd_width);
+                    acc4 = _mm256_load_ps(output_ptr + 0 * C_batch48_size + 4 * C_simd_width);
+                    acc5 = _mm256_load_ps(output_ptr + 0 * C_batch48_size + 5 * C_simd_width);
+                }
+
+                if (T_SIZE >= 2)
+                {
+                    acc6 = _mm256_load_ps(output_ptr + 1 * C_batch48_size + 0 * C_simd_width);
+                    acc7 = _mm256_load_ps(output_ptr + 1 * C_batch48_size + 1 * C_simd_width);
+                    acc8 = _mm256_load_ps(output_ptr + 1 * C_batch48_size + 2 * C_simd_width);
+                    acc9 = _mm256_load_ps(output_ptr + 1 * C_batch48_size + 3 * C_simd_width);
+                    acc10 = _mm256_load_ps(output_ptr + 1 * C_batch48_size + 4 * C_simd_width);
+                    acc11 = _mm256_load_ps(output_ptr + 1 * C_batch48_size + 5 * C_simd_width);
+                }
+            }
+        }
+        else
+        {
+            if (T_SIZE >= 1)
+            {
+                acc0 = _mm256_load_ps(output_ptr + 0 * C_batch48_size + 0 * C_simd_width);
+                acc1 = _mm256_load_ps(output_ptr + 0 * C_batch48_size + 1 * C_simd_width);
+                acc2 = _mm256_load_ps(output_ptr + 0 * C_batch48_size + 2 * C_simd_width);
+                acc3 = _mm256_load_ps(output_ptr + 0 * C_batch48_size + 3 * C_simd_width);
+                acc4 = _mm256_load_ps(output_ptr + 0 * C_batch48_size + 4 * C_simd_width);
+                acc5 = _mm256_load_ps(output_ptr + 0 * C_batch48_size + 5 * C_simd_width);
+            }
+
+            if (T_SIZE >= 2)
+            {
+                acc6  = _mm256_load_ps(output_ptr + 1 * C_batch48_size + 0 * C_simd_width);
+                acc7  = _mm256_load_ps(output_ptr + 1 * C_batch48_size + 1 * C_simd_width);
+                acc8  = _mm256_load_ps(output_ptr + 1 * C_batch48_size + 2 * C_simd_width);
+                acc9  = _mm256_load_ps(output_ptr + 1 * C_batch48_size + 3 * C_simd_width);
+                acc10 = _mm256_load_ps(output_ptr + 1 * C_batch48_size + 4 * C_simd_width);
+                acc11 = _mm256_load_ps(output_ptr + 1 * C_batch48_size + 5 * C_simd_width);
+            }
+        }
+
+        auto input_ptr = &input_buffer[0];
+
+        const auto input_ptr_end = &input_buffer[input_width*C_batch48_size];
+
+        while (input_ptr < input_ptr_end)
+        {
+            // Do MADs.
+            __m256 weights0 = _mm256_broadcast_ss(weights_buffer + 0);
+            __m256 weights1 = _mm256_broadcast_ss(weights_buffer + 1);
+
+            __m256 input = _mm256_load_ps(input_ptr + 0 * C_simd_width);
+            if (T_SIZE >= 1)  acc0 = _mm256_fmadd_ps(input, weights0,  acc0);
+            if (T_SIZE >= 2)  acc6 = _mm256_fmadd_ps(input, weights1,  acc6);
+
+            input = _mm256_load_ps(input_ptr + 1 * C_simd_width);
+            if (T_SIZE >= 1)  acc1 = _mm256_fmadd_ps(input, weights0,  acc1);
+            if (T_SIZE >= 2)  acc7 = _mm256_fmadd_ps(input, weights1,  acc7);
+
+            input = _mm256_load_ps(input_ptr + 2 * C_simd_width);
+            if (T_SIZE >= 1)  acc2 = _mm256_fmadd_ps(input, weights0,  acc2);
+            if (T_SIZE >= 2)  acc8 = _mm256_fmadd_ps(input, weights1,  acc8);
+
+            input = _mm256_load_ps(input_ptr + 3 * C_simd_width);
+            if (T_SIZE >= 1)  acc3 = _mm256_fmadd_ps(input, weights0,  acc3);
+            if (T_SIZE >= 2)  acc9 = _mm256_fmadd_ps(input, weights1,  acc9);
+
+            input = _mm256_load_ps(input_ptr + 4 * C_simd_width);
+            if (T_SIZE >= 1)  acc4 = _mm256_fmadd_ps(input, weights0,  acc4);
+            if (T_SIZE >= 2) acc10 = _mm256_fmadd_ps(input, weights1, acc10);
+
+            input = _mm256_load_ps(input_ptr + 5 * C_simd_width);
+            if (T_SIZE >= 1)  acc5 = _mm256_fmadd_ps(input, weights0,  acc5);
+            if (T_SIZE >= 2) acc11 = _mm256_fmadd_ps(input, weights1, acc11);
+
+            // Increment pointers.
+            input_ptr += C_batch48_size;
+            weights_buffer += C_max_acc_batch48;
+        }
+        
+        if (first_run)
+        {
+            if (T_NEED_BIAS_COPY)
+            {
+                // Add biases.
+                if (T_SIZE >= 1)
+                {
+                    acc0 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 0), acc0);
+                    acc1 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 0), acc1);
+                    acc2 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 0), acc2);
+                    acc3 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 0), acc3);
+                    acc4 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 0), acc4);
+                    acc5 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 0), acc5);
+                }
+
+                if (T_SIZE >= 2)
+                {
+                    acc6 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 1), acc6);
+                    acc7 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 1), acc7);
+                    acc8 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 1), acc8);
+                    acc9 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 1), acc9);
+                    acc10 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 1), acc10);
+                    acc11 = _mm256_add_ps(_mm256_broadcast_ss(bias_ptr + 1), acc11);
+                }
+            }
+        }
+        
+        if (last_run)
+        {
+            if (T_FUNCTION == NN_ACTIVATION_FUNCTION_RELU)
+            {
+                // Perform ReLU.
+                if (T_SIZE >= 1)
+                {
+                    acc0 = _mm256_max_ps(_mm256_setzero_ps(), acc0);
+                    acc1 = _mm256_max_ps(_mm256_setzero_ps(), acc1);
+                    acc2 = _mm256_max_ps(_mm256_setzero_ps(), acc2);
+                    acc3 = _mm256_max_ps(_mm256_setzero_ps(), acc3);
+                    acc4 = _mm256_max_ps(_mm256_setzero_ps(), acc4);
+                    acc5 = _mm256_max_ps(_mm256_setzero_ps(), acc5);
+                }
+
+                if (T_SIZE >= 2)
+                {
+                    acc6 = _mm256_max_ps(_mm256_setzero_ps(), acc6);
+                    acc7 = _mm256_max_ps(_mm256_setzero_ps(), acc7);
+                    acc8 = _mm256_max_ps(_mm256_setzero_ps(), acc8);
+                    acc9 = _mm256_max_ps(_mm256_setzero_ps(), acc9);
+                    acc10 = _mm256_max_ps(_mm256_setzero_ps(), acc10);
+                    acc11 = _mm256_max_ps(_mm256_setzero_ps(), acc11);
+                }
+            }
+        }
+      
+       
+        if (T_SIZE >= 1)
+        {
+            _mm256_storeu_ps(output_ptr + 0 * C_batch48_size + 0 * C_simd_width, acc0);
+            _mm256_storeu_ps(output_ptr + 0 * C_batch48_size + 1 * C_simd_width, acc1);
+            _mm256_storeu_ps(output_ptr + 0 * C_batch48_size + 2 * C_simd_width, acc2);
+            _mm256_storeu_ps(output_ptr + 0 * C_batch48_size + 3 * C_simd_width, acc3);
+            _mm256_storeu_ps(output_ptr + 0 * C_batch48_size + 4 * C_simd_width, acc4);
+            _mm256_storeu_ps(output_ptr + 0 * C_batch48_size + 5 * C_simd_width, acc5);
+        }
+       
+        if (T_SIZE >= 2)
+        {
+            _mm256_storeu_ps(output_ptr + 1 * C_batch48_size + 0 * C_simd_width,  acc6);
+            _mm256_storeu_ps(output_ptr + 1 * C_batch48_size + 1 * C_simd_width,  acc7);
+            _mm256_storeu_ps(output_ptr + 1 * C_batch48_size + 2 * C_simd_width,  acc8);
+            _mm256_storeu_ps(output_ptr + 1 * C_batch48_size + 3 * C_simd_width,  acc9);
+            _mm256_storeu_ps(output_ptr + 1 * C_batch48_size + 4 * C_simd_width, acc10);
+            _mm256_storeu_ps(output_ptr + 1 * C_batch48_size + 5 * C_simd_width, acc11);
+        }
+     
+    }
+
+
+
+    template <NN_ACTIVATION_FUNCTION T_FUNCTION, bool T_NEED_BIAS_COPY>
+    static void run_fully_connected_work_item_internal_batch48(const void* ptr) 
+    {
+        auto this_fc = static_cast<const fully_connected *>(ptr);
+        auto input_buffer  = static_cast<float*>(this_fc->input_memory(0).pointer);
+        auto output_buffer = static_cast<float*>(this_fc->output_memory(0).pointer);
+        auto weight_buffer = static_cast<float*>(this_fc->input_memory(1).pointer);
+        auto bias_buffer = static_cast<float*>(this_fc->argument.input[2].primitive.as<const memory&>().pointer);
+
+        auto& input_arg = this_fc->input_memory(0).argument;
+        auto& input_buffer_size = input_arg.size;
+
+        auto& output_arg = this_fc->output_memory(0).argument;
+        auto& output_buffer_size = output_arg.size;
+
+        auto& weight_arg = this_fc->input_memory(1).argument;
+
+        assert(1 == input_buffer_size.feature.size());
+        assert(1 == input_buffer_size.batch.size());
+        assert(1 == input_buffer_size.feature[0]);
+       // assert(0 == output_buffer_size.spatial[0] % C_max_acc_batch8);
+
+        // what da f...???
+        const auto input_width = input_buffer_size.spatial[0];
+        const auto output_width = output_buffer_size.spatial[0];
+        const auto output_length = output_width; // !!!!!!!!!!!!!!!
+
+        auto weights_ptr = weight_buffer;
+        auto output_ptr = output_buffer;
+     //   auto bias_ptr = bias_buffer;
+
+     //   const auto input_width = input->parent->lengths.t[NN_DATA_COORD_x];
+     //   const auto output_width = output->view_end.t[NN_DATA_COORD_x] - output->view_begin.t[NN_DATA_COORD_x] + 1;
+
+        const auto num_full_blocks = output_width / C_max_acc_batch48;
+        const auto partial_block_size = output_width % C_max_acc_batch48;
+
+        /*auto input_buffer = static_cast<float*>(input->parent->data_buffer);
+        auto output_buffer = static_cast<float*>(output->parent->data_buffer);
+        auto weights_buffer = static_cast<float*>(weights->parent->data_buffer);
+*/
+        // Output views.
+        //const auto output_view_start = output->view_begin.t[NN_DATA_COORD_x];
+        const auto output_view_start = 0;
+        const auto output_view_batch_offset = output_view_start * C_batch48_size;
+
+        // Weight views (for output-related weights).
+        auto weight_view_start = output_view_start / C_max_acc_batch48 * input_width * C_max_acc_batch48;
+
+        //const auto weights_ptr = &weights_buffer[weight_view_start];
+        //const auto output_ptr = &output_buffer[output_view_batch_offset];
+
+        const auto C_package_size = 128;
+
+        const auto num_input_packages = input_width / C_package_size;
+        const auto package_remainder = input_width % C_package_size;
+
+        bool first_run = true;
+
+        float* bias_ptr = nullptr;
+        if (T_NEED_BIAS_COPY)
+        {
+            //auto biases_buffer = static_cast<float*>(bias->parent->data_buffer);
+            auto biases_buffer = bias_buffer;
+            bias_ptr = &biases_buffer[output_view_start];
+        }
+        
+        // Full packages.
+        for (auto input_package = 0u; input_package < num_input_packages; ++input_package)
+        {
+            const bool last_run =
+                (package_remainder > 0 || input_package + 1 < num_input_packages) ? false : true;
+            auto package_weights_ptr = weights_ptr;
+            auto package_output_ptr = output_ptr;
+            auto package_bias_ptr = bias_ptr;
+            for (auto block = 0u; block < num_full_blocks; ++block)
+            {
+                // Run computation.
+                fully_connected_compute_block_batch48<C_max_acc_batch48, T_FUNCTION, T_NEED_BIAS_COPY>(
+                    input_buffer + C_package_size * C_batch48_size * input_package,
+                    package_output_ptr,
+                    package_bias_ptr,
+                    package_weights_ptr + C_package_size * C_max_acc_batch48 * input_package,
+                    C_package_size,
+                    first_run,
+                    last_run);
+
+                // Increment pointers.
+                package_output_ptr += C_data_stride_batch48;
+                package_weights_ptr += input_width*C_max_acc_batch48;
+
+                if (T_NEED_BIAS_COPY)
+                {
+                    package_bias_ptr += C_max_acc_batch48;
+                }
+            }
+
+            switch (partial_block_size)
+            {
+            case  0: break;
+            case  1: fully_connected_compute_block_batch48< 1, T_FUNCTION, T_NEED_BIAS_COPY>(
+                input_buffer + C_package_size * C_batch48_size * input_package,
+                package_output_ptr,
+                package_bias_ptr,
+                package_weights_ptr + C_package_size * C_max_acc_batch48 * input_package,
+                C_package_size,
+                first_run,
+                last_run);
+                break;
+            default:
+                NN_UNREACHABLE_CODE;
+            }
+
+            first_run = false;
+        }
+
+        // Remaining input items.
+        if (package_remainder > 0 )
+        {
+            auto package_weights_ptr = weights_ptr;
+            auto package_output_ptr = output_ptr;
+            auto package_bias_ptr = bias_ptr;
+            for (auto block = 0u; block < num_full_blocks; ++block)
+            {
+                // Run computation.
+                fully_connected_compute_block_batch48<C_max_acc_batch48, T_FUNCTION, T_NEED_BIAS_COPY>(
+                    input_buffer + C_package_size * C_batch48_size * num_input_packages,
+                    package_output_ptr,
+                    package_bias_ptr,
+                    package_weights_ptr + C_package_size * C_max_acc_batch48 * num_input_packages,
+                    package_remainder,
+                    first_run,
+                    true);
+
+                // Increment pointers.
+                package_output_ptr += C_data_stride_batch48;
+                package_weights_ptr += input_width*C_max_acc_batch48;
+
+                if (T_NEED_BIAS_COPY)
+                {
+                    package_bias_ptr += C_max_acc_batch48;
+                }
+            }
+
+            switch (partial_block_size)
+            {
+            case  0: break;
+            case  1: fully_connected_compute_block_batch48< 1, T_FUNCTION, T_NEED_BIAS_COPY>(
+                input_buffer + C_package_size * C_batch48_size * num_input_packages,
+                package_output_ptr,
+                package_bias_ptr,
+                package_weights_ptr + C_package_size * C_max_acc_batch48 * num_input_packages,
+                package_remainder,
+                first_run,
+                true);
+                break;
+            default:
+                NN_UNREACHABLE_CODE;
+            }
+        }
+
+    }
+
+
+
+
+
+
+    template<uint32_t T_SIZE, NN_ACTIVATION_FUNCTION T_FUNCTION, bool T_NEED_BIAS_COPY>
     void fully_connected_compute_block_batch8(
         float* input_buffer,
         float* output_ptr,
@@ -644,9 +1019,9 @@ namespace neural {
 		case 8:
 			run_fully_connected_work_item_internal_batch8<NN_ACTIVATION_FUNCTION_NONE, true>(ptr);
 			break;
-	/*	case 48:
+		case 48:
 			run_fully_connected_work_item_internal_batch48<NN_ACTIVATION_FUNCTION_NONE, true>(ptr);
-			break;*/
+			break;
 		default:
 			break;
 		}
