@@ -3,6 +3,7 @@
 #include <vector>
 #include <iostream>
 
+#include "boost/make_shared.hpp"
 #include "caffe/layers/softmax_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/layers/mkl_dnn_layers.hpp"
@@ -29,15 +30,37 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   uint32_t output_x = input_x;
   const uint32_t z = 1;
 
-  bottom_data_->memory_prv = memory::describe({engine_, bottom_data_->layout_prv, {batch, {{input_x}}, z}});
-  top_data_   ->memory_prv = memory::describe({engine_, top_data_   ->layout_prv, {batch, {{input_x}}, z}});
-  bottom_diff_->memory_prv = memory::describe({engine_, bottom_diff_->layout_prv, {batch, {{input_x}}, z}});
-  top_diff_   ->memory_prv = memory::describe({engine_, top_diff_   ->layout_prv, {batch, {{input_x}}, z}});
+  // Choose layout according to the engine
+  switch (engine_) {
+    case  neural::engine::cpu:
+      prv_layout_in_out_ = memory::format::xb_f32;
+    break;
+    case neural::engine::reference:
+      prv_layout_in_out_ = memory::format::xb_f32;
+    break;
+    default:
+      CHECK(0) << "Wrong mkl-dnn engine";
+  }
 
-  bottom_data_->memory_usr = memory::describe({engine_, bottom_data_->layout_usr, {batch, {{input_x}}, z}});
-  top_data_   ->memory_usr = memory::describe({engine_, top_data_   ->layout_usr, {batch, {{input_x}}, z}});
-  bottom_diff_->memory_usr = memory::describe({engine_, bottom_diff_->layout_usr, {batch, {{input_x}}, z}});
-  top_diff_   ->memory_usr = memory::describe({engine_, top_diff_   ->layout_usr, {batch, {{input_x}}, z}});
+  bottom_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}}, z}}),
+          memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}}, z}}));
+
+  top_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}}, z}}),
+          memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}}, z}}));
+
+  bottom_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}}, z}}),
+          memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}}, z}}));
+
+  top_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}}, z}}),
+          memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}}, z}}));
 
   // Names are for debugging only
   bottom_data_->name = "fwd_bottom_data   @ " + this->layer_param_.name() + " ";
@@ -45,10 +68,6 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   top_diff_->name =    "bwd_top_diff      @ " + this->layer_param_.name() + " ";
   bottom_diff_->name = "bwd_bottom_diff   @ " + this->layer_param_.name() + " ";
 
-  bottom_data_->create_conversions();
-  top_data_   ->create_conversions();
-  bottom_diff_->create_conversions();
-  top_diff_   ->create_conversions();
   softmaxFwd_ = normalization::softmax::create({engine_,
                                                 top_data_->memory_prv,
                                                 {0, {{0}}, 0},
