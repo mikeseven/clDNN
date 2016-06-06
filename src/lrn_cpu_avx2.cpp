@@ -180,8 +180,6 @@ namespace neural {
             const __m256i first_masker = _mm256_loadu_si256((__m256i*)first_load_mask);
             const __m256i last_masker = _mm256_loadu_si256((__m256i*)last_load_mask);
 
-            const __m256 pow_vec = _mm256_set1_ps(-beta);
-
             for (uint32_t batch = output_batch_begin; batch < output_batch_end; ++batch)
             {
                 for (uint32_t row = input_row_begin, out_row = output_row_begin;
