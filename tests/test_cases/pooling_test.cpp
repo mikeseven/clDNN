@@ -321,8 +321,8 @@ TEST(pooling_forward, naive_comparison_optimized_max_bs_yxf_bv24_f32_wsiz2x2_wst
     auto output_prim_ref = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 48,{ 5, 5 }, 4 }}); auto& output_memory_ref = output_prim_ref.as<const memory&>();
 
     // Optimized data.
-    auto input_prim_cpu  = memory::allocate({ engine::reference, memory::format::bs_yxf_bv24_f32,{ 48,{ 6, 6 }, 4 }});
-    auto output_prim_cpu = memory::allocate({ engine::reference, memory::format::bs_yxf_bv24_f32,{ 48,{ 5, 5 }, 4 }});
+    auto input_prim_cpu  = memory::allocate({ engine::reference, memory::format::byxf_b24_f32,{ 48,{ 6, 6 }, 4 }});
+    auto output_prim_cpu = memory::allocate({ engine::reference, memory::format::byxf_b24_f32,{ 48,{ 5, 5 }, 4 }});
 
     // Temporary data for optimized results in reference space.
     auto temp_output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 48,{ 5, 5 }, 4 }}); auto& temp_output_memory = temp_output.as<const memory&>();
