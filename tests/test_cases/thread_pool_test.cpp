@@ -19,6 +19,7 @@
 #include "api/neural.h"
 #include "tests/gtest/gtest.h"
 #include "test_utils/test_utils.h"
+#include "thread_pool.h"
 
 using namespace neural;
 using namespace tests;
@@ -35,22 +36,27 @@ void do_some (const void* a)
     int* b = static_cast<int*>(a_temp);
     *b = sum;
     //*b = *b+1;
-    //cout << "number=" << *static_cast<const int*>(a) << endl;
-    //cout << *static_cast<const int*>(a);
+    //std::cout << "number=" << *static_cast<const int*>(a) << "\n";
+    //std::cout << "b=" << *b << "\n";
 }
 
 TEST(thread_pool, check_result) {
 
-    task_group tasks;
-    const int task_count = 100000;
+    task_group group;
+    const int task_count = 10;
     int num[task_count];
     for (int i = 0; i < task_count; i++)
     {
         num[i] = i;
-        tasks.tsk.push_back({ &do_some, &num[i] });
+        group.tasks.push_back({ &do_some, &num[i] });
     }
 
-    nn_thread_worker_pool wp();
-    wp.push_job(tasks);
+    nn_thread_worker_pool wp;
+    wp.push_job(group);
+
+    for (int i = 0; i < task_count; i++)
+    {
+        std::cout << "num[i]=" << num[i] << "\n";
+    }
 
 }
