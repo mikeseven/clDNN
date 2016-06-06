@@ -144,7 +144,7 @@ namespace
     {
         attach()
         {
-            auto key_fw = std::make_tuple(engine::cpu, memory::format::bs_yxf_bv24_f32, memory::format::bs_yxf_bv24_f32);
+            auto key_fw = std::make_tuple(engine::cpu, memory::format::byxf_b24_f32, memory::format::byxf_b24_f32);
             auto val_fw = pooling_cpu_avx2_batch24::create;
 
             pool_fw_implementation_map::instance().insert( {key_fw, val_fw} );
