@@ -129,12 +129,16 @@ namespace neural {
         {
             auto input_buffer = static_cast<float*>(data->lrn_cpu_layer->input_memory(0).pointer);
             auto output_buffer = static_cast<float*>(data->lrn_cpu_layer->output_memory(0).pointer);
+
             auto &n = data->lrn_cpu_layer->argument.size;
             auto &k = data->lrn_cpu_layer->argument.k;
             auto &alpha = data->lrn_cpu_layer->argument.alpha;
             auto &beta = data->lrn_cpu_layer->argument.beta;
 
             const auto input_column_size = data->lrn_cpu_layer->input_memory(0).argument.size.feature[0];
+            if (input_column_size % 8) 
+                throw std::runtime_error("the value of featuremap="+std::to_string(input_column_size)+" is not a multiple of 8, and it should be");
+
             const auto input_row_size = data->lrn_cpu_layer->input_memory(0).argument.size.spatial[0] * input_column_size;
             const auto input_batch_size = data->lrn_cpu_layer->input_memory(0).argument.size.spatial[1] * input_row_size;
 

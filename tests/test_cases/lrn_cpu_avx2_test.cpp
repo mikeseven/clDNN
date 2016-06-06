@@ -20,6 +20,7 @@
 #include "api/neural.h"
 #include "multidimensional_counter.h"
 #include "test_utils/test_utils.h"
+#include "memory_utils.h"
 #include <iostream>
 
 TEST(local_response_normalization, lrn_cpu_avx2_test) {
@@ -27,53 +28,47 @@ TEST(local_response_normalization, lrn_cpu_avx2_test) {
     using namespace neural;
     using namespace tests;
 
-    // test initialization
+    // ------------------------------------------------------------------------------------------------
+    // TEST INITIALIZATION
+    // Memory descriptors for reference lrn
+
 
     // input-output parameters:
-
-    const uint32_t px = 2, py = 2, pb = 1, pf = 7, psize = 3;
-
-    std::initializer_list<float> input_oracle_init = {
-         -1.0f, -0.5f,  0.0f,  0.5f,  1.0f,  1.5f,  2.0f,    // b=0, x=0, y=0
-         -2.0f, -1.7f, -1.2f, -0.7f, -0.2f,  0.3f,  0.8f,    // b=0, x=1, y=0
-          0.1f,  0.4f,  0.9f,  1.4f,  1.9f,  2.4f,  2.9f,    // b=0, x=0, y=1
-        -10.0f, -8.0f, -7.5f, -7.0f, -6.5f, -6.0f, -5.5f };  // b=0, x=1, y=1
-
-    std::initializer_list<float> output_oracle_init = {
-        -0.54433f, -0.27217f,  0.00000f,  0.27217f,  0.32366f,  0.30814f,  0.45266f,    // b=0, x=0, y=0
-        -0.42484f, -0.31845f, -0.32025f, -0.30941f, -0.13928f,  0.19550f,  0.53034f,    // b=0, x=1, y=0
-         0.08889f,  0.23964f,  0.32244f,  0.31267f,  0.28876f,  0.26604f,  0.37728f,    // b=0, x=0, y=1
-        -0.21721f, -0.13945f, -0.15913f, -0.16455f, -0.17056f, -0.17725f, -0.23420f };  // b=0, x=1, y=1
-
+    const uint32_t param_x = 2, param_y = 2, param_b = 24, param_f = 16, param_size = 5;
     // lrn parameters:
-    const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
+    const float param_k = 1.0f, param_alpha = 1.0f, param_beta = 0.75f;
 
-    auto input = memory::allocate({ engine::cpu, memory::format::byxf_f32,{ pb,{ px, py }, pf } });
-    auto output = memory::allocate({ engine::cpu, memory::format::byxf_f32,{ pb,{ px, py }, pf } });
-    auto output_oracle = memory::allocate({ engine::cpu, memory::format::byxf_f32,{ pb,{ px, py }, pf } });
+    // reference
+    auto input_reference = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ param_b,{ param_x, param_y }, param_f } });
+    auto output_reference = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ param_b,{ param_x, param_y }, param_f } });
+    fill<float>(input_reference);
 
-    set_values(input, input_oracle_init);
-    set_values(output_oracle, output_oracle_init);
+    auto lrn_reference = normalization::response::create({engine::reference, output_reference, input_reference, param_size, padding::zero, param_k, param_alpha, param_beta});
 
-    auto lrn = normalization::response::create({ engine::cpu, output, input, psize, padding::zero, pk, palpha, pbeta });
+    // optimized
+    auto input_optimized = memory::allocate({ engine::reference, memory::format::byxf_f32,{ param_b,{ param_x, param_y }, param_f } });
+    auto output_optimized = memory::allocate({ engine::reference, memory::format::byxf_f32,{ param_b,{ param_x, param_y }, param_f } });
+    auto output_optimized_in_reference_format = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ param_b,{ param_x, param_y }, param_f } });
 
+    auto reorder_input_reference_to_optimized = reorder::create({ engine::reference, input_reference, input_optimized });
+    auto reorder_output_optimized_to_reference_format = reorder::create({ engine::reference, output_optimized, output_optimized_in_reference_format });
+
+    auto lrn_optimized = normalization::response::create({ engine::cpu, output_optimized, input_optimized, param_size, padding::zero, param_k, param_alpha, param_beta });
+    
     // ------------------------------------------------------------------------------------------------
-    // test run
-    execute({ lrn });
+    // TEST RUN
+    execute({ lrn_reference, reorder_input_reference_to_optimized, lrn_optimized, reorder_output_optimized_to_reference_format }).wait();
 
     // analysis of results
-    float* buff = nullptr;
-    float* buff_oracle = nullptr;
-
     bool   result = true;
 
     try {
 
-        buff = static_cast<float*>(output.as<const memory&>().pointer);
-        buff_oracle = static_cast<float*>(output_oracle.as<const memory&>().pointer);
+        auto buff = static_cast<float*>(output_optimized_in_reference_format.as<const memory&>().pointer);
+        auto buff_reference = static_cast<float*>(output_reference.as<const memory&>().pointer);
 
-        for (size_t i = 0; i < px*py*pb*pf; ++i) {
-            EXPECT_NEAR(buff[i], buff_oracle[i], 1e-04F);
+        for (size_t i = 0; i < param_x*param_y*param_b*param_f; ++i) {
+            EXPECT_EQ(true, tests::are_equal(buff_reference[i], buff[i], 1e-04F, 1e-04F, 1e-04F)) << "at index " << i;
         }
     }
     catch (const std::exception& E) {
@@ -82,6 +77,6 @@ TEST(local_response_normalization, lrn_cpu_avx2_test) {
 
     EXPECT_EQ(true, result);
     // ------------------------------------------------------------------------------------------------
-    // test clean
+    // TEST CLEAN
 
 }
