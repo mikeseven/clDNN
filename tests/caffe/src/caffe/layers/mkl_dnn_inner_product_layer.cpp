@@ -220,10 +220,10 @@ void MKL_DNNInnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 
   auto bottom_data = bottom_data_->get_converted_prv(bottom[0], true);
   auto weight = weights_data_->get_converted_prv(this->blobs_[0].get(), true);
-  void *top_data = nullptr;
+  Dtype *top_data = nullptr;
   if (top_data_->from_prv != nullptr) {
-    top[0]->set_prv_data(top_data_->prv_ptr, top_data_, false);
-    top_data = top_data_->prv_ptr;
+    top_data = top_data_->prv_ptr();
+    top[0]->set_prv_data(top_data, top_data_, false);
   } else {
     top_data = top[0]->mutable_cpu_data();
     DLOG(INFO) << "Using cpu_data for top in MKL_DNNInnerProductLayer.";

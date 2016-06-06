@@ -7,7 +7,7 @@
 #include "caffe/layers/mkl_dnn_layers.hpp"
 
 // Uncomment to see where the layout conversions are done
-//#undef DLOG
+#undef DLOG
 #ifndef DLOG
 #include <iostream>
 #define DLOG(x) std::cout
@@ -32,7 +32,8 @@ void MKL_DNNMemory<Dtype, is_diff>::convert_from_prv(void* prv_ptr, void* cpu_pt
   CHECK(cpu_ptr);
   CHECK(this->from_prv != nullptr);
 
-  DLOG(INFO) << "convert priv =>           "  << this->name << " =>"  << "\n";
+  DLOG(INFO) << "convert priv =>           "  << this->name << " =>"
+          << "                            || layouts: " << this->layout_prv << " => \n";
   execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv}).wait();
 #ifdef CONVERSION_PRINT_DATA
   DLOG(INFO) << "Before conversion: ";
@@ -53,11 +54,14 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
   if (this->to_prv != nullptr)  // Checking is conversion is required
   {
     const Dtype* prv_ptr = is_diff ?  blob->prv_diff() : blob->prv_data();
-    if(prv_ptr == NULL)
+    if(prv_ptr == nullptr)
     {
-      DLOG(INFO) << "convert      => priv                                => " << this->name << "\n";
+      DLOG(INFO) << "convert      => priv                                => " << this->name
+              << "  || layouts:   => " << this->layout_prv<< "\n";
       auto usr_ptr = is_diff ? (Dtype *) blob->cpu_diff() : (Dtype *) blob->cpu_data();
-      execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr), this->to_prv}).wait();
+      if(this->prv_ptr_ == nullptr)
+        this->allocate();
+      execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr_), this->to_prv}).wait();
 
 #ifdef CONVERSION_PRINT_DATA
       DLOG(INFO) << "Before conversion: ";
@@ -66,16 +70,16 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
       DLOG(INFO) << " \n";
       DLOG(INFO) << "After  conversion: ";
       for (auto i=0; i<blob->count(); i++)
-        DLOG(INFO) << this->prv_ptr[i] << " ";
+        DLOG(INFO) << this->prv_ptr_[i] << " ";
       DLOG(INFO) << " \n\n";
 #endif
       if (set_prv_ptr) {
         if(is_diff)
-          blob->set_prv_diff(this->prv_ptr, get_shared_ptr(), true);
+          blob->set_prv_diff(this->prv_ptr_, get_shared_ptr(), true);
         else
-          blob->set_prv_data(this->prv_ptr, get_shared_ptr(), true);
+          blob->set_prv_data(this->prv_ptr_, get_shared_ptr(), true);
       }
-      return this->prv_ptr;
+      return this->prv_ptr_;
     }
     else
     {
@@ -94,22 +98,22 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
           // hack for reusing previously done conversion
           if(converted_in_fwd->layout_prv == this->layout_prv) {
             DLOG(INFO) << "layout OK                 " << converted_in_fwd->name << " == " << this->name  << "\n";
-            return converted_in_fwd->prv_ptr;
+            return converted_in_fwd->prv_ptr_;
           }
         }
         DLOG(INFO) << "convert priv => priv      " << current_descr->name << " => " << this->name
                    << "  || layouts: " << current_descr->layout_prv  << " => " << this->layout_prv<< "\n";
         neural::primitive convert = reorder::create(reorder::arguments({engine::reference, current_descr->memory_prv, this->memory_prv}));
-        execute({current_descr->memory_prv(current_descr->prv_ptr),
-                 this->memory_prv(this->prv_ptr), convert}).wait();
+        execute({current_descr->memory_prv(current_descr->prv_ptr_),
+                 this->memory_prv(this->prv_ptr_), convert}).wait();
 
         if (set_prv_ptr) {
           if(is_diff)
-            blob->set_prv_diff(this->prv_ptr, get_shared_ptr(), true);
+            blob->set_prv_diff(this->prv_ptr_, get_shared_ptr(), true);
           else
-            blob->set_prv_data(this->prv_ptr, get_shared_ptr(), true);
+            blob->set_prv_data(this->prv_ptr_, get_shared_ptr(), true);
         }
-        return this->prv_ptr;
+        return this->prv_ptr_;
       }
       else if(current_descr.get() != this) {
         DLOG(INFO) << "layout OK                 " << current_descr->name << " == " << this->name << "\n";
@@ -327,8 +331,8 @@ void MKL_DNNConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
   float* filter_data = fwd_filter_data->get_converted_prv(this->blobs_[0].get(), true);
   Dtype* top_data;
   if (fwd_top_data->from_prv != nullptr) {
-    top_data = fwd_top_data->prv_ptr;
-    top[0]->set_prv_data(fwd_top_data->prv_ptr, fwd_top_data, false);
+    top_data = fwd_top_data->prv_ptr();
+    top[0]->set_prv_data(top_data, fwd_top_data, false);
   } else {
     top_data = top[0]->mutable_cpu_data();
   }
@@ -390,8 +394,8 @@ void MKL_DNNConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& to
     Dtype* bottom_diff;
     if (bwd_bottom_diff->from_prv != nullptr)
     {
-      bottom[0]->set_prv_diff(bwd_bottom_diff->prv_ptr, bwd_bottom_diff, false);
-      bottom_diff = bwd_bottom_diff->prv_ptr;
+      bottom_diff = bwd_bottom_diff->prv_ptr();
+      bottom[0]->set_prv_diff(bottom_diff, bwd_bottom_diff, false);
     }
     else
       bottom_diff = bottom[0]->mutable_cpu_diff();
@@ -399,16 +403,16 @@ void MKL_DNNConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& to
     Dtype* filter_diff;
     if (bwd_filter_diff->from_prv != nullptr)
     {
-      this->blobs_[0]->set_prv_diff(bwd_filter_diff->prv_ptr, bwd_filter_diff, false);
-      filter_diff = bwd_filter_diff->prv_ptr;
+      filter_diff = bwd_filter_diff->prv_ptr();
+      this->blobs_[0]->set_prv_diff(filter_diff, bwd_filter_diff, false);
     }
     else
       filter_diff = this->blobs_[0]->mutable_cpu_diff();
 
     Dtype* bias_diff;
     if (bwd_bias_diff->from_prv != nullptr) {
-      this->blobs_[1]->set_prv_diff(bwd_bias_diff->prv_ptr, bwd_bias_diff, false);
-      bias_diff = bwd_bias_diff->prv_ptr;
+      bias_diff = bwd_bias_diff->prv_ptr();
+      this->blobs_[1]->set_prv_diff(bias_diff, bwd_bias_diff, false);\
     }
     else
       bias_diff = this->blobs_[1]->mutable_cpu_diff();

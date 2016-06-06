@@ -32,7 +32,6 @@ struct MKL_DNNMemory : PrvMemDescr,
     {
       if (layout_usr != layout_prv)
       {
-        CaffeMallocHost((void**)&prv_ptr, sizeof(Dtype)*prv_count(), &use_cuda);
         // TODO: use the same engine as in the layer
         to_prv   = reorder::create(reorder::arguments({engine::reference, memory_usr, memory_prv}));
         from_prv = reorder::create(reorder::arguments({engine::reference, memory_prv, memory_usr}));
@@ -40,7 +39,7 @@ struct MKL_DNNMemory : PrvMemDescr,
     };
     
   ~MKL_DNNMemory() {
-    if(prv_ptr) CaffeFreeHost(prv_ptr, use_cuda);
+    if(prv_ptr_) CaffeFreeHost(prv_ptr_, use_cuda);
   }
 
   shared_ptr<MKL_DNNMemory<Dtype, is_diff> > get_shared_ptr() {
@@ -51,7 +50,6 @@ struct MKL_DNNMemory : PrvMemDescr,
   memory::format::type layout_prv;
   primitive memory_usr = nullptr;
   primitive memory_prv = nullptr;
-  Dtype* prv_ptr       = nullptr;
   primitive to_prv     = nullptr;
   primitive from_prv   = nullptr;
   std::string name = "UNKNOWN";  // for debugging purposes
@@ -60,10 +58,23 @@ struct MKL_DNNMemory : PrvMemDescr,
   virtual size_t prv_count() {
       return (memory_prv.as<const neural::memory&>().count());
   };
+
+  void allocate() {
+    CHECK(prv_ptr_ == nullptr);
+    CaffeMallocHost((void**)&prv_ptr_, sizeof(Dtype)*prv_count(), &use_cuda);
+  }
+  Dtype* prv_ptr() { 
+    if(prv_ptr_ == nullptr)
+      allocate();
+
+    return prv_ptr_;
+  }
   virtual void convert_from_prv(void* prv_ptr, void* cpu_ptr);
   virtual PrvDescrType get_descr_type() {return PRV_DESCR_MKL_DNN;};
   Dtype* get_converted_prv(Blob<Dtype>* blob, bool set_prv_ptr, 
           MKL_DNNMemory<Dtype, is_diff>* converted_in_fwd=nullptr);
+ private:
+  Dtype* prv_ptr_       = nullptr;
 };
 
 template <typename Dtype>

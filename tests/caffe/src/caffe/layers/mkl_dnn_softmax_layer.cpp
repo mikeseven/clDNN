@@ -4,7 +4,6 @@
 #include <iostream>
 
 #include "boost/make_shared.hpp"
-#include "caffe/layers/softmax_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/layers/mkl_dnn_layers.hpp"
 
@@ -101,10 +100,10 @@ void MKL_DNNSoftmaxLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
 
   auto bottom_data = bottom_data_->get_converted_prv(bottom[0], true);
-  void *top_data = nullptr;
+  Dtype *top_data = nullptr;
   if (top_data_->from_prv != nullptr) {
-    top[0]->set_prv_data(top_data_->prv_ptr, top_data_, false);
-    top_data = top_data_->prv_ptr;
+    top_data = top_data_->prv_ptr();
+    top[0]->set_prv_data(top_data, top_data_, false);
   } else {
     top_data = top[0]->mutable_cpu_data();
     DLOG(INFO) << "Using cpu_data for top in DnnPooling.";
