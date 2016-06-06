@@ -24,8 +24,9 @@
 using namespace neural;
 using namespace tests;
 
-void do_some (const void* a)
+void thread_task (const void* a)
 {
+    // threads count sum to have random duration
     long  sum = 0;
     int count = rand() % 10;
     for (long i = 0; i < count; i++)
@@ -34,29 +35,111 @@ void do_some (const void* a)
     }
     void* a_temp = (void*)(a);
     int* b = static_cast<int*>(a_temp);
-    *b = sum;
-    //*b = *b+1;
-    //std::cout << "number=" << *static_cast<const int*>(a) << "\n";
-    //std::cout << "b=" << *b << "\n";
+    *b = *b+1; // easy to check results
 }
 
-TEST(thread_pool, check_result) {
+TEST(thread_pool, many_tasks_many_threads) {
 
     task_group group;
-    const int task_count = 10;
+    const int task_count = 10000;
     int num[task_count];
     for (int i = 0; i < task_count; i++)
     {
         num[i] = i;
-        group.tasks.push_back({ &do_some, &num[i] });
+        group.tasks.push_back({ &thread_task, &num[i] });
     }
 
-    nn_thread_worker_pool wp;
+    nn_thread_worker_pool wp(50);
     wp.push_job(group);
 
     for (int i = 0; i < task_count; i++)
     {
-        std::cout << "num[i]=" << num[i] << "\n";
+        EXPECT_EQ(i + 1, num[i]);
+    }
+}
+
+TEST(thread_pool, one_task_many_threads) {
+
+    task_group group;
+    const int task_count = 1;
+    int num[task_count];
+    for (int i = 0; i < task_count; i++)
+    {
+        num[i] = i;
+        group.tasks.push_back({ &thread_task, &num[i] });
     }
 
+    nn_thread_worker_pool wp(30);
+    wp.push_job(group);
+
+    for (int i = 0; i < task_count; i++)
+    {
+        EXPECT_EQ(i + 1, num[i]);
+    }
+}
+
+TEST(thread_pool, many_tasks_many_threads_schedule_single) {
+
+    task_group group;
+    const int task_count = 10000;
+    int num[task_count];
+    for (int i = 0; i < task_count; i++)
+    {
+        num[i] = i;
+        group.tasks.push_back({ &thread_task, &num[i] });
+    }
+
+    group.schedule = schedule::single;
+
+    nn_thread_worker_pool wp(30);
+    wp.push_job(group);
+
+    for (int i = 0; i < task_count; i++)
+    {
+        EXPECT_EQ(i + 1, num[i]);
+    }
+}
+
+TEST(thread_pool, many_tasks_many_threads_schedule_unordered) {
+
+    task_group group;
+    const int task_count = 10000;
+    int num[task_count];
+    for (int i = 0; i < task_count; i++)
+    {
+        num[i] = i;
+        group.tasks.push_back({ &thread_task, &num[i] });
+    }
+
+    group.schedule = schedule::unordered;
+
+    nn_thread_worker_pool wp(30);
+    wp.push_job(group);
+
+    for (int i = 0; i < task_count; i++)
+    {
+        EXPECT_EQ(i + 1, num[i]);
+    }
+}
+
+TEST(thread_pool, many_tasks_many_threads_schedule_split) {
+
+    task_group group;
+    const int task_count = 10000;
+    int num[task_count];
+    for (int i = 0; i < task_count; i++)
+    {
+        num[i] = i;
+        group.tasks.push_back({ &thread_task, &num[i] });
+    }
+
+    group.schedule = schedule::split;
+
+    nn_thread_worker_pool wp(30);
+    wp.push_job(group);
+
+    for (int i = 0; i < task_count; i++)
+    {
+        EXPECT_EQ(i + 1, num[i]);
+    }
 }
