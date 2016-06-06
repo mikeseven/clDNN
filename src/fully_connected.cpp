@@ -118,7 +118,7 @@ primitive fully_connected::create(fully_connected::arguments arg) {
         weight_arg.format != memory::format::io_i13_f2  )                throw std::runtime_error("Fully connected weight format is not oi_f32.");
     
 
-    // wrap relu into RAII wrapper
+    // wrap into RAII wrapper
     std::unique_ptr<fully_connected> result(new fully_connected(arg));
 
     // create implementation for non-lazy evaluation

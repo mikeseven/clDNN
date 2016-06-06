@@ -20,9 +20,9 @@
 #include "implementation_map.h"
 
 namespace neural {
-	//                                           engine                        output                         input
-	using fully_con_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
-	
-	using fully_con_implementation_map = singleton_map<fully_con_key, std::function<is_an_implementation *(fully_connected &)>>;
+    //                                           engine                        output                         input
+    using fully_con_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
+    
+    using fully_con_implementation_map = singleton_map<fully_con_key, std::function<is_an_implementation *(fully_connected &)>>;
 }
 

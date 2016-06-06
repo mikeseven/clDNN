@@ -22,27 +22,26 @@
 namespace neural 
 {
     
+   
     struct parameters_connected_forward_cpu_avx2
     {
         const fully_connected *fc;
-        uint32_t output_num;
+        uint32_t thread_num;
     };
 
-
-	struct fully_connected_forward_cpu_avx2 : is_an_implementation 
+    class fully_connected_forward_cpu_avx2 : is_an_implementation 
     {
-    	fully_connected_forward_cpu_avx2(fully_connected &arg);
-		~fully_connected_forward_cpu_avx2();
-            
+        std::unique_ptr<is_an_implementation> fully_connected_ptr;
         std::vector<parameters_connected_forward_cpu_avx2> tasks_parameters;
         task_group tsk_grp;
-
-		static is_an_implementation *create(fully_connected &arg) { return new fully_connected_forward_cpu_avx2(arg); };
+        const fully_connected &fc;     
+    public:
+        fully_connected_forward_cpu_avx2(fully_connected &arg);
+        ~fully_connected_forward_cpu_avx2();
+        
+        static is_an_implementation *create(fully_connected &arg) { return new fully_connected_forward_cpu_avx2(arg); };
         task_group work() { return tsk_grp; };
-
-		std::unique_ptr<is_an_implementation> fully_connected_ptr;
-		const fully_connected &outer;
-	};
+    };
 
 }
 
