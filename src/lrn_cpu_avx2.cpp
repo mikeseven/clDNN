@@ -28,8 +28,12 @@ namespace neural {
 #pragma pack(push, 1)
         struct task_data_t {
             const normalization::response *lrn_cpu_layer;
-            size_t offset;
-            size_t size;
+            uint64_t output_batch_begin;
+            uint64_t output_batch_end;
+            uint64_t input_row_begin;
+            uint64_t output_row_begin;
+            uint64_t output_row_end;
+
         };
 #pragma pack(pop)
 
@@ -40,20 +44,30 @@ namespace neural {
 
 
             auto lrn_layer = static_cast<const normalization::response *>(outher);
-            auto output_mem_count = lrn_layer->output_memory(0).count();
 
-            auto chunks_count = 1u;
-            auto chunk_size = output_mem_count / chunks_count;
+            auto output_batch_begin=lrn_layer->argument.output_offset.batch[0];
+            auto output_batch_end = lrn_layer->argument.output_size.batch[0] + output_batch_begin;
+            auto input_row_begin = lrn_layer->argument.input_offset.spatial[1];
+            auto output_row_begin = lrn_layer->argument.output_offset.spatial[1];
+            auto output_row_end = lrn_layer->argument.output_size.spatial[1] + output_row_begin;
 
-            tasks.resize(chunks_count);
+
+            auto batch_view_length = lrn_layer->argument.output_size.batch[0];
+            auto row_view_length = lrn_layer->argument.output_size.spatial[1];
+
+            auto chunks_count = batch_view_length * row_view_length;
+
+            tasks.clear();
             task_data.resize(chunks_count);
-            for (auto i = 0u; i < tasks.size(); ++i) {
-                auto offset = i * chunk_size;
-                auto size = (i < chunks_count - 1) ? (i + 1) * chunk_size - offset : output_mem_count - offset;
 
-                task_data[i] = { lrn_layer, offset, size };
-                tasks[i] = { reinterpret_cast<void(*)(const void*)>(run_3d_normalization_work_item), &task_data[i] };
-            }
+            uint64_t index = 0;
+
+            for (auto batch = output_batch_begin; batch < output_batch_end; ++batch)
+                for (uint64_t row = input_row_begin, output_row = output_row_begin; output_row < output_row_end; row++, output_row++)
+                    task_data[index++] = { lrn_layer, batch, batch+1, row, output_row, output_row+1 };
+
+            for (auto& task : task_data)
+                tasks.push_back({ reinterpret_cast<void(*)(const void*)>(run_3d_normalization_work_item), &task });
         }
 
         static __m256 _inner_mm256_invpow075_ps(__m256 arg)
@@ -136,9 +150,6 @@ namespace neural {
             auto &beta = data->lrn_cpu_layer->argument.beta;
 
             const auto input_column_size = data->lrn_cpu_layer->input_memory(0).argument.size.feature[0];
-            if (input_column_size % 8) 
-                throw std::runtime_error("the value of featuremap="+std::to_string(input_column_size)+" is not a multiple of 8, and it should be");
-
             const auto input_row_size = data->lrn_cpu_layer->input_memory(0).argument.size.spatial[0] * input_column_size;
             const auto input_batch_size = data->lrn_cpu_layer->input_memory(0).argument.size.spatial[1] * input_row_size;
 
@@ -146,12 +157,12 @@ namespace neural {
             const auto output_row_size = data->lrn_cpu_layer->output_memory(0).argument.size.spatial[0] * output_column_size;
             const auto output_batch_size = data->lrn_cpu_layer->output_memory(0).argument.size.spatial[1] * output_row_size;
 
-            const auto output_batch_begin = data->lrn_cpu_layer->argument.output_offset.batch[0];
-            const auto output_batch_end = data->lrn_cpu_layer->argument.output_size.batch[0] + output_batch_begin;
+            const auto output_batch_begin = data->output_batch_begin;
+            const auto output_batch_end = data->output_batch_end;
 
-            const auto input_row_begin = data->lrn_cpu_layer->argument.input_offset.spatial[1];
-            const auto output_row_begin = data->lrn_cpu_layer->argument.output_offset.spatial[1];
-            const auto output_row_end = data->lrn_cpu_layer->argument.output_size.spatial[1] + output_row_begin;
+            const auto input_row_begin = data->input_row_begin;
+            const auto output_row_begin = data->output_row_begin;
+            const auto output_row_end = data->output_row_end;
 
             const auto input_column_begin = data->lrn_cpu_layer->argument.input_offset.spatial[0];
             const auto output_column_begin = data->lrn_cpu_layer->argument.output_offset.spatial[0];
@@ -180,13 +191,13 @@ namespace neural {
             const __m256i first_masker = _mm256_loadu_si256((__m256i*)first_load_mask);
             const __m256i last_masker = _mm256_loadu_si256((__m256i*)last_load_mask);
 
-            for (uint32_t batch = output_batch_begin; batch < output_batch_end; ++batch)
+            for (uint64_t batch = output_batch_begin; batch < output_batch_end; ++batch)
             {
-                for (uint32_t row = input_row_begin, out_row = output_row_begin;
+                for (uint64_t row = input_row_begin, out_row = output_row_begin;
                 out_row < output_row_end;
                     ++row, ++out_row)
                 {
-                    for (uint32_t column = input_column_begin, out_column = output_column_begin;
+                    for (uint64_t column = input_column_begin, out_column = output_column_begin;
                     out_column < output_column_end;
                         ++column, ++out_column)
                     {
@@ -257,11 +268,8 @@ namespace neural {
 
         auto this_lrn = static_cast<const normalization::response *>(&outer);
 
-        auto& input_offset = this_lrn->argument.input_offset;
-        auto& output_offset = this_lrn->argument.output_offset;
-
-        for (auto &x : input_offset.raw)  if (x != 0) throw std::runtime_error("ReLU input offset must be equal to zero.");
-        for (auto &x : output_offset.raw) if (x > 0) throw std::runtime_error("ReLU output offset must be equal to zero.");
+        if (this_lrn->output_memory(0).argument.size.feature[0] % 8)
+            throw std::runtime_error("the value of featuremap=" + std::to_string(this_lrn->output_memory(0).argument.size.feature[0]) + " is not a multiple of 8, and it should be");
 
         lrn_ptr.reset(new lrn_cpu_avx2_worker(this_lrn));
     };
