@@ -1,6 +1,7 @@
 #ifdef MKL_DNN_ENABLED
 #include <vector>
 
+#include "boost/make_shared.hpp"
 #include "caffe/filler.hpp"
 #include "caffe/layers/inner_product_layer.hpp"
 #include "caffe/layers/mkl_dnn_layers.hpp"
@@ -78,25 +79,61 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(
   uint32_t input_x = K_;
   uint32_t bias_x = N_, output_x = N_;
 
-  bottom_data_->memory_prv = memory::describe({engine_, bottom_data_->layout_prv, {batch, {{input_x}},  1}});
-  top_data_   ->memory_prv = memory::describe({engine_, top_data_   ->layout_prv, {batch, {{output_x}}, 1}});
-  bottom_diff_->memory_prv = memory::describe({engine_, bottom_diff_->layout_prv, {batch, {{input_x}},  1}});
-  top_diff_   ->memory_prv = memory::describe({engine_, top_diff_   ->layout_prv, {batch, {{output_x}}, 1}});
+    // Choose layout according to the engine
+  switch (engine_) {
+    case  neural::engine::cpu:
+      prv_layout_in_out_  = memory::format::xb_f32;  // TBD
+      prv_layout_weights_ = memory::format::xb_f32;  // TBD
+    break;
+    case neural::engine::reference:
+      prv_layout_in_out_  = memory::format::xb_f32;
+      prv_layout_weights_ = memory::format::xb_f32;
+    break;
+    default:
+      CHECK(0) << "Wrong mkl-dnn engine";
+  }
 
-  bottom_data_->memory_usr = memory::describe({engine_, bottom_data_->layout_usr, {batch, {{input_x}},  1}});
-  top_data_   ->memory_usr = memory::describe({engine_, top_data_   ->layout_usr, {batch, {{output_x}}, 1}});
-  bottom_diff_->memory_usr = memory::describe({engine_, bottom_diff_->layout_usr, {batch, {{input_x}},  1}});
-  top_diff_   ->memory_usr = memory::describe({engine_, top_diff_   ->layout_usr, {batch, {{output_x}}, 1}});
+  // Memory setup
+  bottom_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}},  1}}),
+          memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}},  1}}));
 
-  weights_data_->memory_prv = memory::describe({engine_, bottom_data_->layout_prv, {input_x, {{output_x}}, 1}});
-  bias_data_   ->memory_prv = memory::describe({engine_, bias_data_  ->layout_prv, {1,        {{bias_x}},  1}});
-  weights_diff_->memory_prv = memory::describe({engine_, bottom_diff_->layout_prv, {input_x, {{output_x}}, 1}});
-  bias_diff_   ->memory_prv = memory::describe({engine_, bias_diff_  ->layout_prv, {1,        {{bias_x}},  1}});
+  top_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {batch, {{output_x}}, 1}}),
+          memory::describe({engine_, prv_layout_in_out_, {batch, {{output_x}}, 1}}));
 
-  weights_data_->memory_usr = memory::describe({engine_, bottom_data_->layout_usr, {input_x, {{output_x}}, 1}});
-  bias_data_   ->memory_usr = memory::describe({engine_, bias_data_  ->layout_usr, {1,        {{bias_x}},  1}});
-  weights_diff_->memory_usr = memory::describe({engine_, bottom_diff_->layout_usr, {input_x, {{output_x}}, 1}});
-  bias_diff_   ->memory_usr = memory::describe({engine_, bias_diff_  ->layout_usr, {1,        {{bias_x}},  1}});
+  weights_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
+          usr_layout_weights_, prv_layout_weights_,
+          memory::describe({engine_, usr_layout_weights_, {input_x, {{output_x}}, 1}}),
+          memory::describe({engine_, prv_layout_weights_, {input_x, {{output_x}}, 1}}));
+
+  bias_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
+          layout_bias_, layout_bias_,
+          memory::describe({engine_, layout_bias_, {1, {{bias_x}}, 1}}),
+          memory::describe({engine_, layout_bias_, {1, {{bias_x}}, 1}}));
+
+  bottom_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}},  1}}),
+          memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}},  1}}));
+
+  top_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
+          usr_layout_in_out_, prv_layout_in_out_,
+          memory::describe({engine_, usr_layout_in_out_, {batch, {{output_x}}, 1}}),
+          memory::describe({engine_, prv_layout_in_out_, {batch, {{output_x}}, 1}}));
+
+  weights_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
+          usr_layout_weights_, prv_layout_weights_,
+          memory::describe({engine_, usr_layout_weights_, {input_x, {{output_x}}, 1}}),
+          memory::describe({engine_, prv_layout_weights_, {input_x, {{output_x}}, 1}}));
+
+  bias_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
+          layout_bias_, layout_bias_,
+          memory::describe({engine_, layout_bias_, {1, {{bias_x}}, 1}}),
+          memory::describe({engine_, layout_bias_, {1, {{bias_x}}, 1}}));
+
 
   // Names are for debugging only
   bottom_data_ ->name = "fwd_bottom_data   @ " + this->layer_param_.name() + "  ";
@@ -108,17 +145,6 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(
   bias_data_   ->name = "bias_data         @ " + this->layer_param_.name() + "  ";
   weights_diff_->name = "weights_diff      @ " + this->layer_param_.name() + "  ";
   bias_diff_   ->name = "bias_diff         @ " + this->layer_param_.name() + "  ";
-
-  bottom_data_->create_conversions();
-  top_data_   ->create_conversions();
-  bottom_diff_->create_conversions();
-  top_diff_   ->create_conversions();
-
-  weights_data_->create_conversions();
-  bias_data_   ->create_conversions();
-  weights_diff_->create_conversions();
-  bias_diff_   ->create_conversions();
-
 
   fcFwd_ = fully_connected::create({ engine_,
                                      top_data_->memory_prv,
@@ -174,12 +200,11 @@ void MKL_DNNInnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
       uint32_t c = bottom[0]->shape(1);
       uint32_t h = bottom[0]->shape(2);
       uint32_t w = bottom[0]->shape(3);
-      bottom_data_->layout_usr = neural::memory::format::bfyx_f32;
-      bottom_data_->layout_prv = neural::memory::format::fyxb_f32;
-      bottom_data_->memory_usr = memory::describe({engine_, bottom_data_->layout_usr, {n, {{w, h}}, c}});
-      bottom_data_->memory_prv = memory::describe({engine_, bottom_data_->layout_prv, {n, {{w, h}}, c}});
 
-      bottom_data_->create_conversions();
+      bottom_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
+          neural::memory::format::bfyx_f32, neural::memory::format::fyxb_f32,
+          memory::describe({engine_, neural::memory::format::bfyx_f32, {n, {{w, h}}, c}}),
+          memory::describe({engine_, neural::memory::format::fyxb_f32, {n, {{w, h}}, c}}));
 
       // Fake buffer for casting fyxb => xb
       bottom_data_xb_ =  memory::describe({engine_, neural::memory::format::xb_f32, {n, {{w*h*c}}, 1}});
