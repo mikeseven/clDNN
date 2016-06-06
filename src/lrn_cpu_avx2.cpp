@@ -38,11 +38,13 @@ namespace neural {
 
         lrn_cpu_avx2_worker(const void *outher) : is_an_implementation(neural::type_id<lrn_cpu_avx2_worker>()) {
 
+
             auto lrn_layer = static_cast<const normalization::response *>(outher);
             auto output_mem_count = lrn_layer->output_memory(0).count();
-/*
+
             auto chunks_count = 1u;
             auto chunk_size = output_mem_count / chunks_count;
+
             tasks.resize(chunks_count);
             task_data.resize(chunks_count);
             for (auto i = 0u; i < tasks.size(); ++i) {
@@ -50,8 +52,8 @@ namespace neural {
                 auto size = (i < chunks_count - 1) ? (i + 1) * chunk_size - offset : output_mem_count - offset;
 
                 task_data[i] = { lrn_layer, offset, size };
-                tasks[i] = { reinterpret_cast<void(*)(const void*)>(run_3d_normalization_work_item_template), &task_data[i] };
-*/
+                tasks[i] = { reinterpret_cast<void(*)(const void*)>(run_3d_normalization_work_item), &task_data[i] };
+            }
         }
 
         static __m256 _inner_mm256_invpow075_ps(__m256 arg)
@@ -123,7 +125,7 @@ namespace neural {
             return intermediate_result;
         }
 
-        static void run_3d_normalization_work_item_template(const task_data_t *data)
+        static void run_3d_normalization_work_item(const task_data_t *data)
         {
             auto input_buffer = static_cast<float*>(data->lrn_cpu_layer->input_memory(0).pointer);
             auto output_buffer = static_cast<float*>(data->lrn_cpu_layer->output_memory(0).pointer);
@@ -193,7 +195,7 @@ namespace neural {
                         __m256 source_tmp = _mm256_maskload_ps(input_address - neighbourhood, first_masker);
                         source_tmp = _mm256_mul_ps(source_tmp, source_tmp);
 
-#pragma forceinline recursive
+
                         for (uint32_t feature_map = input_feature_map_begin, out_feature_map = output_feature_map_begin;
                         out_feature_map < output_feature_map_end;
                             feature_map += C_simd_width, out_feature_map += C_simd_width)
