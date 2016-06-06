@@ -29,9 +29,7 @@ TEST(local_response_normalization, lrn_reference_test) {
 
     // test initialization
 
-    // input-output parameters:
 
-    const uint32_t px = 2, py = 2, pb = 1, pf = 7, psize = 3;
 
     std::initializer_list<float> input_reference_init = {
          -1.0f, -0.5f,  0.0f,  0.5f,  1.0f,  1.5f,  2.0f,    // b=0, x=0, y=0
@@ -45,8 +43,8 @@ TEST(local_response_normalization, lrn_reference_test) {
          0.08889f,  0.23964f,  0.32244f,  0.31267f,  0.28876f,  0.26604f,  0.37728f,    // b=0, x=0, y=1
         -0.21721f, -0.13945f, -0.15913f, -0.16455f, -0.17056f, -0.17725f, -0.23420f };  // b=0, x=1, y=1
 
-    // lrn parameters:
-    const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
+    // input-output parameters:
+    const uint32_t px = 2, py = 2, pb = 1, pf = 7, psize = 3;
 
     auto input = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }});
     auto output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ pb,{ px, py }, pf }});
@@ -54,6 +52,9 @@ TEST(local_response_normalization, lrn_reference_test) {
 
     set_values(input, input_reference_init);
     set_values(output_reference, output_reference_init);
+
+    // lrn parameters:
+    const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
 
     auto lrn = normalization::response::create({ engine::reference, output, input, psize, padding::zero, pk, palpha, pbeta });
 
