@@ -102,8 +102,8 @@ template<> size_t index<neural::memory::format::oi_f32>(std::vector<uint32_t> si
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
-    const size_t Fo = size[1];   const size_t Fi = size[2]; 
-    const size_t fo =  pos[1];   const size_t fi =  pos[2]; 
+  /*  const size_t Fo = size[1];*/ const size_t Fi = size[2]; 
+    const size_t fo =  pos[1];     const size_t fi =  pos[2]; 
     
     assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
     assert(1 == size[3]); 
@@ -115,7 +115,7 @@ template<> size_t index<neural::memory::format::io_f32>(std::vector<uint32_t> si
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
-    const size_t Fo = size[1];   const size_t Fi = size[2]; 
+    const size_t Fo = size[1];  // const size_t Fi = size[2]; 
     const size_t fo =  pos[1];   const size_t fi =  pos[2]; 
 
     assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
