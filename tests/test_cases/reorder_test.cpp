@@ -166,7 +166,7 @@ TEST_F(Reorder_test_fixture,reorder_test_output_as_input_2pass) {
 }
 
 TEST(reorder_test, byxf_f32_to_byxf_b24_f32) {
-    const uint32_t y = 1, x = 1, f = 1, b = 24;
+    const uint32_t y = 2, x = 3, f = 3, b = 24*2;
 
     auto input      = memory::allocate({engine::reference, memory::format::byxf_f32,     {b, {x, y}, f}});
     auto output     = memory::allocate({engine::reference, memory::format::byxf_b24_f32, {b, {x, y}, f}});
@@ -181,5 +181,5 @@ TEST(reorder_test, byxf_f32_to_byxf_b24_f32) {
     auto output_ptr     = static_cast<float *>(output.as<const memory&>().pointer);
     auto output_ref_ptr = static_cast<float *>(output_ref.as<const memory&>().pointer);
     for(size_t i = 0; i < y*x*f*b; ++i)
-        EXPECT_EQ(output_ptr[i], output_ref_ptr[i]) << i;
+        EXPECT_EQ(output_ptr[i], output_ref_ptr[i]);
 }
