@@ -1,3 +1,4 @@
+
 /*
 // Copyright (c) 2016 Intel Corporation
 //
@@ -21,6 +22,9 @@
 #include "multidimensional_counter.h"
 #include "memory_utils.h"
 
+#if defined _MSC_VER
+__pragma(warning(disable:4127))
+#endif
 
 namespace neural
 {
@@ -336,7 +340,7 @@ namespace neural
         auto& output_arg = this_fc->output_memory(0).argument;
         auto& output_buffer_size = output_arg.size;
 
-        auto& weight_arg = this_fc->input_memory(1).argument;
+//        auto& weight_arg = this_fc->input_memory(1).argument;
 
         assert(1 == input_buffer_size.feature.size());
         assert(1 == input_buffer_size.batch.size());
@@ -632,7 +636,7 @@ namespace neural
         auto& output_arg = this_fc->output_memory(0).argument;
         auto& output_buffer_size = output_arg.size;
 
-        auto& weight_arg = this_fc->input_memory(1).argument;
+//        auto& weight_arg = this_fc->input_memory(1).argument;
 
         assert(1 == input_buffer_size.feature.size());
         assert(1 == input_buffer_size.batch.size());
@@ -923,7 +927,7 @@ namespace neural
         auto& output_arg = this_fc->output_memory(0).argument;
         auto& output_buffer_size = output_arg.size;
 
-        auto& weight_arg = this_fc->input_memory(1).argument;
+ //       auto& weight_arg = this_fc->input_memory(1).argument;
 
         assert(1 == input_buffer_size.feature.size());
         assert(1 == input_buffer_size.batch.size());
