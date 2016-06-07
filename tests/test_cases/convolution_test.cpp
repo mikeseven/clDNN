@@ -950,3 +950,85 @@ TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
                                         static_cast<float*>(output_mem_optimized.pointer)[i]))
                << "at index " << i;
 }
+
+/// tests for GPU
+
+TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
+    //  Filter : 2x2
+    //  Stride : 2x2
+    //  Input  : 4x4
+    //  Output : 2x2
+    //
+    //  Input:
+    //  -0.5   1.5   0.5  0.5
+    //   1    -0.5   0.5  2
+    //   0.5   0    -1    1.5
+    //   2    -1     1   -0.5
+    //
+    //  Filter
+    //  -2   3.5
+    //   0.5 1.5
+    //
+    //  Bias
+    //  2
+    //
+    //  Output:
+    //  8   6
+    //  0.5 9
+
+    auto input = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1,{ 4, 4 }, 1 } });
+    auto output = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
+    auto weights = memory::allocate({ engine::gpu, memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
+    auto biases = memory::allocate({ engine::gpu, memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+
+    set_values(input, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f, 0.5f, -1.0f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f });
+    set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f });
+    set_values(biases, { 2.0f });
+
+    auto conv = convolution::create({ engine::gpu, output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero });
+
+    execute({ conv }).wait();
+
+    auto& output_memory = output.as<const memory&>();
+    EXPECT_FLOAT_EQ(8.0f, get_value<float>(output_memory, 0));
+    EXPECT_FLOAT_EQ(0.5f, get_value<float>(output_memory, 1));
+    EXPECT_FLOAT_EQ(6.0f, get_value<float>(output_memory, 2));
+    EXPECT_FLOAT_EQ(9.0f, get_value<float>(output_memory, 3));
+}
+
+TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
+    //  Filter : 2x2
+    //  Stride : 2x2
+    //  Input  : 2x2x1x2
+    //  Output : 1x1x1x2
+    //
+    //  Input:
+    //  0.5  1.5    2.3 -0.4
+    //  2.0  4.0    1.0  3.0
+    //
+    //  Filter:
+    //  -1.2  1.5
+    //   0.5 -0.5
+    //
+    //  Bias:
+    //  -1
+    //
+    //  Output:
+    //  3.65 -5.36
+    auto input = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 2,{ 2, 2 }, 1 } });
+    auto output = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 2,{ 1, 1 }, 1 } });
+    auto weights = memory::allocate({ engine::gpu, memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
+    auto biases = memory::allocate({ engine::gpu, memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+
+    set_values(input, { 0.5f, 2.3f, 1.5f, -0.4f, 2.0f, 1.0f, -4.0f, 3.0f });
+    set_values(weights, { -1.2f, 1.5f, 0.5f, -0.5f });
+    set_values(biases, { -1.0f });
+
+    auto conv = convolution::create({ engine::gpu, output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero });
+
+    execute({ conv }).wait();
+
+    auto& output_memory = output.as<const memory&>();
+    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 0));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 1));
+}
