@@ -28,7 +28,6 @@ namespace neural
 
 namespace
 {
-
 // maps of available strides for specific formats
 static std::map< std::tuple<memory::format::type, bool>, std::tuple<std::vector<uint32_t>, std::vector<uint32_t>, std::vector<uint32_t>>> format_strides_map =
 {
