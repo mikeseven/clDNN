@@ -39,6 +39,7 @@ enum neural_memory_format {
     any=-1
 };
 
+#pragma pack(push, 1)
 typedef struct _neural_memory_tag {
     uint format;
     uint feature_offset;
@@ -46,6 +47,7 @@ typedef struct _neural_memory_tag {
     uint data_offset;
     uint data[1];
 } neural_memory;
+#pragma pack(pop)
 
 __global uint* get_raw(__global neural_memory* mem) { return &(mem->data[0]); }
 uint get_raw_size(__global neural_memory* mem) { return mem->data_offset; } 

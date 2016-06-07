@@ -33,13 +33,6 @@ namespace neural { namespace gpu {
 
 struct neural_memory;
 
-
-inline size_t neural_memory_datasize(neural::memory::arguments arg) {
-    auto count = std::accumulate(arg.size.raw.begin(), arg.size.raw.end(), size_t(1), std::multiplies<size_t>());
-    auto elem_size = memory::traits(arg.format).type->size;
-    return count * elem_size;
-}
-
 class buffer {
     const neural::memory& _mem;
     cl::Buffer _clBuffer;
@@ -49,9 +42,7 @@ class buffer {
     bool _copy_input;
     bool _copy_output;
 
-    cl::size_type size() const {
-        return neural_memory_datasize(_mem.argument);
-    }
+    size_t size() const;
 
 protected:
     buffer(const neural::memory& mem, bool copy_input, bool copy_output);
@@ -62,52 +53,28 @@ public:
     ~buffer();
 };
 
-class input_buffer : public buffer {
+class input_mem : public buffer {
 public:
-    input_buffer(const neural::memory& mem) :buffer(mem, true, false) {}
+    input_mem(const neural::memory& mem) :buffer(mem, true, false) {}
 };
 
-class output_buffer : public buffer {
+class output_mem : public buffer {
 public:
-    output_buffer(const neural::memory& mem) :buffer(mem, false, true) {}
+    output_mem(const neural::memory& mem) :buffer(mem, false, true) {}
 };
 
-
-template<typename T>
-class kernelArg {
-    cl::Kernel& _kernel;
+class kernel_execution_options {
+    cl::NDRange _global;
+    cl::NDRange _local;
 public:
-    explicit kernelArg(cl::Kernel& kernel)
-        : _kernel(kernel) {}
-    void set(unsigned index, const T& arg) {
-        _kernel.setArg(index, arg);
-    }
-};
+    kernel_execution_options(size_t work_items, size_t parallel_items) : _global(work_items), _local(parallel_items) {}
 
-template<>
-class kernelArg<input_buffer> {
-    cl::Kernel& _kernel;
-public:
-    explicit kernelArg(cl::Kernel& kernel)
-        : _kernel(kernel) {}
-    void set(unsigned index, const input_buffer& arg) {
-        _kernel.setArg(index, arg.get_buffer());
-    }
-};
-
-template<>
-class kernelArg<output_buffer> {
-    cl::Kernel& _kernel;
-public:
-    explicit kernelArg(cl::Kernel& kernel)
-        : _kernel(kernel) {}
-    void set(unsigned index, const output_buffer& arg) {
-        _kernel.setArg(index, arg.get_buffer());
-    }
+    cl::NDRange global_range() const { return _global; }
+    cl::NDRange local_range() const { return _local; }
 };
 
 template<typename... Args>
-class gpu_functor {
+class kernel {
     cl::Kernel _kernel;
 
     
@@ -116,17 +83,16 @@ class gpu_functor {
         _kernel.setArg(index, arg);
     }
 
-    void setKernelArg(unsigned index, const input_buffer& arg) {
+    void setKernelArg(unsigned index, const input_mem& arg) {
         _kernel.setArg(index, arg.get_buffer());
     }
 
-    void setKernelArg(unsigned index, const output_buffer& arg) {
+    void setKernelArg(unsigned index, const output_mem& arg) {
         _kernel.setArg(index, arg.get_buffer());
     }
 
     template<unsigned index, typename Ti, typename... Ts>
     void setArgs(Ti&& arg, Ts&&... args) {
-        //kernelArg<Ti>(_kernel).set(index, arg);
         setKernelArg(index, arg);
         setArgs<index + 1, Ts...>(std::forward<Ts>(args)...);
     }
@@ -134,7 +100,6 @@ class gpu_functor {
 
     template<unsigned index, typename Ti>
     void setArgs(Ti&& arg) {
-        //kernelArg<Ti>(_kernel).set(index, arg);
         setKernelArg(index, arg);
     }
 
@@ -142,16 +107,16 @@ class gpu_functor {
     void setArgs() {}
 
 public:
-    gpu_functor(cl::Kernel kernel) : _kernel(kernel) {};
-    gpu_functor(const std::string& name);
+    kernel(cl::Kernel kernel) : _kernel(kernel) {};
+    kernel(const std::string& name);
     
-    void operator()(cl::NDRange global, cl::NDRange local, Args... args)
+    void operator()(const kernel_execution_options& options, Args... args)
     {
         setArgs<0>(std::forward<Args>(args)...);
         auto queue = cl::CommandQueue::getDefault();
 
         cl::Event end_event;
-        queue.enqueueNDRangeKernel(_kernel, cl::NullRange, global, local, 0, &end_event);
+        queue.enqueueNDRangeKernel(_kernel, cl::NullRange, options.global_range(), options.local_range(), 0, &end_event);
         end_event.wait();
     }
 };
@@ -173,7 +138,7 @@ private:
     gpu_toolkit();
 
     static std::once_flag ocl_initialized;
-    static void initialize_opencl();
+    static void initialize();
 
     const cl::Program& get_program() {
         if (!program || program_modified) {
@@ -200,6 +165,6 @@ public:
 };
 
 template <typename ... Args>
-gpu_functor<Args...>::gpu_functor(const std::string& name) : _kernel(gpu_toolkit::get().get_kernel(name)) {}
+kernel<Args...>::kernel(const std::string& name) : _kernel(gpu_toolkit::get().get_kernel(name)) {}
 
 }}

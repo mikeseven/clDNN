@@ -21,6 +21,7 @@
 namespace neural { namespace gpu {
 
 const char* definitions_cl = R"__krnl(
+#pragma pack(push, 1)
 typedef struct _neural_memory_tag {
     uint format;
     uint feature_offset;
@@ -28,6 +29,7 @@ typedef struct _neural_memory_tag {
     uint data_offset;
     uint data[1];
 } neural_memory;
+#pragma pack(pop)
 
 __global uint* get_raw(__global neural_memory* mem) { return &(mem->data[0]); }
 uint get_raw_size(__global neural_memory* mem) { return mem->data_offset; } 
@@ -57,6 +59,7 @@ size_t get_data_size(__global neural_memory* mem) {
 }
 )__krnl";
 
+#pragma pack(push, 1)
 struct neural_memory {
     cl_uint format;
     cl_uint feature_offset;
@@ -92,16 +95,27 @@ struct neural_memory {
         return sizeof(neural_memory) - sizeof(neural_memory::data);
     }
 
+    static size_t datasize(neural::memory::arguments arg) {
+        auto count = std::accumulate(arg.size.raw.begin(), arg.size.raw.end(), size_t(1), std::multiplies<size_t>());
+        auto elem_size = memory::traits(arg.format).type->size;
+        return count * elem_size;
+    }
+
     static size_t size(neural::memory::arguments arg) {
-        return header_size() + arg.size.raw.size() * sizeof(cl_uint) + neural_memory_datasize(arg);
+        return header_size() + arg.size.raw.size() * sizeof(cl_uint) + datasize(arg);
     }
 
     size_t size() {
         return  header_size() + (raw_end() - raw_begin()) * sizeof(cl_uint) + data_size();
     }
 };
+#pragma pack(pop)
 
 std::once_flag gpu_toolkit::ocl_initialized;
+
+cl::size_type buffer::size() const {
+    return neural_memory::datasize(_mem.argument);
+}
 
 buffer::buffer(const neural::memory& mem, bool copy_input, bool copy_output): _mem(mem), _copy_input(copy_input), _copy_output(copy_output) {
     if (is_own()) {
@@ -114,7 +128,7 @@ buffer::buffer(const neural::memory& mem, bool copy_input, bool copy_output): _m
 
 buffer::~buffer() {
     if (is_own()) {
-        //TODO check if .pointer field of gpu owned_memory can be kept unchanged.
+        //TODO remove const_cast: check if .pointer field of gpu owned_memory can be kept unchanged.
         const_cast<neural::memory&>(_mem).pointer = gpu_toolkit::get().map_buffer(_clBuffer, size())->pointer();
     }
     else if (_copy_output) {
@@ -131,11 +145,11 @@ buffer::~buffer() {
 }
 
 gpu_toolkit::gpu_toolkit() {
-    std::call_once(ocl_initialized, initialize_opencl);
+    std::call_once(ocl_initialized, initialize);
     add_kernel(definitions_cl);
 }
 
-void gpu_toolkit::initialize_opencl() {
+void gpu_toolkit::initialize() {
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
     cl::Platform plat;
@@ -156,15 +170,11 @@ void gpu_toolkit::initialize_opencl() {
     }
 }
 
-inline size_t sizeof_neural_memory(neural::memory::arguments arg) {
-    return neural_memory::header_size() + arg.size.raw.size() * sizeof(cl_uint) + neural_memory_datasize(arg);
-}
-
 neural_memory* gpu_toolkit::new_buffer(neural::memory::arguments arg) {
     cl::Buffer buffer(CL_MEM_READ_WRITE, neural_memory::size(arg));
     auto queue = cl::CommandQueue::getDefault();
     cl::Event end_event;
-    auto mapped_mem = reinterpret_cast<neural_memory*>(queue.enqueueMapBuffer(buffer, true, CL_MAP_WRITE, 0, sizeof_neural_memory(arg), 0, &end_event));
+    auto mapped_mem = reinterpret_cast<neural_memory*>(queue.enqueueMapBuffer(buffer, true, CL_MAP_WRITE, 0, neural_memory::size(arg), 0, &end_event));
     end_event.wait();
     mapped_mem->initialize(arg);
     auto pointer = mapped_mem->pointer();

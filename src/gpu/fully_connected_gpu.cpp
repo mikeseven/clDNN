@@ -100,8 +100,8 @@ namespace neural {
             
             auto output_bufSize = output_mem.count();
 
-            auto kernel = gpu::gpu_functor<gpu::input_buffer, gpu::input_buffer, gpu::input_buffer, gpu::output_buffer>("Fully_Connected_GPU");
-            kernel(cl::NDRange(output_bufSize), cl::NDRange(output_bufSize), gpu::input_buffer(input_mem), gpu::input_buffer(weight_mem), gpu::input_buffer(bias_mem), gpu::output_buffer(output_mem));
+            gpu::kernel<gpu::input_mem, gpu::input_mem, gpu::input_mem, gpu::output_mem> kernel{ "Fully_Connected_GPU" };
+            kernel({ output_bufSize, output_bufSize }, input_mem, weight_mem, bias_mem, output_mem);
         }
 
         task_group work() override {
