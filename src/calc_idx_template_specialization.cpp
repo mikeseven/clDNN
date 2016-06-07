@@ -128,13 +128,13 @@ template<> size_t index<neural::memory::format::io_i13_f32>(std::vector<uint32_t
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
-    const size_t Fo = size[1];   const size_t Fi = size[2]; 
-    const size_t fo =  pos[1];   const size_t fi =  pos[2]; 
+ /*   const size_t Fo = size[1];*/   const size_t Fi = size[2]; 
+    const size_t fo =  pos[1];       const size_t fi =  pos[2]; 
 
     const uint32_t stride = 13;
     assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
     assert(1 == size[3]); 
-    assert(0 == Fo % stride ); 
+    assert(0 == size[1] % stride ); 
 
     return fo % stride + fi * stride +(stride * Fi)*(fo / stride);
  }
@@ -143,13 +143,13 @@ template<> size_t index<neural::memory::format::io_i13_f2>(std::vector<uint32_t>
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
-    const size_t Fo = size[1];   const size_t Fi = size[2]; 
-    const size_t fo =  pos[1];   const size_t fi =  pos[2]; 
+  /*  const size_t Fo = size[1];*/  const size_t Fi = size[2]; 
+    const size_t fo =  pos[1];      const size_t fi =  pos[2]; 
 
     const uint32_t stride = 2;
     assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
     assert(1 == size[3]); 
-    assert(0 == Fo % stride ); 
+    assert(0 == size[1] % stride ); 
 
      return fo % stride + fi * stride +(stride * Fi)*(fo / stride);
 }
