@@ -183,7 +183,7 @@ static void fillrand(primitive& mr)
             mem.argument.format == memory::format::io_i13_f32)
          size = mem.argument.size.feature[0] * mem.argument.size.feature[1];
 
-    for (int i = 0; i < size; i++)
+    for (uint32_t i = 0; i < size; i++)
         *it++ = (rand() % 20 - 10) / 2.0f;
 };
 
@@ -253,7 +253,7 @@ TEST(fully_connected_avx2_batch1, x_f32)
     //auto it_ref = static_cast<float*>(output_memory_ref.pointer);
     //auto it = static_cast<float*>(output_memory.pointer);
 
-    for (int i = 0; i < output_memory_ref.count(); i++)
+    for (size_t i = 0; i < output_memory_ref.count(); i++)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i))) << " at index " << i << "\n";
 }
 
@@ -294,7 +294,7 @@ TEST(fully_connected_avx2_batch8, x_f32)
     execute({ full_con_prim_ref }).wait();
     execute({ full_con_prim }).wait();
 
-    for (int i = 0; i < output_memory_ref.count(); i++)
+    for (size_t i = 0; i < output_memory_ref.count(); i++)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i))) << " at index " << i << "\n";
 }
 
@@ -315,11 +315,11 @@ TEST(fully_connected_avx2_batch48, x_f32)
 
     auto& output_memory_ref = output_prim_ref.as<const memory&>();
     auto& output_memory = output_prim.as<const memory&>();
-    auto it_ref = static_cast<float*>(output_memory_ref.pointer);
-    auto it = static_cast<float*>(output_memory.pointer);
+   /* auto it_ref = static_cast<float*>(output_memory_ref.pointer);
+    auto it = static_cast<float*>(output_memory.pointer);*/
 
-    auto w1 = static_cast<float*>( (weights_prim.as<const memory&>()).pointer);
-    auto w2 = static_cast<float*>( (weights_prim_tr.as<const memory&>()).pointer);
+   /* auto w1 = static_cast<float*>( (weights_prim.as<const memory&>()).pointer);
+    auto w2 = static_cast<float*>( (weights_prim_tr.as<const memory&>()).pointer);*/
 
     auto full_con_prim_ref = fully_connected::create({ engine::reference, output_prim_ref , input_prim, weights_prim, bias_prim });
     auto full_con_prim = fully_connected::create({ engine::cpu, output_prim, input_prim, weights_prim_tr, bias_prim });
@@ -337,7 +337,7 @@ TEST(fully_connected_avx2_batch48, x_f32)
     execute({ full_con_prim }).wait();
     
 
-    for (int i = 0; i < output_memory_ref.count(); i++)
+    for (size_t i = 0; i < output_memory_ref.count(); i++)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i))) << " at index " << i << "\n";
 
 }
