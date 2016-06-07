@@ -70,7 +70,7 @@ struct task_group {
     std::vector<task>       tasks;
     neural::schedule::type  schedule;
 
-    task_group() {};
+    task_group() : schedule(schedule::single) {};
     task_group(const std::vector<task>& arg_tasks, neural::schedule::type arg_schedule) 
         : tasks(arg_tasks)
         , schedule(arg_schedule)
@@ -120,7 +120,7 @@ template<typename T> struct vector {
         typename std::vector<T>::const_iterator cbegin() const { return raw_.cbegin() + begin_; }
         typename std::vector<T>::const_iterator cend() const { return raw_.cbegin() + end_; }
         size_t size() const { return end_-begin_; }
-        operator T() const { return raw_[0]; }
+        operator T() const { return raw_[begin_]; }
         T& operator[](size_t at) { assert(at<end_ - begin_); return raw_[begin_ + at]; }
         T operator[](size_t at) const { assert(at<end_ - begin_); return raw_[begin_ + at]; }
     } batch, feature, spatial;

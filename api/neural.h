@@ -173,6 +173,7 @@ private:
     reorder(arguments arg) : is_a_primitive(type_id<const reorder>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
+    std::unique_ptr<is_an_implementation> _private;
 };
 
 

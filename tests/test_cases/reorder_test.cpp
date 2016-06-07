@@ -18,6 +18,7 @@
 
 #include "tests/gtest/gtest.h"
 #include "api/neural.h"
+#include "memory_utils.h"
 
 using namespace neural;
 using namespace std;
@@ -162,4 +163,23 @@ TEST_F(Reorder_test_fixture,reorder_test_output_as_input_2pass) {
         result &= buf_out2[i] == in_buffer[i];
 
     EXPECT_EQ(true, result);
+}
+
+TEST(reorder_test, byxf_f32_to_byxf_b24_f32) {
+    const uint32_t y = 1, x = 1, f = 1, b = 24;
+
+    auto input      = memory::allocate({engine::reference, memory::format::byxf_f32,     {b, {x, y}, f}});
+    auto output     = memory::allocate({engine::reference, memory::format::byxf_b24_f32, {b, {x, y}, f}});
+    auto output_ref = memory::allocate({engine::reference, memory::format::byxf_b24_f32, {b, {x, y}, f}});
+    fill<float>(input.as<const memory&>());
+
+    auto valid  = reorder::create({engine::reference, output_ref, input});
+    auto tested = reorder::create({engine::cpu,       output,     input});
+    execute({valid, tested}).wait();
+
+    bool result = true;
+    auto output_ptr     = static_cast<float *>(output.as<const memory&>().pointer);
+    auto output_ref_ptr = static_cast<float *>(output_ref.as<const memory&>().pointer);
+    for(size_t i = 0; i < y*x*f*b; ++i)
+        EXPECT_EQ(output_ptr[i], output_ref_ptr[i]) << i;
 }
