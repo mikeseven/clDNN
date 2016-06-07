@@ -158,7 +158,7 @@ void convolution_gpu::implementation(const void *ptr) {
 
     //auto outBuffer = toolkit.create_output_buffer<float>(output_mem);
     auto dstSizes = get_memory_sizes(output_mem);
-    int dstSize = dstSizes.s0 * dstSizes.s1 * dstSizes.s2 * dstSizes.s3;
+    size_t dstSize = dstSizes.s0 * dstSizes.s1 * dstSizes.s2 * dstSizes.s3;
 
     auto biasSizes = get_memory_sizes(this_conv->argument.input[2].primitive.as<const memory&>());
     cl_uint2 spatialStride = { stride.spatial[0], stride.spatial[1] };
@@ -170,8 +170,8 @@ void convolution_gpu::implementation(const void *ptr) {
     switch(padding){
         case padding::zero:
         {
-            auto kernel = gpu::gpu_functor<gpu::input_buffer, gpu::input_buffer, cl_float, gpu::output_buffer, cl_uint2>("Convolution_GPU");
-            kernel(cl::NDRange(dstSize), cl::NDRange(1), gpu::input_buffer(input_mem), gpu::input_buffer(filter_mem), bias[0], gpu::output_buffer(output_mem), spatialStride);
+            auto kernel = gpu::kernel<gpu::input_mem, gpu::input_mem, cl_float, gpu::output_mem, cl_uint2>("Convolution_GPU");
+            kernel({ dstSize, 1 }, input_mem, filter_mem, bias[0], output_mem, spatialStride);
         }
             break;
         default:
