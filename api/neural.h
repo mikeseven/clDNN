@@ -154,7 +154,7 @@ private:
 //   Reorder yxfb_f32 to byxf_f32 on user-specified buffers on reference engine.
 //     neural::primitive input   = memory::describe({engine::reference, memory::format::yxfb_f32, {16, {4, 8}, 1}});
 //     neural::primitive output  = memory::describe({engine::reference, memory::format::byxf_f32, {16, {4, 8}, 1}});
-//     neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,input,output});
+//     neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,output,input});
 struct reorder : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
