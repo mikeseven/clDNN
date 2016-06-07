@@ -14,20 +14,21 @@
 // limitations under the License.
 */
 
-#include "api/neural.h"
-#include <iostream>
 
-int main()
-{
-    extern void example_lrn_forward();
-    try {
-        example_lrn_forward();
-    }
-    catch (std::exception &e) {
-        std::cerr << e.what();
-    }
-    catch (...) {
-        std::cerr << "Unknown exceptions.";
-    }
-    return 0;
+#pragma once
+
+#include "lrn.h"
+
+namespace neural {
+    struct lrn_cpu_avx2 : is_an_implementation {
+
+        lrn_cpu_avx2(normalization::response &arg);
+        ~lrn_cpu_avx2();
+
+        static is_an_implementation *create(normalization::response &arg) { return new lrn_cpu_avx2(arg); };
+        task_group work() { return lrn_ptr->work(); };
+
+        std::unique_ptr<is_an_implementation> lrn_ptr;
+        const normalization::response &outer;
+    };
 }
