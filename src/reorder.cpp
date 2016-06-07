@@ -134,7 +134,7 @@ struct reorder_reference : is_an_implementation {
 
 } // namespace {
 
-reorder::arguments::arguments(neural::engine::type _engine, primitive_at _in, primitive _out) //todo Artur fix arguments order
+reorder::arguments::arguments(neural::engine::type _engine, primitive _out, primitive_at _in)
     : engine(_engine)
     , output({_out})
     , input({_in}) {}

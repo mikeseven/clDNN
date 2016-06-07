@@ -161,7 +161,7 @@ struct reorder : is_a_primitive {
         std::vector<primitive>      output;
         std::vector<primitive_at>   input;  // 1: {input}
 
-        DLL_SYM arguments(neural::engine::type engine, primitive_at input, primitive output);
+        DLL_SYM arguments(neural::engine::type engine, primitive output, primitive_at input);
         DLL_SYM arguments(neural::engine::type engine, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input);
     };
     const arguments argument;

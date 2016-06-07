@@ -114,7 +114,7 @@ public:
 
     neural::primitive input   = memory::describe({engine::reference, in_layout, in_sizes});
     neural::primitive output  = memory::allocate({engine::reference, out_layout, out_sizes});
-    neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,input,output});
+    neural::primitive reorder = reorder::create({engine::reference,output, input});
 };
 
 TEST_F(Reorder_test_fixture,reorder_test_basic) {
@@ -141,7 +141,7 @@ TEST_F(Reorder_test_fixture,reorder_test_output_as_input_2pass) {
 
     auto input2  = memory::describe({engine::reference, out_layout, out_sizes});
     auto output2 = memory::allocate({engine::reference, in_layout, in_sizes});
-    auto reorder2    = reorder::create({engine::reference,input2,output2});
+    auto reorder2    = reorder::create({engine::reference, output2, input2});
 
     float* buf_out = nullptr;
     float* buf_out2 = nullptr;

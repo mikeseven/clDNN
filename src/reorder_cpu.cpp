@@ -23,8 +23,7 @@ struct reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
     const reorder &outer;
     reorder_cpu_byxf_f32_to_byxf_b24_f32(reorder &arg)
         : is_an_implementation(neural::type_id<reorder_cpu_byxf_f32_to_byxf_b24_f32>())
-        , outer(arg)
-    {};
+        , outer(arg) {};
     ~reorder_cpu_byxf_f32_to_byxf_b24_f32() {}
 
     static void implementation(const void *ptr) {
@@ -47,16 +46,12 @@ struct reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
                     }
     }
 
-    task_group work() {
-        return {{task{implementation, &outer}}, schedule::unordered};
-    }
-
+    task_group work() { return {{task{implementation, &outer}}, schedule::unordered}; }
     static is_an_implementation *create(reorder &arg) { return new reorder_cpu_byxf_f32_to_byxf_b24_f32(arg); };
 };
 
 
 namespace {
-
     struct attach {
         attach() {
             auto key_fw = std::make_tuple(engine::cpu, memory::format::byxf_b24_f32, memory::format::byxf_f32);
@@ -65,7 +60,6 @@ namespace {
         }
         ~attach(){}
     };
-
 #ifdef __GNUC__
     __attribute__((visibility("default")))
 #elif _MSC_VER
