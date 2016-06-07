@@ -21,9 +21,6 @@
 #include "fully_connected.h"
 #include "ocl_toolkit.h"
 
-#include <iostream>
-#include <fstream>
-
 const std::string kernelCode = R"__krnl(
 __kernel void Fully_Connected_GPU(__global neural_memory* input_mem, __global neural_memory* weights_mem, __global neural_memory* bias_mem, __global neural_memory* dst_mem)
 {
@@ -47,23 +44,6 @@ __kernel void Fully_Connected_GPU(__global neural_memory* input_mem, __global ne
     pDst[x] += bias[outXIdx];
 }
 )__krnl";
-
-void loadFile(const char *filePath, std::vector<char> &outFile)
-{
-    std::streampos size;
-    std::ifstream file;
-    file.open(filePath, std::ios::ate);
-    if (file.is_open())
-    {
-        size = file.tellg();
-        outFile.resize(size);
-        file.seekg(0, std::ios::beg);
-        file.read(&outFile[0], size);
-        file.close();
-    }
-    else
-        throw std::runtime_error("Cannot open kernel file.");
-}
 
 namespace neural {
 
