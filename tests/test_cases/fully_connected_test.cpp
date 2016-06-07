@@ -253,7 +253,7 @@ TEST(fully_connected_avx2_batch1, x_f32)
     //auto it_ref = static_cast<float*>(output_memory_ref.pointer);
     //auto it = static_cast<float*>(output_memory.pointer);
 
-    for (size_t i = 0; i < output_memory_ref.count(); i++)
+    for (uint32_t i = 0; i < output_memory_ref.count(); i++)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i))) << " at index " << i << "\n";
 }
 
@@ -294,7 +294,7 @@ TEST(fully_connected_avx2_batch8, x_f32)
     execute({ full_con_prim_ref }).wait();
     execute({ full_con_prim }).wait();
 
-    for (size_t i = 0; i < output_memory_ref.count(); i++)
+    for (uint32_t i = 0; i < output_memory_ref.count(); i++)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i))) << " at index " << i << "\n";
 }
 
@@ -337,7 +337,7 @@ TEST(fully_connected_avx2_batch48, x_f32)
     execute({ full_con_prim }).wait();
     
 
-    for (size_t i = 0; i < output_memory_ref.count(); i++)
+    for (uint32_t i = 0; i < output_memory_ref.count(); i++)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i))) << " at index " << i << "\n";
 
 }
