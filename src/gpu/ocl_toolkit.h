@@ -29,21 +29,148 @@
 #include <mutex>
 #include "api/neural.h"
 
-namespace neural {
+namespace neural { namespace gpu {
 
-class ocl_toolkit {
+struct neural_memory;
+
+
+inline size_t neural_memory_datasize(neural::memory::arguments arg) {
+    auto count = std::accumulate(arg.size.raw.begin(), arg.size.raw.end(), size_t(1), std::multiplies<size_t>());
+    auto elem_size = memory::traits(arg.format).type->size;
+    return count * elem_size;
+}
+
+class buffer {
+    const neural::memory& _mem;
+    cl::Buffer _clBuffer;
+    bool is_own() const {
+        return _mem.argument.engine == neural::engine::gpu && _mem.argument.owns_memory;
+    }
+    bool _copy_input;
+    bool _copy_output;
+
+    cl::size_type size() const {
+        return neural_memory_datasize(_mem.argument);
+    }
+
+protected:
+    buffer(const neural::memory& mem, bool copy_input, bool copy_output);
+
+public:
+    cl::Buffer get_buffer() const { return _clBuffer; }
+
+    ~buffer();
+};
+
+class input_buffer : public buffer {
+public:
+    input_buffer(const neural::memory& mem) :buffer(mem, true, false) {}
+};
+
+class output_buffer : public buffer {
+public:
+    output_buffer(const neural::memory& mem) :buffer(mem, false, true) {}
+};
+
+
+template<typename T>
+class kernelArg {
+    cl::Kernel& _kernel;
+public:
+    explicit kernelArg(cl::Kernel& kernel)
+        : _kernel(kernel) {}
+    void set(unsigned index, const T& arg) {
+        _kernel.setArg(index, arg);
+    }
+};
+
+template<>
+class kernelArg<input_buffer> {
+    cl::Kernel& _kernel;
+public:
+    explicit kernelArg(cl::Kernel& kernel)
+        : _kernel(kernel) {}
+    void set(unsigned index, const input_buffer& arg) {
+        _kernel.setArg(index, arg.get_buffer());
+    }
+};
+
+template<>
+class kernelArg<output_buffer> {
+    cl::Kernel& _kernel;
+public:
+    explicit kernelArg(cl::Kernel& kernel)
+        : _kernel(kernel) {}
+    void set(unsigned index, const output_buffer& arg) {
+        _kernel.setArg(index, arg.get_buffer());
+    }
+};
+
+template<typename... Args>
+class gpu_functor {
+    cl::Kernel _kernel;
+
+    
+    template<typename Ti>
+    void setKernelArg(unsigned index, const Ti& arg) {
+        _kernel.setArg(index, arg);
+    }
+
+    void setKernelArg(unsigned index, const input_buffer& arg) {
+        _kernel.setArg(index, arg.get_buffer());
+    }
+
+    void setKernelArg(unsigned index, const output_buffer& arg) {
+        _kernel.setArg(index, arg.get_buffer());
+    }
+
+    template<unsigned index, typename Ti, typename... Ts>
+    void setArgs(Ti&& arg, Ts&&... args) {
+        //kernelArg<Ti>(_kernel).set(index, arg);
+        setKernelArg(index, arg);
+        setArgs<index + 1, Ts...>(std::forward<Ts>(args)...);
+    }
+
+
+    template<unsigned index, typename Ti>
+    void setArgs(Ti&& arg) {
+        //kernelArg<Ti>(_kernel).set(index, arg);
+        setKernelArg(index, arg);
+    }
+
+    template<unsigned index>
+    void setArgs() {}
+
+public:
+    gpu_functor(cl::Kernel kernel) : _kernel(kernel) {};
+    gpu_functor(const std::string& name);
+    
+    void operator()(cl::NDRange global, cl::NDRange local, Args... args)
+    {
+        setArgs<0>(std::forward<Args>(args)...);
+        auto queue = cl::CommandQueue::getDefault();
+
+        cl::Event end_event;
+        queue.enqueueNDRangeKernel(_kernel, cl::NullRange, global, local, 0, &end_event);
+        end_event.wait();
+    }
+};
+
+class gpu_toolkit {
 public:
     using buffer_type = cl::Buffer;
 
 private:
+
     bool program_modified = true;
     cl::Program::Sources kernel_sources;
 
     std::unique_ptr<cl::Program> program;
 
-    ocl_toolkit() {
-        std::call_once(ocl_initialized, initialize_opencl);
-    }
+    std::map<void*, std::pair<const cl::Buffer, neural_memory*>> _mapped_buffers;
+
+private:
+    gpu_toolkit();
 
     static std::once_flag ocl_initialized;
     static void initialize_opencl();
@@ -58,73 +185,21 @@ private:
     }
 
 public:
-    using buffer_type = cl::Buffer;
-
     void add_kernel(const std::string& source) {
         kernel_sources.push_back(source);
         program_modified = true;
     }
 
-    template<typename... Ts>
-    cl::KernelFunctor<Ts...> getKernel(const std::string& name) {
-        return cl::KernelFunctor<Ts...>(get_program(), name);
-    }
+    cl::Kernel get_kernel(const std::string& name) { return cl::Kernel(get_program(), name.c_str()); }
 
-    template<typename T>
-    static buffer_type create_input_buffer(const neural::memory& mem) {
-        auto data_bufSize = get_buffer_size(mem);
+    neural_memory* new_buffer(neural::memory::arguments arg);
+    neural_memory* map_buffer(const cl::Buffer& buf, cl::size_type size, cl_map_flags flags = CL_MAP_WRITE);
+    cl::Buffer unmap_buffer(void* pointer);
 
-        return cl::Buffer(CL_MEM_READ_ONLY | CL_MEM_HOST_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(T) * data_bufSize, mem.pointer);
-    }
-
-    template<typename T>
-    static buffer_type create_output_buffer(const neural::memory& mem) {
-        auto data_bufSize = get_buffer_size(mem);
-
-        return cl::Buffer(CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY, sizeof(T) * data_bufSize);
-    }
-
-    template<typename T>
-    static buffer_type create_inout_buffer(const neural::memory& mem) {
-        auto data_bufSize = get_buffer_size(mem);
-
-        return cl::Buffer(CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(T) * data_bufSize, mem.pointer);
-    }
-
-    template<typename T>
-    static cl_int read_buffer(const buffer_type& buffer, const neural::memory& mem) {
-        auto output = static_cast<T*>(mem.pointer);
-
-        auto out_buf_size = get_buffer_size(mem);
-
-#if defined(_MSC_VER)
-        auto out_begin = stdext::make_checked_array_iterator(output, out_buf_size);
-        auto out_end = stdext::make_checked_array_iterator(output, out_buf_size, out_buf_size);
-#else
-        auto out_begin = output;
-        auto out_end = output + data_bufSize;
-#endif
-        return cl::copy(buffer, out_begin, out_end);
-    }
-
-    static cl::size_type get_buffer_size(const neural::memory& mem) {
-        auto& sizes = mem.argument.size.raw;
-
-        return std::accumulate(std::begin(sizes), std::end(sizes), static_cast<cl::size_type>(1), std::multiplies<cl::size_type>{});
-    }
-
-    static cl_uint4 get_memory_sizes(const neural::memory& mem)
-    {
-        auto size = mem.argument.size;
-        if (size.raw.size() > 4) {
-            throw std::runtime_error("Want to get size, but this is not a vector of sizes, because size is greater than 4!");
-        }
-
-        cl_uint4 x = { 0 };
-        std::copy(std::begin(size.raw), std::end(size.raw), x.s);
-        return x;
-    }
-
-    static ocl_toolkit& get();
+    static gpu_toolkit& get();
 };
-}
+
+template <typename ... Args>
+gpu_functor<Args...>::gpu_functor(const std::string& name) : _kernel(gpu_toolkit::get().get_kernel(name)) {}
+
+}}
