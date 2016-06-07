@@ -33,20 +33,21 @@ void thread_task (const void* a)
     {
         sum += i*i;
     }
-    void* a_temp = (void*)(a);
+    void* a_temp = const_cast<void*>(a);
     int* b = static_cast<int*>(a_temp);
-    *b = *b+1; // easy to check results
+    *b = *b + 1; // easy to check results
+    *(b + 1) = sum;
 }
 
 TEST(thread_pool, many_tasks_many_threads) {
 
     task_group group;
     const int task_count = 10000;
-    int num[task_count];
+    int num[task_count * 2];
     for (int i = 0; i < task_count; i++)
     {
-        num[i] = i;
-        group.tasks.push_back({ &thread_task, &num[i] });
+        num[2 * i] = 2 * i;
+        group.tasks.push_back({ &thread_task, &num[2*i] });
     }
 
     nn_thread_worker_pool wp(50);
@@ -54,7 +55,7 @@ TEST(thread_pool, many_tasks_many_threads) {
 
     for (int i = 0; i < task_count; i++)
     {
-        EXPECT_EQ(i + 1, num[i]);
+        EXPECT_EQ(2 * i + 1, num[2 * i]);
     }
 }
 
@@ -62,11 +63,12 @@ TEST(thread_pool, one_task_many_threads) {
 
     task_group group;
     const int task_count = 1;
-    int num[task_count];
+    int num[task_count * 2];
+    
     for (int i = 0; i < task_count; i++)
     {
-        num[i] = i;
-        group.tasks.push_back({ &thread_task, &num[i] });
+        num[2 * i] = 2 * i;
+        group.tasks.push_back({ &thread_task, &num[2 * i] });
     }
 
     nn_thread_worker_pool wp(30);
@@ -74,7 +76,7 @@ TEST(thread_pool, one_task_many_threads) {
 
     for (int i = 0; i < task_count; i++)
     {
-        EXPECT_EQ(i + 1, num[i]);
+        EXPECT_EQ(2 * i + 1, num[2 * i]);
     }
 }
 
@@ -82,11 +84,11 @@ TEST(thread_pool, many_tasks_many_threads_schedule_single) {
 
     task_group group;
     const int task_count = 10000;
-    int num[task_count];
+    int num[task_count * 2];
     for (int i = 0; i < task_count; i++)
     {
-        num[i] = i;
-        group.tasks.push_back({ &thread_task, &num[i] });
+        num[2 * i] = 2 * i;
+        group.tasks.push_back({ &thread_task, &num[2 * i] });
     }
 
     group.schedule = schedule::single;
@@ -96,7 +98,7 @@ TEST(thread_pool, many_tasks_many_threads_schedule_single) {
 
     for (int i = 0; i < task_count; i++)
     {
-        EXPECT_EQ(i + 1, num[i]);
+        EXPECT_EQ(2 * i + 1, num[2 * i]);
     }
 }
 
@@ -104,11 +106,11 @@ TEST(thread_pool, many_tasks_many_threads_schedule_unordered) {
 
     task_group group;
     const int task_count = 10000;
-    int num[task_count];
+    int num[task_count * 2];
     for (int i = 0; i < task_count; i++)
     {
-        num[i] = i;
-        group.tasks.push_back({ &thread_task, &num[i] });
+        num[2 * i] = 2 * i;
+        group.tasks.push_back({ &thread_task, &num[2 * i] });
     }
 
     group.schedule = schedule::unordered;
@@ -118,7 +120,7 @@ TEST(thread_pool, many_tasks_many_threads_schedule_unordered) {
 
     for (int i = 0; i < task_count; i++)
     {
-        EXPECT_EQ(i + 1, num[i]);
+        EXPECT_EQ(2 * i + 1, num[2 * i]);
     }
 }
 
@@ -126,11 +128,11 @@ TEST(thread_pool, many_tasks_many_threads_schedule_split) {
 
     task_group group;
     const int task_count = 10000;
-    int num[task_count];
+    int num[task_count * 2];
     for (int i = 0; i < task_count; i++)
     {
-        num[i] = i;
-        group.tasks.push_back({ &thread_task, &num[i] });
+        num[2 * i] = 2 * i;
+        group.tasks.push_back({ &thread_task, &num[2 * i] });
     }
 
     group.schedule = schedule::split;
@@ -140,6 +142,6 @@ TEST(thread_pool, many_tasks_many_threads_schedule_split) {
 
     for (int i = 0; i < task_count; i++)
     {
-        EXPECT_EQ(i + 1, num[i]);
+        EXPECT_EQ(2 * i + 1, num[2 * i]);
     }
 }
