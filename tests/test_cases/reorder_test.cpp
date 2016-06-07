@@ -177,7 +177,6 @@ TEST(reorder_test, byxf_f32_to_byxf_b24_f32) {
     auto tested = reorder::create({engine::cpu,       output,     input});
     execute({valid, tested}).wait();
 
-    bool result = true;
     auto output_ptr     = static_cast<float *>(output.as<const memory&>().pointer);
     auto output_ref_ptr = static_cast<float *>(output_ref.as<const memory&>().pointer);
     for(size_t i = 0; i < y*x*f*b; ++i)
