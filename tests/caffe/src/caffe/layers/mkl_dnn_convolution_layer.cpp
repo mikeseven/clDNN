@@ -6,6 +6,8 @@
 #include "caffe/layer.hpp"
 #include "caffe/layers/mkl_dnn_layers.hpp"
 
+//#define CONVERSION_PRINT_DATA
+
 // Uncomment to see where the layout conversions are done
 #undef DLOG
 #ifndef DLOG
@@ -20,8 +22,6 @@
  *  1d, 3d conv
  */
 using namespace neural;
-
-#define CONVERSION_PRINT_DATA
 
 namespace caffe {
 

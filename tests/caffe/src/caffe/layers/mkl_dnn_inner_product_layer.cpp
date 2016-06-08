@@ -106,8 +106,8 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(
 
   weights_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
           usr_layout_weights_, prv_layout_weights_,
-          memory::describe({engine_, usr_layout_weights_, {input_x, {{output_x}}, 1}}),
-          memory::describe({engine_, prv_layout_weights_, {input_x, {{output_x}}, 1}}));
+          memory::describe({engine_, usr_layout_weights_, {1, {{1}}, {output_x, input_x}}}),
+          memory::describe({engine_, prv_layout_weights_, {1, {{1}}, {output_x, input_x}}}));
 
   bias_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
           layout_bias_, layout_bias_,
