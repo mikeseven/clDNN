@@ -77,7 +77,7 @@ bool nn_thread_worker_pool::is_thread_enable(uint32_t threadId) { return (thread
 
 // main loop of task processing
 void nn_thread_worker_pool::process_task(uint32_t threadId) {
-    while (true) {
+    for (;;) {
         std::unique_lock<std::mutex> ul(mtx_wake);
         --active_threads;
         // notify thread pool that thread, probably, is going to sleep
@@ -96,7 +96,7 @@ void nn_thread_worker_pool::process_task(uint32_t threadId) {
 
         if (stop) return;
 
-        while(true) {
+        for (;;) {
             const size_t nextTaskId = current_task_id.fetch_add(thread_batch_size); // get index of first element for processing by increasing atomic variable by value of task count per thread
             if(nextTaskId >= taskcount + thread_batch_size - 1) break;              // exit in case when all tasks done
             size_t endTaskId = nextTaskId + thread_batch_size;                      // calculate index last element for processing

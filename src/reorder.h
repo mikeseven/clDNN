@@ -14,20 +14,13 @@
 // limitations under the License.
 */
 
+#pragma once
 #include "api/neural.h"
-#include <iostream>
+#include "implementation_map.h"
+namespace neural{
+    //                                           engine                          output                  input
+    using reorder_fw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
+    using reorder_bw_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>; //todo
 
-int main()
-{
-    extern void example_lrn_forward();
-    try {
-        example_lrn_forward();
-    }
-    catch (std::exception &e) {
-        std::cerr << e.what();
-    }
-    catch (...) {
-        std::cerr << "Unknown exceptions.";
-    }
-    return 0;
+    using reorder_fw_implementation_map = singleton_map<reorder_fw_key, std::function<is_an_implementation *(reorder &)>>;
 }

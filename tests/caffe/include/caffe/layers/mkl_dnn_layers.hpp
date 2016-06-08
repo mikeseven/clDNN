@@ -33,8 +33,8 @@ struct MKL_DNNMemory : PrvMemDescr,
       if (layout_usr != layout_prv)
       {
         // TODO: use the same engine as in the layer
-        to_prv   = reorder::create(reorder::arguments({engine::reference, memory_usr, memory_prv}));
-        from_prv = reorder::create(reorder::arguments({engine::reference, memory_prv, memory_usr}));
+        to_prv   = reorder::create(reorder::arguments({engine::reference, memory_prv, memory_usr}));
+        from_prv = reorder::create(reorder::arguments({engine::reference, memory_usr, memory_prv}));
       }
     };
     
