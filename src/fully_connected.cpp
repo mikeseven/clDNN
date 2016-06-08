@@ -115,7 +115,7 @@ primitive fully_connected::create(fully_connected::arguments arg) {
     if (weight_arg.format != memory::format::oi_f32     &&
         weight_arg.format != memory::format::io_f32     &&
         weight_arg.format != memory::format::io_i13_f32 &&
-        weight_arg.format != memory::format::io_i13_f2  )                throw std::runtime_error("Fully connected weight format is not oi_f32.");
+        weight_arg.format != memory::format::io_i2_f32  )                throw std::runtime_error("Fully connected weight format is not oi_f32.");
     
 
     // wrap into RAII wrapper

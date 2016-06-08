@@ -244,7 +244,7 @@ TEST(fully_connected_avx2_batch48, x_f32)
     auto output_prim_ref= memory::allocate({ engine::reference, memory::format::x_f32    ,{ output_b ,{ { output_x } }, 1 }});
     auto output_prim    = memory::allocate({ engine::reference, memory::format::x_f32    ,{ output_b ,{ { output_x } }, 1 }});
     auto weights_prim_ref=memory::allocate({ engine::reference, memory::format::oi_f32   ,{ 1        ,{{1}}           , { weight_x, weight_y } }});
-    auto weights_prim   = memory::allocate({ engine::reference, memory::format::io_i13_f2,{ 1        ,{{1}}           , { weight_x, weight_y } }});
+    auto weights_prim   = memory::allocate({ engine::reference, memory::format::io_i2_f32,{ 1        ,{{1}}           , { weight_x, weight_y } }});
     auto bias_prim      = memory::allocate({ engine::reference, memory::format:: x_f32   ,{ 1        ,{ { output_x } }, 1 }});
 
     auto full_con_prim_ref = fully_connected::create({ engine::reference, output_prim_ref , input_prim, weights_prim_ref, bias_prim });
