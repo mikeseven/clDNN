@@ -324,19 +324,17 @@ static void fully_connected_compute_block_batch48(
 template <NN_ACTIVATION_FUNCTION T_FUNCTION, bool T_NEED_BIAS_COPY>
 static void run_fully_connected_work_item_internal_batch48(const fully_connected* this_fc, uint32_t thread_num) 
 {
-//        auto this_fc = static_cast<const fully_connected *>(ptr);
     auto input_buffer  = static_cast<float*>(this_fc->input_memory(0).pointer);
     auto output_buffer = static_cast<float*>(this_fc->output_memory(0).pointer);
     auto weight_buffer = static_cast<float*>(this_fc->input_memory(1).pointer);
-    auto bias_buffer = static_cast<float*>(this_fc->argument.input[2].primitive.as<const memory&>().pointer);
-
+   
     auto& input_arg = this_fc->input_memory(0).argument;
     auto& input_buffer_size = input_arg.size;
 
     auto& output_arg = this_fc->output_memory(0).argument;
     auto& output_buffer_size = output_arg.size;
 
-//        auto& weight_arg = this_fc->input_memory(1).argument;
+//  auto& weight_arg = this_fc->input_memory(1).argument;
 
     assert(1 == input_buffer_size.feature.size());
     assert(1 == input_buffer_size.batch.size());
@@ -348,12 +346,18 @@ static void run_fully_connected_work_item_internal_batch48(const fully_connected
 
     assert(C_max_acc_batch48 * thread_num < output_length);
 
-    const auto output_width = C_max_acc_batch48 * (thread_num+1) >  output_length  ?  (output_length % C_max_acc_batch48)  : C_max_acc_batch48; // !!!!!!!!!!!!!!!
+    const auto output_width = C_max_acc_batch48 * (thread_num+1) >  output_length  ?  (output_length % C_max_acc_batch48)  : C_max_acc_batch48;
 
     auto weights_ptr = weight_buffer + C_max_acc_batch48* thread_num * input_width;
     auto output_ptr  = output_buffer + C_max_acc_batch48* thread_num * C_batch48_size;
-    auto bias_ptr    =   bias_buffer + C_max_acc_batch48* thread_num;
-
+  
+    float* bias_ptr = nullptr;
+    if (T_NEED_BIAS_COPY)
+    {
+        auto bias_buffer = static_cast<float*>(this_fc->argument.input[2].primitive.as<const memory&>().pointer);
+        bias_ptr    =   bias_buffer + C_max_acc_batch48* thread_num;
+    }
+    
     const auto num_full_blocks = output_width / C_max_acc_batch48;
     const auto partial_block_size = output_width % C_max_acc_batch48;
 
@@ -364,14 +368,6 @@ static void run_fully_connected_work_item_internal_batch48(const fully_connected
 
     bool first_run = true;
 
-    //float* bias_ptr = nullptr;
-    //if (T_NEED_BIAS_COPY)
-    //{
-    //    //auto biases_buffer = static_cast<float*>(bias->parent->data_buffer);
-    //    auto biases_buffer = bias_buffer;
-    //    bias_ptr = &biases_buffer[output_view_start];
-    //}
-        
     // Full packages.
     for (auto input_package = 0u; input_package < num_input_packages; ++input_package)
     {
@@ -553,7 +549,6 @@ static void fully_connected_compute_block_batch8(
         // Increment pointers.
         input_ptr += C_batch8_size;
         weights_buffer += C_max_acc_batch8;
-        //weights_buffer += T_SIZE;
     }
 
     if (T_NEED_BIAS_COPY)
@@ -624,15 +619,12 @@ static void run_fully_connected_work_item_internal_batch8(const fully_connected*
     auto input_buffer  = static_cast<float*>(this_fc->input_memory(0).pointer);
     auto output_buffer = static_cast<float*>(this_fc->output_memory(0).pointer);
     auto weight_buffer = static_cast<float*>(this_fc->input_memory(1).pointer);
-    auto bias_buffer = static_cast<float*>(this_fc->argument.input[2].primitive.as<const memory&>().pointer);
-
+    
     auto& input_arg = this_fc->input_memory(0).argument;
     auto& input_buffer_size = input_arg.size;
 
     auto& output_arg = this_fc->output_memory(0).argument;
     auto& output_buffer_size = output_arg.size;
-
-//        auto& weight_arg = this_fc->input_memory(1).argument;
 
     assert(1 == input_buffer_size.feature.size());
     assert(1 == input_buffer_size.batch.size());
@@ -648,18 +640,17 @@ static void run_fully_connected_work_item_internal_batch8(const fully_connected*
  
     auto weights_ptr = weight_buffer + C_max_acc_batch8 * thread_num * input_width;
     auto output_ptr  = output_buffer + C_max_acc_batch8 * thread_num * C_batch8_size;  
-    auto bias_ptr    =   bias_buffer + C_max_acc_batch8 * thread_num;
-
-    const auto num_full_blocks = output_width / C_max_acc_batch8;
-    const auto partial_block_size = output_width % C_max_acc_batch8;
-    /*   
+    
     float* bias_ptr = nullptr;
     if (T_NEED_BIAS_COPY)
     {
-        auto biases_buffer = static_cast<float*>(bias->parent->data_buffer);
-        bias_ptr = &biases_buffer[output_view_start];
+        auto bias_buffer = static_cast<float*>(this_fc->argument.input[2].primitive.as<const memory&>().pointer);
+        bias_ptr = bias_buffer + C_max_acc_batch8 * thread_num;
     }
-*/
+
+    const auto num_full_blocks = output_width / C_max_acc_batch8;
+    const auto partial_block_size = output_width % C_max_acc_batch8;
+    
     for (auto block = 0u; block < num_full_blocks; ++block)
     {
         // Run computation.
