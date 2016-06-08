@@ -328,8 +328,8 @@ TEST(pooling_forward, naive_comparison_optimized_max_bs_yxf_bv24_f32_wsiz2x2_wst
     auto temp_output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 48,{ 5, 5 }, 4 }}); auto& temp_output_memory = temp_output.as<const memory&>();
 
     // Reordering primitives.
-    auto reorder_input_to_ref      = reorder::create({ engine::reference, input_prim_ref, input_prim_cpu });
-    auto reorder_output_to_tmp_ref = reorder::create({ engine::reference, output_prim_cpu, temp_output });
+    auto reorder_input_to_ref      = reorder::create({engine::reference, input_prim_cpu , input_prim_ref});
+    auto reorder_output_to_tmp_ref = reorder::create({engine::reference, temp_output , output_prim_cpu});
 
     // Main pooling.
     auto pool_prim_ref = pooling::create({ engine::reference, pooling::mode::max, output_prim_ref, input_prim_ref, { 1, { 1, 1 }, 1 }, { 1, { 2, 2 }, 1 }, padding::type::zero });
