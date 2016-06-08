@@ -20,7 +20,8 @@
 #include "tests/gtest/gtest.h"
 #include "test_utils/test_utils.h"
 #include "memory_utils.h"
-#include <thread>
+//#include <thread>
+#include "memory_utils.h"
 
 using namespace neural;
 using namespace tests;
@@ -164,138 +165,71 @@ TEST(fully_connected, x_f32) {
 }
 
 
-
-
-
-
-static void fillrand(primitive& mr)
-{
-    auto& mem = mr.as<const neural::memory&>();
-    auto it = static_cast<float*>(mem.pointer);
-    uint32_t size = 0;
-    
-    if (mem.argument.format == memory::format::x_f32 || mem.argument.format == memory::format::xb_f32)
-         size = mem.argument.size.spatial[0] * mem.argument.size.batch[0];
-    else
-        if (mem.argument.format == memory::format::io_f32 ||
-            mem.argument.format == memory::format::oi_f32 ||
-            mem.argument.format == memory::format::io_i13_f2 ||
-            mem.argument.format == memory::format::io_i13_f32)
-         size = mem.argument.size.feature[0] * mem.argument.size.feature[1];
-
-    for (uint32_t i = 0; i < size; i++)
-        *it++ = (rand() % 20 - 10) / 2.0f;
-};
-
-//static void fillzero(primitive& mr)
-//{
-//    auto& mem = mr.as<const neural::memory&>();
-//    auto it = static_cast<float*>(mem.pointer);
-//    auto size = mem.argument.size.spatial[0] * mem.argument.size.batch[0];
-//    if (mem.argument.size.feature.size() != 1)
-//        size = mem.argument.size.feature[0] * mem.argument.size.feature[1];
-//    for (int i = 0; i < size; i++)
-//        *it++ = 5.0f;
-//};
-
-//static void TransposeMatrix(primitive& dst, primitive& src)
-//{
-//    auto& mem_src = src.as<const neural::memory&>();
-//    auto& mem_dst = dst.as<const neural::memory&>();
-//    auto size = mem_src.argument.size.feature[0] * mem_dst.argument.size.feature[1];
-//    auto width = mem_src.argument.size.feature[0];
-//    auto length = mem_dst.argument.size.feature[1];
-//
-//    auto memp_src = static_cast<float*>(mem_src.pointer);
-//    auto memp_dst = static_cast<float*>(mem_dst.pointer);
-//
-//    for (int i = 0; i < size; i++)
-//    {
-//        auto x = i / length;
-//        auto y = i % length;
-//        memp_dst[x + y * width] = memp_src[i];
-//    }
-//};
-
 TEST(fully_connected_avx2_batch1, x_f32) 
 {
     const uint32_t output_x = 129,                           // size of whole output buffer
-                   input_x = 3,                             // size of whole input buffer
+                   input_x = 7,                             // size of whole input buffer
                    weight_x = output_x, weight_y = input_x;  // size of whole weights buffer
 
-    auto input_prim     = memory::allocate({ engine::reference, memory::format:: x_f32,{ 1 ,{ { input_x } },   1 }});
-    auto output_prim    = memory::allocate({ engine::reference, memory::format:: x_f32,{ 1 ,{ { output_x } },  1 }});
-    auto output_prim_ref= memory::allocate({ engine::reference, memory::format:: x_f32,{ 1 ,{ { output_x } },  1 }});
-    auto weights_prim   = memory::allocate({ engine::reference, memory::format::oi_f32,{ 1 ,{{1}},             { weight_x, weight_y } }});
-    auto weights_prim_tr= memory::allocate({ engine::reference, memory::format::io_f32,{ 1 ,{{1}},             { weight_x, weight_y } }});
-    auto bias_prim      = memory::allocate({ engine::reference, memory::format:: x_f32,{ 1 ,{ { output_x } },  1 }});
+    auto input_prim      = memory::allocate({ engine::reference, memory::format:: x_f32,{ 1 ,{ { input_x } } ,  1 }});
+    auto output_prim     = memory::allocate({ engine::reference, memory::format:: x_f32,{ 1 ,{ { output_x } },  1 }});
+    auto output_prim_ref = memory::allocate({ engine::reference, memory::format:: x_f32,{ 1 ,{ { output_x } },  1 }});
+    auto weights_prim_ref= memory::allocate({ engine::reference, memory::format::oi_f32,{ 1 ,{{1}}           ,{ weight_x, weight_y } }});
+    auto weights_prim    = memory::allocate({ engine::reference, memory::format::io_f32,{ 1 ,{{1}}           ,{ weight_x, weight_y } }});
+    auto bias_prim       = memory::allocate({ engine::reference, memory::format:: x_f32,{ 1 ,{ { output_x } },1 }});
 
-    auto full_con_prim_ref = fully_connected::create({ engine::reference, output_prim_ref, input_prim, weights_prim, bias_prim });
+    auto full_con_prim_ref = fully_connected::create({ engine::reference, output_prim_ref, input_prim, weights_prim_ref, bias_prim });
+    auto full_con_prim     = fully_connected::create({ engine::cpu, output_prim, input_prim, weights_prim, bias_prim });
 
-    auto& output_memory_ref = output_prim_ref.as<const memory&>();
-
-    srand(0);
-    fillrand(input_prim);
-    fillrand(weights_prim);
-    fillrand(bias_prim);
-  
-    //TransposeMatrix(weights_prim_tr, weights_prim);
-    auto reorder = reorder::create({engine::reference, weights_prim, weights_prim_tr});
-
-    execute({ full_con_prim_ref }).wait();
-
-    auto full_con_prim = fully_connected::create({ engine::cpu, output_prim, input_prim, weights_prim_tr, bias_prim });
+    fill<float>(      input_prim.as<const neural::memory&>());
+    fill<float>(weights_prim_ref.as<const neural::memory&>());
+    fill<float>(       bias_prim.as<const neural::memory&>());
+      
+    auto reorder = reorder::create({engine::reference, weights_prim, weights_prim_ref});
     execute({ reorder}).wait();
+    execute({ full_con_prim_ref }).wait();
     execute({ full_con_prim }).wait();
 
     auto& output_memory = output_prim.as<const memory&>();
-
-    //auto it_ref = static_cast<float*>(output_memory_ref.pointer);
-    //auto it = static_cast<float*>(output_memory.pointer);
+    auto& output_memory_ref = output_prim_ref.as<const memory&>();
 
     for (uint32_t i = 0; i < output_memory_ref.count(); i++)
-        EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i))) << " at index " << i << "\n";
+        EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i),1e-3f, 1e-4f)) << " at index " << i << "\n";
 }
 
 
 
 TEST(fully_connected_avx2_batch8, x_f32) 
 {
-    const uint32_t output_x = 13*8, output_b = 8,              // size of whole output buffer
-        input_x = 3*5, input_b = 8,    // size of whole input buffer
-        weight_x = output_x, weight_y = input_x;  // size of whole weights buffer
+    const uint32_t output_x = 13*8,     output_b = 8,              // size of whole output buffer
+                   input_x = 3*5,       input_b = 8,    // size of whole input buffer
+                   weight_x = output_x, weight_y = input_x;  // size of whole weights buffer
 
-    auto input_prim     = memory::allocate({ engine::reference, memory::format:: x_f32,     { input_b   ,{ { input_x } }, 1 }});
-    auto output_prim_ref= memory::allocate({ engine::reference, memory::format::x_f32,      { output_b  ,{ { output_x } }, 1 }});
-    auto output_prim    = memory::allocate({ engine::reference, memory::format::x_f32,      { output_b  ,{ { output_x } }, 1 }});
-    auto weights_prim   = memory::allocate({ engine::reference, memory::format::oi_f32,     { 1,          {{1}}, { weight_x, weight_y } }});
-    auto weights_prim_tr = memory::allocate({ engine::reference, memory::format::io_i13_f32,{ 1,          {{1}}, { weight_x, weight_y } }});
-    auto bias_prim      = memory::allocate({ engine::reference, memory::format:: x_f32,     { 1,          { { output_x } }, 1 }});
-
-    auto& output_memory_ref = output_prim_ref.as<const memory&>();
-    auto& output_memory = output_prim.as<const memory&>();
-    //auto it_ref = static_cast<float*>(output_memory_ref.pointer);
-    //auto it = static_cast<float*>(output_memory.pointer);
-
-    //auto w1 = static_cast<float*>( (weights_prim.as<const memory&>()).pointer);
-    //auto w2 = static_cast<float*>( (weights_prim_tr.as<const memory&>()).pointer);
+    auto input_prim      = memory::allocate({ engine::reference, memory::format:: x_f32    ,{ input_b   ,{ { input_x } } , 1 }});
+    auto output_prim_ref = memory::allocate({ engine::reference, memory::format::x_f32     ,{ output_b  ,{ { output_x } }, 1 }});
+    auto output_prim     = memory::allocate({ engine::reference, memory::format::x_f32     ,{ output_b  ,{ { output_x } }, 1 }});
+    auto weights_prim_ref= memory::allocate({ engine::reference, memory::format::oi_f32    ,{ 1         ,{{1}}           , { weight_x, weight_y } }});
+    auto weights_prim    = memory::allocate({ engine::reference, memory::format::io_i13_f32,{ 1         ,{{1}}           , { weight_x, weight_y } }});
+    auto bias_prim       = memory::allocate({ engine::reference, memory::format:: x_f32    ,{ 1         ,{ { output_x } }, 1 }});
      
-    auto full_con_prim_ref = fully_connected::create({ engine::reference, output_prim_ref , input_prim, weights_prim, bias_prim });
-    auto full_con_prim = fully_connected::create({ engine::cpu, output_prim, input_prim, weights_prim_tr, bias_prim });
+    auto full_con_prim_ref = fully_connected::create({ engine::reference, output_prim_ref , input_prim, weights_prim_ref, bias_prim });
+    auto full_con_prim     = fully_connected::create({ engine::cpu, output_prim, input_prim, weights_prim, bias_prim });
 
-    srand(0);
-    fillrand(input_prim);
-    fillrand(weights_prim);
-    fillrand(bias_prim);
-    auto reorder = reorder::create({engine::reference, weights_prim, weights_prim_tr});
+    fill<float>(  input_prim.as<const neural::memory&>());
+    fill<float>(weights_prim.as<const neural::memory&>());
+    fill<float>(   bias_prim.as<const neural::memory&>());
+
+    auto reorder = reorder::create({engine::reference, weights_prim_ref, weights_prim});
 
     execute({ reorder}).wait();
-
     execute({ full_con_prim_ref }).wait();
     execute({ full_con_prim }).wait();
 
+    auto& output_memory_ref = output_prim_ref.as<const memory&>();
+    auto& output_memory = output_prim.as<const memory&>();
+
     for (uint32_t i = 0; i < output_memory_ref.count(); i++)
-        EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i))) << " at index " << i << "\n";
+        EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i), 1e-3f, 1e-4f)) << " at index " << i << "\n";
 }
 
 
@@ -306,38 +240,29 @@ TEST(fully_connected_avx2_batch48, x_f32)
                    input_x = 8,         input_b = 48,         // size of whole input buffer
                    weight_x = output_x, weight_y = input_x;   // size of whole weights buffer
 
-    auto input_prim     = memory::allocate({ engine::reference, memory::format:: x_f32,    { input_b  ,{ { input_x } },  1 }});
-    auto output_prim_ref= memory::allocate({ engine::reference, memory::format::x_f32,     { output_b ,{ { output_x } }, 1 }});
-    auto output_prim    = memory::allocate({ engine::reference, memory::format::x_f32,     { output_b ,{ { output_x } }, 1 }});
-    auto weights_prim   = memory::allocate({ engine::reference, memory::format::oi_f32,    { 1        ,{{1}}           , { weight_x, weight_y } }});
-    auto weights_prim_tr = memory::allocate({ engine::reference, memory::format::io_i13_f2,{ 1        ,{{1}}           , { weight_x, weight_y } }});
-    auto bias_prim      = memory::allocate({ engine::reference, memory::format:: x_f32,    { 1        ,{ { output_x } }, 1 }});
+    auto input_prim     = memory::allocate({ engine::reference, memory::format:: x_f32   ,{ input_b  ,{ { input_x } },  1 }});
+    auto output_prim_ref= memory::allocate({ engine::reference, memory::format::x_f32    ,{ output_b ,{ { output_x } }, 1 }});
+    auto output_prim    = memory::allocate({ engine::reference, memory::format::x_f32    ,{ output_b ,{ { output_x } }, 1 }});
+    auto weights_prim_ref=memory::allocate({ engine::reference, memory::format::oi_f32   ,{ 1        ,{{1}}           , { weight_x, weight_y } }});
+    auto weights_prim   = memory::allocate({ engine::reference, memory::format::io_i13_f2,{ 1        ,{{1}}           , { weight_x, weight_y } }});
+    auto bias_prim      = memory::allocate({ engine::reference, memory::format:: x_f32   ,{ 1        ,{ { output_x } }, 1 }});
+
+    auto full_con_prim_ref = fully_connected::create({ engine::reference, output_prim_ref , input_prim, weights_prim_ref, bias_prim });
+    auto full_con_prim     = fully_connected::create({ engine::cpu, output_prim, input_prim, weights_prim, bias_prim });
+
+    fill<float>(  input_prim.as<const neural::memory&>());
+    fill<float>(weights_prim.as<const neural::memory&>());
+    fill<float>(   bias_prim.as<const neural::memory&>());
+   
+    auto reorder = reorder::create({engine::reference, weights_prim_ref, weights_prim});
+
+    execute({ reorder}).wait();
+    execute({ full_con_prim_ref }).wait();
+    execute({ full_con_prim }).wait();
 
     auto& output_memory_ref = output_prim_ref.as<const memory&>();
     auto& output_memory = output_prim.as<const memory&>();
-   /* auto it_ref = static_cast<float*>(output_memory_ref.pointer);
-    auto it = static_cast<float*>(output_memory.pointer);*/
-
-   /* auto w1 = static_cast<float*>( (weights_prim.as<const memory&>()).pointer);
-    auto w2 = static_cast<float*>( (weights_prim_tr.as<const memory&>()).pointer);*/
-
-    auto full_con_prim_ref = fully_connected::create({ engine::reference, output_prim_ref , input_prim, weights_prim, bias_prim });
-    auto full_con_prim = fully_connected::create({ engine::cpu, output_prim, input_prim, weights_prim_tr, bias_prim });
-
-    srand(0);
-    fillrand(input_prim);
-    fillrand(weights_prim);
-    fillrand(bias_prim);
-   
-    auto reorder = reorder::create({engine::reference, weights_prim, weights_prim_tr});
-
-    execute({ reorder}).wait();
-
-    execute({ full_con_prim_ref }).wait();
-    execute({ full_con_prim }).wait();
-    
 
     for (uint32_t i = 0; i < output_memory_ref.count(); i++)
-        EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i))) << " at index " << i << "\n";
-
+        EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(output_memory, i), 1e-3f, 1e-4f)) << " at index " << i << "\n";
 }
