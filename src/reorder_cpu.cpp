@@ -25,6 +25,8 @@ struct reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
         : is_an_implementation(neural::type_id<reorder_cpu_byxf_f32_to_byxf_b24_f32>())
         , outer(arg) {};
     ~reorder_cpu_byxf_f32_to_byxf_b24_f32() {}
+    task_group work() { return {{task{implementation, &outer}}, schedule::unordered}; }
+    static is_an_implementation *create(reorder &arg) { return new reorder_cpu_byxf_f32_to_byxf_b24_f32(arg); };
 
     static void implementation(const void *ptr) {
         auto this_reorder = static_cast<const reorder *>(ptr);
@@ -45,18 +47,49 @@ struct reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
                         output[output_index] = input[input_index];
                     }
     }
-
-    task_group work() { return {{task{implementation, &outer}}, schedule::unordered}; }
-    static is_an_implementation *create(reorder &arg) { return new reorder_cpu_byxf_f32_to_byxf_b24_f32(arg); };
 };
+
+
+
+struct reorder_cpu_bfyx_f32_to_byxf_f32 : is_an_implementation {
+    const reorder &outer;
+    reorder_cpu_bfyx_f32_to_byxf_f32(reorder &arg)
+        : is_an_implementation(neural::type_id<reorder_cpu_bfyx_f32_to_byxf_f32>())
+        , outer(arg) {};
+    ~reorder_cpu_bfyx_f32_to_byxf_f32() {}
+    task_group work() { return {{task{implementation, &outer}}, schedule::unordered}; }
+    static is_an_implementation *create(reorder &arg) { return new reorder_cpu_bfyx_f32_to_byxf_f32(arg); };
+
+    static void implementation(const void *ptr) {
+        auto this_reorder = static_cast<const reorder *>(ptr);
+        auto input = static_cast<float*>(this_reorder->input_memory(0).pointer);
+        auto output = static_cast<float*>(this_reorder->output_memory(0).pointer);
+        auto& input_memory_arg  = this_reorder->input_memory(0).argument;
+
+        uint32_t size_b = input_memory_arg.size.batch;
+        uint32_t size_y = input_memory_arg.size.spatial[1];
+        uint32_t size_x = input_memory_arg.size.spatial[0];
+        uint32_t size_f = input_memory_arg.size.feature;
+        for(uint32_t b=0; b<size_b; ++b)
+            for(uint32_t y=0; y<size_y; ++y)
+                for(uint32_t x=0; x<size_x; ++x)
+                    for(uint32_t f=0; f<size_f; ++f) {
+                        auto  input_index = x + size_x * (y + size_y * (f + size_f * b));
+                        auto output_index = f + size_f * (x + size_x * (y + size_y * b));
+                        output[output_index] = input[input_index];
+                    }
+    }
+};
+
 
 
 namespace {
     struct attach {
         attach() {
-            auto key_fw = std::make_tuple(engine::cpu, memory::format::byxf_b24_f32, memory::format::byxf_f32);
-            auto val_fw = reorder_cpu_byxf_f32_to_byxf_b24_f32::create;
-            reorder_fw_implementation_map::instance().insert( {key_fw, val_fw} );
+            auto &map = reorder_fw_implementation_map::instance();
+                                      // engine       output                        input                      create function
+            map.insert( {std::make_tuple(engine::cpu, memory::format::byxf_b24_f32, memory::format::byxf_f32), reorder_cpu_byxf_f32_to_byxf_b24_f32::create} );
+            map.insert( {std::make_tuple(engine::cpu, memory::format::byxf_f32,     memory::format::bfyx_f32), reorder_cpu_bfyx_f32_to_byxf_f32    ::create} );
         }
         ~attach(){}
     };
