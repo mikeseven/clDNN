@@ -53,6 +53,11 @@ struct MKL_DNNMemory : PrvMemDescr,
   primitive to_prv     = nullptr;
   primitive from_prv   = nullptr;
   std::string name = "UNKNOWN";  // for debugging purposes
+  vector<primitive> memory_prv_part_;    // TODO: better solution
+  vector<primitive> memory_usr_part_;    // TODO: better solution
+  vector<primitive> to_prv_part_;        // TODO: better solution
+  uint32_t parts_ = 1;
+  uint32_t part_offset_ = 0;
   bool use_cuda;
 
   virtual size_t prv_count() {

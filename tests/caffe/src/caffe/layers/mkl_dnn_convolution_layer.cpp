@@ -21,6 +21,8 @@
  */
 using namespace neural;
 
+#define CONVERSION_PRINT_DATA
+
 namespace caffe {
 
 // *** Conversion methods for MKL_DNNMemory class
@@ -36,11 +38,11 @@ void MKL_DNNMemory<Dtype, is_diff>::convert_from_prv(void* prv_ptr, void* cpu_pt
           << "                            || layouts: " << this->layout_prv << " => \n";
   execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv}).wait();
 #ifdef CONVERSION_PRINT_DATA
-  DLOG(INFO) << "Before conversion: ";
+  DLOG(INFO) << "Before conversion: \n";
   for (auto i=0; i<this->prv_count(); i++)
     DLOG(INFO) << ((Dtype*)prv_ptr)[i] << " ";
   DLOG(INFO) << " \n";
-  DLOG(INFO) << "After  conversion: ";
+  DLOG(INFO) << "After  conversion: \n";
   for (auto i=0; i<this->prv_count(); i++)
     DLOG(INFO) << ((Dtype*)cpu_ptr)[i] << " ";
   DLOG(INFO) << " \n\n";
@@ -57,18 +59,28 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
     if(prv_ptr == nullptr)
     {
       DLOG(INFO) << "convert      => priv                                => " << this->name
-              << "  || layouts:   => " << this->layout_prv<< "\n";
+              << "  || layouts:   => " << this->layout_prv << "\n";
       auto usr_ptr = is_diff ? (Dtype *) blob->cpu_diff() : (Dtype *) blob->cpu_data();
       if(this->prv_ptr_ == nullptr)
         this->allocate();
-      execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr_), this->to_prv}).wait();
+
+      if(parts_ == 1) {
+        execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr_), this->to_prv}).wait();
+      }
+      else {
+        for(int i=0; i < parts_; i++)
+          execute({memory_usr_part_[i](usr_ptr        + i*part_offset_), // TODO: dont use part_offset_ ?
+                   memory_prv_part_[i](this->prv_ptr_ + i*part_offset_),
+                   this->to_prv_part_[i]}).wait();
+
+      }
 
 #ifdef CONVERSION_PRINT_DATA
-      DLOG(INFO) << "Before conversion: ";
+      DLOG(INFO) << "Before conversion: \n";
       for (auto i=0; i<blob->count(); i++)
         DLOG(INFO) << usr_ptr[i] << " ";
       DLOG(INFO) << " \n";
-      DLOG(INFO) << "After  conversion: ";
+      DLOG(INFO) << "After  conversion: \n";
       for (auto i=0; i<blob->count(); i++)
         DLOG(INFO) << this->prv_ptr_[i] << " ";
       DLOG(INFO) << " \n\n";
@@ -79,6 +91,7 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
         else
           blob->set_prv_data(this->prv_ptr_, get_shared_ptr(), true);
       }
+
       return this->prv_ptr_;
     }
     else
@@ -119,7 +132,6 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
         DLOG(INFO) << "layout OK                 " << current_descr->name << " == " << this->name << "\n";
       }
     }
-
     return (Dtype*) prv_ptr;
   }
 
@@ -179,17 +191,19 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
   switch (engine_) {
     case  neural::engine::cpu:
     {
-      prv_layout_in_out_ = memory::format::byxf_f32;
-      prv_layout_filter_ = memory::format::oyxi_o16_f32;
-      if((n % 24 == 0) && (ic % 8 == 0)) {
+      if((n % 24 == 0) && (ic % 8 == 0) && (oc % 4 == 0)) {
         prv_layout_in_out_ = memory::format::byxf_b24_f32;
         prv_layout_filter_ = memory::format::yxoi_o4_f32;
+      } else {
+        prv_layout_in_out_ = memory::format::byxf_f32;
+        prv_layout_filter_ = memory::format::oyxi_o16_f32;
       }
     }
     break;
     case neural::engine::reference:
       prv_layout_in_out_ = memory::format::yxfb_f32;
       prv_layout_filter_ = memory::format::oiyx_f32;
+
     break;
     default:
       CHECK(0) << "Wrong mkl-dnn engine";
@@ -210,21 +224,31 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
           memory::describe({engine_, usr_layout_filter_, {1, {kw, kh}, {oc, ic/g}}}),
           memory::describe({engine_, prv_layout_filter_, {1, {kw, kh}, {oc, ic/g}}}));
 
+  {
+    fwd_filter_data->parts_ = g;
+    fwd_filter_data->part_offset_ = kw*kh*(oc/g)*(ic/g);
+    for (unsigned i=0; i<g; i++) {
+      fwd_filter_data->memory_usr_part_.push_back(memory::describe({engine_, usr_layout_filter_, {1, {kw, kh}, {oc/g, ic/g}}}));
+      fwd_filter_data->memory_prv_part_.push_back(memory::describe({engine_, prv_layout_filter_, {1, {kw, kh}, {oc/g, ic/g}}}));
+      fwd_filter_data->to_prv_part_.push_back(
+        reorder::create(reorder::arguments({engine::reference,
+              fwd_filter_data->memory_usr_part_[i], fwd_filter_data->memory_prv_part_[i]})));
+    }
+  }
   fwd_bias_data = boost::make_shared<MKL_DNNData<Dtype> >(
           layout_bias_, layout_bias_,
           memory::describe({engine_, layout_bias_, {1, {{oc}}, 1}}),
           memory::describe({engine_, layout_bias_, {1, {{oc}}, 1}}));
 
   for (unsigned i=0; i<g; i++) {
-    filters_.push_back(memory::describe({engine_, fwd_filter_data->layout_prv, {1, {kw, kh}, {oc/g, ic/g}}}));
-    biases_. push_back(memory::describe({engine_, fwd_bias_data  ->layout_prv, {1, {{oc/g}}, 1}}));
+    biases_. push_back(memory::describe({engine_, fwd_bias_data->layout_prv, {1, {{oc/g}}, 1}}));
     convolution_fwd_.push_back(
       convolution::create({engine_,
                            fwd_top_data->memory_prv,
                            {0, {0, 0}, i*(oc/g)},
                            {n, {ow, oh}, oc/g},
                            { fwd_bottom_data->memory_prv,
-                             filters_[i],
+                             fwd_filter_data->memory_prv_part_[i],
                              biases_ [i] },
                            {0, {-pad_w_, -pad_h_}, static_cast<int>(i*(ic/g))},
                            {1, {stride_w_, stride_h_}, 1},
@@ -324,7 +348,6 @@ void MKL_DNNConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
   CHECK_EQ(top[0]->num()     , n)    << "Inclompatible shape of bottom with layer";
 
   CHECK_EQ(convolution_fwd_.size(), g);
-  CHECK_EQ(filters_.size(), g);
   CHECK_EQ(biases_.size(), g);
 
   auto bottom_data   = fwd_bottom_data->get_converted_prv(bottom[0], true);
@@ -341,7 +364,8 @@ void MKL_DNNConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
     float* bias_data   = fwd_bias_data  ->get_converted_prv(this->blobs_[1].get(), true);
     for(int i=0; i<g; i++) {
       execute({fwd_bottom_data->memory_prv(bottom_data), fwd_top_data->memory_prv(top_data),
-              filters_[i](filter_data + i* this->weight_offset_), biases_[i](bias_data + i*oc),
+              fwd_filter_data->memory_prv_part_[i](filter_data + i* this->weight_offset_),
+              biases_[i](bias_data + i*oc),
               convolution_fwd_[i]}).wait();
     }
   } else {
