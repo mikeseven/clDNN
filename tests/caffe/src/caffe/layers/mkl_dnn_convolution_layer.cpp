@@ -68,11 +68,10 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
         execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr_), this->to_prv}).wait();
       }
       else {
-        for(int i=0; i < parts_; i++)
-          execute({memory_usr_part_[i](usr_ptr        + i*part_offset_), // TODO: dont use part_offset_ ?
-                   memory_prv_part_[i](this->prv_ptr_ + i*part_offset_),
+         for(int i=0; i < parts_; i++)
+          execute({memory_usr_part_[i](usr_ptr        + i * part_offset_), // TODO: dont use part_offset_ ?
+                   memory_prv_part_[i](this->prv_ptr_ + i * part_offset_),
                    this->to_prv_part_[i]}).wait();
-
       }
 
 #ifdef CONVERSION_PRINT_DATA
@@ -232,7 +231,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
       fwd_filter_data->memory_prv_part_.push_back(memory::describe({engine_, prv_layout_filter_, {1, {kw, kh}, {oc/g, ic/g}}}));
       fwd_filter_data->to_prv_part_.push_back(
         reorder::create(reorder::arguments({engine::reference,
-              fwd_filter_data->memory_usr_part_[i], fwd_filter_data->memory_prv_part_[i]})));
+              fwd_filter_data->memory_prv_part_[i], fwd_filter_data->memory_usr_part_[i]})));
     }
   }
   fwd_bias_data = boost::make_shared<MKL_DNNData<Dtype> >(

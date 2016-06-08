@@ -46,7 +46,7 @@ void MKL_DNNLRNLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   // Choose layout according to the engine
   switch (engine_) {
     case  neural::engine::cpu:
-      prv_layout_in_out_ = memory::format::byxf_b24_f32;
+      prv_layout_in_out_ = memory::format::byxf_f32;
     break;
     case neural::engine::reference:
       prv_layout_in_out_ = memory::format::yxfb_f32;
