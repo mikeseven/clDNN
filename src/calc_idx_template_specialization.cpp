@@ -24,7 +24,7 @@ template<neural::memory::format::type FORMAT>
 size_t index(std::vector<uint32_t> size, std::vector<uint32_t> pos);
 
 namespace {
-    bool is_in_range(std::vector<uint32_t> &range, std::vector<uint32_t> &pos) {
+    bool is_in_range(const std::vector<uint32_t> &range, const std::vector<uint32_t> &pos) {
         if(pos.size()!=range.size()) return false;
         for(size_t i = 0; i < pos.size(); ++i)
             if(pos[i] >= range[i]) return false;
@@ -110,6 +110,34 @@ template<> size_t index<neural::memory::format::byxf_b24_f32>(std::vector<uint32
     return b%24 + 24 * (f + F * (x + X * (y + (b/24) * Y)));
 };
 
+// see template def above
+template<neural::memory::format::type FORMAT>
+void* pointer(const neural::memory& mem, const std::vector<uint32_t>& pos);
+
+template <> void* pointer<neural::memory::format::xb_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
+    auto size = mem.argument.size.raw;
+    assert(is_in_range(size, pos));
+    auto index = pos[0] + size[0]*pos[2];
+   float* array_ptr = static_cast<float*>(mem.pointer);
+    return &(array_ptr[index]);
+};
+
+template <> void* pointer<neural::memory::format::yxfb_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
+    auto size = mem.argument.size.raw;
+    assert(is_in_range(size, pos));
+    auto index = pos[0] + size[0] * (pos[1] + size[1]*(pos[2] + size[2] * pos[3]));
+    float* array_ptr = static_cast<float*>(mem.pointer);
+    return &(array_ptr[index]);
+};
+
+template <> void* pointer<neural::memory::format::oiyx_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
+    auto size = mem.argument.size.raw;
+    assert(is_in_range(size, pos));
+    assert(1 == size[0]); // batch
+    auto index = pos[3] + size[3] * (pos[4] + size[4] * (pos[2] + size[2] * pos[1]));
+    float* array_ptr = static_cast<float*>(mem.pointer);
+    return &(array_ptr[index]);
+};
 
 fptr choose_calculate_idx(neural::memory::format::type arg){
     switch (arg){
@@ -129,5 +157,19 @@ fptr choose_calculate_idx(neural::memory::format::type arg){
             throw std::runtime_error("choose_calculate_idx has no case for memory::format " + std::to_string(arg));
     }
 };
+
+pfptr choose_calculate_ptr(const neural::memory& mem)
+{
+    auto format = mem.argument.format;
+    switch (format)
+    {
+        case neural::memory::format::type::x_f32: // treat x_f32 as xb_f32 with b=1
+        case neural::memory::format::type::xb_f32:              return pointer<neural::memory::format::type::xb_f32>;
+        case neural::memory::format::type::yxfb_f32:            return pointer<neural::memory::format::type::yxfb_f32>;
+        case neural::memory::format::type::oiyx_f32:            return pointer<neural::memory::format::type::oiyx_f32>;
+        default:
+            throw std::runtime_error("choose_calculate_ptr has no case for memory::format " + std::to_string(format));
+    }
+}
 
 }

@@ -34,8 +34,12 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     auto& padding       = this_conv->argument.padding;
     auto& stride        = this_conv->argument.stride;
 
+    auto& input_mem = this_conv->input_memory(0);
+    auto& output_mem = this_conv->output_memory(0);
+    auto& filter_mem = this_conv->argument.input[1].primitive.as<const memory&>();
+    auto& bias_mem = this_conv->argument.input[2].primitive.as<const memory&>();
+
     auto& input_arg  = this_conv->input_memory(0).argument;
-    auto& output_arg = this_conv->output_memory(0).argument;
 
     auto& filter_arg = this_conv->argument.input[1].primitive.as<const memory&>().argument; //convolution filter
 
@@ -44,10 +48,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     // todo remove
     if(filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");
 
-    auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
-    auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
-    auto filter = static_cast<float*>(this_conv->argument.input[1].primitive.as<const memory&>().pointer);
-    auto bias   = static_cast<float*>(this_conv->argument.input[2].primitive.as<const memory&>().pointer);
+    float *input, *output, *filter, *bias;
 
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
     namespace nd = ndimensional;
@@ -61,16 +62,18 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     // Ofm and batch is cropped, ofm will be hold manually
     // Batch is included in output size
     nd::value<uint32_t> window_range_truncated ({filter_arg.size.raw.cbegin()+2, filter_arg.size.raw.cend()});
-    auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
-    auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
-    auto calc_win_idx = nd::choose_calculate_idx(filter_arg.format);
+    auto calc_in_ptr     = nd::choose_calculate_ptr(input_mem);
+    auto calc_out_ptr    = nd::choose_calculate_ptr(output_mem);
+    auto calc_filter_ptr = nd::choose_calculate_ptr(filter_mem);
+    auto calc_bias_ptr   = nd::choose_calculate_ptr(bias_mem);
 
     switch(padding){
         case padding::zero:
         {
             for(auto pos : range) {
-                auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
-                output[out_idx] = bias[pos[f_pos]];
+                output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
+                bias = static_cast<float*>(calc_bias_ptr(bias_mem, {0,0,pos[f_pos]}));
+                *(output) = *bias;
             }
 
             // Ofm in weights and feature maps in output size is the same.
@@ -89,19 +92,19 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                         if( nd::is_out_of_range(input_arg.size, arg_in_idx) )
                             continue;
 
-                        auto in_idx  = calc_in_idx ( input_arg.size.raw, {arg_in_idx.begin(), arg_in_idx.end()} );
-                        auto win_idx = calc_win_idx( filter_arg.size.raw,
+                        input  = static_cast<float*> (calc_in_ptr ( input_mem, {arg_in_idx.begin(), arg_in_idx.end()} ));
+                        filter = static_cast<float*> (calc_filter_ptr( filter_mem,
                                                      [&](){
                                                         auto vec = std::vector<uint32_t>({0, ofm-output_offset.feature[0]});
                                                         auto* win_pos_ptr = dynamic_cast<std::vector<uint32_t>*>(&win_pos);
                                                         vec.insert(vec.end(), win_pos_ptr->begin(), win_pos_ptr->end());
                                                         return vec;
                                                      }()
-                                                    );
+                                                    ));
 
-                        auto out_idx = calc_out_idx(output_arg.size.raw, pos_with_modified_ofm );
+                        output = static_cast<float*> (calc_out_ptr(output_mem, pos_with_modified_ofm ));
 
-                        output[out_idx] += input[in_idx] * filter[win_idx];
+                        *output += *input * *filter;
                     }
                 }
             }
