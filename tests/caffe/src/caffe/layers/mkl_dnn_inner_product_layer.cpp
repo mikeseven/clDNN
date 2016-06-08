@@ -82,12 +82,12 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(
     // Choose layout according to the engine
   switch (engine_) {
     case  neural::engine::cpu:
-      prv_layout_in_out_  = memory::format::xb_f32;  // TBD
-      prv_layout_weights_ = memory::format::xb_f32;  // TBD
+      prv_layout_in_out_  = memory::format::xb_f32;
+      prv_layout_weights_ = memory::format::io_f32;
     break;
     case neural::engine::reference:
       prv_layout_in_out_  = memory::format::xb_f32;
-      prv_layout_weights_ = memory::format::xb_f32;
+      prv_layout_weights_ = memory::format::oi_f32;
     break;
     default:
       CHECK(0) << "Wrong mkl-dnn engine";

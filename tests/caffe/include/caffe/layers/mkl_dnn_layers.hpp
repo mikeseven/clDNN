@@ -416,7 +416,7 @@ class MKL_DNNInnerProductLayer : public Layer<Dtype> {
   neural::memory::format::type prv_layout_in_out_;
   neural::memory::format::type prv_layout_weights_;
   const neural::memory::format::type usr_layout_in_out_  = memory::format::bx_f32;
-  const neural::memory::format::type usr_layout_weights_ = memory::format::xb_f32;
+  const neural::memory::format::type usr_layout_weights_ = memory::format::oi_f32;
   const neural::memory::format::type layout_bias_        = memory::format::x_f32;
   primitive fcFwd_ = nullptr, fcBwd_ = nullptr;
   shared_ptr<MKL_DNNData<Dtype> > top_data_, bottom_data_, weights_data_, bias_data_;
