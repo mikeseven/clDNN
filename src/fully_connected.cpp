@@ -16,6 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
+#include "fully_connected.h"
 #include "multidimensional_counter.h"
 #include "memory_utils.h"
 
@@ -66,7 +67,7 @@ struct fully_connected_reference : is_an_implementation {
         auto calc_w_ptr = nd::choose_calculate_ptr(weight_mem);
         auto calc_bias_ptr = nd::choose_calculate_ptr(bias_mem);
 
-        std::vector<uint32_t> arg_weight_idx(3);
+        std::vector<uint32_t> arg_weight_idx(4);
         nd::value<uint32_t> batch_offset(range_output.size());
 
         for (auto pos_out : range_output) {
@@ -75,8 +76,8 @@ struct fully_connected_reference : is_an_implementation {
                 input = static_cast<float*>(calc_in_ptr(input_mem, pos_in));
                 batch_offset[BATCH_INDEX] = pos_in[BATCH_INDEX];
 
-                arg_weight_idx[DATA_INDEX] = pos_out[DATA_INDEX];
-                arg_weight_idx[BATCH_INDEX] = pos_in[DATA_INDEX];
+                arg_weight_idx[1] = pos_out[DATA_INDEX];
+                arg_weight_idx[2] = pos_in[DATA_INDEX];
 
                 weight = static_cast<float*>(calc_w_ptr(weight_mem, arg_weight_idx));
                 output = static_cast<float*>(calc_out_ptr(output_mem, pos_out + batch_offset));
@@ -103,11 +104,6 @@ struct fully_connected_reference : is_an_implementation {
 //                                    engine                output                        input
 using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
-// map of available implementations
-static std::map<implementation_key, std::function<is_an_implementation *(fully_connected &)>> implementation_map = {
-    { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create },
-    { std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create }
-};
 
 fully_connected::arguments::arguments( neural::engine::type eng,
                                        primitive            out,
@@ -127,18 +123,21 @@ primitive fully_connected::create(fully_connected::arguments arg) {
     auto& weight_arg = arg.input[1].primitive.as<const memory&>().argument;
 
     if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Fully connected input/output number of dimension does not match.");
-    if (weight_arg.format != memory::format::xb_f32 &&
-        weight_arg.format != memory::format::x_f32)                 throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
+    if (weight_arg.format != memory::format::oi_f32     &&
+        weight_arg.format != memory::format::io_f32     &&
+        weight_arg.format != memory::format::io_i13_f32 &&
+        weight_arg.format != memory::format::io_i2_f32  )                throw std::runtime_error("Fully connected weight format is not oi_f32.");
+    
 
-    // wrap relu into RAII wrapper
+    // wrap into RAII wrapper
     std::unique_ptr<fully_connected> result(new fully_connected(arg));
 
     // create implementation for non-lazy evaluation
     if(0 == (arg.engine & engine::lazy)) {
         // lookup in database; throw if not found
         auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = implementation_map.find(key);
-        if (it == std::end(implementation_map)) throw std::runtime_error("not yet implemented");
+        auto it = fully_con_implementation_map::instance().find(key);
+        if (it == std::end(fully_con_implementation_map::instance())) throw std::runtime_error("not yet implemented");
 
         // create implementation & attach it to result
         auto implementation = it->second(*result);
@@ -148,6 +147,25 @@ primitive fully_connected::create(fully_connected::arguments arg) {
 
     // release RAII wrapper, return naked pointer
     return result.release();
+}
+
+namespace {
+    struct attach {
+        attach() {
+            fully_con_implementation_map::instance().insert({ std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create });
+            fully_con_implementation_map::instance().insert({ std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create });
+}
+        ~attach() {}
+};
+
+
+#ifdef __GNUC__
+__attribute__((visibility("default"))) //todo meybe dll_sym?
+#elif _MSC_VER
+#   pragma section(".nn_init$m", read, write)
+#endif
+attach attach_impl;
+
 }
 
 }
