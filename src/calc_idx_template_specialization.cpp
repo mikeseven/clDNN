@@ -19,9 +19,11 @@ namespace ndimensional{
 
 namespace {
     bool is_in_range(const std::vector<uint32_t> &range, const std::vector<uint32_t> &pos) {
-        if(pos.size()!=range.size()) return false;
+        if(pos.size()!=range.size())
+            return false;
         for(size_t i = 0; i < pos.size(); ++i)
-            if(pos[i] >= range[i]) return false;
+            if(pos[i] >= range[i])
+                return false;
         return true;
     }
 }
@@ -189,6 +191,75 @@ template <> void* pointer<neural::memory::format::byxf_b24_f32>(const neural::me
     return &(array_ptr[index]);
 };
 
+template <> void* pointer<neural::memory::format::oi_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
+    auto size = mem.argument.size.raw;
+    assert(is_in_range(size, pos));
+
+    // BFXY represents buffer size, wbile bfxy represents current position
+  /*  const size_t Fo = size[1];*/ const size_t Fi = size[2]; 
+    const size_t fo =  pos[1];     const size_t fi =  pos[2]; 
+    
+    assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
+    assert(1 == size[3]); 
+       
+    auto index = fi + fo * Fi;
+    float* array_ptr = static_cast<float*>(mem.pointer);
+    return &(array_ptr[index]);
+}
+
+template <> void* pointer<neural::memory::format::io_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
+    auto size = mem.argument.size.raw;
+    assert(is_in_range(size, pos));
+
+    // BFXY represents buffer size, wbile bfxy represents current position
+    const size_t Fo = size[1];  // const size_t Fi = size[2]; 
+    const size_t fo =  pos[1];   const size_t fi =  pos[2]; 
+
+    assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
+    assert(1 == size[3]); 
+
+    auto index = fo + fi * Fo;
+    float* array_ptr = static_cast<float*>(mem.pointer);
+    return &(array_ptr[index]);
+}
+
+template <> void* pointer<neural::memory::format::io_i13_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
+    auto size = mem.argument.size.raw;
+    assert(is_in_range(size, pos));
+
+    // BFXY represents buffer size, wbile bfxy represents current position
+ /*   const size_t Fo = size[1];*/   const size_t Fi = size[2]; 
+    const size_t fo =  pos[1];       const size_t fi =  pos[2]; 
+
+    const uint32_t stride = 13;
+    assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
+    assert(1 == size[3]); 
+    assert(0 == size[1] % stride ); 
+
+    auto index = fo % stride + fi * stride +(stride * Fi)*(fo / stride);
+    float* array_ptr = static_cast<float*>(mem.pointer);
+    return &(array_ptr[index]);
+
+ }
+
+template <> void* pointer<neural::memory::format::io_i2_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
+    auto size = mem.argument.size.raw;
+    assert(is_in_range(size, pos));
+
+    // BFXY represents buffer size, wbile bfxy represents current position
+  /*  const size_t Fo = size[1];*/  const size_t Fi = size[2]; 
+    const size_t fo =  pos[1];      const size_t fi =  pos[2]; 
+
+    const uint32_t stride = 2;
+    assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
+    assert(1 == size[3]); 
+    assert(0 == size[1] % stride ); 
+
+    auto index = fo % stride + fi * stride +(stride * Fi)*(fo / stride);
+    float* array_ptr = static_cast<float*>(mem.pointer);
+    return &(array_ptr[index]);
+}
+
 pfptr choose_calculate_ptr(const neural::memory& mem)
 {
     auto format = mem.argument.format;
@@ -197,6 +268,10 @@ pfptr choose_calculate_ptr(const neural::memory& mem)
         case neural::memory::format::type::x_f32: // treat x_f32 as xb_f32 with b=1
         case neural::memory::format::type::xb_f32:          return pointer<neural::memory::format::type::xb_f32>;
         case neural::memory::format::type::bx_f32:          return pointer<neural::memory::format::type::bx_f32>;
+        case neural::memory::format::type::oi_f32:          return pointer<neural::memory::format::type::oi_f32>;
+        case neural::memory::format::type::io_f32:          return pointer<neural::memory::format::type::io_f32>;
+        case neural::memory::format::type::io_i13_f32:      return pointer<neural::memory::format::type::io_i13_f32>;
+        case neural::memory::format::type::io_i2_f32:       return pointer<neural::memory::format::type::io_i2_f32>;
         case neural::memory::format::type::yxfb_f32:        return pointer<neural::memory::format::type::yxfb_f32>;
         case neural::memory::format::type::byxf_f32:        return pointer<neural::memory::format::type::byxf_f32>;
         case neural::memory::format::type::oiyx_f32:        return pointer<neural::memory::format::type::oiyx_f32>;

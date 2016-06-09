@@ -76,8 +76,8 @@ struct fully_connected_reference : is_an_implementation {
                 input = static_cast<float*>(calc_in_ptr(input_mem, pos_in));
                 batch_offset[BATCH_INDEX] = pos_in[BATCH_INDEX];
 
-                arg_weight_idx[1] = pos_out[DATA_INDEX];
-                arg_weight_idx[2] = pos_in[DATA_INDEX];
+                arg_weight_idx[1]  = pos_out[DATA_INDEX];
+                arg_weight_idx[2] = pos_in [DATA_INDEX];
 
                 weight = static_cast<float*>(calc_w_ptr(weight_mem, arg_weight_idx));
                 output = static_cast<float*>(calc_out_ptr(output_mem, pos_out + batch_offset));
