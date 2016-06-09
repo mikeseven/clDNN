@@ -20,7 +20,23 @@
 #include "memory_utils.h"
 #include "ocl_toolkit.h"
 
-#pragma warning(disable: 4189)
+/*#pragma warning(disable: 4189)
+#pragma warning(disable: 4100)
+#define __global
+#define __kernel
+#define uint cl_uint
+#define uint2 cl_uint2
+#define __attribute__(A)
+
+int get_global_id(int dim)
+{
+    static int x = 0;
+    if (dim == 0)
+        return x++;
+    else
+        return 0;
+}
+#include "definitions.cl"*/
 namespace neural {
 
     /*int get_global_id(int dim)
@@ -32,86 +48,115 @@ namespace neural {
             return 0;
     }
 
-    void test_convolution_GPU(float* input, cl_uint4 input_size, float* filter, cl_uint4 filter_size, float* bias, float* pDst, cl_uint4 dst_size, cl_uint2 spatial_stride)
+    void test_convolution_GPU(
+        __global neural_memory* input_mem,
+        __global neural_memory* filter_mem,
+        __global neural_memory* bias_mem,
+        __global neural_memory* dst_mem,
+        uint2 spatial_stride)
     {
+        const __global uint* input_size = get_raw(input_mem);
+        const __global uint* filter_size = get_raw(filter_mem);
+        const __global uint* bias_size = get_raw(bias_mem);
+        const __global uint* dst_size = get_raw(dst_mem);
+        const __global float* input = (const __global float*)get_data(input_mem);
+        const __global float* filter = (const __global float*)get_data(filter_mem);
+        const __global float* bias = (const __global float*)get_data(bias_mem);
+        __global float* pDst = (__global float*)get_data(dst_mem);
+        //
+
         int global_id = get_global_id(0);
-        const int batch_num = dst_size.s0;
-        const int batch_offset = global_id % dst_size.s0;
+        const int batch_num = dst_size[0];
+        const int batch_offset = global_id % batch_num;
 
-        const int idx = global_id / batch_num;
+        const int ofm_num = dst_size[1];
+        const int ofm_offset = (global_id / batch_num) % ofm_num;
 
-        const int x = (idx % input_size.s2) * spatial_stride.s0;
-        const int y = (idx * spatial_stride.s1) / input_size.s2;
+        const int f_ofm_num = filter_size[1];
+        const int f_ofm_offset = (global_id % f_ofm_num) * filter_size[4] * filter_size[3] * filter_size[2];
 
+        const int idx = (global_id / batch_num);
+
+        const int i_ifm_num = input_size[1];
         const int out_offset = idx * batch_num + batch_offset;
 
+        const int x = ((idx / f_ofm_num) % input_size[2]) * spatial_stride.s0;
+        const int y = ((idx / f_ofm_num) * spatial_stride.s1) / input_size[2];
+
+
         pDst[out_offset] = 0;
-        for (cl_uint i = 0; i < filter_size.s3; i++)
+        for (uint h = 0; h < filter_size[2]; h++)
         {
-            for (cl_uint j = 0; j < filter_size.s2; j++)
+            const int f_ifm_offset = h * filter_size[4] * filter_size[3];
+            for (uint i = 0; i < filter_size[4]; i++)
             {
-                int input_idx = (x + j + ((y + i) * input_size.s2)) * batch_num + batch_offset;
-                int filter_idx = i * filter_size.s2 + j;
-                pDst[out_offset] += input[input_idx] * filter[filter_idx];
+                for (uint j = 0; j < filter_size[3]; j++)
+                {
+                    int input_idx = (x + j + ((y + i) * input_size[2])) * batch_num * i_ifm_num + h * batch_num + batch_offset;
+                    int filter_idx = (i * filter_size[3] + j) + f_ofm_offset + f_ifm_offset;
+                    pDst[out_offset] += input[input_idx] * filter[filter_idx];
+                }
             }
         }
-        pDst[out_offset] += bias[0];
+        pDst[out_offset] += bias[ofm_offset];
     }*/
 
 const std::string kernelCode = R"__krnl(
 __kernel void Convolution_GPU(
     const __global neural_memory* input_mem,
     const __global neural_memory* filter_mem,
-    float bias,
+    const __global neural_memory* bias_mem,
     __global neural_memory* dst_mem,
-    const __global neural_vector* spatial_stride)
+    const __global neural_vector* stride)
 {
-
 //
     const __global uint* input_size = get_raw(input_mem);
     const __global uint* filter_size = get_raw(filter_mem);
+    const __global uint* bias_size = get_raw(bias_mem);
     const __global uint* dst_size = get_raw(dst_mem);
     const __global float* input = (const __global float*)get_data(input_mem);
     const __global float* filter = (const __global float*)get_data(filter_mem);
+    const __global float* bias = (const __global float*)get_data(bias_mem);
     __global float* pDst = (__global float*)get_data(dst_mem);
-//
+    const __global uint* spatial_stride = get_spatial(stride);
+ //
 
     int global_id = get_global_id(0);
     const int batch_num = dst_size[0];
-    const int batch_offset = global_id % dst_size[0];
+    const int batch_offset = global_id % batch_num;
 
-    const int idx = global_id / batch_num;
+    const int ofm_num = dst_size[1];
+    const int ofm_offset = (global_id / batch_num) % ofm_num;
 
-    const int x = (idx % input_size[2]) * get_spatial(spatial_stride)[0];
-    const int y = (idx * get_spatial(spatial_stride)[1]) / input_size[2];
+    const int f_ofm_num = filter_size[1];
+    const int f_ofm_offset = (global_id % f_ofm_num) * filter_size[4] * filter_size[3] * filter_size[2];
 
+    const int idx = (global_id / batch_num);
+
+    const int i_ifm_num = input_size[1];
     const int out_offset = idx * batch_num + batch_offset;
 
+    const int x = ((idx / f_ofm_num) % input_size[2]) * spatial_stride[0];
+    const int y = ((idx / f_ofm_num) * spatial_stride[1]) / input_size[2];
+
+
     pDst[out_offset] = 0;
-    for (uint i = 0; i < filter_size[4]; i++)
+    for (uint h = 0; h < filter_size[2]; h++)
     {
-        for (uint j = 0; j < filter_size[3]; j++)
+        const int f_ifm_offset = h * filter_size[4] * filter_size[3];
+        for (uint i = 0; i < filter_size[4]; i++)
         {
-            int input_idx = (x + j + ((y + i) * input_size[2])) * batch_num + batch_offset;
-            int filter_idx = i * filter_size[3] + j;
-            pDst[out_offset] += input[input_idx] * filter[filter_idx];
+            for (uint j = 0; j < filter_size[3]; j++)
+            {
+                int input_idx = (x + j + ((y + i) * input_size[2])) * batch_num * i_ifm_num + h * batch_num + batch_offset;
+                int filter_idx = (i * filter_size[3] + j) + f_ofm_offset + f_ifm_offset;
+                pDst[out_offset] += input[input_idx] * filter[filter_idx];
+            }
         }
     }
-    pDst[out_offset] += bias;
+    pDst[out_offset] += bias[ofm_offset];
 }
 )__krnl";
-
-static cl_uint4 get_memory_sizes(const neural::memory& mem)
-{
-    auto size = mem.argument.size;
-    if (size.raw.size() > 4) {
-        throw std::runtime_error("Want to get size, but this is not a vector of sizes, because size is greater than 4!");
-    }
-
-    cl_uint4 x = { 0 };
-    std::copy(std::begin(size.raw), std::end(size.raw), x.s);
-    return x;
-}
 
 convolution_gpu::convolution_gpu(convolution &arg)
         : is_an_implementation(neural::type_id<convolution_cpu_reference>())
@@ -135,7 +180,7 @@ void convolution_gpu::implementation(const void *ptr) {
     auto& input_mem  = this_conv->input_memory(0);
     auto& output_mem = this_conv->output_memory(0);
     auto& filter_mem = this_conv->argument.input[1].primitive.as<const memory&>();
-    auto bias   = static_cast<float*>(this_conv->argument.input[2].primitive.as<const memory&>().pointer);
+    auto& bias_mem   = this_conv->argument.input[2].primitive.as<const memory&>();
 
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
     namespace nd = ndimensional;
@@ -149,29 +194,22 @@ void convolution_gpu::implementation(const void *ptr) {
     // Ofm and batch is cropped, ofm will be hold manually
     // Batch is included in output size
 
-    //
-    //auto inBuffer = toolkit.create_input_buffer<float>(input_mem);
-    //auto inputSizes = toolkit.get_memory_sizes(input_mem);
-
-    //auto filterBuffer = toolkit.create_input_buffer<float>(filter_mem);
-    //auto filterSizes = toolkit.get_memory_sizes(filter_mem);
-
-    //auto outBuffer = toolkit.create_output_buffer<float>(output_mem);
-    auto dstSizes = get_memory_sizes(output_mem);
-    size_t dstSize = dstSizes.s0 * dstSizes.s1 * dstSizes.s2 * dstSizes.s3;
-
-    auto biasSizes = get_memory_sizes(this_conv->argument.input[2].primitive.as<const memory&>());
-    cl_uint2 spatialStride = { stride.spatial[0], stride.spatial[1] };
-    
-    //for(int i = 0; i < dstSize; i++)
-    //    test_convolution_GPU((float*)input_mem.pointer, inputSizes, (float*)filter_mem.pointer, filterSizes, bias, (float*)output_mem.pointer, dstSizes, spatialStride);
-    //
+    size_t dstSize = output_mem.count();
 
     switch(padding){
         case padding::zero:
         {
-            auto kernel = gpu::kernel<gpu::input_mem, gpu::input_mem, float, gpu::output_mem, gpu::vector_arg>("Convolution_GPU");
-            kernel({ dstSize, 1 }, input_mem, filter_mem, bias[0], output_mem, stride);
+            auto kernel = gpu::kernel<gpu::input_mem, gpu::input_mem, gpu::input_mem, gpu::output_mem, gpu::vector_arg>("Convolution_GPU");
+            kernel({ dstSize, dstSize }, input_mem, filter_mem, bias_mem, output_mem, stride);
+
+
+            /*auto& m = gpu::gpu_toolkit::get().get_very_unsafe_delete_this_mapped_buffers();
+            for (int i = 0; i < dstSize; i++)
+                test_convolution_GPU(
+                    (neural_memory*)m[input_mem.pointer].second,
+                    (neural_memory*)m[filter_mem.pointer].second,
+                    (neural_memory*)m[bias_mem.pointer].second, 
+                    (neural_memory*)m[output_mem.pointer].second, spatialStride);*/
         }
             break;
         default:
