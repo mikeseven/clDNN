@@ -102,16 +102,10 @@ namespace neural {
     namespace {
         struct attach {
             attach() {
-                auto key_yxfb_f32 = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
-                auto key_byxf_f32 = std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32);
-
-                auto val_fw = lrn_cpu_reference::create;
-                //auto val_bw = lrn_backward_cpu_reference::create;
-
-                lrn_fw_implementation_map::instance().insert({ key_yxfb_f32, val_fw }); //todo keys should be different
-                lrn_fw_implementation_map::instance().insert({ key_byxf_f32, val_fw }); //todo keys should be different
-
-               //lrn_bw_implementation_map.insert({ key, val_bw });
+                auto &map = lrn_fw_implementation_map::instance();
+                map.insert({std::make_tuple(engine::reference, memory::format::yxfb_f32,     memory::format::yxfb_f32), lrn_cpu_reference::create});
+                map.insert({std::make_tuple(engine::reference, memory::format::byxf_f32,     memory::format::byxf_f32), lrn_cpu_reference::create});
+                map.insert({std::make_tuple(engine::reference, memory::format::byxf_b24_f32, memory::format::byxf_b24_f32), lrn_cpu_reference::create});
             }
             ~attach() {}
         };
