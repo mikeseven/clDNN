@@ -57,17 +57,14 @@ namespace neural {
 
         static void implementation(const void *ptr) {
 
-            //auto& toolkit = gpu::gpu_toolkit::get();
-
             auto this_fc = static_cast<const fully_connected *>(ptr);
 
             // input
             auto& input_mem = this_fc->input_memory(0);
-            auto& input_buffer_size = input_mem.argument.size;
 
-            assert(1 == input_buffer_size.feature.size());
-            assert(1 == input_buffer_size.batch.size());
-            assert(1 == input_buffer_size.feature[0]);
+            assert(1 == input_mem.argument.size.feature.size());
+            assert(1 == input_mem.argument.size.batch.size());
+            assert(1 == input_mem.argument.size.feature[0]);
 
             // weights
             auto& weight_mem = this_fc->input_memory(1);

@@ -58,21 +58,21 @@ namespace neural {
         pDst[out_offset] += bias[0];
     }*/
 
-    const std::string kernelCode = R"__krnl(
+const std::string kernelCode = R"__krnl(
 __kernel void Convolution_GPU(
     const __global neural_memory* input_mem,
     const __global neural_memory* filter_mem,
     float bias,
     __global neural_memory* dst_mem,
-    uint2 spatial_stride)
+    const __global neural_vector* spatial_stride)
 {
 
 //
     const __global uint* input_size = get_raw(input_mem);
     const __global uint* filter_size = get_raw(filter_mem);
     const __global uint* dst_size = get_raw(dst_mem);
-    const __global float* input = (__global float*)get_data(input_mem);
-    const __global float* filter = (__global float*)get_data(filter_mem);
+    const __global float* input = (const __global float*)get_data(input_mem);
+    const __global float* filter = (const __global float*)get_data(filter_mem);
     __global float* pDst = (__global float*)get_data(dst_mem);
 //
 
@@ -82,8 +82,8 @@ __kernel void Convolution_GPU(
 
     const int idx = global_id / batch_num;
 
-    const int x = (idx % input_size[2]) * spatial_stride.s0;
-    const int y = (idx * spatial_stride.s1) / input_size[2];
+    const int x = (idx % input_size[2]) * get_spatial(spatial_stride)[0];
+    const int y = (idx * get_spatial(spatial_stride)[1]) / input_size[2];
 
     const int out_offset = idx * batch_num + batch_offset;
 
@@ -170,8 +170,8 @@ void convolution_gpu::implementation(const void *ptr) {
     switch(padding){
         case padding::zero:
         {
-            auto kernel = gpu::kernel<gpu::input_mem, gpu::input_mem, cl_float, gpu::output_mem, cl_uint2>("Convolution_GPU");
-            kernel({ dstSize, 1 }, input_mem, filter_mem, bias[0], output_mem, spatialStride);
+            auto kernel = gpu::kernel<gpu::input_mem, gpu::input_mem, float, gpu::output_mem, gpu::vector_arg>("Convolution_GPU");
+            kernel({ dstSize, 1 }, input_mem, filter_mem, bias[0], output_mem, stride);
         }
             break;
         default:

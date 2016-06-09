@@ -32,8 +32,21 @@
 namespace neural { namespace gpu {
 
 struct neural_memory;
+struct neural_vector;
 
-class buffer {
+
+class vector_arg {
+    const neural::vector<uint32_t>& _vec;
+    cl::Buffer _clBuffer;
+public:
+    vector_arg(const neural::vector<uint32_t>& arg);
+    const cl::Buffer& get_buffer() const { return _clBuffer; };
+
+    ~vector_arg();
+};
+
+
+class memory_arg {
     const neural::memory& _mem;
     cl::Buffer _clBuffer;
     bool is_own() const {
@@ -42,26 +55,42 @@ class buffer {
     bool _copy_input;
     bool _copy_output;
 
-    size_t size() const;
-
 protected:
-    buffer(const neural::memory& mem, bool copy_input, bool copy_output);
+    memory_arg(const neural::memory& mem, bool copy_input, bool copy_output);
 
 public:
-    cl::Buffer get_buffer() const { return _clBuffer; }
-
-    ~buffer();
+    const cl::Buffer& get_buffer() const { return _clBuffer; };
+    ~memory_arg();
 };
 
-class input_mem : public buffer {
+class input_mem : public memory_arg {
 public:
-    input_mem(const neural::memory& mem) :buffer(mem, true, false) {}
+    input_mem(const neural::memory& mem) :memory_arg(mem, true, false) {}
 };
 
-class output_mem : public buffer {
+class output_mem : public memory_arg {
 public:
-    output_mem(const neural::memory& mem) :buffer(mem, false, true) {}
+    output_mem(const neural::memory& mem) :memory_arg(mem, false, true) {}
 };
+
+template<typename T, class Enable=void>
+struct kernel_arg_handler;
+
+template<typename T>
+struct kernel_arg_handler<T, typename std::enable_if<!std::is_base_of<memory_arg, T>::value>::type> {
+    static const T& get(const T& arg) { return arg; }
+};
+
+template<typename T>
+struct kernel_arg_handler<T, typename std::enable_if<std::is_base_of<memory_arg, T>::value>::type> {
+    static const cl::Buffer& get(const T& arg) { return arg.get_buffer(); }
+};
+
+template<>
+struct kernel_arg_handler<vector_arg> {
+    static const cl::Buffer& get(const vector_arg& arg) { return arg.get_buffer(); };
+};
+
 
 class kernel_execution_options {
     cl::NDRange _global;
@@ -77,30 +106,16 @@ template<typename... Args>
 class kernel {
     cl::Kernel _kernel;
 
-    
-    template<typename Ti>
-    void setKernelArg(unsigned index, const Ti& arg) {
-        _kernel.setArg(index, arg);
-    }
-
-    void setKernelArg(unsigned index, const input_mem& arg) {
-        _kernel.setArg(index, arg.get_buffer());
-    }
-
-    void setKernelArg(unsigned index, const output_mem& arg) {
-        _kernel.setArg(index, arg.get_buffer());
-    }
-
     template<unsigned index, typename Ti, typename... Ts>
     void setArgs(Ti&& arg, Ts&&... args) {
-        setKernelArg(index, arg);
+        _kernel.setArg(index, kernel_arg_handler<Ti>::get(arg));
         setArgs<index + 1, Ts...>(std::forward<Ts>(args)...);
     }
 
 
     template<unsigned index, typename Ti>
     void setArgs(Ti&& arg) {
-        setKernelArg(index, arg);
+        _kernel.setArg(index, kernel_arg_handler<Ti>::get(arg));
     }
 
     template<unsigned index>
@@ -132,7 +147,7 @@ private:
 
     std::unique_ptr<cl::Program> program;
 
-    std::map<void*, std::pair<const cl::Buffer, neural_memory*>> _mapped_buffers;
+    std::map<void*, std::pair<const cl::Buffer, neural_memory*>> _mapped_memory;
 
 private:
     gpu_toolkit();
@@ -157,8 +172,8 @@ public:
 
     cl::Kernel get_kernel(const std::string& name) { return cl::Kernel(get_program(), name.c_str()); }
 
-    neural_memory* new_buffer(neural::memory::arguments arg);
-    neural_memory* map_buffer(const cl::Buffer& buf, cl::size_type size, cl_map_flags flags = CL_MAP_WRITE);
+    neural_memory* new_memory_buffer(neural::memory::arguments arg);
+    neural_memory* map_memory_buffer(const cl::Buffer& buf, cl::size_type size, cl_map_flags flags = CL_MAP_WRITE);
     cl::Buffer unmap_buffer(void* pointer);
 
     static gpu_toolkit& get();
