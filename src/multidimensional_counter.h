@@ -112,10 +112,6 @@ std::ostream &operator<<(std::ostream &out, value<U> &val) {
     return out;
 }
 
-// todo rename or remove fptr
-typedef size_t (*fptr)(std::vector<uint32_t> size, std::vector<uint32_t> pos);
-DLL_SYM fptr choose_calculate_idx(neural::memory::format::type arg);
-
 typedef void*(*pfptr)(const neural::memory& mem, const std::vector<uint32_t>& pos);
 // Returns a function, which when given a neural::memory and position,
 // returns a pointer to the data. The type is memory-format dependent.
