@@ -117,15 +117,29 @@ void* pointer(const neural::memory& mem, const std::vector<uint32_t>& pos);
 template <> void* pointer<neural::memory::format::xb_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
     auto size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
-    auto index = pos[0] + size[0]*pos[2];
-   float* array_ptr = static_cast<float*>(mem.pointer);
+
+    auto b = pos[0];
+    auto B = size[0];
+    auto x = pos[2];
+    
+    auto index = b + B*x;
+    float* array_ptr = static_cast<float*>(mem.pointer);
     return &(array_ptr[index]);
 };
 
 template <> void* pointer<neural::memory::format::yxfb_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
     auto size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
-    auto index = pos[0] + size[0] * (pos[1] + size[1]*(pos[2] + size[2] * pos[3]));
+
+    auto b = pos[0];
+    auto B = size[0];
+    auto f = pos[1];
+    auto F = size[1];
+    auto x = pos[2];
+    auto X = size[2];
+    auto y = pos[3];
+
+    auto index = b + B * (f + F*(x + X * y));
     float* array_ptr = static_cast<float*>(mem.pointer);
     return &(array_ptr[index]);
 };
@@ -134,7 +148,18 @@ template <> void* pointer<neural::memory::format::oiyx_f32>(const neural::memory
     auto size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
     assert(1 == size[0]); // batch
-    auto index = pos[3] + size[3] * (pos[4] + size[4] * (pos[2] + size[2] * pos[1]));
+
+    auto o = pos[1];
+    auto i = pos[2];
+    auto I = size[2];
+    
+    auto x = pos[3];
+    auto X = size[3];
+
+    auto y = pos[4];
+    auto Y = size[4];
+
+    auto index = x + X * (y + Y * (i + I * o));
     float* array_ptr = static_cast<float*>(mem.pointer);
     return &(array_ptr[index]);
 };

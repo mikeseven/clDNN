@@ -36,8 +36,8 @@ void convolution_cpu_reference::implementation(const void *ptr) {
 
     auto& input_mem = this_conv->input_memory(0);
     auto& output_mem = this_conv->output_memory(0);
-    auto& filter_mem = this_conv->argument.input[1].primitive.as<const memory&>();
-    auto& bias_mem = this_conv->argument.input[2].primitive.as<const memory&>();
+    auto& filter_mem = this_conv->input_memory(1);
+    auto& bias_mem = this_conv->input_memory(2);
 
     auto& input_arg  = this_conv->input_memory(0).argument;
 
@@ -72,7 +72,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
         {
             for(auto pos : range) {
                 output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
-                bias = static_cast<float*>(calc_bias_ptr(bias_mem, {0,0,pos[f_pos]}));
+                bias = static_cast<float*>(calc_bias_ptr(bias_mem, {0, 0, pos[f_pos]}));
                 *(output) = *bias;
             }
 
@@ -155,14 +155,18 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     if(bias_arg.size.spatial[0]   != bw_input_arg.size.feature[0])    throw std::runtime_error("Backward convolution biases/bw_input dimensions does not match.");
     if(bias_arg.size              != bias_diff_arg.size)              throw std::runtime_error("Backward convolution bias/bias_diff size doesn't match.");
 
-    auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer);
-    auto fw_input     = static_cast<float*>(this_bw_conv->input_memory(1).pointer);
-    auto weights      = static_cast<float*>(this_bw_conv->input_memory(2).pointer);
+    auto& bw_input_mem = this_bw_conv->input_memory(0);
+    auto& fw_input_mem = this_bw_conv->input_memory(1);
+    auto& weights_mem  = this_bw_conv->input_memory(2);
+
+    float *bw_input, *fw_input, *weights;
     //todo fw bias is used only for size check, is it needed?
 
-    auto bw_output    = static_cast<float*>(this_bw_conv->output_memory(0).pointer);
-    auto weights_diff = static_cast<float*>(this_bw_conv->output_memory(1).pointer);
-    auto bias_diff    = static_cast<float*>(this_bw_conv->output_memory(2).pointer);
+    auto& bw_output_mem     = this_bw_conv->output_memory(0);
+    auto& weights_diff_mem  = this_bw_conv->output_memory(1);
+    auto& bias_diff_mem     = this_bw_conv->output_memory(2);
+
+    float *bw_output, *weights_diff, *bias_diff;
 
     //todo review conditions below
     for(size_t i = 0; i < bw_output_offset.raw.size(); ++i){
@@ -189,15 +193,20 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     nd::value<uint32_t> bias_range (bias_arg.size);
     nd::value<uint32_t> range (bw_input_size); //todo in/out size?
     nd::value<uint32_t> window_range (filter_arg.size);
-    auto calc_in_idx   = nd::choose_calculate_idx(bw_input_arg.format);
-    auto calc_out_idx  = nd::choose_calculate_idx(bw_output_arg.format);
-    auto calc_win_idx  = nd::choose_calculate_idx(filter_arg.format);
+    auto calc_in_ptr        = nd::choose_calculate_ptr(bw_input_mem);
+    auto calc_out_ptr       = nd::choose_calculate_ptr(bw_output_mem);
+    auto calc_win_ptr       = nd::choose_calculate_ptr(weights_mem);
+    auto calc_diff_ptr      = nd::choose_calculate_ptr(weights_diff_mem);
+    auto calc_fw_input_ptr  = nd::choose_calculate_ptr(fw_input_mem);
+    auto calc_bias_diff_ptr = nd::choose_calculate_ptr(bias_diff_mem);
 
     switch(padding){
         case padding::zero:
         {
             for(auto pos : range) {
-                auto in_idx = calc_in_idx(bw_input_arg.size.raw , pos + bw_input_offset);
+                auto in_pos = pos + bw_input_offset;
+                bw_input = static_cast<float*>(calc_in_ptr(bw_input_mem, in_pos));
+                bias_diff       = static_cast<float*>(calc_bias_diff_ptr(bias_diff_mem, {0, 0, pos[F_POS]}));
 
                 for(auto win_pos : window_range){
                     const std::vector<uint32_t> arg_out_idx = nd::value<uint32_t>(bw_output_offset) + pos*stride + win_pos;
@@ -205,15 +214,17 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
                     if( nd::is_out_of_range(bw_output_arg.size, arg_out_idx) )
                         continue;
 
-                    auto out_idx = calc_out_idx(bw_output_arg.size.raw, arg_out_idx);
-                    auto win_idx = calc_win_idx(filter_arg.size.raw, win_pos);
+                    bw_output       = static_cast<float*>(calc_out_ptr(bw_output_mem, arg_out_idx));
+                    weights         = static_cast<float*>(calc_win_ptr(weights_mem, win_pos));
+                    weights_diff    = static_cast<float*>(calc_diff_ptr(weights_diff_mem, win_pos));
+                    fw_input        = static_cast<float*>(calc_fw_input_ptr(fw_input_mem, arg_out_idx));
 
-                    auto sensitivity = bw_input[in_idx] * weights[win_idx];
+                    auto sensitivity = *bw_input * *weights;
 
-                    bw_output[out_idx] += sensitivity;
-                    weights_diff[win_idx] += fw_input[out_idx] * sensitivity;
+                    *bw_output += sensitivity;
+                    *weights_diff += *fw_input * sensitivity;
                 }
-                bias_diff[ pos[F_POS] ] += bw_input[in_idx];
+                *bias_diff += *bw_input;
             }
             break;
         }
