@@ -32,9 +32,12 @@ struct MKL_DNNMemory : PrvMemDescr,
     {
       if (layout_usr != layout_prv)
       {
-        // TODO: use the same engine as in the layer
-        to_prv   = reorder::create(reorder::arguments({engine::reference, memory_prv, memory_usr}));
-        from_prv = reorder::create(reorder::arguments({engine::reference, memory_usr, memory_prv}));
+        if (layout_usr == neural::memory::format::bfyx_f32 
+                && layout_prv == neural::memory::format::byxf_f32)
+            engine_to_prv_ = engine::cpu;
+
+        to_prv   = reorder::create(reorder::arguments({engine_to_prv_, memory_prv, memory_usr}));
+        from_prv = reorder::create(reorder::arguments({engine_from_prv_, memory_usr, memory_prv}));
       }
     };
     
@@ -52,6 +55,10 @@ struct MKL_DNNMemory : PrvMemDescr,
   primitive memory_prv = nullptr;
   primitive to_prv     = nullptr;
   primitive from_prv   = nullptr;
+
+  // TODO: use the same engine as for the layers
+  neural::engine::type engine_to_prv_ = engine::reference;
+  neural::engine::type engine_from_prv_ = engine::reference;
   std::string name = "UNKNOWN";  // for debugging purposes
   vector<primitive> memory_prv_part_;    // TODO: better solution
   vector<primitive> memory_usr_part_;    // TODO: better solution
@@ -415,7 +422,7 @@ class MKL_DNNInnerProductLayer : public Layer<Dtype> {
   neural::engine::type engine_;
   neural::memory::format::type prv_layout_in_out_;
   neural::memory::format::type prv_layout_weights_;
-  const neural::memory::format::type usr_layout_in_out_  = memory::format::bx_f32;
+  neural::memory::format::type usr_layout_in_out_  = memory::format::bx_f32;
   const neural::memory::format::type usr_layout_weights_ = memory::format::oi_f32;
   const neural::memory::format::type layout_bias_        = memory::format::x_f32;
   primitive fcFwd_ = nullptr, fcBwd_ = nullptr;

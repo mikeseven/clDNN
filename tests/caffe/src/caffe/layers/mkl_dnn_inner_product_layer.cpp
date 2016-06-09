@@ -83,7 +83,7 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(
   switch (engine_) {
     case  neural::engine::cpu:
       prv_layout_in_out_  = memory::format::xb_f32;
-      prv_layout_weights_ = memory::format::io_f32;
+      prv_layout_weights_ = memory::format::io_i2_f32;
     break;
     case neural::engine::reference:
       prv_layout_in_out_  = memory::format::xb_f32;
@@ -96,13 +96,13 @@ void MKL_DNNInnerProductLayer<Dtype>::LayerSetUp(
   // Memory setup
   bottom_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
           usr_layout_in_out_, prv_layout_in_out_,
-          memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}},  1}}),
-          memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}},  1}}));
+          memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}},  {1}}}),
+          memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}},  {1}}}));
 
   top_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
           usr_layout_in_out_, prv_layout_in_out_,
-          memory::describe({engine_, usr_layout_in_out_, {batch, {{output_x}}, 1}}),
-          memory::describe({engine_, prv_layout_in_out_, {batch, {{output_x}}, 1}}));
+          memory::describe({engine_, usr_layout_in_out_, {batch, {{output_x}}, {1}}}),
+          memory::describe({engine_, prv_layout_in_out_, {batch, {{output_x}}, {1}}}));
 
   weights_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
           usr_layout_weights_, prv_layout_weights_,
@@ -194,17 +194,20 @@ void MKL_DNNInnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
     auto bottom_descr =  boost::static_pointer_cast<MKL_DNNData<Dtype> >
                (bottom[0]->get_prv_descriptor_data());
 
-    if(bottom_descr->layout_prv == neural::memory::format::yxfb_f32 &&
+    if(bottom_descr->layout_prv != prv_layout_in_out_ &&
             bottom_data_xb_ == nullptr) {
       uint32_t n = bottom[0]->shape(0);
       uint32_t c = bottom[0]->shape(1);
       uint32_t h = bottom[0]->shape(2);
       uint32_t w = bottom[0]->shape(3);
 
+      usr_layout_in_out_ = neural::memory::format::bfyx_f32;
       bottom_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
-          neural::memory::format::bfyx_f32, neural::memory::format::fyxb_f32,
-          memory::describe({engine_, neural::memory::format::bfyx_f32, {n, {{w, h}}, c}}),
+          usr_layout_in_out_ , neural::memory::format::fyxb_f32,
+          memory::describe({engine_, usr_layout_in_out_, {n, {{w, h}}, c}}),
           memory::describe({engine_, neural::memory::format::fyxb_f32, {n, {{w, h}}, c}}));
+
+      bottom_data_ ->name = "fwd_bottom_data   @ " + this->layer_param_.name() + "  ";
 
       // Fake buffer for casting fyxb => xb
       bottom_data_xb_ =  memory::describe({engine_, neural::memory::format::xb_f32, {n, {{w*h*c}}, 1}});
