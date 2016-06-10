@@ -20,6 +20,7 @@
 #include "tests/gtest/gtest.h"
 #include "test_utils/test_utils.h"
 #include "memory_utils.h"
+#include "multidimensional_counter.h"
 #include <algorithm>
 #include <thread>
 
@@ -1128,4 +1129,114 @@ TEST(convolution_f32_fw, optimized_generic_spatials_maps_test) {
                                      , filter, filter_size, bias , batch_size, true)) << "test configuration:\tx: " << x << "\ty: " << y;
         }
     }
+}
+
+
+TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
+    const uint32_t in_x = 2, in_y = 2, in_f = 16,
+                   out_x= 1, out_y= 1, out_f= 8,
+                   str_x= 2, str_y= 2,
+                   filter_x= 2, filter_y= 2,
+                   b = 24,
+                   groups = 2;
+
+    static_assert(0 ==  in_f % groups, "0 !=  in_f % groups");
+    static_assert(0 == out_f % groups, "0 != out_f % groups");
+
+    // allocate memory buffers
+    auto input      = memory::allocate({engine::reference, memory::format::byxf_b24_f32, {b, { in_x,  in_y},  in_f}});
+
+    auto output_opt = memory::allocate({engine::reference, memory::format::byxf_b24_f32, {b, {out_x, out_y}, out_f}});
+    auto weight_opt = memory::allocate({engine::reference, memory::format:: yxoi_o4_f32, {1, {filter_x, filter_y},{out_f, in_f/groups}}});
+    auto biases_opt = memory::allocate({engine::reference, memory::format::       x_f32, {1, {{out_f}} , 1}});
+
+    auto output_ref1= memory::allocate({engine::reference, memory::format::byxf_b24_f32, {b, {out_x, out_y}, out_f/2}});
+    auto weight_ref1= memory::allocate({engine::reference, memory::format:: yxoi_o4_f32, {1, {filter_x, filter_y},{out_f/groups, in_f/groups}}});
+    auto biases_ref1= memory::allocate({engine::reference, memory::format::       x_f32, {1, {{out_f/2}} , 1}});
+
+    auto output_ref2= memory::allocate({engine::reference, memory::format::byxf_b24_f32, {b, {out_x, out_y}, out_f/2}});
+    auto weight_ref2= memory::allocate({engine::reference, memory::format:: yxoi_o4_f32, {1, {filter_x, filter_y},{out_f/groups, in_f/groups}}});
+    auto biases_ref2= memory::allocate({engine::reference, memory::format::       x_f32, {1, {{out_f/2}} , 1}});
+
+    auto engine_resource = worker_cpu::create({1});
+
+    auto conv_group = convolution::create( {neural::engine::cpu,
+                                            output_opt,
+                                            {input, weight_opt, biases_opt},
+                                            {1, {str_x, str_y}, 1},
+                                            padding::zero}
+                                          );
+
+    auto conv1 = convolution::create( {neural::engine::reference,
+                                       output_ref1,
+                                       {0, {0, 0}, 0},                // out offfset
+                                       {b, {out_x, out_y}, out_f/groups},  // size
+                                       {input, weight_ref1, biases_ref1},
+                                       {0, {0, 0}, 0},                // in offset
+                                       {1, {str_x, str_y}, 1},
+                                       padding::zero}
+                                     );
+
+    auto conv2 = convolution::create( {neural::engine::reference,
+                                       output_ref2,
+                                       {0, {0, 0}, out_x/2},          // out offfset
+                                       {b, {out_x, out_y}, out_f/groups},  // size
+                                       {input, weight_ref1, biases_ref2},
+                                       {0, {0, 0}, in_f/2},           // in offset
+                                       {1, {str_x, str_y}, 1},
+                                       padding::zero}
+                                     );
+
+    // initialize buffers
+    fill<float>(input, 1.0f);
+    fill<float>(weight_ref1, 0.0f);
+    fill<float>(weight_ref2, 0.0f);
+    fill<float>(biases_ref1, 0.0f);
+    fill<float>(biases_ref2, 0.0f);
+    fill<float>(weight_opt, 0.0f);
+    fill<float>(biases_opt, 0.0f);
+
+    namespace nd = ndimensional;
+    // copy (concatenate) weights and biases for conv_group
+    for(size_t i = 0; i < out_f/groups ; ++i){
+        static_cast<float*>(biases_opt.as<const memory&>().pointer)[i]              = static_cast<float*>(biases_ref1.as<const memory&>().pointer)[i];
+        static_cast<float*>(biases_opt.as<const memory&>().pointer)[i+out_f/groups] = static_cast<float*>(biases_ref2.as<const memory&>().pointer)[i];
+    }
+
+    auto& w_ref1_mem = weight_ref1.as<const memory&>();
+    auto& w_ref2_mem = weight_ref2.as<const memory&>();
+    auto& w_opt_mem  = weight_opt .as<const memory&>();
+    float* w_opt_ptr  = static_cast<float*>( w_opt_mem.pointer);
+    float* w_ref1_ptr = static_cast<float*>(w_ref1_mem.pointer);
+    float* w_ref2_ptr = static_cast<float*>(w_ref2_mem.pointer);
+    nd::value<uint32_t> w_ref_range(w_ref1_mem.argument.size);
+
+    auto calc_w_ref_idx = nd::choose_calculate_idx(w_ref1_mem.argument.format); //w_ref1 and w_ref2 has the same format and dimensions
+    auto calc_w_opt_idx = nd::choose_calculate_idx(w_opt_mem .argument.format);
+    for(auto pos : w_ref_range){
+        // copy data from reference weights(1) to optimized weights
+        auto ref_idx = calc_w_ref_idx( w_ref1_mem.argument.size.raw, pos);
+        auto opt_idx = calc_w_opt_idx( w_opt_mem.argument .size.raw, pos);
+        w_opt_ptr[opt_idx] = w_ref1_ptr[ref_idx];
+
+        // copy data from reference weights(2) to optimized weights, just add ofm and ifm offsets
+        opt_idx = calc_w_opt_idx( w_opt_mem.argument .size.raw, pos + neural::vector<uint32_t>{0, {0, 0}, {out_f/groups, 0}});
+        w_opt_ptr[opt_idx] = w_ref2_ptr[ref_idx];
+    }
+
+    execute(
+    {
+    conv_group,
+    conv1, conv2
+    }, {engine_resource}).wait();
+
+    auto output_opt_ptr  = static_cast<float*>(output_opt .as<const memory&>().pointer);
+    auto output_ref1_ptr = static_cast<float*>(output_ref1.as<const memory&>().pointer);
+    auto output_ref2_ptr = static_cast<float*>(output_ref2.as<const memory&>().pointer);
+    for(size_t i = 0; i < output_ref1.as<const memory&>().count(); ++i)
+        EXPECT_EQ(true, tests::are_equal(output_ref1_ptr[i], output_opt_ptr[i])) << "at pos: " << i << " group: " << 1;
+
+    output_opt_ptr += output_ref1.as<const memory&>().count();
+    for(size_t i = 0; i < output_ref2.as<const memory&>().count(); ++i)
+        EXPECT_EQ(true, tests::are_equal(output_ref2_ptr[i], output_opt_ptr[i])) << "at pos: " << i << " group: " << 2;
 }
