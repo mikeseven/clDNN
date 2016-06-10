@@ -104,8 +104,9 @@ struct lrn_cpu_avx2_batch24 : public neural::is_an_implementation {
 
 #pragma pack(push, 1)
     struct task_data_t {
-        float *input_ptr;
-        float *output_ptr;
+        float **input_ptr;
+        float **output_ptr;
+        uint64_t offset;
         uint32_t feature_count;
         float alpha;
         float k;
@@ -121,30 +122,34 @@ struct lrn_cpu_avx2_batch24 : public neural::is_an_implementation {
         , outer(outer)
     {
         if(outer.argument.size!=5) throw std::runtime_error("lrn_cpu_avx2_batch24: only normalization size of 5 currently supported");
-        if(outer.argument.output_size.batch!=24) throw std::runtime_error("lrn_cpu_avx2_batch24: only batch size of 24 currently supported");
+        if(outer.argument.output_size.batch%24!=0) throw std::runtime_error("lrn_cpu_avx2_batch24: only batch size being multiple of 24 is currently supported");
         if(outer.argument.input_offset.batch!=0) throw std::runtime_error("lrn_cpu_avx2_batch24: only batch input offset 0 currently supported");
         if(outer.argument.output_offset.batch!=0) throw std::runtime_error("lrn_cpu_avx2_batch24: only batch output offset 0 currently supported");
 
+        const uint32_t batch24_count = outer.argument.output_size.batch/24;
         auto size_y = outer.argument.output_size.spatial[1];
         auto size_x = outer.argument.output_size.spatial[0];
-        task_data.resize(size_x*size_y);
-        tasks.resize(size_x*size_y);
+        task_data.resize(size_x*size_y*batch24_count);
+        tasks.resize(size_x*size_y*batch24_count);
         const uint64_t value_stride = 24*outer.input_memory(0).argument.size.feature;
-        for(uint32_t y=0; y<size_y; ++y)
-            for(uint32_t x=0; x<size_x; ++x) {
-                uint64_t offset = value_stride*(x+y*outer.input_memory(0).argument.size.spatial[0]);
-                float *input_ptr = static_cast<float *>(outer.input_memory(0).pointer) + offset;
-                float *outpt_ptr = static_cast<float *>(outer.output_memory(0).pointer) + offset;
-                auto index = x+y*size_x;
-                task_data[index] = task_data_t{
-                      input_ptr
-                    , outpt_ptr
-                    , outer.argument.output_size.feature
-                    , outer.argument.alpha
-                    , outer.argument.k
-                };
-                tasks[index] = { &implementation, &task_data[index] };
-            }
+        const uint64_t batch24_stride = value_stride*size_x*size_y;
+        float **input_ptr = reinterpret_cast<float **>(&outer.input_memory(0).pointer);
+        float **outpt_ptr = reinterpret_cast<float **>(&outer.output_memory(0).pointer);
+        for(uint32_t batch24_index=0; batch24_index<batch24_count; ++batch24_index)
+            for(uint32_t y=0; y<size_y; ++y)
+                for(uint32_t x=0; x<size_x; ++x) {
+                    uint64_t offset = value_stride*(x+y*outer.input_memory(0).argument.size.spatial[0]) + batch24_stride*batch24_index;
+                    auto index = x+size_x*(y+size_y*batch24_index);
+                    task_data[index] = task_data_t{
+                          input_ptr
+                        , outpt_ptr
+                        , offset
+                        , outer.argument.output_size.feature
+                        , outer.argument.alpha
+                        , outer.argument.k
+                    };
+                    tasks[index] = { &implementation, &task_data[index] };
+                }
     }
 
     task_group work() { return {tasks, schedule::unordered}; }
@@ -153,8 +158,8 @@ struct lrn_cpu_avx2_batch24 : public neural::is_an_implementation {
     static void implementation(const void *task_data) {
         auto ptr = static_cast<const task_data_t *>(task_data);
         auto feature_count  = ptr->feature_count;
-        auto input_ptr      = ptr->input_ptr;
-        auto output_ptr     = ptr->output_ptr;
+        auto input_ptr      = (*ptr->input_ptr)+ptr->offset;
+        auto output_ptr     = (*ptr->output_ptr)+ptr->offset;
         auto alpha          = ptr->alpha;
         auto k              = ptr->k;
 
