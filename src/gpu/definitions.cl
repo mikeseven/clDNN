@@ -44,6 +44,7 @@ typedef struct _neural_memory_tag {
     uint format;
     uint feature_offset;
     uint spatial_offset;
+    uint vector_size;
     uint data_offset;
     uint data[1];
 } neural_memory;
@@ -59,7 +60,7 @@ typedef struct _neural_vector_tag {
 // neural_memory accessors
 __attribute__((overloadable)) __global uint* get_raw(__global neural_memory* mem) { return &(mem->data[0]); }
 __attribute__((overloadable)) const __global uint* get_raw(const __global neural_memory* mem) { return &(mem->data[0]); }
-__attribute__((overloadable)) uint get_raw_size(const __global neural_memory* mem) { return mem->data_offset; } 
+__attribute__((overloadable)) uint get_raw_size(const __global neural_memory* mem) { return mem->vector_size; } 
 
 __attribute__((overloadable)) __global uint* get_batch(__global neural_memory* mem) { return get_raw(mem); }
 __attribute__((overloadable)) const __global uint* get_batch(const __global neural_memory* mem) { return get_raw(mem); }

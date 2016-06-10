@@ -45,6 +45,7 @@ typedef struct _neural_memory_tag {
     uint format;
     uint feature_offset;
     uint spatial_offset;
+    uint vector_size;
     uint data_offset;
     uint data[1];
 } neural_memory;
@@ -60,7 +61,7 @@ typedef struct _neural_vector_tag {
 // neural_memory accessors
 __attribute__((overloadable)) __global uint* get_raw(__global neural_memory* mem) { return &(mem->data[0]); }
 __attribute__((overloadable)) const __global uint* get_raw(const __global neural_memory* mem) { return &(mem->data[0]); }
-__attribute__((overloadable)) uint get_raw_size(const __global neural_memory* mem) { return mem->data_offset; } 
+__attribute__((overloadable)) uint get_raw_size(const __global neural_memory* mem) { return mem->vector_size; } 
 
 __attribute__((overloadable)) __global uint* get_batch(__global neural_memory* mem) { return get_raw(mem); }
 __attribute__((overloadable)) const __global uint* get_batch(const __global neural_memory* mem) { return get_raw(mem); }
@@ -81,7 +82,7 @@ __attribute__((overloadable)) size_t get_element_size(const __global neural_memo
 __attribute__((overloadable)) size_t get_data_size(const __global neural_memory* mem) {
     size_t result = get_element_size(mem);
 
-    __global uint* raw = get_raw(mem);
+    const __global uint* raw = get_raw(mem);
     uint raw_size = get_raw_size(mem);
 
     for(uint i = 0; i < raw_size; i++) {
@@ -115,16 +116,20 @@ size_t align_to(size_t size, size_t align) {
     return (size % align == 0) ? size : size - size % align + align;
 }
 
+size_t pad_to(size_t size, size_t align) {
+    return (size % align == 0) ? 0 : align - size % align;
+}
+
 template<typename T>
 T* allocate_aligned(size_t size, size_t align) {
     assert(sizeof(T) <= size);
     assert(alignof(T) <= align);
-    return reinterpret_cast<T*>(_aligned_malloc(align_to(size, align), align));
+    return reinterpret_cast<T*>(_mm_malloc(align_to(size, align), align));
 }
 
 template<typename T>
 void deallocate_aligned(T* ptr) {
-    _aligned_free(ptr);
+    _mm_free(ptr);
 }
 
 #if defined(_SECURE_SCL) && (_SECURE_SCL > 0)
@@ -151,27 +156,32 @@ struct neural_memory {
     cl_uint format;
     cl_uint feature_offset;
     cl_uint spatial_offset;
+    cl_uint vector_size;
     cl_uint data_offset;
     cl_uint data[1];
 
-    void* pointer() { return reinterpret_cast<void*>(raw_end()); }
-    cl_uint* raw_begin() { return data; }
-    size_t raw_size() const { return data_offset; }
-    cl_uint* raw_end() { return data + raw_size(); }
+    void* pointer() { return reinterpret_cast<void*>(&data[data_offset]); }
+    cl_uint* raw_begin() { return &data[0]; }
+    const cl_uint* raw_begin() const { return &data[0]; }
+    size_t raw_size() const { return vector_size; }
+
     size_t data_size() const {
-        auto result = memory::traits(static_cast<memory::format::type>(format)).type->size;
-        for (cl_uint i = 0; i < raw_size(); i++)
-            result *= data[i];
-        return result;
+        return std::accumulate( arr_begin(raw_begin(), raw_size()),
+                                arr_end(raw_begin(), raw_size()),
+                                memory::traits(static_cast<memory::format::type>(format)).type->size,
+                                std::multiplies<size_t>()
+        );
     }
 
     void initialize(neural::memory::arguments arg) {
         format = static_cast<cl_uint>(arg.format);
         feature_offset = static_cast<cl_uint>(arg.size.batch.size());
         spatial_offset = static_cast<cl_uint>(arg.size.batch.size() + arg.size.feature.size());
-        data_offset = static_cast<cl_uint>(arg.size.raw.size());
+        vector_size = static_cast<cl_uint>(arg.size.raw.size());
 
-        std::copy(std::begin(arg.size.raw), std::end(arg.size.raw), arr_begin(raw_begin(), data_offset));
+        data_offset = static_cast<cl_uint>(get_data_offset(arg));
+
+        std::copy(std::begin(arg.size.raw), std::end(arg.size.raw), arr_begin(raw_begin(), raw_size()));
     }
 
     static size_t header_size() {
@@ -179,17 +189,25 @@ struct neural_memory {
     }
 
     static size_t datasize(neural::memory::arguments arg) {
-        auto count = std::accumulate(arg.size.raw.begin(), arg.size.raw.end(), size_t(1), std::multiplies<size_t>());
-        auto elem_size = memory::traits(arg.format).type->size;
-        return count * elem_size;
+        return std::accumulate( arg.size.raw.begin(),
+                                arg.size.raw.end(),
+                                memory::traits(arg.format).type->size,
+                                std::multiplies<size_t>()
+        );
+    }
+
+    static size_t get_data_offset(neural::memory::arguments arg) {
+        auto header_and_raw_size = header_size() + arg.size.raw.size() * sizeof(cl_uint);
+        auto padding = pad_to(header_and_raw_size, CACHE_ALIGNMENT) / sizeof(cl_uint);
+        return arg.size.raw.size() + padding;
     }
 
     static size_t size_of_memory(neural::memory::arguments arg) {
-        return header_size() + arg.size.raw.size() * sizeof(cl_uint) + datasize(arg);
+        return header_size() + get_data_offset(arg) * sizeof(cl_uint) + datasize(arg);
     }
 
     size_t size() const {
-        return  header_size() + raw_size() * sizeof(cl_uint) + data_size();
+        return  header_size() + data_offset * sizeof(cl_uint) + data_size();
     }
 
     void* operator new(size_t) = delete;
@@ -204,9 +222,10 @@ struct neural_vector {
     cl_uint raw_size;
     cl_uint raw[1];
 
-    void* pointer() { return reinterpret_cast<void*>(raw_end()); }
     cl_uint* raw_begin() { return raw; }
+    const cl_uint* raw_begin() const { return raw; }
     cl_uint* raw_end() { return raw + raw_size; }
+    const cl_uint* raw_end() const { return raw + raw_size; }
 
     void initialize(const neural::vector<uint32_t>& src) {
         feature_offset = static_cast<cl_uint>(src.batch.size());
