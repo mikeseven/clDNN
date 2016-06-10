@@ -334,7 +334,7 @@ neural_memory* gpu_toolkit::new_memory_buffer(neural::memory::arguments arg) {
     end_event.wait();
     mapped_mem->initialize(arg);
     auto pointer = mapped_mem->pointer();
-    _mapped_memory.insert({ pointer,{ buffer, mapped_mem } });
+    _mapped_memory.push(pointer,{ buffer, mapped_mem });
     return mapped_mem;
 }
 
@@ -344,16 +344,13 @@ neural_memory* gpu_toolkit::map_memory_buffer(const cl::Buffer& buf, cl::size_ty
     auto mapped_mem = reinterpret_cast<neural_memory*>(queue.enqueueMapBuffer(buf, true, flags, 0, size, 0, &end_event));
     end_event.wait();
     auto pointer = mapped_mem->pointer();
-    _mapped_memory.insert({ pointer, {buf, mapped_mem} });
+    _mapped_memory.push( pointer, {buf, mapped_mem} );
     return mapped_mem;
 }
 
 cl::Buffer gpu_toolkit::unmap_buffer(void* pointer) {
     auto queue = cl::CommandQueue::getDefault();
-    auto it = _mapped_memory.find(pointer);
-    if (it == std::end(_mapped_memory)) throw std::runtime_error("The pointer is not the mapped buffer");
-    auto mapped = it->second;
-    _mapped_memory.erase(it);
+    auto mapped = _mapped_memory.pop(pointer);
     cl::Event end_event;
     queue.enqueueUnmapMemObject(mapped.first, mapped.second, 0, &end_event);
     end_event.wait();

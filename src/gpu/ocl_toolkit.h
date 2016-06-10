@@ -136,20 +136,35 @@ public:
     }
 };
 
-class gpu_toolkit {
+template<typename Key, typename Type, class Traits = std::less<Key>,
+    class Allocator = std::allocator<std::pair <const Key, Type> >>
+class push_pop_map {
+    std::mutex _mutex;
+    std::map<Key, Type, Traits, Allocator> _map;
 public:
-    using buffer_type = cl::Buffer;
+    void push(const Key& key, Type value) {
+        std::lock_guard<std::mutex> lock{ _mutex };
+        _map.insert({ key, value });
+    }
 
-private:
+    Type pop(const Key& key) {
+        std::lock_guard<std::mutex> lock{ _mutex };
+        auto it = _map.find(key);
+        if (it == _map.end()) throw std::out_of_range("Invalud push_pop_map<K, T> key");
+        auto x = std::move(it->second);
+        _map.erase(it);
+        return std::move(x);
+    }
+};
 
+class gpu_toolkit {
     bool program_modified = true;
     cl::Program::Sources kernel_sources;
 
     std::unique_ptr<cl::Program> program;
 
-    std::map<void*, std::pair<const cl::Buffer, neural_memory*>> _mapped_memory;
+    push_pop_map<void*, std::pair<const cl::Buffer, neural_memory*>> _mapped_memory;
 
-private:
     gpu_toolkit();
 
     static std::once_flag ocl_initialized;
