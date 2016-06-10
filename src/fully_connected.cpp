@@ -37,8 +37,7 @@ struct fully_connected_reference : is_an_implementation {
         auto& output_mem = this_fc->output_memory(0);
         auto& weight_mem = this_fc->input_memory(1);
         auto& bias_mem = this_fc->input_memory(2);
-        
-        float *input, *output, *weight, *bias;
+
         auto& weight_buffer_size = this_fc->input_memory(1).argument.size;
 
         auto& input_arg = this_fc->input_memory(0).argument;
@@ -73,21 +72,21 @@ struct fully_connected_reference : is_an_implementation {
         for (auto pos_out : range_output) {
 
             for (auto pos_in : range_input) {
-                input = static_cast<float*>(calc_in_ptr(input_mem, pos_in));
+                auto input = static_cast<float*>(calc_in_ptr(input_mem, pos_in));
                 batch_offset[BATCH_INDEX] = pos_in[BATCH_INDEX];
 
                 arg_weight_idx[1]  = pos_out[DATA_INDEX];
                 arg_weight_idx[2] = pos_in [DATA_INDEX];
 
-                weight = static_cast<float*>(calc_w_ptr(weight_mem, arg_weight_idx));
-                output = static_cast<float*>(calc_out_ptr(output_mem, pos_out + batch_offset));
+                auto weight = static_cast<float*>(calc_w_ptr(weight_mem, arg_weight_idx));
+                auto output = static_cast<float*>(calc_out_ptr(output_mem, pos_out + batch_offset));
 
                 *output += *input * *weight;
             }
             for (auto b = 0u; b < range_input[BATCH_INDEX]; b++) {
                 batch_offset[BATCH_INDEX] = b;
-                output = static_cast<float*>(calc_out_ptr(output_mem, pos_out + batch_offset));
-                bias = static_cast<float*>(calc_bias_ptr(bias_mem,{0, 0, pos_out[DATA_INDEX]}));
+                auto output = static_cast<float*>(calc_out_ptr(output_mem, pos_out + batch_offset));
+                auto bias = static_cast<float*>(calc_bias_ptr(bias_mem,{0, 0, pos_out[DATA_INDEX]}));
 
                 *output += *bias;
             }
@@ -127,7 +126,7 @@ primitive fully_connected::create(fully_connected::arguments arg) {
         weight_arg.format != memory::format::io_f32     &&
         weight_arg.format != memory::format::io_i13_f32 &&
         weight_arg.format != memory::format::io_i2_f32  )                throw std::runtime_error("Fully connected weight format is not oi_f32.");
-    
+
 
     // wrap into RAII wrapper
     std::unique_ptr<fully_connected> result(new fully_connected(arg));

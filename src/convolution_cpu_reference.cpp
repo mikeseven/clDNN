@@ -48,8 +48,6 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     // todo remove
     if(filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");
 
-    float *input, *output, *filter, *bias;
-
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
     namespace nd = ndimensional;
     nd::value<uint32_t> range (output_size.raw);
@@ -71,8 +69,8 @@ void convolution_cpu_reference::implementation(const void *ptr) {
         case padding::zero:
         {
             for(auto pos : range) {
-                output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
-                bias = static_cast<float*>(calc_bias_ptr(bias_mem, {0, 0, pos[f_pos]}));
+                auto output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
+                auto bias = static_cast<float*>(calc_bias_ptr(bias_mem, {0, 0, pos[f_pos]}));
                 *(output) = *bias;
             }
 
@@ -92,8 +90,8 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                         if( nd::is_out_of_range(input_arg.size, arg_in_idx) )
                             continue;
 
-                        input  = static_cast<float*> (calc_in_ptr ( input_mem, {arg_in_idx.begin(), arg_in_idx.end()} ));
-                        filter = static_cast<float*> (calc_filter_ptr( filter_mem,
+                        auto input  = static_cast<float*> (calc_in_ptr ( input_mem, {arg_in_idx.begin(), arg_in_idx.end()} ));
+                        auto filter = static_cast<float*> (calc_filter_ptr( filter_mem,
                                                      [&](){
                                                         auto vec = std::vector<uint32_t>({0, ofm-output_offset.feature[0]});
                                                         auto* win_pos_ptr = dynamic_cast<std::vector<uint32_t>*>(&win_pos);
@@ -102,7 +100,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                                                      }()
                                                     ));
 
-                        output = static_cast<float*> (calc_out_ptr(output_mem, pos_with_modified_ofm ));
+                        auto output = static_cast<float*> (calc_out_ptr(output_mem, pos_with_modified_ofm ));
 
                         *output += *input * *filter;
                     }
@@ -159,14 +157,11 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     auto& fw_input_mem = this_bw_conv->input_memory(1);
     auto& weights_mem  = this_bw_conv->input_memory(2);
 
-    float *bw_input, *fw_input, *weights;
     //todo fw bias is used only for size check, is it needed?
 
     auto& bw_output_mem     = this_bw_conv->output_memory(0);
     auto& weights_diff_mem  = this_bw_conv->output_memory(1);
     auto& bias_diff_mem     = this_bw_conv->output_memory(2);
-
-    float *bw_output, *weights_diff, *bias_diff;
 
     //todo review conditions below
     for(size_t i = 0; i < bw_output_offset.raw.size(); ++i){
@@ -205,8 +200,8 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
         {
             for(auto pos : range) {
                 auto in_pos = pos + bw_input_offset;
-                bw_input = static_cast<float*>(calc_in_ptr(bw_input_mem, in_pos));
-                bias_diff       = static_cast<float*>(calc_bias_diff_ptr(bias_diff_mem, {0, 0, pos[F_POS]}));
+                auto bw_input = static_cast<float*>(calc_in_ptr(bw_input_mem, in_pos));
+                auto bias_diff       = static_cast<float*>(calc_bias_diff_ptr(bias_diff_mem, {0, 0, pos[F_POS]}));
 
                 for(auto win_pos : window_range){
                     const std::vector<uint32_t> arg_out_idx = nd::value<uint32_t>(bw_output_offset) + pos*stride + win_pos;
@@ -214,10 +209,10 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
                     if( nd::is_out_of_range(bw_output_arg.size, arg_out_idx) )
                         continue;
 
-                    bw_output       = static_cast<float*>(calc_out_ptr(bw_output_mem, arg_out_idx));
-                    weights         = static_cast<float*>(calc_win_ptr(weights_mem, win_pos));
-                    weights_diff    = static_cast<float*>(calc_diff_ptr(weights_diff_mem, win_pos));
-                    fw_input        = static_cast<float*>(calc_fw_input_ptr(fw_input_mem, arg_out_idx));
+                    auto bw_output       = static_cast<float*>(calc_out_ptr(bw_output_mem, arg_out_idx));
+                    auto weights         = static_cast<float*>(calc_win_ptr(weights_mem, win_pos));
+                    auto weights_diff    = static_cast<float*>(calc_diff_ptr(weights_diff_mem, win_pos));
+                    auto fw_input        = static_cast<float*>(calc_fw_input_ptr(fw_input_mem, arg_out_idx));
 
                     auto sensitivity = *bw_input * *weights;
 

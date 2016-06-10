@@ -29,8 +29,6 @@ namespace neural {
             auto& input_mem     = this_pooling->input_memory(0);
             auto& output_mem    = this_pooling->output_memory(0);
 
-            float *input, *output;
-
             auto& input_arg = this_pooling->argument.input[0].primitive.as<const memory&>().argument;
 
             auto& input_buffer_size = input_arg.size;
@@ -66,7 +64,7 @@ namespace neural {
             switch (this_pooling->argument.mode) {
             case pooling::mode::max:
                 for (auto pos : range) {
-                    output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
+                    auto output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
 
                     float acc = -std::numeric_limits<float>::max();
                     for (auto win_pos : window_range) {
@@ -79,7 +77,7 @@ namespace neural {
                             continue;
                         }
 
-                        input = static_cast<float*>(calc_in_ptr(input_mem, { arg_in_idx.begin(), arg_in_idx.end() }));
+                        auto input = static_cast<float*>(calc_in_ptr(input_mem, { arg_in_idx.begin(), arg_in_idx.end() }));
                         acc = std::max(acc, *input);
                     }
                     *output = acc;
@@ -89,7 +87,7 @@ namespace neural {
             {
                 auto window_elements = std::accumulate(window.raw.cbegin(), window.raw.cend(), 1, std::multiplies<uint32_t>());
                 for (auto pos : range) {
-                    output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
+                    auto output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
 
                     float acc = 0.0f;
                     for (auto win_pos : window_range) {
@@ -98,7 +96,7 @@ namespace neural {
                         if (nd::is_out_of_range(input_arg.size, arg_in_idx))
                             continue;
 
-                        input = static_cast<float*>(calc_in_ptr(input_mem, { arg_in_idx.begin(), arg_in_idx.end() }));
+                        auto input = static_cast<float*>(calc_in_ptr(input_mem, { arg_in_idx.begin(), arg_in_idx.end() }));
                         acc += *input;
                     }
                     *output = acc / window_elements;

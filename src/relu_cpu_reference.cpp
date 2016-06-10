@@ -39,16 +39,14 @@ void relu_cpu_reference::implementation(const void *ptr) {
     auto& input_mem     = this_relu->input_memory(0);
     auto& output_mem    = this_relu->output_memory(0);
 
-    float *input, *output;
-
     namespace nd = ndimensional;
     nd::value<uint32_t> range ( output_size );
     auto calc_in_ptr  = nd::choose_calculate_ptr(input_mem);
     auto calc_out_ptr = nd::choose_calculate_ptr(output_mem);
 
     for(auto pos : range) {
-        input  = static_cast<float*>(calc_in_ptr (input_mem , pos + input_offset ));
-        output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
+        auto input  = static_cast<float*>(calc_in_ptr (input_mem , pos + input_offset ));
+        auto output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
 
         *output = std::max( *input, 0.0f) + this_relu->argument.negative_slope * std::min( *input, 0.0f);
     }
@@ -70,8 +68,6 @@ void relu_backward_cpu_reference::implementation(const void *ptr)
     auto& forward_input_mem       = this_relu->input_memory(1);
     auto& forward_input_grad_mem  = this_relu->output_memory(0);
 
-    float *forward_output_grad, *forward_input, *forward_input_grad;
-
     auto& forward_output_grad_offset = this_relu->argument.input_offset[0];
 
     auto& forward_input_offset = this_relu->argument.input_offset[1];
@@ -86,9 +82,9 @@ void relu_backward_cpu_reference::implementation(const void *ptr)
     auto calc_forward_output_grad_ptr = nd::choose_calculate_ptr(forward_output_grad_mem);
     auto calc_forward_input_grad_ptr  = nd::choose_calculate_ptr(forward_input_grad_mem);
     for(auto pos : range) {
-        forward_input       = static_cast<float*>(calc_forward_input_ptr      (forward_input_mem, pos + forward_input_offset));
-        forward_output_grad = static_cast<float*>(calc_forward_output_grad_ptr(forward_output_grad_mem, pos + forward_output_grad_offset));
-        forward_input_grad  = static_cast<float*>(calc_forward_input_grad_ptr (forward_input_grad_mem, pos + forward_input_grad_offset));
+        auto forward_input       = static_cast<float*>(calc_forward_input_ptr      (forward_input_mem, pos + forward_input_offset));
+        auto forward_output_grad = static_cast<float*>(calc_forward_output_grad_ptr(forward_output_grad_mem, pos + forward_output_grad_offset));
+        auto forward_input_grad  = static_cast<float*>(calc_forward_input_grad_ptr (forward_input_grad_mem, pos + forward_input_grad_offset));
 
         *forward_input_grad = (*forward_input <= 0.0f ? 0.0f : 1.0f) * *forward_output_grad;
     }

@@ -93,8 +93,6 @@ struct reorder_reference : is_an_implementation {
         auto& input_mem     = this_reorder->input_memory(0);
         auto& output_mem    = this_reorder->output_memory(0);
 
-        float *input, *output;
-
         auto& input_memory_arg  = this_reorder->input_memory(0).argument;
         auto& input_format = input_memory_arg.format;
 
@@ -123,8 +121,8 @@ struct reorder_reference : is_an_implementation {
         auto calc_out_ptr = nd::choose_calculate_ptr(output_mem);
 
         for(auto pos : range) {
-            input  = static_cast<float*>(calc_in_ptr(input_mem, pos));
-            output = static_cast<float*>(calc_out_ptr(output_mem, pos));
+            auto input  = static_cast<float*>(calc_in_ptr(input_mem, pos));
+            auto output = static_cast<float*>(calc_out_ptr(output_mem, pos));
 
             *output = *input;
         }

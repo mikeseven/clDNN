@@ -32,8 +32,6 @@ void softmax_cpu_reference::implementation(const void *ptr) {
     auto& input_mem     = this_softmax->input_memory(0);
     auto& output_mem    = this_softmax->output_memory(0);
 
-    float *input, *output;
-
     auto& input_offset  = this_softmax->argument.input_offset;
     auto& output_offset = this_softmax->argument.output_offset;
     auto& output_size   = this_softmax->argument.output_size;
@@ -51,19 +49,19 @@ void softmax_cpu_reference::implementation(const void *ptr) {
 
     // find max val per batch
     for(auto pos : range) {
-        input  = static_cast<float*>(calc_in_ptr (input_mem , pos + input_offset ));
+        auto input  = static_cast<float*>(calc_in_ptr (input_mem , pos + input_offset ));
         v_max[ pos[batch_index] ] = std::max( v_max[pos[batch_index]], *input);
     }
     for(auto pos : range) {
-        input   = static_cast<float*>(calc_in_ptr (input_mem , pos + input_offset ));
-        output  = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
+        auto input   = static_cast<float*>(calc_in_ptr (input_mem , pos + input_offset ));
+        auto output  = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
 
         *output = *input - v_max[ pos[batch_index] ]; // subtracte max val from every data point per batch
-       * output = std::exp(*output);  // exp
+        *output = std::exp(*output);  // exp
         v_acc[ pos[batch_index] ] += *output; // sum eveything per batch
     }
     for(auto pos : range) {
-        output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
+        auto output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
         *output /= v_acc[ pos[batch_index] ]; // compute softmax
     }
 }

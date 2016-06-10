@@ -49,8 +49,6 @@ namespace neural {
         auto& input_mem     = this_lrn->input_memory(0);
         auto& output_mem    = this_lrn->output_memory(0);
 
-        float *input, *output, *value;
-
         namespace nd = ndimensional;
         nd::value<uint32_t> range(output_size);
 
@@ -73,8 +71,8 @@ namespace neural {
             help_input_offset.feature[0] -= static_cast<int32_t>(size / 2);
 
             for (auto pos : range) {
-                input = static_cast<float*>(calc_in_ptr(input_mem, pos + input_offset));
-                output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
+                auto input = static_cast<float*>(calc_in_ptr(input_mem, pos + input_offset));
+                auto output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
 
                 float acc = 0.0f;
 
@@ -82,10 +80,10 @@ namespace neural {
 
                     auto input_pos = pos + help_input_offset + window_pos;
 
-                    if (nd::is_out_of_range(input_arg.size, input_pos)) 
+                    if (nd::is_out_of_range(input_arg.size, input_pos))
                         continue;
 
-                    value = static_cast<float*>(calc_in_ptr(input_mem, input_pos));
+                    auto value = static_cast<float*>(calc_in_ptr(input_mem, input_pos));
 
                     acc += (*value) * (*value);
                 }

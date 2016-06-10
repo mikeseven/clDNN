@@ -35,16 +35,12 @@ template<neural::memory::format::type FORMAT>
 void* pointer(const neural::memory& mem, const std::vector<uint32_t>& pos);
 
 template <> void* pointer<neural::memory::format::byxf_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
 
-    auto b = pos[0];
-    auto f = pos[1];
-    auto F = size[1];
-    auto x = pos[2];
-    auto X = size[2];
-    auto y = pos[3];
-    auto Y = size[3];
+    // BFXY represents buffer size, wbile bfxy represents current position
+                                const size_t F = size[1];   const size_t X = size[2];   const size_t Y = size[3];
+    const size_t b = pos[0];    const size_t f =  pos[1];   const size_t x =  pos[2];   const size_t y =  pos[3];
 
     auto index =  f + F * (x + X * (y + Y * b));
     float* array_ptr = static_cast<float*>(mem.pointer);
@@ -52,42 +48,38 @@ template <> void* pointer<neural::memory::format::byxf_f32>(const neural::memory
 };
 
 template <> void* pointer<neural::memory::format::xb_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
 
-    auto b = pos[0];
-    auto B = size[0];
-    auto x = pos[2];
-    
+    // BFXY represents buffer size, wbile bfxy represents current position
+    const size_t B = size[0];
+    const size_t b =  pos[0];   const size_t x = pos[2];
+
     auto index = b + B*x;
     float* array_ptr = static_cast<float*>(mem.pointer);
     return &(array_ptr[index]);
 };
 
 template <> void* pointer<neural::memory::format::bx_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
 
-    auto b = pos[0];
-    auto x = pos[2];
-    auto X = size[2];
-    
+    // BFXY represents buffer size, wbile bfxy represents current position
+    const size_t X = size[2];
+    const size_t b =  pos[0];   const size_t x = pos[2];
+
     auto index = x + X*b;
     float* array_ptr = static_cast<float*>(mem.pointer);
     return &(array_ptr[index]);
 };
 
 template <> void* pointer<neural::memory::format::bfyx_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
 
-    auto b = pos[0];
-    auto f = pos[1];
-    auto F = size[1];
-    auto x = pos[2];
-    auto X = size[2];
-    auto y = pos[3];
-    auto Y = size[3];
+    // BFXY represents buffer size, wbile bfxy represents current position
+                                const size_t F = size[1];   const size_t X = size[2];   const size_t Y = size[3];
+    const size_t b = pos[0];    const size_t f =  pos[1];   const size_t x =  pos[2];   const size_t y =  pos[3];
 
     auto index = x + X * (y + Y * (f + F * b));
     float* array_ptr = static_cast<float*>(mem.pointer);
@@ -95,16 +87,12 @@ template <> void* pointer<neural::memory::format::bfyx_f32>(const neural::memory
 };
 
 template <> void* pointer<neural::memory::format::yxfb_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
 
-    auto b = pos[0];
-    auto B = size[0];
-    auto f = pos[1];
-    auto F = size[1];
-    auto x = pos[2];
-    auto X = size[2];
-    auto y = pos[3];
+    // BFXY represents buffer size, wbile bfxy represents current position
+    const size_t B = size[0];   const size_t F = size[1];   const size_t X = size[2];
+    const size_t b =  pos[0];   const size_t f =  pos[1];   const size_t x =  pos[2];   const size_t y = pos[3];
 
     auto index = b + B * (f + F*(x + X * y));
     float* array_ptr = static_cast<float*>(mem.pointer);
@@ -112,27 +100,20 @@ template <> void* pointer<neural::memory::format::yxfb_f32>(const neural::memory
 };
 
 template <> void* pointer<neural::memory::format::oiyx_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
     assert(1 == size[0]); // batch
 
-    auto o = pos[1];
-    auto i = pos[2];
-    auto I = size[2];
-    
-    auto x = pos[3];
-    auto X = size[3];
+                                const size_t Fi = size[2];  const size_t X = size[3];   const size_t Y = size[4];
+    const size_t Fo = pos[1];   const size_t fi =  pos[2];  const size_t x =  pos[3];   const size_t y =  pos[4];
 
-    auto y = pos[4];
-    auto Y = size[4];
-
-    auto index = x + X * (y + Y * (i + I * o));
+    auto index = x + X * (y + Y * (fi + Fi * Fo));
     float* array_ptr = static_cast<float*>(mem.pointer);
     return &(array_ptr[index]);
 };
 
 template <> void* pointer<neural::memory::format::oyxi_o16_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
     assert(1 == size[0]); // batch
 
@@ -145,16 +126,12 @@ template <> void* pointer<neural::memory::format::oyxi_o16_f32>(const neural::me
 };
 
 template <> void* pointer<neural::memory::format::fyxb_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
 
-    auto b = pos[0];
-    auto B = size[0];
-    auto f = pos[1];
-    auto x = pos[2];
-    auto X = size[2];
-    auto y = pos[3];
-    auto Y = size[3];
+    // BFXY represents buffer size, wbile bfxy represents current position
+    const size_t B = size[0];                               const size_t X = size[2];   const size_t Y = size[3];
+    const size_t b =  pos[0];   const size_t f = pos[1];    const size_t x =  pos[2];   const size_t y =  pos[3];
 
     auto index = b + B * (x + X*(y + Y * f));
     float* array_ptr = static_cast<float*>(mem.pointer);
@@ -162,7 +139,7 @@ template <> void* pointer<neural::memory::format::fyxb_f32>(const neural::memory
 }
 
 template <> void* pointer<neural::memory::format::yxoi_o4_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
@@ -179,7 +156,7 @@ template <> void* pointer<neural::memory::format::yxoi_o4_f32>(const neural::mem
 }
 
 template <> void* pointer<neural::memory::format::byxf_b24_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
 
                                 const size_t F = size[1];   const size_t X = size[2];   const size_t Y = size[3];
@@ -192,31 +169,31 @@ template <> void* pointer<neural::memory::format::byxf_b24_f32>(const neural::me
 };
 
 template <> void* pointer<neural::memory::format::oi_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
-  /*  const size_t Fo = size[1];*/ const size_t Fi = size[2]; 
-    const size_t fo =  pos[1];     const size_t fi =  pos[2]; 
-    
+  /*  const size_t Fo = size[1];*/ const size_t Fi = size[2];
+    const size_t fo =  pos[1];     const size_t fi =  pos[2];
+
     assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
-    assert(1 == size[3]); 
-       
+    assert(1 == size[3]);
+
     auto index = fi + fo * Fi;
     float* array_ptr = static_cast<float*>(mem.pointer);
     return &(array_ptr[index]);
 }
 
 template <> void* pointer<neural::memory::format::io_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
-    const size_t Fo = size[1];  // const size_t Fi = size[2]; 
-    const size_t fo =  pos[1];   const size_t fi =  pos[2]; 
+    const size_t Fo = size[1];  // const size_t Fi = size[2];
+    const size_t fo =  pos[1];   const size_t fi =  pos[2];
 
     assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
-    assert(1 == size[3]); 
+    assert(1 == size[3]);
 
     auto index = fo + fi * Fo;
     float* array_ptr = static_cast<float*>(mem.pointer);
@@ -224,17 +201,17 @@ template <> void* pointer<neural::memory::format::io_f32>(const neural::memory& 
 }
 
 template <> void* pointer<neural::memory::format::io_i13_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
- /*   const size_t Fo = size[1];*/   const size_t Fi = size[2]; 
-    const size_t fo =  pos[1];       const size_t fi =  pos[2]; 
+ /*   const size_t Fo = size[1];*/   const size_t Fi = size[2];
+    const size_t fo =  pos[1];       const size_t fi =  pos[2];
 
     const uint32_t stride = 13;
     assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
-    assert(1 == size[3]); 
-    assert(0 == size[1] % stride ); 
+    assert(1 == size[3]);
+    assert(0 == size[1] % stride );
 
     auto index = fo % stride + fi * stride +(stride * Fi)*(fo / stride);
     float* array_ptr = static_cast<float*>(mem.pointer);
@@ -243,17 +220,17 @@ template <> void* pointer<neural::memory::format::io_i13_f32>(const neural::memo
  }
 
 template <> void* pointer<neural::memory::format::io_i2_f32>(const neural::memory& mem, const std::vector<uint32_t>& pos){
-    auto size = mem.argument.size.raw;
+    auto& size = mem.argument.size.raw;
     assert(is_in_range(size, pos));
 
     // BFXY represents buffer size, wbile bfxy represents current position
-  /*  const size_t Fo = size[1];*/  const size_t Fi = size[2]; 
-    const size_t fo =  pos[1];      const size_t fi =  pos[2]; 
+  /*  const size_t Fo = size[1];*/  const size_t Fi = size[2];
+    const size_t fo =  pos[1];      const size_t fi =  pos[2];
 
     const uint32_t stride = 2;
     assert(1 == size[0]); // Weights doesnt use batch, but the field must exist.
-    assert(1 == size[3]); 
-    assert(0 == size[1] % stride ); 
+    assert(1 == size[3]);
+    assert(0 == size[1] % stride );
 
     auto index = fo % stride + fi * stride +(stride * Fi)*(fo / stride);
     float* array_ptr = static_cast<float*>(mem.pointer);
