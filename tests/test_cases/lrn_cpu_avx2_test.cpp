@@ -119,3 +119,34 @@ TEST(local_response_normalization, lrn_cpu_avx2_batch24_x2) {
     for (size_t i = 0; i < size_x*size_y*batch*feature_maps; ++i)
         EXPECT_EQ(true, tests::are_equal(buff_reference[i], buff[i], 1e-04F, 1e-04F, 1e-04F)) << "at index " << i;
 }
+
+TEST(local_response_normalization, lrn_cpu_avx2_batch24_x2_user_mem) {
+    using namespace neural;
+
+    const uint32_t    size_x = 1
+                    , size_y = 2
+                    , feature_maps = 10
+                    , batch = 24*2
+                    , n = 5;
+    const float       k = 2.0f
+                    , alpha = 1e-4f
+                    , beta = 0.75f;
+
+    float* ptr = new float[batch*size_x*size_y*feature_maps];
+    auto input          = memory::describe({engine::reference, memory::format::byxf_b24_f32, {batch, {size_x, size_y}, feature_maps}});
+    auto output_valid   = memory::allocate({engine::reference, memory::format::byxf_b24_f32, {batch, {size_x, size_y}, feature_maps}});
+    auto output         = memory::allocate({engine::reference, memory::format::byxf_b24_f32, {batch, {size_x, size_y}, feature_maps}});
+
+    auto valid  = normalization::response::create({engine::reference, output_valid, input, n, padding::zero, k, alpha, beta });
+    auto tested = normalization::response::create({engine::cpu,       output,       input, n, padding::zero, k, alpha, beta });
+
+    input(ptr);
+    fill<float>(input);
+
+    execute({valid, tested}).wait();
+
+    auto buff           = static_cast<float*>(output.as<const memory&>().pointer);
+    auto buff_reference = static_cast<float*>(output_valid.as<const memory&>().pointer);
+    for (size_t i = 0; i < size_x*size_y*batch*feature_maps; ++i)
+        EXPECT_EQ(true, tests::are_equal(buff_reference[i], buff[i], 1e-04F, 1e-04F, 1e-04F)) << "at index " << i;
+}
