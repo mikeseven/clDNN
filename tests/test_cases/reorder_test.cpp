@@ -18,6 +18,7 @@
 
 #include "tests/gtest/gtest.h"
 #include "api/neural.h"
+#include "memory_utils.h"
 
 using namespace neural;
 using namespace std;
@@ -113,7 +114,7 @@ public:
 
     neural::primitive input   = memory::describe({engine::reference, in_layout, in_sizes});
     neural::primitive output  = memory::allocate({engine::reference, out_layout, out_sizes});
-    neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,input,output});
+    neural::primitive reorder = reorder::create({engine::reference,output, input});
 };
 
 TEST_F(Reorder_test_fixture,reorder_test_basic) {
@@ -140,7 +141,7 @@ TEST_F(Reorder_test_fixture,reorder_test_output_as_input_2pass) {
 
     auto input2  = memory::describe({engine::reference, out_layout, out_sizes});
     auto output2 = memory::allocate({engine::reference, in_layout, in_sizes});
-    auto reorder2    = reorder::create({engine::reference,input2,output2});
+    auto reorder2    = reorder::create({engine::reference, output2, input2});
 
     float* buf_out = nullptr;
     float* buf_out2 = nullptr;
@@ -162,4 +163,42 @@ TEST_F(Reorder_test_fixture,reorder_test_output_as_input_2pass) {
         result &= buf_out2[i] == in_buffer[i];
 
     EXPECT_EQ(true, result);
+}
+
+
+TEST(reorder_test, byxf_f32_to_byxf_b24_f32) {
+    const uint32_t y = 2, x = 3, f = 3, b = 24*2;
+
+    auto input      = memory::allocate({engine::reference, memory::format::byxf_f32,     {b, {x, y}, f}});
+    auto output     = memory::allocate({engine::reference, memory::format::byxf_b24_f32, {b, {x, y}, f}});
+    auto output_ref = memory::allocate({engine::reference, memory::format::byxf_b24_f32, {b, {x, y}, f}});
+    fill<float>(input.as<const memory&>());
+
+    auto valid  = reorder::create({engine::reference, output_ref, input});
+    auto tested = reorder::create({engine::cpu,       output,     input});
+    execute({valid, tested}).wait();
+
+    auto output_ptr     = static_cast<float *>(output.as<const memory&>().pointer);
+    auto output_ref_ptr = static_cast<float *>(output_ref.as<const memory&>().pointer);
+    for(size_t i = 0; i < y*x*f*b; ++i)
+        EXPECT_EQ(output_ptr[i], output_ref_ptr[i]);
+}
+
+
+TEST(reorder_test, bfyx_f32_to_byxf_f32) {
+    const uint32_t y = 5, x = 4, f = 3, b = 12;
+
+    auto input      = memory::allocate({engine::reference, memory::format::bfyx_f32, {b, {x, y}, f}});
+    auto output     = memory::allocate({engine::reference, memory::format::byxf_f32, {b, {x, y}, f}});
+    auto output_ref = memory::allocate({engine::reference, memory::format::byxf_f32, {b, {x, y}, f}});
+    fill<float>(input.as<const memory&>());
+
+    auto valid  = reorder::create({engine::reference, output_ref, input});
+    auto tested = reorder::create({engine::cpu,       output,     input});
+    execute({valid, tested}).wait();
+
+    auto output_ptr     = static_cast<float *>(output.as<const memory&>().pointer);
+    auto output_ref_ptr = static_cast<float *>(output_ref.as<const memory&>().pointer);
+    for(size_t i = 0; i < y*x*f*b; ++i)
+        EXPECT_EQ(output_ptr[i], output_ref_ptr[i]);
 }

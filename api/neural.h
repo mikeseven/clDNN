@@ -52,6 +52,10 @@ struct memory : is_a_primitive {
         x_f32,
         xb_f32,         // 1D+batch, float32
         bx_f32,         // 1D+batch, float32
+        oi_f32,
+        io_f32,
+        io_i13_f32,
+        io_i2_f32,
         yxfb_f32,       // 3D+batch, float32
         byxf_f32,       // for convolution_cpu_jit_batch1
         bfyx_f32,       // used in Caffe
@@ -66,6 +70,10 @@ struct memory : is_a_primitive {
     static const format_traits traits(format::type fmt) {
         switch(fmt) {
         case format::   x_f32: return {1, type_id<float>()};
+        case format::  oi_f32:
+        case format::  io_f32:
+        case format::  io_i13_f32:
+        case format::  io_i2_f32:
         case format::  xb_f32: return {2, type_id<float>()};
         case format::yxfb_f32:
         case format::byxf_f32:
@@ -154,14 +162,14 @@ private:
 //   Reorder yxfb_f32 to byxf_f32 on user-specified buffers on reference engine.
 //     neural::primitive input   = memory::describe({engine::reference, memory::format::yxfb_f32, {16, {4, 8}, 1}});
 //     neural::primitive output  = memory::describe({engine::reference, memory::format::byxf_f32, {16, {4, 8}, 1}});
-//     neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,input,output});
+//     neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,output,input});
 struct reorder : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
         std::vector<primitive>      output;
         std::vector<primitive_at>   input;  // 1: {input}
 
-        DLL_SYM arguments(neural::engine::type engine, primitive_at input, primitive output);
+        DLL_SYM arguments(neural::engine::type engine, primitive output, primitive_at input);
         DLL_SYM arguments(neural::engine::type engine, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input);
     };
     const arguments argument;
@@ -173,6 +181,7 @@ private:
     reorder(arguments arg) : is_a_primitive(type_id<const reorder>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
+    std::unique_ptr<is_an_implementation> _private;
 };
 
 

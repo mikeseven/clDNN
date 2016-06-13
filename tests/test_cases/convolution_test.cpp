@@ -785,10 +785,10 @@ TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x
     auto temp_output  = memory::allocate({engine::cpu, memory::format::yxfb_f32, {2, {5, 4}, 32}}); auto& temp_output_memory = temp_output.as<const memory&>();
 
     // Reordering primitives.
-    auto reorder_input_to_ref   = reorder::create({engine::reference, input, ref_input});
-    auto reorder_weights_to_ref = reorder::create({engine::reference, weights, ref_weights});
-    auto reorder_biases_to_ref  = reorder::create({engine::reference, biases, ref_biases});
-    auto reorder_output_to_tmp_ref  = reorder::create({engine::reference, output, temp_output});
+    auto reorder_input_to_ref   = reorder::create({engine::reference, ref_input, input});
+    auto reorder_weights_to_ref = reorder::create({engine::reference, ref_weights, weights});
+    auto reorder_biases_to_ref  = reorder::create({engine::reference, ref_biases, biases});
+    auto reorder_output_to_tmp_ref  = reorder::create({engine::reference, temp_output, output});
 
     // Main convolutions.
     auto opt_conv = convolution::create({engine::cpu, output, {input, weights, biases}, {1, {2, 3}, 1}, padding::zero});
@@ -955,10 +955,10 @@ TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
                                            );
 
     // Reordering primitives.
-    auto reorder_input_optimized_to_ref   = reorder::create({engine::reference, input_optimized, input_ref});
-    auto reorder_weights_optimized_to_ref = reorder::create({engine::reference, weights_optimized, weights_ref});
+    auto reorder_input_optimized_to_ref   = reorder::create({engine::reference, input_ref, input_optimized});
+    auto reorder_weights_optimized_to_ref = reorder::create({engine::reference, weights_ref, weights_optimized});
 
-    auto reorder_output_optimized_ref_format = reorder::create({engine::reference, output_optimized, output_optimized_in_ref_format});
+    auto reorder_output_optimized_ref_format = reorder::create({engine::reference, output_optimized_in_ref_format, output_optimized});
 
     auto engine_resource = worker_cpu::create({4});
      execute(

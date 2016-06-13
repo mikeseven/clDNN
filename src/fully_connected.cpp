@@ -16,6 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
+#include "fully_connected.h"
 #include "multidimensional_counter.h"
 #include "memory_utils.h"
 
@@ -65,15 +66,15 @@ struct fully_connected_reference : is_an_implementation {
         auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
         auto calc_w_idx   = nd::choose_calculate_idx(weight_arg.format);
 
-        std::vector<uint32_t> arg_weight_idx(3);
+        std::vector<uint32_t> arg_weight_idx(4);
         for (auto pos_out : range_output){
                 auto out_idx = calc_out_idx(output_arg.size.raw, pos_out);
 
                 for (auto pos_in : range_input){
                     auto in_idx = calc_in_idx(input_arg.size.raw, pos_in);
 
-                    arg_weight_idx[DATA_INDEX]  = pos_out[DATA_INDEX];
-                    arg_weight_idx[BATCH_INDEX] = pos_in [DATA_INDEX];
+                    arg_weight_idx[1]  = pos_out[DATA_INDEX];
+                    arg_weight_idx[2] = pos_in [DATA_INDEX];
                     auto w_idx = calc_w_idx(weight_arg.size.raw, arg_weight_idx);
                     output[out_idx + pos_in[BATCH_INDEX]] += input[in_idx] * weight[w_idx];
                 }
@@ -92,11 +93,6 @@ struct fully_connected_reference : is_an_implementation {
 //                                    engine                output                        input
 using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
-// map of available implementations
-static std::map<implementation_key, std::function<is_an_implementation *(fully_connected &)>> implementation_map = {
-    { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create },
-    { std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create }
-};
 
 fully_connected::arguments::arguments( neural::engine::type eng,
                                        primitive            out,
@@ -116,18 +112,21 @@ primitive fully_connected::create(fully_connected::arguments arg) {
     auto& weight_arg = arg.input[1].primitive.as<const memory&>().argument;
 
     if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Fully connected input/output number of dimension does not match.");
-    if (weight_arg.format != memory::format::xb_f32 &&
-        weight_arg.format != memory::format::x_f32)                 throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
+    if (weight_arg.format != memory::format::oi_f32     &&
+        weight_arg.format != memory::format::io_f32     &&
+        weight_arg.format != memory::format::io_i13_f32 &&
+        weight_arg.format != memory::format::io_i2_f32  )                throw std::runtime_error("Fully connected weight format is not oi_f32.");
+    
 
-    // wrap relu into RAII wrapper
+    // wrap into RAII wrapper
     std::unique_ptr<fully_connected> result(new fully_connected(arg));
 
     // create implementation for non-lazy evaluation
     if(0 == (arg.engine & engine::lazy)) {
         // lookup in database; throw if not found
         auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = implementation_map.find(key);
-        if (it == std::end(implementation_map)) throw std::runtime_error("not yet implemented");
+        auto it = fully_con_implementation_map::instance().find(key);
+        if (it == std::end(fully_con_implementation_map::instance())) throw std::runtime_error("not yet implemented");
 
         // create implementation & attach it to result
         auto implementation = it->second(*result);
@@ -137,6 +136,25 @@ primitive fully_connected::create(fully_connected::arguments arg) {
 
     // release RAII wrapper, return naked pointer
     return result.release();
+}
+
+namespace {
+	struct attach {
+		attach() {
+			fully_con_implementation_map::instance().insert({ std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create });
+			fully_con_implementation_map::instance().insert({ std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create });
+}
+		~attach() {}
+};
+
+
+#ifdef __GNUC__
+__attribute__((visibility("default"))) //todo meybe dll_sym?
+#elif _MSC_VER
+#   pragma section(".nn_init$m", read, write)
+#endif
+attach attach_impl;
+
 }
 
 }
