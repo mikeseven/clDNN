@@ -1136,7 +1136,7 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
     const uint32_t in_x = 2, in_y = 2, in_f = 16,
                    out_x= 1, out_y= 1, out_f= 8,
                    str_x= 2, str_y= 2,
-                   filter_x= 2, filter_y= 2,
+                   filter_x= 3, filter_y= 3,
                    b = 24,
                    groups = 2;
 
@@ -1181,20 +1181,20 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
                                        output_ref2,
                                        {0, {0, 0}, out_x/2},          // out offfset
                                        {b, {out_x, out_y}, out_f/groups},  // size
-                                       {input, weight_ref1, biases_ref2},
+                                       {input, weight_ref2, biases_ref2},
                                        {0, {0, 0}, in_f/2},           // in offset
                                        {1, {str_x, str_y}, 1},
                                        padding::zero}
                                      );
 
     // initialize buffers
-    fill<float>(input, 1.0f);
-    fill<float>(weight_ref1, 0.0f);
-    fill<float>(weight_ref2, 0.0f);
-    fill<float>(biases_ref1, 0.0f);
-    fill<float>(biases_ref2, 0.0f);
-    fill<float>(weight_opt, 0.0f);
-    fill<float>(biases_opt, 0.0f);
+    fill<float>(input);
+    fill<float>(weight_ref1);
+    fill<float>(weight_ref2);
+    fill<float>(biases_ref1);
+    fill<float>(biases_ref2);
+    fill<float>(weight_opt);
+    fill<float>(biases_opt);
 
     namespace nd = ndimensional;
     // copy (concatenate) weights and biases for conv_group
@@ -1224,11 +1224,8 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
         w_opt_ptr[opt_idx] = w_ref2_ptr[ref_idx];
     }
 
-    execute(
-    {
-    conv_group,
-    conv1, conv2
-    }, {engine_resource}).wait();
+    execute({conv1, conv2}, {engine_resource}).wait();
+    execute({conv_group}, {engine_resource}).wait();
 
     auto output_opt_ptr  = static_cast<float*>(output_opt .as<const memory&>().pointer);
     auto output_ref1_ptr = static_cast<float*>(output_ref1.as<const memory&>().pointer);

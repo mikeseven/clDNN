@@ -224,15 +224,15 @@ namespace {
         , float **  bias
         , uint64_t group_count
     ) : is_an_implementation(neural::type_id<jit_convolution_generic>())
-	  , code(input_feature_maps)
+	  , code(input_feature_maps/group_count)
     {
         // create tasks list
         assert(input_feature_maps  % input_features_per_iteration ==0 && "input feature map count is not a multiple of features-per-iteration");
         assert(output_feature_maps % output_features_per_iteration==0 && "output feature map count is not a multiple of features-per-iteration");
 
         // allocating buffers
-        const auto output_feature_blocks = output_feature_maps/group_count/output_features_per_iteration;
-        const auto input_feature_blocks  = input_feature_maps/group_count/input_features_per_iteration;
+        const auto output_feature_blocks = output_feature_maps/output_features_per_iteration;
+        const auto input_feature_blocks  = input_feature_maps/input_features_per_iteration;
 
         const uint64_t fma_per_iteration           = batch_size/register_width_in_float*output_features_per_iteration*input_features_per_iteration;
         const uint64_t fma_per_all_output_features = fma_per_iteration*input_feature_blocks*output_feature_blocks;
@@ -240,7 +240,7 @@ namespace {
         *const_cast<float *>(&fma_clock_count)     = 0.5f*fma_per_image_filtering;
 
         // creating tasks
-        const auto job_count        = output_height*output_width*group_count;
+        const auto job_count        = output_height*output_width;
 
         tasks.tasks.resize(job_count);
         op_data.resize(job_count);
@@ -271,8 +271,10 @@ namespace {
                 auto output_block_stride = output_features_per_iteration*batch_size;
                 auto filter_feature_blocks = output_features_per_iteration*input_feature_maps;
 
-                for(uint64_t group=0; group<group_count; ++group) {
-                    auto at = x+output_width*(y + output_height*group);
+                //for(uint64_t group=0; group<group_count; ++group)
+                {
+                    //auto at = x+output_width*(y + output_height*group);
+                    auto at = x+output_width*y;
                     std::map<std::tuple<int64_t,int64_t,int64_t,int64_t>, op_data_t> sorted;
                     auto at_pos = 0;
                     if(y>=output_height || x>=output_width) continue;
@@ -289,9 +291,9 @@ namespace {
                             auto filter_index = output_feature_blocks*(kx + filter_size*ky);
 
                             sorted.insert({
-                                std::make_tuple(at_pos, group, x,y),
+                                std::make_tuple(at_pos, 0, x,y),
                                 {
-                                      sizeof(float)*(output_block_stride*output_index)
+                                      sizeof(float)*output_block_stride*output_index
                                     , sizeof(float)*batch_size*input_feature_maps*(sx + input_width*sy)
                                     , sizeof(float)*filter_feature_blocks*filter_index
                                     , 1
