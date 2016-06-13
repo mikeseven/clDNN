@@ -46,14 +46,14 @@ namespace neural {
             throw std::runtime_error("lrn input/output number of dimension does not match [iput size=" + std::to_string(input_arg.size.raw.size())
                                      + ", output size=" + std::to_string(output_arg.size.raw.size()));
 
-        auto input  = static_cast<float*>(this_lrn->input_memory(0).pointer);
-        auto output = static_cast<float*>(this_lrn->output_memory(0).pointer);
+        auto& input_mem     = this_lrn->input_memory(0);
+        auto& output_mem    = this_lrn->output_memory(0);
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range(output_size);
 
-        auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
-        auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
+        auto calc_in_ptr  = nd::choose_calculate_ptr(input_mem);
+        auto calc_out_ptr = nd::choose_calculate_ptr(output_mem);
 
         nd::value<uint32_t> window_range({ 1,{1,1},size });
 
@@ -71,27 +71,25 @@ namespace neural {
             help_input_offset.feature[0] -= static_cast<int32_t>(size / 2);
 
             for (auto pos : range) {
-                auto in_idx = calc_in_idx(input_arg.size.raw, pos + input_offset);
-                auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
+                auto input = static_cast<float*>(calc_in_ptr(input_mem, pos + input_offset));
+                auto output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
 
                 float acc = 0.0f;
-                float value = 0.0f;
 
                 for (auto window_pos : window_range) {
 
                     auto input_pos = pos + help_input_offset + window_pos;
 
-                    if (nd::is_out_of_range(input_arg.size, input_pos)) 
+                    if (nd::is_out_of_range(input_arg.size, input_pos))
                         continue;
 
-                    auto input_index = calc_in_idx(input_arg.size.raw, input_pos);
-                    value = input[input_index];
+                    auto value = static_cast<float*>(calc_in_ptr(input_mem, input_pos));
 
-                    acc += value*value;
+                    acc += (*value) * (*value);
                 }
                 acc = acc * alpha + k;
                 acc = std::pow(acc, -beta);
-                output[out_idx] = acc * input[in_idx];
+                *output = acc * *input;
             }
             break;
         default:

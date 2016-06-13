@@ -25,8 +25,9 @@ namespace neural {
     pooling_cpu_reference::~pooling_cpu_reference() {};
     void pooling_cpu_reference::implementation(const void *ptr) {
             auto this_pooling = static_cast<const pooling *>(ptr);
-            auto input = static_cast<float*>(this_pooling->argument.input[0].primitive.as<const memory&>().pointer);
-            auto output = static_cast<float*>(this_pooling->argument.output[0].as<const memory&>().pointer);
+
+            auto& input_mem     = this_pooling->input_memory(0);
+            auto& output_mem    = this_pooling->output_memory(0);
 
             auto& input_arg = this_pooling->argument.input[0].primitive.as<const memory&>().argument;
 
@@ -58,12 +59,12 @@ namespace neural {
             namespace nd = ndimensional;
             nd::value<uint32_t> range(output_size);
             nd::value<uint32_t> window_range(window);
-            auto calc_in_idx = nd::choose_calculate_idx(input_arg.format);
-            auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
+            auto calc_in_ptr    = nd::choose_calculate_ptr(input_mem);
+            auto calc_out_ptr   = nd::choose_calculate_ptr(output_mem);
             switch (this_pooling->argument.mode) {
             case pooling::mode::max:
                 for (auto pos : range) {
-                    auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
+                    auto output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
 
                     float acc = -std::numeric_limits<float>::max();
                     for (auto win_pos : window_range) {
@@ -76,17 +77,17 @@ namespace neural {
                             continue;
                         }
 
-                        auto in_idx = calc_in_idx(input_arg.size.raw, { arg_in_idx.begin(), arg_in_idx.end() });
-                        acc = std::max(acc, input[in_idx]);
+                        auto input = static_cast<float*>(calc_in_ptr(input_mem, { arg_in_idx.begin(), arg_in_idx.end() }));
+                        acc = std::max(acc, *input);
                     }
-                    output[out_idx] = acc;
+                    *output = acc;
                 }
                 break;
             case pooling::mode::average:
             {
                 auto window_elements = std::accumulate(window.raw.cbegin(), window.raw.cend(), 1, std::multiplies<uint32_t>());
                 for (auto pos : range) {
-                    auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
+                    auto output = static_cast<float*>(calc_out_ptr(output_mem, pos + output_offset));
 
                     float acc = 0.0f;
                     for (auto win_pos : window_range) {
@@ -95,10 +96,10 @@ namespace neural {
                         if (nd::is_out_of_range(input_arg.size, arg_in_idx))
                             continue;
 
-                        auto in_idx = calc_in_idx(input_arg.size.raw, { arg_in_idx.begin(), arg_in_idx.end() });
-                        acc += input[in_idx];
+                        auto input = static_cast<float*>(calc_in_ptr(input_mem, { arg_in_idx.begin(), arg_in_idx.end() }));
+                        acc += *input;
                     }
-                    output[out_idx] = acc / window_elements;
+                    *output = acc / window_elements;
                 }
             }
             break;
