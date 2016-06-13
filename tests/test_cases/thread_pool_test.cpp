@@ -39,24 +39,11 @@ void thread_task (const void* a)
     *(b + 1) = sum;
 }
 
-TEST(thread_pool, many_tasks_many_threads) {
+TEST(thread_pool, zero_tasks_many_threads) {
 
     task_group group;
-    const int task_count = 10000;
-    int num[task_count * 2];
-    for (int i = 0; i < task_count; i++)
-    {
-        num[2 * i] = 2 * i;
-        group.tasks.push_back({ &thread_task, &num[2*i] });
-    }
-
     nn_thread_worker_pool wp(50);
     wp.push_job(group);
-
-    for (int i = 0; i < task_count; i++)
-    {
-        EXPECT_EQ(2 * i + 1, num[2 * i]);
-    }
 }
 
 TEST(thread_pool, one_task_many_threads) {
@@ -64,7 +51,7 @@ TEST(thread_pool, one_task_many_threads) {
     task_group group;
     const int task_count = 1;
     int num[task_count * 2];
-    
+
     for (int i = 0; i < task_count; i++)
     {
         num[2 * i] = 2 * i;
