@@ -89,8 +89,9 @@ struct reorder_reference : is_an_implementation {
 
     static void implementation(const void *ptr) {
         auto this_reorder = static_cast<const reorder *>(ptr);
-        auto input = static_cast<float*>(this_reorder->input_memory(0).pointer);
-        auto output = static_cast<float*>(this_reorder->output_memory(0).pointer);
+
+        auto& input_mem     = this_reorder->input_memory(0);
+        auto& output_mem    = this_reorder->output_memory(0);
 
         auto& input_memory_arg  = this_reorder->input_memory(0).argument;
         auto& input_format = input_memory_arg.format;
@@ -100,8 +101,11 @@ struct reorder_reference : is_an_implementation {
 
         if (input_format == output_format)
         {
-            if(input != output)
-                memcpy(output, input, this_reorder->output_memory(0).count() * memory::traits(output_format).type->size);
+            auto input_mem_ptr = input_mem.pointer;
+            auto output_mem_ptr = output_mem.pointer;
+
+            if(input_mem_ptr != output_mem_ptr)
+                memcpy(output_mem_ptr, input_mem_ptr, this_reorder->output_memory(0).count() * memory::traits(output_format).type->size);
 
             return;
         }
@@ -113,14 +117,14 @@ struct reorder_reference : is_an_implementation {
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range (output_size);
-        auto calc_in_idx = nd::choose_calculate_idx(input_format);
-        auto calc_out_idx = nd::choose_calculate_idx(output_format);
+        auto calc_in_ptr = nd::choose_calculate_ptr(input_mem);
+        auto calc_out_ptr = nd::choose_calculate_ptr(output_mem);
 
         for(auto pos : range) {
-            auto in_idx  = calc_in_idx(input_size.raw, pos);
-            auto out_idx = calc_out_idx(output_size.raw, pos);
+            auto input  = static_cast<float*>(calc_in_ptr(input_mem, pos));
+            auto output = static_cast<float*>(calc_out_ptr(output_mem, pos));
 
-            output[out_idx] = input[in_idx];
+            *output = *input;
         }
     }
 
