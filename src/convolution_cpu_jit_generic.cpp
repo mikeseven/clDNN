@@ -240,15 +240,6 @@ namespace {
         const auto  input_feature_blocks = input_feature_maps/input_features_per_iteration;
         const auto output_feature_blocks_group = output_feature_maps_group/input_features_per_iteration;
         const auto  input_feature_blocks_group = input_feature_maps_group/output_features_per_iteration;
-        {
-            auto useless = input_feature_blocks_group*output_feature_blocks_group;
-            useless++;
-        }
-
-        const uint64_t fma_per_iteration           = batch_size/register_width_in_float*output_features_per_iteration*input_features_per_iteration;
-        const uint64_t fma_per_all_output_features = fma_per_iteration*input_feature_blocks*output_feature_blocks;
-        const uint64_t fma_per_image_filtering     = fma_per_all_output_features*output_height*output_width*filter_size*filter_size;
-        *const_cast<float *>(&fma_clock_count)     = 0.5f*fma_per_image_filtering;
 
         // creating tasks
         const auto job_count        = output_height*output_width; //todo *group_count
