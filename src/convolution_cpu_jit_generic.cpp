@@ -257,17 +257,17 @@ namespace {
         op_data.resize(job_count);
         op_array.resize(job_count);
 
+        auto output_block_stride = output_features_per_iteration*batch_size;
+        auto filter_feature_blocks = output_features_per_iteration*input_feature_maps;
+        auto filter_feature_blocks_group = output_features_per_iteration*input_feature_maps_group;
         const auto filter_radius = (filter_size-1)/2;
         for(uint64_t y=0; y<output_height; ++y)
             for(uint64_t x=0; x<output_width; ++x)
             {
-                auto output_block_stride = output_features_per_iteration*batch_size;
-                auto filter_feature_blocks = output_features_per_iteration*input_feature_maps/group_count;
-
                 for(uint64_t group=0; group<1; ++group) //todo iterate through group_count
                 {
-                    //auto at = x+output_width*(y + output_height*group);
-                    auto at = x+output_width*y;
+                    auto at = x+output_width*(y + output_height*group);
+                    //auto at = x+output_width*y;
                     std::map<std::tuple<int64_t,int64_t,int64_t,int64_t>, op_data_t> sorted;
                     auto at_pos = 0;
                     if(y>=output_height || x>=output_width) continue;
@@ -280,7 +280,7 @@ namespace {
                             int64_t sx=x*stride_x+kxr;
                             if(sx<0 || static_cast<uint64_t>(sx)>=input_width) continue;
 
-                            auto output_index = output_feature_blocks*(x + output_width*y);
+                            auto output_index = output_feature_blocks*(x + output_width*y) ;
                             auto filter_index = output_feature_blocks*(kx + filter_size*ky);
 
                             sorted.insert({
@@ -288,7 +288,7 @@ namespace {
                                 {
                                       sizeof(float)*output_block_stride*output_index
                                     , sizeof(float)*batch_size*input_feature_maps*(sx + input_width*sy)
-                                    , sizeof(float)*filter_feature_blocks*filter_index
+                                    , sizeof(float)*filter_feature_blocks_group*filter_index
                                     , 1
                                 }
                             });

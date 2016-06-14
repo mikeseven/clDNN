@@ -1171,20 +1171,20 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
 
     auto conv1 = convolution::create( {neural::engine::reference,
                                        output_ref1,
-                                       {0, {0, 0}, 0},                // out offfset
+                                       {0, {0, 0}, 0},                     // out offfset
                                        {b, {out_x, out_y}, out_f/groups},  // size
                                        {input, weight_ref1, biases_ref1},
-                                       {0, {0, 0}, 0},                // in offset
+                                       {0, {0, 0}, 0},                     // in offset
                                        {1, {str_x, str_y}, 1},
                                        padding::zero}
                                      );
 
     auto conv2 = convolution::create( {neural::engine::reference,
                                        output_ref2,
-                                       {0, {0, 0}, out_x/2},          // out offfset
+                                       {0, {0, 0}, 0},                     // out offfset
                                        {b, {out_x, out_y}, out_f/groups},  // size
                                        {input, weight_ref2, biases_ref2},
-                                       {0, {0, 0}, in_f/2},           // in offset
+                                       {0, {0, 0}, in_f/2},                // in offset
                                        {1, {str_x, str_y}, 1},
                                        padding::zero}
                                      );
