@@ -224,15 +224,26 @@ namespace {
         , float **  bias
         , uint64_t group_count
     ) : is_an_implementation(neural::type_id<jit_convolution_generic>())
-	  , code(input_feature_maps/group_count)
+      , code(input_feature_maps/group_count)
     {
         // create tasks list
         assert(input_feature_maps  % input_features_per_iteration ==0 && "input feature map count is not a multiple of features-per-iteration");
         assert(output_feature_maps % output_features_per_iteration==0 && "output feature map count is not a multiple of features-per-iteration");
 
+        const auto input_feature_maps_group  = input_feature_maps  / group_count;
+        const auto output_feature_maps_group = output_feature_maps / group_count;
+        assert( input_feature_maps_group % input_features_per_iteration ==0 && "input feature map count is not a multiple of features-per-iteration");
+        assert(output_feature_maps_group % output_features_per_iteration==0 && "output feature map count is not a multiple of features-per-iteration");
+
         // allocating buffers
         const auto output_feature_blocks = output_feature_maps/output_features_per_iteration;
-        const auto input_feature_blocks  = input_feature_maps/input_features_per_iteration;
+        const auto  input_feature_blocks = input_feature_maps/input_features_per_iteration;
+        const auto output_feature_blocks_group = output_feature_maps_group/input_features_per_iteration;
+        const auto  input_feature_blocks_group = input_feature_maps_group/output_features_per_iteration;
+        {
+            auto useless = input_feature_blocks_group*output_feature_blocks_group;
+            useless++;
+        }
 
         const uint64_t fma_per_iteration           = batch_size/register_width_in_float*output_features_per_iteration*input_features_per_iteration;
         const uint64_t fma_per_all_output_features = fma_per_iteration*input_feature_blocks*output_feature_blocks;
@@ -240,38 +251,20 @@ namespace {
         *const_cast<float *>(&fma_clock_count)     = 0.5f*fma_per_image_filtering;
 
         // creating tasks
-        const auto job_count        = output_height*output_width;
+        const auto job_count        = output_height*output_width; //todo *group_count
 
         tasks.tasks.resize(job_count);
         op_data.resize(job_count);
         op_array.resize(job_count);
-//    struct op_data_t { //todo offsets can be 32bit, does it impact performance?
-//        uint64_t output_offset;
-//        uint64_t input_offset;
-//        uint64_t filter_offset;
-//        int8_t type; // 0:init, 1:normal, 2:finalize
-//    };blocks_in_column
-//
-//    struct op_array_t {
-//        uint64_t count;
-//        op_data_t *array;
-//        uint64_t output_feature_block_stride;
-//        uint64_t output_feature_blocks;
-//        uint64_t filter_feature_blocks;
-//        float **output;
-//        float **input;
-//        float **filter;
-//        float **bias;
-//    };
 
         const auto filter_radius = (filter_size-1)/2;
         for(uint64_t y=0; y<output_height; ++y)
             for(uint64_t x=0; x<output_width; ++x)
             {
                 auto output_block_stride = output_features_per_iteration*batch_size;
-                auto filter_feature_blocks = output_features_per_iteration*input_feature_maps;
+                auto filter_feature_blocks = output_features_per_iteration*input_feature_maps/group_count;
 
-                //for(uint64_t group=0; group<group_count; ++group)
+                for(uint64_t group=0; group<1; ++group) //todo iterate through group_count
                 {
                     //auto at = x+output_width*(y + output_height*group);
                     auto at = x+output_width*y;
@@ -327,8 +320,8 @@ namespace {
                     op_array[at] = {
                         op_data[at].size()
                         , &op_data[at][0]
-                        , output_block_stride*sizeof(float)
-                        , output_feature_blocks
+                        , output_block_stride*sizeof(float)/group_count
+                        , output_feature_blocks/group_count
                         , filter_feature_blocks*sizeof(float)
                         , output
                         , input
@@ -366,7 +359,7 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
     const int y_pos = 3;
 
     assert( 2 == output_size.spatial.size() );
-    assert( weights_arg.size.spatial[0] == weights_arg.size.spatial[1] ); //todo what is weights format?
+    assert( weights_arg.size.spatial[0] == weights_arg.size.spatial[1] );
     assert( input_arg.size.feature[0] % jit_convolution_generic::input_features_per_iteration ==0 && "input feature count is not multiple of input_features_per_iteration");
     assert( output_size.feature[0]    % jit_convolution_generic::output_features_per_iteration==0 && "output feature count is not multiple of output_features_per_iteration");
 

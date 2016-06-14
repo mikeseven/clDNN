@@ -46,4 +46,12 @@ template <class T> void fill(const memory &that){
 template <class T> void fill(const primitive &that){
     fill<float>(that.as<const memory&>());
 }
+template <class T> void debug_fill(const primitive &that, const float val, const uint32_t period){
+    for(auto it1 = data_begin<T>(that.as<const memory&>()), it2 = data_end<T>(that.as<const memory&>()); it1 != it2; ){
+        float local_val = val;
+        for(uint32_t i = 0; i < period; ++i){
+            if(it1 != it2){ *it1 = local_val++; ++it1;}
+       }
+    }
+}
 } // namespace neural
