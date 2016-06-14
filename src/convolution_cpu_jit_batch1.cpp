@@ -639,8 +639,10 @@ convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
     uint64_t inpfmap_length = inpfmap_end - inpfmap_begin + 1;
 
     // Get output offsets.
+    uint64_t batch_size = arg.argument.output_size.batch[0];
     uint64_t outbatch_begin = arg.argument.output_offset.batch[0];
-    uint64_t outbatch_end = outbatch_begin + arg.argument.output_size.batch[0] - 1;
+    uint64_t outbatch_end = outbatch_begin + batch_size - 1;
+    
 
     // Get output buffer sizes.
     uint64_t output_width = arg.output_memory(0).argument.size.spatial[0];
@@ -668,16 +670,21 @@ convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
     uint64_t num_col_items = outpcol_length / output_col_package_size;
     uint64_t num_row_items = outprow_length / output_row_package_size;
 
-    precompiled_request_handles.resize(num_output_fm_items * num_col_items * num_row_items);
+    precompiled_request_handles.resize(num_output_fm_items * num_col_items * num_row_items * batch_size);
 
     // Fill slave work items.
+    for(uint64_t batch_item = outbatch_begin; batch_item <= outbatch_end; ++batch_item)
     for (uint64_t output_fm_item = 0u; output_fm_item < num_output_fm_items; ++output_fm_item)
     {
         for (uint64_t row_item = 0u; row_item < num_row_items; ++row_item)
         {
             for (uint64_t col_item = 0u; col_item < num_col_items; ++col_item)
             { 
-                uint64_t item_in_pool = col_item * num_output_fm_items * num_row_items + row_item * num_output_fm_items + output_fm_item;
+                uint64_t item_in_pool = 
+                    batch_item * num_col_items * num_output_fm_items * num_row_items + 
+                    col_item * num_output_fm_items * num_row_items + 
+                    row_item * num_output_fm_items + 
+                    output_fm_item;
 
                 uint64_t input_view_begin_col = arg.argument.input_offset.spatial[0] + col_item * output_col_package_size * stride_col;
                 uint64_t input_view_begin_row = arg.argument.input_offset.spatial[1] + row_item * output_row_package_size * stride_row;
@@ -728,8 +735,8 @@ convolution_cpu_jit_batch1::convolution_cpu_jit_batch1(convolution &arg)
                 precompiled_request_handles[item_in_pool].output_row_view_end          = output_view_end_row;
                 precompiled_request_handles[item_in_pool].output_fm_view_start         = output_view_begin_map;
                 precompiled_request_handles[item_in_pool].output_fm_view_end           = output_view_end_map;
-                precompiled_request_handles[item_in_pool].output_image_view_start      = outbatch_begin;
-                precompiled_request_handles[item_in_pool].output_image_view_end        = outbatch_end;
+                precompiled_request_handles[item_in_pool].output_image_view_start      = batch_item;
+                precompiled_request_handles[item_in_pool].output_image_view_end        = batch_item;
                 precompiled_request_handles[item_in_pool].padding                      = arg.argument.padding;
                 precompiled_request_handles[item_in_pool].callback                     = 
                     get_generator<convolution_generator>(
