@@ -1207,19 +1207,28 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
     fill(output_opt, -9999.0f);
 
     // initialize buffers
-    fill<float>(input, -5555.0f);
     fill<float>(weight_ref1
-//                , 5.0f
+   //             , 5.0f
                 );
-//    debug_fill<float>(weight_ref1 , 1.0f, 3);
     fill<float>(weight_ref2
    //             , 0.0f
                 );
-    for(auto pos : nd::value<uint32_t>({b, { in_x,  in_y},  in_f/2})){
-        // fill input only for 1st group
-        auto opt_idx = calc_in_idx( in_mem.argument.size.raw, pos);
-        in_ptr[opt_idx] = my_rand();
-    }
+//    debug_fill<float>(weight_ref1 , 1.0f, 3);
+//    debug_fill<float>(weight_ref2 , 1.0f, 3);
+
+    fill<float>(input);
+//    debug_fill<float>(input, 1.0f, 4);
+
+//    for(auto pos : nd::value<uint32_t>({b, { in_x,  in_y},  in_f/groups})){
+//        // fill input only for 1st group
+//        auto opt_idx = calc_in_idx( in_mem.argument.size.raw, pos);
+//        in_ptr[opt_idx] = -1;
+//    }
+//    for(auto pos : nd::value<uint32_t>({b, { in_x,  in_y},  in_f/groups})){
+//        // fill input only for 1st group
+//        auto opt_idx = calc_in_idx( in_mem.argument.size.raw, pos + neural::vector<uint32_t>{0, {0, 0}, {in_f/groups}});
+//        in_ptr[opt_idx] = 1;
+//    }
 
     fill<float>(biases_ref1, 0.0f); //todo remove, bias works
     fill<float>(biases_ref2, 0.0f);
@@ -1255,14 +1264,14 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
     float* out_ref2_ptr = static_cast<float*>(out_ref2_mem.pointer);
     auto calc_out_idx = nd::choose_calculate_idx(out_opt_mem.argument.format); //same formats
 
-    uint32_t err_count1 = 0, err_count2 = 0;
+    uint32_t correct1 = 0, correct2 = 0;
     for(auto pos : nd::value<uint32_t>({b, {out_x, out_y}, out_f/groups})){
         //EXPECT_EQ(true, tests::are_equal(output_ref1_ptr[i], output_opt_ptr[i]), 1e-3f, 1e-4f) << "at pos: " << i << " group: " << 1;
         auto ref_idx = calc_out_idx( out_ref1_mem.argument.size.raw, pos);
         auto opt_idx = calc_out_idx( out_opt_mem.argument .size.raw, pos);
         bool are_equal = tests::are_equal(out_ref1_ptr[ref_idx], out_opt_ptr[opt_idx], 1e-3f, 1e-4f);
-        err_count1 += are_equal? 1 : 0;
-        std::cout << out_ref1_ptr[ref_idx] << "\t\t" << out_opt_ptr[opt_idx] << "\t\t" << are_equal << "\tat pos: " << pos << " group: " << 1 << std::endl;
+        correct1 += are_equal? 1 : 0;
+//        std::cout << out_ref1_ptr[ref_idx] << "\t\t" << out_opt_ptr[opt_idx] << "\t\t" << are_equal << "\tat pos: " << pos << " group: " << 1 << std::endl;
     }
 
 #define group2
@@ -1271,13 +1280,13 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
         auto ref_idx = calc_out_idx( out_ref2_mem.argument.size.raw, pos);
         auto opt_idx = calc_out_idx( out_opt_mem.argument .size.raw, pos + neural::vector<uint32_t>{0, {0, 0}, {out_f/groups}});
         bool are_equal = tests::are_equal(out_ref2_ptr[ref_idx], out_opt_ptr[opt_idx], 1e-3f, 1e-4f);
-        err_count2 += are_equal? 1 : 0;
+        correct2 += are_equal? 1 : 0;
         std::cout << out_ref2_ptr[ref_idx] << "\t\t" << out_opt_ptr[opt_idx] << "\t\t" << are_equal << "\tat pos: " << pos << " group: " << 2<< std::endl;
     }
 #endif
 
-    std::cout << "---------- " << err_count1 << "/" << output_ref1.as<const memory&>().count() << std::endl;
+    std::cout << "---------- " << correct1 << "/" << output_ref1.as<const memory&>().count() << std::endl;
 #ifdef group2
-    std::cout << "---------- " << err_count2 << "/" << output_ref2.as<const memory&>().count() << std::endl;
+    std::cout << "---------- " << correct2 << "/" << output_ref2.as<const memory&>().count() << std::endl;
 #endif
 }

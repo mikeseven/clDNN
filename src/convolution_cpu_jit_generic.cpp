@@ -238,11 +238,11 @@ namespace {
         // allocating buffers
         const auto output_feature_blocks = output_feature_maps/output_features_per_iteration;
         const auto  input_feature_blocks = input_feature_maps/input_features_per_iteration;
-        const auto output_feature_blocks_group = output_feature_maps_group/input_features_per_iteration;
-        const auto  input_feature_blocks_group = input_feature_maps_group/output_features_per_iteration;
+        const auto output_feature_blocks_group = output_feature_maps_group/output_features_per_iteration;
+        const auto  input_feature_blocks_group = input_feature_maps_group /input_features_per_iteration;
 
         // creating tasks
-        const auto job_count        = output_height*output_width; //todo *group_count
+        const auto job_count = output_height*output_width*group_count;
 
         tasks.tasks.resize(job_count);
         op_data.resize(job_count);
@@ -255,7 +255,7 @@ namespace {
         for(uint64_t y=0; y<output_height; ++y)
             for(uint64_t x=0; x<output_width; ++x)
             {
-                for(uint64_t group=0; group<1; ++group) //todo iterate through group_count
+                for(uint64_t group=0; group<group_count; ++group) //todo iterate through group_count
                 {
                     auto at = x+output_width*(y + output_height*group);
                     //auto at = x+output_width*y;
@@ -277,9 +277,9 @@ namespace {
                             sorted.insert({
                                 std::make_tuple(at_pos, 0, x,y),
                                 {
-                                      sizeof(float)*output_block_stride*output_index
-                                    , sizeof(float)*batch_size*input_feature_maps*(sx + input_width*sy)
-                                    , sizeof(float)*filter_feature_blocks_group*filter_index
+                                      sizeof(float)*output_block_stride*(output_index+group)
+                                    , sizeof(float)*(batch_size*input_feature_maps*(sx + input_width*sy) + group*batch_size*input_feature_maps_group)
+                                    , sizeof(float)*filter_feature_blocks_group*(filter_index+group)
                                     , 1
                                 }
                             });
