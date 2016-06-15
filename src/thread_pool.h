@@ -48,11 +48,11 @@ namespace neural
         void process_task(uint32_t threadId);
 
     public:
-        nn_thread_worker_pool(uint32_t arg_num_threads = 0);
-        ~nn_thread_worker_pool();
+        DLL_SYM nn_thread_worker_pool(uint32_t arg_num_threads = 0);
+        DLL_SYM ~nn_thread_worker_pool();
 
         // push    tasks for processing
-        void push_job(const task_group& requests);
+        DLL_SYM void push_job(const task_group& requests);
     };
 };
 
