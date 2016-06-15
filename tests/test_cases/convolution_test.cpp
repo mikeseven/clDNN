@@ -1191,9 +1191,6 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
     auto& w_ref1_mem = weight_ref1.as<const memory&>();
     auto& w_ref2_mem = weight_ref2.as<const memory&>();
     auto& w_opt_mem  = weight_opt .as<const memory&>();
-    float* w_opt_ptr  = static_cast<float*>( w_opt_mem.pointer);
-    float* w_ref1_ptr = static_cast<float*>(w_ref1_mem.pointer);
-    float* w_ref2_ptr = static_cast<float*>(w_ref2_mem.pointer);
     namespace nd = ndimensional;
     nd::value<uint32_t> w_ref_range(w_ref1_mem.argument.size);
 
@@ -1209,17 +1206,18 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
         static_cast<float*>(biases_opt.as<const memory&>().pointer)[i+out_f/groups] = static_cast<float*>(biases_ref2.as<const memory&>().pointer)[i];
     }
 
-    auto calc_w_ref_idx = nd::choose_calculate_idx(w_ref1_mem.argument.format); //w_ref1 and w_ref2 has the same format and dimensions
-    auto calc_w_opt_idx = nd::choose_calculate_idx(w_opt_mem .argument.format);
+    auto calc_w_ref_idx = nd::choose_calculate_ptr(w_ref1_mem); //w_ref1 and w_ref2 has the same format and dimensions
+    auto calc_w_opt_idx = nd::choose_calculate_ptr(w_opt_mem );
     for(auto pos : w_ref_range){
         // copy data from reference weights(1) to optimized weights
-        auto ref_idx = calc_w_ref_idx( w_ref1_mem.argument.size.raw, pos);
-        auto opt_idx = calc_w_opt_idx( w_opt_mem.argument .size.raw, pos);
-        w_opt_ptr[opt_idx] = w_ref1_ptr[ref_idx];
+        auto w_ref1_ptr = static_cast<float*>(calc_w_ref_idx( w_ref1_mem, pos));
+        auto w_opt_ptr  = static_cast<float*>(calc_w_opt_idx( w_opt_mem , pos));
+        *w_opt_ptr = *w_ref1_ptr;
 
         // copy data from reference weights(2) to optimized weights, just add ofm and ifm offsets
-        opt_idx = calc_w_opt_idx( w_opt_mem.argument .size.raw, pos + neural::vector<uint32_t>{0, {0, 0}, {out_f/groups, 0}});
-        w_opt_ptr[opt_idx] = w_ref2_ptr[ref_idx];
+        auto w_ref2_ptr = static_cast<float*>(calc_w_ref_idx( w_ref2_mem, pos));
+        w_opt_ptr = static_cast<float*>(calc_w_opt_idx( w_opt_mem, pos + neural::vector<uint32_t>{0, {0, 0}, {out_f/groups, 0}}));
+        *w_opt_ptr = *w_ref2_ptr;
     }
 
     execute({conv1, conv2}, {engine_resource}).wait();
@@ -1228,17 +1226,15 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
     auto& out_opt_mem  = output_opt.as<const memory&>();
     auto& out_ref1_mem = output_ref1.as<const memory&>();
     auto& out_ref2_mem = output_ref2.as<const memory&>();
-    float* out_opt_ptr  = static_cast<float*>(out_opt_mem.pointer);
-    float* out_ref1_ptr = static_cast<float*>(out_ref1_mem.pointer);
-    float* out_ref2_ptr = static_cast<float*>(out_ref2_mem.pointer);
-    auto calc_out_idx = nd::choose_calculate_idx(out_opt_mem.argument.format); //same formats for all outputs
+    auto calc_out_idx = nd::choose_calculate_ptr(out_opt_mem); //same formats for all outputs
 
     for(auto pos : nd::value<uint32_t>({b, {out_x, out_y}, out_f/groups})){
-        auto ref_idx = calc_out_idx( out_ref1_mem.argument.size.raw, pos);
-        auto opt_idx = calc_out_idx( out_opt_mem.argument .size.raw, pos);
-        EXPECT_EQ(true, tests::are_equal(out_ref1_ptr[ref_idx], out_opt_ptr[opt_idx], 1e-3f, 1e-4f)) << "at index(ref/opt) : " << ref_idx << "/" << opt_idx << " group: " << 1;
+        auto out_ref1_ptr = static_cast<float*>(calc_out_idx( out_ref1_mem, pos));
+        auto out_opt_ptr  = static_cast<float*>(calc_out_idx( out_opt_mem , pos));
+        EXPECT_EQ(true, tests::are_equal(*out_ref1_ptr, *out_opt_ptr, 1e-3f, 1e-4f)) << " group: " << 1;
 
-        opt_idx = calc_out_idx( out_opt_mem.argument .size.raw, pos + neural::vector<uint32_t>{0, {0, 0}, {out_f/groups}});
-        EXPECT_EQ(true, tests::are_equal(out_ref2_ptr[ref_idx], out_opt_ptr[opt_idx], 1e-3f, 1e-4f)) << "at index(ref/opt) : " << ref_idx << "/" << opt_idx << " group: " << 2;
+        auto out_ref2_ptr = static_cast<float*>(calc_out_idx( out_ref2_mem, pos));
+        out_opt_ptr       = static_cast<float*>(calc_out_idx( out_opt_mem, pos + neural::vector<uint32_t>{0, {0, 0}, {out_f/groups}}));
+        EXPECT_EQ(true, tests::are_equal(*out_ref2_ptr, *out_opt_ptr, 1e-3f, 1e-4f)) << " group: " << 2;
     }
 }
