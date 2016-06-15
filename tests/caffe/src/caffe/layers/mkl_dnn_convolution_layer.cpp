@@ -261,21 +261,39 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
           memory::describe({engine_, layout_bias_, {1, {{oc}}, 1}}),
           memory::describe({engine_, layout_bias_, {1, {{oc}}, 1}}));
 
-  for (unsigned i=0; i<g; i++) {
-    filters_.push_back(memory::describe({engine_, fwd_filter_data->layout_prv, {1, {kw, kh}, {oc/g, ic/g}}}));
-    biases_. push_back(memory::describe({engine_, fwd_bias_data->layout_prv, {1, {{oc/g}}, 1}}));
+  if(engine_ == engine::cpu) {
+    // TODO: For groups > 1 API for engine::cpu is different then for engine:: reference
+    filters_.push_back(memory::describe({engine_, fwd_filter_data->layout_prv, {1, {kw, kh}, {oc, ic/g}}}));
+    biases_. push_back(memory::describe({engine_, fwd_bias_data->layout_prv, {1, {{oc}}, 1}}));
     convolution_fwd_.push_back(
-      convolution::create({engine_,
-                           fwd_top_data->memory_prv,
-                           {0, {0, 0}, i*(oc/g)},
-                           {n, {ow, oh}, oc/g},
-                           { fwd_bottom_data->memory_prv,
-                             filters_[i],
-                             biases_ [i] },
-                           {0, {-pad_w_, -pad_h_}, static_cast<int>(i*(ic/g))},
-                           {1, {stride_w_, stride_h_}, 1},
-                           padding::zero}
-                         ));
+        convolution::create({engine_,
+                             fwd_top_data->memory_prv,
+                             {0, {0, 0}, 0},
+                             {n, {ow, oh}, oc},
+                             { fwd_bottom_data->memory_prv,
+                               filters_[0],
+                               biases_ [0] },
+                             {0, {-pad_w_, -pad_h_}, 0},
+                             {1, {stride_w_, stride_h_}, 1},
+                             padding::zero}
+                           ));
+  } else {
+    for (unsigned i=0; i<g; i++) {
+      filters_.push_back(memory::describe({engine_, fwd_filter_data->layout_prv, {1, {kw, kh}, {oc/g, ic/g}}}));
+      biases_. push_back(memory::describe({engine_, fwd_bias_data->layout_prv, {1, {{oc/g}}, 1}}));
+      convolution_fwd_.push_back(
+        convolution::create({engine_,
+                             fwd_top_data->memory_prv,
+                             {0, {0, 0}, i*(oc/g)},
+                             {n, {ow, oh}, oc/g},
+                             { fwd_bottom_data->memory_prv,
+                               filters_[i],
+                               biases_ [i] },
+                             {0, {-pad_w_, -pad_h_}, static_cast<int>(i*(ic/g))},
+                             {1, {stride_w_, stride_h_}, 1},
+                             padding::zero}
+                           ));
+    }
   }
 
 /*
@@ -354,12 +372,9 @@ void MKL_DNNConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
   CHECK_EQ(top[0]->channels(), oc*g) << "Inclompatible shape of bottom with layer";
   CHECK_EQ(top[0]->num()     , n)    << "Inclompatible shape of bottom with layer";
 
-  CHECK_EQ(convolution_fwd_.size(), g);
-  CHECK_EQ(biases_.size(), g);
-  CHECK_EQ(filters_.size(), g);
-
-  auto bottom_data   = fwd_bottom_data->get_converted_prv(bottom[0], true);
-  float* filter_data = fwd_filter_data->get_converted_prv(this->blobs_[0].get(), true);
+  Dtype* bottom_data = fwd_bottom_data->get_converted_prv(bottom[0], true);
+  Dtype* filter_data = fwd_filter_data->get_converted_prv(this->blobs_[0].get(), true);
+  Dtype* bias_data   = fwd_bias_data  ->get_converted_prv(this->blobs_[1].get(), true);
   Dtype* top_data;
   if (fwd_top_data->from_prv != nullptr) {
     top_data = fwd_top_data->prv_ptr();
@@ -369,12 +384,22 @@ void MKL_DNNConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
   }
 
   if(this->bias_term_) {
-    float* bias_data   = fwd_bias_data  ->get_converted_prv(this->blobs_[1].get(), true);
-    for(int i=0; i<g; i++) {
+    if(engine_ == engine::cpu) {
+      // TODO: For groups > 1 API for engine::cpu is different then for engine:: reference
       execute({fwd_bottom_data->memory_prv(bottom_data), fwd_top_data->memory_prv(top_data),
-              filters_[i](filter_data + i* this->weight_offset_),
-              biases_[i](bias_data + i*oc),
-              convolution_fwd_[i]}).wait();
+               filters_[0](filter_data),
+               biases_[0](bias_data),
+               convolution_fwd_[0]}).wait();
+    } else {
+      CHECK_EQ(convolution_fwd_.size(), g);
+      CHECK_EQ(biases_.size(), g);
+      CHECK_EQ(filters_.size(), g);
+      for(int i=0; i<g; i++) {
+        execute({fwd_bottom_data->memory_prv(bottom_data), fwd_top_data->memory_prv(top_data),
+                filters_[i](filter_data + i* this->weight_offset_),
+                biases_[i](bias_data + i*oc),
+                convolution_fwd_[i]}).wait();
+      }
     }
   } else {
     NOT_IMPLEMENTED;  // TODO, not supported currently
@@ -391,7 +416,7 @@ void MKL_DNNConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& to
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom)
 {
   NOT_IMPLEMENTED;  // This is WIP - not tested
-
+#if 0
   size_t n, g;
   size_t iw, ih, ic;
   size_t ow, oh, oc;
@@ -456,6 +481,7 @@ void MKL_DNNConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& to
         convolution_bwd
     }).wait();
   }
+#endif // #if 0
 }
 
 #ifdef CPU_ONLY

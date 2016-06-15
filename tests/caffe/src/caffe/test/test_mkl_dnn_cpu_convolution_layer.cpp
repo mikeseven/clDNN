@@ -586,14 +586,14 @@ TYPED_TEST(MKL_DNN_CPU_ConvLayerTest, DISABLED_TestSimpleConvolutionGroup) {
   }
 }
 
-TYPED_TEST(MKL_DNN_CPU_ConvLayerTest, DISABLED_TestSimpleConvolutionGroup_batch24) {
+TYPED_TEST(MKL_DNN_CPU_ConvLayerTest, TestSimpleConvolutionGroup_batch24) {
   typedef typename TypeParam::Dtype Dtype;
 
-  Blob<Dtype> bottom(24, 16, 2, 2);
+  Blob<Dtype> bottom(48, 24, 2, 2);
 
   FillerParameter filler_param;
   filler_param.set_value(0);
-  ConstantFiller<Dtype> filler(filler_param);
+  GaussianFiller<Dtype> filler(filler_param);
   filler.Fill(&bottom);
   this->blob_bottom_vec_[0] = &bottom;
 
@@ -602,15 +602,14 @@ TYPED_TEST(MKL_DNN_CPU_ConvLayerTest, DISABLED_TestSimpleConvolutionGroup_batch2
       layer_param.mutable_convolution_param();
   convolution_param->add_kernel_size(2);  //3
   convolution_param->add_stride(2);
-  convolution_param->set_num_output(8);
-  convolution_param->set_group(2);
-  convolution_param->mutable_weight_filler()->set_type("constant");
-  convolution_param->mutable_weight_filler()->set_value(0);
+  convolution_param->set_num_output(12);
+  convolution_param->set_group(3);
+  convolution_param->mutable_weight_filler()->set_type("gaussian");
 
   convolution_param->mutable_bias_filler()->set_type("constant");
   convolution_param->mutable_bias_filler()->set_value(0.1);
   shared_ptr<Layer<Dtype> > layer(
-      new MKL_DNNConvolutionLayer<Dtype>(layer_param, neural::engine::cpu));
+      new MKL_DNNConvolutionLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Check against reference convolution.
@@ -621,7 +620,6 @@ TYPED_TEST(MKL_DNN_CPU_ConvLayerTest, DISABLED_TestSimpleConvolutionGroup_batch2
   top_data = this->blob_top_->cpu_data();
   ref_top_data = this->ref_blob_top_->cpu_data();
   for (int i = 0; i < this->blob_top_->count(); ++i) {
-    ASSERT_NEAR(top_data[i], ref_top_data[i], 1e-4) << "i=" << i;
     EXPECT_NEAR(top_data[i], ref_top_data[i], 1e-4) << "i=" << i;
   }
 }
