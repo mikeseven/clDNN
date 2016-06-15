@@ -38,6 +38,7 @@ namespace {
         uint64_t output_offset;
         uint64_t input_offset;
         uint64_t filter_offset;
+        uint64_t bias_offset;
         int8_t type; // 0:init, 1:normal, 2:finalize
     };
 
@@ -190,6 +191,7 @@ namespace {
                 // initial = zeroing -> calculation -> store
                 mov(rdi, ptr [rsi+offsetof(op_array_t,bias)]);
                 mov(rdi, ptr [rdi]);
+                add(rdi, ptr [r15+offsetof(op_data_t,bias_offset)]);
                 code_op_type(0, code_prologue_zero, code_epilogue_store);
 
                 // initial = load -> calculation -> relu -> store
@@ -237,9 +239,9 @@ namespace {
 
         // allocating buffers
         const auto output_feature_blocks = output_feature_maps/output_features_per_iteration;
-        const auto  input_feature_blocks = input_feature_maps/input_features_per_iteration;
-        const auto output_feature_blocks_group = output_feature_maps_group/output_features_per_iteration;
-        const auto  input_feature_blocks_group = input_feature_maps_group /input_features_per_iteration;
+        //const auto  input_feature_blocks = input_feature_maps/input_features_per_iteration;
+        //const auto output_feature_blocks_group = output_feature_maps_group/output_features_per_iteration;
+        //const auto  input_feature_blocks_group = input_feature_maps_group /input_features_per_iteration;
 
         // creating tasks
         const auto job_count = output_height*output_width*group_count;
@@ -278,8 +280,9 @@ namespace {
                                 std::make_tuple(at_pos, 0, x,y),
                                 {
                                       sizeof(float)*output_block_stride*(output_index+group)
-                                    , sizeof(float)*(batch_size*input_feature_maps*(sx + input_width*sy) + group*batch_size*input_feature_maps_group)
+                                    , sizeof(float)*batch_size*(input_feature_maps*(sx + input_width*sy) + group*input_feature_maps_group)
                                     , sizeof(float)*filter_feature_blocks_group*(filter_index+group)
+                                    , sizeof(float)*output_feature_maps_group*group
                                     , 1
                                 }
                             });

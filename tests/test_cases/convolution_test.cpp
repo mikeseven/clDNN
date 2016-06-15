@@ -23,7 +23,6 @@
 #include "multidimensional_counter.h"
 #include <algorithm>
 #include <thread>
-#include <random> //todo remove
 
 
 using namespace neural;
@@ -84,7 +83,7 @@ bool validate(
     return result;
 };
 }
-/*
+
 TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 //  Filter : 2x2
 //  Stride : 2x2
@@ -817,7 +816,7 @@ TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x
                                          static_cast<float*>(temp_output_memory.pointer)[output_element]
                                          , 1e-3f, 1e-4f));
 }
-*/
+
 TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
     const uint32_t input_width         = 20;   // data = input|output
     const uint32_t input_height        = 20;   // data = input|output
@@ -1189,7 +1188,6 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
                                        padding::zero}
                                      );
 
-    auto& in_mem     = input.as<const memory&>();
     auto& w_ref1_mem = weight_ref1.as<const memory&>();
     auto& w_ref2_mem = weight_ref2.as<const memory&>();
     auto& w_opt_mem  = weight_opt .as<const memory&>();
@@ -1202,8 +1200,8 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
     fill<float>(weight_ref1);
     fill<float>(weight_ref2);
     fill<float>(input);
-    fill<float>(biases_ref1, 0.0f);
-    fill<float>(biases_ref2, 0.0f);
+    fill<float>(biases_ref1);
+    fill<float>(biases_ref2);
 
     // copy (concatenate) weights and biases for conv_group
     for(size_t i = 0; i < out_f/groups ; ++i){
