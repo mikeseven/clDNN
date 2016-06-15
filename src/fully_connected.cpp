@@ -32,20 +32,19 @@ struct fully_connected_reference : is_an_implementation {
 
     static void implementation(const void *ptr) {
         auto this_fc = static_cast<const fully_connected *>(ptr);
-        auto input = static_cast<float*>(this_fc->input_memory(0).pointer);
-        auto output = static_cast<float*>(this_fc->output_memory(0).pointer);
-        auto weight = static_cast<float*>(this_fc->input_memory(1).pointer);
-        auto& weight_buffer_size = this_fc->input_memory(1).argument.size;
-        auto bias   = static_cast<float*>(this_fc->argument.input[2].primitive.as<const memory&>().pointer);
 
+        auto& input_mem = this_fc->input_memory(0);
+        auto& output_mem = this_fc->output_memory(0);
+        auto& weight_mem = this_fc->input_memory(1);
+        auto& bias_mem = this_fc->input_memory(2);
+
+        auto& weight_buffer_size = this_fc->input_memory(1).argument.size;
 
         auto& input_arg = this_fc->input_memory(0).argument;
         auto& input_buffer_size = input_arg.size;
 
         auto& output_arg = this_fc->output_memory(0).argument;
         auto& output_buffer_size = output_arg.size;
-
-        auto& weight_arg = this_fc->input_memory(1).argument;
 
         assert( 1 == input_buffer_size.feature.size());
         assert( 1 == input_buffer_size.batch.size()  );
@@ -62,24 +61,35 @@ struct fully_connected_reference : is_an_implementation {
         nd::value<uint32_t> range_input(input_buffer_size);
         nd::value<uint32_t> range_weight(weight_buffer_size);
 
-        auto calc_in_idx  = nd::choose_calculate_idx(input_arg.format);
-        auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
-        auto calc_w_idx   = nd::choose_calculate_idx(weight_arg.format);
+        auto calc_in_ptr = nd::choose_calculate_ptr(input_mem);
+        auto calc_out_ptr = nd::choose_calculate_ptr(output_mem);
+        auto calc_w_ptr = nd::choose_calculate_ptr(weight_mem);
+        auto calc_bias_ptr = nd::choose_calculate_ptr(bias_mem);
 
         std::vector<uint32_t> arg_weight_idx(4);
-        for (auto pos_out : range_output){
-                auto out_idx = calc_out_idx(output_arg.size.raw, pos_out);
+        nd::value<uint32_t> batch_offset(range_output.size());
 
-                for (auto pos_in : range_input){
-                    auto in_idx = calc_in_idx(input_arg.size.raw, pos_in);
+        for (auto pos_out : range_output) {
 
-                    arg_weight_idx[1]  = pos_out[DATA_INDEX];
-                    arg_weight_idx[2] = pos_in [DATA_INDEX];
-                    auto w_idx = calc_w_idx(weight_arg.size.raw, arg_weight_idx);
-                    output[out_idx + pos_in[BATCH_INDEX]] += input[in_idx] * weight[w_idx];
-                }
-                for (auto  b=0u; b < range_input[BATCH_INDEX]; b++)
-                    output[out_idx + b] += bias[pos_out[DATA_INDEX]];
+            for (auto pos_in : range_input) {
+                auto input = static_cast<float*>(calc_in_ptr(input_mem, pos_in));
+                batch_offset[BATCH_INDEX] = pos_in[BATCH_INDEX];
+
+                arg_weight_idx[1]  = pos_out[DATA_INDEX];
+                arg_weight_idx[2] = pos_in [DATA_INDEX];
+
+                auto weight = static_cast<float*>(calc_w_ptr(weight_mem, arg_weight_idx));
+                auto output = static_cast<float*>(calc_out_ptr(output_mem, pos_out + batch_offset));
+
+                *output += *input * *weight;
+            }
+            for (auto b = 0u; b < range_input[BATCH_INDEX]; b++) {
+                batch_offset[BATCH_INDEX] = b;
+                auto output = static_cast<float*>(calc_out_ptr(output_mem, pos_out + batch_offset));
+                auto bias = static_cast<float*>(calc_bias_ptr(bias_mem,{0, 0, pos_out[DATA_INDEX]}));
+
+                *output += *bias;
+            }
         }
     }
 
@@ -116,7 +126,7 @@ primitive fully_connected::create(fully_connected::arguments arg) {
         weight_arg.format != memory::format::io_f32     &&
         weight_arg.format != memory::format::io_i13_f32 &&
         weight_arg.format != memory::format::io_i2_f32  )                throw std::runtime_error("Fully connected weight format is not oi_f32.");
-    
+
 
     // wrap into RAII wrapper
     std::unique_ptr<fully_connected> result(new fully_connected(arg));
@@ -139,12 +149,12 @@ primitive fully_connected::create(fully_connected::arguments arg) {
 }
 
 namespace {
-	struct attach {
-		attach() {
-			fully_con_implementation_map::instance().insert({ std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create });
-			fully_con_implementation_map::instance().insert({ std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create });
+    struct attach {
+        attach() {
+            fully_con_implementation_map::instance().insert({ std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), fully_connected_reference::create });
+            fully_con_implementation_map::instance().insert({ std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32),  fully_connected_reference::create });
 }
-		~attach() {}
+        ~attach() {}
 };
 
 
