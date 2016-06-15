@@ -33,7 +33,9 @@ class MKL_DNN_CPU_NeuronLayerTest : public MultiDeviceTest<TypeParam> {
     blob_bottom_vec_.push_back(blob_bottom_);
     blob_top_vec_.push_back(blob_top_);
   }
-  virtual ~MKL_DNN_CPU_NeuronLayerTest() { delete blob_bottom_; delete blob_top_; }
+  virtual ~MKL_DNN_CPU_NeuronLayerTest() {
+    delete blob_bottom_; delete blob_top_;
+  }
   Blob<Dtype>* const blob_bottom_;
   Blob<Dtype>* const blob_top_;
   vector<Blob<Dtype>*> blob_bottom_vec_;
@@ -41,7 +43,8 @@ class MKL_DNN_CPU_NeuronLayerTest : public MultiDeviceTest<TypeParam> {
 };
 
 // TODO: Currently only float support
-TYPED_TEST_CASE(MKL_DNN_CPU_NeuronLayerTest, ::testing::Types<CPUDevice<float> >);
+TYPED_TEST_CASE(MKL_DNN_CPU_NeuronLayerTest,
+  ::testing::Types<CPUDevice<float> >);
 
 TYPED_TEST(MKL_DNN_CPU_NeuronLayerTest, TestReLU) {
   typedef typename TypeParam::Dtype Dtype;
@@ -68,4 +71,4 @@ TYPED_TEST(MKL_DNN_CPU_NeuronLayerTest, TestReLUGradient) {
 }
 
 }  // namespace caffe
-#endif //#ifdef MKL_DNN_ENABLED
+#endif  // #ifdef MKL_DNN_ENABLED

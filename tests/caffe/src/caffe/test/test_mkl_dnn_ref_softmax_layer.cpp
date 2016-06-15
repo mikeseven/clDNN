@@ -33,14 +33,17 @@ class MKL_DNN_Ref_SoftmaxLayerTest : public MultiDeviceTest<TypeParam> {
     blob_bottom_vec_.push_back(blob_bottom_);
     blob_top_vec_.push_back(blob_top_);
   }
-  virtual ~MKL_DNN_Ref_SoftmaxLayerTest() { delete blob_bottom_; delete blob_top_; }
+  virtual ~MKL_DNN_Ref_SoftmaxLayerTest() {
+    delete blob_bottom_; delete blob_top_;
+  }
   Blob<Dtype>* const blob_bottom_;
   Blob<Dtype>* const blob_top_;
   vector<Blob<Dtype>*> blob_bottom_vec_;
   vector<Blob<Dtype>*> blob_top_vec_;
 };
 
-TYPED_TEST_CASE(MKL_DNN_Ref_SoftmaxLayerTest, ::testing::Types<CPUDevice<float> >);
+TYPED_TEST_CASE(MKL_DNN_Ref_SoftmaxLayerTest,
+                ::testing::Types<CPUDevice<float> >);
 
 TYPED_TEST(MKL_DNN_Ref_SoftmaxLayerTest, TestForward) {
   typedef typename TypeParam::Dtype Dtype;
@@ -90,4 +93,4 @@ TYPED_TEST(MKL_DNN_Ref_SoftmaxLayerTest, TestGradient) {
 
 }  // namespace caffe
 
-#endif  //#ifdef MKL_DNN_ENABLED
+#endif  // #ifdef MKL_DNN_ENABLED

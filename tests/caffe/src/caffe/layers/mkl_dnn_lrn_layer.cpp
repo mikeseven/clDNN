@@ -6,15 +6,20 @@
 #include "caffe/layers/mkl_dnn_layers.hpp"
 #include "caffe/util/math_functions.hpp"
 
+using neural::normalization::response;
+using neural::padding;
 namespace caffe {
 
-template <> void MKL_DNNLRNLayer<double>::LayerSetUp(const vector<Blob<double>*>& bottom,
-      const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
-template <> void MKL_DNNLRNLayer<double>::Forward_cpu(const vector<Blob<double>*>& bottom,
-    const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
-template <> void MKL_DNNLRNLayer<double>::Backward_cpu(const vector<Blob<double>*>& top,
-    const vector<bool>& propagate_down,
-    const vector<Blob<double>*>& bottom) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNLRNLayer<double>::LayerSetUp(
+  const vector<Blob<double>*>& bottom,
+  const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNLRNLayer<double>::Forward_cpu(
+  const vector<Blob<double>*>& bottom,
+  const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNLRNLayer<double>::Backward_cpu(
+  const vector<Blob<double>*>& top,
+  const vector<bool>& propagate_down,
+  const vector<Blob<double>*>& bottom) {NOT_IMPLEMENTED;}
 template <> void MKL_DNNLRNLayer<double>::CrossChannelForward_cpu(
     const vector<Blob<double>*>& bottom, const vector<Blob<double>*>& top)
 {NOT_IMPLEMENTED;}
@@ -40,9 +45,6 @@ void MKL_DNNLRNLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   width_    = bottom[0]->width();
   num_      = bottom[0]->num();
 
-  //std::cout << "n "  <<  num_ << "  c " << channels_  << "  w "  << width_  <<  "  h " << height_  << "\n";
-  //std::cout << "size "  <<  size_ << "  a " << alpha_ << "  b "  << beta_  <<  "  k " << k_  << "\n";
-
   // Choose layout according to the engine
   switch (engine_) {
     case  neural::engine::cpu:
@@ -56,24 +58,32 @@ void MKL_DNNLRNLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   }
 
   fwd_bottom_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
-          usr_layout_in_out_, prv_layout_in_out_,
-          memory::describe({engine_, usr_layout_in_out_, {num_, {width_, height_}, channels_ }}),
-          memory::describe({engine_, prv_layout_in_out_, {num_, {width_, height_}, channels_ }}));
+    usr_layout_in_out_, prv_layout_in_out_,
+    memory::describe({engine_, usr_layout_in_out_,
+      {num_, {width_, height_}, channels_ }}),
+    memory::describe({engine_, prv_layout_in_out_,
+      {num_, {width_, height_}, channels_ }}));
 
   fwd_top_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
-          usr_layout_in_out_, prv_layout_in_out_,
-          memory::describe({engine_, usr_layout_in_out_, {num_, {width_, height_}, channels_ }}),
-          memory::describe({engine_, prv_layout_in_out_, {num_, {width_, height_}, channels_ }}));
+    usr_layout_in_out_, prv_layout_in_out_,
+    memory::describe({engine_, usr_layout_in_out_,
+      {num_, {width_, height_}, channels_ }}),
+    memory::describe({engine_, prv_layout_in_out_,
+      {num_, {width_, height_}, channels_ }}));
 
   bwd_bottom_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
-          usr_layout_in_out_, prv_layout_in_out_,
-          memory::describe({engine_, usr_layout_in_out_, {num_, {width_, height_}, channels_ }}),
-          memory::describe({engine_, prv_layout_in_out_, {num_, {width_, height_}, channels_ }}));
+    usr_layout_in_out_, prv_layout_in_out_,
+    memory::describe({engine_, usr_layout_in_out_,
+      {num_, {width_, height_}, channels_ }}),
+    memory::describe({engine_, prv_layout_in_out_,
+      {num_, {width_, height_}, channels_ }}));
 
   bwd_top_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
-          usr_layout_in_out_, prv_layout_in_out_,
-          memory::describe({engine_, usr_layout_in_out_, {num_, {width_, height_}, channels_ }}),
-          memory::describe({engine_, prv_layout_in_out_, {num_, {width_, height_}, channels_ }}));
+    usr_layout_in_out_, prv_layout_in_out_,
+    memory::describe({engine_, usr_layout_in_out_,
+      {num_, {width_, height_}, channels_ }}),
+    memory::describe({engine_, prv_layout_in_out_,
+      {num_, {width_, height_}, channels_ }}));
 
 
   // Names are for debugging only
@@ -82,14 +92,13 @@ void MKL_DNNLRNLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   bwd_top_diff_->name =    "bwd_top_diff      @ " + this->layer_param_.name();
   bwd_bottom_diff_->name = "bwd_bottom_diff   @ " + this->layer_param_.name();
 
-  lrnFwd_ = normalization::response::create({engine_,
-          fwd_top_data_->memory_prv,
-          fwd_bottom_data_->memory_prv,
-          size_, padding::zero, k_, alpha_/size_, beta_});
+  lrnFwd_ = response::create({engine_,
+                              fwd_top_data_->memory_prv,
+                              fwd_bottom_data_->memory_prv,
+                              size_, padding::zero, k_, alpha_/size_, beta_});
 
-  //  TODO:
+  // TODO:
   lrnBwd_ = NULL;
-
 }
 
 template <typename Dtype>

@@ -14,15 +14,20 @@
  * backward
  * using of max_idx_ / topmask
  */
+using neural::pooling;
+using neural::padding;
 
 namespace caffe {
-template <> void MKL_DNNPoolingLayer<double>::LayerSetUp(const vector<Blob<double>*>& bottom,
-      const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
-template <> void MKL_DNNPoolingLayer<double>::Forward_cpu(const vector<Blob<double>*>& bottom,
-    const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
-template <> void MKL_DNNPoolingLayer<double>::Backward_cpu(const vector<Blob<double>*>& top,
-    const vector<bool>& propagate_down,
-    const vector<Blob<double>*>& bottom) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNPoolingLayer<double>::LayerSetUp(
+  const vector<Blob<double>*>& bottom,
+  const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNPoolingLayer<double>::Forward_cpu(
+  const vector<Blob<double>*>& bottom,
+  const vector<Blob<double>*>& top) {NOT_IMPLEMENTED;}
+template <> void MKL_DNNPoolingLayer<double>::Backward_cpu(
+  const vector<Blob<double>*>& top,
+  const vector<bool>& propagate_down,
+  const vector<Blob<double>*>& bottom) {NOT_IMPLEMENTED;}
 
 template <typename Dtype>
 void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
@@ -125,7 +130,8 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   // Choose layout according to the engine
   switch (engine_) {
     case  neural::engine::cpu:
-      CHECK_EQ(n%24, 0) << "Optimized Pooling supports only batch that is multiple of 24";
+      CHECK_EQ(n%24, 0)
+        << "Optimized Pooling supports only batch that is multiple of 24";
       prv_layout_in_out_ = memory::format::byxf_b24_f32;
     break;
     case neural::engine::reference:
@@ -173,16 +179,16 @@ void MKL_DNNPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       NOT_IMPLEMENTED;
   }
 
-  poolingFwd_ = pooling::create( {engine_,
-                                  mode,
-                                  fwd_top_data_->memory_prv,
-                                  {out_off_b, {out_off_x, out_off_y}, out_off_z},
-                                  {n,         {ow,        oh},        c},
-                                  fwd_bottom_data_->memory_prv,
-                                  {in_off_b,  {in_off_x, in_off_y},   in_off_z},
-                                  {1,         {stride_w_, stride_h_}, 1},
-                                  {1,         {kernel_w_, kernel_h_}, 1},
-                                  padding::zero} );
+  poolingFwd_ = pooling::create({engine_,
+                                 mode,
+                                 fwd_top_data_->memory_prv,
+                                 {out_off_b, {out_off_x, out_off_y}, out_off_z},
+                                 {n,         {ow,        oh},        c},
+                                 fwd_bottom_data_->memory_prv,
+                                 {in_off_b,  {in_off_x, in_off_y},   in_off_z},
+                                 {1,         {stride_w_, stride_h_}, 1},
+                                 {1,         {kernel_w_, kernel_h_}, 1},
+                                 padding::zero});
 
   // TODO:
   poolingBwd_ = NULL;
@@ -303,7 +309,6 @@ void MKL_DNNPoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     return;
   }
   NOT_IMPLEMENTED;
-
 }
 
 #ifdef CPU_ONLY

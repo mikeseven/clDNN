@@ -27,6 +27,7 @@ extern cudaDeviceProp CAFFE_TEST_CUDA_PROP;
 template <typename TypeParam>
 class MKL_DNN_CPU_InnerProductLayerTest : public MultiDeviceTest<TypeParam> {
   typedef typename TypeParam::Dtype Dtype;
+
  protected:
   MKL_DNN_CPU_InnerProductLayerTest()
       : blob_bottom_(new Blob<Dtype>(g_batch, 3, 4, 5)),
@@ -52,7 +53,8 @@ class MKL_DNN_CPU_InnerProductLayerTest : public MultiDeviceTest<TypeParam> {
   vector<Blob<Dtype>*> blob_top_vec_;
 };
 
-TYPED_TEST_CASE(MKL_DNN_CPU_InnerProductLayerTest, ::testing::Types<CPUDevice<float> >);
+TYPED_TEST_CASE(MKL_DNN_CPU_InnerProductLayerTest,
+                ::testing::Types<CPUDevice<float> >);
 
 TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestSetUp) {
   typedef typename TypeParam::Dtype Dtype;
@@ -104,8 +106,8 @@ TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestSetUpTranposeTrue) {
   InnerProductParameter* inner_product_param =
       layer_param.mutable_inner_product_param();
   inner_product_param->set_num_output(g_num_output);
-  //TBD
-  //inner_product_param->set_transpose(true);
+  // TBD
+  // inner_product_param->set_transpose(true);
   shared_ptr<MKL_DNNInnerProductLayer<Dtype> > layer(
       new MKL_DNNInnerProductLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -176,7 +178,7 @@ TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestForwardTranspose) {
     inner_product_param->mutable_bias_filler()->set_max(2);
 
     // TBD
-    //inner_product_param->set_transpose(false);
+    // inner_product_param->set_transpose(false);
     shared_ptr<MKL_DNNInnerProductLayer<Dtype> > layer(
         new MKL_DNNInnerProductLayer<Dtype>(layer_param, engine));
     layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -303,8 +305,8 @@ TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestGradientTranspose) {
     inner_product_param->mutable_bias_filler()->set_min(1);
     inner_product_param->mutable_bias_filler()->set_max(2);
 
-    //TBD
-    //inner_product_param->set_transpose(true);
+    // TBD
+    // inner_product_param->set_transpose(true);
     MKL_DNNInnerProductLayer<Dtype> layer(layer_param);
     GradientChecker<Dtype> checker(1e-2, 1e-3);
     checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
@@ -332,7 +334,7 @@ TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestBackwardTranspose) {
     inner_product_param->mutable_bias_filler()->set_min(1);
     inner_product_param->mutable_bias_filler()->set_max(2);
     // TBD
-    //inner_product_param->set_transpose(false);
+    // inner_product_param->set_transpose(false);
     shared_ptr<MKL_DNNInnerProductLayer<Dtype> > layer(
         new MKL_DNNInnerProductLayer<Dtype>(layer_param, engine));
     layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);

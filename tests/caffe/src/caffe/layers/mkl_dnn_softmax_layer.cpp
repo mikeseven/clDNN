@@ -1,13 +1,13 @@
 #ifdef MKL_DNN_ENABLED
 #include <algorithm>
 #include <vector>
-#include <iostream>
 
 #include "boost/make_shared.hpp"
-#include "caffe/util/math_functions.hpp"
 #include "caffe/layers/mkl_dnn_layers.hpp"
+#include "caffe/util/math_functions.hpp"
 
 // TODO: 4D input ???
+using neural::normalization::softmax;
 
 namespace caffe {
 template <> void MKL_DNNSoftmaxLayer<double>::LayerSetUp(
@@ -42,24 +42,24 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   }
 
   bottom_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
-          usr_layout_in_out_, prv_layout_in_out_,
-          memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}}, z}}),
-          memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}}, z}}));
+    usr_layout_in_out_, prv_layout_in_out_,
+    memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}}, z}}),
+    memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}}, z}}));
 
   top_data_ = boost::make_shared<MKL_DNNData<Dtype> >(
-          usr_layout_in_out_, prv_layout_in_out_,
-          memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}}, z}}),
-          memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}}, z}}));
+    usr_layout_in_out_, prv_layout_in_out_,
+    memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}}, z}}),
+    memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}}, z}}));
 
   bottom_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
-          usr_layout_in_out_, prv_layout_in_out_,
-          memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}}, z}}),
-          memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}}, z}}));
+    usr_layout_in_out_, prv_layout_in_out_,
+    memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}}, z}}),
+    memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}}, z}}));
 
   top_diff_ = boost::make_shared<MKL_DNNDiff<Dtype> >(
-          usr_layout_in_out_, prv_layout_in_out_,
-          memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}}, z}}),
-          memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}}, z}}));
+    usr_layout_in_out_, prv_layout_in_out_,
+    memory::describe({engine_, usr_layout_in_out_, {batch, {{input_x}}, z}}),
+    memory::describe({engine_, prv_layout_in_out_, {batch, {{input_x}}, z}}));
 
   // Names are for debugging only
   bottom_data_->name = "fwd_bottom_data   @ " + this->layer_param_.name() + " ";
@@ -67,13 +67,13 @@ void MKL_DNNSoftmaxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   top_diff_->name =    "bwd_top_diff      @ " + this->layer_param_.name() + " ";
   bottom_diff_->name = "bwd_bottom_diff   @ " + this->layer_param_.name() + " ";
 
-  softmaxFwd_ = normalization::softmax::create({engine_,
-                                                top_data_->memory_prv,
-                                                {0, {{0}}, 0},
-                                                {batch, {{output_x}}, 1u},
-                                                bottom_data_->memory_prv,
-                                                {0, {{0}}, 0},
-                                                });
+  softmaxFwd_ = softmax::create({engine_,
+                                 top_data_->memory_prv,
+                                 {0, {{0}}, 0},
+                                 {batch, {{output_x}}, 1u},
+                                 bottom_data_->memory_prv,
+                                 {0, {{0}}, 0},
+                                 });
   // TODO: softmax backward support in mkl-dnn
 }
 
@@ -108,7 +108,8 @@ void MKL_DNNSoftmaxLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     top_data = top[0]->mutable_cpu_data();
     DLOG(INFO) << "Using cpu_data for top in DnnPooling.";
   }
-  execute({bottom_data_->memory_prv(bottom_data), top_data_->memory_prv(top_data), softmaxFwd_}).wait();
+  execute({bottom_data_->memory_prv(bottom_data),
+           top_data_->memory_prv(top_data), softmaxFwd_}).wait();
 }
 
 template <typename Dtype>
