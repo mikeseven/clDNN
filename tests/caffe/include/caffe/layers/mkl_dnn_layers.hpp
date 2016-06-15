@@ -60,11 +60,6 @@ struct MKL_DNNMemory : PrvMemDescr,
   neural::engine::type engine_to_prv_ = engine::reference;
   neural::engine::type engine_from_prv_ = engine::reference;
   std::string name = "UNKNOWN";  // for debugging purposes
-  vector<primitive> memory_prv_part_;    // TODO: better solution
-  vector<primitive> memory_usr_part_;    // TODO: better solution
-  vector<primitive> to_prv_part_;        // TODO: better solution
-  uint32_t parts_ = 1;
-  uint32_t part_offset_ = 0;
   bool use_cuda;
 
   virtual size_t prv_count() {

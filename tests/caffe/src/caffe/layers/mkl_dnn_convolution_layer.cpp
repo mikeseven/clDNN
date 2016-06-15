@@ -83,16 +83,7 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
   Timer timer;
   timer.Start();
 #endif
-      if(parts_ == 1) {
-        execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr_), this->to_prv}).wait();
-      }
-      else {
-         for(int i=0; i < parts_; i++)
-          execute({memory_usr_part_[i](usr_ptr        + i * part_offset_), // TODO: dont use part_offset_ ?
-                   memory_prv_part_[i](this->prv_ptr_ + i * part_offset_),
-                   this->to_prv_part_[i]}).wait();
-      }
-
+      execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr_), this->to_prv}).wait();
 #ifdef CONVERSION_PROFILING
   DLOG(INFO) << " *** conversion time: " << timer.MilliSeconds() << " ms.\n";
 #endif
@@ -265,23 +256,13 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
           memory::describe({engine_, usr_layout_filter_, {1, {kw, kh}, {oc, ic/g}}}),
           memory::describe({engine_, prv_layout_filter_, {1, {kw, kh}, {oc, ic/g}}}));
 
-  {
-    fwd_filter_data->parts_ = g;
-    fwd_filter_data->part_offset_ = kw*kh*(oc/g)*(ic/g);
-    for (unsigned i=0; i<g; i++) {
-      fwd_filter_data->memory_usr_part_.push_back(memory::describe({engine_, usr_layout_filter_, {1, {kw, kh}, {oc/g, ic/g}}}));
-      fwd_filter_data->memory_prv_part_.push_back(memory::describe({engine_, prv_layout_filter_, {1, {kw, kh}, {oc/g, ic/g}}}));
-      fwd_filter_data->to_prv_part_.push_back(
-        reorder::create(reorder::arguments({engine::reference,
-              fwd_filter_data->memory_prv_part_[i], fwd_filter_data->memory_usr_part_[i]})));
-    }
-  }
   fwd_bias_data = boost::make_shared<MKL_DNNData<Dtype> >(
           layout_bias_, layout_bias_,
           memory::describe({engine_, layout_bias_, {1, {{oc}}, 1}}),
           memory::describe({engine_, layout_bias_, {1, {{oc}}, 1}}));
 
   for (unsigned i=0; i<g; i++) {
+    filters_.push_back(memory::describe({engine_, fwd_filter_data->layout_prv, {1, {kw, kh}, {oc/g, ic/g}}}));
     biases_. push_back(memory::describe({engine_, fwd_bias_data->layout_prv, {1, {{oc/g}}, 1}}));
     convolution_fwd_.push_back(
       convolution::create({engine_,
@@ -289,7 +270,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
                            {0, {0, 0}, i*(oc/g)},
                            {n, {ow, oh}, oc/g},
                            { fwd_bottom_data->memory_prv,
-                             fwd_filter_data->memory_prv_part_[i],
+                             filters_[i],
                              biases_ [i] },
                            {0, {-pad_w_, -pad_h_}, static_cast<int>(i*(ic/g))},
                            {1, {stride_w_, stride_h_}, 1},
@@ -322,22 +303,7 @@ void MKL_DNNConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bott
           memory::describe({engine_, layout_bias_, {1, {{oc}}, 1}}));
 
   // TODO:
-#if 0
-  convolution_bwd = convolution_backward::create({ engine_,
-                                              std::vector<primitive>({bwd_bottom_diff->memory_prv,
-                                                                      bwd_filter_diff->memory_prv,
-                                                                      bwd_bias_diff->memory_prv}),
-                                          //   {out_off_y, out_off_x, out_off_z, out_off_b},
-                                          //   {out_siz_y, out_siz_x, out_siz_z, out_siz_b},
-                                              {bwd_top_diff->memory_prv,
-                                               fwd_bottom_data->memory_prv,
-                                               fwd_filter_data->memory_prv,
-                                               fwd_bias_data->memory_prv},
-                                          //  {in_off_y, in_off_x, in_off_z, in_off_b},
-                                               {1, {stride_w_, stride_h_}, 1},
-                                              padding::zero
-                                            });
-#endif
+  // convolution_bwd =
 
   // Names are for debugging purposes only. TODO: Consider removing this.
   fwd_bottom_data    ->name = "fwd_bottom_data   @ " + this->layer_param_.name();
@@ -390,6 +356,7 @@ void MKL_DNNConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
 
   CHECK_EQ(convolution_fwd_.size(), g);
   CHECK_EQ(biases_.size(), g);
+  CHECK_EQ(filters_.size(), g);
 
   auto bottom_data   = fwd_bottom_data->get_converted_prv(bottom[0], true);
   float* filter_data = fwd_filter_data->get_converted_prv(this->blobs_[0].get(), true);
@@ -405,7 +372,7 @@ void MKL_DNNConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
     float* bias_data   = fwd_bias_data  ->get_converted_prv(this->blobs_[1].get(), true);
     for(int i=0; i<g; i++) {
       execute({fwd_bottom_data->memory_prv(bottom_data), fwd_top_data->memory_prv(top_data),
-              fwd_filter_data->memory_prv_part_[i](filter_data + i* this->weight_offset_),
+              filters_[i](filter_data + i* this->weight_offset_),
               biases_[i](bias_data + i*oc),
               convolution_fwd_[i]}).wait();
     }
