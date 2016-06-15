@@ -38,6 +38,7 @@ namespace {
         uint64_t output_offset;
         uint64_t input_offset;
         uint64_t filter_offset;
+        uint64_t bias_offset;
         int8_t type; // 0:init, 1:normal, 2:finalize
     };
 
@@ -190,6 +191,7 @@ namespace {
                 // initial = zeroing -> calculation -> store
                 mov(rdi, ptr [rsi+offsetof(op_array_t,bias)]);
                 mov(rdi, ptr [rdi]);
+                add(rdi, ptr [r15+offsetof(op_data_t,bias_offset)]);
                 code_op_type(0, code_prologue_zero, code_epilogue_store);
 
                 // initial = load -> calculation -> relu -> store
@@ -219,111 +221,111 @@ namespace {
 
     jit_convolution_generic(
           float **output, uint64_t output_width, uint64_t output_height, uint64_t output_feature_maps
-        , float ** input, uint64_t  input_width, uint64_t  input_height, uint64_t  input_feature_maps,uint64_t stride_width, uint64_t stride_height
+        , float ** input, uint64_t  input_width, uint64_t  input_height, uint64_t  input_feature_maps,uint64_t stride_x, uint64_t stride_y
         , float **filter, uint64_t filter_size
         , float **  bias
-        , uint64_t block_width, uint64_t block_height
+        , uint64_t group_count
     ) : is_an_implementation(neural::type_id<jit_convolution_generic>())
-	  , code(input_feature_maps)
+      , code(input_feature_maps/group_count)
     {
         // create tasks list
         assert(input_feature_maps  % input_features_per_iteration ==0 && "input feature map count is not a multiple of features-per-iteration");
         assert(output_feature_maps % output_features_per_iteration==0 && "output feature map count is not a multiple of features-per-iteration");
 
+        const auto input_feature_maps_group  = input_feature_maps  / group_count;
+        const auto output_feature_maps_group = output_feature_maps / group_count;
+        assert( input_feature_maps_group % input_features_per_iteration ==0 && "input feature map count is not a multiple of features-per-iteration");
+        assert(output_feature_maps_group % output_features_per_iteration==0 && "output feature map count is not a multiple of features-per-iteration");
+
         // allocating buffers
         const auto output_feature_blocks = output_feature_maps/output_features_per_iteration;
-        const auto input_feature_blocks  = input_feature_maps/input_features_per_iteration;
-
-        const uint64_t fma_per_iteration           = batch_size/register_width_in_float*output_features_per_iteration*input_features_per_iteration;
-        const uint64_t fma_per_all_output_features = fma_per_iteration*input_feature_blocks*output_feature_blocks;
-        const uint64_t fma_per_image_filtering     = fma_per_all_output_features*output_height*output_width*filter_size*filter_size;
-        *const_cast<float *>(&fma_clock_count)     = 0.5f*fma_per_image_filtering;
+        //const auto  input_feature_blocks = input_feature_maps/input_features_per_iteration;
+        //const auto output_feature_blocks_group = output_feature_maps_group/output_features_per_iteration;
+        //const auto  input_feature_blocks_group = input_feature_maps_group /input_features_per_iteration;
 
         // creating tasks
-        const auto blocks_in_column = (output_height+block_height-1)/block_height;
-        const auto blocks_in_row    = (output_width +block_width -1)/block_width;
-        const auto job_count        = blocks_in_column*blocks_in_row;
+        const auto job_count = output_height*output_width*group_count;
 
         tasks.tasks.resize(job_count);
         op_data.resize(job_count);
         op_array.resize(job_count);
 
+        auto output_block_stride = output_features_per_iteration*batch_size;
+        auto filter_feature_blocks = output_features_per_iteration*input_feature_maps;
+        auto filter_feature_blocks_group = output_features_per_iteration*input_feature_maps_group;
         const auto filter_radius = (filter_size-1)/2;
-        for(uint64_t by=0; by<blocks_in_column; ++by)
-            for(uint64_t bx=0; bx<blocks_in_row; ++bx) {
+        for(uint64_t y=0; y<output_height; ++y)
+            for(uint64_t x=0; x<output_width; ++x)
+            {
+                for(uint64_t group=0; group<group_count; ++group) //todo iterate through group_count
+                {
+                    auto at = x+output_width*(y + output_height*group);
+                    //auto at = x+output_width*y;
+                    std::map<std::tuple<int64_t,int64_t,int64_t,int64_t>, op_data_t> sorted;
+                    auto at_pos = 0;
+                    if(y>=output_height || x>=output_width) continue;
+                    for(uint64_t ky=0; ky<filter_size; ++ky) {
+                        int64_t kyr=ky-filter_radius;
+                        int64_t sy =y*stride_y+kyr;
+                        if(sy<0 || static_cast<uint64_t>(sy)>=input_height) continue;
+                        for(uint64_t kx=0; kx<filter_size; ++kx) {
+                            int64_t kxr=kx-filter_radius;
+                            int64_t sx=x*stride_x+kxr;
+                            if(sx<0 || static_cast<uint64_t>(sx)>=input_width) continue;
 
-                auto output_block_stride = output_features_per_iteration*batch_size;
-                auto filter_feature_blocks = output_features_per_iteration*input_feature_maps;
+                            auto output_index = output_feature_blocks*(x + output_width*y) ;
+                            auto filter_index = output_feature_blocks*(kx + filter_size*ky);
 
-                auto at = by*blocks_in_row + bx;
-                std::set<std::tuple<int64_t, int64_t>> exists;
-                std::map<std::tuple<int64_t,int64_t,int64_t,int64_t>, op_data_t> sorted;
-                auto at_pos = 0;
-                for(uint64_t byi=0; byi<block_height; ++byi)
-                    for(uint64_t bxi=0; bxi<block_width; ++bxi) {
-                        auto y=by*block_height+byi;
-                        auto x=bx*block_width +bxi;
-                        if(y>=output_height || x>=output_width) continue;
-                        for(uint64_t ky=0; ky<filter_size; ++ky) {
-                            int64_t kyr=ky-filter_radius;
-                            int64_t sy =y*stride_height+kyr;
-                            if(sy<0 || static_cast<uint64_t>(sy)>=input_height) continue;
-                            for(uint64_t kx=0; kx<filter_size; ++kx) {
-                                int64_t kxr=kx-filter_radius;
-                                int64_t sx=x*stride_width+kxr;
-                                if(sx<0 || static_cast<uint64_t>(sx)>=input_width) continue;
-
-                                auto output_block = output_feature_blocks*(x + output_width*y);
-                                auto filter_block = output_feature_blocks*(kx + filter_size*ky);
-
-                                sorted.insert({
-                                    std::make_tuple(at_pos, at_pos, x,y),
-                                    {
-                                        sizeof(float)*output_block_stride*output_block
-                                        , sizeof(float)*batch_size*input_feature_maps*((x*stride_width+kx-filter_radius) + input_width*(y*stride_height+ky-filter_radius))
-                                        , sizeof(float)*filter_feature_blocks*filter_block
-                                        , 1
-                                    }
-                                });
-                                ++at_pos;
-                            }
+                            sorted.insert({
+                                std::make_tuple(at_pos, 0, x,y),
+                                {
+                                      sizeof(float)*output_block_stride*(output_index+group)
+                                    , sizeof(float)*batch_size*(input_feature_maps*(sx + input_width*sy) + group*input_feature_maps_group)
+                                    , sizeof(float)*filter_feature_blocks_group*(filter_index+group)
+                                    , sizeof(float)*output_feature_maps_group*group
+                                    , 1
+                                }
+                            });
+                            ++at_pos;
                         }
                     }
-                std::set<std::tuple<int64_t, int64_t>> first;
-                for(auto it = sorted.begin(); it!=sorted.end(); ++it) {
-                    auto local_at = std::make_tuple(std::get<2>(it->first), std::get<3>(it->first));
-                    if(first.find(local_at)==first.end()) {
-                        first.insert(local_at);
-                        it->second.type = 0;
+
+                    std::set<std::tuple<int64_t, int64_t, int64_t>> first;
+                    for(auto it = sorted.begin(); it!=sorted.end(); ++it) {
+                        auto local_at = std::make_tuple(std::get<1>(it->first), std::get<2>(it->first), std::get<3>(it->first));
+                        if(first.find(local_at)==first.end()) {
+                            first.insert(local_at);
+                            it->second.type = 0;
+                        }
                     }
-                }
 
-                std::set<std::tuple<int64_t, int64_t>> last;
-                for(auto it = sorted.rbegin(); it!=sorted.rend(); ++it) {
-                    auto local_at = std::make_tuple(std::get<2>(it->first), std::get<3>(it->first));
-                    if(last.find(local_at)==last.end()) {
-                        last.insert(local_at);
-                        it->second.type = 2;
+                    std::set<std::tuple<int64_t, int64_t, int64_t>> last;
+                    for(auto it = sorted.rbegin(); it!=sorted.rend(); ++it) {
+                        auto local_at = std::make_tuple(std::get<1>(it->first), std::get<2>(it->first), std::get<3>(it->first));
+                        if(last.find(local_at)==last.end()) {
+                            last.insert(local_at);
+                            it->second.type = 2;
+                        }
                     }
+
+                    for(auto &data : sorted)
+                        op_data[at].push_back(std::get<1>(data));
+
+                    op_array[at] = {
+                        op_data[at].size()
+                        , &op_data[at][0]
+                        , output_block_stride*sizeof(float)/group_count
+                        , output_feature_blocks/group_count
+                        , filter_feature_blocks*sizeof(float)
+                        , output
+                        , input
+                        , filter
+                        , bias
+                    };
+
+                    tasks.tasks[at].callback = reinterpret_cast<void (*)(const void *)>(code.getCode());
+                    tasks.tasks[at].data     = &op_array[at];
                 }
-
-                for(auto &data : sorted)
-                    op_data[at].push_back(std::get<1>(data));
-
-                op_array[at] = {
-                    op_data[at].size()
-                    , &op_data[at][0]
-                    , output_block_stride*sizeof(float)
-                    , output_feature_maps/output_features_per_iteration
-                    , filter_feature_blocks*sizeof(float)
-                    , output
-                    , input
-                    , filter
-                    , bias
-                };
-
-                tasks.tasks[at].callback = reinterpret_cast<void (*)(const void *)>(code.getCode());
-                tasks.tasks[at].data     = &op_array[at];
             }
     }
 
@@ -351,7 +353,7 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
     const int y_pos = 3;
 
     assert( 2 == output_size.spatial.size() );
-    assert( weights_arg.size.spatial[0] == weights_arg.size.spatial[1] ); //todo what is weights format?
+    assert( weights_arg.size.spatial[0] == weights_arg.size.spatial[1] );
     assert( input_arg.size.feature[0] % jit_convolution_generic::input_features_per_iteration ==0 && "input feature count is not multiple of input_features_per_iteration");
     assert( output_size.feature[0]    % jit_convolution_generic::output_features_per_iteration==0 && "output feature count is not multiple of output_features_per_iteration");
 
@@ -373,8 +375,7 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
                 reinterpret_cast<float**>(&arg.input_memory(1).pointer),
                 weights_arg.size.raw[ x_pos+1 ], // filter is square x == y
                 reinterpret_cast<float**>(&arg.input_memory(2).pointer),
-                1, // magic number, block w
-                1  // magic number, block h
+                input_arg.size.raw[f_pos]/weights_arg.size.raw[f_pos+1]
                 );
 
             jit_conv_ptr.reset(jit_convolution_generic_ptr);

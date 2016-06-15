@@ -46,7 +46,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     assert( output_size.feature[0] == filter_arg.size.feature[0] ); // memory::format oixy
 
     // todo remove
-    if(filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");
+//    if(filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");
 
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
     namespace nd = ndimensional;
@@ -231,13 +231,9 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
 namespace{
 struct attach{
     attach(){
-        auto key_fw = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
-        auto key_bw = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
-        auto val_fw = convolution_cpu_reference::create;
-        auto val_bw = convolution_backward_cpu_reference::create;
-
-        conv_fw_implementation_map.insert( {key_fw, val_fw} ); //todo keys should be different
-        conv_bw_implementation_map.insert( {key_bw, val_bw} );
+        conv_fw_implementation_map.insert( {std::make_tuple(engine::reference, memory::format::yxfb_f32,     memory::format::yxfb_f32),     convolution_cpu_reference::create} );
+        conv_fw_implementation_map.insert( {std::make_tuple(engine::reference, memory::format::byxf_b24_f32, memory::format::byxf_b24_f32), convolution_cpu_reference::create} );
+        conv_bw_implementation_map.insert( {std::make_tuple(engine::reference, memory::format::yxfb_f32,     memory::format::yxfb_f32),     convolution_backward_cpu_reference::create} );
     }
     ~attach(){}
 };
