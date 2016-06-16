@@ -6,10 +6,6 @@ layer {
 
   dummy_data_param {
     shape: { dim: 48 dim: 3 dim: 227 dim: 227 }
-    data_filler {
-      type: "gaussian"
-      value: 0.01
-    }
   }
 }
 
