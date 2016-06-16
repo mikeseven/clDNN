@@ -1138,7 +1138,7 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
                    out_x= 2, out_y= 1, out_f= 8,
                    str_x= 2, str_y= 2,
                    filter_x= 2, filter_y= 2,
-                   b = 24,
+                   b = 48,
                    groups = 2;
 
     static_assert(0 ==  in_f % groups, "0 !=  in_f % groups");
@@ -1228,13 +1228,16 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
     auto& out_ref2_mem = output_ref2.as<const memory&>();
     auto calc_out_idx = nd::choose_calculate_ptr(out_opt_mem); //same formats for all outputs
 
+    uint64_t group1_correct = 0, group2_correct = 0;
     for(auto pos : nd::value<uint32_t>({b, {out_x, out_y}, out_f/groups})){
         auto out_ref1_ptr = static_cast<float*>(calc_out_idx( out_ref1_mem, pos));
         auto out_opt_ptr  = static_cast<float*>(calc_out_idx( out_opt_mem , pos));
-        EXPECT_EQ(true, tests::are_equal(*out_ref1_ptr, *out_opt_ptr, 1e-3f, 1e-4f)) << " group: " << 1;
+        group1_correct += tests::are_equal(*out_ref1_ptr, *out_opt_ptr, 1e-3f, 1e-4f);
 
         auto out_ref2_ptr = static_cast<float*>(calc_out_idx( out_ref2_mem, pos));
         out_opt_ptr       = static_cast<float*>(calc_out_idx( out_opt_mem, pos + neural::vector<uint32_t>{0, {0, 0}, {out_f/groups}}));
-        EXPECT_EQ(true, tests::are_equal(*out_ref2_ptr, *out_opt_ptr, 1e-3f, 1e-4f)) << " group: " << 2;
+        group2_correct += tests::are_equal(*out_ref2_ptr, *out_opt_ptr, 1e-3f, 1e-4f);
     }
+    EXPECT_EQ(out_ref1_mem.count(), group1_correct);
+    EXPECT_EQ(out_ref2_mem.count(), group2_correct);
 }

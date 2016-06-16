@@ -225,6 +225,7 @@ namespace {
         , float **filter, uint64_t filter_size
         , float **  bias
         , uint64_t group_count
+        , uint64_t batch
     ) : is_an_implementation(neural::type_id<jit_convolution_generic>())
       , code(input_feature_maps/group_count)
     {
@@ -244,23 +245,26 @@ namespace {
         //const auto  input_feature_blocks_group = input_feature_maps_group /input_features_per_iteration;
 
         // creating tasks
-        const auto job_count = output_height*output_width*group_count;
+        const auto batch_blocks = batch/batch_size;
+        const auto job_count = output_height*output_width*group_count*batch_blocks;
 
         tasks.tasks.resize(job_count);
         op_data.resize(job_count);
         op_array.resize(job_count);
 
-        auto output_block_stride = output_features_per_iteration*batch_size;
-        auto filter_feature_blocks = output_features_per_iteration*input_feature_maps;
+        auto output_block_stride         = output_features_per_iteration*batch_size;
+        auto filter_feature_blocks       = output_features_per_iteration*input_feature_maps;
         auto filter_feature_blocks_group = output_features_per_iteration*input_feature_maps_group;
+        const auto image_spatial_area    = output_height*output_width;
         const auto filter_radius = (filter_size-1)/2;
+
+        for(uint64_t bblock = 0; bblock < batch_blocks; ++bblock)
         for(uint64_t y=0; y<output_height; ++y)
             for(uint64_t x=0; x<output_width; ++x)
             {
                 for(uint64_t group=0; group<group_count; ++group) //todo iterate through group_count
                 {
-                    auto at = x+output_width*(y + output_height*group);
-                    //auto at = x+output_width*y;
+                    auto at = x+output_width*(y + output_height*(group + group_count*bblock));
                     std::map<std::tuple<int64_t,int64_t,int64_t,int64_t>, op_data_t> sorted;
                     auto at_pos = 0;
                     if(y>=output_height || x>=output_width) continue;
@@ -279,8 +283,8 @@ namespace {
                             sorted.insert({
                                 std::make_tuple(at_pos, 0, x,y),
                                 {
-                                      sizeof(float)*output_block_stride*(output_index+group)
-                                    , sizeof(float)*batch_size*(input_feature_maps*(sx + input_width*sy) + group*input_feature_maps_group)
+                                      sizeof(float)*(output_block_stride*(output_index+group+ bblock*image_spatial_area*group_count))
+                                    , sizeof(float)*(batch_size*(input_feature_maps*(sx + input_width*(sy + bblock* input_height)) + group*input_feature_maps_group ))
                                     , sizeof(float)*filter_feature_blocks_group*(filter_index+group)
                                     , sizeof(float)*output_feature_maps_group*group
                                     , 1
@@ -375,7 +379,8 @@ convolution_cpu_jit_generic::convolution_cpu_jit_generic(convolution &arg)
                 reinterpret_cast<float**>(&arg.input_memory(1).pointer),
                 weights_arg.size.raw[ x_pos+1 ], // filter is square x == y
                 reinterpret_cast<float**>(&arg.input_memory(2).pointer),
-                input_arg.size.raw[f_pos]/weights_arg.size.raw[f_pos+1]
+                input_arg.size.raw[f_pos]/weights_arg.size.raw[f_pos+1],
+                input_arg.size.batch[0]
                 );
 
             jit_conv_ptr.reset(jit_convolution_generic_ptr);
