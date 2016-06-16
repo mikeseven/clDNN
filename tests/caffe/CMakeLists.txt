@@ -22,7 +22,7 @@ include(cmake/ConfigGen.cmake)
 
 # ---[ Options
 caffe_option(CPU_ONLY  "Build Caffe without CUDA support" ON) # TODO: rename to USE_CUDA
-caffe_option(USE_OPENMP "Build Caffe with OpenMP support" ON )
+caffe_option(USE_OPENMP "Build Caffe with OpenMP support" OFF )
 #caffe_option(USE_CUDNN "Build Caffe with cuDNN library support" ON IF NOT CPU_ONLY)
 caffe_option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 #caffe_option(BUILD_python "Build Python wrapper" ON)
@@ -55,7 +55,7 @@ endif()
 add_definitions(-DGTEST_USE_OWN_TR1_TUPLE)
 
 # ---[ Warnings
-caffe_warnings_disable(CMAKE_CXX_FLAGS -Wno-sign-compare -Wno-uninitialized)
+caffe_warnings_disable(CMAKE_CXX_FLAGS -Wno-sign-compare -Wno-uninitialized -Wno-unknown-pragmas)
 
 # ---[ Config generation
 configure_file(cmake/Templates/caffe_config.h.in "${PROJECT_BINARY_DIR}/caffe_config.h")
