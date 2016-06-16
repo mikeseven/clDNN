@@ -30,7 +30,15 @@ layer {
     num_output: 96
     kernel_size: 11
     stride: 4
-    engine: MKL_DNN_CPU
+    engine: CAFFE
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
   }
 }
 layer {
@@ -39,7 +47,7 @@ layer {
   bottom: "conv1"
   top: "conv1"
   relu_param {
-    engine: MKL_DNN_CPU
+    engine: CAFFE
   }
 }
 layer {
@@ -51,7 +59,7 @@ layer {
     local_size: 5
     alpha: 0.0001
     beta: 0.75
-    engine: MKL_DNN_CPU
+    engine: CAFFE
   }
 }
 layer {
@@ -63,7 +71,7 @@ layer {
     pool: MAX
     kernel_size: 3
     stride: 2
-    engine: MKL_DNN_CPU 
+    engine: CAFFE 
   }
 }
 layer {
@@ -84,7 +92,15 @@ layer {
     pad: 2
     kernel_size: 5
     group: 2
-    engine: MKL_DNN_CPU
+    engine: CAFFE
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
   }
 }
 layer {
@@ -93,7 +109,7 @@ layer {
   bottom: "conv2"
   top: "conv2"
   relu_param {
-    engine: MKL_DNN_CPU
+    engine: CAFFE
   }
 }
 layer {
@@ -105,7 +121,7 @@ layer {
     local_size: 5
     alpha: 0.0001
     beta: 0.75
-    engine: MKL_DNN_CPU
+    engine: CAFFE
   }
 }
 layer {
@@ -117,7 +133,7 @@ layer {
     pool: MAX
     kernel_size: 3
     stride: 2
-    engine: MKL_DNN_CPU
+    engine: CAFFE
   }
 }
 layer {
@@ -137,7 +153,15 @@ layer {
     num_output: 384
     pad: 1
     kernel_size: 3
-    engine: MKL_DNN_CPU
+    engine: CAFFE
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
   }
 }
 layer {
@@ -146,7 +170,7 @@ layer {
   bottom: "conv3"
   top: "conv3"
   relu_param {
-    engine: MKL_DNN_CPU
+    engine: CAFFE
   }
 }
 layer {
@@ -167,7 +191,15 @@ layer {
     pad: 1
     kernel_size: 3
     group: 2
-    engine: MKL_DNN_CPU
+    engine: CAFFE
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
   }
 }
 layer {
@@ -176,7 +208,7 @@ layer {
   bottom: "conv4"
   top: "conv4"
   relu_param {
-    engine: MKL_DNN_CPU
+    engine: CAFFE
   }
 }
 layer {
@@ -197,7 +229,15 @@ layer {
     pad: 1
     kernel_size: 3
     group: 2
-    engine: MKL_DNN_CPU
+    engine: CAFFE
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
   }
 }
 layer {
@@ -206,7 +246,7 @@ layer {
   bottom: "conv5"
   top: "conv5"
   relu_param {
-    engine: MKL_DNN_CPU
+    engine: CAFFE
   }
 }
 layer {
@@ -218,7 +258,7 @@ layer {
     pool: MAX
     kernel_size: 3
     stride: 2
-    engine: MKL_DNN_CPU
+    engine: CAFFE
   }
 }
 layer {
@@ -236,7 +276,15 @@ layer {
   }
   inner_product_param {
     num_output: 4096
-    engine: MKL_DNN_CPU
+    engine: CAFFE
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
   }
 }
 layer {
@@ -245,7 +293,7 @@ layer {
   bottom: "fc6"
   top: "fc6"
   relu_param {
-    engine: MKL_DNN_CPU
+    engine: CAFFE
   }
 }
 #layer {
@@ -272,7 +320,15 @@ layer {
   }
   inner_product_param {
     num_output: 4096
-    engine: MKL_DNN_CPU
+    engine: CAFFE
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
   }
 }
 layer {
@@ -281,7 +337,7 @@ layer {
   bottom: "fc7"
   top: "fc7"
   relu_param {
-    engine: MKL_DNN_CPU
+    engine: CAFFE
   }
 }
 #layer {
@@ -308,7 +364,15 @@ layer {
   }
   inner_product_param {
     num_output: 1000
-    engine: MKL_DNN_CPU
+    engine: CAFFE
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
   }
 }
 layer {
@@ -317,6 +381,6 @@ layer {
   bottom: "fc8"
   top: "prob"
   softmax_param {
-    engine: MKL_DNN_CPU
+    engine: CAFFE
   }
 }

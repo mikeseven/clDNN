@@ -7,7 +7,7 @@
 #include "caffe/layers/mkl_dnn_layers.hpp"
 
 // #define CONVERSION_PRINT_DATA
-#define CONVERSION_PROFILING
+// #define CONVERSION_PROFILING
 
 #ifdef CONVERSION_PROFILING
 #include "caffe/caffe.hpp"
@@ -15,9 +15,9 @@ using caffe::Timer;
 #endif
 
 // Uncomment to see where the layout conversions are done
-#undef DLOG
+// #undef DLOG
 #ifndef DLOG
-#define DLOG(x) LOG(x)
+#define DLOG(x) std::cout
 #endif
 
 /*  TODO

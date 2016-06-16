@@ -624,13 +624,13 @@ int compare() {
 
   // Data layer from reference:
   layers_ref[0]->Forward(bottom_vecs_ref[0], top_vecs_ref[0]);
-  layers_ref[1]->Forward(bottom_vecs_ref[1], top_vecs_ref[1]);
+  //layers_ref[1]->Forward(bottom_vecs_ref[1], top_vecs_ref[1]);
   // Reuse data layer output from reference net
-  const_cast< vector<vector<Blob<float>*> >& > (bottom_vecs)[2] = bottom_vecs_ref[2];
+  const_cast< vector<vector<Blob<float>*> >& > (bottom_vecs)[1] = bottom_vecs_ref[1];
 
   LOG(INFO) << "\n\nPerforming Forward - collect data for comparison";
   // start after the data layer
-  for (int i = 2; i < layers.size(); ++i) {
+  for (int i = 1; i < layers.size(); ++i) {
 
     CHECK_EQ(layers[i]->layer_param().name(), layers_ref[i]->layer_param().name());
 
@@ -640,7 +640,7 @@ int compare() {
 
   LOG(INFO) << "\n\nCompare fwd output, layer by layer";
   // start after the data layer
-  for (int i = 2; i < layers.size(); ++i) {
+  for (int i = 1; i < layers.size(); ++i) {
 
     CHECK_EQ(layers[i]->layer_param().name(), layers_ref[i]->layer_param().name());
 
@@ -658,7 +658,7 @@ int compare() {
         LOG(INFO) << "Forward: Error " << err << " at offset " << j <<  " vals: " << data[j] << " should be " << ref[j]
                                   << " layer: " << i << " name: " << layers[i]->layer_param().name();
         has_err++;
-        if (has_err > 10) break;
+        if (has_err > 100) break;
       }
     }
     if(has_err) break;

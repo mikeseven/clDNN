@@ -584,7 +584,7 @@ TYPED_TEST(MKL_DNN_CPU_ConvLayerTest, DISABLED_TestSimpleConvolutionGroup) {
 TYPED_TEST(MKL_DNN_CPU_ConvLayerTest, TestSimpleConvolutionGroup_batch24) {
   typedef typename TypeParam::Dtype Dtype;
 
-  Blob<Dtype> bottom(48, 24, 2, 2);
+  Blob<Dtype> bottom(48, 16, 2, 2);
 
   FillerParameter filler_param;
   filler_param.set_value(0);
@@ -597,8 +597,8 @@ TYPED_TEST(MKL_DNN_CPU_ConvLayerTest, TestSimpleConvolutionGroup_batch24) {
       layer_param.mutable_convolution_param();
   convolution_param->add_kernel_size(2);
   convolution_param->add_stride(2);
-  convolution_param->set_num_output(12);
-  convolution_param->set_group(3);
+  convolution_param->set_num_output(16);
+  convolution_param->set_group(2);
   convolution_param->mutable_weight_filler()->set_type("gaussian");
 
   convolution_param->mutable_bias_filler()->set_type("constant");
