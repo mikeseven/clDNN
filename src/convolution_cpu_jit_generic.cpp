@@ -95,8 +95,8 @@ namespace {
 
                 align(4);
                 L(op_type_);
-                    mov(rbx, r11);
-                    mov(rcx, r12);
+                    mov(rbx, r11);  // input
+                    mov(rcx, r12);  // weights
                     mov(rdx, input_feature_blocks);
 
                     prologue();
@@ -114,7 +114,7 @@ namespace {
                     epilogue();
 
                     add(rax, r9);
-                    add(r12, r10);
+                    add(r12, r10);  //r10 filter feature blocks
                     dec(r8);
                 jnz(op_type_);
                 add(r15, sizeof(op_data_t));
@@ -255,7 +255,7 @@ namespace {
         op_array.resize(job_count);
 
         auto output_block_stride         = output_features_per_iteration*batch_size;
-        auto filter_feature_blocks       = output_features_per_iteration*input_feature_maps;
+        //auto filter_feature_blocks       = output_features_per_iteration*input_feature_maps;
         auto filter_feature_blocks_group = output_features_per_iteration*input_feature_maps_group;
         const auto image_spatial_area    = output_height*output_width;
         const auto filter_radius = (filter_size-1)/2;
@@ -264,7 +264,6 @@ namespace {
         for(uint64_t y=0; y<output_height; ++y)
             for(uint64_t x=0; x<output_width; ++x)
             {
-                //for(uint64_t ofm_block = 0; ofm_block < output_feature_blocks; ++ ofm_block)
                 for(uint64_t group=0; group<group_count; ++group) //todo iterate through group_count
                 {
                     auto at = x+output_width*(y + output_height*(group + group_count*bblock));
@@ -324,7 +323,7 @@ namespace {
                         , &op_data[at][0]
                         , output_block_stride*sizeof(float)
                         , output_feature_blocks/group_count
-                        , filter_feature_blocks*sizeof(float)
+                        , filter_feature_blocks_group*sizeof(float)
                         , output
                         , input
                         , filter

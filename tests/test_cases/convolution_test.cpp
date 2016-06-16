@@ -1242,8 +1242,8 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad) {
 }
 
 TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad2) {
-    const uint32_t in_x = 2, in_y = 1, in_f = 16,
-                   out_x= 1, out_y= 1, out_f= 16,
+    const uint32_t in_x = 6, in_y = 6, in_f = 32,
+                   out_x= 3, out_y= 3, out_f= 32,
                    str_x= 2, str_y= 2,
                    filter_x= 2, filter_y= 2,
                    b = 48,
@@ -1303,11 +1303,11 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad2) {
     nd::value<uint32_t> w_ref_range(w_ref1_mem.argument.size);
 
     fill<float>(output_opt, -9999.0f);
-    fill<float>(weight_ref1, 1.0f);
-    fill<float>(weight_ref2, 1.0f);
-    fill<float>(input      , 1.0f);
-    fill<float>(biases_ref1, 1.0f);
-    fill<float>(biases_ref2, 1.0f);
+    fill<float>(weight_ref1);
+    fill<float>(weight_ref2);
+    fill<float>(input      );
+    fill<float>(biases_ref1);
+    fill<float>(biases_ref2);
 
     // copy (concatenate) weights and biases for conv_group
     for(size_t i = 0; i < out_f/groups ; ++i){
@@ -1329,10 +1329,6 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad2) {
         *w_opt_ptr = *w_ref2_ptr;
     }
 
-
-    fill<float>(weight_opt, 1.0f);
-    fill<float>(biases_opt, 1.0f);
-
     execute({conv1, conv2}, {engine_resource}).wait();
     execute({conv_group}, {engine_resource}).wait();
 
@@ -1343,6 +1339,7 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad2) {
 
     uint64_t group1_correct = 0, group2_correct = 0;
     for(auto pos : nd::value<uint32_t>({b, {out_x, out_y}, out_f/groups})){
+        std::cout << pos << std::endl;
         auto out_ref1_ptr = static_cast<float*>(calc_out_idx( out_ref1_mem, pos));
         auto out_opt_ptr  = static_cast<float*>(calc_out_idx( out_opt_mem , pos));
         group1_correct += tests::are_equal(*out_ref1_ptr, *out_opt_ptr, 1e-3f, 1e-4f);
