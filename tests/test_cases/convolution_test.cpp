@@ -1339,7 +1339,6 @@ TEST(convolution_group_f32_fw, groups2_optimized_vs_ref_nopad2) {
 
     uint64_t group1_correct = 0, group2_correct = 0;
     for(auto pos : nd::value<uint32_t>({b, {out_x, out_y}, out_f/groups})){
-        std::cout << pos << std::endl;
         auto out_ref1_ptr = static_cast<float*>(calc_out_idx( out_ref1_mem, pos));
         auto out_opt_ptr  = static_cast<float*>(calc_out_idx( out_opt_mem , pos));
         group1_correct += tests::are_equal(*out_ref1_ptr, *out_opt_ptr, 1e-3f, 1e-4f);
