@@ -63,15 +63,15 @@ struct reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
     task_group work() { return {tasks, schedule::unordered}; }
     static is_an_implementation *create(reorder &arg) { return new reorder_cpu_byxf_f32_to_byxf_b24_f32(arg); };
 
-   static void implementation2(const void *ptr) {
+   static void implementation(const void *ptr) {
         auto data       = static_cast<const op_data_t* >(ptr);
-        auto input_ptr  = data->input;
-        auto output_ptr = data->output;
+        auto input_ptr  = *data->input;
+        auto output_ptr = *data->output;
 
-        uint32_t size_y = data->size_y;
-        uint32_t size_x = data->size_x;
-        uint32_t size_f = data->size_f;
-        uint32_t b      = data->batch;
+        const uint32_t size_y = data->size_y;
+        const uint32_t size_x = data->size_x;
+        const uint32_t size_f = data->size_f;
+        const uint32_t b      = data->batch;
 
         for(uint32_t y=0; y<size_y; ++y)
             for(uint32_t x=0; x<size_x; ++x)
@@ -83,8 +83,6 @@ struct reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
     }
 
 };
-
-
 
 struct reorder_cpu_bfyx_f32_to_byxf_f32 : is_an_implementation {
     const reorder &outer;
