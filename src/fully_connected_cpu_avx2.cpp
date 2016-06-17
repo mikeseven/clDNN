@@ -67,6 +67,7 @@ fully_connected_forward_cpu_avx2::fully_connected_forward_cpu_avx2(fully_connect
 
     tasks_parameters.reserve(task_count);
     tsk_grp.tasks.reserve(task_count);
+    tsk_grp.schedule = schedule::split;
     for (uint32_t i = 0; i < task_count; ++i)
     {
         tasks_parameters.emplace_back(parameters_connected_forward_cpu_avx2{ &fc, i });

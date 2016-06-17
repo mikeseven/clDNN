@@ -153,8 +153,6 @@ class MKL_DNN_Ref_ConvLayerTest : public MultiDeviceTest<TypeParam> {
   MKL_DNN_Ref_ConvLayerTest()
       : blob_bottom_(new Blob<Dtype>(2, 3, 6, 4)),
         blob_bottom_2_(new Blob<Dtype>(2, 3, 6, 4)),
-        // : blob_bottom_(new Blob<Dtype>(1, 3, 2, 2)), // jrenieck: temporarily simplified
-        //blob_bottom_2_(new Blob<Dtype>(1, 3, 2, 2)),
         blob_top_(new Blob<Dtype>()),
         blob_top_2_(new Blob<Dtype>()) {}
   virtual void SetUp() {
@@ -191,7 +189,7 @@ class MKL_DNN_Ref_ConvLayerTest : public MultiDeviceTest<TypeParam> {
 };
 
 
-//TYPED_TEST_CASE(MKL_DNN_Ref_ConvLayerTest, TestDtypesAndDevices);
+// TYPED_TEST_CASE(MKL_DNN_Ref_ConvLayerTest, TestDtypesAndDevices);
 // TODO: Currently only float support
 TYPED_TEST_CASE(MKL_DNN_Ref_ConvLayerTest, ::testing::Types<CPUDevice<float> >);
 
@@ -256,7 +254,6 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestSimpleConvolution) {
   top_data = this->blob_top_->cpu_data();
   ref_top_data = this->ref_blob_top_->cpu_data();
   for (int i = 0; i < this->blob_top_->count(); ++i) {
-    //std::cout << i << " \n";
     EXPECT_NEAR(top_data[i], ref_top_data[i], 1e-4);
   }
 
@@ -281,9 +278,9 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradient) {
 // TODO: improve conv so that it runs on all buffers in bottom vector
   this->blob_bottom_vec_.push_back(this->blob_bottom_2_);
   this->blob_top_vec_.push_back(this->blob_top_2_);
-  convolution_param->add_kernel_size(1); // jrenieck: temporarily simplified, was:3
-  convolution_param->add_stride(1);      // jrenieck: temporarily simplified, was:2
-  convolution_param->set_num_output(1);  // jrenieck: temporarily simplified, was:2
+  convolution_param->add_kernel_size(3);
+  convolution_param->add_stride(2);
+  convolution_param->set_num_output(2);
   convolution_param->mutable_weight_filler()->set_type("gaussian");
   convolution_param->mutable_bias_filler()->set_type("gaussian");
   MKL_DNNConvolutionLayer<Dtype> layer(layer_param, engine);
@@ -866,4 +863,4 @@ TYPED_TEST(MKL_DNN_Ref_ConvLayerTest, TestGradientGroup) {
 }
 #endif
 }  // namespace caffe
-#endif //#ifdef MKL_DNN_ENABLED
+#endif  // #ifdef MKL_DNN_ENABLED

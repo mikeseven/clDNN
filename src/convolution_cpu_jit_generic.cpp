@@ -95,15 +95,17 @@ namespace {
 
                 align(4);
                 L(op_type_);
-                    mov(rbx, r11);
-                    mov(rcx, r12);
+                    mov(rbx, r11);  // input
+                    mov(rcx, r12);  // weights
                     mov(rdx, input_feature_blocks);
 
                     prologue();
 
                     align(4);
                     L(op_internal_loop_);
-                        for(uint64_t n=0; n<input_features_per_iteration; ++n) code_op_type_block(static_cast<int>(n));
+                        for(uint64_t n=0; n<input_features_per_iteration; ++n)
+                            code_op_type_block(static_cast<int>(n));
+
                         add(rbx,    batch_size*output_features_per_iteration*input_features_per_iteration);
                         add(rcx, sizeof(float)*output_features_per_iteration*input_features_per_iteration);
                         dec(rdx);
@@ -112,7 +114,7 @@ namespace {
                     epilogue();
 
                     add(rax, r9);
-                    add(r12, r10);
+                    add(r12, r10);  //r10 filter feature blocks
                     dec(r8);
                 jnz(op_type_);
                 add(r15, sizeof(op_data_t));
@@ -210,7 +212,7 @@ namespace {
         };
     };
 
-	jit_code code;
+    jit_code code;
     std::vector<std::vector<op_data_t>> op_data;
     std::vector<op_array_t> op_array;
 
@@ -241,7 +243,7 @@ namespace {
         // allocating buffers
         const auto output_feature_blocks = output_feature_maps/output_features_per_iteration;
         //const auto  input_feature_blocks = input_feature_maps/input_features_per_iteration;
-        //const auto output_feature_blocks_group = output_feature_maps_group/output_features_per_iteration;
+        const auto output_feature_blocks_group = output_feature_maps_group/output_features_per_iteration;
         //const auto  input_feature_blocks_group = input_feature_maps_group /input_features_per_iteration;
 
         // creating tasks
@@ -253,7 +255,7 @@ namespace {
         op_array.resize(job_count);
 
         auto output_block_stride         = output_features_per_iteration*batch_size;
-        auto filter_feature_blocks       = output_features_per_iteration*input_feature_maps;
+        //auto filter_feature_blocks       = output_features_per_iteration*input_feature_maps;
         auto filter_feature_blocks_group = output_features_per_iteration*input_feature_maps_group;
         const auto image_spatial_area    = output_height*output_width;
         const auto filter_radius = (filter_size-1)/2;
@@ -283,9 +285,10 @@ namespace {
                             sorted.insert({
                                 std::make_tuple(at_pos, 0, x,y),
                                 {
-                                      sizeof(float)*(output_block_stride*(output_index+group+ bblock*image_spatial_area*group_count))
+                                      sizeof(float)*(output_block_stride*(output_index+group*output_feature_blocks_group+ bblock*image_spatial_area*output_feature_blocks))
                                     , sizeof(float)*(batch_size*(input_feature_maps*(sx + input_width*(sy + bblock* input_height)) + group*input_feature_maps_group ))
-                                    , sizeof(float)*filter_feature_blocks_group*(filter_index+group)
+                                    //, sizeof(float)*filter_feature_blocks_group*(filter_index+group)
+                                    , sizeof(float)*(group*input_feature_maps_group*output_feature_maps_group + filter_index*filter_feature_blocks_group)
                                     , sizeof(float)*output_feature_maps_group*group
                                     , 1
                                 }
@@ -318,9 +321,9 @@ namespace {
                     op_array[at] = {
                         op_data[at].size()
                         , &op_data[at][0]
-                        , output_block_stride*sizeof(float)/group_count
+                        , output_block_stride*sizeof(float)
                         , output_feature_blocks/group_count
-                        , filter_feature_blocks*sizeof(float)
+                        , filter_feature_blocks_group*sizeof(float)
                         , output
                         , input
                         , filter
@@ -330,7 +333,7 @@ namespace {
                     tasks.tasks[at].callback = reinterpret_cast<void (*)(const void *)>(code.getCode());
                     tasks.tasks[at].data     = &op_array[at];
                 }
-            }
+             }
     }
 
     neural::task_group work() {

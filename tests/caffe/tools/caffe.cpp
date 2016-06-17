@@ -59,6 +59,10 @@ DEFINE_string(listen_address, "",
 DEFINE_string(multinode_type, "sync",
     "Optional; multinode mode, type of multinode training mode "
     "[sync, async, ave]");
+DEFINE_bool(forward_only, false,
+    "Optional; Execute only forward pass");
+DEFINE_bool(min_time, false,
+    "Optional; Measure min time");
 
 // A simple registry for caffe commands.
 typedef int (*BrewFunction)();
@@ -350,8 +354,8 @@ int test() {
         } else {
           test_score[idx] += score;
         }
-        const std::string& output_name = caffe_net.blob_names()[
-            caffe_net.output_blob_indices()[j]];
+        //const std::string& output_name = caffe_net.blob_names()[
+        //    caffe_net.output_blob_indices()[j]];
         //LOG(INFO) << "Batch " << i << ", " << output_name << " = " << score;
         if(score > max_score) {
           max_score = score;
@@ -410,7 +414,8 @@ int time() {
   caffe_net.Forward(vector<Blob<float>*>(), &initial_loss);
   LOG(INFO) << "Initial loss: " << initial_loss;
   LOG(INFO) << "Performing Backward";
-  caffe_net.Backward();
+  if (!FLAGS_forward_only)
+    caffe_net.Backward();
 
   const vector<shared_ptr<Layer<float> > >& layers = caffe_net.layers();
   const vector<vector<Blob<float>*> >& bottom_vecs = caffe_net.bottom_vecs();
@@ -424,10 +429,16 @@ int time() {
   Timer forward_timer;
   Timer backward_timer;
   Timer timer;
-  std::vector<float> forward_time_per_layer(layers.size(), 1e37);
-  std::vector<float> backward_time_per_layer(layers.size(), 1e37);
-  float forward_time = 0;
-  float backward_time = 0;
+  std::vector<double> forward_time_per_layer(layers.size(), 0.0);
+  std::vector<double> backward_time_per_layer(layers.size(), 0.0);
+  double forward_time = 0.0;
+  double backward_time = 0.0;
+  if (FLAGS_min_time) {
+    for (int i = 0; i < layers.size(); i++) forward_time_per_layer[i] = 1e37;
+    for (int i = 0; i < layers.size(); i++) backward_time_per_layer[i] = 1e37;
+    forward_time = 1e37;
+    backward_time = 1e37;
+  }
   for (int j = 0; j < FLAGS_iterations; ++j) {
     Timer iter_timer;
     iter_timer.Start();
@@ -435,37 +446,89 @@ int time() {
     for (int i = 0; i < layers.size(); ++i) {
       timer.Start();
       layers[i]->Forward(bottom_vecs[i], top_vecs[i]);
-      forward_time_per_layer[i] = std::min(forward_time_per_layer[i],timer.MicroSeconds());
+      if (FLAGS_min_time) {
+        double time = timer.MicroSeconds();
+        if (forward_time_per_layer[i] > time)
+          forward_time_per_layer[i] = time;
+      } else {
+        forward_time_per_layer[i] += timer.MicroSeconds();
+      }
     }
-    forward_time += forward_timer.MicroSeconds();
-    backward_timer.Start();
-    for (int i = layers.size() - 1; i >= 0; --i) {
-      timer.Start();
-      layers[i]->Backward(top_vecs[i], bottom_need_backward[i],
-                          bottom_vecs[i]);
-      backward_time_per_layer[i] = std::min(backward_time_per_layer[i], timer.MicroSeconds());
+    if (FLAGS_min_time) {
+      double time = forward_timer.MicroSeconds();
+      if (forward_time > time)
+        forward_time = time;
+    } else {
+      forward_time += forward_timer.MicroSeconds();
     }
-    backward_time += backward_timer.MicroSeconds();
-    LOG(INFO) << "Iteration: " << j + 1 << " forward-backward time: "
-      << iter_timer.MilliSeconds() << " ms.";
+    if (!FLAGS_forward_only) {
+      backward_timer.Start();
+      for (int i = layers.size() - 1; i >= 0; --i) {
+        timer.Start();
+        layers[i]->Backward(top_vecs[i], bottom_need_backward[i],
+                            bottom_vecs[i]);
+        if (FLAGS_min_time) {
+          double time = timer.MicroSeconds();
+          if (backward_time_per_layer[i] > time)
+            backward_time_per_layer[i] = time;
+        } else {
+          backward_time_per_layer[i] += timer.MicroSeconds();
+        }
+      }
+      if (FLAGS_min_time) {
+        double time = backward_timer.MicroSeconds();
+        if (backward_time > time) backward_time = time;
+      } else {
+        backward_time += backward_timer.MicroSeconds();
+      }
+      LOG(INFO) << "Iteration: " << j + 1 << " forward-backward time: "
+        << iter_timer.MilliSeconds() << " ms.";
+    } else {
+      LOG(INFO) << "Iteration: " << j + 1 << " forward time: "
+        << iter_timer.MilliSeconds() << " ms.";
+    }
   }
-  LOG(INFO) << "Min time per layer: ";
-  for (int i = 0; i < layers.size(); ++i) {
-    const caffe::string& layername = layers[i]->layer_param().name();
-    LOG(INFO) << std::setfill(' ') << std::setw(10) << layername <<
-      "\tforward:  " << forward_time_per_layer[i] / 1000 /
-      (1 + 0*FLAGS_iterations) << " ms.";
-    LOG(INFO) << std::setfill(' ') << std::setw(10) << layername  <<
-      "\tbackward: " << backward_time_per_layer[i] / 1000 /
-      (1+0*FLAGS_iterations) << " ms.";
+  if (FLAGS_min_time) {
+    LOG(INFO) << "Min time per layer: ";
+    for (int i = 0; i < layers.size(); ++i) {
+      const caffe::string& layername = layers[i]->layer_param().name();
+      LOG(INFO) << std::setfill(' ') << std::setw(10) << layername <<
+        "\tforward: " << forward_time_per_layer[i] / 1000 << " ms.";
+      if (!FLAGS_forward_only) {
+        LOG(INFO) << std::setfill(' ') << std::setw(10) << layername  <<
+          "\tbackward: " << backward_time_per_layer[i] / 1000 << " ms.";
+      }
+    }
+  } else {
+    LOG(INFO) << "Average time per layer: ";
+    for (int i = 0; i < layers.size(); ++i) {
+      const caffe::string& layername = layers[i]->layer_param().name();
+      LOG(INFO) << std::setfill(' ') << std::setw(10) << layername <<
+        "\tforward: " << forward_time_per_layer[i] / 1000 /
+        FLAGS_iterations << " ms.";
+      if (!FLAGS_forward_only) {
+        LOG(INFO) << std::setfill(' ') << std::setw(10) << layername  <<
+          "\tbackward: " << backward_time_per_layer[i] / 1000 /
+          FLAGS_iterations << " ms.";
+      }
+    }
   }
   total_timer.Stop();
-  LOG(INFO) << "Average Forward pass: " << forward_time / 1000 /
-    FLAGS_iterations << " ms.";
-  LOG(INFO) << "Average Backward pass: " << backward_time / 1000 /
-    FLAGS_iterations << " ms.";
-  LOG(INFO) << "Average Forward-Backward: " << total_timer.MilliSeconds() /
-    FLAGS_iterations << " ms.";
+  if (FLAGS_min_time) {
+    LOG(INFO) << "Min Forward pass: " << forward_time / 1000 << " ms.";
+    if (!FLAGS_forward_only) {
+      LOG(INFO) << "Min Backward pass: " << backward_time / 1000 << " ms.";
+    }
+  } else {
+    LOG(INFO) << "Average Forward pass: " << forward_time / 1000 /
+      FLAGS_iterations << " ms.";
+    if (!FLAGS_forward_only) {
+      LOG(INFO) << "Average Backward pass: " << backward_time / 1000 /
+        FLAGS_iterations << " ms.";
+      LOG(INFO) << "Average Forward-Backward: " << total_timer.MilliSeconds() /
+        FLAGS_iterations << " ms.";
+    }
+  }
   LOG(INFO) << "Total Time: " << total_timer.MilliSeconds() << " ms.";
   LOG(INFO) << "*** Benchmark ends ***";
   return 0;
@@ -561,13 +624,13 @@ int compare() {
 
   // Data layer from reference:
   layers_ref[0]->Forward(bottom_vecs_ref[0], top_vecs_ref[0]);
-  layers_ref[1]->Forward(bottom_vecs_ref[1], top_vecs_ref[1]);
+  //layers_ref[1]->Forward(bottom_vecs_ref[1], top_vecs_ref[1]);
   // Reuse data layer output from reference net
-  const_cast< vector<vector<Blob<float>*> >& > (bottom_vecs)[2] = bottom_vecs_ref[2];
+  const_cast< vector<vector<Blob<float>*> >& > (bottom_vecs)[1] = bottom_vecs_ref[1];
 
   LOG(INFO) << "\n\nPerforming Forward - collect data for comparison";
   // start after the data layer
-  for (int i = 2; i < layers.size(); ++i) {
+  for (int i = 1; i < layers.size(); ++i) {
 
     CHECK_EQ(layers[i]->layer_param().name(), layers_ref[i]->layer_param().name());
 
@@ -577,7 +640,7 @@ int compare() {
 
   LOG(INFO) << "\n\nCompare fwd output, layer by layer";
   // start after the data layer
-  for (int i = 2; i < layers.size(); ++i) {
+  for (int i = 1; i < layers.size(); ++i) {
 
     CHECK_EQ(layers[i]->layer_param().name(), layers_ref[i]->layer_param().name());
 
@@ -595,7 +658,7 @@ int compare() {
         LOG(INFO) << "Forward: Error " << err << " at offset " << j <<  " vals: " << data[j] << " should be " << ref[j]
                                   << " layer: " << i << " name: " << layers[i]->layer_param().name();
         has_err++;
-        if (has_err > 10) break;
+        if (has_err > 100) break;
       }
     }
     if(has_err) break;
