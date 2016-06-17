@@ -165,9 +165,9 @@ TEST_F(Reorder_test_fixture,reorder_test_output_as_input_2pass) {
     EXPECT_EQ(true, result);
 }
 
-
 TEST(reorder_test, byxf_f32_to_byxf_b24_f32) {
-    const uint32_t y = 2, x = 3, f = 3, b = 24*2;
+    const uint32_t y = 10, x = 10, f = 4, b = 24*2;
+    auto engine_resource = worker_cpu::create({8});
 
     auto input      = memory::allocate({engine::reference, memory::format::byxf_f32,     {b, {x, y}, f}});
     auto output     = memory::allocate({engine::reference, memory::format::byxf_b24_f32, {b, {x, y}, f}});
@@ -176,14 +176,16 @@ TEST(reorder_test, byxf_f32_to_byxf_b24_f32) {
 
     auto valid  = reorder::create({engine::reference, output_ref, input});
     auto tested = reorder::create({engine::cpu,       output,     input});
-    execute({valid, tested}).wait();
 
-    auto output_ptr     = static_cast<float *>(output.as<const memory&>().pointer);
+    execute({ valid }).wait();
     auto output_ref_ptr = static_cast<float *>(output_ref.as<const memory&>().pointer);
-    for(size_t i = 0; i < y*x*f*b; ++i)
-        EXPECT_EQ(output_ptr[i], output_ref_ptr[i]);
-}
 
+    execute({ tested }, {engine_resource} ).wait();
+    auto output_ptr     = static_cast<float *>(output.as<const memory&>().pointer);
+
+    for(size_t i = 0; i < y*x*f*b; ++i)
+        EXPECT_EQ(output_ptr[i], output_ref_ptr[i]) << "at index: " << i;
+}
 
 TEST(reorder_test, bfyx_f32_to_byxf_f32) {
     const uint32_t y = 5, x = 4, f = 3, b = 12;
