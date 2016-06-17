@@ -49,7 +49,7 @@ void MKL_DNNMemory<Dtype, is_diff>::convert_from_prv(
   Timer timer;
   timer.Start();
 #endif
-  execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv}).wait();
+ // execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv}).wait();
 #ifdef CONVERSION_PROFILING
   DLOG(INFO) << " *** conversion time: " << timer.MilliSeconds() << " ms.\n";
 #endif
@@ -76,8 +76,8 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
       DLOG(INFO) << "convert      => priv                                => "
                  << this->name  << "  || layouts:   => " << this->layout_prv
                  << " | engine: " << engine_to_prv_ << "\n";
-      auto usr_ptr = is_diff ? const_cast<Dtype*>(blob->cpu_diff()) :
-                               const_cast<Dtype*>(blob->cpu_data());
+      //auto usr_ptr = is_diff ? const_cast<Dtype*>(blob->cpu_diff()) :
+        //                       const_cast<Dtype*>(blob->cpu_data());
       if (this->prv_ptr_ == nullptr)
         this->allocate();
 
@@ -85,8 +85,8 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
   Timer timer;
   timer.Start();
 #endif
-      execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr_), this->to_prv})
-        .wait();
+      //execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr_), this->to_prv})
+       // .wait();
 #ifdef CONVERSION_PROFILING
   DLOG(INFO) << " *** conversion time: " << timer.MilliSeconds() << " ms.\n";
 #endif
@@ -152,8 +152,8 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
 #endif
         primitive convert = reorder::create(reorder::arguments
           ({conversion_engine, this->memory_prv, current_descr->memory_prv}));
-        execute({current_descr->memory_prv(current_descr->prv_ptr_),
-                 this->memory_prv(this->prv_ptr_), convert}).wait();
+        //execute({current_descr->memory_prv(current_descr->prv_ptr_),
+          //       this->memory_prv(this->prv_ptr_), convert}).wait();
 
 #ifdef CONVERSION_PROFILING
   DLOG(INFO) << " *** conversion time: " << timer.MilliSeconds() << " ms.\n";
