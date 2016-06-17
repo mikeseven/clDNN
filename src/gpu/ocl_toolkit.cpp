@@ -145,7 +145,7 @@ stdext::checked_array_iterator<T*> arr_end(T* buf, size_t count) {
 
 #else
 template<typename T>
-T* arr_begin(T* buf, size_t count) { return buf; }
+T* arr_begin(T* buf, size_t) { return buf; }
 
 template<typename T>
 T* arr_end(T* buf, size_t count) { return buf + count; }
