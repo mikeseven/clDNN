@@ -60,7 +60,7 @@ struct task {
 };
 
 
-struct schedule { enum type { 
+struct schedule { enum type {
       single        // single-thread execution, for reference implementations
     , unordered     // first come, first served
     , split         // split task list among worker threads
@@ -70,8 +70,8 @@ struct task_group {
     std::vector<task>       tasks;
     neural::schedule::type  schedule;
 
-    task_group() : schedule(schedule::single) {};
-    task_group(const std::vector<task>& arg_tasks, neural::schedule::type arg_schedule) 
+    task_group() : schedule(schedule::unordered) {};
+    task_group(const std::vector<task>& arg_tasks, neural::schedule::type arg_schedule)
         : tasks(arg_tasks)
         , schedule(arg_schedule)
     {};   // workaround, could be remove in future
@@ -241,7 +241,7 @@ template<typename T_type> __attribute__((noinline)) type_traits *type_id() {
     return ti;
 }
 
-class engine  { engine();  public: enum type { 
+class engine  { engine();  public: enum type {
     // engines
       reference=1                   // naive & easy to debug implementation for validation
     , cpu                           // optimized CPU implementation
@@ -467,7 +467,7 @@ class async_result {
     // execution of sequence of primitives
     friend DLL_SYM async_result execute(std::vector<primitive>, std::vector<worker>);
 public:
-    DLL_SYM size_t tasks_left(); 
+    DLL_SYM size_t tasks_left();
     DLL_SYM void wait();
 };
 DLL_SYM async_result execute(std::vector<primitive> primitives, std::vector<worker> workers=std::vector<worker>());
