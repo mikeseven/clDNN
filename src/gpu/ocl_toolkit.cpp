@@ -301,28 +301,35 @@ memory_arg::~memory_arg() {
 }
 
 gpu_toolkit::gpu_toolkit() {
-    std::call_once(ocl_initialized, initialize);
     add_kernel(definitions_cl);
 }
 
 void gpu_toolkit::initialize() {
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
-    cl::Platform plat;
+    cl::Device default_device;
     for (auto& p : platforms) {
-        std::string platver = p.getInfo<CL_PLATFORM_VERSION>();
-        if (platver.find("OpenCL 2.") != std::string::npos) {
-            plat = p;
+        std::vector<cl::Device> devices;
+        p.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        for(auto& d: devices) {
+            if (d.getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_GPU) {
+                auto vendor_id = d.getInfo<CL_DEVICE_VENDOR_ID>();
+                //set Intel GPU device default
+                if (vendor_id == 0x8086) {
+                    auto default_platform = cl::Platform::setDefault(p);
+                    if (default_platform != p) throw std::runtime_error("Error setting default platform.");
+
+                    default_device = cl::Device::setDefault(d);
+                    if (default_device != d) throw std::runtime_error("Error setting default device.");
+                    break;
+                }
+            }
         }
+        if(default_device() !=  nullptr) break;
     }
 
-    if (plat() == nullptr) {
-        throw std::runtime_error("No OpenCL 2.0 platform found.");
-    }
-
-    cl::Platform newP = cl::Platform::setDefault(plat);
-    if (newP != plat) {
-        throw std::runtime_error("Error setting default platform.");
+    if (default_device() == nullptr) {
+        throw std::runtime_error("No OpenCL GPU device found.");
     }
 }
 

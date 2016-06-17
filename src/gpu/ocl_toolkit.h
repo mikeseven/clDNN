@@ -22,7 +22,8 @@
 #pragma warning(disable: 4505)
 // we want exceptions
 #define CL_HPP_ENABLE_EXCEPTIONS
-#define CL_HPP_TARGET_OPENCL_VERSION 200
+#define CL_HPP_MINIMUM_OPENCL_VERSION 120
+#define CL_HPP_TARGET_OPENCL_VERSION 120
 #include "cl2.hpp"
 #pragma warning(pop)
 #include <numeric>
@@ -155,6 +156,11 @@ public:
         _map.erase(it);
         return std::move(x);
     }
+
+    bool empty() {
+        std::lock_guard<std::mutex> lock{ _mutex };
+        return _map.empty();
+    }
 };
 
 class gpu_toolkit {
@@ -166,14 +172,19 @@ class gpu_toolkit {
     push_pop_map<void*, std::pair<const cl::Buffer, neural_memory*>> _mapped_memory;
 
     gpu_toolkit();
+    
+    ~gpu_toolkit() {
+        assert(_mapped_memory.empty() && "There are mapped OCL buffers kept! Check the client code.");
+    }
 
     static std::once_flag ocl_initialized;
     static void initialize();
 
     const cl::Program& get_program() {
+        std::call_once(ocl_initialized, initialize);
         if (!program || program_modified) {
             program.reset(new cl::Program(kernel_sources));
-            program->build("-cl-std=CL2.0");
+            program->build();// "-cl-std=CL2.0");
             program_modified = false;
         }
         return *program.get();
