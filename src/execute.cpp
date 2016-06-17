@@ -28,7 +28,7 @@ class async_execution {
     bool is_lazy() { return !!(_workers[0].engine()&engine::lazy); }
     void start() {
         _tasks_left = _primitives.size();
-        auto thread_function = [&]() {
+//        auto thread_function = [&]() {
             // here async_execution object exists
             const auto primitives_count = _primitives.size();
 
@@ -39,8 +39,8 @@ class async_execution {
                 _workers[0].execute(_primitives[at].work());
                 --_tasks_left;
             }
-        };
-        std::thread(thread_function).detach();
+  //      };
+//        std::thread(thread_function).detach();
     }
 public:
     async_execution(std::vector<primitive> primitives, std::vector<worker> workers)
