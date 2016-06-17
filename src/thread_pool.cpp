@@ -62,6 +62,7 @@ void nn_thread_worker_pool::push_job(const task_group& requests) {
     current_task_id = 0;
     enable_thread_denom = requests.schedule==schedule::single ? num_threads : 1;
     thread_batch_size = requests.schedule==schedule::unordered ? 1 : (taskcount+num_threads-1)/num_threads;
+thread_batch_size = (thread_batch_size+1) /2;
     cv_wake.notify_all();
 
     // waiting when all threads finish the job

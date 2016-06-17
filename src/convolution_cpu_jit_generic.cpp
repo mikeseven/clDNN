@@ -334,7 +334,7 @@ namespace {
     }
 
     neural::task_group work() {
-        return {this->tasks, neural::schedule::unordered}; // todo check
+        return {this->tasks, neural::schedule::split}; // todo check
     };
     ~jit_convolution_generic(){};
 };
