@@ -55,7 +55,7 @@ namespace {
     };
 #pragma pack(pop)
 
-    neural::task_group tasks;
+    std::vector<neural::task> tasks;
     static const uint64_t input_features_per_iteration  = 8;
     static const uint64_t output_features_per_iteration = 4;
     static const uint64_t batch_size                    = 24;
@@ -248,7 +248,7 @@ namespace {
         const auto batch_blocks = batch/batch_size;
         const auto job_count = output_height*output_width*group_count*batch_blocks;
 
-        tasks.tasks.resize(job_count);
+        tasks.resize(job_count);
         op_data.resize(job_count);
         op_array.resize(job_count);
 
@@ -327,14 +327,14 @@ namespace {
                         , bias
                     };
 
-                    tasks.tasks[at].callback = reinterpret_cast<void (*)(const void *)>(code.getCode());
-                    tasks.tasks[at].data     = &op_array[at];
+                    tasks[at].callback = reinterpret_cast<void (*)(const void *)>(code.getCode());
+                    tasks[at].data     = &op_array[at];
                 }
             }
     }
 
     neural::task_group work() {
-        return this->tasks;
+        return {this->tasks, neural::schedule::split};
     };
     ~jit_convolution_generic(){};
 };
