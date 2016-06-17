@@ -369,7 +369,8 @@ class MKL_DNN_CPU_PoolingLayerTest : public MultiDeviceTest<TypeParam> {
   }
 };
 
-TYPED_TEST_CASE(MKL_DNN_CPU_PoolingLayerTest, ::testing::Types<CPUDevice<float> >);
+TYPED_TEST_CASE(MKL_DNN_CPU_PoolingLayerTest,
+                ::testing::Types<CPUDevice<float> >);
 
 TYPED_TEST(MKL_DNN_CPU_PoolingLayerTest, TestSetup) {
   typedef typename TypeParam::Dtype Dtype;

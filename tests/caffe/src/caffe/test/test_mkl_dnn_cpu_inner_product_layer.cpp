@@ -16,19 +16,21 @@
  *  transpose tests - get from newer caffe or ...
  */
 namespace caffe {
-static auto engine =  neural::engine::reference;
+static auto engine =  neural::engine::cpu;
+const int g_batch = 48;
+const int g_num_output = 8;
 
 #ifndef CPU_ONLY
 extern cudaDeviceProp CAFFE_TEST_CUDA_PROP;
 #endif
 
 template <typename TypeParam>
-class MKL_DNN_Ref_InnerProductLayerTest : public MultiDeviceTest<TypeParam> {
+class MKL_DNN_CPU_InnerProductLayerTest : public MultiDeviceTest<TypeParam> {
   typedef typename TypeParam::Dtype Dtype;
 
  protected:
-  MKL_DNN_Ref_InnerProductLayerTest()
-      : blob_bottom_(new Blob<Dtype>(2, 3, 4, 5)),
+  MKL_DNN_CPU_InnerProductLayerTest()
+      : blob_bottom_(new Blob<Dtype>(g_batch, 3, 4, 5)),
         blob_bottom_nobatch_(new Blob<Dtype>(1, 2, 3, 4)),
         blob_top_(new Blob<Dtype>()) {
     // fill the values
@@ -39,7 +41,7 @@ class MKL_DNN_Ref_InnerProductLayerTest : public MultiDeviceTest<TypeParam> {
     filler.Fill(this->blob_bottom_nobatch_);
     blob_top_vec_.push_back(blob_top_);
   }
-  virtual ~MKL_DNN_Ref_InnerProductLayerTest() {
+  virtual ~MKL_DNN_CPU_InnerProductLayerTest() {
     delete blob_bottom_;
     delete blob_bottom_nobatch_;
     delete blob_top_;
@@ -51,65 +53,65 @@ class MKL_DNN_Ref_InnerProductLayerTest : public MultiDeviceTest<TypeParam> {
   vector<Blob<Dtype>*> blob_top_vec_;
 };
 
-TYPED_TEST_CASE(MKL_DNN_Ref_InnerProductLayerTest,
+TYPED_TEST_CASE(MKL_DNN_CPU_InnerProductLayerTest,
                 ::testing::Types<CPUDevice<float> >);
 
-TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestSetUp) {
+TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestSetUp) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_);
   LayerParameter layer_param;
   InnerProductParameter* inner_product_param =
       layer_param.mutable_inner_product_param();
-  inner_product_param->set_num_output(10);
+  inner_product_param->set_num_output(g_num_output);
   shared_ptr<MKL_DNNInnerProductLayer<Dtype> > layer(
       new MKL_DNNInnerProductLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
-  EXPECT_EQ(this->blob_top_->num(), 2);
+  EXPECT_EQ(this->blob_top_->num(), g_batch);
   EXPECT_EQ(this->blob_top_->height(), 1);
   EXPECT_EQ(this->blob_top_->width(), 1);
-  EXPECT_EQ(this->blob_top_->channels(), 10);
+  EXPECT_EQ(this->blob_top_->channels(), g_num_output);
 }
 
 #if 0
 /** @brief TestSetUp while toggling tranpose flag
  */
-TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestSetUpTranposeFalse) {
+TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestSetUpTranposeFalse) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_);
   LayerParameter layer_param;
   InnerProductParameter* inner_product_param =
       layer_param.mutable_inner_product_param();
-  inner_product_param->set_num_output(10);
+  inner_product_param->set_num_output(g_num_output);
   // TBD
   // inner_product_param->set_transpose(false);
   shared_ptr<MKL_DNNInnerProductLayer<Dtype> > layer(
       new MKL_DNNInnerProductLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
-  EXPECT_EQ(2, this->blob_top_->num());
+  EXPECT_EQ(g_batch, this->blob_top_->num());
   EXPECT_EQ(1, this->blob_top_->height());
   EXPECT_EQ(1, this->blob_top_->width());
-  EXPECT_EQ(10, this->blob_top_->channels());
+  EXPECT_EQ(g_num_output, this->blob_top_->channels());
   EXPECT_EQ(2, layer->blobs()[0]->num_axes());
-  EXPECT_EQ(10, layer->blobs()[0]->shape(0));
+  EXPECT_EQ(g_num_output, layer->blobs()[0]->shape(0));
   EXPECT_EQ(60, layer->blobs()[0]->shape(1));
 }
 
 /** @brief TestSetUp while toggling tranpose flag
  */
 
-TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestSetUpTranposeTrue) {
+TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestSetUpTranposeTrue) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_);
   LayerParameter layer_param;
   InnerProductParameter* inner_product_param =
       layer_param.mutable_inner_product_param();
-  inner_product_param->set_num_output(10);
+  inner_product_param->set_num_output(g_num_output);
   // TBD
   // inner_product_param->set_transpose(true);
   shared_ptr<MKL_DNNInnerProductLayer<Dtype> > layer(
       new MKL_DNNInnerProductLayer<Dtype>(layer_param, engine));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
-  EXPECT_EQ(2, this->blob_top_->num());
+  EXPECT_EQ(g_batch, this->blob_top_->num());
   EXPECT_EQ(1, this->blob_top_->height());
   EXPECT_EQ(1, this->blob_top_->width());
   EXPECT_EQ(10, this->blob_top_->channels());
@@ -118,7 +120,7 @@ TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestSetUpTranposeTrue) {
   EXPECT_EQ(10, layer->blobs()[0]->shape(1));
 }
 #endif
-TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestForward) {
+TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestForward) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_);
   bool IS_VALID_CUDA = false;
@@ -130,7 +132,7 @@ TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestForward) {
     LayerParameter layer_param;
     InnerProductParameter* inner_product_param =
         layer_param.mutable_inner_product_param();
-    inner_product_param->set_num_output(10);
+    inner_product_param->set_num_output(g_num_output);
     inner_product_param->mutable_weight_filler()->set_type("uniform");
     inner_product_param->mutable_bias_filler()->set_type("uniform");
     inner_product_param->mutable_bias_filler()->set_min(1);
@@ -157,7 +159,7 @@ TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestForward) {
  * then run Forward on the same input and check that the result is the same
  */
 #if 0
-TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestForwardTranspose) {
+TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestForwardTranspose) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_);
   bool IS_VALID_CUDA = false;
@@ -169,7 +171,7 @@ TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestForwardTranspose) {
     LayerParameter layer_param;
     InnerProductParameter* inner_product_param =
         layer_param.mutable_inner_product_param();
-    inner_product_param->set_num_output(10);
+    inner_product_param->set_num_output(g_num_output);
     inner_product_param->mutable_weight_filler()->set_type("uniform");
     inner_product_param->mutable_bias_filler()->set_type("uniform");
     inner_product_param->mutable_bias_filler()->set_min(1);
@@ -227,7 +229,7 @@ TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestForwardTranspose) {
   }
 }
 #endif
-TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestForwardNoBatch) {
+TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestForwardNoBatch) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_nobatch_);
   bool IS_VALID_CUDA = false;
@@ -239,7 +241,7 @@ TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestForwardNoBatch) {
     LayerParameter layer_param;
     InnerProductParameter* inner_product_param =
         layer_param.mutable_inner_product_param();
-    inner_product_param->set_num_output(10);
+    inner_product_param->set_num_output(g_num_output);
     inner_product_param->mutable_weight_filler()->set_type("uniform");
     inner_product_param->mutable_bias_filler()->set_type("uniform");
     inner_product_param->mutable_bias_filler()->set_min(1);
@@ -259,7 +261,7 @@ TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestForwardNoBatch) {
 }
 
 #if 0  // TODO backward
-TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestGradient) {
+TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestGradient) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_);
   bool IS_VALID_CUDA = false;
@@ -271,7 +273,7 @@ TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestGradient) {
     LayerParameter layer_param;
     InnerProductParameter* inner_product_param =
         layer_param.mutable_inner_product_param();
-    inner_product_param->set_num_output(10);
+    inner_product_param->set_num_output(g_num_output);
     inner_product_param->mutable_weight_filler()->set_type("gaussian");
     inner_product_param->mutable_bias_filler()->set_type("gaussian");
     inner_product_param->mutable_bias_filler()->set_min(1);
@@ -285,7 +287,7 @@ TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestGradient) {
   }
 }
 
-TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestGradientTranspose) {
+TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestGradientTranspose) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_);
   bool IS_VALID_CUDA = false;
@@ -314,7 +316,7 @@ TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestGradientTranspose) {
   }
 }
 
-TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestBackwardTranspose) {
+TYPED_TEST(MKL_DNN_CPU_InnerProductLayerTest, TestBackwardTranspose) {
   typedef typename TypeParam::Dtype Dtype;
   this->blob_bottom_vec_.push_back(this->blob_bottom_);
   bool IS_VALID_CUDA = false;
@@ -326,7 +328,7 @@ TYPED_TEST(MKL_DNN_Ref_InnerProductLayerTest, TestBackwardTranspose) {
     LayerParameter layer_param;
     InnerProductParameter* inner_product_param =
         layer_param.mutable_inner_product_param();
-    inner_product_param->set_num_output(10);
+    inner_product_param->set_num_output(g_num_output);
     inner_product_param->mutable_weight_filler()->set_type("uniform");
     inner_product_param->mutable_bias_filler()->set_type("uniform");
     inner_product_param->mutable_bias_filler()->set_min(1);

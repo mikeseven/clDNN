@@ -27,7 +27,7 @@ inline void CaffeMallocHost(void** ptr, size_t size, bool* use_cuda) {
 #ifdef USE_MKL
   *ptr = mkl_malloc(size ? size : 1, 64);
 #else
-  *ptr = malloc(size);
+  *ptr = aligned_alloc(4096, size);
 #endif
   *use_cuda = false;
   CHECK(*ptr) << "host allocation of size " << size << " failed";
