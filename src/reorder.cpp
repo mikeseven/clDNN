@@ -155,7 +155,7 @@ primitive reorder::create(reorder::arguments arg) {
     // create implementation for non-lazy evaluation
     if(0 == (arg.engine & engine::lazy)) {
         // lookup in database; throw if not found
-        auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
+        auto key = std::make_tuple(arg.engine, result->output_memory(0).argument.format, result->input_memory(0).argument.format);
         auto &map = reorder_fw_implementation_map::instance();
         auto it = map.find(key);
 
