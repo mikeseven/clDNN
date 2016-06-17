@@ -443,9 +443,15 @@ int time() {
     Timer iter_timer;
     iter_timer.Start();
     forward_timer.Start();
+    // force "new data" state to see conversion time
+    top_vecs[0][0]->mutable_cpu_data(); 
     for (int i = 0; i < layers.size(); ++i) {
       timer.Start();
       layers[i]->Forward(bottom_vecs[i], top_vecs[i]);
+      
+      // force output conversion to see the time
+      if (i == layers.size()-1)
+         top_vecs[i][0]->cpu_data();
       if (FLAGS_min_time) {
         double time = timer.MicroSeconds();
         if (forward_time_per_layer[i] > time)
