@@ -21,6 +21,7 @@
 #include <atomic>
 #include <condition_variable>
 #include "neural.h"
+#include <pthread.h>
 
 namespace neural
 {
@@ -35,6 +36,9 @@ namespace neural
         std::mutex mtx_wake;
         std::condition_variable cv_wake;
         std::condition_variable cv_endtasks;
+
+        pthread_barrier_t br_wake;
+        pthread_barrier_t br_endtasks;
 
         uint32_t thread_batch_size;
         uint32_t enable_thread_denom;
