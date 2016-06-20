@@ -204,3 +204,25 @@ TEST(reorder_test, bfyx_f32_to_byxf_f32) {
     for(size_t i = 0; i < y*x*f*b; ++i)
         EXPECT_EQ(output_ptr[i], output_ref_ptr[i]);
 }
+
+TEST(reorder_test, byxf_f32_to_fyxb_f32) {
+    const uint32_t y = 10, x = 10, f = 4, b = 24*2;
+    auto engine_resource = worker_cpu::create({8});
+
+    auto input      = memory::allocate({engine::reference, memory::format::byxf_f32, {b, {x, y}, f}});
+    auto output     = memory::allocate({engine::reference, memory::format::fyxb_f32, {b, {x, y}, f}});
+    auto output_ref = memory::allocate({engine::reference, memory::format::fyxb_f32, {b, {x, y}, f}});
+    fill<float>(input.as<const memory&>());
+
+    auto valid  = reorder::create({engine::reference, output_ref, input});
+    auto tested = reorder::create({engine::cpu,       output,     input});
+    auto output_ref_ptr = static_cast<float *>(output_ref.as<const memory&>().pointer);
+
+    execute({ valid }).wait();
+
+    execute({ tested }, {engine_resource} ).wait();
+    auto output_ptr     = static_cast<float *>(output.as<const memory&>().pointer);
+
+    for(size_t i = 0; i < y*x*f*b; ++i)
+        EXPECT_EQ(output_ptr[i], output_ref_ptr[i]) << "at index: " << i;
+}
