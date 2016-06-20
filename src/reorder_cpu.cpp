@@ -135,6 +135,58 @@ struct reorder_cpu_bfyx_f32_to_byxf_f32 : is_an_implementation {
     }
 };
 
+struct reorder_cpu_byxf_f32_to_fyxb_f32 : is_an_implementation {
+    const reorder &outer;
+
+    std::vector<task> tasks;
+    std::vector<op_data_t> op_array;
+
+    reorder_cpu_byxf_f32_to_fyxb_f32(reorder &arg)
+        : is_an_implementation(neural::type_id<reorder_cpu_byxf_f32_to_fyxb_f32>())
+        , outer(arg)
+    {
+        const uint32_t batch = outer.input_memory(0).argument.size.batch;
+
+        tasks.resize(batch, {implementation, nullptr});
+        op_array.resize(batch, {0
+                                , reinterpret_cast<float**>(&outer.output_memory(0).pointer)
+                                , reinterpret_cast<float**>(&outer.input_memory(0).pointer)
+                                , outer.input_memory(0).argument.size.batch[0]
+                                , outer.input_memory(0).argument.size.spatial[1]
+                                , outer.input_memory(0).argument.size.spatial[0]
+                                , outer.input_memory(0).argument.size.feature[0]
+                        });
+
+        for(uint32_t b = 0; b < batch; ++b){
+            op_array[b].batch = b;
+            tasks[b].data     = &op_array[b];
+        }
+    }
+    ~reorder_cpu_byxf_f32_to_fyxb_f32() {}
+    task_group work() { return {tasks, schedule::unordered}; }
+    static is_an_implementation *create(reorder &arg) { return new reorder_cpu_byxf_f32_to_fyxb_f32(arg); }
+
+   static void implementation(const void *ptr) {
+        auto data       = static_cast<const op_data_t* >(ptr);
+        auto input_ptr  = *data->input;
+        auto output_ptr = *data->output;
+
+        const uint32_t size_y = data->size_y;
+        const uint32_t size_x = data->size_x;
+        const uint32_t size_f = data->size_f;
+        const uint32_t size_b = data->size_b;
+        const uint32_t b      = data->batch;
+
+        for(uint32_t y=0; y<size_y; ++y)
+            for(uint32_t x=0; x<size_x; ++x)
+                for(uint32_t f=0; f<size_f; ++f) {
+                    auto  input_index = f + size_f * (x + size_x * (y + size_y * b));
+                    auto output_index = b + size_b * (x + size_x * (y + size_y * f));
+                    output_ptr[output_index] = input_ptr[input_index];
+                }
+    }
+
+};
 
 
 namespace {
