@@ -18,6 +18,10 @@
 #include "api/neural_base.h"
 #include "reorder.h"
 
+#define XBYAK_NO_OP_NAMES
+#define XBYAK_USE_MMAP_ALLOCATOR
+
+#include "xbyak/xbyak_util.h"
 #include <immintrin.h>
 
 using namespace neural;
@@ -34,6 +38,117 @@ struct op_data_t {
 
     uint32_t row;
 };
+
+class avx2_scatter : public ::Xbyak::CodeGenerator
+{
+public:
+    void (*callback)(float*, float*);
+
+    avx2_scatter()
+    {
+        using namespace ::Xbyak;
+        util::Cpu Current_cpu;
+
+        if(Current_cpu.has(util::Cpu::tAVX2))
+        {
+#ifdef _WIN32
+            const Reg64&   regarg_output_ptr = rcx;
+            const Reg64&   regarg_input_ptr  = rdx;
+#else
+            const Reg64&   regarg_output_ptr = rdi;
+            const Reg64&   regarg_input_ptr  = rsi;
+#endif
+
+            vmovups(ymm0,  ptr[regarg_input_ptr + 4*0*8]);
+            vmovups(ymm4,  ptr[regarg_input_ptr + 4*1*8]);
+            vmovups(ymm8,  ptr[regarg_input_ptr + 4*2*8]);
+            vmovups(ymm12, ptr[regarg_input_ptr + 4*3*8]);
+
+            vmovss(ptr[regarg_output_ptr + 4*0*24 + 4*0*8*24], xmm0);
+            vmovss(ptr[regarg_output_ptr + 4*0*24 + 4*1*8*24], xmm4);
+            vmovss(ptr[regarg_output_ptr + 4*0*24 + 4*2*8*24], xmm8);
+            vmovss(ptr[regarg_output_ptr + 4*0*24 + 4*3*8*24], xmm12);
+
+            vpalignr(xmm1,   xmm0,  xmm0, 4);
+            vpalignr(xmm5,   xmm4,  xmm4, 4);
+            vpalignr(xmm9,   xmm8,  xmm8, 4);
+            vpalignr(xmm13, xmm12, xmm12, 4);
+
+            vmovss(ptr[regarg_output_ptr + 4*1*24 + 4*0*8*24],  xmm1);
+            vmovss(ptr[regarg_output_ptr + 4*1*24 + 4*1*8*24],  xmm5);
+            vmovss(ptr[regarg_output_ptr + 4*1*24 + 4*2*8*24],  xmm9);
+            vmovss(ptr[regarg_output_ptr + 4*1*24 + 4*3*8*24], xmm13);
+
+            vpalignr(xmm2,   xmm0,  xmm0, 8);
+            vpalignr(xmm6,   xmm4,  xmm4, 8);
+            vpalignr(xmm10,  xmm8,  xmm8, 8);
+            vpalignr(xmm14, xmm12, xmm12, 8);
+
+            vmovss(ptr[regarg_output_ptr + 4*2*24 + 4*0*8*24],  xmm2);
+            vmovss(ptr[regarg_output_ptr + 4*2*24 + 4*1*8*24],  xmm6);
+            vmovss(ptr[regarg_output_ptr + 4*2*24 + 4*2*8*24], xmm10);
+            vmovss(ptr[regarg_output_ptr + 4*2*24 + 4*3*8*24], xmm14);
+
+
+            vpalignr(xmm3,   xmm0,  xmm0, 12);
+            vpalignr(xmm7,   xmm4,  xmm4, 12);
+            vpalignr(xmm11,  xmm8,  xmm8, 12);
+            vpalignr(xmm15, xmm12, xmm12, 12);
+
+            vmovss(ptr[regarg_output_ptr + 4*3*24 + 4*0*8*24],  xmm3);
+            vmovss(ptr[regarg_output_ptr + 4*3*24 + 4*1*8*24],  xmm7);
+            vmovss(ptr[regarg_output_ptr + 4*3*24 + 4*2*8*24], xmm11);
+            vmovss(ptr[regarg_output_ptr + 4*3*24 + 4*3*8*24], xmm15);
+
+            vextractf128(xmm0,   ymm0, 1);
+            vextractf128(xmm4,   ymm4, 1);
+            vextractf128(xmm8,   ymm8, 1);
+            vextractf128(xmm12, ymm12, 1);
+
+            vmovss(ptr[regarg_output_ptr + 4*4*24 + 4*0*8*24], xmm0);
+            vmovss(ptr[regarg_output_ptr + 4*4*24 + 4*1*8*24], xmm4);
+            vmovss(ptr[regarg_output_ptr + 4*4*24 + 4*2*8*24], xmm8);
+            vmovss(ptr[regarg_output_ptr + 4*4*24 + 4*3*8*24], xmm12);
+
+            vpalignr(xmm1,   xmm0,  xmm0, 4);
+            vpalignr(xmm5,   xmm4,  xmm4, 4);
+            vpalignr(xmm9,   xmm8,  xmm8, 4);
+            vpalignr(xmm13, xmm12, xmm12, 4);
+
+            vmovss(ptr[regarg_output_ptr + 4*5*24 + 4*0*8*24],  xmm1);
+            vmovss(ptr[regarg_output_ptr + 4*5*24 + 4*1*8*24],  xmm5);
+            vmovss(ptr[regarg_output_ptr + 4*5*24 + 4*2*8*24],  xmm9);
+            vmovss(ptr[regarg_output_ptr + 4*5*24 + 4*3*8*24], xmm13);
+
+            vpalignr(xmm2,   xmm0,  xmm0, 8);
+            vpalignr(xmm6,   xmm4,  xmm4, 8);
+            vpalignr(xmm10,  xmm8,  xmm8, 8);
+            vpalignr(xmm14, xmm12, xmm12, 8);
+
+            vmovss(ptr[regarg_output_ptr + 4*6*24 + 4*0*8*24],  xmm2);
+            vmovss(ptr[regarg_output_ptr + 4*6*24 + 4*1*8*24],  xmm6);
+            vmovss(ptr[regarg_output_ptr + 4*6*24 + 4*2*8*24], xmm10);
+            vmovss(ptr[regarg_output_ptr + 4*6*24 + 4*3*8*24], xmm14);
+
+
+            vpalignr(xmm3,   xmm0,  xmm0, 12);
+            vpalignr(xmm7,   xmm4,  xmm4, 12);
+            vpalignr(xmm11,  xmm8,  xmm8, 12);
+            vpalignr(xmm15, xmm12, xmm12, 12);
+
+            vmovss(ptr[regarg_output_ptr + 4*7*24 + 4*0*8*24],  xmm3);
+            vmovss(ptr[regarg_output_ptr + 4*7*24 + 4*1*8*24],  xmm7);
+            vmovss(ptr[regarg_output_ptr + 4*7*24 + 4*2*8*24], xmm11);
+            vmovss(ptr[regarg_output_ptr + 4*7*24 + 4*3*8*24], xmm15);
+
+            ret();
+
+            callback = getCode<void (*)(float*, float*)>();
+        }
+        else
+            throw std::runtime_error("AVX2 not supported by this machine.");
+    }
+} global_avx2_scatter_stride24_32fm;
 }
 
 struct ULTRAFAST_reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
@@ -69,6 +184,7 @@ struct ULTRAFAST_reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
     static is_an_implementation *create(reorder &arg) { return new ULTRAFAST_reorder_cpu_byxf_f32_to_byxf_b24_f32(arg); }
 
     static void implementation(const void *ptr) {
+
         auto data       = static_cast<const op_data_t* >(ptr);
         auto input_ptr  = *data->input;
         auto output_ptr = *data->output;
@@ -81,10 +197,13 @@ struct ULTRAFAST_reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
         //auto outoffs = b%24 + 24 * (f + size_f * (x + size_x * (y + (b/24) * size_y)));
         //auto inoffs = f + size_f * (x + size_x * (y + size_y * b));
 
-        if(size_f % 8 == 0)
+        if(size_f % 32 == 0)
         {
             // Precomputed constants.
-            const uint64_t fm_package_size = 8;
+            const uint64_t fm_package_size = 32;
+            const uint64_t fm_scatter_size = 8;
+            const uint64_t in_f_scatter_stride = fm_scatter_size;
+            const uint64_t out_f_scatter_stride = fm_scatter_size*24;
             const uint64_t in_f_stride = fm_package_size;
             const uint64_t out_f_stride = fm_package_size*24;
             const uint64_t in_xf_stride = size_f;
@@ -107,14 +226,7 @@ struct ULTRAFAST_reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
 
                     for(uint64_t f = 0; f < size_f; f += fm_package_size)
                     {
-                        output_ptr[out_byx_offset + 0 * 24] = input_ptr[in_byx_offset + 0];
-                        output_ptr[out_byx_offset + 1 * 24] = input_ptr[in_byx_offset + 1];
-                        output_ptr[out_byx_offset + 2 * 24] = input_ptr[in_byx_offset + 2];
-                        output_ptr[out_byx_offset + 3 * 24] = input_ptr[in_byx_offset + 3];
-                        output_ptr[out_byx_offset + 4 * 24] = input_ptr[in_byx_offset + 4];
-                        output_ptr[out_byx_offset + 5 * 24] = input_ptr[in_byx_offset + 5];
-                        output_ptr[out_byx_offset + 6 * 24] = input_ptr[in_byx_offset + 6];
-                        output_ptr[out_byx_offset + 7 * 24] = input_ptr[in_byx_offset + 7];
+                        global_avx2_scatter_stride24_32fm.callback(&output_ptr[out_byx_offset], &input_ptr[in_byx_offset]);
 
                         in_byx_offset += in_f_stride;
                         out_byx_offset += out_f_stride;
