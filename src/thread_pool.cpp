@@ -56,6 +56,7 @@ nn_thread_worker_pool::~nn_thread_worker_pool() {
 #endif // !_WIN32
     }
 #else 
+    stop = true;
     pthread_barrier_wait(&br_wake);
 #endif
 
