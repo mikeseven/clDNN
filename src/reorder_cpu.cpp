@@ -201,9 +201,6 @@ struct ULTRAFAST_reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
         {
             // Precomputed constants.
             const uint64_t fm_package_size = 32;
-            const uint64_t fm_scatter_size = 8;
-            const uint64_t in_f_scatter_stride = fm_scatter_size;
-            const uint64_t out_f_scatter_stride = fm_scatter_size*24;
             const uint64_t in_f_stride = fm_package_size;
             const uint64_t out_f_stride = fm_package_size*24;
             const uint64_t in_xf_stride = size_f;
