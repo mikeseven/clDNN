@@ -195,6 +195,7 @@ namespace {
             auto &map = reorder_fw_implementation_map::instance();
                                       // engine       output                        input                      create function
             map.insert( {std::make_tuple(engine::cpu, memory::format::byxf_b24_f32, memory::format::byxf_f32), reorder_cpu_byxf_f32_to_byxf_b24_f32::create} );
+            map.insert( {std::make_tuple(engine::cpu, memory::format::byxf_f32,     memory::format::fyxb_f32), reorder_cpu_byxf_f32_to_fyxb_f32    ::create} );
             map.insert( {std::make_tuple(engine::cpu, memory::format::byxf_f32,     memory::format::bfyx_f32), reorder_cpu_bfyx_f32_to_byxf_f32    ::create} );
         }
         ~attach(){}
