@@ -18,6 +18,8 @@
 #include "api/neural_base.h"
 #include "reorder.h"
 
+#include <immintrin.h>
+
 using namespace neural;
 
 namespace{
@@ -283,6 +285,7 @@ struct reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
                                 , outer.input_memory(0).argument.size.spatial[1]
                                 , outer.input_memory(0).argument.size.spatial[0]
                                 , outer.input_memory(0).argument.size.feature[0]
+                                , 0
                         });
 
         for(uint32_t b = 0; b < batch; ++b){
@@ -335,6 +338,7 @@ struct reorder_cpu_bfyx_f32_to_byxf_f32 : is_an_implementation {
                                 , outer.input_memory(0).argument.size.spatial[1]
                                 , outer.input_memory(0).argument.size.spatial[0]
                                 , outer.input_memory(0).argument.size.feature[0]
+                                , 0
                         });
 
         for(uint32_t b = 0; b < batch; ++b){
@@ -386,6 +390,7 @@ struct reorder_cpu_byxf_f32_to_fyxb_f32 : is_an_implementation {
                                 , outer.input_memory(0).argument.size.spatial[1]
                                 , outer.input_memory(0).argument.size.spatial[0]
                                 , outer.input_memory(0).argument.size.feature[0]
+                                , 0
                         });
 
         for(uint32_t b = 0; b < batch; ++b){
