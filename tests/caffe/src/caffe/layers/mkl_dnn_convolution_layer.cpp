@@ -50,7 +50,7 @@ void MKL_DNNMemory<Dtype, is_diff>::convert_from_prv(
 #endif
   execute({memory_prv(prv_ptr), memory_usr(cpu_ptr), this->from_prv}).wait();
 #ifdef CONVERSION_PROFILING
-  DLOG(INFO) << " *** conversion time: " << timer.MilliSeconds() << " ms.\n";
+  LOG(INFO) << " *** conversion time: " << timer.MilliSeconds() << " ms.\n";
 #endif
 
 #ifdef CONVERSION_PRINT_DATA
@@ -87,7 +87,7 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
       execute({memory_usr(usr_ptr), memory_prv(this->prv_ptr_), this->to_prv})
         .wait();
 #ifdef CONVERSION_PROFILING
-  DLOG(INFO) << " *** conversion time: " << timer.MilliSeconds() << " ms.\n";
+  LOG(INFO) << " *** conversion time: " << timer.MilliSeconds() << " ms.\n";
 #endif
 #ifdef CONVERSION_PRINT_DATA
       DLOG(INFO) << "Before conversion: \n";
@@ -151,7 +151,7 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
                  this->memory_prv(this->prv_ptr_), convert}).wait();
 
 #ifdef CONVERSION_PROFILING
-  DLOG(INFO) << " *** conversion time: " << timer.MilliSeconds() << " ms.\n";
+  LOG(INFO) << " *** conversion time: " << timer.MilliSeconds() << " ms.\n";
 #endif
 
         if (set_prv_ptr) {
