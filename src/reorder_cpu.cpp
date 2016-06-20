@@ -44,8 +44,14 @@ class avx2_scatter : public ::Xbyak::CodeGenerator
 public:
     void (*callback)(float*, float*);
 
-    avx2_scatter()
+    avx2_scatter(int stride, int fm_packages)
     {
+        if(fm_packages < 1)
+            throw std::runtime_error("avx2_scatter: at least one package is required");
+
+        if(fm_packages > 4)
+            throw std::runtime_error("avx2_scatter: max 4 packages are supported now");
+
         using namespace ::Xbyak;
         util::Cpu Current_cpu;
 
@@ -59,87 +65,25 @@ public:
             const Reg64&   regarg_input_ptr  = rsi;
 #endif
 
-            vmovups(ymm0,  ptr[regarg_input_ptr + 4*0*8]);
-            vmovups(ymm4,  ptr[regarg_input_ptr + 4*1*8]);
-            vmovups(ymm8,  ptr[regarg_input_ptr + 4*2*8]);
-            vmovups(ymm12, ptr[regarg_input_ptr + 4*3*8]);
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vmovups(Ymm(fm_package*4),  ptr[regarg_input_ptr + 4*fm_package*8]);
 
-            vmovss(ptr[regarg_output_ptr + 4*0*24 + 4*0*8*24], xmm0);
-            vmovss(ptr[regarg_output_ptr + 4*0*24 + 4*1*8*24], xmm4);
-            vmovss(ptr[regarg_output_ptr + 4*0*24 + 4*2*8*24], xmm8);
-            vmovss(ptr[regarg_output_ptr + 4*0*24 + 4*3*8*24], xmm12);
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vmovss(ptr[regarg_output_ptr + 4*0*stride + 4*fm_package*8*stride], Xmm(fm_package*4));
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vpalignr(Xmm(fm_package*4+1), Xmm(fm_package*4),  Xmm(fm_package*4), 4);
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vmovss(ptr[regarg_output_ptr + 4*1*stride + 4*fm_package*8*stride],  Xmm(fm_package*4+1));
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vpalignr(Xmm(fm_package*4+2), Xmm(fm_package*4), Xmm(fm_package*4), 8);
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vmovss(ptr[regarg_output_ptr + 4*2*stride + 4*fm_package*8*stride],  Xmm(fm_package*4+2));
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vpalignr(Xmm(fm_package*4+3), Xmm(fm_package*4), Xmm(fm_package*4), 12);
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vmovss(ptr[regarg_output_ptr + 4*3*stride + 4*fm_package*8*stride],  Xmm(fm_package*4+3));
 
-            vpalignr(xmm1,   xmm0,  xmm0, 4);
-            vpalignr(xmm5,   xmm4,  xmm4, 4);
-            vpalignr(xmm9,   xmm8,  xmm8, 4);
-            vpalignr(xmm13, xmm12, xmm12, 4);
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vextractf128(Xmm(fm_package*4), Ymm(fm_package*4), 1);
 
-            vmovss(ptr[regarg_output_ptr + 4*1*24 + 4*0*8*24],  xmm1);
-            vmovss(ptr[regarg_output_ptr + 4*1*24 + 4*1*8*24],  xmm5);
-            vmovss(ptr[regarg_output_ptr + 4*1*24 + 4*2*8*24],  xmm9);
-            vmovss(ptr[regarg_output_ptr + 4*1*24 + 4*3*8*24], xmm13);
-
-            vpalignr(xmm2,   xmm0,  xmm0, 8);
-            vpalignr(xmm6,   xmm4,  xmm4, 8);
-            vpalignr(xmm10,  xmm8,  xmm8, 8);
-            vpalignr(xmm14, xmm12, xmm12, 8);
-
-            vmovss(ptr[regarg_output_ptr + 4*2*24 + 4*0*8*24],  xmm2);
-            vmovss(ptr[regarg_output_ptr + 4*2*24 + 4*1*8*24],  xmm6);
-            vmovss(ptr[regarg_output_ptr + 4*2*24 + 4*2*8*24], xmm10);
-            vmovss(ptr[regarg_output_ptr + 4*2*24 + 4*3*8*24], xmm14);
-
-
-            vpalignr(xmm3,   xmm0,  xmm0, 12);
-            vpalignr(xmm7,   xmm4,  xmm4, 12);
-            vpalignr(xmm11,  xmm8,  xmm8, 12);
-            vpalignr(xmm15, xmm12, xmm12, 12);
-
-            vmovss(ptr[regarg_output_ptr + 4*3*24 + 4*0*8*24],  xmm3);
-            vmovss(ptr[regarg_output_ptr + 4*3*24 + 4*1*8*24],  xmm7);
-            vmovss(ptr[regarg_output_ptr + 4*3*24 + 4*2*8*24], xmm11);
-            vmovss(ptr[regarg_output_ptr + 4*3*24 + 4*3*8*24], xmm15);
-
-            vextractf128(xmm0,   ymm0, 1);
-            vextractf128(xmm4,   ymm4, 1);
-            vextractf128(xmm8,   ymm8, 1);
-            vextractf128(xmm12, ymm12, 1);
-
-            vmovss(ptr[regarg_output_ptr + 4*4*24 + 4*0*8*24], xmm0);
-            vmovss(ptr[regarg_output_ptr + 4*4*24 + 4*1*8*24], xmm4);
-            vmovss(ptr[regarg_output_ptr + 4*4*24 + 4*2*8*24], xmm8);
-            vmovss(ptr[regarg_output_ptr + 4*4*24 + 4*3*8*24], xmm12);
-
-            vpalignr(xmm1,   xmm0,  xmm0, 4);
-            vpalignr(xmm5,   xmm4,  xmm4, 4);
-            vpalignr(xmm9,   xmm8,  xmm8, 4);
-            vpalignr(xmm13, xmm12, xmm12, 4);
-
-            vmovss(ptr[regarg_output_ptr + 4*5*24 + 4*0*8*24],  xmm1);
-            vmovss(ptr[regarg_output_ptr + 4*5*24 + 4*1*8*24],  xmm5);
-            vmovss(ptr[regarg_output_ptr + 4*5*24 + 4*2*8*24],  xmm9);
-            vmovss(ptr[regarg_output_ptr + 4*5*24 + 4*3*8*24], xmm13);
-
-            vpalignr(xmm2,   xmm0,  xmm0, 8);
-            vpalignr(xmm6,   xmm4,  xmm4, 8);
-            vpalignr(xmm10,  xmm8,  xmm8, 8);
-            vpalignr(xmm14, xmm12, xmm12, 8);
-
-            vmovss(ptr[regarg_output_ptr + 4*6*24 + 4*0*8*24],  xmm2);
-            vmovss(ptr[regarg_output_ptr + 4*6*24 + 4*1*8*24],  xmm6);
-            vmovss(ptr[regarg_output_ptr + 4*6*24 + 4*2*8*24], xmm10);
-            vmovss(ptr[regarg_output_ptr + 4*6*24 + 4*3*8*24], xmm14);
-
-
-            vpalignr(xmm3,   xmm0,  xmm0, 12);
-            vpalignr(xmm7,   xmm4,  xmm4, 12);
-            vpalignr(xmm11,  xmm8,  xmm8, 12);
-            vpalignr(xmm15, xmm12, xmm12, 12);
-
-            vmovss(ptr[regarg_output_ptr + 4*7*24 + 4*0*8*24],  xmm3);
-            vmovss(ptr[regarg_output_ptr + 4*7*24 + 4*1*8*24],  xmm7);
-            vmovss(ptr[regarg_output_ptr + 4*7*24 + 4*2*8*24], xmm11);
-            vmovss(ptr[regarg_output_ptr + 4*7*24 + 4*3*8*24], xmm15);
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vmovss(ptr[regarg_output_ptr + 4*4*stride + 4*fm_package*8*stride],  Xmm(fm_package*4));
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vpalignr(Xmm(fm_package*4+1), Xmm(fm_package*4), Xmm(fm_package*4), 4);
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vmovss(ptr[regarg_output_ptr + 4*5*stride + 4*fm_package*8*stride],  Xmm(fm_package*4+1));
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vpalignr(Xmm(fm_package*4+2), Xmm(fm_package*4), Xmm(fm_package*4), 8);
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vmovss(ptr[regarg_output_ptr + 4*6*stride + 4*fm_package*8*stride],  Xmm(fm_package*4+2));
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vpalignr(Xmm(fm_package*4+3), Xmm(fm_package*4), Xmm(fm_package*4), 12);
+            for(int fm_package = 0; fm_package < fm_packages; ++fm_package) vmovss(ptr[regarg_output_ptr + 4*7*stride + 4*fm_package*8*stride],  Xmm(fm_package*4+3));
 
             ret();
 
@@ -148,7 +92,7 @@ public:
         else
             throw std::runtime_error("AVX2 not supported by this machine.");
     }
-} global_avx2_scatter_stride24_32fm;
+} global_avx2_scatter_stride24_32fm(24, 4);
 }
 
 struct ULTRAFAST_reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
@@ -239,8 +183,6 @@ struct ULTRAFAST_reorder_cpu_byxf_f32_to_byxf_b24_f32 : is_an_implementation {
         }
         else
         {
-            //throw std::runtime_error("this code works, its just a debug print for evaluation purposes ;)");
-
             // Precomputed constants.
             const uint64_t fm_package_size = 1;
             const uint64_t in_f_stride = fm_package_size;
