@@ -35,10 +35,6 @@ struct MKL_DNNMemory : PrvMemDescr,
           memory_usr(memory_usr),
           memory_prv(memory_prv) {
       if (layout_usr != layout_prv) {
-        if (layout_usr == memory::format::bfyx_f32
-                && layout_prv == memory::format::byxf_f32)
-            engine_to_prv_ = engine::cpu;
-
         to_prv   = reorder::create(reorder::arguments({engine_to_prv_,
           memory_prv, memory_usr}));
         from_prv = reorder::create(reorder::arguments({engine_from_prv_,
@@ -62,8 +58,8 @@ struct MKL_DNNMemory : PrvMemDescr,
   primitive from_prv   = nullptr;
 
   // TODO: use the same engine as for the layers
-  engine::type engine_to_prv_ = engine::reference;
-  engine::type engine_from_prv_ = engine::reference;
+  engine::type engine_to_prv_ = engine::cpu;
+  engine::type engine_from_prv_ = engine::cpu;
   std::string name = "UNKNOWN";  // for debugging purposes
   bool use_cuda;
 
