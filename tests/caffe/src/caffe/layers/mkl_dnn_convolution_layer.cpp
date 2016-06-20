@@ -43,8 +43,7 @@ void MKL_DNNMemory<Dtype, is_diff>::convert_from_prv(
 
   DLOG(INFO) << "convert priv =>           "  << this->name << " =>"
              << "                            || layouts: "
-             << this->layout_prv << " =>  "
-             << " | engine: " << engine_to_prv_ << "\n";
+             << this->layout_prv << " =>  " << "\n";
 #ifdef CONVERSION_PROFILING
   Timer timer;
   timer.Start();
@@ -75,7 +74,7 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
     if (prv_ptr == nullptr) {
       DLOG(INFO) << "convert      => priv                                => "
                  << this->name  << "  || layouts:   => " << this->layout_prv
-                 << " | engine: " << engine_to_prv_ << "\n";
+                 << "\n";
       auto usr_ptr = is_diff ? const_cast<Dtype*>(blob->cpu_diff()) :
                                const_cast<Dtype*>(blob->cpu_data());
       if (this->prv_ptr_ == nullptr)
@@ -132,16 +131,12 @@ Dtype* MKL_DNNMemory<Dtype, is_diff>::get_converted_prv(
           }
         }
 
-        engine::type conversion_engine = engine::reference;
-        if (current_descr->layout_prv == memory::format::byxf_f32
-                  && this->layout_prv == memory::format::byxf_b24_f32) {
-          conversion_engine = engine::cpu;
-        }
+        engine::type conversion_engine = engine::cpu;
 
         DLOG(INFO) << "convert priv => priv      " << current_descr->name
                    << " => " << this->name << "  || layouts: "
                    << current_descr->layout_prv  << " => " << this->layout_prv
-                   << " | engine: " << conversion_engine << "\n";
+                   << "\n";
 
         if (this->prv_ptr_ == nullptr)
           this->allocate();
