@@ -79,7 +79,7 @@ void nn_thread_worker_pool::push_job(const task_group& requests)
     taskcount  = static_cast<uint32_t>(requests.tasks.size());
     current_task_id = 0;
     enable_thread_denom = requests.schedule==schedule::single ? num_threads : 1;
-    thread_batch_size = requests.schedule==schedule::unordered ? 1 : (taskcount - 1)/(2 * num_threads) + 1;
+    thread_batch_size = requests.schedule==schedule::unordered ? 1 : (taskcount - 1)/(10 * num_threads) + 1;
     
 #ifndef __linux__
     cv_wake.notify_all();
