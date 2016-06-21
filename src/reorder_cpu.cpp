@@ -18,10 +18,6 @@
 #include "api/neural_base.h"
 #include "reorder.h"
 
-#define XBYAK_NO_OP_NAMES
-#define XBYAK_USE_MMAP_ALLOCATOR
-
-#include "xbyak/xbyak_util.h"
 #include <immintrin.h>
 
 using namespace neural;
