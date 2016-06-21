@@ -18,7 +18,7 @@
 #include "convolution_gpu.h"
 #include "multidimensional_counter.h"
 #include "memory_utils.h"
-#include "ocl_toolkit.h"
+#include "kernel.h"
 
 #pragma warning(disable: 4189)
 #pragma warning(disable: 4100)
@@ -117,6 +117,7 @@ namespace neural {
         pDst[global_id] += bias[output_feature_idx];
     }
 
+const std::string kernelName = "Convolution_GPU";
 const std::string kernelCode = R"__krnl(
 __kernel void Convolution_GPU(
     const __global neural_memory* input_mem,
@@ -174,6 +175,7 @@ __kernel void Convolution_GPU(
 }
 )__krnl";
 
+const std::string kernelName_BFXY_f32 = "Convolution_GPU_bfxy_f32";
 const std::string kernelCode_BFXY_f32 = R"__krnl(
 __kernel void Convolution_GPU_bfxy_f32(
     const __global neural_memory* input_mem,
@@ -313,12 +315,12 @@ void convolution_gpu::implementation(const void *ptr) {
                         _stride.spatial[0], _stride.spatial[1]);*/
 
                 auto kernel = gpu::kernel<gpu::input_mem, gpu::input_mem, gpu::input_mem, gpu::output_mem, gpu::vector_arg>("Convolution_GPU_bfxy_f32");
-                kernel({ dstSize, 16 }, input_mem, filter_mem, bias_mem, output_mem, stride);
+                kernel({ dstSize, std::min(dstSize, (size_t)16) }, input_mem, filter_mem, bias_mem, output_mem, stride);
             }
             else
             {
                 auto kernel = gpu::kernel<gpu::input_mem, gpu::input_mem, gpu::input_mem, gpu::output_mem, gpu::vector_arg>("Convolution_GPU");
-                kernel({ dstSize, 16 }, input_mem, filter_mem, bias_mem, output_mem, stride);
+                kernel({ dstSize, std::min( dstSize, (size_t)16 ) }, input_mem, filter_mem, bias_mem, output_mem, stride);
             }
         }
             break;
@@ -437,13 +439,13 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
 namespace{
 struct attach{
     attach(){
-        gpu::gpu_toolkit::get().add_kernel(kernelCode);
+        gpu::kernel_templates::add(kernelName, kernelCode);
         auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
         auto val_fw = convolution_gpu::create;
 
         conv_fw_implementation_map.insert( {key_fw, val_fw} );
 
-        gpu::gpu_toolkit::get().add_kernel(kernelCode_BFXY_f32);
+        gpu::kernel_templates::add(kernelName_BFXY_f32, kernelCode_BFXY_f32);
         auto key_fw2 = std::make_tuple(engine::gpu, memory::format::bfyx_f32, memory::format::bfyx_f32);
         conv_fw_implementation_map.insert({ key_fw2, val_fw });
     }

@@ -14,15 +14,13 @@
 // limitations under the License.
 */
 
-#ifdef CODE_PREFIX
-#define CODE_BEGIN CODE_PREFIX
-#define CODE_END CODE_POSTFIX
-#else
-#define CODE_BEGIN
-#define CODE_END
-#endif
+///////////////////////////////////////////////////////////////////////////////////////////////////
+#include "ocl_toolkit.h"
+#include "kernels_cache.h"
 
-CODE_BEGIN
+namespace neural { namespace gpu {
+
+static const char* kernels_header = R"__krnl(
 enum neural_memory_format {
     x_f32,
     xb_f32,     // 1D+batch, float32
@@ -109,84 +107,63 @@ __attribute__((overloadable)) uint get_feature_size(const __global neural_vector
 __attribute__((overloadable)) const __global uint* get_spatial(const __global neural_vector* v) { return &(v->data[v->spatial_offset]); }
 __attribute__((overloadable)) uint get_spatial_size(const __global neural_vector* v) { return get_raw_size(v) - v->spatial_offset; } 
 
-CODE_END
+)__krnl";
 
-/*
-KERNEL(Fully_Connected_GPU)
-DECALRE_CONSTANT()
-BEGIN_ARGUMENTS_DECLARATION
-DECLARE_INPUT_MEMORY_ARGUMENT(input_mem)
-DECLARE_INPUT_MEMORY_ARGUMENT(weights_mem)
-DECLARE_INPUT_MEMORY_ARGUMENT(bias_mem)
-DECLARE_OUTPUT_MEMORY_ARGUMENT(dst_mem)
-END_ARGUMENTS_DECLARATION
-CODE_BEGIN
-#define WEIGHTS { 1.0, 3.2, 4.5, 6.7 }
-#define WEIGHTS_SIZE { 2, 2 }
-#define WEIGHTS_DIM 2
-*/
-__kernel void Fully_Connected_GPU(__global neural_memory* input_mem, __global neural_memory* weights_mem, __global neural_memory* bias_mem, __global neural_memory* dst_mem)
-{
-    __global uint* input_size = get_raw(input_mem);
-    __global uint* weights_size = get_raw(weights_mem);
-    __global float* input = (__global float*)get_data(input_mem);
-    __global float* weights = (__global float*)get_data(weights_mem);
-    __global float* bias = (__global float*)get_data(bias_mem);
-    __global float* pDst = (__global float*)get_data(dst_mem);
 
-    const int x = get_global_id(0);
+std::mutex kernel_templates::_mutex;
+std::map<std::string, std::string> kernel_templates::_templates;
 
-    pDst[x] = 0;
-    uint outXIdx = x / input_size[0];
-    uint inputBatchIdx = x % input_size[0];
-    uint weightYIdx = outXIdx * weights_size[0];
-    for (uint i = 0; i < input_size[2]; i++)
-    {
-        pDst[x] += input[i * input_size[0] + inputBatchIdx] * weights[weightYIdx + i];
+cl::Program::Sources kernels_cache::get_program_source() const {
+    cl::Program::Sources source{ kernels_header };
+    for (auto& code : _kernel_codes) {
+        source.push_back(code.second);
     }
-    pDst[x] += bias[outXIdx];
+    return source;
 }
-CODE_END
 
-CODE_BEGIN
-__kernel void Convolution_GPU(
-    const __global neural_memory* input_mem,
-    const __global neural_memory* filter_mem,
-    float bias,
-    __global neural_memory* dst_mem,
-    const __global neural_vector* spatial_stride)
-{
+kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, std::map<std::string, std::string> definitions) {
+    std::string kernel_name = template_name;
+    std::string kernel_code = kernel_templates::get(template_name);
 
-//
-    const __global uint* input_size = get_raw(input_mem);
-    const __global uint* filter_size = get_raw(filter_mem);
-    const __global uint* dst_size = get_raw(dst_mem);
-    const __global float* input = (const __global float*)get_data(input_mem);
-    const __global float* filter = (const __global float*)get_data(filter_mem);
-    __global float* pDst = (__global float*)get_data(dst_mem);
-//
+    if(!definitions.empty()) {
+        // TODO: FIXIT: more than one kernel can be created for same template_name and definitions
+        auto kernel_num = std::to_string(_kernel_codes.size());
+        kernel_name += "_" + kernel_num;
 
-    int global_id = get_global_id(0);
-    const int batch_num = dst_size[0];
-    const int batch_offset = global_id % dst_size[0];
-
-    const int idx = global_id / batch_num;
-
-    const int x = (idx % input_size[2]) * get_spatial(spatial_stride)[0];
-    const int y = (idx * get_spatial(spatial_stride)[1]) / input_size[2];
-
-    const int out_offset = idx * batch_num + batch_offset;
-
-    pDst[out_offset] = 0;
-    for (uint i = 0; i < filter_size[4]; i++)
-    {
-        for (uint j = 0; j < filter_size[3]; j++)
-        {
-            int input_idx = (x + j + ((y + i) * input_size[2])) * batch_num + batch_offset;
-            int filter_idx = i * filter_size[3] + j;
-            pDst[out_offset] += input[input_idx] * filter[filter_idx];
+        std::ostringstream code;
+        code << "#define KERNEL_NUMBER " << kernel_num << std::endl;
+        for (auto& definition : definitions) {
+            code << "#define " << definition.first << " " << definition.second << std::endl;
         }
+        code << kernel_code;
+        kernel_code = code.str();
     }
-    pDst[out_offset] += bias;
+
+    std::lock_guard<std::mutex> lock(_mutex);
+    _kernel_codes[kernel_name] = kernel_code;
+    _modified = true;
+    return kernel_name;
 }
-CODE_END
+
+cl::Program kernels_cache::get_program(gpu_toolkit* context) {
+    assert(context != nullptr);
+    std::lock_guard<std::mutex> lock(_mutex);
+    if (modified()){
+        context->program() = cl::Program(context->context(), get_program_source());
+        context->program().build({ context->device() });
+    }
+    _modified = false;
+    return context->program();
+}
+
+cl::Kernel kernels_cache::get_kernel(neural::gpu::gpu_toolkit* context, kernels_cache::kernel_id id) {
+    assert(context != nullptr);
+    return cl::Kernel(get_program(context), id.c_str());
+}
+
+kernels_cache& kernels_cache::get() {
+    static kernels_cache instance;
+    return instance;
+}
+
+}}

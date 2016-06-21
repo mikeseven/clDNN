@@ -26,150 +26,56 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 #include "cl2.hpp"
 #pragma warning(pop)
-#include <numeric>
 #include <mutex>
 #include "api/neural.h"
+#include <atomic>
+#include <sstream>
+#include "push_pop_map.h"
+#include "memory_gpu.h"
 
 namespace neural { namespace gpu {
+class gpu_toolkit;
 
 struct neural_memory;
 struct neural_vector;
 
-
-class vector_arg {
-    const neural::vector<uint32_t>& _vec;
-    cl::Buffer _clBuffer;
-public:
-    vector_arg(const neural::vector<uint32_t>& arg);
-    const cl::Buffer& get_buffer() const { return _clBuffer; };
-
-    ~vector_arg();
-};
-
-
-class memory_arg {
-    const neural::memory& _mem;
-    cl::Buffer _clBuffer;
-    bool is_own() const {
-        return _mem.argument.engine == neural::engine::gpu && _mem.argument.owns_memory;
-    }
-    bool _copy_input;
-    bool _copy_output;
-
-protected:
-    memory_arg(const neural::memory& mem, bool copy_input, bool copy_output);
-
-public:
-    const cl::Buffer& get_buffer() const { return _clBuffer; };
-    ~memory_arg();
-};
-
-class input_mem : public memory_arg {
-public:
-    input_mem(const neural::memory& mem) :memory_arg(mem, true, false) {}
-};
-
-class output_mem : public memory_arg {
-public:
-    output_mem(const neural::memory& mem) :memory_arg(mem, false, true) {}
-};
-
-template<typename T, class Enable=void>
-struct kernel_arg_handler;
-
 template<typename T>
-struct kernel_arg_handler<T, typename std::enable_if<!std::is_base_of<memory_arg, T>::value>::type> {
-    static const T& get(const T& arg) { return arg; }
-};
-
-template<typename T>
-struct kernel_arg_handler<T, typename std::enable_if<std::is_base_of<memory_arg, T>::value>::type> {
-    static const cl::Buffer& get(const T& arg) { return arg.get_buffer(); }
+struct sizeof_traits {
+    static size_t get(size_t count) { return sizeof(T) * count ; }
 };
 
 template<>
-struct kernel_arg_handler<vector_arg> {
-    static const cl::Buffer& get(const vector_arg& arg) { return arg.get_buffer(); };
+struct sizeof_traits<neural_memory> {
+    static size_t get(const neural::memory::arguments& arg) { return neural_memory::size_of_memory(arg); }
 };
 
-
-class kernel_execution_options {
-    cl::NDRange _global;
-    cl::NDRange _local;
-public:
-    kernel_execution_options(size_t work_items, size_t parallel_items) : _global(work_items), _local(parallel_items) {}
-
-    cl::NDRange global_range() const { return _global; }
-    cl::NDRange local_range() const { return _local; }
+template<>
+struct sizeof_traits<neural_vector> {
+    static size_t get(const neural::vector<uint32_t>& arg) { return neural_vector::size_of_vector(arg); }
 };
 
-template<typename... Args>
-class kernel {
-    cl::Kernel _kernel;
-
-    template<unsigned index, typename Ti, typename... Ts>
-    void setArgs(Ti&& arg, Ts&&... args) {
-        _kernel.setArg(index, kernel_arg_handler<Ti>::get(arg));
-        setArgs<index + 1, Ts...>(std::forward<Ts>(args)...);
-    }
-
-
-    template<unsigned index, typename Ti>
-    void setArgs(Ti&& arg) {
-        _kernel.setArg(index, kernel_arg_handler<Ti>::get(arg));
-    }
-
-    template<unsigned index>
-    void setArgs() {}
-
+template<typename T, typename Size_of = sizeof_traits<T>>
+class mapped_buffer {
+    std::shared_ptr<gpu_toolkit> _context;
+    cl::Buffer _buffer;
+    T* _mapped_ptr;
 public:
-    kernel(cl::Kernel kernel) : _kernel(kernel) {};
-    kernel(const std::string& name);
-    
-    void operator()(const kernel_execution_options& options, Args... args)
-    {
-        setArgs<0>(std::forward<Args>(args)...);
-        auto queue = cl::CommandQueue::getDefault();
+    template<typename Arg> mapped_buffer(std::shared_ptr<gpu_toolkit> context, cl::Buffer buffer, Arg arg);
+    template<typename Arg> mapped_buffer(std::shared_ptr<gpu_toolkit> context, Arg arg);
+    ~mapped_buffer();
 
-        cl::Event end_event;
-        queue.enqueueNDRangeKernel(_kernel, cl::NullRange, options.global_range(), options.local_range(), 0, &end_event);
-        end_event.wait();
-    }
-};
+    mapped_buffer(const mapped_buffer& other) = delete;
+    mapped_buffer& operator=(const mapped_buffer& other) = delete;
 
-template<typename Key, typename Type, class Traits = std::less<Key>,
-    class Allocator = std::allocator<std::pair <const Key, Type> >>
-class push_pop_map {
-    std::mutex _mutex;
-    std::map<Key, Type, Traits, Allocator> _map;
-public:
-    void push(const Key& key, Type value) {
-        std::lock_guard<std::mutex> lock{ _mutex };
-        _map.insert({ key, value });
-    }
-
-    Type pop(const Key& key) {
-        std::lock_guard<std::mutex> lock{ _mutex };
-        auto it = _map.find(key);
-        if (it == _map.end()) throw std::out_of_range("Invalud push_pop_map<K, T> key");
-        auto x = std::move(it->second);
-        _map.erase(it);
-        return std::move(x);
-    }
-
-    bool empty() {
-        std::lock_guard<std::mutex> lock{ _mutex };
-        return _map.empty();
-    }
+    T* data() const { return _mapped_ptr; }
+    cl::Buffer buffer() const { return _buffer; }
 };
 
 class gpu_toolkit {
-    bool program_modified = true;
-    cl::Program::Sources kernel_sources;
-
-    std::unique_ptr<cl::Program> program;
-
-    push_pop_map<void*, std::pair<const cl::Buffer, neural_memory*>> _mapped_memory;
+    cl::Device _device;
+    cl::Context _context;
+    cl::CommandQueue _command_queue;
+    cl::Program _program;
 
     gpu_toolkit();
     
@@ -177,35 +83,52 @@ class gpu_toolkit {
         assert(_mapped_memory.empty() && "There are mapped OCL buffers kept! Check the client code.");
     }
 
-    static std::once_flag ocl_initialized;
-    static void initialize();
-
-    const cl::Program& get_program() {
-        std::call_once(ocl_initialized, initialize);
-        if (!program || program_modified) {
-            program.reset(new cl::Program(kernel_sources));
-            program->build();// "-cl-std=CL2.0");
-            program_modified = false;
-        }
-        return *program.get();
-    }
-
+    static std::shared_ptr<gpu_toolkit>get();
+    friend class context_holder;
 public:
-    void add_kernel(const std::string& source) {
-        kernel_sources.push_back(source);
-        program_modified = true;
-    }
+    push_pop_map<void*, std::unique_ptr<mapped_buffer<neural_memory>>> _mapped_memory;
 
-    cl::Kernel get_kernel(const std::string& name) { return cl::Kernel(get_program(), name.c_str()); }
+    mapped_buffer<neural_memory>* new_memory_buffer(neural::memory::arguments arg);
+    mapped_buffer<neural_memory>* map_memory_buffer(const cl::Buffer& buf, neural::memory::arguments arg);
+    std::unique_ptr<mapped_buffer<neural_memory>> unmap_buffer(void* pointer);
 
-    neural_memory* new_memory_buffer(neural::memory::arguments arg);
-    neural_memory* map_memory_buffer(const cl::Buffer& buf, cl::size_type size, cl_map_flags flags = CL_MAP_WRITE);
-    cl::Buffer unmap_buffer(void* pointer);
+    cl::Device& device() { return _device; }
+    cl::Context& context() { return _context; }
+    cl::CommandQueue& queue() { return _command_queue; }
+    cl::Program& program() { return _program; }
 
-    static gpu_toolkit& get();
+    static void* allocate_memory_gpu(neural::memory::arguments arg);
+    static void deallocate_memory_gpu(void* pointer, neural::memory::arguments);
 };
 
-template <typename ... Args>
-kernel<Args...>::kernel(const std::string& name) : _kernel(gpu_toolkit::get().get_kernel(name)) {}
+class context_holder {
+    std::shared_ptr<gpu_toolkit> _context;
+protected:
+    context_holder() : _context(gpu_toolkit::get()){}
+    virtual ~context_holder() = default;
+    const std::shared_ptr<gpu_toolkit>& context() const { return _context; }
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+template <typename T, typename Size_of>
+template <typename Arg>
+mapped_buffer<T, Size_of>::mapped_buffer(std::shared_ptr<gpu_toolkit> context, cl::Buffer buffer, Arg arg) :
+    _context(context), _buffer(buffer) {
+    cl::Event end_event;
+    _mapped_ptr = reinterpret_cast<T*>(_context->queue().enqueueMapBuffer(_buffer, true, CL_MAP_WRITE, 0, Size_of::get(arg), 0, &end_event));
+    end_event.wait();
+}
+
+template <typename T, typename Size_of>
+template <typename Arg>
+mapped_buffer<T, Size_of>::mapped_buffer(std::shared_ptr<gpu_toolkit> context, Arg arg) :
+    mapped_buffer(context, cl::Buffer(context->context(), CL_MEM_READ_WRITE, Size_of::get(arg)), arg) {}
+
+template <typename T, typename Size_of>
+mapped_buffer<T, Size_of>::~mapped_buffer() {
+    cl::Event end_event;
+    _context->queue().enqueueUnmapMemObject(_buffer, _mapped_ptr, 0, &end_event);
+    end_event.wait();
+}
 
 }}

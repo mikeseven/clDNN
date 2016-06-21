@@ -17,10 +17,10 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
 #include "multidimensional_counter.h"
-#include "memory_utils.h"
 #include "fully_connected.h"
-#include "ocl_toolkit.h"
+#include "kernel.h"
 
+const std::string kernelName = "Fully_Connected_GPU";
 const std::string kernelCode = R"__krnl(
 __kernel void Fully_Connected_GPU(__global neural_memory* input_mem, __global neural_memory* weights_mem, __global neural_memory* bias_mem, __global neural_memory* dst_mem)
 {
@@ -49,15 +49,17 @@ namespace neural {
 
     struct fully_connected_gpu : is_an_implementation {
         const fully_connected &outer;
-        fully_connected_gpu(fully_connected &arg)
+        gpu::kernel<gpu::input_mem, gpu::input_mem, gpu::input_mem, gpu::output_mem> _kernel;
+
+        fully_connected_gpu(fully_connected &arg, const std::string& kernel_name)
             : is_an_implementation(neural::type_id<fully_connected_gpu>())
-            , outer(arg)
+            , outer(arg), _kernel(kernel_name)
         {};
         ~fully_connected_gpu() {}
 
         static void implementation(const void *ptr) {
-
-            auto this_fc = static_cast<const fully_connected *>(ptr);
+            auto me = static_cast<const fully_connected_gpu *>(ptr);
+            auto this_fc = &me->outer;
 
             // input
             auto& input_mem = this_fc->input_memory(0);
@@ -77,21 +79,22 @@ namespace neural {
             
             auto output_bufSize = output_mem.count();
 
-            gpu::kernel<gpu::input_mem, gpu::input_mem, gpu::input_mem, gpu::output_mem> kernel{ "Fully_Connected_GPU" };
-            kernel({ output_bufSize, output_bufSize }, input_mem, weight_mem, bias_mem, output_mem);
+            const_cast<fully_connected_gpu*>(me)->_kernel({ output_bufSize, output_bufSize }, input_mem, weight_mem, bias_mem, output_mem);
         }
 
         task_group work() override {
-            return{ { task{ implementation, &outer } }, schedule::single };
+            return{ { task{ implementation, this } }, schedule::single };
         }
 
-        static is_an_implementation *create(fully_connected &arg) { return new fully_connected_gpu(arg); };
+        static is_an_implementation *create(fully_connected &arg) {
+            return new fully_connected_gpu(arg, kernelName);
+        };
     };
 
 namespace {
     struct attach {
         attach() {
-            gpu::gpu_toolkit::get().add_kernel(kernelCode);
+            gpu::kernel_templates::add(kernelName, kernelCode);
             auto val_fw = fully_connected_gpu::create;
             fully_connected_fw_implementation_map::instance().insert({ std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32), val_fw });
             fully_connected_fw_implementation_map::instance().insert({ std::make_tuple(engine::gpu, memory::format::x_f32,  memory::format::x_f32), val_fw });
