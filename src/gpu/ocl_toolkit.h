@@ -86,6 +86,7 @@ class gpu_toolkit {
     static std::shared_ptr<gpu_toolkit>get();
     friend class context_holder;
 public:
+
     push_pop_map<void*, std::unique_ptr<mapped_buffer<neural_memory>>> _mapped_memory;
 
     mapped_buffer<neural_memory>* new_memory_buffer(neural::memory::arguments arg);
@@ -99,6 +100,11 @@ public:
 
     static void* allocate_memory_gpu(neural::memory::arguments arg);
     static void deallocate_memory_gpu(void* pointer, neural::memory::arguments);
+
+    gpu_toolkit(const gpu_toolkit& other) = delete;
+    gpu_toolkit(gpu_toolkit&& other) = delete;
+    gpu_toolkit& operator=(const gpu_toolkit& other) = delete;
+    gpu_toolkit& operator=(gpu_toolkit&& other) = delete;
 };
 
 class context_holder {
