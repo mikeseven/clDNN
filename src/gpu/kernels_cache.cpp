@@ -109,10 +109,6 @@ __attribute__((overloadable)) uint get_spatial_size(const __global neural_vector
 
 )__krnl";
 
-
-std::mutex kernel_templates::_mutex;
-std::map<std::string, std::string> kernel_templates::_templates;
-
 cl::Program::Sources kernels_cache::get_program_source() const {
     cl::Program::Sources source{ kernels_header };
     for (auto& code : _kernel_codes) {

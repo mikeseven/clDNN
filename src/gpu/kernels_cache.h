@@ -21,18 +21,29 @@ namespace neural {namespace gpu {
 class gpu_toolkit;
 
 class kernel_templates {
-    static std::mutex _mutex;
-    static std::map<std::string, std::string> _templates;
+    std::mutex _mutex;
+    std::map<std::string, std::string> _templates;
+    kernel_templates(){}
+    static kernel_templates& instance() {
+        static kernel_templates instance;
+        return instance;
+    }
 public:
+    kernel_templates(const kernel_templates& other) = delete;
+    kernel_templates(kernel_templates&& other) = delete;
+    kernel_templates& operator=(const kernel_templates& other) = delete;
+    kernel_templates& operator=(kernel_templates&& other) = delete;
+
     static void add(const std::string& name, const std::string& code) {
-        std::lock_guard<std::mutex> lock(_mutex);
-        _templates.insert({ name, code });
+        std::lock_guard<std::mutex> lock(instance()._mutex);
+        instance()._templates.insert({ name, code });
     }
     static std::string get(const std::string& name) {
-        std::lock_guard<std::mutex> lock(_mutex);
-        std::string result = _templates.at(name);
+        std::lock_guard<std::mutex> lock(instance()._mutex);
+        std::string result = instance()._templates.at(name);
         return result;
     }
+
 };
 
 class kernels_cache {
