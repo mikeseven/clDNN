@@ -218,8 +218,8 @@ __kernel void Convolution_GPU_bfxy_f32(
     const int input_batch_size = input_feature_num * input_feature_size;
     const int input_batch_offset = input_batch_size * batch_idx;
 
-    const int input_x_offset = global_id % (input_size[2] / spatial_stride[1]) * spatial_stride[1];    
-    const int input_y_offset = ((global_id / (input_size[2] / spatial_stride[1])) % (input_size[3] / spatial_stride[2])) * spatial_stride[2];
+    const int input_x_offset = global_id % (input_size[2] / spatial_stride[0]) * spatial_stride[0];    
+    const int input_y_offset = ((global_id / (input_size[2] / spatial_stride[0])) % (input_size[3] / spatial_stride[1])) * spatial_stride[1];
     
     const int input_offset = input_batch_offset + input_y_offset * input_size[2] + input_x_offset;
     
@@ -315,12 +315,12 @@ void convolution_gpu::implementation(const void *ptr) {
                         _stride.spatial[0], _stride.spatial[1]);*/
 
                 auto kernel = gpu::kernel<gpu::input_mem, gpu::input_mem, gpu::input_mem, gpu::output_mem, gpu::vector_arg>("Convolution_GPU_bfxy_f32");
-                kernel({ dstSize, std::min(dstSize, (size_t)16) }, input_mem, filter_mem, bias_mem, output_mem, stride);
+                kernel({ dstSize, std::min(dstSize, (size_t)16) }, input_mem, filter_mem, bias_mem, output_mem, _stride);
             }
             else
             {
                 auto kernel = gpu::kernel<gpu::input_mem, gpu::input_mem, gpu::input_mem, gpu::output_mem, gpu::vector_arg>("Convolution_GPU");
-                kernel({ dstSize, std::min( dstSize, (size_t)16 ) }, input_mem, filter_mem, bias_mem, output_mem, stride);
+                kernel({ dstSize, std::min( dstSize, (size_t)16 ) }, input_mem, filter_mem, bias_mem, output_mem, _stride);
             }
         }
             break;
