@@ -127,7 +127,7 @@ kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::s
         kernel_name += "_" + kernel_num;
 
         std::ostringstream code;
-        code << "#define KERNEL_NUMBER " << kernel_num << std::endl;
+        code << "#define KERNEL(name) _kernel void name##_" << kernel_num << std::endl;
         for (auto& definition : definitions) {
             code << "#define " << definition.first << " " << definition.second << std::endl;
         }
