@@ -22,13 +22,10 @@
 
 const std::string kernelName = "Fully_Connected_GPU";
 const std::string kernelCode = R"__krnl(
-__kernel void Fully_Connected_GPU(__global neural_memory* input_mem, __global neural_memory* weights_mem, __global neural_memory* bias_mem, __global neural_memory* dst_mem)
+KERNEL (Fully_Connected_GPU)(__global neural_memory* input_mem, __global neural_memory* dst_mem)
 {
     __global uint* input_size = get_raw(input_mem);
-    __global uint* weights_size = get_raw(weights_mem);
     __global float* input = (__global float*)get_data(input_mem);
-    __global float* weights = (__global float*)get_data(weights_mem);
-    __global float* bias = (__global float*)get_data(bias_mem);
     __global float* pDst = (__global float*)get_data(dst_mem);
 
     const int x = get_global_id(0);
@@ -36,12 +33,12 @@ __kernel void Fully_Connected_GPU(__global neural_memory* input_mem, __global ne
     pDst[x] = 0;
     uint outXIdx = x / input_size[0];
     uint inputBatchIdx = x % input_size[0];
-    uint weightYIdx = outXIdx * weights_size[0];
+    uint weightBatchIdx = outXIdx * WEIGHTS_BATCH_NUM;
     for (uint i = 0; i < input_size[2]; i++)
     {
-        pDst[x] += input[i * input_size[0] + inputBatchIdx] * weights[weightYIdx + i];
+        pDst[x] += input[i * input_size[0] + inputBatchIdx] * WEIGHTS[weightBatchIdx + i];
     }
-    pDst[x] += bias[outXIdx];
+    pDst[x] += BIASES[outXIdx];
 }
 )__krnl";
 
@@ -49,11 +46,10 @@ namespace neural {
 
     struct fully_connected_gpu : is_an_implementation {
         const fully_connected &outer;
-        gpu::kernel<gpu::input_mem, gpu::input_mem, gpu::input_mem, gpu::output_mem> _kernel;
-
-        fully_connected_gpu(fully_connected &arg, const std::string& kernel_name)
+       
+        fully_connected_gpu(fully_connected &arg)
             : is_an_implementation(neural::type_id<fully_connected_gpu>())
-            , outer(arg), _kernel(kernel_name)
+            , outer(arg)
         {};
         ~fully_connected_gpu() {}
 
@@ -79,7 +75,13 @@ namespace neural {
             
             auto output_bufSize = output_mem.count();
 
-            const_cast<fully_connected_gpu*>(me)->_kernel({ output_bufSize, output_bufSize }, input_mem, weight_mem, bias_mem, output_mem);
+            gpu::memory_constants mem_consts{  
+                gpu::memory_constant("WEIGHTS", weight_mem),
+                gpu::memory_constant("BIASES", bias_mem)
+            };
+
+            gpu::kernel<gpu::input_mem, gpu::output_mem> _kernel(kernelName, mem_consts);
+            _kernel({ output_bufSize, output_bufSize }, input_mem, output_mem);
         }
 
         task_group work() override {
@@ -87,7 +89,7 @@ namespace neural {
         }
 
         static is_an_implementation *create(fully_connected &arg) {
-            return new fully_connected_gpu(arg, kernelName);
+            return new fully_connected_gpu(arg);
         };
     };
 

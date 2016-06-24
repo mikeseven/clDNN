@@ -59,6 +59,67 @@ public:
     output_mem(const neural::memory& mem) :memory_arg(mem, false, true) {}
 };
 
+class memory_constant {
+    const std::string _name;
+    const neural::memory* _memory;
+    const neural::vector<uint32_t>* _vector;
+private:
+    void create_sizes(std::vector<std::pair<std::string, std::string>> &result, const neural::vector<uint32_t> & vec) const
+    {
+        size_t feature_offset = vec.batch.size();
+        size_t spatial_offset = vec.feature.size() + feature_offset;
+        result.push_back({ _name + "_BATCH_NUM", std::to_string(vec.raw[0]) });
+        result.push_back({ _name + "_SIZE_X", std::to_string(vec.raw[0 + spatial_offset]) });
+        result.push_back({ _name + "_SIZE_Y", vec.spatial.size() > 1 ? std::to_string(vec.raw[1 + spatial_offset]) : "1" });
+        result.push_back({ _name + "_INPUT_FEATURE_NUM", std::to_string(vec.raw[0 + feature_offset]) });
+        result.push_back({ _name + "_OUTPUT_FEATURE_NUM", vec.feature.size() > 1 ? std::to_string(vec.raw[1 + feature_offset]) : "1" });
+    }
+public:
+    memory_constant(const std::string& name, const neural::memory& memory) : _name(name), _memory(&memory), _vector(nullptr) {
+    }
+    memory_constant(const std::string& name, const neural::vector<uint32_t>& vector) : _name(name), _memory(nullptr), _vector(&vector) {
+    }
+
+    std::vector<std::pair<std::string, std::string>> get_definitions() const {
+        std::vector<std::pair<std::string, std::string>> result;
+        if (_memory) {
+            //fill result by memory_data
+            std::stringstream ss;
+            ss << "(float[]){ ";
+            for (int i = 0; i < _memory->count(); i++)
+                ss << ((float*)_memory->pointer)[i] << ",";
+            ss << " } ";
+            result.push_back({ _name, ss.str() });
+
+            create_sizes(result, _memory->argument.size);
+        }
+        else if (_vector) {
+            create_sizes(result, *_vector);
+        }
+        else {
+            assert(false && "crazy case");
+        }
+
+        return result;
+    }
+};
+
+class memory_constants {
+    std::vector<memory_constant> _constants;
+public:
+    memory_constants(std::initializer_list<memory_constant> constants) :_constants(constants) {}
+
+    std::vector<std::pair<std::string, std::string>> get_definitions() const {
+        std::vector<std::pair<std::string, std::string>> definitons;
+        for (auto& constant : _constants) {
+            for (auto& def : constant.get_definitions()) {
+                definitons.push_back(def);
+            }
+        }
+        return definitons;
+    }
+};
+
 template<typename T, class Enable = void>
 struct kernel_arg_handler;
 
@@ -109,7 +170,10 @@ class kernel : public context_holder {
     void setArgs() {}
 
 public:
-    explicit kernel(const std::string& name, std::map<std::string, std::string> definitions = std::map<std::string, std::string>()) : _kernel_id(kernels_cache::get().create_kernel_from_template(name, definitions)) {}
+    explicit kernel(const std::string& name, std::vector<std::pair<std::string, std::string>> definitions = std::vector<std::pair<std::string, std::string>>())
+        : _kernel_id(kernels_cache::get().create_kernel_from_template(name, definitions)) {}
+    explicit kernel(const std::string& name, const memory_constants& constants) 
+        : _kernel_id(kernels_cache::get().create_kernel_from_template(name, constants.get_definitions())) {}
 
     void operator()(const kernel_execution_options& options, Args... args) {
         _kernel = kernels_cache::get().get_kernel(context().get(), _kernel_id);

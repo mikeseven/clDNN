@@ -117,7 +117,7 @@ cl::Program::Sources kernels_cache::get_program_source() const {
     return source;
 }
 
-kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, std::map<std::string, std::string> definitions) {
+kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, std::vector<std::pair<std::string, std::string>> definitions) {
     std::string kernel_name = template_name;
     std::string kernel_code = kernel_templates::get(template_name);
 
@@ -127,7 +127,7 @@ kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::s
         kernel_name += "_" + kernel_num;
 
         std::ostringstream code;
-        code << "#define KERNEL(name) _kernel void name##_" << kernel_num << std::endl;
+        code << "#define KERNEL(name) __kernel void name##_" << kernel_num << std::endl;
         for (auto& definition : definitions) {
             code << "#define " << definition.first << " " << definition.second << std::endl;
         }

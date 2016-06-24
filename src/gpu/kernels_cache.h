@@ -61,7 +61,7 @@ public:
     static kernels_cache& get();
     bool modified() const { return _modified; }
 
-    kernel_id create_kernel_from_template(const std::string& template_name, std::map<std::string, std::string> definitions = std::map<std::string, std::string>());
+    kernel_id create_kernel_from_template(const std::string& template_name, std::vector<std::pair<std::string, std::string>> definitions = std::vector<std::pair<std::string, std::string>>());
     cl::Program get_program(neural::gpu::gpu_toolkit* context);
     cl::Kernel get_kernel(neural::gpu::gpu_toolkit* context, kernel_id id);
 };
