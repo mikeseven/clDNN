@@ -52,8 +52,8 @@ KERNEL(Convolution_GPU)(
     const int i_ifm_num = input_size[1];
     const int out_offset = idx * batch_num + batch_offset;
 
-    const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % input_size[2]) * STRIDE_SIZE_X;
-    const int y = ((idx / FILTER_OUTPUT_FEATURE_NUM) * STRIDE_SIZE_Y) / input_size[2];
+    const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % dst_size[2]) * STRIDE_SIZE_X;
+    const int y = (((idx / FILTER_OUTPUT_FEATURE_NUM) * STRIDE_SIZE_Y) / input_size[2]) * STRIDE_SIZE_Y;
 
 
     pDst[out_offset] = 0;
@@ -64,9 +64,16 @@ KERNEL(Convolution_GPU)(
         {
             for (uint j = 0; j < FILTER_SIZE_X; j++)
             {
+                int input_offset_x = x + j;
+                int input_offset_y = y + i;
+                bool zero = false;
+                zero = input_offset_x < 0 ? true : zero;
+                zero = input_offset_y < 0 ? true : zero;
+                zero = input_offset_x >= input_size[2] ? true : zero;
+                zero = input_offset_y >= input_size[3] ? true : zero;
                 int input_idx = (x + j + ((y + i) * input_size[2])) * batch_num * i_ifm_num + h * batch_num + batch_offset;
                 int filter_idx = (i * FILTER_SIZE_X + j) + f_ofm_offset + f_ifm_offset;
-                pDst[out_offset] += input[input_idx] * FILTER[filter_idx];
+                pDst[out_offset] += zero ? 0 : input[input_idx] * FILTER[filter_idx];
             }
         }
     }
@@ -197,7 +204,7 @@ void convolution_gpu::implementation(const void *ptr) {
             else
             {
                 auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem>("Convolution_GPU", mem_consts);
-                kernel({ dstSize, std::min( dstSize, (size_t)16 ) }, input_mem, output_mem);
+                kernel({ {dstSize, 1} , {std::min(dstSize, (size_t)16), 1} }, input_mem, output_mem);
             }
         }
             break;
