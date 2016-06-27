@@ -16,18 +16,17 @@
 
 #pragma once
 
-#include "convolution.h"
+#include "relu.h"
 
 namespace neural {
-    struct convolution_gpu : is_an_implementation {
-        convolution_gpu(convolution &arg);
-        ~convolution_gpu();
+    struct relu_gpu : is_an_implementation {
+        relu_gpu(relu &arg);
+        ~relu_gpu();
         static void implementation(const void *ptr);
-        const convolution &outer;
 
-        static is_an_implementation *create(convolution &arg) { return new convolution_gpu(arg); };
-        task_group work() {
-            return{ { task{ implementation, &outer } }, schedule::single };
-        }
+        static is_an_implementation *create(relu &arg) { return new relu_gpu(arg); };
+        task_group work() { return {{task{implementation, &outer}}, schedule::unordered}; };
+
+        const relu &outer;
     };
 }
