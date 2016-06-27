@@ -143,7 +143,23 @@ class kernel_execution_options {
     cl::NDRange _global;
     cl::NDRange _local;
 public:
+    class range2d {
+        size_t x; size_t y;
+    public:
+        range2d(size_t x, size_t y) :x(x), y(y) {}
+        operator cl::NDRange() const { return cl::NDRange(x, y); }
+    };
+
+    class range3d {
+        size_t x; size_t y; size_t z;
+    public:
+        range3d(size_t x, size_t y, size_t z) :x(x), y(y), z(z) {}
+        operator cl::NDRange() const { return cl::NDRange(x, y, z); }
+    };
+
     kernel_execution_options(size_t work_items, size_t parallel_items) : _global(work_items), _local(parallel_items) {}
+    kernel_execution_options(range2d work_items, range2d parallel_items) : _global(work_items), _local(parallel_items){}
+    kernel_execution_options(range3d work_items, range3d parallel_items) : _global(work_items), _local(parallel_items) {}
 
     cl::NDRange global_range() const { return _global; }
     cl::NDRange local_range() const { return _local; }
