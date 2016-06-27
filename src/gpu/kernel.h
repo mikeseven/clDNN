@@ -71,8 +71,8 @@ private:
         result.push_back({ _name + "_BATCH_NUM", std::to_string(vec.raw[0]) });
         result.push_back({ _name + "_SIZE_X", std::to_string(vec.raw[0 + spatial_offset]) });
         result.push_back({ _name + "_SIZE_Y", vec.spatial.size() > 1 ? std::to_string(vec.raw[1 + spatial_offset]) : "1" });
-        result.push_back({ _name + "_INPUT_FEATURE_NUM", std::to_string(vec.raw[0 + feature_offset]) });
-        result.push_back({ _name + "_OUTPUT_FEATURE_NUM", vec.feature.size() > 1 ? std::to_string(vec.raw[1 + feature_offset]) : "1" });
+        result.push_back({ _name + "_OUTPUT_FEATURE_NUM", std::to_string(vec.raw[0 + feature_offset]) });
+        result.push_back({ _name + "_INPUT_FEATURE_NUM", vec.feature.size() > 1 ? std::to_string(vec.raw[1 + feature_offset]) : "1" });
     }
 public:
     memory_constant(const std::string& name, const neural::memory& memory) : _name(name), _memory(&memory), _vector(nullptr) {

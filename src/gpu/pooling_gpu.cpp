@@ -21,7 +21,7 @@
 
 const std::string kernelName = "Pooling_GPU_max";
 const std::string kernelCode = R"__krnl(
-__kernel void Pooling_GPU_max(__global neural_memory* input_mem, __global neural_memory* output_mem, const __global neural_vector* stride, const __global neural_vector* window)
+KERNEL(Pooling_GPU_max)(__global neural_memory* input_mem, __global neural_memory* output_mem)
 {
     __global uint* input_size = get_raw(input_mem);
     __global float* input = (__global float*)get_data(input_mem);
@@ -40,20 +40,16 @@ __kernel void Pooling_GPU_max(__global neural_memory* input_mem, __global neural
 
     const int i_fm_num = input_size[1];
 
-    const __global uint* window_size = get_spatial(window);
-    const __global uint* spatial_stride = get_spatial(stride);
-    
-
     const int filter_application_count_x = output_size[2]; // how many times we need to apply filter in X dimension
     const int filter_application_count_y = output_size[3]; // how many times we need to apply filter in Y dimension
 
-    const int offset_x = (idx / ofm_num) % filter_application_count_x * spatial_stride[0];
-    const int offset_y = ((idx / ofm_num) / filter_application_count_x) % filter_application_count_y * spatial_stride[1]; 
+    const int offset_x = (idx / ofm_num) % filter_application_count_x * STRIDE_SIZE_X;
+    const int offset_y = ((idx / ofm_num) / filter_application_count_x) % filter_application_count_y * STRIDE_SIZE_Y; 
 
     output[global_id] = -FLT_MAX;
-    for(uint j = 0; j < window_size[1]; j++)
+    for(uint j = 0; j < WINDOW_SIZE_Y; j++)
     {
-        for(uint i = 0; i < window_size[0]; i++)
+        for(uint i = 0; i < WINDOW_SIZE_X; i++)
         {
             int input_idx = (i + offset_x + (j + offset_y) * input_size[2]) * batch_num * i_fm_num + ofm_offset * batch_num + batch_offset;
             output[global_id] = max(output[global_id], input[input_idx]);
@@ -108,11 +104,15 @@ namespace neural {
                     throw std::runtime_error("Pooling output buffer size is to small.");
             }
 
-            namespace nd = ndimensional;
+            gpu::memory_constants mem_consts{
+                gpu::memory_constant("WINDOW", window),
+                gpu::memory_constant("STRIDE", stride)
+            };
+
             if (this_pooling->argument.mode == pooling::mode::max)
             {
-                auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem, gpu::vector_arg, gpu::vector_arg>{ kernelName };
-                kernel({ dstSize, std::min( dstSize, (size_t)16 ) }, input_mem, output_mem, stride, window);
+                auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem>{ kernelName, mem_consts };
+                kernel({ dstSize, std::min( dstSize, (size_t)16 ) }, input_mem, output_mem);
             }
             else if (this_pooling->argument.mode == pooling::mode::average)
             {
