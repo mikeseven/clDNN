@@ -118,25 +118,27 @@ cl::Program::Sources kernels_cache::get_program_source() const {
 }
 
 kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, std::vector<std::pair<std::string, std::string>> definitions) {
-    std::string kernel_name = template_name;
-    std::string kernel_code = kernel_templates::get(template_name);
+    auto kernel_name = template_name;
+    std::ostringstream code;
+    code << "#ifdef KERNEL\n#undef KERNEL\n#endif" << std::endl;
+    code << "#define KERNEL(name) __kernel void name";
 
+    // TODO: FIXIT: more than one kernel can be created for same template_name and definitions
     if(!definitions.empty()) {
-        // TODO: FIXIT: more than one kernel can be created for same template_name and definitions
         auto kernel_num = std::to_string(_kernel_codes.size());
+        code << "##_" << kernel_num;
         kernel_name += "_" + kernel_num;
-
-        std::ostringstream code;
-        code << "#ifdef KERNEL\n#undef KERNEL\n#endif\n"
-             << "#define KERNEL(name) __kernel void name##_" << kernel_num << std::endl;
-        for (auto& definition : definitions) {
-            auto macro_name = definition.first;
-            code << "#ifdef " << macro_name << "\n#undef " << macro_name << "\n#endif\n"
-                 << "#define " << macro_name << " " << definition.second << std::endl;
-        }
-        code << kernel_code;
-        kernel_code = code.str();
     }
+    code << std::endl;
+
+    for (auto& definition : definitions) {
+        auto macro_name = definition.first;
+        code << "#ifdef " << macro_name << "\n#undef " << macro_name << "\n#endif\n"
+             << "#define " << macro_name << " " << definition.second << std::endl;
+    }
+
+    code << kernel_templates::get(template_name);
+    auto kernel_code = code.str();
 
     std::lock_guard<std::mutex> lock(_mutex);
     _kernel_codes[kernel_name] = kernel_code;
