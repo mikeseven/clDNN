@@ -26,12 +26,15 @@ KERNEL (lrn_GPU)(__global neural_memory* input_mem, __global neural_memory* dst_
     __global float* input = (__global float*)get_data(input_mem);
     __global float* pDst = (__global float*)get_data(dst_mem);
 
-    const int idx = get_global_id(0);
+    const int global_id = get_global_id(0);
+
+    const int batch_num = input_size[0];
+    const int batch_offset = global_id % batch_num;
 
     const int ifm_num = input_size[1];
-    const int ifm_offset = idx % ifm_num;
+    const int ifm_offset = (global_id / batch_num) % ifm_num;
 
-    const int x = idx / ifm_num;
+    const int x = (global_id / batch_num) / ifm_num;
 
     float acc = 0;
 
@@ -43,17 +46,18 @@ KERNEL (lrn_GPU)(__global neural_memory* input_mem, __global neural_memory* dst_
         zero = input_offset_f < 0 ? true : zero;
         zero = input_offset_f >= ifm_num ? true : zero;
 
-        int input_idx = input_offset_f + x * ifm_num;
+        int input_idx = input_offset_f * batch_num + x * ifm_num * batch_num + batch_offset;
         
         float value = zero ? 0 : input[input_idx];
         acc += value * value;
         
-        //pDst[idx] = zero ? 0 : 1;
+        //if(i==0)
+        //pDst[global_id] = input_offset_f;
     }
     acc = acc * alpha + k;
     acc = pow(acc, -beta);
 
-    pDst[idx] = acc * input[idx];
+    pDst[global_id] = acc * input[global_id];
 }
 )__krnl";
 
