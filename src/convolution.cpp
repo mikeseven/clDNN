@@ -51,6 +51,75 @@ convolution::arguments::arguments( neural::engine::type     eng,
     , stride(strd)
     , padding(padd) {};
 
+convolution::arguments::arguments(neural::engine::type     eng,
+    memory::format::type    out_fmt,
+    std::vector<primitive_at>in,
+    neural::vector<int32_t>  in_off,
+    neural::vector<uint32_t> strd,
+    neural::padding::type    padd)
+    : engine(eng)
+    , input(in)
+    , input_offset(in_off)
+    , stride(strd)
+    , padding(padd)
+{
+    // compute how many outputs in rows and columns will be generate by filter. 
+    // outp <= (input_size - (2*input_offset) - kernel_size)/ stride 
+    
+    auto kernel_xy = in[1].primitive.as<const memory&>().argument.size.spatial;
+    auto output_spatial_x = (in[0].primitive.as<const memory&>().argument.size.spatial[0] -(2* input_offset.spatial[0]) - kernel_xy[0] ) / strd.spatial[0];
+    auto output_spatial_y = (in[0].primitive.as<const memory&>().argument.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_xy[1]) / strd.spatial[1];
+    auto input_x = in[0].primitive.as<const memory&>().argument;
+
+    auto ofm = in[1].primitive.as<const memory&>().argument;
+    auto number_of_batches = ofm.size.raw[1];
+    output_size = { 
+        in[0].primitive.as<const memory&>().argument.size.batch[0],
+        { output_spatial_x, output_spatial_y },
+        number_of_batches 
+    };
+    output = {memory::allocate({ eng, out_fmt,output_size }) };
+    output_offset = { 
+        output[0].as<const memory&>().argument.size.batch.size(),
+        output[0].as<const memory&>().argument.size.spatial.size(),
+        output[0].as<const memory&>().argument.size.feature.size() 
+    };
+};
+
+convolution::arguments::arguments(neural::engine::type     eng,
+    memory::format::type    out_fmt,
+    std::vector<primitive_at>in,
+    neural::vector<uint32_t> strd,
+    neural::padding::type    padd)
+    : engine(eng)
+    , input(in)
+    , input_offset(in[0].primitive.as<const memory&>().argument.size.batch.size(), in[0].primitive.as<const memory&>().argument.size.spatial.size(), in[0].primitive.as<const memory&>().argument.size.feature.size())
+    , stride(strd)
+    , padding(padd)
+{
+    // compute how many outputs in rows and columns will be generate by filter. 
+    // outp <= (input_size - (2*input_offset) - kernel_size)/ stride 
+
+    auto kernel_xy = in[1].primitive.as<const memory&>().argument.size.spatial;
+    auto output_spatial_x = (in[0].primitive.as<const memory&>().argument.size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_xy[0]) / strd.spatial[0];
+    auto output_spatial_y = (in[0].primitive.as<const memory&>().argument.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_xy[1]) / strd.spatial[1];
+    auto input_x = in[0].primitive.as<const memory&>().argument;
+
+    auto ofm = in[1].primitive.as<const memory&>().argument;
+    auto number_of_batches = ofm.size.raw[1];
+    output_size = {
+        in[0].primitive.as<const memory&>().argument.size.batch[0],
+        { output_spatial_x, output_spatial_y },
+        number_of_batches
+    };
+    output = { memory::allocate({ eng, out_fmt,output_size }) };
+    output_offset = {
+        output[0].as<const memory&>().argument.size.batch.size(),
+        output[0].as<const memory&>().argument.size.spatial.size(),
+        output[0].as<const memory&>().argument.size.feature.size()
+    };
+};
+
 convolution::arguments::arguments( neural::engine::type     eng,
                                    primitive                out,
                                    std::vector<primitive_at>in,
@@ -113,7 +182,7 @@ primitive convolution::create(convolution::arguments arg) {
     if(stride.raw.size()          != output_arg.size.raw.size())  throw std::runtime_error("Convolution stride/output number of dimension does not match.");
     if(filter_arg.size.raw.size() != output_arg.size.raw.size()+1)throw std::runtime_error("Convolution window_size != 5");
     if(bias_arg.size.raw.size()   != 3)                           throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
-    if(bias_arg.size.spatial[0]   != output_size.feature[0])      throw std::runtime_error("Convolution biases/output feature maps number does not match.");
+    if(bias_arg.size.spatial[0] != output_size.raw[1])      throw std::runtime_error("Convolution biases/output feature maps number does not match.");
     if(arg.padding                != padding::zero)               throw std::runtime_error("Unknown padding mode in convolution.");
     if(input_offset.raw.size()    != input_arg.size.raw.size())   throw std::runtime_error("Convolution input offset/input number of dimension does not match.");
     if(output_offset.raw.size()   != input_arg.size.raw.size())   throw std::runtime_error("Convolution output offset/input number of dimension does not match.");

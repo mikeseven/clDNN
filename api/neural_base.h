@@ -134,7 +134,19 @@ template<typename T> struct vector {
     {}
     vector &operator=(const vector &arg)  {
         raw = arg.raw;
-        spatial.raw_ = arg.spatial.raw_; // todo what is it?
+        spatial.raw_   = arg.spatial.raw_; 
+        spatial.begin_ = arg.spatial.begin_;
+        spatial.end_   = arg.spatial.end_;
+
+        batch.raw_   = arg.batch.raw_;
+        batch.begin_ = arg.batch.begin_;
+        batch.end_   = arg.batch.end_;
+
+        feature.raw_   = arg.feature.raw_;
+        feature.begin_ = arg.feature.begin_;
+        feature.end_   = arg.feature.end_;
+
+        return *this;
     }
     vector() : raw(0), batch(raw,0,0), feature(raw,0,0), spatial(raw,0,0) {}
     vector(size_t size): raw(2+size), batch(raw,0,1), feature(raw,1,2), spatial(raw,2, 2+size) {}
@@ -254,7 +266,7 @@ class engine  { engine();  public: enum type {
 inline engine::type operator|(engine::type a, engine::type b) { return static_cast<engine::type>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b)); };
 inline engine::type operator&(engine::type a, engine::type b) { return static_cast<engine::type>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b)); };
 
-class padding { padding(); public: enum type { zero }; };
+class padding { padding(); public: enum type { zero, one, two }; };
 
 // value in any format
 class any_value {

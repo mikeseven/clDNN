@@ -19,10 +19,10 @@
 
 int main()
 {
-    extern void example_convolution_cpu_forward();
+    extern void example_005();
 
     try {
-        example_convolution_cpu_forward();
+        example_005();
     }
     catch (std::exception &e) {
         std::cerr << e.what();

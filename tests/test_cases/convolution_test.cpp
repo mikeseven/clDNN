@@ -273,7 +273,7 @@ TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     auto& output_memory = output.as<const memory&>();
     EXPECT_FLOAT_EQ(12.25f, get_value<float>(output_memory, 0));
 }
-
+    
 TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 //   Filter       : 3x3
 //   Stride       : 2x2

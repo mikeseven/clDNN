@@ -19,6 +19,35 @@
 
 namespace neural {
 
+relu::arguments::arguments(neural::engine::type engine, memory::format::type out_fmt, primitive in)
+    : engine(engine)
+    , negative_slope(0.0f) 
+{
+    if (in.id() == type_id<const memory>()->id)
+    {
+        input = { in };
+    }
+    else
+    {
+        input = { in.output[0] };
+    }
+
+    input_offset =
+    {
+        input[0].primitive.as<const memory&>().argument.size.batch.size(),
+        input[0].primitive.as<const memory&>().argument.size.spatial.size(),
+        input[0].primitive.as<const memory&>().argument.size.feature.size(),
+    };
+    output_size = input[0].primitive.as<const memory&>().argument.size;
+    output = { memory::allocate({engine, out_fmt, output_size}) };
+    output_offset = 
+    {
+        output_size.batch.size(),
+        output_size.spatial.size(),
+        output_size.feature.size(),
+    };
+}
+
 relu::arguments::arguments(neural::engine::type engine, primitive out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, float slp)
     : engine(engine)
     , output({ out })

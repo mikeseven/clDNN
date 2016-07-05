@@ -20,6 +20,7 @@
 #include <array>
 
 namespace neural {
+#define CRC_INIT 0xbaba7007
 
 namespace {
 const primitive null_primitive(nullptr);
@@ -35,11 +36,44 @@ uint32_t crc32(const void *buffer, size_t count, uint32_t crc) {
 #pragma pack(push,1)   /* The data has been redefined (alignment 4), so the pragma pack is not necessary,
                           but who knows if in the future, the compiler does not align to 8?  */
 struct file_header {
-    std::array<uint8_t,3>           magic;
-    uint8_t                         version;
-    neural::memory::format::type    format;
-    uint8_t                         rank_minus_1;
+    // Data header                   // Size [B]
+    uint8_t    magic[3];             // 3          |
+    uint8_t    data_type;            // 1           } aligment 2x4B
+    uint8_t    version;              // 1          |
+    uint8_t    dimension;            // 1
+    uint8_t    sizeof_value;         // 1
 };
+
+struct nn_data{
+#if defined __cplusplus
+    nn_data() : buffer(nullptr), size(nullptr), dimension(0), sizeof_value(0) {};
+#endif
+void           *const buffer;       /* buffer containig data */
+const size_t   *const size;         /* sizes of signal in each coordinate; unit is a value */
+const uint8_t         dimension;    /* dimensionality of data, as in http://en.wikipedia.org/wiki/Dimension */
+const uint8_t         sizeof_value; /* size of single value in buffer */
+};
+
+/* calculate size of buffer, sizes in array
+examples:
+size_t sizes[3] = {2, 3, 4};
+nn_data_buffer_size_ptr(sizeof(float), sizeof(sizes)/sizeof(sizes[0]), sizes);
+Buffer for 3-dimensional grid of floats with size [2,3,4] has size of 96 bytes.
+size_t sizes[2] = {320, 240};
+nn_data_buffer_size_ptr(sizeof(float), sizeof(sizes)/sizeof(sizes[0]), sizes);
+Buffer for 2-dimensional grid of bytes with size [320,240] has size od 768000.
+*/
+static inline size_t nn_data_buffer_size_ptr(
+    size_t  sizeof_value,   /* sizeof single value */
+    uint8_t dimension,      /* dimensionality of data */
+    const size_t *size_ptr  /* array of sizes - one per axis */
+) {
+    assert(size_ptr);
+    if (!size_ptr) return 0;
+    size_t buffer_size = sizeof_value;
+    for (uint8_t at = 0; at<dimension; ++at) buffer_size *= size_ptr[at];
+    return buffer_size;
+}
 
 #pragma pack(pop)
 
@@ -49,7 +83,6 @@ template<typename T_type, typename... T_args> std::unique_ptr<T_type> make_uniqu
 }
 
 } //namespace {
-
 
 file::arguments::arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize)
     : engine(aengine)
@@ -71,51 +104,68 @@ file::arguments::arguments(neural::engine::type aengine, std::string aname)
     , name(aname)
     , output({null_primitive}) {};
 
-
 // creates primitive with memry buffer loaded from specified file
 primitive file::create(file::arguments arg) {
     try {
-        std::ifstream in;
-        in.exceptions(std::ios::failbit | std::ios::badbit);
-        in.open(arg.name, std::ios::in | std::ios::binary);
+        std::ifstream rfile;
+        rfile.exceptions(std::ios::failbit | std::ios::badbit);
+        rfile.open(arg.name, std::ios::in | std::ios::binary);
 
-        auto read_crc = [&in]() -> uint32_t {
+        auto read_crc = [&rfile]() -> uint32_t {
             uint32_t result;
-            in.read(reinterpret_cast<char *>(&result), sizeof(uint32_t));
+            rfile.read(reinterpret_cast<char *>(&result), sizeof(uint32_t));
             return result;
         };
 
-        // load header, verify 32-bit crc, validate
-        const uint32_t crc_seed = 0xdeadf00d;
-        file_header header;
-        in.read(reinterpret_cast<char *>(&header), sizeof(header));
-        if(read_crc()!=crc32(&header, sizeof(header), crc_seed))    throw std::runtime_error("file::create: header crc mismatch");
-        if(header.magic!=std::array<uint8_t,3>{{'n','I','A'}})      throw std::runtime_error("file::create: bad format");
-        if(header.version!=0)                                       throw std::runtime_error("file::create: bad format version");
+        // load header, verify 32-bit crc
+        file_header file_head;
+        rfile.read(reinterpret_cast<char *>(&file_head), sizeof(file_head));
+        if (read_crc() != crc32(&file_head, sizeof(file_head), CRC_INIT)) throw std::runtime_error("nn_data_t header crc mismatch");
+        if (file_head.sizeof_value != sizeof(float)
+            || file_head.data_type != 'F') throw std::runtime_error("nn_data_t has invalid type");
 
-        // load vector of size_t sizes (one per each dimension)
-        auto size = make_unique<std::vector<uint32_t>>(header.rank_minus_1+1);
-        in.read(reinterpret_cast<char *>(size->data()), size->size()*sizeof(uint32_t));
-        if(read_crc()!=crc32(&header, sizeof(header), crc_seed))    throw std::runtime_error("file::create: sizes crc mismatch");
+        // load size array, verify 32-bit crc
+        auto array = std::unique_ptr<size_t>(new size_t[file_head.dimension]);
+        auto array_size = file_head.dimension * sizeof(size_t);
+        rfile.read(reinterpret_cast<char *>(array.get()), array_size);
+        if (read_crc() != crc32(array.get(), array_size, CRC_INIT)) throw std::runtime_error("nn_data_t size array crc mismatch");
 
-        // validation
-        if(arg.output[0]!=null_primitive) {
-            auto output = arg.output[0].as<const memory&>().argument;
-            if(header.format!=output.format)                            throw std::runtime_error("file::create: format in file different than requested");
-            if(0 != output.size.raw.size() && *size != output.size.raw) throw std::runtime_error("file::create: size/dimensionality of data is different than requested");
+        // create target nn::data & load data into it               
+        auto data_size = nn_data_buffer_size_ptr(sizeof(float), file_head.dimension, array.get());
+        
+        memory::arguments* p_arg = nullptr;
+
+        switch (file_head.dimension)
+        {
+        case 1:
+        {
+            p_arg = new memory::arguments({ engine::reference, memory::format::x_f32,{ 1,{{ static_cast<unsigned int>(array.get()[0]) }}, 1 } });
+            break;
         }
+        case 4:
+        {
+            p_arg = new memory::arguments({ engine::reference, memory::format::oiyx_f32,{ 1,
+            { static_cast<unsigned int>(array.get()[0]), static_cast<unsigned int>(array.get()[1]) }, // kernel spatials x, y
+            { static_cast<unsigned int>(array.get()[3]), static_cast<unsigned int>(array.get()[2]) } } }); // ofm, ifm
+            break;
+        }
+        default:
+        {
+            throw std::runtime_error("dimension mismatch");
+            break;
+        }
+        }
+        if (!p_arg) throw std::runtime_error("memory arguments allocation failed");
 
-        // crete result with output owning memory, load data into it
-        auto result = std::unique_ptr<file>(new file({arg.engine, arg.name, memory::allocate({arg.engine, header.format, *size})}));
+        auto memory_primitive = memory::allocate(*p_arg); // ofm, ifm
+        delete p_arg;
+        auto &mem = (memory_primitive).as<const neural::memory&>();
+        rfile.read(reinterpret_cast<char *>(mem.pointer), data_size);
 
-        auto &buffer = result->output_memory(0);
-        auto count = buffer.count()*memory::traits(buffer.argument.format).type->size;
-        in.read(static_cast<char *>(buffer.pointer), count);
-
-        return result.release();
+        return memory_primitive;
     }
-    catch(...) {
-        throw std::runtime_error("file::create: error loading file");
+    catch (...) {
+        return nullptr;
     }
 }
 

@@ -43,6 +43,48 @@ normalization::response::arguments::arguments(
 
 normalization::response::arguments::arguments(
                  neural::engine::type aengine,
+                 memory::format::type aoutput_fmt,
+                 primitive ainput,
+                 uint32_t  asize,
+                 neural::padding::type apadding,
+                 float ak,
+                 float aalpha,
+                 float abeta)
+    : engine(aengine)
+    , input({ ainput })
+    , size(asize)
+    , padding(apadding)
+    , k(ak)
+    , alpha(aalpha)
+    , beta(abeta)
+    , output({ memory::allocate({aengine, aoutput_fmt,output_size}) })
+{ 
+    if (ainput.output.size() != 1) throw std::runtime_error("should have one output");
+    auto input_mem = ainput.output[0].as<const memory&>().argument;
+    input_offset =
+    {
+        input_mem.size.batch.size(),
+        input_mem.size.spatial.size(),
+        input_mem.size.feature.size()
+    };
+    output_offset =
+    {
+        input_mem.size.batch.size(),
+        input_mem.size.spatial.size(),
+        input_mem.size.feature.size()
+    };
+    output_size = input_mem.size;
+    output = {
+        memory::allocate(
+        {
+            aengine,
+            aoutput_fmt,
+            output_size
+        }) };
+};
+
+normalization::response::arguments::arguments(
+                 neural::engine::type aengine,
                  primitive aoutput,
                  vector<uint32_t> aoutput_offset,
                  vector<uint32_t> aoutput_size,

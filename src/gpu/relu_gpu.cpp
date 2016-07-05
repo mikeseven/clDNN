@@ -42,10 +42,10 @@ relu_gpu::~relu_gpu() {}
 void relu_gpu::implementation(const void *ptr) {
     auto this_relu = static_cast<const relu *>(ptr);
 
-    auto& output_size   = this_relu->argument.output_size;
+    //auto& output_size   = this_relu->argument.output_size;
 
-    assert( 1 == output_size.feature.size() );
-    assert( 1 == output_size.batch.size()   );
+    //assert( 1 == output_size.feature.size() );
+    //assert( 1 == output_size.batch.size()   );
 
     auto& input_mem = this_relu->input_memory(0);
     auto& output_mem = this_relu->output_memory(0);

@@ -42,6 +42,40 @@ pooling::arguments::arguments( neural::engine::type     eng,
 
 pooling::arguments::arguments( neural::engine::type     eng,
                                pooling::mode::type      p_mode,
+                               memory::format::type     o_frmt,
+                               primitive                in,
+                               neural::vector<uint32_t> strd,
+                               neural::vector<uint32_t> siz,
+                               neural::padding::type    padd)
+    : engine(eng)
+    , mode(p_mode)
+    , input({in})
+    , stride(strd)
+    , size(siz)
+    , padding(padd) 
+    , output_offset({ 0,0 })
+{
+    // verify if primitive has one output.
+    if (in.output.size() != 1) throw std::runtime_error("more than one output in primitive isn't supported yet");
+    auto output_memory = in.output[0].as<const memory&>().argument;
+    // compute size of output after pooling (downsampling)
+    auto spatial_x = (output_memory.size.spatial[0]) / strd.spatial[0];
+    auto spatial_y = (output_memory.size.spatial[1]) / strd.spatial[1];
+
+    output_size = { 
+        output_memory.size.batch[0],
+        {
+            spatial_x,
+            spatial_y
+        },
+        output_memory.size.feature[0]
+    };
+    output = { memory::allocate({eng, o_frmt, output_size }) };
+};
+
+
+pooling::arguments::arguments( neural::engine::type     eng,
+                               pooling::mode::type      p_mode,
                                primitive                out,
                                neural::vector<uint32_t> out_off,
                                neural::vector<uint32_t> out_siz,
