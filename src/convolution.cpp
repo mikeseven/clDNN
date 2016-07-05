@@ -182,7 +182,7 @@ primitive convolution::create(convolution::arguments arg) {
     if(stride.raw.size()          != output_arg.size.raw.size())  throw std::runtime_error("Convolution stride/output number of dimension does not match.");
     if(filter_arg.size.raw.size() != output_arg.size.raw.size()+1)throw std::runtime_error("Convolution window_size != 5");
     if(bias_arg.size.raw.size()   != 3)                           throw std::runtime_error("Convolution biases isn't 1D vector."); // b=1, f=1
-    if(bias_arg.size.spatial[0] != output_size.raw[1])      throw std::runtime_error("Convolution biases/output feature maps number does not match.");
+    if(bias_arg.size.spatial[0]   != output_size.feature[0])      throw std::runtime_error("Convolution biases/output feature maps number does not match.");
     if(arg.padding                != padding::zero)               throw std::runtime_error("Unknown padding mode in convolution.");
     if(input_offset.raw.size()    != input_arg.size.raw.size())   throw std::runtime_error("Convolution input offset/input number of dimension does not match.");
     if(output_offset.raw.size()   != input_arg.size.raw.size())   throw std::runtime_error("Convolution output offset/input number of dimension does not match.");
