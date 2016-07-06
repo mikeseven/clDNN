@@ -22,13 +22,13 @@ namespace neural {
 
 const std::string kernelName = "Relu_GPU";
 const std::string kernelCode = R"__krnl(
-KERNEL(Relu_GPU)(const __global neural_memory* input_mem, __global neural_memory* output_mem)
+KERNEL(Relu_GPU)(const __global neural_memory* input_mem, __global neural_memory* output_mem, float negative_slope)
 {
     const __global float* input = (const __global float*)get_data(input_mem);
     __global float* output = (__global float*)get_data(output_mem);
     
     const int global_id = get_global_id(0);
-    output[global_id] = max(0.0f, input[global_id]);
+    output[global_id] = max(0.0f, input[global_id]) + negative_slope * min(input[global_id], 0.0f);
 }
 )__krnl";
 
@@ -50,6 +50,7 @@ void relu_gpu::implementation(const void *ptr) {
     auto& input_mem = this_relu->input_memory(0);
     auto& output_mem = this_relu->output_memory(0);
 
+    float negative_slope = this_relu->argument.negative_slope;
     size_t dstSize = output_mem.count();
 
     int lws = 16;
@@ -58,8 +59,8 @@ void relu_gpu::implementation(const void *ptr) {
         lws--;
     }
 
-    auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem>(kernelName);
-    kernel({ dstSize, std::min(dstSize, (size_t)lws) }, input_mem, output_mem);
+    auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem, float>(kernelName);
+    kernel({ dstSize, std::min(dstSize, (size_t)lws) }, input_mem, output_mem, negative_slope);
 
 }
 
