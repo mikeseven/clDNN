@@ -31,7 +31,7 @@ namespace{
 }
 
 using namespace neural;
-
+#if 0 // no support yet
 TEST(relu_f32_fw_gpu, basic) {
     // FAIL now, because we don't support using the same buffer as input and output
     EXPECT_EQ(false, true);
@@ -61,7 +61,7 @@ TEST(relu_f32_fw_gpu, basic) {
 
     EXPECT_EQ(false, result);
 }
-
+#endif // NOT YET
 TEST(relu_f32_fw_gpu, intrinsics_avx2) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 

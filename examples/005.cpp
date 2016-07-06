@@ -51,29 +51,56 @@ void example_005() {
         memory::format::yxfb_f32,
         conv1
     });
-    auto pool1 = pooling::create(
-    {
-        engine::reference,
-        pooling::mode::max,
-        memory::format::yxfb_f32,
-        relu1,
-        {1,{2,2},1}, // strd
-        {1,{3,3},1}, // kernel
-        padding::zero
-    });
     auto lrn1 = normalization::response::create(
     {
         engine::reference,
         memory::format::yxfb_f32,
-        pool1,
+        relu1,
         5,
         padding::zero,
         1.0f,
         0.00002f,
         0.75f 
     });
-     /*auto conv_relu2 = convolution_relu::create({engine::cpu, memory::format::yxfb_f32, lrn1, file::create({engine::cpu, "weight2.nnb"}), file::create({engine::cpu, "bias2.nnb"}), padding::zero, 0.0f});
-    auto pool2      = pooling::create({engine::cpu, pooling::mode::max, memory::format::yxfb_f32, conv_relu2, 3, 2, padding::zero});
+    auto pool1 = pooling::create(
+    {
+        engine::reference,
+        pooling::mode::max,
+        memory::format::yxfb_f32,
+        lrn1,
+        { 1,{ 2,2 },1 }, // strd
+        { 1,{ 3,3 },1 }, // kernel
+        padding::zero
+    });
+    auto conv2g1 = convolution::create(
+    {
+        engine::reference,
+        memory::format::yxfb_f32,
+        {
+            pool1,
+            file::create({engine::cpu, "conv2_g1_weights.nnd"}),
+            file::create({engine::cpu, "conv2_g1_biases.nnd"}),
+        },
+        { 0,{ -2, -2 }, 0 },
+        { 1,{ 1, 1 }, 1 },
+        padding::zero
+    });
+
+    auto conv2g2 = convolution::create(
+    {
+        engine::reference,
+        memory::format::yxfb_f32,
+        {
+            pool1,
+            file::create({ engine::cpu, "conv2_g1_weights.nnd" }),
+            file::create({ engine::cpu, "conv2_g1_biases.nnd" }),
+        },
+        { 0,{ -2, -2 }, 0 },
+        { 1,{ 1, 1 }, 1 },
+        padding::zero
+    });
+
+     /* auto pool2      = pooling::create({engine::cpu, pooling::mode::max, memory::format::yxfb_f32, conv_relu2, 3, 2, padding::zero});
     auto lrn2       = normalization::response::create({engine::cpu, memory::format::yxfb_f32, pool2, 5, padding::zero, 1.0f, 0.00002f, 0.75f });
     auto conv_relu3 = convolution_relu::create({engine::cpu, memory::format::yxfb_f32, lrn2, file::create({engine::cpu, "weight3.nnb"}), file::create({engine::cpu, "bias3.nnb"}), padding::zero, 0.0f});
     auto conv_relu4 = convolution_relu::create({engine::cpu, memory::format::yxfb_f32, conv_relu3, file::create({engine::cpu, "weight4.nnb"}), file::create({engine::cpu, "bias4.nnb"}), padding::zero, 0.0f});

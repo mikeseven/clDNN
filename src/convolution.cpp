@@ -58,23 +58,30 @@ convolution::arguments::arguments(neural::engine::type     eng,
     neural::vector<uint32_t> strd,
     neural::padding::type    padd)
     : engine(eng)
-    , input(in)
     , input_offset(in_off)
     , stride(strd)
     , padding(padd)
 {
+    // if input is previouse layer, not memory primitive need to set input to output memory of this primitive
+    auto input_mem = in[0].primitive.id() == type_id<const memory>()->id ? in[0].primitive : in[0].primitive.output[0];
+    if (in.size() != 3) throw std::runtime_error("input size mismatch");
+    if (in[0].primitive.id() != type_id<const memory>()->id) {
+        input = { in[0].primitive.output[0], in[1], in[2] };
+    }
+    else {
+        input = { in[0], in[1], in[2] };;
+    }
     // compute how many outputs in rows and columns will be generate by filter. 
     // outp <= (input_size - (2*input_offset) - kernel_size)/ stride 
-    
     auto kernel_xy = in[1].primitive.as<const memory&>().argument.size.spatial;
-    auto output_spatial_x = (in[0].primitive.as<const memory&>().argument.size.spatial[0] -(2* input_offset.spatial[0]) - kernel_xy[0] ) / strd.spatial[0];
-    auto output_spatial_y = (in[0].primitive.as<const memory&>().argument.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_xy[1]) / strd.spatial[1];
-    auto input_x = in[0].primitive.as<const memory&>().argument;
-
+    auto output_spatial_x = (input_mem.as<const memory&>().argument.size.spatial[0] -(2* input_offset.spatial[0]) - kernel_xy[0] ) / strd.spatial[0];
+    auto output_spatial_y = (input_mem.as<const memory&>().argument.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_xy[1]) / strd.spatial[1];
+    auto input_x = input_mem.as<const memory&>().argument;
+    // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
     auto ofm = in[1].primitive.as<const memory&>().argument;
     auto number_of_batches = ofm.size.raw[1];
     output_size = { 
-        in[0].primitive.as<const memory&>().argument.size.batch[0],
+        input_mem.as<const memory&>().argument.size.batch[0],
         { output_spatial_x, output_spatial_y },
         number_of_batches 
     };
@@ -85,7 +92,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
         output[0].as<const memory&>().argument.size.feature.size() 
     };
 };
-
+#if 0 //NOT_YET
 convolution::arguments::arguments(neural::engine::type     eng,
     memory::format::type    out_fmt,
     std::vector<primitive_at>in,
@@ -99,6 +106,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
 {
     // compute how many outputs in rows and columns will be generate by filter. 
     // outp <= (input_size - (2*input_offset) - kernel_size)/ stride 
+    throw std::runtime_error("This function is not verified yet. Input memory/primitive isn't implemented yet");
 
     auto kernel_xy = in[1].primitive.as<const memory&>().argument.size.spatial;
     auto output_spatial_x = (in[0].primitive.as<const memory&>().argument.size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_xy[0]) / strd.spatial[0];
@@ -118,7 +126,9 @@ convolution::arguments::arguments(neural::engine::type     eng,
         output[0].as<const memory&>().argument.size.spatial.size(),
         output[0].as<const memory&>().argument.size.feature.size()
     };
+
 };
+#endif // NOT_YET
 
 convolution::arguments::arguments( neural::engine::type     eng,
                                    primitive                out,
