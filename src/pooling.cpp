@@ -107,11 +107,26 @@ pooling::arguments::arguments( neural::engine::type     eng,
     , output({out})
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)
-    , input({in})
-    , input_offset(in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size())
     , stride(strd)
     , size(siz)
-    , padding(padd) {};
+    , padding(padd) 
+{
+    if (in.id() == type_id<const memory>()->id)
+    {
+        input = { in };
+    }
+    else
+    {
+        input = { in.output[0] };
+    }
+
+    input_offset =
+    {
+        input[0].primitive.as<const memory&>().argument.size.batch.size(),
+        input[0].primitive.as<const memory&>().argument.size.spatial.size(),
+        input[0].primitive.as<const memory&>().argument.size.feature.size(),
+    };
+};
 
 pooling::arguments::arguments( neural::engine::type     eng,
                                pooling::mode::type      p_mode,

@@ -80,9 +80,16 @@ relu::arguments::arguments(neural::engine::type engine, primitive out, primitive
     , output({ out })
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)
-    , input({ in })
-    , input_offset(in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size())
-    , negative_slope(0.0f) {}
+    , negative_slope(0.0f) 
+{
+    auto input_mem = in.id() == type_id<const memory>()->id ? in : in.output[0];
+    input = { input_mem };
+    input_offset = {
+        input_mem.as<const memory&>().argument.size.batch.size(),
+        input_mem.as<const memory&>().argument.size.spatial.size(),
+        input_mem.as<const memory&>().argument.size.feature.size()
+    };
+}
 
 relu_backward::arguments::arguments(neural::engine::type engine, primitive out, neural::vector<uint32_t> out_offset, neural::vector<uint32_t> out_size, std::vector<primitive_at> in, std::vector<neural::vector<uint32_t>> in_offsets, float neg_slope)
     : engine(engine)

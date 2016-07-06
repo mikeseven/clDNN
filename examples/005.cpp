@@ -100,6 +100,69 @@ void example_005() {
         padding::zero
     });
 
+
+    auto relu2g1 = relu::create(
+    {
+        engine::reference,
+        memory::format::yxfb_f32,
+        conv2g1
+    });
+
+    auto relu2g2 = relu::create(
+    {
+        engine::reference,
+        memory::format::yxfb_f32,
+        conv2g2
+    });
+
+    auto lrn2g1 = normalization::response::create(
+    {
+        engine::reference,
+        memory::format::yxfb_f32,
+        relu2g1,
+        5,
+        padding::zero,
+        1.0f,
+        0.0001f,
+        0.75
+    });
+
+    auto lrn2g2 = normalization::response::create(
+    {
+        engine::reference,
+        memory::format::yxfb_f32,
+        relu2g2,
+        5,
+        padding::zero,
+        1.0f,
+        0.0001f,
+        0.75
+    });
+
+    auto pool2g1 = pooling::create(
+    {
+        engine::reference,
+        pooling::mode::max,
+        memory::format::yxfb_f32,
+        lrn2g1,
+        { 1,{ 2,2 },1 }, // strd
+        { 1,{ 3,3 },1 }, // kernel
+        padding::zero
+    });
+
+    auto pool2g2 = pooling::create(
+    {
+        engine::reference,
+        pooling::mode::max,
+        memory::format::yxfb_f32,
+        lrn2g2,
+        { 1,{ 2,2 },1 }, // strd
+        { 1,{ 3,3 },1 }, // kernel
+        padding::zero
+    });
+
+    // TODO: place here primitive:: memory that will merge two outputs into one 
+
      /* auto pool2      = pooling::create({engine::cpu, pooling::mode::max, memory::format::yxfb_f32, conv_relu2, 3, 2, padding::zero});
     auto lrn2       = normalization::response::create({engine::cpu, memory::format::yxfb_f32, pool2, 5, padding::zero, 1.0f, 0.00002f, 0.75f });
     auto conv_relu3 = convolution_relu::create({engine::cpu, memory::format::yxfb_f32, lrn2, file::create({engine::cpu, "weight3.nnb"}), file::create({engine::cpu, "bias3.nnb"}), padding::zero, 0.0f});
