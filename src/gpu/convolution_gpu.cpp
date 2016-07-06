@@ -141,7 +141,7 @@ KERNEL(Convolution_GPU_bfxy_f32)(
 )__krnl";
 
 convolution_gpu::convolution_gpu(convolution &arg)
-        : is_an_implementation(neural::type_id<convolution_cpu_reference>())
+        : is_an_implementation(neural::type_id<convolution_gpu>())
         , outer(arg) {};
 convolution_gpu::~convolution_gpu() {};
 void convolution_gpu::implementation(const void *ptr) {
