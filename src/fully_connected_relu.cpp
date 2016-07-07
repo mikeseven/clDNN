@@ -27,13 +27,39 @@ fully_connected_relu::arguments::arguments( neural::engine::type eng,
                                        primitive            in,
                                        primitive            weights,
                                        primitive            bias,
-                                       float nslp)
+                                       float                nslp)
 : engine(eng)
 , output({out})
 , input({in, weights, bias})
-, negative_slope(nslp)
+, negative_slope(nslp) {};
+
+fully_connected_relu::arguments::arguments(neural::engine::type eng,
+                        neural::memory::format::type out_fmt,
+                        primitive                    in,
+                        primitive                    weights,
+                        primitive                    bias,
+                        float                        negative_slope)
+    : engine(eng)
+    , negative_slope(negative_slope)
 {
-};
+    // if input is previouse layer, not memory primitive need to set input to output memory of this primitive
+    auto input_mem = in.id() == type_id<const memory>()->id ? in : in.output[0];
+    if (in.id() != type_id<const memory>()->id) {
+        input = { in.output[0], weights, bias };
+    }
+    else {
+        input = { in, weights, bias };
+    }
+
+    neural::vector<uint32_t> output_size = { 
+        input_mem.as<const memory&>().argument.size.batch[0],
+        { 1, bias.as<const memory&>().argument.size.batch[0] },
+        input_mem.as<const memory&>().argument.size.feature[0]
+    };
+
+    output = { memory::allocate({ eng, out_fmt, output_size}) };
+}
+
 
 // creates primitive with fully_connected implementation that supports provided arguments
 primitive fully_connected_relu::create(fully_connected_relu::arguments arg) {
