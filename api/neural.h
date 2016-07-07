@@ -756,18 +756,11 @@ struct fully_connected_relu : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
         std::vector<primitive>      output;
-        vector<uint32_t>            output_offset;
-        vector<uint32_t>            output_size;
-        std::vector<primitive_at>   input;          // 3: {input, filter, bias}
-        vector<int32_t>             input_offset;
-        vector<uint32_t>            input_stride;
+        std::vector<primitive_at>   input;  // 3: {input, weights, bias}
         float                       negative_slope;
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type, vector<uint32_t>, vector<uint32_t>, primitive, vector<int32_t>, vector<uint32_t>, primitive, primitive, float);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                     primitive,                  vector<uint32_t>, primitive, primitive, float);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                     primitive,                  uint32_t,         primitive, primitive, float);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type,                                     primitive,                                    primitive, primitive, float);
-        DLL_SYM arguments(neural::engine::type, primitive,                                                        primitive,                                    primitive, primitive, float);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, primitive in, primitive weights, primitive bias, float negative_slope);
+        DLL_SYM arguments(neural::engine::type, primitive                        out, primitive in, primitive weights, primitive bias, float negative_slope);
     };
     const neural::fully_connected_relu::arguments argument;
 
@@ -778,6 +771,8 @@ private:
     fully_connected_relu(fully_connected_relu::arguments arg) : is_a_primitive(type_id<const fully_connected_relu>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
+
+    std::unique_ptr<is_an_implementation> _private;
 };
 
 
