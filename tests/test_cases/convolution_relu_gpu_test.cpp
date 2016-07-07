@@ -53,7 +53,7 @@ TEST(convolution_relu_gpu, trivial_convolution_relu) {
     auto input = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1,{ 4, 4 }, 1 } });
     auto output = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
     auto weights = memory::allocate({ engine::gpu, memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
-    auto biases = memory::allocate({ engine::gpu, memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+    auto biases = memory::allocate({ engine::gpu, memory::format::x_f32,{ 1,{ { 1 } }, 1 } });
 
     set_values(input, {
         -0.5f,  1.0f,  0.5f,  2.0f,

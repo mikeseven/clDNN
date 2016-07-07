@@ -20,9 +20,6 @@
 #include "memory_utils.h"
 #include "kernel.h"
 
-#pragma warning(disable: 4189)
-#pragma warning(disable: 4100)
-
 namespace neural {
 
 const std::string kernelName = "Convolution_relu_GPU";
