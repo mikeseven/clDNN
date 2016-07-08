@@ -77,9 +77,9 @@ namespace neural {
             auto output_bufSize = output_mem.count();
 
             float negative_slope = this_fc->argument.negative_slope;
-            gpu::memory_constants mem_consts{  
-                gpu::memory_constant("WEIGHTS", weight_mem),
-                gpu::memory_constant("BIASES", bias_mem)
+            gpu::jit_constants mem_consts{  
+                gpu::make_jit_constant("WEIGHTS", weight_mem),
+                gpu::make_jit_constant("BIASES", bias_mem)
             };
 
             gpu::kernel<gpu::input_mem, gpu::output_mem, float> _kernel(kernelName, mem_consts);

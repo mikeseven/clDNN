@@ -189,10 +189,10 @@ void convolution_relu_gpu::implementation(const void *ptr) {
 
     size_t dstSize = output_mem.count();
 
-    gpu::memory_constants mem_consts{
-        gpu::memory_constant("STRIDE", _stride),
-        gpu::memory_constant("BIAS", bias_mem),
-        gpu::memory_constant("FILTER", filter_mem)
+    gpu::jit_constants mem_consts{
+        gpu::make_jit_constant("STRIDE", _stride),
+        gpu::make_jit_constant("BIAS", bias_mem),
+        gpu::make_jit_constant("FILTER", filter_mem)
     };
 
     switch(padding){
