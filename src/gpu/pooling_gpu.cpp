@@ -104,9 +104,9 @@ namespace neural {
                     throw std::runtime_error("Pooling output buffer size is to small.");
             }
 
-            gpu::memory_constants mem_consts{
-                gpu::memory_constant("WINDOW", window),
-                gpu::memory_constant("STRIDE", stride)
+            gpu::jit_constants mem_consts{
+                gpu::make_jit_constant("WINDOW", window),
+                gpu::make_jit_constant("STRIDE", stride)
             };
 
             if (this_pooling->argument.mode == pooling::mode::max)

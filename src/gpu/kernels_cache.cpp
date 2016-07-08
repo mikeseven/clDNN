@@ -117,7 +117,7 @@ cl::Program::Sources kernels_cache::get_program_source() const {
     return source;
 }
 
-kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, std::vector<std::pair<std::string, std::string>> definitions) {
+kernels_cache::kernel_id kernels_cache::create_kernel_from_template(std::shared_ptr<neural::gpu::gpu_toolkit>, const std::string& template_name, jit_definitions definitions) {
     auto kernel_name = template_name;
     std::ostringstream code;
     code << "#ifdef KERNEL\n#undef KERNEL\n#endif" << std::endl;
@@ -146,10 +146,10 @@ kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::s
     return kernel_name;
 }
 
-cl::Program kernels_cache::get_program(gpu_toolkit* context) {
+cl::Program kernels_cache::get_program(std::shared_ptr<neural::gpu::gpu_toolkit> context) {
     assert(context != nullptr);
     std::lock_guard<std::mutex> lock(_mutex);
-    if (modified()){
+    if (_modified){
         context->program() = cl::Program(context->context(), get_program_source());
         context->program().build({ context->device() });
     }
@@ -157,7 +157,7 @@ cl::Program kernels_cache::get_program(gpu_toolkit* context) {
     return context->program();
 }
 
-cl::Kernel kernels_cache::get_kernel(neural::gpu::gpu_toolkit* context, kernels_cache::kernel_id id) {
+cl::Kernel kernels_cache::get_kernel(std::shared_ptr<neural::gpu::gpu_toolkit> context, kernel_id id) {
     assert(context != nullptr);
     return cl::Kernel(get_program(context), id.c_str());
 }

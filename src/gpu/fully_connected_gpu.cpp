@@ -75,9 +75,9 @@ namespace neural {
             
             auto output_bufSize = output_mem.count();
 
-            gpu::memory_constants mem_consts{  
-                gpu::memory_constant("WEIGHTS", weight_mem),
-                gpu::memory_constant("BIASES", bias_mem)
+            gpu::jit_constants mem_consts{  
+                gpu::make_jit_constant("WEIGHTS", weight_mem),
+                gpu::make_jit_constant("BIASES", bias_mem)
             };
 
             gpu::kernel<gpu::input_mem, gpu::output_mem> _kernel(kernelName, mem_consts);

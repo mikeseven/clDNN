@@ -59,62 +59,91 @@ public:
     output_mem(const neural::memory& mem) :memory_arg(mem, false, true) {}
 };
 
-class memory_constant {
+class jit_constant {
+protected:
     const std::string _name;
-    const neural::memory* _memory;
-    const neural::vector<uint32_t>* _vector;
-private:
-    void create_sizes(std::vector<std::pair<std::string, std::string>> &result, const neural::vector<uint32_t> & vec) const
-    {
-        size_t feature_offset = vec.batch.size();
-        size_t spatial_offset = vec.feature.size() + feature_offset;
-        result.push_back({ _name + "_BATCH_NUM", std::to_string(vec.raw[0]) });
-        result.push_back({ _name + "_SIZE_X", std::to_string(vec.raw[0 + spatial_offset]) });
-        result.push_back({ _name + "_SIZE_Y", vec.spatial.size() > 1 ? std::to_string(vec.raw[1 + spatial_offset]) : "1" });
-        result.push_back({ _name + "_OUTPUT_FEATURE_NUM", std::to_string(vec.raw[0 + feature_offset]) });
-        result.push_back({ _name + "_INPUT_FEATURE_NUM", vec.feature.size() > 1 ? std::to_string(vec.raw[1 + feature_offset]) : "1" });
-    }
+    jit_constant(const std::string& name):_name(name){}
+
 public:
-    memory_constant(const std::string& name, const neural::memory& memory) : _name(name), _memory(&memory), _vector(nullptr) {
+    virtual kernels_cache::jit_definitions get_definitions() const = 0;
+    virtual ~jit_constant() {}
+};
+
+class simple_jit_constant : public jit_constant {
+    const std::string _value;
+
+public:
+    simple_jit_constant(const std::string& name, const std::string& value)
+        :jit_constant(name), _value(value) {}
+
+    kernels_cache::jit_definitions get_definitions() const override {
+        return kernels_cache::jit_definitions{ {_name, _value} };
     }
-    memory_constant(const std::string& name, const neural::vector<uint32_t>& vector) : _name(name), _memory(nullptr), _vector(&vector) {
+};
+
+inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const std::string& value) {
+    return std::static_pointer_cast<jit_constant>(std::make_shared<simple_jit_constant>(name, value));
+}
+
+class vector_jit_constant : public jit_constant {
+    const neural::vector<uint32_t>& _vec;
+
+public:
+    vector_jit_constant(const std::string& name, const neural::vector<uint32_t>& vec)
+        : jit_constant(name), _vec(vec) {}
+
+    kernels_cache::jit_definitions get_definitions() const override {
+        auto feature_offset = _vec.batch.size();
+        auto spatial_offset = _vec.feature.size() + feature_offset;
+        return kernels_cache::jit_definitions{
+            { _name + "_BATCH_NUM", std::to_string(_vec.raw[0]) },
+            { _name + "_SIZE_X", std::to_string(_vec.raw[0 + spatial_offset]) },
+            { _name + "_SIZE_Y", _vec.spatial.size() > 1 ? std::to_string(_vec.raw[1 + spatial_offset]) : "1" },
+            { _name + "_OUTPUT_FEATURE_NUM", std::to_string(_vec.raw[0 + feature_offset]) },
+            { _name + "_INPUT_FEATURE_NUM", _vec.feature.size() > 1 ? std::to_string(_vec.raw[1 + feature_offset]) : "1" }
+        };
     }
+};
 
-    std::vector<std::pair<std::string, std::string>> get_definitions() const {
-        std::vector<std::pair<std::string, std::string>> result;
-        if (_memory) {
-            //fill result by memory_data
-            std::stringstream ss;
-            ss << "(float[]){ ";
-            for (int i = 0; i < _memory->count(); i++)
-                ss << ((float*)_memory->pointer)[i] << ",";
-            ss << " } ";
-            result.push_back({ _name, ss.str() });
+inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const neural::vector<uint32_t>& value) {
+    return std::static_pointer_cast<jit_constant>(std::make_shared<vector_jit_constant>(name, value));
+}
 
-            create_sizes(result, _memory->argument.size);
-        }
-        else if (_vector) {
-            create_sizes(result, *_vector);
-        }
-        else {
-            assert(false && "crazy case");
-        }
+class memory_jit_constant : public vector_jit_constant {
+    const neural::memory& _mem;
 
+public:
+    memory_jit_constant(const std::string& name, const neural::memory& mem)
+        : vector_jit_constant(name, mem.argument.size), _mem(mem){}
+
+    kernels_cache::jit_definitions get_definitions() const override {
+        auto result = vector_jit_constant::get_definitions();
+        std::stringstream ss;
+        ss << "(float[]){ ";
+        for (int i = 0; i < _mem.count(); i++)
+            ss << static_cast<float*>(_mem.pointer)[i] << ",";
+        ss << " } ";
+        result.push_back({ _name, ss.str() });
         return result;
     }
 };
 
-class memory_constants {
-    std::vector<memory_constant> _constants;
-public:
-    memory_constants(std::initializer_list<memory_constant> constants) :_constants(constants) {}
+inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const neural::memory& value) {
+    return std::static_pointer_cast<jit_constant>(std::make_shared<memory_jit_constant>(name, value));
+}
 
-    std::vector<std::pair<std::string, std::string>> get_definitions() const {
-        std::vector<std::pair<std::string, std::string>> definitons;
+class jit_constants {
+    std::vector<std::shared_ptr<jit_constant>> _constants;
+public:
+    jit_constants(std::initializer_list<std::shared_ptr<jit_constant>> constants) :_constants(constants) {}
+
+    kernels_cache::jit_definitions get_definitions() const {
+        kernels_cache::jit_definitions definitons;
+        definitons.reserve(_constants.size() * 6); //assuming max 6 pairs per jit_constant
+
         for (auto& constant : _constants) {
-            for (auto& def : constant.get_definitions()) {
-                definitons.push_back(def);
-            }
+            auto def = constant->get_definitions();
+            definitons.insert(definitons.end(), def.begin(), def.end());
         }
         return definitons;
     }
@@ -186,13 +215,13 @@ class kernel : public context_holder {
     void setArgs() {}
 
 public:
-    explicit kernel(const std::string& name, std::vector<std::pair<std::string, std::string>> definitions = std::vector<std::pair<std::string, std::string>>())
-        : _kernel_id(kernels_cache::get().create_kernel_from_template(name, definitions)) {}
-    explicit kernel(const std::string& name, const memory_constants& constants) 
-        : _kernel_id(kernels_cache::get().create_kernel_from_template(name, constants.get_definitions())) {}
+    explicit kernel(const std::string& name, kernels_cache::jit_definitions definitions = kernels_cache::jit_definitions())
+        : _kernel_id(kernels_cache::get().create_kernel_from_template(context(), name, definitions)) {}
+    explicit kernel(const std::string& name, const jit_constants& constants) 
+        : _kernel_id(kernels_cache::get().create_kernel_from_template(context(), name, constants.get_definitions())) {}
 
     void operator()(const kernel_execution_options& options, Args... args) {
-        _kernel = kernels_cache::get().get_kernel(context().get(), _kernel_id);
+        _kernel = kernels_cache::get().get_kernel(context(), _kernel_id);
         setArgs<0>(std::forward<Args>(args)...);
 
         try {

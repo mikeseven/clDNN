@@ -49,6 +49,8 @@ public:
 class kernels_cache {
 public:
     typedef std::string kernel_id;
+    typedef std::vector<std::pair<std::string, std::string>> jit_definitions;
+
 private:
     std::mutex _mutex;
     std::map<std::string, std::string> _kernel_codes;
@@ -56,14 +58,13 @@ private:
 
     cl::Program::Sources get_program_source() const;
     kernels_cache() = default;
+    cl::Program get_program(std::shared_ptr<neural::gpu::gpu_toolkit> context);
 
 public:
     static kernels_cache& get();
-    bool modified() const { return _modified; }
 
-    kernel_id create_kernel_from_template(const std::string& template_name, std::vector<std::pair<std::string, std::string>> definitions = std::vector<std::pair<std::string, std::string>>());
-    cl::Program get_program(neural::gpu::gpu_toolkit* context);
-    cl::Kernel get_kernel(neural::gpu::gpu_toolkit* context, kernel_id id);
+    kernel_id create_kernel_from_template(std::shared_ptr<neural::gpu::gpu_toolkit> context, const std::string& template_name, jit_definitions definitions = jit_definitions());
+    cl::Kernel get_kernel(std::shared_ptr<neural::gpu::gpu_toolkit> context, kernel_id id);
 };
 
 }}
