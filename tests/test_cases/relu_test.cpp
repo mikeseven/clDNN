@@ -59,7 +59,7 @@ TEST(relu_f32_fw, basic) {
     EXPECT_EQ(false, result);
 }
 
-TEST(relu_f32_fw, intrinsics_avx2) {
+TEST(relu_f32_fw, DISABLED_intrinsics_avx2) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
     // Optimized data
@@ -183,7 +183,7 @@ TEST(relu_f32_bw, basic) {
     EXPECT_EQ(true, result);
 }
 
-TEST(relu_f32_bw, intrinsics_avx2) {
+TEST(relu_f32_bw, DISABLED_intrinsics_avx2) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
     // Optimized data

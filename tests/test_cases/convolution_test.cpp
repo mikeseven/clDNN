@@ -609,7 +609,7 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }
 
-TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
+TEST(convolution_f32_fw, DISABLED_optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     auto engine_resource = worker_cpu::create({std::thread::hardware_concurrency()});
     auto input           = memory::allocate({engine::cpu, memory::format::       byxf_f32,    {1, {4, 4}, 1}});
@@ -652,7 +652,7 @@ TEST(convolution_f32_fw, optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     run_subtest(2.0f, 2.0f, 2.0f);
 }
 
-TEST(convolution_f32_fw, optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
+TEST(convolution_f32_fw, DISABLED_optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     // This implementation will use two jobs, each for one slice, so make sure it will test MT path, no matter what underlying HW we have.
     auto engine_resource = worker_cpu::create({2});
@@ -715,7 +715,7 @@ TEST(convolution_f32_fw, optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     run_subtest(3.0f, 1.0f, 1.0f, 2.0f, 2.0f);
 }
 
-TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x12x3x2_nopad) {
+TEST(convolution_f32_fw, DISABLED_naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x12x3x2_nopad) {
 
     // This implementation will use two jobs, each for one slice, so make sure it will test MT path, no matter what underlying HW we have.
     auto engine_resource = worker_cpu::create({2});
@@ -766,7 +766,7 @@ TEST(convolution_f32_fw, naive_comparison_optimized_2slice_wsiz3x3_wstr2x3_in21x
                                          0.0005f));
 }
 
-TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
+TEST(convolution_f32_fw, DISABLED_optimized_generic_vs_for_loop_implementation) {
     const uint32_t input_width         = 20;   // data = input|output
     const uint32_t input_height        = 20;   // data = input|output
     const uint32_t input_feature_maps  = 8;
@@ -871,7 +871,7 @@ TEST(convolution_f32_fw, optimized_generic_vs_for_loop_implementation) {
     }
 }
 
-TEST(convolution_f32_fw, optimized_generic_vs_ref_implementation) {
+TEST(convolution_f32_fw, DISABLED_optimized_generic_vs_ref_implementation) {
     const uint32_t input_width         = 6;   // data = input|output
     const uint32_t input_height        = 6;   // data = input|output
     const uint32_t input_feature_maps  = 8;
