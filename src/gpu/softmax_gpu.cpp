@@ -62,6 +62,8 @@ KERNEL (softmax_gpu)(__global neural_memory* input_mem, __global neural_memory* 
     
     // function code to be replaced with _find_max_value function
     
+
+
     
     __local float partial_max[LWS];
     float value = -FLT_MAX;
@@ -170,9 +172,11 @@ KERNEL (softmax_gpu_batches)(__global neural_memory* input_mem, __global neural_
     const int batch_offset = global_id % batch_num;
 
     //const float max_value = find_max_value(global_id, idx, batch_offset, batch_num, input);
-  
 
     // function code to be replaced with _find_max_value function
+
+
+
 
     __local float partial_max[LWS];
     float value = -FLT_MAX;
@@ -201,26 +205,7 @@ KERNEL (softmax_gpu_batches)(__global neural_memory* input_mem, __global neural_
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     //
-
-
-
-
-
-
     float tmp_vals[ITEMS_NUM + 1];
     for(int i = 0; i < ITEMS_NUM; i++)
     {
