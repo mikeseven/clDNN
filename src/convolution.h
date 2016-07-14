@@ -18,7 +18,6 @@
 
 #include "api/neural.h"
 #include "implementation_map.h"
-#include "convolution_cpu_jit.h"
 #include "convolution_cpu_reference.h"
 
 namespace neural{

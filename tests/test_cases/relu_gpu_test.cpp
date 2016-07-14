@@ -79,7 +79,7 @@ TEST(relu_f32_fw_gpu, intrinsics_avx2) {
     fill<float>(input_memory);
 
     // Relu primitives
-    auto opt_relu = relu::create({ engine::cpu, output, input });
+    auto opt_relu = relu::create({ engine::reference, output, input });
     auto ref_relu = relu::create({ engine::gpu, ref_output, input });
 
     execute({ output, opt_relu }).wait();

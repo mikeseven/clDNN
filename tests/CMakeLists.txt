@@ -17,11 +17,11 @@ add_subdirectory (gtest)
 set (APP_NAME "tests")
 # Sources for test files
 
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wno-error=conversion-null")
-elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
+if (MSVC)
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /WX")
-endif()
+else ()
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wno-error=conversion-null")
+endif ()
 
 file (GLOB TEST_CASES_SRC
       test_cases/*.cpp)
@@ -43,7 +43,7 @@ file (GLOB API_HEADERS
 # Create named folders for the sources within the .vcproj
 # Empty name lists them directly under the .vcproj
 source_group("" FILES ${MAIN_SRC})
-source_group("test caseses" FILES ${TEST_CASES_SRC})
+source_group("test cases" FILES ${TEST_CASES_SRC})
 source_group("test utils" FILES ${TEST_UTILS_SRC})
 
 # Properties->C/C++->General->Additional Include Directories

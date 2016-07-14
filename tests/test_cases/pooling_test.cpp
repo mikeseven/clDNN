@@ -311,7 +311,7 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_inoffs1) {
     EXPECT_EQ(1.0f, get_value<float>(output_memory, 13)); EXPECT_EQ(0.0f, get_value<float>(output_memory, 15));
 }
 
-TEST(pooling_forward, naive_comparison_optimized_max_bs_yxf_bv24_f32_wsiz2x2_wstr1x1_i6x6x4x48_nopad_cpu) {
+TEST(pooling_forward, DISABLED_naive_comparison_optimized_max_bs_yxf_bv24_f32_wsiz2x2_wstr1x1_i6x6x4x48_nopad_cpu) {
 
     // This implementation will use two jobs, each for one slice, so make sure it will test MT path, no matter what underlying HW we have.
     auto engine_resource = worker_cpu::create({ 4 });

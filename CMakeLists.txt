@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.1)
 include(CheckCXXCompilerFlag)
 
 #Use solution folders.
@@ -23,11 +23,6 @@ message("=====================> ${CMAKE_BUILD_TYPE} <=====================")
 set(PROJECT_NAME "MKL-DNN")
 project (${PROJECT_NAME})
 
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-    set (COMPILER_STR "gcc")
-elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
-    set (COMPILER_STR "mscc")
-endif()
 if(NOT(UNIX))
   set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
   set (LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
@@ -45,6 +40,7 @@ message (STATUS "CMAKE_BINARY_DIR ...................... " ${CMAKE_BINARY_DIR})
 message (STATUS "CMAKE_SOURCE_DIR ...................... " ${CMAKE_SOURCE_DIR})
 message (STATUS "CMAKE_GENERATOR ....................... " ${CMAKE_GENERATOR})
 message (STATUS "CMAKE_C_COMPILER_ID ................... " ${CMAKE_C_COMPILER_ID})
+message (STATUS "CMAKE_CXX_COMPILER_ID ................. " ${CMAKE_CXX_COMPILER_ID})
 
 # To Enable C++11 gcc (Linux compiler) require additional flag to be added
 if(UNIX)
@@ -74,7 +70,7 @@ if(UNIX)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -z noexecstack -z relro -z now")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pie -z noexecstack -z relro -z now")
 else()
-  if (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC") #MSVC specific flags
+  if (MSVC) #MSVC specific flags
     add_definitions(/sdl)
   endif()
 endif()
