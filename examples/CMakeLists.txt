@@ -14,11 +14,11 @@
 
 set (TARGET_NAME "examples")
 
-if (MSVC)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX")
-else ()
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
-endif ()
+elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX")
+endif()
 
 # Sources for test files
 set (MAIN_SRC   ${CMAKE_SOURCE_DIR}/examples/main.cpp)
@@ -33,23 +33,40 @@ file  (GLOB EXAMPLES_SRC
        ${CMAKE_SOURCE_DIR}/examples/*.h
        ${CMAKE_SOURCE_DIR}/examples/*.cpp
       )
+file (GLOB EXAMPLES_COMMON
+       ${CMAKE_SOURCE_DIR}/examples/common/*.h
+	   ${CMAKE_SOURCE_DIR}/examples/common/*.cpp
+	  )
+file (GLOB EXAMPLES_FREEIMAGE
+       ${CMAKE_SOURCE_DIR}/examples/common/FreeImage64/*.h
+	   ${CMAKE_SOURCE_DIR}/examples/common/FreeImage64/*.cpp
+	  )
+	   
 # Create named folders for the sources within the .vcproj
 # Empty name lists them directly under the .vcproj
 source_group("api" FILES ${API_HEADERS})
 source_group("src" FILES ${EXAMPLES_SRC})
+source_group("common" FILES ${EXAMPLES_COMMON})
+source_group("freeImage" FILES ${EXAMPLES_FREEIMAGE})
 
 # Properties->C/C++->General->Additional Include Directories
 include_directories (${CMAKE_SOURCE_DIR}
                      ${CMAKE_SOURCE_DIR}/src
                     )
+					
 
+			
 # Create library file from sources.
 add_executable(${TARGET_NAME}
                ${MAIN_SRC}
                ${API_HEADERS}
                ${LIBRARY_SRC}
                ${EXAMPLES_SRC}
+			   ${EXAMPLES_COMMON}
+			   ${EXAMPLES_FREEIMAGE}
               )
 
 target_link_libraries(${TARGET_NAME} mkl_dnn)
+target_link_libraries(${TARGET_NAME} 
+						${CMAKE_SOURCE_DIR}/examples/common/FreeImage64/FreeImage.lib)
 
