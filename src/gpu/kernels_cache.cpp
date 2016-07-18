@@ -117,27 +117,60 @@ cl::Program::Sources kernels_cache::get_program_source() const {
     return source;
 }
 
-kernels_cache::kernel_id kernels_cache::create_kernel_from_template(std::shared_ptr<neural::gpu::gpu_toolkit>, const std::string& template_name, jit_definitions definitions) {
-    auto kernel_name = template_name;
-    std::ostringstream code;
-    code << "#ifdef KERNEL\n#undef KERNEL\n#endif" << std::endl;
-    code << "#define KERNEL(name) __kernel void name";
+namespace {
+    class decoration_macro
+    {
+        const std::string& _m;
+        const std::string& _pre;
+        const std::string& _post;
+    public:
+        decoration_macro(const std::string& macro, const std::string& prefix, const std::string& postfix)
+            : _m(macro), _pre(prefix), _post(postfix) {}
 
+        friend std::ostream& operator<<(std::ostream& os, const decoration_macro& dm) {
+            return os
+                << "#ifdef " << dm._m << "\n"
+                << "#undef " << dm._m << "\n"
+                << "#endif\n"
+                << "#define " << dm._m << "(name) " << dm._pre << " name" << (dm._post.empty() ? "" : "##_") << dm._post
+                << std::endl;
+        }
+    };
+
+    class value_macro
+    {
+        const std::string& _n;
+        const std::string& _v;
+    public:
+        value_macro(const std::string& name, const std::string& value) : _n(name), _v(value) {}
+
+        friend std::ostream& operator<<(std::ostream& os, const value_macro& vm) {
+            return os
+                << "#ifdef " << vm._n << "\n"
+                << "#undef " << vm._n << "\n"
+                << "#endif\n"
+                << "#define " << vm._n << " " << vm._v
+                << std::endl;
+        }
+    };
+}
+
+kernels_cache::kernel_id kernels_cache::create_kernel_from_template(std::shared_ptr<neural::gpu::gpu_toolkit>, const std::string& template_name, jit_definitions definitions) {
     // TODO: FIXIT: more than one kernel can be created for same template_name and definitions
-    if(!definitions.empty()) {
-        auto kernel_num = std::to_string(_kernel_codes.size());
-        code << "##_" << kernel_num;
-        kernel_name += "_" + kernel_num;
-    }
-    code << std::endl;
+    auto kernel_num = definitions.empty() ? "" : std::to_string(_kernel_codes.size());
+    auto kernel_name = template_name + (kernel_num.empty() ? "" : "_") + kernel_num;
+    std::ostringstream code;
+
+    code << decoration_macro("KERNEL", "__kernel void", kernel_num)
+         << decoration_macro("FUNC", "", kernel_num)
+         << decoration_macro("FUNC_CALL", "", kernel_num);
 
     for (auto& definition : definitions) {
-        auto macro_name = definition.first;
-        code << "#ifdef " << macro_name << "\n#undef " << macro_name << "\n#endif\n"
-             << "#define " << macro_name << " " << definition.second << std::endl;
+        code  << value_macro(definition.first, definition.second);
     }
 
-    code << kernel_templates::get(template_name);
+    code << kernel_templates::get(template_name) << std::endl;
+
     auto kernel_code = code.str();
 
     std::lock_guard<std::mutex> lock(_mutex);
