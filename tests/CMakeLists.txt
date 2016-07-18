@@ -57,7 +57,6 @@ include_directories (${CMAKE_SOURCE_DIR}
 add_executable(${APP_NAME}
                ${MAIN_SRC}
                ${TEST_CASES_SRC}
-               ${API_HEADERS}
               )
 
 # To use SDE it has to be installed and its root dir needs to be

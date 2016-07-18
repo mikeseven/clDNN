@@ -89,21 +89,44 @@ struct memory : is_a_primitive {
         DLL_SYM arguments(neural::engine::type aengine, memory::format::type aformat, neural::vector<uint32_t> asize);
     };
     const arguments argument;
-    mutable void *pointer;
+
+    class ptr
+    {
+        memory& mem;
+        void* data;
+        friend class memory;
+        ptr(memory& mem) : mem(mem), data(mem.aquire()) {}
+    public:
+        ptr(const ptr& rhs) : mem(rhs.mem), data(mem.aquire()) { }
+        ptr& operator=(const ptr& rhs) {
+            mem.release();
+            mem = rhs.mem;
+            data = mem.aquire();
+            return *this;
+        }
+        ~ptr() { mem.release(); }
+        void* get() { return data; }
+    };
+
+    ptr pointer() { return ptr(*this); }
 
     DLL_SYM static primitive describe(arguments);
     DLL_SYM static primitive allocate(arguments);
-    memory &operator()(void *ptr) { pointer = ptr; return *this; };
+
+    virtual void* aquire() { return _pointer; }
+    virtual void release() {}
+
+    memory &operator()(void *ptr) { _pointer = ptr; return *this; };
     void execute_argument(void *arg) const {
         if(argument.owns_memory) throw std::runtime_error("memory::execute_argument: this a container with its own memory; cannot set new pointer");
-        else pointer = arg;
+        else _pointer = arg;
     }
     DLL_SYM size_t count() const;
 
     ~memory();
 private:
-
-    memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), pointer(0) {};
+    mutable void *_pointer;
+    memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), _pointer(0) {};
 };
 
 
