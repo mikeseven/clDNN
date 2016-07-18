@@ -92,23 +92,23 @@ struct memory : is_a_primitive {
 
     class ptr
     {
-        memory& mem;
+        memory* mem;
         void* data;
         friend class memory;
-        ptr(memory& mem) : mem(mem), data(mem.aquire()) {}
+        ptr(memory* mem) : mem(mem), data(mem->aquire()) {}
     public:
-        ptr(const ptr& rhs) : mem(rhs.mem), data(mem.aquire()) { }
+        ptr(const ptr& rhs) : mem(rhs.mem), data(mem->aquire()) { }
         ptr& operator=(const ptr& rhs) {
-            mem.release();
+            mem->release();
             mem = rhs.mem;
-            data = mem.aquire();
+            data = mem->aquire();
             return *this;
         }
-        ~ptr() { mem.release(); }
+        ~ptr() { mem->release(); }
         void* get() { return data; }
     };
 
-    ptr pointer() { return ptr(*this); }
+    ptr pointer() { return ptr(this); }
 
     DLL_SYM static primitive describe(arguments);
     DLL_SYM static primitive allocate(arguments);
