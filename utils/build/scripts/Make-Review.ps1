@@ -6,12 +6,32 @@ param([string] $InputServerUri,
       [string] $InputMergeBranch,
       [string] $InputReviewEnabled,
       [string] $InputReviewId = "",
-      [string] $InputServerUserMapJson = "");
+      [string] $InputReviewTitle = "",
+      [string] $InputServerUserMapJson = "",
+      [string] $InputTeamCityUri = "https://teamcity01-igk.devtools.intel.com");
+
+$CPC = [char] 0x25;
 
 function escapeTeamCityMsg([string] $Message) {
     if ([string]::IsNullOrEmpty($Message)) { return ''; }
     return ((((($Message -replace '[''|\[\]]', '|$0') -replace '\n', '|n') -replace '\r', '|r') `
                 -replace '\u0085', '|x') -replace '\u2028', '|l') -replace '\u2029', '|p';
+}
+
+function writeTcSuccessStatus([string] $Message) {
+    [string] $Msg = escapeTeamCityMsg $Message;
+    Write-Host ("##teamcity[buildStatus status='SUCCESS' text='{0}']" -f $Msg);
+}
+
+function writeTcFailureStatus([string] $Message) {
+    [string] $Msg = escapeTeamCityMsg $Message;
+    Write-Host ("##teamcity[buildStatus status='FAILURE' text='{0}']" -f $Msg);
+}
+
+function updateTcParameter([string] $ParamName, [string] $Message) {
+    [string] $PName = escapeTeamCityMsg $ParamName;
+    [string] $Msg   = escapeTeamCityMsg $Message;
+    Write-Host ("##teamcity[setParameter name='{0}' value='{1}']" -f @($PName, $Msg));
 }
 
 # ------------------------------------------ Constants ---------------------------------------------
@@ -46,8 +66,14 @@ try {
     [string] $InputReviewId = @'
         %my.build.review.id%
 '@.Trim();
+    [string] $InputReviewTitle = @'
+        %my.build.review.title%
+'@.Trim();
     [string] $InputServerUserMapJson = @'
         %my.build.review.useMapJson%
+'@.Trim();
+    [string] $InputTeamCityUri = @'
+        %teamcity.serverUrl%
 '@.Trim();
 #>
 
@@ -68,12 +94,14 @@ try {
 
     [long] $ReviewId = -1;
     if (![string]::IsNullOrEmpty($InputReviewId)) {
-        if (![long]::TryParse($InputReviewId, [ref] $ReviewId) -or ($ReviewId -lt 0)) {
+        if (![long]::TryParse($InputReviewId, 'Integer', [CultureInfo]::InvariantCulture, [ref] $ReviewId) -or ($ReviewId -lt 0)) {
             throw 'Invalid review ID.';
         }
     }
 
-    [Hashtable] $ServerUserMap = New-Object hashtable; #case-sensitive
+    [string] $ReviewTitle = $InputReviewTitle;
+
+    [Hashtable] $ServerUserMap = New-Object Hashtable; #case-sensitive
     if (![string]::IsNullOrEmpty($InputServerUserMapJson)) {
         try {
             [System.Web.Script.Serialization.JavaScriptSerializer] $Deserializer = `
@@ -86,6 +114,9 @@ try {
         catch { throw 'Invalid user login map (JSON malformed).'; }
     }
 
+    try { [Uri] $TeamCityUri = New-Object 'Uri' @($InputTeamCityUri, [UriKind]::Absolute); }
+    catch { throw 'Invalid TeamCity server URL.'; }
+
 # --------------------------------------------------------------------------------------------------
 
     function getCCollabServiceUri([Uri] $ServerUri) {
@@ -97,7 +128,7 @@ try {
                                   [object[]] $InvokeArgs,
                                   [int]      $Timeout = 30) {
         try {
-            $ArgsBody = ConvertTo-Json $InvokeArgs -Compress;
+            $ArgsBody = ConvertTo-Json $InvokeArgs -Compress -Depth 8;
             $RequestBody = [System.Text.Encoding]::UTF8.GetBytes($ArgsBody);
 
             $Response = Invoke-WebRequest $ServiceUri.AbsoluteUri -Body $RequestBody `
@@ -173,6 +204,25 @@ try {
         return $Result[$Commands.Count - 1];
     }
 
+    function findCurrentUser([PSObject] $LoginTicket,
+                             [int]      $Timeout = 30) {
+        $FindUserCommand = @{command = "UserService.getSelfUser"};
+        $Commands = @($LoginTicket.AuthCommands; $FindUserCommand);
+
+        $Response = invokeCCollabService $LoginTicket.ServiceUri `
+                          $Commands $Timeout;
+
+        $Result = @($Response.result | ? { ![object]::Equals($_, $null) });
+        if ($Result.Count -lt $LoginTicket.AuthCommands.Count) {
+            throw 'Communication error with Collaborator service (login failed).';
+        }
+        if ($Result.Count -lt $Commands.Count) {
+            throw 'Communication error with Collaborator service (timeout).';
+        }
+
+        return $Result[$Commands.Count - 1];
+    }
+
     function findReview([PSObject] $LoginTicket,
                         [long]     $ReviewId,
                         [int]      $Timeout = 30) {
@@ -199,12 +249,16 @@ try {
     }
 
     function createReview([PSObject] $LoginTicket,
-                          [PSObject] $Author,
+                          [PSObject] $Creator,
                           [string]   $Title = '',
                           [int]      $Timeout = 30) {
-        $FindReviewCommand = @{command = "ReviewService.findReviewById";
-                               args    = @{reviewId = $ReviewId}};
-        $Commands = @($LoginTicket.AuthCommands; $FindReviewCommand);
+        $CreateReviewCommand = @{command = "ReviewService.createReview";
+                                 args    = @{creator = $Creator.login}};
+        if (![string]::IsNullOrEmpty($Title)) {
+            $CreateReviewCommand['args']['title'] = $Title;
+        }
+
+        $Commands = @($LoginTicket.AuthCommands; $CreateReviewCommand);
 
         $Response = invokeCCollabService $LoginTicket.ServiceUri `
                           $Commands $Timeout;
@@ -214,23 +268,121 @@ try {
             throw 'Communication error with Collaborator service (login failed).';
         }
         if ($Result.Count -lt $Commands.Count) {
-            return $null;
+            throw 'Communication error with Collaborator service (create review failed).';
         }
-
-        return $Result[$Commands.Count - 1];
+        return [long] $Result[$Commands.Count - 1].reviewId;
     }
 
+    function assignReviewAuthor([PSObject] $LoginTicket,
+                                [long]     $ReviewId,
+                                [PSObject] $Author,
+                                [int]      $Timeout = 30) {
+        $AssignCommand = @{command = "ReviewService.setAssignments";
+                           args    = @{reviewId    = $ReviewId;
+                                       assignments = @(
+                                           @{user = $Author.login;
+                                             role = 'AUTHOR'}
+                                       )}};
+        $Commands = @($LoginTicket.AuthCommands; $AssignCommand);
 
+        $Response = invokeCCollabService $LoginTicket.ServiceUri `
+                          $Commands $Timeout;
+
+        $Result = @($Response.result | ? { ![object]::Equals($_, $null) });
+        if ($Result.Count -lt $LoginTicket.AuthCommands.Count) {
+            throw 'Communication error with Collaborator service (login failed).';
+        }
+        if ($Result.Count -lt $Commands.Count) {
+            throw 'Communication error with Collaborator service (author assign failed).';
+        }
+    }
+
+    function addReviewComment([PSObject] $LoginTicket,
+                              [long]     $ReviewId,
+                              [string]   $Comment,
+                              [int]      $Timeout = 30) {
+        $AssignCommand = @{command = "ReviewService.createReviewComment";
+                           args    = @{reviewId = $ReviewId;
+                                       comment  = $Comment }};
+        $Commands = @($LoginTicket.AuthCommands; $AssignCommand);
+
+        $Response = invokeCCollabService $LoginTicket.ServiceUri `
+                          $Commands $Timeout;
+
+        $Result = @($Response.result | ? { ![object]::Equals($_, $null) });
+        if ($Result.Count -lt $LoginTicket.AuthCommands.Count) {
+            throw 'Communication error with Collaborator service (login failed).';
+        }
+        if ($Result.Count -lt $Commands.Count) {
+            Write-Warning 'Communication error with Collaborator service (comment add failed).';
+            return [long] -1;
+        }
+        return [long] $Result[$Commands.Count - 1].commentId;
+    }
+
+    function findReviewComments([PSObject] $LoginTicket,
+                                [long]     $ReviewId,
+                                [PSObject] $Creator,
+                                [int]      $Timeout = 30) {
+        $FindCommentsCommand = @{command = "ReviewService.getComments";
+                                 args    = @{reviewId = $ReviewId;
+                                             user     = $Creator.login;
+                                             type     = 'USER' 
+                                             }};
+        $Commands = @($LoginTicket.AuthCommands; $FindCommentsCommand);
+
+        $Response = invokeCCollabService $LoginTicket.ServiceUri `
+                          $Commands $Timeout;
+
+        $Result = @($Response.result | ? { ![object]::Equals($_, $null) });
+        if ($Result.Count -lt $LoginTicket.AuthCommands.Count) {
+            throw 'Communication error with Collaborator service (login failed).';
+        }
+        if ($Result.Count -lt $Commands.Count) {
+            return @();
+        }
+        return $Result[$Commands.Count - 1].comments;
+    }
+
+    function addReviewGitDiffFiles([Uri]    $ServerUri,
+                                   [string] $User,
+                                   [string] $Password,
+                                   [long]   $ReviewId,
+                                   [string] $MergeTargetBranch,
+                                   [string] $ReviewBranch = 'HEAD',
+                                   [string] $UploadComment = '') {
+        if ([string]::IsNullOrEmpty($UploadComment)) {
+            $UComment = git show -s --format="${CPC}s" 2>&1;
+            if (!$?) {
+                $UComment = "Unknown";
+            }
+        } else { $UComment = $UploadComment; }
+
+        $DiffSpecification = "origin/$MergeTargetBranch...$ReviewBranch";
+
+        ccollab --url $ServerUri --user $User --password $Password --non-interactive --no-browser addgitdiffs --upload-comment $UComment $ReviewId $DiffSpecification 2>&1;
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Creating / updating review failed. File upload failed.'
+        }
+    }
+
+# --------------------------------------------------------------------------------------------------
 
     if (!$ReviewEnabled) {
-        Write-Host "##teamcity[buildStatus status='SUCCESS' text='Review creation disabled. Build skipped.']";
+        writeTcSuccessStatus 'Review creation disabled. Build skipped.';
         return;
     }
 
     $CCollabTicket = loginCCollab $ServerUri $ServerUser $ServerPassword;
+    $CCollabDemon  = findCurrentUser $CCollabTicket;
     $CCollabAuthor = findUser $CCollabTicket $TriggeredBy;
     if ($CCollabAuthor -eq $null) {
-        throw 'Cannot create / update review. User who trigger review build is not registered in SmartBear Collaborator.';
+        if ($ReviewId -ge 0) {
+            throw 'Cannot update review. User who triggered review build had not been registered in SmartBear Collaborator.';
+        }
+        else {
+            throw 'Cannot create review. User who triggered review build had not been registered in SmartBear Collaborator.';
+        }
     }
 
     if ($ReviewId -ge 0) {
@@ -238,11 +390,24 @@ try {
         if ($CCollabReview -eq $null) {
             throw 'Cannot update review. Review with specified review ID cannot be found.';
         }
+        $BuildComments = findReviewComments $CCollabTicket $ReviewId $CCollabDemon;
+        $IsInitCommentAdded = @($BuildComments.text | ? { $_ -cmatch '\n\s*-\s*Build\s+system\s+link\s*:' }).Count -gt 0;
     }
+    else {
+        $ReviewId = createReview $CCollabTicket $CCollabDemon $ReviewTitle;
+        assignReviewAuthor $CCollabTicket $ReviewId $CCollabAuthor;
+        $IsInitCommentAdded = $false;
+    }
+
+    if (!$IsInitCommentAdded) {
+        addReviewComment $CCollabTicket $ReviewId "[Build Agent]`n - Build system link: $($TeamCityUri.AbsoluteUri)" | Out-Null;
+    }
+
+    addReviewGitDiffFiles $ServerUri $ServerUser $ServerPassword $ReviewId $MergeBranch;
+
+    updateTcParameter 'my.build.review.id' $ReviewId.ToString([CultureInfo]::InvariantCulture);
 }
 catch {
-    [string] $ErrMsg = escapeTeamCityMsg $_.Exception.Message;
-
-    Write-Host ("##teamcity[buildStatus status='FAILURE' text='{0}']" -f $ErrMsg);
+    writeTcFailureStatus $_.Exception.Message;
     throw;
 }
