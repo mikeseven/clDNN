@@ -37,17 +37,12 @@ file (GLOB EXAMPLES_COMMON
        ${CMAKE_SOURCE_DIR}/examples/common/*.h
 	   ${CMAKE_SOURCE_DIR}/examples/common/*.cpp
 	  )
-file (GLOB EXAMPLES_FREEIMAGE
-       ${CMAKE_SOURCE_DIR}/examples/common/FreeImage64/*.h
-	   ${CMAKE_SOURCE_DIR}/examples/common/FreeImage64/*.cpp
-	  )
 	   
 # Create named folders for the sources within the .vcproj
 # Empty name lists them directly under the .vcproj
 source_group("api" FILES ${API_HEADERS})
 source_group("src" FILES ${EXAMPLES_SRC})
 source_group("common" FILES ${EXAMPLES_COMMON})
-source_group("freeImage" FILES ${EXAMPLES_FREEIMAGE})
 
 # Properties->C/C++->General->Additional Include Directories
 include_directories (${CMAKE_SOURCE_DIR}
@@ -63,7 +58,6 @@ add_executable(${TARGET_NAME}
                ${LIBRARY_SRC}
                ${EXAMPLES_SRC}
 			   ${EXAMPLES_COMMON}
-			   ${EXAMPLES_FREEIMAGE}
               )
 
 target_link_libraries(${TARGET_NAME} mkl_dnn)
