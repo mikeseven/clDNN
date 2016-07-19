@@ -322,6 +322,74 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_memory, 3));
 }
 
+TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_split2) {
+    //  Filter : 2x2
+    //  Stride : 2x2
+    //  Input  : 4x4x2
+    //  Output : 2x2x2
+
+    //  Input:
+    //  f0: -0.5   1     0.5  2
+    //       1.5  -0.5   0   -1
+    //       0.5   0.5  -1    1
+    //       0.5   2     1.5 -0.5
+    //
+    //  f1:  0.5   1.5   2.3 -0.4
+    //       2.0  -4.0   1.0  3.0
+    //       0.5   1.5   2.3 -0.4
+    //       2.0  -4.0   1.0  3.0
+    //
+    //  Filter1:
+    //  -2   0.5
+    //   3.5 1.5
+    //
+    //  Bias1:
+    //  2
+    //
+    //  Filter2:
+    //  -1.2  1.5
+    //   0.5 -0.5
+    //
+    //  Bias2:
+    //  -1
+
+    //  Output:
+    //   8  3.65 0.5 -5.36
+    //   6  3.65 9   -5.36
+
+    auto input = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 1,{ 4, 4 }, 2 } });
+    auto output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 1,{ 2, 2 }, 2 } });
+    auto weights1 = memory::allocate({ engine::reference, memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
+    auto biases1 = memory::allocate({ engine::reference, memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+    auto weights2 = memory::allocate({ engine::reference, memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
+    auto biases2 = memory::allocate({ engine::reference, memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+
+    set_values(input, {
+        -0.5f,  0.5f,  1.0f,  1.5f,  0.5f,  2.3f,  2.0f, -0.4f,
+         1.5f,  2.0f, -0.5f, -4.0f,  0.0f,  1.0f, -1.0f,  3.0f,
+         0.5f,  0.5f,  0.5f,  1.5f, -1.0f,  2.3f,  1.0f, -0.4f,
+         0.5f,  2.0f,  2.0f, -4.0f,  1.5f,  1.0f, -0.5f,  3.0f
+    });
+    set_values(weights1, { -2.0f, 0.5f, 3.5f, 1.5f });
+    set_values(biases1, { 2.0f });
+    set_values(weights2, { -1.2f, 1.5f, 0.5f, -0.5f });
+    set_values(biases2, { -1.0f });
+
+    auto conv = convolution::create({ engine::reference, output,{ input, weights1, biases1, weights2, biases2 },{ 1,{ 2, 2 }, 1 }, padding::zero, 2 });
+
+    execute({ conv }).wait();
+
+    auto& output_memory = output.as<const memory&>();
+    EXPECT_FLOAT_EQ(8.0f, get_value<float>(output_memory, 0));
+    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 1));
+    EXPECT_FLOAT_EQ(0.5f, get_value<float>(output_memory, 2));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 3));
+    EXPECT_FLOAT_EQ(6.0f, get_value<float>(output_memory, 4));
+    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 5));
+    EXPECT_FLOAT_EQ(9.0f, get_value<float>(output_memory, 6));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 7));
+}
+
 TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
 //   Filter    : 2x2
 //   Stride    : 1x1

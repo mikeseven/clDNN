@@ -39,15 +39,21 @@ void convolution_cpu_reference::implementation(const void *ptr) {
 
     auto& filter_arg = this_conv->argument.input[1].primitive.as<const memory&>().argument; //convolution filter
 
-    assert( output_size.feature[0] == filter_arg.size.feature[0] ); // memory::format oixy
+    size_t split = this_conv->argument.split;
+
+    assert( output_size.feature[0] / split == filter_arg.size.feature[0] ); // memory::format oixy
 
     // todo remove
     if(filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");
 
     auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
     auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
-    auto filter = static_cast<float*>(this_conv->argument.input[1].primitive.as<const memory&>().pointer);
-    auto bias   = static_cast<float*>(this_conv->argument.input[2].primitive.as<const memory&>().pointer);
+    std::vector<float*> filters;
+    for (int i = 0; i < split; i++)
+        filters.push_back(static_cast<float*>(this_conv->argument.input[i * 2 + 1].primitive.as<const memory&>().pointer));
+    std::vector<float*> biases;
+    for (int i = 0; i < split; i++)
+        biases.push_back(static_cast<float*>(this_conv->argument.input[i * 2 + 2].primitive.as<const memory&>().pointer));
 
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
     namespace nd = ndimensional;
@@ -65,12 +71,17 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
     auto calc_win_idx = nd::choose_calculate_idx(filter_arg.format);
 
+    size_t batch_num = output_arg.size.batch[0];
+    size_t output_feature_num = output_arg.size.feature[0];
+
     switch(padding){
         case padding::zero:
         {
             for(auto pos : range) {
                 auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
-                output[out_idx] = bias[pos[f_pos]];
+                size_t feature_map_idx = (out_idx / batch_num) % output_feature_num;
+                size_t split_idx = feature_map_idx / (output_feature_num / split);
+                output[out_idx] = biases[split_idx][pos[f_pos] / split];
             }
 
             // Ofm in weights and feature maps in output size is the same.
@@ -84,7 +95,8 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                         auto pos_with_modified_ofm(pos); // assign current ofm to output position
                         pos_with_modified_ofm[1] = ofm;
 
-                        std::vector<uint32_t> arg_in_idx = pos*stride + input_offset + win_pos;
+                        std::vector<uint32_t> fm_offset { 0, split > 1 ? ofm : 0, 0, 0 };
+                        std::vector<uint32_t> arg_in_idx = (pos + fm_offset)*stride + input_offset + win_pos;
 
                         if( nd::is_out_of_range(input_arg.size, arg_in_idx) )
                             continue;
@@ -92,7 +104,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                         auto in_idx  = calc_in_idx ( input_arg.size.raw, {arg_in_idx.begin(), arg_in_idx.end()} );
                         auto win_idx = calc_win_idx( filter_arg.size.raw,
                                                      [&](){
-                                                        auto vec = std::vector<uint32_t>({0, ofm-output_offset.feature[0]});
+                                                        auto vec = std::vector<uint32_t>({0, (ofm-output_offset.feature[0]) / (uint32_t)split});
                                                         auto* win_pos_ptr = dynamic_cast<std::vector<uint32_t>*>(&win_pos);
                                                         vec.insert(vec.end(), win_pos_ptr->begin(), win_pos_ptr->end());
                                                         return vec;
@@ -101,7 +113,10 @@ void convolution_cpu_reference::implementation(const void *ptr) {
 
                         auto out_idx = calc_out_idx(output_arg.size.raw, pos_with_modified_ofm );
 
-                        output[out_idx] += input[in_idx] * filter[win_idx];
+                        size_t feature_map_idx = (out_idx / batch_num) % output_feature_num;
+                        size_t split_idx = feature_map_idx / (output_feature_num / split);
+
+                        output[out_idx] += input[in_idx] * filters[split_idx][win_idx];
                     }
                 }
             }
