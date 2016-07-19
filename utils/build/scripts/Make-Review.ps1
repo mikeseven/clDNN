@@ -2,12 +2,13 @@ param([string] $InputServerUri,
       [string] $InputServerUser,
       [string] $InputServerPassword,
       [string] $InputTriggeredBy,
-      [string] $InputBranch,
+      [string] $InputBranchRef,
       [string] $InputMergeBranch,
-      [string] $InputReviewEnabled,
+      [string] $InputDevProcessMode,
       [string] $InputReviewId = "",
       [string] $InputReviewTitle = "",
       [string] $InputServerUserMapJson = "",
+      [string] $InputBuildNo = "",
       [string] $InputTeamCityUri = "https://teamcity01-igk.devtools.intel.com");
 
 $CPC = [char] 0x25;
@@ -54,14 +55,14 @@ try {
     [string] $InputTriggeredBy = @'
         %teamcity.build.triggeredBy.username%
 '@.Trim();
-    [string] $InputBranch = @'
-        %my.build.review.branch%
+    [string] $InputBranchRef = @'
+        %my.build.review.branch_ref%
 '@.Trim();
     [string] $InputMergeBranch = @'
-        %my.build.merge.target.branch%
+        %my.build.merge.branch%
 '@.Trim();
-    [string] $InputReviewEnabled = @'
-        %my.build.review.is_enabled%
+    [string] $InputDevProcessMode = @'
+        %my.build.dev_process.mode%
 '@.Trim();
     [string] $InputReviewId = @'
         %my.build.review.id%
@@ -70,7 +71,10 @@ try {
         %my.build.review.title%
 '@.Trim();
     [string] $InputServerUserMapJson = @'
-        %my.build.review.useMapJson%
+        %my.build.review.userMapJson%
+'@.Trim();
+    [string] $InputBuildNo = @'
+        %build.number%
 '@.Trim();
     [string] $InputTeamCityUri = @'
         %teamcity.serverUrl%
@@ -84,19 +88,27 @@ try {
     [string] $ServerPassword = $InputServerPassword;
     [string] $TriggeredBy    = $InputTriggeredBy;
 
-    [string] $Branch = git check-ref-format --branch $InputBranch 2>&1;
+    [string] $Branch = git check-ref-format --branch $InputBranchRef 2>&1;
     if (!$?) { throw 'Invalid branch name (review branch).'; }
 
     [string] $MergeBranch = git check-ref-format --branch $InputMergeBranch 2>&1;
     if (!$?) { throw 'Invalid branch name (merge base branch).'; }
 
-    [bool] $ReviewEnabled = $InputReviewEnabled -ne '0';
+    [string] $DevProcessMode = $InputDevProcessMode;
+    if ($DevProcessMode -cnotmatch '^(RCoU|BTR|BTO)$') {
+        throw 'Invalid development process / review mode.';
+    }
 
     [long] $ReviewId = -1;
     if (![string]::IsNullOrEmpty($InputReviewId)) {
         if (![long]::TryParse($InputReviewId, 'Integer', [CultureInfo]::InvariantCulture, [ref] $ReviewId) -or ($ReviewId -lt 0)) {
             throw 'Invalid review ID.';
         }
+    }
+    switch -casesensitive ($DevProcessMode) {
+        'RCoU' {}                                                                         # Do nothing if mode is: Create / Update Review
+        'BTR'  { if ($ReviewId -lt 0) { throw 'Review ID is mandatory in this mode.'; } } # Mandatory review ID if mode is: Re-run Build and Tests
+        'BTO'  { $ReviewId = -1; }                                                        # Ignore review ID if mode is: Run Build and Tests w/o Review
     }
 
     [string] $ReviewTitle = $InputReviewTitle;
@@ -114,10 +126,22 @@ try {
         catch { throw 'Invalid user login map (JSON malformed).'; }
     }
 
+    [string] $BuildNo = $InputBuildNo;
+
     try { [Uri] $TeamCityUri = New-Object 'Uri' @($InputTeamCityUri, [UriKind]::Absolute); }
     catch { throw 'Invalid TeamCity server URL.'; }
 
 # --------------------------------------------------------------------------------------------------
+
+    function getFailMsgStart([string] $DPMode,
+                             [long]   $ReviewId) {
+        switch -casesensitive ($DPMode) {
+            'RCoU' { if ($ReviewId -lt 0) { return 'Cannot create review.'; }
+                     else                 { return 'Cannot update review.'; } }
+            'BTR'  { return 'Cannot re-run build and tests.'; }
+            'BTO'  { return 'Cannot run build and tests.'; }
+        }
+    }
 
     function getCCollabServiceUri([Uri] $ServerUri) {
         try { return New-Object Uri $ServerUri, $ServiceRelUri; }
@@ -277,6 +301,10 @@ try {
                                 [long]     $ReviewId,
                                 [PSObject] $Author,
                                 [int]      $Timeout = 30) {
+        if ($Author.login -eq $Creator.login) {
+            return;
+        }
+
         $AssignCommand = @{command = "ReviewService.setAssignments";
                            args    = @{reviewId    = $ReviewId;
                                        assignments = @(
@@ -287,14 +315,41 @@ try {
 
         $Response = invokeCCollabService $LoginTicket.ServiceUri `
                           $Commands $Timeout;
+        ConvertTo-Json $Response -Depth 8;
 
         $Result = @($Response.result | ? { ![object]::Equals($_, $null) });
         if ($Result.Count -lt $LoginTicket.AuthCommands.Count) {
             throw 'Communication error with Collaborator service (login failed).';
         }
-        if ($Result.Count -lt $Commands.Count) {
-            throw 'Communication error with Collaborator service (author assign failed).';
+        return ($Result.Count -eq $Commands.Count);
+    }
+
+    function unassignReviewCreator([PSObject] $LoginTicket,
+                                   [long]     $ReviewId,
+                                   [PSObject] $Creator,
+                                   [PSObject] $Author,
+                                   [int]      $Timeout = 30) {
+        if ($Author.login -eq $Creator.login) {
+            return;
         }
+
+        $UnassignCommand = @{command = "ReviewService.removeAssignments";
+                             args    = @{reviewId    = $ReviewId;
+                                         assignments = @(
+                                             @{user = $Creator.login;
+                                               role = 'AUTHOR'}
+                                         )}};
+        $Commands = @($LoginTicket.AuthCommands; $UnassignCommand);
+
+        $Response = invokeCCollabService $LoginTicket.ServiceUri `
+                          $Commands $Timeout;
+        ConvertTo-Json $Response -Depth 8;
+
+        $Result = @($Response.result | ? { ![object]::Equals($_, $null) });
+        if ($Result.Count -lt $LoginTicket.AuthCommands.Count) {
+            throw 'Communication error with Collaborator service (login failed).';
+        }
+        return ($Result.Count -lt $Commands.Count);
     }
 
     function addReviewComment([PSObject] $LoginTicket,
@@ -349,18 +404,18 @@ try {
                                    [string] $Password,
                                    [long]   $ReviewId,
                                    [string] $MergeTargetBranch,
-                                   [string] $ReviewBranch = 'HEAD',
+                                   [string] $ReviewBranchRef = 'HEAD',
                                    [string] $UploadComment = '') {
+        $DiffSpecification = "origin/$MergeTargetBranch...$ReviewBranchRef";
+
         if ([string]::IsNullOrEmpty($UploadComment)) {
             $UComment = git show -s --format="${CPC}s" 2>&1;
             if (!$?) {
-                $UComment = "Unknown";
+                $UComment = $DiffSpecification;
             }
         } else { $UComment = $UploadComment; }
 
-        $DiffSpecification = "origin/$MergeTargetBranch...$ReviewBranch";
-
-        ccollab --url $ServerUri --user $User --password $Password --non-interactive --no-browser addgitdiffs --upload-comment $UComment $ReviewId $DiffSpecification 2>&1;
+        ccollab --url $ServerUri --user $User --password $Password --non-interactive --no-browser addgitdiffs --upload-comment $UComment $ReviewId $DiffSpecification 2>&1 | ? { $_ -is [string] };
         if ($LASTEXITCODE -ne 0) {
             throw 'Creating / updating review failed. File upload failed.'
         }
@@ -368,7 +423,8 @@ try {
 
 # --------------------------------------------------------------------------------------------------
 
-    if (!$ReviewEnabled) {
+    # [BTO] No review path...
+    if ($DevProcessMode -ceq 'BTO') {
         writeTcSuccessStatus 'Review creation disabled. Build skipped.';
         return;
     }
@@ -377,25 +433,26 @@ try {
     $CCollabDemon  = findCurrentUser $CCollabTicket;
     $CCollabAuthor = findUser $CCollabTicket $TriggeredBy;
     if ($CCollabAuthor -eq $null) {
-        if ($ReviewId -ge 0) {
-            throw 'Cannot update review. User who triggered review build had not been registered in SmartBear Collaborator.';
-        }
-        else {
-            throw 'Cannot create review. User who triggered review build had not been registered in SmartBear Collaborator.';
-        }
+        $MsgStart = getFailMsgStart $DevProcessMode $ReviewId;
+        throw ('{0} User who triggered review build had not been registered in SmartBear Collaborator.' -f $MsgStart);
     }
 
+    # [RCoU, BTR] Update review path...
     if ($ReviewId -ge 0) {
         $CCollabReview = findReview $CCollabTicket $ReviewId;
         if ($CCollabReview -eq $null) {
-            throw 'Cannot update review. Review with specified review ID cannot be found.';
+            $MsgStart = getFailMsgStart $DevProcessMode $ReviewId;
+            throw ('{0} Review with specified review ID cannot be found.' -f $MsgStart);
         }
         $BuildComments = findReviewComments $CCollabTicket $ReviewId $CCollabDemon;
         $IsInitCommentAdded = @($BuildComments.text | ? { $_ -cmatch '\n\s*-\s*Build\s+system\s+link\s*:' }).Count -gt 0;
     }
+    # [RCoU] Create review path...
     else {
         $ReviewId = createReview $CCollabTicket $CCollabDemon $ReviewTitle;
-        assignReviewAuthor $CCollabTicket $ReviewId $CCollabAuthor;
+        if (!(assignReviewAuthor $CCollabTicket $ReviewId $CCollabAuthor)) {
+            throw 'Communication error with Collaborator service (author assign failed).';
+        }
         $IsInitCommentAdded = $false;
     }
 
@@ -403,7 +460,11 @@ try {
         addReviewComment $CCollabTicket $ReviewId "[Build Agent]`n - Build system link: $($TeamCityUri.AbsoluteUri)" | Out-Null;
     }
 
-    addReviewGitDiffFiles $ServerUri $ServerUser $ServerPassword $ReviewId $MergeBranch;
+    # [RCoU] Update review files...
+    if ($DevProcessMode -ceq 'RCoU') {
+        addReviewGitDiffFiles $ServerUri $ServerUser $ServerPassword $ReviewId $MergeBranch;
+        unassignReviewCreator $CCollabTicket $ReviewId $CCollabDemon $CCollabAuthor | Out-Null;
+    }
 
     updateTcParameter 'my.build.review.id' $ReviewId.ToString([CultureInfo]::InvariantCulture);
 }
