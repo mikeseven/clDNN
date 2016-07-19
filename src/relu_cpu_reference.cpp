@@ -39,8 +39,8 @@ void relu_cpu_reference::implementation(const void *ptr) {
     assert( 1 == output_size.feature.size() );
     assert( 1 == output_size.batch.size()   );
 
-    auto input  = static_cast<float*>(this_relu->input_memory(0).pointer);
-    auto output = static_cast<float*>(this_relu->output_memory(0).pointer);
+    auto input  = static_cast<float*>(this_relu->input_memory(0).pointer());
+    auto output = static_cast<float*>(this_relu->output_memory(0).pointer());
 
     namespace nd = ndimensional;
     nd::value<uint32_t> range ( output_size );
@@ -67,9 +67,9 @@ void relu_backward_cpu_reference::implementation(const void *ptr)
 {
     auto this_relu = static_cast<const relu_backward *>(ptr);
 
-    auto forward_output_grad = static_cast<float*>(this_relu->input_memory(0).pointer);
-    auto forward_input       = static_cast<float*>(this_relu->input_memory(1).pointer);
-    auto forward_input_grad  = static_cast<float*>(this_relu->output_memory(0).pointer);
+    auto forward_output_grad = static_cast<float*>(this_relu->input_memory(0).pointer());
+    auto forward_input       = static_cast<float*>(this_relu->input_memory(1).pointer());
+    auto forward_input_grad  = static_cast<float*>(this_relu->output_memory(0).pointer());
 
     auto& forward_output_grad_arg    = this_relu->input_memory(0).argument;
     auto& forward_output_grad_offset = this_relu->argument.input_offset[0];

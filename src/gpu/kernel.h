@@ -123,7 +123,7 @@ public:
         std::stringstream ss;
         ss << "(float[]){ ";
         for (int i = 0; i < _mem.count(); i++)
-            ss << static_cast<float*>(_mem.pointer)[i] << ",";
+            ss << static_cast<float*>(_mem.pointer())[i] << ",";
         ss << " } ";
         result.push_back({ _name, ss.str() });
         return result;

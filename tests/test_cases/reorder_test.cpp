@@ -127,7 +127,7 @@ TEST_F(Reorder_test_fixture,reorder_test_basic) {
         std::cout << ex.what() << std::endl;
     }
 
-    auto buf_out = static_cast<float*>(output.as<const memory&>().pointer);
+    auto buf_out = static_cast<float*>(output.as<const memory&>().pointer());
 
     bool result = true;
     for(size_t i = 0; i < dim_y*dim_x*dim_f*dim_b; ++i)
@@ -147,10 +147,10 @@ TEST_F(Reorder_test_fixture,reorder_test_output_as_input_2pass) {
     try
     {
         execute({input(in_buffer), reorder}).wait();
-        buf_out = static_cast<float*>(output.as<const memory&>().pointer);
+        buf_out = static_cast<float*>(output.as<const memory&>().pointer());
 
         execute({input2(buf_out), reorder2}).wait();
-        buf_out2 = static_cast<float*>(output2.as<const memory&>().pointer);
+        buf_out2 = static_cast<float*>(output2.as<const memory&>().pointer());
     }
     catch (const std::exception& ex)
     {

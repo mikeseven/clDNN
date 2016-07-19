@@ -224,7 +224,7 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, values_batch_wise) {
 //    auto input  = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
 //    auto output = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
 //    auto& input_memory  = input.as<const memory&>();
-//    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer);
+//    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer());
 //
 //    // Initialize input data
 //    fill<float>(input_memory);
@@ -271,7 +271,7 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, values_batch_wise) {
 //    auto input  = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
 //    auto output = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
 //    auto& input_memory  = input.as<const memory&>();
-//    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer);
+//    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer());
 //
 //    // Initialize input data
 //    fill<float>(input_memory);
@@ -327,7 +327,7 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, values_batch_wise) {
 //    auto input  = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
 //    auto output = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
 //    auto& input_memory  = input.as<const memory&>();
-//    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer);
+//    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer());
 //
 //    // Initialize input data
 //    fill<float>(input_memory);

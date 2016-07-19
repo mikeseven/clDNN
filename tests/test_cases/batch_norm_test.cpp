@@ -72,7 +72,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_true) {
         execute({bn}).wait();
 
     for (i = 0; i < input_size[2]; ++i){
-        EXPECT_EQ(0.0f, static_cast<float*>(output_memory.pointer)[i]);
+        EXPECT_EQ(0.0f, static_cast<float*>(output_memory.pointer())[i]);
     }
 }
 
@@ -127,7 +127,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     // Put non zero value in random place in input
     std::uniform_int_distribution<uint32_t> dist_input(0, total_input_size - 1);
     auto random_input_non_zero = dist_input(rng);
-    static_cast<float*>(input_memory.pointer)[random_input_non_zero] = 10.0f;
+    static_cast<float*>(input_memory.pointer())[random_input_non_zero] = 10.0f;
 
     // Create primitive.
     auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, true, 1.0, 1.0});
@@ -172,7 +172,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_true) {
     expected_output[random_input_non_zero] = (10.0f - get_value<float>(current_average_memory, non_zero_value)) * current_inv_std_dev_buffer;
 
     for (i = 0; i < total_input_size; ++i) {
-        EXPECT_EQ(expected_output[i], static_cast<float*>(output_memory.pointer)[i]);
+        EXPECT_EQ(expected_output[i], static_cast<float*>(output_memory.pointer())[i]);
     }
 
     delete[] expected_output;
@@ -232,7 +232,7 @@ TEST(batch_normalization, trivial_forward_same_value_spatial_false) {
         execute({bn}).wait();
 
     for (i = 0; i < total_average_size; ++i){
-        EXPECT_EQ(0.0f, static_cast<float*>(output_memory.pointer)[i]);
+        EXPECT_EQ(0.0f, static_cast<float*>(output_memory.pointer())[i]);
     }
 }
 
@@ -288,7 +288,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     // Put non zero value in random place in input
     std::uniform_int_distribution<uint32_t> dist_input(0, total_input_size - 1);
     auto random_input_non_zero = dist_input(rng);
-    static_cast<float*>(input_memory.pointer)[random_input_non_zero] = 10.0f;
+    static_cast<float*>(input_memory.pointer())[random_input_non_zero] = 10.0f;
 
     // Create primitive.
     auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, false, 1.0, 1.0});
@@ -331,7 +331,7 @@ TEST(batch_normalization, trivial_forward_one_value_spatial_false) {
     expected_output[random_input_non_zero] = (10.0f - get_value<float>(current_average_memory, non_zero_value)) * current_inv_std_dev_buffer;
 
     for (i = 0; i < total_input_size; ++i) {
-        EXPECT_EQ(expected_output[i], static_cast<float*>(output_memory.pointer)[i]);
+        EXPECT_EQ(expected_output[i], static_cast<float*>(output_memory.pointer())[i]);
     }
 
     delete[] expected_output;

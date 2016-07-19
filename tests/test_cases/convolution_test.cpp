@@ -622,19 +622,19 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
     auto& biases_diff_mem  = biases_diff.as<const memory&>();
 
     fill(fw_input_mem, 1.0f);
-    static_cast<float*>(fw_input_mem.pointer)[10] = -0.5f;
-    static_cast<float*>(fw_input_mem.pointer)[11] =  1.5f;
-    static_cast<float*>(fw_input_mem.pointer)[14] =  1.0f;
-    static_cast<float*>(fw_input_mem.pointer)[15] = -0.5f;
+    static_cast<float*>(fw_input_mem.pointer())[10] = -0.5f;
+    static_cast<float*>(fw_input_mem.pointer())[11] =  1.5f;
+    static_cast<float*>(fw_input_mem.pointer())[14] =  1.0f;
+    static_cast<float*>(fw_input_mem.pointer())[15] = -0.5f;
 
     fill(bw_input_mem, 1.0f);
-    static_cast<float*>(bw_input_mem.pointer)[3] = 2.0f;
+    static_cast<float*>(bw_input_mem.pointer())[3] = 2.0f;
 
     fill(weights_mem, 1.0f);
-    static_cast<float*>(weights_mem.pointer)[4] = -2.0f;
-    static_cast<float*>(weights_mem.pointer)[5] =  3.5f;
-    static_cast<float*>(weights_mem.pointer)[7] =  0.5f;
-    static_cast<float*>(weights_mem.pointer)[8] =  1.5f;
+    static_cast<float*>(weights_mem.pointer())[4] = -2.0f;
+    static_cast<float*>(weights_mem.pointer())[5] =  3.5f;
+    static_cast<float*>(weights_mem.pointer())[7] =  0.5f;
+    static_cast<float*>(weights_mem.pointer())[8] =  1.5f;
 
     fill(biases_mem, -3.0f);
 
@@ -696,7 +696,7 @@ TEST(convolution_f32_fw, DISABLED_optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     auto& input_memory   = input.as<const memory&>();
     auto& weights_memory = weights.as<const memory&>();
     auto& biases_memory  = biases.as<const memory&>();
-    auto output_ptr = static_cast<float*>(output_memory.pointer);
+    auto output_ptr = static_cast<float*>(output_memory.pointer());
 
     auto conv = convolution::create({engine::cpu, output, {input, weights, biases}, {1, {2, 2}, 1}, padding::zero});
 
@@ -836,8 +836,8 @@ TEST(convolution_f32_fw, DISABLED_naive_comparison_optimized_2slice_wsiz3x3_wstr
     }, {engine_resource}).wait();
 
     for(size_t output_element = 0; output_element < temp_output_memory.count(); ++output_element)
-        EXPECT_EQ(true, tests::are_equal(static_cast<float*>(ref_output_memory.pointer)[output_element],
-                                         static_cast<float*>(temp_output_memory.pointer)[output_element],
+        EXPECT_EQ(true, tests::are_equal(static_cast<float*>(ref_output_memory.pointer())[output_element],
+                                         static_cast<float*>(temp_output_memory.pointer())[output_element],
                                          0.0005f));
 }
 
@@ -1026,7 +1026,7 @@ TEST(convolution_f32_fw, DISABLED_optimized_generic_vs_ref_implementation) {
      auto& output_mem_optimized = output_optimized.as<const memory&>();
      auto& output_mem_ref       = output_ref.as<const memory&>();
      for(size_t i = 0; i < output_buffer_size; ++i)
-       EXPECT_EQ(true, tests::are_equal(static_cast<float*>(output_mem_ref.pointer)[i],
-                                        static_cast<float*>(output_mem_optimized.pointer)[i]))
+       EXPECT_EQ(true, tests::are_equal(static_cast<float*>(output_mem_ref.pointer())[i],
+                                        static_cast<float*>(output_mem_optimized.pointer())[i]))
                << "at index " << i;
 }

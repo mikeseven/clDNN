@@ -92,10 +92,11 @@ struct memory : is_a_primitive {
 
     class ptr
     {
-        memory* mem;
+    
+        const memory* mem;
         void* data;
-        friend class memory;
-        ptr(memory* mem) : mem(mem), data(mem->aquire()) {}
+        friend struct memory;
+        ptr(const memory* mem) : mem(mem), data(mem->aquire()) {}
     public:
         ptr(const ptr& rhs) : mem(rhs.mem), data(mem->aquire()) { }
         ptr& operator=(const ptr& rhs) {
@@ -104,20 +105,24 @@ struct memory : is_a_primitive {
             data = mem->aquire();
             return *this;
         }
+
         ~ptr() { mem->release(); }
-        void* get() { return data; }
+
+        template<typename T>
+        operator T*() const { return static_cast<T*>(data); }
     };
 
-    ptr pointer() { return ptr(this); }
+    ptr pointer() const { return ptr(this); }
 
     DLL_SYM static primitive describe(arguments);
     DLL_SYM static primitive allocate(arguments);
 
-    virtual void* aquire() { return _pointer; }
-    virtual void release() {}
+    virtual void* aquire() const { return _pointer; }
+    virtual void release() const {}
 
     memory &operator()(void *ptr) { _pointer = ptr; return *this; };
-    void execute_argument(void *arg) const {
+    void execute_argument(void *arg) const override
+    {
         if(argument.owns_memory) throw std::runtime_error("memory::execute_argument: this a container with its own memory; cannot set new pointer");
         else _pointer = arg;
     }

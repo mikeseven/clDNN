@@ -29,7 +29,7 @@ template<typename T>
 void set_values( neural::primitive& prim, std::initializer_list<T> args ){
     auto& mem = prim.as<const neural::memory&>();
 
-    auto it = static_cast<T*>(mem.pointer);
+    auto it = static_cast<T*>(mem.pointer());
     for(auto x : args)
         *it++ = x;
 }
@@ -38,7 +38,7 @@ template<typename T>
 void set_values(neural::primitive& prim, std::vector<T> args) {
     auto& mem = prim.as<const neural::memory&>();
 
-    auto it = static_cast<T*>(mem.pointer);
+    auto it = static_cast<T*>(mem.pointer());
     for (auto x : args)
         *it++ = x;
 }

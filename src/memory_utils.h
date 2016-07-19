@@ -20,7 +20,7 @@
 
 namespace neural {
 
-template <class T> T* data_begin(const memory &that) {return reinterpret_cast<T*>(that.pointer);}
+template <class T> T* data_begin(const memory &that) {return static_cast<T*>(that.pointer());}
 template <class T> T* data_end(const memory &that)   {return data_begin<T>(that) + that.count();}
 
 template <class T> void set_value(const memory &that, uint32_t index, T value) {data_begin<T>(that)[index] = value;}

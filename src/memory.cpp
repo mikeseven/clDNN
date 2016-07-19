@@ -38,7 +38,7 @@ memory::~memory() {
     auto it = allocators_map::instance().find(key);
     if (it == std::end(allocators_map::instance())) return;
 
-    it->second.deallocate(pointer, argument);
+    it->second.deallocate(_pointer, argument);
 }
 
 primitive memory::describe(memory::arguments arg){
@@ -51,7 +51,7 @@ primitive memory::allocate(memory::arguments arg){
     if(it == std::end(allocators_map::instance())) throw std::runtime_error("Memory allocator is not yet implemented.");
 
     auto result = std::unique_ptr<memory>(new memory(arg));
-    result->pointer = it->second.allocate(arg);
+    result->_pointer = it->second.allocate(arg);
     const_cast<memory::arguments &>(result->argument).owns_memory = true;
     return result.release();
 }

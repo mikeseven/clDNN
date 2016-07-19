@@ -46,14 +46,14 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     // todo remove
     if(filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");
 
-    auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
-    auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
+    auto input  = static_cast<float*>(this_conv->input_memory(0).pointer());
+    auto output = static_cast<float*>(this_conv->output_memory(0).pointer());
     std::vector<float*> filters;
     std::vector<float*> biases;
     for (int i = 0; i < split; i++)
     {
-        filters.push_back(static_cast<float*>(this_conv->argument.input[i * 2 + 1].primitive.as<const memory&>().pointer));
-        biases.push_back(static_cast<float*>(this_conv->argument.input[i * 2 + 2].primitive.as<const memory&>().pointer));
+        filters.push_back(static_cast<float*>(this_conv->argument.input[i * 2 + 1].primitive.as<const memory&>().pointer()));
+        biases.push_back(static_cast<float*>(this_conv->argument.input[i * 2 + 2].primitive.as<const memory&>().pointer()));
     }
 
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
@@ -171,14 +171,14 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     if(bias_arg.size.spatial[0]   != bw_input_arg.size.feature[0])    throw std::runtime_error("Backward convolution biases/bw_input dimensions does not match.");
     if(bias_arg.size              != bias_diff_arg.size)              throw std::runtime_error("Backward convolution bias/bias_diff size doesn't match.");
 
-    auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer);
-    auto fw_input     = static_cast<float*>(this_bw_conv->input_memory(1).pointer);
-    auto weights      = static_cast<float*>(this_bw_conv->input_memory(2).pointer);
+    auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer());
+    auto fw_input     = static_cast<float*>(this_bw_conv->input_memory(1).pointer());
+    auto weights      = static_cast<float*>(this_bw_conv->input_memory(2).pointer());
     //todo fw bias is used only for size check, is it needed?
 
-    auto bw_output    = static_cast<float*>(this_bw_conv->output_memory(0).pointer);
-    auto weights_diff = static_cast<float*>(this_bw_conv->output_memory(1).pointer);
-    auto bias_diff    = static_cast<float*>(this_bw_conv->output_memory(2).pointer);
+    auto bw_output    = static_cast<float*>(this_bw_conv->output_memory(0).pointer());
+    auto weights_diff = static_cast<float*>(this_bw_conv->output_memory(1).pointer());
+    auto bias_diff    = static_cast<float*>(this_bw_conv->output_memory(2).pointer());
 
     //todo review conditions below
     for(size_t i = 0; i < bw_output_offset.raw.size(); ++i){

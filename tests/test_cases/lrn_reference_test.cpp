@@ -69,8 +69,8 @@ TEST(local_response_normalization, lrn_test) {
 
     try {
 
-        buff = static_cast<float*>(output.as<const memory&>().pointer);
-        buff_oracle = static_cast<float*>(output_oracle.as<const memory&>().pointer);
+        buff = static_cast<float*>(output.as<const memory&>().pointer());
+        buff_oracle = static_cast<float*>(output_oracle.as<const memory&>().pointer());
 
         for (size_t i = 0; i < px*py*pb*pf; ++i) {
             EXPECT_NEAR(buff[i], buff_oracle[i], 1e-04F);
@@ -155,8 +155,8 @@ TEST(local_response_normalization, lrn_test_batches) {
 
     try {
 
-        buff = static_cast<float*>(output.as<const memory&>().pointer);
-        buff_oracle = static_cast<float*>(output_oracle.as<const memory&>().pointer);
+        buff = static_cast<float*>(output.as<const memory&>().pointer());
+        buff_oracle = static_cast<float*>(output_oracle.as<const memory&>().pointer());
 
         for (size_t i = 0; i < px*py*pb*pf; ++i) {
             EXPECT_NEAR(buff[i], buff_oracle[i], 1e-04F);
