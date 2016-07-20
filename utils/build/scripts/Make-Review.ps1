@@ -415,9 +415,14 @@ try {
             }
         } else { $UComment = $UploadComment; }
 
+        git fetch -q origin $MergeTargetBranch 2>&1 | ? { $_ -is [string] };
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Creating / updating review failed. Fetching merge branch (for diff) failed.';
+        }
+
         ccollab --url $ServerUri --user $User --password $Password --non-interactive --no-browser addgitdiffs --upload-comment $UComment $ReviewId $DiffSpecification 2>&1 | ? { $_ -is [string] };
         if ($LASTEXITCODE -ne 0) {
-            throw 'Creating / updating review failed. File upload failed.'
+            throw 'Creating / updating review failed. File upload failed.';
         }
     }
 
