@@ -118,58 +118,66 @@ cl::Program::Sources kernels_cache::get_program_source() const {
 }
 
 namespace {
-    class decoration_macro
-    {
-        const std::string& _m;
-        const std::string& _pre;
-        const std::string& _post;
-    public:
-        decoration_macro(const std::string& macro, const std::string& prefix, const std::string& postfix)
-            : _m(macro), _pre(prefix), _post(postfix) {}
 
-        friend std::ostream& operator<<(std::ostream& os, const decoration_macro& dm) {
-            return os
-                << "#ifdef " << dm._m << "\n"
-                << "#undef " << dm._m << "\n"
-                << "#endif\n"
-                << "#define " << dm._m << "(name) " << dm._pre << " name" << (dm._post.empty() ? "" : "##_") << dm._post
-                << std::endl;
+    class code_builder
+    {
+        std::ostringstream oss;
+        std::string code;
+        std::vector<std::string> defined_macroses;
+
+        code_builder& register_macro(const std::string& name)
+        {
+            assert(std::count(defined_macroses.begin(), defined_macroses.end(), name) == 0);
+            defined_macroses.push_back(name);
+            return *this;
+        }
+
+    public:
+        code_builder& set_code(const std::string& c)
+        {
+            assert(code.empty());
+            code = c;
+            return *this;
+        }
+
+        code_builder& decoration_macro(const std::string& name, const std::string& prefix, const std::string& postfix)
+        {
+            oss << "#define " << name << "(name) " << prefix << " name" << (postfix.empty() ? "" : "##_") << postfix << std::endl;
+            return register_macro(name);
+        }
+
+        code_builder& value_macro(const std::string& name, const std::string& value)
+        {
+            oss << "#define " << name << " " << value << std::endl;
+            return register_macro(name);
+        }
+
+        std::string str()
+        {
+            std::ostringstream os;
+            os << oss.str();
+            os << code << std::endl;
+            std::for_each(std::crbegin(defined_macroses), std::crend(defined_macroses), [&](const std::string& name) { os << "#undef " << name << std::endl; });
+            return os.str();
         }
     };
 
-    class value_macro
-    {
-        const std::string& _n;
-        const std::string& _v;
-    public:
-        value_macro(const std::string& name, const std::string& value) : _n(name), _v(value) {}
-
-        friend std::ostream& operator<<(std::ostream& os, const value_macro& vm) {
-            return os
-                << "#ifdef " << vm._n << "\n"
-                << "#undef " << vm._n << "\n"
-                << "#endif\n"
-                << "#define " << vm._n << " " << vm._v
-                << std::endl;
-        }
-    };
 }
 
 kernels_cache::kernel_id kernels_cache::create_kernel_from_template(std::shared_ptr<neural::gpu::gpu_toolkit>, const std::string& template_name, jit_definitions definitions) {
     // TODO: FIXIT: more than one kernel can be created for same template_name and definitions
     auto kernel_num = definitions.empty() ? "" : std::to_string(_kernel_codes.size());
     auto kernel_name = template_name + (kernel_num.empty() ? "" : "_") + kernel_num;
-    std::ostringstream code;
 
-    code << decoration_macro("KERNEL", "__kernel void", kernel_num)
-         << decoration_macro("FUNC", "", kernel_num)
-         << decoration_macro("FUNC_CALL", "", kernel_num);
-
+    class code_builder code;
+    code.decoration_macro("KERNEL", "__kernel void", kernel_num)
+        .decoration_macro("FUNC", "", kernel_num)
+        .decoration_macro("FUNC_CALL", "", kernel_num);
     for (auto& definition : definitions) {
-        code  << value_macro(definition.first, definition.second);
+        code.value_macro(definition.first, definition.second);
     }
 
-    code << kernel_templates::get(template_name) << std::endl;
+    code.set_code(kernel_templates::get(template_name));
 
     auto kernel_code = code.str();
 

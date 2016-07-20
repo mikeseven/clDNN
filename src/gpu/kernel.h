@@ -85,11 +85,12 @@ inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, 
     return std::static_pointer_cast<jit_constant>(std::make_shared<simple_jit_constant>(name, value));
 }
 
+template<typename T>
 class vector_jit_constant : public jit_constant {
-    const neural::vector<uint32_t>& _vec;
+    const neural::vector<T>& _vec;
 
 public:
-    vector_jit_constant(const std::string& name, const neural::vector<uint32_t>& vec)
+    vector_jit_constant(const std::string& name, const neural::vector<T>& vec)
         : jit_constant(name), _vec(vec) {}
 
     kernels_cache::jit_definitions get_definitions() const override {
@@ -105,11 +106,12 @@ public:
     }
 };
 
-inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const neural::vector<uint32_t>& value) {
-    return std::static_pointer_cast<jit_constant>(std::make_shared<vector_jit_constant>(name, value));
+template<typename T>
+inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const neural::vector<T>& value) {
+    return std::static_pointer_cast<jit_constant>(std::make_shared<vector_jit_constant<T>>(name, value));
 }
 
-class memory_jit_constant : public vector_jit_constant {
+class memory_jit_constant : public vector_jit_constant<uint32_t> {
     const neural::memory& _mem;
 
 public:
