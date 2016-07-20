@@ -375,7 +375,14 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_split2) {
     set_values(weights2, { -1.2f, 1.5f, 0.5f, -0.5f });
     set_values(biases2, { -1.0f });
 
-    auto conv = convolution::create({ engine::reference, output,{ input, weights1, biases1, weights2, biases2 },{ 1,{ 2, 2 }, 1 }, padding::zero, 2 });
+    auto conv = convolution::create({
+        engine::reference,
+        output,
+        { input, weights1, biases1, weights2, biases2 },
+        { 1,{ 2, 2 }, 1 },
+        padding::zero,
+        2 
+    });
 
     execute({ conv }).wait();
 

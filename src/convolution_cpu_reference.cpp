@@ -39,7 +39,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
 
     auto& filter_arg = this_conv->argument.input[1].primitive.as<const memory&>().argument; //convolution filter
 
-    size_t split = this_conv->argument.split;
+    auto split = this_conv->argument.split;
 
     assert( output_size.feature[0] / split == filter_arg.size.feature[0] ); // memory::format oixy
 
@@ -49,11 +49,12 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     auto input  = static_cast<float*>(this_conv->input_memory(0).pointer);
     auto output = static_cast<float*>(this_conv->output_memory(0).pointer);
     std::vector<float*> filters;
-    for (int i = 0; i < split; i++)
-        filters.push_back(static_cast<float*>(this_conv->argument.input[i * 2 + 1].primitive.as<const memory&>().pointer));
     std::vector<float*> biases;
     for (int i = 0; i < split; i++)
+    {
+        filters.push_back(static_cast<float*>(this_conv->argument.input[i * 2 + 1].primitive.as<const memory&>().pointer));
         biases.push_back(static_cast<float*>(this_conv->argument.input[i * 2 + 2].primitive.as<const memory&>().pointer));
+    }
 
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
     namespace nd = ndimensional;
@@ -79,8 +80,8 @@ void convolution_cpu_reference::implementation(const void *ptr) {
         {
             for(auto pos : range) {
                 auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
-                size_t feature_map_idx = (out_idx / batch_num) % output_feature_num;
-                size_t split_idx = feature_map_idx / (output_feature_num / split);
+                auto feature_map_idx = (out_idx / batch_num) % output_feature_num;
+                auto split_idx = feature_map_idx / (output_feature_num / split);
                 output[out_idx] = biases[split_idx][pos[f_pos] / split];
             }
 
@@ -95,6 +96,9 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                         auto pos_with_modified_ofm(pos); // assign current ofm to output position
                         pos_with_modified_ofm[1] = ofm;
 
+                        // We got 2x window for split=2, and we iterate over this window 2 times with different values for each of data sets,
+                        // so we need to offset input position based on which part of split computations we are. If we don't do this, we will iterate
+                        // two times over the same half of input values.
                         std::vector<uint32_t> fm_offset { 0, split > 1 ? ofm : 0, 0, 0 };
                         std::vector<uint32_t> arg_in_idx = (pos + fm_offset)*stride + input_offset + win_pos;
 
