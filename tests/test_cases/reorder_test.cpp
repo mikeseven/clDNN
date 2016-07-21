@@ -138,16 +138,16 @@ TEST_F(Reorder_test_fixture,reorder_test_basic) {
 
 TEST_F(Reorder_test_fixture,reorder_test_output_as_input_2pass) {
 
-    auto input2  = memory::describe({engine::reference, out_layout, out_sizes});
+    auto& input2 = output; // memory::describe({ engine::reference, out_layout, out_sizes });
     auto output2 = memory::allocate({engine::reference, in_layout, in_sizes});
     auto reorder2    = reorder::create({engine::reference,input2,output2});
 
     try
     {
         execute({input(in_buffer), reorder}).wait();
-        auto buf_out = output.as<const memory&>().pointer<float>();
+        //auto buf_out = output.as<const memory&>().pointer<float>();
 
-        execute({input2(buf_out), reorder2}).wait();
+        execute({input2, reorder2}).wait();
     }
     catch (const std::exception& ex)
     {

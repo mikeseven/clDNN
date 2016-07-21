@@ -37,15 +37,15 @@ TEST(relu_f32_fw, basic) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
     auto input  = memory::allocate({engine::reference, memory::format::yxfb_f32, { b, {y, x}, f}});
-    auto output = memory::describe({engine::reference, memory::format::yxfb_f32, { b, {y, x}, f}});
+    auto& output = input; // memory::describe({ engine::reference, memory::format::yxfb_f32, { b, {y, x}, f} });
     fill<float>(input.as<const memory&>());
 
     auto act = relu::create({engine::reference, output, input});
-    auto buf = input.as<const memory&>().pointer<float>();
     // write output to input buffer
-    execute({output(buf), act}).wait();
+    execute({output, act}).wait();
 
     // multiply all positive intigers by -1
+    auto buf = input.as<const memory&>().pointer<float>();
     for(size_t i = 0; i < y*x*f*b; ++i)
         buf[i] = (buf[i] > 0)? -buf[i] : buf[i];
 
@@ -53,6 +53,7 @@ TEST(relu_f32_fw, basic) {
 
     bool result = false;
     // every element should be 0.0f
+    buf = input.as<const memory&>().pointer<float>();
     for(size_t i = 0; i < y*x*f*b; ++i)
         result = result || buf[i];
 
