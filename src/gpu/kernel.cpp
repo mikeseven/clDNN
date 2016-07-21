@@ -16,6 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include <iterator>
 #include "kernel.h"
 #include "memory_gpu.h"
 
@@ -35,15 +36,18 @@ namespace neural { namespace gpu {
 
     memory_arg::memory_arg(const neural::memory& mem, bool copy_input, bool copy_output) : _mem(mem), _copy_input(copy_input), _copy_output(copy_output) {
         if (is_own()) {
-            _clBuffer = context()->unmap_buffer(mem.pointer())->buffer();
+            auto mem_ptr = mem.pointer<char>();
+            _clBuffer = context()->unmap_buffer(mem_ptr.get())->buffer();
         }
         else {
             mapped_buffer<neural_memory> buffer(context(), _mem.argument);
             if (_copy_input) {
-                auto src = static_cast<char*>(_mem.pointer());
+                auto src = _mem.pointer<char>();
+                //auto src = static_cast<char*>(_mem.pointer());
                 auto dst = static_cast<char*>(buffer.data()->pointer());
                 auto data_size = buffer.data()->data_size();
-                std::copy(arr_begin(src, data_size), arr_end(src, data_size), arr_begin(dst, data_size));
+                //std::copy(arr_begin(src, data_size), arr_end(src, data_size), arr_begin(dst, data_size));
+                std::copy(std::begin(src), std::end(src), arr_begin(dst, data_size));
             }
             _clBuffer = buffer.buffer();
         }
@@ -57,9 +61,10 @@ namespace neural { namespace gpu {
         else if (_copy_output) {
             mapped_buffer<neural_memory> buffer(context(), _clBuffer, _mem.argument);
             auto src = static_cast<char*>(buffer.data()->pointer());
-            auto dst = static_cast<char*>(_mem.pointer());
+            auto dst = _mem.pointer<char>();
+            //auto dst = static_cast<char*>(_mem.pointer<char>().get());
             auto data_size = buffer.data()->data_size();
-            std::copy(arr_begin(src, data_size), arr_end(src, data_size), arr_begin(dst, data_size));
+            std::copy(arr_begin(src, data_size), arr_end(src, data_size), std::begin(dst));
         }
     }
 

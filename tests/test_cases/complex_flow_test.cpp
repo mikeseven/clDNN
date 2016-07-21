@@ -70,11 +70,11 @@ TEST(complex_flow, trivial_convolution_relu) {
     auto act = relu::create({ engine::reference,output,conv });
     execute({ conv, act }).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(4.0f, get_value<float>(output_memory, 0));
-    EXPECT_FLOAT_EQ(0.0f, get_value<float>(output_memory, 1));
-    EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_memory, 2));
-    EXPECT_FLOAT_EQ(5.0f, get_value<float>(output_memory, 3));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ(4.0f, output_ptr[0]);
+    EXPECT_FLOAT_EQ(0.0f, output_ptr[1]);
+    EXPECT_FLOAT_EQ(2.0f, output_ptr[2]);
+    EXPECT_FLOAT_EQ(5.0f, output_ptr[3]);
 }
 
 TEST(complex_flow, trivial_convolution_relu_pool) {
@@ -130,6 +130,6 @@ TEST(complex_flow, trivial_convolution_relu_pool) {
     });
     execute({ conv, act, pool }).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(5.0f, get_value<float>(output_memory, 0));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ(5.0f, output_ptr[0]);
 }

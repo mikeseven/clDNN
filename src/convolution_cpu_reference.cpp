@@ -171,14 +171,14 @@ void convolution_backward_cpu_reference::implementation(const void *ptr) { //tod
     if(bias_arg.size.spatial[0]   != bw_input_arg.size.feature[0])    throw std::runtime_error("Backward convolution biases/bw_input dimensions does not match.");
     if(bias_arg.size              != bias_diff_arg.size)              throw std::runtime_error("Backward convolution bias/bias_diff size doesn't match.");
 
-    auto bw_input     = static_cast<float*>(this_bw_conv->input_memory(0).pointer());
-    auto fw_input     = static_cast<float*>(this_bw_conv->input_memory(1).pointer());
-    auto weights      = static_cast<float*>(this_bw_conv->input_memory(2).pointer());
+    auto bw_input     = this_bw_conv->input_memory(0).pointer<float>();
+    auto fw_input     = this_bw_conv->input_memory(1).pointer<float>();
+    auto weights      = this_bw_conv->input_memory(2).pointer<float>();
     //todo fw bias is used only for size check, is it needed?
 
-    auto bw_output    = static_cast<float*>(this_bw_conv->output_memory(0).pointer());
-    auto weights_diff = static_cast<float*>(this_bw_conv->output_memory(1).pointer());
-    auto bias_diff    = static_cast<float*>(this_bw_conv->output_memory(2).pointer());
+    auto bw_output    = this_bw_conv->output_memory(0).pointer<float>();
+    auto weights_diff = this_bw_conv->output_memory(1).pointer<float>();
+    auto bias_diff    = this_bw_conv->output_memory(2).pointer<float>();
 
     //todo review conditions below
     for(size_t i = 0; i < bw_output_offset.raw.size(); ++i){

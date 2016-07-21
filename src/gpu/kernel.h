@@ -120,10 +120,11 @@ public:
 
     kernels_cache::jit_definitions get_definitions() const override {
         auto result = vector_jit_constant::get_definitions();
+        auto data = _mem.pointer<float>();
         std::stringstream ss;
         ss << "(float[]){ ";
         for (int i = 0; i < _mem.count(); i++)
-            ss << static_cast<float*>(_mem.pointer())[i] << ",";
+            ss << data[i] << ",";
         ss << " } ";
         result.push_back({ _name, ss.str() });
         return result;

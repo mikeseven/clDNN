@@ -97,13 +97,13 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
         auto& current_mean        = this_bn->argument.output[1].as<const memory&>();
         auto& current_inv_std_dev = this_bn->argument.output[2].as<const memory&>();
 
-        auto input_buffer = static_cast<T*>(input.pointer());
-        auto scale_buffer = static_cast<T*>(scale.pointer());
-        auto bias_buffer  = static_cast<T*>(bias.pointer());
+        auto input_buffer = input.pointer<T>();
+        auto scale_buffer = scale.pointer<T>();
+        auto bias_buffer  = bias.pointer<T>();
 
-        auto output_buffer              = static_cast<T*>(output.pointer());
-        auto current_mean_buffer        = static_cast<T*>(current_mean.pointer());
-        auto current_inv_std_dev_buffer = static_cast<T*>(current_inv_std_dev.pointer());
+        auto output_buffer              = output.pointer<T>();
+        auto current_mean_buffer        = current_mean.pointer<T>();
+        auto current_inv_std_dev_buffer = current_inv_std_dev.pointer<T>();
 
         if(output.argument.format != input.argument.format)
             throw std::runtime_error("batch_normalization_training_forward_reference::implementation -> io format doesn't match.");
@@ -169,7 +169,7 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
         {
             //auto& moving_mean = this_bn->output_memory(3);
             auto& moving_mean = this_bn->argument.output[3].as<const memory&>();
-            auto moving_mean_buffer = static_cast<T*>(moving_mean.pointer());
+            auto moving_mean_buffer = moving_mean.pointer<T>();
 
             // For first run, set data to zero.
             if(*request->minibatch_counter == 0) fill<T>(moving_mean, 0);
@@ -186,7 +186,7 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
         {
             //auto& moving_inv_std_dev = this_bn->output_memory(4);
             auto& moving_inv_std_dev = this_bn->argument.output[4].as<const memory&>();
-            auto moving_inv_std_dev_buffer = static_cast<T*>(moving_inv_std_dev.pointer());
+            auto moving_inv_std_dev_buffer = moving_inv_std_dev.pointer<T>();
 
             // For first run, set data to zero.
             if(*request->minibatch_counter == 0) fill<T>(moving_inv_std_dev, 0);
@@ -256,15 +256,15 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
         auto& scale_grad = this_bn->argument.output[1].as<const memory&>();
         auto& bias_grad  = this_bn->argument.output[2].as<const memory&>();
 
-        auto forward_input_buffer         = static_cast<T*>(forward_input.pointer());
-        auto forward_scale_buffer         = static_cast<T*>(forward_scale.pointer());
-        auto output_grad_buffer           = static_cast<T*>(output_grad.pointer());
-        auto current_mean_buffer          = static_cast<T*>(current_mean.pointer());
-        auto current_inv_std_dev_buffer   = static_cast<T*>(current_inv_std_dev.pointer());
+        auto forward_input_buffer         = forward_input.pointer<T>();
+        auto forward_scale_buffer         = forward_scale.pointer<T>();
+        auto output_grad_buffer           = output_grad.pointer<T>();
+        auto current_mean_buffer          = current_mean.pointer<T>();
+        auto current_inv_std_dev_buffer   = current_inv_std_dev.pointer<T>();
 
-        auto input_grad_buffer = static_cast<T*>(input_grad.pointer());
-        auto scale_grad_buffer = static_cast<T*>(scale_grad.pointer());
-        auto bias_grad_buffer  = static_cast<T*>(bias_grad.pointer());
+        auto input_grad_buffer = input_grad.pointer<T>();
+        auto scale_grad_buffer = scale_grad.pointer<T>();
+        auto bias_grad_buffer  = bias_grad.pointer<T>();
 
         if(output_grad.argument.format != input_grad.argument.format)
             throw std::runtime_error("batch_normalization_training_backward_reference::implementation -> io format doesn't match.");
@@ -374,13 +374,13 @@ struct batch_normalization_inference_reference : is_an_implementation {
 
         auto& output = this_bn->argument.output[0].as<const memory&>();
 
-        auto input_buffer = static_cast<T*>(input.pointer());
-        auto scale_buffer = static_cast<T*>(scale.pointer());
-        auto bias_buffer = static_cast<T*>(bias.pointer());
-        auto mean_buffer = static_cast<T*>(mean.pointer());
-        auto inv_std_dev_buffer = static_cast<T*>(inv_std_dev.pointer());
+        auto input_buffer = input.pointer<T>();
+        auto scale_buffer = scale.pointer<T>();
+        auto bias_buffer = (bias.pointer<T>());
+        auto mean_buffer = (mean.pointer<T>());
+        auto inv_std_dev_buffer = (inv_std_dev.pointer<T>());
 
-        auto output_buffer = static_cast<T*>(output.pointer());
+        auto output_buffer = (output.pointer<T>());
 
 
         if(output.argument.format != input.argument.format)

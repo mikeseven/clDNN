@@ -90,29 +90,61 @@ struct memory : is_a_primitive {
     };
     const arguments argument;
 
+    template<typename T>
     class ptr
     {
-    
         const memory* mem;
-        void* data;
+        T* data;
         friend struct memory;
-        ptr(const memory* mem) : mem(mem), data(mem->aquire()) {}
+        ptr(const memory* mem) : mem(mem), data(static_cast<T*>(mem->aquire())) {}
     public:
-        ptr(const ptr& rhs) : mem(rhs.mem), data(mem->aquire()) { }
+        ptr(const ptr& rhs) : mem(rhs.mem), data(static_cast<T*>(mem->aquire())) { }
         ptr& operator=(const ptr& rhs) {
             mem->release();
             mem = rhs.mem;
-            data = mem->aquire();
+            data = static_cast<T*>(mem->aquire());
             return *this;
         }
 
         ~ptr() { mem->release(); }
 
-        template<typename T>
-        operator T*() const { return static_cast<T*>(data); }
+        T* get() const& { return static_cast<T*>(data); }
+        size_t size() const { return mem->count(); }
+
+#if defined(_SECURE_SCL) && (_SECURE_SCL > 0)
+        stdext::checked_array_iterator<T*> begin() const& {
+            return stdext::make_checked_array_iterator(get(), size());
+        }
+        stdext::checked_array_iterator<T*> end() const& {
+            return stdext::make_checked_array_iterator(get(), size(), size());
+        }
+#else
+        T* begin() const& { return get(); }
+        T* end() const& { return get() + size(); }
+#endif
+
+        T& operator[](size_t idx) const& {
+            assert(idx < size());
+            return data[idx];
+        }
+
+        friend bool operator==(const ptr& lhs, const ptr& rhs) {
+            return lhs.data == rhs.data;
+        }
+
+        friend bool operator!=(const ptr& lhs, const ptr& rhs) {
+            return !(lhs == rhs);
+        }
+
+        // do not use this class as temporary object
+        void begin() && {}
+        void end() && {}
+        void operator[](size_t idx) && {}
+        void get() && { }
     };
 
-    ptr pointer() const { return ptr(this); }
+    template<typename T>
+    ptr<T> pointer() const { return ptr<T>(this); }
 
     DLL_SYM static primitive describe(arguments);
     DLL_SYM static primitive allocate(arguments);

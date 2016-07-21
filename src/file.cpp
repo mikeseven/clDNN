@@ -160,7 +160,8 @@ primitive file::create(file::arguments arg) {
         auto memory_primitive = memory::allocate(*p_arg); // ofm, ifm
         delete p_arg;
         auto &mem = (memory_primitive).as<const neural::memory&>();
-        rfile.read(static_cast<char *>(mem.pointer()), data_size);
+        auto buf = mem.pointer<char>();
+        rfile.read(buf.get(), data_size);
 
         return memory_primitive;
     }

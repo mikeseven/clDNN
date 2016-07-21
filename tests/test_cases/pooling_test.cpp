@@ -48,8 +48,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
 
     execute({pool_prim}).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(2.0f, get_value<float>(output_memory, 0));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(2.0f, get_value<float>(output_ptr, 0));
 }
 
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
@@ -77,11 +77,11 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
 
     execute({pool_prim}).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(2.0f, get_value<float>(output_memory, 0));
-    EXPECT_EQ(1.5f, get_value<float>(output_memory, 1));
-    EXPECT_EQ(2.0f, get_value<float>(output_memory, 2));
-    EXPECT_EQ(1.5f, get_value<float>(output_memory, 3));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(2.0f, get_value<float>(output_ptr, 0));
+    EXPECT_EQ(1.5f, get_value<float>(output_ptr, 1));
+    EXPECT_EQ(2.0f, get_value<float>(output_ptr, 2));
+    EXPECT_EQ(1.5f, get_value<float>(output_ptr, 3));
 }
 
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
@@ -110,11 +110,11 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
 
     execute({pool_prim}).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(2.0f, get_value<float>(output_memory, 0));
-    EXPECT_EQ(0.5f, get_value<float>(output_memory, 1));
-    EXPECT_EQ(0.5f, get_value<float>(output_memory, 2));
-    EXPECT_EQ(0.5f, get_value<float>(output_memory, 3));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(2.0f, get_value<float>(output_ptr, 0));
+    EXPECT_EQ(0.5f, get_value<float>(output_ptr, 1));
+    EXPECT_EQ(0.5f, get_value<float>(output_ptr, 2));
+    EXPECT_EQ(0.5f, get_value<float>(output_ptr, 3));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -154,16 +154,16 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
 
     execute({pool_prim}).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ( 1.0f, get_value<float>(output_memory,  0)); EXPECT_EQ( 0.0f, get_value<float>(output_memory,  2));
-    EXPECT_EQ( 0.5f, get_value<float>(output_memory,  4)); EXPECT_EQ( 1.5f, get_value<float>(output_memory,  6));
-    EXPECT_EQ( 1.0f, get_value<float>(output_memory,  8)); EXPECT_EQ( 1.0f, get_value<float>(output_memory, 10));
-    EXPECT_EQ(-0.5f, get_value<float>(output_memory, 12)); EXPECT_EQ( 1.5f, get_value<float>(output_memory, 14));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ( 1.0f, get_value<float>(output_ptr,  0)); EXPECT_EQ( 0.0f, get_value<float>(output_ptr,  2));
+    EXPECT_EQ( 0.5f, get_value<float>(output_ptr,  4)); EXPECT_EQ( 1.5f, get_value<float>(output_ptr,  6));
+    EXPECT_EQ( 1.0f, get_value<float>(output_ptr,  8)); EXPECT_EQ( 1.0f, get_value<float>(output_ptr, 10));
+    EXPECT_EQ(-0.5f, get_value<float>(output_ptr, 12)); EXPECT_EQ( 1.5f, get_value<float>(output_ptr, 14));
 
-    EXPECT_EQ( 0.5f, get_value<float>(output_memory,  1)); EXPECT_EQ( 1.0f, get_value<float>(output_memory,  3));
-    EXPECT_EQ( 1.0f, get_value<float>(output_memory,  5)); EXPECT_EQ( 0.5f, get_value<float>(output_memory,  7));
-    EXPECT_EQ(-0.5f, get_value<float>(output_memory,  9)); EXPECT_EQ( 1.0f, get_value<float>(output_memory, 11));
-    EXPECT_EQ( 1.5f, get_value<float>(output_memory, 13)); EXPECT_EQ( 0.0f, get_value<float>(output_memory, 15));
+    EXPECT_EQ( 0.5f, get_value<float>(output_ptr,  1)); EXPECT_EQ( 1.0f, get_value<float>(output_ptr,  3));
+    EXPECT_EQ( 1.0f, get_value<float>(output_ptr,  5)); EXPECT_EQ( 0.5f, get_value<float>(output_ptr,  7));
+    EXPECT_EQ(-0.5f, get_value<float>(output_ptr,  9)); EXPECT_EQ( 1.0f, get_value<float>(output_ptr, 11));
+    EXPECT_EQ( 1.5f, get_value<float>(output_ptr, 13)); EXPECT_EQ( 0.0f, get_value<float>(output_ptr, 15));
 }
 
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz4x4_wstr1x1_i2x2x1x1_inoffs1) {
@@ -191,8 +191,8 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz4x4_wstr1x1_i2x2x1x1_inoffs1) {
 
     execute({pool_prim}).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(1.0f, get_value<float>(output_memory, 0));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(1.0f, get_value<float>(output_ptr, 0));
 }
 
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i2x2x1x1_inoffs1) {
@@ -221,11 +221,11 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i2x2x1x1_inoffs1) {
 
     execute({pool_prim}).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(1.0f, get_value<float>(output_memory, 0));
-    EXPECT_EQ(1.0f, get_value<float>(output_memory, 1));
-    EXPECT_EQ(1.0f, get_value<float>(output_memory, 2));
-    EXPECT_EQ(1.0f, get_value<float>(output_memory, 3));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(1.0f, get_value<float>(output_ptr, 0));
+    EXPECT_EQ(1.0f, get_value<float>(output_ptr, 1));
+    EXPECT_EQ(1.0f, get_value<float>(output_ptr, 2));
+    EXPECT_EQ(1.0f, get_value<float>(output_ptr, 3));
 }
 
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_inoffs1) {
@@ -254,11 +254,11 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_inoffs1) {
 
     execute({pool_prim}).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(0.0f, get_value<float>(output_memory, 0));
-    EXPECT_EQ(0.5f, get_value<float>(output_memory, 1));
-    EXPECT_EQ(1.0f, get_value<float>(output_memory, 2));
-    EXPECT_EQ(0.0f, get_value<float>(output_memory, 3));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(0.0f, get_value<float>(output_ptr, 0));
+    EXPECT_EQ(0.5f, get_value<float>(output_ptr, 1));
+    EXPECT_EQ(1.0f, get_value<float>(output_ptr, 2));
+    EXPECT_EQ(0.0f, get_value<float>(output_ptr, 3));
 }
 
 TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_inoffs1) {
@@ -299,16 +299,16 @@ TEST(pooling_forward, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x2x2_inoffs1) {
 
     execute({pool_prim}).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(0.0f, get_value<float>(output_memory,  0)); EXPECT_EQ(0.0f, get_value<float>(output_memory,  2));
-    EXPECT_EQ(0.5f, get_value<float>(output_memory,  4)); EXPECT_EQ(0.0f, get_value<float>(output_memory,  6));
-    EXPECT_EQ(1.0f, get_value<float>(output_memory,  8)); EXPECT_EQ(1.0f, get_value<float>(output_memory, 10));
-    EXPECT_EQ(0.0f, get_value<float>(output_memory, 12)); EXPECT_EQ(1.5f, get_value<float>(output_memory, 14));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(0.0f, get_value<float>(output_ptr,  0)); EXPECT_EQ(0.0f, get_value<float>(output_ptr,  2));
+    EXPECT_EQ(0.5f, get_value<float>(output_ptr,  4)); EXPECT_EQ(0.0f, get_value<float>(output_ptr,  6));
+    EXPECT_EQ(1.0f, get_value<float>(output_ptr,  8)); EXPECT_EQ(1.0f, get_value<float>(output_ptr, 10));
+    EXPECT_EQ(0.0f, get_value<float>(output_ptr, 12)); EXPECT_EQ(1.5f, get_value<float>(output_ptr, 14));
 
-    EXPECT_EQ(0.5f, get_value<float>(output_memory,  1)); EXPECT_EQ(0.5f, get_value<float>(output_memory,  3));
-    EXPECT_EQ(0.0f, get_value<float>(output_memory,  5)); EXPECT_EQ(0.0f, get_value<float>(output_memory,  7));
-    EXPECT_EQ(0.0f, get_value<float>(output_memory,  9)); EXPECT_EQ(1.0f, get_value<float>(output_memory, 11));
-    EXPECT_EQ(1.0f, get_value<float>(output_memory, 13)); EXPECT_EQ(0.0f, get_value<float>(output_memory, 15));
+    EXPECT_EQ(0.5f, get_value<float>(output_ptr,  1)); EXPECT_EQ(0.5f, get_value<float>(output_ptr,  3));
+    EXPECT_EQ(0.0f, get_value<float>(output_ptr,  5)); EXPECT_EQ(0.0f, get_value<float>(output_ptr,  7));
+    EXPECT_EQ(0.0f, get_value<float>(output_ptr,  9)); EXPECT_EQ(1.0f, get_value<float>(output_ptr, 11));
+    EXPECT_EQ(1.0f, get_value<float>(output_ptr, 13)); EXPECT_EQ(0.0f, get_value<float>(output_ptr, 15));
 }
 
 TEST(pooling_forward, DISABLED_naive_comparison_optimized_max_bs_yxf_bv24_f32_wsiz2x2_wstr1x1_i6x6x4x48_nopad_cpu) {
@@ -317,15 +317,15 @@ TEST(pooling_forward, DISABLED_naive_comparison_optimized_max_bs_yxf_bv24_f32_ws
     auto engine_resource = worker_cpu::create({ 4 });
 
     // Reference data.
-    auto input_prim_ref  = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 48,{ 6, 6 }, 4 }}); auto& input_memory_ref = input_prim_ref.as<const memory&>();
-    auto output_prim_ref = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 48,{ 5, 5 }, 4 }}); auto& output_memory_ref = output_prim_ref.as<const memory&>();
+    auto input_prim_ref  = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 48,{ 6, 6 }, 4 }});
+    auto output_prim_ref = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 48,{ 5, 5 }, 4 }});
 
     // Optimized data.
     auto input_prim_cpu  = memory::allocate({ engine::reference, memory::format::bs_yxf_bv24_f32,{ 48,{ 6, 6 }, 4 }});
     auto output_prim_cpu = memory::allocate({ engine::reference, memory::format::bs_yxf_bv24_f32,{ 48,{ 5, 5 }, 4 }});
 
     // Temporary data for optimized results in reference space.
-    auto temp_output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 48,{ 5, 5 }, 4 }}); auto& temp_output_memory = temp_output.as<const memory&>();
+    auto temp_output = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ 48,{ 5, 5 }, 4 }});
 
     // Reordering primitives.
     auto reorder_input_to_ref      = reorder::create({ engine::reference, input_prim_ref, input_prim_cpu });
@@ -336,6 +336,7 @@ TEST(pooling_forward, DISABLED_naive_comparison_optimized_max_bs_yxf_bv24_f32_ws
     auto pool_prim_cpu = pooling::create({ engine::cpu, pooling::mode::max, output_prim_cpu, input_prim_cpu, { 1, { 1, 1 }, 1 }, { 1, { 2, 2 }, 1 }, padding::type::zero });
 
     // Initialize data.
+    auto& input_memory_ref = input_prim_ref.as<const memory&>();
     fill_rng<float>(input_memory_ref, 5, -10.0f, 10.0f);
 
     execute(
@@ -346,6 +347,8 @@ TEST(pooling_forward, DISABLED_naive_comparison_optimized_max_bs_yxf_bv24_f32_ws
         reorder_output_to_tmp_ref
     }, {engine_resource}).wait();
 
-    for (uint32_t i = 0; i < static_cast<uint32_t>(output_memory_ref.count()); i++)
+    auto output_memory_ref = output_prim_ref.as<const memory&>().pointer<float>();
+    auto temp_output_memory = temp_output.as<const memory&>().pointer<float>();
+    for (uint32_t i = 0; i < static_cast<uint32_t>(output_memory_ref.size()); i++)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(output_memory_ref, i), get_value<float>(temp_output_memory, i))) << " at index " << i << "\n";
 }

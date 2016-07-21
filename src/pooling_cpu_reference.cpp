@@ -25,8 +25,8 @@ namespace neural {
     pooling_cpu_reference::~pooling_cpu_reference() {};
     void pooling_cpu_reference::implementation(const void *ptr) {
             auto this_pooling = static_cast<const pooling *>(ptr);
-            auto input = static_cast<float*>(this_pooling->argument.input[0].primitive.as<const memory&>().pointer());
-            auto output = static_cast<float*>(this_pooling->argument.output[0].as<const memory&>().pointer());
+            auto input = this_pooling->argument.input[0].primitive.as<const memory&>().pointer<float>();
+            auto output = this_pooling->argument.output[0].as<const memory&>().pointer<float>();
 
             auto& input_arg = this_pooling->argument.input[0].primitive.as<const memory&>().argument;
 

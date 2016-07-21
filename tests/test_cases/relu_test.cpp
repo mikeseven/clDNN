@@ -41,7 +41,7 @@ TEST(relu_f32_fw, basic) {
     fill<float>(input.as<const memory&>());
 
     auto act = relu::create({engine::reference, output, input});
-    auto buf = static_cast<float*>(input.as<const memory&>().pointer());
+    auto buf = input.as<const memory&>().pointer<float>();
     // write output to input buffer
     execute({output(buf), act}).wait();
 
@@ -82,8 +82,13 @@ TEST(relu_f32_fw, DISABLED_intrinsics_avx2) {
     execute({output, opt_relu}).wait();
     execute({ref_output, ref_relu}).wait();
 
-    for(size_t output_element = 0; output_element < output_memory.count(); ++output_element)
-        EXPECT_EQ(true, tests::are_equal(static_cast<float*>(ref_output_memory.pointer())[output_element], static_cast<float*>(output_memory.pointer())[output_element]));
+    {
+        auto ref_out_ptr = ref_output_memory.pointer<float>();
+        auto out_ptr = output_memory.pointer<float>();
+
+        for (size_t output_element = 0; output_element < output_memory.count(); ++output_element)
+            EXPECT_EQ(true, tests::are_equal(ref_out_ptr[output_element], out_ptr[output_element]));
+    }
 }
 
 TEST(relu_f32_fw, offsets) {
@@ -127,8 +132,8 @@ TEST(relu_f32_fw, offsets) {
                               {in_off_b, {in_off_x, in_off_y}, in_off_f}
                              });
 
-    auto buf_in  = static_cast<float*>( input.as<const memory&>().pointer());
-    auto buf_out = static_cast<float*>(output.as<const memory&>().pointer());
+    auto buf_in  = input.as<const memory&>().pointer<float>();
+    auto buf_out = output.as<const memory&>().pointer<float>();
 
     execute({act}).wait();
 
@@ -172,9 +177,9 @@ TEST(relu_f32_bw, basic) {
     auto act = relu_backward::create({engine::reference, {bw_output}, {bw_input, fw_input}});
     execute({act}).wait();
 
-    auto fw_input_buf  = static_cast<float*>(fw_input .as<const memory&>().pointer());
-    auto bw_input_buf  = static_cast<float*>(bw_input .as<const memory&>().pointer());
-    auto bw_output_buf = static_cast<float*>(bw_output.as<const memory&>().pointer());
+    auto fw_input_buf  = fw_input .as<const memory&>().pointer<float>();
+    auto bw_input_buf  = bw_input .as<const memory&>().pointer<float>();
+    auto bw_output_buf = bw_output.as<const memory&>().pointer<float>();
 
     bool result = true;
     for(size_t i = 0; i < y*x*f*b; ++i)
@@ -209,8 +214,13 @@ TEST(relu_f32_bw, DISABLED_intrinsics_avx2) {
     execute({bw_output, opt_relu}).wait();
     execute({ref_bw_output, ref_relu}).wait();
 
-    for(size_t output_element = 0; output_element < bw_output_memory.count(); ++output_element)
-        EXPECT_EQ(true, tests::are_equal(static_cast<float*>(ref_bw_output_memory.pointer())[output_element], static_cast<float*>(bw_output_memory.pointer())[output_element]));
+
+    {
+        auto ref_out_ptr = ref_bw_output_memory.pointer<float>();
+        auto out_ptr = bw_output_memory.pointer<float>();
+        for (size_t output_element = 0; output_element < bw_output_memory.count(); ++output_element)
+            EXPECT_EQ(true, tests::are_equal(ref_out_ptr[output_element], out_ptr[output_element]));
+    }
 }
 
 TEST(relu_f32_bw, offsets) {
@@ -268,9 +278,9 @@ TEST(relu_f32_bw, offsets) {
                                      });
     execute({act}).wait();
 
-    auto buf_fw_input  = static_cast<float*>( fw_input.as<const memory&>().pointer());
-    auto buf_bw_input  = static_cast<float*>( bw_input.as<const memory&>().pointer());
-    auto buf_bw_output = static_cast<float*>(bw_output.as<const memory&>().pointer());
+    auto buf_fw_input  =  fw_input.as<const memory&>().pointer<float>();
+    auto buf_bw_input  =  bw_input.as<const memory&>().pointer<float>();
+    auto buf_bw_output = bw_output.as<const memory&>().pointer<float>();
 
     bool result = true;
     for(uint32_t y = 0; y < out_siz_y; ++y)

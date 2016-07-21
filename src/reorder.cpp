@@ -87,8 +87,8 @@ namespace neural {
 
             static void implementation(const void *ptr) {
                 auto this_reorder = static_cast<const reorder *>(ptr);
-                auto input = static_cast<float*>(this_reorder->input_memory(0).pointer());
-                auto output = static_cast<float*>(this_reorder->output_memory(0).pointer());
+                auto input = this_reorder->input_memory(0).pointer<float>();
+                auto output = this_reorder->output_memory(0).pointer<float>();
 
                 auto& input_memory_arg  = this_reorder->input_memory(0).argument;
                 auto& input_format = input_memory_arg.format;
@@ -98,8 +98,9 @@ namespace neural {
 
                 if (input_format == output_format)
                 {
-                    if(input != output)
-                        memcpy(output, input, this_reorder->output_memory(0).count() * memory::traits(output_format).type->size);
+                    if (input != output)
+                        std::copy(std::begin(input), std::end(input), std::begin(output));
+                        //memcpy(output, input, this_reorder->output_memory(0).count() * memory::traits(output_format).type->size);
 
                     return;
                 }

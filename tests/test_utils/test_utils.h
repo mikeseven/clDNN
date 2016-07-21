@@ -27,18 +27,18 @@ namespace tests{
 
 template<typename T>
 void set_values( neural::primitive& prim, std::initializer_list<T> args ){
-    auto& mem = prim.as<const neural::memory&>();
+    auto ptr = prim.as<const neural::memory&>().pointer<T>();
 
-    auto it = static_cast<T*>(mem.pointer());
+    auto it = ptr.begin();
     for(auto x : args)
         *it++ = x;
 }
 
 template<typename T>
 void set_values(neural::primitive& prim, std::vector<T> args) {
-    auto& mem = prim.as<const neural::memory&>();
+    auto ptr = prim.as<const neural::memory&>().pointer<T>();
 
-    auto it = static_cast<T*>(mem.pointer());
+    auto it = ptr.begin();
     for (auto x : args)
         *it++ = x;
 }

@@ -32,11 +32,11 @@ namespace neural {
 
         static void implementation(const void *ptr) {
             auto this_fc = static_cast<const fully_connected *>(ptr);
-            auto input = static_cast<float*>(this_fc->input_memory(0).pointer());
-            auto output = static_cast<float*>(this_fc->output_memory(0).pointer());
-            auto weight = static_cast<float*>(this_fc->input_memory(1).pointer());
+            auto input = this_fc->input_memory(0).pointer<float>();
+            auto output = this_fc->output_memory(0).pointer<float>();
+            auto weight = this_fc->input_memory(1).pointer<float>();
             auto& weight_buffer_size = this_fc->input_memory(1).argument.size;
-            auto bias = static_cast<float*>(this_fc->argument.input[2].primitive.as<const memory&>().pointer());
+            auto bias = this_fc->argument.input[2].primitive.as<const memory&>().pointer<float>();
 
 
             auto& input_arg = this_fc->input_memory(0).argument;
