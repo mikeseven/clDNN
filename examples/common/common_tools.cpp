@@ -36,7 +36,7 @@ std::vector<std::string> get_directory_images(std::string images_path) {
 // i am not sure what is better: pass memory as primitive where layout, ptr and size are included
 // or pass as separate parameters to avoid including neural.h in common tools?
 void load_images_from_file_list(
-    std::vector<std::string> images_list,
+    const std::vector<std::string>& images_list,
     neural::primitive& memory)
 {
     auto memory_primitive = memory.as<const neural::memory&>().argument;
