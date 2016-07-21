@@ -20,7 +20,7 @@
 
 const std::string kernelName = "softmax_gpu";
 const std::string kernelCode = R"__krnl(
-/*float find_max_value(const int idx, __global float* input)
+float FUNC(find_max_value)(const int idx, __global float* input)
 {
     __local float partial_max[LWS];
     float value = -FLT_MAX;
@@ -45,7 +45,7 @@ const std::string kernelCode = R"__krnl(
     barrier(CLK_LOCAL_MEM_FENCE);
 #endif
     return partial_max[0];
-}*/
+}
 
 KERNEL (softmax_gpu)(__global neural_memory* input_mem, __global neural_memory* dst_mem)
 {
@@ -58,41 +58,8 @@ KERNEL (softmax_gpu)(__global neural_memory* input_mem, __global neural_memory* 
     const int batch_num = input_size[0];
     const int batch_offset = idx % batch_num;
 
-    //float max_value = find_max_value(idx, input);
+    float max_value = FUNC_CALL(find_max_value)(idx, input);
     
-    // function code to be replaced with _find_max_value function
-    
-
-
-    
-    __local float partial_max[LWS];
-    float value = -FLT_MAX;
-    for(int i = 0; i < ITEMS_NUM; i++)
-    {
-        value = max(value, input[LWS * i + idx]);
-    }
-    value = max(value, idx < LEFTOVERS? LWS * ITEMS_NUM + idx : -FLT_MAX);
-    partial_max[idx] = value;
-
-#if (GWS == LWS) && (LWS <= 32) 
-    barrier(CLK_LOCAL_MEM_FENCE);
-#endif
-    if(idx == 0)
-    {
-        for(int i = 1; i < LWS; i++)
-        {
-            partial_max[0] = max(partial_max[0], partial_max[i]);
-        };
-    }
-#if (GWS == LWS) && (LWS <= 32) 
-    barrier(CLK_LOCAL_MEM_FENCE);
-#endif
-    float max_value = partial_max[0];
-
-
-
-
-    //
     float tmp_vals[ITEMS_NUM + 1];
     for(int i = 0; i < ITEMS_NUM; i++)
     {
@@ -132,7 +99,7 @@ KERNEL (softmax_gpu)(__global neural_memory* input_mem, __global neural_memory* 
 
 const std::string kernelName2 = "softmax_gpu_batches";
 const std::string kernelCodeBatches = R"__krnl(
-/*float find_max_value(const int global_id, const int idx, const int batch_offset, const int batch_num, __global float* input)
+float FUNC(find_max_value)(const int global_id, const int idx, const int batch_offset, const int batch_num, __global float* input)
 {
     __local float partial_max[LWS];
     float value = -FLT_MAX;
@@ -157,7 +124,7 @@ const std::string kernelCodeBatches = R"__krnl(
     barrier(CLK_LOCAL_MEM_FENCE);
 #endif
     return partial_max[batch_offset];
-}*/
+}
 
 KERNEL (softmax_gpu_batches)(__global neural_memory* input_mem, __global neural_memory* dst_mem)
 {
@@ -171,41 +138,8 @@ KERNEL (softmax_gpu_batches)(__global neural_memory* input_mem, __global neural_
 
     const int batch_offset = global_id % batch_num;
 
-    //const float max_value = find_max_value(global_id, idx, batch_offset, batch_num, input);
+    const float max_value = FUNC_CALL(find_max_value)(global_id, idx, batch_offset, batch_num, input);
 
-    // function code to be replaced with _find_max_value function
-
-
-
-
-    __local float partial_max[LWS];
-    float value = -FLT_MAX;
-    for(int i = 0; i < ITEMS_NUM; i++)
-    {
-        value = max(value, input[LWS * i + global_id]);
-    }
-    value = max(value, global_id < LEFTOVERS? LWS * ITEMS_NUM + global_id : -FLT_MAX);
-    partial_max[global_id] = value;
-
-#if (GWS == LWS) && (LWS <= 32) 
-    barrier(CLK_LOCAL_MEM_FENCE);
-#endif
-    if(global_id < batch_num)
-    {
-        for(int i = 1; i < LWS / batch_num; i++)
-        {
-            partial_max[batch_offset] = max(partial_max[0], partial_max[i*batch_num + batch_offset]);
-        };
-    }
-#if (GWS == LWS) && (LWS <= 32) 
-    barrier(CLK_LOCAL_MEM_FENCE);
-#endif
-    const float max_value = partial_max[batch_offset];
-
-
-
-
-    //
     float tmp_vals[ITEMS_NUM + 1];
     for(int i = 0; i < ITEMS_NUM; i++)
     {
@@ -261,15 +195,15 @@ void softmax_gpu::implementation(const void *ptr) {
 
     auto& input_mem = this_softmax->input_memory(0);
     auto& output_mem = this_softmax->output_memory(0);
-    size_t dstSize = output_mem.count();
+    auto dstSize = output_mem.count();
 
-    size_t batch_num = output_size.batch[0];
+    auto batch_num = output_size.batch[0];
     if (batch_num == 1)
     {
-        const size_t preferred_lws = dstSize < 32 ? dstSize : 32;
-        const size_t preferred_gws = dstSize < 32 ? dstSize : dstSize - (dstSize % preferred_lws);
-        const size_t items_num = preferred_gws / preferred_lws;
-        const size_t leftovers = dstSize < 32 ? 0 : dstSize % preferred_lws;
+        const auto preferred_lws = dstSize < 32 ? dstSize : 32;
+        const auto preferred_gws = dstSize < 32 ? dstSize : dstSize - (dstSize % preferred_lws);
+        const auto items_num = preferred_gws / preferred_lws;
+        const auto leftovers = dstSize < 32 ? 0 : dstSize % preferred_lws;
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("ITEMS_NUM", std::to_string(items_num)),
@@ -282,15 +216,14 @@ void softmax_gpu::implementation(const void *ptr) {
     }
     else
     {
-        size_t _preferred_lws = batch_num;
-        size_t _items_num = dstSize / _preferred_lws;
+        auto _preferred_lws = batch_num;
+        auto _items_num = dstSize / _preferred_lws;
         while (_items_num > 32 || _preferred_lws < _items_num)
         {
             _preferred_lws <<= 1;
             _items_num >>= 1;
         }
-        //size_t _preferred_gws = dstSize < 32 ? dstSize : dstSize - (dstSize % _preferred_lws);
-        size_t _leftovers = dstSize % _preferred_lws;
+        auto _leftovers = dstSize % _preferred_lws;
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("ITEMS_NUM", std::to_string(_items_num)),
