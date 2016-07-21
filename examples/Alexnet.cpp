@@ -14,32 +14,36 @@
 // limitations under the License.
 */
 
-#if 1
-#include "api/neural.h"
+
+
 #include "common/common_tools.h"
 #include <iostream>
 #include <string>
 // AlexNet with weights & biases from file
-void Alexnet(uint32_t batch_size, std::string img_dir)
+void alexnet(uint32_t batch_size, std::string img_dir)
 {
     using namespace neural;
-
-    //char  *input_buffer = nullptr;
-    //char *output_buffer = nullptr;
+    auto input  = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ batch_size,{ 227, 227 }, 3, } });
+    auto output = memory::allocate({ engine::reference, memory::format::xb_f32,{ batch_size,{ 1000 }} });
     auto img_list = get_directory_images(img_dir);
+    if (img_list.empty())
+        throw std::runtime_error("Specified path doesn't contain image data\n");
     auto images_list_iterator = img_list.begin();
     auto images_list_end = img_list.end();
+    auto number_of_batches = (img_list.size() % batch_size == 0) 
+        ? img_list.size() / batch_size : img_list.size() / batch_size + 1;
 
-    while (images_list_iterator != images_list_end)
-    {
-        std::cout << images_list_iterator->c_str();
-        images_list_iterator++;
+    for (auto batch = 0; batch < number_of_batches; batch++)
+    {   // TODO: run network in loop
+        while (images_list_iterator != images_list_end)
+        {
+            // TODO: pack into bachtes
+            std::cout << images_list_iterator->c_str();
+            images_list_iterator++;
+        }
     }
-    auto input = memory::describe({ engine::reference, memory::format::yxfb_f32,{ batch_size,{ 227, 227 }, 3, } });
-    // conv1->pool1
-    //auto hidden1 = memory::describe({ engine::reference, memory::format::yxfb_f32,{ batch_size,{ 224, 224 }, 3, } })
-    auto output = memory::describe({ engine::reference, memory::format::xb_f32,{ batch_size,{ { 1000 } },1 } });
 
+    // TODO: move this to separate function;
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     auto conv1 = convolution::create(
     {
@@ -60,6 +64,7 @@ void Alexnet(uint32_t batch_size, std::string img_dir)
         memory::format::yxfb_f32,
         conv1
     });
+
     auto lrn1 = normalization::response::create(
     {
         engine::reference,
@@ -71,6 +76,7 @@ void Alexnet(uint32_t batch_size, std::string img_dir)
         0.00002f,
         0.75f 
     });
+
     auto pool1 = pooling::create(
     {
         engine::reference,
@@ -81,21 +87,8 @@ void Alexnet(uint32_t batch_size, std::string img_dir)
         { 1,{ 3,3 },1 }, // kernel
         padding::zero
     });
-    auto conv2g1 = convolution::create(
-    {
-        engine::reference,
-        memory::format::yxfb_f32,
-        {
-            pool1,
-            file::create({engine::cpu, "conv2_g1_weights.nnd"}),
-            file::create({engine::cpu, "conv2_g1_biases.nnd"}),
-        },
-        { 0,{ -2, -2 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        padding::zero
-    });
 
-    auto conv2g2 = convolution::create(
+    auto conv2_group2 = convolution::create(
     {
         engine::reference,
         memory::format::yxfb_f32,
@@ -103,86 +96,159 @@ void Alexnet(uint32_t batch_size, std::string img_dir)
             pool1,
             file::create({ engine::cpu, "conv2_g1_weights.nnd" }),
             file::create({ engine::cpu, "conv2_g1_biases.nnd" }),
+            file::create({ engine::cpu, "conv2_g2_weights.nnd" }),
+            file::create({ engine::cpu, "conv2_g2_biases.nnd" }),
         },
         { 0,{ -2, -2 }, 0 },
+        { 1,{ 1, 1 }, 1 },
+        padding::zero,
+        2
+    });
+
+    auto relu2 = relu::create(
+    {
+        engine::reference,
+        memory::format::yxfb_f32,
+        conv2_group2
+    });
+
+    auto lrn2 = normalization::response::create(
+    {
+        engine::reference,
+        memory::format::yxfb_f32,
+        relu2,
+        5,
+        padding::zero,
+        1.0f,
+        0.0001f,
+        0.75
+    });
+
+    auto pool2 = pooling::create(
+    {
+        engine::reference,
+        pooling::mode::max,
+        memory::format::yxfb_f32,
+        lrn2,
+        { 1,{ 2,2 },1 }, // strd
+        { 1,{ 3,3 },1 }, // kernel
+        padding::zero
+    });
+
+    auto conv3 = convolution::create(
+    {
+        engine::reference,
+        memory::format::yxfb_f32,
+        {
+            pool2,
+            file::create({ engine::cpu, "conv3_weights.nnd" }),
+            file::create({ engine::cpu, "conv3_biases.nnd" }),
+        },
+        { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
         padding::zero
     });
 
-
-    auto relu2g1 = relu::create(
+    auto relu3 = relu::create(
     {
         engine::reference,
         memory::format::yxfb_f32,
-        conv2g1
+        conv3
     });
 
-    auto relu2g2 = relu::create(
+    auto conv4_group2 = convolution::create(
     {
         engine::reference,
         memory::format::yxfb_f32,
-        conv2g2
-    });
-
-    auto lrn2g1 = normalization::response::create(
-    {
-        engine::reference,
-        memory::format::yxfb_f32,
-        relu2g1,
-        5,
+        {
+            relu3,
+            file::create({ engine::cpu, "conv4_g1_weights.nnd" }),
+            file::create({ engine::cpu, "conv4_g1_biases.nnd" }),
+            file::create({ engine::cpu, "conv4_g2_weights.nnd" }),
+            file::create({ engine::cpu, "conv4_g2_biases.nnd" }),
+        },
+        { 0,{ -1, -1 }, 0 },
+        { 1,{ 1, 1 }, 1 },
         padding::zero,
-        1.0f,
-        0.0001f,
-        0.75
+        2
     });
 
-    auto lrn2g2 = normalization::response::create(
+    auto relu4 = relu::create(
     {
         engine::reference,
         memory::format::yxfb_f32,
-        relu2g2,
-        5,
-        padding::zero,
-        1.0f,
-        0.0001f,
-        0.75
+        conv4_group2
     });
 
-    auto pool2g1 = pooling::create(
+    auto conv5_group2 = convolution::create(
+    {
+        engine::reference,
+        memory::format::yxfb_f32,
+        {
+            relu4,
+            file::create({ engine::cpu, "conv5_g1_weights.nnd" }),
+            file::create({ engine::cpu, "conv5_g1_biases.nnd" }),
+            file::create({ engine::cpu, "conv5_g2_weights.nnd" }),
+            file::create({ engine::cpu, "conv5_g2_biases.nnd" }),
+        },
+        { 0,{ -1, -1 }, 0 },
+        { 1,{ 1, 1 }, 1 },
+        padding::zero,
+        2
+    });
+
+    auto relu5 = relu::create(
+    {
+        engine::reference,
+        memory::format::yxfb_f32,
+        conv5_group2
+    });
+
+    auto pool5 = pooling::create(
     {
         engine::reference,
         pooling::mode::max,
         memory::format::yxfb_f32,
-        lrn2g1,
+        relu5,
         { 1,{ 2,2 },1 }, // strd
         { 1,{ 3,3 },1 }, // kernel
         padding::zero
     });
 
-    auto pool2g2 = pooling::create(
+    auto fc6 = fully_connected_relu::create(
     {
         engine::reference,
-        pooling::mode::max,
-        memory::format::yxfb_f32,
-        lrn2g2,
-        { 1,{ 2,2 },1 }, // strd
-        { 1,{ 3,3 },1 }, // kernel
-        padding::zero
+        memory::format::xb_f32,
+        pool5,
+        file::create({ engine::cpu, "fc6_weights.nnd" }),
+        file::create({ engine::cpu, "fc6_biases.nnd" }),
+        0
     });
 
-    // TODO: place here primitive:: memory that will merge two outputs into one 
+    auto fc7 = fully_connected_relu::create(
+    {
+        engine::reference,
+        memory::format::xb_f32,
+        fc6,
+        file::create({ engine::cpu, "fc7_weights.nnd" }),
+        file::create({ engine::cpu, "fc7_biases.nnd" }),
+        0
+    });
 
-     /* auto pool2      = pooling::create({engine::cpu, pooling::mode::max, memory::format::yxfb_f32, conv_relu2, 3, 2, padding::zero});
-    auto lrn2       = normalization::response::create({engine::cpu, memory::format::yxfb_f32, pool2, 5, padding::zero, 1.0f, 0.00002f, 0.75f });
-    auto conv_relu3 = convolution_relu::create({engine::cpu, memory::format::yxfb_f32, lrn2, file::create({engine::cpu, "weight3.nnb"}), file::create({engine::cpu, "bias3.nnb"}), padding::zero, 0.0f});
-    auto conv_relu4 = convolution_relu::create({engine::cpu, memory::format::yxfb_f32, conv_relu3, file::create({engine::cpu, "weight4.nnb"}), file::create({engine::cpu, "bias4.nnb"}), padding::zero, 0.0f});
-    auto conv_relu5 = convolution_relu::create({engine::cpu, memory::format::yxfb_f32, conv_relu4, file::create({engine::cpu, "weight5.nnb"}), file::create({engine::cpu, "bias5.nnb"}), padding::zero, 0.0f});
-    auto pool5      = pooling::create({engine::cpu, pooling::mode::max, memory::format::yxfb_f32, conv_relu5, 3, 2, padding::zero});
-    auto fc_relu6   = fully_connected_relu::create({engine::cpu, memory::format::yxfb_f32, pool5, file::create({engine::cpu, "weight6.nnb"}), file::create({engine::cpu, "bias6.nnb"}), 0.0f});
-    auto fc_relu7   = fully_connected_relu::create({engine::cpu, memory::format::yxfb_f32, fc_relu6, file::create({engine::cpu, "weight7.nnb"}), file::create({engine::cpu, "bias7.nnb"}), 0.0f});
-    auto fc_relu8    = fully_connected_relu::create({engine::cpu, memory::format::yxfb_f32, fc_relu7, file::create({engine::cpu, "weight8.nnb"}), file::create({engine::cpu, "bias8.nnb"}), 0.0f});
-    auto soft_max   = normalization::softmax::create({engine::cpu, output, fc_relu8});
+    auto fc8 = fully_connected_relu::create(
+    {
+        engine::reference,
+        memory::format::xb_f32,
+        fc7,
+        file::create({ engine::cpu, "fc8_weights.nnd" }),
+        file::create({ engine::cpu, "fc8_biases.nnd" }),
+        0
+    });
 
-    execute({input(input_buffer), output(input_buffer), conv_relu1, pool1, lrn1, conv_relu2, pool2, lrn2, conv_relu3, conv_relu4, conv_relu5, pool5, fc_relu6, fc_relu7, fc_relu8, soft_max}).wait();*/
+    auto softmax = normalization::softmax::create(
+    {
+        engine::reference,
+        output,
+        fc8
+    });
 }
-#endif
