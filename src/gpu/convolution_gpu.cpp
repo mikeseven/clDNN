@@ -52,8 +52,8 @@ KERNEL(Convolution_GPU)(
     const int i_ifm_num = input_size[1];
     const int out_offset = idx * batch_num + batch_offset;
 
-    const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % dst_size[2]) * STRIDE_SIZE_X;
-    const int y = (((idx / FILTER_OUTPUT_FEATURE_NUM) * STRIDE_SIZE_Y) / input_size[2]) * STRIDE_SIZE_Y;
+    const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % dst_size[2]) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
+    const int y = (((idx / FILTER_OUTPUT_FEATURE_NUM) * STRIDE_SIZE_Y) / input_size[2]) * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
 
 
     pDst[out_offset] = 0;
@@ -115,8 +115,8 @@ KERNEL(Convolution_GPU_bfxy_f32)(
     const int input_batch_size = input_feature_num * input_feature_size;
     const int input_batch_offset = input_batch_size * batch_idx;
 
-    const int input_x_offset = global_id % (input_size[2] / STRIDE_SIZE_X) * STRIDE_SIZE_X;    
-    const int input_y_offset = ((global_id / (input_size[2] / STRIDE_SIZE_X)) % (input_size[3] / STRIDE_SIZE_Y)) * STRIDE_SIZE_Y;
+    const int input_x_offset = global_id % (input_size[2] / STRIDE_SIZE_X) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;    
+    const int input_y_offset = ((global_id / (input_size[2] / STRIDE_SIZE_X)) % (input_size[3] / STRIDE_SIZE_Y)) * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
     
     const int input_offset = input_batch_offset + input_y_offset * input_size[2] + input_x_offset;
     
@@ -148,6 +148,7 @@ void convolution_gpu::implementation(const void *ptr) {
 
     auto this_conv = static_cast<const convolution *>(ptr);
 
+    auto& input_offset  = this_conv->argument.input_offset;
     auto& output_size   = this_conv->argument.output_size;
     auto& padding       = this_conv->argument.padding;
     auto& stride        = this_conv->argument.stride;
@@ -189,6 +190,7 @@ void convolution_gpu::implementation(const void *ptr) {
 
     gpu::jit_constants mem_consts{
         gpu::make_jit_constant("STRIDE", _stride),
+        gpu::make_jit_constant("INPUT_OFFSET", input_offset),
         gpu::make_jit_constant("BIAS", bias_mem),
         gpu::make_jit_constant("FILTER", filter_mem)
     };

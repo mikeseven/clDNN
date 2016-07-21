@@ -50,8 +50,8 @@ KERNEL(Convolution_relu_GPU)(
     const int i_ifm_num = input_size[1];
     const int out_offset = idx * batch_num + batch_offset;
 
-    const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % dst_size[2]) * STRIDE_SIZE_X;
-    const int y = (((idx / FILTER_OUTPUT_FEATURE_NUM) * STRIDE_SIZE_Y) / input_size[2]) * STRIDE_SIZE_Y;
+    const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % dst_size[2]) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
+    const int y = (((idx / FILTER_OUTPUT_FEATURE_NUM) * STRIDE_SIZE_Y) / input_size[2]) * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
 
 
     pDst[out_offset] = 0;
@@ -149,6 +149,7 @@ void convolution_relu_gpu::implementation(const void *ptr) {
 
     auto this_conv = static_cast<const convolution_relu *>(ptr);
 
+    auto& input_offset = this_conv->argument.input_offset;
     auto& output_size   = this_conv->argument.output_size;
     auto& padding       = this_conv->argument.padding;
     auto& stride        = this_conv->argument.stride;
@@ -191,6 +192,7 @@ void convolution_relu_gpu::implementation(const void *ptr) {
 
     gpu::jit_constants mem_consts{
         gpu::make_jit_constant("STRIDE", _stride),
+        gpu::make_jit_constant("INPUT_OFFSET", input_offset),
         gpu::make_jit_constant("BIAS", bias_mem),
         gpu::make_jit_constant("FILTER", filter_mem)
     };
