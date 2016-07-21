@@ -2,7 +2,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace neural { namespace cache {
+namespace neural { namespace gpu { namespace cache {
 
 persistent_cache::persistent_cache(const char* cache_file_name) : file(cache_file_name) { }
 
@@ -38,4 +38,4 @@ void persistent_cache::cache_file::write(const binary_data& data)
 	throw (errno);
 }
 
-} }
+} } }

@@ -1,6 +1,6 @@
 #include "serialization.h"
 
-namespace neural { namespace cache {
+namespace neural { namespace gpu { namespace cache {
 
 namespace {
 
@@ -72,4 +72,4 @@ binary_cache serialization::deserialize(const binary_data& data)
 	return ret;
 }
 
-} }
+} } }

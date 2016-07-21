@@ -8,7 +8,7 @@
 #include "gpu_compiler.h"
 #include "cost_model.h"
 
-namespace neural { namespace cache {
+namespace neural { namespace gpu { namespace cache {
 
 /// \brief Class that provides transparent cache/compiler interface for collecting compilation results 
 ///
@@ -27,4 +27,4 @@ private:
 	persistent_cache file_cache;
 };
 
-} }
+} } }

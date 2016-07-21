@@ -1,7 +1,7 @@
 #include "primitive_db.h"
 #include <algorithm>
 
-namespace neural { namespace manager {
+namespace neural { namespace gpu { namespace manager {
 
 primitive_db::primitive_db() : primitives({
 	#include "primitive_db.inc"
@@ -15,4 +15,4 @@ std::vector<code> primitive_db::get(const primitive_id & id)
 	return temp;
 }
 
-} }
+} } }

@@ -3,7 +3,7 @@
 #include "primitive_db.h"
 #include "cache.h"
 
-namespace neural { namespace manager {
+namespace neural { namespace gpu { namespace manager {
 
 /// \brief Class that selects a best binary using ordering provided by cost model
 ///
@@ -18,4 +18,4 @@ private:
 	cache::cache binary_cache;
 };
 
-} }
+} } }

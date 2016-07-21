@@ -1,6 +1,6 @@
 #include "cache.h"
 
-namespace neural { namespace cache {
+namespace neural { namespace gpu { namespace cache {
 
 static const char* cache_file_name = ""; //TODO building name
 
@@ -19,4 +19,4 @@ cache::type cache::get(context* context, kernel kernel)
 	return std::make_pair(binary, cost_model::rate(binary));
 }
 
-} }
+} } }

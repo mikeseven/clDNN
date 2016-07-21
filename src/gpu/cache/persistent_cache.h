@@ -2,7 +2,7 @@
 
 #include "cache_types.h"
 
-namespace neural { namespace cache {
+namespace neural { namespace gpu { namespace cache {
 
 /// \brief Class providing persistent cache (in file) functionality for our kernel binary base
 ///
@@ -27,4 +27,4 @@ private:
 	} file;
 };
 
-} }
+} } }

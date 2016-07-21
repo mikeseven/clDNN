@@ -2,7 +2,7 @@
 
 #include "cache_types.h"
 
-namespace neural { namespace cache {
+namespace neural { namespace gpu { namespace cache {
 
 /// \brief Class providing a cost for kernel that satisfies properties for 
 /// strict ordering allowing choosing the "best" kernel binary
@@ -21,4 +21,4 @@ struct cost_model
 	static cost rate(const binary_data& kernel_binary);
 };
 
-} }
+} } }

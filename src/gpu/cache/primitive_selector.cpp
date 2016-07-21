@@ -1,7 +1,7 @@
 #include "primitive_selector.h"
 #include <algorithm>
 
-namespace neural { namespace manager {
+namespace neural { namespace gpu { namespace manager {
 
 primitive_selector::primitive_selector() : binary_cache(), db() { }
 
@@ -14,4 +14,4 @@ cache::binary_data primitive_selector::get(context* context, const jit & jit, co
 	return best.first;
 }
 
-} }
+} } }
