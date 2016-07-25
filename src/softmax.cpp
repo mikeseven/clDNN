@@ -33,8 +33,8 @@ softmax::arguments::arguments(neural::engine::type eng, primitive out, primitive
     , output({out})
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)
-    , input({in})
-    , input_offset(in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size())
+    , input({in.output[0]})
+    , input_offset(in.output[0].as<const memory&>().argument.size.batch.size(), in.output[0].as<const memory&>().argument.size.spatial.size(), in.output[0].as<const memory&>().argument.size.feature.size())
     {}
 
 // creates primitive with softmax implementation that supports provided arguments

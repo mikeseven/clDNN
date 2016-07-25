@@ -15,8 +15,10 @@
 */
 
 #include "os_windows.h"
+#include "FreeImage_wraps.h"
 #include "api/neural.h"
 #include <string>
+
 // returns list of files (path+filename) from specified directory
 std::vector<std::string> get_directory_images(std::string images_path) {
     std::vector<std::string> result;
@@ -33,6 +35,49 @@ std::vector<std::string> get_directory_images(std::string images_path) {
     return result;
 }
 
+
+void nn_data_load_from_image(std::string  filename, // Load of all data from a image filename
+    float* dst_buffer,
+    uint32_t std_size,     // size of image both: height and width
+    bool RGB_order)        // if true - image have RGB order, otherwise BGR
+                           // supported formats: JPEG, J2K, JP2, PNG, BMP, WEBP, GIF, TIFF
+{
+    if (FIBITMAP *bitmap_raw = fi::crop_image_to_square_and_resize(fi::load_image_from_file(filename), std_size)) {
+        FIBITMAP *bitmap;
+        if (FreeImage_GetBPP(bitmap_raw) != 24) {
+            bitmap = FreeImage_ConvertTo24Bits(bitmap_raw);
+            FreeImage_Unload(bitmap_raw);
+        }
+        else bitmap = bitmap_raw;
+
+        auto bytes_per_pixel = FreeImage_GetLine(bitmap) / std_size;
+        auto data_buffer = dst_buffer;
+        if (RGB_order) {
+            for (uint32_t y = 0u; y<std_size; ++y) {
+                uint8_t *pixel = FreeImage_GetScanLine(bitmap, std_size - y - 1);
+                for (uint32_t x = 0u; x<std_size; ++x) {
+                    *(data_buffer + 0 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_RED];
+                    *(data_buffer + 1 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_GREEN];
+                    *(data_buffer + 2 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_BLUE];
+                    pixel += bytes_per_pixel;
+                }
+            }
+        }
+        else {
+            for (uint32_t y = 0u; y<std_size; ++y) {
+                uint8_t *pixel = FreeImage_GetScanLine(bitmap, std_size - y - 1);
+                for (uint32_t x = 0u; x<std_size; ++x) {
+                    *(data_buffer + 0 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_BLUE];
+                    *(data_buffer + 1 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_GREEN];
+                    *(data_buffer + 2 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_RED];
+                    pixel += bytes_per_pixel;
+                }
+            }
+        }
+        FreeImage_Unload(bitmap);
+    }
+};
+
 // i am not sure what is better: pass memory as primitive where layout, ptr and size are included
 // or pass as separate parameters to avoid including neural.h in common tools?
 void load_images_from_file_list(
@@ -40,22 +85,20 @@ void load_images_from_file_list(
     neural::primitive& memory)
 {
     auto memory_primitive = memory.as<const neural::memory&>().argument;
-    auto data_pointer     = memory.as<const neural::memory&>().pointer;
+    float* dst_ptr = static_cast<float*>(memory.as<const neural::memory&>().pointer);
+
     // validate if primitvie is memory type
-    if (data_pointer == nullptr) throw std::runtime_error("Given primitive is not a memory");
+    if (dst_ptr == nullptr) throw std::runtime_error("Given primitive is not a memory");
 
     auto batches = std::min(memory_primitive.size.batch[0], (uint32_t) images_list.size()) ;
     auto dim = memory_primitive.size.spatial;
-    auto layout = memory_primitive.format;
-    
-    switch (layout) // add new format packings in this switch
-    {
-    case neural::memory::format::yxfb_f32 :
-        //TODO: raw memory to layout conversion
-        break;
-    default:
-        throw std::runtime_error("format not supported");
-    }
-    
 
+    if (dim[0] != dim[1]) throw std::runtime_error("w and h aren't equal");
+    if (memory_primitive.format != neural::memory::format::byxf_f32) throw std::runtime_error("Only bfyx format is supported as input to images from files");
+    auto single_image_size = dim[0] * dim[0] * 3;
+    for (auto img : images_list)
+    {
+        nn_data_load_from_image(img, dst_ptr, dim[0], true);
+        dst_ptr += single_image_size;
+    }
 }
