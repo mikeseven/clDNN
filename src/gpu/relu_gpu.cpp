@@ -60,7 +60,7 @@ void relu_gpu::implementation(const void *ptr) {
     }
 
     auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem, float>(kernelName);
-    kernel({ dstSize, std::min(dstSize, (size_t)lws) }, input_mem, output_mem, negative_slope);
+    kernel({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) }, input_mem, output_mem, negative_slope);
 
 }
 

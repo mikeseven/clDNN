@@ -89,11 +89,6 @@ file::arguments::arguments(neural::engine::type aengine, std::string aname, memo
     , name(aname)
     , output{{memory::allocate({aengine, aformat, asize})}} {}
 
-file::arguments::arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat)
-    : engine(aengine)
-    , name(aname)
-    , output{{memory::describe({aengine, aformat, std::vector<uint32_t>()})}} {}
-
 file::arguments::arguments(neural::engine::type aengine, std::string aname, primitive aoutput)
     : engine(aengine)
     , name(aname)
@@ -131,7 +126,6 @@ primitive file::create(file::arguments arg) {
         if (read_crc() != crc32(array.get(), array_size, CRC_INIT)) throw std::runtime_error("nn_data_t size array crc mismatch");
 
         // create target nn::data & load data into it               
-        auto data_size = nn_data_buffer_size_ptr(sizeof(float), file_head.dimension, array.get());
         
         memory::arguments* p_arg = nullptr;
 
@@ -161,7 +155,8 @@ primitive file::create(file::arguments arg) {
         delete p_arg;
         auto &mem = (memory_primitive).as<const neural::memory&>();
         auto buf = mem.pointer<char>();
-        rfile.read(buf.get(), data_size);
+        std::istream_iterator<char> src_begin(rfile);
+        std::copy_n(src_begin, buf.size(), std::begin(buf));
 
         return memory_primitive;
     }

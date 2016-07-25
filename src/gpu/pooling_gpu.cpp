@@ -112,7 +112,7 @@ namespace neural {
             if (this_pooling->argument.mode == pooling::mode::max)
             {
                 auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem>{ kernelName, mem_consts };
-                kernel({ dstSize, std::min( dstSize, (size_t)16 ) }, input_mem, output_mem);
+                kernel({ dstSize, std::min( dstSize, static_cast<size_t>(16) ) }, input_mem, output_mem);
             }
             else if (this_pooling->argument.mode == pooling::mode::average)
             {

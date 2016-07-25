@@ -63,7 +63,7 @@ struct memory : is_a_primitive {
         any=static_cast<uint32_t>(-1)
     }; };
 
-    static const format_traits traits(format::type fmt) {
+    static format_traits traits(format::type fmt) {
         switch(fmt) {
         case format::   x_f32: return {1, type_id<float>()};
         case format::  xb_f32: return {2, type_id<float>()};
@@ -84,39 +84,45 @@ struct memory : is_a_primitive {
         neural::engine::type            engine;
         neural::memory::format::type    format;
         neural::vector<uint32_t>        size;
-        bool                            owns_memory;
 
         DLL_SYM arguments(neural::engine::type aengine, memory::format::type aformat, neural::vector<uint32_t> asize);
     };
-    const arguments argument;
+
+    struct buffer
+    {
+        virtual void* lock() = 0;
+        virtual void release() = 0;
+        virtual void reset(void*) = 0;
+        virtual size_t size() = 0;
+        virtual ~buffer() = default;
+    };
 
     template<typename T>
     class ptr
     {
-        const memory* mem;
+        std::shared_ptr<buffer> _buffer;
         T* data;
         friend struct memory;
-        ptr(const memory* mem) : mem(mem), data(static_cast<T*>(mem->aquire())) {}
     public:
-        ptr(const ptr& rhs) : mem(rhs.mem), data(static_cast<T*>(mem->aquire())) { }
+        ptr(std::shared_ptr<buffer> buffer) : _buffer(buffer), data(static_cast<T*>(buffer->lock())) {}
+        ptr(const ptr& rhs) : _buffer(rhs._buffer), data(static_cast<T*>(_buffer->lock())) { }
         ptr& operator=(const ptr& rhs) {
-            mem->release();
-            mem = rhs.mem;
-            data = static_cast<T*>(mem->aquire());
+            _buffer->release();
+            _buffer = rhs._buffer;
+            data = static_cast<T*>(_buffer->lock());
             return *this;
         }
 
-        ~ptr() { mem->release(); }
+        ~ptr() { _buffer->release(); }
 
-        T* get() const& { return static_cast<T*>(data); }
-        size_t size() const { return mem->count(); }
+        size_t size() const { return _buffer->size()/sizeof(T); }
 
 #if defined(_SECURE_SCL) && (_SECURE_SCL > 0)
         stdext::checked_array_iterator<T*> begin() const& {
-            return stdext::make_checked_array_iterator(get(), size());
+            return stdext::make_checked_array_iterator(data, size());
         }
         stdext::checked_array_iterator<T*> end() const& {
-            return stdext::make_checked_array_iterator(get(), size(), size());
+            return stdext::make_checked_array_iterator(data, size(), size());
         }
 #else
         T* begin() const& { return get(); }
@@ -137,33 +143,33 @@ struct memory : is_a_primitive {
         }
 
         // do not use this class as temporary object
+        // ReSharper disable CppMemberFunctionMayBeStatic, CppMemberFunctionMayBeConst
         void begin() && {}
         void end() && {}
         void operator[](size_t idx) && {}
-        void get() && { }
+        // ReSharper restore CppMemberFunctionMayBeConst, CppMemberFunctionMayBeStatic
     };
 
+    const arguments argument;
+
+    std::shared_ptr<buffer> get_buffer() const { return _buffer; }
+
     template<typename T>
-    ptr<T> pointer() const { return ptr<T>(this); }
+    ptr<T> pointer() const { return ptr<T>(get_buffer()); }
 
     DLL_SYM static primitive describe(arguments);
     DLL_SYM static primitive allocate(arguments);
+    DLL_SYM static size_t size_of(arguments);
 
-    virtual void* aquire() const { return _pointer; }
-    virtual void release() const {}
-
-    memory &operator()(void *ptr) { _pointer = ptr; return *this; };
     void execute_argument(void *arg) const override
     {
-        if(argument.owns_memory) throw std::runtime_error("memory::execute_argument: this a container with its own memory; cannot set new pointer");
-        else _pointer = arg;
+        get_buffer()->reset(arg);
     }
     DLL_SYM size_t count() const;
 
-    ~memory();
 private:
-    mutable void *_pointer;
-    memory(arguments arg) : is_a_primitive(type_id<const memory>()), argument(arg), _pointer(0) {};
+    std::shared_ptr<buffer> _buffer;
+    memory(arguments arg, std::shared_ptr<buffer> buffer) : is_a_primitive(type_id<const memory>()), argument(arg), _buffer(buffer) {};
 };
 
 
@@ -188,7 +194,6 @@ struct file : is_a_primitive {
         std::vector<primitive>  output;
 
         DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize);
-        DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat);
         DLL_SYM arguments(neural::engine::type aengine, std::string aname, primitive aoutput);
         DLL_SYM arguments(neural::engine::type aengine, std::string aname);
     };

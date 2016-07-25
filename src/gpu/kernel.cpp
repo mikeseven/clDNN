@@ -36,35 +36,23 @@ namespace neural { namespace gpu {
 
     memory_arg::memory_arg(const neural::memory& mem, bool copy_input, bool copy_output) : _mem(mem), _copy_input(copy_input), _copy_output(copy_output) {
         if (is_own()) {
-            auto mem_ptr = mem.pointer<char>();
-            _clBuffer = context()->unmap_buffer(mem_ptr.get())->buffer();
+            _gpu_buffer = std::static_pointer_cast<gpu_buffer>(_mem.get_buffer());
         }
         else {
-            mapped_buffer<neural_memory> buffer(context(), _mem.argument);
+            _gpu_buffer = std::make_shared<gpu_buffer>(_mem.argument);
             if (_copy_input) {
-                auto src = _mem.pointer<char>();
-                //auto src = static_cast<char*>(_mem.pointer());
-                auto dst = static_cast<char*>(buffer.data()->pointer());
-                auto data_size = buffer.data()->data_size();
-                //std::copy(arr_begin(src, data_size), arr_end(src, data_size), arr_begin(dst, data_size));
-                std::copy(std::begin(src), std::end(src), arr_begin(dst, data_size));
+                auto src = mem.pointer<char>();
+                memory::ptr<char> dst(_gpu_buffer);
+                std::copy(std::begin(src), std::end(src), std::begin(dst));
             }
-            _clBuffer = buffer.buffer();
         }
     }
 
     memory_arg::~memory_arg() {
-        if (is_own()) {
-            //TODO remove const_cast: check if .pointer field of gpu owned_memory can be kept unchanged.
-            const_cast<neural::memory&>(_mem)(context()->map_memory_buffer(_clBuffer, _mem.argument)->data()->pointer());
-        }
-        else if (_copy_output) {
-            mapped_buffer<neural_memory> buffer(context(), _clBuffer, _mem.argument);
-            auto src = static_cast<char*>(buffer.data()->pointer());
+        if (_copy_output && !is_own()) {
+            memory::ptr<char> src(_gpu_buffer);
             auto dst = _mem.pointer<char>();
-            //auto dst = static_cast<char*>(_mem.pointer<char>().get());
-            auto data_size = buffer.data()->data_size();
-            std::copy(arr_begin(src, data_size), arr_end(src, data_size), std::begin(dst));
+            std::copy(std::begin(src),std::end(src), std::begin(dst));
         }
     }
 

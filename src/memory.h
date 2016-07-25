@@ -21,10 +21,5 @@
 
 namespace neural {
 
-    struct memory_allocator {
-        std::function<void*(memory::arguments arg)> allocate;
-        std::function<void(void*, memory::arguments)> deallocate;
-    };
-
-    using allocators_map = singleton_map<engine::type, memory_allocator>;
+    using allocators_map = singleton_map<engine::type, std::function<std::shared_ptr<memory::buffer>(memory::arguments, bool)>>;
 }

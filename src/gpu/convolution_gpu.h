@@ -26,7 +26,7 @@ namespace neural {
         const convolution &outer;
 
         static is_an_implementation *create(convolution &arg) { return new convolution_gpu(arg); };
-        task_group work() {
+        task_group work() override {
             return{ { task{ implementation, &outer } }, schedule::single };
         }
     };

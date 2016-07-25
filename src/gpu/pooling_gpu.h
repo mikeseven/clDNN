@@ -25,7 +25,7 @@ namespace neural {
         static void implementation(const void *ptr);
 
         static is_an_implementation *create(pooling &arg) { return new pooling_gpu(arg); };
-        task_group work() { return {{task{implementation, &outer}}, schedule::single}; };
+        task_group work() override { return {{task{implementation, &outer}}, schedule::single}; };
 
         const pooling &outer;
     };

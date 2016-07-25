@@ -16,6 +16,10 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "ocl_toolkit.h"
+#include <map>
+#include <mutex>
+#include <vector>
 
 namespace neural {namespace gpu {
 class gpu_toolkit;

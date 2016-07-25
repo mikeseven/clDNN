@@ -37,7 +37,7 @@ TEST(relu_f32_fw, basic) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
     auto input  = memory::allocate({engine::reference, memory::format::yxfb_f32, { b, {y, x}, f}});
-    auto& output = input; // memory::describe({ engine::reference, memory::format::yxfb_f32, { b, {y, x}, f} });
+    auto& output = input;
     fill<float>(input.as<const memory&>());
 
     auto act = relu::create({engine::reference, output, input});
