@@ -134,10 +134,50 @@ inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name,
     return std::static_pointer_cast<jit_constant>(std::make_shared<memory_jit_constant>(name, value));
 }
 
+class memories_jit_constant : public vector_jit_constant<uint32_t> {
+    const std::vector<std::reference_wrapper<const neural::memory>> _mem;
+
+public:
+    memories_jit_constant(const std::string& name, const std::vector<std::reference_wrapper<const neural::memory>> mem)
+        :vector_jit_constant(name, mem[0].get().argument.size), _mem(mem) {}
+
+    kernels_cache::jit_definitions get_definitions() const override {
+        for (int i = 1; i < _mem.size(); i++)
+        {
+            if (_mem[0].get().count() != _mem[i].get().count())
+                throw std::exception("All memories must contain the same number of elements!");
+        }
+        auto result = vector_jit_constant::get_definitions();
+        result.push_back({ _name + "_ARRAY_NUM", std::to_string(_mem.size()) });
+        std::stringstream ss;
+        ss << "(float[][" + std::to_string(_mem[0].get().count()) + "]) {";
+        for (auto& m : _mem)
+        {
+            auto & _m = m.get();
+            ss << "{ ";
+            for (int i = 0; i < _m.count(); i++)
+                ss << static_cast<float*>(_m.pointer)[i] << ",";
+            ss << " } ,";
+        }
+        ss << " } ";
+        result.push_back({ _name, ss.str() });
+        return result;
+    }
+};
+
+inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const std::vector<std::reference_wrapper<const neural::memory>> value) {
+    return std::static_pointer_cast<jit_constant>(std::make_shared<memories_jit_constant>(name, value));
+}
+
 class jit_constants {
     std::vector<std::shared_ptr<jit_constant>> _constants;
 public:
     jit_constants(std::initializer_list<std::shared_ptr<jit_constant>> constants) :_constants(constants) {}
+
+    void add_constant(std::shared_ptr<jit_constant> constant)
+    {
+        _constants.push_back(constant);
+    }
 
     kernels_cache::jit_definitions get_definitions() const {
         kernels_cache::jit_definitions definitons;

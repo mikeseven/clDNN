@@ -27,6 +27,7 @@ namespace neural {
 
 const std::string kernelName = "Convolution_GPU";
 const std::string kernelCode = R"__krnl(
+#define INPUT_SIZE_X input_size[2]
 KERNEL(Convolution_GPU)(
     const __global neural_memory* input_mem,
     __global neural_memory* dst_mem)
@@ -43,20 +44,21 @@ KERNEL(Convolution_GPU)(
     const int batch_offset = global_id % batch_num;
 
     const int ofm_num = dst_size[1];
-    const int ofm_offset = (global_id / batch_num) % ofm_num;
+    const int ofm_offset = ((global_id / batch_num) % ofm_num) / FILTER_ARRAY_NUM;
 
     const int f_ofm_offset = (global_id % FILTER_OUTPUT_FEATURE_NUM) * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
 
-    const int idx = (global_id / batch_num);
+    const int idx = (global_id / batch_num) / FILTER_ARRAY_NUM;
 
     const int i_ifm_num = input_size[1];
-    const int out_offset = idx * batch_num + batch_offset;
 
     const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % dst_size[2]) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
-    const int y = (((idx / FILTER_OUTPUT_FEATURE_NUM) * STRIDE_SIZE_Y) / input_size[2]) * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
+    const int y = (((idx / FILTER_OUTPUT_FEATURE_NUM) * STRIDE_SIZE_Y) / INPUT_SIZE_X) * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
 
+    int divider = FILTER_ARRAY_NUM > FILTER_INPUT_FEATURE_NUM ? 1 : FILTER_INPUT_FEATURE_NUM / FILTER_ARRAY_NUM;
+    const int split_idx = ((global_id / batch_num) / divider) % FILTER_ARRAY_NUM;
 
-    pDst[out_offset] = 0;
+    pDst[global_id] = 0;
     for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
     {
         const int f_ifm_offset = h * FILTER_SIZE_Y * FILTER_SIZE_X;
@@ -66,18 +68,23 @@ KERNEL(Convolution_GPU)(
             {
                 int input_offset_x = x + j;
                 int input_offset_y = y + i;
+
                 bool zero = false;
                 zero = input_offset_x < 0 ? true : zero;
                 zero = input_offset_y < 0 ? true : zero;
                 zero = input_offset_x >= input_size[2] ? true : zero;
                 zero = input_offset_y >= input_size[3] ? true : zero;
-                int input_idx = (x + j + ((y + i) * input_size[2])) * batch_num * i_ifm_num + h * batch_num + batch_offset;
+
+                int input_idx = (input_offset_x + (input_offset_y * INPUT_SIZE_X)) * batch_num * i_ifm_num;
+                input_idx += split_idx * batch_num;
+                input_idx += h * batch_num;
+                input_idx += batch_offset;
                 int filter_idx = (i * FILTER_SIZE_X + j) + f_ofm_offset + f_ifm_offset;
-                pDst[out_offset] += zero ? 0 : input[input_idx] * FILTER[filter_idx];
+                pDst[global_id] += zero ? 0 : input[input_idx] * FILTER[split_idx][filter_idx];
             }
         }
     }
-    pDst[out_offset] += BIAS[ofm_offset];
+   pDst[global_id] += BIAS[split_idx][ofm_offset];
 }
 )__krnl";
 
@@ -131,12 +138,12 @@ KERNEL(Convolution_GPU_bfxy_f32)(
             {
                 int input_idx = j + i * input_size[2] + input_offset + input_feature_offset;
                 int filter_idx = (i * FILTER_SIZE_X + j) + filter_output_feature_offset + filter_input_feature_offset;
-                pDst[global_id] += input[input_idx] * FILTER[filter_idx];
+                pDst[global_id] += input[input_idx] * FILTER[0][filter_idx];
             }
         }
     }
-
-    pDst[global_id] += BIAS[output_feature_idx];
+    // TODO!!!! change [0] from BIAS and FILTER to something that works - [0] is for temporary compilation
+    pDst[global_id] += BIAS[0][output_feature_idx];
 }
 )__krnl";
 
@@ -153,17 +160,23 @@ void convolution_gpu::implementation(const void *ptr) {
     auto& padding       = this_conv->argument.padding;
     auto& stride        = this_conv->argument.stride;
 
+    auto split = this_conv->argument.split;
     auto& filter_arg = this_conv->argument.input[1].primitive.as<const memory&>().argument; //convolution filter
 
-    assert( output_size.feature[0] == filter_arg.size.feature[0] ); // memory::format oixy
+    assert( output_size.feature[0] / split == filter_arg.size.feature[0] ); // memory::format oixy
 
     // todo remove
     if(filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");
 
     auto& input_mem  = this_conv->input_memory(0);
     auto& output_mem = this_conv->output_memory(0);
-    auto& filter_mem = this_conv->argument.input[1].primitive.as<const memory&>();
-    auto& bias_mem   = this_conv->argument.input[2].primitive.as<const memory&>();
+    std::vector<std::reference_wrapper<const neural::memory>> biases_mem;
+    std::vector<std::reference_wrapper<const neural::memory>> filters_mem;
+    for (int i = 0; i < split; i++)
+    {
+        filters_mem.push_back(this_conv->argument.input[i * 2 + 1].primitive.as<const memory&>());
+        biases_mem.push_back(this_conv->argument.input[i * 2 + 2].primitive.as<const memory&>());
+    }
 
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
     namespace nd = ndimensional;
@@ -191,8 +204,8 @@ void convolution_gpu::implementation(const void *ptr) {
     gpu::jit_constants mem_consts{
         gpu::make_jit_constant("STRIDE", _stride),
         gpu::make_jit_constant("INPUT_OFFSET", input_offset),
-        gpu::make_jit_constant("BIAS", bias_mem),
-        gpu::make_jit_constant("FILTER", filter_mem)
+        gpu::make_jit_constant("BIAS", biases_mem), 
+        gpu::make_jit_constant("FILTER", filters_mem)
     };
 
     switch(padding){
