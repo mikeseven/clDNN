@@ -43,7 +43,8 @@ void parse_parameters(std::map<std::string, std::string> &config, std::vector<st
 
 int main(int argc, char *argv[])
 {
-    extern void Alexnet(uint32_t batch_size, std::string img_dir);
+    // TODO: create header file for all examples
+    extern void alexnet(uint32_t batch_size, std::string img_dir);
 
     if (argc <= 1)
     {
@@ -78,7 +79,7 @@ int main(int argc, char *argv[])
         if (config["model"].compare("alexnet") == 0)
         {
             try {
-                Alexnet(std::stoi(config["batch"]), config["input"]);
+                alexnet(std::stoi(config["batch"]), config["input"]);
             }
             catch (std::exception &e) {
                 std::cerr << e.what();
