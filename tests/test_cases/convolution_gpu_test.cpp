@@ -381,15 +381,15 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x1_nopad_split2) {
 
     execute({ conv }).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(8.0f, get_value<float>(output_memory, 0));
-    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 1));
-    EXPECT_FLOAT_EQ(0.5f, get_value<float>(output_memory, 2));
-    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 3));
-    EXPECT_FLOAT_EQ(6.0f, get_value<float>(output_memory, 4));
-    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 5));
-    EXPECT_FLOAT_EQ(9.0f, get_value<float>(output_memory, 6));
-    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 7));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ(8.0f,   get_value<float>(output_ptr, 0));
+    EXPECT_FLOAT_EQ(3.65f,  get_value<float>(output_ptr, 1));
+    EXPECT_FLOAT_EQ(0.5f,   get_value<float>(output_ptr, 2));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_ptr, 3));
+    EXPECT_FLOAT_EQ(6.0f,   get_value<float>(output_ptr, 4));
+    EXPECT_FLOAT_EQ(3.65f,  get_value<float>(output_ptr, 5));
+    EXPECT_FLOAT_EQ(9.0f,   get_value<float>(output_ptr, 6));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_ptr, 7));
 }
 
 TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2) {
@@ -467,23 +467,23 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2) {
 
     execute({ conv }).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(8.0f, get_value<float>(output_memory, 0));
-    EXPECT_FLOAT_EQ(8.0f, get_value<float>(output_memory, 1));
-    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 2));
-    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 3));
-    EXPECT_FLOAT_EQ(0.5f, get_value<float>(output_memory, 4));
-    EXPECT_FLOAT_EQ(0.5f, get_value<float>(output_memory, 5));
-    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 6));
-    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 7));
-    EXPECT_FLOAT_EQ(6.0f, get_value<float>(output_memory, 8));
-    EXPECT_FLOAT_EQ(6.0f, get_value<float>(output_memory, 9));
-    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 10));
-    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 11));
-    EXPECT_FLOAT_EQ(9.0f, get_value<float>(output_memory, 12));
-    EXPECT_FLOAT_EQ(9.0f, get_value<float>(output_memory, 13));
-    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 14));
-    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 15));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ(8.0f,   get_value<float>(output_ptr, 0));
+    EXPECT_FLOAT_EQ(8.0f,   get_value<float>(output_ptr, 1));
+    EXPECT_FLOAT_EQ(3.65f,  get_value<float>(output_ptr, 2));
+    EXPECT_FLOAT_EQ(3.65f,  get_value<float>(output_ptr, 3));
+    EXPECT_FLOAT_EQ(0.5f,   get_value<float>(output_ptr, 4));
+    EXPECT_FLOAT_EQ(0.5f,   get_value<float>(output_ptr, 5));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_ptr, 6));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_ptr, 7));
+    EXPECT_FLOAT_EQ(6.0f,   get_value<float>(output_ptr, 8));
+    EXPECT_FLOAT_EQ(6.0f,   get_value<float>(output_ptr, 9));
+    EXPECT_FLOAT_EQ(3.65f,  get_value<float>(output_ptr, 10));
+    EXPECT_FLOAT_EQ(3.65f,  get_value<float>(output_ptr, 11));
+    EXPECT_FLOAT_EQ(9.0f,   get_value<float>(output_ptr, 12));
+    EXPECT_FLOAT_EQ(9.0f,   get_value<float>(output_ptr, 13));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_ptr, 14));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_ptr, 15));
 }
 
 /*TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad_reorder) {

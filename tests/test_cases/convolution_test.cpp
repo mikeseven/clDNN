@@ -386,15 +386,15 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_split2) {
 
     execute({ conv }).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(8.0f, get_value<float>(output_memory, 0));
-    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 1));
-    EXPECT_FLOAT_EQ(0.5f, get_value<float>(output_memory, 2));
-    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 3));
-    EXPECT_FLOAT_EQ(6.0f, get_value<float>(output_memory, 4));
-    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 5));
-    EXPECT_FLOAT_EQ(9.0f, get_value<float>(output_memory, 6));
-    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 7));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ(8.0f,   get_value<float>(output_ptr, 0));
+    EXPECT_FLOAT_EQ(3.65f,  get_value<float>(output_ptr, 1));
+    EXPECT_FLOAT_EQ(0.5f,   get_value<float>(output_ptr, 2));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_ptr, 3));
+    EXPECT_FLOAT_EQ(6.0f,   get_value<float>(output_ptr, 4));
+    EXPECT_FLOAT_EQ(3.65f,  get_value<float>(output_ptr, 5));
+    EXPECT_FLOAT_EQ(9.0f,   get_value<float>(output_ptr, 6));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_ptr, 7));
 }
 
 TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
@@ -462,7 +462,6 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
     auto results_equal = std::equal(std::begin(bw_out_expected), std::end(bw_out_expected), std::begin(bw_output_ptr));
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong output gradient";
 
-    results_equal = true;
     float weights_diff_expected[] = { -7.00f, 35.00f, 5.50f, 32.25f };
     auto weights_diff_ptr = weights_diff_mem.pointer<float>();
     results_equal = std::equal(std::begin(weights_diff_expected), std::end(weights_diff_expected), std::begin(weights_diff_ptr));
@@ -533,10 +532,9 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
                                                  padding::zero});
     execute({conv_bw}).wait();
 
-    bool results_equal = true;
     float bw_output_expected[] = { -4.0f, 7.0f, 1.0f, 3.0f };
     auto bw_output_ptr = bw_output_mem.pointer<float>();
-    results_equal = std::equal(std::begin(bw_output_expected), std::end(bw_output_expected), std::begin(bw_output_ptr));
+    auto results_equal = std::equal(std::begin(bw_output_expected), std::end(bw_output_expected), std::begin(bw_output_ptr));
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong output gradient";
 
     float weights_diff_expected[] = { 2.0f, 10.5f, 0.0f, 1.0f, -1.5f, 0.0f, 0.0f, 0.0f, 0.0f };

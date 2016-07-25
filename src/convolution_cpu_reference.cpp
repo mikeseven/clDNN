@@ -46,14 +46,14 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     // todo remove
     if(filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");
 
-    auto input  = static_cast<float*>(this_conv->input_memory(0).pointer());
-    auto output = static_cast<float*>(this_conv->output_memory(0).pointer());
-    std::vector<float*> filters;
-    std::vector<float*> biases;
+    auto input  = this_conv->input_memory(0).pointer<float>();
+    auto output = this_conv->output_memory(0).pointer<float>();
+    std::vector<memory::ptr<float>> filters;
+    std::vector<memory::ptr<float>> biases;
     for (int i = 0; i < split; i++)
     {
-        filters.push_back(static_cast<float*>(this_conv->argument.input[i * 2 + 1].primitive.as<const memory&>().pointer()));
-        biases.push_back(static_cast<float*>(this_conv->argument.input[i * 2 + 2].primitive.as<const memory&>().pointer()));
+        filters.push_back(this_conv->argument.input[i * 2 + 1].primitive.as<const memory&>().pointer<float>());
+        biases.push_back(this_conv->argument.input[i * 2 + 2].primitive.as<const memory&>().pointer<float>());
     }
 
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.

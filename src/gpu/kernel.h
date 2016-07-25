@@ -156,9 +156,10 @@ public:
         for (auto& m : _mem)
         {
             auto & _m = m.get();
+            auto data = _m.pointer<float>();
             ss << "{ ";
             for (int i = 0; i < _m.count(); i++)
-                ss << static_cast<float*>(_m.pointer)[i] << ",";
+                ss << data[i] << ",";
             ss << " } ,";
         }
         ss << " } ";
