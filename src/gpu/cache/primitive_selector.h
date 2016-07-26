@@ -9,13 +9,13 @@ namespace neural { namespace gpu { namespace manager {
 ///
 struct primitive_selector
 {
-	primitive_selector( );
+    primitive_selector( );
 
-	cache::binary_data get(context* context, const jit& jit, const primitive_id& id);
+    cache::binary_data get(context* context, const jit& jit, const primitive_id& id);
 
 private:
-	primitive_db db;
-	cache::cache binary_cache;
+    primitive_db db;
+    cache::cache binary_cache;
 };
 
 } } }

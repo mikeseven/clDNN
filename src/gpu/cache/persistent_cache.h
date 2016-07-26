@@ -9,22 +9,22 @@ namespace neural { namespace gpu { namespace cache {
 class persistent_cache
 {
 public:
-	persistent_cache(const char * cache_file_name);
-	~persistent_cache() = default;
+    persistent_cache(const char * cache_file_name);
+    ~persistent_cache() = default;
 
-	binary_data get();
-	void set(binary_data);
+    binary_data get();
+    void set(binary_data);
 
 private:
-	struct cache_file
-	{
-		cache_file(const char* file_name);
-		~cache_file() = default;
-		binary_data read();
-		void write(const binary_data&);
-	private:
-		const char* cache_file_name;
-	} file;
+    struct cache_file
+    {
+        cache_file(const char* file_name);
+        ~cache_file() = default;
+        binary_data read();
+        void write(const binary_data&);
+    private:
+        const char* cache_file_name;
+    } file;
 };
 
 } } }

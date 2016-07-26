@@ -10,11 +10,11 @@ namespace neural { namespace gpu { namespace manager {
 ///
 struct kernel_manager
 {
-	kernel_manager( ) = default;
-	gpu_program get(context* context, const std::vector<std::pair<jit, primitive_id>>& primitives);
+    kernel_manager( ) = default;
+    gpu_program get(context* context, const std::vector<std::pair<jit, primitive_id>>& primitives);
 
 private:
-	primitive_selector selector;
+    primitive_selector selector;
 };
 
 } } }

@@ -15,16 +15,16 @@ namespace neural { namespace gpu { namespace cache {
 class cache
 {
 public:
-	cache();
-	~cache();
+    cache();
+    ~cache();
 
-	using type = std::pair<binary_data, cost_model::cost>;
+    using type = std::pair<binary_data, cost_model::cost>;
 
-	type get(context* context, kernel kernel);
+    type get(context* context, kernel kernel);
 
 private:
-	binary_cache kernel_binaries;
-	persistent_cache file_cache;
+    binary_cache kernel_binaries;
+    persistent_cache file_cache;
 };
 
 } } }

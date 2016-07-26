@@ -8,7 +8,7 @@ namespace neural { namespace gpu { namespace cache {
 /// 
 struct gpu_compiler
 {
-	static binary_data compile(context* context, const jit& compile_options, const code& code);
+    static binary_data compile(context* context, const jit& compile_options, const code& code);
 };
 
 } } }

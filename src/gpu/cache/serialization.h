@@ -8,8 +8,8 @@ namespace neural { namespace gpu { namespace cache {
 ///
 struct serialization
 {
-	static binary_data serialize(const binary_cache& prog);
-	static binary_cache deserialize(const binary_data& data);
+    static binary_data serialize(const binary_cache& prog);
+    static binary_cache deserialize(const binary_data& data);
 };
 
 } } }

@@ -9,16 +9,16 @@ namespace neural { namespace gpu { namespace cache {
 ///
 struct cost_model
 {
-	struct cost
-	{
-		cost(size_t value);
-		cost() = default;
-		bool operator<(const cost& rhs) const;
-	private:
-		size_t value; //TODO might need more elaborated state
-	};
+    struct cost
+    {
+        cost(size_t value);
+        cost() = default;
+        bool operator<(const cost& rhs) const;
+    private:
+        size_t value; //TODO might need more elaborated state
+    };
 
-	static cost rate(const binary_data& kernel_binary);
+    static cost rate(const binary_data& kernel_binary);
 };
 
 } } }
