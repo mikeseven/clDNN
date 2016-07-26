@@ -755,17 +755,17 @@ function(intel_arch_detect targetArchVarName hostArchVarName)
   if(CMAKE_HOST_SYSTEM_NAME MATCHES "Windows")
     set(_osArchitecture "32-bit")
     execute_process(
-        COMMAND powershell -NonInteractive -Command "(Get-WmiObject -Class Win32_OperatingSystem).OSArchitecture.ToLowerInvariant()"
+        COMMAND powershell -NonInteractive -WindowStyle Hidden -Command "(Get-WmiObject -Class Win32_OperatingSystem).OSArchitecture.ToLowerInvariant()"
         TIMEOUT 10
         OUTPUT_VARIABLE _osArchitecture
         ERROR_QUIET
         OUTPUT_STRIP_TRAILING_WHITESPACE
       )
 
-    if(_osArchitecture MATCHES "^(x64|x86_64|win64|amd64|64[ ]*\\-[ ]*bit)$")
-      set(_hostArchitecture "Windows64")
+    if(NOT (_osArchitecture MATCHES "^(x64|x86_64|win64|amd64|64[ ]*\\-[ ]*bit)$"))
+      set(_hostArchitecture "Windows32")
     else()
-      set(_hostArchitecture "Windows32") # WindowsARM cannot be host.
+      set(_hostArchitecture "Windows64") # WindowsARM cannot be host.
     endif()
   # Use 'uname -m' to detect kernel architecture.
   elseif((CMAKE_HOST_SYSTEM_NAME MATCHES "Linux") OR (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin"))
