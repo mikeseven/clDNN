@@ -15,12 +15,12 @@ persistent_cache::cache_file::cache_file(const char* file_name) : cache_file_nam
 
 binary_data persistent_cache::cache_file::read()
 {
-	std::ifstream file(cache_file_name, std::ios::binary);
-	if (file.is_open())
+	std::ifstream c_file(cache_file_name, std::ios::binary);
+	if (c_file.is_open())
 	{
 		std::stringstream data;
-		data << file.rdbuf();
-		file.close();
+		data << c_file.rdbuf();
+		c_file.close();
 		return data.str();
 	}
 	throw(errno);
@@ -28,11 +28,11 @@ binary_data persistent_cache::cache_file::read()
 
 void persistent_cache::cache_file::write(const binary_data& data)
 {
-	std::ofstream file(cache_file_name, std::ios::binary);
-	if (file.is_open())
+	std::ofstream c_file(cache_file_name, std::ios::binary);
+	if (c_file.is_open())
 	{
-		file << data;
-		file.close();
+		c_file << data;
+		c_file.close();
 		return;
 	}
 	throw (errno);
