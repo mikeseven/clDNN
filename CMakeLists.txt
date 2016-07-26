@@ -12,11 +12,63 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required (VERSION 3.1 FATAL_ERROR)
 include(CheckCXXCompilerFlag)
 
-#Use solution folders.
+# Register Intel helper modules.
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/utils/build/cmake/modules")
+include(IntelHelpers)
+
+# ======================================================================================================
+
+# Writes debug message in project (it will be presented only if debug is enabled).
+#
+# @param text Text to present.
+function(cldnn_dmsg text)
+  if(CLDNN__CMAKE_DEBUG)
+    message(STATUS "[GEN GPU clDNN][D] ${text}")
+  endif()
+endfunction()
+
+# ======================================================================================================
+# ==================================== BUILD CONFIGURATIONS (part 1) ===================================
+# ======================================================================================================
+# The section must be before project definition which is a point for configurations generation
+# for multi-configuration generators.
+
+# Available configuration types:
+# Two standard configuration + "Release-Internal" custom configuration.
+set(CMAKE_CONFIGURATION_TYPES
+    "Debug"
+    "Release"
+  )
+set(CMAKE_CONFIGURATION_TYPES ${CMAKE_CONFIGURATION_TYPES} CACHE INTERNAL "Available build configurations.")
+
+# ======================================================================================================
+# ======================================================================================================
+# ======================================================================================================
+
+
+# Default languages: C, C++.
+project(LlvmBcVersionAdapter)
+
+
+# ======================================================================================================
+# ==================================== BUILD CONFIGURATIONS (part 2) ===================================
+# ======================================================================================================
+# The section must be after project definition and its supported languages because otherwise
+# used variables are not available yet.
+
+#intel_custom_build_add("<custom config>" "Release") # No custom configuration at the momeent.
+# Populating global property with list of debug configurations.
+set_property(GLOBAL PROPERTY DEBUG_CONFIGURATIONS "Debug")
+# Use solution folders.
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+# ======================================================================================================
+# ======================================================================================================
+# ======================================================================================================
+
 
 message("=====================> ${CMAKE_BUILD_TYPE} <=====================")
 
