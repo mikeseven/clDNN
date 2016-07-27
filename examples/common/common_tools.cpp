@@ -40,9 +40,8 @@ void load_images_from_file_list(
     neural::primitive& memory)
 {
     auto memory_primitive = memory.as<const neural::memory&>().argument;
-    auto data_pointer     = memory.as<const neural::memory&>().pointer;
     // validate if primitvie is memory type
-    if (data_pointer == nullptr) throw std::runtime_error("Given primitive is not a memory");
+    if (!memory.is<const neural::memory&>()) throw std::runtime_error("Given primitive is not a memory");
 
     auto batches = std::min(memory_primitive.size.batch[0], (uint32_t) images_list.size()) ;
     auto dim = memory_primitive.size.spatial;
