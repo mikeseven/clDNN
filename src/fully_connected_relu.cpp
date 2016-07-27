@@ -53,8 +53,8 @@ fully_connected_relu::arguments::arguments(neural::engine::type eng,
 
     neural::vector<uint32_t> output_size = { 
         input_mem.as<const memory&>().argument.size.batch[0],
-        { 1, bias.as<const memory&>().argument.size.batch[0] },
-        input_mem.as<const memory&>().argument.size.feature[0]
+        { {bias.as<const memory&>().argument.size.spatial[0]} },
+        1
     };
 
     output = { memory::allocate({ eng, out_fmt, output_size}) };
@@ -63,11 +63,11 @@ fully_connected_relu::arguments::arguments(neural::engine::type eng,
 
 // creates primitive with fully_connected implementation that supports provided arguments
 primitive fully_connected_relu::create(fully_connected_relu::arguments arg) {
-    auto& input_arg = arg.input[0].primitive.as<const memory&>().argument;
-    auto& output_arg = arg.output[0].as<const memory&>().argument;
+    // auto& input_arg = arg.input[0].primitive.as<const memory&>().argument;
+    // auto& output_arg = arg.output[0].as<const memory&>().argument;
     auto& weight_arg = arg.input[1].primitive.as<const memory&>().argument;
-
-    if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Fully connected input/output number of dimension does not match.");
+    // TODO: add proper dimension handling
+    // if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Fully connected input/output number of dimension does not match.");
     if (weight_arg.format != memory::format::xb_f32 &&
         weight_arg.format != memory::format::x_f32)                 throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
 

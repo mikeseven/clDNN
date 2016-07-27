@@ -122,15 +122,21 @@ private:
 //   Load data from file into memory available to CPU & validate that format is yxfb_f32, 96 feature maps, 3D data [224x224x3].
 //     auto weight = file::create({engine::cpu, "weight.nnb"}, memory::format::yxfb_f32, {96, {224, 224, 3}}});
 struct file : is_a_primitive {
+    enum weights_type
+    {
+        convolution,
+        fully_connected
+    };
     struct arguments {
-        neural::engine::type    engine;
-        std::string             name;
-        std::vector<primitive>  output;
+        neural::engine::type         engine;
+        std::string                  name;
+        std::vector<primitive>       output;
+        weights_type                 weight_type;
 
         DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize);
         DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat);
         DLL_SYM arguments(neural::engine::type aengine, std::string aname, primitive aoutput);
-        DLL_SYM arguments(neural::engine::type aengine, std::string aname);
+        DLL_SYM arguments(neural::engine::type aengine, std::string aname, weights_type = weights_type::convolution);
     };
     const arguments argument;
 

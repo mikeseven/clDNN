@@ -71,7 +71,8 @@ static inline size_t nn_data_buffer_size_ptr(
     assert(size_ptr);
     if (!size_ptr) return 0;
     size_t buffer_size = sizeof_value;
-    for (uint8_t at = 0; at<dimension; ++at) buffer_size *= size_ptr[at];
+    for (uint8_t at = 0; at<dimension; ++at)
+        buffer_size *= size_ptr[at];
     return buffer_size;
 }
 
@@ -87,22 +88,26 @@ template<typename T_type, typename... T_args> std::unique_ptr<T_type> make_uniqu
 file::arguments::arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize)
     : engine(aengine)
     , name(aname)
+    , weight_type(weights_type::convolution)
     , output{{memory::allocate({aengine, aformat, asize})}} {}
 
 file::arguments::arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat)
     : engine(aengine)
     , name(aname)
+    , weight_type(weights_type::convolution)
     , output{{memory::describe({aengine, aformat, std::vector<uint32_t>()})}} {}
 
 file::arguments::arguments(neural::engine::type aengine, std::string aname, primitive aoutput)
     : engine(aengine)
     , name(aname)
+    , weight_type(weights_type::convolution)
     , output{aoutput} {}
 
-file::arguments::arguments(neural::engine::type aengine, std::string aname)
+file::arguments::arguments(neural::engine::type aengine, std::string aname, weights_type type)
     : engine(aengine)
     , name(aname)
-    , output({null_primitive}) {};
+    , output({null_primitive})
+    , weight_type(type) {};
 
 // creates primitive with memry buffer loaded from specified file
 primitive file::create(file::arguments arg) {
@@ -142,11 +147,33 @@ primitive file::create(file::arguments arg) {
             p_arg = new memory::arguments({ engine::reference, memory::format::x_f32,{ 1,{{ static_cast<unsigned int>(array.get()[0]) }}, 1 } });
             break;
         }
+        case 2:
+        {
+            p_arg = new memory::arguments(
+            { engine::reference, memory::format::xb_f32,
+            {
+                static_cast<unsigned int>(array.get()[0]),
+                { { static_cast<unsigned int>(array.get()[1]) } },
+                1
+            }
+            });
+            break;
+        }
         case 4:
         {
-            p_arg = new memory::arguments({ engine::reference, memory::format::oiyx_f32,{ 1,
-            { static_cast<unsigned int>(array.get()[0]), static_cast<unsigned int>(array.get()[1]) }, // kernel spatials x, y
-            { static_cast<unsigned int>(array.get()[3]), static_cast<unsigned int>(array.get()[2]) } } }); // ofm, ifm
+            if (arg.weight_type == file::weights_type::convolution)
+                p_arg = new memory::arguments({ engine::reference, memory::format::oiyx_f32,{ 1,
+                { static_cast<unsigned int>(array.get()[0]), static_cast<unsigned int>(array.get()[1]) }, // kernel spatials x, y
+                { static_cast<unsigned int>(array.get()[3]), static_cast<unsigned int>(array.get()[2]) } } }); // ofm, ifm
+            else // fully connected
+                p_arg = new memory::arguments(
+                { engine::reference, memory::format::xb_f32,
+                    {
+                         static_cast<unsigned int>(array.get()[1]) * static_cast<unsigned int>(array.get()[0]) * static_cast<unsigned int>(array.get()[2]),
+                         {{ static_cast<unsigned int>(array.get()[3]) }}, 
+                         1 
+                    }
+                });
             break;
         }
         default:

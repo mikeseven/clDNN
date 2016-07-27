@@ -19,43 +19,23 @@
 #include "common/common_tools.h"
 #include <iostream>
 #include <string>
+
+using namespace neural;
 // AlexNet with weights & biases from file
-void alexnet(uint32_t batch_size, std::string img_dir)
+void execute_alexnet(primitive& input, primitive& output)
 {
-    using namespace neural;
-    auto input  = memory::allocate({ engine::reference, memory::format::yxfb_f32,{ batch_size,{ 227, 227 }, 3, } });
-    auto output = memory::allocate({ engine::reference, memory::format::xb_f32,{ batch_size,{ 1000 }} });
-    auto img_list = get_directory_images(img_dir);
-    if (img_list.empty())
-        throw std::runtime_error("Specified path doesn't contain image data\n");
-    auto images_list_iterator = img_list.begin();
-    auto images_list_end = img_list.end();
-    auto number_of_batches = (img_list.size() % batch_size == 0) 
-        ? img_list.size() / batch_size : img_list.size() / batch_size + 1;
-
-    for (auto batch = 0; batch < number_of_batches; batch++)
-    {   // TODO: run network in loop
-        while (images_list_iterator != images_list_end)
-        {
-            // TODO: pack into bachtes
-            std::cout << images_list_iterator->c_str();
-            images_list_iterator++;
-        }
-    }
-
-    // TODO: move this to separate function;
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     auto conv1 = convolution::create(
     {
         engine::reference,
         memory::format::yxfb_f32,
-        { 
+        {
             input,
             file::create({ engine::reference, "conv1_weights.nnd" }),
             file::create({ engine::reference, "conv1_biases.nnd" })
         },
-        {0,{ 0, 0}, 0},
-        { 1, { 4, 4 }, 1 },
+        { 0,{ 0, 0 }, 0 },
+        { 1,{ 4, 4 }, 1 },
         padding::zero });
 
     auto relu1 = relu::create(
@@ -74,7 +54,7 @@ void alexnet(uint32_t batch_size, std::string img_dir)
         padding::zero,
         1.0f,
         0.00002f,
-        0.75f 
+        0.75f
     });
 
     auto pool1 = pooling::create(
@@ -94,10 +74,10 @@ void alexnet(uint32_t batch_size, std::string img_dir)
         memory::format::yxfb_f32,
         {
             pool1,
-            file::create({ engine::cpu, "conv2_g1_weights.nnd" }),
-            file::create({ engine::cpu, "conv2_g1_biases.nnd" }),
-            file::create({ engine::cpu, "conv2_g2_weights.nnd" }),
-            file::create({ engine::cpu, "conv2_g2_biases.nnd" }),
+            file::create({ engine::reference, "conv2_g1_weights.nnd" }),
+            file::create({ engine::reference, "conv2_g1_biases.nnd" }),
+            file::create({ engine::reference, "conv2_g2_weights.nnd" }),
+            file::create({ engine::reference, "conv2_g2_biases.nnd" }),
         },
         { 0,{ -2, -2 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -141,8 +121,8 @@ void alexnet(uint32_t batch_size, std::string img_dir)
         memory::format::yxfb_f32,
         {
             pool2,
-            file::create({ engine::cpu, "conv3_weights.nnd" }),
-            file::create({ engine::cpu, "conv3_biases.nnd" }),
+            file::create({ engine::reference, "conv3_weights.nnd" }),
+            file::create({ engine::reference, "conv3_biases.nnd" }),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -162,10 +142,10 @@ void alexnet(uint32_t batch_size, std::string img_dir)
         memory::format::yxfb_f32,
         {
             relu3,
-            file::create({ engine::cpu, "conv4_g1_weights.nnd" }),
-            file::create({ engine::cpu, "conv4_g1_biases.nnd" }),
-            file::create({ engine::cpu, "conv4_g2_weights.nnd" }),
-            file::create({ engine::cpu, "conv4_g2_biases.nnd" }),
+            file::create({ engine::reference, "conv4_g1_weights.nnd" }),
+            file::create({ engine::reference, "conv4_g1_biases.nnd" }),
+            file::create({ engine::reference, "conv4_g2_weights.nnd" }),
+            file::create({ engine::reference, "conv4_g2_biases.nnd" }),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -186,10 +166,10 @@ void alexnet(uint32_t batch_size, std::string img_dir)
         memory::format::yxfb_f32,
         {
             relu4,
-            file::create({ engine::cpu, "conv5_g1_weights.nnd" }),
-            file::create({ engine::cpu, "conv5_g1_biases.nnd" }),
-            file::create({ engine::cpu, "conv5_g2_weights.nnd" }),
-            file::create({ engine::cpu, "conv5_g2_biases.nnd" }),
+            file::create({ engine::reference, "conv5_g1_weights.nnd" }),
+            file::create({ engine::reference, "conv5_g1_biases.nnd" }),
+            file::create({ engine::reference, "conv5_g2_weights.nnd" }),
+            file::create({ engine::reference, "conv5_g2_biases.nnd" }),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -220,8 +200,8 @@ void alexnet(uint32_t batch_size, std::string img_dir)
         engine::reference,
         memory::format::xb_f32,
         pool5,
-        file::create({ engine::cpu, "fc6_weights.nnd" }),
-        file::create({ engine::cpu, "fc6_biases.nnd" }),
+        file::create({ engine::reference, "fc6_weights.nnd", file::weights_type::fully_connected}),
+        file::create({ engine::reference, "fc6_biases.nnd" }),
         0
     });
 
@@ -230,8 +210,8 @@ void alexnet(uint32_t batch_size, std::string img_dir)
         engine::reference,
         memory::format::xb_f32,
         fc6,
-        file::create({ engine::cpu, "fc7_weights.nnd" }),
-        file::create({ engine::cpu, "fc7_biases.nnd" }),
+        file::create({ engine::reference, "fc7_weights.nnd", file::weights_type::fully_connected }),
+        file::create({ engine::reference, "fc7_biases.nnd" }),
         0
     });
 
@@ -240,8 +220,8 @@ void alexnet(uint32_t batch_size, std::string img_dir)
         engine::reference,
         memory::format::xb_f32,
         fc7,
-        file::create({ engine::cpu, "fc8_weights.nnd" }),
-        file::create({ engine::cpu, "fc8_biases.nnd" }),
+        file::create({ engine::reference, "fc8_weights.nnd", file::weights_type::fully_connected }),
+        file::create({ engine::reference, "fc8_biases.nnd" }),
         0
     });
 
@@ -251,4 +231,58 @@ void alexnet(uint32_t batch_size, std::string img_dir)
         output,
         fc8
     });
+    execute({
+        conv1,relu1,lrn1,pool1, //stage 0
+        conv2_group2,relu2,lrn2, pool2,
+        conv3,relu3,
+        conv4_group2, relu4,
+        conv5_group2, relu5, pool5,
+        fc6,
+        fc7,
+        fc8,
+        softmax }).wait();
+}
+
+void alexnet(uint32_t batch_size, std::string img_dir)
+{
+    auto input  = memory::allocate({ engine::reference, memory::format::byxf_f32,{ batch_size,{ 224, 224 }, 3, } });
+    auto output = memory::allocate({ engine::reference, memory::format::xb_f32,{ batch_size,{ 1000 }} });
+    auto img_list = get_directory_images(img_dir);
+    if (img_list.empty())
+        throw std::runtime_error("Specified path doesn't contain image data\n");
+    auto images_list_iterator = img_list.begin();
+    auto images_list_end = img_list.end();
+    auto number_of_batches = (img_list.size() % batch_size == 0) 
+        ? img_list.size() / batch_size : img_list.size() / batch_size + 1;
+    std::vector<std::string> image_in_batches;
+    for (auto batch = 0; batch < number_of_batches; batch++)
+    {
+        image_in_batches.clear();
+        for (uint32_t i = 0; i < batch_size && images_list_iterator != images_list_end; i++, images_list_iterator++)
+            image_in_batches.push_back(*images_list_iterator);
+        // load croped and resized images into input
+        load_images_from_file_list(image_in_batches, input);    
+        
+        // create conversion to yxfb format
+        auto reordered_input = reorder::create(
+        {
+            engine::reference,
+            memory::format::yxfb_f32,
+            input.as<const memory&>().argument.size, // do not resize
+            input
+        });
+
+
+        float* out_ptr = (float*) output.as<const memory&>().pointer;
+        execute_alexnet(reordered_input, output);
+        for (auto i = 0; i < batch_size; i++)
+        {
+            // TODO: port html result parsing
+            std::cout << "Image:" << image_in_batches[i] << std::endl;
+            for (auto j = 0; j < 1000; j++)
+                std::cout << *out_ptr++ << " ";
+            std::cout << std::endl;
+        }
+
+    }    
 }
