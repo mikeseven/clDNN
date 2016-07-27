@@ -14,6 +14,11 @@
 
 set (TARGET_NAME "examples")
 
+
+intel_config_flag_apply_settings(CompilerOptions CMAKE_CXX_FLAGS ALL_PATTERN ""
+    SET WarnLevel3 TreatWarnAsErrorDisabled
+  )
+
 # Sources for test files
 set (MAIN_SRC   ${CMAKE_SOURCE_DIR}/examples/main.cpp)
 
@@ -36,6 +41,8 @@ source_group("common" FILES ${EXAMPLES_COMMON})
 include_directories (${CMAKE_SOURCE_DIR}
                      ${CMAKE_SOURCE_DIR}/src
                     )
+link_directories(${CLDNN__IOCL_ICD_LIBDIRS}
+                 ${CLDNN__IOCL_ICD_SHLDIRS})
 					
 
 			
