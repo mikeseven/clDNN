@@ -483,6 +483,7 @@ if(MSVC)
       GROUP NAME Rtti               "/GR-?"
       GROUP NAME TreatWarnAsError   "/WX-?"
       GROUP NAME DisableExtensions  "/Za"
+      GROUP NAME WarnLevels         "/W[0-4]"
 
       ALIAS CallingConvCdecl           "/Gd"
       ALIAS CallingConvFastcall        "/Gr"
@@ -510,6 +511,11 @@ if(MSVC)
       ALIAS RttiEnabled                "/GR"
       ALIAS TreatWarnAsErrorDisabled   "/WX-"
       ALIAS TreatWarnAsErrorEnabled    "/WX"
+      ALIAS WarnLevel0                 "/W0"
+      ALIAS WarnLevel1                 "/W1"
+      ALIAS WarnLevel2                 "/W2"
+      ALIAS WarnLevel3                 "/W3"
+      ALIAS WarnLevel4                 "/W4"
       ALIAS ExtensionsDisabled         "/Za"
       ALIAS ExtensionsEnabled          DisableExtensions REMOVE_GROUP
       ALIAS StandardCxx11
@@ -536,8 +542,9 @@ elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
       GROUP NAME Exceptions         "-f(no-)?exceptions"
       GROUP NAME Optimization       "-O[0-3sg]?"
       GROUP NAME Rtti               "-f(no-)?rtti"
-      GROUP NAME TreatWarnAsError   "-Werror"
+      GROUP NAME TreatWarnAsError   "-Werror|-pedantic-errors"
       GROUP NAME Standard           "-std=[^ ]+"
+      GROUP NAME WarnLevels         "-W(all|extra|pedantic)|-w|-pedantic"
 
       ALIAS CallingConvCdecl
       ALIAS CallingConvFastcall
@@ -564,7 +571,12 @@ elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
       ALIAS RttiDisabled               "-fno-rtti"
       ALIAS RttiEnabled                "-frtti"
       ALIAS TreatWarnAsErrorDisabled   TreatWarnAsError REMOVE_GROUP
-      ALIAS TreatWarnAsErrorEnabled    "-Werror"
+      ALIAS TreatWarnAsErrorEnabled    "-Werror" "-pedantic-errors"
+      ALIAS WarnLevel0                 "-w"
+      ALIAS WarnLevel1                 WarnLevels REMOVE_GROUP
+      ALIAS WarnLevel2                 "-Wall"
+      ALIAS WarnLevel3                 "-Wall" "-pedantic"
+      ALIAS WarnLevel4                 "-Wall" "-Wextra" "-pedantic"
       ALIAS ExtensionsDisabled
       ALIAS ExtensionsEnabled
       ALIAS StandardCxx11              "-std=c++11"
@@ -605,6 +617,7 @@ elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES
       GROUP NAME Rtti               "-f(no-)?rtti"
       GROUP NAME TreatWarnAsError   "-Werror"
       GROUP NAME Standard           "-std=[^ ]+"
+      GROUP NAME WarnLevels         "-W(all|extra|pedantic)|-w|-pedantic"
 
       ALIAS CallingConvCdecl
       ALIAS CallingConvFastcall
@@ -632,6 +645,11 @@ elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES
       ALIAS RttiEnabled                Rtti REMOVE_GROUP
       ALIAS TreatWarnAsErrorDisabled   TreatWarnAsError REMOVE_GROUP
       ALIAS TreatWarnAsErrorEnabled    "-Werror"
+      ALIAS WarnLevel0                 "-w"
+      ALIAS WarnLevel1                 WarnLevels REMOVE_GROUP
+      ALIAS WarnLevel2                 "-Wall"
+      ALIAS WarnLevel3                 "-Wall" "-pedantic"
+      ALIAS WarnLevel4                 "-Wall" "-Wextra" "-pedantic"
       ALIAS ExtensionsDisabled
       ALIAS ExtensionsEnabled
       ALIAS StandardCxx11              "-std=c++11"
@@ -719,6 +737,8 @@ foreach(_compilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
         RttiDisabled
         DeadCodeEliminate
         ExtensionsEnabled
+        TreatWarnAsErrorEnabled
+        WarnLevel4
     )
   intel_config_flag_apply_settings(
       CompilerOptions
@@ -765,8 +785,6 @@ foreach(_compilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
           -fno-strict-aliasing
           -fpermissive
           -fstack-protector-strong
-          -pedantic
-          -Wall
           -W
           -Wno-unused-parameter
           -Wno-unknown-pragmas

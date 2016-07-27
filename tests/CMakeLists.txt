@@ -17,10 +17,14 @@ add_subdirectory (gtest)
 set (APP_NAME "tests")
 # Sources for test files
 
-if (MSVC)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /WX")
-else ()
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wno-error=conversion-null")
+
+intel_config_flag_apply_settings(CompilerOptions CMAKE_CXX_FLAGS ALL_PATTERN ""
+    SET WarnLevel3
+  )
+if (NOT MSVC)
+  intel_config_flag_apply_settings(CompilerOptions CMAKE_CXX_FLAGS ALL_PATTERN ""
+      SET_RAW "-Wno-error=conversion-null"
+    )
 endif ()
 
 file (GLOB TEST_CASES_SRC
@@ -52,6 +56,8 @@ include_directories (${CMAKE_SOURCE_DIR}
                      ${CMAKE_SOURCE_DIR}/tests
                      ${CMAKE_SOURCE_DIR}/test_utils
                     )
+link_directories(${CLDNN__IOCL_ICD_LIBDIRS}
+                 ${CLDNN__IOCL_ICD_SHLDIRS})
 
 # Create exe file from sources.
 add_executable(${APP_NAME}
@@ -83,7 +89,7 @@ set(GFLAGS_BINARY_NAME gflags)
 if(RUN_ULTS_OFFLINE)
     add_test(${APP_NAME} ${TEST_COMMAND})
     message (STATUS "add_test ...................... " ${APP_NAME} ${TEST_COMMAND})
-else()
+elseif(CLDNN__RUN_TESTS)
     if(NOT UNIX)
         find_program(GFLAGS_EXE_DIR ${GFLAGS_BINARY_NAME})
         message("GFLAGS: ${GFLAGS_EXE_DIR}")

@@ -18,9 +18,7 @@ set (TARGET_NAME "mkl_dnn")
 add_definitions(-DEXPORT_NEURAL_SYMBOLS)
 
 if (MSVC)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX /arch:AVX2")
-else ()
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX2")
 endif()
 
 file (GLOB API_HEADERS
@@ -37,15 +35,6 @@ file (GLOB LIBRARY_SRC_GPU
        ${CMAKE_SOURCE_DIR}/src/gpu/cache/*.cpp
       )
 
-# OpenCL includes and libraries
-# Get the list of directories where libs could be stored
-file(GLOB OPENCL_LIB_DIRS $ENV{INTELOCLSDKROOT}/../**/lib64/)
-
-# Order of searching is that first SDK is checked for OpenCL headers/libs then 
-# headers from project are taken and libs from hardcoded system locations
-find_path(OPENCL_INCLUDE_DIRS NAMES CL/cl.hpp HINTS $ENV{INTELOCLSDKROOT}/include PATHS ../../ )
-find_library(OPENCL_LIBRARIES NAMES OpenCL OpenCL.lib HINTS $ENV{INTELOCLSDKROOT}/lib/x64 $ENV{INTELOCLSDKROOT}
- ${OPENCL_LIB_DIRS} PATHS /lib64 /usr/lib )
 
 # Create named folders for the sources within the .vcproj
 # Empty name lists them directly under the .vcproj
@@ -57,8 +46,9 @@ source_group("src\\gpu" FILES ${LIBRARY_SRC_GPU})
 # Properties->C/C++->General->Additional Include Directories
 include_directories (${CMAKE_SOURCE_DIR}
                      ${CMAKE_SOURCE_DIR}/src
-                     ${OPENCL_INCLUDE_DIRS}
                     )
+link_directories(${CLDNN__IOCL_ICD_LIBDIRS}
+                 ${CLDNN__IOCL_ICD_SHLDIRS})
 
 # Create library file from sources.
 add_library(${TARGET_NAME} SHARED
@@ -66,7 +56,7 @@ add_library(${TARGET_NAME} SHARED
             ${LIBRARY_SRC_GPU}
             ${API_HEADERS})
 
-target_link_libraries(${TARGET_NAME} ${OPENCL_LIBRARIES} )
+target_link_libraries(${TARGET_NAME} OpenCL)
 
 if(UNIX)
     target_link_libraries(${TARGET_NAME} pthread)

@@ -14,21 +14,9 @@
 
 set (TARGET_NAME "examples")
 
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
-elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX")
-endif()
-
 # Sources for test files
 set (MAIN_SRC   ${CMAKE_SOURCE_DIR}/examples/main.cpp)
 
-file (GLOB API_HEADERS
-       ${CMAKE_SOURCE_DIR}/api/*.h
-      )
-file (GLOB LIBRARY_SRC
-       ${CMAKE_SOURCE_DIR}/src/*.h
-      )
 file  (GLOB EXAMPLES_SRC
        ${CMAKE_SOURCE_DIR}/examples/*.h
        ${CMAKE_SOURCE_DIR}/examples/*.cpp
@@ -54,8 +42,6 @@ include_directories (${CMAKE_SOURCE_DIR}
 # Create library file from sources.
 add_executable(${TARGET_NAME}
                ${MAIN_SRC}
-               ${API_HEADERS}
-               ${LIBRARY_SRC}
                ${EXAMPLES_SRC}
 			   ${EXAMPLES_COMMON}
               )
