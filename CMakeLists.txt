@@ -90,6 +90,11 @@ set(CLDNN_BUILD__DEFAULT_OUT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/build/out")
 # Prefix for all targets in internal pass.
 set(CLDNN_BUILD__PROJ_NAME_PREFIX "")
 
+# Minimum versions of compilers.
+set(CLDNN__MIN_COMPILER_VERSION__MSVC  "19.0")
+set(CLDNN__MIN_COMPILER_VERSION__GCC   "4.9")
+set(CLDNN__MIN_COMPILER_VERSION__CLANG "3.5")
+
 # ======================================================================================================
 # ======================================================================================================
 # ======================================================================================================
@@ -185,6 +190,7 @@ foreach(__CLDNN_IOclIcdVersionPath ${__CLDNN_IOclIcdVersionPaths})
     unset(__CLDNN_IOclIcdTargetsCount)
 
     if(__CLDNN_IOclIcdPathValid)
+      cldnn_dmsg("Found internal Intel OpenCL SDK ICD (version: ${__CLDNN_IOclIcdVersion}) at path: ${__CLDNN_IOclIcdPath}")
       list(APPEND __CLDNN_IOclIcdVersions "${__CLDNN_IOclIcdVersion}")
       list(APPEND __CLDNN_IOclIcdPaths    "${__CLDNN_IOclIcdPath}")
     endif()
@@ -204,6 +210,7 @@ foreach(__CLDNN_IOclIcdVersion ${__CLDNN_IOclIcdVersions})
   endif()
 endforeach()
 unset(__CLDNN_IOclIcdVersion)
+cldnn_dmsg("Selected default version of internal Intel OpenCL SDK ICD: ${__CLDNN_IOclIcdDefaultVersion}")
 
 if(__CLDNN_IOclIcdDefaultVersion VERSION_EQUAL "0")
   if(NOT CLDNN__IOCL_ICD_USE_EXTERNAL)
@@ -281,6 +288,11 @@ mark_as_advanced(CLDNN__CMAKE_DEBUG)
 # ======================================================================================================
 # ======================================================================================================
 
+# Checking whether tests can be run.
+if((NOT CLDNN__INCLUDE_TESTS) AND CLDNN__RUN_TESTS)
+  message(WARNING "[clDNN] CLDNN__RUN_TESTS: Selected running of tests, but test are not built. Option will be disabled.")
+  set(CLDNN__RUN_TESTS OFF)
+endif()
 
 # Selecting Intel OpenCL SDK version and path.
 if (CLDNN__IOCL_ICD_USE_EXTERNAL)
@@ -406,72 +418,559 @@ message(STATUS "[clDNN]     + Shared libs: ${CLDNN__IOCL_ICD_SHLDIRS}")
 message(STATUS "[clDNN] =============================================================================")
 unset(__CLDNN_DetectedArch_Target)
 
-return()
 
-if(NOT(UNIX))
-  set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
-  set (LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
-  set (CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
-  set (LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_DIRECTORY}) # compatibility issue: linux uses LIBRARY_OUTPUT_PATH, windows uses LIBRARY_OUTPUT_DIRECTORY
-else ()
-  set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
-  set (LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
-  set (CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
-  set (LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_DIRECTORY})
+# ======================================================================================================
+# ==================================== COMMON BUILD CONFIGURATION ======================================
+# ======================================================================================================
+
+# =================================== Main targets names and labels ====================================
+
+set(CLDNN_BUILD__PROJ__clDNN       "${CLDNN_BUILD__PROJ_NAME_PREFIX}clDNN_shlib")
+set(CLDNN_BUILD__PROJ_LABEL__clDNN "clDNN")
+
+# ================================================ Outputs =============================================
+
+set(EXECUTABLE_OUTPUT_PATH "${CLDNN__OUTPUT_DIR}")
+set(LIBRARY_OUTPUT_PATH    "${CLDNN__OUTPUT_DIR}")
+
+
+# Main targets' output names.
+if(ANDROID)
+  set(__CLDNN_CpuSuffix "")
+else()
+  intel_arch_get_cpu(__CLDNN_CpuSuffix "${CLDNN__ARCHITECTURE_TARGET}")
 endif()
 
-message (STATUS "PROJECT ............................... " ${PROJECT_NAME})
-message (STATUS "CMAKE_BINARY_DIR ...................... " ${CMAKE_BINARY_DIR})
-message (STATUS "CMAKE_SOURCE_DIR ...................... " ${CMAKE_SOURCE_DIR})
-message (STATUS "CMAKE_GENERATOR ....................... " ${CMAKE_GENERATOR})
-message (STATUS "CMAKE_C_COMPILER_ID ................... " ${CMAKE_C_COMPILER_ID})
-message (STATUS "CMAKE_CXX_COMPILER_ID ................. " ${CMAKE_CXX_COMPILER_ID})
+set(CLDNN_BUILD__PROJ_OUTPUT_NAME__clDNN "clDNN${__CLDNN_CpuSuffix}")
 
-# To Enable C++11 gcc (Linux compiler) require additional flag to be added
-if(UNIX)
-  CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
-  CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-  if(COMPILER_SUPPORTS_CXX11)
-    add_definitions(-std=c++11)
-  elseif(COMPILER_SUPPORTS_CXX0X)
-    add_definitions(-std=c++0x)
-  elseif ((NOT(COMPILER_SUPPORTS_CXX11)) AND (NOT(COMPILER_SUPPORTS_CXX0X)))
-    message (FATAL_ERROR "CMake BREAK: Compiler must support C++11")
+unset(__CLDNN_CpuSuffix)
+
+# ======================================================================================================
+
+cldnn_dmsg("${CLDNN__PROJ_NAME} Settings:")
+cldnn_dmsg(" - project file name: ${CLDNN_BUILD__PROJ__clDNN}")
+cldnn_dmsg(" - project label:     ${CLDNN_BUILD__PROJ_LABEL__clDNN}")
+cldnn_dmsg(" - library name:      ${CLDNN_BUILD__PROJ_OUTPUT_NAME__clDNN}")
+cldnn_dmsg(" - used generator:    ${CMAKE_GENERATOR}")
+cldnn_dmsg("    + platform:       ${CMAKE_GENERATOR_PLATFORM}")
+cldnn_dmsg("    + toolset:        ${CMAKE_GENERATOR_TOOLSET}")
+cldnn_dmsg(" - crosscompiling:    ${CMAKE_CROSSCOMPILING}")
+if(CMAKE_CROSSCOMPILING)
+  cldnn_dmsg("    + toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
+endif()
+cldnn_dmsg(" - compiler (C++):    ${CMAKE_CXX_COMPILER_ID}")
+cldnn_dmsg("    + version:        ${CMAKE_CXX_COMPILER_VERSION}")
+cldnn_dmsg(" - compiler (C):      ${CMAKE_C_COMPILER_ID}")
+cldnn_dmsg("    + version:        ${CMAKE_C_COMPILER_VERSION}")
+
+# =============================== Compiler options (abstract configuration) ============================
+
+if(MSVC)
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "${CLDNN__MIN_COMPILER_VERSION__MSVC}")
+    message(FATAL_ERROR "[clDNN] Minimum required version of Microsoft Visual C++ compiler is ${CLDNN__MIN_COMPILER_VERSION__MSVC}. Please update compiler.")
   endif()
-  if( ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") # GCC specific flags
-    add_definitions(-mavx)
-    add_definitions(-mavx2)
-    add_definitions(-mfma)
-    add_definitions(-ffast-math)
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 4.9)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-strong")
-    else()
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector")
+
+  intel_flag_register_settings(
+      CompilerOptions
+
+      GROUP NAME CallingConvention  "/G[drzv]"
+      GROUP NAME CompileAs          "/T[CP]"
+      GROUP NAME DebugInfoFormat    "/Z[7iI]"
+      GROUP NAME Exceptions         "/EHa" "/EHsc?"
+      GROUP NAME FaviorSizeSpeed    "/O[st]"
+      GROUP NAME Optimization       "/O[d12x]"
+      GROUP NAME RuntimeLibrary     "/M[TD]d?"
+      GROUP NAME Rtti               "/GR-?"
+      GROUP NAME TreatWarnAsError   "/WX-?"
+      GROUP NAME DisableExtensions  "/Za"
+
+      ALIAS CallingConvCdecl           "/Gd"
+      ALIAS CallingConvFastcall        "/Gr"
+      ALIAS CallingConvStdcall         "/Gz"
+      ALIAS CallingConvVectorcall      "/Gv"
+      ALIAS CompileAsC                 "/TC"
+      ALIAS CompileAsCpp               "/TP"
+      ALIAS CompileAsDefault           CompileAs REMOVE_GROUP
+      ALIAS DebugInfoDisabled          DebugInfoFormat REMOVE_GROUP
+      ALIAS DebugInfoProgramDatabase   "/Zi"
+      ALIAS ExceptionsDisabled         Exceptions REMOVE_GROUP
+      ALIAS ExceptionsEnabled          "/EHsc"
+      ALIAS FaviorSize                 "/Os"
+      ALIAS FaviorSpeed                "/Ot"
+      ALIAS MultiProcessorCompilation  "/MP"
+      ALIAS OptimizeDisabled           "/Od"
+      ALIAS OptimizeSize               "/O2" "/Oi" "/Os"
+      ALIAS OptimizeSpeed              "/O2"
+      ALIAS OptimizeFull               "/Ox"
+      ALIAS RtMultiThreadedStatic      "/MT"
+      ALIAS RtMultiThreadedShared      "/MD"
+      ALIAS RtMultiThreadedStaticDebug "/MTd"
+      ALIAS RtMultiThreadedSharedDebug "/MDd"
+      ALIAS RttiDisabled               "/GR-"
+      ALIAS RttiEnabled                "/GR"
+      ALIAS TreatWarnAsErrorDisabled   "/WX-"
+      ALIAS TreatWarnAsErrorEnabled    "/WX"
+      ALIAS ExtensionsDisabled         "/Za"
+      ALIAS ExtensionsEnabled          DisableExtensions REMOVE_GROUP
+      ALIAS StandardCxx11
+      ALIAS StandardNone
+
+      ALIAS DeadCodeEliminate
+      ALIAS DeadCodePreserve
+    )
+elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "${CLDNN__MIN_COMPILER_VERSION__GCC}")
+    message(FATAL_ERROR "[clDNN] Minimum required version of GCC/G++ compiler is ${CLDNN__MIN_COMPILER_VERSION__GCC}. Please update compiler.")
+  endif()
+
+  CHECK_CXX_COMPILER_FLAG("-std=c++11" __CLDNN_CompilerSupportsCxx11)
+  if(NOT __CLDNN_CompilerSupportsCxx11)
+    message(FATAL_ERROR "[clDNN] Compiler does not support C++11. Please update compiler.")
+  endif()
+  unset(__CLDNN_CompilerSupportsCxx11)
+
+  intel_flag_register_settings(
+      CompilerOptions
+
+      GROUP NAME DebugInfoFormat    "-g[0-3]?"
+      GROUP NAME Exceptions         "-f(no-)?exceptions"
+      GROUP NAME Optimization       "-O[0-3sg]?"
+      GROUP NAME Rtti               "-f(no-)?rtti"
+      GROUP NAME TreatWarnAsError   "-Werror"
+      GROUP NAME Standard           "-std=[^ ]+"
+
+      ALIAS CallingConvCdecl
+      ALIAS CallingConvFastcall
+      ALIAS CallingConvStdcall
+      ALIAS CallingConvVectorcall
+      ALIAS CompileAsC
+      ALIAS CompileAsCpp
+      ALIAS CompileAsDefault
+      ALIAS DebugInfoDisabled          "-g0"
+      ALIAS DebugInfoProgramDatabase   "-g"
+      ALIAS ExceptionsDisabled         "-fno-exceptions"
+      ALIAS ExceptionsEnabled          "-fexceptions"
+      ALIAS FaviorSize                 "-Os"
+      ALIAS FaviorSpeed                "-O3"
+      ALIAS MultiProcessorCompilation
+      ALIAS OptimizeDisabled           "-O0"
+      ALIAS OptimizeSize               "-Os"
+      ALIAS OptimizeSpeed              "-O2"
+      ALIAS OptimizeFull               "-03"
+      ALIAS RtMultiThreadedStatic
+      ALIAS RtMultiThreadedShared
+      ALIAS RtMultiThreadedStaticDebug
+      ALIAS RtMultiThreadedSharedDebug
+      ALIAS RttiDisabled               "-fno-rtti"
+      ALIAS RttiEnabled                "-frtti"
+      ALIAS TreatWarnAsErrorDisabled   TreatWarnAsError REMOVE_GROUP
+      ALIAS TreatWarnAsErrorEnabled    "-Werror"
+      ALIAS ExtensionsDisabled
+      ALIAS ExtensionsEnabled
+      ALIAS StandardCxx11              "-std=c++11"
+      ALIAS StandardNone               Standard REMOVE_GROUP
+
+      ALIAS DeadCodeEliminate
+      ALIAS DeadCodePreserve
+    )
+
+  if(CLDNN__COMPILE_LINK_ALLOW_UNSAFE_SIZE_OPT)
+    intel_flag_register_settings(
+        CompilerOptions
+
+        GROUP NAME EmitDataSec "-fdata-sections"
+        GROUP NAME EmitFuncSec "-ffunction-sections"
+
+        ALIAS DeadCodeEliminate  "-fdata-sections" "-ffunction-sections"
+        ALIAS DeadCodePreserve   EmitDataSec EmitFuncSec REMOVE_GROUP
+      )
+  endif()
+elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "${CLDNN__MIN_COMPILER_VERSION__CLANG}")
+    message(FATAL_ERROR "[clDNN] Minimum required version of clang compiler is ${CLDNN__MIN_COMPILER_VERSION__CLANG}. Please update compiler.")
+  endif()
+
+  CHECK_CXX_COMPILER_FLAG("-std=c++11" __CLDNN_CompilerSupportsCxx11)
+  if(NOT __CLDNN_CompilerSupportsCxx11)
+    message(FATAL_ERROR "[clDNN] Compiler does not support C++11. Please update compiler.")
+  endif()
+  unset(__CLDNN_CompilerSupportsCxx11)
+
+  intel_flag_register_settings(
+      CompilerOptions
+
+      GROUP NAME DebugInfoFormat    "-g(dwardf-[2-4]?)?"
+      GROUP NAME Exceptions         "-f(no-)?exceptions"
+      GROUP NAME Optimization       "-O([0-3]?|fast|s|z)?"
+      GROUP NAME Rtti               "-f(no-)?rtti"
+      GROUP NAME TreatWarnAsError   "-Werror"
+      GROUP NAME Standard           "-std=[^ ]+"
+
+      ALIAS CallingConvCdecl
+      ALIAS CallingConvFastcall
+      ALIAS CallingConvStdcall
+      ALIAS CallingConvVectorcall
+      ALIAS CompileAsC
+      ALIAS CompileAsCpp
+      ALIAS CompileAsDefault
+      ALIAS DebugInfoDisabled          DebugInfoFormat REMOVE_GROUP
+      ALIAS DebugInfoProgramDatabase   "-g"
+      ALIAS ExceptionsDisabled         Exceptions REMOVE_GROUP
+      ALIAS ExceptionsEnabled          "-fexceptions"
+      ALIAS FaviorSize                 "-Os"
+      ALIAS FaviorSpeed                "-O3"
+      ALIAS MultiProcessorCompilation
+      ALIAS OptimizeDisabled           "-O0"
+      ALIAS OptimizeSize               "-Os"
+      ALIAS OptimizeSpeed              "-O2"
+      ALIAS OptimizeFull               "-03"
+      ALIAS RtMultiThreadedStatic
+      ALIAS RtMultiThreadedShared
+      ALIAS RtMultiThreadedStaticDebug
+      ALIAS RtMultiThreadedSharedDebug
+      ALIAS RttiDisabled               "-fno-rtti"
+      ALIAS RttiEnabled                Rtti REMOVE_GROUP
+      ALIAS TreatWarnAsErrorDisabled   TreatWarnAsError REMOVE_GROUP
+      ALIAS TreatWarnAsErrorEnabled    "-Werror"
+      ALIAS ExtensionsDisabled
+      ALIAS ExtensionsEnabled
+      ALIAS StandardCxx11              "-std=c++11"
+      ALIAS StandardNone               Standard REMOVE_GROUP
+
+      ALIAS DeadCodeEliminate
+      ALIAS DeadCodePreserve
+    )
+else()
+  message(FATAL_ERROR "[clDNN] Unknown compiler. Please define support for it or use different compiler.")
+endif()
+
+# =============================== Linker options (abstract configuration) ==============================
+
+if(MSVC)
+  intel_flag_register_settings(
+      LinkerOptions
+
+      GROUP NAME DebugInfo         "/[dD][eE][bB][uU][gG]"
+      GROUP NAME DeadCode          "/[oO][pP][tT]:([nN][oO])?[rR][eE][fF]"
+      GROUP NAME IdenticalCodeData "/[oO][pP][tT]:([nN][oO])?[iI][cC][fF](=[0-9]+)?"
+      GROUP NAME Incremental       "/[iI][nN][cC][rR][eE][mM][eE][nN][tT][aA][lL](:[nN][oO])?"
+
+      ALIAS DebugInfoDisabled          DebugInfo REMOVE_GROUP
+      ALIAS DebugInfoProgramDatabase   "/DEBUG"
+      ALIAS DeadCodeEliminate          "/OPT:REF"
+      ALIAS DeadCodePreserve           "/OPT:NOREF"
+      ALIAS IdenticalCodeDataFold      "/OPT:ICF"
+      ALIAS IdenticalCodeDataNoFold    "/OPT:NOICF"
+      ALIAS IncrementalEnabled         "/INCREMENTAL"
+      ALIAS IncrementalDisabled        "/INCREMENTAL:NO"
+    )
+else()
+  intel_flag_register_settings(
+      LinkerOptions
+
+      ALIAS DebugInfoDisabled
+      ALIAS DebugInfoProgramDatabase
+      ALIAS DeadCodeEliminate
+      ALIAS DeadCodePreserve
+      ALIAS IdenticalCodeDataFold
+      ALIAS IdenticalCodeDataNoFold
+      ALIAS IncrementalEnabled
+      ALIAS IncrementalDisabled
+    )
+
+  if(CLDNN__COMPILE_LINK_ALLOW_UNSAFE_SIZE_OPT)
+    if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+      intel_flag_register_settings(
+          LinkerOptions
+
+          GROUP NAME GcSections "-Wl,--gc-sections"
+
+          ALIAS DeadCodeEliminate  "-Wl,--gc-sections"
+          ALIAS DeadCodePreserve   GcSections REMOVE_GROUP
+        )
+    elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
+      intel_flag_register_settings(
+          LinkerOptions
+
+          GROUP NAME DeadStrip "-Wl,-dead_strip"
+
+          ALIAS DeadCodeEliminate  "-Wl,-dead_strip"
+          ALIAS DeadCodePreserve   DeadStrip REMOVE_GROUP
+        )
     endif()
   endif()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE -fPIC -fno-operator-names -Wformat -Wformat-security -Wall")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -D_FORTIFY_SOURCE=2")
-  
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -z noexecstack -z relro -z now")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pie -z noexecstack -z relro -z now")
-else()
-  if (MSVC) #MSVC specific flags
-    add_definitions(/sdl)
+endif()
+
+# ======================================= Generic compiler options =====================================
+
+foreach(_compilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
+  # Change some generic settings of compiler.
+  # NOTE: Debug info generation is enabled for all build configuration, because it is separate on Windows
+  #       and we will use "strip" command on Linux and Android (to separate it).
+  intel_config_flag_apply_settings(
+      CompilerOptions
+      "${_compilerFlagName}"
+      ALL_PATTERN ""
+      SET
+        CompileAsDefault
+        DebugInfoProgramDatabase
+        ExceptionsEnabled
+        MultiProcessorCompilation
+        RttiDisabled
+        DeadCodeEliminate
+        ExtensionsEnabled
+    )
+  intel_config_flag_apply_settings(
+      CompilerOptions
+      "${_compilerFlagName}"
+      ALL_PATTERN_NOINHERIT ""
+      SET
+        OptimizeSize
+        RtMultiThreadedStatic
+    )
+  intel_config_flag_apply_settings(
+      CompilerOptions
+      "${_compilerFlagName}"
+      PATTERN "^Debug"
+      SET
+        OptimizeDisabled
+        RtMultiThreadedStaticDebug
+    )
+
+  # Adding needed settings specific to MSVC.
+  if(MSVC)
+    intel_config_flag_apply_settings(
+        CompilerOptions
+        "${_compilerFlagName}"
+        ALL_PATTERN ""
+        SET_RAW
+          "/sdl"
+      )
+  # Adding needed settings specific to GCC.
+  # NOTE: Following options can be needed in the future (although some not recommended: NR):
+  # [NR] -fno-short-enums
+  # [NR] -fno-tree-pre
+  #      -fno-omit-frame-pointer
+  #      -Wa,--noexecstack
+  #      -fkeep-inline-functions
+  elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+    intel_config_flag_apply_settings(
+        CompilerOptions
+        "${_compilerFlagName}"
+        ALL_PATTERN ""
+        SET_RAW
+          -pipe
+          -fmessage-length=0
+          -fno-operator-names
+          -fno-strict-aliasing
+          -fpermissive
+          -fstack-protector-strong
+          -pedantic
+          -Wall
+          -W
+          -Wno-unused-parameter
+          -Wno-unknown-pragmas
+          -Wno-missing-field-initializers
+          -Wwrite-strings
+          -Wswitch
+          -Wformat
+          -Wformat-security
+          -march=corei7
+          -mstackrealign
+          -msse
+          -msse2
+          -msse3
+          -mssse3
+          -msse4
+          -msse4.1
+          -msse4.2
+          -mavx
+          -mavx2
+          -mfma
+          -ffast-math
+          -fvisibility=hidden
+          -fvisibility-inlines-hidden
+          -finline
+          -finline-functions
+          -finline-limit=300
+          -funswitch-loops
+          -fPIE
+          -fPIC
+          -Wl,--no-undefined
+      )
+  elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
+    intel_config_flag_apply_settings(
+        CompilerOptions
+        "${_compilerFlagName}"
+        ALL_PATTERN ""
+        SET_RAW
+          -pipe
+          -fvisibility=hidden
+          -fvisibility-inlines-hidden
+          -Wall
+          -Wcovered-switch-default
+          -Wextra
+          -Wno-unused-parameter
+          -Wno-gnu
+          -pedantic
+          -finline
+          -finline-functions
+          -fkeep-inline-functions
+          -msse4.2
+      )
+  endif()
+endforeach()
+
+# C++ only options.
+intel_config_flag_apply_settings(
+    CompilerOptions
+    CMAKE_CXX_FLAGS
+    ALL_PATTERN ""
+    SET
+      StandardCxx11
+  )
+
+# NOTE: [WA] Workaround for possible crash problem (double destruction of static objects on bionic).
+#            This switch is not conformant with C++ standard (order of destruction of static elements is not met) but
+#            it is used in Android build system (possibliy due to Android bionic __cxa_atexit limitations).
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  if(ANDROID)
+    intel_config_flag_apply_settings(
+        CompilerOptions
+        CMAKE_CXX_FLAGS
+        ALL_PATTERN ""
+        SET_RAW
+          -fno-use-cxa-atexit
+      )
   endif()
 endif()
 
-if(UNIX)
-  CHECK_CXX_COMPILER_FLAG("-fvisibility=hidden" COMPILER_SUPPORTS_VISIBILITY)
-  if (COMPILER_SUPPORTS_VISIBILITY)
-    #add_definitions(-fvisibility=hidden) todo: should be hidden? if so define default visibiliti explicite for each funtion
-    add_definitions(-fvisibility=default) 
-    endif(COMPILER_SUPPORTS_VISIBILITY)
-endif(UNIX)
+# NOTE: When compiling with Clang, use the flags below for C++ files. These flags cannot be enabled when compiliing
+#       C files.
+if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
+  if(LLVM_ON_DARWIN)
+    intel_config_flag_apply_settings(
+        CompilerOptions
+        CMAKE_CXX_FLAGS
+        ALL_PATTERN ""
+        SET_RAW
+          -stdlib=libc++
+      )
+  endif()
+endif()
 
-include_directories(${CMAKE_SOURCE_DIR}/api)
-include_directories(${CMAKE_SOURCE_DIR}/xbyak)
+# ======================================== Generic linker options ======================================
+
+foreach(_linkerFlagName IN ITEMS "CMAKE_EXE_LINKER_FLAGS" "CMAKE_SHARED_LINKER_FLAGS")
+  # Change some generic settings of linker.
+  # NOTE: Debug info generation is enabled for all build configuration, because it is separate on Windows
+  #       and we will use "strip" command on Linux and Android (to separate it).
+  intel_config_flag_apply_settings(
+      LinkerOptions
+      "${_linkerFlagName}"
+      ALL_PATTERN ""
+      SET
+        DebugInfoProgramDatabase
+        DeadCodeEliminate
+        IdenticalCodeDataFold
+        IncrementalDisabled
+    )
+endforeach()
+
+# Force static linking of common libraries on Android for shared objects.
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  intel_config_flag_apply_settings(
+        LinkerOptions
+        CMAKE_EXE_LINKER_FLAGS
+        ALL_PATTERN ""
+        SET_RAW
+          -pie
+          -Wl,-z,noexecstack,-z,relro,-z,now
+      )
+  intel_config_flag_apply_settings(
+        LinkerOptions
+        CMAKE_SHARED_LINKER_FLAGS
+        ALL_PATTERN ""
+        SET_RAW
+          -Wl,-z,noexecstack,-z,relro,-z,now
+      )
+
+  if(ANDROID)
+    intel_config_flag_apply_settings(
+        LinkerOptions
+        CMAKE_SHARED_LINKER_FLAGS
+        ALL_PATTERN ""
+        SET_RAW
+          -static
+      )
+  endif()
+endif()
+
+if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
+  intel_config_flag_apply_settings(
+      LinkerOptions
+      CMAKE_SHARED_LINKER_FLAGS
+      ALL_PATTERN ""
+      SET_RAW
+        -shared
+        -Wl,-undefined,dynamic_lookup
+        -Wl,-headerpad_max_install_names
+    )
+endif()
+
+# ======================================================================================================
+
+cldnn_dmsg(" - compile/link flags:")
+foreach(__CLDNN_Flag IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS" "CMAKE_EXE_LINKER_FLAGS" "CMAKE_SHARED_LINKER_FLAGS")
+  cldnn_dmsg("    + ${__CLDNN_Flag}:     ${${__CLDNN_Flag}}")
+  foreach(__CLDNN_CfgType ${CMAKE_CONFIGURATION_TYPES})
+    string(TOUPPER "${__CLDNN_Flag}_${__CLDNN_CfgType}" __CLDNN_CfgFlag)
+    if(DEFINED "${__CLDNN_CfgFlag}")
+      cldnn_dmsg("    + ${__CLDNN_CfgFlag}:     ${${__CLDNN_CfgFlag}}")
+    endif()
+  endforeach()
+  cldnn_dmsg("")
+endforeach()
+unset(__CLDNN_Flag)
+unset(__CLDNN_CfgType)
+unset(__CLDNN_CfgFlag)
+
+# ============================== Generic compiler preprocessor definitions =============================
+
+set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
+    CLDNN_CMAKE
+    $<$<CONFIG:Release>:_FORTIFY_SOURCE=2>
+  )
+
+if (MSVC)
+#  set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
+#      _SCL_SECURE_NO_WARNINGS
+#    )
+elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
+    $<$<CONFIG:Release>:_FORTIFY_SOURCE=2>
+  )
+endif()
+
+# ======================================== Include directories =========================================
+
+include_directories(
+    ${CLDNN__IOCL_ICD_INCDIRS}
+    "${CMAKE_SOURCE_DIR}/api"
+  )
+#include_directories("${CMAKE_SOURCE_DIR}/xbyak")
+
+# =================================== Link targets and dependencies ====================================
 
 # Sub-directories where more CMakeLists.txt exist
 add_subdirectory(src)
-add_subdirectory(examples)
-add_subdirectory(tests)
+if(CLDNN__INCLUDE_EXAMPLES)
+  add_subdirectory(examples)
+endif()
+if(CLDNN__INCLUDE_TESTS)
+  add_subdirectory(tests)
+endif()
+
+# ======================================================================================================
+# ======================================================================================================
+# ======================================================================================================
