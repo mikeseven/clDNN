@@ -16,6 +16,7 @@
 
 #include "softmax_cpu_reference.h"
 #include "multidimensional_counter.h"
+#include "implementation_map.h"
 
 namespace neural {
 namespace normalization {
@@ -74,7 +75,7 @@ struct attach {
         auto key_fw = std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32);
         auto val_fw = softmax_cpu_reference::create;
 
-        softmax_fw_implementation_map::instance().insert( {key_fw, val_fw} );
+        implementation_map<softmax>::add(key_fw, val_fw);
     }
     ~attach() {}
 };

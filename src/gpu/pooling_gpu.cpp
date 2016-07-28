@@ -16,7 +16,7 @@
 
 #include "pooling_gpu.h"
 #include "multidimensional_counter.h"
-#include "ocl_toolkit.h"
+#include "implementation_map.h"
 #include "kernel.h"
 
 const std::string kernelName = "Pooling_GPU_max";
@@ -135,7 +135,7 @@ namespace
             auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = pooling_gpu::create;
 
-            pool_fw_implementation_map::instance().insert( {key_fw, val_fw} );
+            implementation_map<pooling>::add(key_fw, val_fw);
         }
 
         ~attach()

@@ -16,6 +16,7 @@
 
 #include "relu_cpu_reference.h"
 #include "multidimensional_counter.h"
+#include "implementation_map.h"
 
 namespace neural {
 
@@ -104,8 +105,8 @@ struct attach {
         auto val_fw = relu_cpu_reference::create;
         auto val_bw = relu_backward_cpu_reference::create;
 
-        relu_fw_implementation_map::instance().insert( {key_fw, val_fw} ); //todo keys should be different
-        relu_bw_implementation_map::instance().insert( {key_bw, val_bw} );
+        implementation_map<relu>::add(key_fw, val_fw); //todo keys should be different
+        implementation_map<relu_backward>::add(key_bw, val_bw);
     }
     ~attach() {}
 };

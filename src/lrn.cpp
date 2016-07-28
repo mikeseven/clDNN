@@ -15,7 +15,7 @@
 */
 
 #include "multidimensional_counter.h"
-#include "lrn.h"
+#include "implementation_map.h"
 
 namespace neural {
 
@@ -110,24 +110,7 @@ normalization::response::arguments::arguments(
 
 // creates primitive with convolution implementation that supports provided arguments
 primitive normalization::response::create(response::arguments arg) {
-    // wrap relu into RAII wrapper
-    std::unique_ptr<response> result(new response(arg));
-
-    // create implementation for non-lazy evaluation
-    if(0 == (arg.engine & engine::lazy)) {
-        // lookup in database; throw if not found
-        lrn_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = lrn_fw_implementation_map::instance().find(key);
-        if(it==std::end(lrn_fw_implementation_map::instance())) throw std::runtime_error("Not yet implemented.");
-
-        // create implementation & attach it to result
-        auto implementation = it->second(*result);
-        result->_private.reset(implementation);
-        result->_work = implementation->work();
-    }
-
-    // release RAII wrapper, return naked pointer
-    return result.release();
+    return is_a_primitive::create<response>(arg);
 }
 /*
 primitive normalization::response_backward::create(normalization::response_backward::arguments arg) {

@@ -153,6 +153,7 @@ namespace neural {
 
             // create implementation & attach it to result
             auto implementation = reorder_reference::create(*result);
+            result->_impl.reset(implementation);
             result->_work = implementation->work();
         }
 

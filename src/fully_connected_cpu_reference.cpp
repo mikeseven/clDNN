@@ -18,7 +18,7 @@
 #include "api/neural.h"
 #include "multidimensional_counter.h"
 #include "memory_utils.h"
-#include "fully_connected.h"
+#include "implementation_map.h"
 
 namespace neural {
 
@@ -94,8 +94,10 @@ namespace {
     struct attach {
         attach() {
             auto val_fw = fully_connected_reference::create;
-            fully_connected_fw_implementation_map::instance().insert({ std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), val_fw });
-            fully_connected_fw_implementation_map::instance().insert({ std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32), val_fw });
+            implementation_map<fully_connected>::add({
+            { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), val_fw },
+            { std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32), val_fw },
+            });
         }
         ~attach() {}
     };

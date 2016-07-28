@@ -16,6 +16,7 @@
 
 #include "pooling_cpu_reference.h"
 #include "multidimensional_counter.h"
+#include "implementation_map.h"
 
 namespace neural {
 
@@ -117,8 +118,7 @@ namespace
         {
             auto key_fw = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = pooling_cpu_reference::create;
-
-            pool_fw_implementation_map::instance().insert( {key_fw, val_fw} );
+            implementation_map<pooling>::add(key_fw, val_fw);
         }
 
         ~attach()

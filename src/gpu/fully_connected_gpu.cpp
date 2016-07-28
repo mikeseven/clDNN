@@ -17,7 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
 #include "multidimensional_counter.h"
-#include "fully_connected.h"
+#include "implementation_map.h"
 #include "kernel.h"
 
 const std::string kernelName = "Fully_Connected_GPU";
@@ -98,8 +98,10 @@ namespace {
         attach() {
             gpu::kernel_templates::add(kernelName, kernelCode);
             auto val_fw = fully_connected_gpu::create;
-            fully_connected_fw_implementation_map::instance().insert({ std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32), val_fw });
-            fully_connected_fw_implementation_map::instance().insert({ std::make_tuple(engine::gpu, memory::format::x_f32,  memory::format::x_f32), val_fw });
+            implementation_map<fully_connected>::add({
+            { std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32), val_fw },
+            { std::make_tuple(engine::gpu, memory::format::x_f32,  memory::format::x_f32 ), val_fw },
+            });
         }
         ~attach() {}
     };

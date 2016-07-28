@@ -361,46 +361,28 @@ struct primitive_at;
 class primitive {
     std::shared_ptr<const is_a_primitive> _pointer;
 
-    // [C++1x] replace with std:: versions
-    template<typename T> struct is_reference         { static const bool value = false; };
-    template<typename T> struct is_reference<T&>     { static const bool value = true; };
-    template<typename T> struct remove_reference     {typedef T type;};
-    template<typename T> struct remove_reference<T&> {typedef T type;};
-
 public:
-    primitive(const is_a_primitive *raw) : _pointer(raw) {};
-    primitive(const primitive &other) : _pointer(other._pointer) {};
+    primitive(const is_a_primitive *raw) : _pointer(raw), input(this), output(this) {};
+    primitive(const primitive &other) : _pointer(other._pointer), input(this), output(this) {};
     any_value_type_lookup operator[] (const std::string &arg) const;
     const primitive operator()(void *argument) const;
-#if defined __GNUC__
-#   pragma GCC diagnostic push
-#   pragma GCC diagnostic ignored "-Winvalid-offsetof"
-#endif
+
     class input {
-        const primitive *get_base() const {
-            const uint8_t *ptr = reinterpret_cast<const uint8_t *>(this);
-            ptr -= (size_t)&reinterpret_cast<const volatile char&>((((primitive *)0)->input));
-            return reinterpret_cast<const primitive *>(ptr);
-        }
+        primitive* base;
     public:
+        input(primitive* b) :base(b) {}
         inline const primitive_at operator[](uint32_t) const;
-        inline const primitive_at operator[](std::string) const;
         inline size_t size() const;
     } input;
+
     class output {
-        const primitive *get_base() const {
-            const uint8_t *ptr = reinterpret_cast<const uint8_t *>(this);
-            ptr -= (size_t)&reinterpret_cast<const volatile char&>((((primitive *)0)->output));
-            return reinterpret_cast<const primitive *>(ptr);
-        }
+        primitive* base;
     public:
+        output(primitive* b) :base(b) {}
         inline const primitive operator[](uint32_t) const;
-        inline const primitive operator[](std::string) const;
         inline size_t size() const;
     } output;
-#if defined __GNUC__
-#   pragma GCC diagnostic pop
-#endif
+
     template<typename T> T as() const;
     template<typename T> operator T() { return as<T>(); }
     template<typename T> bool is() const;
@@ -419,16 +401,19 @@ struct primitive_at {
 };
 
 struct memory;
+class is_an_implementation;
 
 // is_a_primitive is a base class for all primitives exposing common interface; primiary user is a primitive wrapper
 class is_a_primitive {
-    is_a_primitive(const is_a_primitive &);
-    is_a_primitive &operator=(const is_a_primitive &);
+    is_a_primitive(const is_a_primitive &) = delete;
+    is_a_primitive &operator=(const is_a_primitive &) = delete;
 protected:
     type_traits                     *_type_traits;
     std::map<std::string, any_value> _map;
     task_group                       _work;
+    std::shared_ptr<is_an_implementation> _impl;
     is_a_primitive(type_traits *traits) : _type_traits(traits) {}
+    template<class T> static is_a_primitive* create(typename T::arguments arg);
 public:
     virtual ~is_a_primitive() {};
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
@@ -447,25 +432,25 @@ public:
 };
 
 // implementations of inline functions from primitive
-inline const primitive_at           primitive::input::operator[] (uint32_t at) const { return get_base()->_pointer->input()[at]; }
-inline size_t                       primitive::input::size() const { return get_base()->_pointer->input().size(); }
+inline const primitive_at           primitive::input::operator[] (uint32_t at) const { return base->_pointer->input()[at]; }
+inline size_t                       primitive::input::size() const { return base->_pointer->input().size(); }
 inline const primitive              primitive::operator()(void *argument) const { _pointer->execute_argument(argument); return *this; }
 inline const task_group&            primitive::work() const { return _pointer->_work; }
 inline size_t                       primitive::id() const { return _pointer->_type_traits->id; }
-inline const primitive              primitive::output::operator[](uint32_t at) const { return get_base()->_pointer.get()->output()[at]; }
-inline size_t                       primitive::output::size() const { return get_base()->_pointer.get()->output().size(); }
+inline const primitive              primitive::output::operator[](uint32_t at) const { return base->_pointer->output()[at]; }
+inline size_t                       primitive::output::size() const { return base->_pointer->output().size(); }
 inline any_value_type_lookup        primitive::operator[](const std::string &key) const { return any_value_type_lookup(_pointer->_map, key); }
 
 
 template<typename T> T primitive::as() const {
     // [C++1x] replace with static_assert
-    assert(is_reference<T>::value == true);
-    assert(type_id<typename remove_reference<T>::type>()->id == _pointer->_type_traits->id);
-    return *reinterpret_cast<typename remove_reference<T>::type *>(_pointer.get());
+    static_assert(std::is_reference<T>::value, "cannot cast to non-reference type");
+    assert(type_id<typename std::remove_reference<T>::type>()->id == _pointer->_type_traits->id);
+    return *reinterpret_cast<typename std::remove_reference<T>::type *>(_pointer.get());
 }
 
 template<typename T> bool primitive::is() const {
-    return type_id<typename remove_reference<T>::type>()->id == _pointer->_type_traits->id;
+    return type_id<typename std::remove_reference<T>::type>()->id == _pointer->_type_traits->id;
 }
 
 // unkown structure with type info for cast validation

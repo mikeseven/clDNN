@@ -16,6 +16,7 @@
 
 #include "softmax_gpu.h"
 #include "multidimensional_counter.h"
+#include "implementation_map.h"
 #include "kernel.h"
 
 const std::string kernelName = "softmax_gpu";
@@ -245,7 +246,7 @@ struct attach {
         auto key_fw = std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32);
         auto val_fw = softmax_gpu::create;
 
-        softmax_fw_implementation_map::instance().insert( {key_fw, val_fw} );
+        implementation_map<softmax>::add(key_fw, val_fw);
     }
     ~attach() {}
 };
