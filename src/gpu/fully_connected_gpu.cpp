@@ -16,29 +16,17 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
-#include "multidimensional_counter.h"
+#include "fully_connected_common_gpu.h"
 #include "fully_connected.h"
 #include "kernel.h"
 
 const std::string kernelName = "Fully_Connected_GPU";
-const std::string kernelCode = R"__krnl(
+const std::string kernelCode_Begin = R"__krnl(
 KERNEL (Fully_Connected_GPU)(__global neural_memory* input_mem, __global neural_memory* dst_mem)
 {
-    __global uint* input_size = get_raw(input_mem);
-    __global float* input = (__global float*)get_data(input_mem);
-    __global float* pDst = (__global float*)get_data(dst_mem);
+)__krnl";
 
-    const int x = get_global_id(0);
-
-    pDst[x] = 0;
-    uint outXIdx = x / input_size[0];
-    uint inputBatchIdx = x % input_size[0];
-    uint weightBatchIdx = outXIdx * WEIGHTS_BATCH_NUM;
-    for (uint i = 0; i < input_size[2]; i++)
-    {
-        pDst[x] += input[i * input_size[0] + inputBatchIdx] * WEIGHTS[weightBatchIdx + i];
-    }
-    pDst[x] += BIASES[outXIdx];
+const std::string kernelCode_End = R"__krnl(
 }
 )__krnl";
 
@@ -96,7 +84,7 @@ namespace neural {
 namespace {
     struct attach {
         attach() {
-            gpu::kernel_templates::add(kernelName, kernelCode);
+            gpu::kernel_templates::add(kernelName, kernelCode_Begin + fully_connected_code + kernelCode_End);
             auto val_fw = fully_connected_gpu::create;
             fully_connected_fw_implementation_map::instance().insert({ std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32), val_fw });
             fully_connected_fw_implementation_map::instance().insert({ std::make_tuple(engine::gpu, memory::format::x_f32,  memory::format::x_f32), val_fw });
