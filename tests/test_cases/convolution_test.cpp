@@ -69,11 +69,11 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     execute({conv}).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(8.0f, get_value<float>(output_memory, 0));
-    EXPECT_FLOAT_EQ(0.5f, get_value<float>(output_memory, 1));
-    EXPECT_FLOAT_EQ(6.0f, get_value<float>(output_memory, 2));
-    EXPECT_FLOAT_EQ(9.0f, get_value<float>(output_memory, 3));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ(8.0f, output_ptr[0]);
+    EXPECT_FLOAT_EQ(0.5f, output_ptr[1]);
+    EXPECT_FLOAT_EQ(6.0f, output_ptr[2]);
+    EXPECT_FLOAT_EQ(9.0f, output_ptr[3]);
 }
 
 TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
@@ -108,9 +108,9 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
 
     execute({ conv }).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 0));
-    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 1));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ(3.65f, output_ptr[0]);
+    EXPECT_FLOAT_EQ(-5.36f, output_ptr[1]);
 }
 
 TEST(convolution_f32_fw, basic_ofm_wsiz2x1x2x1_in1x2x1_nopad) {
@@ -145,9 +145,9 @@ TEST(convolution_f32_fw, basic_ofm_wsiz2x1x2x1_in1x2x1_nopad) {
 
     execute({ conv }).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(5.1f, get_value<float>(output_memory, 0));
-    EXPECT_FLOAT_EQ(-5.2f, get_value<float>(output_memory, 1));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ(5.1f, output_ptr[0]);
+    EXPECT_FLOAT_EQ(-5.2f, output_ptr[1]);
 }
 
 TEST(convolution_f32_fw, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad) {
@@ -189,10 +189,10 @@ TEST(convolution_f32_fw, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad) {
 
     execute({ conv }).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ( 25.0f, get_value<float>(output_memory, 0));
-    EXPECT_FLOAT_EQ( 64.0f, get_value<float>(output_memory, 1));
-    EXPECT_FLOAT_EQ(103.0f, get_value<float>(output_memory, 2));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ( 25.0f, output_ptr[0]);
+    EXPECT_FLOAT_EQ( 64.0f, output_ptr[1]);
+    EXPECT_FLOAT_EQ(103.0f, output_ptr[2]);
 }
 
 TEST(convolution_f32_fw, basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
@@ -230,10 +230,10 @@ TEST(convolution_f32_fw, basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
 
     execute({ conv }).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_TRUE(are_equal(3.08f, get_value<float>(output_memory, 0)));
-    EXPECT_TRUE(are_equal(2.12f, get_value<float>(output_memory, 1)));
-    EXPECT_TRUE(are_equal(0.7f , get_value<float>(output_memory, 2)));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_TRUE(are_equal(3.08f, output_ptr[0]));
+    EXPECT_TRUE(are_equal(2.12f, output_ptr[1]));
+    EXPECT_TRUE(are_equal(0.7f , output_ptr[2]));
 }
 
 TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
@@ -270,8 +270,8 @@ TEST(convolution_f32_fw, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     auto conv = convolution::create({engine::reference, output, {input, weights, biases}, {1, {2, 2}, 1}, padding::zero});
     execute({conv}).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(12.25f, get_value<float>(output_memory, 0));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ(12.25f, output_ptr[0]);
 }
     
 TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
@@ -318,8 +318,8 @@ TEST(convolution_f32_fw, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
                                      padding::zero});
     execute({conv}).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_memory, 3));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ(2.0f, output_ptr[3]);
 }
 
 TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_split2) {
@@ -386,15 +386,15 @@ TEST(convolution_f32_fw, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_split2) {
 
     execute({ conv }).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(8.0f, get_value<float>(output_memory, 0));
-    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 1));
-    EXPECT_FLOAT_EQ(0.5f, get_value<float>(output_memory, 2));
-    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 3));
-    EXPECT_FLOAT_EQ(6.0f, get_value<float>(output_memory, 4));
-    EXPECT_FLOAT_EQ(3.65f, get_value<float>(output_memory, 5));
-    EXPECT_FLOAT_EQ(9.0f, get_value<float>(output_memory, 6));
-    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 7));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ(8.0f,   get_value<float>(output_ptr, 0));
+    EXPECT_FLOAT_EQ(3.65f,  get_value<float>(output_ptr, 1));
+    EXPECT_FLOAT_EQ(0.5f,   get_value<float>(output_ptr, 2));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_ptr, 3));
+    EXPECT_FLOAT_EQ(6.0f,   get_value<float>(output_ptr, 4));
+    EXPECT_FLOAT_EQ(3.65f,  get_value<float>(output_ptr, 5));
+    EXPECT_FLOAT_EQ(9.0f,   get_value<float>(output_ptr, 6));
+    EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_ptr, 7));
 }
 
 TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
@@ -456,27 +456,20 @@ TEST(convolution_f32_bw, wsiz2x2_wstr1x1_in2x2x1x1_nopad) {
 
     execute({conv_bw}).wait();
 
-    bool results_equal = true;
-    results_equal &= -2.0f == get_value<float>(bw_output_mem, 0);
-    results_equal &= -0.5f == get_value<float>(bw_output_mem, 1);
-    results_equal &=  7.0f == get_value<float>(bw_output_mem, 2);
-    results_equal &= -5.5f == get_value<float>(bw_output_mem, 3);
-    results_equal &=  5.0f == get_value<float>(bw_output_mem, 4);
-    results_equal &= 17.0f == get_value<float>(bw_output_mem, 5);
-    results_equal &=  1.5f == get_value<float>(bw_output_mem, 6);
-    results_equal &=  6.5f == get_value<float>(bw_output_mem, 7);
-    results_equal &=  6.0f == get_value<float>(bw_output_mem, 8);
+    
+    float bw_out_expected[] = { -2.0f, -0.5f, 7.0f, -5.5f, 5.0f, 17.0f, 1.5f, 6.5f, 6.0f };
+    auto bw_output_ptr = bw_output_mem.pointer<float>();
+    auto results_equal = std::equal(std::begin(bw_out_expected), std::end(bw_out_expected), std::begin(bw_output_ptr));
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong output gradient";
 
-    results_equal = true;
-    results_equal &= -7.00f == get_value<float>(weights_diff_mem, 0);
-    results_equal &= 35.00f == get_value<float>(weights_diff_mem, 1);
-    results_equal &=  5.50f == get_value<float>(weights_diff_mem, 2);
-    results_equal &= 32.25f == get_value<float>(weights_diff_mem, 3);
+    float weights_diff_expected[] = { -7.00f, 35.00f, 5.50f, 32.25f };
+    auto weights_diff_ptr = weights_diff_mem.pointer<float>();
+    results_equal = std::equal(std::begin(weights_diff_expected), std::end(weights_diff_expected), std::begin(weights_diff_ptr));
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong weights gradient";
 
-    results_equal = true;
-    results_equal &= 10.0f == get_value<float>(biases_diff_mem, 0);
+    float biases_diff_expected[] = { 10.0f };
+    auto biases_diff_ptr = biases_diff_mem.pointer<float>();
+    results_equal = std::equal(std::begin(biases_diff_expected), std::end(biases_diff_expected), std::begin(biases_diff_ptr));
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }
 
@@ -539,27 +532,19 @@ TEST(convolution_f32_bw, wsiz3x3_wstr2x2_in1x1x1x1_zeropad) {
                                                  padding::zero});
     execute({conv_bw}).wait();
 
-    bool results_equal = true;
-    results_equal &= -4.0f == get_value<float>(bw_output_mem, 0);
-    results_equal &=  7.0f == get_value<float>(bw_output_mem, 1);
-    results_equal &=  1.0f == get_value<float>(bw_output_mem, 2);
-    results_equal &=  3.0f == get_value<float>(bw_output_mem, 3);
+    float bw_output_expected[] = { -4.0f, 7.0f, 1.0f, 3.0f };
+    auto bw_output_ptr = bw_output_mem.pointer<float>();
+    auto results_equal = std::equal(std::begin(bw_output_expected), std::end(bw_output_expected), std::begin(bw_output_ptr));
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong output gradient";
 
-    results_equal = true;
-    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 0);
-    results_equal &= 10.5f == get_value<float>(weights_diff_mem, 1);
-    results_equal &=  0.0f == get_value<float>(weights_diff_mem, 2);
-    results_equal &=  1.0f == get_value<float>(weights_diff_mem, 3);
-    results_equal &= -1.5f == get_value<float>(weights_diff_mem, 4);
-    results_equal &=  0.0f == get_value<float>(weights_diff_mem, 5);
-    results_equal &=  0.0f == get_value<float>(weights_diff_mem, 6);
-    results_equal &=  0.0f == get_value<float>(weights_diff_mem, 7);
-    results_equal &=  0.0f == get_value<float>(weights_diff_mem, 8);
+    float weights_diff_expected[] = { 2.0f, 10.5f, 0.0f, 1.0f, -1.5f, 0.0f, 0.0f, 0.0f, 0.0f };
+    auto weights_diff_ptr = weights_diff_mem.pointer<float>();
+    results_equal = std::equal(std::begin(weights_diff_expected), std::end(weights_diff_expected), std::begin(weights_diff_ptr));
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong weights gradient";
 
-    results_equal = true;
-    results_equal &= 2.0f == get_value<float>(biases_diff_mem, 0);
+    float biases_diff_expected[] = { 2.0f };
+    auto biases_diff_ptr = biases_diff_mem.pointer<float>();
+    results_equal = std::equal(std::begin(biases_diff_expected), std::end(biases_diff_expected), std::begin(biases_diff_ptr));
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }
 
@@ -622,19 +607,27 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
     auto& biases_diff_mem  = biases_diff.as<const memory&>();
 
     fill(fw_input_mem, 1.0f);
-    static_cast<float*>(fw_input_mem.pointer)[10] = -0.5f;
-    static_cast<float*>(fw_input_mem.pointer)[11] =  1.5f;
-    static_cast<float*>(fw_input_mem.pointer)[14] =  1.0f;
-    static_cast<float*>(fw_input_mem.pointer)[15] = -0.5f;
-
+    {
+        auto ptr = fw_input_mem.pointer<float>();
+        ptr[10] = -0.5f;
+        ptr[11] = 1.5f;
+        ptr[14] = 1.0f;
+        ptr[15] = -0.5f;
+    }
     fill(bw_input_mem, 1.0f);
-    static_cast<float*>(bw_input_mem.pointer)[3] = 2.0f;
+    {
+        auto ptr = bw_input_mem.pointer<float>();
+        ptr[3] = 2.0f;
+    }
 
     fill(weights_mem, 1.0f);
-    static_cast<float*>(weights_mem.pointer)[4] = -2.0f;
-    static_cast<float*>(weights_mem.pointer)[5] =  3.5f;
-    static_cast<float*>(weights_mem.pointer)[7] =  0.5f;
-    static_cast<float*>(weights_mem.pointer)[8] =  1.5f;
+    {
+        auto ptr = weights_mem.pointer<float>();
+        ptr[4] = -2.0f;
+        ptr[5] = 3.5f;
+        ptr[7] = 0.5f;
+        ptr[8] = 1.5f;
+    }
 
     fill(biases_mem, -3.0f);
 
@@ -648,39 +641,25 @@ TEST(convolution_f32_bw, offsets_wsiz3x3_in2x2x1x1_zeropad) {
                                                  padding::zero});
     execute({conv_bw}).wait();
 
-    bool results_equal = true;
-    results_equal &=  0.0f == get_value<float>(bw_output_mem, 0);
-    results_equal &=  0.0f == get_value<float>(bw_output_mem, 1);
-    results_equal &=  0.0f == get_value<float>(bw_output_mem, 2);
-    results_equal &=  0.0f == get_value<float>(bw_output_mem, 3);
-    results_equal &=  0.0f == get_value<float>(bw_output_mem, 4);
-    results_equal &=  2.0f == get_value<float>(bw_output_mem, 5);
-    results_equal &=  2.0f == get_value<float>(bw_output_mem, 6);
-    results_equal &=  2.0f == get_value<float>(bw_output_mem, 7);
-    results_equal &=  0.0f == get_value<float>(bw_output_mem, 8);
-    results_equal &=  2.0f == get_value<float>(bw_output_mem, 9);
-    results_equal &= -4.0f == get_value<float>(bw_output_mem, 10);
-    results_equal &=  7.0f == get_value<float>(bw_output_mem, 11);
-    results_equal &=  0.0f == get_value<float>(bw_output_mem, 12);
-    results_equal &=  2.0f == get_value<float>(bw_output_mem, 13);
-    results_equal &=  1.0f == get_value<float>(bw_output_mem, 14);
-    results_equal &=  3.0f == get_value<float>(bw_output_mem, 15);
+    float bw_output_expected[] = { 0.0f, 0.0f,  0.0f, 0.0f,
+                                   0.0f, 2.0f,  2.0f, 2.0f,
+                                   0.0f, 2.0f, -4.0f, 7.0f,
+                                   0.0f, 2.0f,  1.0f, 3.0f };
+    auto bw_output_ptr = bw_output_mem.pointer<float>();
+    auto results_equal = std::equal(std::begin(bw_output_expected), std::end(bw_output_expected), std::begin(bw_output_ptr));
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong output gradient";
 
-    results_equal = true;
-    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 0);
-    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 1);
-    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 2);
-    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 3);
-    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 4);
-    results_equal &= 10.5f == get_value<float>(weights_diff_mem, 5);
-    results_equal &=  2.0f == get_value<float>(weights_diff_mem, 6);
-    results_equal &=  1.0f == get_value<float>(weights_diff_mem, 7);
-    results_equal &= -1.5f == get_value<float>(weights_diff_mem, 8);
+    float weights_diff_expected[] = { 2.0f, 2.0f, 2.0f,
+                                      2.0f, 2.0f, 10.5f,
+                                      2.0f, 1.0f, -1.5f, };
+
+    auto weights_diff_ptr = weights_diff_mem.pointer<float>();
+    results_equal = std::equal(std::begin(weights_diff_expected), std::end(weights_diff_expected), std::begin(weights_diff_ptr));
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong weights gradient";
 
-    results_equal = true;
-    results_equal &= 2.0f == get_value<float>(biases_diff_mem, 0);
+    float biases_diff_expected[] = { 2.0f };
+    auto biases_diff_ptr = biases_diff_mem.pointer<float>();
+    results_equal = std::equal(std::begin(biases_diff_expected), std::end(biases_diff_expected), std::begin(biases_diff_ptr));
     EXPECT_TRUE(results_equal) << "ERROR MESSAGE: wrong bias gradient";
 }
 
@@ -696,7 +675,7 @@ TEST(convolution_f32_fw, DISABLED_optimized_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     auto& input_memory   = input.as<const memory&>();
     auto& weights_memory = weights.as<const memory&>();
     auto& biases_memory  = biases.as<const memory&>();
-    auto output_ptr = static_cast<float*>(output_memory.pointer);
+    auto output_ptr = output_memory.pointer<float>();
 
     auto conv = convolution::create({engine::cpu, output, {input, weights, biases}, {1, {2, 2}, 1}, padding::zero});
 
@@ -753,11 +732,19 @@ TEST(convolution_f32_fw, DISABLED_optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nop
         fill<float>(input_memory, input_val);
 
         // Weights and biases are grouped by slices, so we can easily initialize them with different values.
-        for(size_t weight_element = 0; weight_element < weights_memory.count(); ++weight_element)
-            set_value<float>(weights_memory, static_cast<uint32_t>(weight_element), (weight_element < weights_memory.count()/2) ? weight_val_slice0 : weight_val_slice1);
+        {// restrict memory::ptr lifetime
+            auto weights_ptr = weights_memory.pointer<float>();
+            auto weights_count_half = weights_memory.count() / 2;
+            std::fill(std::begin(weights_ptr), std::begin(weights_ptr) + weights_count_half, weight_val_slice0);
+            std::fill(std::begin(weights_ptr) + weights_count_half, std::end(weights_ptr), weight_val_slice1);
+        }
 
-        for(size_t bias_element = 0; bias_element < biases_memory.count(); ++bias_element)
-            set_value<float>(biases_memory, static_cast<uint32_t>(bias_element), (bias_element < biases_memory.count()/2) ? bias_val_slice0 : bias_val_slice1);
+        {// restrict memory::ptr lifetime
+            auto biases_ptr = biases_memory.pointer<float>();
+            auto biases_count_half = biases_memory.count() / 2;
+            std::fill(std::begin(biases_ptr), std::begin(biases_ptr) + biases_count_half, bias_val_slice0);
+            std::fill(std::begin(biases_ptr) + biases_count_half, std::end(biases_ptr), bias_val_slice1);
+        }
 
         execute({conv}, {engine_resource}).wait();
 
@@ -766,12 +753,13 @@ TEST(convolution_f32_fw, DISABLED_optimized_2slice_wsiz2x2_wstr2x2_in4x4x1x1_nop
         float expected_value_slice0 = num_input_kernel_elements * input_val * weight_val_slice0 + bias_val_slice0;
         float expected_value_slice1 = num_input_kernel_elements * input_val * weight_val_slice1 + bias_val_slice1;
 
+        auto output_ptr = output_memory.pointer<float>();
         for(uint32_t fmap = 0; fmap < output_sizes.feature[0]; ++fmap)
             for(uint32_t col = 0; col < output_sizes.spatial[0]; ++col)
                 for(uint32_t row = 0; row < output_sizes.spatial[1]; ++row)
                 {
                     uint32_t output_element = fmap + col * output_sizes.feature[0] + row * output_sizes.feature[0] * output_sizes.spatial[0];
-                    EXPECT_EQ(true, tests::are_equal((fmap < 16) ? expected_value_slice0 : expected_value_slice1, get_value<float>(output_memory, output_element)));
+                    EXPECT_EQ(true, tests::are_equal((fmap < 16) ? expected_value_slice0 : expected_value_slice1, output_ptr[output_element]));
                 }
         };
 
@@ -835,10 +823,14 @@ TEST(convolution_f32_fw, DISABLED_naive_comparison_optimized_2slice_wsiz3x3_wstr
         ref_conv,
     }, {engine_resource}).wait();
 
-    for(size_t output_element = 0; output_element < temp_output_memory.count(); ++output_element)
-        EXPECT_EQ(true, tests::are_equal(static_cast<float*>(ref_output_memory.pointer)[output_element],
-                                         static_cast<float*>(temp_output_memory.pointer)[output_element],
-                                         0.0005f));
+    {
+        auto ref_out_ptr = ref_output_memory.pointer<float>();
+        auto temp_out_ptr = temp_output_memory.pointer<float>();
+        for(size_t output_element = 0; output_element < temp_output_memory.count(); ++output_element)
+            EXPECT_EQ(true, tests::are_equal(ref_out_ptr[output_element],
+                                             temp_out_ptr[output_element],
+                                             0.0005f));
+    }
 }
 
 TEST(convolution_f32_fw, DISABLED_optimized_generic_vs_for_loop_implementation) {
@@ -1023,10 +1015,10 @@ TEST(convolution_f32_fw, DISABLED_optimized_generic_vs_ref_implementation) {
      , reorder_output_optimized_ref_format }                            // copy optimized output to another buffer in reference output's format, so we can compare them
      , {engine_resource}).wait();
 
-     auto& output_mem_optimized = output_optimized.as<const memory&>();
-     auto& output_mem_ref       = output_ref.as<const memory&>();
+     auto output_mem_optimized = output_optimized.as<const memory&>().pointer<float>();
+     auto output_mem_ref       = output_ref.as<const memory&>().pointer<float>();
      for(size_t i = 0; i < output_buffer_size; ++i)
-       EXPECT_EQ(true, tests::are_equal(static_cast<float*>(output_mem_ref.pointer)[i],
-                                        static_cast<float*>(output_mem_optimized.pointer)[i]))
+       EXPECT_EQ(true, tests::are_equal(output_mem_ref[i],
+                                        output_mem_optimized[i]))
                << "at index " << i;
 }

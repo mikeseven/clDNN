@@ -44,7 +44,7 @@ TEST(relu_f32_fw_gpu, basic) {
     fill<float>(input.as<const memory&>());
 
     auto act = relu::create({ engine::gpu, output, input });
-    auto buf = static_cast<float*>(input.as<const memory&>().pointer);
+    auto buf = input.as<const memory&>().pointer<float>();
     // write output to input buffer
     execute({ output(buf), act }).wait();
 
@@ -85,6 +85,10 @@ TEST(relu_f32_fw_gpu, intrinsics_avx2) {
     execute({ output, opt_relu }).wait();
     execute({ ref_output, ref_relu }).wait();
 
-    for (size_t output_element = 0; output_element < output_memory.count(); ++output_element)
-        EXPECT_EQ(true, tests::are_equal(static_cast<float*>(ref_output_memory.pointer)[output_element], static_cast<float*>(output_memory.pointer)[output_element]));
+    {
+        auto ref_out_ptr = ref_output_memory.pointer<float>();
+        auto out_ptr = output_memory.pointer<float>();
+        for (size_t output_element = 0; output_element < output_memory.count(); ++output_element)
+            EXPECT_EQ(true, tests::are_equal(ref_out_ptr[output_element], out_ptr[output_element]));
+    }
 }

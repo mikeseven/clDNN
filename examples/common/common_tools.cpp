@@ -36,11 +36,12 @@ std::vector<std::string> get_directory_images(std::string images_path) {
 }
 
 
-void nn_data_load_from_image(std::string  filename, // Load of all data from a image filename
-    float* dst_buffer,
-    uint32_t std_size,     // size of image both: height and width
-    bool RGB_order)        // if true - image have RGB order, otherwise BGR
-                           // supported formats: JPEG, J2K, JP2, PNG, BMP, WEBP, GIF, TIFF
+void nn_data_load_from_image(
+    std::string  filename,                       // Load of all data from a image filename
+    neural::memory::ptr<float>::iterator dst_buffer,
+    uint32_t                   std_size,         // size of image both: height and width
+    bool                       RGB_order)        // if true - image have RGB order, otherwise BGR
+                                                 // supported formats: JPEG, J2K, JP2, PNG, BMP, WEBP, GIF, TIFF
 {
     if (FIBITMAP *bitmap_raw = fi::crop_image_to_square_and_resize(fi::load_image_from_file(filename), std_size)) {
         FIBITMAP *bitmap;
@@ -85,10 +86,10 @@ void load_images_from_file_list(
     neural::primitive& memory)
 {
     auto memory_primitive = memory.as<const neural::memory&>().argument;
-    float* dst_ptr = static_cast<float*>(memory.as<const neural::memory&>().pointer);
-
+    auto dst_ptr = memory.as<const neural::memory&>().pointer<float>();
+    auto it = dst_ptr.begin();
     // validate if primitvie is memory type
-    if (dst_ptr == nullptr) throw std::runtime_error("Given primitive is not a memory");
+    if (!memory.is<const neural::memory&>()) throw std::runtime_error("Given primitive is not a memory");
 
     auto batches = std::min(memory_primitive.size.batch[0], (uint32_t) images_list.size()) ;
     auto dim = memory_primitive.size.spatial;
@@ -98,7 +99,7 @@ void load_images_from_file_list(
     auto single_image_size = dim[0] * dim[0] * 3;
     for (auto img : images_list)
     {
-        nn_data_load_from_image(img, dst_ptr, dim[0], true);
-        dst_ptr += single_image_size;
+        nn_data_load_from_image(img, it,dim[0], true);
+        it += single_image_size;
     }
 }

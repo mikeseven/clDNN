@@ -16,9 +16,10 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "ocl_toolkit.h"
+#include "memory_gpu.h"
 #include "kernels_cache.h"
 #include <iostream>
+#include <sstream>
 
 namespace neural { namespace gpu {
 
@@ -34,9 +35,9 @@ public:
 
 class memory_arg : public context_holder {
     const neural::memory& _mem;
-    cl::Buffer _clBuffer;
+    std::shared_ptr<gpu_buffer> _gpu_buffer;
     bool is_own() const {
-        return _mem.argument.engine == neural::engine::gpu && _mem.argument.owns_memory;
+        return _mem.argument.engine == neural::engine::gpu;
     }
     bool _copy_input;
     bool _copy_output;
@@ -45,7 +46,7 @@ protected:
     memory_arg(const neural::memory& mem, bool copy_input, bool copy_output);
 
 public:
-    const cl::Buffer& get_buffer() const { return _clBuffer; };
+    const cl::Buffer& get_buffer() const { return _gpu_buffer->get_buffer(); }
     ~memory_arg();
 };
 
@@ -120,10 +121,11 @@ public:
 
     kernels_cache::jit_definitions get_definitions() const override {
         auto result = vector_jit_constant::get_definitions();
+        auto data = _mem.pointer<float>();
         std::stringstream ss;
         ss << "(float[]){ ";
         for (int i = 0; i < _mem.count(); i++)
-            ss << static_cast<float*>(_mem.pointer)[i] << ",";
+            ss << data[i] << ",";
         ss << " } ";
         result.push_back({ _name, ss.str() });
         return result;
@@ -154,9 +156,10 @@ public:
         for (auto& m : _mem)
         {
             auto & _m = m.get();
+            auto data = _m.pointer<float>();
             ss << "{ ";
             for (int i = 0; i < _m.count(); i++)
-                ss << static_cast<float*>(_m.pointer)[i] << ",";
+                ss << data[i] << ",";
             ss << " } ,";
         }
         ss << " } ";

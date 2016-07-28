@@ -105,7 +105,7 @@ namespace neural {
         case padding::zero:
         {
             gpu::kernel<gpu::input_mem, gpu::output_mem, cl_uint, cl_float, cl_float, cl_float, cl_int> kernel(kernelName);
-            kernel({ dstSize, std::min(dstSize, (size_t)lws) }, input_mem, output_mem, size, k, alpha, beta, help_input_offset.feature[0]);
+            kernel({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) }, input_mem, output_mem, size, k, alpha, beta, help_input_offset.feature[0]);
             break;
         }
         default:

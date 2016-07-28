@@ -67,9 +67,9 @@ TEST(convolution_relu_gpu, trivial_convolution_relu) {
     auto conv_relu = convolution_relu::create({ engine::gpu, output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero, 0 });
     execute({ conv_relu }).wait();
 
-    auto& output_memory = output.as<const memory&>();
-    EXPECT_FLOAT_EQ(4.0f, get_value<float>(output_memory, 0));
-    EXPECT_FLOAT_EQ(0.0f, get_value<float>(output_memory, 1));
-    EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_memory, 2));
-    EXPECT_FLOAT_EQ(5.0f, get_value<float>(output_memory, 3));
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ(4.0f, get_value<float>(output_ptr, 0));
+    EXPECT_FLOAT_EQ(0.0f, get_value<float>(output_ptr, 1));
+    EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_ptr, 2));
+    EXPECT_FLOAT_EQ(5.0f, get_value<float>(output_ptr, 3));
 }

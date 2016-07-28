@@ -15,16 +15,55 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#include "memory_gpu.h"
 #include "memory.h"
-#include "ocl_toolkit.h"
-#include "kernels_cache.h"
 
 namespace neural { namespace gpu {
+    gpu_buffer::gpu_buffer(memory::arguments arg) : _argument(arg),
+        _ref_count(0),
+        _buffer_size(neural_memory::size_of_memory(arg)),
+        _data_size(neural_memory::datasize(arg)),
+        _buffer(context()->context(), CL_MEM_READ_WRITE, _buffer_size),
+        _mapped_ptr(nullptr) {
+        gpu_buffer::lock();
+        gpu_buffer::release();
+    }
+
+    void* gpu_buffer::lock() {
+        std::lock_guard<std::mutex> locker(_mutex);
+        if (0 == _ref_count) {
+            cl::Event end_event;
+            _mapped_ptr = reinterpret_cast<neural_memory*>(context()->queue().enqueueMapBuffer(_buffer, true, CL_MAP_WRITE, 0, _buffer_size, 0, &end_event));
+            end_event.wait();
+            _mapped_ptr->initialize(_argument);
+        }
+        _ref_count++;
+        return _mapped_ptr->pointer();
+    }
+
+    void gpu_buffer::release() {
+        std::lock_guard<std::mutex> locker(_mutex);
+        _ref_count--;
+        if (0 == _ref_count) {
+            cl::Event end_event;
+            context()->queue().enqueueUnmapMemObject(_buffer, _mapped_ptr, 0, &end_event);
+            end_event.wait();
+            _mapped_ptr = nullptr;
+        }
+    }
+
+    void gpu_buffer::reset(void* ptr) {
+        auto me = lock();
+        ::memcpy(me, ptr, _data_size);
+        release();
+    }
 
 namespace {
     struct attach_gpu_allocator {
         attach_gpu_allocator() {
-            allocators_map::instance().insert({ engine::gpu,{ gpu_toolkit::allocate_memory_gpu, gpu_toolkit::deallocate_memory_gpu } });
+            allocators_map::instance().insert({ engine::gpu, [](memory::arguments arg, bool) -> std::shared_ptr<memory::buffer> {
+                return std::make_shared<gpu_buffer>(arg);
+            } });
         }
         ~attach_gpu_allocator() {}
     };

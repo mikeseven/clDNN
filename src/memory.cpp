@@ -18,58 +18,93 @@
 
 #include <functional>
 #include <numeric>
+#include <atomic>
 
 namespace neural {
 
 memory::arguments::arguments(neural::engine::type aengine, memory::format::type aformat, vector<uint32_t> asize)
     : engine(aengine)
     , format(aformat)
-    , size(asize)
-    , owns_memory(false) {}
+    , size(asize) {}
 
 size_t memory::count() const {
-    return std::accumulate(argument.size.raw.begin(), argument.size.raw.end(), size_t(1), std::multiplies<size_t>());
+    return _buffer->size() / traits(argument.format).type->size;
 }
 
-memory::~memory() {
-    if (!argument.owns_memory) return;
+size_t memory::size_of(arguments arg) {
+    return std::accumulate(
+        arg.size.raw.begin(),
+        arg.size.raw.end(),
+        memory::traits(arg.format).type->size,
+        std::multiplies<size_t>()
+    );
+}
 
-    auto key = argument.engine;
+std::shared_ptr<memory::buffer> create_buffer(memory::arguments arg, bool allocate) {
+    auto key = arg.engine;
     auto it = allocators_map::instance().find(key);
-    if (it == std::end(allocators_map::instance())) return;
+    if (it == std::end(allocators_map::instance())) throw std::runtime_error("Memory allocator is not yet implemented.");
 
-    it->second.deallocate(pointer, argument);
+    return it->second(arg, allocate);
 }
 
 primitive memory::describe(memory::arguments arg){
-    return new memory(arg);
+    auto buffer = create_buffer(arg, false);
+    return new memory(arg, buffer);
 }
 
 primitive memory::allocate(memory::arguments arg){
-    auto key = arg.engine;
-    auto it = allocators_map::instance().find(key);
-    if(it == std::end(allocators_map::instance())) throw std::runtime_error("Memory allocator is not yet implemented.");
-
-    auto result = std::unique_ptr<memory>(new memory(arg));
-    result->pointer = it->second.allocate(arg);
-    const_cast<memory::arguments &>(result->argument).owns_memory = true;
-    return result.release();
+    auto buffer = create_buffer(arg, true);
+    return new memory(arg, buffer);
 }
 
 namespace {
+    // simple CPU memory buffer
+    struct cpu_buffer : public memory::buffer {
+        explicit cpu_buffer(size_t size, bool allocate = true) : _size(size),
+                                                                 _pointer(nullptr) {
+            if (allocate) {
+                not_my_pointer.clear();
+                _pointer = new char[_size];
+            }
+            else
+                not_my_pointer.test_and_set();
+        }
+
+        ~cpu_buffer() override {
+            clear();
+        }
+
+        void* lock() override {
+            return _pointer;
+        }
+
+        void release() override {}
+
+        void reset(void* ptr) override {
+            clear();
+            _pointer = static_cast<char *>(ptr);
+        }
+
+        size_t size() override { return _size; }
+
+    private:
+        void clear() {
+            if (!not_my_pointer.test_and_set())
+                delete[] _pointer;
+        }
+        std::atomic_flag not_my_pointer;
+        size_t _size;
+        char* _pointer;
+    };
+
     struct attach {
         attach() {
-            memory_allocator default_allocator {
-                [](memory::arguments arg) {
-                    auto count = std::accumulate(arg.size.raw.begin(), arg.size.raw.end(), size_t(1), std::multiplies<size_t>());
-                    auto elem_size = memory::traits(arg.format).type->size;
-                    return new char[count*elem_size];
-                },
-                [](void* pointer, memory::arguments) { delete[] static_cast<char *>(pointer); }
+            auto create_buff = [](memory::arguments arg, bool allocate) -> std::shared_ptr<memory::buffer> {
+                return std::make_shared<cpu_buffer>(memory::size_of(arg), allocate);
             };
-
-            allocators_map::instance().insert({ engine::reference, default_allocator });
-            allocators_map::instance().insert({ engine::cpu, default_allocator });
+            allocators_map::instance().insert({ engine::reference, create_buff });
+            allocators_map::instance().insert({ engine::cpu, create_buff });
         }
         ~attach() {}
     };

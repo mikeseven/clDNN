@@ -17,7 +17,6 @@
 #include <iterator>
 #include "convolution_gpu.h"
 #include "multidimensional_counter.h"
-#include "memory_utils.h"
 #include "kernel.h"
 
 #pragma warning(disable: 4189)
@@ -178,7 +177,7 @@ void convolution_gpu::implementation(const void *ptr) {
         biases_mem.push_back(this_conv->argument.input[i * 2 + 2].primitive.as<const memory&>());
     }
 
-    const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
+    // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
     namespace nd = ndimensional;
     nd::value<uint32_t> range (output_size.raw);
 
@@ -199,7 +198,7 @@ void convolution_gpu::implementation(const void *ptr) {
     // Ofm and batch is cropped, ofm will be hold manually
     // Batch is included in output size
 
-    size_t dstSize = output_mem.count();
+    auto dstSize = output_mem.count();
 
     gpu::jit_constants mem_consts{
         gpu::make_jit_constant("STRIDE", _stride),
@@ -214,12 +213,12 @@ void convolution_gpu::implementation(const void *ptr) {
             if (input_mem.argument.format == memory::format::bfyx_f32)
             {
                 auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem>("Convolution_GPU_bfxy_f32", mem_consts);
-                kernel({ dstSize, std::min(dstSize, (size_t)16) }, input_mem, output_mem);
+                kernel({ dstSize, std::min(dstSize, static_cast<size_t>(16)) }, input_mem, output_mem);
             }
             else
             {
                 auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem>("Convolution_GPU", mem_consts);
-                kernel({ {dstSize, 1} , {std::min(dstSize, (size_t)16), 1} }, input_mem, output_mem);
+                kernel({ {dstSize, 1} , {std::min(dstSize, static_cast<size_t>(16)), 1} }, input_mem, output_mem);
             }
         }
             break;

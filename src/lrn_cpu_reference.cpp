@@ -46,8 +46,8 @@ namespace neural {
             throw std::runtime_error("lrn input/output number of dimension does not match [iput size=" + std::to_string(input_arg.size.raw.size())
                                      + ", output size=" + std::to_string(output_arg.size.raw.size()));
 
-        auto input  = static_cast<float*>(this_lrn->input_memory(0).pointer);
-        auto output = static_cast<float*>(this_lrn->output_memory(0).pointer);
+        auto input  = this_lrn->input_memory(0).pointer<float>();
+        auto output = this_lrn->output_memory(0).pointer<float>();
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range(output_size);

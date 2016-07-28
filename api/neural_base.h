@@ -15,6 +15,7 @@
 */
 #pragma once
 
+#include <iterator>
 #include <vector>
 #include <string>
 #include <memory>
@@ -402,6 +403,7 @@ public:
 #endif
     template<typename T> T as() const;
     template<typename T> operator T() { return as<T>(); }
+    template<typename T> bool is() const;
     const neural::task_group &work() const;
     size_t id() const;
     bool operator==(const primitive &other) const { return _pointer==other._pointer; }
@@ -461,6 +463,11 @@ template<typename T> T primitive::as() const {
     assert(type_id<typename remove_reference<T>::type>()->id == _pointer->_type_traits->id);
     return *reinterpret_cast<typename remove_reference<T>::type *>(_pointer.get());
 }
+
+template<typename T> bool primitive::is() const {
+    return type_id<typename remove_reference<T>::type>()->id == _pointer->_type_traits->id;
+}
+
 // unkown structure with type info for cast validation
 class is_an_implementation {
     const type_traits *const _type_traits;

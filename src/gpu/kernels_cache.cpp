@@ -15,8 +15,10 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "ocl_toolkit.h"
 #include "kernels_cache.h"
+#include "ocl_toolkit.h"
+#include <sstream>
+#include <cassert>
 
 namespace neural { namespace gpu {
 

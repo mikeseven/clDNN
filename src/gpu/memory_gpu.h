@@ -20,6 +20,8 @@
 #include <cassert>
 #include <iterator>
 #include <numeric>
+#include "ocl_toolkit.h"
+#include "api/neural.h"
 
 #define BUFFER_ALIGNMENT 4096
 #define CACHE_ALIGNMENT 64
@@ -167,6 +169,39 @@ static_assert(std::is_pod<neural_vector>::value, "Please fix the neural::gpu::ne
 
 #pragma pack(pop)
 
-class gpu_toolkit;
+template<typename T>
+struct sizeof_traits {
+    static size_t get(size_t count) { return sizeof(T) * count; }
+};
+
+template<>
+struct sizeof_traits<neural_memory> {
+    static size_t get(const neural::memory::arguments& arg) { return neural_memory::size_of_memory(arg); }
+};
+
+template<>
+struct sizeof_traits<neural_vector> {
+    static size_t get(const neural::vector<uint32_t>& arg) { return neural_vector::size_of_vector(arg); }
+};
+
+struct gpu_buffer : public memory::buffer, public context_holder {
+    gpu_buffer(memory::arguments arg);
+    void* lock() override;
+    void release() override;
+    void reset(void* ptr) override;
+    size_t size() override { return _data_size; }
+    const cl::Buffer& get_buffer() const {
+        assert(0 == _ref_count);
+        return _buffer;
+    }
+private:
+    std::mutex _mutex;
+    memory::arguments _argument;
+    unsigned _ref_count;
+    size_t _buffer_size;
+    size_t _data_size;
+    cl::Buffer _buffer;
+    neural_memory* _mapped_ptr;
+};
 
 } }

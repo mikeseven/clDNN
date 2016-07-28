@@ -61,11 +61,11 @@ TEST(fully_connected_relu_gpu, xb_f32_batch_1) {
 
     execute({ full_con_relu_prim }).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(2.5f, get_value<float>(output_memory, 0));
-    EXPECT_EQ(0, get_value<float>(output_memory, 1));
-    EXPECT_EQ(0.75f, get_value<float>(output_memory, 2));
-    EXPECT_EQ(0, get_value<float>(output_memory, 3));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(2.50f, output_ptr[0]);
+    EXPECT_EQ(0.00f, output_ptr[1]);
+    EXPECT_EQ(0.75f, output_ptr[2]);
+    EXPECT_EQ(0.00f, output_ptr[3]);
 }
 
 TEST(fully_connected_relu_gpu, xb_f32_batch_2) {
@@ -106,15 +106,15 @@ TEST(fully_connected_relu_gpu, xb_f32_batch_2) {
 
     execute({ full_con_rel_prim }).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(2.5f, get_value<float>(output_memory, 0));
-    EXPECT_EQ(4.0f, get_value<float>(output_memory, 1));
-    EXPECT_EQ(0, get_value<float>(output_memory, 2));
-    EXPECT_EQ(0, get_value<float>(output_memory, 3));
-    EXPECT_EQ(0.75f, get_value<float>(output_memory, 4));
-    EXPECT_EQ(2.75f, get_value<float>(output_memory, 5));
-    EXPECT_EQ(0, get_value<float>(output_memory, 6));
-    EXPECT_EQ(0, get_value<float>(output_memory, 7));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(2.50f, output_ptr[0]);
+    EXPECT_EQ(4.00f, output_ptr[1]);
+    EXPECT_EQ(0.00f, output_ptr[2]);
+    EXPECT_EQ(0.00f, output_ptr[3]);
+    EXPECT_EQ(0.75f, output_ptr[4]);
+    EXPECT_EQ(2.75f, output_ptr[5]);
+    EXPECT_EQ(0.00f, output_ptr[6]);
+    EXPECT_EQ(0.00f, output_ptr[7]);
 }
 
 TEST(fully_connected_relu_gpu, x_f32) {
@@ -147,16 +147,15 @@ TEST(fully_connected_relu_gpu, x_f32) {
 
     auto full_con_relu_prim = fully_connected_relu::create({ engine::gpu, output_prim, input_prim, weights_prim, bias_prim, 0 });
 
-    auto& output_memory = output_prim.as<const memory&>();
-
     set_values(input_prim, { -0.5f, 2.0f, 0.5f });
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
     set_values(bias_prim, { 1.0f, -2.0f, 3.0f, -4.0f });
 
     execute({ full_con_relu_prim }).wait();
 
-    EXPECT_EQ(2.5f, get_value<float>(output_memory, 0));
-    EXPECT_EQ(0, get_value<float>(output_memory, 1));
-    EXPECT_EQ(0.75f, get_value<float>(output_memory, 2));
-    EXPECT_EQ(0, get_value<float>(output_memory, 3));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(2.50f, output_ptr[0]);
+    EXPECT_EQ(0.00f, output_ptr[1]);
+    EXPECT_EQ(0.75f, output_ptr[2]);
+    EXPECT_EQ(0.00f, output_ptr[3]);
 }

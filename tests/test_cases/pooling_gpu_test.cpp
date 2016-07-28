@@ -48,8 +48,8 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
 
     execute({ pool_prim }).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(2.0f, get_value<float>(output_memory, 0));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(2.0f, get_value<float>(output_ptr, 0));
 }
 
 TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
@@ -77,11 +77,11 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
 
     execute({ pool_prim }).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(2.0f, get_value<float>(output_memory, 0));
-    EXPECT_EQ(1.5f, get_value<float>(output_memory, 1));
-    EXPECT_EQ(2.0f, get_value<float>(output_memory, 2));
-    EXPECT_EQ(1.5f, get_value<float>(output_memory, 3));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(2.0f, get_value<float>(output_ptr, 0));
+    EXPECT_EQ(1.5f, get_value<float>(output_ptr, 1));
+    EXPECT_EQ(2.0f, get_value<float>(output_ptr, 2));
+    EXPECT_EQ(1.5f, get_value<float>(output_ptr, 3));
 }
 
 TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
@@ -110,11 +110,11 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
 
     execute({ pool_prim }).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(2.0f, get_value<float>(output_memory, 0));
-    EXPECT_EQ(0.5f, get_value<float>(output_memory, 1));
-    EXPECT_EQ(0.5f, get_value<float>(output_memory, 2));
-    EXPECT_EQ(0.5f, get_value<float>(output_memory, 3));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(2.0f, get_value<float>(output_ptr, 0));
+    EXPECT_EQ(0.5f, get_value<float>(output_ptr, 1));
+    EXPECT_EQ(0.5f, get_value<float>(output_ptr, 2));
+    EXPECT_EQ(0.5f, get_value<float>(output_ptr, 3));
 }
 
 TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
@@ -153,14 +153,14 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
 
     execute({ pool_prim }).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(1.0f, get_value<float>(output_memory, 0)); EXPECT_EQ(0.0f, get_value<float>(output_memory, 2));
-    EXPECT_EQ(0.5f, get_value<float>(output_memory, 4)); EXPECT_EQ(1.5f, get_value<float>(output_memory, 6));
-    EXPECT_EQ(1.0f, get_value<float>(output_memory, 8)); EXPECT_EQ(1.0f, get_value<float>(output_memory, 10));
-    EXPECT_EQ(-0.5f, get_value<float>(output_memory, 12)); EXPECT_EQ(1.5f, get_value<float>(output_memory, 14));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(1.0f, get_value<float>(output_ptr, 0)); EXPECT_EQ(0.0f, get_value<float>(output_ptr, 2));
+    EXPECT_EQ(0.5f, get_value<float>(output_ptr, 4)); EXPECT_EQ(1.5f, get_value<float>(output_ptr, 6));
+    EXPECT_EQ(1.0f, get_value<float>(output_ptr, 8)); EXPECT_EQ(1.0f, get_value<float>(output_ptr, 10));
+    EXPECT_EQ(-0.5f, get_value<float>(output_ptr, 12)); EXPECT_EQ(1.5f, get_value<float>(output_ptr, 14));
 
-    EXPECT_EQ(0.5f, get_value<float>(output_memory, 1)); EXPECT_EQ(1.0f, get_value<float>(output_memory, 3));
-    EXPECT_EQ(1.0f, get_value<float>(output_memory, 5)); EXPECT_EQ(0.5f, get_value<float>(output_memory, 7));
-    EXPECT_EQ(-0.5f, get_value<float>(output_memory, 9)); EXPECT_EQ(1.0f, get_value<float>(output_memory, 11));
-    EXPECT_EQ(1.5f, get_value<float>(output_memory, 13)); EXPECT_EQ(0.0f, get_value<float>(output_memory, 15));
+    EXPECT_EQ(0.5f, get_value<float>(output_ptr, 1)); EXPECT_EQ(1.0f, get_value<float>(output_ptr, 3));
+    EXPECT_EQ(1.0f, get_value<float>(output_ptr, 5)); EXPECT_EQ(0.5f, get_value<float>(output_ptr, 7));
+    EXPECT_EQ(-0.5f, get_value<float>(output_ptr, 9)); EXPECT_EQ(1.0f, get_value<float>(output_ptr, 11));
+    EXPECT_EQ(1.5f, get_value<float>(output_ptr, 13)); EXPECT_EQ(0.0f, get_value<float>(output_ptr, 15));
 }

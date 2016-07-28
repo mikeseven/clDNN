@@ -273,16 +273,16 @@ void alexnet(uint32_t batch_size, std::string img_dir)
         });
 
 
-        float* out_ptr = (float*) output.as<const memory&>().pointer;
+       // auto out_ptr =  output.as<const memory&>().pointer<float>();
         execute_alexnet(reordered_input, output);
-        for (auto i = 0; i < batch_size; i++)
-        {
-            // TODO: port html result parsing
-            std::cout << "Image:" << image_in_batches[i] << std::endl;
-            for (auto j = 0; j < 1000; j++)
-                std::cout << *out_ptr++ << " ";
-            std::cout << std::endl;
-        }
+        //for (auto i = 0; i < batch_size; i++) not yet
+        //{
+        //    // TODO: port html result parsing
+        //    std::cout << "Image:" << image_in_batches[i] << std::endl;
+        //    for (auto j = 0; j < 1000; j++)
+        //        std::cout << *out_ptr. << " ";
+        //    std::cout << std::endl;
+        //}
 
     }    
 }

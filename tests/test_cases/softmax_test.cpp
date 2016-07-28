@@ -187,7 +187,7 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch1_sum_to_one) {
     auto input  = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
     auto output = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
     auto& input_memory  = input.as<const memory&>();
-    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer);
+    auto output_memory_ptr = output.as<const memory&>().pointer<float>();
 
     // Initialize input data
     fill<float>(input_memory);
@@ -196,7 +196,7 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch1_sum_to_one) {
 
     execute({output, softmax}).wait();
 
-    auto sum = accumulate(output_memory_ptr, output_memory_ptr + x, 0.0f);
+    auto sum = accumulate(std::begin(output_memory_ptr), std::end(output_memory_ptr), 0.0f);
 
     EXPECT_EQ(true, tests::are_equal(sum, 1.0f));
 }
@@ -208,11 +208,9 @@ TEST(softmax_xb_f32_fw, DISABLED_intrinsics_avx2_batch1_ref_compare) {
     auto input  = memory::allocate({ engine::reference, memory::format::xb_f32, {b, {x}} });
     auto output = memory::allocate({ engine::reference, memory::format::xb_f32, {b, {x}} });
     auto& input_memory  = input.as<const memory&>();
-    auto& output_memory = output.as<const memory&>();
 
     // Reference data
     auto ref_output = memory::allocate({ engine::reference, memory::format::xb_f32,{b, {x}} });
-    auto& ref_output_memory = ref_output.as<const memory&>();
 
     // Initialize input data
     fill<float>(input_memory);
@@ -224,7 +222,9 @@ TEST(softmax_xb_f32_fw, DISABLED_intrinsics_avx2_batch1_ref_compare) {
     execute({output, opt_softmax}).wait();
     execute({ref_output, ref_softmax}).wait();
 
-    for(uint32_t output_element = 0; output_element < output_memory.count(); ++output_element)
+    auto ref_output_memory = ref_output.as<const memory&>().pointer<float>();
+    auto output_memory = output.as<const memory&>().pointer<float>();
+    for(uint32_t output_element = 0; output_element < output_memory.size(); ++output_element)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(output_memory, output_element)));
 }
 
@@ -234,7 +234,7 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch8_sum_to_one) {
     auto input  = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
     auto output = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
     auto& input_memory  = input.as<const memory&>();
-    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer);
+    auto output_memory_ptr = output.as<const memory&>().pointer<float>();
 
     // Initialize input data
     fill<float>(input_memory);
@@ -264,11 +264,9 @@ TEST(softmax_xb_f32_fw, DISABLED_intrinsics_avx2_batch8_ref_compare) {
     auto input  = memory::allocate({ engine::reference, memory::format::xb_f32, {b, {x}} });
     auto output = memory::allocate({ engine::reference, memory::format::xb_f32, {b, {x}} });
     auto& input_memory  = input.as<const memory&>();
-    auto& output_memory = output.as<const memory&>();
 
     // Reference data
     auto ref_output = memory::allocate({ engine::reference, memory::format::xb_f32,{b, {x}} });
-    auto& ref_output_memory = ref_output.as<const memory&>();
 
     // Initialize input data
     fill<float>(input_memory);
@@ -280,7 +278,9 @@ TEST(softmax_xb_f32_fw, DISABLED_intrinsics_avx2_batch8_ref_compare) {
     execute({output, opt_softmax}).wait();
     execute({ref_output, ref_softmax}).wait();
 
-    for(uint32_t output_element = 0; output_element < output_memory.count(); ++output_element)
+    auto ref_output_memory = ref_output.as<const memory&>().pointer<float>();
+    auto output_memory = output.as<const memory&>().pointer<float>();
+    for(uint32_t output_element = 0; output_element < output_memory.size(); ++output_element)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(output_memory, output_element)));
 }
 
@@ -290,7 +290,7 @@ TEST(softmax_xb_f32_fw, intrinsics_avx2_batch48_sum_to_one) {
     auto input  = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
     auto output = memory::allocate({engine::reference, memory::format::xb_f32, {b, {x}}});
     auto& input_memory  = input.as<const memory&>();
-    auto output_memory_ptr = static_cast<float*>(output.as<const memory&>().pointer);
+    auto output_memory_ptr = output.as<const memory&>().pointer<float>();
 
     // Initialize input data
     fill<float>(input_memory);
@@ -320,11 +320,9 @@ TEST(softmax_xb_f32_fw, DISABLED_intrinsics_avx2_batch48_ref_compare) {
     auto input  = memory::allocate({ engine::reference, memory::format::xb_f32, {b, {x}} });
     auto output = memory::allocate({ engine::reference, memory::format::xb_f32, {b, {x}} });
     auto& input_memory  = input.as<const memory&>();
-    auto& output_memory = output.as<const memory&>();
 
     // Reference data
     auto ref_output = memory::allocate({ engine::reference, memory::format::xb_f32,{b, {x}} });
-    auto& ref_output_memory = ref_output.as<const memory&>();
 
     // Initialize input data
     fill<float>(input_memory);
@@ -336,6 +334,8 @@ TEST(softmax_xb_f32_fw, DISABLED_intrinsics_avx2_batch48_ref_compare) {
     execute({output, opt_softmax}).wait();
     execute({ref_output, ref_softmax}).wait();
 
-    for(uint32_t output_element = 0; output_element < output_memory.count(); ++output_element)
+    auto ref_output_memory = ref_output.as<const memory&>().pointer<float>();
+    auto output_memory = output.as<const memory&>().pointer<float>();
+    for(uint32_t output_element = 0; output_element < output_memory.size(); ++output_element)
         EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(output_memory, output_element)));
 }

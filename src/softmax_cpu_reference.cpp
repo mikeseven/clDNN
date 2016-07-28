@@ -28,8 +28,8 @@ softmax_cpu_reference::~softmax_cpu_reference() {}
 
 void softmax_cpu_reference::implementation(const void *ptr) {
     auto this_softmax = static_cast<const softmax *>(ptr);
-    auto input        = static_cast<float*>(this_softmax->input_memory(0).pointer);
-    auto output       = static_cast<float*>(this_softmax->output_memory(0).pointer);
+    auto input        = this_softmax->input_memory(0).pointer<float>();
+    auto output       = this_softmax->output_memory(0).pointer<float>();
 
     auto& input_offset  = this_softmax->argument.input_offset;
     auto& output_offset = this_softmax->argument.output_offset;

@@ -61,11 +61,11 @@ TEST(fully_connected_gpu, xb_f32_batch_1) {
 
     execute({ full_con_prim }).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(2.5f, get_value<float>(output_memory, 0));
-    EXPECT_EQ(2.75f, get_value<float>(output_memory, 1));
-    EXPECT_EQ(0.75f, get_value<float>(output_memory, 2));
-    EXPECT_EQ(7.0f, get_value<float>(output_memory, 3));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(2.5f, output_ptr[0]);
+    EXPECT_EQ(2.75f, output_ptr[1]);
+    EXPECT_EQ(0.75f, output_ptr[2]);
+    EXPECT_EQ(7.0f, output_ptr[3]);
 }
 
 TEST(fully_connected_gpu, xb_f32_batch_2) {
@@ -106,15 +106,16 @@ TEST(fully_connected_gpu, xb_f32_batch_2) {
 
     execute({ full_con_prim }).wait();
 
-    auto& output_memory = output_prim.as<const memory&>();
-    EXPECT_EQ(2.5f, get_value<float>(output_memory, 0));
-    EXPECT_EQ(4.0f, get_value<float>(output_memory, 1));
-    EXPECT_EQ(2.75f, get_value<float>(output_memory, 2));
-    EXPECT_EQ(1.0f, get_value<float>(output_memory, 3));
-    EXPECT_EQ(0.75f, get_value<float>(output_memory, 4));
-    EXPECT_EQ(2.75f, get_value<float>(output_memory, 5));
-    EXPECT_EQ(7.0f, get_value<float>(output_memory, 6));
-    EXPECT_EQ(5.0f, get_value<float>(output_memory, 7));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+
+    EXPECT_EQ(2.50f, output_ptr[0]);
+    EXPECT_EQ(4.00f, output_ptr[1]);
+    EXPECT_EQ(2.75f, output_ptr[2]);
+    EXPECT_EQ(1.00f, output_ptr[3]);
+    EXPECT_EQ(0.75f, output_ptr[4]);
+    EXPECT_EQ(2.75f, output_ptr[5]);
+    EXPECT_EQ(7.00f, output_ptr[6]);
+    EXPECT_EQ(5.00f, output_ptr[7]);
 }
 
 TEST(fully_connected_gpu, x_f32) {
@@ -147,7 +148,6 @@ TEST(fully_connected_gpu, x_f32) {
 
     auto full_con_prim = fully_connected::create({ engine::gpu, output_prim, input_prim, weights_prim, bias_prim });
 
-    auto& output_memory = output_prim.as<const memory&>();
 
     set_values(input_prim, { -0.5f, 2.0f, 0.5f });
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
@@ -155,8 +155,9 @@ TEST(fully_connected_gpu, x_f32) {
 
     execute({ full_con_prim }).wait();
 
-    EXPECT_EQ(2.5f, get_value<float>(output_memory, 0));
-    EXPECT_EQ(2.75f, get_value<float>(output_memory, 1));
-    EXPECT_EQ(0.75f, get_value<float>(output_memory, 2));
-    EXPECT_EQ(7.0f, get_value<float>(output_memory, 3));
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(2.50f, output_ptr[0]);
+    EXPECT_EQ(2.75f, output_ptr[1]);
+    EXPECT_EQ(0.75f, output_ptr[2]);
+    EXPECT_EQ(7.00f, output_ptr[3]);
 }
