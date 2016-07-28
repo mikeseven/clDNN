@@ -89,7 +89,7 @@ namespace neural {
 namespace {
     struct attach {
         attach() {
-            gpu::kernel_templates::add(kernelName, kernelCode_Begin + fully_connected_code + kernelCode_Relu + kernelCode_End);
+            gpu::kernel_templates::add(kernelName, kernelCode_Begin + fully_connected_code_xb + kernelCode_Relu + kernelCode_End);
             auto val_fw = fully_connected_relu_gpu::create;
             fully_connected_relu_fw_implementation_map::instance().insert({ std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32), val_fw });
             fully_connected_relu_fw_implementation_map::instance().insert({ std::make_tuple(engine::gpu, memory::format::x_f32,  memory::format::x_f32), val_fw });

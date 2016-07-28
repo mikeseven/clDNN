@@ -161,3 +161,43 @@ TEST(fully_connected_gpu, x_f32) {
     EXPECT_EQ(0.75f, output_ptr[2]);
     EXPECT_EQ(7.00f, output_ptr[3]);
 }
+
+
+TEST(fully_connected_gpu, yxfb_f32) {
+    //  Input  : 2x2x1x2 - 2 batches 2 feature maps of size 2x1
+    //  Output : 2x1 - 2 batches 1 neuron each
+    //  Weights: 1x2x1x2 - 1 neuron with weights of 2 feature maps of size 2x1
+    //
+    //  Input:
+    //   1  -2      f0: b0
+    //   3  -4      f1: b0
+    //   5  -6      f0: b1
+    //   7  -8      f1: b1
+
+    //  Weights:
+    //   1  -1      n0: fm0  
+    //   2   0      n0: fm1
+    //
+    //  Biases:
+    //   1.0, 2.0
+    //
+    //  Output:
+    //   10,  27
+
+    auto input_prim = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 2, { { 2, 1 } }, 2 } });
+    auto output_prim = memory::allocate({ engine::gpu, memory::format::nb_f32,{ 2 ,{ { 1 } }, 1 } });
+    auto weights_prim = memory::allocate({ engine::gpu, memory::format::yxfn_f32,{ 1, { { 2, 1 } }, 2 } });
+    auto bias_prim = memory::allocate({ engine::gpu, memory::format::x_f32,{ 1,{ { 2 } }, 1 } });
+
+    auto full_con_prim = fully_connected::create({ engine::gpu, output_prim, input_prim, weights_prim, bias_prim });
+
+    set_values(input_prim, { 1.f, 5.f, 3.f, 7.f, -2.f, -6.f, -4.f, -8.f });
+    set_values(weights_prim, { 1.f, 2.f, -1.f, 0.f });
+    set_values(bias_prim, { 1.0f, 2.0f });
+
+    execute({ full_con_prim }).wait();
+
+    auto output_ptr = output_prim.as<const memory &>().pointer<float>();
+    EXPECT_EQ(10, output_ptr[0]);
+    EXPECT_EQ(27, output_ptr[1]);
+}

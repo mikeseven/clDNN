@@ -19,5 +19,6 @@
 #include <string>
 
 namespace neural {
-    extern const std::string fully_connected_code;
+    extern const std::string fully_connected_code_xb;
+    extern const std::string fully_connected_code_yxfn;
 }
