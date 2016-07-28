@@ -56,8 +56,6 @@ include_directories (${CMAKE_SOURCE_DIR}
                      ${CMAKE_SOURCE_DIR}/tests
                      ${CMAKE_SOURCE_DIR}/test_utils
                     )
-link_directories(${CLDNN__IOCL_ICD_LIBDIRS}
-                 ${CLDNN__IOCL_ICD_SHLDIRS})
 
 # Create exe file from sources.
 add_executable(${APP_NAME}

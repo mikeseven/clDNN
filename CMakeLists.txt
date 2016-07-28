@@ -339,7 +339,7 @@ endif()
 
 if(CLDNN__IOCL_ICD_USE_EXTERNAL)
   set(CLDNN__IOCL_ICD_INCDIRS "${CLDNN__IOCL_ICD_ROOT}/include" CACHE INTERNAL "Paths to interface headers for Intel OpenCL SDK ICD.")
-  set(CLDNN__IOCL_ICD_LIBDIRS "${CLDNN__IOCL_ICD_ROOT}/lib/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to static libraries for Intel OpenCL SDK ICD.")
+  set(CLDNN__IOCL_ICD_STLDIRS "${CLDNN__IOCL_ICD_ROOT}/lib/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to static libraries for Intel OpenCL SDK ICD.")
 
   set(__CLDNN_FindLibSuffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_SHARED_LIBRARY_SUFFIX}")
@@ -367,8 +367,17 @@ if(CLDNN__IOCL_ICD_USE_EXTERNAL)
   unset(__CLDNN_IOclIcdSharedLibDir)
 else()
   set(CLDNN__IOCL_ICD_INCDIRS "${CLDNN__IOCL_ICD_ROOT}/${__CLDNN_TargetOs}/include" CACHE INTERNAL "Paths to interface headers for Intel OpenCL SDK ICD.")
-  set(CLDNN__IOCL_ICD_LIBDIRS "${CLDNN__IOCL_ICD_ROOT}/${__CLDNN_TargetOs}/${__CLDNN_TargetConfig}/lib/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to static libraries for Intel OpenCL SDK ICD.")
+  set(CLDNN__IOCL_ICD_STLDIRS "${CLDNN__IOCL_ICD_ROOT}/${__CLDNN_TargetOs}/${__CLDNN_TargetConfig}/lib/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to static libraries for Intel OpenCL SDK ICD.")
   set(CLDNN__IOCL_ICD_SHLDIRS "${CLDNN__IOCL_ICD_ROOT}/${__CLDNN_TargetOs}/${__CLDNN_TargetConfig}/bin/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to shared libraries for Intel OpenCL SDK ICD.")
+endif()
+
+# Select link directory based on targeted OS.
+# - on Windows: static libraries directory.
+# - on others:  shared libraries directory.
+if(__CLDNN_TargetOs MATCHES "^windows$")
+  set(CLDNN__IOCL_ICD_LIBDIRS ${CLDNN__IOCL_ICD_STLDIRS} CACHE INTERNAL "Paths to libraries to link for Intel OpenCL SDK ICD.")
+else()
+  set(CLDNN__IOCL_ICD_LIBDIRS ${CLDNN__IOCL_ICD_SHLDIRS} CACHE INTERNAL "Paths to libraries to link for Intel OpenCL SDK ICD.")
 endif()
 
 unset(__CLDNN_IOclIcdVersions)
@@ -411,10 +420,11 @@ message(STATUS "[clDNN]  - CMake debug trace:          ${CLDNN__CMAKE_DEBUG}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN] ICD:")
-message(STATUS "[clDNN]  - Root:           ${CLDNN__IOCL_ICD_ROOT}")
-message(STATUS "[clDNN]     + Headers:     ${CLDNN__IOCL_ICD_INCDIRS}")
-message(STATUS "[clDNN]     + Static libs: ${CLDNN__IOCL_ICD_LIBDIRS}")
-message(STATUS "[clDNN]     + Shared libs: ${CLDNN__IOCL_ICD_SHLDIRS}")
+message(STATUS "[clDNN]  - Root:            ${CLDNN__IOCL_ICD_ROOT}")
+message(STATUS "[clDNN]     + Headers:      ${CLDNN__IOCL_ICD_INCDIRS}")
+message(STATUS "[clDNN]     + Static libs:  ${CLDNN__IOCL_ICD_STLDIRS}")
+message(STATUS "[clDNN]     + Shared libs:  ${CLDNN__IOCL_ICD_SHLDIRS}")
+message(STATUS "[clDNN]     + Libs to link: ${CLDNN__IOCL_ICD_LIBDIRS}")
 message(STATUS "[clDNN] =============================================================================")
 unset(__CLDNN_DetectedArch_Target)
 
@@ -463,261 +473,9 @@ cldnn_dmsg("    + version:        ${CMAKE_CXX_COMPILER_VERSION}")
 cldnn_dmsg(" - compiler (C):      ${CMAKE_C_COMPILER_ID}")
 cldnn_dmsg("    + version:        ${CMAKE_C_COMPILER_VERSION}")
 
-# =============================== Compiler options (abstract configuration) ============================
+# ============================== Abstraction of compiler and linker options ============================
 
-if(MSVC)
-  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "${CLDNN__MIN_COMPILER_VERSION__MSVC}")
-    message(FATAL_ERROR "[clDNN] Minimum required version of Microsoft Visual C++ compiler is ${CLDNN__MIN_COMPILER_VERSION__MSVC}. Please update compiler.")
-  endif()
-
-  intel_flag_register_settings(
-      CompilerOptions
-
-      GROUP NAME CallingConvention  "/G[drzv]"
-      GROUP NAME CompileAs          "/T[CP]"
-      GROUP NAME DebugInfoFormat    "/Z[7iI]"
-      GROUP NAME Exceptions         "/EHa" "/EHsc?"
-      GROUP NAME FaviorSizeSpeed    "/O[st]"
-      GROUP NAME Optimization       "/O[d12x]"
-      GROUP NAME RuntimeLibrary     "/M[TD]d?"
-      GROUP NAME Rtti               "/GR-?"
-      GROUP NAME TreatWarnAsError   "/WX-?"
-      GROUP NAME DisableExtensions  "/Za"
-      GROUP NAME WarnLevels         "/W[0-4]"
-
-      ALIAS CallingConvCdecl           "/Gd"
-      ALIAS CallingConvFastcall        "/Gr"
-      ALIAS CallingConvStdcall         "/Gz"
-      ALIAS CallingConvVectorcall      "/Gv"
-      ALIAS CompileAsC                 "/TC"
-      ALIAS CompileAsCpp               "/TP"
-      ALIAS CompileAsDefault           CompileAs REMOVE_GROUP
-      ALIAS DebugInfoDisabled          DebugInfoFormat REMOVE_GROUP
-      ALIAS DebugInfoProgramDatabase   "/Zi"
-      ALIAS ExceptionsDisabled         Exceptions REMOVE_GROUP
-      ALIAS ExceptionsEnabled          "/EHsc"
-      ALIAS FaviorSize                 "/Os"
-      ALIAS FaviorSpeed                "/Ot"
-      ALIAS MultiProcessorCompilation  "/MP"
-      ALIAS OptimizeDisabled           "/Od"
-      ALIAS OptimizeSize               "/O2" "/Oi" "/Os"
-      ALIAS OptimizeSpeed              "/O2"
-      ALIAS OptimizeFull               "/Ox"
-      ALIAS RtMultiThreadedStatic      "/MT"
-      ALIAS RtMultiThreadedShared      "/MD"
-      ALIAS RtMultiThreadedStaticDebug "/MTd"
-      ALIAS RtMultiThreadedSharedDebug "/MDd"
-      ALIAS RttiDisabled               "/GR-"
-      ALIAS RttiEnabled                "/GR"
-      ALIAS TreatWarnAsErrorDisabled   "/WX-"
-      ALIAS TreatWarnAsErrorEnabled    "/WX"
-      ALIAS WarnLevel0                 "/W0"
-      ALIAS WarnLevel1                 "/W1"
-      ALIAS WarnLevel2                 "/W2"
-      ALIAS WarnLevel3                 "/W3"
-      ALIAS WarnLevel4                 "/W4"
-      ALIAS ExtensionsDisabled         "/Za"
-      ALIAS ExtensionsEnabled          DisableExtensions REMOVE_GROUP
-      ALIAS StandardCxx11
-      ALIAS StandardNone
-
-      ALIAS DeadCodeEliminate
-      ALIAS DeadCodePreserve
-    )
-elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "${CLDNN__MIN_COMPILER_VERSION__GCC}")
-    message(FATAL_ERROR "[clDNN] Minimum required version of GCC/G++ compiler is ${CLDNN__MIN_COMPILER_VERSION__GCC}. Please update compiler.")
-  endif()
-
-  CHECK_CXX_COMPILER_FLAG("-std=c++11" __CLDNN_CompilerSupportsCxx11)
-  if(NOT __CLDNN_CompilerSupportsCxx11)
-    message(FATAL_ERROR "[clDNN] Compiler does not support C++11. Please update compiler.")
-  endif()
-  unset(__CLDNN_CompilerSupportsCxx11)
-
-  intel_flag_register_settings(
-      CompilerOptions
-
-      GROUP NAME DebugInfoFormat    "-g[0-3]?"
-      GROUP NAME Exceptions         "-f(no-)?exceptions"
-      GROUP NAME Optimization       "-O[0-3sg]?"
-      GROUP NAME Rtti               "-f(no-)?rtti"
-      GROUP NAME TreatWarnAsError   "-Werror|-pedantic-errors"
-      GROUP NAME Standard           "-std=[^ ]+"
-      GROUP NAME WarnLevels         "-W(all|extra|pedantic)|-w|-pedantic"
-
-      ALIAS CallingConvCdecl
-      ALIAS CallingConvFastcall
-      ALIAS CallingConvStdcall
-      ALIAS CallingConvVectorcall
-      ALIAS CompileAsC
-      ALIAS CompileAsCpp
-      ALIAS CompileAsDefault
-      ALIAS DebugInfoDisabled          "-g0"
-      ALIAS DebugInfoProgramDatabase   "-g"
-      ALIAS ExceptionsDisabled         "-fno-exceptions"
-      ALIAS ExceptionsEnabled          "-fexceptions"
-      ALIAS FaviorSize                 "-Os"
-      ALIAS FaviorSpeed                "-O3"
-      ALIAS MultiProcessorCompilation
-      ALIAS OptimizeDisabled           "-O0"
-      ALIAS OptimizeSize               "-Os"
-      ALIAS OptimizeSpeed              "-O2"
-      ALIAS OptimizeFull               "-03"
-      ALIAS RtMultiThreadedStatic
-      ALIAS RtMultiThreadedShared
-      ALIAS RtMultiThreadedStaticDebug
-      ALIAS RtMultiThreadedSharedDebug
-      ALIAS RttiDisabled               "-fno-rtti"
-      ALIAS RttiEnabled                "-frtti"
-      ALIAS TreatWarnAsErrorDisabled   TreatWarnAsError REMOVE_GROUP
-      ALIAS TreatWarnAsErrorEnabled    "-Werror" "-pedantic-errors"
-      ALIAS WarnLevel0                 "-w"
-      ALIAS WarnLevel1                 WarnLevels REMOVE_GROUP
-      ALIAS WarnLevel2                 "-Wall"
-      ALIAS WarnLevel3                 "-Wall" "-pedantic"
-      ALIAS WarnLevel4                 "-Wall" "-Wextra" "-pedantic"
-      ALIAS ExtensionsDisabled
-      ALIAS ExtensionsEnabled
-      ALIAS StandardCxx11              "-std=c++11"
-      ALIAS StandardNone               Standard REMOVE_GROUP
-
-      ALIAS DeadCodeEliminate
-      ALIAS DeadCodePreserve
-    )
-
-  if(CLDNN__COMPILE_LINK_ALLOW_UNSAFE_SIZE_OPT)
-    intel_flag_register_settings(
-        CompilerOptions
-
-        GROUP NAME EmitDataSec "-fdata-sections"
-        GROUP NAME EmitFuncSec "-ffunction-sections"
-
-        ALIAS DeadCodeEliminate  "-fdata-sections" "-ffunction-sections"
-        ALIAS DeadCodePreserve   EmitDataSec EmitFuncSec REMOVE_GROUP
-      )
-  endif()
-elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
-  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "${CLDNN__MIN_COMPILER_VERSION__CLANG}")
-    message(FATAL_ERROR "[clDNN] Minimum required version of clang compiler is ${CLDNN__MIN_COMPILER_VERSION__CLANG}. Please update compiler.")
-  endif()
-
-  CHECK_CXX_COMPILER_FLAG("-std=c++11" __CLDNN_CompilerSupportsCxx11)
-  if(NOT __CLDNN_CompilerSupportsCxx11)
-    message(FATAL_ERROR "[clDNN] Compiler does not support C++11. Please update compiler.")
-  endif()
-  unset(__CLDNN_CompilerSupportsCxx11)
-
-  intel_flag_register_settings(
-      CompilerOptions
-
-      GROUP NAME DebugInfoFormat    "-g(dwardf-[2-4]?)?"
-      GROUP NAME Exceptions         "-f(no-)?exceptions"
-      GROUP NAME Optimization       "-O([0-3]?|fast|s|z)?"
-      GROUP NAME Rtti               "-f(no-)?rtti"
-      GROUP NAME TreatWarnAsError   "-Werror"
-      GROUP NAME Standard           "-std=[^ ]+"
-      GROUP NAME WarnLevels         "-W(all|extra|pedantic)|-w|-pedantic"
-
-      ALIAS CallingConvCdecl
-      ALIAS CallingConvFastcall
-      ALIAS CallingConvStdcall
-      ALIAS CallingConvVectorcall
-      ALIAS CompileAsC
-      ALIAS CompileAsCpp
-      ALIAS CompileAsDefault
-      ALIAS DebugInfoDisabled          DebugInfoFormat REMOVE_GROUP
-      ALIAS DebugInfoProgramDatabase   "-g"
-      ALIAS ExceptionsDisabled         Exceptions REMOVE_GROUP
-      ALIAS ExceptionsEnabled          "-fexceptions"
-      ALIAS FaviorSize                 "-Os"
-      ALIAS FaviorSpeed                "-O3"
-      ALIAS MultiProcessorCompilation
-      ALIAS OptimizeDisabled           "-O0"
-      ALIAS OptimizeSize               "-Os"
-      ALIAS OptimizeSpeed              "-O2"
-      ALIAS OptimizeFull               "-03"
-      ALIAS RtMultiThreadedStatic
-      ALIAS RtMultiThreadedShared
-      ALIAS RtMultiThreadedStaticDebug
-      ALIAS RtMultiThreadedSharedDebug
-      ALIAS RttiDisabled               "-fno-rtti"
-      ALIAS RttiEnabled                Rtti REMOVE_GROUP
-      ALIAS TreatWarnAsErrorDisabled   TreatWarnAsError REMOVE_GROUP
-      ALIAS TreatWarnAsErrorEnabled    "-Werror"
-      ALIAS WarnLevel0                 "-w"
-      ALIAS WarnLevel1                 WarnLevels REMOVE_GROUP
-      ALIAS WarnLevel2                 "-Wall"
-      ALIAS WarnLevel3                 "-Wall" "-pedantic"
-      ALIAS WarnLevel4                 "-Wall" "-Wextra" "-pedantic"
-      ALIAS ExtensionsDisabled
-      ALIAS ExtensionsEnabled
-      ALIAS StandardCxx11              "-std=c++11"
-      ALIAS StandardNone               Standard REMOVE_GROUP
-
-      ALIAS DeadCodeEliminate
-      ALIAS DeadCodePreserve
-    )
-else()
-  message(FATAL_ERROR "[clDNN] Unknown compiler. Please define support for it or use different compiler.")
-endif()
-
-# =============================== Linker options (abstract configuration) ==============================
-
-if(MSVC)
-  intel_flag_register_settings(
-      LinkerOptions
-
-      GROUP NAME DebugInfo         "/[dD][eE][bB][uU][gG]"
-      GROUP NAME DeadCode          "/[oO][pP][tT]:([nN][oO])?[rR][eE][fF]"
-      GROUP NAME IdenticalCodeData "/[oO][pP][tT]:([nN][oO])?[iI][cC][fF](=[0-9]+)?"
-      GROUP NAME Incremental       "/[iI][nN][cC][rR][eE][mM][eE][nN][tT][aA][lL](:[nN][oO])?"
-
-      ALIAS DebugInfoDisabled          DebugInfo REMOVE_GROUP
-      ALIAS DebugInfoProgramDatabase   "/DEBUG"
-      ALIAS DeadCodeEliminate          "/OPT:REF"
-      ALIAS DeadCodePreserve           "/OPT:NOREF"
-      ALIAS IdenticalCodeDataFold      "/OPT:ICF"
-      ALIAS IdenticalCodeDataNoFold    "/OPT:NOICF"
-      ALIAS IncrementalEnabled         "/INCREMENTAL"
-      ALIAS IncrementalDisabled        "/INCREMENTAL:NO"
-    )
-else()
-  intel_flag_register_settings(
-      LinkerOptions
-
-      ALIAS DebugInfoDisabled
-      ALIAS DebugInfoProgramDatabase
-      ALIAS DeadCodeEliminate
-      ALIAS DeadCodePreserve
-      ALIAS IdenticalCodeDataFold
-      ALIAS IdenticalCodeDataNoFold
-      ALIAS IncrementalEnabled
-      ALIAS IncrementalDisabled
-    )
-
-  if(CLDNN__COMPILE_LINK_ALLOW_UNSAFE_SIZE_OPT)
-    if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-      intel_flag_register_settings(
-          LinkerOptions
-
-          GROUP NAME GcSections "-Wl,--gc-sections"
-
-          ALIAS DeadCodeEliminate  "-Wl,--gc-sections"
-          ALIAS DeadCodePreserve   GcSections REMOVE_GROUP
-        )
-    elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
-      intel_flag_register_settings(
-          LinkerOptions
-
-          GROUP NAME DeadStrip "-Wl,-dead_strip"
-
-          ALIAS DeadCodeEliminate  "-Wl,-dead_strip"
-          ALIAS DeadCodePreserve   DeadStrip REMOVE_GROUP
-        )
-    endif()
-  endif()
-endif()
+include("${CMAKE_SOURCE_DIR}/CMakeCompilerLinkerOpts.txt" NO_POLICY_SCOPE)
 
 # ======================================= Generic compiler options =====================================
 
@@ -764,6 +522,7 @@ foreach(_compilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
         "${_compilerFlagName}"
         ALL_PATTERN ""
         SET_RAW
+          "/arch:AVX2"
           "/sdl"
       )
   # Adding needed settings specific to GCC.
@@ -957,7 +716,6 @@ unset(__CLDNN_CfgFlag)
 
 set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
     CLDNN_CMAKE
-    $<$<CONFIG:Release>:_FORTIFY_SOURCE=2>
   )
 
 if (MSVC)
@@ -976,11 +734,12 @@ include_directories(
     ${CLDNN__IOCL_ICD_INCDIRS}
     "${CMAKE_SOURCE_DIR}/api"
   )
-#include_directories("${CMAKE_SOURCE_DIR}/xbyak")
+link_directories(
+    ${CLDNN__IOCL_ICD_LIBDIRS}
+  )
 
 # =================================== Link targets and dependencies ====================================
 
-# Sub-directories where more CMakeLists.txt exist
 add_subdirectory(src)
 if(CLDNN__INCLUDE_EXAMPLES)
   add_subdirectory(examples)

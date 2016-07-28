@@ -17,10 +17,6 @@ set (TARGET_NAME "mkl_dnn")
 
 add_definitions(-DEXPORT_NEURAL_SYMBOLS)
 
-if (MSVC)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX2")
-endif()
-
 file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h
       )
@@ -47,8 +43,6 @@ source_group("src\\gpu" FILES ${LIBRARY_SRC_GPU})
 include_directories (${CMAKE_SOURCE_DIR}
                      ${CMAKE_SOURCE_DIR}/src
                     )
-link_directories(${CLDNN__IOCL_ICD_LIBDIRS}
-                 ${CLDNN__IOCL_ICD_SHLDIRS})
 
 # Create library file from sources.
 add_library(${TARGET_NAME} SHARED

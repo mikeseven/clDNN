@@ -41,9 +41,7 @@ source_group("common" FILES ${EXAMPLES_COMMON})
 include_directories (${CMAKE_SOURCE_DIR}
                      ${CMAKE_SOURCE_DIR}/src
                     )
-link_directories(${CLDNN__IOCL_ICD_LIBDIRS}
-                 ${CLDNN__IOCL_ICD_SHLDIRS})
-					
+
 
 			
 # Create library file from sources.
