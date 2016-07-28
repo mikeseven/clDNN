@@ -33,48 +33,47 @@ class singleton_map : public std::map<T, U> {
 
 namespace neural {
 
-using default_key_type = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
-
-template<typename T>
-struct default_key_builder {
-    default_key_type operator()(T& primitive) {
+template<typename primitive_kind>
+struct implementation_key {
+    typedef std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type> type;
+    type operator()(primitive_kind& primitive) {
         return std::make_tuple(primitive.argument.engine, primitive.input_memory(0).argument.format, primitive.output_memory(0).argument.format);
     }
 };
 
-template<typename T,
-    typename key_type = default_key_type,
-    typename key_builder = default_key_builder<T>>
-    class implementation_map {
-    public:
-        //using key_type = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
-        using factory_type = std::function<is_an_implementation *(T &)>;
-        using map_type = singleton_map<key_type, factory_type>;
+template<typename primitive_kind>
+class implementation_map {
+public:
+    using key_builder = implementation_key<primitive_kind>;
+    using key_type = typename key_builder::type;
+    using factory_type = std::function<is_an_implementation *(primitive_kind &)>;
+    using map_type = singleton_map<key_type, factory_type>;
 
-        static is_an_implementation* create(T& primitive) {
-            // lookup in database; throw if not found 
-            auto key = key_builder()(primitive);
-            auto it = map_type::instance().find(key);
-            if (it == std::end(map_type::instance())) throw std::runtime_error("not yet implemented");
+    static factory_type create(primitive_kind& primitive) {
+        // lookup in database; throw if not found 
+        auto key = key_builder()(primitive);
+        auto it = map_type::instance().find(key);
+        if (it == std::end(map_type::instance())) throw std::runtime_error("not yet implemented");
 
-            // create implementation & attach it to result 
-            return it->second(primitive);
-        }
+        // create implementation & attach it to result 
+        return it->second;
+    }
 
-        static void add(key_type key, factory_type factory) {
-            map_type::instance().insert({ key, factory });
-        }
+    static void add(typename map_type::key_type key, factory_type factory) {
+        map_type::instance().insert({ key, factory });
+    }
 
-        static void add(std::initializer_list<typename map_type::value_type> il) {
-            map_type::instance().insert(il);
-        }
+    static void add(std::initializer_list<typename map_type::value_type> il) {
+        map_type::instance().insert(il);
+    }
 };
 
-template <class T>
-is_a_primitive* is_a_primitive::create(typename T::arguments arg) {
-    std::unique_ptr<T> result(new T(arg));
+template <class primitive_kind>
+is_a_primitive* is_a_primitive::create(typename primitive_kind::arguments arg) {
+    std::unique_ptr<primitive_kind> result(new primitive_kind(arg));
     if (0 == (arg.engine & engine::lazy)) {
-        auto implementation = implementation_map<T>::create(*result);
+        auto factory = implementation_map<primitive_kind>::create(*result);
+        auto implementation = factory(*result);
         result->_impl.reset(implementation);
         result->_work = implementation->work();
     }

@@ -413,7 +413,7 @@ protected:
     task_group                       _work;
     std::shared_ptr<is_an_implementation> _impl;
     is_a_primitive(type_traits *traits) : _type_traits(traits) {}
-    template<class T> static is_a_primitive* create(typename T::arguments arg);
+    template<class primitive_kind> static is_a_primitive* create(typename primitive_kind::arguments arg);
 public:
     virtual ~is_a_primitive() {};
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
