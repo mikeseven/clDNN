@@ -144,7 +144,7 @@ namespace neural {
         , split(splt) {};
 
 
-    void validate_convolution_common_params(const convolution_common::arguments &arg)
+    void convolution_common::validate_convolution_common_params(const convolution_common::arguments &arg)
     {
         auto& output_size = arg.output_size;
         auto& stride = arg.stride;

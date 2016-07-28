@@ -72,7 +72,7 @@ convolution_relu::arguments::arguments( neural::engine::type     eng,
 // creates primitive with convolution_relu implementation that supports provided arguments
 primitive convolution_relu::create(convolution_relu::arguments arg) {
     try {
-        validate_convolution_common_params(arg);
+        convolution_common::validate_convolution_common_params(arg);
     }
     catch (std::runtime_error err) {
         throw std::runtime_error(std::string("Convolution_Relu ") + err.what());

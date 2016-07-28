@@ -199,6 +199,8 @@ struct convolution_common {
         arguments(neural::engine::type, primitive                    out,                                                                         std::vector<primitive_at> in,                                                                  neural::padding::type, size_t split = 1);
         arguments(neural::engine::type, primitive                    out,     neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type, size_t split = 1);
     };
+
+    static void validate_convolution_common_params(const convolution_common::arguments &arg);
 };
 
 

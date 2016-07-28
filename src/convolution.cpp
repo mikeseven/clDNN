@@ -98,7 +98,7 @@ convolution_backward::arguments::arguments( neural::engine::type     eng,
 // creates primitive with convolution implementation that supports provided arguments
 primitive convolution::create(convolution::arguments arg) {
     try {
-        validate_convolution_common_params(arg);
+        convolution_common::validate_convolution_common_params(arg);
     }
     catch (std::runtime_error err) {
         throw std::runtime_error(std::string("Convolution ") + err.what());
