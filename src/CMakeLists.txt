@@ -33,6 +33,8 @@ file (GLOB LIBRARY_SRC
 file (GLOB LIBRARY_SRC_GPU
        ${CMAKE_SOURCE_DIR}/src/gpu/*.h
        ${CMAKE_SOURCE_DIR}/src/gpu/*.cpp
+	   ${CMAKE_SOURCE_DIR}/src/gpu/cache/*.h
+       ${CMAKE_SOURCE_DIR}/src/gpu/cache/*.cpp
       )
 
 # OpenCL includes and libraries
