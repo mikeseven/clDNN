@@ -91,7 +91,7 @@ namespace neural {
         auto input_x = input_mem.argument;
         // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
         auto ofm = in[1].primitive.as<const memory&>().argument;
-        auto number_of_batches = ofm.size.raw[1];
+        auto number_of_batches = ofm.size.raw[1] * static_cast<uint32_t>(split);
         output_size = {
             input_mem.argument.size.batch[0],
             { output_spatial_x, output_spatial_y },

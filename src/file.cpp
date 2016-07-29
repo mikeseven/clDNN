@@ -158,7 +158,18 @@ primitive file::create(file::arguments arg) {
                 p_arg = new memory::arguments({ engine::reference, memory::format::oiyx_f32,{ 1,
                 { static_cast<unsigned int>(array.get()[0]), static_cast<unsigned int>(array.get()[1]) }, // kernel spatials x, y
                 { static_cast<unsigned int>(array.get()[3]), static_cast<unsigned int>(array.get()[2]) } } }); // ofm, ifm
-            else // fully connected
+            else if (arg.weight_type == file::weights_type::fully_connected)
+            {
+                p_arg = new memory::arguments(
+                { engine::reference, memory::format::yxfn_f32,
+                    {
+                        { static_cast<unsigned int>(array.get()[3]) }, // batches
+                        { static_cast<unsigned int>(array.get()[1]), static_cast<unsigned int>(array.get()[0]) },
+                        { static_cast<unsigned int>(array.get()[2]) }, // feature maps
+                    }
+                });
+            }
+            else
                 p_arg = new memory::arguments(
                 { engine::reference, memory::format::xb_f32,
                     {
@@ -181,8 +192,7 @@ primitive file::create(file::arguments arg) {
         delete p_arg;
         auto &mem = (memory_primitive).as<const neural::memory&>();
         auto buf = mem.pointer<char>();
-        std::istream_iterator<char> src_begin(rfile);
-        std::copy_n(src_begin, buf.size(), std::begin(buf));
+        rfile.read(&buf[0], buf.size());
 
         return memory_primitive;
     }
