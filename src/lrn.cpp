@@ -112,26 +112,5 @@ normalization::response::arguments::arguments(
 primitive normalization::response::create(response::arguments arg) {
     return is_a_primitive::create<response>(arg);
 }
-/*
-primitive normalization::response_backward::create(normalization::response_backward::arguments arg) {
-    // wrap relu into RAII wrapper
-    std::unique_ptr<normalization::response_backward> result(new normalization::response_backward(arg));
 
-    // create implementation for non-lazy evaluation
-    if(0 == (arg.engine & engine::lazy)) {
-        // lookup in database; throw if not found
-        lrn_bw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = lrn_bw_implementation_map.find(key);
-        if(it==std::end(lrn_bw_implementation_map)) throw std::runtime_error("Not yet implemented.");
-
-        // create implementation & attach it to result
-        auto implementation = it->second(*result);
-        result->_private.reset(implementation);
-        result->_work = implementation->work();
-    }
-
-    // release RAII wrapper, return naked pointer
-    return result.release();
-}
-*/
 }
