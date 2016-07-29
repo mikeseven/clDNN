@@ -124,7 +124,9 @@ template<typename T> struct vector {
         operator T() const { return raw_[0]; }
         T& operator[](size_t at) { assert(at<end_ - begin_); return raw_[begin_ + at]; }
         T operator[](size_t at) const { assert(at<end_ - begin_); return raw_[begin_ + at]; }
-    } batch, feature, spatial;
+    } feature, spatial;
+    union { ref_vector batch; ref_vector neuron; };
+
     bool operator==(const vector &rhs) const { return rhs.spatial==spatial && rhs.feature==feature && rhs.batch==batch; }
     bool operator!=(const vector &rhs) const { return !(*this==rhs); }
     vector(const vector &arg)

@@ -51,6 +51,7 @@ struct memory : is_a_primitive {
         x_f32,
         xb_f32,     // 1D+batch, float32
         bx_f32,     // 1D+batch, float32
+        yxfn_f32,   // 3D + number of neurons - used in fully connected weights
         yxfb_f32,   // 3D+batch, float32
         byxf_f32,   // for convolution_cpu_jit_batch1
         bfyx_f32,   // used in Caffe
@@ -67,6 +68,7 @@ struct memory : is_a_primitive {
         switch(fmt) {
         case format::   x_f32: return {1, type_id<float>()};
         case format::  xb_f32: return {2, type_id<float>()};
+        case format::yxfn_f32:
         case format::yxfb_f32:
         case format::byxf_f32:
         case format::bfyx_f32:
