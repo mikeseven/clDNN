@@ -170,14 +170,7 @@ primitive file::create(file::arguments arg) {
                 });
             }
             else
-                p_arg = new memory::arguments(
-                { engine::reference, memory::format::xb_f32,
-                    {
-                         static_cast<unsigned int>(array.get()[1]) * static_cast<unsigned int>(array.get()[0]) * static_cast<unsigned int>(array.get()[2]),
-                         {{ static_cast<unsigned int>(array.get()[3]) }}, 
-                         1 
-                    }
-                });
+                throw std::runtime_error("Unsupported weights type");
             break;
         }
         default:

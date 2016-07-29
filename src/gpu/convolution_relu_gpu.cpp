@@ -54,6 +54,7 @@ void convolution_relu_gpu::implementation(const void *ptr) {
 
     auto& input_offset = this_conv->argument.input_offset;
     auto& output_size   = this_conv->argument.output_size;
+    output_size;
     auto& padding       = this_conv->argument.padding;
     auto& stride        = this_conv->argument.stride;
     auto negative_slope = this_conv->argument.negative_slope;
