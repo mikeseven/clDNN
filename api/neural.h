@@ -129,8 +129,8 @@ struct memory : is_a_primitive {
         }
 #else
         typedef T* iterator;
-        T* begin() const& { return get(); }
-        T* end() const& { return get() + size(); }
+        T* begin() const& { return data; }
+        T* end() const& { return data + size(); }
 #endif
 
         T& operator[](size_t idx) const& {
