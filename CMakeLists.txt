@@ -76,8 +76,14 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # ====================================== HELPER CONSTANT VARIABLES =====================================
 # ======================================================================================================
 
+# Path which points to main directory of project.
+set(CLDNN__MAIN_DIR     "${CMAKE_CURRENT_SOURCE_DIR}")
+
 # Path which points to directory with common dependencies (internal and 3-rd party).
 set(CLDNN__COMMON_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/common")
+
+# Path which points to directory with interface for framework.
+set(CLDNN__API_DIR      "${CMAKE_CURRENT_SOURCE_DIR}/api")
 
 # Path which points to directory with binaries for Intel OpenCL SDK ICD (Installable Client Driver).
 set(CLDNN__IOCL_ICD_DIR "${CLDNN__COMMON_DIR}/intel_ocl_icd")
@@ -95,6 +101,15 @@ set(CLDNN__MIN_COMPILER_VERSION__MSVC  "19.0")
 set(CLDNN__MIN_COMPILER_VERSION__GCC   "4.9")
 set(CLDNN__MIN_COMPILER_VERSION__CLANG "3.5")
 
+# Single/multi-configuration generator helpers.
+if(CMAKE_CFG_INTDIR STREQUAL ".")
+  set(CLDNN__TARGET_CFG_VAR "${CMAKE_BUILD_TYPE}")
+  set(CLDNN__MULTI_CFG_GEN  NO)
+else()
+  set(CLDNN__TARGET_CFG_VAR "${CMAKE_CFG_INTDIR}")
+  set(CLDNN__MULTI_CFG_GEN  YES)
+endif()
+
 # ======================================================================================================
 # ======================================================================================================
 # ======================================================================================================
@@ -111,7 +126,7 @@ if(DEFINED CMAKE_BUILD_TYPE)
     set(__CLDNN_BuildType "Debug")
   else()
     set(__CLDNN_BuildType "Debug")
-    if(NOT (MSVC OR DEFINED XCODE_VERSION))
+    if(NOT CLDNN__MULTI_CFG_GEN)
       message(WARNING "[clDNN] CMAKE_BUILD_TYPE: Unknown build configuration. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
           The \"${__CLDNN_BuildType}\" configuration will be used.
 
@@ -121,7 +136,7 @@ if(DEFINED CMAKE_BUILD_TYPE)
   endif()
 else()
   set(__CLDNN_BuildType "Debug")
-  if(NOT (MSVC OR DEFINED XCODE_VERSION))
+  if(NOT CLDNN__MULTI_CFG_GEN)
     message(WARNING "[clDNN] CMAKE_BUILD_TYPE: No build configuration specified. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
         The \"${__CLDNN_BuildType}\" configuration will be used.
 
@@ -240,7 +255,14 @@ endif()
 # ======================================================================================================
 
 # Output directory path where the final libraries, examples and tests will be stored.
-set(CLDNN__OUTPUT_DIR "${CLDNN_BUILD__DEFAULT_OUT_ROOT}/${CLDNN__ARCHITECTURE_TARGET}/${CMAKE_CFG_INTDIR}" CACHE PATH "Output directory path where the final libraries, examples and tests will be stored.")
+if(CLDNN__MULTI_CFG_GEN)
+  # Multi-configuration generators automatically append build type subdirectory.
+  set(__CLDNN_OutDir "${CLDNN_BUILD__DEFAULT_OUT_ROOT}/${CLDNN__ARCHITECTURE_TARGET}")
+else()
+  set(__CLDNN_OutDir "${CLDNN_BUILD__DEFAULT_OUT_ROOT}/${CLDNN__ARCHITECTURE_TARGET}/${CMAKE_BUILD_TYPE}")
+endif()
+set(CLDNN__OUTPUT_DIR "${__CLDNN_OutDir}" CACHE PATH "Output directory path where the final libraries, examples and tests will be stored.")
+unset(__CLDNN_OutDir)
 
 # ======================================================================================================
 
@@ -251,7 +273,7 @@ set_property(CACHE CLDNN__IOCL_ICD_VERSION PROPERTY STRINGS ${__CLDNN_IOclIcdVer
 
 # ======================================================================================================
 
-set(CLDNN__IOCL_ICD_USE_EXTERNAL ON CACHE BOOL "Intel OpenCL SDK ICD: Try to use externally-intalled Intel OpenCL SDK ICD.")
+set(CLDNN__IOCL_ICD_USE_EXTERNAL OFF CACHE BOOL "Intel OpenCL SDK ICD: Try to use externally-intalled Intel OpenCL SDK ICD.")
 mark_as_advanced(CLDNN__IOCL_ICD_USE_EXTERNAL)
 
 # ======================================================================================================
@@ -323,12 +345,6 @@ string(TOLOWER "${__CLDNN_TargetOs}" __CLDNN_TargetOs)
 intel_arch_get_cpu(__CLDNN_TargetCpu "${CLDNN__ARCHITECTURE_TARGET}")
 string(TOLOWER "${__CLDNN_TargetCpu}" __CLDNN_TargetCpu)
 
-if(CMAKE_CFG_INTDIR STREQUAL ".")
-  set(__CLDNN_TargetConfig "${CMAKE_BUILD_TYPE}")
-else()
-  set(__CLDNN_TargetConfig "${CMAKE_CFG_INTDIR}")
-endif()
-
 if(__CLDNN_TargetCpu STREQUAL "32")
   set(__CLDNN_TargetCpuDir "x86")
 elseif(__CLDNN_TargetCpu STREQUAL "64")
@@ -367,8 +383,8 @@ if(CLDNN__IOCL_ICD_USE_EXTERNAL)
   unset(__CLDNN_IOclIcdSharedLibDir)
 else()
   set(CLDNN__IOCL_ICD_INCDIRS "${CLDNN__IOCL_ICD_ROOT}/${__CLDNN_TargetOs}/include" CACHE INTERNAL "Paths to interface headers for Intel OpenCL SDK ICD.")
-  set(CLDNN__IOCL_ICD_STLDIRS "${CLDNN__IOCL_ICD_ROOT}/${__CLDNN_TargetOs}/${__CLDNN_TargetConfig}/lib/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to static libraries for Intel OpenCL SDK ICD.")
-  set(CLDNN__IOCL_ICD_SHLDIRS "${CLDNN__IOCL_ICD_ROOT}/${__CLDNN_TargetOs}/${__CLDNN_TargetConfig}/bin/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to shared libraries for Intel OpenCL SDK ICD.")
+  set(CLDNN__IOCL_ICD_STLDIRS "${CLDNN__IOCL_ICD_ROOT}/${__CLDNN_TargetOs}/${CLDNN__TARGET_CFG_VAR}/lib/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to static libraries for Intel OpenCL SDK ICD.")
+  set(CLDNN__IOCL_ICD_SHLDIRS "${CLDNN__IOCL_ICD_ROOT}/${__CLDNN_TargetOs}/${CLDNN__TARGET_CFG_VAR}/bin/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to shared libraries for Intel OpenCL SDK ICD.")
 endif()
 
 # Select link directory based on targeted OS.
@@ -386,7 +402,6 @@ unset(__CLDNN_IOclIcdDefaultVersion)
 unset(__CLDNN_IOclIcdVersionIdx)
 unset(__CLDNN_TargetOs)
 unset(__CLDNN_TargetCpu)
-unset(__CLDNN_TargetConfig)
 unset(__CLDNN_TargetCpuDir)
 
 
@@ -440,20 +455,23 @@ set(CLDNN_BUILD__PROJ_LABEL__clDNN "clDNN")
 
 # ================================================ Outputs =============================================
 
+# Old.
 set(EXECUTABLE_OUTPUT_PATH "${CLDNN__OUTPUT_DIR}")
 set(LIBRARY_OUTPUT_PATH    "${CLDNN__OUTPUT_DIR}")
+# New.
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CLDNN__OUTPUT_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CLDNN__OUTPUT_DIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CLDNN__OUTPUT_DIR}")
 
 
 # Main targets' output names.
 if(ANDROID)
-  set(__CLDNN_CpuSuffix "")
+  set(CLDNN__OUT_CPU_SUFFIX "")
 else()
-  intel_arch_get_cpu(__CLDNN_CpuSuffix "${CLDNN__ARCHITECTURE_TARGET}")
+  intel_arch_get_cpu(CLDNN__OUT_CPU_SUFFIX "${CLDNN__ARCHITECTURE_TARGET}")
 endif()
 
-set(CLDNN_BUILD__PROJ_OUTPUT_NAME__clDNN "clDNN${__CLDNN_CpuSuffix}")
-
-unset(__CLDNN_CpuSuffix)
+set(CLDNN_BUILD__PROJ_OUTPUT_NAME__clDNN "clDNN${CLDNN__OUT_CPU_SUFFIX}")
 
 # ======================================================================================================
 
@@ -732,7 +750,7 @@ endif()
 
 include_directories(
     ${CLDNN__IOCL_ICD_INCDIRS}
-    "${CMAKE_SOURCE_DIR}/api"
+    "${CLDNN__API_DIR}"
   )
 link_directories(
     ${CLDNN__IOCL_ICD_LIBDIRS}

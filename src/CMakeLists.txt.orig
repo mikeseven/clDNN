@@ -1,0 +1,130 @@
+<<<<<<< HEAD
+# Copyright (c) 2016 Intel Corporation
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#      http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set (TARGET_NAME "mkl_dnn")
+# Sources for test files
+
+add_definitions(-DEXPORT_NEURAL_SYMBOLS)
+
+file (GLOB API_HEADERS
+       ${CMAKE_SOURCE_DIR}/api/*.h
+      )
+file (GLOB LIBRARY_SRC
+       ${CMAKE_SOURCE_DIR}/src/*.h
+       ${CMAKE_SOURCE_DIR}/src/*.cpp
+      )
+file (GLOB LIBRARY_SRC_GPU
+       ${CMAKE_SOURCE_DIR}/src/gpu/*.h
+       ${CMAKE_SOURCE_DIR}/src/gpu/*.cpp
+	   ${CMAKE_SOURCE_DIR}/src/gpu/cache/*.h
+       ${CMAKE_SOURCE_DIR}/src/gpu/cache/*.cpp
+      )
+
+
+# Create named folders for the sources within the .vcproj
+# Empty name lists them directly under the .vcproj
+
+source_group("api" FILES ${API_HEADERS})
+source_group("src" FILES ${LIBRARY_SRC})
+source_group("src\\gpu" FILES ${LIBRARY_SRC_GPU})
+
+# Properties->C/C++->General->Additional Include Directories
+include_directories (${CMAKE_SOURCE_DIR}
+                     ${CMAKE_SOURCE_DIR}/src
+                    )
+
+# Create library file from sources.
+add_library(${TARGET_NAME} SHARED
+            ${LIBRARY_SRC}
+            ${LIBRARY_SRC_GPU}
+            ${API_HEADERS})
+
+target_link_libraries(${TARGET_NAME} OpenCL)
+
+if(UNIX)
+    target_link_libraries(${TARGET_NAME} pthread)
+endif()
+
+=======
+# Copyright (c) 2016 Intel Corporation
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#      http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# ========================================== Settings from parent ======================================
+
+set(CLDNN_BUILD__PROJ             "${CLDNN_BUILD__PROJ__clDNN}")
+set(CLDNN_BUILD__PROJ_LABEL       "${CLDNN_BUILD__PROJ_LABEL__clDNN}")
+set(CLDNN_BUILD__PROJ_OUTPUT_NAME "${CLDNN_BUILD__PROJ_OUTPUT_NAME__clDNN}")
+
+# ================================== Compiler preprocessor definitions =================================
+
+set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
+    CLDNN_EXPORTS
+    EXPORT_NEURAL_SYMBOLS
+  )
+
+# ========================================= Source/Header files ========================================
+
+file (GLOB API_HEADERS
+       ${CMAKE_SOURCE_DIR}/api/*.h
+      )
+file (GLOB LIBRARY_SRC
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+  )
+file (GLOB LIBRARY_SRC_GPU
+       ${CMAKE_SOURCE_DIR}/src/gpu/*.h
+       ${CMAKE_SOURCE_DIR}/src/gpu/*.cpp
+      )
+
+
+# Create named folders for the sources within the .vcproj
+# Empty name lists them directly under the .vcproj
+
+source_group("api" FILES ${API_HEADERS})
+source_group("src" FILES ${LIBRARY_SRC})
+source_group("src\\gpu" FILES ${LIBRARY_SRC_GPU})
+
+# Properties->C/C++->General->Additional Include Directories
+include_directories (${CMAKE_SOURCE_DIR}
+                     ${CMAKE_SOURCE_DIR}/src
+                    )
+
+# Create library file from sources.
+add_library(${CLDNN_BUILD__PROJ} SHARED
+            ${LIBRARY_SRC}
+            ${LIBRARY_SRC_GPU}
+            ${API_HEADERS})
+set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY PROJECT_LABEL "${CLDNN_BUILD__PROJ_LABEL}")
+set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD__PROJ_OUTPUT_NAME}")
+
+
+target_link_libraries(${CLDNN_BUILD__PROJ} OpenCL)
+if(UNIX)
+    target_link_libraries(${CLDNN_BUILD__PROJ} pthread)
+endif()
+
+>>>>>>> [GPU DNN][Build Utils] Changing CMake to more generic approach (part VI).

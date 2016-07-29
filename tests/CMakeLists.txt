@@ -12,11 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_subdirectory (gtest)
 
-set (APP_NAME "tests")
-# Sources for test files
+add_subdirectory(gtest)
 
+# ========================================= Name / Output settings =====================================
+
+set(CLDNN_BUILD__PROJ             "tests")
+set(CLDNN_BUILD__PROJ_LABEL       "${CLDNN_BUILD__PROJ}")
+set(CLDNN_BUILD__PROJ_OUTPUT_NAME "${CLDNN_BUILD__PROJ}${CLDNN__OUT_CPU_SUFFIX}")
+
+# =========================================== Compiler options =========================================
 
 intel_config_flag_apply_settings(CompilerOptions CMAKE_CXX_FLAGS ALL_PATTERN ""
     SET WarnLevel3
@@ -27,41 +32,73 @@ if (NOT MSVC)
     )
 endif ()
 
-file (GLOB TEST_CASES_SRC
-      test_cases/*.cpp)
-      
-file (GLOB TEST_UTILS_SRC
-      test_utils/*.cpp
-      test_utils/*.h
-      )
+# ========================================= Source/Header files ========================================
 
-# Main source file
-set  (MAIN_SRC
-      main.cpp
-      )
+set(__CLDNN_Label__main                "")
+file(GLOB __CLDNN_Sources__main
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+  )
 
-file (GLOB API_HEADERS
-       ${CMAKE_SOURCE_DIR}/api/*.h
-      )
+set(__CLDNN_Directory__test_cases      "${CMAKE_CURRENT_SOURCE_DIR}/test_cases")
+set(__CLDNN_Label__test_cases          "test cases")
+file(GLOB __CLDNN_Sources__test_cases
+    "${__CLDNN_Directory__test_cases}/*.h"
+    "${__CLDNN_Directory__test_cases}/*.hpp"
+    "${__CLDNN_Directory__test_cases}/*.cpp"
+  )
 
-# Create named folders for the sources within the .vcproj
-# Empty name lists them directly under the .vcproj
-source_group("" FILES ${MAIN_SRC})
-source_group("test cases" FILES ${TEST_CASES_SRC})
-source_group("test utils" FILES ${TEST_UTILS_SRC})
+set(__CLDNN_Directory__test_utils      "${CMAKE_CURRENT_SOURCE_DIR}/test_utils")
+set(__CLDNN_Label__test_utils          "test utils")
+file(GLOB __CLDNN_Sources__test_utils
+    "${__CLDNN_Directory__test_utils}/*.h"
+    "${__CLDNN_Directory__test_utils}/*.hpp"
+    "${__CLDNN_Directory__test_utils}/*.cpp"
+  )
 
-# Properties->C/C++->General->Additional Include Directories
-include_directories (${CMAKE_SOURCE_DIR}
-                     ${CMAKE_SOURCE_DIR}/src
-                     ${CMAKE_SOURCE_DIR}/tests
-                     ${CMAKE_SOURCE_DIR}/test_utils
-                    )
 
-# Create exe file from sources.
-add_executable(${APP_NAME}
-               ${MAIN_SRC}
-               ${TEST_CASES_SRC}
-              )
+set(__CLDNN_AllSources
+    ${__CLDNN_Sources__main}
+    ${__CLDNN_Sources__test_cases}
+    ${__CLDNN_Sources__test_utils}
+  )
+
+# =============================================== Filters ==============================================
+
+source_group("${__CLDNN_Label__main}"       FILES ${__CLDNN_Sources__main})
+source_group("${__CLDNN_Label__test_cases}" FILES ${__CLDNN_Sources__test_cases})
+source_group("${__CLDNN_Label__test_utils}" FILES ${__CLDNN_Sources__test_utils})
+
+# ===================================== Include/Link directories =======================================
+
+include_directories(
+    "${CLDNN__MAIN_DIR}"
+    "${CLDNN__MAIN_DIR}/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${__CLDNN_Directory__test_utils}"
+  )
+
+# =================================== Link targets and dependencies ====================================
+
+# Tests executable.
+add_executable("${CLDNN_BUILD__PROJ}"
+    ${__CLDNN_AllSources}
+  )
+set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY PROJECT_LABEL "${CLDNN_BUILD__PROJ_LABEL}")
+set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD__PROJ_OUTPUT_NAME}")
+
+
+# Set library dependencies
+target_link_libraries("${CLDNN_BUILD__PROJ}"
+    gtest
+    "${CLDNN_BUILD__PROJ__clDNN}"
+  )
+
+# ======================================================================================================
+
+# TODO: Clean up unused / unnecessary custom steps.
+
 
 # To use SDE it has to be installed and its root dir needs to be
 # added to PATH env variable.Also USE_SDE_EMULATION should be set
@@ -72,59 +109,53 @@ message("SDE: ${SDE_EXE_DIR}")
 endif()
 
 if((SDE_EXE_DIR STREQUAL "SDE_EXE_DIR-NOTFOUND") OR (NOT USE_SDE_EMULATION))
-set(TEST_COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${APP_NAME})
+set(TEST_COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CLDNN_BUILD__PROJ})
 else()
-set(TEST_COMMAND ${SDE_EXE_DIR} -bdw -- ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${APP_NAME})
+set(TEST_COMMAND ${SDE_EXE_DIR} -bdw -- ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CLDNN_BUILD__PROJ})
 endif()
-
-set_target_properties( ${APP_NAME}
-    PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
-)
 
 set(GFLAGS_BINARY_NAME gflags)
 
 if(RUN_ULTS_OFFLINE)
-    add_test(${APP_NAME} ${TEST_COMMAND})
-    message (STATUS "add_test ...................... " ${APP_NAME} ${TEST_COMMAND})
+    add_test(${CLDNN_BUILD__PROJ} ${TEST_COMMAND})
+    message (STATUS "add_test ...................... " ${CLDNN_BUILD__PROJ} ${TEST_COMMAND})
 elseif(CLDNN__RUN_TESTS)
     if(NOT UNIX)
         find_program(GFLAGS_EXE_DIR ${GFLAGS_BINARY_NAME})
         message("GFLAGS: ${GFLAGS_EXE_DIR}")
 
         if(NOT(GFLAGS_EXE_DIR STREQUAL "GFLAGS_EXE_DIR-NOTFOUND"))
-            add_custom_command(TARGET ${APP_NAME}
+            add_custom_command(TARGET ${CLDNN_BUILD__PROJ}
                            POST_BUILD
                            WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-                           COMMAND ${GFLAGS_EXE_DIR} /i ${APP_NAME}.exe +ust +hpa )
+                           COMMAND ${GFLAGS_EXE_DIR} /i ${CLDNN_BUILD__PROJ}.exe +ust +hpa )
         endif()
     endif()
 
     if((SDE_EXE_DIR STREQUAL "SDE_EXE_DIR-NOTFOUND") OR (NOT USE_SDE_EMULATION))
-        add_custom_command(TARGET ${APP_NAME}
+        add_custom_command(TARGET ${CLDNN_BUILD__PROJ}
                        POST_BUILD
                        WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-                       COMMAND ${APP_NAME} )
+                       COMMAND ${CLDNN_BUILD__PROJ} )
     else()
-        add_custom_command(TARGET ${APP_NAME}
+        add_custom_command(TARGET ${CLDNN_BUILD__PROJ}
                        POST_BUILD
                        WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-                       COMMAND ${APP_NAME} )
+                       COMMAND ${CLDNN_BUILD__PROJ} )
     endif()
 
     if(NOT UNIX)
         if(NOT(GFLAGS_EXE_DIR STREQUAL "GFLAGS_EXE_DIR-NOTFOUND"))
-            add_custom_command(TARGET ${APP_NAME}
+            add_custom_command(TARGET ${CLDNN_BUILD__PROJ}
                            POST_BUILD
                            WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-                           COMMAND ${GFLAGS_EXE_DIR} /i ${APP_NAME}.exe -ust -hpa )
+                           COMMAND ${GFLAGS_EXE_DIR} /i ${CLDNN_BUILD__PROJ}.exe -ust -hpa )
         endif()
      endif()
 endif()
-# Set library dependencies
-target_link_libraries(${APP_NAME} gtest mkl_dnn)
 
 if(UNIX AND WITH_CAFFE)
     add_subdirectory (caffe EXCLUDE_FROM_ALL)
 endif()
 
+# ======================================================================================================
