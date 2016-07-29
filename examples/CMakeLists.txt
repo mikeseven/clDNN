@@ -16,7 +16,9 @@ set (TARGET_NAME "examples")
 
 
 intel_config_flag_apply_settings(CompilerOptions CMAKE_CXX_FLAGS ALL_PATTERN ""
-    SET WarnLevel3 TreatWarnAsErrorDisabled
+    SET
+      WarnLevel3
+      TreatWarnAsErrorDisabled
   )
 
 # Sources for test files

@@ -12,18 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set (TARGET_NAME "mkl_dnn")
-# Sources for test files
+# ========================================== Settings from parent ======================================
 
-add_definitions(-DEXPORT_NEURAL_SYMBOLS)
+set(CLDNN_BUILD__PROJ             "${CLDNN_BUILD__PROJ__clDNN}")
+set(CLDNN_BUILD__PROJ_LABEL       "${CLDNN_BUILD__PROJ_LABEL__clDNN}")
+set(CLDNN_BUILD__PROJ_OUTPUT_NAME "${CLDNN_BUILD__PROJ_OUTPUT_NAME__clDNN}")
+
+# ================================== Compiler preprocessor definitions =================================
+
+set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
+    CLDNN_EXPORTS
+    EXPORT_NEURAL_SYMBOLS
+  )
+
+# ========================================= Source/Header files ========================================
 
 file (GLOB API_HEADERS
        ${CMAKE_SOURCE_DIR}/api/*.h
       )
 file (GLOB LIBRARY_SRC
-       ${CMAKE_SOURCE_DIR}/src/*.h
-       ${CMAKE_SOURCE_DIR}/src/*.cpp
-      )
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+  )
 file (GLOB LIBRARY_SRC_GPU
        ${CMAKE_SOURCE_DIR}/src/gpu/*.h
        ${CMAKE_SOURCE_DIR}/src/gpu/*.cpp
@@ -45,14 +56,16 @@ include_directories (${CMAKE_SOURCE_DIR}
                     )
 
 # Create library file from sources.
-add_library(${TARGET_NAME} SHARED
+add_library(${CLDNN_BUILD__PROJ} SHARED
             ${LIBRARY_SRC}
             ${LIBRARY_SRC_GPU}
             ${API_HEADERS})
+set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY PROJECT_LABEL "${CLDNN_BUILD__PROJ_LABEL}")
+set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD__PROJ_OUTPUT_NAME}")
 
-target_link_libraries(${TARGET_NAME} OpenCL)
 
+target_link_libraries(${CLDNN_BUILD__PROJ} OpenCL)
 if(UNIX)
-    target_link_libraries(${TARGET_NAME} pthread)
+    target_link_libraries(${CLDNN_BUILD__PROJ} pthread)
 endif()
 

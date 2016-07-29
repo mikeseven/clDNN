@@ -728,7 +728,7 @@ elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
   )
 endif()
 
-# ======================================== Include directories =========================================
+# ===================================== Include/Link directories =======================================
 
 include_directories(
     ${CLDNN__IOCL_ICD_INCDIRS}
