@@ -49,7 +49,7 @@ public:
     using factory_type = std::function<is_an_implementation *(primitive_kind &)>;
     using map_type = singleton_map<key_type, factory_type>;
 
-    static factory_type create(primitive_kind& primitive) {
+    static factory_type get(primitive_kind& primitive) {
         // lookup in database; throw if not found 
         auto key = key_builder()(primitive);
         auto it = map_type::instance().find(key);
@@ -72,7 +72,7 @@ template <class primitive_kind>
 is_a_primitive* is_a_primitive::create(typename primitive_kind::arguments arg) {
     std::unique_ptr<primitive_kind> result(new primitive_kind(arg));
     if (0 == (arg.engine & engine::lazy)) {
-        auto factory = implementation_map<primitive_kind>::create(*result);
+        auto factory = implementation_map<primitive_kind>::get(*result);
         auto implementation = factory(*result);
         result->_impl.reset(implementation);
         result->_work = implementation->work();
