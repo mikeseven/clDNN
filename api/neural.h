@@ -172,6 +172,7 @@ struct memory : is_a_primitive {
 private:
     std::shared_ptr<buffer> _buffer;
     memory(arguments arg, std::shared_ptr<buffer> buffer) : is_a_primitive(type_id<const memory>()), argument(arg), _buffer(buffer) {};
+    friend class is_a_primitive;
 };
 
 
@@ -212,6 +213,7 @@ struct file : is_a_primitive {
 private:
     file(arguments arg) : is_a_primitive(type_id<const file>()), argument(arg) {};
     const std::vector<primitive>     &output() const { return argument.output; };
+    friend class is_a_primitive;
 };
 
 
@@ -247,6 +249,7 @@ private:
     reorder(arguments arg) : is_a_primitive(type_id<const reorder>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
+    friend class is_a_primitive;
 };
 
 
@@ -319,8 +322,7 @@ private:
     convolution(arguments arg) : is_a_primitive(type_id<const convolution>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
-
-    std::unique_ptr<is_an_implementation> _private;
+    friend class is_a_primitive;
 };
 
 
@@ -360,7 +362,7 @@ private:
     const std::vector<primitive_at>  &input() const { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
 
-    std::unique_ptr<is_an_implementation> _private;
+    friend class is_a_primitive;
 };
 
 
@@ -411,8 +413,7 @@ private:
     convolution_backward(arguments arg) : is_a_primitive(type_id<const convolution_backward>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
-
-    std::unique_ptr<is_an_implementation> _private;
+    friend class is_a_primitive;
 };
 
 
@@ -448,8 +449,7 @@ private:
     fully_connected(arguments arg) : is_a_primitive(type_id<const fully_connected>()), argument(arg) {};
     const std::vector<primitive_at>  &input()  const { return argument.input;  };
     const std::vector<primitive>     &output() const { return argument.output; };
-
-    std::unique_ptr<is_an_implementation> _private;
+    friend class is_a_primitive;
 };
 
 
@@ -492,8 +492,7 @@ private:
     relu(arguments arg) : is_a_primitive(type_id<const relu>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
-
-    std::unique_ptr<is_an_implementation> _private;
+    friend class is_a_primitive;
 };
 
 
@@ -533,8 +532,7 @@ struct relu_backward : is_a_primitive {
 
 private:
     relu_backward(arguments arg) : is_a_primitive(type_id<const relu_backward>()), argument(arg) {};
-
-    std::unique_ptr<is_an_implementation> _private;
+    friend class is_a_primitive;
 };
 
 
@@ -590,8 +588,7 @@ private:
     pooling(arguments arg) : is_a_primitive(type_id<const pooling>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
-
-    std::unique_ptr<is_an_implementation> _private;
+    friend class is_a_primitive;
 };
 
 
@@ -649,8 +646,7 @@ private:
     response(arguments arg) : is_a_primitive(type_id<const response>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
-
-    std::unique_ptr<is_an_implementation> _private;
+    friend class is_a_primitive;
 };
 
 
@@ -688,8 +684,7 @@ private:
     softmax(arguments arg) : is_a_primitive(type_id<const softmax>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
-
-    std::unique_ptr<is_an_implementation> _private;
+    friend class is_a_primitive;
 };
 
 
@@ -735,6 +730,7 @@ struct /*normalization*/batch_training_forward : is_a_primitive {
 
 private:
     batch_training_forward(arguments arg) : is_a_primitive(type_id<const batch_training_forward>()), argument(arg) {};
+    friend class is_a_primitive;
 };
 
 
@@ -776,6 +772,7 @@ struct /*normalization*/batch_training_backward : is_a_primitive {
 
 private:
     batch_training_backward(arguments arg) : is_a_primitive(type_id<const batch_training_backward>()), argument(arg) {};
+    friend class is_a_primitive;
 };
 
 
@@ -815,6 +812,7 @@ struct /*normalization*/batch_inference : is_a_primitive {
 
 private:
     batch_inference(arguments arg) : is_a_primitive(type_id<const batch_inference>()), argument(arg) {};
+    friend class is_a_primitive;
 };
 
 };//normalization /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -854,8 +852,7 @@ private:
     fully_connected_relu(fully_connected_relu::arguments arg) : is_a_primitive(type_id<const fully_connected_relu>()), argument(arg) {};
     const std::vector<primitive_at>  &input() const  { return argument.input; };
     const std::vector<primitive>     &output() const { return argument.output; };
-
-    std::unique_ptr<is_an_implementation> _private;
+    friend class is_a_primitive;
 };
 
 

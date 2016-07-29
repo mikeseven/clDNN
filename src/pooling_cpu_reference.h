@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "pooling.h"
+#include "api/neural.h"
 
 namespace neural {
     struct pooling_cpu_reference : is_an_implementation {

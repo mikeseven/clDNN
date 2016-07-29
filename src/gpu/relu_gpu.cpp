@@ -16,6 +16,7 @@
 
 #include "relu_gpu.h"
 #include "multidimensional_counter.h"
+#include "implementation_map.h"
 #include "kernel.h"
 
 namespace neural {
@@ -71,7 +72,7 @@ struct attach {
         auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
         auto val_fw = relu_gpu::create;
 
-        relu_fw_implementation_map::instance().insert( {key_fw, val_fw} ); //todo keys should be different
+        implementation_map<relu>::add(key_fw, val_fw); //todo keys should be different
     }
     ~attach() {}
 };

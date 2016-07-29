@@ -16,6 +16,7 @@
 
 #include "api/neural.h"
 #include "memory_utils.h"
+#include "implementation_map.h"
 #include <algorithm>
 #include <numeric>
 #include <tuple>
@@ -422,30 +423,39 @@ struct batch_normalization_inference_reference : is_an_implementation {
     }
 };
 
-//                                    engine                output                        input
-using implementation_key = std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type>;
 
-// maps of available implementations
-static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_training_forward &)>> training_forward_implementation_map = {
-    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_training_forward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_training_forward_reference<float>::create}
+struct attach {
+    attach() {
+        implementation_map<normalization::batch_training_forward>::add({
+        { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_training_forward_reference<float>::create },
+        { std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_training_forward_reference<float>::create },
+        { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_training_forward_reference<float>::create },
+        { std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_training_forward_reference<float>::create },
+        });
+
+        implementation_map<normalization::batch_training_backward>::add({
+        { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_training_backward_reference<float>::create },
+        { std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_training_backward_reference<float>::create },
+        { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_training_backward_reference<float>::create },
+        { std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_training_backward_reference<float>::create }
+        });
+
+        implementation_map<normalization::batch_inference>::add({
+        { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_inference_reference<float>::create },
+        { std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_inference_reference<float>::create },
+        { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_inference_reference<float>::create },
+        { std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_inference_reference<float>::create }
+        });
+    }
+    ~attach() {}
 };
 
-static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_training_backward &)>> training_backward_implementation_map = {
-    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_training_backward_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_training_backward_reference<float>::create}
-};
-
-static std::map<implementation_key, std::function<is_an_implementation *(normalization::batch_inference &)>> inference_implementation_map = {
-    {std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_inference_reference<float>::create},
-    {std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_inference_reference<float>::create}
-};
+#ifdef __GNUC__
+    __attribute__((visibility("default"))) //todo meybe dll_sym?
+#elif _MSC_VER
+#   pragma section(".nn_init$m", read, write)
+#endif
+    attach attach_impl;
 
 } // namespace {
 
@@ -462,26 +472,7 @@ batch_training_forward::arguments::arguments( neural::engine::type engine, std::
 // creates primitive with batch_normalization implementation that supports provided arguments
 primitive batch_training_forward::create(batch_training_forward::arguments arg)
 {
-    // wrap batch norm into RAII wrapper
-    std::unique_ptr<batch_training_forward> result(new batch_training_forward(arg));
-
-    // create implementation for non-lazy evaluation
-    if(0 == (arg.engine & engine::lazy)) {
-        // lookup in database; throw if not found
-        auto& infmt = result->argument.input[0].primitive.as<const memory&>().argument.format;
-        auto& outfmt = result->argument.output[0].as<const memory&>().argument.format;
-        auto key = std::make_tuple(arg.engine, infmt, outfmt);
-
-        auto it = training_forward_implementation_map.find(key);
-        if(it==std::end(training_forward_implementation_map)) throw std::runtime_error("not yet implemented");
-
-        // create implementation & attach it to result
-        auto implementation = it->second(*result);
-        result->_work = implementation->work();
-    }
-
-    // release RAII wrapper, return naked pointer
-    return result.release();
+    return is_a_primitive::create<batch_training_forward>(arg);
 }
 
 batch_training_backward::arguments::arguments( neural::engine::type engine, std::vector<primitive> output, std::vector<primitive_at> input, bool spatial)
@@ -493,23 +484,7 @@ batch_training_backward::arguments::arguments( neural::engine::type engine, std:
 // creates primitive with batch_normalization implementation that supports provided arguments
 primitive batch_training_backward::create(batch_training_backward::arguments arg)
 {
-    // wrap batch norm into RAII wrapper
-    std::unique_ptr<batch_training_backward> result(new batch_training_backward(arg));
-
-    // create implementation for non-lazy evaluation
-    if(0 == (arg.engine & engine::lazy)) {
-        // lookup in database; throw if not found
-        auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = training_backward_implementation_map.find(key);
-        if(it==std::end(training_backward_implementation_map)) throw std::runtime_error("not yet implemented");
-
-        // create implementation & attach it to result
-        auto implementation = it->second(*result);
-        result->_work = implementation->work();
-    }
-
-    // release RAII wrapper, return naked pointer
-    return result.release();
+    return is_a_primitive::create<batch_training_backward>(arg);
 }
 
 batch_inference::arguments::arguments( neural::engine::type engine, std::vector<primitive> output, std::vector<primitive_at> input, bool spatial)
@@ -521,23 +496,7 @@ batch_inference::arguments::arguments( neural::engine::type engine, std::vector<
 // creates primitive with batch_normalization implementation that supports provided arguments
 primitive batch_inference::create(batch_inference::arguments arg)
 {
-    // wrap batch norm into RAII wrapper
-    std::unique_ptr<batch_inference> result(new batch_inference(arg));
-
-    // create implementation for non-lazy evaluation
-    if(0 == (arg.engine & engine::lazy)) {
-        // lookup in database; throw if not found
-        auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = inference_implementation_map.find(key);
-        if(it==std::end(inference_implementation_map)) throw std::runtime_error("not yet implemented");
-
-        // create implementation & attach it to result
-        auto implementation = it->second(*result);
-        result->_work = implementation->work();
-    }
-
-    // release RAII wrapper, return naked pointer
-    return result.release();
+    return is_a_primitive::create<batch_inference>(arg);
 }
 
 } // namespace normalization

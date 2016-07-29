@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "convolution.h"
+#include "api/neural.h"
 
 namespace neural {
     struct convolution_gpu : is_an_implementation {

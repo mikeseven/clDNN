@@ -15,7 +15,9 @@
 */
 
 #include "convolution_gpu.h"
+#include "multidimensional_counter.h"
 #include "convolution_common_gpu.h"
+#include "implementation_map.h"
 #include "kernel.h"
 
 namespace neural {
@@ -121,14 +123,14 @@ namespace{
 struct attach{
     attach(){
         gpu::kernel_templates::add(kernelName_YXFB, kernelCode_YXFB_Begin + convolution_code_yxfb + kernelCodeEnd);
-        auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
         auto val_fw = convolution_gpu::create;
 
-        conv_fw_implementation_map.insert( {key_fw, val_fw} );
+        auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
+        implementation_map<convolution>::add(key_fw, val_fw);
 
         gpu::kernel_templates::add(kernelName_BFXY, kernelCode_BFXY_Begin + convolution_code_bfxy + kernelCodeEnd);
         auto key_fw2 = std::make_tuple(engine::gpu, memory::format::bfyx_f32, memory::format::bfyx_f32);
-        conv_fw_implementation_map.insert({ key_fw2, val_fw });
+        implementation_map<convolution>::add(key_fw2, val_fw);
     }
     ~attach(){}
 };

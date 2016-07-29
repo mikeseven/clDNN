@@ -15,7 +15,7 @@
 */
 
 #include "multidimensional_counter.h"
-#include "convolution_relu.h"
+#include "implementation_map.h"
 #include "convolution_common.h"
 #include <sstream>
 
@@ -78,23 +78,6 @@ primitive convolution_relu::create(convolution_relu::arguments arg) {
         throw std::runtime_error(std::string("Convolution_Relu ") + err.what());
     }
 
-    // wrap relu into RAII wrapper
-    std::unique_ptr<convolution_relu> result(new convolution_relu(arg));
-
-    // create implementation for non-lazy evaluation
-    if(0 == (arg.engine & engine::lazy)) {
-        // lookup in database; throw if not found
-        conv_relu_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = conv_relu_fw_implementation_map.find(key);
-        if(it==std::end(conv_relu_fw_implementation_map)) throw std::runtime_error("Not yet implemented.");
-
-        // create implementation & attach it to result
-        auto implementation = it->second(*result);
-        result->_private.reset(implementation);
-        result->_work = implementation->work();
-    }
-
-    // release RAII wrapper, return naked pointer
-    return result.release();
+    return is_a_primitive::create<convolution_relu>(arg);
 }
 }

@@ -15,7 +15,7 @@
 */
 
 #include "multidimensional_counter.h"
-#include "pooling.h"
+#include "implementation_map.h"
 
 namespace neural {
 
@@ -149,25 +149,7 @@ pooling::arguments::arguments( neural::engine::type     eng,
 
 // creates primitive with pooling implementation that supports provided arguments
 primitive pooling::create(pooling::arguments arg) {
-    // wrap relu into RAII wrapper
-    std::unique_ptr<pooling> result(new pooling(arg));
-
-    // create implementation for non-lazy evaluation
-    if(0 == (arg.engine & engine::lazy)) {
-        // lookup in database; throw if not found
-        auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = pool_fw_implementation_map::instance().find(key);
-        auto it2 = std::end(pool_fw_implementation_map::instance());
-        if(it==it2) throw std::runtime_error("not yet implemented");
-
-        // create implementation & attach it to result
-        auto implementation = it->second(*result);
-        result->_private.reset(implementation);
-        result->_work = implementation->work();
-    }
-
-    // release RAII wrapper, return naked pointer
-    return result.release();
+    return is_a_primitive::create<pooling>(arg);
 }
 
 }

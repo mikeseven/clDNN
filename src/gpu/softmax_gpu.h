@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "softmax.h"
+#include "api/neural.h"
 
 namespace neural {
 namespace normalization {

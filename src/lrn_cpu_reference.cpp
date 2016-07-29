@@ -16,6 +16,7 @@
 
 #include "multidimensional_counter.h"
 #include "lrn_cpu_reference.h"
+#include "implementation_map.h"
 
 namespace neural {
 
@@ -104,10 +105,8 @@ namespace neural {
             attach() {
                 auto key = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
                 auto val_fw = lrn_cpu_reference::create;
-                //auto val_bw = lrn_backward_cpu_reference::create;
 
-                lrn_fw_implementation_map::instance().insert({ key, val_fw }); //todo keys should be different
-                //lrn_bw_implementation_map.insert({ key, val_bw });
+                implementation_map<normalization::response>::add( key, val_fw ); //todo keys should be different
             }
             ~attach() {}
         };

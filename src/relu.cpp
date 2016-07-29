@@ -14,8 +14,7 @@
 // limitations under the License.
 */
 
-#include "multidimensional_counter.h"
-#include "relu.h"
+#include "implementation_map.h"
 
 namespace neural {
 
@@ -125,24 +124,8 @@ primitive relu::create(relu::arguments arg) {
         if (input_arg.size.raw[i]  < output_size.raw[i] + input_offset.raw[i]) throw std::runtime_error("ReLU input/output size does not match.");
         if (output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("ReLU sizes to small.");
     }
-    // wrap relu into RAII wrapper
-    std::unique_ptr<relu> result(new relu(arg));
 
-    // create implementation for non-lazy evaluation
-    if(0 == (arg.engine & engine::lazy)) {
-        // lookup in database; throw if not found
-        auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = relu_fw_implementation_map::instance().find(key);
-        if (it == std::end(relu_fw_implementation_map::instance())) throw std::runtime_error("not yet implemented");
-
-        // create implementation & attach it to result
-        auto implementation = it->second(*result);
-        result->_private.reset(implementation);
-        result->_work = implementation->work();
-    }
-
-    // release RAII wrapper, return naked pointer
-    return result.release();
+    return is_a_primitive::create<relu>(arg);
 }
 
 
@@ -175,23 +158,6 @@ primitive relu_backward::create(relu_backward::arguments arg) {
         if (forward_input_grad_arg.size.raw[i]  < processed_window_sizes.raw[i] + forward_input_grad_offset.raw[i])     throw std::runtime_error("ReLU backward: forward_input_grad size does not match the offset.");
     }
 
-    // wrap relu into RAII wrapper
-    std::unique_ptr<relu_backward> result(new relu_backward(arg));
-
-    // create implementation for non-lazy evaluation
-    if(0 == (arg.engine & engine::lazy)) {
-        // lookup in database; throw if not found
-        auto key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = relu_bw_implementation_map::instance().find(key);
-        if (it == std::end(relu_bw_implementation_map::instance())) throw std::runtime_error("not yet implemented");
-
-        // create implementation & attach it to result
-        auto implementation = it->second(*result);
-        result->_private.reset(implementation);
-        result->_work = implementation->work();
-    }
-
-    // release RAII wrapper, return naked pointer
-    return result.release();
+    return is_a_primitive::create<relu_backward>(arg);
 }
 }

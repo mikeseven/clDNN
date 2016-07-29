@@ -16,6 +16,7 @@
 
 #include <iterator>
 #include "convolution_cpu_reference.h"
+#include "implementation_map.h"
 #include "multidimensional_counter.h"
 #include "memory_utils.h"
 
@@ -108,8 +109,8 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                         auto in_idx  = calc_in_idx ( input_arg.size.raw, {arg_in_idx.begin(), arg_in_idx.end()} );
                         auto win_idx = calc_win_idx( filter_arg.size.raw,
                                                      [&](){
-                                                        auto vec = std::vector<uint32_t>({0, (ofm-output_offset.feature[0]) / (uint32_t)split});
-                                                        auto* win_pos_ptr = dynamic_cast<std::vector<uint32_t>*>(&win_pos);
+                                                        auto vec = std::vector<uint32_t>({0, (ofm-output_offset.feature[0]) / static_cast<uint32_t>(split)});
+                                                        auto* win_pos_ptr = static_cast<std::vector<uint32_t>*>(&win_pos);
                                                         vec.insert(vec.end(), win_pos_ptr->begin(), win_pos_ptr->end());
                                                         return vec;
                                                      }()
@@ -246,8 +247,8 @@ struct attach{
         auto val_fw = convolution_cpu_reference::create;
         auto val_bw = convolution_backward_cpu_reference::create;
 
-        conv_fw_implementation_map.insert( {key_fw, val_fw} ); //todo keys should be different
-        conv_bw_implementation_map.insert( {key_bw, val_bw} );
+        implementation_map<convolution>::add( key_fw, val_fw );
+        implementation_map<convolution_backward>::add(key_bw, val_bw);
     }
     ~attach(){}
 };

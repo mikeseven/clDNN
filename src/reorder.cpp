@@ -16,6 +16,7 @@
 
 #include "api/neural.h"
 #include "multidimensional_counter.h"
+#include "implementation_map.h"
 #include <algorithm>
 #include <tuple>
 #include <map>
@@ -140,24 +141,30 @@ namespace neural {
         , output( {memory::allocate({_engine, _out_layout, _out_sizes})} )
         , input({_in}) {}
 
+    template<>
+    struct implementation_key<reorder> {
+        typedef neural::engine::type type;
+        type operator()(reorder& primitive) { return primitive.argument.engine; }
+    };
+
+    namespace {
+        struct attach {
+            attach() {
+                implementation_map<reorder>::add({
+                    { engine::type::reference, reorder_reference::create },
+                    { engine::type::cpu, reorder_reference::create },
+                });
+            }
+        };
+    }
+
     // creates primitive with reorder implementation that supports provided arguments
     primitive reorder::create(reorder::arguments arg) {
-        // wrap reorder into RAII wrapper
-        std::unique_ptr<reorder> result(new reorder(arg));
-
-        // create implementation for non-lazy evaluation
-        if(0 == (arg.engine & engine::lazy)) {
-            if(arg.input[0].primitive.as<const memory&>().argument.size.raw.size() != arg.output[0].as<const memory&>().argument.size.raw.size())
-    //            throw std::runtime_error("Number of dimensions in reorder does not match. Meybe you want to use reshape primitive?"); //todo reshape
-                throw std::runtime_error("Number of dimensions in reorder does not match.");
-
-            // create implementation & attach it to result
-            auto implementation = reorder_reference::create(*result);
-            result->_work = implementation->work();
-        }
-
-        // release RAII wrapper, return naked pointer
-        return result.release();
+        static attach attach_impl;
+        if (arg.input[0].primitive.as<const memory&>().argument.size.raw.size() != arg.output[0].as<const memory&>().argument.size.raw.size())
+            //            throw std::runtime_error("Number of dimensions in reorder does not match. Meybe you want to use reshape primitive?"); //todo reshape
+            throw std::runtime_error("Number of dimensions in reorder does not match.");
+        return is_a_primitive::create<reorder>(arg);
     }
 
 }

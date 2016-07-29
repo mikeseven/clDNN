@@ -16,6 +16,7 @@
 
 #include "multidimensional_counter.h"
 #include "lrn_gpu.h"
+#include "implementation_map.h"
 #include "kernel.h"
 
 const std::string kernelName = "lrn_GPU";
@@ -121,7 +122,7 @@ namespace neural {
                 auto val_fw = lrn_gpu::create;
                 //auto val_bw = lrn_backward_cpu_reference::create;
 
-                lrn_fw_implementation_map::instance().insert({ key, val_fw }); //todo keys should be different
+                implementation_map<normalization::response>::add(key, val_fw); //todo keys should be different
                 //lrn_bw_implementation_map.insert({ key, val_bw });
             }
             ~attach() {}

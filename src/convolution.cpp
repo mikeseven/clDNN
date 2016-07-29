@@ -15,7 +15,7 @@
 */
 
 #include "multidimensional_counter.h"
-#include "convolution.h"
+#include "implementation_map.h"
 #include "convolution_common.h"
 #include <sstream>
 
@@ -104,25 +104,9 @@ primitive convolution::create(convolution::arguments arg) {
         throw std::runtime_error(std::string("Convolution ") + err.what());
     }
 
-    // wrap relu into RAII wrapper
-    std::unique_ptr<convolution> result(new convolution(arg));
-
-    // create implementation for non-lazy evaluation
-    if(0 == (arg.engine & engine::lazy)) {
-        // lookup in database; throw if not found
-        conv_fw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = conv_fw_implementation_map.find(key);
-        if(it==std::end(conv_fw_implementation_map)) throw std::runtime_error("Not yet implemented.");
-
-        // create implementation & attach it to result
-        auto implementation = it->second(*result);
-        result->_private.reset(implementation);
-        result->_work = implementation->work();
-    }
-
-    // release RAII wrapper, return naked pointer
-    return result.release();
+    return is_a_primitive::create<convolution>(arg);
 }
+
 primitive convolution_backward::create(convolution_backward::arguments arg) {
     auto& bw_input_size = arg.input_size;  // todo output or input?
     auto& bw_input_offset = arg.input_offset;
@@ -168,22 +152,6 @@ primitive convolution_backward::create(convolution_backward::arguments arg) {
     }
 
     // wrap relu into RAII wrapper
-    std::unique_ptr<convolution_backward> result(new convolution_backward(arg));
-
-    // create implementation for non-lazy evaluation
-    if(0 == (arg.engine & engine::lazy)) {
-        // lookup in database; throw if not found
-        conv_bw_key key = std::make_tuple(arg.engine, result-> input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = conv_bw_implementation_map.find(key);
-        if(it==std::end(conv_bw_implementation_map)) throw std::runtime_error("Not yet implemented.");
-
-        // create implementation & attach it to result
-        auto implementation = it->second(*result);
-        result->_private.reset(implementation);
-        result->_work = implementation->work();
-    }
-
-    // release RAII wrapper, return naked pointer
-    return result.release();
+    return is_a_primitive::create<convolution_backward>(arg);
 }
 }

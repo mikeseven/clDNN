@@ -17,8 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
 #include "multidimensional_counter.h"
-#include "memory_utils.h"
-#include "fully_connected.h"
+#include "implementation_map.h"
 
 namespace neural {
 
@@ -43,24 +42,7 @@ primitive fully_connected::create(fully_connected::arguments arg) {
     if (weight_arg.format != memory::format::xb_f32 &&
         weight_arg.format != memory::format::x_f32)                 throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
 
-    // wrap relu into RAII wrapper
-    std::unique_ptr<fully_connected> result(new fully_connected(arg));
-
-    // create implementation for non-lazy evaluation
-    if(0 == (arg.engine & engine::lazy)) {
-        // lookup in database; throw if not found
-        auto key = std::make_tuple(arg.engine, result->input_memory(0).argument.format, result->output_memory(0).argument.format);
-        auto it = fully_connected_fw_implementation_map::instance().find(key);
-        if (it == std::end(fully_connected_fw_implementation_map::instance())) throw std::runtime_error("not yet implemented");
-
-        // create implementation & attach it to result
-        auto implementation = it->second(*result);
-        result->_private.reset(implementation);
-        result->_work = implementation->work();
-    }
-
-    // release RAII wrapper, return naked pointer
-    return result.release();
+    return is_a_primitive::create<fully_connected>(arg);
 }
 
 }

@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "relu.h"
+#include "api/neural.h"
 
 namespace neural {
     struct relu_cpu_reference : is_an_implementation {
