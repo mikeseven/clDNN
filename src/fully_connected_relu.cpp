@@ -63,13 +63,21 @@ fully_connected_relu::arguments::arguments(neural::engine::type eng,
 
 // creates primitive with fully_connected implementation that supports provided arguments
 primitive fully_connected_relu::create(fully_connected_relu::arguments arg) {
-    // auto& input_arg = arg.input[0].primitive.as<const memory&>().argument;
-    // auto& output_arg = arg.output[0].as<const memory&>().argument;
+    auto& input_arg = arg.input[0].primitive.as<const memory&>().argument;
+    auto& output_arg = arg.output[0].as<const memory&>().argument;
     auto& weight_arg = arg.input[1].primitive.as<const memory&>().argument;
-    // TODO: add proper dimension handling
-    // if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Fully connected input/output number of dimension does not match.");
-    if (weight_arg.format != memory::format::xb_f32 &&
-        weight_arg.format != memory::format::x_f32)                 throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
+
+    if (input_arg.format == memory::format::yxfb_f32)
+    {
+        if (weight_arg.format != memory::format::yxfn_f32)
+            throw std::runtime_error("Fully connected input is yxfb, so weights must be in format yxfn!");
+    }
+    else
+    {
+        if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Fully connected input/output number of dimension does not match.");
+        if (weight_arg.format != memory::format::xb_f32 &&
+            weight_arg.format != memory::format::x_f32 )                 throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32 or nb_f32.");
+    }
 
     // wrap relu into RAII wrapper
     std::unique_ptr<fully_connected_relu> result(new fully_connected_relu(arg));

@@ -38,7 +38,6 @@ primitive fully_connected::create(fully_connected::arguments arg) {
     auto& input_arg = arg.input[0].primitive.as<const memory&>().argument;
     auto& output_arg = arg.output[0].as<const memory&>().argument;
     auto& weight_arg = arg.input[1].primitive.as<const memory&>().argument;
-
     
     if (input_arg.format == memory::format::yxfb_f32)
     {
@@ -49,7 +48,7 @@ primitive fully_connected::create(fully_connected::arguments arg) {
     {
         if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Fully connected input/output number of dimension does not match.");
         if (weight_arg.format != memory::format::xb_f32 &&
-            weight_arg.format != memory::format::x_f32)                 throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32.");
+            weight_arg.format != memory::format::x_f32)                 throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32 or nb_f32.");
     }
 
     // wrap relu into RAII wrapper

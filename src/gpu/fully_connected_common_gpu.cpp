@@ -26,12 +26,12 @@ namespace neural {
         const int x = get_global_id(0);
 
         pDst[x] = 0;
-        uint outXIdx = x / input_size[0];
-        uint inputBatchIdx = x % input_size[0];
+        uint outXIdx = x / INPUT_BATCH_NUM;
+        uint inputBatchIdx = x % INPUT_BATCH_NUM;
         uint weightBatchIdx = outXIdx * WEIGHTS_BATCH_NUM;
-        for (uint i = 0; i < input_size[2]; i++)
+        for (uint i = 0; i < INPUT_SIZE_X; i++)
         {
-            pDst[x] += input[i * input_size[0] + inputBatchIdx] * WEIGHTS[weightBatchIdx + i];
+            pDst[x] += input[i * INPUT_BATCH_NUM + inputBatchIdx] * WEIGHTS[weightBatchIdx + i];
         }
         pDst[x] += BIASES[outXIdx];
     )__CC";
@@ -44,10 +44,10 @@ namespace neural {
         const int x = get_global_id(0);
 
         pDst[x] = 0;
-        uint neuronIdx = x % input_size[0];
-        for (uint i = 0; i < input_size[2] * input_size[3] * input_size[1]; i++)
+        uint neuronIdx = x % INPUT_BATCH_NUM;
+        for (uint i = 0; i < INPUT_SIZE_X * INPUT_SIZE_Y * INPUT_FEATURE_NUM; i++)
         {
-            pDst[x] += input[i * input_size[0] + neuronIdx] * WEIGHTS[i];
+            pDst[x] += input[i * INPUT_BATCH_NUM + neuronIdx] * WEIGHTS[i];
         }
         pDst[x] += BIASES[neuronIdx];
     )__CC";

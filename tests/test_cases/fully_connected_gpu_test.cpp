@@ -185,7 +185,7 @@ TEST(fully_connected_gpu, yxfb_f32) {
     //   10,  27
 
     auto input_prim = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 2, { { 2, 1 } }, 2 } });
-    auto output_prim = memory::allocate({ engine::gpu, memory::format::nb_f32,{ 2 ,{ { 1 } }, 1 } });
+    auto output_prim = memory::allocate({ engine::gpu, memory::format::xb_f32,{ 2 ,{ { 1 } }, 1 } });
     auto weights_prim = memory::allocate({ engine::gpu, memory::format::yxfn_f32,{ 1, { { 2, 1 } }, 2 } });
     auto bias_prim = memory::allocate({ engine::gpu, memory::format::x_f32,{ 1,{ { 2 } }, 1 } });
 
