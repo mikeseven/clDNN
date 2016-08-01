@@ -44,19 +44,22 @@ void parse_parameters(std::map<std::string, std::string> &config, std::vector<st
 int main(int argc, char *argv[])
 {
     // TODO: create header file for all examples
-    extern void alexnet(uint32_t batch_size, std::string img_dir);
+    extern void alexnet(uint32_t, std::string, neural::engine::type);
 
     if (argc <= 1)
     {
         std::cout <<
             R"_help_(<parameters> include:
-            --batch = <value>
+            --batch=<value>
             size of group of images that are classified together;  large batch
             sizes have better performance
-            --model = <name>
+            --model=<name>
             name of network model that is used for classfication
             can be : alexnet, caffenet_float, caffenet_int16 or lenet_float
-            --input = <directory>
+            --engine=<name>
+            engine type: can be referenced or gpu
+            can be : alexnet, caffenet_float, caffenet_int16 or lenet_float
+            --input=<directory>
             path to directory that contains images to be classfied)_help_";
     }
     else
@@ -71,6 +74,7 @@ int main(int argc, char *argv[])
         auto not_found = std::end(config);
         if (config.find("batch") == not_found) config["batch"] = "32";
         if (config.find("model") == not_found) config["model"] = "alexnet";
+        if (config.find("engine") == not_found) config["engine"] = "referenced";
         if (config.find("input") == not_found)
         {
             std::cout << "Directory path has to be defined using current dir"<<std::endl;
@@ -79,7 +83,10 @@ int main(int argc, char *argv[])
         if (config["model"].compare("alexnet") == 0)
         {
             try {
-                alexnet(std::stoi(config["batch"]), config["input"]);
+                alexnet(
+                    std::stoi(config["batch"]),
+                    config["input"],
+                    config["engine"].compare("gpu") == 0 ? neural::engine::gpu : neural::engine::reference);
             }
             catch (std::exception &e) {
                 std::cerr << e.what();

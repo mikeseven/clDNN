@@ -22,17 +22,17 @@
 
 using namespace neural;
 // AlexNet with weights & biases from file
-void execute_alexnet(primitive& input, primitive& output)
+void execute_alexnet(primitive& input, primitive& output, engine::type eng)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     auto conv1 = convolution::create(
     {
-        engine::reference,
+        eng,
         memory::format::yxfb_f32,
         {
             input,
-            file::create({ engine::reference, "conv1_weights.nnd" }),
-            file::create({ engine::reference, "conv1_biases.nnd" })
+            file::create({ eng, "conv1_weights.nnd" }),
+            file::create({ eng, "conv1_biases.nnd" })
         },
         { 0,{ 0, 0 }, 0 },
         { 1,{ 4, 4 }, 1 },
@@ -40,14 +40,14 @@ void execute_alexnet(primitive& input, primitive& output)
 
     auto relu1 = relu::create(
     {
-        engine::reference,
+        eng,
         memory::format::yxfb_f32,
         conv1
     });
 
     auto lrn1 = normalization::response::create(
     {
-        engine::reference,
+        eng,
         memory::format::yxfb_f32,
         relu1,
         5,
@@ -59,7 +59,7 @@ void execute_alexnet(primitive& input, primitive& output)
 
     auto pool1 = pooling::create(
     {
-        engine::reference,
+        eng,
         pooling::mode::max,
         memory::format::yxfb_f32,
         lrn1,
@@ -70,14 +70,14 @@ void execute_alexnet(primitive& input, primitive& output)
 
     auto conv2_group2 = convolution::create(
     {
-        engine::reference,
+        eng,
         memory::format::yxfb_f32,
         {
             pool1,
-            file::create({ engine::reference, "conv2_g1_weights.nnd" }),
-            file::create({ engine::reference, "conv2_g1_biases.nnd" }),
-            file::create({ engine::reference, "conv2_g2_weights.nnd" }),
-            file::create({ engine::reference, "conv2_g2_biases.nnd" }),
+            file::create({ eng, "conv2_g1_weights.nnd" }),
+            file::create({ eng, "conv2_g1_biases.nnd" }),
+            file::create({ eng, "conv2_g2_weights.nnd" }),
+            file::create({ eng, "conv2_g2_biases.nnd" }),
         },
         { 0,{ -2, -2 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -87,14 +87,14 @@ void execute_alexnet(primitive& input, primitive& output)
 
     auto relu2 = relu::create(
     {
-        engine::reference,
+        eng,
         memory::format::yxfb_f32,
         conv2_group2
     });
 
     auto lrn2 = normalization::response::create(
     {
-        engine::reference,
+        eng,
         memory::format::yxfb_f32,
         relu2,
         5,
@@ -106,7 +106,7 @@ void execute_alexnet(primitive& input, primitive& output)
 
     auto pool2 = pooling::create(
     {
-        engine::reference,
+        eng,
         pooling::mode::max,
         memory::format::yxfb_f32,
         lrn2,
@@ -117,12 +117,12 @@ void execute_alexnet(primitive& input, primitive& output)
 
     auto conv3 = convolution::create(
     {
-        engine::reference,
+        eng,
         memory::format::yxfb_f32,
         {
             pool2,
-            file::create({ engine::reference, "conv3_weights.nnd" }),
-            file::create({ engine::reference, "conv3_biases.nnd" }),
+            file::create({ eng, "conv3_weights.nnd" }),
+            file::create({ eng, "conv3_biases.nnd" }),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -131,21 +131,21 @@ void execute_alexnet(primitive& input, primitive& output)
 
     auto relu3 = relu::create(
     {
-        engine::reference,
+        eng,
         memory::format::yxfb_f32,
         conv3
     });
 
     auto conv4_group2 = convolution::create(
     {
-        engine::reference,
+        eng,
         memory::format::yxfb_f32,
         {
             relu3,
-            file::create({ engine::reference, "conv4_g1_weights.nnd" }),
-            file::create({ engine::reference, "conv4_g1_biases.nnd" }),
-            file::create({ engine::reference, "conv4_g2_weights.nnd" }),
-            file::create({ engine::reference, "conv4_g2_biases.nnd" }),
+            file::create({ eng, "conv4_g1_weights.nnd" }),
+            file::create({ eng, "conv4_g1_biases.nnd" }),
+            file::create({ eng, "conv4_g2_weights.nnd" }),
+            file::create({ eng, "conv4_g2_biases.nnd" }),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -155,21 +155,21 @@ void execute_alexnet(primitive& input, primitive& output)
 
     auto relu4 = relu::create(
     {
-        engine::reference,
+        eng,
         memory::format::yxfb_f32,
         conv4_group2
     });
 
     auto conv5_group2 = convolution::create(
     {
-        engine::reference,
+        eng,
         memory::format::yxfb_f32,
         {
             relu4,
-            file::create({ engine::reference, "conv5_g1_weights.nnd" }),
-            file::create({ engine::reference, "conv5_g1_biases.nnd" }),
-            file::create({ engine::reference, "conv5_g2_weights.nnd" }),
-            file::create({ engine::reference, "conv5_g2_biases.nnd" }),
+            file::create({ eng, "conv5_g1_weights.nnd" }),
+            file::create({ eng, "conv5_g1_biases.nnd" }),
+            file::create({ eng, "conv5_g2_weights.nnd" }),
+            file::create({ eng, "conv5_g2_biases.nnd" }),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -179,14 +179,14 @@ void execute_alexnet(primitive& input, primitive& output)
 
     auto relu5 = relu::create(
     {
-        engine::reference,
+        eng,
         memory::format::yxfb_f32,
         conv5_group2
     });
 
     auto pool5 = pooling::create(
     {
-        engine::reference,
+        eng,
         pooling::mode::max,
         memory::format::yxfb_f32,
         relu5,
@@ -197,37 +197,37 @@ void execute_alexnet(primitive& input, primitive& output)
 
     auto fc6 = fully_connected_relu::create(
     {
-        engine::reference,
+        eng,
         memory::format::xb_f32,
         pool5,
-        file::create({ engine::reference, "fc6_weights.nnd", file::weights_type::fully_connected}),
-        file::create({ engine::reference, "fc6_biases.nnd" }),
+        file::create({ eng, "fc6_weights.nnd", file::weights_type::fully_connected}),
+        file::create({ eng, "fc6_biases.nnd" }),
         0
     });
 
     auto fc7 = fully_connected_relu::create(
     {
-        engine::reference,
+        eng,
         memory::format::xb_f32,
         fc6,
-        file::create({ engine::reference, "fc7_weights.nnd", file::weights_type::fully_connected }),
-        file::create({ engine::reference, "fc7_biases.nnd" }),
+        file::create({ eng, "fc7_weights.nnd", file::weights_type::fully_connected }),
+        file::create({ eng, "fc7_biases.nnd" }),
         0
     });
 
     auto fc8 = fully_connected_relu::create(
     {
-        engine::reference,
+        eng,
         memory::format::xb_f32,
         fc7,
-        file::create({ engine::reference, "fc8_weights.nnd", file::weights_type::fully_connected }),
-        file::create({ engine::reference, "fc8_biases.nnd" }),
+        file::create({ eng, "fc8_weights.nnd", file::weights_type::fully_connected }),
+        file::create({ eng, "fc8_biases.nnd" }),
         0
     });
 
     auto softmax = normalization::softmax::create(
     {
-        engine::reference,
+        eng,
         output,
         fc8
     });
@@ -243,7 +243,7 @@ void execute_alexnet(primitive& input, primitive& output)
         softmax }).wait();
 }
 
-void alexnet(uint32_t batch_size, std::string img_dir)
+void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng)
 {
     auto input  = memory::allocate({ engine::reference, memory::format::byxf_f32,{ batch_size,{ 224, 224 }, 3, } });
     auto output = memory::allocate({ engine::reference, memory::format::xb_f32,{ batch_size,{ 1000 }} });
@@ -274,7 +274,7 @@ void alexnet(uint32_t batch_size, std::string img_dir)
 
 
        // auto out_ptr =  output.as<const memory&>().pointer<float>();
-        execute_alexnet(reordered_input, output);
+        execute_alexnet(reordered_input, output, eng);
         //for (auto i = 0; i < batch_size; i++) not yet
         //{
         //    // TODO: port html result parsing
