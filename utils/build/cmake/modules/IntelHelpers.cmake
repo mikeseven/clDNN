@@ -755,7 +755,7 @@ function(intel_arch_detect targetArchVarName hostArchVarName)
   if(CMAKE_HOST_SYSTEM_NAME MATCHES "Windows")
     set(_osArchitecture "32-bit")
     execute_process(
-        COMMAND powershell -NonInteractive -WindowStyle Hidden -Command "(Get-WmiObject -Class Win32_OperatingSystem).OSArchitecture.ToLowerInvariant()"
+        COMMAND powershell -NonInteractive -Command "(Get-WmiObject -Class Win32_OperatingSystem).OSArchitecture.ToLowerInvariant()"
         TIMEOUT 10
         OUTPUT_VARIABLE _osArchitecture
         ERROR_QUIET

@@ -522,7 +522,7 @@ foreach(_compilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
       ALL_PATTERN_NOINHERIT ""
       SET
         OptimizeSize
-        RtMultiThreadedStatic
+        RtMultiThreadedShared
     )
   intel_config_flag_apply_settings(
       CompilerOptions
@@ -530,7 +530,7 @@ foreach(_compilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
       PATTERN "^Debug"
       SET
         OptimizeDisabled
-        RtMultiThreadedStaticDebug
+        RtMultiThreadedSharedDebug
     )
 
   # Adding needed settings specific to MSVC.
