@@ -123,4 +123,59 @@ namespace neural {
         pDst[global_id] += BIAS[0][output_feature_idx];
     )__CC";
 
+    const std::string convolution_code_yxfb_memory = R"__CC(
+        const __global uint* input_size = get_raw(input_mem);
+        const __global uint* dst_size = get_raw(dst_mem);
+        const __global float* input = (const __global float*)get_data(input_mem);
+        __global float* pDst = (__global float*)get_data(dst_mem);
+
+        const __global float* filter = (const __global float*)get_data(filter_mem);
+        const __global float* bias = (const __global float*)get_data(bias_mem);
+
+        const int batch_num = dst_size[0];
+
+        int global_id = (get_global_id(0) / batch_num) * (batch_num * FILTER_ARRAY_NUM) + (get_global_id(0) % batch_num) + split_idx * batch_num;
+
+        const int batch_offset = global_id % batch_num;
+
+        const int ofm_num = dst_size[1];
+        const int ofm_offset = ((global_id / batch_num) % ofm_num) / FILTER_ARRAY_NUM;
+
+        const int f_ofm_offset = (global_id % FILTER_OUTPUT_FEATURE_NUM) * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
+
+        const int idx = (global_id / batch_num) / FILTER_ARRAY_NUM;
+
+        const int i_ifm_num = input_size[1];
+
+        const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % dst_size[2]) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
+        const int y = (((idx / FILTER_OUTPUT_FEATURE_NUM) * STRIDE_SIZE_Y) / INPUT_SIZE_X) * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
+
+        pDst[global_id] = 0;
+        for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
+        {
+            const int f_ifm_offset = h * FILTER_SIZE_Y * FILTER_SIZE_X;
+            for (uint i = 0; i < FILTER_SIZE_Y; i++)
+            {
+                for (uint j = 0; j < FILTER_SIZE_X; j++)
+                {
+                    int input_offset_x = x + j;
+                    int input_offset_y = y + i;
+
+                    bool zero = false;
+                    zero = input_offset_x < 0 ? true : zero;
+                    zero = input_offset_y < 0 ? true : zero;
+                    zero = input_offset_x >= input_size[2] ? true : zero;
+                    zero = input_offset_y >= input_size[3] ? true : zero;
+
+                    int input_idx = (input_offset_x + (input_offset_y * INPUT_SIZE_X)) * batch_num * i_ifm_num;
+                    input_idx += split_idx * batch_num;
+                    input_idx += h * batch_num;
+                    input_idx += batch_offset;
+                    int filter_idx = (i * FILTER_SIZE_X + j) + f_ofm_offset + f_ifm_offset;
+                    pDst[global_id] += zero ? 0 : input[input_idx] * filter[filter_idx];
+                }
+            }
+        }
+       pDst[global_id] += bias[ofm_offset];
+    )__CC";
 }

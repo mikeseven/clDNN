@@ -531,7 +531,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2) {
     EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_memory, 1));
 }*/
 
-TEST(convolution_f32_fw_gpu, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad_reorder) {
+TEST(convolution_f32_fw_gpu, DISABLED_basic_ofm_wsiz3x2x2x1_in2x2x1_nopad_reorder) {
     //  Filter : 1x3x2x2x1
     //  Input  : 1x2x2x1
     //  Output : 1x3x1x1

@@ -38,6 +38,17 @@ KERNEL(Convolution_GPU_BFXY)(
 {
 )__krnl";
 
+const std::string kernelName_YXFB_memory = "Convolution_GPU_YXFB_memory";
+const std::string kernelCode_YXFB_memory_Begin = R"__krnl(
+#define INPUT_SIZE_X input_size[2]
+KERNEL(Convolution_GPU_YXFB_memory)(
+    const __global neural_memory* input_mem,
+    __global neural_memory* dst_mem,
+    const __global neural_memory* filter_mem,
+    const __global neural_memory* bias_mem,
+    uint split_idx)
+{)__krnl";
+
 const std::string kernelCodeEnd = R"__krnl(
 }
 )__krnl";
@@ -94,12 +105,22 @@ void convolution_gpu::implementation(const void *ptr) {
 
     auto dstSize = output_mem.count();
 
+    bool inline_memory = filters_mem[0].get().count() > 1024 ? false : true;
+
     gpu::jit_constants mem_consts{
         gpu::make_jit_constant("STRIDE", _stride),
-        gpu::make_jit_constant("INPUT_OFFSET", input_offset),
-        gpu::make_jit_constant("BIAS", biases_mem), 
-        gpu::make_jit_constant("FILTER", filters_mem)
+        gpu::make_jit_constant("INPUT_OFFSET", input_offset)
     };
+    if (inline_memory)
+    {
+        mem_consts.add_constant(gpu::make_jit_constant("BIAS", biases_mem));
+        mem_consts.add_constant(gpu::make_jit_constant("FILTER", filters_mem));
+    }
+    else
+    {
+        mem_consts.add_constant(gpu::make_jit_constant("FILTER", filters_mem[0].get().argument.size));
+        mem_consts.add_constant(gpu::make_jit_constant("FILTER_ARRAY_NUM", std::to_string(split)));
+    }
 
     switch(padding){
         case padding::zero:
@@ -111,8 +132,20 @@ void convolution_gpu::implementation(const void *ptr) {
             }
             else
             {
-                auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem>(kernelName_YXFB, mem_consts);
-                kernel({ {dstSize, 1} , {std::min(dstSize, static_cast<size_t>(16)), 1} }, input_mem, output_mem);
+                if (inline_memory)
+                {
+                    auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem>(kernelName_YXFB, mem_consts);
+                    kernel({ { dstSize, 1 } ,{ std::min(dstSize, static_cast<size_t>(16)), 1 } }, input_mem, output_mem);
+                }
+                else
+                {
+                    size_t workitems_per_enqueue = dstSize / split;
+                    auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, cl_uint>(kernelName_YXFB_memory, mem_consts);
+                    for (int i = 0; i < filters_mem.size(); i++)
+                    {
+                        kernel({ { workitems_per_enqueue, 1 } ,{ std::min(workitems_per_enqueue, static_cast<size_t>(16)), 1 } }, input_mem, output_mem, filters_mem[i].get(), biases_mem[i].get(), (cl_uint)i);
+                    }
+                }
             }
         }
             break;
@@ -125,12 +158,14 @@ namespace{
 struct attach{
     attach(){
         gpu::kernel_templates::add(kernelName_YXFB, kernelCode_YXFB_Begin + convolution_code_yxfb + kernelCodeEnd);
+        gpu::kernel_templates::add(kernelName_BFXY, kernelCode_BFXY_Begin + convolution_code_bfxy + kernelCodeEnd);
+        gpu::kernel_templates::add(kernelName_YXFB_memory, kernelCode_YXFB_memory_Begin + convolution_code_yxfb_memory + kernelCodeEnd);
+
         auto val_fw = convolution_gpu::create;
 
         auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
         implementation_map<convolution>::add(key_fw, val_fw);
 
-        gpu::kernel_templates::add(kernelName_BFXY, kernelCode_BFXY_Begin + convolution_code_bfxy + kernelCodeEnd);
         auto key_fw2 = std::make_tuple(engine::gpu, memory::format::bfyx_f32, memory::format::bfyx_f32);
         implementation_map<convolution>::add(key_fw2, val_fw);
     }
