@@ -40,6 +40,34 @@ KERNEL (Fully_Connected_Relu_GPU_yxfn)(__global neural_memory* input_mem, __glob
 {
 )__krnl";
 
+const std::string kernelName_xb_memory = "Fully_Connected_Relu_GPU_xb_memory";
+const std::string kernelCode_xb_memory_Begin = R"__krnl(
+#define INPUT_BATCH_NUM input_size[0]
+#define INPUT_FEATURE_NUM input_size[1]
+#define INPUT_SIZE_X input_size[2]
+#define INPUT_SIZE_Y input_size[3]
+KERNEL (Fully_Connected_Relu_GPU_xb_memory)(
+    const __global neural_memory* input_mem, 
+    __global neural_memory* dst_mem, 
+    const __global neural_memory* weights_mem,
+    const __global neural_memory* bias_mem)
+{
+)__krnl";
+
+const std::string kernelName_yxfn_memory = "Fully_Connected_Relu_GPU_yxfn_memory";
+const std::string kernelCode_yxfn_memory_Begin = R"__krnl(
+#define INPUT_BATCH_NUM input_size[0]
+#define INPUT_FEATURE_NUM input_size[1]
+#define INPUT_SIZE_X input_size[2]
+#define INPUT_SIZE_Y input_size[3]
+KERNEL (Fully_Connected_Relu_GPU_yxfn_memory)(
+    const __global neural_memory* input_mem, 
+    __global neural_memory* dst_mem, 
+    const __global neural_memory* weights_mem,
+    const __global neural_memory* bias_mem)
+{
+)__krnl";
+
 const std::string kernelCode_Relu = R"__krnl(
 pDst[x] = max(pDst[x], 0.0f) + NEGATIVE_SLOPE * min(pDst[x], 0.0f);
 )__krnl";
@@ -75,29 +103,68 @@ namespace neural {
             auto output_bufSize = output_mem.count();
 
             float negative_slope = this_fc->argument.negative_slope;
-            gpu::jit_constants mem_consts{  
-                gpu::make_jit_constant("WEIGHTS", weight_mem),
-                gpu::make_jit_constant("BIASES", bias_mem),
-                gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope))
-            };
 
+            // validate arguments
             if (input_mem.argument.format == memory::format::yxfb_f32)
             {
                 assert(input_mem.argument.size.feature.size() == weight_mem.argument.size.feature.size());
                 assert(input_mem.argument.size.batch.size() == weight_mem.argument.size.batch.size());
                 assert(input_mem.argument.size.feature[0] == weight_mem.argument.size.feature[0]);
-
-                gpu::kernel<gpu::input_mem, gpu::output_mem> _kernel(kernelName_yxfn, mem_consts);
-                _kernel({ output_bufSize, output_bufSize }, input_mem, output_mem);
             }
             else
             {
                 assert(1 == input_mem.argument.size.feature.size());
                 assert(1 == input_mem.argument.size.batch.size());
                 assert(1 == input_mem.argument.size.feature[0]);
+            }
 
-                gpu::kernel<gpu::input_mem, gpu::output_mem> _kernel(kernelName_xb, mem_consts);
-                _kernel({ output_bufSize, output_bufSize }, input_mem, output_mem);
+            gpu::jit_constants mem_consts{
+                gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope))
+            };
+
+            bool inline_memory = weight_mem.count() > 1024 ? false : true;
+            if (inline_memory)
+            {
+                mem_consts.add_constant(gpu::make_jit_constant("WEIGHTS", weight_mem));
+                mem_consts.add_constant(gpu::make_jit_constant("BIASES", bias_mem));
+            }
+            else
+            {
+                mem_consts.add_constant(gpu::make_jit_constant("WEIGHTS", weight_mem.argument.size));
+            }
+
+            // calculate local workgroup size
+            int lws = 16;
+            while (output_bufSize % lws)
+            {
+                lws--;
+            }
+
+            if (input_mem.argument.format == memory::format::yxfb_f32)
+            {
+                if (inline_memory)
+                {
+                    gpu::kernel<gpu::input_mem, gpu::output_mem> _kernel(kernelName_yxfn, mem_consts);
+                    _kernel({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
+                }
+                else
+                {
+                    gpu::kernel<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem> _kernel(kernelName_yxfn_memory, mem_consts);
+                    _kernel({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
+                }
+            }
+            else
+            {
+                if (inline_memory)
+                {
+                    gpu::kernel<gpu::input_mem, gpu::output_mem> _kernel(kernelName_xb, mem_consts);
+                    _kernel({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
+                }
+                else
+                {
+                    gpu::kernel<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem> _kernel(kernelName_xb_memory, mem_consts);
+                    _kernel({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
+                }
             }
         }
 
@@ -115,6 +182,8 @@ namespace {
         attach() {
             gpu::kernel_templates::add(kernelName_xb, kernelCode_xb_Begin + fully_connected_code_xb + kernelCode_Relu + kernelCode_End);
             gpu::kernel_templates::add(kernelName_yxfn, kernelCode_yxfn_Begin + fully_connected_code_yxfn + kernelCode_Relu + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_xb_memory, kernelCode_xb_memory_Begin + fully_connected_code_xb_memory + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_yxfn_memory, kernelCode_yxfn_memory_Begin + fully_connected_code_yxfn_memory + kernelCode_Relu + kernelCode_End);
 
             auto val_fw = fully_connected_relu_gpu::create;
 

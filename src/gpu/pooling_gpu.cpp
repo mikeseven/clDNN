@@ -73,9 +73,7 @@ namespace neural {
             // output
             auto& output_mem = this_pooling->output_memory(0);
 
-
-
-            auto& input_arg = this_pooling->argument.input[0].primitive.as<const memory&>().argument;
+            auto& input_arg = this_pooling->input_memory(0).argument;
 
             auto& input_buffer_size = input_arg.size;
             auto& input_offset = this_pooling->argument.input_offset;

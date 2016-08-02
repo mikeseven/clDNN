@@ -21,4 +21,6 @@
 namespace neural {
     extern const std::string fully_connected_code_xb;
     extern const std::string fully_connected_code_yxfn;
+    extern const std::string fully_connected_code_xb_memory;
+    extern const std::string fully_connected_code_yxfn_memory;
 }
