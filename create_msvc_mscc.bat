@@ -12,10 +12,23 @@
 @REM See the License for the specific language governing permissions and
 @REM limitations under the License.
 
-@echo off
-echo Creating Microsoft Visual Studio 14 2015 Win64 files...
 
-cmake -G"Visual Studio 14 2015 Win64" -B".\MSVC\Debug" --no-warn-unused-cli -DCMAKE_BUILD_TYPE:STRING="Debug" -DCMAKE_CONFIGURATION_TYPES:STRING="Debug" -DCMAKE_SUPPRESS_REGENERATION:BOOL=ON -H"."
-cmake -G"Visual Studio 14 2015 Win64" -B".\MSVC\Release" --no-warn-unused-cli -DCMAKE_BUILD_TYPE:STRING="Release" -DCMAKE_CONFIGURATION_TYPES:STRING="Release" -DCMAKE_SUPPRESS_REGENERATION:BOOL=ON -H"."
+@setlocal
+@echo off
+
+set "ROOT_DIR=%~dp0"
+
+set "SOLUTION_TARGET32=Windows32"
+set "SOLUTION_DIR32=%ROOT_DIR%\build\%SOLUTION_TARGET32%"
+
+set "SOLUTION_TARGET64=Windows64"
+set "SOLUTION_DIR64=%ROOT_DIR%\build\%SOLUTION_TARGET64%"
+
+
+echo Creating Visual Studio 2015 (Win32) files in %SOLUTION_DIR32%... && ^
+cd "%ROOT_DIR%" && cmake -E make_directory "%SOLUTION_DIR32%" && cd "%SOLUTION_DIR32%" && cmake -G "Visual Studio 14 2015" "-DCLDNN__ARCHITECTURE_TARGET=%SOLUTION_TARGET32%" "%ROOT_DIR%"
+echo Creating Visual Studio 2015 (x64) files in %SOLUTION_DIR64%... && ^
+cd "%ROOT_DIR%" && cmake -E make_directory "%SOLUTION_DIR64%" && cd "%SOLUTION_DIR64%" && cmake -G "Visual Studio 14 2015 Win64" "-DCLDNN__ARCHITECTURE_TARGET=%SOLUTION_TARGET64%" "%ROOT_DIR%"
+
 echo Done.
 pause

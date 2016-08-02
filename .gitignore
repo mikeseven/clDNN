@@ -1,3 +1,4 @@
+build/*
 Debug/*
 *sdf
 *.suo
@@ -11,7 +12,6 @@ MSVC/*
 UnixMk/*
 **/CMakeFiles/
 nbproject/*
-**/*.cmake
 CMakeCache.txt
 compile_commands.json
 **/Makefile

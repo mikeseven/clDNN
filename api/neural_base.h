@@ -137,15 +137,15 @@ template<typename T> struct vector {
     {}
     vector &operator=(const vector &arg)  {
         raw = arg.raw;
-        spatial.raw_   = arg.spatial.raw_; 
+        spatial.raw_   = raw; 
         spatial.begin_ = arg.spatial.begin_;
         spatial.end_   = arg.spatial.end_;
 
-        batch.raw_   = arg.batch.raw_;
+        batch.raw_   = raw;
         batch.begin_ = arg.batch.begin_;
         batch.end_   = arg.batch.end_;
 
-        feature.raw_   = arg.feature.raw_;
+        feature.raw_   = raw;
         feature.begin_ = arg.feature.begin_;
         feature.end_   = arg.feature.end_;
 

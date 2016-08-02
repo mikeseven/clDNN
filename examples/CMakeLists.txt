@@ -12,55 +12,70 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set (TARGET_NAME "examples")
 
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
-elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX")
-endif()
+# ========================================= Name / Output settings =====================================
 
-# Sources for test files
-set (MAIN_SRC   ${CMAKE_SOURCE_DIR}/examples/main.cpp)
+set(CLDNN_BUILD__PROJ             "examples")
+set(CLDNN_BUILD__PROJ_LABEL       "${CLDNN_BUILD__PROJ}")
+set(CLDNN_BUILD__PROJ_OUTPUT_NAME "${CLDNN_BUILD__PROJ}${CLDNN__OUT_CPU_SUFFIX}")
 
-file (GLOB API_HEADERS
-       ${CMAKE_SOURCE_DIR}/api/*.h
-      )
-file (GLOB LIBRARY_SRC
-       ${CMAKE_SOURCE_DIR}/src/*.h
-      )
-file  (GLOB EXAMPLES_SRC
-       ${CMAKE_SOURCE_DIR}/examples/*.h
-       ${CMAKE_SOURCE_DIR}/examples/*.cpp
-      )
-file (GLOB EXAMPLES_COMMON
-       ${CMAKE_SOURCE_DIR}/examples/common/*.h
-	   ${CMAKE_SOURCE_DIR}/examples/common/*.cpp
-	  )
-	   
-# Create named folders for the sources within the .vcproj
-# Empty name lists them directly under the .vcproj
-source_group("api" FILES ${API_HEADERS})
-source_group("src" FILES ${EXAMPLES_SRC})
-source_group("common" FILES ${EXAMPLES_COMMON})
+# =========================================== Compiler options =========================================
 
-# Properties->C/C++->General->Additional Include Directories
-include_directories (${CMAKE_SOURCE_DIR}
-                     ${CMAKE_SOURCE_DIR}/src
-                    )
-					
+intel_config_flag_apply_settings(CompilerOptions CMAKE_CXX_FLAGS ALL_PATTERN ""
+    SET
+      WarnLevel3
+      TreatWarnAsErrorDisabled
+  )
 
-			
-# Create library file from sources.
-add_executable(${TARGET_NAME}
-               ${MAIN_SRC}
-               ${API_HEADERS}
-               ${LIBRARY_SRC}
-               ${EXAMPLES_SRC}
-			   ${EXAMPLES_COMMON}
-              )
+# ========================================= Source/Header files ========================================
 
-target_link_libraries(${TARGET_NAME} mkl_dnn)
-target_link_libraries(${TARGET_NAME} 
-						${CMAKE_SOURCE_DIR}/examples/common/FreeImage64/FreeImage.lib)
+set(__CLDNN_Label__main                "")
+file(GLOB __CLDNN_Sources__main
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+  )
 
+set(__CLDNN_Directory__common          "${CMAKE_CURRENT_SOURCE_DIR}/common")
+set(__CLDNN_Label__common              "common")
+file(GLOB __CLDNN_Sources__common
+    "${__CLDNN_Directory__common}/*.h"
+    "${__CLDNN_Directory__common}/*.hpp"
+    "${__CLDNN_Directory__common}/*.cpp"
+  )
+
+
+set(__CLDNN_AllSources
+    ${__CLDNN_Sources__main}
+    ${__CLDNN_Sources__common}
+  )
+
+# =============================================== Filters ==============================================
+
+source_group("${__CLDNN_Label__main}"   FILES ${__CLDNN_Sources__main})
+source_group("${__CLDNN_Label__common}" FILES ${__CLDNN_Sources__common})
+
+# ===================================== Include/Link directories =======================================
+
+include_directories(
+    "${CLDNN__MAIN_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+  )
+
+# =================================== Link targets and dependencies ====================================
+
+# Examples executable.
+add_executable("${CLDNN_BUILD__PROJ}"
+    ${__CLDNN_AllSources}
+  )
+set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY PROJECT_LABEL "${CLDNN_BUILD__PROJ_LABEL}")
+set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD__PROJ_OUTPUT_NAME}")
+
+
+# TODO: find_library for FreeImage and move to global common directory.
+target_link_libraries("${CLDNN_BUILD__PROJ}"
+    "${CLDNN_BUILD__PROJ__clDNN}"
+    "${__CLDNN_Directory__common}/FreeImage64/FreeImage.lib"
+  )
+
+# ======================================================================================================

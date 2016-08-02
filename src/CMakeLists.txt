@@ -12,63 +12,86 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set (TARGET_NAME "mkl_dnn")
-# Sources for test files
 
-add_definitions(-DEXPORT_NEURAL_SYMBOLS)
+# =================================== Name / Output settings from parent ===============================
 
-if (MSVC)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX /arch:AVX2")
-else ()
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
-endif()
+set(CLDNN_BUILD__PROJ             "${CLDNN_BUILD__PROJ__clDNN}")
+set(CLDNN_BUILD__PROJ_LABEL       "${CLDNN_BUILD__PROJ_LABEL__clDNN}")
+set(CLDNN_BUILD__PROJ_OUTPUT_NAME "${CLDNN_BUILD__PROJ_OUTPUT_NAME__clDNN}")
 
-file (GLOB API_HEADERS
-       ${CMAKE_SOURCE_DIR}/api/*.h
-      )
-file (GLOB LIBRARY_SRC
-       ${CMAKE_SOURCE_DIR}/src/*.h
-       ${CMAKE_SOURCE_DIR}/src/*.cpp
-      )
-file (GLOB LIBRARY_SRC_GPU
-       ${CMAKE_SOURCE_DIR}/src/gpu/*.h
-       ${CMAKE_SOURCE_DIR}/src/gpu/*.cpp
-	   ${CMAKE_SOURCE_DIR}/src/gpu/cache/*.h
-       ${CMAKE_SOURCE_DIR}/src/gpu/cache/*.cpp
-      )
+# ================================== Compiler preprocessor definitions =================================
 
-# OpenCL includes and libraries
-# Get the list of directories where libs could be stored
-file(GLOB OPENCL_LIB_DIRS $ENV{INTELOCLSDKROOT}/../**/lib64/)
+set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
+    CLDNN_EXPORTS
+    EXPORT_NEURAL_SYMBOLS
+  )
 
-# Order of searching is that first SDK is checked for OpenCL headers/libs then 
-# headers from project are taken and libs from hardcoded system locations
-find_path(OPENCL_INCLUDE_DIRS NAMES CL/cl.hpp HINTS $ENV{INTELOCLSDKROOT}/include PATHS ../../ )
-find_library(OPENCL_LIBRARIES NAMES OpenCL OpenCL.lib HINTS $ENV{INTELOCLSDKROOT}/lib/x64 $ENV{INTELOCLSDKROOT}
- ${OPENCL_LIB_DIRS} PATHS /lib64 /usr/lib )
+# ========================================= Source/Header files ========================================
 
-# Create named folders for the sources within the .vcproj
-# Empty name lists them directly under the .vcproj
+set(__CLDNN_Label__api                 "api")
+file(GLOB __CLDNN_Headers__api
+    "${CLDNN__API_DIR}/*.h"
+    "${CLDNN__API_DIR}/*.hpp"
+  )
 
-source_group("api" FILES ${API_HEADERS})
-source_group("src" FILES ${LIBRARY_SRC})
-source_group("src\\gpu" FILES ${LIBRARY_SRC_GPU})
+set(__CLDNN_Label__main                "")
+file(GLOB __CLDNN_Sources__main
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+  )
 
-# Properties->C/C++->General->Additional Include Directories
-include_directories (${CMAKE_SOURCE_DIR}
-                     ${CMAKE_SOURCE_DIR}/src
-                     ${OPENCL_INCLUDE_DIRS}
-                    )
+set(__CLDNN_Directory__gpu             "${CMAKE_CURRENT_SOURCE_DIR}/gpu")
+set(__CLDNN_Label__gpu                 "gpu")
+file(GLOB __CLDNN_Sources__gpu
+    "${__CLDNN_Directory__gpu}/*.h"
+    "${__CLDNN_Directory__gpu}/*.hpp"
+    "${__CLDNN_Directory__gpu}/*.cpp"
+  )
 
-# Create library file from sources.
-add_library(${TARGET_NAME} SHARED
-            ${LIBRARY_SRC}
-            ${LIBRARY_SRC_GPU}
-            ${API_HEADERS})
+set(__CLDNN_Directory__cache           "${__CLDNN_Directory__gpu}/cache")
+set(__CLDNN_Label__cache               "${__CLDNN_Label__gpu}\\cache")
+file(GLOB __CLDNN_Sources__cache
+    "${__CLDNN_Directory__cache}/*.h"
+    "${__CLDNN_Directory__cache}/*.hpp"
+    "${__CLDNN_Directory__cache}/*.cpp"
+  )
 
-target_link_libraries(${TARGET_NAME} ${OPENCL_LIBRARIES} )
 
+set(__CLDNN_AllSources
+    ${__CLDNN_Headers__api}
+    ${__CLDNN_Sources__main}
+    ${__CLDNN_Sources__gpu}
+    ${__CLDNN_Sources__cache}
+  )
+
+# =============================================== Filters ==============================================
+
+source_group("${__CLDNN_Label__api}"   FILES ${__CLDNN_Headers__api})
+source_group("${__CLDNN_Label__main}"  FILES ${__CLDNN_Sources__main})
+source_group("${__CLDNN_Label__gpu}"   FILES ${__CLDNN_Sources__gpu})
+source_group("${__CLDNN_Label__cache}" FILES ${__CLDNN_Sources__cache})
+
+# ===================================== Include/Link directories =======================================
+
+include_directories(
+    "${CLDNN__MAIN_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+  )
+
+# =================================== Link targets and dependencies ====================================
+
+# Main shared library.
+add_library("${CLDNN_BUILD__PROJ}" SHARED
+    ${__CLDNN_AllSources}
+  )
+set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY PROJECT_LABEL "${CLDNN_BUILD__PROJ_LABEL}")
+set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD__PROJ_OUTPUT_NAME}")
+
+
+target_link_libraries("${CLDNN_BUILD__PROJ}" OpenCL)
 if(UNIX)
-    target_link_libraries(${TARGET_NAME} pthread)
+  target_link_libraries("${CLDNN_BUILD__PROJ}" pthread)
 endif()
 
+# ======================================================================================================
