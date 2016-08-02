@@ -57,7 +57,9 @@ gpu_toolkit::gpu_toolkit()
                         ? cl::QueueProperties::Profiling
                         : cl::QueueProperties::None)
     , _kernels_cache(*this)
-    {}
+{
+    _device.getInfo(CL_DEVICE_EXTENSIONS, &extensions);
+}
 
 std::shared_ptr<gpu_toolkit> gpu_toolkit::get() {
     static std::recursive_mutex mutex;

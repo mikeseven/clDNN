@@ -14,6 +14,11 @@
 // limitations under the License.
 */
 
+#ifdef CLDNN_BUILT_FROM_OPENVX
+#pragma warning push
+#pragma warning disable : 504 // boost issue
+#endif
+
 #include "api/neural.h"
 #include "api/instrumentation.h"
 
@@ -24,6 +29,9 @@
 
 #include <boost/filesystem.hpp>
 
+#ifdef CLDNN_BUILT_FROM_OPENVX
+#pragma warning pop
+#endif
 
 namespace neural {
     namespace instrumentation {
@@ -222,6 +230,14 @@ namespace neural {
 
         void logger::log_memory_to_file(const primitive& mem, std::string prefix, bool single_batch, uint32_t batch_id, bool single_feature, uint32_t feature_id)
         {
+#ifdef CLDNN_BUILT_FROM_OPENVX
+            mem;
+            prefix;
+            single_batch;
+            batch_id;
+            single_feature;
+            feature_id;
+#else
             const auto& mem_prim = get_memory_primitive(mem);
             auto mem_arg = mem_prim.argument;
 
@@ -306,6 +322,7 @@ namespace neural {
                         file_stream.close();
                     }
                 }
+#endif
         }
     }
 }

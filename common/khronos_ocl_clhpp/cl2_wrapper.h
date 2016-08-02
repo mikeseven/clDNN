@@ -26,7 +26,16 @@
 #endif
 
 // Check for compiler and change specific diagnostics.
-#if defined _MSC_VER
+#if defined __INTEL_COMPILER
+    #pragma warning push
+    #pragma warning disable: 177
+    #pragma warning disable: 411
+    #pragma warning disable: 858
+    #pragma warning disable: 869
+    #pragma warning disable: 2557
+    #pragma warning disable: 3280
+    #pragma warning disable: 3346
+#elif defined _MSC_VER
     #pragma warning(push)
     #pragma warning(disable: 4018 4100 4505)
 #elif defined __clang__
@@ -52,7 +61,9 @@
 
 
 // Restore specific diagnostics.
-#if defined _MSC_VER
+#if defined __INTEL_COMPILER
+    #pragma warning pop
+#elif defined _MSC_VER
     #pragma warning(pop)
 #elif defined __clang__
     #pragma clang diagnostic pop

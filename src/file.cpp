@@ -14,12 +14,21 @@
 // limitations under the License.
 */
 
+#ifdef CLDNN_BUILT_FROM_OPENVX
+#pragma warning push
+#pragma warning disable : 504 // boost issue
+#endif
 #include "api/neural.h"
 #include <fstream>
 #include <iostream>
 #include <nmmintrin.h>
 #include <array>
 #include <boost/filesystem.hpp>
+
+#ifdef CLDNN_BUILT_FROM_OPENVX
+#pragma warning pop
+#pragma warning disable : 177 // unsued function
+#endif
 
 namespace neural {
 #define CRC_INIT 0xbaba7007

@@ -114,7 +114,11 @@ struct convolution_gpu : is_an_implementation {
         if (_kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
             _kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1)
         {
+#ifdef CLDNN_BUILT_FROM_OPENVX
+            _worker = std::unique_ptr<worker>(new worker(std::forward<worker>(worker_gpu::create())));
+#else
             _worker = std::make_unique<worker>(worker_gpu::create());
+#endif
 
             reorder.push_back(reorder::create({
                 outer.input_memory(1).argument.size.spatial[0],

@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+if(CLDNN_BUILT_FROM_OPENVX)
+  FIND_PACKAGE(OpenCL)
+  if (NOT OpenCL_FOUND)
+    message(STATUS "Couldn't build clDNN library. Skip plugin build." )
+    return( )
+  endif( )
+endif( )
 
 # =================================== Name / Output settings from parent ===============================
 
@@ -57,10 +64,19 @@ file(GLOB __CLDNN_Sources__cache
     "${__CLDNN_Directory__cache}/*.hpp"
     "${__CLDNN_Directory__cache}/*.cpp"
   )
+  
+set(__CLDNN_Directory__OpenVXAdapter   "${CMAKE_CURRENT_SOURCE_DIR}/vx_adapter")
+set(__CLDNN_Label__OpenVXAdapter       "OpenVXAdapter")
+file(GLOB __CLDNN_Sources__OpenVXAdapter 
+    "${__CLDNN_Directory__OpenVXAdapter}/api/*.h"
+    "${__CLDNN_Directory__OpenVXAdapter}/*.h"
+    "${__CLDNN_Directory__OpenVXAdapter}/*.hpp"
+    "${__CLDNN_Directory__OpenVXAdapter}/*.cpp"
+  )
 
 set(__CLDNN_Directory__ch_kernels      "${__CLDNN_Directory__cache}/kernels")
 set(__CLDNN_Label__ch_kernels          "${__CLDNN_Label__cache}\\kernels")
-file(GLOB __CLDNN_Sources__ch_kernels
+file(GLOB_RECURSE __CLDNN_Sources__ch_kernels
     "${__CLDNN_Directory__ch_kernels}/*.cl"
   )
 
@@ -80,18 +96,20 @@ set(__CLDNN_AllSources
     ${__CLDNN_Sources__cache}
     ${__CLDNN_Sources__ch_kernels}
     ${__CLDNN_Sources__cg_cache}
+    ${__CLDNN_Sources__OpenVXAdapter}
   )
 # Helping with some generators.
 set_property(SOURCE ${__CLDNN_Sources__cg_cache} PROPERTY GENERATED TRUE)
 
 # =============================================== Filters ==============================================
 
-source_group("${__CLDNN_Label__api}"        FILES ${__CLDNN_Headers__api})
-source_group("${__CLDNN_Label__main}"       FILES ${__CLDNN_Sources__main})
-source_group("${__CLDNN_Label__gpu}"        FILES ${__CLDNN_Sources__gpu})
-source_group("${__CLDNN_Label__cache}"      FILES ${__CLDNN_Sources__cache})
-source_group("${__CLDNN_Label__ch_kernels}" FILES ${__CLDNN_Sources__ch_kernels})
-source_group("${__CLDNN_Label__cg_cache}"   FILES ${__CLDNN_Sources__cg_cache})
+source_group("${__CLDNN_Label__api}"           FILES ${__CLDNN_Headers__api})
+source_group("${__CLDNN_Label__main}"          FILES ${__CLDNN_Sources__main})
+source_group("${__CLDNN_Label__gpu}"           FILES ${__CLDNN_Sources__gpu})
+source_group("${__CLDNN_Label__cache}"         FILES ${__CLDNN_Sources__cache})
+source_group("${__CLDNN_Label__ch_kernels}"    FILES ${__CLDNN_Sources__ch_kernels})
+source_group("${__CLDNN_Label__cg_cache}"      FILES ${__CLDNN_Sources__cg_cache})
+source_group("${__CLDNN_Label__OpenVXAdapter}" FILES ${__CLDNN_Sources__OpenVXAdapter})
 
 # ===================================== Include/Link directories =======================================
 
@@ -103,18 +121,34 @@ include_directories(
 # =================================== Link targets and dependencies ====================================
 
 # Main shared library.
-add_library("${CLDNN_BUILD__PROJ}" SHARED
-    ${__CLDNN_AllSources}
-  )
+if( CLDNN_BUILT_FROM_OPENVX )
+  add_library("${CLDNN_BUILD__PROJ}" STATIC
+      ${__CLDNN_AllSources}
+    )
+else()
+  add_library("${CLDNN_BUILD__PROJ}" SHARED
+      ${__CLDNN_AllSources}
+    )
+endif()
+
 set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY PROJECT_LABEL "${CLDNN_BUILD__PROJ_LABEL}")
 set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD__PROJ_OUTPUT_NAME}")
 
 
 target_link_libraries("${CLDNN_BUILD__PROJ}"
-    OpenCL
     Boost::filesystem
     Boost::system
   )
+
+if(CLDNN_BUILT_FROM_OPENVX)
+    target_link_libraries("${CLDNN_BUILD__PROJ}" 
+          ${OpenCL_LIBRARIES} 
+      )
+else()
+    target_link_libraries("${CLDNN_BUILD__PROJ}"
+        OpenCL
+      )
+endif()
 
 if(WIN32)
   target_link_libraries("${CLDNN_BUILD__PROJ}" setupapi)
@@ -126,7 +160,7 @@ endif()
 
 add_custom_command(OUTPUT "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${__CLDNN_CGDirectory__cg_cache}"
-    COMMAND "${__CLDNN_Directory__cache}/primitive_db_gen.py" "${__CLDNN_CGDirectory__cg_cache}" "${__CLDNN_Directory__ch_kernels}"
+    COMMAND ${PYTHON_EXECUTABLE} "${__CLDNN_Directory__cache}/primitive_db_gen.py" -out_path "${__CLDNN_CGDirectory__cg_cache}" -kernels "${__CLDNN_Directory__ch_kernels}"
     DEPENDS ${__CLDNN_Sources__ch_kernels} "${__CLDNN_Directory__cache}/primitive_db_gen.py"
     COMMENT "Generating ${__CLDNN_File__cg_cache__prim_db} ..."
   )

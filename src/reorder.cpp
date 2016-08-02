@@ -23,6 +23,10 @@
 #include <functional>
 #include <cstring>
 
+#ifdef CLDNN_BUILT_FROM_OPENVX
+#pragma warning disable : 177 // unsued function
+#endif
+
 namespace neural {
 
     namespace {

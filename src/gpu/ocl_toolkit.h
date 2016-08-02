@@ -67,6 +67,7 @@ class gpu_toolkit {
     kernels_cache _kernels_cache;
 //    cl::Program _program;
     std::vector<instrumentation::profiling_info> _profiling_info;
+    std::string extensions;
 
     gpu_toolkit();
 
@@ -82,6 +83,7 @@ public:
     void report_profiling(const instrumentation::profiling_info& info) { _profiling_info.push_back(info); }
     const std::vector<instrumentation::profiling_info>& get_profiling_info() const { return _profiling_info; }
     engine_info get_engine_info() { return engine_info(*this); }
+    inline bool extension_supported(const std::string ext) { return extensions.find(ext) != std::string::npos; }
 
     gpu_toolkit(const gpu_toolkit& other) = delete;
     gpu_toolkit(gpu_toolkit&& other) = delete;

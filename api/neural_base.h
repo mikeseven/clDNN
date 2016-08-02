@@ -27,7 +27,9 @@
 
 
 // exporting symbols form dynamic library
-#ifdef EXPORT_NEURAL_SYMBOLS
+#ifdef CLDNN_BUILT_FROM_OPENVX
+#      define DLL_SYM // don't export nothing from OpenVX
+#elif defined EXPORT_NEURAL_SYMBOLS
 #   if defined(_MSC_VER)
        //  Microsoft
 #      define DLL_SYM __declspec(dllexport)
@@ -98,7 +100,7 @@ struct task_group {
 };
 
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && !defined(CLDNN_BUILT_FROM_OPENVX)
 namespace {
 // (de)initializing global constructors within MKL-DNN
 extern "C" DLL_SYM void _cdecl nn_init();

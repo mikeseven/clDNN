@@ -17,6 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "kernels_cache.h"
 #include "ocl_toolkit.h"
+#include <iterator>
 #include <algorithm>
 #include <cassert>
 #include <sstream>
@@ -186,9 +187,12 @@ namespace {
         std::string str()
         {
             std::ostringstream os;
+#ifndef CLDNN_BUILT_FROM_OPENVX
             os << oss.str();
             os << code << std::endl;
+            // I don't know why ICC in Linux machine doesn't recognize std::crbegin/crend
             std::for_each(std::crbegin(defined_macroses), std::crend(defined_macroses), [&](const std::string& name) { os << "#undef " << name << std::endl; });
+#endif
             return os.str();
         }
     };

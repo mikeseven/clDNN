@@ -233,36 +233,37 @@ endfunction()
 
 
 # Expressing CMake setting for current build configuration as option and providing a way to correct it (treat as case-insensitive).
-if(DEFINED CMAKE_BUILD_TYPE)
-  string(TOLOWER "${CMAKE_BUILD_TYPE}" __CLDNN_BuildType)
-  string(STRIP "${__CLDNN_BuildType}" __CLDNN_BuildType)
+if(NOT CLDNN_BUILT_FROM_OPENVX)
+    if(DEFINED CMAKE_BUILD_TYPE)
+      string(TOLOWER "${CMAKE_BUILD_TYPE}" __CLDNN_BuildType)
+      string(STRIP "${__CLDNN_BuildType}" __CLDNN_BuildType)
 
-  if(__CLDNN_BuildType MATCHES "^release$")
-    set(__CLDNN_BuildType "Release")
-  elseif(__CLDNN_BuildType MATCHES "^debug$")
-    set(__CLDNN_BuildType "Debug")
-  else()
-    set(__CLDNN_BuildType "Debug")
-    if(NOT CLDNN__MULTI_CFG_GEN)
-      message(WARNING "[clDNN] CMAKE_BUILD_TYPE: Unknown build configuration. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
-          The \"${__CLDNN_BuildType}\" configuration will be used.
+      if(__CLDNN_BuildType MATCHES "^release$")
+        set(__CLDNN_BuildType "Release")
+      elseif(__CLDNN_BuildType MATCHES "^debug$")
+        set(__CLDNN_BuildType "Debug")
+      else()
+        set(__CLDNN_BuildType "Debug")
+        if(NOT CLDNN__MULTI_CFG_GEN)
+          message(WARNING "[clDNN] CMAKE_BUILD_TYPE: Unknown build configuration. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
+              The \"${__CLDNN_BuildType}\" configuration will be used.
 
-          This value has meaning only for single-configuration generators (like Make). It will be ignored for MSVC/XCode."
-        )
+              This value has meaning only for single-configuration generators (like Make). It will be ignored for MSVC/XCode."
+            )
+        endif()
+      endif()
+    else()
+      set(__CLDNN_BuildType "Debug")
+      if(NOT CLDNN__MULTI_CFG_GEN)
+        message(WARNING "[clDNN] CMAKE_BUILD_TYPE: No build configuration specified. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
+            The \"${__CLDNN_BuildType}\" configuration will be used.
+
+            This value has meaning only for single-configuration generators (like Make). It will be ignored for MSVC/XCode."
+          )
+      endif()
     endif()
-  endif()
-else()
-  set(__CLDNN_BuildType "Debug")
-  if(NOT CLDNN__MULTI_CFG_GEN)
-    message(WARNING "[clDNN] CMAKE_BUILD_TYPE: No build configuration specified. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
-        The \"${__CLDNN_BuildType}\" configuration will be used.
-
-        This value has meaning only for single-configuration generators (like Make). It will be ignored for MSVC/XCode."
-      )
-  endif()
+  set(CMAKE_BUILD_TYPE "${__CLDNN_BuildType}")
 endif()
-set(CMAKE_BUILD_TYPE "${__CLDNN_BuildType}")
-unset(__CLDNN_BuildType)
 
 # ======================================================================================================
 
@@ -355,8 +356,10 @@ endif()
 # ======================================================================================================
 
 # Current build configuration (only for single-configuration generators).
-set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING "Current build configuration (only for single-configuration generators)." FORCE)
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES})
+if(NOT CLDNN_BUILT_FROM_OPENVX)
+  set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING "Current build configuration (only for single-configuration generators)." FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES})
+endif()
 
 # ======================================================================================================
 
@@ -369,16 +372,21 @@ elseif(DEFINED XCODE_VERSION)
 endif()
 
 # ======================================================================================================
-
-# Output directory path where the final libraries, examples and tests will be stored.
-if(CLDNN__MULTI_CFG_GEN)
-  # Multi-configuration generators automatically append build type subdirectory.
-  set(__CLDNN_OutDir "${CLDNN_BUILD__DEFAULT_OUT_ROOT}/${CLDNN__ARCHITECTURE_TARGET}")
+if(CLDNN_BUILT_FROM_OPENVX)
+    set(CLDNN__OUTPUT_BIN_DIR "${CMAKE_BIN_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final libraries, examples and tests will be stored.")
+    set(CLDNN__OUTPUT_LIB_DIR "${CMAKE_LIB_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final libraries, examples and tests will be stored.")
 else()
-  set(__CLDNN_OutDir "${CLDNN_BUILD__DEFAULT_OUT_ROOT}/${CLDNN__ARCHITECTURE_TARGET}/${CMAKE_BUILD_TYPE}")
+    # Output directory path where the final libraries, examples and tests will be stored.
+    if(CLDNN__MULTI_CFG_GEN)
+      # Multi-configuration generators automatically append build type subdirectory.
+      set(__CLDNN_OutDir "${CLDNN_BUILD__DEFAULT_OUT_ROOT}/${CLDNN__ARCHITECTURE_TARGET}")
+    else()
+      set(__CLDNN_OutDir "${CLDNN_BUILD__DEFAULT_OUT_ROOT}/${CLDNN__ARCHITECTURE_TARGET}/${__CLDNN_BuildType}")
+    endif()
+    set(CLDNN__OUTPUT_BIN_DIR "${__CLDNN_OutDir}" CACHE PATH "Output directory path where the final libraries, examples and tests will be stored.")
+    set(CLDNN__OUTPUT_LIB_DIR "${CLDNN__OUTPUT_BIN_DIR}" CACHE PATH "Output directory path where the final libraries, examples and tests will be stored.")
+    unset(__CLDNN_OutDir)
 endif()
-set(CLDNN__OUTPUT_DIR "${__CLDNN_OutDir}" CACHE PATH "Output directory path where the final libraries, examples and tests will be stored.")
-unset(__CLDNN_OutDir)
 
 # ======================================================================================================
 
@@ -458,7 +466,7 @@ endif()
 # ======================================================================================================
 
 # Check for python 3.x interpreter (required tool).
-find_package(PythonInterp 3.3)
+find_package(PythonInterp)
 if(NOT PYTHONINTERP_FOUND)
   message(WARNING "[clDNN] Project requires Python 3.3+ interpreter to build (with python loader). CMake could not detect it correctly.
       If you have installed this interpreter, please disregard this warning or specify PYTHON_EXECUTABLE in CMake command-line."
@@ -619,8 +627,10 @@ message(STATUS "[clDNN] ======================== ${CLDNN__PROJ_NAME} Project ===
 message(STATUS "[clDNN] Build type:       ${CMAKE_BUILD_TYPE} (for single-configuration generators)")
 message(STATUS "[clDNN] Av. build types:  ${CMAKE_CONFIGURATION_TYPES} (for multi-configuration generators)")
 message(STATUS "[clDNN]")
-message(STATUS "[clDNN] Output directory:")
-message(STATUS "[clDNN]    \"${CLDNN__OUTPUT_DIR}\"")
+message(STATUS "[clDNN] Output bin directory:")
+message(STATUS "[clDNN]    \"${CLDNN__OUTPUT_BIN_DIR}\"")
+message(STATUS "[clDNN] Output lib directory:")
+message(STATUS "[clDNN]    \"${CLDNN__OUTPUT_LIB_DIR}\"")
 message(STATUS "[clDNN] Architecture:")
 message(STATUS "[clDNN]  - target: ${CLDNN__ARCHITECTURE_TARGET}    (detected: ${__CLDNN_DetectedArch_Target})")
 message(STATUS "[clDNN]")
@@ -677,12 +687,12 @@ set(CLDNN_BUILD__PROJ_LABEL__clDNN "clDNN")
 # ================================================ Outputs =============================================
 
 # Old.
-set(EXECUTABLE_OUTPUT_PATH "${CLDNN__OUTPUT_DIR}")
-set(LIBRARY_OUTPUT_PATH    "${CLDNN__OUTPUT_DIR}")
+set(EXECUTABLE_OUTPUT_PATH "${CLDNN__OUTPUT_BIN_DIR}")
+set(LIBRARY_OUTPUT_PATH    "${CLDNN__OUTPUT_BIN_DIR}")
 # New.
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CLDNN__OUTPUT_DIR}")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CLDNN__OUTPUT_DIR}")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CLDNN__OUTPUT_DIR}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CLDNN__OUTPUT_LIB_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CLDNN__OUTPUT_BIN_DIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CLDNN__OUTPUT_BIN_DIR}")
 
 
 # Main targets' output names.
@@ -726,7 +736,7 @@ cldnn_dmsg("    + version:        ${CMAKE_C_COMPILER_VERSION}")
 
 # ============================== Abstraction of compiler and linker options ============================
 
-include("${CMAKE_SOURCE_DIR}/CMakeCompilerLinkerOpts.txt" NO_POLICY_SCOPE)
+include("${CMAKE_CURRENT_SOURCE_DIR}/CMakeCompilerLinkerOpts.txt" NO_POLICY_SCOPE)
 
 # ======================================= Generic compiler options =====================================
 
@@ -777,14 +787,45 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
 
   # Adding needed settings specific to MSVC.
   if(MSVC)
-    intel_config_flag_apply_settings(
-        CompilerOptions
-        "${__CLDNN_CompilerFlagName}"
-        ALL_PATTERN ""
-        SET_RAW
-          "/arch:SSE2"
-          "/sdl"
-      )
+    if(CMAKE_COMPILER_IS_INTEL)
+      intel_config_flag_apply_settings(
+          CompilerOptions
+          "${__CLDNN_CompilerFlagName}"
+          ALL_PATTERN ""
+          SET_RAW
+            "/wd177"
+            "/wd367"
+            "/wd411"
+            "/wd2415"
+            "/wd3280"
+            "/wd3346"
+        )
+    else()
+      intel_config_flag_apply_settings(
+          CompilerOptions
+          "${__CLDNN_CompilerFlagName}"
+          ALL_PATTERN ""
+          SET_RAW
+            "/arch:SSE2"
+            "/sdl"
+        )
+    endif()
+  elseif(CMAKE_COMPILER_IS_INTEL)
+    if (CLDNN_BUILT_FROM_OPENVX)
+      intel_config_flag_apply_settings(
+          CompilerOptions
+          "${__CLDNN_CompilerFlagName}"
+          ALL_PATTERN ""
+          SET_RAW
+            -Wno-error=missing-field-initializers
+            -Wno-error=unused-parameter
+            -Wno-error=unused-function
+            -fPIC
+            -Wl,--no-undefined
+        )
+    else()
+      message(FATAL_ERROR "TODO Support native ICC")
+    endif()
   # Adding needed settings specific to GCC.
   # NOTE: Following options can be needed in the future (although some not recommended: NR):
   # [NR] -fno-short-enums
@@ -997,6 +1038,12 @@ elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
   set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
     $<$<CONFIG:Release>:_FORTIFY_SOURCE=2>
   )
+endif()
+
+if(CLDNN_BUILT_FROM_OPENVX)
+    set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
+        CLDNN_BUILT_FROM_OPENVX
+      )
 endif()
 
 # ===================================== Include/Link directories =======================================
