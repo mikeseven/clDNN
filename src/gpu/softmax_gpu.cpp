@@ -29,10 +29,10 @@ float FUNC(find_max_value)(const int idx, __global float* input)
     {
         value = max(value, input[LWS * i + idx]);
     }
-    value = max(value, idx < LEFTOVERS? LWS * ITEMS_NUM + idx : -FLT_MAX);
+    value = max(value, idx < LEFTOVERS? input[LWS * ITEMS_NUM + idx] : -FLT_MAX);
     partial_max[idx] = value;
 
-#if (GWS == LWS) && (LWS <= 32) 
+#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE);
 #endif
     if(idx == 0)
@@ -42,7 +42,7 @@ float FUNC(find_max_value)(const int idx, __global float* input)
             partial_max[0] = max(partial_max[0], partial_max[i]);
         };
     }
-#if (GWS == LWS) && (LWS <= 32) 
+#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE);
 #endif
     return partial_max[0];
@@ -76,7 +76,7 @@ KERNEL (softmax_gpu)(__global neural_memory* input_mem, __global neural_memory* 
         partial_acc[idx] += tmp_vals[i];
     }
 
-#if (GWS == LWS) && (LWS <= 32) 
+#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE); // we must be sure that all threads calculated max of elements(we can remove it if simd32 and GWS <= 32
 #endif
     if(idx == 0)
@@ -86,7 +86,7 @@ KERNEL (softmax_gpu)(__global neural_memory* input_mem, __global neural_memory* 
             partial_acc[0] += partial_acc[i];
         }
     }
-#if (GWS == LWS) && (LWS <= 32) 
+#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE);
 #endif
     for(int i = 0; i < ITEMS_NUM; i++)
@@ -108,10 +108,10 @@ float FUNC(find_max_value)(const int global_id, const int idx, const int batch_o
     {
         value = max(value, input[LWS * i + global_id]);
     }
-    value = max(value, global_id < LEFTOVERS? LWS * ITEMS_NUM + global_id : -FLT_MAX);
+    value = max(value, global_id < LEFTOVERS? input[LWS * ITEMS_NUM + global_id] : -FLT_MAX);
     partial_max[global_id] = value;
 
-#if (GWS == LWS) && (LWS <= 32) 
+#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE);
 #endif
     if(global_id < batch_num)
@@ -121,7 +121,7 @@ float FUNC(find_max_value)(const int global_id, const int idx, const int batch_o
             partial_max[batch_offset] = max(partial_max[0], partial_max[i*batch_num + batch_offset]);
         };
     }
-#if (GWS == LWS) && (LWS <= 32) 
+#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE);
 #endif
     return partial_max[batch_offset];
@@ -156,7 +156,7 @@ KERNEL (softmax_gpu_batches)(__global neural_memory* input_mem, __global neural_
         partial_acc[global_id] += tmp_vals[i];
     }
 
-#if (GWS == LWS) && (LWS <= 32) 
+#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE); // we must be sure that all threads calculated max of elements(we can remove it if simd32 and GWS <= 32
 #endif
     if(global_id < batch_num)
@@ -166,7 +166,7 @@ KERNEL (softmax_gpu_batches)(__global neural_memory* input_mem, __global neural_
             partial_acc[batch_offset] += partial_acc[i*batch_num + batch_offset];
         }
     }
-#if (GWS == LWS) && (LWS <= 32) 
+#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE);
 #endif
     for(int i = 0; i < ITEMS_NUM; i++)
@@ -209,6 +209,7 @@ void softmax_gpu::implementation(const void *ptr) {
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("ITEMS_NUM", std::to_string(items_num)),
             gpu::make_jit_constant("LWS", std::to_string(preferred_lws)),
+            gpu::make_jit_constant("GWS", std::to_string(preferred_gws)),
             gpu::make_jit_constant("LEFTOVERS", std::to_string(leftovers))
         };
 
@@ -229,6 +230,7 @@ void softmax_gpu::implementation(const void *ptr) {
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("ITEMS_NUM", std::to_string(_items_num)),
             gpu::make_jit_constant("LWS", std::to_string(_preferred_lws)),
+            gpu::make_jit_constant("GWS", std::to_string(_preferred_lws)),
             gpu::make_jit_constant("LEFTOVERS", std::to_string(_leftovers))
         };
 
