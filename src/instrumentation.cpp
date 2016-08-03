@@ -23,7 +23,7 @@
 #include <ctime>
 #include <string>
 namespace neural {
-    void instrumentation::log_memory_to_file(const primitive& mem)
+    void instrumentation::log_memory_to_file(const primitive& mem, std::string prefix)
     {
         auto mem_arg = mem.as<const memory&>().argument;
         auto mem_ptr = mem.as<const memory&>().pointer<float>();
@@ -44,7 +44,7 @@ namespace neural {
         for (uint32_t i = 0; i < batch; i++)
         for (uint32_t j = 0; j < feature;j++)
         {
-            std::string filename((dirpath + "/b" + std::to_string(i) + "_f" + std::to_string(j) + ".txt"));
+            std::string filename((dirpath + "/" + prefix + "_b" + std::to_string(i) + "_f" + std::to_string(j) + ".txt"));
             files_handels[i].push_back(std::ofstream(filename, std::ios::out));          
         }
         int input_it = 0;

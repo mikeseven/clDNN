@@ -892,7 +892,7 @@ private:
 class instrumentation
 {
 public:
-    DLL_SYM static void log_memory_to_file(const primitive&);
+    DLL_SYM static void log_memory_to_file(const primitive&,std::string prefix = "");
 };
 
 } // namespace neural
