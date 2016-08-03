@@ -56,9 +56,8 @@ int main(int argc, char *argv[])
             --model=<name>
             name of network model that is used for classfication
             can be : alexnet, caffenet_float, caffenet_int16 or lenet_float
-            --engine=<name>
+            --engine=<type>
             engine type: can be referenced or gpu
-            can be : alexnet, caffenet_float, caffenet_int16 or lenet_float
             --input=<directory>
             path to directory that contains images to be classfied)_help_";
     }

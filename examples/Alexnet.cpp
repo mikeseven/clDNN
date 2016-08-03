@@ -240,7 +240,7 @@ void execute_alexnet(primitive& input, primitive& output, engine::type eng)
         fc6,
         fc7,
         fc8,
-        softmax }).wait();
+        softmax,output }).wait();
 }
 
 void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng)
@@ -271,18 +271,9 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng)
             input.as<const memory&>().argument.size, // do not resize
             input
         });
+        // reorder data
+        execute({ reordered_input }).wait();
 
-
-       // auto out_ptr =  output.as<const memory&>().pointer<float>();
         execute_alexnet(reordered_input, output, eng);
-        //for (auto i = 0; i < batch_size; i++) not yet
-        //{
-        //    // TODO: port html result parsing
-        //    std::cout << "Image:" << image_in_batches[i] << std::endl;
-        //    for (auto j = 0; j < 1000; j++)
-        //        std::cout << *out_ptr. << " ";
-        //    std::cout << std::endl;
-        //}
-
     }    
 }
