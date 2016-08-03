@@ -57,7 +57,6 @@ normalization::response::arguments::arguments(
     , k(ak)
     , alpha(aalpha)
     , beta(abeta)
-    , output({ memory::allocate({aengine, aoutput_fmt,output_size}) })
 { 
     if (ainput.output.size() != 1) throw std::runtime_error("should have one output");
     auto input_mem = ainput.output[0].as<const memory&>().argument;

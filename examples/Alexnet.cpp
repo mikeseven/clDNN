@@ -273,6 +273,7 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng)
         });
 
 
+        execute({ reordered_input }).wait();
        // auto out_ptr =  output.as<const memory&>().pointer<float>();
         execute_alexnet(reordered_input, output, eng);
         //for (auto i = 0; i < batch_size; i++) not yet
