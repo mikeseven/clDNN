@@ -231,6 +231,9 @@ void execute_alexnet(primitive& input, primitive& output, engine::type eng)
         output,
         fc8
     });
+
+    
+    
     execute({
         conv1,relu1,lrn1,pool1, //stage 0
         conv2_group2,relu2,lrn2, pool2,
@@ -241,6 +244,7 @@ void execute_alexnet(primitive& input, primitive& output, engine::type eng)
         fc7,
         fc8,
         softmax,output }).wait();
+    instrumentation::log_memory_to_file(conv1.output[0]);
 }
 
 void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng)
@@ -273,7 +277,6 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng)
         });
         // reorder data
         execute({ reordered_input }).wait();
-
         execute_alexnet(reordered_input, output, eng);
     }    
 }

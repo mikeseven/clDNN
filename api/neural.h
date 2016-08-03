@@ -889,6 +889,10 @@ private:
     worker_cpu(arguments arg, nn_thread_worker_pool &);
 };
 
-
+class instrumentation
+{
+public:
+    DLL_SYM static void log_memory_to_file(const primitive&);
+};
 
 } // namespace neural
