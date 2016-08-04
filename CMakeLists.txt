@@ -88,6 +88,9 @@ set(CLDNN__API_DIR      "${CMAKE_CURRENT_SOURCE_DIR}/api")
 # Path which points to directory with binaries for Intel OpenCL SDK ICD (Installable Client Driver).
 set(CLDNN__IOCL_ICD_DIR "${CLDNN__COMMON_DIR}/intel_ocl_icd")
 
+# Path which points to directory with C++ bindings for OpenCL (header files + wrapper that disables specific warnings).
+set(CLDNN__KHR_CLHPP    "${CLDNN__COMMON_DIR}/khronos_ocl_clhpp")
+
 # Build targets settings.
 
 # Path which points to default root directory for compilation output.
@@ -750,6 +753,7 @@ endif()
 
 include_directories(
     ${CLDNN__IOCL_ICD_INCDIRS}
+    "${CLDNN__KHR_CLHPP}"
     "${CLDNN__API_DIR}"
   )
 link_directories(

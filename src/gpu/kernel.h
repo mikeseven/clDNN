@@ -124,7 +124,7 @@ public:
         auto data = _mem.pointer<float>();
         std::stringstream ss;
         ss << "(float[]){ ";
-        for (int i = 0; i < _mem.count(); i++)
+        for (std::size_t i = 0; i < _mem.count(); i++)
             ss << data[i] << ",";
         ss << " } ";
         result.push_back({ _name, ss.str() });
@@ -144,7 +144,7 @@ public:
         :vector_jit_constant(name, mem[0].get().argument.size), _mem(mem) {}
 
     kernels_cache::jit_definitions get_definitions() const override {
-        for (int i = 1; i < _mem.size(); i++)
+        for (std::size_t i = 1; i < _mem.size(); i++)
         {
             if (_mem[0].get().count() != _mem[i].get().count())
                 throw std::exception("All memories must contain the same number of elements!");
@@ -158,7 +158,7 @@ public:
             auto & _m = m.get();
             auto data = _m.pointer<float>();
             ss << "{ ";
-            for (int i = 0; i < _m.count(); i++)
+            for (std::size_t i = 0; i < _m.count(); i++)
                 ss << data[i] << ",";
             ss << " } ,";
         }

@@ -1,6 +1,6 @@
 #include "gpu_compiler.h"
-// TODO add forwarding to cl2.hpp
-// include cl2.hpp
+// TODO add forwarding to cl2_wrapper.h
+// include cl2_wrapper.h
 
 namespace neural { namespace gpu { namespace cache {
 
