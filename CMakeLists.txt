@@ -19,16 +19,6 @@ include(CheckCXXCompilerFlag)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/utils/build/cmake/modules")
 include(IntelHelpers)
 
-# ======================================================================================================
-
-# Writes debug message in project (it will be presented only if debug is enabled).
-#
-# @param text Text to present.
-function(cldnn_dmsg text)
-  if(CLDNN__CMAKE_DEBUG)
-    message(STATUS "[clDNN][D] ${text}")
-  endif()
-endfunction()
 
 # ======================================================================================================
 # ==================================== BUILD CONFIGURATIONS (part 1) ===================================
@@ -77,19 +67,22 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # ======================================================================================================
 
 # Path which points to main directory of project.
-set(CLDNN__MAIN_DIR     "${CMAKE_CURRENT_SOURCE_DIR}")
+set(CLDNN__MAIN_DIR      "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Path which points to directory with common dependencies (internal and 3-rd party).
-set(CLDNN__COMMON_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/common")
+set(CLDNN__COMMON_DIR    "${CMAKE_CURRENT_SOURCE_DIR}/common")
 
 # Path which points to directory with interface for framework.
-set(CLDNN__API_DIR      "${CMAKE_CURRENT_SOURCE_DIR}/api")
+set(CLDNN__API_DIR       "${CMAKE_CURRENT_SOURCE_DIR}/api")
 
 # Path which points to directory with binaries for Intel OpenCL SDK ICD (Installable Client Driver).
-set(CLDNN__IOCL_ICD_DIR "${CLDNN__COMMON_DIR}/intel_ocl_icd")
+set(CLDNN__IOCL_ICD_DIR  "${CLDNN__COMMON_DIR}/intel_ocl_icd")
+
+# Path which points to directory with FreeImage and FreeImagePlus libraries.
+set(CLDNN__FREEIMAGE_DIR "${CLDNN__COMMON_DIR}/FreeImage")
 
 # Path which points to directory with C++ bindings for OpenCL (header files + wrapper that disables specific warnings).
-set(CLDNN__KHR_CLHPP    "${CLDNN__COMMON_DIR}/khronos_ocl_clhpp")
+set(CLDNN__KHR_CLHPP_DIR "${CLDNN__COMMON_DIR}/khronos_ocl_clhpp")
 
 # Build targets settings.
 
@@ -112,6 +105,112 @@ else()
   set(CLDNN__TARGET_CFG_VAR "${CMAKE_CFG_INTDIR}")
   set(CLDNN__MULTI_CFG_GEN  YES)
 endif()
+
+# ======================================================================================================
+# ======================================================================================================
+# ======================================================================================================
+
+
+# ======================================================================================================
+# =========================================== HELPER FUNCTIONS =========================================
+# ======================================================================================================
+
+# Writes debug message in project (it will be presented only if debug is enabled).
+#
+# @param text Text to present.
+function(cldnn_dmsg text)
+  if(CLDNN__CMAKE_DEBUG)
+    message(STATUS "[clDNN][D] ${text}")
+  endif()
+endfunction()
+
+# ======================================================================================================
+
+# Locates and detects all versions of specific component.
+#
+# The highest version of component is also returned as default version to use.
+#
+# @param retVarNameVersions       Name of variable placeholder with all versions of specified component
+#                                 which are available in the build.
+# @param retVarNamePaths          Name of variable placeholder with all paths to versions of specified
+#                                 component which are available in build. The paths map to corresponding
+#                                 versions from retVarNameVersions (1:1).
+# @param retVarNameDefaultVersion Default version to use. It is highest specified version, or 0 if no
+#                                 version of component was found.
+# @param componentName            Descriptive name of a component. It is presentated in warning and
+#                                 debug messages.
+# @param componentBaseDir         Base directory for component (directory containing version
+#                                 subdirectories).
+# @param [componentReqFile [...]] Optional list of component required files to check for existence.
+#                                 The componentReqFile can contain file(GLOB) wildcards. If multiple
+#                                 are specified, checked version is valid when all files are existing
+#                                 (or GLOB return at least one file for each entry).
+function(cldnn_locate_component_versions retVarNameVersions retVarNamePaths retVarNameDefaultVersion
+                                         componentName componentBaseDir)
+  if(NOT EXISTS "${componentBaseDir}")
+    cldnn_dmsg("Base directory for ${componentName} does not exist at ${componentBaseDir}.")
+    set("${retVarNameVersions}"       ""  PARENT_SCOPE)
+    set("${retVarNamePaths}"          ""  PARENT_SCOPE)
+    set("${retVarNameDefaultVersion}" "0" PARENT_SCOPE)
+    return()
+  endif()
+                                         
+  # Detecting all versions of added component in the project.
+  file(GLOB __CLDNN_F_CompVersionPaths RELATIVE "${componentBaseDir}" "${componentBaseDir}/[0-9rRvV]*")
+  set(__CLDNN_F_CompVersions "")
+  set(__CLDNN_F_CompPaths    "")
+  foreach(__CLDNN_F_CompVersionPath ${__CLDNN_F_CompVersionPaths})
+    string(REPLACE ";" "\;" __CLDNN_F_CompVersionPath "${__CLDNN_F_CompVersionPath}") # [WA#1] Must escape ; again if occurred in item.
+    if(__CLDNN_F_CompVersionPath MATCHES "^[rRvV]?([0-9]+([\\._][0-9]+([\\._][0-9]+([\\._][0-9]+)?)?)?)")
+      string(REPLACE "_" "." __CLDNN_F_CompVersion "${CMAKE_MATCH_1}")
+      set(__CLDNN_F_CompPath "${componentBaseDir}/${__CLDNN_F_CompVersionPath}")
+
+      set(__CLDNN_F_CompPathValid TRUE)
+      foreach(__CLDNN_F_CompReqFile ${ARGN})
+        string(REPLACE ";" "\;" __CLDNN_F_CompReqFile "${__CLDNN_F_CompReqFile}") # [WA#1] Must escape ; again if occurred in item.
+        set(__CLDNN_F_CompReqFileGlob "${__CLDNN_F_CompPath}/${__CLDNN_F_CompReqFile}")
+
+        file(GLOB __CLDNN_F_CompReqTargets ${__CLDNN_F_CompReqFileGlob})
+        list(LENGTH __CLDNN_F_CompReqTargets __CLDNN_F_CompReqTargetsCount)
+        if(__CLDNN_F_CompReqTargetsCount LESS 1)
+            message(WARNING "[clDNN] ${componentName} at \"${__CLDNN_F_CompPath}\" does not contain required files. It will be omitted.")
+            set(__CLDNN_F_CompPathValid FALSE)
+            break()
+        endif()
+      endforeach()
+      unset(__CLDNN_F_CompReqFile)
+      unset(__CLDNN_F_CompReqFileGlob)
+      unset(__CLDNN_F_CompReqTargets)
+      unset(__CLDNN_F_CompReqTargetsCount)
+
+      if(__CLDNN_F_CompPathValid)
+        cldnn_dmsg("Found internal ${componentName} (version: ${__CLDNN_F_CompVersion}) at path: ${__CLDNN_F_CompPath}")
+        list(APPEND __CLDNN_F_CompVersions "${__CLDNN_F_CompVersion}")
+        list(APPEND __CLDNN_F_CompPaths    "${__CLDNN_F_CompPath}")
+      endif()
+    endif()
+  endforeach()
+  unset(__CLDNN_F_CompVersionPaths)
+  unset(__CLDNN_F_CompVersionPath)
+  unset(__CLDNN_F_CompVersion)
+  unset(__CLDNN_F_CompPath)
+  unset(__CLDNN_F_CompPathValid)
+
+  # Selecting highest version of component as a default version.
+  set(__CLDNN_F_CompDefaultVersion "0")
+  foreach(__CLDNN_F_CompVersion ${__CLDNN_F_CompVersions})
+    if(__CLDNN_F_CompVersion VERSION_GREATER __CLDNN_F_CompDefaultVersion)
+      set(__CLDNN_F_CompDefaultVersion "${__CLDNN_F_CompVersion}")
+    endif()
+  endforeach()
+  unset(__CLDNN_F_CompVersion)
+  cldnn_dmsg("Selected default version of internal ${componentName}: ${__CLDNN_F_CompDefaultVersion}")
+
+  set("${retVarNameVersions}"       ${__CLDNN_F_CompVersions}         PARENT_SCOPE)
+  set("${retVarNamePaths}"          ${__CLDNN_F_CompPaths}            PARENT_SCOPE)
+  set("${retVarNameDefaultVersion}" "${__CLDNN_F_CompDefaultVersion}" PARENT_SCOPE)
+endfunction()
+
 
 # ======================================================================================================
 # ======================================================================================================
@@ -184,58 +283,39 @@ unset(__CLDNN_ArchValid_Target)
 # Detecting all versions of added Intel OpenCL SDK ICDs in the project.
 if(NOT EXISTS "${CLDNN__IOCL_ICD_DIR}")
   if(NOT CLDNN__IOCL_ICD_USE_EXTERNAL)
-    message(FATAL_ERROR "[clDNN] Root for Intel OpenCL SDK ICDs is invalid or does not exist.
+    message(FATAL_ERROR "[clDNN] Root for ICDs for Intel OpenCL SDK is invalid or does not exist.
       Please make sure that ICDs are added into \"${CLDNN__IOCL_ICD_DIR}\".")
   endif()
 endif()
 
-file(GLOB __CLDNN_IOclIcdVersionPaths RELATIVE "${CLDNN__IOCL_ICD_DIR}" "${CLDNN__IOCL_ICD_DIR}/[0-9rRvV]*")
-set(__CLDNN_IOclIcdVersions "")
-set(__CLDNN_IOclIcdPaths    "")
-foreach(__CLDNN_IOclIcdVersionPath ${__CLDNN_IOclIcdVersionPaths})
-  if(__CLDNN_IOclIcdVersionPath MATCHES "^[rRvV]?([0-9]+([\\._][0-9]+([\\._][0-9]+([\\._][0-9]+)?)?)?)")
-    string(REPLACE "_" "." __CLDNN_IOclIcdVersion "${CMAKE_MATCH_1}")
-    set(__CLDNN_IOclIcdPath "${CLDNN__IOCL_ICD_DIR}/${__CLDNN_IOclIcdVersionPath}")
-
-    set(__CLDNN_IOclIcdPathValid TRUE)
-    file(GLOB __CLDNN_IOclIcdTargets "${__CLDNN_IOclIcdPath}/*/include/CL/opencl.h")
-    list(LENGTH __CLDNN_IOclIcdTargets __CLDNN_IOclIcdTargetsCount)
-    if(__CLDNN_IOclIcdTargetsCount LESS 1)
-        message(WARNING "[clDNN] ICD for Intel OpenCL SDK at \"${__CLDNN_IOclIcdPath}\" does not contain required header files. It will be omitted.")
-        set(__CLDNN_IOclIcdPathValid FALSE)
-    endif()
-    unset(__CLDNN_IOclIcdTargets)
-    unset(__CLDNN_IOclIcdTargetsCount)
-
-    if(__CLDNN_IOclIcdPathValid)
-      cldnn_dmsg("Found internal Intel OpenCL SDK ICD (version: ${__CLDNN_IOclIcdVersion}) at path: ${__CLDNN_IOclIcdPath}")
-      list(APPEND __CLDNN_IOclIcdVersions "${__CLDNN_IOclIcdVersion}")
-      list(APPEND __CLDNN_IOclIcdPaths    "${__CLDNN_IOclIcdPath}")
-    endif()
-  endif()
-endforeach()
-unset(__CLDNN_IOclIcdVersionPaths)
-unset(__CLDNN_IOclIcdVersionPath)
-unset(__CLDNN_IOclIcdVersion)
-unset(__CLDNN_IOclIcdPath)
-unset(__CLDNN_IOclIcdPathValid)
-
-# Selecting highest version of ICD as default version.
-set(__CLDNN_IOclIcdDefaultVersion "0")
-foreach(__CLDNN_IOclIcdVersion ${__CLDNN_IOclIcdVersions})
-  if(__CLDNN_IOclIcdVersion VERSION_GREATER __CLDNN_IOclIcdDefaultVersion)
-    set(__CLDNN_IOclIcdDefaultVersion "${__CLDNN_IOclIcdVersion}")
-  endif()
-endforeach()
-unset(__CLDNN_IOclIcdVersion)
-cldnn_dmsg("Selected default version of internal Intel OpenCL SDK ICD: ${__CLDNN_IOclIcdDefaultVersion}")
+cldnn_locate_component_versions(__CLDNN_IOclIcdVersions __CLDNN_IOclIcdPaths __CLDNN_IOclIcdDefaultVersion
+    "ICD for Intel OpenCL SDK" "${CLDNN__IOCL_ICD_DIR}"
+    "*/include/CL/opencl.h"
+  )
 
 if(__CLDNN_IOclIcdDefaultVersion VERSION_EQUAL "0")
   if(NOT CLDNN__IOCL_ICD_USE_EXTERNAL)
-    message(FATAL_ERROR "[clDNN] Intel OpenCL SDK ICD required for build cannot be localized.")
+    message(FATAL_ERROR "[clDNN] Intel OpenCL SDK ICD required for build cannot be located.")
   endif()
 endif()
 
+# ======================================================================================================
+
+# Detecting all versions of added FreeImage library in the project.
+if(NOT EXISTS "${CLDNN__FREEIMAGE_DIR}")
+  message(FATAL_ERROR "[clDNN] Root for FreeImage/FreeImagePlus library is invalid or does not exist.
+    Please make sure that libraries are added into \"${CLDNN__FREEIMAGE_DIR}\".")
+endif()
+
+cldnn_locate_component_versions(__CLDNN_FreeImageVersions __CLDNN_FreeImagePaths __CLDNN_FreeImageDefaultVersion
+    "FreeImage/FreeImagePlus library" "${CLDNN__FREEIMAGE_DIR}"
+    "include/FreeImage.h"
+    "include/FreeImagePlus.h"
+  )
+
+if(__CLDNN_FreeImageDefaultVersion VERSION_EQUAL "0")
+  message(FATAL_ERROR "[clDNN] FreeImage/FreeImagePlus library required for build cannot be located.")
+endif()
 
 # ======================================================================================================
 # ============================================ CMAKE OPTIONS ===========================================
@@ -281,6 +361,13 @@ mark_as_advanced(CLDNN__IOCL_ICD_USE_EXTERNAL)
 
 # ======================================================================================================
 
+# FreeImage/FreeImagePlus library: Version of library used to build clDNN.
+set(CLDNN__FREEIMAGE_VERSION "${__CLDNN_FreeImageDefaultVersion}" CACHE STRING "FreeImage/FreeImagePlus library: Version of library used to build clDNN framework.")
+mark_as_advanced(CLDNN__FREEIMAGE_VERSION)
+set_property(CACHE CLDNN__FREEIMAGE_VERSION PROPERTY STRINGS ${__CLDNN_FreeImageVersions})
+
+# ======================================================================================================
+
 # Include and build: Examples of usage of clDNN framework.
 set(CLDNN__INCLUDE_EXAMPLES ON CACHE BOOL "Include and build: clDNN framework's usage examples.")
 mark_as_advanced(CLDNN__INCLUDE_EXAMPLES)
@@ -319,6 +406,25 @@ if((NOT CLDNN__INCLUDE_TESTS) AND CLDNN__RUN_TESTS)
   set(CLDNN__RUN_TESTS OFF)
 endif()
 
+# ======================================================================================================
+
+# Setting helper variables for component paths.
+intel_arch_get_os(__CLDNN_TargetOs "${CLDNN__ARCHITECTURE_TARGET}")
+string(TOLOWER "${__CLDNN_TargetOs}" __CLDNN_TargetOs)
+
+intel_arch_get_cpu(__CLDNN_TargetCpu "${CLDNN__ARCHITECTURE_TARGET}")
+string(TOLOWER "${__CLDNN_TargetCpu}" __CLDNN_TargetCpu)
+
+if(__CLDNN_TargetCpu STREQUAL "32")
+  set(__CLDNN_TargetCpuDir "x86")
+elseif(__CLDNN_TargetCpu STREQUAL "64")
+  set(__CLDNN_TargetCpuDir "x64")
+else()
+  set(__CLDNN_TargetCpuDir "${__CLDNN_TargetCpu}")
+endif()
+
+# ======================================================================================================
+
 # Selecting Intel OpenCL SDK version and path.
 if (CLDNN__IOCL_ICD_USE_EXTERNAL)
   if(NOT DEFINED ENV{INTELOCLSDKROOT})
@@ -342,20 +448,6 @@ endif()
 set(CLDNN__IOCL_ICD_ROOT "${CLDNN__IOCL_ICD_ROOT}" CACHE INTERNAL "Path to Intel OpenCL SDK ICD used to build clDNN framework.")
 
 # Select SDK subdirectories with headers, binaries and libraries (based on architecture, cpu, generator and SDK type).
-intel_arch_get_os(__CLDNN_TargetOs "${CLDNN__ARCHITECTURE_TARGET}")
-string(TOLOWER "${__CLDNN_TargetOs}" __CLDNN_TargetOs)
-
-intel_arch_get_cpu(__CLDNN_TargetCpu "${CLDNN__ARCHITECTURE_TARGET}")
-string(TOLOWER "${__CLDNN_TargetCpu}" __CLDNN_TargetCpu)
-
-if(__CLDNN_TargetCpu STREQUAL "32")
-  set(__CLDNN_TargetCpuDir "x86")
-elseif(__CLDNN_TargetCpu STREQUAL "64")
-  set(__CLDNN_TargetCpuDir "x64")
-else()
-  set(__CLDNN_TargetCpuDir "${__CLDNN_TargetCpu}")
-endif()
-
 if(CLDNN__IOCL_ICD_USE_EXTERNAL)
   set(CLDNN__IOCL_ICD_INCDIRS "${CLDNN__IOCL_ICD_ROOT}/include" CACHE INTERNAL "Paths to interface headers for Intel OpenCL SDK ICD.")
   set(CLDNN__IOCL_ICD_STLDIRS "${CLDNN__IOCL_ICD_ROOT}/lib/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to static libraries for Intel OpenCL SDK ICD.")
@@ -403,10 +495,28 @@ unset(__CLDNN_IOclIcdVersions)
 unset(__CLDNN_IOclIcdPaths)
 unset(__CLDNN_IOclIcdDefaultVersion)
 unset(__CLDNN_IOclIcdVersionIdx)
+
+
+# ======================================================================================================
+
+# Selecting FreeImage/FreeImagePlus library version and path.
+list(FIND __CLDNN_FreeImageVersions "${CLDNN__FREEIMAGE_VERSION}" __CLDNN_FreeImageVersionIdx)
+if(__CLDNN_FreeImageVersionIdx LESS 0)
+  message(FATAL_ERROR "[clDNN] CLDNN__FREEIMAGE_VERSION: Selected version of FreeImage/FreeImagePlus library cannot be found.
+    Please use one of following values: ${__CLDNN_FreeImageVersions}.")
+endif()
+list(GET __CLDNN_FreeImagePaths ${__CLDNN_FreeImageVersionIdx} CLDNN__FREEIMAGE_ROOT)
+set(CLDNN__FREEIMAGE_ROOT "${CLDNN__FREEIMAGE_ROOT}" CACHE INTERNAL "Path to FreeImage/FreeImagePlus library used to build clDNN framework.")
+
+set(CLDNN__FREEIMAGE_INCDIRS "${CLDNN__FREEIMAGE_ROOT}/include" CACHE INTERNAL "Paths to interface headers for FreeImage/FreeImagePlus.")
+set(CLDNN__FREEIMAGE_LIBDIRS "${CLDNN__FREEIMAGE_ROOT}/${__CLDNN_TargetOs}/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to libraries to link for FreeImage/FreeImagePlus.")
+
+# ======================================================================================================
+
+# Clean-up of helper variables for component paths.
 unset(__CLDNN_TargetOs)
 unset(__CLDNN_TargetCpu)
 unset(__CLDNN_TargetCpuDir)
-
 
 # ============================================= Status =================================================
 
@@ -427,6 +537,7 @@ if (CLDNN__IOCL_ICD_USE_EXTERNAL)
 else()
   message(STATUS "[clDNN]  - ICD version used to build:  ${CLDNN__IOCL_ICD_VERSION}")
 endif()
+message(STATUS "[clDNN]  - FreeImage v. used to build: ${CLDNN__FREEIMAGE_VERSION}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Include/Build examples:     ${CLDNN__INCLUDE_EXAMPLES}")
 message(STATUS "[clDNN]  - Include/Build tests:        ${CLDNN__INCLUDE_TESTS}")
@@ -443,6 +554,11 @@ message(STATUS "[clDNN]     + Headers:      ${CLDNN__IOCL_ICD_INCDIRS}")
 message(STATUS "[clDNN]     + Static libs:  ${CLDNN__IOCL_ICD_STLDIRS}")
 message(STATUS "[clDNN]     + Shared libs:  ${CLDNN__IOCL_ICD_SHLDIRS}")
 message(STATUS "[clDNN]     + Libs to link: ${CLDNN__IOCL_ICD_LIBDIRS}")
+message(STATUS "[clDNN]")
+message(STATUS "[clDNN] FreeImage/FreeImagePlus:")
+message(STATUS "[clDNN]  - Root:            ${CLDNN__FREEIMAGE_ROOT}")
+message(STATUS "[clDNN]     + Headers:      ${CLDNN__FREEIMAGE_INCDIRS}")
+message(STATUS "[clDNN]     + Libs to link: ${CLDNN__FREEIMAGE_LIBDIRS}")
 message(STATUS "[clDNN] =============================================================================")
 unset(__CLDNN_DetectedArch_Target)
 
@@ -753,11 +869,13 @@ endif()
 
 include_directories(
     ${CLDNN__IOCL_ICD_INCDIRS}
-    "${CLDNN__KHR_CLHPP}"
+    ${CLDNN__FREEIMAGE_INCDIRS}
+    "${CLDNN__KHR_CLHPP_DIR}"
     "${CLDNN__API_DIR}"
   )
 link_directories(
     ${CLDNN__IOCL_ICD_LIBDIRS}
+    ${CLDNN__FREEIMAGE_LIBDIRS}
   )
 
 # =================================== Link targets and dependencies ====================================

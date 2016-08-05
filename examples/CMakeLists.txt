@@ -75,7 +75,7 @@ set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD
 # TODO: find_library for FreeImage and move to global common directory.
 target_link_libraries("${CLDNN_BUILD__PROJ}"
     "${CLDNN_BUILD__PROJ__clDNN}"
-    "${__CLDNN_Directory__common}/FreeImage64/FreeImage.lib"
+    FreeImage
   )
 
 # ======================================================================================================
