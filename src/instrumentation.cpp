@@ -16,6 +16,8 @@
 
 #include "api/neural.h"
 #include <fstream>
+#include <sstream>
+#include <iomanip>
 #include <nmmintrin.h>
 #include <array>
 #include <vector>
@@ -25,8 +27,8 @@
 namespace neural {
     void instrumentation::log_memory_to_file(const primitive& mem, std::string prefix)
     {
-        auto mem_arg = mem.as<const memory&>().argument;
-        auto mem_ptr = mem.as<const memory&>().pointer<float>();
+        auto mem_arg = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>().argument : mem.output[0].as<const memory&>().argument;
+        auto mem_ptr = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>().pointer<float>() : mem.output[0].as<const memory&>().pointer;
         time_t rawtime;
         char buf[85];
         time(&rawtime);
@@ -77,6 +79,39 @@ namespace neural {
         for (uint32_t i = 0; i < batch; i++)
             for (uint32_t j = 0; j < feature;j++)
                 files_handels[i][j].close();
+    }
+
+    std::string instrumentation::timer::time_diff_string(uint64_t t_diff) {
+        std::ostringstream temp;
+        if (t_diff>0) {
+            double t_d = static_cast<double>(t_diff);
+            std::string units[] = { "ns", "us", "ms", "s" };
+            uint8_t     index = 0;
+
+            while (t_d>1000 && index < 3) {
+                t_d /= 1000;
+                ++index;
+            };
+            temp << std::setprecision(3) << std::fixed << t_d << " " + units[index];
+        }
+        return temp.str();
+    }
+    std::string instrumentation::timer::clocks_diff_string(uint64_t c_diff) {
+        std::string        cds;
+        std::ostringstream rest;
+
+        while (c_diff>999) {
+            rest.str("");
+            rest << " " << std::setfill('0') << std::setw(3) << c_diff % 1000;
+            c_diff /= 1000;
+            cds = rest.str() + cds;
+        }
+        if (c_diff>0) {
+            rest.str("");
+            rest << c_diff;
+            cds = rest.str() + cds;
+        }
+        return cds + " ticks";
     }
 
 }

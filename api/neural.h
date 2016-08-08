@@ -17,7 +17,9 @@
 #pragma once
 
 #include "neural_base.h"
-
+#include <algorithm>
+#include <chrono>
+#include <string>
 namespace neural {
 
 
@@ -891,6 +893,38 @@ private:
 
 class instrumentation
 {
+    struct timer
+    {
+    private:
+        std::chrono::high_resolution_clock::time_point  time_tick;
+        std::chrono::high_resolution_clock::time_point  time_tock;
+        uint64_t                                        time_diff;
+        uint64_t                                        clocks_tick;
+        uint64_t                                        clocks_tock;
+        uint64_t                                        clocks_diff;
+
+    public:
+        void start() {
+            time_tick = std::chrono::high_resolution_clock::now();
+            clocks_tick = __rdtsc();
+        };
+
+        void stop() {
+            clocks_tock = __rdtsc();
+            time_tock = std::chrono::high_resolution_clock::now();
+            clocks_diff = clocks_tock - clocks_tick;
+            time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(time_tock - time_tick).count();
+        };
+
+        DLL_SYM uint64_t     get_time_diff() { return time_diff; };
+        DLL_SYM uint64_t     get_clocks_diff() { return clocks_diff; };
+
+        std::string time_diff_string() { return time_diff_string(time_diff); };
+        std::string clocks_diff_string() { return clocks_diff_string(clocks_diff); };
+
+        static std::string time_diff_string(uint64_t);
+        static std::string clocks_diff_string(uint64_t);
+    };
 public:
     DLL_SYM static void log_memory_to_file(const primitive&,std::string prefix = "");
 };
