@@ -80,7 +80,7 @@ void convolution_gpu::implementation(const void *ptr) {
     auto& output_mem = this_conv->output_memory(0);
     std::vector<std::reference_wrapper<const neural::memory>> biases_mem;
     std::vector<std::reference_wrapper<const neural::memory>> filters_mem;
-    for (std::size_t i = 0; i < split; i++)
+    for (size_t i = 0; i < split; i++)
     {
         filters_mem.push_back(this_conv->argument.input[i * 2 + 1].primitive.as<const memory&>());
         biases_mem.push_back(this_conv->argument.input[i * 2 + 2].primitive.as<const memory&>());
@@ -141,7 +141,7 @@ void convolution_gpu::implementation(const void *ptr) {
                 {
                     size_t workitems_per_enqueue = dstSize / split;
                     auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, cl_uint>(kernelName_YXFB_memory, mem_consts);
-                    for (std::size_t i = 0; i < filters_mem.size(); i++)
+                    for (size_t i = 0; i < filters_mem.size(); i++)
                     {
                         kernel({ { workitems_per_enqueue, 1 } ,{ std::min(workitems_per_enqueue, static_cast<size_t>(16)), 1 } }, input_mem, output_mem, filters_mem[i].get(), biases_mem[i].get(), (cl_uint)i);
                     }

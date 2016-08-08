@@ -78,7 +78,7 @@ namespace neural {
         input.push_back(
             in[0].primitive.id() != type_id<const memory>()->id ? in[0].primitive.output[0] : in[0]
         );
-        for (std::size_t i = 1; i < in.size(); i++)
+        for (size_t i = 1; i < in.size(); i++)
             input.push_back(in[i]);
 
         auto &input_mem = input[0].primitive.as<const memory&>();
@@ -155,8 +155,8 @@ namespace neural {
         if (input_arg.size.raw.size() != output_arg.size.raw.size())  throw std::runtime_error("input/output number of dimension does not match.");
         if (stride.raw.size() != output_arg.size.raw.size())          throw std::runtime_error("stride/output number of dimension does not match.");
 
-        const std::size_t split = arg.split;
-        for (std::size_t j = 0; j < split; j++)
+        const size_t split = arg.split;
+        for (size_t j = 0; j < split; j++)
         {
             auto& filter_arg = arg.input[j * 2 + 1].primitive.as<const memory&>().argument; //convolution filter
             auto& bias_arg = arg.input[j * 2 + 2].primitive.as<const memory&>().argument;
