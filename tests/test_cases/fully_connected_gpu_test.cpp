@@ -163,7 +163,7 @@ TEST(fully_connected_gpu, x_f32) {
 }
 
 
-TEST(fully_connected_gpu, yxfb_f32) {
+TEST(fully_connected_gpu, yxfn_f32) {
     //  Input  : 2x2x1x2 - 2 batches 2 feature maps of size 2x1
     //  Output : 2x1 - 2 batches 1 neuron each
     //  Weights: 1x2x1x2 - 1 neuron with weights of 2 feature maps of size 2x1

@@ -53,7 +53,6 @@ pooling::arguments::arguments( neural::engine::type     eng,
     , stride(strd)
     , size(siz)
     , padding(padd) 
-    , output_offset({ 0,0 })
 {
     // verify if primitive has one output.
     if (in.output.size() != 1) throw std::runtime_error("more than one output in primitive isn't supported yet");
@@ -71,6 +70,16 @@ pooling::arguments::arguments( neural::engine::type     eng,
         output_memory.size.feature[0]
     };
     output = { memory::allocate({eng, o_frmt, output_size }) };
+    output_offset = vector<uint32_t>(
+        output[0].as<const memory&>().argument.size.batch.size(),
+        output[0].as<const memory&>().argument.size.spatial.size(),
+        output[0].as<const memory&>().argument.size.feature.size());
+    input_offset =
+    {
+        in.output[0].as<const memory&>().argument.size.batch.size(),
+        in.output[0].as<const memory&>().argument.size.spatial.size(),
+        in.output[0].as<const memory&>().argument.size.feature.size(),
+    };
 };
 
 

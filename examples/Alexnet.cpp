@@ -244,7 +244,8 @@ void execute_alexnet(primitive& input, primitive& output, engine::type eng)
         fc7,
         fc8,
         softmax,output }).wait();
-    instrumentation::log_memory_to_file(conv1.output[0]);
+    //instrumentation::log_memory_to_file(conv1.output[0],"conv1");
+    instrumentation::log_memory_to_file(output, "final_result");
 }
 
 void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng)

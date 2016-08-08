@@ -63,6 +63,11 @@ namespace neural {
                         }
             }
             break;
+        case memory::format::xb_f32:
+            for (uint32_t x = 0; x < sizex;x++)
+                    for (uint32_t batch_it = 0; batch_it < batch; batch_it++)
+                        files_handels[batch_it][0] << mem_ptr[input_it++] << std::endl;
+            break;
         default:
             throw std::runtime_error("format not implemented yet");
             break;
