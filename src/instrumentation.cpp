@@ -28,7 +28,7 @@ namespace neural {
     void instrumentation::log_memory_to_file(const primitive& mem, std::string prefix)
     {
         auto mem_arg = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>().argument : mem.output[0].as<const memory&>().argument;
-        auto mem_ptr = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>().pointer<float>() : mem.output[0].as<const memory&>().pointer;
+        auto mem_ptr = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>().pointer<float>() : mem.output[0].as<const memory&>().pointer<float>();
         time_t rawtime;
         char buf[85];
         time(&rawtime);
@@ -85,7 +85,7 @@ namespace neural {
         std::ostringstream temp;
         if (t_diff>0) {
             double t_d = static_cast<double>(t_diff);
-            std::string units[] = { "ns", "us", "ms", "s" };
+            static const std::string units[] = { "ns", "us", "ms", "s" };
             uint8_t     index = 0;
 
             while (t_d>1000 && index < 3) {
@@ -94,6 +94,7 @@ namespace neural {
             };
             temp << std::setprecision(3) << std::fixed << t_d << " " + units[index];
         }
+        temp << "Error: time interval is less than zero";
         return temp.str();
     }
     std::string instrumentation::timer::clocks_diff_string(uint64_t c_diff) {

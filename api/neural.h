@@ -893,6 +893,7 @@ private:
 
 class instrumentation
 {
+public:
     struct timer
     {
     private:
@@ -904,12 +905,12 @@ class instrumentation
         uint64_t                                        clocks_diff;
 
     public:
-        void start() {
+        DLL_SYM void start() {
             time_tick = std::chrono::high_resolution_clock::now();
             clocks_tick = __rdtsc();
         };
 
-        void stop() {
+        DLL_SYM void stop() {
             clocks_tock = __rdtsc();
             time_tock = std::chrono::high_resolution_clock::now();
             clocks_diff = clocks_tock - clocks_tick;
@@ -919,13 +920,13 @@ class instrumentation
         DLL_SYM uint64_t     get_time_diff() { return time_diff; };
         DLL_SYM uint64_t     get_clocks_diff() { return clocks_diff; };
 
-        std::string time_diff_string() { return time_diff_string(time_diff); };
-        std::string clocks_diff_string() { return clocks_diff_string(clocks_diff); };
+        DLL_SYM std::string time_diff_string() { return time_diff_string(time_diff); };
+        DLL_SYM std::string clocks_diff_string() { return clocks_diff_string(clocks_diff); };
 
         static std::string time_diff_string(uint64_t);
         static std::string clocks_diff_string(uint64_t);
     };
-public:
+
     DLL_SYM static void log_memory_to_file(const primitive&,std::string prefix = "");
 };
 

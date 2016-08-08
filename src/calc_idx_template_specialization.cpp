@@ -145,7 +145,6 @@ fptr choose_calculate_idx(neural::memory::format::type arg){
         case neural::memory::format::type::bs_yxf_bv24_f32:    return index<neural::memory::format::type::bs_yxf_bv24_f32>;
         case neural::memory::format::type::byxf_b24_f32:       return index<neural::memory::format::type::byxf_b24_f32>;
         case neural::memory::format::type::yxoi_o4_f32:        return index<neural::memory::format::type::yxoi_o4_f32>;
-            break;
         default:
             throw std::runtime_error("choose_calculate_idx has no case for memory::format " + std::to_string(arg));
     }

@@ -22,9 +22,12 @@
 
 using namespace neural;
 // AlexNet with weights & biases from file
-void execute_alexnet(primitive& input, primitive& output, engine::type eng)
+uint64_t execute_alexnet(primitive& input, primitive& output, engine::type eng)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
+    instrumentation::timer timer_build, timer_execution;
+    std::cout << "Building Alexnet started" << std::endl;
+    timer_build.start();
     auto conv1 = convolution::create(
     {
         eng,
@@ -232,8 +235,10 @@ void execute_alexnet(primitive& input, primitive& output, engine::type eng)
         fc8
     });
 
-    
-    
+    timer_build.stop();
+    std::cout << "Building Alexnet finished in " << timer_build.time_diff_string() << " with " << timer_build.clocks_diff_string() << std::endl;
+    std::cout << "Start execution" << std::endl;
+    timer_execution.start();
     execute({
         conv1,relu1,lrn1,pool1, //stage 0
         conv2_group2,relu2,lrn2, pool2,
@@ -244,8 +249,11 @@ void execute_alexnet(primitive& input, primitive& output, engine::type eng)
         fc7,
         fc8,
         softmax,output }).wait();
+    timer_execution.stop();
+    std::cout << "Alexnet execution finished in " << timer_execution.time_diff_string() << " with " << timer_execution.clocks_diff_string() << std::endl;
     //instrumentation::log_memory_to_file(conv1.output[0],"conv1");
     instrumentation::log_memory_to_file(output, "final_result");
+    return timer_execution.get_time_diff();
 }
 
 void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng)
@@ -278,6 +286,8 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng)
         });
         // reorder data
         execute({ reordered_input }).wait();
-        execute_alexnet(reordered_input, output, eng);
+        auto time = execute_alexnet(reordered_input, output, eng);
+        double ratio = 1000000000.0/ (double) time;
+        std::cout << "Frames per second:" << ratio * (double)batch_size << std::endl;
     }    
 }
