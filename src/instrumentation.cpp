@@ -40,7 +40,6 @@ namespace neural {
             auto batch = mem_arg.size.batch[0];
             auto feature = mem_arg.size.feature[0];
             auto sizex = mem_arg.size.spatial[0];
-            auto sizey = mem_arg.size.spatial[1];
             std::vector<std::vector<std::ofstream>> files_handels(batch);
             std::string dirpath(buf);
 
@@ -54,7 +53,7 @@ namespace neural {
             switch (mem_arg.format)
             {
             case memory::format::yxfb_f32:
-                for (uint32_t y = 0; y < sizey;y++)
+                for (uint32_t y = 0; y < mem_arg.size.spatial[1];y++)
                 {
                     for (uint32_t x = 0; x < sizex;x++)
                         for (uint32_t feature_it = 0; feature_it < feature; feature_it++)
