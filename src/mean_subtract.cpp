@@ -31,6 +31,30 @@ mean_subtract::arguments::arguments( neural::engine::type   eng,
 {
 };
 
+mean_subtract::arguments::arguments(neural::engine::type            eng,
+                                       neural::memory::format::type out_fmt,
+                                       primitive                    in,
+                                       primitive                    mean)
+{
+    // if input is previouse layer, not memory primitive need to set input to output memory of this primitive
+    auto input_mem = in.id() == type_id<const memory>()->id ? in : in.output[0];
+    if (in.id() != type_id<const memory>()->id) {
+        input = { in.output[0], mean };
+    }
+    else {
+        input = { in, mean };
+    }
+
+    auto input_arg = input_mem.as<const memory&>().argument;
+    neural::vector<uint32_t> output_size = {
+        input_arg.size.batch[0],
+        { { input_arg.size.spatial[0], input_arg.size.spatial[1] } },
+        input_arg.size.feature[0]
+    };
+
+    output = { memory::allocate({ eng, out_fmt, output_size }) };
+}
+
 // creates primitive with fully_connected implementation that supports provided arguments
 primitive mean_subtract::create(mean_subtract::arguments arg) {
     auto& input_arg = arg.input[0].primitive.as<const memory&>().argument;

@@ -275,6 +275,7 @@ struct mean_subtract : is_a_primitive {
         std::vector<primitive_at> input; // 2: input, mean
 
         DLL_SYM arguments(neural::engine::type, primitive out, primitive in, primitive mean);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, primitive in, primitive mean);
     };
     const arguments argument;
 
