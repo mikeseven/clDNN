@@ -71,7 +71,7 @@ void convolution_relu_gpu::implementation(const void *ptr) {
     auto& output_mem = this_conv->output_memory(0);
     std::vector<std::reference_wrapper<const neural::memory>> biases_mem;
     std::vector<std::reference_wrapper<const neural::memory>> filters_mem;
-    for (int i = 0; i < split; i++)
+    for (size_t i = 0; i < split; i++)
     {
         filters_mem.push_back(this_conv->argument.input[i * 2 + 1].primitive.as<const memory&>());
         biases_mem.push_back(this_conv->argument.input[i * 2 + 2].primitive.as<const memory&>());

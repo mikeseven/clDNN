@@ -51,7 +51,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     auto output = this_conv->output_memory(0).pointer<float>();
     std::vector<memory::ptr<float>> filters;
     std::vector<memory::ptr<float>> biases;
-    for (int i = 0; i < split; i++)
+    for (size_t i = 0; i < split; i++)
     {
         filters.push_back(this_conv->argument.input[i * 2 + 1].primitive.as<const memory&>().pointer<float>());
         biases.push_back(this_conv->argument.input[i * 2 + 2].primitive.as<const memory&>().pointer<float>());

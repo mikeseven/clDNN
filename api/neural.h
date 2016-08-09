@@ -258,6 +258,42 @@ private:
 
 
 
+
+// neural::mean_subtract
+//
+// Subtract mean from input
+//
+// Example:
+//
+//  auto input = memory::describe({engine::refetence, memory::format::yxfb_f32, { 16, {4, 8}, 3 }));
+//  auto output = memory::describe({engine::refetence, memory::format::yxfb_f32, { 16, {4, 8}, 3 }));
+//  auto mean = file::create({engine::cpu, "mean.nnb"});
+//  neural::primitive mean_subtract = mean_subtract::create({engine::reference, output, input, mean});
+//
+struct mean_subtract : is_a_primitive {
+    struct arguments {
+        neural::engine::type      engine;
+        std::vector<primitive>    output;
+        std::vector<primitive_at> input; // 2: input, mean
+
+        DLL_SYM arguments(neural::engine::type, primitive out, primitive in, primitive mean);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, primitive in, primitive mean);
+    };
+    const arguments argument;
+
+    struct query_entry : is_a_query_entry { mean_subtract::arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    DLL_SYM static primitive create(arguments);
+private:
+    mean_subtract(arguments arg) : is_a_primitive(type_id<const mean_subtract>()), argument(arg) {};
+    const std::vector<primitive_at> &input() const { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+    friend class is_a_primitive;
+};
+
+
+
+
 // struct common for convolution and convolution_relu to reduce code duplication
 struct convolution_common {
     struct arguments {

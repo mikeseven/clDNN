@@ -16,7 +16,7 @@
 
 
 #pragma once
-#include "FreeImage64/FreeImage.h"
+#include <FreeImage.h>
 #include <stdint.h>
 #include <string>
 namespace fi {

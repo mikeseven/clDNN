@@ -71,11 +71,30 @@ add_executable("${CLDNN_BUILD__PROJ}"
 set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY PROJECT_LABEL "${CLDNN_BUILD__PROJ_LABEL}")
 set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD__PROJ_OUTPUT_NAME}")
 
-
-# TODO: find_library for FreeImage and move to global common directory.
 target_link_libraries("${CLDNN_BUILD__PROJ}"
     "${CLDNN_BUILD__PROJ__clDNN}"
-    "${__CLDNN_Directory__common}/FreeImage64/FreeImage.lib"
+    FreeImage
   )
+
+# =================================== Custom pre- and post-steps =======================================
+
+set(__CLDNN_FindLibSuffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
+set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+find_library(CLDNN_FIND__FREEIMAGE_SHLPATH
+  NAMES FreeImage
+  PATHS ${CLDNN__FREEIMAGE_LIBDIRS}
+  NO_CMAKE_FIND_ROOT_PATH
+)
+set(CMAKE_FIND_LIBRARY_SUFFIXES ${__CLDNN_FindLibSuffixes})
+
+if(CLDNN_FIND__FREEIMAGE_SHLPATH)
+  add_custom_command(TARGET "${CLDNN_BUILD__PROJ}" POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CLDNN_FIND__FREEIMAGE_SHLPATH}" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/"
+      COMMENT "Copying FreeImage shared library to output..."
+    )
+endif()
+
+unset(CLDNN_FIND__FREEIMAGE_SHLPATH CACHE)
+unset(__CLDNN_FindLibSuffixes)
 
 # ======================================================================================================
