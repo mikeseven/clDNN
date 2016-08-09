@@ -89,7 +89,7 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES ${__CLDNN_FindLibSuffixes})
 
 if(CLDNN_FIND__FREEIMAGE_SHLPATH)
   add_custom_command(TARGET "${CLDNN_BUILD__PROJ}" POST_BUILD
-      COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CLDNN_FIND__FREEIMAGE_SHLPATH}" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CLDNN__TARGET_CFG_VAR}/"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CLDNN_FIND__FREEIMAGE_SHLPATH}" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/"
       COMMENT "Copying FreeImage shared library to output..."
     )
 endif()
