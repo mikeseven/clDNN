@@ -91,7 +91,7 @@ html::html(const std::string & file_name, const std::string & title)
 	}
 	else
 	{
-		throw (errno);
+		throw std::system_error(errno, std::system_category( ));
 	}
 }
 
