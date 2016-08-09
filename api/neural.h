@@ -891,43 +891,36 @@ private:
     worker_cpu(arguments arg, nn_thread_worker_pool &);
 };
 
-class instrumentation
+namespace instrumentation
 {
-public:
     struct timer
     {
     private:
         std::chrono::high_resolution_clock::time_point  time_tick;
         std::chrono::high_resolution_clock::time_point  time_tock;
-        uint64_t                                        time_diff;
-        uint64_t                                        clocks_tick;
-        uint64_t                                        clocks_tock;
-        uint64_t                                        clocks_diff;
 
     public:
         DLL_SYM void start() {
-            time_tick = std::chrono::high_resolution_clock::now();
-            clocks_tick = __rdtsc();
+            time_tick = std::chrono::steady_clock::now();
         };
 
         DLL_SYM void stop() {
-            clocks_tock = __rdtsc();
-            time_tock = std::chrono::high_resolution_clock::now();
-            clocks_diff = clocks_tock - clocks_tick;
-            time_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(time_tock - time_tick).count();
+            time_tock = std::chrono::steady_clock::now();
         };
 
-        DLL_SYM uint64_t     get_time_diff() { return time_diff; };
-        DLL_SYM uint64_t     get_clocks_diff() { return clocks_diff; };
+        DLL_SYM std::chrono::high_resolution_clock::duration get_time_diff() { 
+            return time_tock - time_tick; }
 
-        DLL_SYM std::string time_diff_string() { return time_diff_string(time_diff); };
-        DLL_SYM std::string clocks_diff_string() { return clocks_diff_string(clocks_diff); };
+        DLL_SYM std::string time_diff_string() {
+            return time_diff_string(std::chrono::duration_cast<std::chrono::nanoseconds>(time_tock - time_tick).count()); 
+        };
 
-        static std::string time_diff_string(uint64_t);
-        static std::string clocks_diff_string(uint64_t);
+        static std::string  time_diff_string(uint64_t);
     };
-
-    DLL_SYM static void log_memory_to_file(const primitive&,std::string prefix = "");
+    struct logger
+    {
+        DLL_SYM static void log_memory_to_file(const primitive&, std::string prefix = "");
+    };
 };
 
 } // namespace neural

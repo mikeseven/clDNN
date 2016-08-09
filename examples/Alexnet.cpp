@@ -22,7 +22,7 @@
 
 using namespace neural;
 // AlexNet with weights & biases from file
-uint64_t execute_alexnet(primitive& input, primitive& output, engine::type eng)
+std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, primitive& output, engine::type eng, bool dump_hl)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     instrumentation::timer timer_build, timer_execution;
@@ -236,7 +236,7 @@ uint64_t execute_alexnet(primitive& input, primitive& output, engine::type eng)
     });
 
     timer_build.stop();
-    std::cout << "Building Alexnet finished in " << timer_build.time_diff_string() << " with " << timer_build.clocks_diff_string() << std::endl;
+    std::cout << "Building Alexnet finished in " << timer_build.time_diff_string() << std::endl;
     std::cout << "Start execution" << std::endl;
     timer_execution.start();
     execute({
@@ -250,13 +250,30 @@ uint64_t execute_alexnet(primitive& input, primitive& output, engine::type eng)
         fc8,
         softmax,output }).wait();
     timer_execution.stop();
-    std::cout << "Alexnet execution finished in " << timer_execution.time_diff_string() << " with " << timer_execution.clocks_diff_string() << std::endl;
+    std::cout << "Alexnet execution finished in " << timer_execution.time_diff_string() << std::endl;
     //instrumentation::log_memory_to_file(conv1.output[0],"conv1");
-    instrumentation::log_memory_to_file(output, "final_result");
+    if (dump_hl)
+    {
+        instrumentation::logger::log_memory_to_file(input, "input0");
+        instrumentation::logger::log_memory_to_file(conv1.output[0], "conv1");
+        instrumentation::logger::log_memory_to_file(relu1.output[0], "relu1");
+        instrumentation::logger::log_memory_to_file(lrn1.output[0], "lrn1");
+        instrumentation::logger::log_memory_to_file(pool1.output[0], "pool1");
+        instrumentation::logger::log_memory_to_file(conv2_group2.output[0], "conv2_group2");
+        instrumentation::logger::log_memory_to_file(relu2.output[0], "relu2");
+        instrumentation::logger::log_memory_to_file(pool2.output[0], "pool2");
+        instrumentation::logger::log_memory_to_file(conv3.output[0], "conv3");
+        instrumentation::logger::log_memory_to_file(relu3.output[0], "relu3");
+        // for now its enought. rest wil be done when we have equals those values
+    }
+    else
+    {
+        instrumentation::logger::log_memory_to_file(output, "final_result");
+    }
     return timer_execution.get_time_diff();
 }
 
-void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng)
+void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool dump_hl)
 {
     auto input  = memory::allocate({ engine::reference, memory::format::byxf_f32,{ batch_size,{ 224, 224 }, 3, } });
     auto output = memory::allocate({ engine::reference, memory::format::xb_f32,{ batch_size,{ 1000 }} });
@@ -286,8 +303,8 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng)
         });
         // reorder data
         execute({ reordered_input }).wait();
-        auto time = execute_alexnet(reordered_input, output, eng);
-        double ratio = 1000000000.0/ (double) time;
-        std::cout << "Frames per second:" << ratio * (double)batch_size << std::endl;
+        auto time = execute_alexnet(reordered_input, output, eng, dump_hl);
+        auto ratio =  std::chrono::duration_cast<std::chrono::milliseconds>(time);
+        std::cout << "Frames per second:" << (double)batch_size*1000.0/(double)ratio.count() << std::endl;
     }    
 }

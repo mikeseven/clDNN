@@ -44,7 +44,7 @@ void parse_parameters(std::map<std::string, std::string> &config, std::vector<st
 int main(int argc, char *argv[])
 {
     // TODO: create header file for all examples
-    extern void alexnet(uint32_t, std::string, neural::engine::type);
+    extern void alexnet(uint32_t, std::string, neural::engine::type,bool);
 
     if (argc <= 1)
     {
@@ -58,11 +58,14 @@ int main(int argc, char *argv[])
             can be : alexnet, caffenet_float, caffenet_int16 or lenet_float
             --engine=<type>
             engine type: can be referenced or gpu
+            --dump_hidden_layers
+            dumps results from hidden layers
             --input=<directory>
             path to directory that contains images to be classfied)_help_";
     }
     else
     {
+        bool dump_results = false;
         std::vector<std::string> arg;
         for (int n = 1; n<argc; ++n) arg.push_back(argv[n]);
         // parse configuration (command line and from file)
@@ -74,6 +77,7 @@ int main(int argc, char *argv[])
         if (config.find("batch") == not_found) config["batch"] = "32";
         if (config.find("model") == not_found) config["model"] = "alexnet";
         if (config.find("engine") == not_found) config["engine"] = "referenced";
+        if (config.find("dump_hidden_layers") != not_found) dump_results = true;
         if (config.find("input") == not_found)
         {
             std::cout << "Directory path has to be defined using current dir"<<std::endl;
@@ -85,7 +89,8 @@ int main(int argc, char *argv[])
                 alexnet(
                     std::stoi(config["batch"]),
                     config["input"],
-                    config["engine"].compare("gpu") == 0 ? neural::engine::gpu : neural::engine::reference);
+                    config["engine"].compare("gpu") == 0 ? neural::engine::gpu : neural::engine::reference,
+                    dump_results);
             }
             catch (std::exception &e) {
                 std::cerr << e.what();
