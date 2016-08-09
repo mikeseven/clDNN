@@ -261,7 +261,7 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng)
         ? img_list.size() / batch_size : img_list.size() / batch_size + 1;
     std::vector<std::string> image_in_batches;
 
-	html output_file("alexnet.html", "alexnet run");
+	html output_file("alexnet", "alexnet run");
     for (auto batch = 0; batch < number_of_batches; batch++)
     {
         image_in_batches.clear();

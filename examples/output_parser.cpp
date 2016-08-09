@@ -2,6 +2,9 @@
 #include <algorithm>
 #include <sstream>
 #include <iomanip>
+#include <cerrno>
+#include <system_error>
+#include <chrono>
 
 namespace neural
 {
@@ -29,7 +32,9 @@ std::vector<std::vector<std::pair<float, size_t>>> read_output(const neural::mem
 				ret[i].push_back(std::make_pair(ptr[offset++], c));
 			}
 		}
-		for (auto& v : ret) { std::sort(v.begin( ), v.end( ), [](const auto& l, const auto& r){ return l.first > r.first; }); }
+		for (auto& v : ret) { std::sort(v.begin( ), v.end( ), 
+										[](const std::pair<float, size_t>& l, const std::pair<float, size_t>& r)
+											{ return l.first > r.first; }); }
 		break;
 	default:
 		throw std::exception("Unsupported format for result parser");
@@ -50,12 +55,13 @@ std::vector<std::string> load_category_names(const std::string & file_name)
 		while (std::getline(data, tmp)) { ret.push_back(tmp); }
 		return ret;
 	}
-	throw(errno);
+	throw std::system_error(errno, std::system_category( ));
 }
 
 html::html(const std::string & file_name, const std::string & title)
 {
-	html_file.open(file_name, std::ios::out | std::ios::trunc);
+	auto t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now( ));
+	html_file.open(file_name + "_" + std::to_string(t) + ".html", std::ios::out | std::ios::trunc);
 	if(html_file.is_open( ))
 	{
 		// begin HTML file
@@ -64,24 +70,24 @@ html::html(const std::string & file_name, const std::string & title)
 			<html>
 			<head>
 				<meta charset="utf-8" />
-				<title>)"<< title<< R"(</title>
+				<title>)"<< title << R"(</title>
 				<style>
-					body { font-family: sans-serif;}
+					body {font-family: sans-serif;}
 					p, h1, h2, th, td, li {padding: 0.5em;}
 					img {margin: 0.5em 0px 0px 0.5em;}
-					table.recognitions { padding:0.5em;}
-					.thright { text-align:right;}
+					table.recognitions {padding:0.5em;}
+					.thright {text-align:right;}
 					.recognition {font-family:monospace;
 					vertical-align:top;width:300px;
 					-webkit-box-shadow: 5px 5px 9px 1px rgba(0,0,0,0.79);
 					-moz-box-shadow: 5px 5px 9px 1px rgba(0, 0, 0, 0.79);
 					box-shadow: 5px 5px 9px 1px rgba(0, 0, 0, 0.79);}
-					.goal { font-weight: bold; color: red;}
+					.goal {font-weight: bold; color: red;}
 				</style>
 			</head>
 			<body>)";
 		// HTML file content
-		html_file << "<h2>" << title << "</h2>"<< std::endl << "<ul> " << "</ul><hr><hr>"<< std::endl;
+		html_file << "<h2>" << title << "</h2>"<< std::endl << "<ul> " << "</ul><hr><hr>" << std::endl;
 	}
 	else
 	{
