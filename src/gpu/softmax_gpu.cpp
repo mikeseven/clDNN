@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "softmax_gpu.h"
+#include "api/neural.h"
 #include "multidimensional_counter.h"
 #include "implementation_map.h"
 #include "kernel.h"
