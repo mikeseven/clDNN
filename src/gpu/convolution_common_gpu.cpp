@@ -148,7 +148,7 @@ namespace neural {
         const int i_ifm_num = input_size[1];
 
         const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % dst_size[2]) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
-        const int y = (((idx / FILTER_OUTPUT_FEATURE_NUM) * STRIDE_SIZE_Y) / INPUT_SIZE_X) * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
+        const int y = ((idx / FILTER_OUTPUT_FEATURE_NUM) / dst_size[2] * STRIDE_SIZE_Y) + INPUT_OFFSET_SIZE_Y;
 
         pDst[global_id] = 0;
         for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
