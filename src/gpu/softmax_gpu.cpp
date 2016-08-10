@@ -186,6 +186,9 @@ namespace normalization {
 
     softmax_gpu::~softmax_gpu() {}
 
+// TODO: read this value from ocl device!!!
+#define MAX_LWS 256
+
 void softmax_gpu::implementation(const void *ptr) {
     auto this_softmax = static_cast<const softmax *>(ptr);
 
@@ -220,11 +223,12 @@ void softmax_gpu::implementation(const void *ptr) {
     {
         auto _preferred_lws = batch_num;
         auto _items_num = dstSize / _preferred_lws;
-        while (_items_num > 32 || _preferred_lws < _items_num)
+        while ( (_items_num > 32 || _preferred_lws < _items_num) && ((_preferred_lws << 1) <= MAX_LWS) )
         {
             _preferred_lws <<= 1;
             _items_num >>= 1;
         }
+
         auto _leftovers = dstSize % _preferred_lws;
 
         gpu::jit_constants mem_consts{
