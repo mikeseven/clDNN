@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "pooling_gpu.h"
+#include "api/neural.h"
 #include "multidimensional_counter.h"
 #include "implementation_map.h"
 #include "kernel.h"
@@ -59,67 +59,86 @@ KERNEL(Pooling_GPU_max)(__global neural_memory* input_mem, __global neural_memor
 )__krnl";
 
 namespace neural {
+struct pooling_gpu : is_an_implementation {
+    pooling &outer;
+    gpu::kernel _kernel;
 
-    pooling_gpu::pooling_gpu(pooling &arg)
-        : is_an_implementation(neural::type_id<pooling_gpu>())
-        , outer(arg) {};
-    pooling_gpu::~pooling_gpu() {};
-    void pooling_gpu::implementation(const void *ptr) {
-            auto this_pooling = static_cast<const pooling *>(ptr);
-            
-            // input
-            auto& input_mem = this_pooling->input_memory(0);
+    pooling_gpu(pooling &arg) : is_an_implementation(neural::type_id<pooling_gpu>())
+        , outer(arg) 
+        , _kernel(select_kernel_name(), get_jit_constants())
+    {}
 
-            // output
-            auto& output_mem = this_pooling->output_memory(0);
+    const std::string& select_kernel_name() const {
+        return kernelName;
+    }
 
-            auto& input_arg = this_pooling->input_memory(0).argument;
+    gpu::jit_constants get_jit_constants() const {
+        auto& window = outer.argument.size;
+        auto& stride = outer.argument.stride;
 
-            auto& input_buffer_size = input_arg.size;
-            auto& input_offset = this_pooling->argument.input_offset;
+        return gpu::jit_constants {
+            gpu::make_jit_constant("WINDOW", window),
+            gpu::make_jit_constant("STRIDE", stride)
+        };
+    }
 
-            auto& output_arg = this_pooling->argument.output[0].as<const memory&>().argument;
-            auto& output_buffer_size = output_arg.size;
-            auto& output_offset = this_pooling->argument.output_offset;
-            auto& output_size = this_pooling->argument.output_size;
+    static void implementation(const void *ptr) {
+        auto me = static_cast<const pooling_gpu*>(ptr);
+        auto& outer = me->outer;
 
-            auto& stride  = this_pooling->argument.stride;
-            auto& window  = this_pooling->argument.size;
-            auto& padding = this_pooling->argument.padding;
+        // input
+        auto& input_mem = outer.input_memory(0);
 
-            if (padding::zero != padding)                                      throw std::runtime_error("Pooling support only zero padding.");
-            if (input_arg.format != memory::format::yxfb_f32)                  throw std::runtime_error("Pooling reference uses yxfb_f32 format."); //todo, only this format?
-            if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::runtime_error("Pooling input/output number of dimension does not match.");
-            if (stride.raw.size() != output_buffer_size.raw.size())            throw std::runtime_error("Pooling stride/output number of dimension does not match.");
-            if (window.raw.size() != output_buffer_size.raw.size())            throw std::runtime_error("Pooling window_size/output number of dimension does not match.");
-            if (input_arg.format != output_arg.format)                         throw std::runtime_error("Pooling input/output data format does not match.");
+        // output
+        auto& output_mem = outer.output_memory(0);
 
-            size_t dstSize = output_mem.count();
+        size_t dstSize = output_mem.count();
 
-            // general formula: output size = (input size - window size) / step + 1
-            for (size_t i = 0; i < input_offset.raw.size(); ++i) {
-                if (output_buffer_size.raw[i] < output_size.raw[i] + output_offset.raw[i])
-                    throw std::runtime_error("Pooling output buffer size is to small.");
-            }
+        switch (outer.argument.mode) {
+        case pooling::mode::max:
+            me->_kernel.run<gpu::input_mem, gpu::output_mem>
+                ({ dstSize, std::min(dstSize, static_cast<size_t>(16)) }, input_mem, output_mem);
+            break;
+        case pooling::mode::average:
+            break;
+        default:
+            throw std::runtime_error("Unknown pooling mode.");
+        }
+    }
 
-            gpu::jit_constants mem_consts{
-                gpu::make_jit_constant("WINDOW", window),
-                gpu::make_jit_constant("STRIDE", stride)
-            };
+    static is_an_implementation *create(pooling &arg) {
+        auto& input_arg = arg.input_memory(0).argument;
+        auto& input_offset = arg.argument.input_offset;
 
-            if (this_pooling->argument.mode == pooling::mode::max)
-            {
-                auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem>{ kernelName, mem_consts };
-                kernel({ dstSize, std::min( dstSize, static_cast<size_t>(16) ) }, input_mem, output_mem);
-            }
-            else if (this_pooling->argument.mode == pooling::mode::average)
-            {
-            }
-            else
-            {
-                throw std::runtime_error("Unknown pooling mode.");
-            }
-    };
+        auto& input_buffer_size = input_arg.size;
+        auto& output_arg = arg.output_memory(0).argument;
+        auto& output_buffer_size = output_arg.size;
+        auto& output_size = arg.argument.output_size;
+        auto& output_offset = arg.argument.output_offset;
+        auto& stride = arg.argument.stride;
+        auto& window = arg.argument.size;
+        auto& padding = arg.argument.padding;
+
+        if (padding::zero != padding)                                      throw std::logic_error("Pooling supports only zero padding.");
+        if (input_arg.format != memory::format::yxfb_f32)                  throw std::logic_error("Pooling reference uses yxfb_f32 format."); //todo, only this format?
+        if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::invalid_argument("Pooling input/output number of dimension does not match.");
+        if (stride.raw.size() != output_buffer_size.raw.size())            throw std::invalid_argument("Pooling stride/output number of dimension does not match.");
+        if (window.raw.size() != output_buffer_size.raw.size())            throw std::invalid_argument("Pooling window_size/output number of dimension does not match.");
+        if (input_arg.format != output_arg.format)                         throw std::invalid_argument("Pooling input/output data format does not match.");
+        
+        // general formula: output size = (input size - window size) / step + 1
+        for (size_t i = 0; i < input_offset.raw.size(); ++i) {
+            if (output_buffer_size.raw[i] < output_size.raw[i] + output_offset.raw[i])
+                throw std::runtime_error("Pooling output buffer size is to small.");
+        }
+
+        return new pooling_gpu(arg);
+    }
+
+    task_group work() override { return{ { task{ implementation, this } }, schedule::single }; };
+
+};
+
 
 
 namespace

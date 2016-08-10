@@ -79,13 +79,52 @@ const std::string kernelCode_End = R"__krnl(
 namespace neural {
 
     struct fully_connected_relu_gpu : is_an_implementation {
-        const fully_connected_relu &outer;
-       
+        fully_connected_relu &outer;
+        bool inline_memory;
+        gpu::kernel _kernel;
+
         fully_connected_relu_gpu(fully_connected_relu &arg)
             : is_an_implementation(neural::type_id<fully_connected_relu_gpu>())
             , outer(arg)
-        {};
+            , inline_memory(can_inline_memory(arg.input_memory(1)))
+            , _kernel(select_kernel_name(), get_jit_constants())
+        {}
         ~fully_connected_relu_gpu() {}
+
+        static bool can_inline_memory(const neural::memory& mem) {
+            return mem.count() <= 1024;
+        }
+
+        const std::string& select_kernel_name() const {
+            // input
+            auto& input_mem = outer.input_memory(0);
+            if (input_mem.argument.format == memory::format::yxfb_f32) {
+                return inline_memory ? kernelName_yxfn : kernelName_yxfn_memory;
+            }
+            else {
+                return inline_memory ? kernelName_xb : kernelName_xb_memory;
+            }
+        }
+
+        gpu::jit_constants get_jit_constants() const {
+            // weights
+            auto& weight_mem = outer.input_memory(1);
+            // bias
+            auto& bias_mem = outer.input_memory(2);
+
+            float negative_slope = outer.argument.negative_slope;
+
+            return inline_memory
+                ? gpu::jit_constants {
+                    gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope)),
+                    gpu::make_jit_constant("WEIGHTS", weight_mem),
+                    gpu::make_jit_constant("BIASES", bias_mem)
+                    }
+                : gpu::jit_constants {
+                    gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope)),
+                    gpu::make_jit_constant("WEIGHTS", weight_mem.argument.size)
+                    };
+        }
 
         static void implementation(const void *ptr) {
             auto me = static_cast<const fully_connected_relu_gpu *>(ptr);
@@ -102,37 +141,6 @@ namespace neural {
             
             auto output_bufSize = output_mem.count();
 
-            float negative_slope = this_fc->argument.negative_slope;
-
-            // validate arguments
-            if (input_mem.argument.format == memory::format::yxfb_f32)
-            {
-                assert(input_mem.argument.size.feature.size() == weight_mem.argument.size.feature.size());
-                assert(input_mem.argument.size.batch.size() == weight_mem.argument.size.batch.size());
-                assert(input_mem.argument.size.feature[0] == weight_mem.argument.size.feature[0]);
-            }
-            else
-            {
-                assert(1 == input_mem.argument.size.feature.size());
-                assert(1 == input_mem.argument.size.batch.size());
-                assert(1 == input_mem.argument.size.feature[0]);
-            }
-
-            gpu::jit_constants mem_consts{
-                gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope))
-            };
-
-            bool inline_memory = weight_mem.count() > 1024 ? false : true;
-            if (inline_memory)
-            {
-                mem_consts.add_constant(gpu::make_jit_constant("WEIGHTS", weight_mem));
-                mem_consts.add_constant(gpu::make_jit_constant("BIASES", bias_mem));
-            }
-            else
-            {
-                mem_consts.add_constant(gpu::make_jit_constant("WEIGHTS", weight_mem.argument.size));
-            }
-
             // calculate local workgroup size
             int lws = 16;
             while (output_bufSize % lws)
@@ -142,28 +150,29 @@ namespace neural {
 
             if (input_mem.argument.format == memory::format::yxfb_f32)
             {
-                if (inline_memory)
+
+                if (me->inline_memory)
                 {
-                    gpu::kernel<gpu::input_mem, gpu::output_mem> _kernel(kernelName_yxfn, mem_consts);
-                    _kernel({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem >
+                        ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
                 }
                 else
                 {
-                    gpu::kernel<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem> _kernel(kernelName_yxfn_memory, mem_consts);
-                    _kernel({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                        ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
                 }
             }
             else
             {
-                if (inline_memory)
+                if (me->inline_memory)
                 {
-                    gpu::kernel<gpu::input_mem, gpu::output_mem> _kernel(kernelName_xb, mem_consts);
-                    _kernel({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem>
+                        ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
                 }
                 else
                 {
-                    gpu::kernel<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem> _kernel(kernelName_xb_memory, mem_consts);
-                    _kernel({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                        ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
                 }
             }
         }
@@ -173,6 +182,21 @@ namespace neural {
         }
 
         static is_an_implementation *create(fully_connected_relu &arg) {
+            // input
+            auto& input_mem = arg.input_memory(0);
+            // weights
+            auto& weight_mem = arg.input_memory(1);
+
+            // validate arguments
+            if (input_mem.argument.format == memory::format::yxfb_f32) {
+                assert(input_mem.argument.size.feature.size() == weight_mem.argument.size.feature.size());
+                assert(input_mem.argument.size.batch.size() == weight_mem.argument.size.batch.size());
+                assert(input_mem.argument.size.feature[0] == weight_mem.argument.size.feature[0]);
+            } else {
+                assert(1 == input_mem.argument.size.feature.size());
+                assert(1 == input_mem.argument.size.batch.size());
+                assert(1 == input_mem.argument.size.feature[0]);
+            }
             return new fully_connected_relu_gpu(arg);
         };
     };

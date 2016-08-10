@@ -14,8 +14,8 @@
 // limitations under the License.
 */
 
+#include "api/neural.h"
 #include "multidimensional_counter.h"
-#include "lrn_gpu.h"
 #include "implementation_map.h"
 #include "kernel.h"
 
@@ -63,37 +63,33 @@ KERNEL (lrn_GPU)(__global neural_memory* input_mem, __global neural_memory* dst_
 )__krnl";
 
 namespace neural {
+struct lrn_gpu : is_an_implementation {
+    normalization::response& outer;
+        gpu::kernel _kernel;
 
-    lrn_gpu::lrn_gpu(normalization::response &arg)
-        : is_an_implementation(neural::type_id<lrn_gpu>())
-        , outer(arg) {};
+    lrn_gpu(normalization::response &arg): is_an_implementation(neural::type_id<lrn_gpu>())
+        , outer(arg)
+        , _kernel(kernelName)
+    {}
 
-    lrn_gpu::~lrn_gpu() {};
+    static void implementation(const void *ptr) {
+        auto me = static_cast<const lrn_gpu*>(ptr);
+        auto& outer = me->outer;
 
-    void lrn_gpu::implementation(const void *ptr) {
+        auto& input_mem = outer.input_memory(0);
+        auto& output_mem = outer.output_memory(0);
 
-        auto this_lrn = static_cast<const normalization::response *>(ptr);
+        auto size = outer.argument.size;
 
-        auto& input_offset = this_lrn->argument.input_offset;
-        auto& padding = this_lrn->argument.padding;
-        auto& size = this_lrn->argument.size;
-
-        auto& k = this_lrn->argument.k;
-        auto& alpha = this_lrn->argument.alpha;
-        auto& beta = this_lrn->argument.beta;
-
-        auto input_arg  = this_lrn->input_memory(0).argument;
-        auto output_arg = this_lrn->output_memory(0).argument;
-
-        if (input_arg.size.raw.size() != output_arg.size.raw.size())
-            throw std::runtime_error("lrn input/output number of dimension does not match [iput size=" + std::to_string(input_arg.size.raw.size())
-                                     + ", output size=" + std::to_string(output_arg.size.raw.size()));
-
-        vector<int32_t> help_input_offset({ input_offset });
+        vector<int32_t> help_input_offset({ outer.argument.input_offset });
         help_input_offset.feature[0] -= static_cast<int32_t>(size / 2);
 
-        auto& input_mem = this_lrn->input_memory(0);
-        auto& output_mem = this_lrn->output_memory(0);
+        auto k = outer.argument.k;
+        auto alpha = outer.argument.alpha;
+        auto beta = outer.argument.beta;
+
+        auto padding = outer.argument.padding;
+
         size_t dstSize = output_mem.count();
 
         int lws = 16;
@@ -105,14 +101,36 @@ namespace neural {
         switch (padding) {
         case padding::zero:
         {
-            gpu::kernel<gpu::input_mem, gpu::output_mem, cl_uint, cl_float, cl_float, cl_float, cl_int> kernel(kernelName);
-            kernel({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) }, input_mem, output_mem, size, k, alpha, beta, help_input_offset.feature[0]);
+            me->_kernel.run<gpu::input_mem, gpu::output_mem, cl_uint, cl_float, cl_float, cl_float, int32_t>
+                ({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) },
+                    input_mem,
+                    output_mem,
+                    size,
+                    k,
+                    alpha,
+                    beta,
+                    help_input_offset.feature[0]);
             break;
         }
         default:
             throw std::runtime_error("Unknown padding mode in lrn");
-        }        
+        }
     }
+
+
+    static is_an_implementation *create(normalization::response &arg) {
+        auto input_arg = arg.input_memory(0).argument;
+        auto output_arg = arg.output_memory(0).argument;
+
+        if (input_arg.size.raw.size() != output_arg.size.raw.size())
+            throw std::runtime_error("lrn input/output number of dimension does not match [iput size=" + std::to_string(input_arg.size.raw.size())
+                + ", output size=" + std::to_string(output_arg.size.raw.size()));
+        return new lrn_gpu(arg);
+    }
+
+    task_group work() override { return{ { task{ implementation, this } }, schedule::single }; }
+
+};
 
     namespace {
         struct attach {

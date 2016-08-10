@@ -18,16 +18,3 @@
 
 #include "api/neural.h"
 
-namespace neural {
-    struct convolution_gpu : is_an_implementation {
-        convolution_gpu(convolution &arg);
-        ~convolution_gpu();
-        static void implementation(const void *ptr);
-        const convolution &outer;
-
-        static is_an_implementation *create(convolution &arg) { return new convolution_gpu(arg); };
-        task_group work() override {
-            return{ { task{ implementation, &outer } }, schedule::single };
-        }
-    };
-}

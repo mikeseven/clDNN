@@ -179,65 +179,102 @@ KERNEL (softmax_gpu_batches)(__global neural_memory* input_mem, __global neural_
 )__krnl";
 namespace neural {
 namespace normalization {
+struct softmax_gpu : is_an_implementation {
+    softmax &outer;
+    gpu::kernel _kernel;
 
-    softmax_gpu::softmax_gpu(softmax &arg)
-    : is_an_implementation(neural::type_id<softmax_gpu>())
-    , outer(arg) {}
+    softmax_gpu(softmax &arg) : is_an_implementation(neural::type_id<softmax_gpu>())
+        , outer(arg) 
+        , _kernel(select_kernel_name(), get_jit_constants())
+    {}
 
-    softmax_gpu::~softmax_gpu() {}
+    const std::string& select_kernel_name() const {
+        return outer.argument.output_size.batch[0] == 1 ? kernelName : kernelName2;
+    }
 
-void softmax_gpu::implementation(const void *ptr) {
-    auto this_softmax = static_cast<const softmax *>(ptr);
+    gpu::jit_constants get_jit_constants() const {
+        auto batch_num = outer.argument.output_size.batch[0];
 
-    auto& output_size   = this_softmax->argument.output_size;
+        auto dstSize = outer.output_memory(0).count();
 
-    assert( 1 == output_size.feature.size() );
-    assert( 1 == output_size.batch.size()   );
+        size_t items_num = 0;
+        size_t preferred_lws = 0;
+        size_t preferred_gws = 0;
+        size_t leftovers = 0;
 
-    auto& input_mem = this_softmax->input_memory(0);
-    auto& output_mem = this_softmax->output_memory(0);
-    auto dstSize = output_mem.count();
+        if (batch_num == 1)
+        {
+            preferred_lws = dstSize < 32 ? dstSize : 32;
+            preferred_gws = dstSize < 32 ? dstSize : dstSize - (dstSize % preferred_lws);
+            items_num = preferred_gws / preferred_lws;
+            leftovers = dstSize < 32 ? 0 : dstSize % preferred_lws;
+        }
+        else
+        {
+            preferred_lws = batch_num;
+            items_num = dstSize / preferred_lws;
+            while (items_num > 32 || preferred_lws < items_num)
+            {
+                preferred_lws <<= 1;
+                items_num >>= 1;
+            }
+            preferred_gws = preferred_lws;
+            leftovers = dstSize % preferred_lws;
+        }
 
-    auto batch_num = output_size.batch[0];
-    if (batch_num == 1)
-    {
-        const auto preferred_lws = dstSize < 32 ? dstSize : 32;
-        const auto preferred_gws = dstSize < 32 ? dstSize : dstSize - (dstSize % preferred_lws);
-        const auto items_num = preferred_gws / preferred_lws;
-        const auto leftovers = dstSize < 32 ? 0 : dstSize % preferred_lws;
+        assert(items_num > 0 && preferred_lws > 0 && preferred_gws > 0 && leftovers > 0);
 
-        gpu::jit_constants mem_consts{
+        return gpu::jit_constants{
             gpu::make_jit_constant("ITEMS_NUM", std::to_string(items_num)),
             gpu::make_jit_constant("LWS", std::to_string(preferred_lws)),
             gpu::make_jit_constant("GWS", std::to_string(preferred_gws)),
             gpu::make_jit_constant("LEFTOVERS", std::to_string(leftovers))
         };
-
-        gpu::kernel<gpu::input_mem, gpu::output_mem> kernel(kernelName, mem_consts);
-        kernel({ preferred_gws, preferred_lws }, input_mem, output_mem);
     }
-    else
-    {
-        auto _preferred_lws = batch_num;
-        auto _items_num = dstSize / _preferred_lws;
-        while (_items_num > 32 || _preferred_lws < _items_num)
+
+    static void implementation(const void *ptr) {
+        auto me = static_cast<const softmax_gpu*>(ptr);
+        auto& outer = me->outer;
+
+        auto& output_size = outer.argument.output_size;
+
+        assert(1 == output_size.feature.size());
+        assert(1 == output_size.batch.size());
+
+        auto& input_mem = outer.input_memory(0);
+        auto& output_mem = outer.output_memory(0);
+        auto dstSize = output_mem.count();
+
+        auto batch_num = output_size.batch[0];
+
+        size_t preferred_lws = 0;
+        size_t preferred_gws = 0;
+
+        if (batch_num == 1)
         {
-            _preferred_lws <<= 1;
-            _items_num >>= 1;
+            preferred_lws = dstSize < 32 ? dstSize : 32;
+            preferred_gws = dstSize < 32 ? dstSize : dstSize - (dstSize % preferred_lws);
         }
-        auto _leftovers = dstSize % _preferred_lws;
+        else
+        {
+            preferred_lws = batch_num;
+            auto items_num = dstSize / preferred_lws;
+            while (items_num > 32 || preferred_lws < items_num)
+            {
+                preferred_lws <<= 1;
+                items_num >>= 1;
+            }
+            preferred_gws = preferred_lws;
+        }
 
-        gpu::jit_constants mem_consts{
-            gpu::make_jit_constant("ITEMS_NUM", std::to_string(_items_num)),
-            gpu::make_jit_constant("LWS", std::to_string(_preferred_lws)),
-            gpu::make_jit_constant("GWS", std::to_string(_preferred_lws)),
-            gpu::make_jit_constant("LEFTOVERS", std::to_string(_leftovers))
-        };
-
-        gpu::kernel<gpu::input_mem, gpu::output_mem> kernel(kernelName2, mem_consts);
-        kernel({ _preferred_lws, _preferred_lws }, input_mem, output_mem);
+        me->_kernel.run<gpu::input_mem, gpu::output_mem>
+            ({ preferred_gws, preferred_lws }, input_mem, output_mem);
     }
-}
+
+    static is_an_implementation *create(softmax &arg) { return new softmax_gpu(arg); };
+    task_group work() override { return{ { task{ implementation, this } }, schedule::single }; };
+
+};
 
 namespace {
 struct attach {

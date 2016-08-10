@@ -40,7 +40,6 @@ public:
 
     neural::primitive input  = memory::allocate({engine::gpu, memory::format::xb_f32, {input_b, {{input_x}}, 1}});
     neural::primitive output = memory::allocate({engine::gpu, memory::format::xb_f32, {output_b, {{output_x}}, 1}});
-    neural::primitive act    = normalization::softmax::create({engine::gpu, output, input});
 
     void compare_out_buffer_with_expected() {
         for(size_t i = 0; i < out_size; ++i) {
@@ -76,6 +75,9 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, input_same_values) {
     std::vector<float> in_b(std::begin(in_buffer), std::end(in_buffer));
 
     set_values(input, in_b);
+
+    neural::primitive act = normalization::softmax::create({ engine::gpu, output, input });
+
     execute({input, output, act}).wait();
 
     auto output_ptr = output.as<const memory&>().pointer<float>();
@@ -98,6 +100,8 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, input_same_values_batch_wise) {
     // fill buffer with the expected 0.1f value
     for(size_t i = 0; i < out_size; ++i)
         expected_buffer[i] = 0.1f;
+
+    neural::primitive act = normalization::softmax::create({ engine::gpu, output, input });
 
     execute({input, output, act}).wait();
 
@@ -146,6 +150,8 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, values_batch_wise) {
     // out_buffer filled with non-signaling NaN
     for(size_t i = 0; i < out_size; ++i)
         out_buffer[i] = NAN;
+
+    neural::primitive act = normalization::softmax::create({ engine::gpu, output, input });
 
     execute({input, output, act}).wait();
     auto output_ptr = output.as<const memory&>().pointer<float>();

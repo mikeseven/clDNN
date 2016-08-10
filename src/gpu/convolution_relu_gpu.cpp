@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "convolution_relu_gpu.h"
+#include "api/neural.h"
 #include "multidimensional_counter.h"
 #include "convolution_common_gpu.h"
 #include "implementation_map.h"
@@ -44,85 +44,117 @@ const std::string kernelCode_End = R"__krnl(
 }
 )__krnl";
 
-convolution_relu_gpu::convolution_relu_gpu(convolution_relu &arg)
+struct convolution_relu_gpu : is_an_implementation {
+    convolution_relu &outer;
+    gpu::kernel _kernel;
+
+    convolution_relu_gpu(convolution_relu &arg)
         : is_an_implementation(neural::type_id<convolution_relu_gpu>())
-        , outer(arg) {};
-convolution_relu_gpu::~convolution_relu_gpu() {};
-void convolution_relu_gpu::implementation(const void *ptr) {
+        , outer(arg)
+        , _kernel(select_kernel_name(), get_jit_constants())
+    {}
 
-    auto this_conv = static_cast<const convolution_relu *>(ptr);
-
-    auto& input_offset = this_conv->argument.input_offset;
-    auto& output_size   = this_conv->argument.output_size;
-    output_size;
-    auto& padding       = this_conv->argument.padding;
-    auto& stride        = this_conv->argument.stride;
-    auto negative_slope = this_conv->argument.negative_slope;
-
-    auto split = this_conv->argument.split;
-    auto& filter_arg = this_conv->argument.input[1].primitive.as<const memory&>().argument; //convolution filter
-
-    assert( output_size.feature[0] == filter_arg.size.feature[0] ); // memory::format oixy
-
-    // todo remove
-    if(filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");
-
-    auto& input_mem = this_conv->input_memory(0);
-    auto& output_mem = this_conv->output_memory(0);
-    std::vector<std::reference_wrapper<const neural::memory>> biases_mem;
-    std::vector<std::reference_wrapper<const neural::memory>> filters_mem;
-    for (size_t i = 0; i < split; i++)
-    {
-        filters_mem.push_back(this_conv->argument.input[i * 2 + 1].primitive.as<const memory&>());
-        biases_mem.push_back(this_conv->argument.input[i * 2 + 2].primitive.as<const memory&>());
+    static bool can_inline_memory(const neural::memory& mem) {
+        return mem.count() <= 1024;
     }
 
-    neural::vector<uint32_t> _stride(stride);
-    if ( (stride.spatial[0] > input_mem.argument.size.spatial[0]) ||
-         (stride.spatial[1] > input_mem.argument.size.spatial[1]) )
-    {
-        _stride.spatial[0] = input_mem.argument.size.spatial[0];
-        _stride.spatial[1] = input_mem.argument.size.spatial[1];
-    }
- 
+    const std::string& select_kernel_name() const {
+        // input
+        auto& input_mem = outer.input_memory(0);
+        auto& padding = outer.argument.padding;
 
-    // weights neural::vector is: {b}, {ofm, ifm} {spatials}
-    // ofm - output feature maps
-    // ifm - input feature maps
-    // b = 1 always
-    // (weights can't have batch so it is equall to 1)
-    // Ofm and batch is cropped, ofm will be hold manually
-    // Batch is included in output size
+        if (padding != padding::zero)
+            throw std::invalid_argument("Unknown padding mode in convolution.");
 
-    auto dstSize = output_mem.count();
-
-    gpu::jit_constants mem_consts{
-        gpu::make_jit_constant("STRIDE", _stride),
-        gpu::make_jit_constant("INPUT_OFFSET", input_offset),
-        gpu::make_jit_constant("BIAS", biases_mem),
-        gpu::make_jit_constant("FILTER", filters_mem),
-        gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope))
-    };
-
-    switch(padding){
-        case padding::zero:
-        {
-            if (input_mem.argument.format == memory::format::bfyx_f32)
-            {
-                auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem>(kernelName_BFXY, mem_consts);
-                kernel({ dstSize, std::min(dstSize, static_cast<size_t>(16)) }, input_mem, output_mem);
-            }
-            else
-            {
-                auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem>(kernelName_YXFB, mem_consts);
-                kernel({ {dstSize, 1} , {std::min(dstSize, static_cast<size_t>(16)), 1} }, input_mem, output_mem);
-            }
-        }
-            break;
+        switch (input_mem.argument.format) {
+        case memory::format::bfyx_f32:
+            return kernelName_BFXY;
+        case memory::format::yxfb_f32:
+            return kernelName_YXFB;
         default:
-            throw std::runtime_error("Unknown padding mode in convolution.");
+            throw std::invalid_argument("Input memory format is not supported");
+        }
     }
-}
+
+    gpu::jit_constants get_jit_constants() const {
+
+        auto& input_mem = outer.input_memory(0);
+        auto& input_offset = outer.argument.input_offset;
+        auto split = outer.argument.split;
+        auto negative_slope = outer.argument.negative_slope;
+
+        neural::vector<uint32_t> stride(outer.argument.stride);
+        stride.spatial[0] = std::min(stride.spatial[0], input_mem.argument.size.spatial[0]);
+        stride.spatial[1] = std::min(stride.spatial[1], input_mem.argument.size.spatial[1]);
+
+        // weights neural::vector is: {b}, {ofm, ifm} {spatials}
+        // ofm - output feature maps
+        // ifm - input feature maps
+        // b = 1 always
+        // (weights can't have batch so it is equall to 1)
+        // Ofm and batch is cropped, ofm will be hold manually
+        // Batch is included in output size
+
+        std::vector<std::reference_wrapper<const neural::memory>> biases_mem;
+        std::vector<std::reference_wrapper<const neural::memory>> filters_mem;
+        for (uint32_t i = 0; i < split; i++)
+        {
+            filters_mem.push_back(outer.input_memory(i * 2 + 1));
+            biases_mem.push_back(outer.input_memory(i * 2 + 2));
+        }
+
+        return gpu::jit_constants{
+            gpu::make_jit_constant("STRIDE", stride),
+            gpu::make_jit_constant("INPUT_OFFSET", input_offset),
+            gpu::make_jit_constant("BIAS", biases_mem),
+            gpu::make_jit_constant("FILTER", filters_mem),
+            gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope))
+        };
+    }
+
+    static void implementation(const void *ptr) {
+        auto me = static_cast<const convolution_relu_gpu*>(ptr);
+        auto& outer = me->outer;
+
+        auto& input_mem = outer.input_memory(0);
+        auto& output_mem = outer.output_memory(0);
+
+        // weights neural::vector is: {b}, {ofm, ifm} {spatials}
+        // ofm - output feature maps
+        // ifm - input feature maps
+        // b = 1 always
+        // (weights can't have batch so it is equall to 1)
+        // Ofm and batch is cropped, ofm will be hold manually
+        // Batch is included in output size
+
+        if (outer.argument.padding != padding::zero)
+            throw std::invalid_argument("Unknown padding mode in convolution.");
+
+        auto dstSize = output_mem.count();
+
+        if (input_mem.argument.format == memory::format::bfyx_f32) {
+            me->_kernel.run<gpu::input_mem, gpu::output_mem>
+                ({ dstSize, std::min(dstSize, static_cast<size_t>(16)) }, input_mem, output_mem);
+        } else {
+            me->_kernel.run<gpu::input_mem, gpu::output_mem>
+                ({ {dstSize, 1} , {std::min(dstSize, static_cast<size_t>(16)), 1} }, input_mem, output_mem);
+        }
+    }
+
+    static is_an_implementation *create(convolution_relu &arg) {
+        auto& filter_arg = arg.input_memory(1).argument; //convolution filter
+
+        assert(arg.argument.output_size.feature[0] / arg.argument.split == filter_arg.size.feature[0]); // memory::format oixy
+        // todo remove
+        if (filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");
+
+        return new convolution_relu_gpu(arg);
+    }
+
+    task_group work() override {
+        return{ { task{ implementation, this } }, schedule::single };
+    }
+};
 
 namespace{
 struct attach{

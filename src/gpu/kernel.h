@@ -88,7 +88,7 @@ inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, 
 
 template<typename T>
 class vector_jit_constant : public jit_constant {
-    const neural::vector<T>& _vec;
+    const neural::vector<T> _vec;
 
 public:
     vector_jit_constant(const std::string& name, const neural::vector<T>& vec)
@@ -239,25 +239,23 @@ public:
     cl::NDRange local_range() const { return _local; }
 };
 
-template<typename... Args>
 class kernel : public context_holder {
     kernels_cache::kernel_id _kernel_id;
-    cl::Kernel _kernel;
 
     template<unsigned index, typename Ti, typename... Ts>
-    void setArgs(Ti&& arg, Ts&&... args) {
-        _kernel.setArg(index, kernel_arg_handler<Ti>::get(arg));
-        setArgs<index + 1, Ts...>(std::forward<Ts>(args)...);
+    void setArgs(cl::Kernel& clkernel, Ti&& arg, Ts&&... args) const {
+        clkernel.setArg(index, kernel_arg_handler<Ti>::get(arg));
+        setArgs<index + 1, Ts...>(clkernel, std::forward<Ts>(args)...);
     }
 
 
     template<unsigned index, typename Ti>
-    void setArgs(Ti&& arg) {
-        _kernel.setArg(index, kernel_arg_handler<Ti>::get(arg));
+    void setArgs(cl::Kernel& clkernel, Ti&& arg) const {
+        clkernel.setArg(index, kernel_arg_handler<Ti>::get(arg));
     }
 
     template<unsigned index>
-    void setArgs() {}
+    void setArgs(cl::Kernel&) const {}
 
 public:
     explicit kernel(const std::string& name, kernels_cache::jit_definitions definitions = kernels_cache::jit_definitions())
@@ -265,13 +263,23 @@ public:
     explicit kernel(const std::string& name, const jit_constants& constants) 
         : _kernel_id(kernels_cache::get().create_kernel_from_template(context(), name, constants.get_definitions())) {}
 
-    void operator()(const kernel_execution_options& options, Args... args) {
-        _kernel = kernels_cache::get().get_kernel(context(), _kernel_id);
-        setArgs<0>(std::forward<Args>(args)...);
+    kernel(const kernel& other) : _kernel_id(other._kernel_id) {}
+
+    kernel& operator=(const kernel& other) {
+        if (this == &other)
+            return *this;
+        _kernel_id = other._kernel_id;
+        return *this;
+    }
+
+    template<typename... Args>
+    void run(const kernel_execution_options& options, Args... args) const {
+        auto clkernel = kernels_cache::get().get_kernel(context(), _kernel_id);
+        setArgs<0>(clkernel, std::forward<Args>(args)...);
 
         try {
             cl::Event end_event;
-            context()->queue().enqueueNDRangeKernel(_kernel, cl::NullRange, options.global_range(), options.local_range(), 0, &end_event);
+            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), 0, &end_event);
             end_event.wait();
         } catch(cl::Error err) {
             std::cerr << "ERROR:" << err.what() << std::endl;

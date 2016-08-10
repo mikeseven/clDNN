@@ -17,16 +17,3 @@
 #pragma once
 
 #include "api/neural.h"
-
-namespace neural {
-    struct lrn_gpu : is_an_implementation {
-        lrn_gpu(normalization::response &arg);
-        ~lrn_gpu();
-        static void implementation(const void *ptr);
-
-        static is_an_implementation *create(normalization::response &arg) { return new lrn_gpu(arg); };
-        task_group work() override { return {{task{implementation, &outer}}, schedule::single}; };
-
-        const normalization::response &outer;
-    };
-}

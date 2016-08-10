@@ -53,11 +53,12 @@ TEST(fully_connected_relu_gpu, xb_f32_batch_1) {
     auto output_prim = memory::allocate({ engine::gpu, memory::format::xb_f32,{ output_b,{ { output_x } },{ 1 } } });
     auto weights_prim = memory::allocate({ engine::gpu, memory::format::xb_f32,{ weight_y,{ { weight_x } },{ 1 } } });
     auto bias_prim = memory::allocate({ engine::gpu, memory::format::x_f32,{ 1,{ { output_x } },{ 1 } } });
-    auto full_con_relu_prim = fully_connected_relu::create({ engine::gpu, output_prim, input_prim, weights_prim,  bias_prim, 0 });
 
     set_values(input_prim, { -0.5f, 2.0f, 0.5f });
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
     set_values(bias_prim, { 1.0f, -2.0f, 3.0f, -4.0f });
+
+    auto full_con_relu_prim = fully_connected_relu::create({ engine::gpu, output_prim, input_prim, weights_prim,  bias_prim, 0 });
 
     execute({ full_con_relu_prim }).wait();
 
@@ -98,11 +99,12 @@ TEST(fully_connected_relu_gpu, xb_f32_batch_2) {
     auto output_prim  = memory::allocate({ engine::gpu, memory::format::xb_f32,{ output_b,{ { output_x } }, 1 } });
     auto weights_prim = memory::allocate({ engine::gpu, memory::format::xb_f32,{ weight_y,{ { weight_x } }, 1 } });
     auto bias_prim =    memory::allocate({ engine::gpu, memory::format::x_f32, { 1,{ { output_x } }, 1 } });
-    auto full_con_rel_prim = fully_connected_relu::create({ engine::gpu, output_prim, input_prim, weights_prim, bias_prim, 0 });
 
     set_values(input_prim, { -0.5f, 1.0f, 2.0f, 1.5f, 0.5f, 0.0f });
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
     set_values(bias_prim, { 1.0f, -2.0f, 3.0f, -4.0f });
+
+    auto full_con_rel_prim = fully_connected_relu::create({ engine::gpu, output_prim, input_prim, weights_prim, bias_prim, 0 });
 
     execute({ full_con_rel_prim }).wait();
 
@@ -145,11 +147,11 @@ TEST(fully_connected_relu_gpu, x_f32) {
     auto weights_prim = memory::allocate({ engine::gpu, memory::format::xb_f32,{ weight_y,{ { weight_x } }, 1 } });
     auto bias_prim    = memory::allocate({ engine::gpu, memory::format::x_f32, { 1,{ { output_x } }, 1 } });
 
-    auto full_con_relu_prim = fully_connected_relu::create({ engine::gpu, output_prim, input_prim, weights_prim, bias_prim, 0 });
-
     set_values(input_prim, { -0.5f, 2.0f, 0.5f });
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
     set_values(bias_prim, { 1.0f, -2.0f, 3.0f, -4.0f });
+
+    auto full_con_relu_prim = fully_connected_relu::create({ engine::gpu, output_prim, input_prim, weights_prim, bias_prim, 0 });
 
     execute({ full_con_relu_prim }).wait();
 

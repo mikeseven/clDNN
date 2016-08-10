@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "relu_gpu.h"
+#include "api/neural.h"
 #include "multidimensional_counter.h"
 #include "implementation_map.h"
 #include "kernel.h"
@@ -33,37 +33,39 @@ KERNEL(Relu_GPU)(const __global neural_memory* input_mem, __global neural_memory
 }
 )__krnl";
 
-relu_gpu::relu_gpu(relu &arg)
-    : is_an_implementation(neural::type_id<relu_gpu>())
-    , outer(arg)
-{};
+struct relu_gpu : is_an_implementation {
+    relu &outer;
+    gpu::kernel _kernel;
 
-relu_gpu::~relu_gpu() {}
+    relu_gpu(relu &arg) : is_an_implementation(neural::type_id<relu_gpu>())
+        , outer(arg)
+        , _kernel(kernelName)
+    {};
 
-void relu_gpu::implementation(const void *ptr) {
-    auto this_relu = static_cast<const relu *>(ptr);
+    static void implementation(const void *ptr) {
+        auto me = static_cast<const relu_gpu *>(ptr);
+        auto& outer = me->outer;
 
-    //auto& output_size   = this_relu->argument.output_size;
+        auto& input_mem = outer.input_memory(0);
+        auto& output_mem = outer.output_memory(0);
 
-    //assert( 1 == output_size.feature.size() );
-    //assert( 1 == output_size.batch.size()   );
+        float negative_slope = outer.argument.negative_slope;
+        size_t dstSize = output_mem.count();
 
-    auto& input_mem = this_relu->input_memory(0);
-    auto& output_mem = this_relu->output_memory(0);
+        int lws = 16;
+        while (dstSize % lws)
+        {
+            lws--;
+        }
 
-    float negative_slope = this_relu->argument.negative_slope;
-    size_t dstSize = output_mem.count();
-
-    int lws = 16;
-    while (dstSize % lws)
-    {
-        lws--;
+        me->_kernel.run<gpu::input_mem, gpu::output_mem, float>
+            ({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) }, input_mem, output_mem, negative_slope);
     }
 
-    auto kernel = gpu::kernel<gpu::input_mem, gpu::output_mem, float>(kernelName);
-    kernel({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) }, input_mem, output_mem, negative_slope);
+    static is_an_implementation *create(relu &arg) { return new relu_gpu(arg); };
+    task_group work() override { return{ { task{ implementation, this } }, schedule::unordered }; };
+};
 
-}
 
 namespace {
 struct attach {

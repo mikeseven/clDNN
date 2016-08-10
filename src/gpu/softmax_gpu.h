@@ -20,15 +20,5 @@
 
 namespace neural {
 namespace normalization {
-    struct softmax_gpu : is_an_implementation {
-        softmax_gpu(softmax &arg);
-        ~softmax_gpu();
-        static void implementation(const void *ptr);
-
-        static is_an_implementation *create(softmax &arg) { return new softmax_gpu(arg); };
-        task_group work() override { return {{task{implementation, &outer}}, schedule::single}; };
-
-        const softmax &outer;
-    };
 }
 }

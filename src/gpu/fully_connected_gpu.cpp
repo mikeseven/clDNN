@@ -79,28 +79,105 @@ const std::string kernelCode_End = R"__krnl(
 namespace neural {
 
     struct fully_connected_gpu : is_an_implementation {
-        const fully_connected &outer;
-       
+        fully_connected &outer;
+        bool inline_memory;
+        gpu::kernel _kernel;
+
         fully_connected_gpu(fully_connected &arg)
             : is_an_implementation(neural::type_id<fully_connected_gpu>())
             , outer(arg)
-        {};
-        ~fully_connected_gpu() {}
+            , inline_memory(can_inline_memory(arg.input_memory(1)))
+            , _kernel(select_kernel_name(), get_jit_constants())
+        {}
+
+        static bool can_inline_memory(const neural::memory& mem) {
+            return mem.count() <= 1024;
+        }
+
+        const std::string& select_kernel_name() const {
+            switch (outer.input_memory(0).argument.format) {
+            case memory::format::yxfb_f32:
+                return inline_memory ? kernelName_yxfn : kernelName_yxfn_memory;
+            case memory::format::x_f32:
+            case memory::format::xb_f32:
+                return inline_memory ? kernelName_xb : kernelName_xb_memory;
+            default:
+                throw std::invalid_argument("Memory format is not supported");
+            }
+        }
+
+        gpu::jit_constants get_jit_constants() const {
+            // weights
+            auto& weight_mem = outer.input_memory(1);
+            // bias
+            auto& bias_mem = outer.input_memory(2);
+
+            if(inline_memory) {
+                return gpu::jit_constants{ gpu::make_jit_constant("WEIGHTS", weight_mem), gpu::make_jit_constant("BIASES", bias_mem) };
+            } else {
+                return gpu::jit_constants{ gpu::make_jit_constant("WEIGHTS", weight_mem.argument.size) };
+            }
+
+            //return inline_memory 
+            //    ? gpu::jit_constants{ gpu::make_jit_constant("WEIGHTS", weight_mem), gpu::make_jit_constant("BIASES", bias_mem) }
+            //    : gpu::jit_constants{ gpu::make_jit_constant("WEIGHTS", weight_mem.argument.size) };
+        }
 
         static void implementation(const void *ptr) {
             auto me = static_cast<const fully_connected_gpu *>(ptr);
-            auto this_fc = &me->outer;
+            auto& outer = me->outer;
 
             // input
-            auto& input_mem = this_fc->input_memory(0);
+            auto& input_mem = outer.input_memory(0);
             // weights
-            auto& weight_mem = this_fc->input_memory(1);
+            auto& weight_mem = outer.input_memory(1);
             // bias
-            auto& bias_mem = this_fc->input_memory(2);
+            auto& bias_mem = outer.input_memory(2);
             // output
-            auto& output_mem = this_fc->output_memory(0);
-            
+            auto& output_mem = outer.output_memory(0);
+
             auto output_bufSize = output_mem.count();
+
+            // calculate local workgroup size
+            int lws = 16;
+            while (output_bufSize % lws) {
+                lws--;
+            }
+
+            switch (input_mem.argument.format) {
+            case memory::format::yxfb_f32:
+                if (me->inline_memory) {
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem >
+                        ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
+                } else {
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                        ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
+                }
+                break;
+            case memory::format::x_f32:
+            case memory::format::xb_f32:
+                if (me->inline_memory) {
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem>
+                        ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
+                } else {
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                        ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
+                }
+                break;
+            default:
+                throw std::invalid_argument("Input memory format is not supported");
+            }
+        }
+
+        task_group work() override {
+            return{ { task{ implementation, this } }, schedule::single };
+        }
+
+        static is_an_implementation *create(fully_connected &arg) {
+            // input
+            auto& input_mem = arg.input_memory(0);
+            // weights
+            auto& weight_mem = arg.input_memory(1);
 
             // validate arguments
             if (input_mem.argument.format == memory::format::yxfb_f32)
@@ -116,60 +193,6 @@ namespace neural {
                 assert(1 == input_mem.argument.size.feature[0]);
             }
 
-            gpu::jit_constants mem_consts{};
-
-            bool inline_memory = weight_mem.count() > 1024 ? false : true;
-            if (inline_memory)
-            {
-                mem_consts.add_constant(gpu::make_jit_constant("WEIGHTS", weight_mem));
-                mem_consts.add_constant(gpu::make_jit_constant("BIASES", bias_mem));
-            }
-            else
-            {
-                mem_consts.add_constant(gpu::make_jit_constant("WEIGHTS", weight_mem.argument.size));
-            }
-
-            // calculate local workgroup size
-            int lws = 16;
-            while (output_bufSize % lws)
-            {
-                lws--;
-            }
-
-            if (input_mem.argument.format == memory::format::yxfb_f32)
-            {
-             
-                if (inline_memory)
-                {
-                    gpu::kernel<gpu::input_mem, gpu::output_mem> _kernel(kernelName_yxfn, mem_consts);
-                    _kernel({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
-                }
-                else
-                {
-                    gpu::kernel<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem> _kernel(kernelName_yxfn_memory, mem_consts);
-                    _kernel({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
-                }
-            }
-            else
-            {
-                if (inline_memory)
-                {
-                    gpu::kernel<gpu::input_mem, gpu::output_mem> _kernel(kernelName_xb, mem_consts);
-                    _kernel({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
-                }
-                else
-                {
-                    gpu::kernel<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem> _kernel(kernelName_xb_memory, mem_consts);
-                    _kernel({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
-                }
-            }
-        }
-
-        task_group work() override {
-            return{ { task{ implementation, this } }, schedule::single };
-        }
-
-        static is_an_implementation *create(fully_connected &arg) {
             return new fully_connected_gpu(arg);
         };
     };
