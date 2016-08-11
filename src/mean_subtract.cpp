@@ -35,6 +35,7 @@ mean_subtract::arguments::arguments(neural::engine::type            eng,
                                        neural::memory::format::type out_fmt,
                                        primitive                    in,
                                        primitive                    mean)
+: engine(eng)
 {
     // if input is previouse layer, not memory primitive need to set input to output memory of this primitive
     auto input_mem = in.id() == type_id<const memory>()->id ? in : in.output[0];

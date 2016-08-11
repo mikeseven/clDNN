@@ -28,12 +28,20 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
     instrumentation::timer timer_build, timer_execution;
     std::cout << "Building Alexnet started" << std::endl;
     timer_build.start();
+    auto mean = mean_subtract::create(
+    {
+        eng,
+        memory::format::yxfb_f32,
+        input,
+        file::create({eng,"imagenet_mean.nnd"})
+    });
+
     auto conv1 = convolution::create(
     {
         eng,
         memory::format::yxfb_f32,
         {
-            input,
+            mean,
             file::create({ eng, "conv1_weights.nnd" }),
             file::create({ eng, "conv1_biases.nnd" })
         },
@@ -238,8 +246,10 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
     timer_build.stop();
     std::cout << "Building Alexnet finished in " << timer_build.time_diff_string() << std::endl;
     std::cout << "Start execution" << std::endl;
+
     timer_execution.start();
     execute({
+        mean, //mean
         conv1,relu1,lrn1,pool1, //stage 0
         conv2_group2,relu2,lrn2, pool2,
         conv3,relu3,
@@ -255,6 +265,7 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
     if (dump_hl)
     {
         instrumentation::logger::log_memory_to_file(input, "input0");
+        instrumentation::logger::log_memory_to_file(mean, "mean");
         instrumentation::logger::log_memory_to_file(conv1.output[0], "conv1");
         instrumentation::logger::log_memory_to_file(relu1.output[0], "relu1");
         instrumentation::logger::log_memory_to_file(lrn1.output[0], "lrn1");
@@ -264,6 +275,10 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
         instrumentation::logger::log_memory_to_file(pool2.output[0], "pool2");
         instrumentation::logger::log_memory_to_file(conv3.output[0], "conv3");
         instrumentation::logger::log_memory_to_file(relu3.output[0], "relu3");
+        instrumentation::logger::log_memory_to_file(pool5.output[0], "pool5");
+        instrumentation::logger::log_memory_to_file(fc6.output[0], "fc6");
+        instrumentation::logger::log_memory_to_file(fc8.output[0], "fc8");
+        instrumentation::logger::log_memory_to_file(softmax.output[0], "softmax");
         // for now its enought. rest wil be done when we have equals those values
     }
     else
@@ -275,7 +290,7 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
 
 void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool dump_hl)
 {
-    auto input  = memory::allocate({ engine::reference, memory::format::byxf_f32,{ batch_size,{ 224, 224 }, 3, } });
+    auto input  = memory::allocate({ engine::reference, memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3, } });
     auto output = memory::allocate({ engine::reference, memory::format::xb_f32,{ batch_size,{ 1000 }} });
     auto img_list = get_directory_images(img_dir);
     if (img_list.empty())
