@@ -62,8 +62,8 @@ void convolution_gpu::implementation(const void *ptr) {
     auto this_conv = static_cast<const convolution *>(ptr);
 
     auto& input_offset  = this_conv->argument.input_offset;
+    auto& output_offset = this_conv->argument.output_offset;
     auto& output_size   = this_conv->argument.output_size;
-    output_size;
 
     auto& padding       = this_conv->argument.padding;
     auto& stride        = this_conv->argument.stride;
@@ -109,7 +109,9 @@ void convolution_gpu::implementation(const void *ptr) {
 
     gpu::jit_constants mem_consts{
         gpu::make_jit_constant("STRIDE", _stride),
-        gpu::make_jit_constant("INPUT_OFFSET", input_offset)
+        gpu::make_jit_constant("INPUT_OFFSET", input_offset),
+        gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
+        gpu::make_jit_constant("OUTPUT_SIZE", output_size)
     };
     if (inline_memory)
     {

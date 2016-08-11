@@ -76,6 +76,8 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     size_t batch_num = output_arg.size.batch[0];
     size_t output_feature_num = output_arg.size.feature[0];
 
+    const size_t fm_offset_per_computation = input_arg.size.feature[0] / split;
+
     switch(padding){
         case padding::zero:
         {
@@ -97,16 +99,21 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                         auto pos_with_modified_ofm(pos); // assign current ofm to output position
                         pos_with_modified_ofm[1] = ofm;
 
-                        // We got 2x window for split=2, and we iterate over this window 2 times with different values for each of data sets,
-                        // so we need to offset input position based on which part of split computations we are. If we don't do this, we will iterate
-                        // two times over the same half of input values.
-                        std::vector<uint32_t> fm_offset { 0, split > 1 ? ofm : 0, 0, 0 };
-                        std::vector<uint32_t> arg_in_idx = (pos + fm_offset)*stride + input_offset + win_pos;
+                        std::vector<uint32_t> arg_in_idx = pos*stride + input_offset + win_pos;
 
                         if( nd::is_out_of_range(input_arg.size, arg_in_idx) )
                             continue;
 
+                        auto out_idx = calc_out_idx(output_arg.size.raw, pos_with_modified_ofm);
+
+                        size_t split_idx = out_idx / batch_num % split;
+
                         auto in_idx  = calc_in_idx ( input_arg.size.raw, {arg_in_idx.begin(), arg_in_idx.end()} );
+                        // We got 2x window for split=2, and we iterate over this window 2 times with different values for each of data sets,
+                        // so we need to offset input position based on which part of split computations we are. If we don't do this, we will iterate
+                        // two times over the same half of input values.
+                        in_idx += split_idx * fm_offset_per_computation;
+
                         auto win_idx = calc_win_idx( filter_arg.size.raw,
                                                      [&](){
                                                         auto vec = std::vector<uint32_t>({0, (ofm-output_offset.feature[0]) / static_cast<uint32_t>(split)});
@@ -115,11 +122,6 @@ void convolution_cpu_reference::implementation(const void *ptr) {
                                                         return vec;
                                                      }()
                                                     );
-
-                        auto out_idx = calc_out_idx(output_arg.size.raw, pos_with_modified_ofm );
-
-                        size_t feature_map_idx = (out_idx / batch_num) % output_feature_num;
-                        size_t split_idx = feature_map_idx / (output_feature_num / split);
 
                         output[out_idx] += input[in_idx] * filters[split_idx][win_idx];
                     }
