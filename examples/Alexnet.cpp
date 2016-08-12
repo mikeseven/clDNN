@@ -17,6 +17,7 @@
 
 
 #include "common/common_tools.h"
+#include "output_parser.h"
 #include <iostream>
 #include <string>
 
@@ -300,6 +301,7 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool du
     auto number_of_batches = (img_list.size() % batch_size == 0) 
         ? img_list.size() / batch_size : img_list.size() / batch_size + 1;
     std::vector<std::string> image_in_batches;
+	html output_file("alexnet", "alexnet run");
     for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
     {
         image_in_batches.clear();
@@ -321,5 +323,6 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool du
         auto time = execute_alexnet(reordered_input, output, eng, dump_hl);
         auto ratio =  std::chrono::duration_cast<std::chrono::milliseconds>(time);
         std::cout << "Frames per second:" << (double)batch_size*1000.0/(double)ratio.count() << std::endl;
+		output_file.batch(output.as<const neural::memory&>( ), "names.txt", image_in_batches);
     }    
 }
