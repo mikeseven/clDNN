@@ -361,6 +361,12 @@ public:
 
     neural::engine::type engine() const { return _pointer->engine(); }
     void execute(const neural::task_group& requests) const { _pointer->execute(requests);}
+
+    template<typename T> T as() const  {
+        static_assert(std::is_reference<T>::value, "cannot cast to non-reference type");
+        assert(type_id<typename std::remove_reference<T>::type>()->id == _pointer->_type_traits->id);
+        return *reinterpret_cast<typename std::remove_reference<T>::type *>(_pointer.get());
+    }
 };
 
 // cheap to copy handle with reference counting

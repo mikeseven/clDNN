@@ -26,6 +26,8 @@ public:
     program_builder(gpu::kernels_cache& cache) {
         _program = cache.get_program(context());
     }
+
+    auto get_profiling_info() const -> decltype(context()->get_profiling_info()) { return context()->get_profiling_info(); }
 };
 
 
@@ -38,6 +40,10 @@ void worker_gpu::execute(const neural::task_group& requests) const {
     for (auto& task : requests.tasks) {
         task.callback(task.data);
     }
+}
+
+std::vector<std::pair<std::string, std::chrono::nanoseconds>> worker_gpu::get_profiling_info() const {
+    return builder->get_profiling_info();
 }
 
 worker worker_gpu::create() {

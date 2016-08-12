@@ -933,8 +933,9 @@ class worker_gpu : public is_a_worker {
     worker_gpu();
 public:
     DLL_SYM static worker create();
-    void execute(const neural::task_group& requests) const override;
-    neural::engine::type engine() const override { return neural::engine::gpu; }
+    DLL_SYM void execute(const neural::task_group& requests) const override;
+    DLL_SYM neural::engine::type engine() const override { return neural::engine::gpu; }
+    DLL_SYM std::vector<std::pair<std::string, std::chrono::nanoseconds>> get_profiling_info() const;
 };
 
 namespace instrumentation

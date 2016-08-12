@@ -20,8 +20,26 @@
 #include "output_parser.h"
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <iomanip>
 
 using namespace neural;
+
+template<class Rep, class Period>
+std::string duration_to_string(const std::chrono::duration<Rep, Period> dur) {
+    namespace  ch=std::chrono;
+    std::ostringstream os;
+    os << std::setprecision(4) << std::fixed << std::setw(10) << std::right;
+    ch::microseconds us(1);
+    ch::milliseconds ms(1);
+    ch::seconds s(1);
+    /*if      (dur > s)  os << std::chrono::duration_cast<ch::duration<double, ch::seconds::period>>(dur).count() << "s";
+    else*/ if (dur > us) os << std::chrono::duration_cast<ch::duration<double, ch::milliseconds::period>>(dur).count() << "ms";
+    //else if (dur > us) os << std::chrono::duration_cast<ch::duration<double, ch::microseconds::period>>(dur).count() << "us";
+    else               os << std::chrono::duration_cast<ch::nanoseconds>(dur).count() << "ns";
+    return os.str();
+}
+
 // AlexNet with weights & biases from file
 std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, primitive& output, engine::type eng, bool dump_hl)
 {
@@ -247,14 +265,20 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
     timer_build.stop();
     std::cout << "Building Alexnet finished in " << timer_build.time_diff_string() << std::endl;
 
-    auto worker = worker_cpu::create({});
 
-    if (eng == engine::gpu) {
+    std::vector<worker> workers;
+
+    switch(eng) 
+    {
+    case engine::gpu:
         std::cout << "GPU Program compilation started" << std::endl;
         timer_execution.start();
-        worker = worker_gpu::create();
+        workers.push_back(worker_gpu::create());
         timer_build.stop();
         std::cout << "GPU Program compilation finished in " << timer_build.time_diff_string() << std::endl;
+        break;
+    default:
+        workers.push_back(worker_cpu::create({}));
     }
 
     std::cout << "Start execution" << std::endl;
@@ -269,7 +293,7 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
         fc6,
         fc7,
         fc8,
-        softmax,output }, {worker}).wait();
+        softmax,output }, workers).wait();
     timer_execution.stop();
     std::cout << "Alexnet execution finished in " << timer_execution.time_diff_string() << std::endl;
     //instrumentation::log_memory_to_file(conv1.output[0],"conv1");
@@ -296,6 +320,19 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
     {
         instrumentation::logger::log_memory_to_file(output, "final_result");
     }
+
+    std::cout << "Kernels profiling info: " << std::endl;
+    if (eng == engine::gpu) {
+        auto profiling_info = workers[0].as<const worker_gpu&>().get_profiling_info();
+        auto max_len_it = std::max_element(std::begin(profiling_info), std::end(profiling_info), [](decltype(profiling_info)::value_type& a, decltype(profiling_info)::value_type& b) {return a.first.length() < b.first.length(); });
+        auto max_len = max_len_it->first.length();
+        for (auto& pi : profiling_info ) {
+            std::cout << std::setw(max_len) << std::left << pi.first << " " << duration_to_string(pi.second) << std::endl;
+        }
+    }
+
+
+
     return timer_execution.get_time_diff();
 }
 
