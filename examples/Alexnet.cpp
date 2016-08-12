@@ -246,8 +246,18 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
 
     timer_build.stop();
     std::cout << "Building Alexnet finished in " << timer_build.time_diff_string() << std::endl;
-    std::cout << "Start execution" << std::endl;
 
+    auto worker = worker_cpu::create({});
+
+    if (eng == engine::gpu) {
+        std::cout << "GPU Program compilation started" << std::endl;
+        timer_execution.start();
+        worker = worker_gpu::create();
+        timer_build.stop();
+        std::cout << "GPU Program compilation finished in " << timer_build.time_diff_string() << std::endl;
+    }
+
+    std::cout << "Start execution" << std::endl;
     timer_execution.start();
     execute({
         mean, //mean
@@ -259,7 +269,7 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
         fc6,
         fc7,
         fc8,
-        softmax,output }).wait();
+        softmax,output }, {worker}).wait();
     timer_execution.stop();
     std::cout << "Alexnet execution finished in " << timer_execution.time_diff_string() << std::endl;
     //instrumentation::log_memory_to_file(conv1.output[0],"conv1");

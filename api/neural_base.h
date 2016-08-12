@@ -352,6 +352,12 @@ class worker {
 public:
     worker(is_a_worker *raw) : _pointer(raw) {};
     worker(const worker &other) : _pointer(other._pointer) {};
+    worker& operator=(const worker& other) {
+        if (this == &other)
+            return *this;
+        _pointer = other._pointer;
+        return *this;
+    }
 
     neural::engine::type engine() const { return _pointer->engine(); }
     void execute(const neural::task_group& requests) const { _pointer->execute(requests);}

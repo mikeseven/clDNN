@@ -174,14 +174,14 @@ namespace neural {
         }
 
         static is_an_implementation *create(fully_connected &arg) {
+#ifndef NDEBUG
             // input
             auto& input_mem = arg.input_memory(0);
-            // weights
-            auto& weight_mem = arg.input_memory(1);
-
             // validate arguments
             if (input_mem.argument.format == memory::format::yxfb_f32)
             {
+                // weights
+                auto& weight_mem = arg.input_memory(1);
                 assert(input_mem.argument.size.feature.size() == weight_mem.argument.size.feature.size());
                 assert(input_mem.argument.size.batch.size() == weight_mem.argument.size.batch.size());
                 assert(input_mem.argument.size.feature[0] == weight_mem.argument.size.feature[0]);
@@ -192,7 +192,7 @@ namespace neural {
                 assert(1 == input_mem.argument.size.batch.size());
                 assert(1 == input_mem.argument.size.feature[0]);
             }
-
+#endif
             return new fully_connected_gpu(arg);
         };
     };

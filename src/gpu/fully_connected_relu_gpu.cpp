@@ -182,6 +182,7 @@ namespace neural {
         }
 
         static is_an_implementation *create(fully_connected_relu &arg) {
+#ifndef NDEBUG
             // input
             auto& input_mem = arg.input_memory(0);
             // weights
@@ -197,6 +198,7 @@ namespace neural {
                 assert(1 == input_mem.argument.size.batch.size());
                 assert(1 == input_mem.argument.size.feature[0]);
             }
+#endif
             return new fully_connected_relu_gpu(arg);
         };
     };
