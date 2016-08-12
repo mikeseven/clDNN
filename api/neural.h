@@ -17,7 +17,9 @@
 #pragma once
 
 #include "neural_base.h"
-
+#include <algorithm>
+#include <chrono>
+#include <string>
 namespace neural {
 
 
@@ -253,6 +255,42 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
     friend class is_a_primitive;
 };
+
+
+
+
+// neural::mean_subtract
+//
+// Subtract mean from input
+//
+// Example:
+//
+//  auto input = memory::describe({engine::refetence, memory::format::yxfb_f32, { 16, {4, 8}, 3 }));
+//  auto output = memory::describe({engine::refetence, memory::format::yxfb_f32, { 16, {4, 8}, 3 }));
+//  auto mean = file::create({engine::cpu, "mean.nnb"});
+//  neural::primitive mean_subtract = mean_subtract::create({engine::reference, output, input, mean});
+//
+struct mean_subtract : is_a_primitive {
+    struct arguments {
+        neural::engine::type      engine;
+        std::vector<primitive>    output;
+        std::vector<primitive_at> input; // 2: input, mean
+
+        DLL_SYM arguments(neural::engine::type, primitive out, primitive in, primitive mean);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, primitive in, primitive mean);
+    };
+    const arguments argument;
+
+    struct query_entry : is_a_query_entry { mean_subtract::arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    DLL_SYM static primitive create(arguments);
+private:
+    mean_subtract(arguments arg) : is_a_primitive(type_id<const mean_subtract>()), argument(arg) {};
+    const std::vector<primitive_at> &input() const { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+    friend class is_a_primitive;
+};
+
 
 
 
@@ -889,10 +927,36 @@ private:
     worker_cpu(arguments arg, nn_thread_worker_pool &);
 };
 
-class instrumentation
+namespace instrumentation
 {
-public:
-    DLL_SYM static void log_memory_to_file(const primitive&,std::string prefix = "");
+    struct timer
+    {
+    private:
+        std::chrono::high_resolution_clock::time_point  time_tick;
+        std::chrono::high_resolution_clock::time_point  time_tock;
+
+    public:
+        DLL_SYM void start() {
+            time_tick = std::chrono::steady_clock::now();
+        };
+
+        DLL_SYM void stop() {
+            time_tock = std::chrono::steady_clock::now();
+        };
+
+        DLL_SYM std::chrono::high_resolution_clock::duration get_time_diff() { 
+            return time_tock - time_tick; }
+
+        DLL_SYM std::string time_diff_string() {
+            return time_diff_string(std::chrono::duration_cast<std::chrono::nanoseconds>(time_tock - time_tick).count()); 
+        };
+
+        static std::string  time_diff_string(uint64_t);
+    };
+    struct logger
+    {
+        DLL_SYM static void log_memory_to_file(const primitive&, std::string prefix = "");
+    };
 };
 
 } // namespace neural

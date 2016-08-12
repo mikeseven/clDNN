@@ -31,19 +31,27 @@ namespace neural {
         const int ofm_num = dst_size[1];
         const int ofm_offset = ((global_id / batch_num) % ofm_num) / FILTER_ARRAY_NUM;
 
-        const int f_ofm_offset = (global_id % FILTER_OUTPUT_FEATURE_NUM) * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
+        const int f_ofm_offset = ((global_id / FILTER_ARRAY_NUM) % FILTER_OUTPUT_FEATURE_NUM) * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
 
         const int idx = (global_id / batch_num) / FILTER_ARRAY_NUM;
 
         const int i_ifm_num = input_size[1];
 
         const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % dst_size[2]) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
-        const int y = (((idx / FILTER_OUTPUT_FEATURE_NUM) * STRIDE_SIZE_Y) / INPUT_SIZE_X) * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
+        const int y = ((idx / FILTER_OUTPUT_FEATURE_NUM) / dst_size[2] * STRIDE_SIZE_Y) + INPUT_OFFSET_SIZE_Y;
 
         int divider = FILTER_ARRAY_NUM > FILTER_INPUT_FEATURE_NUM ? 1 : FILTER_INPUT_FEATURE_NUM / FILTER_ARRAY_NUM;
         const int split_idx = ((global_id / batch_num) / divider) % FILTER_ARRAY_NUM;
+        pDst[global_id] = BIAS[split_idx][ofm_offset];
 
-        pDst[global_id] = 0;
+        bool finish = false;
+        finish = global_id % dst_size[2] >= OUTPUT_SIZE_SIZE_X ? true : finish;
+        finish = (global_id % (dst_size[2] * dst_size[3])) / dst_size[2]  >= OUTPUT_SIZE_SIZE_Y ? true : finish;
+        finish = global_id % dst_size[2] < OUTPUT_OFFSET_SIZE_X ? true : finish;
+        finish = (global_id % (dst_size[2] * dst_size[3])) / dst_size[2]  < OUTPUT_OFFSET_SIZE_Y ? true : finish;
+        if(finish)
+            return;
+
         for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
         {
             const int f_ifm_offset = h * FILTER_SIZE_Y * FILTER_SIZE_X;
@@ -60,8 +68,8 @@ namespace neural {
                     zero = input_offset_x >= input_size[2] ? true : zero;
                     zero = input_offset_y >= input_size[3] ? true : zero;
 
-                    int input_idx = (input_offset_x + (input_offset_y * INPUT_SIZE_X)) * batch_num * i_ifm_num;
-                    input_idx += split_idx * batch_num;
+                    int input_idx = (input_offset_x + (input_offset_y * INPUT_SIZE_X)) * i_ifm_num * batch_num;
+                    input_idx += split_idx * FILTER_INPUT_FEATURE_NUM * batch_num;
                     input_idx += h * batch_num;
                     input_idx += batch_offset;
                     int filter_idx = (i * FILTER_SIZE_X + j) + f_ofm_offset + f_ifm_offset;
@@ -69,7 +77,6 @@ namespace neural {
                 }
             }
         }
-       pDst[global_id] += BIAS[split_idx][ofm_offset];
     )__CC";
 
     const std::string convolution_code_bfxy = R"__CC(
@@ -141,16 +148,25 @@ namespace neural {
         const int ofm_num = dst_size[1];
         const int ofm_offset = ((global_id / batch_num) % ofm_num) / FILTER_ARRAY_NUM;
 
-        const int f_ofm_offset = (global_id % FILTER_OUTPUT_FEATURE_NUM) * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
+        const int f_ofm_offset = ((global_id / FILTER_ARRAY_NUM) % FILTER_OUTPUT_FEATURE_NUM) * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
 
         const int idx = (global_id / batch_num) / FILTER_ARRAY_NUM;
 
         const int i_ifm_num = input_size[1];
 
         const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % dst_size[2]) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
-        const int y = (((idx / FILTER_OUTPUT_FEATURE_NUM) * STRIDE_SIZE_Y) / INPUT_SIZE_X) * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
+        const int y = ((idx / FILTER_OUTPUT_FEATURE_NUM) / dst_size[2] * STRIDE_SIZE_Y) + INPUT_OFFSET_SIZE_Y;
 
-        pDst[global_id] = 0;
+        pDst[global_id] = bias[ofm_offset];
+
+        bool finish = false;
+        finish = global_id % dst_size[2] >= OUTPUT_SIZE_SIZE_X ? true : finish;
+        finish = (global_id % (dst_size[2] * dst_size[3])) / dst_size[2]  >= OUTPUT_SIZE_SIZE_Y ? true : finish;
+        finish = global_id % dst_size[2] < OUTPUT_OFFSET_SIZE_X ? true : finish;
+        finish = (global_id % (dst_size[2] * dst_size[3])) / dst_size[2]  < OUTPUT_OFFSET_SIZE_Y ? true : finish;
+        if(finish)
+            return;
+
         for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
         {
             const int f_ifm_offset = h * FILTER_SIZE_Y * FILTER_SIZE_X;
@@ -167,15 +183,14 @@ namespace neural {
                     zero = input_offset_x >= input_size[2] ? true : zero;
                     zero = input_offset_y >= input_size[3] ? true : zero;
 
-                    int input_idx = (input_offset_x + (input_offset_y * INPUT_SIZE_X)) * batch_num * i_ifm_num;
-                    input_idx += split_idx * batch_num;
+                    int input_idx = (input_offset_x + (input_offset_y * INPUT_SIZE_X)) * i_ifm_num * batch_num;
+                    input_idx += split_idx * FILTER_INPUT_FEATURE_NUM * batch_num;
                     input_idx += h * batch_num;
                     input_idx += batch_offset;
                     int filter_idx = (i * FILTER_SIZE_X + j) + f_ofm_offset + f_ifm_offset;
                     pDst[global_id] += zero ? 0 : input[input_idx] * filter[filter_idx];
                 }
-            }
+            } 
         }
-       pDst[global_id] += bias[ofm_offset];
     )__CC";
 }

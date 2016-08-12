@@ -94,6 +94,8 @@ struct convolution_gpu : is_an_implementation {
         auto& input_mem = outer.input_memory(0);
         auto& input_offset = outer.argument.input_offset;
         auto split = outer.argument.split;
+        auto& output_offset = outer.argument.output_offset;
+        auto& output_size   = outer.argument.output_size;
 
         neural::vector<uint32_t> stride(outer.argument.stride);
         stride.spatial[0] = std::min(stride.spatial[0], input_mem.argument.size.spatial[0]);
@@ -110,6 +112,8 @@ struct convolution_gpu : is_an_implementation {
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("STRIDE", stride),
             gpu::make_jit_constant("INPUT_OFFSET", input_offset)
+            gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
+            gpu::make_jit_constant("OUTPUT_SIZE", output_size)
         };
 
         if (inline_memory)

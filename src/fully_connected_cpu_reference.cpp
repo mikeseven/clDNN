@@ -49,7 +49,7 @@ namespace neural {
 
             assert(1 == input_buffer_size.feature.size());
             assert(1 == input_buffer_size.batch.size());
-            assert(1 == input_buffer_size.feature[0]);
+          //  assert(1 == input_buffer_size.feature[0]);
 
             namespace nd = ndimensional;
             fill(this_fc->output_memory(0), 0.0f);
@@ -65,18 +65,30 @@ namespace neural {
             auto calc_in_idx = nd::choose_calculate_idx(input_arg.format);
             auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
             auto calc_w_idx = nd::choose_calculate_idx(weight_arg.format);
-
-            std::vector<uint32_t> arg_weight_idx(3);
-            for (auto pos_out : range_output) {
+            auto arg_weight_size = weight_arg.format == memory::format::yxfn_f32 ? 4 : 3;
+            std::vector<uint32_t> arg_weight_idx(arg_weight_size);
+            for (auto pos_out : range_output) { // for over neurons
                 auto out_idx = calc_out_idx(output_arg.size.raw, pos_out);
 
-                for (auto pos_in : range_input) {
-                    auto in_idx = calc_in_idx(input_arg.size.raw, pos_in);
+                for (auto pos_in : range_input) { // for over (input_x*batch) x weights
+ 
+                    if (weight_arg.format != memory::format::yxfn_f32)
+                    {
+                        auto in_idx = calc_in_idx(input_arg.size.raw, pos_in);
 
-                    arg_weight_idx[DATA_INDEX] = pos_out[DATA_INDEX];
-                    arg_weight_idx[BATCH_INDEX] = pos_in[DATA_INDEX];
-                    auto w_idx = calc_w_idx(weight_arg.size.raw, arg_weight_idx);
-                    output[out_idx + pos_in[BATCH_INDEX]] += input[in_idx] * weight[w_idx];
+                        arg_weight_idx[DATA_INDEX] = pos_out[DATA_INDEX];
+                        arg_weight_idx[BATCH_INDEX] = pos_in[DATA_INDEX];
+                        auto w_idx = calc_w_idx(weight_arg.size.raw, arg_weight_idx);
+                        output[out_idx + pos_in[BATCH_INDEX]] += input[in_idx] * weight[w_idx];
+                    }
+                    else
+                    {
+                        auto in_idx = calc_in_idx(input_arg.size.raw, pos_in);
+                        arg_weight_idx = pos_in;
+                        arg_weight_idx[BATCH_INDEX] = pos_out[DATA_INDEX];
+                        auto w_idx = calc_w_idx(weight_arg.size.raw, arg_weight_idx);
+                        output[out_idx + pos_in[BATCH_INDEX]] += input[in_idx] * weight[w_idx];
+                    }
                 }
                 for (auto b = 0u; b < range_input[BATCH_INDEX]; b++)
                     output[out_idx + b] += bias[pos_out[DATA_INDEX]];
@@ -95,6 +107,7 @@ namespace {
         attach() {
             auto val_fw = fully_connected_reference::create;
             implementation_map<fully_connected>::add({
+            { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::xb_f32), val_fw },
             { std::make_tuple(engine::reference, memory::format::xb_f32, memory::format::xb_f32), val_fw },
             { std::make_tuple(engine::reference, memory::format::x_f32,  memory::format::x_f32), val_fw },
             });

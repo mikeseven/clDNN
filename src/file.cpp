@@ -135,12 +135,12 @@ primitive file::create(file::arguments arg) {
 
         switch (file_head.dimension)
         {
-        case 1:
+        case 1: // biases 1D
         {
-            p_arg = new memory::arguments({ engine::reference, memory::format::x_f32,{ 1,{{ static_cast<unsigned int>(array.get()[0]) }}, 1 } });
+            p_arg = new memory::arguments({ engine::reference, memory::format::x_f32,{ 1,{ { static_cast<unsigned int>(array.get()[0]) } }, 1 } });
             break;
         }
-        case 2:
+        case 2: // 2D i.e. fully connected
         {
             p_arg = new memory::arguments(
             { engine::reference, memory::format::xb_f32,
@@ -152,7 +152,21 @@ primitive file::create(file::arguments arg) {
             });
             break;
         }
-        case 4:
+        case 3: // 3D mean
+        {
+            auto a = array.get()[0], b = array.get()[1], c = array.get()[2];
+            p_arg = new memory::arguments(
+            {
+                engine::reference, memory::format::yxfb_f32,
+                {
+                    { 1 },
+                    { static_cast<unsigned int>(a), static_cast<unsigned int>(b) },
+                    { static_cast<unsigned int>(c) }
+                }
+            });
+            break;
+        }
+        case 4: // 4D convolution or convolution to fc conversion
         {
             if (arg.weight_type == file::weights_type::convolution)
                 p_arg = new memory::arguments({ engine::reference, memory::format::oiyx_f32,{ 1,
@@ -162,11 +176,11 @@ primitive file::create(file::arguments arg) {
             {
                 p_arg = new memory::arguments(
                 { engine::reference, memory::format::yxfn_f32,
-                    {
-                        { static_cast<unsigned int>(array.get()[3]) }, // batches
-                        { static_cast<unsigned int>(array.get()[1]), static_cast<unsigned int>(array.get()[0]) },
-                        { static_cast<unsigned int>(array.get()[2]) }, // feature maps
-                    }
+                {
+                    { static_cast<unsigned int>(array.get()[3]) }, // batches
+                    { static_cast<unsigned int>(array.get()[1]), static_cast<unsigned int>(array.get()[0]) },
+                    { static_cast<unsigned int>(array.get()[2]) }, // feature maps
+                }
                 });
             }
             else
@@ -179,6 +193,7 @@ primitive file::create(file::arguments arg) {
             break;
         }
         }
+
         if (!p_arg) throw std::runtime_error("memory arguments allocation failed");
 
         auto memory_primitive = memory::allocate(*p_arg); // ofm, ifm

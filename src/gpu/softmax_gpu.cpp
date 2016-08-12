@@ -177,6 +177,10 @@ KERNEL (softmax_gpu_batches)(__global neural_memory* input_mem, __global neural_
         pDst[LWS * ITEMS_NUM + global_id] = tmp_vals[ITEMS_NUM] / partial_acc[batch_offset];
 }
 )__krnl";
+
+// TODO: read this value from ocl device!!!
+#define MAX_LWS 256
+
 namespace neural {
 namespace normalization {
 struct softmax_gpu : is_an_implementation {
@@ -213,7 +217,7 @@ struct softmax_gpu : is_an_implementation {
         {
             preferred_lws = batch_num;
             items_num = dstSize / preferred_lws;
-            while (items_num > 32 || preferred_lws < items_num)
+            while ( (_items_num > 32 || _preferred_lws < _items_num) && ((_preferred_lws << 1) <= MAX_LWS) )
             {
                 preferred_lws <<= 1;
                 items_num >>= 1;
@@ -259,14 +263,13 @@ struct softmax_gpu : is_an_implementation {
         {
             preferred_lws = batch_num;
             auto items_num = dstSize / preferred_lws;
-            while (items_num > 32 || preferred_lws < items_num)
+            while ( (_items_num > 32 || _preferred_lws < _items_num) && ((_preferred_lws << 1) <= MAX_LWS) )
             {
                 preferred_lws <<= 1;
                 items_num >>= 1;
             }
             preferred_gws = preferred_lws;
         }
-
         me->_kernel.run<gpu::input_mem, gpu::output_mem>
             ({ preferred_gws, preferred_lws }, input_mem, output_mem);
     }

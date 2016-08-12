@@ -63,8 +63,6 @@ struct convolution_relu_gpu : is_an_implementation {
         auto& input_mem = outer.input_memory(0);
         auto& padding = outer.argument.padding;
 
-        if (padding != padding::zero)
-            throw std::invalid_argument("Unknown padding mode in convolution.");
 
         switch (input_mem.argument.format) {
         case memory::format::bfyx_f32:
@@ -80,6 +78,8 @@ struct convolution_relu_gpu : is_an_implementation {
 
         auto& input_mem = outer.input_memory(0);
         auto& input_offset = outer.argument.input_offset;
+        auto& output_offset = outer.argument.output_offset;
+        auto& output_size   = outer.argument.output_size;
         auto split = outer.argument.split;
         auto negative_slope = outer.argument.negative_slope;
 
@@ -106,6 +106,8 @@ struct convolution_relu_gpu : is_an_implementation {
         return gpu::jit_constants{
             gpu::make_jit_constant("STRIDE", stride),
             gpu::make_jit_constant("INPUT_OFFSET", input_offset),
+            gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
+            gpu::make_jit_constant("OUTPUT_SIZE", output_size),
             gpu::make_jit_constant("BIAS", biases_mem),
             gpu::make_jit_constant("FILTER", filters_mem),
             gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope))
