@@ -43,15 +43,14 @@ namespace neural {
         __global float* pDst = (__global float*)get_data(dst_mem);
 
         const int x = get_global_id(0);
-
-        pDst[x] = 0;
-        uint neuronIdx = x % INPUT_BATCH_NUM;
-        uint neuronsNum = output_size[0];
+        const int batch_id = x % INPUT_BATCH_NUM;
+        uint neuronIdx = x / INPUT_BATCH_NUM;
+        pDst[x] = BIASES[neuronIdx];
+        
         for (uint i = 0; i < INPUT_SIZE_X * INPUT_SIZE_Y * INPUT_FEATURE_NUM; i++)
         {
-            pDst[x] += input[i * INPUT_BATCH_NUM + neuronIdx] * WEIGHTS[i];
+            pDst[x] += input[i * INPUT_BATCH_NUM + batch_id] * WEIGHTS[i * WEIGHTS_BATCH_NUM + neuronIdx];
         }
-        pDst[x] += BIASES[x / neuronsNum];
     )__CC";
 
     const std::string fully_connected_code_xb_memory = R"__CC(
@@ -85,14 +84,13 @@ namespace neural {
         const __global float* bias = (const __global float*)get_data(bias_mem);
 
         const int x = get_global_id(0);
-
-        pDst[x] = 0;
-        uint neuronIdx = x % INPUT_BATCH_NUM;
-        uint neuronsNum = output_size[0];
+        const int batch_id = x % INPUT_BATCH_NUM;
+        uint neuronIdx = x / INPUT_BATCH_NUM;
+        pDst[x] = bias[neuronIdx];
+        
         for (uint i = 0; i < INPUT_SIZE_X * INPUT_SIZE_Y * INPUT_FEATURE_NUM; i++)
         {
-            pDst[x] += input[i * INPUT_BATCH_NUM + neuronIdx] * weight[i];
+            pDst[x] += input[i * INPUT_BATCH_NUM + batch_id] * weight[i * WEIGHTS_BATCH_NUM + neuronIdx];
         }
-        pDst[x] += bias[x / neuronsNum];
     )__CC";
 }
