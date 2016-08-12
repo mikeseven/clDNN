@@ -72,9 +72,8 @@ struct convolution_gpu : is_an_implementation {
     const std::string& select_kernel_name() const {
         // input
         auto& input_mem = outer.input_memory(0);
-        auto& padding = outer.argument.padding;
 
-        if (padding != padding::zero)
+        if (padding::zero != outer.argument.padding)
             throw std::invalid_argument("Unknown padding mode in convolution.");
 
         switch (input_mem.argument.format) {
@@ -111,7 +110,7 @@ struct convolution_gpu : is_an_implementation {
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("STRIDE", stride),
-            gpu::make_jit_constant("INPUT_OFFSET", input_offset)
+            gpu::make_jit_constant("INPUT_OFFSET", input_offset),
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
             gpu::make_jit_constant("OUTPUT_SIZE", output_size)
         };

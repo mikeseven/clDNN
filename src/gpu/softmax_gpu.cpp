@@ -217,7 +217,7 @@ struct softmax_gpu : is_an_implementation {
         {
             preferred_lws = batch_num;
             items_num = dstSize / preferred_lws;
-            while ( (_items_num > 32 || _preferred_lws < _items_num) && ((_preferred_lws << 1) <= MAX_LWS) )
+            while ( (items_num > 32 || preferred_lws < items_num) && ((preferred_lws << 1) <= MAX_LWS) )
             {
                 preferred_lws <<= 1;
                 items_num >>= 1;
@@ -263,7 +263,7 @@ struct softmax_gpu : is_an_implementation {
         {
             preferred_lws = batch_num;
             auto items_num = dstSize / preferred_lws;
-            while ( (_items_num > 32 || _preferred_lws < _items_num) && ((_preferred_lws << 1) <= MAX_LWS) )
+            while ( (items_num > 32 || preferred_lws < items_num) && ((preferred_lws << 1) <= MAX_LWS) )
             {
                 preferred_lws <<= 1;
                 items_num >>= 1;

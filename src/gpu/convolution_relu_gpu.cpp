@@ -61,8 +61,9 @@ struct convolution_relu_gpu : is_an_implementation {
     const std::string& select_kernel_name() const {
         // input
         auto& input_mem = outer.input_memory(0);
-        auto& padding = outer.argument.padding;
 
+        if (padding::zero != outer.argument.padding)
+            throw std::invalid_argument("Unknown padding mode in convolution.");
 
         switch (input_mem.argument.format) {
         case memory::format::bfyx_f32:

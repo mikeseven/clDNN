@@ -14,11 +14,9 @@
 // limitations under the License.
 */
 
-#include <iterator>
-#include "mean_subtract_gpu.h"
+#include "api/neural.h"
 #include "implementation_map.h"
 #include "multidimensional_counter.h"
-#include "memory_utils.h"
 #include "kernel.h"
 
 namespace neural {
@@ -40,22 +38,25 @@ KERNEL(Mean_subtract_GPU)(const __global neural_memory* input_mem, __global neur
 }
 )__krnl";
 
-    mean_subtract_gpu::mean_subtract_gpu(mean_subtract &arg)
+struct mean_subtract_gpu : is_an_implementation {
+    mean_subtract &outer;
+    gpu::kernel _kernel;
+
+    mean_subtract_gpu(mean_subtract &arg)
         : is_an_implementation(neural::type_id<mean_subtract_gpu>())
-        , outer(arg) {};
-    mean_subtract_gpu::~mean_subtract_gpu() {};
-    void mean_subtract_gpu::implementation(const void *ptr) {
-        auto this_mean = static_cast<const mean_subtract *>(ptr);
+        , outer(arg)
+        , _kernel(kernelName)
+    {}
 
-        auto& mean_arg = this_mean->argument.input[1].primitive.as<const memory&>().argument; //mean
+    static void implementation(const void *ptr) {
+        auto me = static_cast<const mean_subtract_gpu*>(ptr);
+        auto& outer = me->outer;
 
-        if (mean_arg.format != memory::format::yxfb_f32) throw std::runtime_error("mean_subtract mean isn't yxfb_f32 format");
-        
-        auto& input_mem = this_mean->input_memory(0);
-        auto& output_mem = this_mean->output_memory(0);
-        auto& mean_mem = this_mean->input_memory(1);
+        auto& input_mem = outer.input_memory(0);
+        auto& output_mem = outer.output_memory(0);
+        auto& mean_mem = outer.input_memory(1);
 
-        size_t output_bufSize = this_mean->output_memory(0).count();
+        size_t output_bufSize = outer.output_memory(0).count();
 
         // calculate local workgroup size
         int lws = 16;
@@ -64,23 +65,31 @@ KERNEL(Mean_subtract_GPU)(const __global neural_memory* input_mem, __global neur
             lws--;
         }
 
-        gpu::kernel<gpu::input_mem, gpu::output_mem, gpu::input_mem> _kernel(kernelName);
-        _kernel({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, mean_mem);
+        me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>
+            ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, mean_mem);
     }
 
+    static is_an_implementation *create(mean_subtract &arg) {
+        auto& mean_arg = arg.input_memory(1).argument;
+        if (mean_arg.format != memory::format::yxfb_f32) throw std::runtime_error("mean_subtract mean isn't yxfb_f32 format");
+        return new mean_subtract_gpu(arg);
+    }
 
-    namespace {
-        struct attach {
-            attach() {
-                gpu::kernel_templates::add(kernelName, kernelCode);
+    task_group work() override { return{ { task{ implementation, this } }, schedule::single }; };
+};
 
-                auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
-                auto val_fw = mean_subtract_gpu::create;
+namespace {
+    struct attach {
+        attach() {
+            gpu::kernel_templates::add(kernelName, kernelCode);
 
-                implementation_map<mean_subtract>::add(key_fw, val_fw);
-            }
-            ~attach() {}
-        };
+            auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
+            auto val_fw = mean_subtract_gpu::create;
+
+            implementation_map<mean_subtract>::add(key_fw, val_fw);
+        }
+        ~attach() {}
+    };
 
 #ifdef __GNUC__
         __attribute__((visibility("default"))) //todo meybe dll_sym?
