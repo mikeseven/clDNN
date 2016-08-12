@@ -46,8 +46,8 @@ namespace neural {
 
         for (auto pos : range) {
             auto out_idx = calc_out_idx(output_arg.size.raw, pos);
-
-            output[out_idx] = input[out_idx] - mean[out_idx / output_arg.size.batch[0]];
+            // TODO: this is temporary solution. have to be done properly
+            output[out_idx] = input[out_idx] - mean[(out_idx % 3) * mean_arg.size.spatial[0] * mean_arg.size.spatial[1]];
         }
     }
 

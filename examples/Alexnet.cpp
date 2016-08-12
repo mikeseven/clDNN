@@ -31,10 +31,10 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
     timer_build.start();
     auto mean = mean_subtract::create(
     {
-        eng,
+        engine::type::reference,
         memory::format::yxfb_f32,
         input,
-        file::create({eng,"imagenet_mean.nnd"})
+        file::create({ eng,"imagenet_mean.nnd" })
     });
 
     auto conv1 = convolution::create(
@@ -57,11 +57,22 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
         conv1
     });
 
+    auto pool1 = pooling::create(
+    {
+        eng,
+        pooling::mode::max,
+        memory::format::yxfb_f32,
+        relu1,
+        { 1,{ 2,2 },1 }, // strd
+        { 1,{ 3,3 },1 }, // kernel
+        padding::zero
+    });
+
     auto lrn1 = normalization::response::create(
     {
         eng,
         memory::format::yxfb_f32,
-        relu1,
+        pool1,
         5,
         padding::zero,
         1.0f,
@@ -69,23 +80,12 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
         0.75f
     });
 
-    auto pool1 = pooling::create(
-    {
-        eng,
-        pooling::mode::max,
-        memory::format::yxfb_f32,
-        lrn1,
-        { 1,{ 2,2 },1 }, // strd
-        { 1,{ 3,3 },1 }, // kernel
-        padding::zero
-    });
-
     auto conv2_group2 = convolution::create(
     {
         eng,
         memory::format::yxfb_f32,
         {
-            pool1,
+            lrn1,
             file::create({ eng, "conv2_g1_weights.nnd" }),
             file::create({ eng, "conv2_g1_biases.nnd" }),
             file::create({ eng, "conv2_g2_weights.nnd" }),
@@ -104,11 +104,22 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
         conv2_group2
     });
 
+    auto pool2 = pooling::create(
+    {
+        eng,
+        pooling::mode::max,
+        memory::format::yxfb_f32,
+        relu2,
+        { 1,{ 2,2 },1 }, // strd
+        { 1,{ 3,3 },1 }, // kernel
+        padding::zero
+    });
+
     auto lrn2 = normalization::response::create(
     {
         eng,
         memory::format::yxfb_f32,
-        relu2,
+        pool2,
         5,
         padding::zero,
         1.0f,
@@ -116,23 +127,12 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
         0.75
     });
 
-    auto pool2 = pooling::create(
-    {
-        eng,
-        pooling::mode::max,
-        memory::format::yxfb_f32,
-        lrn2,
-        { 1,{ 2,2 },1 }, // strd
-        { 1,{ 3,3 },1 }, // kernel
-        padding::zero
-    });
-
     auto conv3 = convolution::create(
     {
         eng,
         memory::format::yxfb_f32,
         {
-            pool2,
+            lrn2,
             file::create({ eng, "conv3_weights.nnd" }),
             file::create({ eng, "conv3_biases.nnd" }),
         },
@@ -212,7 +212,7 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
         eng,
         memory::format::xb_f32,
         pool5,
-        file::create({ eng, "fc6_weights.nnd", file::weights_type::fully_connected}),
+        file::create({ eng, "fc6_weights.nnd", file::weights_type::fully_connected }),
         file::create({ eng, "fc6_biases.nnd" }),
         0
     });
@@ -251,9 +251,9 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
     timer_execution.start();
     execute({
         mean, //mean
-        conv1,relu1,lrn1,pool1, //stage 0
-        conv2_group2,relu2,lrn2, pool2,
-        conv3,relu3,
+        conv1,relu1, pool1, lrn1, //stage 0
+        conv2_group2, relu2, pool2, lrn2,
+        conv3, relu3,
         conv4_group2, relu4,
         conv5_group2, relu5, pool5,
         fc6,
@@ -274,8 +274,13 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
         instrumentation::logger::log_memory_to_file(conv2_group2.output[0], "conv2_group2");
         instrumentation::logger::log_memory_to_file(relu2.output[0], "relu2");
         instrumentation::logger::log_memory_to_file(pool2.output[0], "pool2");
+        instrumentation::logger::log_memory_to_file(lrn2.output[0], "lrn2");
         instrumentation::logger::log_memory_to_file(conv3.output[0], "conv3");
         instrumentation::logger::log_memory_to_file(relu3.output[0], "relu3");
+        instrumentation::logger::log_memory_to_file(conv4_group2.output[0], "conv4_group2");
+        instrumentation::logger::log_memory_to_file(relu4.output[0], "relu4");
+        instrumentation::logger::log_memory_to_file(conv5_group2.output[0], "conv5_group2");
+        instrumentation::logger::log_memory_to_file(relu5.output[0], "relu5");
         instrumentation::logger::log_memory_to_file(pool5.output[0], "pool5");
         instrumentation::logger::log_memory_to_file(fc6.output[0], "fc6");
         instrumentation::logger::log_memory_to_file(fc8.output[0], "fc8");
@@ -291,25 +296,25 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
 
 void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool dump_hl)
 {
-    auto input  = memory::allocate({ engine::reference, memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3, } });
-    auto output = memory::allocate({ engine::reference, memory::format::xb_f32,{ batch_size,{ 1000 }} });
+    auto input = memory::allocate({ engine::reference, memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3, } });
+    auto output = memory::allocate({ engine::reference, memory::format::xb_f32,{ batch_size,{ 1000 } } });
     auto img_list = get_directory_images(img_dir);
     if (img_list.empty())
         throw std::runtime_error("Specified path doesn't contain image data\n");
     auto images_list_iterator = img_list.begin();
     auto images_list_end = img_list.end();
-    auto number_of_batches = (img_list.size() % batch_size == 0) 
+    auto number_of_batches = (img_list.size() % batch_size == 0)
         ? img_list.size() / batch_size : img_list.size() / batch_size + 1;
     std::vector<std::string> image_in_batches;
-	html output_file("alexnet", "alexnet run");
+    html output_file("alexnet", "alexnet run");
     for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
     {
         image_in_batches.clear();
         for (uint32_t i = 0; i < batch_size && images_list_iterator != images_list_end; i++, images_list_iterator++)
             image_in_batches.push_back(*images_list_iterator);
         // load croped and resized images into input
-        load_images_from_file_list(image_in_batches, input);    
-        
+        load_images_from_file_list(image_in_batches, input);
+
         // create conversion to yxfb format
         auto reordered_input = reorder::create(
         {
@@ -321,8 +326,8 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool du
         // reorder data
         execute({ reordered_input }).wait();
         auto time = execute_alexnet(reordered_input, output, eng, dump_hl);
-        auto ratio =  std::chrono::duration_cast<std::chrono::milliseconds>(time);
-        std::cout << "Frames per second:" << (double)batch_size*1000.0/(double)ratio.count() << std::endl;
-		output_file.batch(output.as<const neural::memory&>( ), "names.txt", image_in_batches);
-    }    
+        auto ratio = std::chrono::duration_cast<std::chrono::milliseconds>(time);
+        std::cout << "Frames per second:" << (double)batch_size*1000.0 / (double)ratio.count() << std::endl;
+        output_file.batch(output.as<const neural::memory&>(), "names.txt", image_in_batches);
+    }
 }
