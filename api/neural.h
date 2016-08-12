@@ -927,6 +927,16 @@ private:
     worker_cpu(arguments arg, nn_thread_worker_pool &);
 };
 
+class program_builder;
+class worker_gpu : public is_a_worker {
+    std::shared_ptr<program_builder> builder;
+    worker_gpu();
+public:
+    DLL_SYM static worker create();
+    void execute(const neural::task_group& requests) const override;
+    neural::engine::type engine() const override { return neural::engine::gpu; }
+};
+
 namespace instrumentation
 {
     struct timer

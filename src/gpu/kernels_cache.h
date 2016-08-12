@@ -16,10 +16,14 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "ocl_toolkit.h"
 #include <map>
 #include <mutex>
 #include <vector>
+
+namespace cl {
+class Kernel;
+class Program;
+}
 
 namespace neural {namespace gpu {
 class gpu_toolkit;
@@ -54,21 +58,23 @@ class kernels_cache {
 public:
     typedef std::string kernel_id;
     typedef std::vector<std::pair<std::string, std::string>> jit_definitions;
+    typedef cl::Program program_type;
+    typedef cl::Kernel kernel_type;
 
 private:
     std::mutex _mutex;
     std::map<std::string, std::string> _kernel_codes;
     bool _modified = true;
 
-    cl::Program::Sources get_program_source() const;
+    std::vector<std::string> get_program_source() const;
     kernels_cache() = default;
-    cl::Program get_program(std::shared_ptr<neural::gpu::gpu_toolkit> context);
 
 public:
     static kernels_cache& get();
 
     kernel_id create_kernel_from_template(std::shared_ptr<neural::gpu::gpu_toolkit> context, const std::string& template_name, jit_definitions definitions = jit_definitions());
-    cl::Kernel get_kernel(std::shared_ptr<neural::gpu::gpu_toolkit> context, kernel_id id);
+    kernel_type get_kernel(std::shared_ptr<neural::gpu::gpu_toolkit> context, kernel_id id);
+    program_type get_program(std::shared_ptr<neural::gpu::gpu_toolkit> context);
 };
 
 }}
