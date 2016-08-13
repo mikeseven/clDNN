@@ -52,7 +52,7 @@ ${PKG_MGR} -y install gcc gcc-c++ clang make glibc-static glibc-devel libstdc++-
 # Development toolset (version 4).
 if [[ $DISTRO == 'centos' ]]; then
     ${PKG_MGR} -y install centos-release-scl
-    ${PKG_MGR} -y install devtoolset-4
+    ${PKG_MGR} -y install devtoolset-4-toolchain
 else
     ${PKG_MGR} -y install dnf-plugins-core
     ${PKG_MGR} -y copr enable mlampe/devtoolset-4
@@ -89,13 +89,13 @@ useradd -m -g users $TC_AGENT_USER
 curl -k $TC_SERVER_URL/update/buildAgent.zip > /home/$TC_AGENT_USER/buildAgent.zip
 unzip /home/$TC_AGENT_USER/buildAgent.zip -d /home/$TC_AGENT_USER/buildAgent
 cat /home/$TC_AGENT_USER/buildAgent/conf/buildAgent.dist.properties | sed '
-/serverUrl=/ { c\
+/^\s*serverUrl\s*=/ { c\
 serverUrl='"$TC_SERVER_URL"'
 }
-/name=/ { c\
+/^\s*name\s*=/ { c\
 name='"$TC_AGENT_NAME"'
 }
-/ownPort=[0-9]*/ { c\
+/^\s*ownPort\s*=\s*[0-9]*/ { c\
 ownPort='"$TC_AGENT_PORT"'
 }' > /home/$TC_AGENT_USER/buildAgent/conf/buildAgent.properties
 chown $TC_AGENT_USER:users /home/$TC_AGENT_USER/buildAgent.zip

@@ -22,6 +22,7 @@ FROM centos:centos7.0.1406
 
 ENV http_proxy=http://proxy-chain.intel.com:911 \
     https_proxy=http://proxy-chain.intel.com:912 \
+    ftp_proxy=http://proxy-chain.intel.com:911 \
     no_proxy=intel.com,.intel.com,10.0.0.0/8,192.168.0.0/16,localhost,127.0.0.0/8,134.134.0.0/16,::1
 
 ARG CF_BIN_URL
@@ -30,6 +31,7 @@ ARG TC_SERVER_URL
 ARG TC_AGENT_USER=teamcity
 ARG TC_AGENT_NAME
 ARG TC_AGENT_PORT=9090
+ARG TC_AGENT_PROPS
 
 
 COPY prepare_tc_agent.sh /tmp/
@@ -39,10 +41,13 @@ COPY ssh_creds/* /home/$TC_AGENT_USER/.ssh/
 
 ENV http_proxy= \
     https_proxy= \
-    no_proxy= 
+    ftp_proxy= \
+    no_proxy=
+
+RUN echo -e "\n$TC_AGENT_PROPS" >> /home/$TC_AGENT_USER/buildAgent/conf/buildAgent.properties
 
 USER $TC_AGENT_USER
 WORKDIR /home/$TC_AGENT_USER
 EXPOSE $TC_AGENT_PORT
 
-ENTRYPOINT ./buildAgent/bin/agent.sh start
+ENTRYPOINT ./buildAgent/bin/agent.sh run
