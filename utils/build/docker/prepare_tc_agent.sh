@@ -43,7 +43,7 @@ fi
 ${PKG_MGR} -y update
 
 # Ensure that basic tools are installed.
-${PKG_MGR} -y install tar xz python p7zip
+${PKG_MGR} -y install tar xz python p7zip unzip
 
 # Compilers and standard libraries.
 ${PKG_MGR} -y install gcc gcc-c++ clang make glibc-static glibc-devel libstdc++-static libstdc++-devel libstdc++ libgcc libX11-devel \
@@ -54,10 +54,9 @@ if [[ $DISTRO == 'centos' ]]; then
     ${PKG_MGR} -y install centos-release-scl
     ${PKG_MGR} -y install devtoolset-4
 else
-    ${PKG_MGR} -y install ${PKG_MGR}-plugins-core
+    ${PKG_MGR} -y install dnf-plugins-core
     ${PKG_MGR} -y copr enable mlampe/devtoolset-4
 fi
-scl enable devtoolset-4 bash
 
 # Repository utilities.
 ${PKG_MGR} -y install git
@@ -73,20 +72,40 @@ else
     ${PKG_MGR} -y install cmake ninja-build
 fi
 
-# Formatting tools.
-if [ ! -z ${BINARY_URL:+x} ]; then
-    curl -k ${BINARY_URL}/clang-format -o /usr/local/bin/clang-format
+# Formatting tools (optional).
+if [ ! -z ${CF_BIN_URL:+x} ]; then
+    curl -k ${CF_BIN_URL}/clang-format -o /usr/local/bin/clang-format
     chmod 755 /usr/local/bin/clang-format
 fi
 
-# Crap for Jenkins
-${PKG_MGR} -y install java-1.8.0-openjdk-headless
-useradd -m -g users jenkins
-curl http://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/2.1/swarm-client-2.1-jar-with-dependencies.jar > /home/jenkins/swarm-client.jar
-chown jenkins:users /home/jenkins/swarm-client.jar
-mkdir /home/jenkins/.ssh
-if [[ $DISTRO == 'fedora' ]]; then echo -e "HostkeyAlgorithms=+ssh-dss" >> /home/jenkins/.ssh/config; fi
-echo -e "UserKnownHostsFile=/dev/null\nStrictHostKeyChecking=no" >> /home/jenkins/.ssh/config
+# TeamCity agent elements.
+if [[ $USE_ORACLE_JAVA == 'y' ]]; then
+    rpm -i http://javadl.oracle.com/webapps/download/AutoDL?BundleId=207764
+else
+    ${PKG_MGR} -y install java-1.8.0-openjdk-headless
+fi
+
+useradd -m -g users $TC_AGENT_USER
+curl -k $TC_SERVER_URL/update/buildAgent.zip > /home/$TC_AGENT_USER/buildAgent.zip
+unzip /home/$TC_AGENT_USER/buildAgent.zip -d /home/$TC_AGENT_USER/buildAgent
+cat /home/$TC_AGENT_USER/buildAgent/conf/buildAgent.dist.properties | sed '
+/serverUrl=/ { c\
+serverUrl='"$TC_SERVER_URL"'
+}
+/name=/ { c\
+name='"$TC_AGENT_NAME"'
+}
+/ownPort=[0-9]*/ { c\
+ownPort='"$TC_AGENT_PORT"'
+}' > /home/$TC_AGENT_USER/buildAgent/conf/buildAgent.properties
+chown $TC_AGENT_USER:users /home/$TC_AGENT_USER/buildAgent.zip
+chown -R $TC_AGENT_USER:users /home/$TC_AGENT_USER/buildAgent
+chmod 755 /home/$TC_AGENT_USER/buildAgent/bin/*.sh
+
+
+mkdir /home/$TC_AGENT_USER/.ssh
+if [[ $DISTRO == 'fedora' ]]; then echo -e "HostkeyAlgorithms=+ssh-dss" >> /home/$TC_AGENT_USER/.ssh/config; fi
+echo -e "UserKnownHostsFile=/dev/null\nStrictHostKeyChecking=no" >> /home/$TC_AGENT_USER/.ssh/config
 
 # Cleanup dnf cache
 ${PKG_MGR} clean all

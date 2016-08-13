@@ -18,14 +18,31 @@
 # express and approved by Intel in writing.
 
 
-FROM centos:centos7
+FROM centos:centos7.0.1406
 
-MAINTAINER Marcin Walkowiak <marcin.walkowiak@intel.com>
+ENV http_proxy=http://proxy-chain.intel.com:911 \
+    https_proxy=http://proxy-chain.intel.com:912 \
+    no_proxy=intel.com,.intel.com,10.0.0.0/8,192.168.0.0/16,localhost,127.0.0.0/8,134.134.0.0/16,::1
 
-RUN yum -y install wget && \
-    wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/7u76-b13/jre-7u76-linux-x64.rpm && \
-    echo "02ec5613512692c3d0c41fde4484d4e3  jre-7u76-linux-x64.rpm" >> MD5SUM && \
-    md5sum -c MD5SUM && \
-    rpm -Uvh jre-7u76-linux-x64.rpm && \
-    yum -y remove wget && \
-    rm -f jre-7u76-linux-x64.rpm MD5SUM
+ARG CF_BIN_URL
+ARG USE_ORACLE_JAVA=y
+ARG TC_SERVER_URL
+ARG TC_AGENT_USER=teamcity
+ARG TC_AGENT_NAME
+ARG TC_AGENT_PORT=9090
+
+
+COPY prepare_tc_agent.sh /tmp/
+RUN chmod 755 /tmp/prepare_tc_agent.sh
+RUN /tmp/prepare_tc_agent.sh
+COPY ssh_creds/* /home/$TC_AGENT_USER/.ssh/
+
+ENV http_proxy= \
+    https_proxy= \
+    no_proxy= 
+
+USER $TC_AGENT_USER
+WORKDIR /home/$TC_AGENT_USER
+EXPOSE $TC_AGENT_PORT
+
+ENTRYPOINT ./buildAgent/bin/agent.sh start
