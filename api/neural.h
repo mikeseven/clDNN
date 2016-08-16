@@ -20,11 +20,10 @@
 #include <algorithm>
 #include <chrono>
 #include <string>
+
 namespace neural {
 
-
-
-// neural::memory
+    // neural::memory
 //
 // Primitive that describes data in memory in known format.
 // Used to describe both user-allocated data buffers and internal ones.
@@ -955,6 +954,9 @@ namespace instrumentation
     };
     struct logger
     {
+    private:
+        static const std::string dump_dir; 
+    public:
         DLL_SYM static void log_memory_to_file(const primitive&, std::string prefix = "");
     };
 };

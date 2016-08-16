@@ -26,27 +26,24 @@
 #include <string>
 namespace neural {
     namespace instrumentation {
+        // initalize dumping directory for whole run
+        const std::string logger::dump_dir = std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+
         void logger::log_memory_to_file(const primitive& mem, std::string prefix)
         {
             auto mem_arg = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>().argument : mem.output[0].as<const memory&>().argument;
             auto mem_ptr = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>().pointer<float>() : mem.output[0].as<const memory&>().pointer<float>();
-            time_t rawtime;
-            char buf[85];
-            time(&rawtime);
-            struct tm timebuf;
-            localtime_s(&timebuf, &rawtime);
-            strftime(buf, 80, "./dumps%d_%m_%Y_%I_%M_%S", &timebuf);
-            _mkdir(buf);
+            _mkdir(dump_dir.c_str());
             auto batch = mem_arg.size.batch[0];
             auto feature = mem_arg.size.feature[0];
             auto sizex = mem_arg.size.spatial[0];
+            auto eng_type = mem_arg.engine == engine::type::gpu ? "gpu" : "reference";
             std::vector<std::vector<std::ofstream>> files_handels(batch);
-            std::string dirpath(buf);
 
             for (uint32_t i = 0; i < batch; i++)
                 for (uint32_t j = 0; j < feature;j++)
                 {
-                    std::string filename((dirpath + "/" + prefix + "_b" + std::to_string(i) + "_f" + std::to_string(j) + ".txt"));
+                    std::string filename((dump_dir + "/" + prefix +"_" + eng_type + "_b" + std::to_string(i) + "_f" + std::to_string(j) + ".txt"));
                     files_handels[i].push_back(std::ofstream(filename, std::ios::out));
                 }
             int input_it = 0;

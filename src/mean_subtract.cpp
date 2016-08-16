@@ -70,7 +70,8 @@ primitive mean_subtract::create(mean_subtract::arguments arg) {
     {
         throw std::runtime_error("Mean subtract output is not in yxfb format!");
     }
-    if (mean_arg.format != memory::format::yxfb_f32)
+    if (mean_arg.format != memory::format::yxfb_f32 && 
+        mean_arg.format != memory::format::bfyx_f32)
     {
         throw std::runtime_error("Mean subtract mean is not in yxfb format!");
     }
