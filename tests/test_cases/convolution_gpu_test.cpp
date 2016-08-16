@@ -486,6 +486,74 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2) {
     EXPECT_FLOAT_EQ(-5.36f, get_value<float>(output_ptr, 15));
 }
 
+TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x4x1_nopad_split2) {
+    //  Filter : 1x1
+    //  Stride : 2x2
+    //  Input  : 1x1x4
+    //  Output : 1x1x4
+    //
+    //  Input:
+    //  f0:  1.5
+    //  f1:  0.5
+    //
+    //  f2:  0.0
+    //  f3: -0.5
+    //
+    //
+    //  Filter1:
+    //  -2 -0.5  ofm=0
+    //   1  2    ofm=1 
+    //  Bias1:
+    //   1  5
+    //
+    //  Filter2:
+    //   4  1.5  ofm=0
+    //   2  0.5  ofm=1
+    //
+    //  Bias2:
+    //  -1  2.5
+    //
+    //  Output:
+    //  -2.25  
+    //   7.5
+    //
+    //  -1.75
+    //   2.25
+    
+
+    auto input = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1,{ 1, 1 }, 4 } });
+    auto output = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1,{ 1, 1 }, 4 } });
+    auto weights1 = memory::allocate({ engine::gpu, memory::format::oiyx_f32,{ 1,{ 1, 1 },{ 2, 2 } } });
+    auto biases1 = memory::allocate({ engine::gpu, memory::format::x_f32,{ 1,{ { 2 } } , 1 } });
+    auto weights2 = memory::allocate({ engine::gpu, memory::format::oiyx_f32,{ 1,{ 1, 1 },{ 2, 2 } } });
+    auto biases2 = memory::allocate({ engine::gpu, memory::format::x_f32,{ 1,{ { 2 } } , 1 } });
+
+    set_values(input, {
+       1.5f, 0.5f, 0.0f, -0.5f
+    });
+    set_values(weights1, { -2.0f, -0.5f, 1.0f, 2.0f });
+    set_values(biases1, { 1.0f, 5.0f });
+    set_values(weights2, { 4.0f, 1.5f, 2.0f, 0.5f });
+    set_values(biases2, { -1.0f, 2.5f });
+
+    auto conv = convolution::create({
+        engine::gpu,
+        output,
+        { input, weights1, biases1, weights2, biases2 },
+        { 1,{ 2, 2 }, 1 },
+        padding::zero,
+        2
+    });
+
+    execute({ conv }).wait();
+
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_FLOAT_EQ(-2.25f, get_value<float>(output_ptr, 0));
+    EXPECT_FLOAT_EQ(7.5f, get_value<float>(output_ptr, 1));
+    EXPECT_FLOAT_EQ(-1.75f, get_value<float>(output_ptr, 2));
+    EXPECT_FLOAT_EQ(2.25f, get_value<float>(output_ptr, 3));
+}
+
 /*TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad_reorder) {
     //  Filter : 2x2
     //  Stride : 2x2
