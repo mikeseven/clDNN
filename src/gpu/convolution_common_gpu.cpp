@@ -29,9 +29,9 @@ namespace neural {
         const int batch_offset = global_id % batch_num;
 
         const int ofm_num = dst_size[1];
-        const int ofm_offset = ((global_id / batch_num) % ofm_num) / FILTER_ARRAY_NUM;
+        const int ofm_offset = (global_id / batch_num) % (ofm_num / FILTER_ARRAY_NUM);
 
-        const int f_ofm_offset = ((global_id / FILTER_ARRAY_NUM) % FILTER_OUTPUT_FEATURE_NUM) * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
+        const int f_ofm_offset = ofm_offset * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
 
         const int idx = (global_id / batch_num) / FILTER_ARRAY_NUM;
 
@@ -40,7 +40,7 @@ namespace neural {
         const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % dst_size[2]) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
         const int y = ((idx / FILTER_OUTPUT_FEATURE_NUM) / dst_size[2] * STRIDE_SIZE_Y) + INPUT_OFFSET_SIZE_Y;
 
-        int divider = FILTER_ARRAY_NUM > FILTER_INPUT_FEATURE_NUM ? 1 : FILTER_INPUT_FEATURE_NUM / FILTER_ARRAY_NUM;
+        int divider = FILTER_ARRAY_NUM > (FILTER_INPUT_FEATURE_NUM * FILTER_OUTPUT_FEATURE_NUM)? 1 : (FILTER_INPUT_FEATURE_NUM * FILTER_OUTPUT_FEATURE_NUM)/ FILTER_ARRAY_NUM;
         const int split_idx = ((global_id / batch_num) / divider) % FILTER_ARRAY_NUM;
         pDst[global_id] = BIAS[split_idx][ofm_offset];
 
@@ -141,14 +141,15 @@ namespace neural {
 
         const int batch_num = dst_size[0];
 
-        int global_id = (get_global_id(0) / batch_num) * (batch_num * FILTER_ARRAY_NUM) + (get_global_id(0) % batch_num) + split_idx * batch_num;
+        const int bifn_num = batch_num * FILTER_INPUT_FEATURE_NUM;
+        int global_id = get_global_id(0) % bifn_num + (get_global_id(0) / bifn_num) * bifn_num * FILTER_ARRAY_NUM + split_idx * bifn_num;
 
         const int batch_offset = global_id % batch_num;
 
         const int ofm_num = dst_size[1];
-        const int ofm_offset = ((global_id / batch_num) % ofm_num) / FILTER_ARRAY_NUM;
+        const int ofm_offset = (global_id / batch_num) % (ofm_num / FILTER_ARRAY_NUM);
 
-        const int f_ofm_offset = ((global_id / FILTER_ARRAY_NUM) % FILTER_OUTPUT_FEATURE_NUM) * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
+        const int f_ofm_offset = ofm_offset * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
 
         const int idx = (global_id / batch_num) / FILTER_ARRAY_NUM;
 
