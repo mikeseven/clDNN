@@ -37,12 +37,13 @@ namespace neural {
             auto batch = mem_arg.size.batch[0];
             auto feature = mem_arg.size.feature[0];
             auto sizex = mem_arg.size.spatial[0];
+            auto eng_type = mem_arg.engine == engine::type::gpu ? "gpu" : "reference";
             std::vector<std::vector<std::ofstream>> files_handels(batch);
 
             for (uint32_t i = 0; i < batch; i++)
                 for (uint32_t j = 0; j < feature;j++)
                 {
-                    std::string filename((dump_dir + "/" + prefix + "_b" + std::to_string(i) + "_f" + std::to_string(j) + ".txt"));
+                    std::string filename((dump_dir + "/" + prefix +"_" + eng_type + "_b" + std::to_string(i) + "_f" + std::to_string(j) + ".txt"));
                     files_handels[i].push_back(std::ofstream(filename, std::ios::out));
                 }
             int input_it = 0;
