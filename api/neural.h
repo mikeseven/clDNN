@@ -21,7 +21,6 @@
 #include <chrono>
 #include <string>
 
-#define UNUSED(param) param
 namespace neural {
 
     // neural::memory
@@ -955,6 +954,9 @@ namespace instrumentation
     };
     struct logger
     {
+    private:
+        static const std::string dump_dir; 
+    public:
         DLL_SYM static void log_memory_to_file(const primitive&, std::string prefix = "");
     };
 };

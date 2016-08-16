@@ -22,8 +22,8 @@
 
 namespace neural {
 
-    size_t yxfb(size_t idx, size_t batch, size_t x, size_t y) { UNUSED(x); UNUSED(y); return idx / batch; }
-    size_t bfyx(size_t idx, size_t batch, size_t x, size_t y) { UNUSED(batch); return (idx % 3) * x * y + (idx / 3); }
+    size_t yxfb(size_t idx, size_t batch, size_t , size_t ) { return idx / batch; }
+    size_t bfyx(size_t idx, size_t, size_t x, size_t y) { return (idx % 3) * x * y + (idx / 3); }
 
     mean_subtract_cpu_reference::mean_subtract_cpu_reference(mean_subtract &arg)
         : is_an_implementation(neural::type_id<mean_subtract_cpu_reference>())
