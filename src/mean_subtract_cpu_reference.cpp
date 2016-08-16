@@ -22,6 +22,9 @@
 
 namespace neural {
 
+    size_t yxfb(size_t idx, size_t batch, size_t x, size_t y) { UNUSED(x); UNUSED(y); return idx / batch; }
+    size_t bfyx(size_t idx, size_t batch, size_t x, size_t y) { UNUSED(batch); return (idx % 3) * x * y + (idx / 3); }
+
     mean_subtract_cpu_reference::mean_subtract_cpu_reference(mean_subtract &arg)
         : is_an_implementation(neural::type_id<mean_subtract_cpu_reference>())
         , outer(arg) {};
@@ -33,7 +36,8 @@ namespace neural {
 
         auto& mean_arg = this_mean->argument.input[1].primitive.as<const memory&>().argument; //mean
 
-        if (mean_arg.format != memory::format::yxfb_f32) throw std::runtime_error("mean_subtract mean isn't yxfb_f32 format");
+        if (mean_arg.format != memory::format::yxfb_f32 &&
+            mean_arg.format != memory::format::bfyx_f32) throw std::runtime_error("mean_subtract mean isn't neither yxfb_f32 nor bfyx_f32 format");
 
         auto input = this_mean->input_memory(0).pointer<float>();
         auto output = this_mean->output_memory(0).pointer<float>();
@@ -44,10 +48,10 @@ namespace neural {
 
         auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
 
+        auto indexer = (mean_arg.format == memory::format::yxfb_f32) ? yxfb : bfyx;
         for (auto pos : range) {
             auto out_idx = calc_out_idx(output_arg.size.raw, pos);
-            // TODO: this is temporary solution. have to be done properly
-            output[out_idx] = input[out_idx] - mean[(out_idx % 3) * mean_arg.size.spatial[0] * mean_arg.size.spatial[1]];
+            output[out_idx] = input[out_idx] - mean[indexer(out_idx, output_arg.size.batch[0], mean_arg.size.spatial[0], mean_arg.size.spatial[1])];
         }
     }
 

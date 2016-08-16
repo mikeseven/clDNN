@@ -20,11 +20,11 @@
 #include <algorithm>
 #include <chrono>
 #include <string>
+
+#define UNUSED(param) param
 namespace neural {
 
-
-
-// neural::memory
+    // neural::memory
 //
 // Primitive that describes data in memory in known format.
 // Used to describe both user-allocated data buffers and internal ones.

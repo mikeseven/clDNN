@@ -157,7 +157,7 @@ primitive file::create(file::arguments arg) {
             auto a = array.get()[0], b = array.get()[1], c = array.get()[2];
             p_arg = new memory::arguments(
             {
-                engine::reference, memory::format::yxfb_f32,
+                engine::reference, memory::format::bfyx_f32,
                 {
                     { 1 },
                     { static_cast<unsigned int>(a), static_cast<unsigned int>(b) },
