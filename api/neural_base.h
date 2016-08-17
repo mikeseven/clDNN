@@ -338,6 +338,7 @@ protected:
     type_traits                     *_type_traits;
     std::map<std::string, any_value> _map;
     is_a_worker(type_traits *traits) : _type_traits(traits) {}
+    friend class worker;
 public:
     virtual ~is_a_worker() {};
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
