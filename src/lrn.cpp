@@ -38,8 +38,7 @@ normalization::response::arguments::arguments(
     , padding(apadding)
     , k(ak)
     , alpha(aalpha)
-    , beta(abeta)
-{ };
+    , beta(abeta) {}
 
 normalization::response::arguments::arguments(
                  neural::engine::type aengine,
@@ -80,7 +79,7 @@ normalization::response::arguments::arguments(
             aoutput_fmt,
             output_size
         }) };
-};
+}
 
 normalization::response::arguments::arguments(
                  neural::engine::type aengine,
@@ -104,7 +103,7 @@ normalization::response::arguments::arguments(
     , padding (apadding)
     , k (ak)
     , alpha (aalpha)
-    , beta (abeta) { };
+    , beta (abeta) {}
 
 
 // creates primitive with convolution implementation that supports provided arguments

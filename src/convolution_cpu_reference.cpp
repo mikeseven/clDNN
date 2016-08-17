@@ -24,8 +24,8 @@ namespace neural {
 
 convolution_cpu_reference::convolution_cpu_reference(convolution &arg)
         : is_an_implementation(neural::type_id<convolution_cpu_reference>())
-        , outer(arg) {};
-convolution_cpu_reference::~convolution_cpu_reference() {};
+        , outer(arg) {}
+convolution_cpu_reference::~convolution_cpu_reference() {}
 void convolution_cpu_reference::implementation(const void *ptr) {
     auto this_conv = static_cast<const convolution *>(ptr);
 
@@ -38,7 +38,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     auto& input_arg  = this_conv->input_memory(0).argument;
     auto& output_arg = this_conv->output_memory(0).argument;
 
-    auto& filter_arg = this_conv->argument.input[1].primitive.as<const memory&>().argument; //convolution filter
+    auto& filter_arg = this_conv->argument.input[1].primitive().as<const memory&>().argument; //convolution filter
 
     auto split = this_conv->argument.split;
 
@@ -53,8 +53,8 @@ void convolution_cpu_reference::implementation(const void *ptr) {
     std::vector<memory::ptr<float>> biases;
     for (size_t i = 0; i < split; i++)
     {
-        filters.push_back(this_conv->argument.input[i * 2 + 1].primitive.as<const memory&>().pointer<float>());
-        biases.push_back(this_conv->argument.input[i * 2 + 2].primitive.as<const memory&>().pointer<float>());
+        filters.push_back(this_conv->argument.input[i * 2 + 1].primitive().as<const memory&>().pointer<float>());
+        biases.push_back(this_conv->argument.input[i * 2 + 2].primitive().as<const memory&>().pointer<float>());
     }
 
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
@@ -136,8 +136,8 @@ void convolution_cpu_reference::implementation(const void *ptr) {
 
 convolution_backward_cpu_reference::convolution_backward_cpu_reference(convolution_backward &arg)
     : is_an_implementation(neural::type_id<convolution_backward_cpu_reference>())
-    , outer(arg) {};
-convolution_backward_cpu_reference::~convolution_backward_cpu_reference() {};
+    , outer(arg) {}
+convolution_backward_cpu_reference::~convolution_backward_cpu_reference() {}
 void convolution_backward_cpu_reference::implementation(const void *ptr) { //todo tests
     auto this_bw_conv = static_cast<const convolution_backward *>(ptr);
 

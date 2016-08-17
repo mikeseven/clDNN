@@ -31,7 +31,7 @@ convolution_relu::arguments::arguments( neural::engine::type     eng,
                                    neural::padding::type    padd,
                                    float nslp,
                                    size_t splt)
-    : convolution_common::arguments(eng, out, out_off, out_siz, in, in_off, strd, padd, splt), negative_slope(nslp) {};
+    : convolution_common::arguments(eng, out, out_off, out_siz, in, in_off, strd, padd, splt), negative_slope(nslp) {}
 
 convolution_relu::arguments::arguments( neural::engine::type     eng,
                                    primitive                out,
@@ -40,7 +40,7 @@ convolution_relu::arguments::arguments( neural::engine::type     eng,
                                    neural::padding::type    padd,
                                    float nslp,
                                    size_t splt)
-    : convolution_common::arguments(eng, out, in, strd, padd, splt), negative_slope(nslp) {};
+    : convolution_common::arguments(eng, out, in, strd, padd, splt), negative_slope(nslp) {}
 
 convolution_relu::arguments::arguments(neural::engine::type     eng,
     memory::format::type    out_fmt,
@@ -50,7 +50,7 @@ convolution_relu::arguments::arguments(neural::engine::type     eng,
     neural::padding::type    padd,
     float nslp,
     size_t splt)
-    : convolution_common::arguments(eng, out_fmt, in, in_off, strd, padd, splt), negative_slope(nslp) {};
+    : convolution_common::arguments(eng, out_fmt, in, in_off, strd, padd, splt), negative_slope(nslp) {}
 
 convolution_relu::arguments::arguments(neural::engine::type     eng,
     memory::format::type    out_fmt,
@@ -67,7 +67,7 @@ convolution_relu::arguments::arguments( neural::engine::type     eng,
                                    neural::padding::type    padd,
                                    float nslp,
                                    size_t splt)
-    : convolution_common::arguments(eng, out, in, padd, splt), negative_slope(nslp) {};
+    : convolution_common::arguments(eng, out, in, padd, splt), negative_slope(nslp) {}
 
 // creates primitive with convolution_relu implementation that supports provided arguments
 primitive convolution_relu::create(convolution_relu::arguments arg) {

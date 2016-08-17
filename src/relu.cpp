@@ -33,11 +33,11 @@ relu::arguments::arguments(neural::engine::type engine, memory::format::type out
 
     input_offset =
     {
-        input[0].primitive.as<const memory&>().argument.size.batch.size(),
-        input[0].primitive.as<const memory&>().argument.size.spatial.size(),
-        input[0].primitive.as<const memory&>().argument.size.feature.size(),
+        input[0].primitive().as<const memory&>().argument.size.batch.size(),
+        input[0].primitive().as<const memory&>().argument.size.spatial.size(),
+        input[0].primitive().as<const memory&>().argument.size.feature.size(),
     };
-    output_size = input[0].primitive.as<const memory&>().argument.size;
+    output_size = input[0].primitive().as<const memory&>().argument.size;
     output = { memory::allocate({engine, out_fmt, output_size}) };
     output_offset = 
     {
@@ -105,7 +105,7 @@ relu_backward::arguments::arguments(neural::engine::type engine, primitive out, 
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)
     , input(in)
-    , input_offset({ in.size(),{ in[0].primitive.as<const memory&>().argument.size.batch.size(), in[0].primitive.as<const memory&>().argument.size.spatial.size(), in[0].primitive.as<const memory&>().argument.size.feature.size() } })
+    , input_offset({ in.size(),{ in[0].primitive().as<const memory&>().argument.size.batch.size(), in[0].primitive().as<const memory&>().argument.size.spatial.size(), in[0].primitive().as<const memory&>().argument.size.feature.size() } })
     , negative_slope(neg_slope) {}
 
 // creates primitive with relu implementation that supports provided arguments
@@ -114,7 +114,7 @@ primitive relu::create(relu::arguments arg) {
     auto& output_offset = arg.output_offset;
     auto& output_size = arg.output_size;
 
-    auto& input_arg  = arg.input[0].primitive.as<const memory&>().argument;
+    auto& input_arg  = arg.input[0].primitive().as<const memory&>().argument;
     auto& output_arg = arg.output[0].as<const memory&>().argument;
 
     if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("ReLU input/output number of dimension does not match.");
@@ -136,10 +136,10 @@ primitive relu_backward::create(relu_backward::arguments arg) {
     if (arg.output.size() != 1)
         throw std::runtime_error("ReLU backward: number of outputs is incorrect.");
 
-    auto& forward_output_grad_arg    = arg.input[0].primitive.as<const memory&>().argument;
+    auto& forward_output_grad_arg    = arg.input[0].primitive().as<const memory&>().argument;
     auto& forward_output_grad_offset = arg.input_offset[0];
 
-    auto& forward_input_arg    = arg.input[1].primitive.as<const memory&>().argument;
+    auto& forward_input_arg    = arg.input[1].primitive().as<const memory&>().argument;
     auto& forward_input_offset = arg.input_offset[1];
 
     auto& forward_input_grad_arg    = arg.output[0].as<const memory&>().argument;

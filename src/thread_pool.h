@@ -54,7 +54,7 @@ namespace neural
         // push    tasks for processing
         void push_job(const task_group& requests);
     };
-};
+}
 
 
 

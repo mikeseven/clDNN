@@ -22,8 +22,8 @@ namespace neural {
 
     pooling_cpu_reference::pooling_cpu_reference(pooling &arg)
         : is_an_implementation(neural::type_id<pooling_cpu_reference>())
-        , outer(arg) {};
-    pooling_cpu_reference::~pooling_cpu_reference() {};
+        , outer(arg) {}
+    pooling_cpu_reference::~pooling_cpu_reference() {}
     void pooling_cpu_reference::implementation(const void *ptr) {
             auto this_pooling = static_cast<const pooling *>(ptr);
             auto input = this_pooling->input_memory(0).pointer<float>();
@@ -105,7 +105,7 @@ namespace neural {
             default:
                 throw std::runtime_error("Unknown pooling mode.");
             }
-    };
+    }
 
 
 namespace

@@ -22,9 +22,9 @@ namespace neural {
 
     lrn_cpu_reference::lrn_cpu_reference(normalization::response &arg)
         : is_an_implementation(neural::type_id<lrn_cpu_reference>())
-        , outer(arg) {};
+        , outer(arg) {}
 
-    lrn_cpu_reference::~lrn_cpu_reference() {};
+    lrn_cpu_reference::~lrn_cpu_reference() {}
 
     void lrn_cpu_reference::implementation(const void *ptr) {
 

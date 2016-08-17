@@ -47,14 +47,14 @@ namespace neural {
             template <typename T>
             nd::value<T> translate_pos(nd::value<T> _srcPosition, Dim _dimSrc) {
                 translate_pos(this->format,_srcPosition,_dimSrc.format);
-            };
+            }
 
             template <typename T>
             static bool can_translate(memory::format::type _src_fmt_type, memory::format::type _dest_fmt_type) {
                 auto src_fmt = memory::traits(_src_fmt_type);
                 auto dest_fmt = memory::traits(_dest_fmt_type);
                 return (src_fmt.dimension == dest_fmt.dimension) && (src_fmt.type->name == dest_fmt.type->name);
-            };
+            }
 
             template <typename T>
             static nd::value<T> translate_pos(memory::format::type _fmtDest, const nd::value<T>& _srcPosition, memory::format::type _fmtSrc) {
@@ -75,7 +75,7 @@ namespace neural {
                     }
                 }
                 return tmp_pos;
-           };
+           }
         };
 
         struct reorder_reference : is_an_implementation {
@@ -161,7 +161,7 @@ namespace neural {
     // creates primitive with reorder implementation that supports provided arguments
     primitive reorder::create(reorder::arguments arg) {
         static attach attach_impl;
-        if (arg.input[0].primitive.as<const memory&>().argument.size.raw.size() != arg.output[0].as<const memory&>().argument.size.raw.size())
+        if (arg.input[0].primitive().as<const memory&>().argument.size.raw.size() != arg.output[0].as<const memory&>().argument.size.raw.size())
             //            throw std::runtime_error("Number of dimensions in reorder does not match. Meybe you want to use reshape primitive?"); //todo reshape
             throw std::runtime_error("Number of dimensions in reorder does not match.");
         return is_a_primitive::create<reorder>(arg);

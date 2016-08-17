@@ -124,8 +124,7 @@ template<typename T> struct vector {
         operator T() const { return raw_[0]; }
         T& operator[](size_t at) { assert(at<end_ - begin_); return raw_[begin_ + at]; }
         T operator[](size_t at) const { assert(at<end_ - begin_); return raw_[begin_ + at]; }
-    } feature, spatial;
-    union { ref_vector batch; ref_vector neuron; };
+    } batch, feature, spatial;
 
     bool operator==(const vector &rhs) const { return rhs.spatial==spatial && rhs.feature==feature && rhs.batch==batch; }
     bool operator!=(const vector &rhs) const { return !(*this==rhs); }
@@ -266,8 +265,8 @@ class engine  { engine();  public: enum type {
     // attributies
     , lazy = 0x80000000             // lazy evaluation
 }; };
-inline engine::type operator|(engine::type a, engine::type b) { return static_cast<engine::type>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b)); };
-inline engine::type operator&(engine::type a, engine::type b) { return static_cast<engine::type>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b)); };
+inline engine::type operator|(engine::type a, engine::type b) { return static_cast<engine::type>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b)); }
+inline engine::type operator&(engine::type a, engine::type b) { return static_cast<engine::type>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b)); }
 
 class padding { padding(); public: enum type { zero, one, two }; };
 
@@ -372,13 +371,25 @@ public:
 
 // cheap to copy handle with reference counting
 class is_a_primitive;
-struct primitive_at;
+class primitive_at;
 class primitive {
     std::shared_ptr<const is_a_primitive> _pointer;
 
 public:
-    primitive(const is_a_primitive *raw) : _pointer(raw), input(this), output(this) {};
-    primitive(const primitive &other) : _pointer(other._pointer), input(this), output(this) {};
+    primitive(const is_a_primitive *raw) : _pointer(raw), input(this), output(this) {}
+    primitive(const primitive &other) : _pointer(other._pointer), input(this), output(this) {}
+    primitive& operator=(const primitive& other) {
+        if (this == &other)
+            return *this;
+
+        _pointer = other._pointer;
+        input    = other.input;
+        output   = other.output;
+
+        return *this;
+    }
+    
+    
     any_value_type_lookup operator[] (const std::string &arg) const;
     const primitive operator()(void *argument) const;
 
@@ -408,11 +419,18 @@ public:
 };
 
 
-struct primitive_at {
-    const neural::primitive primitive;
-    const uint32_t          at;
-    primitive_at(const neural::primitive aprimitive) : primitive(aprimitive), at(0) {}
-    primitive_at(const neural::primitive aprimitive, const uint32_t pos) : primitive(aprimitive), at(pos) {}
+class primitive_at {
+    neural::primitive _primitive;
+    uint32_t          _at;
+
+public:
+    const neural::primitive& primitive() const { return _primitive; }
+    uint32_t at() const { return _at; }
+
+    primitive_at(const neural::primitive aprimitive)
+        : _primitive(aprimitive), _at(0) {}
+    primitive_at(const neural::primitive aprimitive, const uint32_t pos)
+        : _primitive(aprimitive), _at(pos) {}
 };
 
 struct memory;
@@ -435,8 +453,8 @@ public:
     virtual const std::vector<primitive_at>  &input()  const { throw std::runtime_error(std::string("no inputs in ")+_type_traits->name); };
     virtual const std::vector<primitive>     &output() const { throw std::runtime_error(std::string("no outputs in ")+_type_traits->name); };
     const memory &input_memory(uint32_t at) const {
-        auto prim = input()[at].primitive;
-        return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at]).as<const memory &>();
+        auto prim = input()[at].primitive();
+        return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at()]).as<const memory &>();
     }
     const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
     virtual void execute_argument(void *) const { throw std::runtime_error(std::string("execute-time argument not supported in")+_type_traits->name); }

@@ -39,8 +39,7 @@ struct relu_gpu : is_an_implementation {
 
     relu_gpu(relu &arg) : is_an_implementation(neural::type_id<relu_gpu>())
         , outer(arg)
-        , _kernel(kernelName)
-    {};
+        , _kernel(kernelName) {}
 
     static void implementation(const void *ptr) {
         auto me = static_cast<const relu_gpu *>(ptr);

@@ -32,21 +32,21 @@ namespace neural {
     }
     mean_subtract_cpu_reference::mean_subtract_cpu_reference(mean_subtract &arg)
         : is_an_implementation(neural::type_id<mean_subtract_cpu_reference>())
-        , outer(arg) {};
-    mean_subtract_cpu_reference::~mean_subtract_cpu_reference() {};
+        , outer(arg) {}
+    mean_subtract_cpu_reference::~mean_subtract_cpu_reference() {}
     void mean_subtract_cpu_reference::implementation(const void *ptr) {
         auto this_mean = static_cast<const mean_subtract *>(ptr);
 
         auto& output_arg = this_mean->output_memory(0).argument;
 
-        auto& mean_arg = this_mean->argument.input[1].primitive.as<const memory&>().argument; //mean
+        auto& mean_arg = this_mean->argument.input[1].primitive().as<const memory&>().argument; //mean
 
         if (mean_arg.format != memory::format::yxfb_f32 &&
             mean_arg.format != memory::format::bfyx_f32) throw std::runtime_error("mean_subtract mean isn't neither yxfb_f32 nor bfyx_f32 format");
 
         auto input = this_mean->input_memory(0).pointer<float>();
         auto output = this_mean->output_memory(0).pointer<float>();
-        auto mean = this_mean->argument.input[1].primitive.as<const memory&>().pointer<float>();
+        auto mean = this_mean->argument.input[1].primitive().as<const memory&>().pointer<float>();
 
         namespace nd = ndimensional;
         nd::value<uint32_t> range(this_mean->output_memory(0).argument.size.raw);

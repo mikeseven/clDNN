@@ -38,7 +38,7 @@ pooling::arguments::arguments( neural::engine::type     eng,
     , input_offset(in_off)
     , stride(strd)
     , size(siz)
-    , padding(padd) {};
+    , padding(padd) {}
 
 pooling::arguments::arguments( neural::engine::type     eng,
                                pooling::mode::type      p_mode,
@@ -80,7 +80,7 @@ pooling::arguments::arguments( neural::engine::type     eng,
         in.output[0].as<const memory&>().argument.size.spatial.size(),
         in.output[0].as<const memory&>().argument.size.feature.size(),
     };
-};
+}
 
 
 pooling::arguments::arguments( neural::engine::type     eng,
@@ -102,7 +102,7 @@ pooling::arguments::arguments( neural::engine::type     eng,
     , input_offset(in_off)
     , stride(strd)
     , size(siz)
-    , padding(padd) {};
+    , padding(padd) {}
 
 pooling::arguments::arguments( neural::engine::type     eng,
                                pooling::mode::type      p_mode,
@@ -116,26 +116,22 @@ pooling::arguments::arguments( neural::engine::type     eng,
     , output({out})
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)
+    , input({in})
     , stride(strd)
     , size(siz)
     , padding(padd) 
 {
-    if (in.id() == type_id<const memory>()->id)
-    {
-        input = { in };
-    }
-    else
-    {
-        input = { in.output[0] };
-    }
+    const auto& input_size = (in.id() == type_id<const memory>()->id)
+        ? in.as<const memory&>().argument.size
+        : in.output[0].as<const memory&>().argument.size;
 
     input_offset =
     {
-        input[0].primitive.as<const memory&>().argument.size.batch.size(),
-        input[0].primitive.as<const memory&>().argument.size.spatial.size(),
-        input[0].primitive.as<const memory&>().argument.size.feature.size(),
+        input_size.batch.size(),
+        input_size.spatial.size(),
+        input_size.feature.size(),
     };
-};
+}
 
 pooling::arguments::arguments( neural::engine::type     eng,
                                pooling::mode::type      p_mode,
@@ -154,7 +150,7 @@ pooling::arguments::arguments( neural::engine::type     eng,
     , input_offset(in_off)
     , stride(strd)
     , size(siz)
-    , padding(padd) {};
+    , padding(padd) {}
 
 // creates primitive with pooling implementation that supports provided arguments
 primitive pooling::create(pooling::arguments arg) {

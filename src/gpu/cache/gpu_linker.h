@@ -3,6 +3,8 @@
 #include "cache_types.h"
 #include "manager_types.h"
 
+#include <vector>
+
 namespace neural { namespace gpu { namespace manager {
 
 /// \brief Class wrapping compile feature of kernel device compiler

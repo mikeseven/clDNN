@@ -31,7 +31,7 @@ fully_connected_relu::arguments::arguments( neural::engine::type eng,
 : engine(eng)
 , output({out})
 , input({in, weights, bias})
-, negative_slope(nslp) {};
+, negative_slope(nslp) {}
 
 fully_connected_relu::arguments::arguments(neural::engine::type eng,
                         neural::memory::format::type out_fmt,
@@ -63,9 +63,9 @@ fully_connected_relu::arguments::arguments(neural::engine::type eng,
 
 // creates primitive with fully_connected implementation that supports provided arguments
 primitive fully_connected_relu::create(fully_connected_relu::arguments arg) {
-    auto& input_arg = arg.input[0].primitive.as<const memory&>().argument;
+    auto& input_arg = arg.input[0].primitive().as<const memory&>().argument;
     auto& output_arg = arg.output[0].as<const memory&>().argument;
-    auto& weight_arg = arg.input[1].primitive.as<const memory&>().argument;
+    auto& weight_arg = arg.input[1].primitive().as<const memory&>().argument;
 
     if (input_arg.format == memory::format::yxfb_f32)
     {

@@ -25,7 +25,7 @@ namespace neural {
         static void implementation(const void *ptr);
 
         static is_an_implementation *create(mean_subtract &arg);
-        task_group work() { return{ { task{ implementation, &outer } }, schedule::single }; };
+        task_group work() { return{ { task{ implementation, &outer } }, schedule::single }; }
 
         const mean_subtract &outer;
     };

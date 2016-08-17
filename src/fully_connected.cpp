@@ -28,15 +28,13 @@ fully_connected::arguments::arguments( neural::engine::type eng,
                                        primitive            bias)
 : engine(eng)
 , output({out})
-, input({in, weights, bias})
-{
-};
+, input({in, weights, bias}) {}
 
 // creates primitive with fully_connected implementation that supports provided arguments
 primitive fully_connected::create(fully_connected::arguments arg) {
-    auto& input_arg = arg.input[0].primitive.as<const memory&>().argument;
+    auto& input_arg = arg.input[0].primitive().as<const memory&>().argument;
     auto& output_arg = arg.output[0].as<const memory&>().argument;
-    auto& weight_arg = arg.input[1].primitive.as<const memory&>().argument;
+    auto& weight_arg = arg.input[1].primitive().as<const memory&>().argument;
     
     if (input_arg.format == memory::format::yxfb_f32)
     {

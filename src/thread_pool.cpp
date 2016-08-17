@@ -74,7 +74,7 @@ void nn_thread_worker_pool::push_job(const task_group& requests) {
 
 
 
-bool nn_thread_worker_pool::is_thread_enable(uint32_t threadId) { return (threadId % enable_thread_denom) == 0; };
+bool nn_thread_worker_pool::is_thread_enable(uint32_t threadId) { return (threadId % enable_thread_denom) == 0; }
 
 
 

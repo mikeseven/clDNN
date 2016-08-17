@@ -31,16 +31,18 @@
     #pragma warning(disable: 4018 4100 4505)
 #elif defined __GNUC__
     #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignore "-Wsign-compare"
-	#pragma GCC diagnostic ignore "-Wunused-parameter"
-	#pragma GCC diagnostic ignore "-Wunused-variable"
-	#pragma GCC diagnostic ignore "-Wunused-function"
+    #pragma GCC diagnostic ignored "-Wsign-compare"
+    #pragma GCC diagnostic ignored "-Wunused-parameter"
+    #pragma GCC diagnostic ignored "-Wunused-variable"
+    #pragma GCC diagnostic ignored "-Wunused-function"
+    #pragma GCC diagnostic ignored "-Wignored-qualifiers"
 #elif defined __clang__
     #pragma clang diagnostic push
-    #pragma clang diagnostic ignore "-Wsign-compare"
-	#pragma clang diagnostic ignore "-Wunused-parameter"
-	#pragma clang diagnostic ignore "-Wunused-variable"
-	#pragma clang diagnostic ignore "-Wunused-function"
+    #pragma clang diagnostic ignored "-Wsign-compare"
+    #pragma clang diagnostic ignored "-Wunused-parameter"
+    #pragma clang diagnostic ignored "-Wunused-variable"
+    #pragma clang diagnostic ignored "-Wunused-function"
+    #pragma clang diagnostic ignored "-Wignored-qualifiers"
 #else
     #pragma message("Unknown compiler. No changes in diagnostics will be done.")
 #endif

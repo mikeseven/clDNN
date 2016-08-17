@@ -23,8 +23,8 @@ public:
     type get(context* context, kernel kernel);
 
 private:
-    binary_cache kernel_binaries;
     persistent_cache file_cache;
+    binary_cache kernel_binaries;
 };
 
 } } }

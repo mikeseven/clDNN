@@ -27,9 +27,7 @@ mean_subtract::arguments::arguments( neural::engine::type   eng,
                                        primitive            mean)
 : engine(eng)
 , output({out})
-, input({in, mean})
-{
-};
+, input({in, mean}) {}
 
 mean_subtract::arguments::arguments(neural::engine::type            eng,
                                        neural::memory::format::type out_fmt,
@@ -58,9 +56,9 @@ mean_subtract::arguments::arguments(neural::engine::type            eng,
 
 // creates primitive with fully_connected implementation that supports provided arguments
 primitive mean_subtract::create(mean_subtract::arguments arg) {
-    auto& input_arg = arg.input[0].primitive.as<const memory&>().argument;
+    auto& input_arg = arg.input[0].primitive().as<const memory&>().argument;
     auto& output_arg = arg.output[0].as<const memory&>().argument;
-    auto& mean_arg = arg.input[1].primitive.as<const memory&>().argument;
+    auto& mean_arg = arg.input[1].primitive().as<const memory&>().argument;
 
     if (input_arg.format != memory::format::yxfb_f32)
     {

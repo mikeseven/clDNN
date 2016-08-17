@@ -35,7 +35,7 @@ namespace neural {
         , input_offset(in_off)
         , stride(strd)
         , padding(padd)
-        , split(splt) {};
+        , split(splt) {}
 
     convolution_common::arguments::arguments(neural::engine::type     eng,
         primitive                out,
@@ -50,12 +50,12 @@ namespace neural {
             out.as<const memory&>().argument.size.feature.size())
         , output_size(out.as<const memory&>().argument.size)
         , input(in)
-        , input_offset(in[0].primitive.as<const memory&>().argument.size.batch.size(),
-            in[0].primitive.as<const memory&>().argument.size.spatial.size(),
-            in[0].primitive.as<const memory&>().argument.size.feature.size())
+        , input_offset(in[0].primitive().as<const memory&>().argument.size.batch.size(),
+            in[0].primitive().as<const memory&>().argument.size.spatial.size(),
+            in[0].primitive().as<const memory&>().argument.size.feature.size())
         , stride(strd)
         , padding(padd)
-        , split(splt) {};
+        , split(splt) {}
 
     convolution_common::arguments::arguments(neural::engine::type     eng,
         memory::format::type     out_fmt,
@@ -76,21 +76,21 @@ namespace neural {
         if (in.size() != input_expected_size) throw std::runtime_error("input size mismatch");
         input.reserve(input_expected_size);
         input.push_back(
-            in[0].primitive.id() != type_id<const memory>()->id ? in[0].primitive.output[0] : in[0]
+            in[0].primitive().id() != type_id<const memory>()->id ? in[0].primitive().output[0] : in[0]
         );
         for (size_t i = 1; i < in.size(); i++)
             input.push_back(in[i]);
 
-        auto &input_mem = input[0].primitive.as<const memory&>();
+        auto &input_mem = input[0].primitive().as<const memory&>();
 
         // compute how many outputs in rows and columns will be generate by filter. 
         // outp <= (input_size - (2*input_offset) - kernel_size)/ stride 
-        auto kernel_xy = in[1].primitive.as<const memory&>().argument.size.spatial;
+        auto kernel_xy = in[1].primitive().as<const memory&>().argument.size.spatial;
         auto output_spatial_x = (input_mem.argument.size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_xy[0]) / strd.spatial[0] + 1;
         auto output_spatial_y = (input_mem.argument.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_xy[1]) / strd.spatial[1] + 1;
         auto input_x = input_mem.argument;
         // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
-        auto ofm = in[1].primitive.as<const memory&>().argument;
+        auto ofm = in[1].primitive().as<const memory&>().argument;
         auto number_of_batches = ofm.size.raw[1] * static_cast<uint32_t>(split);
         output_size = {
             input_mem.argument.size.batch[0],
@@ -103,7 +103,7 @@ namespace neural {
             output[0].as<const memory&>().argument.size.spatial.size(),
             output[0].as<const memory&>().argument.size.feature.size()
         };
-    };
+    }
 
     convolution_common::arguments::arguments(neural::engine::type     eng,
         memory::format::type     out_fmt,
@@ -115,9 +115,9 @@ namespace neural {
             out_fmt,
             in,
             {
-                in[0].primitive.as<const memory&>().argument.size.batch.size(),
-                in[0].primitive.as<const memory&>().argument.size.spatial.size(),
-                in[0].primitive.as<const memory&>().argument.size.feature.size()
+                in[0].primitive().as<const memory&>().argument.size.batch.size(),
+                in[0].primitive().as<const memory&>().argument.size.spatial.size(),
+                in[0].primitive().as<const memory&>().argument.size.feature.size()
             },
             strd,
             padd,
@@ -136,12 +136,12 @@ namespace neural {
             out.as<const memory&>().argument.size.feature.size())
         , output_size(out.as<const memory&>().argument.size)
         , input(in)
-        , input_offset(in[0].primitive.as<const memory&>().argument.size.batch.size(),
-            in[0].primitive.as<const memory&>().argument.size.spatial.size(),
-            in[0].primitive.as<const memory&>().argument.size.feature.size())
-        , stride(1u, std::vector<uint32_t>(in[0].primitive.as<const memory&>().argument.size.spatial.size(), 1u), 1u)
+        , input_offset(in[0].primitive().as<const memory&>().argument.size.batch.size(),
+            in[0].primitive().as<const memory&>().argument.size.spatial.size(),
+            in[0].primitive().as<const memory&>().argument.size.feature.size())
+        , stride(1u, std::vector<uint32_t>(in[0].primitive().as<const memory&>().argument.size.spatial.size(), 1u), 1u)
         , padding(padd)
-        , split(splt) {};
+        , split(splt) {}
 
 
     void convolution_common::validate_params(const arguments &arg)
@@ -149,7 +149,7 @@ namespace neural {
         auto& output_size = arg.output_size;
         auto& stride = arg.stride;
 
-        auto& input_arg = arg.input[0].primitive.as<const memory&>().argument;
+        auto& input_arg = arg.input[0].primitive().as<const memory&>().argument;
         auto& output_arg = arg.output[0].as<const memory&>().argument;
 
         if (input_arg.size.raw.size() != output_arg.size.raw.size())  throw std::runtime_error("input/output number of dimension does not match.");
@@ -158,8 +158,8 @@ namespace neural {
         const size_t split = arg.split;
         for (size_t j = 0; j < split; j++)
         {
-            auto& filter_arg = arg.input[j * 2 + 1].primitive.as<const memory&>().argument; //convolution filter
-            auto& bias_arg = arg.input[j * 2 + 2].primitive.as<const memory&>().argument;
+            auto& filter_arg = arg.input[j * 2 + 1].primitive().as<const memory&>().argument; //convolution filter
+            auto& bias_arg = arg.input[j * 2 + 2].primitive().as<const memory&>().argument;
 
             auto& input_offset = arg.input_offset;
             auto& output_offset = arg.output_offset;

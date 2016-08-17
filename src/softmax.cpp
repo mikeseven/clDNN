@@ -54,7 +54,7 @@ primitive softmax::create(softmax::arguments arg) {
     auto& output_offset = arg.output_offset;
     auto& output_size   = arg.output_size;
 
-    auto& input_arg  = arg.input[0].primitive.as<const memory&>().argument;
+    auto& input_arg  = arg.input[0].primitive().as<const memory&>().argument;
     auto& output_arg = arg.output[0].as<const memory&>().argument;
     for (auto &x : input_offset.raw) if (x < 0) throw std::runtime_error("Softmax negative input offset.");
 

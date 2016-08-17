@@ -36,14 +36,14 @@ namespace {
 template<> size_t index<neural::memory::format::yxfb_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(is_in_range(size, pos));
     return pos[0] + size[0] * (pos[1] + size[1]*(pos[2] + size[2] * pos[3]));
-};
+}
 
 
 template<> size_t index<neural::memory::format::oiyx_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(is_in_range(size, pos));
     assert(1 == size[0]); // batch
     return pos[3] + size[3] * (pos[4] + size[4] * (pos[2] + size[2] * pos[1]));
-};
+}
 
 
 template<> size_t index<neural::memory::format::os_yxi_sv16_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
@@ -52,31 +52,31 @@ template<> size_t index<neural::memory::format::os_yxi_sv16_f32>(std::vector<uin
     uint32_t slice_id = pos[1] / 16;
     uint32_t id_in_slice = pos[1] % 16;
     return id_in_slice + 16 * (pos[2] + size[2] * (pos[3] + size[3] * (pos[4] + slice_id * size[4])));
-};
+}
 
 
 template<> size_t index<neural::memory::format::byxf_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
     assert(is_in_range(size, pos));
     return pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + size[3] * pos[0]));
-};
+}
 
 
 template<> size_t index<neural::memory::format::xb_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(is_in_range(size, pos));
     return pos[0] + size[0]*pos[2];
-};
+}
 
 
 template<> size_t index<neural::memory::format::bx_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(is_in_range(size, pos));
     return pos[2] + size[2]*pos[0];
-};
+}
 
 
 template<> size_t index<neural::memory::format::bfyx_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
     assert(is_in_range(size, pos));
     return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));
-};
+}
 
 
 template<> size_t index<neural::memory::format::fyxb_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
@@ -129,7 +129,7 @@ size_t index<neural::memory::format::bs_yxf_bv24_f32>(std::vector<uint32_t> size
 
     auto idx = id_in_slice + 24 * (pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + slice_id * size[3])));
     return idx;
-};
+}
 fptr choose_calculate_idx(neural::memory::format::type arg){
     switch (arg){
         case neural::memory::format::type::x_f32: // treat x_f32 as xb_f32 with b=1
@@ -148,6 +148,6 @@ fptr choose_calculate_idx(neural::memory::format::type arg){
         default:
             throw std::runtime_error("choose_calculate_idx has no case for memory::format " + std::to_string(arg));
     }
-};
+}
 
 }

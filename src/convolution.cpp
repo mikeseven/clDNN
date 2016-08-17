@@ -30,7 +30,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
     neural::vector<uint32_t> strd,
     neural::padding::type    padd,
     size_t                   splt)
-    : convolution_common::arguments(eng, out, out_off, out_siz, in, in_off, strd, padd, splt) {};
+    : convolution_common::arguments(eng, out, out_off, out_siz, in, in_off, strd, padd, splt) {}
 
 convolution::arguments::arguments(neural::engine::type     eng,
     primitive                out,
@@ -38,7 +38,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
     neural::vector<uint32_t> strd,
     neural::padding::type    padd,
     size_t                   splt)
-    : convolution_common::arguments(eng, out, in, strd, padd, splt) {};
+    : convolution_common::arguments(eng, out, in, strd, padd, splt) {}
 
 convolution::arguments::arguments(neural::engine::type     eng,
     memory::format::type     out_fmt,
@@ -47,7 +47,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
     neural::vector<uint32_t> strd,
     neural::padding::type    padd,
     size_t                   splt)
-    : convolution_common::arguments(eng, out_fmt, in, in_off, strd, padd, splt) {};
+    : convolution_common::arguments(eng, out_fmt, in, in_off, strd, padd, splt) {}
 
 convolution::arguments::arguments(neural::engine::type     eng,
     memory::format::type     out_fmt,
@@ -62,7 +62,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
     std::vector<primitive_at>in,
     neural::padding::type    padd,
     size_t                   splt)
-    : convolution_common::arguments(eng, out, in, padd, splt) {};
+    : convolution_common::arguments(eng, out, in, padd, splt) {}
 
 convolution_backward::arguments::arguments( neural::engine::type     eng,
                                             std::vector<primitive>   out,
@@ -79,7 +79,7 @@ convolution_backward::arguments::arguments( neural::engine::type     eng,
     , input(in.cbegin(), in.cend())
     , input_offset(in_off)
     , stride(strd)
-    , padding(padd) {};
+    , padding(padd) {}
 
 convolution_backward::arguments::arguments( neural::engine::type     eng,
                                             std::vector<primitive>   out,
@@ -93,7 +93,7 @@ convolution_backward::arguments::arguments( neural::engine::type     eng,
     , input(in.cbegin(), in.cend())
     , input_offset(in[0].as<const memory&>().argument.size.batch.size(), in[0].as<const memory&>().argument.size.spatial.size(), in[0].as<const memory&>().argument.size.feature.size())
     , stride(strd)
-    , padding(padd) {};
+    , padding(padd) {}
 
 // creates primitive with convolution implementation that supports provided arguments
 primitive convolution::create(convolution::arguments arg) {
@@ -114,10 +114,10 @@ primitive convolution_backward::create(convolution_backward::arguments arg) {
     assert(1 == bw_input_size.feature.size());
     assert(1 == bw_input_size.batch.size());
 
-    auto& bw_input_arg = arg.input[0].primitive.as<const memory&>().argument;
-    auto& fw_input_arg = arg.input[1].primitive.as<const memory&>().argument;
-    auto& filter_arg = arg.input[2].primitive.as<const memory&>().argument;
-    auto& bias_arg = arg.input[3].primitive.as<const memory&>().argument;
+    auto& bw_input_arg = arg.input[0].primitive().as<const memory&>().argument;
+    auto& fw_input_arg = arg.input[1].primitive().as<const memory&>().argument;
+    auto& filter_arg = arg.input[2].primitive().as<const memory&>().argument;
+    auto& bias_arg = arg.input[3].primitive().as<const memory&>().argument;
 
     auto& bw_output_arg = arg.output[0].as<const memory&>().argument;
     auto& filter_diff_arg = arg.output[1].as<const memory&>().argument;

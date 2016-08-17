@@ -100,8 +100,8 @@ file::arguments::arguments(neural::engine::type aengine, std::string aname, prim
 file::arguments::arguments(neural::engine::type aengine, std::string aname, weights_type type)
     : engine(aengine)
     , name(aname)
-    , output({null_primitive})
-    , weight_type(type) {};
+    , weight_type(type)
+    , output({null_primitive}) {}
 
 // creates primitive with memry buffer loaded from specified file
 primitive file::create(file::arguments arg) {

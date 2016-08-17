@@ -22,8 +22,7 @@ namespace neural {
 
 relu_cpu_reference::relu_cpu_reference(relu &arg)
     : is_an_implementation(neural::type_id<relu_cpu_reference>())
-    , outer(arg)
-{};
+    , outer(arg) {}
 
 relu_cpu_reference::~relu_cpu_reference() {}
 
@@ -59,8 +58,7 @@ void relu_cpu_reference::implementation(const void *ptr) {
 
 relu_backward_cpu_reference::relu_backward_cpu_reference(relu_backward &arg)
 : is_an_implementation(neural::type_id<relu_backward_cpu_reference>())
-, outer(arg)
-{};
+, outer(arg) {}
 
 relu_backward_cpu_reference::~relu_backward_cpu_reference() {}
 
