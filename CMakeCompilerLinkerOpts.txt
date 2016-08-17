@@ -69,6 +69,7 @@ if(MSVC)
       ALIAS ExtensionsDisabled         "/Za"
       ALIAS ExtensionsEnabled          DisableExtensions REMOVE_GROUP
       ALIAS StandardCxx11
+      ALIAS StandardCxx14
       ALIAS StandardNone
 
       ALIAS DeadCodeEliminate
@@ -130,6 +131,7 @@ elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
       ALIAS ExtensionsDisabled
       ALIAS ExtensionsEnabled
       ALIAS StandardCxx11              "-std=c++11"
+      ALIAS StandardCxx14              "-std=c++14"
       ALIAS StandardNone               Standard REMOVE_GROUP
 
       ALIAS DeadCodeEliminate
@@ -203,6 +205,7 @@ elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES
       ALIAS ExtensionsDisabled
       ALIAS ExtensionsEnabled
       ALIAS StandardCxx11              "-std=c++11"
+      ALIAS StandardCxx14              "-std=c++14"
       ALIAS StandardNone               Standard REMOVE_GROUP
 
       ALIAS DeadCodeEliminate

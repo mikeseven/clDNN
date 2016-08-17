@@ -629,7 +629,6 @@ foreach(_compilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
         DebugInfoProgramDatabase
         ExceptionsEnabled
         MultiProcessorCompilation
-        RttiDisabled
         DeadCodeEliminate
         ExtensionsEnabled
         TreatWarnAsErrorEnabled
@@ -677,9 +676,7 @@ foreach(_compilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
         SET_RAW
           -pipe
           -fmessage-length=0
-          -fno-operator-names
           -fno-strict-aliasing
-          -fpermissive
           -fstack-protector-strong
           -W
           -Wno-unused-parameter
@@ -703,7 +700,6 @@ foreach(_compilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
           -mfma
           -ffast-math
           -fvisibility=hidden
-          -fvisibility-inlines-hidden
           -finline
           -finline-functions
           -finline-limit=300
@@ -741,7 +737,8 @@ intel_config_flag_apply_settings(
     CMAKE_CXX_FLAGS
     ALL_PATTERN ""
     SET
-      StandardCxx11
+      StandardCxx14
+      RttiDisabled
   )
 
 # NOTE: [WA] Workaround for possible crash problem (double destruction of static objects on bionic).
@@ -757,6 +754,15 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
           -fno-use-cxa-atexit
       )
   endif()
+  intel_config_flag_apply_settings(
+      CompilerOptions
+      CMAKE_CXX_FLAGS
+      ALL_PATTERN ""
+      SET_RAW
+        -fno-operator-names
+        -fpermissive
+        -fvisibility-inlines-hidden
+    )
 endif()
 
 # NOTE: When compiling with Clang, use the flags below for C++ files. These flags cannot be enabled when compiliing
