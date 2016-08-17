@@ -18,6 +18,7 @@
 #pragma once
 #include "memory_gpu.h"
 #include "kernels_cache.h"
+#include "api/instrumentation.h"
 #include <iostream>
 #include <sstream>
 
@@ -277,7 +278,8 @@ public:
         auto clkernel = kernels_cache::get().get_kernel(context(), _kernel_id);
         setArgs<0>(clkernel, std::forward<Args>(args)...);
 
-        profiling_clock::time_point start = profiling_clock::now();
+        auto enable_profiling = context()->profiling_enabled();
+        neural::instrumentation::timer<> kernel_timer;
         try {
             cl::Event end_event;
             context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), 0, &end_event);
@@ -285,7 +287,7 @@ public:
         } catch(cl::Error err) {
             std::cerr << "ERROR:" << err.what() << std::endl;
         }
-        context()->report_profiling(_kernel_id, profiling_clock::now() - start);
+        if(enable_profiling) context()->report_profiling(_kernel_id, kernel_timer.uptime());
     }
 };
 

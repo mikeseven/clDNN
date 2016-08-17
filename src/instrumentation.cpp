@@ -15,15 +15,13 @@
 */
 
 #include "api/neural.h"
+#include "api/instrumentation.h"
 #include <fstream>
-#include <sstream>
 #include <iomanip>
-#include <nmmintrin.h>
-#include <array>
 #include <vector>
 #include <direct.h>
-#include <ctime>
 #include <string>
+
 namespace neural {
     namespace instrumentation {
         void logger::log_memory_to_file(const primitive& mem, std::string prefix)
@@ -79,26 +77,6 @@ namespace neural {
             for (uint32_t i = 0; i < batch; i++)
                 for (uint32_t j = 0; j < feature;j++)
                     files_handels[i][j].close();
-        }
-
-        std::string timer::time_diff_string(uint64_t t_diff) {
-            std::ostringstream temp;
-            if (t_diff > 0) {
-                double t_d = static_cast<double>(t_diff);
-                static const std::string units[] = { "ns", "us", "ms", "s" };
-                uint8_t     index = 0;
-
-                while (t_d > 1000 && index < 3) {
-                    t_d /= 1000;
-                    ++index;
-                };
-                temp << std::setprecision(3) << std::fixed << t_d << " " + units[index];
-            }
-            else
-            {
-                temp << "Error: time interval is less than zero";
-            }
-            return temp.str();
         }
     }
 }

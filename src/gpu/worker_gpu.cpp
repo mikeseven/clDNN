@@ -23,17 +23,25 @@ namespace neural {
 class program_builder : public gpu::context_holder {
     gpu::kernels_cache::program_type _program;
 public:
-    program_builder(gpu::kernels_cache& cache) {
-        _program = cache.get_program(context());
+    program_builder(bool profiling_enabled) {
+        context()->profiling_enabled(profiling_enabled);
+        _program = gpu::kernels_cache::get().get_program(context());
     }
 
     auto get_profiling_info() const -> decltype(context()->get_profiling_info()) { return context()->get_profiling_info(); }
 };
 
+worker_gpu::arguments::arguments()
+    : arguments(false)
+    {}
 
-worker_gpu::worker_gpu()
+worker_gpu::arguments::arguments(bool profiling)
+    : profiling_enabled(profiling)
+    {}
+
+worker_gpu::worker_gpu(arguments arg)
     : is_a_worker(type_id<neural::worker_gpu>())
-    , builder(new program_builder(gpu::kernels_cache::get()))
+    , builder(new program_builder(arg.profiling_enabled))
 {}
 
 void worker_gpu::execute(const neural::task_group& requests) const {
@@ -46,8 +54,8 @@ std::vector<std::pair<std::string, std::chrono::nanoseconds>> worker_gpu::get_pr
     return builder->get_profiling_info();
 }
 
-worker worker_gpu::create() {
-    return new worker_gpu();
+worker worker_gpu::create(arguments arg) {
+    return new worker_gpu(arg);
 }
 
 }

@@ -36,14 +36,14 @@ protected:
     const std::shared_ptr<gpu_toolkit>& context() const { return _context; }
 };
 
-typedef std::chrono::high_resolution_clock profiling_clock;
-typedef std::pair<std::string, profiling_clock::duration> profiling_info;
+typedef std::pair<std::string, std::chrono::nanoseconds> profiling_info;
 
 class gpu_toolkit {
     cl::Device _device;
     cl::Context _context;
     cl::CommandQueue _command_queue;
     cl::Program _program;
+    bool _profiling_enabled = false;
     std::vector<profiling_info> _profiling_info;
 
     gpu_toolkit();
@@ -56,7 +56,9 @@ public:
     cl::Context& context() { return _context; }
     cl::CommandQueue& queue() { return _command_queue; }
     cl::Program& program() { return _program; }
-    void report_profiling(std::string desc, profiling_clock::duration data) { _profiling_info.emplace_back( desc, data ); }
+    bool profiling_enabled() const { return _profiling_enabled; }
+    void profiling_enabled(bool enable) { _profiling_enabled = enable; }
+    void report_profiling(std::string desc, std::chrono::nanoseconds data) { _profiling_info.emplace_back( desc, data ); }
     std::vector<profiling_info> get_profiling_info() const { return _profiling_info; }
 
     gpu_toolkit(const gpu_toolkit& other) = delete;

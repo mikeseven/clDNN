@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <chrono>
 #include <string>
+
 namespace neural {
 
 
@@ -928,46 +929,21 @@ private:
 };
 
 class program_builder;
-class worker_gpu : public is_a_worker {
-    std::shared_ptr<program_builder> builder;
-    worker_gpu();
-public:
-    DLL_SYM static worker create();
+struct worker_gpu : is_a_worker {
+    struct arguments {
+        bool profiling_enabled;
+
+        DLL_SYM arguments();
+        DLL_SYM arguments(bool profiling);
+    };
+
+    DLL_SYM static worker create(arguments arg = arguments());
     DLL_SYM void execute(const neural::task_group& requests) const override;
-    DLL_SYM neural::engine::type engine() const override { return neural::engine::gpu; }
+    neural::engine::type engine() const override { return neural::engine::gpu; }
     DLL_SYM std::vector<std::pair<std::string, std::chrono::nanoseconds>> get_profiling_info() const;
-};
-
-namespace instrumentation
-{
-    struct timer
-    {
-    private:
-        std::chrono::high_resolution_clock::time_point  time_tick;
-        std::chrono::high_resolution_clock::time_point  time_tock;
-
-    public:
-        DLL_SYM void start() {
-            time_tick = std::chrono::steady_clock::now();
-        };
-
-        DLL_SYM void stop() {
-            time_tock = std::chrono::steady_clock::now();
-        };
-
-        DLL_SYM std::chrono::high_resolution_clock::duration get_time_diff() { 
-            return time_tock - time_tick; }
-
-        DLL_SYM std::string time_diff_string() {
-            return time_diff_string(std::chrono::duration_cast<std::chrono::nanoseconds>(time_tock - time_tick).count()); 
-        };
-
-        static std::string  time_diff_string(uint64_t);
-    };
-    struct logger
-    {
-        DLL_SYM static void log_memory_to_file(const primitive&, std::string prefix = "");
-    };
+private:
+    std::shared_ptr<program_builder> builder;
+    worker_gpu(arguments);
 };
 
 } // namespace neural
