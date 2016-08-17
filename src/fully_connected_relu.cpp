@@ -69,14 +69,15 @@ primitive fully_connected_relu::create(fully_connected_relu::arguments arg) {
 
     if (input_arg.format == memory::format::yxfb_f32)
     {
-        if (weight_arg.format != memory::format::yxfn_f32)
-            throw std::runtime_error("Fully connected input is yxfb, so weights must be in format yxfn!");
+        if (weight_arg.format != memory::format::bfyx_f32)
+            throw std::runtime_error("Fully connected input is yxfb, so weights must be in format bfyx!");
     }
     else
     {
         if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Fully connected input/output number of dimension does not match.");
         if (weight_arg.format != memory::format::xb_f32 &&
-            weight_arg.format != memory::format::x_f32 )                 throw std::runtime_error("Fully connected weight format is not xb_f32 or x_f32 or nb_f32.");
+            weight_arg.format != memory::format::bx_f32 &&
+            weight_arg.format != memory::format::x_f32 )                 throw std::runtime_error("Fully connected weight format is not xb_f32 or bx_f32 or x_f32 or nb_f32.");
     }
 
     return is_a_primitive::create<fully_connected_relu>(arg);

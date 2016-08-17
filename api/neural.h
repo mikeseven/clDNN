@@ -68,6 +68,7 @@ struct memory : is_a_primitive {
     static format_traits traits(format::type fmt) {
         switch(fmt) {
         case format::   x_f32: return {1, type_id<float>()};
+        case format::  bx_f32:
         case format::  xb_f32: return {2, type_id<float>()};
         case format::yxfn_f32:
         case format::yxfb_f32:

@@ -165,34 +165,34 @@ TEST(fully_connected_gpu, x_f32) {
 
 
 TEST(fully_connected_gpu, yxfn_f32) {
-    //  Input  : 2x2x1x2 - 2 batches 2 feature maps of size 2x1
+    //  Input  : 1x2x1x2 - 1 batch 2 feature maps of size 2x1
     //  Output : 2x1 - 2 batches 1 neuron each
-    //  Weights: 1x2x1x2 - 1 neuron with weights of 2 feature maps of size 2x1
+    //  Weights: 2x2x1x2 - 2 neurons with weights of 2 feature maps of size 2x1
     //
     //  Input:
     //   1  -2      f0: b0
     //   3  -4      f1: b0
-    //   5  -6      f0: b1
-    //   7  -8      f1: b1
 
     //  Weights:
     //   1  -1      n0: fm0  
     //   2   0      n0: fm1
+    //   3   4      n1: fm0
+    //   0.5 5      n1: fm1
     //
     //  Biases:
-    //   1.0
+    //   1.0 -5
     //
     //  Output:
-    //   10,  26
+    //   10  -28.5
 
-    auto input_prim = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 2, { { 2, 1 } }, 2 } });
+    auto input_prim = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1, { { 2, 1 } }, 2 } });
     auto output_prim = memory::allocate({ engine::gpu, memory::format::xb_f32,{ 2 ,{ { 1 } }, 1 } });
-    auto weights_prim = memory::allocate({ engine::gpu, memory::format::yxfn_f32,{ 1, { { 2, 1 } }, 2 } });
-    auto bias_prim = memory::allocate({ engine::gpu, memory::format::x_f32,{ 1,{ { 1 } }, 1 } });
+    auto weights_prim = memory::allocate({ engine::gpu, memory::format::bfyx_f32,{ 2, { { 2, 1 } }, 2 } });
+    auto bias_prim = memory::allocate({ engine::gpu, memory::format::x_f32,{ 1,{ { 2 } }, 1 } });
 
-    set_values(input_prim, { 1.f, 5.f, 3.f, 7.f, -2.f, -6.f, -4.f, -8.f });
-    set_values(weights_prim, { 1.f, 2.f, -1.f, 0.f });
-    set_values(bias_prim, { 1.0f });
+    set_values(input_prim, { 1.f, 3.f, -2.f, -4.f });
+    set_values(weights_prim, { 1.f, -1.f, 2.0f, 0.f, 3.0f, 4.0f, 0.5f, 5.0f });
+    set_values(bias_prim, { 1.0f, -5.0f });
 
     auto full_con_prim = fully_connected::create({ engine::gpu, output_prim, input_prim, weights_prim, bias_prim });
 
@@ -200,5 +200,5 @@ TEST(fully_connected_gpu, yxfn_f32) {
 
     auto output_ptr = output_prim.as<const memory &>().pointer<float>();
     EXPECT_EQ(10, output_ptr[0]);
-    EXPECT_EQ(26, output_ptr[1]);
+    EXPECT_EQ(-28.5, output_ptr[1]);
 }

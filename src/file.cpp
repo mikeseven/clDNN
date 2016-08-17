@@ -143,7 +143,7 @@ primitive file::create(file::arguments arg) {
         case 2: // 2D i.e. fully connected
         {
             p_arg = new memory::arguments(
-            { engine::reference, memory::format::xb_f32,
+            { engine::reference, memory::format::bx_f32,
             {
                 static_cast<unsigned int>(array.get()[0]),
                 { { static_cast<unsigned int>(array.get()[1]) } },
@@ -175,7 +175,7 @@ primitive file::create(file::arguments arg) {
             else if (arg.weight_type == file::weights_type::fully_connected)
             {
                 p_arg = new memory::arguments(
-                { engine::reference, memory::format::yxfn_f32,
+                { engine::reference, memory::format::bfyx_f32,
                 {
                     { static_cast<unsigned int>(array.get()[3]) }, // batches
                     { static_cast<unsigned int>(array.get()[1]), static_cast<unsigned int>(array.get()[0]) },
@@ -204,7 +204,7 @@ primitive file::create(file::arguments arg) {
 
         return memory_primitive;
     }
-    catch (...) {
+    catch (std::exception e) {
         return nullptr;
     }
 }

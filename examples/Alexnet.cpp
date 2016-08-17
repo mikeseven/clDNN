@@ -123,7 +123,7 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
         5,
         padding::zero,
         1.0f,
-        0.0001f,
+        0.00002f,
         0.75
     });
 

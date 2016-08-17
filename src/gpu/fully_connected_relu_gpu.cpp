@@ -22,31 +22,35 @@
 
 const std::string kernelName_xb = "Fully_Connected_Relu_GPU_xb";
 const std::string kernelCode_xb_Begin = R"__krnl(
-#define INPUT_BATCH_NUM input_size[0]
-#define INPUT_FEATURE_NUM input_size[1]
-#define INPUT_SIZE_X input_size[2]
-#define INPUT_SIZE_Y input_size[3]
 KERNEL (Fully_Connected_Relu_GPU_xb)(__global neural_memory* input_mem, __global neural_memory* dst_mem)
+{
+)__krnl";
+
+const std::string kernelName_xb_bx = "Fully_Connected_Relu_GPU_xb_bx";
+const std::string kernelCode_xb_bx_Begin = R"__krnl(
+KERNEL (Fully_Connected_Relu_GPU_xb_bx)(__global neural_memory* input_mem, __global neural_memory* dst_mem)
 {
 )__krnl";
 
 const std::string kernelName_yxfn = "Fully_Connected_Relu_GPU_yxfn";
 const std::string kernelCode_yxfn_Begin = R"__krnl(
-#define INPUT_BATCH_NUM input_size[0]
-#define INPUT_FEATURE_NUM input_size[1]
-#define INPUT_SIZE_X input_size[2]
-#define INPUT_SIZE_Y input_size[3]
 KERNEL (Fully_Connected_Relu_GPU_yxfn)(__global neural_memory* input_mem, __global neural_memory* dst_mem)
 {
 )__krnl";
 
 const std::string kernelName_xb_memory = "Fully_Connected_Relu_GPU_xb_memory";
 const std::string kernelCode_xb_memory_Begin = R"__krnl(
-#define INPUT_BATCH_NUM input_size[0]
-#define INPUT_FEATURE_NUM input_size[1]
-#define INPUT_SIZE_X input_size[2]
-#define INPUT_SIZE_Y input_size[3]
 KERNEL (Fully_Connected_Relu_GPU_xb_memory)(
+    const __global neural_memory* input_mem, 
+    __global neural_memory* dst_mem, 
+    const __global neural_memory* weights_mem,
+    const __global neural_memory* bias_mem)
+{
+)__krnl";
+
+const std::string kernelName_xb_bx_memory = "Fully_Connected_Relu_GPU_xb_bx_memory";
+const std::string kernelCode_xb_bx_memory_Begin = R"__krnl(
+KERNEL (Fully_Connected_Relu_GPU_xb_bx_memory)(
     const __global neural_memory* input_mem, 
     __global neural_memory* dst_mem, 
     const __global neural_memory* weights_mem,
@@ -56,10 +60,6 @@ KERNEL (Fully_Connected_Relu_GPU_xb_memory)(
 
 const std::string kernelName_yxfn_memory = "Fully_Connected_Relu_GPU_yxfn_memory";
 const std::string kernelCode_yxfn_memory_Begin = R"__krnl(
-#define INPUT_BATCH_NUM input_size[0]
-#define INPUT_FEATURE_NUM input_size[1]
-#define INPUT_SIZE_X input_size[2]
-#define INPUT_SIZE_Y input_size[3]
 KERNEL (Fully_Connected_Relu_GPU_yxfn_memory)(
     const __global neural_memory* input_mem, 
     __global neural_memory* dst_mem, 
@@ -102,7 +102,10 @@ namespace neural {
                 return inline_memory ? kernelName_yxfn : kernelName_yxfn_memory;
             }
             else {
-                return inline_memory ? kernelName_xb : kernelName_xb_memory;
+                if (outer.input_memory(1).argument.format == memory::format::bx_f32)
+                    return inline_memory ? kernelName_xb_bx : kernelName_xb_bx_memory;
+                else
+                    return inline_memory ? kernelName_xb : kernelName_xb_memory;
             }
         }
 
@@ -186,7 +189,7 @@ namespace neural {
             auto& input_mem = arg.input_memory(0);
             // weights
             auto& weight_mem = arg.input_memory(1);
-
+            weight_mem;
             // validate arguments
             if (input_mem.argument.format == memory::format::yxfb_f32) {
                 assert(input_mem.argument.size.feature.size() == weight_mem.argument.size.feature.size());
@@ -204,10 +207,12 @@ namespace neural {
 namespace {
     struct attach {
         attach() {
-            gpu::kernel_templates::add(kernelName_xb, kernelCode_xb_Begin + fully_connected_code_xb + kernelCode_Relu + kernelCode_End);
-            gpu::kernel_templates::add(kernelName_yxfn, kernelCode_yxfn_Begin + fully_connected_code_yxfn + kernelCode_Relu + kernelCode_End);
-            gpu::kernel_templates::add(kernelName_xb_memory, kernelCode_xb_memory_Begin + fully_connected_code_xb_memory + kernelCode_End);
-            gpu::kernel_templates::add(kernelName_yxfn_memory, kernelCode_yxfn_memory_Begin + fully_connected_code_yxfn_memory + kernelCode_Relu + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_xb, input_defines + kernelCode_xb_Begin + fully_connected_code_xb + kernelCode_Relu + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_xb_bx, input_defines + kernelCode_xb_bx_Begin + fully_connected_code_xb_bx + kernelCode_Relu + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_yxfn, input_defines + kernelCode_yxfn_Begin + fully_connected_code_yxfn + kernelCode_Relu + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_xb_memory, input_defines + kernelCode_xb_memory_Begin + fully_connected_code_xb_memory + kernelCode_Relu + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_xb_bx_memory, input_defines + kernelCode_xb_bx_memory_Begin + fully_connected_code_xb_bx_memory + kernelCode_Relu + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_yxfn_memory, input_defines + kernelCode_yxfn_memory_Begin + fully_connected_code_yxfn_memory + kernelCode_Relu + kernelCode_End);
 
             auto val_fw = fully_connected_relu_gpu::create;
 
