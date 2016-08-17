@@ -309,8 +309,8 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
 
     if (eng == engine::gpu) {
         auto profiling_info = workers[0].as<worker_gpu&>().get_profiling_info();
-        auto max_len_it = std::max_element(std::begin(profiling_info), std::end(profiling_info), [](decltype(profiling_info)::value_type& a, decltype(profiling_info)::value_type& b) {return a.first.length() < b.first.length(); });
-        if (max_len_it != std::end(profiling_info)) {
+        if (profiling_info.size() > 0) {
+            auto max_len_it = std::max_element(std::begin(profiling_info), std::end(profiling_info), [](decltype(profiling_info)::value_type& a, decltype(profiling_info)::value_type& b) {return a.first.length() < b.first.length(); });
             std::cout << "Kernels profiling info: " << std::endl;
             auto max_len = max_len_it->first.length();
             for (auto& pi : profiling_info) {
