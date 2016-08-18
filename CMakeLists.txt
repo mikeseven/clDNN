@@ -81,6 +81,9 @@ set(CLDNN__IOCL_ICD_DIR  "${CLDNN__COMMON_DIR}/intel_ocl_icd")
 # Path which points to directory with FreeImage and FreeImagePlus libraries.
 set(CLDNN__FREEIMAGE_DIR "${CLDNN__COMMON_DIR}/FreeImage")
 
+# Path which points to directory with boost libraries (only selection).
+set(CLDNN__BOOST_DIR     "${CLDNN__COMMON_DIR}/boost")
+
 # Path which points to directory with C++ bindings for OpenCL (header files + wrapper that disables specific warnings).
 set(CLDNN__KHR_CLHPP_DIR "${CLDNN__COMMON_DIR}/khronos_ocl_clhpp")
 
@@ -94,7 +97,7 @@ set(CLDNN_BUILD__PROJ_NAME_PREFIX "")
 
 # Minimum versions of compilers.
 set(CLDNN__MIN_COMPILER_VERSION__MSVC  "19.0")
-set(CLDNN__MIN_COMPILER_VERSION__GCC   "4.9")
+set(CLDNN__MIN_COMPILER_VERSION__GCC   "5.2")
 set(CLDNN__MIN_COMPILER_VERSION__CLANG "3.5")
 
 # Single/multi-configuration generator helpers.
@@ -318,6 +321,24 @@ if(__CLDNN_FreeImageDefaultVersion VERSION_EQUAL "0")
 endif()
 
 # ======================================================================================================
+
+# Detecting all versions of added boost package in the project.
+if(NOT EXISTS "${CLDNN__BOOST_DIR}")
+  message(FATAL_ERROR "[clDNN] Root for boost libraries is invalid or does not exist.
+    Please make sure that libraries are added into \"${CLDNN__BOOST_DIR}\".")
+endif()
+
+cldnn_locate_component_versions(__CLDNN_BoostVersions __CLDNN_BoostPaths __CLDNN_BoostDefaultVersion
+    "boost libraries" "${CLDNN__BOOST_DIR}"
+    "include/boost-*/boost/config.hpp"
+    "include/boost-*/boost/filesystem/config.hpp"
+  )
+
+if(__CLDNN_BoostDefaultVersion VERSION_EQUAL "0")
+  message(FATAL_ERROR "[clDNN] boost libraries required for build cannot be located.")
+endif()
+
+# ======================================================================================================
 # ============================================ CMAKE OPTIONS ===========================================
 # ======================================================================================================
 
@@ -368,6 +389,13 @@ set_property(CACHE CLDNN__FREEIMAGE_VERSION PROPERTY STRINGS ${__CLDNN_FreeImage
 
 # ======================================================================================================
 
+# boost libraries (filesystem subset): Version of libraries used to build clDNN.
+set(CLDNN__BOOST_VERSION "${__CLDNN_BoostDefaultVersion}" CACHE STRING "boost libraries (filesystem subset): Version of libraries used to build clDNN framework.")
+mark_as_advanced(CLDNN__BOOST_VERSION)
+set_property(CACHE CLDNN__BOOST_VERSION PROPERTY STRINGS ${__CLDNN_BoostVersions})
+
+# ======================================================================================================
+
 # Include and build: Examples of usage of clDNN framework.
 set(CLDNN__INCLUDE_EXAMPLES ON CACHE BOOL "Include and build: clDNN framework's usage examples.")
 mark_as_advanced(CLDNN__INCLUDE_EXAMPLES)
@@ -383,6 +411,13 @@ mark_as_advanced(CLDNN__INCLUDE_TESTS)
 # Run (requires CLDNN__INCLUDE_TESTS to be true): Tests (unit tests and small acceptance tests) for clDNN framework.
 set(CLDNN__RUN_TESTS ON CACHE BOOL "Run: clDNN framework's tests.")
 mark_as_advanced(CLDNN__RUN_TESTS)
+
+# ======================================================================================================
+
+# Compile / Link: Use static C++ Runtime library.
+set(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME OFF CACHE BOOL "Compile / Link: Use static version of C++ Runtime library instead of shared one.")
+mark_as_advanced(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME)
+
 
 # ======================================================================================================
 
@@ -513,6 +548,41 @@ set(CLDNN__FREEIMAGE_LIBDIRS "${CLDNN__FREEIMAGE_ROOT}/${__CLDNN_TargetOs}/${__C
 
 # ======================================================================================================
 
+# Selecting boost libraries version and path.
+list(FIND __CLDNN_BoostVersions "${CLDNN__BOOST_VERSION}" __CLDNN_BoostVersionIdx)
+if(__CLDNN_BoostVersionIdx LESS 0)
+  message(FATAL_ERROR "[clDNN] CLDNN__BOOST_VERSION: Selected version of boost libraries cannot be found.
+    Please use one of following values: ${__CLDNN_BoostVersions}.")
+endif()
+list(GET __CLDNN_BoostPaths ${__CLDNN_BoostVersionIdx} CLDNN__BOOST_ROOT)
+set(CLDNN__BOOST_ROOT "${CLDNN__BOOST_ROOT}" CACHE INTERNAL "Path to boost libraries (filesystem subset) used to build clDNN framework.")
+
+# Setting paths for find_package.
+set(BOOST_ROOT            "${CLDNN__BOOST_ROOT}")
+set(BOOST_INCLUDEDIR      "${CLDNN__BOOST_ROOT}")
+set(BOOST_LIBRARYDIR      "${CLDNN__BOOST_ROOT}/${__CLDNN_TargetOs}/${__CLDNN_TargetCpuDir}/lib")
+set(Boost_NO_SYSTEM_PATHS ON)
+# Setting preferred types of libraries.
+set(Boost_USE_STATIC_LIBS    ON)
+set(Boost_USE_DEBUG_RUNTIME  ON)
+set(Boost_USE_STATIC_RUNTIME ${CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME})
+find_package(Boost "${CLDNN__BOOST_VERSION}" EXACT REQUIRED
+      COMPONENTS filesystem date_time
+    )
+
+
+get_cmake_property(__CLDNN_VarNames VARIABLES)
+cldnn_dmsg("All boost package variables:")
+foreach(__CLDNN_VarName ${__CLDNN_VarNames})
+  string(REPLACE ";" "\;" __CLDNN_VarName "${__CLDNN_VarName}") # [WA#1] Must escape ; again if occurred in item.
+  if(__CLDNN_VarName MATCHES "^Boost_")
+    cldnn_dmsg(" - ${__CLDNN_VarName}:     ${${__CLDNN_VarName}}")
+  endif()
+endforeach()
+cldnn_dmsg("")
+
+# ======================================================================================================
+
 # Clean-up of helper variables for component paths.
 unset(__CLDNN_TargetOs)
 unset(__CLDNN_TargetCpu)
@@ -538,12 +608,14 @@ else()
   message(STATUS "[clDNN]  - ICD version used to build:  ${CLDNN__IOCL_ICD_VERSION}")
 endif()
 message(STATUS "[clDNN]  - FreeImage v. used to build: ${CLDNN__FREEIMAGE_VERSION}")
+message(STATUS "[clDNN]  - boost ver. used to build:   ${CLDNN__BOOST_VERSION}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Include/Build examples:     ${CLDNN__INCLUDE_EXAMPLES}")
 message(STATUS "[clDNN]  - Include/Build tests:        ${CLDNN__INCLUDE_TESTS}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Run tests:                  ${CLDNN__RUN_TESTS}")
 message(STATUS "[clDNN]")
+message(STATUS "[clDNN]  - Use static C++ Runtime:     ${CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME}")
 message(STATUS "[clDNN]  - Allow unsafe size opts:     ${CLDNN__COMPILE_LINK_ALLOW_UNSAFE_SIZE_OPT}")
 message(STATUS "[clDNN]  - CMake debug trace:          ${CLDNN__CMAKE_DEBUG}")
 message(STATUS "[clDNN]")
@@ -559,6 +631,12 @@ message(STATUS "[clDNN] FreeImage/FreeImagePlus:")
 message(STATUS "[clDNN]  - Root:            ${CLDNN__FREEIMAGE_ROOT}")
 message(STATUS "[clDNN]     + Headers:      ${CLDNN__FREEIMAGE_INCDIRS}")
 message(STATUS "[clDNN]     + Libs to link: ${CLDNN__FREEIMAGE_LIBDIRS}")
+message(STATUS "[clDNN]")
+message(STATUS "[clDNN] boost libraries:")
+message(STATUS "[clDNN]  - Root:            ${CLDNN__BOOST_ROOT}")
+message(STATUS "[clDNN]     + Headers:      ${Boost_INCLUDE_DIRS}")
+message(STATUS "[clDNN]     + Libs to link: ${Boost_LIBRARY_DIRS}")
+
 message(STATUS "[clDNN] =============================================================================")
 unset(__CLDNN_DetectedArch_Target)
 
@@ -616,13 +694,22 @@ include("${CMAKE_SOURCE_DIR}/CMakeCompilerLinkerOpts.txt" NO_POLICY_SCOPE)
 
 # ======================================= Generic compiler options =====================================
 
-foreach(_compilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
+# Selecting C++ Runtime.
+if(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME)
+  set(__CLDNN_RtType      "RtMultiThreadedStatic")
+  set(__CLDNN_RtTypeDebug "RtMultiThreadedStaticDebug")
+else()
+  set(__CLDNN_RtType      "RtMultiThreadedShared")
+  set(__CLDNN_RtTypeDebug "RtMultiThreadedSharedDebug")
+endif()
+
+foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
   # Change some generic settings of compiler.
   # NOTE: Debug info generation is enabled for all build configuration, because it is separate on Windows
   #       and we will use "strip" command on Linux and Android (to separate it).
   intel_config_flag_apply_settings(
       CompilerOptions
-      "${_compilerFlagName}"
+      "${__CLDNN_CompilerFlagName}"
       ALL_PATTERN ""
       SET
         CompileAsDefault
@@ -636,26 +723,26 @@ foreach(_compilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
     )
   intel_config_flag_apply_settings(
       CompilerOptions
-      "${_compilerFlagName}"
+      "${__CLDNN_CompilerFlagName}"
       ALL_PATTERN_NOINHERIT ""
       SET
         OptimizeSize
-        RtMultiThreadedShared
+        "${__CLDNN_RtType}"
     )
   intel_config_flag_apply_settings(
       CompilerOptions
-      "${_compilerFlagName}"
+      "${__CLDNN_CompilerFlagName}"
       PATTERN "^Debug"
       SET
         OptimizeDisabled
-        RtMultiThreadedSharedDebug
+        "${__CLDNN_RtTypeDebug}"
     )
 
   # Adding needed settings specific to MSVC.
   if(MSVC)
     intel_config_flag_apply_settings(
         CompilerOptions
-        "${_compilerFlagName}"
+        "${__CLDNN_CompilerFlagName}"
         ALL_PATTERN ""
         SET_RAW
           "/arch:AVX2"
@@ -671,7 +758,7 @@ foreach(_compilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
   elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
     intel_config_flag_apply_settings(
         CompilerOptions
-        "${_compilerFlagName}"
+        "${__CLDNN_CompilerFlagName}"
         ALL_PATTERN ""
         SET_RAW
           -pipe
@@ -711,7 +798,7 @@ foreach(_compilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
   elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
     intel_config_flag_apply_settings(
         CompilerOptions
-        "${_compilerFlagName}"
+        "${__CLDNN_CompilerFlagName}"
         ALL_PATTERN ""
         SET_RAW
           -pipe
@@ -779,15 +866,19 @@ if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^C
   endif()
 endif()
 
+unset(__CLDNN_RtType)
+unset(__CLDNN_RtTypeDebug)
+unset(__CLDNN_CompilerFlagName)
+
 # ======================================== Generic linker options ======================================
 
-foreach(_linkerFlagName IN ITEMS "CMAKE_EXE_LINKER_FLAGS" "CMAKE_SHARED_LINKER_FLAGS")
+foreach(__CLDNN_LinkerFlagName IN ITEMS "CMAKE_EXE_LINKER_FLAGS" "CMAKE_SHARED_LINKER_FLAGS")
   # Change some generic settings of linker.
   # NOTE: Debug info generation is enabled for all build configuration, because it is separate on Windows
   #       and we will use "strip" command on Linux and Android (to separate it).
   intel_config_flag_apply_settings(
       LinkerOptions
-      "${_linkerFlagName}"
+      "${__CLDNN_LinkerFlagName}"
       ALL_PATTERN ""
       SET
         DebugInfoProgramDatabase
@@ -838,6 +929,8 @@ if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^C
     )
 endif()
 
+unset(__CLDNN_LinkerFlagName)
+
 # ======================================================================================================
 
 cldnn_dmsg(" - compile/link flags:")
@@ -859,6 +952,7 @@ unset(__CLDNN_CfgFlag)
 
 set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
     CLDNN_CMAKE
+    BOOST_ALL_NO_LIB
   )
 
 if (MSVC)
@@ -878,6 +972,7 @@ include_directories(
     ${CLDNN__FREEIMAGE_INCDIRS}
     "${CLDNN__KHR_CLHPP_DIR}"
     "${CLDNN__API_DIR}"
+    ${Boost_INCLUDE_DIRS}
   )
 link_directories(
     ${CLDNN__IOCL_ICD_LIBDIRS}

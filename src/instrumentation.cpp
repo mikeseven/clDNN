@@ -16,11 +16,14 @@
 
 #include "api/neural.h"
 #include "api/instrumentation.h"
+
 #include <fstream>
 #include <iomanip>
-#include <vector>
-#include <direct.h>
 #include <string>
+#include <vector>
+
+#include <boost/filesystem.hpp>
+
 
 namespace neural {
     namespace instrumentation {
@@ -31,7 +34,7 @@ namespace neural {
         {
             auto mem_arg = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>().argument : mem.output[0].as<const memory&>().argument;
             auto mem_ptr = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>().pointer<float>() : mem.output[0].as<const memory&>().pointer<float>();
-            _mkdir(dump_dir.c_str());
+            boost::filesystem::create_directories(dump_dir);
             auto batch = mem_arg.size.batch[0];
             auto feature = mem_arg.size.feature[0];
             auto sizex = mem_arg.size.spatial[0];

@@ -80,11 +80,11 @@ elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
     message(FATAL_ERROR "[clDNN] Minimum required version of GCC/G++ compiler is ${CLDNN__MIN_COMPILER_VERSION__GCC}. Please update compiler.")
   endif()
 
-  CHECK_CXX_COMPILER_FLAG("-std=c++11" __CLDNN_CompilerSupportsCxx11)
-  if(NOT __CLDNN_CompilerSupportsCxx11)
-    message(FATAL_ERROR "[clDNN] Compiler does not support C++11. Please update compiler.")
+  CHECK_CXX_COMPILER_FLAG("-std=c++14" __CLDNN_CompilerSupportsCxx14)
+  if(NOT __CLDNN_CompilerSupportsCxx14)
+    message(FATAL_ERROR "[clDNN] Compiler does not support C++14. Please update compiler.")
   endif()
-  unset(__CLDNN_CompilerSupportsCxx11)
+  unset(__CLDNN_CompilerSupportsCxx14)
 
   intel_flag_register_settings(
       CompilerOptions
@@ -154,11 +154,11 @@ elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES
     message(FATAL_ERROR "[clDNN] Minimum required version of clang compiler is ${CLDNN__MIN_COMPILER_VERSION__CLANG}. Please update compiler.")
   endif()
 
-  CHECK_CXX_COMPILER_FLAG("-std=c++11" __CLDNN_CompilerSupportsCxx11)
-  if(NOT __CLDNN_CompilerSupportsCxx11)
-    message(FATAL_ERROR "[clDNN] Compiler does not support C++11. Please update compiler.")
+  CHECK_CXX_COMPILER_FLAG("-std=c++14" __CLDNN_CompilerSupportsCxx14)
+  if(NOT __CLDNN_CompilerSupportsCxx14)
+    message(FATAL_ERROR "[clDNN] Compiler does not support C++14. Please update compiler.")
   endif()
-  unset(__CLDNN_CompilerSupportsCxx11)
+  unset(__CLDNN_CompilerSupportsCxx14)
 
   intel_flag_register_settings(
       CompilerOptions
