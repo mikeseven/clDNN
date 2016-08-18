@@ -74,7 +74,7 @@ namespace neural {
             throw std::invalid_argument("input feature size must be equal to mean feature size");
         }
         return new mean_subtract_cpu_reference(arg);
-    };
+    }
 
     namespace {
         struct attach {
