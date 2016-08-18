@@ -90,9 +90,9 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
         // Cast double->T.
         const T epsilon = static_cast<T>(this_bn->argument.epsilon);
 
-        auto& input = this_bn->argument.input[0].primitive().as<const memory&>();
-        auto& scale = this_bn->argument.input[1].primitive().as<const memory&>();
-        auto& bias  = this_bn->argument.input[2].primitive().as<const memory&>();
+        auto& input = this_bn->input_memory(0);
+        auto& scale = this_bn->input_memory(1);
+        auto& bias  = this_bn->input_memory(2);
 
         auto& output              = this_bn->argument.output[0].as<const memory&>();
         auto& current_mean        = this_bn->argument.output[1].as<const memory&>();
@@ -247,11 +247,11 @@ struct batch_normalization_training_backward_reference : is_an_implementation {
 
         const auto spatial = this_bn->argument.spatial;
 
-        auto& forward_input       = this_bn->argument.input[0].primitive().as<const memory&>();
-        auto& forward_scale       = this_bn->argument.input[1].primitive().as<const memory&>();
-        auto& output_grad         = this_bn->argument.input[3].primitive().as<const memory&>();
-        auto& current_mean        = this_bn->argument.input[4].primitive().as<const memory&>();
-        auto& current_inv_std_dev = this_bn->argument.input[5].primitive().as<const memory&>();
+        auto& forward_input       = this_bn->input_memory(0);
+        auto& forward_scale       = this_bn->input_memory(1);
+        auto& output_grad         = this_bn->input_memory(3);
+        auto& current_mean        = this_bn->input_memory(4);
+        auto& current_inv_std_dev = this_bn->input_memory(5);
 
         auto& input_grad = this_bn->argument.output[0].as<const memory&>();
         auto& scale_grad = this_bn->argument.output[1].as<const memory&>();
@@ -367,11 +367,11 @@ struct batch_normalization_inference_reference : is_an_implementation {
 
         const auto spatial = this_bn->argument.spatial;
 
-        auto& input       = this_bn->argument.input[0].primitive().as<const memory&>();
-        auto& scale       = this_bn->argument.input[1].primitive().as<const memory&>();
-        auto& bias        = this_bn->argument.input[2].primitive().as<const memory&>();
-        auto& mean        = this_bn->argument.input[3].primitive().as<const memory&>();
-        auto& inv_std_dev = this_bn->argument.input[4].primitive().as<const memory&>();
+        auto& input       = this_bn->input_memory(0);
+        auto& scale       = this_bn->input_memory(1);
+        auto& bias        = this_bn->input_memory(2);
+        auto& mean        = this_bn->input_memory(3);
+        auto& inv_std_dev = this_bn->input_memory(4);
 
         auto& output = this_bn->argument.output[0].as<const memory&>();
 

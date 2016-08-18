@@ -36,7 +36,7 @@ namespace neural {
             auto output = this_fc->output_memory(0).pointer<float>();
             auto weight = this_fc->input_memory(1).pointer<float>();
             auto& weight_buffer_size = this_fc->input_memory(1).argument.size;
-            auto bias = this_fc->argument.input[2].primitive().as<const memory&>().pointer<float>();
+            auto bias = this_fc->input_memory(2).pointer<float>();
 
 
             auto& input_arg = this_fc->input_memory(0).argument;

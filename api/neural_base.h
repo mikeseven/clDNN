@@ -383,13 +383,9 @@ public:
             return *this;
 
         _pointer = other._pointer;
-        input    = other.input;
-        output   = other.output;
-
         return *this;
     }
-    
-    
+
     any_value_type_lookup operator[] (const std::string &arg) const;
     const primitive operator()(void *argument) const;
 
@@ -452,11 +448,11 @@ public:
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
     virtual const std::vector<primitive_at>  &input()  const { throw std::runtime_error(std::string("no inputs in ")+_type_traits->name); };
     virtual const std::vector<primitive>     &output() const { throw std::runtime_error(std::string("no outputs in ")+_type_traits->name); };
-    const memory &input_memory(uint32_t at) const {
+    const memory &input_memory(size_t at) const {
         auto prim = input()[at].primitive();
         return (prim.id()==type_id<const memory>()->id ? prim : prim.output[input()[at].at()]).as<const memory &>();
     }
-    const memory &output_memory(uint32_t at) const  { return output()[at].as<const memory &>(); };
+    const memory &output_memory(size_t at) const  { return output()[at].as<const memory &>(); };
     virtual void execute_argument(void *) const { throw std::runtime_error(std::string("execute-time argument not supported in")+_type_traits->name); }
     friend class primitive;
 
