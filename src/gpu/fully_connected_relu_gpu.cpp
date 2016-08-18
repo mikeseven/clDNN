@@ -182,23 +182,24 @@ namespace neural {
         }
 
         static is_an_implementation *create(fully_connected_relu &arg) {
-#ifndef NDEBUG
             // input
             auto& input_mem = arg.input_memory(0);
-            // weights
-            auto& weight_mem = arg.input_memory(1);
-
+            auto& input_size = input_mem.argument.size;
             // validate arguments
             if (input_mem.argument.format == memory::format::yxfb_f32) {
-                assert(input_mem.argument.size.feature.size() == weight_mem.argument.size.feature.size());
-                assert(input_mem.argument.size.batch.size() == weight_mem.argument.size.batch.size());
-                assert(input_mem.argument.size.feature[0] == weight_mem.argument.size.feature[0]);
-            } else {
-                assert(1 == input_mem.argument.size.feature.size());
-                assert(1 == input_mem.argument.size.batch.size());
-                assert(1 == input_mem.argument.size.feature[0]);
+                // weights
+                auto& weight_size = arg.input_memory(1).argument.size;
+                if (input_size.feature.size() != weight_size.feature.size()
+                    || input_size.batch.size() != weight_size.batch.size()
+                    || input_size.feature[0] != weight_size.feature[0])
+                    throw std::invalid_argument("Input and weights sizes do not match");
             }
-#endif
+            else {
+                // int a,b,c; a*b*c = 1  => a=b=c=1
+                if (1 != input_size.feature.size() * input_size.batch.size() * input_size.feature[0])
+                    throw std::invalid_argument("Wrong input size");
+            }
+
             return new fully_connected_relu_gpu(arg);
         };
     };
