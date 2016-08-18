@@ -38,6 +38,17 @@ KERNEL(Convolution_Relu_GPU_BFXY)(
     __global neural_memory* dst_mem)
 {)__krnl";
 
+const std::string kernelName_YXFB_memory = "Convolution_Relu_GPU_YXFB_memory";
+const std::string kernelCode_YXFB_memory_Begin = R"__krnl(
+#define INPUT_SIZE_X input_size[2]
+KERNEL(Convolution_Relu_GPU_YXFB_memory)(
+    const __global neural_memory* input_mem,
+    __global neural_memory* dst_mem,
+    const __global neural_memory* filter_mem,
+    const __global neural_memory* bias_mem,
+    uint split_idx)
+{)__krnl";
+
 const std::string kernelCode_Relu = "    pDst[global_id] = max(pDst[global_id], 0.0f) + NEGATIVE_SLOPE * min(pDst[global_id], 0.0f);";
 
 const std::string kernelCode_End = R"__krnl(
@@ -46,11 +57,13 @@ const std::string kernelCode_End = R"__krnl(
 
 struct convolution_relu_gpu : is_an_implementation {
     convolution_relu &outer;
+    bool inline_memory;
     gpu::kernel _kernel;
 
     convolution_relu_gpu(convolution_relu &arg)
         : is_an_implementation(neural::type_id<convolution_relu_gpu>())
         , outer(arg)
+        , inline_memory(can_inline_memory(arg.input_memory(1)))
         , _kernel(select_kernel_name(), get_jit_constants())
     {}
 
@@ -67,9 +80,11 @@ struct convolution_relu_gpu : is_an_implementation {
 
         switch (input_mem.argument.format) {
         case memory::format::bfyx_f32:
+            if(!inline_memory)
+                throw std::logic_error("Not supported yet");
             return kernelName_BFXY;
         case memory::format::yxfb_f32:
-            return kernelName_YXFB;
+            return inline_memory? kernelName_YXFB : kernelName_YXFB_memory;
         default:
             throw std::invalid_argument("Input memory format is not supported");
         }
@@ -96,28 +111,40 @@ struct convolution_relu_gpu : is_an_implementation {
         // Ofm and batch is cropped, ofm will be hold manually
         // Batch is included in output size
 
-        std::vector<std::reference_wrapper<const neural::memory>> biases_mem;
-        std::vector<std::reference_wrapper<const neural::memory>> filters_mem;
-        for (uint32_t i = 0; i < split; i++)
-        {
-            filters_mem.push_back(outer.input_memory(i * 2 + 1));
-            biases_mem.push_back(outer.input_memory(i * 2 + 2));
-        }
-
-        return gpu::jit_constants{
+        gpu::jit_constants mem_consts{
             gpu::make_jit_constant("STRIDE", stride),
             gpu::make_jit_constant("INPUT_OFFSET", input_offset),
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
             gpu::make_jit_constant("OUTPUT_SIZE", output_size),
-            gpu::make_jit_constant("BIAS", biases_mem),
-            gpu::make_jit_constant("FILTER", filters_mem),
             gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope))
         };
+
+        if (inline_memory)
+        {
+            std::vector<std::reference_wrapper<const neural::memory>> biases_mem;
+            std::vector<std::reference_wrapper<const neural::memory>> filters_mem;
+            for (uint32_t i = 0; i < split; i++)
+            {
+                filters_mem.push_back(outer.input_memory(i * 2 + 1));
+                biases_mem.push_back(outer.input_memory(i * 2 + 2));
+            }
+
+            mem_consts.add_constant(gpu::make_jit_constant("BIAS", biases_mem));
+            mem_consts.add_constant(gpu::make_jit_constant("FILTER", filters_mem));
+        }
+        else
+        {
+            mem_consts.add_constant(gpu::make_jit_constant("FILTER", outer.input_memory(1).argument.size));
+            mem_consts.add_constant(gpu::make_jit_constant("FILTER_ARRAY_NUM", std::to_string(split)));
+        }
+        return mem_consts;
     }
 
     static void implementation(const void *ptr) {
         auto me = static_cast<const convolution_relu_gpu*>(ptr);
         auto& outer = me->outer;
+
+        auto split = outer.argument.split;
 
         auto& input_mem = outer.input_memory(0);
         auto& output_mem = outer.output_memory(0);
@@ -135,12 +162,33 @@ struct convolution_relu_gpu : is_an_implementation {
 
         auto dstSize = output_mem.count();
 
-        if (input_mem.argument.format == memory::format::bfyx_f32) {
+        switch (input_mem.argument.format) {
+        case memory::format::bfyx_f32:
+            if (!me->inline_memory)
+                throw std::logic_error("Not supported yet");
             me->_kernel.run<gpu::input_mem, gpu::output_mem>
-                ({ dstSize, std::min(dstSize, static_cast<size_t>(16)) }, input_mem, output_mem);
-        } else {
-            me->_kernel.run<gpu::input_mem, gpu::output_mem>
-                ({ {dstSize, 1} , {std::min(dstSize, static_cast<size_t>(16)), 1} }, input_mem, output_mem);
+                ({ { dstSize, 1 } ,{ std::min(dstSize, static_cast<size_t>(16)), 1 } }, input_mem, output_mem);
+            break;
+        case memory::format::yxfb_f32:
+            if (me->inline_memory) {
+                me->_kernel.run<gpu::input_mem, gpu::output_mem>
+                    ({ { dstSize, 1 } ,{ std::min(dstSize, static_cast<size_t>(16)), 1 } }, input_mem, output_mem);
+            }
+            else {
+                size_t workitems_per_enqueue = dstSize / split;
+                for (uint32_t i = 0; i < split; i++) {
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
+                        ({ { workitems_per_enqueue, 1 } ,{ std::min(workitems_per_enqueue, static_cast<size_t>(16)), 1 } },
+                            input_mem,
+                            output_mem,
+                            outer.input_memory(i * 2 + 1), //filters
+                            outer.input_memory(i * 2 + 2), //biases
+                            i);
+                }
+            }
+            break;
+        default:
+            throw std::invalid_argument("Input memory format is not supported");
         }
     }
 
@@ -163,12 +211,14 @@ namespace{
 struct attach{
     attach(){
         gpu::kernel_templates::add(kernelName_YXFB, kernelCode_YXFB_Begin + convolution_code_yxfb + kernelCode_Relu + kernelCode_End);
+        gpu::kernel_templates::add(kernelName_BFXY, kernelCode_BFXY_Begin + convolution_code_bfxy + kernelCode_Relu + kernelCode_End);
+        gpu::kernel_templates::add(kernelName_YXFB_memory, kernelCode_YXFB_memory_Begin + convolution_code_yxfb_memory + kernelCode_Relu + kernelCode_End);
+
         auto val_fw = convolution_relu_gpu::create;
 
         auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
         implementation_map<convolution_relu>::add(key_fw, val_fw);
 
-        gpu::kernel_templates::add(kernelName_BFXY, kernelCode_BFXY_Begin + convolution_code_bfxy + kernelCode_Relu + kernelCode_End);
         auto key_fw2 = std::make_tuple(engine::gpu, memory::format::bfyx_f32, memory::format::bfyx_f32);
         implementation_map<convolution_relu>::add(key_fw2, val_fw);
     }

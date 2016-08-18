@@ -38,7 +38,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         file::create({ eng,"imagenet_mean.nnd" })
     });
 
-    auto conv1 = convolution::create(
+    auto conv1 = convolution_relu::create(
     {
         eng,
         memory::format::yxfb_f32,
@@ -51,19 +51,12 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         { 1,{ 4, 4 }, 1 },
         padding::zero });
 
-    auto relu1 = relu::create(
-    {
-        eng,
-        memory::format::yxfb_f32,
-        conv1
-    });
-
     auto pool1 = pooling::create(
     {
         eng,
         pooling::mode::max,
         memory::format::yxfb_f32,
-        relu1,
+        conv1,
         { 1,{ 2,2 },1 }, // strd
         { 1,{ 3,3 },1 }, // kernel
         padding::zero
@@ -81,7 +74,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         0.75f
     });
 
-    auto conv2_group2 = convolution::create(
+    auto conv2_group2 = convolution_relu::create(
     {
         eng,
         memory::format::yxfb_f32,
@@ -95,14 +88,8 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         { 0,{ -2, -2 }, 0 },
         { 1,{ 1, 1 }, 1 },
         padding::zero,
+        0, // negative slope for RELU
         2
-    });
-
-    auto relu2 = relu::create(
-    {
-        eng,
-        memory::format::yxfb_f32,
-        conv2_group2
     });
 
     auto pool2 = pooling::create(
@@ -110,7 +97,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         eng,
         pooling::mode::max,
         memory::format::yxfb_f32,
-        relu2,
+        conv2_group2,
         { 1,{ 2,2 },1 }, // strd
         { 1,{ 3,3 },1 }, // kernel
         padding::zero
@@ -128,7 +115,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         0.75
     });
 
-    auto conv3 = convolution::create(
+    auto conv3 = convolution_relu::create(
     {
         eng,
         memory::format::yxfb_f32,
@@ -142,19 +129,12 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         padding::zero
     });
 
-    auto relu3 = relu::create(
-    {
-        eng,
-        memory::format::yxfb_f32,
-        conv3
-    });
-
-    auto conv4_group2 = convolution::create(
+    auto conv4_group2 = convolution_relu::create(
     {
         eng,
         memory::format::yxfb_f32,
         {
-            relu3,
+            conv3,
             file::create({ eng, "conv4_g1_weights.nnd" }),
             file::create({ eng, "conv4_g1_biases.nnd" }),
             file::create({ eng, "conv4_g2_weights.nnd" }),
@@ -163,22 +143,16 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
         padding::zero,
+        0, // negative slope for RELU
         2
     });
 
-    auto relu4 = relu::create(
-    {
-        eng,
-        memory::format::yxfb_f32,
-        conv4_group2
-    });
-
-    auto conv5_group2 = convolution::create(
+    auto conv5_group2 = convolution_relu::create(
     {
         eng,
         memory::format::yxfb_f32,
         {
-            relu4,
+            conv4_group2,
             file::create({ eng, "conv5_g1_weights.nnd" }),
             file::create({ eng, "conv5_g1_biases.nnd" }),
             file::create({ eng, "conv5_g2_weights.nnd" }),
@@ -187,14 +161,8 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
         padding::zero,
+        0, // negative slope for RELU
         2
-    });
-
-    auto relu5 = relu::create(
-    {
-        eng,
-        memory::format::yxfb_f32,
-        conv5_group2
     });
 
     auto pool5 = pooling::create(
@@ -202,7 +170,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         eng,
         pooling::mode::max,
         memory::format::yxfb_f32,
-        relu5,
+        conv5_group2,
         { 1,{ 2,2 },1 }, // strd
         { 1,{ 3,3 },1 }, // kernel
         padding::zero
@@ -270,11 +238,11 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
     instrumentation::timer<> timer_execution;
     execute({
         mean, //mean
-        conv1,relu1, pool1, lrn1, //stage 0
-        conv2_group2, relu2, pool2, lrn2,
-        conv3, relu3,
-        conv4_group2, relu4,
-        conv5_group2, relu5, pool5,
+        conv1, pool1, lrn1, //stage 0
+        conv2_group2, pool2, lrn2,
+        conv3,
+        conv4_group2,
+        conv5_group2, pool5,
         fc6,
         fc7,
         fc8,
@@ -288,19 +256,14 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         instrumentation::logger::log_memory_to_file(input, "input0");
         instrumentation::logger::log_memory_to_file(mean, "mean");
         instrumentation::logger::log_memory_to_file(conv1.output[0], "conv1");
-        instrumentation::logger::log_memory_to_file(relu1.output[0], "relu1");
         instrumentation::logger::log_memory_to_file(lrn1.output[0], "lrn1");
         instrumentation::logger::log_memory_to_file(pool1.output[0], "pool1");
         instrumentation::logger::log_memory_to_file(conv2_group2.output[0], "conv2_group2");
-        instrumentation::logger::log_memory_to_file(relu2.output[0], "relu2");
         instrumentation::logger::log_memory_to_file(pool2.output[0], "pool2");
         instrumentation::logger::log_memory_to_file(lrn2.output[0], "lrn2");
         instrumentation::logger::log_memory_to_file(conv3.output[0], "conv3");
-        instrumentation::logger::log_memory_to_file(relu3.output[0], "relu3");
         instrumentation::logger::log_memory_to_file(conv4_group2.output[0], "conv4_group2");
-        instrumentation::logger::log_memory_to_file(relu4.output[0], "relu4");
         instrumentation::logger::log_memory_to_file(conv5_group2.output[0], "conv5_group2");
-        instrumentation::logger::log_memory_to_file(relu5.output[0], "relu5");
         instrumentation::logger::log_memory_to_file(pool5.output[0], "pool5");
         instrumentation::logger::log_memory_to_file(fc6.output[0], "fc6");
         instrumentation::logger::log_memory_to_file(fc8.output[0], "fc8");
