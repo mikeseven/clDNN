@@ -49,15 +49,16 @@ namespace neural {
         __global float* pDst = (__global float*)get_data(dst_mem);
 
         const int x = get_global_id(0);
+        const uint batch_id = x % INPUT_BATCH_NUM;
 
-        pDst[x] = 0;
         uint outXIdx = x / INPUT_BATCH_NUM;
         uint weightBatchIdx = outXIdx * WEIGHTS_BATCH_NUM;
+        pDst[x] = BIASES[outXIdx];
         for (uint i = 0; i < INPUT_SIZE_X; i++)
         {
-            pDst[x] += input[i] * WEIGHTS[weightBatchIdx + i];
+            pDst[x] += input[i * INPUT_BATCH_NUM + batch_id] * WEIGHTS[weightBatchIdx + i];
         }
-        pDst[x] += BIASES[outXIdx];
+
     )__CC";
 
     const std::string fully_connected_code_yxfn = R"__CC(
@@ -91,16 +92,15 @@ namespace neural {
         const __global float* bias = (const __global float*)get_data(bias_mem);
 
         const int x = get_global_id(0);
+        const uint batch_id = x % INPUT_BATCH_NUM;
 
-        pDst[x] = 0;
         uint outXIdx = x / INPUT_BATCH_NUM;
-        uint inputBatchIdx = x % INPUT_BATCH_NUM;
         uint weightBatchIdx = outXIdx * WEIGHTS_BATCH_NUM;
+        pDst[x] = bias[outXIdx];
         for (uint i = 0; i < INPUT_SIZE_X; i++)
         {
-            pDst[x] += input[i * INPUT_BATCH_NUM + inputBatchIdx] * weight[weightBatchIdx + i];
+            pDst[x] += input[i * INPUT_BATCH_NUM + batch_id] * weight[weightBatchIdx + i];
         }
-        pDst[x] += bias[outXIdx];
     )__CC";
 
     const std::string fully_connected_code_xb_bx_memory = R"__CC(

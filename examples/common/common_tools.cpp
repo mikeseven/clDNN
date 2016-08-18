@@ -99,6 +99,7 @@ void load_images_from_file_list(
     auto single_image_size = dim[0] * dim[0] * 3;
     for (auto img : images_list)
     {
+        // "false" because we want to load images in BGR format because weights are in BGR format and we don't want any conversions between them.
         nn_data_load_from_image(img, it,dim[0], false);
         it += single_image_size;
     }
