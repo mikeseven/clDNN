@@ -23,7 +23,7 @@
 
 namespace neural {
 
-    // neural::memory
+// neural::memory
 //
 // Primitive that describes data in memory in known format.
 // Used to describe both user-allocated data buffers and internal ones.
@@ -927,39 +927,22 @@ private:
     worker_cpu(arguments arg, nn_thread_worker_pool &);
 };
 
-namespace instrumentation
-{
-    struct timer
-    {
-    private:
-        std::chrono::high_resolution_clock::time_point  time_tick;
-        std::chrono::high_resolution_clock::time_point  time_tock;
+class program_builder;
+struct worker_gpu : is_a_worker {
+    struct arguments {
+        bool profiling_enabled;
 
-    public:
-        DLL_SYM void start() {
-            time_tick = std::chrono::steady_clock::now();
-        };
-
-        DLL_SYM void stop() {
-            time_tock = std::chrono::steady_clock::now();
-        };
-
-        DLL_SYM std::chrono::high_resolution_clock::duration get_time_diff() { 
-            return time_tock - time_tick; }
-
-        DLL_SYM std::string time_diff_string() {
-            return time_diff_string(std::chrono::duration_cast<std::chrono::nanoseconds>(time_tock - time_tick).count()); 
-        };
-
-        static std::string  time_diff_string(uint64_t);
+        DLL_SYM arguments();
+        DLL_SYM arguments(bool profiling);
     };
-    struct logger
-    {
-    private:
-        static const std::string dump_dir; 
-    public:
-        DLL_SYM static void log_memory_to_file(const primitive&, std::string prefix = "");
-    };
+
+    DLL_SYM static worker create(arguments arg = arguments());
+    DLL_SYM void execute(const neural::task_group& requests) const override;
+    neural::engine::type engine() const override { return neural::engine::gpu; }
+    DLL_SYM std::vector<std::pair<std::string, std::chrono::nanoseconds>> get_profiling_info() const;
+private:
+    std::shared_ptr<program_builder> builder;
+    worker_gpu(arguments);
 };
 
 } // namespace neural

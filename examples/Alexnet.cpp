@@ -20,15 +20,16 @@
 #include "output_parser.h"
 #include <iostream>
 #include <string>
+#include "api/instrumentation.h"
 
 using namespace neural;
+
 // AlexNet with weights & biases from file
-std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, primitive& output, engine::type eng, bool dump_hl)
+std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, engine::type eng, bool dump_hl)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
-    instrumentation::timer timer_build, timer_execution;
     std::cout << "Building Alexnet started" << std::endl;
-    timer_build.start();
+    instrumentation::timer<> timer_build;
     auto mean = mean_subtract::create(
     {
         engine::type::reference,
@@ -244,11 +245,29 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
         fc8
     });
 
-    timer_build.stop();
-    std::cout << "Building Alexnet finished in " << timer_build.time_diff_string() << std::endl;
-    std::cout << "Start execution" << std::endl;
+    auto build_time = timer_build.uptime();
+    std::cout << "Building Alexnet finished in " << instrumentation::to_string(build_time) << std::endl;
 
-    timer_execution.start();
+
+    std::vector<worker> workers;
+
+    switch(eng) 
+    {
+    case engine::gpu:
+    {
+        std::cout << "GPU Program compilation started" << std::endl;
+        instrumentation::timer<> timer_compilation;
+        workers.push_back(worker_gpu::create({true}));
+        auto compile_time = timer_compilation.uptime();
+        std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
+    }
+        break;
+    default:
+        workers.push_back(worker_cpu::create({}));
+    }
+
+    std::cout << "Start execution" << std::endl;
+    instrumentation::timer<> timer_execution;
     execute({
         mean, //mean
         conv1,relu1, pool1, lrn1, //stage 0
@@ -259,9 +278,10 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
         fc6,
         fc7,
         fc8,
-        softmax,output }).wait();
-    timer_execution.stop();
-    std::cout << "Alexnet execution finished in " << timer_execution.time_diff_string() << std::endl;
+        softmax,output }, workers).wait();
+
+    auto execution_time(timer_execution.uptime());
+    std::cout << "Alexnet execution finished in " << instrumentation::to_string(execution_time) << std::endl;
     //instrumentation::log_memory_to_file(conv1.output[0],"conv1");
     if (dump_hl)
     {
@@ -291,7 +311,20 @@ std::chrono::high_resolution_clock::duration execute_alexnet(primitive& input, p
     {
         instrumentation::logger::log_memory_to_file(output, "final_result");
     }
-    return timer_execution.get_time_diff();
+
+    if (eng == engine::gpu) {
+        auto profiling_info = workers[0].as<worker_gpu&>().get_profiling_info();
+        if (profiling_info.size() > 0) {
+            auto max_len_it = std::max_element(std::begin(profiling_info), std::end(profiling_info), [](decltype(profiling_info)::value_type& a, decltype(profiling_info)::value_type& b) {return a.first.length() < b.first.length(); });
+            std::cout << "Kernels profiling info: " << std::endl;
+            auto max_len = max_len_it->first.length();
+            for (auto& pi : profiling_info) {
+                std::cout << std::setw(max_len) << std::left << pi.first << " " << instrumentation::to_string(pi.second) << std::endl;
+            }
+        }
+    }
+
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time);
 }
 
 void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool dump_hl)
@@ -326,8 +359,9 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool du
         // reorder data
         execute({ reordered_input }).wait();
         auto time = execute_alexnet(reordered_input, output, eng, dump_hl);
-        auto ratio = std::chrono::duration_cast<std::chrono::milliseconds>(time);
-        std::cout << "Frames per second:" << (double)batch_size*1000.0 / (double)ratio.count() << std::endl;
-        output_file.batch(output.as<const neural::memory&>(), "names.txt", image_in_batches);
-    }
+        auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
+        if(time_in_sec != 0.0)
+            std::cout << "Frames per second:" << (double)batch_size / time_in_sec << std::endl;
+		output_file.batch(output.as<const neural::memory&>( ), "names.txt", image_in_batches);
+    }    
 }

@@ -111,8 +111,8 @@ __attribute__((overloadable)) uint get_spatial_size(const __global neural_vector
 
 )__krnl";
 
-cl::Program::Sources kernels_cache::get_program_source() const {
-    cl::Program::Sources source{ kernels_header };
+std::vector<std::string> kernels_cache::get_program_source() const {
+    std::vector<std::string> source{ kernels_header };
     for (auto& code : _kernel_codes) {
         source.push_back(code.second);
     }
@@ -189,7 +189,7 @@ kernels_cache::kernel_id kernels_cache::create_kernel_from_template(std::shared_
     return kernel_name;
 }
 
-cl::Program kernels_cache::get_program(std::shared_ptr<neural::gpu::gpu_toolkit> context) {
+kernels_cache::program_type kernels_cache::get_program(std::shared_ptr<neural::gpu::gpu_toolkit> context) {
     assert(context != nullptr);
     std::lock_guard<std::mutex> lock(_mutex);
     if (_modified){
@@ -200,7 +200,7 @@ cl::Program kernels_cache::get_program(std::shared_ptr<neural::gpu::gpu_toolkit>
     return context->program();
 }
 
-cl::Kernel kernels_cache::get_kernel(std::shared_ptr<neural::gpu::gpu_toolkit> context, kernel_id id) {
+kernels_cache::kernel_type kernels_cache::get_kernel(std::shared_ptr<neural::gpu::gpu_toolkit> context, kernel_id id) {
     assert(context != nullptr);
     return cl::Kernel(get_program(context), id.c_str());
 }

@@ -338,6 +338,7 @@ protected:
     type_traits                     *_type_traits;
     std::map<std::string, any_value> _map;
     is_a_worker(type_traits *traits) : _type_traits(traits) {}
+    friend class worker;
 public:
     virtual ~is_a_worker() {};
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
@@ -352,9 +353,21 @@ class worker {
 public:
     worker(is_a_worker *raw) : _pointer(raw) {};
     worker(const worker &other) : _pointer(other._pointer) {};
+    worker& operator=(const worker& other) {
+        if (this == &other)
+            return *this;
+        _pointer = other._pointer;
+        return *this;
+    }
 
     neural::engine::type engine() const { return _pointer->engine(); }
     void execute(const neural::task_group& requests) const { _pointer->execute(requests);}
+
+    template<typename T> T as() const  {
+        static_assert(std::is_reference<T>::value, "cannot cast to non-reference type");
+        assert(type_id<typename std::remove_reference<T>::type>()->id == _pointer->_type_traits->id);
+        return *reinterpret_cast<typename std::remove_reference<T>::type *>(_pointer.get());
+    }
 };
 
 // cheap to copy handle with reference counting
