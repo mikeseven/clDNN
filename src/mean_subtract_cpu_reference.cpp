@@ -22,9 +22,14 @@
 
 namespace neural {
 
-    size_t yxfb(size_t idx, size_t batch, size_t , size_t ) { return idx / batch; }
-    size_t bfyx(size_t idx, size_t, size_t x, size_t y) { return (idx % 3) * x * y + (idx / 3); }
-
+    size_t yxfb(std::vector<uint32_t> size, std::vector<uint32_t> pos)
+    {
+        return (pos[0] % size[0]) + size[0] * (pos[1] + size[1] * (pos[2] + size[2] * pos[3]));
+    }
+    size_t bfyx(std::vector<uint32_t> size, std::vector<uint32_t> pos)
+    {
+        return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * (pos[0] % size[0])));
+    }
     mean_subtract_cpu_reference::mean_subtract_cpu_reference(mean_subtract &arg)
         : is_an_implementation(neural::type_id<mean_subtract_cpu_reference>())
         , outer(arg) {};
@@ -51,10 +56,25 @@ namespace neural {
         auto indexer = (mean_arg.format == memory::format::yxfb_f32) ? yxfb : bfyx;
         for (auto pos : range) {
             auto out_idx = calc_out_idx(output_arg.size.raw, pos);
-            output[out_idx] = input[out_idx] - mean[indexer(out_idx, output_arg.size.batch[0], mean_arg.size.spatial[0], mean_arg.size.spatial[1])];
+            output[out_idx] = input[out_idx] - mean[indexer(mean_arg.size.raw, pos)];
         }
     }
 
+    is_an_implementation *mean_subtract_cpu_reference::create(mean_subtract &arg) {
+
+        auto input_arg = arg.input_memory(0).argument;
+        auto mean_arg = arg.input_memory(1).argument;
+        if (input_arg.size.spatial[0] != mean_arg.size.spatial[0] ||
+            input_arg.size.spatial[1] != mean_arg.size.spatial[1])
+        {
+            throw std::invalid_argument("input size x,y must be equal to mean size x,y");
+        }
+        if (input_arg.size.feature[0] != mean_arg.size.feature[0])
+        {
+            throw std::invalid_argument("input feature size must be equal to mean feature size");
+        }
+        return new mean_subtract_cpu_reference(arg);
+    };
 
     namespace {
         struct attach {

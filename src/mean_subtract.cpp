@@ -73,9 +73,9 @@ primitive mean_subtract::create(mean_subtract::arguments arg) {
     if (mean_arg.format != memory::format::yxfb_f32 && 
         mean_arg.format != memory::format::bfyx_f32)
     {
-        throw std::runtime_error("Mean subtract mean is not in yxfb format!");
+        throw std::runtime_error("Mean subtract mean is not in yxfb or bfyx format!");
     }
-
+    
     return is_a_primitive::create<mean_subtract>(arg);
 }
 

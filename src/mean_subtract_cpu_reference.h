@@ -24,7 +24,7 @@ namespace neural {
         ~mean_subtract_cpu_reference();
         static void implementation(const void *ptr);
 
-        static is_an_implementation *create(mean_subtract &arg) { return new mean_subtract_cpu_reference(arg); };
+        static is_an_implementation *create(mean_subtract &arg);
         task_group work() { return{ { task{ implementation, &outer } }, schedule::single }; };
 
         const mean_subtract &outer;
