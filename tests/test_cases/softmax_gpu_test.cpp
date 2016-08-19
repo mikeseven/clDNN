@@ -81,7 +81,7 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, input_same_values) {
     execute({input, output, act}).wait();
 
     auto output_ptr = output.as<const memory&>().pointer<float>();
-    for (int i = 0; i < out_size; i++)
+    for (size_t i = 0; i < out_size; i++)
     {
         out_buffer[i] = get_value<float>(output_ptr, i);
     }
@@ -106,7 +106,7 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, input_same_values_batch_wise) {
     execute({input, output, act}).wait();
 
     auto output_ptr = output.as<const memory&>().pointer<float>();
-    for (int i = 0; i < out_size; i++)
+    for (size_t i = 0; i < out_size; i++)
     {
         out_buffer[i] = get_value<float>(output_ptr, i);
     }
@@ -155,7 +155,7 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, values_batch_wise) {
 
     execute({input, output, act}).wait();
     auto output_ptr = output.as<const memory&>().pointer<float>();
-    for (int i = 0; i < out_size; i++)
+    for (size_t i = 0; i < out_size; i++)
     {
         out_buffer[i] = get_value<float>(output_ptr, i);
     }

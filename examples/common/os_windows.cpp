@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-#ifdef WIN32
+#ifdef _WIN32
 
 #ifndef NOMINMAX
 #   define NOMINMAX

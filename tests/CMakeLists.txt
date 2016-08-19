@@ -28,7 +28,9 @@ intel_config_flag_apply_settings(CompilerOptions CMAKE_CXX_FLAGS ALL_PATTERN ""
   )
 if (NOT MSVC)
   intel_config_flag_apply_settings(CompilerOptions CMAKE_CXX_FLAGS ALL_PATTERN ""
-      SET_RAW "-Wno-error=conversion-null"
+      SET_RAW
+        "-Wno-error=conversion-null"
+        "-Wno-error=type-limits"
     )
 endif ()
 

@@ -179,7 +179,7 @@ TEST(softmax_xb_f32_test, basic_with_offsets) {
           EXPECT_TRUE(are_equal(value, expected))
               << "At ["<< idx <<  "] Expected : " << expected << " actual :" << value;
         }
-};
+}
 
 TEST(softmax_xb_f32_fw, intrinsics_avx2_batch1_sum_to_one) {
     const uint32_t x = 1000, b = 1;

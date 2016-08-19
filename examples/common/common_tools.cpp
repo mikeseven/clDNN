@@ -17,6 +17,7 @@
 #include "os_windows.h"
 #include "FreeImage_wraps.h"
 #include "api/neural.h"
+#include <regex>
 #include <string>
 
 // returns list of files (path+filename) from specified directory
