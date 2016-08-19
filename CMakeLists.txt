@@ -766,13 +766,14 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
           -fno-strict-aliasing
           -fstack-protector-strong
           -W
-          -Wno-unused-parameter
           -Wno-unknown-pragmas
-          -Wno-missing-field-initializers
           -Wwrite-strings
           -Wswitch
           -Wformat
           -Wformat-security
+          -Wno-error=missing-field-initializers
+          -Wno-error=unused-parameter
+          -Wno-error=unused-function
           -march=corei7
           -mstackrealign
           -msse
