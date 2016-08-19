@@ -4,9 +4,10 @@
 
 namespace neural { namespace gpu { 
 
-struct ocl_toolkit; //TODO temporary
-using context = ocl_toolkit;
+class gpu_toolkit; //TODO temporary
+using context = gpu_toolkit;
 using jit = std::string;
 using code = std::string;
-
+using uchar = unsigned char;
+using uint = unsigned int;
 } }

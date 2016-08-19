@@ -23,7 +23,7 @@ binary_data persistent_cache::cache_file::read()
         c_file.close();
         return data.str();
     }
-    throw(errno);
+    return "";
 }
 
 void persistent_cache::cache_file::write(const binary_data& data)
