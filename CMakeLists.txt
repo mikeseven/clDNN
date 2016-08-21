@@ -87,6 +87,9 @@ set(CLDNN__BOOST_DIR     "${CLDNN__COMMON_DIR}/boost")
 # Path which points to directory with C++ bindings for OpenCL (header files + wrapper that disables specific warnings).
 set(CLDNN__KHR_CLHPP_DIR "${CLDNN__COMMON_DIR}/khronos_ocl_clhpp")
 
+# Path which points to directory with fused version of googletest framework (with fused googlemock as well).
+set(CLDNN__GTEST_DIR     "${CLDNN__COMMON_DIR}/googletest-fused")
+
 # Build targets settings.
 
 # Path which points to default root directory for compilation output.

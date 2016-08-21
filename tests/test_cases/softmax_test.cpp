@@ -15,7 +15,7 @@
 */
 
 #include "api/neural.h"
-#include "tests/gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "test_utils/test_utils.h"
 #include "memory_utils.h"
 #include <numeric>

@@ -13,8 +13,6 @@
 # limitations under the License.
 
 
-add_subdirectory(gtest)
-
 # ========================================= Name / Output settings =====================================
 
 set(CLDNN_BUILD__PROJ             "tests")
@@ -59,11 +57,18 @@ file(GLOB __CLDNN_Sources__test_utils
     "${__CLDNN_Directory__test_utils}/*.cpp"
   )
 
+set(__CLDNN_Directory__gtest           "${CLDNN__GTEST_DIR}")
+set(__CLDNN_Label__gtest               "google test framework")
+file(GLOB __CLDNN_Sources__gtest
+    "${__CLDNN_Directory__gtest}/*.cc"
+  )
+
 
 set(__CLDNN_AllSources
     ${__CLDNN_Sources__main}
     ${__CLDNN_Sources__test_cases}
     ${__CLDNN_Sources__test_utils}
+    ${__CLDNN_Sources__gtest}
   )
 
 # =============================================== Filters ==============================================
@@ -71,6 +76,7 @@ set(__CLDNN_AllSources
 source_group("${__CLDNN_Label__main}"       FILES ${__CLDNN_Sources__main})
 source_group("${__CLDNN_Label__test_cases}" FILES ${__CLDNN_Sources__test_cases})
 source_group("${__CLDNN_Label__test_utils}" FILES ${__CLDNN_Sources__test_utils})
+source_group("${__CLDNN_Label__gtest}"      FILES ${__CLDNN_Sources__gtest})
 
 # ===================================== Include/Link directories =======================================
 
@@ -79,6 +85,7 @@ include_directories(
     "${CLDNN__MAIN_DIR}/src"
     "${CMAKE_CURRENT_SOURCE_DIR}"
     "${__CLDNN_Directory__test_utils}"
+    "${CLDNN__GTEST_DIR}"
   )
 
 # =================================== Link targets and dependencies ====================================
@@ -93,71 +100,17 @@ set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD
 
 # Set library dependencies
 target_link_libraries("${CLDNN_BUILD__PROJ}"
-    gtest
     "${CLDNN_BUILD__PROJ__clDNN}"
   )
 
-# ======================================================================================================
+# =================================== Custom pre- and post-steps =======================================
 
-# TODO: Clean up unused / unnecessary custom steps.
-
-
-# To use SDE it has to be installed and its root dir needs to be
-# added to PATH env variable.Also USE_SDE_EMULATION should be set
-# to ON (see scripts for generating build system)
-if(USE_SDE_EMULATION)
-find_program(SDE_EXE_DIR ${SDE_BINARY_NAME})
-message("SDE: ${SDE_EXE_DIR}")
-endif()
-
-if((SDE_EXE_DIR STREQUAL "SDE_EXE_DIR-NOTFOUND") OR (NOT USE_SDE_EMULATION))
-set(TEST_COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CLDNN_BUILD__PROJ})
-else()
-set(TEST_COMMAND ${SDE_EXE_DIR} -bdw -- ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CLDNN_BUILD__PROJ})
-endif()
-
-set(GFLAGS_BINARY_NAME gflags)
-
-if(RUN_ULTS_OFFLINE)
-    add_test(${CLDNN_BUILD__PROJ} ${TEST_COMMAND})
-    message (STATUS "add_test ...................... " ${CLDNN_BUILD__PROJ} ${TEST_COMMAND})
-elseif(CLDNN__RUN_TESTS)
-    if(NOT UNIX)
-        find_program(GFLAGS_EXE_DIR ${GFLAGS_BINARY_NAME})
-        message("GFLAGS: ${GFLAGS_EXE_DIR}")
-
-        if(NOT(GFLAGS_EXE_DIR STREQUAL "GFLAGS_EXE_DIR-NOTFOUND"))
-            add_custom_command(TARGET ${CLDNN_BUILD__PROJ}
-                           POST_BUILD
-                           WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-                           COMMAND ${GFLAGS_EXE_DIR} /i ${CLDNN_BUILD__PROJ}.exe +ust +hpa )
-        endif()
-    endif()
-
-    if((SDE_EXE_DIR STREQUAL "SDE_EXE_DIR-NOTFOUND") OR (NOT USE_SDE_EMULATION))
-        add_custom_command(TARGET ${CLDNN_BUILD__PROJ}
-                       POST_BUILD
-                       WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-                       COMMAND ${CLDNN_BUILD__PROJ} )
-    else()
-        add_custom_command(TARGET ${CLDNN_BUILD__PROJ}
-                       POST_BUILD
-                       WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-                       COMMAND ${CLDNN_BUILD__PROJ} )
-    endif()
-
-    if(NOT UNIX)
-        if(NOT(GFLAGS_EXE_DIR STREQUAL "GFLAGS_EXE_DIR-NOTFOUND"))
-            add_custom_command(TARGET ${CLDNN_BUILD__PROJ}
-                           POST_BUILD
-                           WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-                           COMMAND ${GFLAGS_EXE_DIR} /i ${CLDNN_BUILD__PROJ}.exe -ust -hpa )
-        endif()
-     endif()
-endif()
-
-if(UNIX AND WITH_CAFFE)
-    add_subdirectory (caffe EXCLUDE_FROM_ALL)
+if(CLDNN__RUN_TESTS)
+  add_custom_command(TARGET "${CLDNN_BUILD__PROJ}" POST_BUILD
+      WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+      COMMAND "${CLDNN_BUILD__PROJ}"
+      COMMENT "Executing tests..."
+    )
 endif()
 
 # ======================================================================================================

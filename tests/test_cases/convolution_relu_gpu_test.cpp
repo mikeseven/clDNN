@@ -15,7 +15,7 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "tests/gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "test_utils/test_utils.h"
 #include "api/neural.h"
 #include "multidimensional_counter.h"
