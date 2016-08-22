@@ -50,7 +50,7 @@ TEST(mean_subtract_gpu_f32, basic_in4x4x2x2) {
 
     auto input = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
     auto output = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
-    auto mean = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1,{ 2, 2 }, 2  } });
+    auto mean = memory::allocate({ engine::gpu, memory::format::bfyx_f32,{ 1,{ 2, 2 }, 2  } });
 
     set_values(input, {
         1.f, 0.f, 5.f, 1.5f,
@@ -59,7 +59,7 @@ TEST(mean_subtract_gpu_f32, basic_in4x4x2x2) {
         4.f, -0.5f, 8.f, 8.f
     });
 
-    set_values(mean, { 0.5f, 0.5f, 5.f, 2.f, 15.f, 8.f, 6.f, -0.5f });
+    set_values(mean, { 0.5f, 5.f, 15.f, 6.f, 0.5f, 2.f, 8.f, -0.5f });
 
     auto mean_sub = mean_subtract::create({ engine::gpu, output, input, mean });
 
