@@ -673,6 +673,17 @@ endif()
 
 set(CLDNN_BUILD__PROJ_OUTPUT_NAME__clDNN "clDNN${CLDNN__OUT_CPU_SUFFIX}")
 
+
+# RPATH for executables (Linux, Android, Mac)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+
+intel_arch_get_os(__CLDNN_TargetOs "${CLDNN__ARCHITECTURE_TARGET}")
+if(__CLDNN_TargetOs MATCHES "^Darwin$")
+  set(CMAKE_INSTALL_RPATH "@executable_path")
+else()
+  set(CMAKE_INSTALL_RPATH "$ORIGIN")
+endif()
+
 # ======================================================================================================
 
 cldnn_dmsg("${CLDNN__PROJ_NAME} Settings:")
