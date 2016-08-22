@@ -19,7 +19,7 @@
 #include <string>
 
 namespace neural {
-    extern const std::string convolution_code_yxfb;
-    extern const std::string convolution_code_bfxy;
-    extern const std::string convolution_code_yxfb_memory;
+    extern const char convolution_code_yxfb[];
+    extern const char convolution_code_bfxy[];
+    extern const char convolution_code_yxfb_memory[];
 }
