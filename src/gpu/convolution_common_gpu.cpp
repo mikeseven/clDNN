@@ -145,56 +145,63 @@ namespace neural {
         const int bifn_num = batch_num * FILTER_OUTPUT_FEATURE_NUM;
         int global_id = get_global_id(0) % bifn_num + (get_global_id(0) / bifn_num) * bifn_num * FILTER_ARRAY_NUM + split_idx * bifn_num;
 
-        const int batch_offset = global_id % batch_num;
-
         const int ofm_num = dst_size[1];
         const int ofm_offset = (global_id / batch_num) % (ofm_num / FILTER_ARRAY_NUM);
 
-        const int f_ofm_offset = ofm_offset * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
-
-        const int idx = (global_id / batch_num) / FILTER_ARRAY_NUM;
-
-        const int i_ifm_num = input_size[1];
-
-        const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % dst_size[2]) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
-        const int y = ((idx / FILTER_OUTPUT_FEATURE_NUM) / dst_size[2] * STRIDE_SIZE_Y) + INPUT_OFFSET_SIZE_Y;
-
-        pDst[global_id] = bias[ofm_offset];
+        float result = bias[ofm_offset];
 
         bool finish = false;
         finish = global_id % dst_size[2] >= OUTPUT_SIZE_SIZE_X ? true : finish;
         finish = (global_id % (dst_size[2] * dst_size[3])) / dst_size[2]  >= OUTPUT_SIZE_SIZE_Y ? true : finish;
         finish = global_id % dst_size[2] < OUTPUT_OFFSET_SIZE_X ? true : finish;
         finish = (global_id % (dst_size[2] * dst_size[3])) / dst_size[2]  < OUTPUT_OFFSET_SIZE_Y ? true : finish;
-        
+
         if(!finish)
         {
-            for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
+            const int batch_offset = global_id % batch_num;
+
+            const int f_ofm_offset = ofm_offset * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
+
+            const int idx = (global_id / batch_num) / FILTER_ARRAY_NUM;
+
+            const int i_ifm_num = input_size[1];
+
+            const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % dst_size[2]) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
+            const int y = ((idx / FILTER_OUTPUT_FEATURE_NUM) / dst_size[2] * STRIDE_SIZE_Y) + INPUT_OFFSET_SIZE_Y;
+
+
+            for (uint i = 0; i < FILTER_SIZE_Y; i++)
             {
-                const int f_ifm_offset = h * FILTER_SIZE_Y * FILTER_SIZE_X;
-                for (uint i = 0; i < FILTER_SIZE_Y; i++)
+                int input_offset_y = y + i;
+                bool zero_y = input_offset_y >= input_size[3] || input_offset_y < 0;
+
+                if(!zero_y)
                 {
                     for (uint j = 0; j < FILTER_SIZE_X; j++)
                     {
                         int input_offset_x = x + j;
-                        int input_offset_y = y + i;
+                    
+                        bool zero = input_offset_x >= input_size[2] || input_offset_x < 0;
+    
+                        if(!zero)
+                        {
+                            int input_idx = (input_offset_x + (input_offset_y * INPUT_SIZE_X)) * i_ifm_num * batch_num;
+                            input_idx += split_idx * FILTER_INPUT_FEATURE_NUM * batch_num;
+                            input_idx += batch_offset;
+                    
+                            int filter_idx = (i * FILTER_SIZE_X + j) + f_ofm_offset;
 
-                        bool zero = false;
-                        zero = input_offset_x < 0 ? true : zero;
-                        zero = input_offset_y < 0 ? true : zero;
-                        zero = input_offset_x >= input_size[2] ? true : zero;
-                        zero = input_offset_y >= input_size[3] ? true : zero;
-
-                        int input_idx = (input_offset_x + (input_offset_y * INPUT_SIZE_X)) * i_ifm_num * batch_num;
-                        input_idx += split_idx * FILTER_INPUT_FEATURE_NUM * batch_num;
-                        input_idx += h * batch_num;
-                        input_idx += batch_offset;
-                        int filter_idx = (i * FILTER_SIZE_X + j) + f_ofm_offset + f_ifm_offset;
-                        pDst[global_id] += zero ? 0 : input[input_idx] * filter[filter_idx];
-                    }
-                } 
+                            for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
+                            {
+                                const int f_ifm_offset = h * FILTER_SIZE_Y * FILTER_SIZE_X;
+    
+                                result += input[input_idx + h * batch_num] * filter[filter_idx + f_ifm_offset];
+                            }
+                        }
+                    } 
+                }
             }
         }
-
+        pDst[global_id] = result;
     )__CC";
 }
