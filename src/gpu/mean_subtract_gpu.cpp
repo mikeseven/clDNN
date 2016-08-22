@@ -30,11 +30,16 @@ KERNEL(Mean_subtract_GPU)(const __global neural_memory* input_mem, __global neur
     const __global float* mean = (const __global float*)get_data(mean_mem);
  
     __global uint* input_size = get_raw(input_mem);
+    __global uint* mean_size = get_raw(mean_mem);
 
     const uint batch_num = input_size[0];
 
     const int global_id = get_global_id(0);
-    output[global_id] = input[global_id] - mean[global_id / batch_num];
+    const int batch_id = global_id % batch_num;
+    const int feature_id = (global_id / batch_num) % input_size[1];
+    const int x = ((global_id / batch_num) / input_size[1]) % input_size[2];
+    const int y = ((global_id / batch_num) / input_size[1]) / input_size[2];
+    output[global_id] = input[global_id] - mean[x + mean_size[2] * (y + mean_size[3] * (feature_id + mean_size[1] * (batch_id % mean_size[0])))];
 }
 )__krnl";
 
@@ -64,14 +69,15 @@ struct mean_subtract_gpu : is_an_implementation {
         {
             lws--;
         }
-
+        // mean_mem in bfyx
         me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>
             ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, mean_mem);
     }
 
     static is_an_implementation *create(mean_subtract &arg) {
         auto& mean_arg = arg.input_memory(1).argument;
-        if (mean_arg.format != memory::format::yxfb_f32) throw std::runtime_error("mean_subtract mean isn't yxfb_f32 format");
+        if (mean_arg.format != memory::format::yxfb_f32 &&
+            mean_arg.format != memory::format::bfyx_f32) throw std::runtime_error("mean_subtract mean isn't yxfb_f32 or bfyx_f32 format");
         return new mean_subtract_gpu(arg);
     }
 
