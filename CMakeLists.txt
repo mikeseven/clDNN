@@ -683,6 +683,7 @@ if(__CLDNN_TargetOs MATCHES "^Darwin$")
 else()
   set(CMAKE_INSTALL_RPATH "$ORIGIN")
 endif()
+unset(__CLDNN_TargetOs)
 
 # ======================================================================================================
 
