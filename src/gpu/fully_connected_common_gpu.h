@@ -19,11 +19,11 @@
 #include <string>
 
 namespace neural {
-    extern const std::string input_defines;
-    extern const std::string fully_connected_code_xb;
-    extern const std::string fully_connected_code_xb_bx;
-    extern const std::string fully_connected_code_yxfn;
-    extern const std::string fully_connected_code_xb_memory;
-    extern const std::string fully_connected_code_xb_bx_memory;
-    extern const std::string fully_connected_code_yxfn_memory;
+    extern const char input_defines[];
+    extern const char fully_connected_code_xb[];
+    extern const char fully_connected_code_xb_bx[];
+    extern const char fully_connected_code_yxfn[];
+    extern const char fully_connected_code_xb_memory[];
+    extern const char fully_connected_code_xb_bx_memory[];
+    extern const char fully_connected_code_yxfn_memory[];
 }

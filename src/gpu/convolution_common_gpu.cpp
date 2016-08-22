@@ -18,7 +18,7 @@
 
 namespace neural {
 
-    const std::string convolution_code_yxfb = R"__CC(
+    const char convolution_code_yxfb[] = R"__CC(
         const __global uint* input_size = get_raw(input_mem);
         const __global uint* dst_size = get_raw(dst_mem);
         const __global float* input = (const __global float*)get_data(input_mem);
@@ -80,7 +80,7 @@ namespace neural {
         
     )__CC";
 
-    const std::string convolution_code_bfxy = R"__CC(
+    const char convolution_code_bfxy[] = R"__CC(
         const __global uint* input_size = get_raw(input_mem);
         const __global uint* dst_size = get_raw(dst_mem);
         const __global float* input = (const __global float*)get_data(input_mem);
@@ -131,7 +131,7 @@ namespace neural {
         pDst[global_id] += BIAS[0][output_feature_idx];
     )__CC";
 
-    const std::string convolution_code_yxfb_memory = R"__CC(
+    const char convolution_code_yxfb_memory[] = R"__CC(
         const __global uint* input_size = get_raw(input_mem);
         const __global uint* dst_size = get_raw(dst_mem);
         const __global float* input = (const __global float*)get_data(input_mem);
