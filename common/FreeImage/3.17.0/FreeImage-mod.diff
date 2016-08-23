@@ -1,0 +1,102 @@
+diff -uNr FreeImage/Makefile.fip FreeImage-mod/Makefile.fip
+--- FreeImage/Makefile.fip	2015-03-08 18:03:56.000000000 +0000
++++ FreeImage-mod/Makefile.fip	2016-08-23 10:47:39.006755651 +0000
+@@ -33,7 +33,7 @@
+ 	CXXFLAGS += -fPIC
+ endif
+ 
+-TARGET  = freeimageplus
++TARGET  = FreeImagePlus
+ STATICLIB = lib$(TARGET).a
+ SHAREDLIB = lib$(TARGET)-$(VER_MAJOR).$(VER_MINOR).so
+ LIBNAME	= lib$(TARGET).so
+@@ -68,7 +68,7 @@
+ 	$(AR) r $@ $(MODULES)
+ 
+ $(SHAREDLIB): $(MODULES)
+-	$(CC) -s -shared -Wl,-soname,$(VERLIBNAME) $(LDFLAGS) -o $@ $(MODULES) $(LIBRARIES)
++	$(CC) -s -shared -Wl,-soname,$(LIBNAME),--version-script=export-fip.txt $(LDFLAGS) -o $@ $(MODULES) $(LIBRARIES)
+ 
+ install:
+ 	install -d $(INCDIR) $(INSTALLDIR)
+diff -uNr FreeImage/Makefile.gnu FreeImage-mod/Makefile.gnu
+--- FreeImage/Makefile.gnu	2015-03-08 18:04:00.000000000 +0000
++++ FreeImage-mod/Makefile.gnu	2016-08-23 09:17:27.184824474 +0000
+@@ -33,7 +33,7 @@
+ 	CXXFLAGS += -fPIC
+ endif
+ 
+-TARGET  = freeimage
++TARGET  = FreeImage
+ STATICLIB = lib$(TARGET).a
+ SHAREDLIB = lib$(TARGET)-$(VER_MAJOR).$(VER_MINOR).so
+ LIBNAME	= lib$(TARGET).so
+@@ -67,7 +67,7 @@
+ 	$(AR) r $@ $(MODULES)
+ 
+ $(SHAREDLIB): $(MODULES)
+-	$(CC) -s -shared -Wl,-soname,$(VERLIBNAME) $(LDFLAGS) -o $@ $(MODULES) $(LIBRARIES)
++	$(CC) -s -shared -Wl,-soname,$(LIBNAME),--version-script=export.txt $(LDFLAGS) -o $@ $(MODULES) $(LIBRARIES)
+ 
+ install:
+ 	install -d $(INCDIR) $(INSTALLDIR)
+diff -uNr FreeImage/Source/LibWebP/src/dsp/dsp.upsampling_mips_dsp_r2.c FreeImage-mod/Source/LibWebP/src/dsp/dsp.upsampling_mips_dsp_r2.c
+--- FreeImage/Source/LibWebP/src/dsp/dsp.upsampling_mips_dsp_r2.c	2015-02-20 03:34:36.000000000 +0000
++++ FreeImage-mod/Source/LibWebP/src/dsp/dsp.upsampling_mips_dsp_r2.c	2016-08-18 22:05:30.223646233 +0000
+@@ -34,15 +34,15 @@
+     G = G - t2 + kGCst;                                                        \
+     B = B + kBCst;                                                             \
+     __asm__ volatile (                                                         \
+-      "shll_s.w         %["#R"],      %["#R"],        9              \n\t"     \
+-      "shll_s.w         %["#G"],      %["#G"],        9              \n\t"     \
+-      "shll_s.w         %["#B"],      %["#B"],        9              \n\t"     \
+-      "precrqu_s.qb.ph  %["#R"],      %["#R"],        $zero          \n\t"     \
+-      "precrqu_s.qb.ph  %["#G"],      %["#G"],        $zero          \n\t"     \
+-      "precrqu_s.qb.ph  %["#B"],      %["#B"],        $zero          \n\t"     \
+-      "srl              %["#R"],      %["#R"],        24             \n\t"     \
+-      "srl              %["#G"],      %["#G"],        24             \n\t"     \
+-      "srl              %["#B"],      %["#B"],        24             \n\t"     \
++      "shll_s.w         %[" #R "],      %[" #R "],        9              \n\t"     \
++      "shll_s.w         %[" #G "],      %[" #G "],        9              \n\t"     \
++      "shll_s.w         %[" #B "],      %[" #B "],        9              \n\t"     \
++      "precrqu_s.qb.ph  %[" #R "],      %[" #R "],        $zero          \n\t"     \
++      "precrqu_s.qb.ph  %[" #G "],      %[" #G "],        $zero          \n\t"     \
++      "precrqu_s.qb.ph  %[" #B "],      %[" #B "],        $zero          \n\t"     \
++      "srl              %[" #R "],      %[" #R "],        24             \n\t"     \
++      "srl              %[" #G "],      %[" #G "],        24             \n\t"     \
++      "srl              %[" #B "],      %[" #B "],        24             \n\t"     \
+       : [R]"+r"(R), [G]"+r"(G), [B]"+r"(B)                                     \
+       :                                                                        \
+     );                                                                         \
+diff -uNr FreeImage/Source/LibWebP/src/dsp/dsp.yuv_mips_dsp_r2.c FreeImage-mod/Source/LibWebP/src/dsp/dsp.yuv_mips_dsp_r2.c
+--- FreeImage/Source/LibWebP/src/dsp/dsp.yuv_mips_dsp_r2.c	2015-02-20 03:34:38.000000000 +0000
++++ FreeImage-mod/Source/LibWebP/src/dsp/dsp.yuv_mips_dsp_r2.c	2016-08-18 22:06:41.447944213 +0000
+@@ -54,9 +54,9 @@
+   "srl              %[temp5],   %[temp5],       24              \n\t"          \
+   "srl              %[temp6],   %[temp6],       24              \n\t"          \
+   "srl              %[temp7],   %[temp7],       24              \n\t"          \
+-  "sb               %[temp5],   "#R"(%[dst])                    \n\t"          \
+-  "sb               %[temp6],   "#G"(%[dst])                    \n\t"          \
+-  "sb               %[temp7],   "#B"(%[dst])                    \n\t"          \
++  "sb               %[temp5],   " #R "(%[dst])                    \n\t"          \
++  "sb               %[temp6],   " #G "(%[dst])                    \n\t"          \
++  "sb               %[temp7],   " #B "(%[dst])                    \n\t"          \
+ 
+ #define ASM_CLOBBER_LIST()                                                     \
+   : [temp0]"=&r"(temp0), [temp1]"=&r"(temp1), [temp2]"=&r"(temp2),             \
+diff -uNr FreeImage/export-fip.txt FreeImage-mod/export-fip.txt
+--- FreeImage/export-fip.txt	1970-01-01 00:00:00.000000000 +0000
++++ FreeImage-mod/export-fip.txt	2016-08-23 10:47:00.830635748 +0000
+@@ -0,0 +1,4 @@
++{
++   global: *fip*;
++   local: *;
++};
+diff -uNr FreeImage/export.txt FreeImage-mod/export.txt
+--- FreeImage/export.txt	1970-01-01 00:00:00.000000000 +0000
++++ FreeImage-mod/export.txt	2016-08-23 09:23:32.565608035 +0000
+@@ -0,0 +1,4 @@
++{
++   global: FreeImage_*;
++   local: *;
++};
