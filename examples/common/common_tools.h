@@ -13,11 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
+
+
 #pragma once
 
 #include "api/neural.h"
+
 #include <string>
 #include <vector>
 
-std::vector<std::string> get_directory_images(std::string images_path);
-void load_images_from_file_list(const std::vector<std::string>& images_list, neural::primitive& memory); 
+
+std::vector<std::string> get_directory_images(const std::string &images_path);
+void load_images_from_file_list(const std::vector<std::string> &images_list, neural::primitive &memory); 
