@@ -35,7 +35,7 @@ std::vector<std::string> get_directory_images(const std::string &images_path) {
         for (const directory_entry &dir_entry : directory_iterator(images_path)) {
             if (dir_entry.status().type() == file_type::regular_file && std::regex_match(dir_entry.path().extension().string(),
                                                                                          allowed_exts))
-                result.push_back(dir_entry.path().string());
+                result.push_back(absolute(dir_entry.path()).string());
         }
         return result;
     }
