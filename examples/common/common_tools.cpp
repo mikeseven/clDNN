@@ -28,20 +28,15 @@ using namespace boost::filesystem;
 
 // returns list of files (path+filename) from specified directory
 std::vector<std::string> get_directory_images(const std::string &images_path) {
-    try {
-        std::vector<std::string> result;
-        std::regex allowed_exts("^\\.(jpe?g|png|bmp|gif|j2k|jp2|tiff)$",
-                                std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
-        for (const directory_entry &dir_entry : directory_iterator(images_path)) {
-            if (dir_entry.status().type() == file_type::regular_file && std::regex_match(dir_entry.path().extension().string(),
-                                                                                         allowed_exts))
-                result.push_back(absolute(dir_entry.path()).string());
-        }
-        return result;
+    std::vector<std::string> result;
+    std::regex allowed_exts("^\\.(jpe?g|png|bmp|gif|j2k|jp2|tiff)$",
+                            std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+    for (const directory_entry &dir_entry : directory_iterator(images_path)) {
+        if (dir_entry.status().type() == file_type::regular_file && std::regex_match(dir_entry.path().extension().string(),
+                                                                                     allowed_exts))
+            result.push_back(absolute(dir_entry.path()).string());
     }
-    catch(const std::exception &) {
-        return {};
-    }
+    return result;
 }
 
 
