@@ -18,14 +18,14 @@
 
 namespace neural {
 
-    const std::string input_defines = R"__CC(
+    const char input_defines[] = R"__CC(
         #define INPUT_BATCH_NUM input_size[0]
         #define INPUT_FEATURE_NUM input_size[1]
         #define INPUT_SIZE_X input_size[2]
         #define INPUT_SIZE_Y input_size[3]
     )__CC";
 
-    const std::string fully_connected_code_xb = R"__CC(
+    const char fully_connected_code_xb[] = R"__CC(
         __global uint* input_size = get_raw(input_mem);
         __global float* input = (__global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);
@@ -43,7 +43,7 @@ namespace neural {
         pDst[x] += BIASES[outXIdx];
     )__CC";
 
-    const std::string fully_connected_code_xb_bx = R"__CC(
+    const char fully_connected_code_xb_bx[] = R"__CC(
         __global uint* input_size = get_raw(input_mem);
         __global float* input = (__global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);
@@ -60,7 +60,7 @@ namespace neural {
         }
     )__CC";
 
-    const std::string fully_connected_code_yxfn = R"__CC(
+    const char fully_connected_code_yxfn[] = R"__CC(
         __global uint* input_size = get_raw(input_mem);
         __global uint* output_size = get_raw(dst_mem);
         __global float* input = (__global float*)get_data(input_mem);
@@ -82,7 +82,7 @@ namespace neural {
                 } 
     )__CC";
 
-    const std::string fully_connected_code_xb_memory = R"__CC(
+    const char fully_connected_code_xb_memory[] = R"__CC(
         __global uint* input_size = get_raw(input_mem);
         __global float* input = (__global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);
@@ -102,7 +102,7 @@ namespace neural {
         }
     )__CC";
 
-    const std::string fully_connected_code_xb_bx_memory = R"__CC(
+    const char fully_connected_code_xb_bx_memory[] = R"__CC(
         __global uint* input_size = get_raw(input_mem);
         __global float* input = (__global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);
@@ -122,7 +122,7 @@ namespace neural {
         }
     )__CC";
 
-    const std::string fully_connected_code_yxfn_memory = R"__CC(
+    const char fully_connected_code_yxfn_memory[] = R"__CC(
         __global uint* input_size = get_raw(input_mem);
         __global uint* output_size = get_raw(dst_mem);
         __global float* input = (__global float*)get_data(input_mem);
