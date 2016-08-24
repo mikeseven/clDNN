@@ -62,6 +62,7 @@ struct memory : is_a_primitive {
         yxoi_o4_f32,       // for convolution_cpu_generic
         os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
         bs_yxf_bv24_f32,
+        format_num,
         any=static_cast<uint32_t>(-1)
     }; };
 
@@ -203,8 +204,8 @@ struct file : is_a_primitive {
     struct arguments {
         neural::engine::type         engine;
         std::string                  name;
-        weights_type                 weight_type;
         std::vector<primitive>       output;
+        weights_type                 weight_type;
 
         DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize);
         DLL_SYM arguments(neural::engine::type aengine, std::string aname, primitive aoutput);
@@ -213,6 +214,7 @@ struct file : is_a_primitive {
     const arguments argument;
 
     DLL_SYM static primitive create(arguments);
+    DLL_SYM static void serialize(primitive, std::string);
     file &operator()(void *);
 private:
     file(arguments arg) : is_a_primitive(type_id<const file>()), argument(arg) {};
@@ -855,7 +857,7 @@ private:
     friend class is_a_primitive;
 };
 
-} //normalization /////////////////////////////////////////////////////////////////////////////////////////////////////
+};//normalization /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 

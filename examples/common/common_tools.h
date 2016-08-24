@@ -24,4 +24,5 @@
 
 
 std::vector<std::string> get_directory_images(const std::string &images_path);
+std::vector<std::string> get_directory_weights(const std::string &images_path);
 void load_images_from_file_list(const std::vector<std::string> &images_list, neural::primitive &memory); 

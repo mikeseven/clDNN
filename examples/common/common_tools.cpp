@@ -27,18 +27,34 @@ using namespace boost::filesystem;
 
 
 // returns list of files (path+filename) from specified directory
-std::vector<std::string> get_directory_images(const std::string &images_path) {
+std::vector<std::string> get_directory_files(const std::string &images_path, std::regex extension)
+{
     std::vector<std::string> result;
-    std::regex allowed_exts("^\\.(jpe?g|png|bmp|gif|j2k|jp2|tiff)$",
-                            std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+
     for (const directory_entry &dir_entry : directory_iterator(images_path)) {
-        if (dir_entry.status().type() == file_type::regular_file && std::regex_match(dir_entry.path().extension().string(),
-                                                                                     allowed_exts))
+        if (dir_entry.status().type() == file_type::regular_file && std::regex_match(dir_entry.path().extension().string(), extension))
+        {
             result.push_back(absolute(dir_entry.path()).string());
+        }
     }
     return result;
 }
 
+// returns list of files (path+filename) from specified directory
+std::vector<std::string> get_directory_images(const std::string &images_path)
+{
+    std::regex allowed_exts("^\\.(jpe?g|png|bmp|gif|j2k|jp2|tiff)$",
+                            std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+    return get_directory_files(images_path, allowed_exts);
+}
+
+// returns list of files (path+filename) from specified directory
+std::vector<std::string> get_directory_weights(const std::string &images_path) 
+{
+    std::regex allowed_exts("^\\.nnd$",
+        std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+    return get_directory_files(images_path, allowed_exts);
+}
 
 void nn_data_load_from_image(
     std::string  filename,                       // Load of all data from a image filename
