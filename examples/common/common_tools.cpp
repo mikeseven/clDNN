@@ -14,24 +14,27 @@
 // limitations under the License.
 */
 
-#include "os_windows.h"
 #include "FreeImage_wraps.h"
 #include "api/neural.h"
+
+#include <boost/filesystem.hpp>
+
 #include <regex>
 #include <string>
 
+
+using namespace boost::filesystem;
+
+
 // returns list of files (path+filename) from specified directory
-std::vector<std::string> get_directory_images(std::string images_path) {
+std::vector<std::string> get_directory_images(const std::string &images_path) {
     std::vector<std::string> result;
-    if (DIR *folder = opendir(images_path.c_str())) {
-        dirent *folder_entry = readdir(folder);
-        const auto image_file = std::regex(".*\\.(jpe?g|png|bmp|gif|j2k|jp2|tiff|JPEG|JPG|PNG)$");
-        while (folder_entry != nullptr) {
-            if (std::regex_match(folder_entry->d_name, image_file) && is_regular_file(folder_entry))
-                result.push_back(images_path + "/" + folder_entry->d_name);
-            folder_entry = readdir(folder);
-        }
-        closedir(folder);
+    std::regex allowed_exts("^\\.(jpe?g|png|bmp|gif|j2k|jp2|tiff)$",
+                            std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+    for (const directory_entry &dir_entry : directory_iterator(images_path)) {
+        if (dir_entry.status().type() == file_type::regular_file && std::regex_match(dir_entry.path().extension().string(),
+                                                                                     allowed_exts))
+            result.push_back(absolute(dir_entry.path()).string());
     }
     return result;
 }

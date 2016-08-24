@@ -93,10 +93,10 @@ int main(int argc, char *argv[])
                     dump_results);
             }
             catch (std::exception &e) {
-                std::cerr << e.what();
+                std::cerr << e.what() << std::endl;
             }
             catch (...) {
-                std::cerr << "Unknown exceptions.";
+                std::cerr << "Unknown exceptions." << std::endl;
             }
         }
         else
