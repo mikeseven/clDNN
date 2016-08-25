@@ -32,7 +32,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
     instrumentation::timer<> timer_build;
     auto mean = mean_subtract::create(
     {
-        engine::type::reference,
+        eng,
         memory::format::yxfb_f32,
         input,
         file::create({ eng,"weights/imagenet_mean.nnd" })

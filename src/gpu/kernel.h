@@ -102,7 +102,7 @@ public:
             { _name + "_BATCH_NUM", std::to_string(_vec.raw[0]) },
             { _name + "_SIZE_X", std::to_string(_vec.raw[0 + spatial_offset]) },
             { _name + "_SIZE_Y", _vec.spatial.size() > 1 ? std::to_string(_vec.raw[1 + spatial_offset]) : "1" },
-            { _name + "_OUTPUT_FEATURE_NUM", std::to_string(_vec.raw[0 + feature_offset]) },
+            {  _vec.feature.size() > 1 ? _name + "_OUTPUT_FEATURE_NUM" : _name + "_FEATURE_NUM", std::to_string(_vec.raw[0 + feature_offset]) },
             { _name + "_INPUT_FEATURE_NUM", _vec.feature.size() > 1 ? std::to_string(_vec.raw[1 + feature_offset]) : "1" }
         };
     }

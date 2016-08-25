@@ -25,7 +25,6 @@ namespace neural {
 
 const std::string kernelName_YXFB = "Convolution_Relu_GPU_YXFB";
 const std::string kernelCode_YXFB_Begin = R"__krnl(
-#define INPUT_SIZE_X input_size[2]
 KERNEL(Convolution_Relu_GPU_YXFB)(
     const __global neural_memory* input_mem,
     __global neural_memory* dst_mem)
@@ -40,8 +39,17 @@ KERNEL(Convolution_Relu_GPU_BFXY)(
 
 const std::string kernelName_YXFB_memory = "Convolution_Relu_GPU_YXFB_memory";
 const std::string kernelCode_YXFB_memory_Begin = R"__krnl(
-#define INPUT_SIZE_X input_size[2]
 KERNEL(Convolution_Relu_GPU_YXFB_memory)(
+    const __global neural_memory* input_mem,
+    __global neural_memory* dst_mem,
+    const __global neural_memory* filter_mem,
+    const __global neural_memory* bias_mem,
+    uint split_idx)
+{)__krnl";
+
+const std::string kernelName_YXFB_YXOI_memory = "Convolution_Relu_GPU_YXFB_YXOI_memory";
+const std::string kernelCode_YXFB_YXOI_memory_Begin = R"__krnl(
+KERNEL(Convolution_Relu_GPU_YXFB_YXOI_memory)(
     const __global neural_memory* input_mem,
     __global neural_memory* dst_mem,
     const __global neural_memory* filter_mem,
@@ -74,6 +82,7 @@ struct convolution_relu_gpu : is_an_implementation {
     const std::string& select_kernel_name() const {
         // input
         auto& input_mem = outer.input_memory(0);
+        auto& filter_mem = outer.input_memory(1);
 
         if (padding::zero != outer.argument.padding)
             throw std::invalid_argument("Unknown padding mode in convolution.");
@@ -84,7 +93,14 @@ struct convolution_relu_gpu : is_an_implementation {
                 throw std::logic_error("Not supported yet");
             return kernelName_BFXY;
         case memory::format::yxfb_f32:
-            return inline_memory? kernelName_YXFB : kernelName_YXFB_memory;
+            switch (filter_mem.argument.format) {
+            case memory::format::oiyx_f32:
+                return inline_memory ? kernelName_YXFB : kernelName_YXFB_memory;
+            case memory::format::yxoi_f32:
+                return kernelName_YXFB_YXOI_memory;
+            default:
+                throw std::invalid_argument("Filter memory is not supported");
+            }
         default:
             throw std::invalid_argument("Input memory format is not supported");
         }
@@ -94,6 +110,7 @@ struct convolution_relu_gpu : is_an_implementation {
 
         auto& input_mem = outer.input_memory(0);
         auto& input_offset = outer.argument.input_offset;
+        auto& output_mem = outer.output_memory(0);
         auto& output_offset = outer.argument.output_offset;
         auto& output_size   = outer.argument.output_size;
         auto split = outer.argument.split;
@@ -112,10 +129,12 @@ struct convolution_relu_gpu : is_an_implementation {
         // Batch is included in output size
 
         gpu::jit_constants mem_consts{
+            gpu::make_jit_constant("INPUT", input_mem.argument.size),
+            gpu::make_jit_constant("OUTPUT", output_mem.argument.size),
             gpu::make_jit_constant("STRIDE", stride),
             gpu::make_jit_constant("INPUT_OFFSET", input_offset),
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
-            gpu::make_jit_constant("OUTPUT_SIZE", output_size),
+            gpu::make_jit_constant("OUTPUT_LIMIT", output_size),
             gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope))
         };
 
@@ -197,7 +216,8 @@ struct convolution_relu_gpu : is_an_implementation {
 
         assert(arg.argument.output_size.feature[0] / arg.argument.split == filter_arg.size.feature[0]); // memory::format oixy
         // todo remove
-        if (filter_arg.format != memory::format::oiyx_f32) throw std::runtime_error("conv weights arent oiyx_f32 format");
+        if (filter_arg.format != memory::format::oiyx_f32 &&
+            filter_arg.format != memory::format::yxoi_f32) throw std::runtime_error("conv weights arent oiyx_f32 or yxoi_f32 format");
 
         return new convolution_relu_gpu(arg);
     }
@@ -213,6 +233,7 @@ struct attach{
         gpu::kernel_templates::add(kernelName_YXFB, kernelCode_YXFB_Begin + convolution_code_yxfb + kernelCode_Relu + kernelCode_End);
         gpu::kernel_templates::add(kernelName_BFXY, kernelCode_BFXY_Begin + convolution_code_bfxy + kernelCode_Relu + kernelCode_End);
         gpu::kernel_templates::add(kernelName_YXFB_memory, kernelCode_YXFB_memory_Begin + convolution_code_yxfb_memory + kernelCode_Relu + kernelCode_End);
+        gpu::kernel_templates::add(kernelName_YXFB_YXOI_memory, kernelCode_YXFB_YXOI_memory_Begin + convolution_code_yxfb_yxoi_memory + kernelCode_Relu + kernelCode_End);
 
         auto val_fw = convolution_relu_gpu::create;
 

@@ -58,6 +58,7 @@ struct memory : is_a_primitive {
         bfyx_f32,   // used in Caffe
         fyxb_f32,   // used in Caffe
         oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
+        yxoi_f32,    // format used only for weights: o - output feature maps, i - input feature maps
         byxf_b24_f32,        // for convolution_cpu_generic
         yxoi_o4_f32,       // for convolution_cpu_generic
         os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
@@ -76,6 +77,7 @@ struct memory : is_a_primitive {
         case format::byxf_f32:
         case format::bfyx_f32:
         case format::oiyx_f32:
+        case format::yxoi_f32:
         case format::fyxb_f32:
         case format::bs_yxf_bv24_f32:
         case format::byxf_b24_f32:
