@@ -22,3 +22,7 @@ MKL-DNN.creator.user
 MKL-DNN.files
 MKL-DNN.includes
 
+*.pyc
+.idea
+*~
+conf.ini
