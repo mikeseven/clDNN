@@ -18,6 +18,7 @@
 #include <fstream>
 #include <nmmintrin.h>
 #include <array>
+#include <boost/filesystem.hpp>
 
 namespace neural {
 #define CRC_INIT 0xbaba7007
@@ -25,7 +26,7 @@ namespace neural {
 namespace {
 const primitive null_primitive(nullptr);
 
-uint32_t crc32(const void *buffer, size_t count, uint32_t crc) {
+uint32_t crc32(const void *buffer, uint64_t count, uint32_t crc) {
     const uint8_t *ptr = static_cast<const uint8_t *>(buffer);
     for(; count>=4; count-=4, ptr+=4)
         crc = _mm_crc32_u32( crc,*reinterpret_cast<const uint32_t *>(ptr) );
@@ -43,13 +44,18 @@ struct file_header {
     uint8_t    dimension;            // 1
     uint8_t    sizeof_value;         // 1
 };
+// if file header is in version 2+, right after header there is file_header_ext_* struct
+struct file_header_ext_2
+{
+    uint8_t    layout;
+};
 
 struct nn_data{
 #if defined __cplusplus
     nn_data() : buffer(nullptr), size(nullptr), dimension(0), sizeof_value(0) {};
 #endif
-void           *const buffer;       /* buffer containig data */
-const size_t   *const size;         /* sizes of signal in each coordinate; unit is a value */
+void             *const buffer;       /* buffer containig data */
+const uint64_t   *const size;         /* sizes of signal in each coordinate; unit is a value */
 const uint8_t         dimension;    /* dimensionality of data, as in http://en.wikipedia.org/wiki/Dimension */
 const uint8_t         sizeof_value; /* size of single value in buffer */
 };
@@ -63,14 +69,14 @@ size_t sizes[2] = {320, 240};
 nn_data_buffer_size_ptr(sizeof(float), sizeof(sizes)/sizeof(sizes[0]), sizes);
 Buffer for 2-dimensional grid of bytes with size [320,240] has size od 768000.
 */
-static inline size_t nn_data_buffer_size_ptr(
-    size_t  sizeof_value,   /* sizeof single value */
+static inline uint64_t nn_data_buffer_size_ptr(
+    uint64_t  sizeof_value,   /* sizeof single value */
     uint8_t dimension,      /* dimensionality of data */
-    const size_t *size_ptr  /* array of sizes - one per axis */
+    const uint64_t *size_ptr  /* array of sizes - one per axis */
 ) {
     assert(size_ptr);
     if (!size_ptr) return 0;
-    size_t buffer_size = sizeof_value;
+    uint64_t buffer_size = sizeof_value;
     for (uint8_t at = 0; at<dimension; ++at)
         buffer_size *= size_ptr[at];
     return buffer_size;
@@ -124,10 +130,11 @@ primitive file::create(file::arguments arg) {
             || file_head.data_type != 'F') throw std::runtime_error("nn_data_t has invalid type");
 
         // load size array, verify 32-bit crc
-        auto array = std::unique_ptr<size_t>(new size_t[file_head.dimension]);
-        auto array_size = file_head.dimension * sizeof(size_t);
-        rfile.read(reinterpret_cast<char *>(array.get()), array_size);
-        if (read_crc() != crc32(array.get(), array_size, CRC_INIT)) throw std::runtime_error("nn_data_t size array crc mismatch");
+        auto array = std::vector<uint64_t>(file_head.dimension);
+            //std::unique_ptr<uint64_t>(new uint64_t[file_head.dimension]);
+        auto array_size = file_head.dimension * sizeof(uint64_t);
+        rfile.read(reinterpret_cast<char *>(&array[0]), array_size);
+        if (read_crc() != crc32(&array[0], array_size, CRC_INIT)) throw std::runtime_error("nn_data_t size array crc mismatch");
 
         // create target nn::data & load data into it               
         
@@ -137,7 +144,7 @@ primitive file::create(file::arguments arg) {
         {
         case 1: // biases 1D
         {
-            p_arg = new memory::arguments({ engine::reference, memory::format::x_f32,{ 1,{ { static_cast<unsigned int>(array.get()[0]) } }, 1 } });
+            p_arg = new memory::arguments({ engine::reference, memory::format::x_f32,{ 1,{ { static_cast<unsigned int>(array[0]) } }, 1 } });
             break;
         }
         case 2: // 2D i.e. fully connected
@@ -145,8 +152,8 @@ primitive file::create(file::arguments arg) {
             p_arg = new memory::arguments(
             { engine::reference, memory::format::bx_f32,
             {
-                static_cast<unsigned int>(array.get()[0]),
-                { { static_cast<unsigned int>(array.get()[1]) } },
+                static_cast<unsigned int>(array[0]),
+                { { static_cast<unsigned int>(array[1]) } },
                 1
             }
             });
@@ -154,7 +161,7 @@ primitive file::create(file::arguments arg) {
         }
         case 3: // 3D mean
         {
-            auto a = array.get()[0], b = array.get()[1], c = array.get()[2];
+            auto a = array[0], b = array[1], c = array[2];
             p_arg = new memory::arguments(
             {
                 engine::reference, memory::format::bfyx_f32,
@@ -170,16 +177,16 @@ primitive file::create(file::arguments arg) {
         {
             if (arg.weight_type == file::weights_type::convolution)
                 p_arg = new memory::arguments({ engine::reference, memory::format::oiyx_f32,{ 1,
-                { static_cast<unsigned int>(array.get()[0]), static_cast<unsigned int>(array.get()[1]) }, // kernel spatials x, y
-                { static_cast<unsigned int>(array.get()[3]), static_cast<unsigned int>(array.get()[2]) } } }); // ofm, ifm
+                { static_cast<unsigned int>(array[0]), static_cast<unsigned int>(array[1]) }, // kernel spatials x, y
+                { static_cast<unsigned int>(array[3]), static_cast<unsigned int>(array[2]) } } }); // ofm, ifm
             else if (arg.weight_type == file::weights_type::fully_connected)
             {
                 p_arg = new memory::arguments(
                 { engine::reference, memory::format::bfyx_f32,
                 {
-                    { static_cast<unsigned int>(array.get()[3]) }, // batches
-                    { static_cast<unsigned int>(array.get()[1]), static_cast<unsigned int>(array.get()[0]) },
-                    { static_cast<unsigned int>(array.get()[2]) }, // feature maps
+                    { static_cast<unsigned int>(array[3]) }, // batches
+                    { static_cast<unsigned int>(array[1]), static_cast<unsigned int>(array[0]) },
+                    { static_cast<unsigned int>(array[2]) }, // feature maps
                 }
                 });
             }
@@ -207,6 +214,35 @@ primitive file::create(file::arguments arg) {
     catch (std::exception e) {
         return nullptr;
     }
+}
+
+void file::serialize(const primitive& data, const std::string& name)
+{
+    // TODO: start using boost
+    auto size = data.as<const memory&>().argument.size;
+    auto format = data.as<const memory&>().argument.format;
+    boost::filesystem::path dir_path(std::string("weights_format_num") + std::to_string((uint32_t)format));
+    boost::filesystem::create_directories(dir_path);
+    dir_path /= boost::filesystem::path(name).filename();
+    std::ofstream fstream( dir_path.string(), std::ios::out | std::ios::binary );
+    file_header fh;
+    file_header_ext_2 fh_ext;
+    fh.data_type = 'F';
+    fh.version = 2;
+    fh.dimension = memory::traits(format).dimension;
+    if (fh.dimension == 0 || fh.dimension > 5) throw std::runtime_error("dimensions mismatch");
+    // TODO: add crc validation
+    fh_ext.layout = (uint8_t)format;
+    fstream.write((const char*)&fh,sizeof(fh));
+    fstream.write((const char*)&fh_ext, sizeof(fh_ext));
+    std::vector<uint64_t> array(fh.dimension);
+    for (auto ar = 0; ar < fh.dimension; ar++)
+    {
+        array[ar] = size.raw[ar];
+    }
+    fstream.write((const char*)(&array[0]), array.size()*sizeof(uint64_t));
+    auto ptr = data.as<const memory&>().pointer<char>();
+    fstream.write(&ptr[0], ptr.size());
 }
 
 }

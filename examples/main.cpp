@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 {
     // TODO: create header file for all examples
     extern void alexnet(uint32_t, std::string, neural::engine::type,bool);
-
+    extern void convert_weights(neural::memory::format::type, std::string);
     if (argc <= 1)
     {
         std::cout <<
@@ -60,6 +60,10 @@ int main(int argc, char *argv[])
             engine type: can be referenced or gpu
             --dump_hidden_layers
             dumps results from hidden layers
+            --convert=<format_num> 
+            converts weights to given format (format_num represents format enum)
+            --convertion_path=<path>
+            name, or substring in file name to be converte. i.e. "conv1" - first convolution, "fc" every fully connected
             --input=<directory>
             path to directory that contains images to be classfied)_help_";
     }
@@ -74,6 +78,13 @@ int main(int argc, char *argv[])
         parse_parameters(config, arg);
         // Validate params and set defaults
         auto not_found = std::end(config);
+        if (config.find("convert") != not_found) {
+            if (config.find("convertion_path") == not_found)
+                config["convertion_path"] = "";
+            convert_weights(static_cast<neural::memory::format::type>(std::stoi(config["convert"])),
+                config["convertion_path"]);
+            return 0;
+        }
         if (config.find("batch") == not_found) config["batch"] = "32";
         if (config.find("model") == not_found) config["model"] = "alexnet";
         if (config.find("engine") == not_found) config["engine"] = "referenced";

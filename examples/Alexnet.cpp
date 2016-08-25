@@ -32,10 +32,10 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
     instrumentation::timer<> timer_build;
     auto mean = mean_subtract::create(
     {
-        eng,
+        engine::type::reference,
         memory::format::yxfb_f32,
         input,
-        file::create({ eng,"imagenet_mean.nnd" })
+        file::create({ eng,"weights/imagenet_mean.nnd" })
     });
 
     auto conv1 = convolution_relu::create(
@@ -44,8 +44,8 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         memory::format::yxfb_f32,
         {
             mean,
-            file::create({ eng, "conv1_weights.nnd" }),
-            file::create({ eng, "conv1_biases.nnd" })
+            file::create({ eng, "weights/conv1_weights.nnd" }),
+            file::create({ eng, "weights/conv1_biases.nnd" })
         },
         { 0,{ 0, 0 }, 0 },
         { 1,{ 4, 4 }, 1 },
@@ -80,10 +80,10 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         memory::format::yxfb_f32,
         {
             lrn1,
-            file::create({ eng, "conv2_g1_weights.nnd" }),
-            file::create({ eng, "conv2_g1_biases.nnd" }),
-            file::create({ eng, "conv2_g2_weights.nnd" }),
-            file::create({ eng, "conv2_g2_biases.nnd" }),
+            file::create({ eng, "weights/conv2_g1_weights.nnd" }),
+            file::create({ eng, "weights/conv2_g1_biases.nnd" }),
+            file::create({ eng, "weights/conv2_g2_weights.nnd" }),
+            file::create({ eng, "weights/conv2_g2_biases.nnd" }),
         },
         { 0,{ -2, -2 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -121,8 +121,8 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         memory::format::yxfb_f32,
         {
             lrn2,
-            file::create({ eng, "conv3_weights.nnd" }),
-            file::create({ eng, "conv3_biases.nnd" }),
+            file::create({ eng, "weights/conv3_weights.nnd" }),
+            file::create({ eng, "weights/conv3_biases.nnd" }),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -135,10 +135,10 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         memory::format::yxfb_f32,
         {
             conv3,
-            file::create({ eng, "conv4_g1_weights.nnd" }),
-            file::create({ eng, "conv4_g1_biases.nnd" }),
-            file::create({ eng, "conv4_g2_weights.nnd" }),
-            file::create({ eng, "conv4_g2_biases.nnd" }),
+            file::create({ eng, "weights/conv4_g1_weights.nnd" }),
+            file::create({ eng, "weights/conv4_g1_biases.nnd" }),
+            file::create({ eng, "weights/conv4_g2_weights.nnd" }),
+            file::create({ eng, "weights/conv4_g2_biases.nnd" }),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -153,10 +153,10 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         memory::format::yxfb_f32,
         {
             conv4_group2,
-            file::create({ eng, "conv5_g1_weights.nnd" }),
-            file::create({ eng, "conv5_g1_biases.nnd" }),
-            file::create({ eng, "conv5_g2_weights.nnd" }),
-            file::create({ eng, "conv5_g2_biases.nnd" }),
+            file::create({ eng, "weights/conv5_g1_weights.nnd" }),
+            file::create({ eng, "weights/conv5_g1_biases.nnd" }),
+            file::create({ eng, "weights/conv5_g2_weights.nnd" }),
+            file::create({ eng, "weights/conv5_g2_biases.nnd" }),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -181,8 +181,8 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         eng,
         memory::format::xb_f32,
         pool5,
-        file::create({ eng, "fc6_weights.nnd", file::weights_type::fully_connected }),
-        file::create({ eng, "fc6_biases.nnd" }),
+        file::create({ eng, "weights/fc6_weights.nnd", file::weights_type::fully_connected }),
+        file::create({ eng, "weights/fc6_biases.nnd" }),
         0
     });
 
@@ -191,8 +191,8 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         eng,
         memory::format::xb_f32,
         fc6,
-        file::create({ eng, "fc7_weights.nnd", file::weights_type::fully_connected }),
-        file::create({ eng, "fc7_biases.nnd" }),
+        file::create({ eng, "weights/fc7_weights.nnd", file::weights_type::fully_connected }),
+        file::create({ eng, "weights/fc7_biases.nnd" }),
         0
     });
 
@@ -201,8 +201,8 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         eng,
         memory::format::xb_f32,
         fc7,
-        file::create({ eng, "fc8_weights.nnd", file::weights_type::fully_connected }),
-        file::create({ eng, "fc8_biases.nnd" }),
+        file::create({ eng, "weights/fc8_weights.nnd", file::weights_type::fully_connected }),
+        file::create({ eng, "weights/fc8_biases.nnd" }),
         0
     });
 

@@ -62,6 +62,7 @@ struct memory : is_a_primitive {
         yxoi_o4_f32,       // for convolution_cpu_generic
         os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
         bs_yxf_bv24_f32,
+        format_num,
         any=static_cast<uint32_t>(-1)
     }; };
 
@@ -213,6 +214,7 @@ struct file : is_a_primitive {
     const arguments argument;
 
     DLL_SYM static primitive create(arguments);
+    DLL_SYM static void serialize(const primitive&, const std::string&);
     file &operator()(void *);
 private:
     file(arguments arg) : is_a_primitive(type_id<const file>()), argument(arg) {};
@@ -833,8 +835,10 @@ private:
 //     auto output      = memory::describe({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
 //     auto bn = normalization::batch_inference::create({engine::reference, {output}, {input, scale, bias, average, inv_std_dev}, true});
 
-struct /*normalization*/batch_inference : is_a_primitive {
-    struct arguments {
+struct /*normalization*/batch_inference : is_a_primitive
+{
+    struct arguments
+    {
         neural::engine::type        engine;
         std::vector<primitive>      output;         // 1: {output}
         std::vector<primitive_at>   input;          // 5: {input, scale, bias, precomputed_mean, precomputed_inv_std_dev}
@@ -853,10 +857,8 @@ struct /*normalization*/batch_inference : is_a_primitive {
 private:
     batch_inference(arguments arg) : is_a_primitive(type_id<const batch_inference>()), argument(arg) {};
     friend class is_a_primitive;
-};
-
-} //normalization /////////////////////////////////////////////////////////////////////////////////////////////////////
-
+};//normalization /////////////////////////////////////////////////////////////////////////////////////////////////////
+}
 
 
 
