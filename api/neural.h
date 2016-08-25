@@ -857,10 +857,8 @@ struct /*normalization*/batch_inference : is_a_primitive
 private:
     batch_inference(arguments arg) : is_a_primitive(type_id<const batch_inference>()), argument(arg) {};
     friend class is_a_primitive;
-};
-
 };//normalization /////////////////////////////////////////////////////////////////////////////////////////////////////
-
+}
 
 
 

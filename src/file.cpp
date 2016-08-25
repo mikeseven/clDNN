@@ -223,13 +223,14 @@ void file::serialize(const primitive& data, const std::string& name)
     auto format = data.as<const memory&>().argument.format;
     boost::filesystem::path dir_path(std::string("weights_format_num") + std::to_string((uint32_t)format));
     boost::filesystem::create_directories(dir_path);
-    dir_path.append(boost::filesystem::path(name).filename().c_str());
+    dir_path /= boost::filesystem::path(name).filename();
     std::ofstream fstream( dir_path.string(), std::ios::out | std::ios::binary );
     file_header fh;
     file_header_ext_2 fh_ext;
     fh.data_type = 'F';
     fh.version = 2;
     fh.dimension = memory::traits(format).dimension;
+    if (fh.dimension == 0 || fh.dimension > 5) throw std::runtime_error("dimensions mismatch");
     // TODO: add crc validation
     fh_ext.layout = (uint8_t)format;
     fstream.write((const char*)&fh,sizeof(fh));
