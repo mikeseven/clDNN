@@ -204,8 +204,8 @@ struct file : is_a_primitive {
     struct arguments {
         neural::engine::type         engine;
         std::string                  name;
-        std::vector<primitive>       output;
         weights_type                 weight_type;
+        std::vector<primitive>       output;
 
         DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize);
         DLL_SYM arguments(neural::engine::type aengine, std::string aname, primitive aoutput);
