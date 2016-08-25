@@ -214,7 +214,7 @@ struct file : is_a_primitive {
     const arguments argument;
 
     DLL_SYM static primitive create(arguments);
-    DLL_SYM static void serialize(primitive, std::string);
+    DLL_SYM static void serialize(const primitive&, const std::string&);
     file &operator()(void *);
 private:
     file(arguments arg) : is_a_primitive(type_id<const file>()), argument(arg) {};
@@ -835,8 +835,10 @@ private:
 //     auto output      = memory::describe({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
 //     auto bn = normalization::batch_inference::create({engine::reference, {output}, {input, scale, bias, average, inv_std_dev}, true});
 
-struct /*normalization*/batch_inference : is_a_primitive {
-    struct arguments {
+struct /*normalization*/batch_inference : is_a_primitive
+{
+    struct arguments
+    {
         neural::engine::type        engine;
         std::vector<primitive>      output;         // 1: {output}
         std::vector<primitive_at>   input;          // 5: {input, scale, bias, precomputed_mean, precomputed_inv_std_dev}

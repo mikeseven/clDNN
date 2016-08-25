@@ -81,7 +81,8 @@ int main(int argc, char *argv[])
         if (config.find("convert") != not_found) {
             if (config.find("convertion_path") == not_found)
                 config["convertion_path"] = "";
-            convert_weights((neural::memory::format::type)std::stoi(config["convert"]), config["convertion_path"]);
+            convert_weights(static_cast<neural::memory::format::type>(std::stoi(config["convert"])),
+                config["convertion_path"]);
             return 0;
         }
         if (config.find("batch") == not_found) config["batch"] = "32";

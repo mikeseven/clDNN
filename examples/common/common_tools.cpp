@@ -27,7 +27,7 @@ using namespace boost::filesystem;
 
 
 // returns list of files (path+filename) from specified directory
-std::vector<std::string> get_directory_files(const std::string &images_path, std::regex extension)
+static inline std::vector<std::string> get_directory_files(const std::string &images_path, const std::regex& extension)
 {
     std::vector<std::string> result;
 
