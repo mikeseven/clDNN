@@ -104,6 +104,9 @@ void html::batch(const neural::memory & mem, const std::string& categories_file,
 	// Per image
 	for (size_t img_idx = 0; img_idx < batch.size( ); img_idx++)
 	{
+        if (img_idx >= image_names.size())
+            break;
+
 		auto& img_name = image_names[img_idx];
 		auto idx = img_name.find_last_of("/\\");
 		auto img_file = img_name.substr(idx == std::string::npos ? 0 : idx + 1);

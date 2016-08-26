@@ -16,6 +16,7 @@
 
 #include "api/neural.h"
 #include <fstream>
+#include <iostream>
 #include <nmmintrin.h>
 #include <array>
 #include <boost/filesystem.hpp>
@@ -236,6 +237,7 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
 
     switch (format)
     {
+    case memory::format::oyxi_f32:
     case memory::format::yxoi_f32:
     {
         p_arg = new memory::arguments({ engine::reference, format,{ 1,
@@ -282,7 +284,8 @@ primitive file::create(file::arguments arg) {
             throw std::runtime_error("file version not supported");
         }
     }
-    catch (std::exception e) {
+    catch (std::exception &e) {
+        std::cerr << e.what() << std::endl;
         return nullptr;
     }
 }
