@@ -259,27 +259,22 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
 
 // creates primitive with memry buffer loaded from specified file
 primitive file::create(file::arguments arg) {
-    try {
-        std::ifstream rfile;
-        rfile.exceptions(std::ios::failbit | std::ios::badbit);
-        rfile.open(arg.name, std::ios::binary);
+    std::ifstream rfile;
+    rfile.exceptions(std::ios::failbit | std::ios::badbit);
+    rfile.open(arg.name, std::ios::binary);
 
-        file_header file_head;
-        rfile.read(reinterpret_cast<char *>(&file_head), sizeof(file_head));
+    file_header file_head;
+    rfile.read(reinterpret_cast<char *>(&file_head), sizeof(file_head));
 
-        switch (file_head.version)
-        {
-        case 1:
-        case 2:
-            return read_file_v1_v2(rfile, file_head, arg.weight_type);
-        case 3:
-            return read_file_v3(rfile, file_head);
-        default:
-            throw std::runtime_error("file version not supported");
-        }
-    }
-    catch (std::exception &e) {
-        throw std::exception(e);
+    switch (file_head.version)
+    {
+    case 1:
+    case 2:
+        return read_file_v1_v2(rfile, file_head, arg.weight_type);
+    case 3:
+        return read_file_v3(rfile, file_head);
+    default:
+        throw std::runtime_error("file version not supported");
     }
 }
 
