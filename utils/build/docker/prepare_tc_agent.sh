@@ -64,7 +64,7 @@ ${PKG_MGR} -y install git
 # Build generators and build utilities.
 if [[ $DISTRO == 'centos' ]]; then
     ${PKG_MGR} -y install epel-release
-    ${PKG_MGR} -y install cmake3
+    ${PKG_MGR} -y install cmake3 python34
     /usr/sbin/alternatives --install /usr/bin/cmake cmake /usr/bin/cmake3 50
     git clone --depth 1 --branch v1.7.1 https://github.com/ninja-build/ninja.git
     pushd ninja; ./configure.py --bootstrap; cp ninja /usr/local/bin; popd; rm -r ninja
