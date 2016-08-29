@@ -204,16 +204,15 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
 
 primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
 {
-    file_head;
     file_header_ext_2 fh2;
     rfile.read(reinterpret_cast<char *>(&fh2), sizeof(fh2));
     memory::format::type format = fh2.layout;
 
-    auto read_crc = [&rfile]() -> uint32_t {
+    /*auto read_crc = [&rfile]() -> uint32_t {
         uint32_t result;
         rfile.read(reinterpret_cast<char *>(&result), sizeof(uint32_t));
         return result;
-    };
+    };*/
 
     // load header, verify 32-bit crc
     // TODO!!!! create CRC for files with version 2 and then compare it here!
