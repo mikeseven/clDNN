@@ -57,20 +57,30 @@ file(GLOB __CLDNN_Sources__cache
     "${__CLDNN_Directory__cache}/*.cpp"
   )
 
+set(__CLDNN_Directory__cg_cache        "${CLDNN__CODEGEN_INCDIR}/cache")
+set(__CLDNN_Label__cg_cache            "${__CLDNN_Label__cache}\\codegen")
+set(__CLDNN_Sources__cg_cache
+    "${__CLDNN_Directory__cg_cache}/gen.inc"
+  )
+
 
 set(__CLDNN_AllSources
     ${__CLDNN_Headers__api}
     ${__CLDNN_Sources__main}
     ${__CLDNN_Sources__gpu}
     ${__CLDNN_Sources__cache}
+    ${__CLDNN_Sources__cg_cache}
   )
+# Helping with some generators.
+set_property(SOURCE ${__CLDNN_Sources__cg_cache} PROPERTY GENERATED TRUE)
 
 # =============================================== Filters ==============================================
 
-source_group("${__CLDNN_Label__api}"   FILES ${__CLDNN_Headers__api})
-source_group("${__CLDNN_Label__main}"  FILES ${__CLDNN_Sources__main})
-source_group("${__CLDNN_Label__gpu}"   FILES ${__CLDNN_Sources__gpu})
-source_group("${__CLDNN_Label__cache}" FILES ${__CLDNN_Sources__cache})
+source_group("${__CLDNN_Label__api}"      FILES ${__CLDNN_Headers__api})
+source_group("${__CLDNN_Label__main}"     FILES ${__CLDNN_Sources__main})
+source_group("${__CLDNN_Label__gpu}"      FILES ${__CLDNN_Sources__gpu})
+source_group("${__CLDNN_Label__cache}"    FILES ${__CLDNN_Sources__cache})
+source_group("${__CLDNN_Label__cg_cache}" FILES ${__CLDNN_Sources__cg_cache})
 
 # ===================================== Include/Link directories =======================================
 
@@ -97,5 +107,12 @@ target_link_libraries("${CLDNN_BUILD__PROJ}"
 if(UNIX)
   target_link_libraries("${CLDNN_BUILD__PROJ}" pthread)
 endif()
+
+# =================================== Custom pre- and post-steps =======================================
+
+add_custom_command(OUTPUT ${__CLDNN_Sources__cg_cache}
+    COMMAND "${CMAKE_COMMAND}" -E touch "${__CLDNN_Sources__cg_cache}"
+    COMMENT "Generating file..."
+  )
 
 # ======================================================================================================

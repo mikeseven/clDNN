@@ -112,6 +112,15 @@ else()
   set(CLDNN__MULTI_CFG_GEN  YES)
 endif()
 
+# Code generation settings.
+
+# Path which points to root directory where code generated elements are created.
+set(CLDNN__CODEGEN_DIR     "${CMAKE_CURRENT_BINARY_DIR}/codegen/${CLDNN__TARGET_CFG_VAR}")
+
+# Path which points to automatically included directory with code generated elements
+# (to support "copy-if-different" optimization).
+set(CLDNN__CODEGEN_INCDIR  "${CLDNN__CODEGEN_DIR}/include")
+
 # ======================================================================================================
 # ======================================================================================================
 # ======================================================================================================
@@ -989,6 +998,7 @@ include_directories(
     "${CLDNN__KHR_CLHPP_DIR}"
     "${CLDNN__API_DIR}"
     ${Boost_INCLUDE_DIRS}
+    "${CLDNN__CODEGEN_INCDIR}"
   )
 link_directories(
     ${CLDNN__IOCL_ICD_LIBDIRS}
