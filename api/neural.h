@@ -48,7 +48,7 @@ struct memory : is_a_primitive {
         const type_traits  *type;
     };
 
-    class format { format(); public: enum type {
+    class format { format(); public: enum type : uint8_t {
         x_f32,
         xb_f32,     // 1D+batch, float32
         bx_f32,     // 1D+batch, float32
@@ -65,7 +65,7 @@ struct memory : is_a_primitive {
         os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
         bs_yxf_bv24_f32,
         format_num,
-        any=static_cast<uint32_t>(-1)
+        any=static_cast<uint8_t>(-1)
     }; };
 
     static format_traits traits(format::type fmt) {

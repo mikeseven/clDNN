@@ -43,12 +43,12 @@ struct file_header {
     uint8_t    data_type;            // 1           } aligment 2x4B
     uint8_t    version;              // 1          |
     uint8_t    dimension;            // 1
-    uint8_t    sizeof_value;         // 1
+    uint8_t    data_sizeof;          // 1           - size of a single data value we will be reading i.e for "float" this will be "4".
 };
 // if file header is in version 2+, right after header there is file_header_ext_* struct
 struct file_header_ext_2
 {
-    uint8_t    layout;
+    memory::format::type    layout;
 };
 
 struct nn_data{
@@ -120,7 +120,7 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
 
     // load header, verify 32-bit crc
     if (read_crc() != crc32(&file_head, sizeof(file_head), CRC_INIT)) throw std::runtime_error("nn_data_t header crc mismatch");
-    if (file_head.sizeof_value != sizeof(float)
+    if (file_head.data_sizeof != sizeof(float)
         || file_head.data_type != 'F') throw std::runtime_error("nn_data_t has invalid type");
     // load size array, verify 32-bit crc
     auto array = std::vector<uint64_t>(file_head.dimension);
@@ -131,57 +131,57 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
 
     // create target nn::data & load data into it               
 
-    memory::arguments* p_arg = nullptr;
+    std::unique_ptr<memory::arguments> p_arg = nullptr;
 
     switch (file_head.dimension)
     {
     case 1: // biases 1D
     {
-        p_arg = new memory::arguments({ engine::reference, memory::format::x_f32,{ 1,{ { static_cast<unsigned int>(array[0]) } }, 1 } });
+        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ engine::reference, memory::format::x_f32,{ 1,{ { static_cast<uint32_t>(array[0]) } }, 1 } }));
         break;
     }
     case 2: // 2D i.e. fully connected
     {
-        p_arg = new memory::arguments(
+        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments(
         { engine::reference, memory::format::bx_f32,
         {
-            static_cast<unsigned int>(array[0]),
-            { { static_cast<unsigned int>(array[1]) } },
+            static_cast<uint32_t>(array[0]),
+            { { static_cast<uint32_t>(array[1]) } },
             1
         }
-        });
+        }));
         break;
     }
     case 3: // 3D mean
     {
         auto a = array[0], b = array[1], c = array[2];
-        p_arg = new memory::arguments(
+        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments(
         {
             engine::reference, memory::format::bfyx_f32,
             {
                 { 1 },
-                { static_cast<unsigned int>(a), static_cast<unsigned int>(b) },
-                { static_cast<unsigned int>(c) }
+                { static_cast<uint32_t>(a), static_cast<uint32_t>(b) },
+                { static_cast<uint32_t>(c) }
             }
-        });
+        }));
         break;
     }
     case 4: // 4D convolution or convolution to fc conversion
     {
         if (type == file::weights_type::convolution)
-            p_arg = new memory::arguments({ engine::reference, memory::format::oiyx_f32,{ 1,
-            { static_cast<unsigned int>(array[0]), static_cast<unsigned int>(array[1]) }, // kernel spatials x, y
-            { static_cast<unsigned int>(array[3]), static_cast<unsigned int>(array[2]) } } }); // ofm, ifm
+            p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ engine::reference, memory::format::oiyx_f32,{ 1,
+            { static_cast<uint32_t>(array[0]), static_cast<uint32_t>(array[1]) }, // kernel spatials x, y
+            { static_cast<uint32_t>(array[3]), static_cast<uint32_t>(array[2]) } } })); // ofm, ifm
         else if (type == file::weights_type::fully_connected)
         {
-            p_arg = new memory::arguments(
+            p_arg = std::unique_ptr<memory::arguments>( new memory::arguments(
             { engine::reference, memory::format::bfyx_f32,
             {
-                { static_cast<unsigned int>(array[3]) }, // batches
-                { static_cast<unsigned int>(array[1]), static_cast<unsigned int>(array[0]) },
-                { static_cast<unsigned int>(array[2]) }, // feature maps
+                { static_cast<uint32_t>(array[3]) }, // batches
+                { static_cast<uint32_t>(array[1]), static_cast<uint32_t>(array[0]) },
+                { static_cast<uint32_t>(array[2]) }, // feature maps
             }
-            });
+            }));
         }
         else
             throw std::runtime_error("Unsupported weights type");
@@ -194,10 +194,7 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
     }
     }
 
-    if (!p_arg) throw std::runtime_error("memory arguments allocation failed");
-
     auto memory_primitive = memory::allocate(*p_arg); // ofm, ifm
-    delete p_arg;
     auto &mem = (memory_primitive).as<const neural::memory&>();
     auto buf = mem.pointer<char>();
     rfile.read(&buf[0], buf.size());
@@ -209,8 +206,8 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
 {
     file_head;
     file_header_ext_2 fh2;
-    rfile.read((char*)&fh2, sizeof(fh2));
-    memory::format::type format = static_cast<memory::format::type>(fh2.layout);
+    rfile.read(reinterpret_cast<char *>(&fh2), sizeof(fh2));
+    memory::format::type format = fh2.layout;
 
     auto read_crc = [&rfile]() -> uint32_t {
         uint32_t result;
@@ -221,7 +218,7 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
     // load header, verify 32-bit crc
     // TODO!!!! create CRC for files with version 2 and then compare it here!
     //if (read_crc() != crc32(&file_head, sizeof(file_head), CRC_INIT)) throw std::runtime_error("nn_data_t header crc mismatch");
-    if (file_head.sizeof_value != sizeof(float)
+    if (file_head.data_sizeof != sizeof(float)
         || file_head.data_type != 'F') throw std::runtime_error("nn_data_t has invalid type");
     // load size array, verify 32-bit crc
     auto array = std::vector<uint64_t>(file_head.dimension);
@@ -233,16 +230,16 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
 
     // create target nn::data & load data into it               
 
-    memory::arguments* p_arg = nullptr;
+    std::unique_ptr<memory::arguments> p_arg = nullptr;
 
     switch (format)
     {
     case memory::format::oyxi_f32:
     case memory::format::yxoi_f32:
     {
-        p_arg = new memory::arguments({ engine::reference, format,{ 1,
-        { static_cast<unsigned int>(array[2]), static_cast<unsigned int>(array[3]) }, // kernel spatials x, y
-        { static_cast<unsigned int>(array[0]), static_cast<unsigned int>(array[1]) } } }); // ofm, ifm
+        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ engine::reference, format,{ 1,
+        { static_cast<uint32_t>(array[2]), static_cast<uint32_t>(array[3]) }, // kernel spatials x, y
+        { static_cast<uint32_t>(array[0]), static_cast<uint32_t>(array[1]) } } })); // ofm, ifm
         break;
     }
     default:
@@ -252,10 +249,7 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
     }
     }
 
-    if (!p_arg) throw std::runtime_error("memory arguments allocation failed");
-
     auto memory_primitive = memory::allocate(*p_arg); // ofm, ifm
-    delete p_arg;
     auto &mem = (memory_primitive).as<const neural::memory&>();
     auto buf = mem.pointer<char>();
     rfile.read(&buf[0], buf.size());
@@ -268,7 +262,7 @@ primitive file::create(file::arguments arg) {
     try {
         std::ifstream rfile;
         rfile.exceptions(std::ios::failbit | std::ios::badbit);
-        rfile.open(arg.name, std::ios::in | std::ios::binary);
+        rfile.open(arg.name, std::ios::binary);
 
         file_header file_head;
         rfile.read(reinterpret_cast<char *>(&file_head), sizeof(file_head));
@@ -285,8 +279,7 @@ primitive file::create(file::arguments arg) {
         }
     }
     catch (std::exception &e) {
-        std::cerr << e.what() << std::endl;
-        return nullptr;
+        throw std::exception(e);
     }
 }
 
@@ -302,21 +295,21 @@ void file::serialize(const primitive& data, const std::string& name)
     file_header fh;
     file_header_ext_2 fh_ext;
     fh.data_type = 'F';
-    fh.sizeof_value = 4;
+    fh.data_sizeof = sizeof(float);
     fh.version = 3;
     fh.dimension = memory::traits(format).dimension;
     if (fh.dimension == 0 || fh.dimension > 4) throw std::runtime_error("dimensions mismatch");
     // TODO: add crc validation
-    fh_ext.layout = (uint8_t)format;
-    fstream.write((const char*)&fh,sizeof(fh));
-    fstream.write((const char*)&fh_ext, sizeof(fh_ext));
+    fh_ext.layout = format;
+    fstream.write(reinterpret_cast<const char*>(&fh),sizeof(fh));
+    fstream.write(reinterpret_cast<const char*>(&fh_ext), sizeof(fh_ext));
     std::vector<uint64_t> array(fh.dimension);
     const auto dimension_offset = size.raw.size() - 4; // TODO!!! do it better way, this is needed because weights can have 5 dimensions with batch dimension always equal 1!
     for (auto ar = 0; ar < fh.dimension; ar++)
     {
         array[ar] = size.raw[dimension_offset + ar];
     }
-    fstream.write((const char*)(&array[0]), array.size()*sizeof(uint64_t));
+    fstream.write(reinterpret_cast<const char*>(&array[0]), array.size()*sizeof(uint64_t));
     auto ptr = data.as<const memory&>().pointer<char>();
     fstream.write(&ptr[0], ptr.size());
 }
