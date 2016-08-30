@@ -37,7 +37,7 @@ std::vector<std::vector<std::pair<float, size_t>>> read_output(const neural::mem
 											{ return l.first > r.first; }); }
 		break;
 	default:
-		throw std::exception("Unsupported format for result parser");
+		throw std::logic_error("Unsupported format for result parser");
 	}
 	return ret;
 }

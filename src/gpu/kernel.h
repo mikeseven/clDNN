@@ -147,7 +147,7 @@ public:
         for (size_t i = 1; i < _mem.size(); i++)
         {
             if (_mem[0].get().count() != _mem[i].get().count())
-                throw std::exception("All memories must contain the same number of elements!");
+                throw std::logic_error("All memories must contain the same number of elements!");
         }
         auto result = vector_jit_constant::get_definitions();
         result.push_back({ _name + "_ARRAY_NUM", std::to_string(_mem.size()) });

@@ -10,7 +10,6 @@ namespace neural { namespace gpu { namespace manager {
 struct gpu_linker
 {
     static gpu_program link(context *context, const std::vector<cache::binary_data>& kernels);
-
 };
 
 } } }
