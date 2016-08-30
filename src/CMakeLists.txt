@@ -58,6 +58,7 @@ file(GLOB __CLDNN_Sources__cache
   )
 
 set(__CLDNN_Directory__cg_cache        "${CLDNN__CODEGEN_INCDIR}/cache")
+set(__CLDNN_CGDirectory__cg_cache      "${CLDNN__CODEGEN_DIR}/cache")
 set(__CLDNN_Label__cg_cache            "${__CLDNN_Label__cache}\\codegen")
 set(__CLDNN_Sources__cg_cache
     "${__CLDNN_Directory__cg_cache}/gen.inc"
@@ -110,9 +111,14 @@ endif()
 
 # =================================== Custom pre- and post-steps =======================================
 
-add_custom_command(OUTPUT ${__CLDNN_Sources__cg_cache}
-    COMMAND "${CMAKE_COMMAND}" -E touch "${__CLDNN_Sources__cg_cache}"
+add_custom_command(OUTPUT "${__CLDNN_CGDirectory__cg_cache}/gen.inc"
+    COMMAND "${CMAKE_COMMAND}" -E touch "${__CLDNN_CGDirectory__cg_cache}/gen.inc"
     COMMENT "Generating file..."
+  )
+add_custom_command(OUTPUT "${__CLDNN_Directory__cg_cache}/gen.inc"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${__CLDNN_CGDirectory__cg_cache}/gen.inc" "${__CLDNN_Directory__cg_cache}/gen.inc"
+    DEPENDS "${__CLDNN_CGDirectory__cg_cache}/gen.inc"
+    COMMENT "Updating file if the file changed..."
   )
 
 # ======================================================================================================

@@ -455,6 +455,11 @@ endif()
 
 # ======================================================================================================
 
+# Check for python 3.x interpreter (required tool).
+find_package(PythonInterp 3 REQUIRED)
+
+# ======================================================================================================
+
 # Setting helper variables for component paths.
 intel_arch_get_os(__CLDNN_TargetOs "${CLDNN__ARCHITECTURE_TARGET}")
 string(TOLOWER "${__CLDNN_TargetOs}" __CLDNN_TargetOs)
