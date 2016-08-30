@@ -1,6 +1,8 @@
 #include "gpu_compiler.h"
-// TODO add forwarding to cl2_wrapper.h
-// include cl2_wrapper.h
+#include "../ocl_toolkit.h"
+#include <iostream>
+#include <sstream>
+#include <assert.h>
 
 namespace neural { namespace gpu { namespace cache {
 
@@ -13,10 +15,16 @@ code inject_jit(const jit& compile_options, const code& code)
 
 }
 
-binary_data gpu_compiler::compile(context* context, const jit& compile_options, const code& code)
+binary_data gpu_compiler::compile(context* context, const jit& compile_options, const code& code_src) // throws cl::BuildError
 {
-    static_cast<void>(context);
-    return binary_data(inject_jit(compile_options, code)); //TODO temporary untill we merge proper mechanism
+    auto& clContext = context->context();
+    auto& program = context->program();
+    code source = inject_jit(compile_options, code_src);
+    program = cl::Program(clContext, source, false);
+	program.compile();
+    auto binaries = program.getInfo<CL_PROGRAM_BINARIES>();
+	assert(binaries.size() == 1 && "There should be only one binary");
+	return binary_data(binaries[0].begin(), binaries[0].end());
 }
 
 } } }

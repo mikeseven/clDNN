@@ -1,6 +1,7 @@
 #include "persistent_cache.h"
 #include <fstream>
 #include <sstream>
+#include <system_error>
 
 namespace neural { namespace gpu { namespace cache {
 
@@ -23,7 +24,7 @@ binary_data persistent_cache::cache_file::read()
         c_file.close();
         return data.str();
     }
-    throw(errno);
+    throw std::system_error(errno, std::system_category( ));
 }
 
 void persistent_cache::cache_file::write(const binary_data& data)
@@ -35,7 +36,7 @@ void persistent_cache::cache_file::write(const binary_data& data)
         c_file.close();
         return;
     }
-    throw (errno);
+	throw std::system_error(errno, std::system_category( ));
 }
 
 } } }
