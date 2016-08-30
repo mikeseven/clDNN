@@ -103,7 +103,6 @@ namespace neural {
     )__CC";
 
     const char fully_connected_code_xb_bx_memory[] = R"__CC(
-        __global uint* input_size = get_raw(input_mem);
         __global float* input = (__global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);
 
@@ -114,17 +113,16 @@ namespace neural {
         const uint batch_id = x % INPUT_BATCH_NUM;
 
         uint outXIdx = x / INPUT_BATCH_NUM;
-        uint weightBatchIdx = outXIdx * WEIGHTS_BATCH_NUM;
-        pDst[x] = bias[outXIdx];
+        uint weight_offset = outXIdx * WEIGHTS_BATCH_NUM;
+        float result = bias[outXIdx];
         for (uint i = 0; i < INPUT_SIZE_X; i++)
         {
-            pDst[x] += input[i * INPUT_BATCH_NUM + batch_id] * weight[weightBatchIdx + i];
+            result += input[i * INPUT_BATCH_NUM + batch_id] * weight[weight_offset++];
         }
+        pDst[x] = result;
     )__CC";
 
     const char fully_connected_code_yxfn_memory[] = R"__CC(
-        __global uint* input_size = get_raw(input_mem);
-        __global uint* output_size = get_raw(dst_mem);
         __global float* input = (__global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);
 
@@ -135,15 +133,15 @@ namespace neural {
         const int batch_id = x % INPUT_BATCH_NUM;
         uint neuronIdx = x / INPUT_BATCH_NUM;
 
-        pDst[x] = bias[neuronIdx];
+        float result = bias[neuronIdx];
 
-        uint weight_idx = 0;
         uint weight_offset = neuronIdx * INPUT_FEATURE_NUM * INPUT_SIZE_Y * INPUT_SIZE_X;
         for(int k = 0; k < INPUT_FEATURE_NUM; k++)
             for(int j = 0; j < INPUT_SIZE_Y; j++)
                 for(int i = 0; i < INPUT_SIZE_X; i++)
                 {
-                    pDst[x] += input[(k + INPUT_FEATURE_NUM * ( i + j * INPUT_SIZE_X)) * INPUT_BATCH_NUM + batch_id] * weight[weight_offset + weight_idx++];
+                    result += input[(k + INPUT_FEATURE_NUM * ( i + j * INPUT_SIZE_X)) * INPUT_BATCH_NUM + batch_id] * weight[weight_offset++];
                 } 
+        pDst[x] = result;
     )__CC";
 }
