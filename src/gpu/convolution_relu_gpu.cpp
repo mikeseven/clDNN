@@ -67,6 +67,28 @@ KERNEL(Convolution_Relu_GPU_YXFB_OYXI_memory)(
     uint split_idx)
 {)__krnl";
 
+const std::string kernelName_YXFB_YXOI_B8_memory = "Convolution_Relu_GPU_YXFB_YXOI_B8_memory";
+const std::string kernelCode_YXFB_YXOI_B8_memory_Begin = R"__krnl(
+__attribute__((reqd_work_group_size(8, 1, 1))) 
+KERNEL(Convolution_Relu_GPU_YXFB_YXOI_B8_memory)(
+    const __global neural_memory* input_mem,
+    __global neural_memory* dst_mem,
+    const __global neural_memory* filter_mem,
+    const __global neural_memory* bias_mem,
+    uint split_idx)
+{)__krnl";
+
+const std::string kernelName_YXFB_YXOI_B8_F8_memory = "Convolution_Relu_GPU_YXFB_YXOI_B8_F8_memory";
+const std::string kernelCode_YXFB_YXOI_B8_F8_memory_Begin = R"__krnl(
+__attribute__((reqd_work_group_size(8, 1, 1))) 
+KERNEL(Convolution_Relu_GPU_YXFB_YXOI_B8_F8_memory)(
+    const __global neural_memory* input_mem,
+    __global neural_memory* dst_mem,
+    const __global neural_memory* filter_mem,
+    const __global neural_memory* bias_mem,
+    uint split_idx)
+{)__krnl";
+
 const std::string kernelCode_Relu = "    pDst[global_id] = max(pDst[global_id], 0.0f) + NEGATIVE_SLOPE * min(pDst[global_id], 0.0f);";
 
 const std::string kernelCode_End = R"__krnl(
@@ -93,6 +115,7 @@ struct convolution_relu_gpu : is_an_implementation {
         // input
         auto& input_mem = outer.input_memory(0);
         auto& filter_mem = outer.input_memory(1);
+        auto& output_mem = outer.output_memory(0);
 
         if (padding::zero != outer.argument.padding)
             throw std::invalid_argument("Unknown padding mode in convolution.");
@@ -107,7 +130,16 @@ struct convolution_relu_gpu : is_an_implementation {
             case memory::format::oiyx_f32:
                 return inline_memory ? kernelName_YXFB : kernelName_YXFB_memory;
             case memory::format::yxoi_f32:
-                return kernelName_YXFB_YXOI_memory;
+                if (input_mem.argument.size.batch[0] == 8 &&
+                   output_mem.argument.size.feature[0] % 8 == 0)
+                {
+                    if (input_mem.argument.size.feature[0] % 8 == 0)
+                        return kernelName_YXFB_YXOI_B8_F8_memory;
+                    else
+                        return kernelName_YXFB_YXOI_B8_memory;
+                }
+                else
+                    return kernelName_YXFB_YXOI_memory;
             case memory::format::oyxi_f32:
                 return kernelName_YXFB_OYXI_memory;
             default:
@@ -147,7 +179,8 @@ struct convolution_relu_gpu : is_an_implementation {
             gpu::make_jit_constant("INPUT_OFFSET", input_offset),
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
             gpu::make_jit_constant("OUTPUT_LIMIT", output_size),
-            gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope))
+            gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope)),
+            gpu::make_jit_constant("RELU", "")
         };
 
         if (inline_memory)
@@ -201,7 +234,36 @@ struct convolution_relu_gpu : is_an_implementation {
                 ({ { dstSize, 1 } ,{ std::min(dstSize, static_cast<size_t>(16)), 1 } }, input_mem, output_mem);
             break;
         case memory::format::yxfb_f32:
-            if (me->inline_memory) {
+            if (outer.input_memory(1).argument.format == memory::format::yxoi_f32 &&
+                input_mem.argument.size.batch[0] == 8 &&
+                (output_mem.argument.size.feature[0] % 8) == 0)
+            {
+                if (input_mem.argument.size.feature[0] % 8 == 0)
+                {
+                    for (uint32_t i = 0; i < split; i++) {
+                        me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
+                            ({ { (output_mem.argument.size.feature[0] * 8) / split, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
+                                input_mem,
+                                output_mem,
+                                outer.input_memory(i * 2 + 1), //filters
+                                outer.input_memory(i * 2 + 2), //biases
+                                i);
+                    }
+                }
+                else
+                {
+                    for (uint32_t i = 0; i < split; i++) {
+                        me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
+                            ({ { output_mem.argument.size.feature[0] / split, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
+                                input_mem,
+                                output_mem,
+                                outer.input_memory(i * 2 + 1), //filters
+                                outer.input_memory(i * 2 + 2), //biases
+                                i);
+                    }
+                }
+            }
+            else if (me->inline_memory) {
                 me->_kernel.run<gpu::input_mem, gpu::output_mem>
                     ({ { dstSize, 1 } ,{ std::min(dstSize, static_cast<size_t>(16)), 1 } }, input_mem, output_mem);
             }
@@ -209,7 +271,7 @@ struct convolution_relu_gpu : is_an_implementation {
                 size_t workitems_per_enqueue = dstSize / split;
                 for (uint32_t i = 0; i < split; i++) {
                     me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                        ({ { workitems_per_enqueue, 1 } ,{ std::min(workitems_per_enqueue, static_cast<size_t>(16)), 1 } },
+                        ({ { workitems_per_enqueue, 1 } ,{ std::min(workitems_per_enqueue, static_cast<size_t>(8)), 1 } },
                             input_mem,
                             output_mem,
                             outer.input_memory(i * 2 + 1), //filters
@@ -248,7 +310,8 @@ struct attach{
         gpu::kernel_templates::add(kernelName_YXFB_memory, kernelCode_YXFB_memory_Begin + convolution_code_yxfb_memory + kernelCode_Relu + kernelCode_End);
         gpu::kernel_templates::add(kernelName_YXFB_YXOI_memory, kernelCode_YXFB_YXOI_memory_Begin + convolution_code_yxfb_yxoi_memory + kernelCode_Relu + kernelCode_End);
         gpu::kernel_templates::add(kernelName_YXFB_OYXI_memory, kernelCode_YXFB_OYXI_memory_Begin + convolution_code_yxfb_oyxi_memory + kernelCode_Relu + kernelCode_End);
-
+        gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, kernelCode_YXFB_YXOI_B8_memory_Begin + convolution_code_yxfb_yxoi_b8_memory + kernelCode_End);
+        gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_F8_memory, kernelCode_YXFB_YXOI_B8_F8_memory_Begin + convolution_code_yxfb_yxoi_B8_F8_memory + kernelCode_End);
         auto val_fw = convolution_relu_gpu::create;
 
         auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
