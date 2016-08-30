@@ -179,7 +179,8 @@ struct convolution_relu_gpu : is_an_implementation {
             gpu::make_jit_constant("INPUT_OFFSET", input_offset),
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
             gpu::make_jit_constant("OUTPUT_LIMIT", output_size),
-            gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope))
+            gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope)),
+            gpu::make_jit_constant("RELU", "")
         };
 
         if (inline_memory)
@@ -251,11 +252,9 @@ struct convolution_relu_gpu : is_an_implementation {
                 }
                 else
                 {
-                    auto gws = dstSize / 8;
-                    size_t workitems_per_enqueue = gws / split;
                     for (uint32_t i = 0; i < split; i++) {
                         me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                            ({ { workitems_per_enqueue, 1 } ,{ 8, 1 } },
+                            ({ { output_mem.argument.size.feature[0] / split, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
                                 input_mem,
                                 output_mem,
                                 outer.input_memory(i * 2 + 1), //filters
@@ -312,7 +311,7 @@ struct attach{
         gpu::kernel_templates::add(kernelName_YXFB_YXOI_memory, kernelCode_YXFB_YXOI_memory_Begin + convolution_code_yxfb_yxoi_memory + kernelCode_Relu + kernelCode_End);
         gpu::kernel_templates::add(kernelName_YXFB_OYXI_memory, kernelCode_YXFB_OYXI_memory_Begin + convolution_code_yxfb_oyxi_memory + kernelCode_Relu + kernelCode_End);
         gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, kernelCode_YXFB_YXOI_B8_memory_Begin + convolution_code_yxfb_yxoi_b8_memory + kernelCode_End);
-        gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_F8_memory, kernelCode_YXFB_YXOI_B8_F8_memory_Begin + convolution_code_yxfb_yxoi_B8_F8_memory + kernelCode_Relu + kernelCode_End);
+        gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_F8_memory, kernelCode_YXFB_YXOI_B8_F8_memory_Begin + convolution_code_yxfb_yxoi_B8_F8_memory + kernelCode_End);
         auto val_fw = convolution_relu_gpu::create;
 
         auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
