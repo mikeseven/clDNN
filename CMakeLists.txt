@@ -456,7 +456,12 @@ endif()
 # ======================================================================================================
 
 # Check for python 3.x interpreter (required tool).
-find_package(PythonInterp 3 REQUIRED)
+find_package(PythonInterp 3.3)
+if(NOT PYTHONINTERP_FOUND)
+  message(WARNING "[clDNN] Project requires Python 3.3+ interpreter to build (with python loader). CMake could not detect it correctly.
+      If you have installed this interpreter, please disregard this warning or specify PYTHON_EXECUTABLE in CMake command-line."
+    )
+endif()
 
 # ======================================================================================================
 
