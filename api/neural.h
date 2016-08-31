@@ -336,9 +336,9 @@ struct convolution : is_a_primitive {
         neural::vector<int32_t>   input_offset;
         neural::vector<uint32_t>  stride;
         neural::padding::type     padding;
-        float                     negative_slope;
         size_t                    split; // on how many cards split the computation to
         bool                      use_relu;
+        float                     negative_slope;
 
         DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
         DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                 neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);

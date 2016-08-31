@@ -30,7 +30,7 @@ namespace neural {
         neural::padding::type    padd,
         size_t                   splt,
         bool                     use_relu,
-        float negative_slope)
+        float                    negative_slope)
         : engine(eng)
         , output({ out })
         , output_offset(out_off)
