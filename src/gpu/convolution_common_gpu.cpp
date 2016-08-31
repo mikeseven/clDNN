@@ -78,6 +78,9 @@ namespace neural {
             }
         }
         
+#ifdef RELU
+    pDst[global_id] = max(pDst[global_id], 0.0f) + NEGATIVE_SLOPE * min(pDst[global_id], 0.0f);
+#endif
     )__CC";
 
     const char convolution_code_bfxy[] = R"__CC(
@@ -129,6 +132,9 @@ namespace neural {
         }
         // TODO!!!! change [0] from BIAS and FILTER to something that works - [0] is for temporary compilation
         pDst[global_id] += BIAS[0][output_feature_idx];
+#ifdef RELU
+    pDst[global_id] = max(pDst[global_id], 0.0f) + NEGATIVE_SLOPE * min(pDst[global_id], 0.0f);
+#endif
     )__CC";
 
     const char convolution_code_yxfb_memory[] = R"__CC(
@@ -197,7 +203,11 @@ namespace neural {
                 }
             }
         }
+#ifdef RELU
+        pDst[global_id] = max(result, 0.0f) + NEGATIVE_SLOPE * min(result, 0.0f);
+#else
         pDst[global_id] = result;
+#endif
     )__CC";
 
     const char convolution_code_yxfb_yxoi_memory[] = R"__CC(
@@ -262,7 +272,11 @@ namespace neural {
                 }
             }
         }
+#ifdef RELU
+        pDst[global_id] = max(result, 0.0f) + NEGATIVE_SLOPE * min(result, 0.0f);
+#else
         pDst[global_id] = result;
+#endif;
     )__CC";
 
     const char convolution_code_yxfb_oyxi_memory[] = R"__CC(
@@ -328,7 +342,11 @@ namespace neural {
                 }
             }
         }
+#ifdef RELU
+        pDst[global_id] = max(result, 0.0f) + NEGATIVE_SLOPE * min(result, 0.0f);
+#else
         pDst[global_id] = result;
+#endif
     )__CC";
 
     const char convolution_code_yxfb_yxoi_b8_memory[] = R"__CC(

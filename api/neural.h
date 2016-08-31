@@ -297,40 +297,9 @@ private:
     friend class is_a_primitive;
 };
 
-
-
-
-// struct common for convolution and convolution_relu to reduce code duplication
-struct convolution_common {
-    struct arguments {
-        neural::engine::type      engine;
-        std::vector<primitive>    output;
-        neural::vector<uint32_t>  output_offset;
-        neural::vector<uint32_t>  output_size;
-        std::vector<primitive_at> input;            // 3 : {input, weight, bias}
-        neural::vector<int32_t>   input_offset;
-        neural::vector<uint32_t>  stride;
-        neural::padding::type     padding;
-        size_t                    split; // on how many cards split the computation to
-
-        arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                 neural::vector<uint32_t> stride, neural::padding::type, size_t split = 1);
-        arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                 uint32_t                 stride, neural::padding::type, size_t split = 1);
-        arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type, size_t split = 1);
-        arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                                                  neural::padding::type, size_t split = 1);
-        arguments(neural::engine::type, primitive                    out,                                                                         std::vector<primitive_at> in,                                 neural::vector<uint32_t> stride, neural::padding::type, size_t split = 1);
-        arguments(neural::engine::type, primitive                    out,                                                                         std::vector<primitive_at> in,                                                                  neural::padding::type, size_t split = 1);
-        arguments(neural::engine::type, primitive                    out,     neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type, size_t split = 1);
-    };
-
-    static void validate_params(const arguments &arg);
-};
-
-
-
-
 // neural::convolution
 //
-// Performs forward spatial convolution with weight sharing.
+// Performs forward spatial convolution with weight sharing. Also supports built-in Relu available by setting it in arguments.
 // Parameters are defined in context of "direct" convolution, but actual algorithm is not implied.
 // Look into docs/size_offset_stride_padding.html for description how size, offsets, stride & padding parameter work.
 //
@@ -349,15 +318,35 @@ struct convolution_common {
 //     auto weight = file::create({engine::cpu, "weight.nnb"});
 //     auto bias   = file::create({engine::cpu, "bias.nnb"});
 //     auto conv   = convolution::create({engine::cpu, memory::format::yxfb_f32, input, weight, bias, padding::zero});
+//
+// Example:
+//   In batch 24 convolve & relu-activate 224x224 3-feature-map user-specified inputs into 96-feature-map user-specified outputs.
+//     auto input  = memory::describe({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+//     auto output = memory::describe({engine::cpu, memory::format::yxfb_f32, {96, {224, 224}, 24}});
+//     auto weight = file::create({engine::cpu, "weight.nnb"});
+//     auto bias   = file::create({engine::cpu, "bias.nnb"});
+//     auto conv   = convolution::create({engine::cpu, output, input, weight, bias, padding::zero, 0.0f, 1, true});
 struct convolution : is_a_primitive {
-    struct arguments : convolution_common::arguments{
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                 neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                 uint32_t                 stride, neural::padding::type = neural::padding::type::zero, size_t split=1);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                                                  neural::padding::type = neural::padding::type::zero, size_t split=1);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,                                                                         std::vector<primitive_at> in,                                 neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,                                                                         std::vector<primitive_at> in,                                                                  neural::padding::type = neural::padding::type::zero, size_t split=1);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,     neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1);
+    struct arguments {
+        neural::engine::type      engine;
+        std::vector<primitive>    output;
+        neural::vector<uint32_t>  output_offset;
+        neural::vector<uint32_t>  output_size;
+        std::vector<primitive_at> input;            // 3 : {input, weight, bias}
+        neural::vector<int32_t>   input_offset;
+        neural::vector<uint32_t>  stride;
+        neural::padding::type     padding;
+        float                     negative_slope;
+        size_t                    split; // on how many cards split the computation to
+        bool                      use_relu;
+
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                 neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                 uint32_t                 stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                                                  neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(neural::engine::type, primitive                    out,                                                                         std::vector<primitive_at> in,                                 neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(neural::engine::type, primitive                    out,                                                                         std::vector<primitive_at> in,                                                                  neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(neural::engine::type, primitive                    out,     neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
     };
     const arguments argument;
 
@@ -370,49 +359,6 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
     friend class is_a_primitive;
 };
-
-
-
-
-// neural::convolution_relu
-//
-// Fused layer: convolution fused with relu.
-//
-//
-// Example:
-//   In batch 24 convolve & relu-activate 224x224 3-feature-map user-specified inputs into 96-feature-map user-specified outputs.
-//     auto input  = memory::describe({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
-//     auto output = memory::describe({engine::cpu, memory::format::yxfb_f32, {96, {224, 224}, 24}});
-//     auto weight = file::create({engine::cpu, "weight.nnb"});
-//     auto bias   = file::create({engine::cpu, "bias.nnb"});
-//     auto conv   = convolution_relu::create({engine::cpu, output, input, weight, bias, padding::zero, 0.0f});
-struct convolution_relu : is_a_primitive {
-    struct arguments : convolution_common::arguments {
-        float                     negative_slope;
-
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, float negative_slope=0, size_t split=1);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                 neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, float negative_slope=0, size_t split=1);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                 uint32_t                 stride, neural::padding::type = neural::padding::type::zero, float negative_slope=0, size_t split=1);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                                                  neural::padding::type = neural::padding::type::zero, float negative_slope=0, size_t split=1);
-        DLL_SYM arguments(neural::engine::type, primitive                        out,                                                                     std::vector<primitive_at> in,                                 neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, float negative_slope=0, size_t split=1);
-        DLL_SYM arguments(neural::engine::type, primitive                        out,                                                                     std::vector<primitive_at> in,                                                                  neural::padding::type = neural::padding::type::zero, float negative_slope=0, size_t split=1);
-        DLL_SYM arguments(neural::engine::type, primitive                        out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, float negative_slope=0, size_t split=1);
-    };
-    const arguments argument;
-
-    struct query_entry : is_a_query_entry { convolution_relu::arguments arguments; };
-    static std::vector<query_entry> query(arguments);
-    DLL_SYM static primitive create(arguments);
-private:
-    convolution_relu(arguments arg) : is_a_primitive(type_id<const convolution_relu>()), argument(arg) {};
-    const std::vector<primitive_at>  &input() const { return argument.input; };
-    const std::vector<primitive>     &output() const { return argument.output; };
-
-    friend class is_a_primitive;
-};
-
-
-
 
 // neural::convolution_backward
 //

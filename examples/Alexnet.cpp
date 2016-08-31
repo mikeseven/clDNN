@@ -38,7 +38,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         file::create({ eng,"weights/imagenet_mean.nnd" })
     });
 
-    auto conv1 = convolution_relu::create(
+    auto conv1 = convolution::create(
     {
         eng,
         memory::format::yxfb_f32,
@@ -49,7 +49,9 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         },
         { 0,{ 0, 0 }, 0 },
         { 1,{ 4, 4 }, 1 },
-        padding::zero });
+        padding::zero,
+        1,
+        true});
 
     auto pool1 = pooling::create(
     {
@@ -74,7 +76,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         0.75f
     });
 
-    auto conv2_group2 = convolution_relu::create(
+    auto conv2_group2 = convolution::create(
     {
         eng,
         memory::format::yxfb_f32,
@@ -88,8 +90,9 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         { 0,{ -2, -2 }, 0 },
         { 1,{ 1, 1 }, 1 },
         padding::zero,
-        0, // negative slope for RELU
-        2
+        2,
+        true,
+        0 // negative slope for RELU
     });
 
     auto pool2 = pooling::create(
@@ -115,7 +118,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         0.75
     });
 
-    auto conv3 = convolution_relu::create(
+    auto conv3 = convolution::create(
     {
         eng,
         memory::format::yxfb_f32,
@@ -126,10 +129,12 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
-        padding::zero
+        padding::zero,
+        1,
+        true,
     });
 
-    auto conv4_group2 = convolution_relu::create(
+    auto conv4_group2 = convolution::create(
     {
         eng,
         memory::format::yxfb_f32,
@@ -143,11 +148,12 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
         padding::zero,
-        0, // negative slope for RELU
-        2
+        2,
+        true,
+        0 // negative slope for RELU
     });
 
-    auto conv5_group2 = convolution_relu::create(
+    auto conv5_group2 = convolution::create(
     {
         eng,
         memory::format::yxfb_f32,
@@ -161,8 +167,9 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
         padding::zero,
-        0, // negative slope for RELU
-        2
+        2,
+        true,
+        0 // negative slope for RELU
     });
 
     auto pool5 = pooling::create(
