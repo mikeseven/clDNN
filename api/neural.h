@@ -360,6 +360,9 @@ private:
     friend class is_a_primitive;
 };
 
+
+
+
 // neural::convolution_backward
 //
 // Performs backward spatial convolution with weight sharing.
@@ -413,7 +416,7 @@ private:
 
 // neural::fully_connected
 //
-// Forward pass of fully connected layer.
+// Forward pass of fully connected layer. Also supports built-in Relu available by setting it in arguments.
 //
 //
 // Example:
@@ -423,14 +426,24 @@ private:
 //     auto weights = memory::describe({engine::reference, memory::format::xy_f32, { 1, {6, 7}, 1} });
 //     auto biases  = memory::describe({engine::reference, memory::format::x_f32,  { 1, {{7}},  1} });
 //     auto act = fully_connected::create({engine::reference, output, input, weights, biases});
+//
+// Example:
+//    6 input neurons 7 output neurons with relu activation.
+//     auto input   = memory::describe({engine::reference, memory::format::xb_f32, { 1, {{6}},  1} });
+//     auto output  = memory::describe({engine::reference, memory::format::xb_f32, { 1, {{7}},  1} });
+//     auto weights = memory::describe({engine::reference, memory::format::xy_f32, { 1, {6, 7}, 1} });
+//     auto biases  = memory::describe({engine::reference, memory::format::x_f32,  { 1, {{7}},  1} });
+//     auto act = fully_connected::create({engine::reference, output, input, weights, biases, true, 0.0f});
 struct fully_connected : is_a_primitive {
     struct arguments {
         neural::engine::type        engine;
         std::vector<primitive>      output;
         std::vector<primitive_at>   input;  // 3: {input, weights, bias}
+        bool                        use_relu;
+        float                       negative_slope;
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, primitive in, primitive weights, primitive bias);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,     primitive in, primitive weights, primitive bias);
+        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, primitive in, primitive weights, primitive bias, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(neural::engine::type, primitive                    out,     primitive in, primitive weights, primitive bias, bool use_relu=false, float negative_slope=0.0f);
     };
     const arguments argument;
 
@@ -809,43 +822,6 @@ private:
     friend class is_a_primitive;
 };//normalization /////////////////////////////////////////////////////////////////////////////////////////////////////
 }
-
-
-
-// neural::fully_connected_relu
-//
-// Fused layer: fully connected fused with relu.
-//
-//
-// Example:
-//    6 input neurons 7 output neurons with relu activation.
-//     auto input   = memory::describe({engine::reference, memory::format::xb_f32, { 1, {{6}},  1} });
-//     auto output  = memory::describe({engine::reference, memory::format::xb_f32, { 1, {{7}},  1} });
-//     auto weights = memory::describe({engine::reference, memory::format::xy_f32, { 1, {6, 7}, 1} });
-//     auto biases  = memory::describe({engine::reference, memory::format::x_f32,  { 1, {{7}},  1} });
-//     auto act = fully_connected_relu::create({engine::reference, output, input, weights, biases, 0.0f});
-
-struct fully_connected_relu : is_a_primitive {
-    struct arguments {
-        neural::engine::type        engine;
-        std::vector<primitive>      output;
-        std::vector<primitive_at>   input;  // 3: {input, weights, bias}
-        float                       negative_slope;
-
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, primitive in, primitive weights, primitive bias, float negative_slope);
-        DLL_SYM arguments(neural::engine::type, primitive                        out, primitive in, primitive weights, primitive bias, float negative_slope);
-    };
-    const neural::fully_connected_relu::arguments argument;
-
-    struct query_entry : is_a_query_entry { neural::fully_connected_relu::arguments arguments; };
-    static std::vector<query_entry> query(neural::fully_connected_relu::arguments);
-    DLL_SYM static primitive create(neural::fully_connected_relu::arguments);
-private:
-    fully_connected_relu(fully_connected_relu::arguments arg) : is_a_primitive(type_id<const fully_connected_relu>()), argument(arg) {};
-    const std::vector<primitive_at>  &input() const  { return argument.input; };
-    const std::vector<primitive>     &output() const { return argument.output; };
-    friend class is_a_primitive;
-};
 
 
 

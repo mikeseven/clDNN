@@ -21,14 +21,47 @@
 
 namespace neural {
 
-fully_connected::arguments::arguments( neural::engine::type eng,
-                                       primitive            out,
-                                       primitive            in,
-                                       primitive            weights,
-                                       primitive            bias)
-: engine(eng)
-, output({out})
-, input({in, weights, bias}) {}
+fully_connected::arguments::arguments(neural::engine::type eng,
+    primitive            out,
+    primitive            in,
+    primitive            weights,
+    primitive            bias,
+    bool                 use_relu,
+    float                negative_slope)
+    : engine(eng)
+    , output({ out })
+    , input({ in, weights, bias })
+    , use_relu(use_relu)
+    , negative_slope(negative_slope) {}
+
+fully_connected::arguments::arguments(neural::engine::type eng,
+    neural::memory::format::type out_fmt,
+    primitive                    in,
+    primitive                    weights,
+    primitive                    bias,
+    bool                         use_relu,
+    float                        negative_slope)
+    : engine(eng)
+    , use_relu(use_relu)
+    , negative_slope(negative_slope)
+{
+    // if input is previouse layer, not memory primitive need to set input to output memory of this primitive
+    auto input_mem = in.id() == type_id<const memory>()->id ? in : in.output[0];
+    if (in.id() != type_id<const memory>()->id) {
+        input = { in.output[0], weights, bias };
+    }
+    else {
+        input = { in, weights, bias };
+    }
+
+    neural::vector<uint32_t> output_size = {
+        input_mem.as<const memory&>().argument.size.batch[0],
+        { { bias.as<const memory&>().argument.size.spatial[0] } },
+        1
+    };
+
+    output = { memory::allocate({ eng, out_fmt, output_size }) };
+}
 
 // creates primitive with fully_connected implementation that supports provided arguments
 primitive fully_connected::create(fully_connected::arguments arg) {

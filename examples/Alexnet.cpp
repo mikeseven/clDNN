@@ -183,33 +183,36 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         padding::zero
     });
 
-    auto fc6 = fully_connected_relu::create(
+    auto fc6 = fully_connected::create(
     {
         eng,
         memory::format::xb_f32,
         pool5,
         file::create({ eng, "weights/fc6_weights.nnd", file::weights_type::fully_connected }),
         file::create({ eng, "weights/fc6_biases.nnd" }),
+        true,
         0
     });
 
-    auto fc7 = fully_connected_relu::create(
+    auto fc7 = fully_connected::create(
     {
         eng,
         memory::format::xb_f32,
         fc6,
         file::create({ eng, "weights/fc7_weights.nnd", file::weights_type::fully_connected }),
         file::create({ eng, "weights/fc7_biases.nnd" }),
+        true,
         0
     });
 
-    auto fc8 = fully_connected_relu::create(
+    auto fc8 = fully_connected::create(
     {
         eng,
         memory::format::xb_f32,
         fc7,
         file::create({ eng, "weights/fc8_weights.nnd", file::weights_type::fully_connected }),
         file::create({ eng, "weights/fc8_biases.nnd" }),
+        true,
         0
     });
 
