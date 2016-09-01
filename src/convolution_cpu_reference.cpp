@@ -59,7 +59,7 @@ void convolution_cpu_reference::implementation(const void *ptr) {
 
     const int f_pos = 1; // neural::vector format is b,f,spatials. In input and output 'b' and 'f' fields are always scalars.
     namespace nd = ndimensional;
-    nd::value<uint32_t> range (output_size.raw);
+    nd::value<uint32_t> range (output_size);
 
     // weights neural::vector is: {b}, {ofm, ifm} {spatials}
     // ofm - output feature maps
@@ -125,6 +125,14 @@ void convolution_cpu_reference::implementation(const void *ptr) {
 
                         output[out_idx] += input[in_idx] * filters[split_idx][win_idx];
                     }
+                }
+            }
+            if (this_conv->argument.use_relu)
+            {
+                for (auto pos : range) {
+                    auto out_idx = calc_out_idx(output_arg.size.raw, pos + output_offset);
+
+                    output[out_idx] = std::max(output[out_idx], 0.0f) + this_conv->argument.negative_slope * std::min(output[out_idx], 0.0f);
                 }
             }
         }

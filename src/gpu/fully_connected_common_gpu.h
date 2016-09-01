@@ -19,7 +19,6 @@
 #include <string>
 
 namespace neural {
-    extern const char input_defines[];
     extern const char fully_connected_code_xb[];
     extern const char fully_connected_code_xb_bx[];
     extern const char fully_connected_code_yxfn[];

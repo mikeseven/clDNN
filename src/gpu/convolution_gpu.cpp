@@ -47,6 +47,16 @@ KERNEL(Convolution_GPU_YXFB_memory)(
     uint split_idx)
 {)__krnl";
 
+const std::string kernelName_YXFB_OYXI_memory = "Convolution_GPU_YXFB_OYXI_memory";
+const std::string kernelCode_YXFB_OYXI_memory_Begin = R"__krnl(
+KERNEL(Convolution_GPU_YXFB_OYXI_memory)(
+    const __global neural_memory* input_mem,
+    __global neural_memory* dst_mem,
+    const __global neural_memory* filter_mem,
+    const __global neural_memory* bias_mem,
+    uint split_idx)
+{)__krnl";
+
 const std::string kernelName_YXFB_YXOI_memory = "Convolution_GPU_YXFB_YXOI_memory";
 const std::string kernelCode_YXFB_YXOI_memory_Begin = R"__krnl(
 KERNEL(Convolution_GPU_YXFB_YXOI_memory)(
@@ -57,7 +67,29 @@ KERNEL(Convolution_GPU_YXFB_YXOI_memory)(
     uint split_idx)
 {)__krnl";
 
-const std::string kernelCodeEnd = R"__krnl(
+const std::string kernelName_YXFB_YXOI_B8_memory = "Convolution_GPU_YXFB_YXOI_B8_memory";
+const std::string kernelCode_YXFB_YXOI_B8_memory_Begin = R"__krnl(
+__attribute__((reqd_work_group_size(8, 1, 1))) 
+KERNEL(Convolution_GPU_YXFB_YXOI_B8_memory)(
+    const __global neural_memory* input_mem,
+    __global neural_memory* dst_mem,
+    const __global neural_memory* filter_mem,
+    const __global neural_memory* bias_mem,
+    uint split_idx)
+{)__krnl";
+
+const std::string kernelName_YXFB_YXOI_B8_F8_memory = "Convolution_GPU_YXFB_YXOI_B8_F8_memory";
+const std::string kernelCode_YXFB_YXOI_B8_F8_memory_Begin = R"__krnl(
+__attribute__((reqd_work_group_size(8, 1, 1))) 
+KERNEL(Convolution_GPU_YXFB_YXOI_B8_F8_memory)(
+    const __global neural_memory* input_mem,
+    __global neural_memory* dst_mem,
+    const __global neural_memory* filter_mem,
+    const __global neural_memory* bias_mem,
+    uint split_idx)
+{)__krnl";
+
+const std::string kernelCode_End = R"__krnl(
 }
 )__krnl";
 
@@ -81,6 +113,7 @@ struct convolution_gpu : is_an_implementation {
         // input
         auto& input_mem = outer.input_memory(0);
         auto& filter_mem = outer.input_memory(1);
+        auto& output_mem = outer.output_memory(0);
 
         if (padding::zero != outer.argument.padding)
             throw std::invalid_argument("Unknown padding mode in convolution.");
@@ -95,7 +128,18 @@ struct convolution_gpu : is_an_implementation {
             case memory::format::oiyx_f32:
                 return inline_memory ? kernelName_YXFB : kernelName_YXFB_memory;
             case memory::format::yxoi_f32:
-                return kernelName_YXFB_YXOI_memory;
+                if (input_mem.argument.size.batch[0] == 8 &&
+                    output_mem.argument.size.feature[0] % 8 == 0)
+                {
+                    if (input_mem.argument.size.feature[0] % 8 == 0)
+                        return kernelName_YXFB_YXOI_B8_F8_memory;
+                    else
+                        return kernelName_YXFB_YXOI_B8_memory;
+                }
+                else
+                    return kernelName_YXFB_YXOI_memory;
+            case memory::format::oyxi_f32:
+                return kernelName_YXFB_OYXI_memory;
             default:
                 throw std::invalid_argument("Filter memory is not supported");
             }
@@ -110,8 +154,9 @@ struct convolution_gpu : is_an_implementation {
         auto& input_offset = outer.argument.input_offset;
         auto& output_mem = outer.output_memory(0);
         auto& output_offset = outer.argument.output_offset;
-        auto& output_size   = outer.argument.output_size;
+        auto& output_size = outer.argument.output_size;
         auto split = outer.argument.split;
+        auto negative_slope = outer.argument.negative_slope;
 
         neural::vector<uint32_t> stride(outer.argument.stride);
         stride.spatial[0] = std::min(stride.spatial[0], input_mem.argument.size.spatial[0]);
@@ -133,6 +178,12 @@ struct convolution_gpu : is_an_implementation {
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
             gpu::make_jit_constant("OUTPUT_LIMIT", output_size),
         };
+
+        if (outer.argument.use_relu)
+        {
+            mem_consts.add_constant(gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope)));
+            mem_consts.add_constant(gpu::make_jit_constant("RELU", ""));
+        }
 
         if (inline_memory)
         {
@@ -185,7 +236,36 @@ struct convolution_gpu : is_an_implementation {
                 ({ { dstSize, 1 } ,{ std::min(dstSize, static_cast<size_t>(16)), 1 } }, input_mem, output_mem);
             break;
         case memory::format::yxfb_f32:
-            if (me->inline_memory) {
+            if (outer.input_memory(1).argument.format == memory::format::yxoi_f32 &&
+                input_mem.argument.size.batch[0] == 8 &&
+                (output_mem.argument.size.feature[0] % 8) == 0)
+            {
+                if (input_mem.argument.size.feature[0] % 8 == 0)
+                {
+                    for (uint32_t i = 0; i < split; i++) {
+                        me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
+                            ({ { (output_mem.argument.size.feature[0] * 8) / split, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
+                                input_mem,
+                                output_mem,
+                                outer.input_memory(i * 2 + 1), //filters
+                                outer.input_memory(i * 2 + 2), //biases
+                                i);
+                    }
+                }
+                else
+                {
+                    for (uint32_t i = 0; i < split; i++) {
+                        me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
+                            ({ { output_mem.argument.size.feature[0] / split, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
+                                input_mem,
+                                output_mem,
+                                outer.input_memory(i * 2 + 1), //filters
+                                outer.input_memory(i * 2 + 2), //biases
+                                i);
+                    }
+                }
+            }
+            else if (me->inline_memory) {
                 me->_kernel.run<gpu::input_mem, gpu::output_mem>
                     ({ { dstSize, 1 } ,{ std::min(dstSize, static_cast<size_t>(16)), 1 } }, input_mem, output_mem);
             }
@@ -193,7 +273,7 @@ struct convolution_gpu : is_an_implementation {
                 size_t workitems_per_enqueue = dstSize / split;
                 for (uint32_t i = 0; i < split; i++) {
                     me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                        ({ { workitems_per_enqueue, 1 } ,{ std::min(workitems_per_enqueue, static_cast<size_t>(16)), 1 } },
+                        ({ { workitems_per_enqueue, 1 } ,{ std::min(workitems_per_enqueue, static_cast<size_t>(8)), 1 } },
                             input_mem,
                             output_mem,
                             outer.input_memory(i * 2 + 1), //filters
@@ -211,9 +291,10 @@ struct convolution_gpu : is_an_implementation {
         auto& filter_arg = arg.input_memory(1).argument; //convolution filter
 
         assert(arg.argument.output_size.feature[0] / arg.argument.split == filter_arg.size.feature[0]); // memory::format oixy
-        // todo remove
+                                                                                                        // todo remove
         if (filter_arg.format != memory::format::oiyx_f32 &&
-            filter_arg.format != memory::format::yxoi_f32) throw std::runtime_error("conv weights arent oiyx_f32 or yxoi_f32 format");
+            filter_arg.format != memory::format::yxoi_f32 &&
+            filter_arg.format != memory::format::oyxi_f32) throw std::runtime_error("conv weights arent oiyx_f32 or yxoi_f32 or oyxi_f32 format");
 
         return new convolution_gpu(arg);
     }
@@ -225,22 +306,25 @@ struct convolution_gpu : is_an_implementation {
 
 
 namespace{
-struct attach{
-    attach(){
-        gpu::kernel_templates::add(kernelName_YXFB, kernelCode_YXFB_Begin + convolution_code_yxfb + kernelCodeEnd);
-        gpu::kernel_templates::add(kernelName_BFXY, kernelCode_BFXY_Begin + convolution_code_bfxy + kernelCodeEnd);
-        gpu::kernel_templates::add(kernelName_YXFB_memory, kernelCode_YXFB_memory_Begin + convolution_code_yxfb_memory + kernelCodeEnd);
-        gpu::kernel_templates::add(kernelName_YXFB_YXOI_memory, kernelCode_YXFB_YXOI_memory_Begin + convolution_code_yxfb_yxoi_memory + kernelCodeEnd);
-        auto val_fw = convolution_gpu::create;
+    struct attach {
+        attach() {
+            gpu::kernel_templates::add(kernelName_YXFB, kernelCode_YXFB_Begin + convolution_code_yxfb + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_BFXY, kernelCode_BFXY_Begin + convolution_code_bfxy + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_YXFB_memory, kernelCode_YXFB_memory_Begin + convolution_code_yxfb_memory + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_YXFB_YXOI_memory, kernelCode_YXFB_YXOI_memory_Begin + convolution_code_yxfb_yxoi_memory + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_YXFB_OYXI_memory, kernelCode_YXFB_OYXI_memory_Begin + convolution_code_yxfb_oyxi_memory + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, kernelCode_YXFB_YXOI_B8_memory_Begin + convolution_code_yxfb_yxoi_b8_memory + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_F8_memory, kernelCode_YXFB_YXOI_B8_F8_memory_Begin + convolution_code_yxfb_yxoi_B8_F8_memory + kernelCode_End);
+            auto val_fw = convolution_gpu::create;
 
-        auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
-        implementation_map<convolution>::add(key_fw, val_fw);
+            auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
+            implementation_map<convolution>::add(key_fw, val_fw);
 
-        auto key_fw2 = std::make_tuple(engine::gpu, memory::format::bfyx_f32, memory::format::bfyx_f32);
-        implementation_map<convolution>::add(key_fw2, val_fw);
-    }
-    ~attach(){}
-};
+            auto key_fw2 = std::make_tuple(engine::gpu, memory::format::bfyx_f32, memory::format::bfyx_f32);
+            implementation_map<convolution>::add(key_fw2, val_fw);
+        }
+        ~attach() {}
+    };
 
 #ifdef __GNUC__
     __attribute__((visibility("default"))) //todo meybe dll_sym?

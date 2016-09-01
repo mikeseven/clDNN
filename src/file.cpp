@@ -241,6 +241,13 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
         { static_cast<uint32_t>(array[0]), static_cast<uint32_t>(array[1]) } } })); // ofm, ifm
         break;
     }
+    case memory::format::byxf_f32:
+    {
+        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ engine::reference, format,{ static_cast<uint32_t>(array[0]),
+        { static_cast<uint32_t>(array[2]), static_cast<uint32_t>(array[3]) }, // kernel spatials x, y
+        { static_cast<uint32_t>(array[1]) } } })); // batch, fm
+        break;
+    }
     default:
     {
         throw std::runtime_error("unsupported format");

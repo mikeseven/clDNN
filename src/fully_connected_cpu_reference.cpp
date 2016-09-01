@@ -38,7 +38,6 @@ namespace neural {
             auto& weight_buffer_size = this_fc->input_memory(1).argument.size;
             auto bias = this_fc->input_memory(2).pointer<float>();
 
-
             auto& input_arg = this_fc->input_memory(0).argument;
             auto& input_buffer_size = input_arg.size;
 
@@ -49,7 +48,7 @@ namespace neural {
 
             assert(1 == input_buffer_size.feature.size());
             assert(1 == input_buffer_size.batch.size());
-          //  assert(1 == input_buffer_size.feature[0]);
+            // assert(1 == input_buffer_size.feature[0]);
 
             namespace nd = ndimensional;
             fill(this_fc->output_memory(0), 0.0f);
@@ -65,13 +64,13 @@ namespace neural {
             auto calc_in_idx = nd::choose_calculate_idx(input_arg.format);
             auto calc_out_idx = nd::choose_calculate_idx(output_arg.format);
             auto calc_w_idx = nd::choose_calculate_idx(weight_arg.format);
+
             auto arg_weight_size = weight_arg.format == memory::format::yxfn_f32 ? 4 : 3;
             std::vector<uint32_t> arg_weight_idx(arg_weight_size);
-            for (auto pos_out : range_output) { // for over neurons
+            for (auto pos_out : range_output) {
                 auto out_idx = calc_out_idx(output_arg.size.raw, pos_out);
 
-                for (auto pos_in : range_input) { // for over (input_x*batch) x weights
- 
+                for (auto pos_in : range_input) {
                     if (weight_arg.format != memory::format::yxfn_f32)
                     {
                         auto in_idx = calc_in_idx(input_arg.size.raw, pos_in);
@@ -90,8 +89,11 @@ namespace neural {
                         output[out_idx + pos_in[BATCH_INDEX]] += input[in_idx] * weight[w_idx];
                     }
                 }
-                for (auto b = 0u; b < range_input[BATCH_INDEX]; b++)
+                for (auto b = 0u; b < range_input[BATCH_INDEX]; b++) {
                     output[out_idx + b] += bias[pos_out[DATA_INDEX]];
+                    output[out_idx + b] = std::max(output[out_idx + b], 0.0f) +
+                        this_fc->argument.negative_slope*std::min(0.0f, output[out_idx + b]);
+                }
             }
         }
 
