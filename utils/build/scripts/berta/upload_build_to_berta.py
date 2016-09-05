@@ -54,6 +54,7 @@ def init_settings(args):
         settings['product'] = args.product
         settings['build_version'] = args.buildversion
         settings['build_succeeded'] = True if args.build_succeeded == "True" else False
+        settings['build_store'] = args.build_store
         settings['build_publish_dir'] = args.buildpublishdir
         settings['correlation_build'] = args.correlation_build
         settings['build_info_url'] = args.build_info_url
@@ -66,6 +67,7 @@ def init_settings(args):
         log.debug('  berta_product: %s' % args.product)
         log.debug('  build_version: %s' % args.buildversion)
         log.debug('  build_info_url: %s' % args.build_info_url)
+        log.debug('  build_store: %s' % args.build_store)
         log.debug('  build_publish_dir: %s' % args.buildpublishdir)
         log.debug('  build_succeeded: %s' % args.build_succeeded)
         log.debug('  build_date: %s' % args.builddate)
@@ -142,7 +144,7 @@ def upload_build_to_berta(use_new_berta_api, webcache_root, build_publish_dir, b
 
         # Add the build in the Berta server
         log.debug("add_build_from_store()")
-        build_id = berta_server.add_build_from_store('QuickBuild-2', build_publish_dir, product_name, build_version, build_owner, build_info_url, files, correlation_build, build_date, build_succeeded, build_note)
+        build_id = berta_server.add_build_from_store(settings['build_store'], build_publish_dir, product_name, build_version, build_owner, build_info_url, files, correlation_build, build_date, build_succeeded, build_note)
     else:
         # The legacy API needs list of files as fully qualified URLs
         files = get_qb_files_with_store_path(send_files_filename, webcache_root)
@@ -302,6 +304,7 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--filelist', help='A text file with a list of files to send to berta', default="FileList.txt", required=True)
     # Defaulting --build_succeeded to true in order to make it easier to test on configs that are still modifying the product name in Quickbuild if the build is failed.
     parser.add_argument('-bs', '--build_succeeded', help='Define if build was successful or failed.', default="True", required=False)
+    parser.add_argument('-bst', '--build_store', help='Build store which builds will be uploaded from.', default='QuickBuild-2', required=False)
     parser.add_argument('-c', '--correlation_build', help='correlation build for berta', default="", required=False)
     parser.add_argument('-l', '--build_info_url', help='Build info url, e.g. https://ubit-gfx.intel.com/build/1431321', default="", required=False)
     parser.add_argument('-d', '--builddate', help='build start date', default=datetime.now().strftime('%Y-%m-%d %H:%M:%S'), required=False)
