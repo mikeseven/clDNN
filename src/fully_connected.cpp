@@ -71,8 +71,9 @@ primitive fully_connected::create(fully_connected::arguments arg) {
     
     if (input_arg.format == memory::format::yxfb_f32)
     {
-        if(weight_arg.format != memory::format::bfyx_f32)
-            throw std::runtime_error("Fully connected input is yxfb, so weights must be in format yxfn!");
+        if(weight_arg.format != memory::format::bfyx_f32 &&
+           weight_arg.format != memory::format::byxf_f32)
+            throw std::runtime_error("Fully connected input is yxfb, so weights must be in format yxfn or byxf!");
     }
     else
     {

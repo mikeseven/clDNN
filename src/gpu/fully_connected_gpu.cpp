@@ -74,6 +74,26 @@ KERNEL (Fully_Connected_GPU_yxfn_memory)(
 {
 )__krnl";
 
+const std::string kernelName_yxfn_byxf_memory = "Fully_Connected_GPU_yxfn_byxf_memory";
+const std::string kernelCode_yxfn_byxf_memory_Begin = R"__krnl(
+KERNEL (Fully_Connected_GPU_yxfn_byxf_memory)(
+    const __global neural_memory* input_mem, 
+    __global neural_memory* dst_mem, 
+    const __global neural_memory* weights_mem,
+    const __global neural_memory* bias_mem)
+{
+)__krnl";
+
+const std::string kernelName_yxfn_byxf_b8_f8_memory = "Fully_Connected_GPU_yxfn_byxf_b8_f8_memory";
+const std::string kernelCode_yxfn_byxf_b8_f8_memory_Begin = R"__krnl(
+__attribute__((reqd_work_group_size(8, 1, 1)))
+KERNEL (Fully_Connected_GPU_yxfn_byxf_b8_f8_memory)(
+    const __global neural_memory* input_mem, 
+    __global neural_memory* dst_mem, 
+    const __global neural_memory* weights_mem,
+    const __global neural_memory* bias_mem)
+{
+)__krnl";
 const std::string kernelCode_End = R"__krnl(
 }
 )__krnl";
@@ -99,8 +119,25 @@ namespace neural {
         const std::string& select_kernel_name() const {
             // input
             auto& input_mem = outer.input_memory(0);
+            auto& weight_mem = outer.input_memory(1);
+
             if (input_mem.argument.format == memory::format::yxfb_f32) {
-                return inline_memory ? kernelName_yxfn : kernelName_yxfn_memory;
+                if (weight_mem.argument.format == memory::format::byxf_f32)
+                {
+                    if (input_mem.argument.size.batch[0] % 8 == 0 &&
+                        input_mem.argument.size.feature[0] % 8 == 0)
+                    {
+                        return kernelName_yxfn_byxf_b8_f8_memory;
+                    }
+                    else
+                    {
+                        return kernelName_yxfn_byxf_memory;
+                    }
+                }
+                else
+                {
+                    return inline_memory ? kernelName_yxfn : kernelName_yxfn_memory;
+                }
             }
             else {
                 if (outer.input_memory(1).argument.format == memory::format::bx_f32)
@@ -167,12 +204,23 @@ namespace neural {
 
             switch (input_mem.argument.format) {
             case memory::format::yxfb_f32:
-                if (me->inline_memory) {
-                    me->_kernel.run<gpu::input_mem, gpu::output_mem >
-                        ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
-                } else {
+                if (weight_mem.argument.format == memory::format::byxf_f32 &&
+                    input_mem.argument.size.batch[0] % 8 == 0 &&
+                    input_mem.argument.size.feature[0] % 8 == 0)
+                {
                     me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-                        ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
+                        ({ output_bufSize, 8 }, input_mem, output_mem, weight_mem, bias_mem);
+                }
+                else
+                {
+                    if (me->inline_memory) {
+                        me->_kernel.run<gpu::input_mem, gpu::output_mem >
+                            ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
+                    }
+                    else {
+                        me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                            ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
+                    }
                 }
                 break;
             case memory::format::x_f32:
@@ -226,6 +274,8 @@ namespace {
             gpu::kernel_templates::add(kernelName_xb_memory, kernelCode_xb_memory_Begin + fully_connected_code_xb_memory + kernelCode_End);
             gpu::kernel_templates::add(kernelName_xb_bx_memory, kernelCode_xb_bx_memory_Begin + fully_connected_code_xb_bx_memory + kernelCode_End);
             gpu::kernel_templates::add(kernelName_yxfn_memory, kernelCode_yxfn_memory_Begin + fully_connected_code_yxfn_memory + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_yxfn_byxf_memory, kernelCode_yxfn_byxf_memory_Begin + fully_connected_code_yxfn_byxf_memory + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_yxfn_byxf_b8_f8_memory, kernelCode_yxfn_byxf_b8_f8_memory_Begin + fully_connected_code_yxfn_byxf_b8_f8_memory + kernelCode_End);
 
             auto val_fw = fully_connected_gpu::create;
 
