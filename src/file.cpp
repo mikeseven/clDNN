@@ -110,7 +110,7 @@ file::arguments::arguments(neural::engine::type aengine, std::string aname, weig
     , weight_type(type)
     , output({null_primitive}) {}
 
-primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::weights_type type)
+primitive read_file_v1_v2(engine::type eng, std::ifstream &rfile, file_header &file_head, file::weights_type type)
 {
     auto read_crc = [&rfile]() -> uint32_t {
         uint32_t result;
@@ -137,13 +137,13 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
     {
     case 1: // biases 1D
     {
-        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ engine::reference, memory::format::x_f32,{ 1,{ { static_cast<uint32_t>(array[0]) } }, 1 } }));
+        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ eng, memory::format::x_f32,{ 1,{ { static_cast<uint32_t>(array[0]) } }, 1 } }));
         break;
     }
     case 2: // 2D i.e. fully connected
     {
         p_arg = std::unique_ptr<memory::arguments>(new memory::arguments(
-        { engine::reference, memory::format::bx_f32,
+        { eng, memory::format::bx_f32,
         {
             static_cast<uint32_t>(array[0]),
             { { static_cast<uint32_t>(array[1]) } },
@@ -157,7 +157,7 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
         auto a = array[0], b = array[1], c = array[2];
         p_arg = std::unique_ptr<memory::arguments>(new memory::arguments(
         {
-            engine::reference, memory::format::bfyx_f32,
+            eng, memory::format::bfyx_f32,
             {
                 { 1 },
                 { static_cast<uint32_t>(a), static_cast<uint32_t>(b) },
@@ -169,13 +169,13 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
     case 4: // 4D convolution or convolution to fc conversion
     {
         if (type == file::weights_type::convolution)
-            p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ engine::reference, memory::format::oiyx_f32,{ 1,
+            p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ eng, memory::format::oiyx_f32,{ 1,
             { static_cast<uint32_t>(array[0]), static_cast<uint32_t>(array[1]) }, // kernel spatials x, y
             { static_cast<uint32_t>(array[3]), static_cast<uint32_t>(array[2]) } } })); // ofm, ifm
         else if (type == file::weights_type::fully_connected)
         {
             p_arg = std::unique_ptr<memory::arguments>( new memory::arguments(
-            { engine::reference, memory::format::bfyx_f32,
+            { eng, memory::format::bfyx_f32,
             {
                 { static_cast<uint32_t>(array[3]) }, // batches
                 { static_cast<uint32_t>(array[1]), static_cast<uint32_t>(array[0]) },
@@ -202,7 +202,7 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
     return memory_primitive;
 }
 
-primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
+primitive read_file_v3(engine::type eng, std::ifstream &rfile, file_header &file_head)
 {
     file_header_ext_2 fh2;
     rfile.read(reinterpret_cast<char *>(&fh2), sizeof(fh2));
@@ -236,14 +236,14 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
     case memory::format::oyxi_f32:
     case memory::format::yxoi_f32:
     {
-        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ engine::reference, format,{ 1,
+        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ eng, format,{ 1,
         { static_cast<uint32_t>(array[2]), static_cast<uint32_t>(array[3]) }, // kernel spatials x, y
         { static_cast<uint32_t>(array[0]), static_cast<uint32_t>(array[1]) } } })); // ofm, ifm
         break;
     }
     case memory::format::byxf_f32:
     {
-        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ engine::reference, format,{ static_cast<uint32_t>(array[0]),
+        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ eng, format,{ static_cast<uint32_t>(array[0]),
         { static_cast<uint32_t>(array[2]), static_cast<uint32_t>(array[3]) }, // kernel spatials x, y
         { static_cast<uint32_t>(array[1]) } } })); // batch, fm
         break;
@@ -276,9 +276,9 @@ primitive file::create(file::arguments arg) {
     {
     case 1:
     case 2:
-        return read_file_v1_v2(rfile, file_head, arg.weight_type);
+        return read_file_v1_v2(arg.engine, rfile, file_head, arg.weight_type);
     case 3:
-        return read_file_v3(rfile, file_head);
+        return read_file_v3(arg.engine, rfile, file_head);
     default:
         throw std::runtime_error("file version not supported");
     }
