@@ -349,7 +349,19 @@ namespace neural {
 #endif
     )__CC";
 
-    const char convolution_code_yxfb_yxoi_b8_memory[] = R"__CC(
+const char convolution_code_yxfb_yxoi_b8_memory[] = R"__CC(
+#define DOT_PRODUCT_8( _result, _rowA, colB )    \
+    {   \
+        _result.s0 = mad( _rowA, sub_group_broadcast( colB, 0 ), _result.s0 );  \
+        _result.s1 = mad( _rowA, sub_group_broadcast( colB, 1 ), _result.s1 );  \
+        _result.s2 = mad( _rowA, sub_group_broadcast( colB, 2 ), _result.s2 );  \
+        _result.s3 = mad( _rowA, sub_group_broadcast( colB, 3 ), _result.s3 );  \
+        _result.s4 = mad( _rowA, sub_group_broadcast( colB, 4 ), _result.s4 );  \
+        _result.s5 = mad( _rowA, sub_group_broadcast( colB, 5 ), _result.s5 );  \
+        _result.s6 = mad( _rowA, sub_group_broadcast( colB, 6 ), _result.s6 );  \
+        _result.s7 = mad( _rowA, sub_group_broadcast( colB, 7 ), _result.s7 );  \
+}
+
         const __global float* input = (const __global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);
 
@@ -411,23 +423,7 @@ namespace neural {
 
                             for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
                             {
-                                _filter.s0 = intel_sub_group_shuffle(filter[filter_idx + h], 0);
-                                _filter.s1 = intel_sub_group_shuffle(filter[filter_idx + h], 1);
-                                _filter.s2 = intel_sub_group_shuffle(filter[filter_idx + h], 2);
-                                _filter.s3 = intel_sub_group_shuffle(filter[filter_idx + h], 3);
-                                _filter.s4 = intel_sub_group_shuffle(filter[filter_idx + h], 4);
-                                _filter.s5 = intel_sub_group_shuffle(filter[filter_idx + h], 5);
-                                _filter.s6 = intel_sub_group_shuffle(filter[filter_idx + h], 6);
-                                _filter.s7 = intel_sub_group_shuffle(filter[filter_idx + h], 7);
-
-                                _data.s0 = mad(input[input_idx + h * batch_num] , _filter.s0, _data.s0);
-                                _data.s1 = mad(input[input_idx + h * batch_num] , _filter.s1, _data.s1);
-                                _data.s2 = mad(input[input_idx + h * batch_num] , _filter.s2, _data.s2);
-                                _data.s3 = mad(input[input_idx + h * batch_num] , _filter.s3, _data.s3);
-                                _data.s4 = mad(input[input_idx + h * batch_num] , _filter.s4, _data.s4);
-                                _data.s5 = mad(input[input_idx + h * batch_num] , _filter.s5, _data.s5);
-                                _data.s6 = mad(input[input_idx + h * batch_num] , _filter.s6, _data.s6);
-                                _data.s7 = mad(input[input_idx + h * batch_num] , _filter.s7, _data.s7);
+                                DOT_PRODUCT_8(_data, input[input_idx + h * batch_num], filter[filter_idx + h])
                             }
                         }
                     } 
@@ -453,14 +449,7 @@ namespace neural {
         _data.s6 = max(_data.s6, 0.0f) + NEGATIVE_SLOPE * min(_data.s6, 0.0f);
         _data.s7 = max(_data.s7, 0.0f) + NEGATIVE_SLOPE * min(_data.s7, 0.0f);
 #endif
-        pDst[out_id + 0 * batch_num] = _data.s0;
-        pDst[out_id + 1 * batch_num] = _data.s1;
-        pDst[out_id + 2 * batch_num] = _data.s2;
-        pDst[out_id + 3 * batch_num] = _data.s3;
-        pDst[out_id + 4 * batch_num] = _data.s4;
-        pDst[out_id + 5 * batch_num] = _data.s5;
-        pDst[out_id + 6 * batch_num] = _data.s6;
-        pDst[out_id + 7 * batch_num] = _data.s7;
+        intel_sub_group_block_write8((__global uint*)pDst + out_id, as_uint8(_data));
     )__CC";
 
 
