@@ -349,17 +349,29 @@ namespace neural {
 #endif
     )__CC";
 
-const char convolution_code_yxfb_yxoi_b8_memory[] = R"__CC(
+    const char convolution_code_yxfb_yxoi_b8_memory[] = R"__CC(
+#define OFM_PER_WORK_ITEM 16
 #define DOT_PRODUCT_8( _result, _rowA, colB )    \
-    {   \
-        _result.s0 = mad( _rowA, sub_group_broadcast( colB, 0 ), _result.s0 );  \
-        _result.s1 = mad( _rowA, sub_group_broadcast( colB, 1 ), _result.s1 );  \
-        _result.s2 = mad( _rowA, sub_group_broadcast( colB, 2 ), _result.s2 );  \
-        _result.s3 = mad( _rowA, sub_group_broadcast( colB, 3 ), _result.s3 );  \
-        _result.s4 = mad( _rowA, sub_group_broadcast( colB, 4 ), _result.s4 );  \
-        _result.s5 = mad( _rowA, sub_group_broadcast( colB, 5 ), _result.s5 );  \
-        _result.s6 = mad( _rowA, sub_group_broadcast( colB, 6 ), _result.s6 );  \
-        _result.s7 = mad( _rowA, sub_group_broadcast( colB, 7 ), _result.s7 );  \
+{   \
+        _result.s0 = mad( _rowA, intel_sub_group_shuffle( colB, 0 ), _result.s0 );  \
+        _result.s1 = mad( _rowA, intel_sub_group_shuffle( colB, 1 ), _result.s1 );  \
+        _result.s2 = mad( _rowA, intel_sub_group_shuffle( colB, 2 ), _result.s2 );  \
+        _result.s3 = mad( _rowA, intel_sub_group_shuffle( colB, 3 ), _result.s3 );  \
+        _result.s4 = mad( _rowA, intel_sub_group_shuffle( colB, 4 ), _result.s4 );  \
+        _result.s5 = mad( _rowA, intel_sub_group_shuffle( colB, 5 ), _result.s5 );  \
+        _result.s6 = mad( _rowA, intel_sub_group_shuffle( colB, 6 ), _result.s6 );  \
+        _result.s7 = mad( _rowA, intel_sub_group_shuffle( colB, 7 ), _result.s7 );  \
+}
+#define ADD_BIAS_8( _result, _biasVal) \
+{ \
+    _result.s0 += intel_sub_group_shuffle( _biasVal, 0 ); \
+    _result.s1 += intel_sub_group_shuffle( _biasVal, 1 ); \
+    _result.s2 += intel_sub_group_shuffle( _biasVal, 2 ); \
+    _result.s3 += intel_sub_group_shuffle( _biasVal, 3 ); \
+    _result.s4 += intel_sub_group_shuffle( _biasVal, 4 ); \
+    _result.s5 += intel_sub_group_shuffle( _biasVal, 5 ); \
+    _result.s6 += intel_sub_group_shuffle( _biasVal, 6 ); \
+    _result.s7 += intel_sub_group_shuffle( _biasVal, 7 ); \
 }
 
         const __global float* input = (const __global float*)get_data(input_mem);
@@ -372,17 +384,15 @@ const char convolution_code_yxfb_yxoi_b8_memory[] = R"__CC(
 
         const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
         // we're computing 8 OUTPUT_FEATURE_MAP so we must divide by 8, but we got 8 batches, so no division is needed.
-        int global_id = (get_global_id(0) / batch_num) * 8 + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * FILTER_OUTPUT_FEATURE_NUM; 
+        int global_id = (get_global_id(0) / batch_num) * 8 + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * batch_num; 
 
         const uint out_batch_id = get_local_id(0);
         const uint out_x = get_global_id(1);
         const uint out_y = get_global_id(2);
 
-        const int out_id = (global_id / 8) * 64 + out_batch_id;
+        const int out_id = (global_id / batch_num) * OFM_PER_WORK_ITEM * batch_num + out_batch_id;
 
-        const int ofm_offset = global_id % FILTER_OUTPUT_FEATURE_NUM;
-
-        float result = bias[ofm_offset];
+        const int ofm_offset = (global_id * (OFM_PER_WORK_ITEM / batch_num)) % FILTER_OUTPUT_FEATURE_NUM;
 
         bool finish = false;
 
@@ -391,7 +401,9 @@ const char convolution_code_yxfb_yxoi_b8_memory[] = R"__CC(
 
         const uint sub_group_id = get_local_id(0);
 
-        float8 _data = 0.f;
+        float8 _data0 = 0.f;
+        float8 _data1 = 0.f;
+
         if(!finish)
         {
             const int x = out_x * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
@@ -419,11 +431,10 @@ const char convolution_code_yxfb_yxoi_b8_memory[] = R"__CC(
                             //sub_group_id used as offset to make each workitem load different filter, and then shuffle it
                             int filter_idx = FILTER_INPUT_FEATURE_NUM * ( ofm_offset + sub_group_id +  FILTER_OUTPUT_FEATURE_NUM * (i * FILTER_SIZE_X + j));
     
-                            float8 _filter;
-
                             for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
                             {
-                                DOT_PRODUCT_8(_data, input[input_idx + h * batch_num], filter[filter_idx + h])
+                                DOT_PRODUCT_8(_data0, input[input_idx + h * batch_num], filter[filter_idx + h])
+                                DOT_PRODUCT_8(_data1, input[input_idx + h * batch_num], filter[filter_idx + h + FILTER_INPUT_FEATURE_NUM * 8])
                             }
                         }
                     } 
@@ -431,26 +442,28 @@ const char convolution_code_yxfb_yxoi_b8_memory[] = R"__CC(
             }
         }
 
-        _data.s0 += bias[ofm_offset + 0];
-        _data.s1 += bias[ofm_offset + 1];
-        _data.s2 += bias[ofm_offset + 2];
-        _data.s3 += bias[ofm_offset + 3];
-        _data.s4 += bias[ofm_offset + 4];
-        _data.s5 += bias[ofm_offset + 5];
-        _data.s6 += bias[ofm_offset + 6];
-        _data.s7 += bias[ofm_offset + 7];
+        ADD_BIAS_8(_data0, bias[ofm_offset + sub_group_id]);
+        ADD_BIAS_8(_data1, bias[ofm_offset + sub_group_id + 8]);
 #ifdef RELU
-        _data.s0 = max(_data.s0, 0.0f) + NEGATIVE_SLOPE * min(_data.s0, 0.0f);
-        _data.s1 = max(_data.s1, 0.0f) + NEGATIVE_SLOPE * min(_data.s1, 0.0f);
-        _data.s2 = max(_data.s2, 0.0f) + NEGATIVE_SLOPE * min(_data.s2, 0.0f);
-        _data.s3 = max(_data.s3, 0.0f) + NEGATIVE_SLOPE * min(_data.s3, 0.0f);
-        _data.s4 = max(_data.s4, 0.0f) + NEGATIVE_SLOPE * min(_data.s4, 0.0f);
-        _data.s5 = max(_data.s5, 0.0f) + NEGATIVE_SLOPE * min(_data.s5, 0.0f);
-        _data.s6 = max(_data.s6, 0.0f) + NEGATIVE_SLOPE * min(_data.s6, 0.0f);
-        _data.s7 = max(_data.s7, 0.0f) + NEGATIVE_SLOPE * min(_data.s7, 0.0f);
+#define RELU_8(_result) \
+{ \
+        _result.s0 = max(_result.s0, 0.0f) + NEGATIVE_SLOPE * min(_result.s0, 0.0f); \
+        _result.s1 = max(_result.s1, 0.0f) + NEGATIVE_SLOPE * min(_result.s1, 0.0f); \
+        _result.s2 = max(_result.s2, 0.0f) + NEGATIVE_SLOPE * min(_result.s2, 0.0f); \
+        _result.s3 = max(_result.s3, 0.0f) + NEGATIVE_SLOPE * min(_result.s3, 0.0f); \
+        _result.s4 = max(_result.s4, 0.0f) + NEGATIVE_SLOPE * min(_result.s4, 0.0f); \
+        _result.s5 = max(_result.s5, 0.0f) + NEGATIVE_SLOPE * min(_result.s5, 0.0f); \
+        _result.s6 = max(_result.s6, 0.0f) + NEGATIVE_SLOPE * min(_result.s6, 0.0f); \
+        _result.s7 = max(_result.s7, 0.0f) + NEGATIVE_SLOPE * min(_result.s7, 0.0f); \
+}
+        RELU_8(_data0);
+        RELU_8(_data1);
 #endif
-        intel_sub_group_block_write8((__global uint*)pDst + out_id, as_uint8(_data));
+        intel_sub_group_block_write8((__global uint*)pDst + out_id, as_uint8(_data0));
+        intel_sub_group_block_write8((__global uint*)pDst + out_id + 8 * batch_num, as_uint8(_data1));
     )__CC";
+
+
 
 
     const char convolution_code_yxfb_yxoi_B8_F8_memory[] = R"__CC(

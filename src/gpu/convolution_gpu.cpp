@@ -256,7 +256,7 @@ struct convolution_gpu : is_an_implementation {
                 {
                     for (uint32_t i = 0; i < split; i++) {
                         me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                            ({ { output_mem.argument.size.feature[0] / split, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
+                            ({ { (output_mem.argument.size.feature[0] / 2)/ split, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
                                 input_mem,
                                 output_mem,
                                 outer.input_memory(i * 2 + 1), //filters
