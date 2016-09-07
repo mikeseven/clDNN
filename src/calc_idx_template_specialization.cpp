@@ -51,6 +51,12 @@ template<> size_t index<neural::memory::format::yxoi_f32>(std::vector<uint32_t> 
     return pos[2] + size[2] * (pos[1] + size[1] * (pos[3] + size[3] * pos[4]));
 }
 
+template<> size_t index<neural::memory::format::yxio_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
+    assert(is_in_range(size, pos));
+    assert(1 == size[0]); // batch
+    return pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + size[3] * pos[4]));
+}
+
 template<> size_t index<neural::memory::format::oyxi_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos) {
     assert(is_in_range(size, pos));
     assert(1 == size[0]); // batch
@@ -152,6 +158,7 @@ fptr choose_calculate_idx(neural::memory::format::type arg){
         case neural::memory::format::type::oiyx_f32:           return index<neural::memory::format::type::oiyx_f32>;
         case neural::memory::format::type::yxoi_f32:           return index<neural::memory::format::type::yxoi_f32>;
         case neural::memory::format::type::oyxi_f32:           return index<neural::memory::format::type::oyxi_f32>;
+        case neural::memory::format::type::yxio_f32:           return index<neural::memory::format::type::yxio_f32>;
         case neural::memory::format::type::os_yxi_sv16_f32:    return index<neural::memory::format::type::os_yxi_sv16_f32>;
         case neural::memory::format::type::bfyx_f32:           return index<neural::memory::format::type::bfyx_f32>;
         case neural::memory::format::type::fyxb_f32:           return index<neural::memory::format::type::fyxb_f32>;

@@ -235,6 +235,7 @@ primitive read_file_v3(engine::type eng, std::ifstream &rfile, file_header &file
     {
     case memory::format::oyxi_f32:
     case memory::format::yxoi_f32:
+    case memory::format::yxio_f32:
     {
         p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ eng, format,{ 1,
         { static_cast<uint32_t>(array[2]), static_cast<uint32_t>(array[3]) }, // kernel spatials x, y

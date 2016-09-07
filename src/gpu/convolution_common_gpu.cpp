@@ -466,6 +466,123 @@ namespace neural {
 
 
 
+    const char convolution_code_yxfb_yxio_b8_memory[] = R"__CC(
+#define OFM_PER_WORK_ITEM 16
+#define DOT_PRODUCT_8( _result, _rowA, colB )    \
+{   \
+        _result.s0 = mad( _rowA, intel_sub_group_shuffle( colB, 0 ), _result.s0 );  \
+        _result.s1 = mad( _rowA, intel_sub_group_shuffle( colB, 1 ), _result.s1 );  \
+        _result.s2 = mad( _rowA, intel_sub_group_shuffle( colB, 2 ), _result.s2 );  \
+        _result.s3 = mad( _rowA, intel_sub_group_shuffle( colB, 3 ), _result.s3 );  \
+        _result.s4 = mad( _rowA, intel_sub_group_shuffle( colB, 4 ), _result.s4 );  \
+        _result.s5 = mad( _rowA, intel_sub_group_shuffle( colB, 5 ), _result.s5 );  \
+        _result.s6 = mad( _rowA, intel_sub_group_shuffle( colB, 6 ), _result.s6 );  \
+        _result.s7 = mad( _rowA, intel_sub_group_shuffle( colB, 7 ), _result.s7 );  \
+}
+#define ADD_BIAS_8( _result, _biasVal) \
+{ \
+    _result.s0 += intel_sub_group_shuffle( _biasVal, 0 ); \
+    _result.s1 += intel_sub_group_shuffle( _biasVal, 1 ); \
+    _result.s2 += intel_sub_group_shuffle( _biasVal, 2 ); \
+    _result.s3 += intel_sub_group_shuffle( _biasVal, 3 ); \
+    _result.s4 += intel_sub_group_shuffle( _biasVal, 4 ); \
+    _result.s5 += intel_sub_group_shuffle( _biasVal, 5 ); \
+    _result.s6 += intel_sub_group_shuffle( _biasVal, 6 ); \
+    _result.s7 += intel_sub_group_shuffle( _biasVal, 7 ); \
+}
+
+        const __global float* input = (const __global float*)get_data(input_mem);
+        __global float* pDst = (__global float*)get_data(dst_mem);
+
+        const __global float* filter = (const __global float*)get_data(filter_mem);
+        const __global float* bias = (const __global float*)get_data(bias_mem);
+
+        const int batch_num = INPUT_BATCH_NUM;
+
+        const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
+        // we're computing 8 OUTPUT_FEATURE_MAP so we must divide by 8, but we got 8 batches, so no division is needed.
+        int global_id = (get_global_id(0) / batch_num) * 8 + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * batch_num; 
+
+        const uint out_batch_id = get_local_id(0);
+        const uint out_x = get_global_id(1);
+        const uint out_y = get_global_id(2);
+
+        const int out_id = (global_id / batch_num) * OFM_PER_WORK_ITEM * batch_num + out_batch_id;
+
+        const int ofm_offset = (global_id * (OFM_PER_WORK_ITEM / batch_num)) % FILTER_OUTPUT_FEATURE_NUM;
+
+        bool finish = false;
+
+        finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_OFFSET_SIZE_X;
+        finish = (out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_OFFSET_SIZE_Y) ? true : finish;
+
+        const uint sub_group_id = get_local_id(0);
+
+        float8 _data0 = 0.f;
+        float8 _data1 = 0.f;
+
+        if(!finish)
+        {
+            const int x = out_x * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
+            const int y = out_y * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
+
+            for (uint i = 0; i < FILTER_SIZE_Y; i++)
+            {
+                int input_offset_y = y + i;
+                bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
+
+                if(!zero_y)
+                {
+                    for (uint j = 0; j < FILTER_SIZE_X; j++)
+                    {
+                        int input_offset_x = x + j;
+                    
+                        bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
+    
+                        if(!zero)
+                        {
+                            int input_idx = (input_offset_x + (input_offset_y * INPUT_SIZE_X)) * INPUT_FEATURE_NUM * batch_num;
+                            input_idx += split_idx * FILTER_INPUT_FEATURE_NUM * batch_num;
+                            input_idx += out_batch_id;
+                        
+                            //sub_group_id used as offset to make each workitem load different filter, and then shuffle it
+                            int filter_idx = ofm_offset + sub_group_id + FILTER_INPUT_FEATURE_NUM * (FILTER_OUTPUT_FEATURE_NUM * (i * FILTER_SIZE_X + j));
+    
+                            for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
+                            {
+                                DOT_PRODUCT_8(_data0, input[input_idx + h * batch_num], filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
+                                DOT_PRODUCT_8(_data1, input[input_idx + h * batch_num], filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8])
+                            }
+                        }
+                    } 
+                }
+            }
+        }
+
+        ADD_BIAS_8(_data0, bias[ofm_offset + sub_group_id]);
+        ADD_BIAS_8(_data1, bias[ofm_offset + sub_group_id + 8]);
+#ifdef RELU
+#define RELU_8(_result) \
+{ \
+        _result.s0 = max(_result.s0, 0.0f) + NEGATIVE_SLOPE * min(_result.s0, 0.0f); \
+        _result.s1 = max(_result.s1, 0.0f) + NEGATIVE_SLOPE * min(_result.s1, 0.0f); \
+        _result.s2 = max(_result.s2, 0.0f) + NEGATIVE_SLOPE * min(_result.s2, 0.0f); \
+        _result.s3 = max(_result.s3, 0.0f) + NEGATIVE_SLOPE * min(_result.s3, 0.0f); \
+        _result.s4 = max(_result.s4, 0.0f) + NEGATIVE_SLOPE * min(_result.s4, 0.0f); \
+        _result.s5 = max(_result.s5, 0.0f) + NEGATIVE_SLOPE * min(_result.s5, 0.0f); \
+        _result.s6 = max(_result.s6, 0.0f) + NEGATIVE_SLOPE * min(_result.s6, 0.0f); \
+        _result.s7 = max(_result.s7, 0.0f) + NEGATIVE_SLOPE * min(_result.s7, 0.0f); \
+}
+        RELU_8(_data0);
+        RELU_8(_data1);
+#endif
+        intel_sub_group_block_write8((__global uint*)pDst + out_id, as_uint8(_data0));
+        intel_sub_group_block_write8((__global uint*)pDst + out_id + 8 * batch_num, as_uint8(_data1));
+    )__CC";
+
+
+
+
     const char convolution_code_yxfb_yxoi_B8_F8_memory[] = R"__CC(
         const __global float* input = (const __global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);

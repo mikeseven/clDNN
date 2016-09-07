@@ -60,6 +60,7 @@ struct memory : is_a_primitive {
         oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
         yxoi_f32,   // format used only for weights: o - output feature maps, i - input feature maps
         oyxi_f32,   // format used only for weights: o - output feature maps, i - input feature maps
+        yxio_f32,   // format used only for weights: o - output feature maps, i - input feature maps
         byxf_b24_f32,        // for convolution_cpu_generic
         yxoi_o4_f32,       // for convolution_cpu_generic
         os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
@@ -80,6 +81,7 @@ struct memory : is_a_primitive {
         case format::oiyx_f32:
         case format::yxoi_f32:
         case format::oyxi_f32:
+        case format::yxio_f32:
         case format::fyxb_f32:
         case format::bs_yxf_bv24_f32:
         case format::byxf_b24_f32:

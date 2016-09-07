@@ -78,6 +78,17 @@ KERNEL(Convolution_GPU_YXFB_YXOI_B8_memory)(
     uint split_idx)
 {)__krnl";
 
+const std::string kernelName_YXFB_YXIO_B8_memory = "Convolution_GPU_YXFB_YXIO_B8_memory";
+const std::string kernelCode_YXFB_YXIO_B8_memory_Begin = R"__krnl(
+__attribute__((reqd_work_group_size(8, 1, 1))) 
+KERNEL(Convolution_GPU_YXFB_YXIO_B8_memory)(
+    const __global neural_memory* input_mem,
+    __global neural_memory* dst_mem,
+    const __global neural_memory* filter_mem,
+    const __global neural_memory* bias_mem,
+    uint split_idx)
+{)__krnl";
+
 const std::string kernelName_YXFB_YXOI_B8_F8_memory = "Convolution_GPU_YXFB_YXOI_B8_F8_memory";
 const std::string kernelCode_YXFB_YXOI_B8_F8_memory_Begin = R"__krnl(
 __attribute__((reqd_work_group_size(8, 1, 1))) 
@@ -138,6 +149,8 @@ struct convolution_gpu : is_an_implementation {
                 }
                 else
                     return kernelName_YXFB_YXOI_memory;
+            case memory::format::yxio_f32:
+                return kernelName_YXFB_YXIO_B8_memory;
             case memory::format::oyxi_f32:
                 return kernelName_YXFB_OYXI_memory;
             default:
@@ -265,6 +278,18 @@ struct convolution_gpu : is_an_implementation {
                     }
                 }
             }
+            else if (outer.input_memory(1).argument.format == memory::format::yxio_f32)
+            {
+                for (uint32_t i = 0; i < split; i++) {
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
+                        ({ { (output_mem.argument.size.feature[0] / 2) / split, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
+                            input_mem,
+                            output_mem,
+                            outer.input_memory(i * 2 + 1), //filters
+                            outer.input_memory(i * 2 + 2), //biases
+                            i);
+                }
+            }
             else if (me->inline_memory) {
                 me->_kernel.run<gpu::input_mem, gpu::output_mem>
                     ({ { dstSize, 1 } ,{ std::min(dstSize, static_cast<size_t>(16)), 1 } }, input_mem, output_mem);
@@ -294,7 +319,8 @@ struct convolution_gpu : is_an_implementation {
                                                                                                         // todo remove
         if (filter_arg.format != memory::format::oiyx_f32 &&
             filter_arg.format != memory::format::yxoi_f32 &&
-            filter_arg.format != memory::format::oyxi_f32) throw std::runtime_error("conv weights arent oiyx_f32 or yxoi_f32 or oyxi_f32 format");
+            filter_arg.format != memory::format::oyxi_f32 &&
+            filter_arg.format != memory::format::yxio_f32) throw std::runtime_error("conv weights arent oiyx_f32 or yxoi_f32 or oyxi_f32 or yxio_f32 format");
 
         return new convolution_gpu(arg);
     }
@@ -314,6 +340,7 @@ namespace{
             gpu::kernel_templates::add(kernelName_YXFB_YXOI_memory, kernelCode_YXFB_YXOI_memory_Begin + convolution_code_yxfb_yxoi_memory + kernelCode_End);
             gpu::kernel_templates::add(kernelName_YXFB_OYXI_memory, kernelCode_YXFB_OYXI_memory_Begin + convolution_code_yxfb_oyxi_memory + kernelCode_End);
             gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, kernelCode_YXFB_YXOI_B8_memory_Begin + convolution_code_yxfb_yxoi_b8_memory + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B8_memory, kernelCode_YXFB_YXIO_B8_memory_Begin + convolution_code_yxfb_yxio_b8_memory + kernelCode_End);
             gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_F8_memory, kernelCode_YXFB_YXOI_B8_F8_memory_Begin + convolution_code_yxfb_yxoi_B8_F8_memory + kernelCode_End);
             auto val_fw = convolution_gpu::create;
 
