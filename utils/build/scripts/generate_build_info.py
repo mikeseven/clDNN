@@ -24,13 +24,20 @@ def updateTcParameter(paramName, message):
     print u"""##teamcity[setParameter name='{0}' value='{1}']""".format(pName, msg)
 
 
+def updateTcBuildNumber(number):
+    """ Sends log service message to TeamCity which updates build number for current build. """
+
+    bNumber = escapeTeamCityMsg(number)
+    print u"""##teamcity[buildNumber '{0}']""".format(bNumber)
+
+
 # Sending service messages that will add/update build parameters.
 def main(args):
     curUtcDateTime = datetime.now() if args.use_local_time != 0 else datetime.utcnow()
     curUtcDateTimeBerta = curUtcDateTime.strftime('%Y-%m-%d %H:%M:%S')
 
     updateTcParameter('my.build.info.utcdatetime.berta', curUtcDateTimeBerta)
-    updateTcParameter('build.number', args.format.format(
+    updateTcBuildNumber(args.format.format(
             counter   = args.counter,
             id        = args.id,
             id_f4     = args.id[:4],
