@@ -548,7 +548,36 @@ namespace neural {
                             //sub_group_id used as offset to make each workitem load different filter, and then shuffle it
                             int filter_idx = ofm_offset + sub_group_id + FILTER_INPUT_FEATURE_NUM * (FILTER_OUTPUT_FEATURE_NUM * (i * FILTER_SIZE_X + j));
     
-                            for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
+                            for (uint _h = 0; _h < FILTER_INPUT_FEATURE_NUM/8; _h++)
+                            {
+                                uint h = _h*8;
+                                float8 _input = as_float8(intel_sub_group_block_read8((const __global uint*)input + input_idx + h * batch_num));
+                                                                
+                                DOT_PRODUCT_8(_data0, _input.s0, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
+                                DOT_PRODUCT_8(_data1, _input.s0, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
+                                
+                                DOT_PRODUCT_8(_data0, _input.s1, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
+                                DOT_PRODUCT_8(_data1, _input.s1, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
+
+                                DOT_PRODUCT_8(_data0, _input.s2, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
+                                DOT_PRODUCT_8(_data1, _input.s2, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
+
+                                DOT_PRODUCT_8(_data0, _input.s3, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
+                                DOT_PRODUCT_8(_data1, _input.s3, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
+
+                                DOT_PRODUCT_8(_data0, _input.s4, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
+                                DOT_PRODUCT_8(_data1, _input.s4, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
+
+                                DOT_PRODUCT_8(_data0, _input.s5, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
+                                DOT_PRODUCT_8(_data1, _input.s5, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
+
+                                DOT_PRODUCT_8(_data0, _input.s6, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
+                                DOT_PRODUCT_8(_data1, _input.s6, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
+
+                                DOT_PRODUCT_8(_data0, _input.s7, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
+                                DOT_PRODUCT_8(_data1, _input.s7, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
+                            }
+                            for (uint h = FILTER_INPUT_FEATURE_NUM - (FILTER_INPUT_FEATURE_NUM % 8); h < FILTER_INPUT_FEATURE_NUM; h++)
                             {
                                 DOT_PRODUCT_8(_data0, input[input_idx + h * batch_num], filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
                                 DOT_PRODUCT_8(_data1, input[input_idx + h * batch_num], filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8])
