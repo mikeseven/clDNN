@@ -3,6 +3,7 @@
 
 import argparse
 import re
+import subprocess
 
 from datetime import datetime
 
@@ -52,18 +53,42 @@ def main(args):
             name      = args.name,
         ))
 
+    # Getting last commit author name and e-mail (if possible).
+    lastCommitAuth = args.change_auth
+    try:
+        lastCommitAuth = subprocess.check_output(['git', 'show', '-s', '--format=%aN'],
+                                                 universal_newlines = True).strip()
+    except:
+        pass
+
+    lastCommitAuthEMail = None
+    try:
+        lastCommitAuthEMail = subprocess.check_output(['git', 'show', '-s', '--format=%aE'],
+                                                      universal_newlines = True).strip()
+    except:
+        pass
+
+    
+    updateTcParameter('my.build.info.change.auth', lastCommitAuth)
+    if lastCommitAuthEMail != None:
+        updateTcParameter('my.build.info.change.auth.email', lastCommitAuthEMail)
+        updateTcParameter('my.build.info.change.auth.pretty', u'{0} <{1}>'.format(lastCommitAuth, lastCommitAuthEMail))
+    else:
+        updateTcParameter('my.build.info.change.auth.pretty', u'{0}'.format(lastCommitAuth))
+
     return 0
 
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Generates common build information. Updates build number to the more organized format.')
+    parser = argparse.ArgumentParser(description = 'Generates common build information. Updates build number to the more organized format.')
     parser.add_argument('counter',                                           metavar = '<counter>',             type = int,                                                            help = 'Current value of a (global) build counter.')
     parser.add_argument('id',                                                metavar = '<build-id>',            type = unicode,                                                        help = 'Unique identifier of current build.')
     parser.add_argument('vcs_id',                                            metavar = '<vcs-id>',              type = unicode,                                                        help = 'Unique identifier of main VCS (version control system) revision used in current build.')
     parser.add_argument('-n',   '--name',           dest = 'name',           metavar = '<build-name>',          type = unicode, default = 'manual',                                    help = 'Name of current build, e.g. ci-post-main, manual-pre, etc.')
     parser.add_argument('-f',   '--format',         dest = 'format',         metavar = '<build-number-format>', type = unicode, default = '{name}-{counter:0>5d}---{vcs_id_f8}',       help = 'Format for build number. Use "name", "counter", "id", "vcs_id", "vcs_id_f8" elements and .format() formatting.')
     parser.add_argument('-ult', '--use-local-time', dest = 'use_local_time', metavar = '<ult>',                 type = int,     nargs = '?', const = 1, default = 0, choices = (0, 1), help = 'Boolean int value / Flag which indicates that the local time should be used instead of UTC time in some build parameters.')
+    parser.add_argument('-ca',  '--change-author',  dest = 'change_auth',    metavar = '<change-author>',       type = unicode, default = '',                                          help = 'Fall-back value for author of the last change. If the value can be deduced from VCS, this value will be ignored.')
     parser.add_argument('--version',                                                                                            action = 'version',                                    version = '%(prog)s 1.0')
 
     args = parser.parse_args()
