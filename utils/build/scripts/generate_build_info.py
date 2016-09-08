@@ -111,7 +111,7 @@ def main(args):
 
     lastCommitAuth = lastCommitAuth if lastCommitAuth != '' else lastCommitAuthId
     if lastCommitAuth != '':
-        updateTcParameter('my.build.info.change.auth', lastCommitAuth)
+        updateTcParameter('my.build.info.change.auth.user', lastCommitAuth)
     if lastCommitAuthEMail != '':
         updateTcParameter('my.build.info.change.auth.email', lastCommitAuthEMail)
         lastCommitPrettyAuth = u'{0} <{1}>'.format(lastCommitAuth, lastCommitAuthEMail)
