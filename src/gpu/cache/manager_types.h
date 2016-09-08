@@ -1,12 +1,11 @@
 #pragma once
 
 #include <string>
+#include "../ocl_toolkit.h"
 
 namespace neural { namespace gpu { namespace manager {
 
-//TODO use cl.hpp
-using cl_program = int;
-using gpu_program = cl_program;
+using gpu_program = cl::Program;
 using primitive_id = std::string;
 
 } } }

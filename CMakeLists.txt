@@ -112,6 +112,15 @@ else()
   set(CLDNN__MULTI_CFG_GEN  YES)
 endif()
 
+# Code generation settings.
+
+# Path which points to root directory where code generated elements are created.
+set(CLDNN__CODEGEN_DIR     "${CMAKE_CURRENT_BINARY_DIR}/codegen/${CLDNN__TARGET_CFG_VAR}")
+
+# Path which points to automatically included directory with code generated elements
+# (to support "copy-if-different" optimization).
+set(CLDNN__CODEGEN_INCDIR  "${CLDNN__CODEGEN_DIR}/include")
+
 # ======================================================================================================
 # ======================================================================================================
 # ======================================================================================================
@@ -442,6 +451,16 @@ mark_as_advanced(CLDNN__CMAKE_DEBUG)
 if((NOT CLDNN__INCLUDE_TESTS) AND CLDNN__RUN_TESTS)
   message(WARNING "[clDNN] CLDNN__RUN_TESTS: Selected running of tests, but test are not built. Option will be disabled.")
   set(CLDNN__RUN_TESTS OFF)
+endif()
+
+# ======================================================================================================
+
+# Check for python 3.x interpreter (required tool).
+find_package(PythonInterp 3.3)
+if(NOT PYTHONINTERP_FOUND)
+  message(WARNING "[clDNN] Project requires Python 3.3+ interpreter to build (with python loader). CMake could not detect it correctly.
+      If you have installed this interpreter, please disregard this warning or specify PYTHON_EXECUTABLE in CMake command-line."
+    )
 endif()
 
 # ======================================================================================================
@@ -989,6 +1008,7 @@ include_directories(
     "${CLDNN__KHR_CLHPP_DIR}"
     "${CLDNN__API_DIR}"
     ${Boost_INCLUDE_DIRS}
+    "${CLDNN__CODEGEN_INCDIR}"
   )
 link_directories(
     ${CLDNN__IOCL_ICD_LIBDIRS}

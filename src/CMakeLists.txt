@@ -57,20 +57,40 @@ file(GLOB __CLDNN_Sources__cache
     "${__CLDNN_Directory__cache}/*.cpp"
   )
 
+set(__CLDNN_Directory__ch_kernels      "${__CLDNN_Directory__cache}/kernels")
+set(__CLDNN_Label__ch_kernels          "${__CLDNN_Label__cache}\\kernels")
+file(GLOB __CLDNN_Sources__ch_kernels
+    "${__CLDNN_Directory__ch_kernels}/*.cl"
+  )
+
+set(__CLDNN_Directory__cg_cache        "${CLDNN__CODEGEN_INCDIR}")
+set(__CLDNN_CGDirectory__cg_cache      "${CLDNN__CODEGEN_DIR}/cache")
+set(__CLDNN_Label__cg_cache            "${__CLDNN_Label__cache}\\codegen")
+set(__CLDNN_File__cg_cache__prim_db    "primitive_db.inc")
+set(__CLDNN_Sources__cg_cache
+    "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
+  )
+
 
 set(__CLDNN_AllSources
     ${__CLDNN_Headers__api}
     ${__CLDNN_Sources__main}
     ${__CLDNN_Sources__gpu}
     ${__CLDNN_Sources__cache}
+    ${__CLDNN_Sources__ch_kernels}
+    ${__CLDNN_Sources__cg_cache}
   )
+# Helping with some generators.
+set_property(SOURCE ${__CLDNN_Sources__cg_cache} PROPERTY GENERATED TRUE)
 
 # =============================================== Filters ==============================================
 
-source_group("${__CLDNN_Label__api}"   FILES ${__CLDNN_Headers__api})
-source_group("${__CLDNN_Label__main}"  FILES ${__CLDNN_Sources__main})
-source_group("${__CLDNN_Label__gpu}"   FILES ${__CLDNN_Sources__gpu})
-source_group("${__CLDNN_Label__cache}" FILES ${__CLDNN_Sources__cache})
+source_group("${__CLDNN_Label__api}"        FILES ${__CLDNN_Headers__api})
+source_group("${__CLDNN_Label__main}"       FILES ${__CLDNN_Sources__main})
+source_group("${__CLDNN_Label__gpu}"        FILES ${__CLDNN_Sources__gpu})
+source_group("${__CLDNN_Label__cache}"      FILES ${__CLDNN_Sources__cache})
+source_group("${__CLDNN_Label__ch_kernels}" FILES ${__CLDNN_Sources__ch_kernels})
+source_group("${__CLDNN_Label__cg_cache}"   FILES ${__CLDNN_Sources__cg_cache})
 
 # ===================================== Include/Link directories =======================================
 
@@ -97,5 +117,19 @@ target_link_libraries("${CLDNN_BUILD__PROJ}"
 if(UNIX)
   target_link_libraries("${CLDNN_BUILD__PROJ}" pthread)
 endif()
+
+# =================================== Custom pre- and post-steps =======================================
+
+add_custom_command(OUTPUT "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${__CLDNN_CGDirectory__cg_cache}"
+    COMMAND "${__CLDNN_Directory__cache}/primitive_db_gen.py" "${__CLDNN_CGDirectory__cg_cache}" "${__CLDNN_Directory__ch_kernels}"
+    DEPENDS ${__CLDNN_Sources__ch_kernels} "${__CLDNN_Directory__cache}/primitive_db_gen.py"
+    COMMENT "Generating ${__CLDNN_File__cg_cache__prim_db} ..."
+  )
+add_custom_command(OUTPUT "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}" "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
+    DEPENDS "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
+    COMMENT "Updating file if the file changed (${__CLDNN_File__cg_cache__prim_db}) ..."
+  )
 
 # ======================================================================================================

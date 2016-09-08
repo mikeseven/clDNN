@@ -25,6 +25,7 @@ public:
 private:
     persistent_cache file_cache;
     binary_cache kernel_binaries;
+    bool dirty = false;
 };
 
 } } }

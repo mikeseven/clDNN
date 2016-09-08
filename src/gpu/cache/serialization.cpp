@@ -44,8 +44,9 @@ template <class T>
 static T read_as_binary(const binary_data& data, size_t& offset)
 {
     static_assert(sizeof(T) % sizeof(binary_data::value_type) == 0, "Size of T has to be divisible by size of binary data element");
-    if (data.size() < (offset += sizeof(T) / sizeof(binary_data::value_type))) throw std::out_of_range("binary data ended unexpectedly");
-    return *reinterpret_cast<const T*>(&data[offset - sizeof(T) / sizeof(binary_data::value_type)]);
+    const size_t size_in_value_types = sizeof(T) / sizeof(binary_data::value_type);
+    if (data.size() < (offset += size_in_value_types)) throw std::out_of_range("binary data ended unexpectedly");
+    return *reinterpret_cast<const T*>(&data[offset - size_in_value_types]);
 }
 
 static binary_data read_as_binary(const binary_data& data, size_t& offset, size_t count)
