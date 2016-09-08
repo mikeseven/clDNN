@@ -139,7 +139,6 @@ if __name__ == "__main__":
     parser.add_argument('--version',                                                                                            action = 'version',                                    version = '%(prog)s 1.0')
 
     args = parser.parse_args()
-    print repr(args)
 
     exitCode = main(args)
     parser.exit(exitCode)
