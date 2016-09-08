@@ -138,7 +138,6 @@ struct lrn_gpu : is_an_implementation {
                 gpu::kernel_templates::add(kernelName, kernelCode);
                 auto key = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
                 auto val_fw = lrn_gpu::create;
-                //auto val_bw = lrn_backward_cpu_reference::create;
 
                 implementation_map<normalization::response>::add(key, val_fw); //todo keys should be different
                 //lrn_bw_implementation_map.insert({ key, val_bw });

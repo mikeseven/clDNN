@@ -29,14 +29,5 @@ namespace neural {
 
         const convolution &outer;
     };
-    struct convolution_backward_cpu_reference : is_an_implementation {
-        convolution_backward_cpu_reference(convolution_backward &arg);
-        ~convolution_backward_cpu_reference();
-        static void implementation(const void *ptr);
 
-        static is_an_implementation *create(convolution_backward &arg) { return new convolution_backward_cpu_reference(arg); };
-        task_group work() { return {{task{implementation, &outer}}, schedule::single}; };
-
-        const convolution_backward &outer;
-    };
 }

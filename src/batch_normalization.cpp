@@ -210,125 +210,6 @@ struct batch_normalization_training_forward_reference : is_an_implementation {
     }
 };
 
-template <class T>
-struct batch_normalization_training_backward_reference : is_an_implementation {
-
-    struct request_data
-    {
-        const normalization::batch_training_backward* primitive;
-    };
-
-    const normalization::batch_training_backward &outer;
-
-    std::vector<request_data> requests;
-
-    batch_normalization_training_backward_reference(normalization::batch_training_backward &arg)
-        : is_an_implementation(neural::type_id<batch_normalization_training_backward_reference>())
-        , outer(arg) {}
-
-    ~batch_normalization_training_backward_reference() {}
-
-    task_group work()
-    {
-        requests.push_back({&outer});
-        return {{task{implementation, &requests[0]}}, schedule::single};
-    }
-
-    static is_an_implementation *create(normalization::batch_training_backward &arg) { return new batch_normalization_training_backward_reference(arg); };
-
-    static void implementation(const void *ptr)
-    {
-        const auto request = reinterpret_cast<const request_data *>(ptr);
-        const auto this_bn = static_cast<const normalization::batch_training_backward *>(request->primitive);
-
-        if(this_bn->output().size() != 3 ||
-           this_bn->input().size() != 6)
-            throw std::runtime_error("batch_normalization_training_backward_reference::implementation -> incorrect number of BatchNorm input/outputs.");
-
-        const auto spatial = this_bn->argument.spatial;
-
-        auto& forward_input       = this_bn->input_memory(0);
-        auto& forward_scale       = this_bn->input_memory(1);
-        auto& output_grad         = this_bn->input_memory(3);
-        auto& current_mean        = this_bn->input_memory(4);
-        auto& current_inv_std_dev = this_bn->input_memory(5);
-
-        auto& input_grad = this_bn->argument.output[0].as<const memory&>();
-        auto& scale_grad = this_bn->argument.output[1].as<const memory&>();
-        auto& bias_grad  = this_bn->argument.output[2].as<const memory&>();
-
-        auto forward_input_buffer         = forward_input.pointer<T>();
-        auto forward_scale_buffer         = forward_scale.pointer<T>();
-        auto output_grad_buffer           = output_grad.pointer<T>();
-        auto current_mean_buffer          = current_mean.pointer<T>();
-        auto current_inv_std_dev_buffer   = current_inv_std_dev.pointer<T>();
-
-        auto input_grad_buffer = input_grad.pointer<T>();
-        auto scale_grad_buffer = scale_grad.pointer<T>();
-        auto bias_grad_buffer  = bias_grad.pointer<T>();
-
-        if(output_grad.argument.format != input_grad.argument.format)
-            throw std::runtime_error("batch_normalization_training_backward_reference::implementation -> io format doesn't match.");
-
-        auto it = format_strides_map.find(std::make_tuple(input_grad.argument.format, spatial));
-        if(it==std::end(format_strides_map)) throw std::runtime_error("batch_normalization_training_backward_reference::implementation -> unknown BatchNorm format");
-
-        auto data_w = input_grad.argument.size.raw[2];
-        auto data_h = input_grad.argument.size.raw[3];
-        auto data_c = input_grad.argument.size.raw[1];
-        auto data_n = input_grad.argument.size.raw[0];
-
-        auto spatial_location_stride = 1;
-        auto element_stride = 1;
-        auto batch_stride = 1;
-
-        for (auto index : std::get<0>(it->second)) spatial_location_stride *= input_grad.argument.size.raw[index];
-        for (auto index : std::get<1>(it->second)) element_stride *= input_grad.argument.size.raw[index];
-        for (auto index : std::get<2>(it->second)) batch_stride *= input_grad.argument.size.raw[index];
-
-        const auto spatial_size = (spatial) ? data_w * data_h : 1;
-        const auto num_averages = (spatial) ? data_c : data_c * data_w * data_h;
-        const T inv_num_average_over = static_cast<T>(1.0 / (data_n * spatial_size));
-
-        fill<T>(scale_grad, 0);
-        fill<T>(bias_grad, 0);
-        fill<T>(input_grad, 0);
-
-        auto compute_io_data_offset = [&element_stride, &batch_stride, &spatial_location_stride](int element, int batch, int spatial_location)
-        {
-            return spatial_location * spatial_location_stride + element * element_stride + batch * batch_stride;
-        };
-
-        // Compute scale and bias gradients. (can be MT over element)
-        for(uint32_t element = 0; element < num_averages; ++element)
-            for(uint32_t batch = 0; batch < data_n; ++batch)
-                for(uint32_t spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
-                {
-                    auto io_offset = compute_io_data_offset(element, batch, spatial_location);
-
-                    scale_grad_buffer[element] +=
-                          output_grad_buffer[io_offset]
-                        * (forward_input_buffer[io_offset] - current_mean_buffer[element])
-                        * current_inv_std_dev_buffer[element];
-
-                    bias_grad_buffer[element] += output_grad_buffer[io_offset];
-                }
-
-        // Compute input gradients. (can be MT over element)
-        for(uint32_t element = 0; element < num_averages; ++element)
-            for(uint32_t batch = 0; batch < data_n; ++batch)
-                for(uint32_t spatial_location = 0; spatial_location < spatial_size; ++spatial_location)
-                {
-                    auto io_offset = compute_io_data_offset(element, batch, spatial_location);
-                    auto x_norm = (forward_input_buffer[io_offset] - current_mean_buffer[element]) * current_inv_std_dev_buffer[element];
-
-                    input_grad_buffer[io_offset] +=
-                          forward_scale_buffer[element]
-                        * current_inv_std_dev_buffer[element]
-                        * (output_grad_buffer[io_offset] - (x_norm * scale_grad_buffer[element] + bias_grad_buffer[element]) * inv_num_average_over);
-                }
-    }
-};
 
 template <class T>
 struct batch_normalization_inference_reference : is_an_implementation {
@@ -433,13 +314,6 @@ struct attach {
         { std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_training_forward_reference<float>::create },
         });
 
-        implementation_map<normalization::batch_training_backward>::add({
-        { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_training_backward_reference<float>::create },
-        { std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_training_backward_reference<float>::create },
-        { std::make_tuple(engine::reference, memory::format::fyxb_f32, memory::format::fyxb_f32), batch_normalization_training_backward_reference<float>::create },
-        { std::make_tuple(engine::reference, memory::format::bfyx_f32, memory::format::bfyx_f32), batch_normalization_training_backward_reference<float>::create }
-        });
-
         implementation_map<normalization::batch_inference>::add({
         { std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32), batch_normalization_inference_reference<float>::create },
         { std::make_tuple(engine::reference, memory::format::byxf_f32, memory::format::byxf_f32), batch_normalization_inference_reference<float>::create },
@@ -473,18 +347,6 @@ batch_training_forward::arguments::arguments( neural::engine::type engine, std::
 primitive batch_training_forward::create(batch_training_forward::arguments arg)
 {
     return is_a_primitive::create<batch_training_forward>(arg);
-}
-
-batch_training_backward::arguments::arguments( neural::engine::type engine, std::vector<primitive> output, std::vector<primitive_at> input, bool spatial)
-    : engine(engine)
-    , output(output)
-    , input(input)
-    , spatial(spatial) {}
-
-// creates primitive with batch_normalization implementation that supports provided arguments
-primitive batch_training_backward::create(batch_training_backward::arguments arg)
-{
-    return is_a_primitive::create<batch_training_backward>(arg);
 }
 
 batch_inference::arguments::arguments( neural::engine::type engine, std::vector<primitive> output, std::vector<primitive_at> input, bool spatial)

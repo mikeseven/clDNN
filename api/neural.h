@@ -206,8 +206,6 @@ private:
 };
 
 
-
-
 // neural::file
 //
 // File that is loaded and becomes a data.
@@ -251,8 +249,6 @@ private:
 };
 
 
-
-
 // neural::reorder
 //
 // Changes how data is ordered in memory. Value type is not changed & all information is preserved.
@@ -290,8 +286,6 @@ private:
 };
 
 
-
-
 // neural::mean_subtract
 //
 // Subtract mean from input
@@ -326,6 +320,7 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
     friend class is_a_primitive;
 };
+
 
 // neural::convolution
 //
@@ -394,62 +389,6 @@ private:
 };
 
 
-
-
-// neural::convolution_backward
-//
-// Performs backward spatial convolution with weight sharing.
-// Parameters are defined in context of "direct" convolution, but actual algorithm is not implied.
-//
-//
-// Examples:
-//
-//   Backward pass:
-//     auto bw_output    = memory::describe({eng, memory::format::yxfb_f32, {1, {2, 2}, 1}});
-//     auto bw_input     = memory::describe({eng, memory::format::yxfb_f32, {1, {3, 3}, 1}});
-//     auto fw_input     = memory::describe({eng, memory::format::yxfb_f32, {1, {2, 2}, 1}});
-//     auto weights      = memory::describe({eng, memory::format::yxfb_f32, {1, {2, 2}, 1}});
-//     auto weights_diff = memory::describe({eng, memory::format::yxfb_f32, {1, {2, 2}, 1}});
-//     auto biases       = memory::describe({eng, memory::format::x_f32,    {1, {{1}} , 1}});
-//     auto biases_diff  = memory::describe({eng, memory::format::x_f32,    {1, {{1}} , 1}});
-//     auto conv_bw = convolution_backward::create({engine::reference,
-//         std::vector<primitive>{bw_output, weights_diff, biases_diff},
-//         {bw_input, fw_input, weights, biases}, {1, {1, 1}, 1}, padding::zero});
-struct convolution_backward : is_a_primitive
-{
-    struct arguments
-	{
-        neural::engine::type      engine;
-        std::vector<primitive>    output;         // 3: {backward output, weight diff, bias diff}
-        neural::vector<uint32_t>  output_offset;
-        neural::vector<uint32_t>  input_size;
-        std::vector<primitive_at> input;          // 4: {backward input, forward input, filter, bias}
-        neural::vector<int32_t>   input_offset;
-        neural::vector<uint32_t>  stride;
-        neural::padding::type     padding;
-
-        DLL_SYM arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt, neural::vector<uint32_t> out_off, neural::vector<uint32_t> in_siz, std::vector<primitive> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt,                                                                    std::vector<primitive> in,                                 neural::vector<uint32_t> stride, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, std::vector<neural::memory::format::type> out_fmt,                                                                    std::vector<primitive> in,                                 uint32_t                 stride, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, std::vector<primitive>                    out,                                                                        std::vector<primitive> in,                                 neural::vector<uint32_t> stride, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, std::vector<primitive>                    out,     neural::vector<uint32_t> out_off, neural::vector<uint32_t> in_siz, std::vector<primitive> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type);
-    };
-    const arguments argument;
-
-    struct query_entry : is_a_query_entry { convolution::arguments arguments; };
-    static std::vector<query_entry> query(arguments);
-    DLL_SYM static primitive create(arguments);
-
-private:
-    convolution_backward(arguments arg) : is_a_primitive(type_id<const convolution_backward>()), argument(arg) {};
-    const std::vector<primitive_at>  &input() const  { return argument.input; };
-    const std::vector<primitive>     &output() const { return argument.output; };
-    friend class is_a_primitive;
-};
-
-
-
-
 // neural::fully_connected
 //
 // Forward pass of fully connected layer. Also supports built-in Relu available by setting it in arguments.
@@ -497,8 +436,6 @@ private:
 };
 
 
-
-
 // neural::relu
 //
 // Activiation using rectified linear unit, forward pass.
@@ -541,50 +478,6 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
     friend class is_a_primitive;
 };
-
-
-
-
-// neural::relu_backward
-//
-// Activiation using rectified linear unit, backward pass.
-//
-//
-// Example:
-//   Backward pass:
-//     auto forward_input       = memory::describe({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}});
-//     auto forward_output_grad = memory::describe({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}});
-//     auto forward_input_grad  = memory::describe({engine::reference, memory::format::yxfb_f32, {8, {8, 8}, 3}});
-//     auto act = relu_backward::create({engine::reference, {forward_input_grad}, {forward_output_grad, forward_input}});
-struct relu_backward : is_a_primitive 
-{
-    struct arguments 
-	{
-        neural::engine::type                   engine;
-        std::vector<primitive>                 output;         // 1: {forward_input_grad}
-        neural::vector<uint32_t>               output_offset;
-        neural::vector<uint32_t>               output_size;
-        std::vector<primitive_at>              input;          // 2: {forward_output_grad, forward_input}
-        std::vector<neural::vector<uint32_t>>  input_offset;
-        float                                  negative_slope;
-
-        DLL_SYM arguments(neural::engine::type, primitive out, neural::vector<uint32_t> out_offset, neural::vector<uint32_t> out_size, std::vector<primitive_at> in, std::vector<neural::vector<uint32_t>> in_offsets, float neg_slope = 0.0f);
-        DLL_SYM arguments(neural::engine::type, primitive out,                                                                          std::vector<primitive_at> in,                                                  float neg_slope = 0.0f);
-    };
-    const arguments argument;
-
-    struct query_entry : is_a_query_entry { relu_backward::arguments arguments; };
-    static std::vector<query_entry> query(arguments);
-    DLL_SYM static primitive create(arguments);
-    const std::vector<primitive_at>  &input() const  { return argument.input; };
-    const std::vector<primitive>     &output() const { return argument.output; };
-
-private:
-    relu_backward(arguments arg) : is_a_primitive(type_id<const relu_backward>()), argument(arg) {};
-    friend class is_a_primitive;
-};
-
-
 
 
 // neural::pooling
@@ -644,9 +537,6 @@ private:
 };
 
 
-
-
-
 namespace normalization 
 { 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -704,8 +594,6 @@ private:
 };
 
 
-
-
 // neural::normalization::softmax
 //
 // Normalizes results so they sum to 1.
@@ -743,8 +631,6 @@ private:
     const std::vector<primitive>     &output() const { return argument.output; };
     friend class is_a_primitive;
 };
-
-
 
 
 // neural::normalization::batch_training_forward
@@ -793,52 +679,6 @@ private:
 };
 
 
-
-
-// neural::normalization::batch_training_backward
-//
-// Backward pass fo batch normalization.
-//
-//
-// Example:
-//   Backward pass of batch normalization on 16x32 images with 64 feature maps and batch 128.
-//     auto forward_input       = memory::describe({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
-//     auto forward_scale       = memory::describe({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
-//     auto forward_bias        = memory::describe({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
-//     auto output_grad         = memory::describe({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
-//     auto current_mean        = memory::describe({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
-//     auto current_inv_std_dev = memory::describe({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
-//     auto input_grad = memory::describe({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
-//     auto scale_grad = memory::describe({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
-//     auto bias_grad  = memory::describe({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
-//     auto bn = normalization::batch_training_backward::create({engine::reference, {input_grad, scale_grad, bias_grad}, {forward_input, forward_scale, forward_bias, output_grad, current_mean, current_inv_std_dev}});
-struct /*normalization*/batch_training_backward : is_a_primitive 
-{
-    struct arguments 
-	{
-        neural::engine::type        engine;
-        std::vector<primitive>      output;         // 3: {input_grad, scale_grad, bias_grad}
-        std::vector<primitive_at>   input;          // 6: {forward_input, forward_scale, forward_bias, output_grad, current_mean, current_inv_std_dev}
-        bool                        spatial;
-
-        DLL_SYM arguments(neural::engine::type, std::vector<primitive>, std::vector<primitive_at>, bool);
-    };
-    const arguments argument;
-
-    struct query_entry : is_a_query_entry { batch_training_backward::arguments arguments; };
-    static std::vector<query_entry> query(arguments);
-    DLL_SYM static primitive create(arguments);
-    const std::vector<primitive_at>  &input() const  { return argument.input; };
-    const std::vector<primitive>     &output() const { return argument.output; };
-
-private:
-    batch_training_backward(arguments arg) : is_a_primitive(type_id<const batch_training_backward>()), argument(arg) {};
-    friend class is_a_primitive;
-};
-
-
-
-
 // neural::normalization::batch_inference
 //
 // Batch normalization, forward pass for inference.
@@ -876,10 +716,8 @@ struct /*normalization*/batch_inference : is_a_primitive
 private:
     batch_inference(arguments arg) : is_a_primitive(type_id<const batch_inference>()), argument(arg) {};
     friend class is_a_primitive;
-};//normalization /////////////////////////////////////////////////////////////////////////////////////////////////////
-}
-
-
+};
+}//normalization /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 // neural::worker_cpu

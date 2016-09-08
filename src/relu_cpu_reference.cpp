@@ -55,56 +55,14 @@ void relu_cpu_reference::implementation(const void *ptr) {
     }
 }
 
-
-relu_backward_cpu_reference::relu_backward_cpu_reference(relu_backward &arg)
-: is_an_implementation(neural::type_id<relu_backward_cpu_reference>())
-, outer(arg) {}
-
-relu_backward_cpu_reference::~relu_backward_cpu_reference() {}
-
-void relu_backward_cpu_reference::implementation(const void *ptr)
-{
-    auto this_relu = static_cast<const relu_backward *>(ptr);
-
-    auto forward_output_grad = this_relu->input_memory(0).pointer<float>();
-    auto forward_input       = this_relu->input_memory(1).pointer<float>();
-    auto forward_input_grad  = this_relu->output_memory(0).pointer<float>();
-
-    auto& forward_output_grad_arg    = this_relu->input_memory(0).argument;
-    auto& forward_output_grad_offset = this_relu->argument.input_offset[0];
-
-    auto& forward_input_arg    = this_relu->input_memory(1).argument;
-    auto& forward_input_offset = this_relu->argument.input_offset[1];
-
-    auto& forward_input_grad_arg    = this_relu->output_memory(0).argument;
-    auto& forward_input_grad_offset = this_relu->argument.output_offset;
-
-    auto& processed_window_sizes = this_relu->argument.output_size;
-
-    namespace nd = ndimensional;
-    nd::value<uint32_t> range (processed_window_sizes);
-    auto calc_forward_input_idx       = nd::choose_calculate_idx(forward_input_arg.format);
-    auto calc_forward_output_grad_idx = nd::choose_calculate_idx(forward_output_grad_arg.format);
-    auto calc_forward_input_grad_idx  = nd::choose_calculate_idx(forward_input_grad_arg.format);
-    for(auto pos : range) {
-        auto forward_input_idx       = calc_forward_input_idx      (forward_input_arg.size.raw, pos + forward_input_offset);
-        auto forward_output_grad_idx = calc_forward_output_grad_idx(forward_output_grad_arg.size.raw, pos + forward_output_grad_offset);
-        auto forward_input_grad_idx  = calc_forward_input_grad_idx (forward_input_grad_arg.size.raw, pos + forward_input_grad_offset);
-
-        forward_input_grad[forward_input_grad_idx] = (forward_input[forward_input_idx] <= 0.0f ? 0.0f : 1.0f) * forward_output_grad[forward_output_grad_idx];
-    }
-}
-
 namespace {
 struct attach {
     attach() {
         auto key_fw = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
         auto key_bw = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
         auto val_fw = relu_cpu_reference::create;
-        auto val_bw = relu_backward_cpu_reference::create;
 
         implementation_map<relu>::add(key_fw, val_fw); //todo keys should be different
-        implementation_map<relu_backward>::add(key_bw, val_bw);
     }
     ~attach() {}
 };
@@ -118,3 +76,4 @@ attach attach_impl;
 
 }
 }
+
