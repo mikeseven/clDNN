@@ -34,9 +34,7 @@ namespace neural {
             pDst[x] += input[i * INPUT_BATCH_NUM + inputBatchIdx] * WEIGHTS[weightBatchIdx + i];
         }
         pDst[x] += BIASES[outXIdx];
-#ifdef RELU
-        pDst[x] = max(pDst[x], 0.0f) + NEGATIVE_SLOPE * min(pDst[x], 0.0f);
-#endif
+		ACTIVATION(pDst[x], pDst[x]);
     )__CC";
 
     const char fully_connected_code_xb_bx[] = R"__CC(
@@ -54,9 +52,7 @@ namespace neural {
         {
             pDst[x] += input[i * INPUT_BATCH_NUM + batch_id] * WEIGHTS[weightBatchIdx + i];
         }
-#ifdef RELU
-        pDst[x] = max(pDst[x], 0.0f) + NEGATIVE_SLOPE * min(pDst[x], 0.0f);
-#endif
+		ACTIVATION(pDst[x], pDst[x]);
     )__CC";
 
     const char fully_connected_code_yxfn[] = R"__CC(
@@ -79,9 +75,7 @@ namespace neural {
                 {
                     pDst[neuronIdx] += input[(k + INPUT_FEATURE_NUM * ( i + j * INPUT_SIZE_X)) * INPUT_BATCH_NUM + batch_id] * WEIGHTS[weight_offset + weight_idx++];
                 } 
-#ifdef RELU
-        pDst[neuronIdx] = max(pDst[neuronIdx], 0.0f) + NEGATIVE_SLOPE * min(pDst[neuronIdx], 0.0f);
-#endif
+		 ACTIVATION(pDst[neuronIdx],pDst[neuronIdx]);
     )__CC";
 
     const char fully_connected_code_xb_memory[] = R"__CC(
@@ -102,9 +96,8 @@ namespace neural {
         {
             pDst[x] += input[i * INPUT_BATCH_NUM + batch_id] * weight[weightBatchIdx + i];
         }
-#ifdef RELU
-        pDst[x] = max(pDst[x], 0.0f) + NEGATIVE_SLOPE * min(pDst[x], 0.0f);
-#endif
+
+		ACTIVATION(pDst[x], pDst[x]);
     )__CC";
 
     const char fully_connected_code_xb_bx_memory[] = R"__CC(
@@ -124,11 +117,7 @@ namespace neural {
         {
             result += input[i * INPUT_BATCH_NUM + batch_id] * weight[weight_offset++];
         }
-#ifdef RELU
-        pDst[x] = max(result, 0.0f) + NEGATIVE_SLOPE * min(result, 0.0f);
-#else
-        pDst[x] = result;
-#endif
+		 ACTIVATION(pDst[x], result);
     )__CC";
 
     const char fully_connected_code_yxfn_memory[] = R"__CC(
@@ -151,11 +140,7 @@ namespace neural {
                 {
                     result += input[(k + INPUT_FEATURE_NUM * ( i + j * INPUT_SIZE_X)) * INPUT_BATCH_NUM + batch_id] * weight[weight_offset++];
                 }
-#ifdef RELU
-        pDst[x] = max(result, 0.0f) + NEGATIVE_SLOPE * min(result, 0.0f);
-#else
-        pDst[x] = result;
-#endif
+		 ACTIVATION(pDst[x], result);
     )__CC";
 
     const char fully_connected_code_yxfn_byxf_memory[] = R"__CC(
@@ -181,11 +166,7 @@ namespace neural {
                     result += input[input_idx + k * INPUT_BATCH_NUM] * weight[weight_offset++];
                 }
             }
-#ifdef RELU
-        pDst[x] = max(result, 0.0f) + NEGATIVE_SLOPE * min(result, 0.0f);
-#else
-        pDst[x] = result;
-#endif
+		 ACTIVATION(pDst[x], result);
     )__CC";
 
     const char fully_connected_code_yxfn_byxf_b8_f8_memory[] = R"__CC(
@@ -230,10 +211,6 @@ namespace neural {
         result += _data.s0 + _data.s1 + _data.s2 + _data.s3 +
                   _data.s4 + _data.s5 + _data.s6 + _data.s7;
 
-#ifdef RELU
-        pDst[x] = max(result, 0.0f) + NEGATIVE_SLOPE * min(result, 0.0f);
-#else
-        pDst[x] = result;
-#endif
+		ACTIVATION(pDst[x], result);
     )__CC";
 }

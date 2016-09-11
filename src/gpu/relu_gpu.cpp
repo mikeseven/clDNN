@@ -18,18 +18,32 @@
 #include "multidimensional_counter.h"
 #include "implementation_map.h"
 #include "kernel.h"
+#include "relu_gpu.h"
 
-namespace neural {
+namespace neural 
+{
+
+const char inline_utils_float[] = R"__CC(
+#ifdef RELU
+#define ACTIVATION(output, input) output = max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f);
+#else
+#define ACTIVATION(output, input) output = input;
+#endif
+)__CC";
+
+const char inline_utils_float_end[] = R"__CC(
+#undef ACTIVATION
+)__CC";
 
 const std::string kernelName = "Relu_GPU";
 const std::string kernelCode = R"__krnl(
-KERNEL(Relu_GPU)(const __global neural_memory* input_mem, __global neural_memory* output_mem, float negative_slope)
+KERNEL(Relu_GPU)(const __global neural_memory* input_mem, __global neural_memory* output_mem)
 {
     const __global float* input = (const __global float*)get_data(input_mem);
     __global float* output = (__global float*)get_data(output_mem);
     
     const int global_id = get_global_id(0);
-    output[global_id] = max(0.0f, input[global_id]) + negative_slope * min(input[global_id], 0.0f);
+    ACTIVATION(output[global_id], input[global_id]);
 }
 )__krnl";
 
@@ -39,16 +53,27 @@ struct relu_gpu : is_an_implementation {
 
     relu_gpu(relu &arg) : is_an_implementation(neural::type_id<relu_gpu>())
         , outer(arg)
-        , _kernel(kernelName) {}
+        , _kernel(kernelName, get_jit_constants()) {}
 
-    static void implementation(const void *ptr) {
+	gpu::jit_constants get_jit_constants() const
+	{
+		gpu::jit_constants mem_consts
+		{
+			gpu::make_jit_constant("RELU", ""),
+			gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(outer.argument.negative_slope)),
+		};
+
+		return mem_consts;
+	}
+
+    static void implementation(const void *ptr) 
+	{
         auto me = static_cast<const relu_gpu *>(ptr);
         auto& outer = me->outer;
 
         auto& input_mem = outer.input_memory(0);
         auto& output_mem = outer.output_memory(0);
 
-        float negative_slope = outer.argument.negative_slope;
         size_t dstSize = output_mem.count();
 
         int lws = 16;
@@ -57,8 +82,8 @@ struct relu_gpu : is_an_implementation {
             lws--;
         }
 
-        me->_kernel.run<gpu::input_mem, gpu::output_mem, float>
-            ({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) }, input_mem, output_mem, negative_slope);
+        me->_kernel.run<gpu::input_mem, gpu::output_mem>
+            ({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
     }
 
     static is_an_implementation *create(relu &arg) { return new relu_gpu(arg); };
@@ -69,7 +94,7 @@ struct relu_gpu : is_an_implementation {
 namespace {
 struct attach {
     attach() {
-        gpu::kernel_templates::add(kernelName, kernelCode);
+        gpu::kernel_templates::add(kernelName, inline_utils_float + kernelCode + inline_utils_float_end);
         auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
         auto val_fw = relu_gpu::create;
 
