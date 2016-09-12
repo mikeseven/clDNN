@@ -36,6 +36,8 @@ def updateTcBuildNumber(number):
 
 
 def prepareTcRestConnection(teamCityUrl, agentUser, agentPass):
+    """ Prepares read-only (verb: GET) REST connection to TeamCity server. """
+
     if agentUser != None and agentUser != '':
         passMgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
         passMgr.add_password(None, teamCityUrl, agentUser, agentPass)
@@ -44,6 +46,8 @@ def prepareTcRestConnection(teamCityUrl, agentUser, agentPass):
         urllib2.install_opener(restOpener)
 
     def prepareGetRequest(restGetRequest, **args):
+        """ Prepares and invokes GET request to REST end-point in TeamCity. """
+
         getRequestPart = unicode(restGetRequest).format(
             **{k: urllib2.quote(v, safe = '') for (k, v) in args.iteritems()})
         getRequestFragment = u'/httpAuth/app/rest/{0}'.format(getRequestPart)

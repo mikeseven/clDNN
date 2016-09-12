@@ -1,3 +1,6 @@
+#!/usr/bin/env python2
+
+
 import os
 import sys
 import json
@@ -180,6 +183,7 @@ def main( args ):
     if status == True:
         log.info('Build is still running')
     else:
+        berta_server.show_tasks_with_regressions()
         log.info('Build is complete')
     return status
 

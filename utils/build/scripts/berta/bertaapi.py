@@ -1,10 +1,13 @@
+#!/usr/bin/env python2
+
+
 """
 bertapi.py
 
 Description:
     Access Berta through xmlrpc
 """
-#!/usr/bin/python
+
 import os
 import getpass
 import json
@@ -173,6 +176,25 @@ class BertaApi():
         api_version = self.proxy.get_api_version()
 
         return api_version
+
+
+    def show_test_session_regressions(self, session_id, start = 0, limit = 100, all_performance_comparisons = False,
+                                      prev_session_id = None, prev_build_id = None, hide_disabled_tests = None,
+                                      current_result = None, prev_result = None):
+
+        test_session_regr = self.proxy.show_test_session_regressions(session_id, start, limit, all_performance_comparisons,
+                                                                     prev_session_id, prev_build_id, hide_disabled_tests,
+                                                                     current_result, prev_result)
+
+        return test_session_regr
+
+
+    def show_tasks_with_regressions(self, test_session_id, prev_session_id = None, prev_build_id = None):
+        tasks_regr = self.proxy.show_tasks_with_regressions(test_session_id, prev_session_id, prev_build_id)
+
+        return tasks_regr
+
+
 
 def save_json(file, data):
     """ Saves an object to a local JSON file """
