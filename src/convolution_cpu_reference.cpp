@@ -146,7 +146,7 @@ namespace{
 struct attach{
     attach(){
         auto key_fw = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
-        auto key_bw = std::make_tuple(engine::reference, memory::format::yxfb_f32, memory::format::yxfb_f32);
+
         auto val_fw = convolution_cpu_reference::create;
 
         implementation_map<convolution>::add( key_fw, val_fw );
