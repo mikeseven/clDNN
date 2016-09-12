@@ -12,48 +12,80 @@ from datetime import datetime
 
 
 def escapeTeamCityMsg(message):
-    """ Escapes TeamCity server messages. """
+    """ Escapes TeamCity server messages.
+
+    :param message: Message to escape.
+    :type message: str | unicode
+    :return: Escaped string that can be used in service messages sent to TeamCity.
+    :rtype: unicode
+    """
 
     if not isinstance(message, (str, unicode)) or message == u'':
-        return u'';
+        return u''
     return re.sub(ur'''['|\[\]]''', ur'|\g<0>', unicode(message)).replace(u'\n', u'|n').replace(u'\r', u'|r') \
         .replace(u'\u0085', '|x').replace(u'\u2028', '|l').replace(u'\u2029', '|p')
 
 
-def updateTcParameter(paramName, message):
-    """ Sends log service message to TeamCity which updates/adds build configuration parameter. """
+def updateTcParameter(paramName, value):
+    """ Sends log service message to TeamCity which updates/adds build configuration parameter.
+
+    :param paramName: Name of TeamCity parameter to add or update.
+    :type paramName: str | unicode
+    :param value: New value of the parameter.
+    :type value: str | unicode
+    """
 
     pName = escapeTeamCityMsg(paramName)
-    msg   = escapeTeamCityMsg(message)
+    msg   = escapeTeamCityMsg(value)
     print u"""##teamcity[setParameter name='{0}' value='{1}']""".format(pName, msg)
 
 
 def updateTcBuildNumber(number):
-    """ Sends log service message to TeamCity which updates build number for current build. """
+    """ Sends log service message to TeamCity which updates build number for current build.
+
+    :param number: New number string that will update current build number.
+    :type number: str | unicode
+    """
 
     bNumber = escapeTeamCityMsg(number)
     print u"""##teamcity[buildNumber '{0}']""".format(bNumber)
 
 
 def prepareTcRestConnection(teamCityUrl, agentUser, agentPass):
-    """ Prepares read-only (verb: GET) REST connection to TeamCity server. """
+    """ Prepares read-only (verb: GET) REST connection to TeamCity server.
 
-    if agentUser != None and agentUser != '':
+    :param teamCityUrl: URL to TeamCity server.
+    :type teamCityUrl: str
+    :param agentUser: TeamCity server credentials (user name that will be used to log on).
+    :type agentUser: str
+    :param agentPass: TeamCity server credentials (user's password that will be used to log on).
+    :type agentPass: str
+    :return: Delegate function that is able to request data from TeamCity REST end-point.
+    :rtype: (str | unicode, dict[str, str | unicode]) -> Any
+    """
+
+    if agentUser is not None and agentUser != '':
         passMgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
         passMgr.add_password(None, teamCityUrl, agentUser, agentPass)
         authHandler = urllib2.HTTPBasicAuthHandler(passMgr)
         restOpener = urllib2.build_opener(authHandler)
         urllib2.install_opener(restOpener)
 
-    def prepareGetRequest(restGetRequest, **args):
-        """ Prepares and invokes GET request to REST end-point in TeamCity. """
+    def prepareGetRequest(restGetRequest, **requestArgs):
+        """ Prepares and invokes GET request to REST end-point in TeamCity.
+        :param restGetRequest:
+        :type restGetRequest: str | unicode
+        :param requestArgs:
+        :type requestArgs: dict[str, str | unicode]
+        :return: 
+        """
 
         getRequestPart = unicode(restGetRequest).format(
-            **{k: urllib2.quote(v, safe = '') for (k, v) in args.iteritems()})
+            **{k: urllib2.quote(v, safe = '') for (k, v) in requestArgs.iteritems()})
         getRequestFragment = u'/httpAuth/app/rest/{0}'.format(getRequestPart)
         getRequestUrl = urlparse.urljoin(teamCityUrl, getRequestFragment)
 
-        getRequest = urllib2.Request(getRequestUrl, headers = {'Accept' : 'application/json'})
+        getRequest = urllib2.Request(getRequestUrl, headers = {'Accept': 'application/json'})
         return json.loads(urllib2.urlopen(getRequest).read())
 
     return prepareGetRequest
@@ -61,30 +93,29 @@ def prepareTcRestConnection(teamCityUrl, agentUser, agentPass):
 
 # Sending service messages that will add/update build parameters.
 def main(args):
-    curUtcDateTime = datetime.now() if args.use_local_time != 0 else datetime.utcnow()
+    curUtcDateTime      = datetime.now() if args.use_local_time != 0 else datetime.utcnow()
     curUtcDateTimeBerta = curUtcDateTime.strftime('%Y-%m-%d %H:%M:%S')
 
     updateTcParameter('my.build.info.utcdatetime.berta', curUtcDateTimeBerta)
     updateTcBuildNumber(args.format.format(
-            counter   = args.counter,
-            id        = args.id,
-            id_f4     = args.id[:4],
-            id_l4     = args.id[-4:],
-            id_f8     = args.id[:8],
-            id_l8     = args.id[-8:],
-            vcs_id    = args.vcs_id,
-            vcs_id_f4 = args.vcs_id[:4],
-            vcs_id_l4 = args.vcs_id[-4:],
-            vcs_id_f8 = args.vcs_id[:8],
-            vcs_id_l8 = args.vcs_id[-8:],
-            name      = args.name,
-        ))
+        counter   = args.counter,
+        id        = args.id,
+        id_f4     = args.id[:4],
+        id_l4     = args.id[-4:],
+        id_f8     = args.id[:8],
+        id_l8     = args.id[-8:],
+        vcs_id    = args.vcs_id,
+        vcs_id_f4 = args.vcs_id[:4],
+        vcs_id_l4 = args.vcs_id[-4:],
+        vcs_id_f8 = args.vcs_id[:8],
+        vcs_id_l8 = args.vcs_id[-8:],
+        name      = args.name,
+    ))
 
     # Getting name and e-mail of the person who triggered build or author of last commit (if possible).
-    lastCommitAuthId     = args.change_auth  #ID -> AD SID
-    lastCommitAuth       = ''
-    lastCommitAuthEMail  = ''
-    lastCommitPrettyAuth = ''
+    lastCommitAuthId    = args.change_auth  # ID -> AD SID
+    lastCommitAuth      = ''
+    lastCommitAuthEMail = ''
 
     if args.change_auth != '' and args.tc_url != '':
         conn = prepareTcRestConnection(args.tc_url, args.agent_user, args.agent_pass)
@@ -125,7 +156,6 @@ def main(args):
         updateTcParameter('my.build.info.change.auth.pretty', lastCommitPrettyAuth)
 
     return 0
-
 
 
 if __name__ == "__main__":
