@@ -132,7 +132,7 @@ void html::batch(const neural::memory & mem, const std::string& categories_file,
         {
             auto& category = categories[batch[img_idx][0].second];
             std::cout << img_file << " ";
-            std::cout << std::setprecision(2) << std::fixed << batch[img_idx][0].first * 100 << "%% ";
+            std::cout << std::setprecision(2) << std::fixed << batch[img_idx][0].first * 100 << "%"<<" ";
             std::cout << category << std::endl;                           
         }
 		// table cell end

@@ -333,8 +333,8 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool du
         execute({ reordered_input }).wait();
         auto time = execute_alexnet(reordered_input, output, eng, dump_hl);
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-        if(time_in_sec != 0.0)
-            std::cout << "Frames per second:" << (double)batch_size / time_in_sec << std::endl;
 		output_file.batch(output.as<const neural::memory&>( ), "names.txt", image_in_batches);
+        if (time_in_sec != 0.0)
+            std::cout << "Frames per second:" << (double)batch_size / time_in_sec << std::endl;
     }    
 }
