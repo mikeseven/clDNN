@@ -1,6 +1,7 @@
 #include "output_parser.h"
 #include <algorithm>
 #include <sstream>
+#include <iostream>
 #include <iomanip>
 #include <cerrno>
 #include <stdexcept>
@@ -123,6 +124,17 @@ void html::batch(const neural::memory & mem, const std::string& categories_file,
 			rounded_float << std::setprecision(1) << std::fixed << batch[img_idx][i].first * 100 <<"% ";
 			html_file << "<li>" << rounded_float.str( )	<< category << "</li>" << std::endl;
 		}
+
+        // for testing enviroment we also output data to std out
+        // this should be done on some global config flag set by
+        // runtime arguments, so user could have choice between
+        // html and textlog
+        {
+            auto& category = categories[batch[img_idx][0].second];
+            std::cout << img_file << " ";
+            std::cout << std::setprecision(2) << std::fixed << batch[img_idx][0].first * 100 << "%% ";
+            std::cout << category << std::endl;                           
+        }
 		// table cell end
 		html_file << "</ol>" << std::endl << "    </td>";
 	}
