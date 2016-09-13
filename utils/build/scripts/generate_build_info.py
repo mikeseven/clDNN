@@ -3,6 +3,8 @@
 
 import argparse
 import json
+import logging
+import logging.handlers
 import re
 import subprocess
 import urllib2
@@ -15,7 +17,7 @@ def escapeTeamCityMsg(message):
     """ Escapes TeamCity server messages.
 
     :param message: Message to escape.
-    :type message: str | unicode
+    :type message: string
     :return: Escaped string that can be used in service messages sent to TeamCity.
     :rtype: unicode
     """
@@ -30,9 +32,9 @@ def updateTcParameter(paramName, value):
     """ Sends log service message to TeamCity which updates/adds build configuration parameter.
 
     :param paramName: Name of TeamCity parameter to add or update.
-    :type paramName: str | unicode
+    :type paramName: string
     :param value: New value of the parameter.
-    :type value: str | unicode
+    :type value: string
     """
 
     pName = escapeTeamCityMsg(paramName)
@@ -44,11 +46,14 @@ def updateTcBuildNumber(number):
     """ Sends log service message to TeamCity which updates build number for current build.
 
     :param number: New number string that will update current build number.
-    :type number: str | unicode
+    :type number: string
     """
 
     bNumber = escapeTeamCityMsg(number)
     print u"""##teamcity[buildNumber '{0}']""".format(bNumber)
+
+
+########################################################################################################################
 
 
 def prepareTcRestConnection(teamCityUrl, agentUser, agentPass):
@@ -61,7 +66,7 @@ def prepareTcRestConnection(teamCityUrl, agentUser, agentPass):
     :param agentPass: TeamCity server credentials (user's password that will be used to log on).
     :type agentPass: str
     :return: Delegate function that is able to request data from TeamCity REST end-point.
-    :rtype: (str | unicode, dict[str, str | unicode]) -> Any
+    :rtype: (string, dict[str, string]) -> Any
     """
 
     if agentUser is not None and agentUser != '':
@@ -73,11 +78,13 @@ def prepareTcRestConnection(teamCityUrl, agentUser, agentPass):
 
     def prepareGetRequest(restGetRequest, **requestArgs):
         """ Prepares and invokes GET request to REST end-point in TeamCity.
-        :param restGetRequest:
-        :type restGetRequest: str | unicode
-        :param requestArgs:
-        :type requestArgs: dict[str, str | unicode]
-        :return: 
+
+        :param restGetRequest: GET request with optional str.format() placeholders. Request is automatically prefixed
+                               with TeamCity server URL and REST API root.
+        :type restGetRequest: string
+        :param requestArgs: Arguments for GET request in form key = value. Values are automatically quoted/escaped.
+        :type requestArgs: dict[str, string]
+        :return: Parsed response (from returned JSON).
         """
 
         getRequestPart = unicode(restGetRequest).format(
@@ -91,58 +98,106 @@ def prepareTcRestConnection(teamCityUrl, agentUser, agentPass):
     return prepareGetRequest
 
 
+########################################################################################################################
+
+
+def initLogger(loggerName = None, logFileName = None):
+    """ Initializes logging capabilities.
+
+    It should not be use more than once on the same loggerName.
+
+    :param loggerName: Name of logger. If not specified, root logger is used.
+    :type loggerName: string
+    :param logFileName: Path to log file name. If it not specified, only console output will handle log output.
+    :type logFileName: string
+    :return: Logger object.
+    """
+    logger          = logging.getLogger(loggerName)
+    loggerFormatter = logging.Formatter("%(asctime)-22s %(name)12s: %(levelname)8s:  %(message)s",
+                                        datefmt = '[%Y-%m-%d  %H:%M:%S]')
+    logger.setLevel(logging.DEBUG)
+    if logFileName is not None and logFileName != '':
+        logFileHandler = logging.handlers.RotatingFileHandler(logFileName, maxBytes = 5 * 1024 * 1024, backupCount = 2)
+        logFileHandler.setFormatter(loggerFormatter)
+        logger.addHandler(logFileHandler)
+
+    consoleHandler = logging.StreamHandler()
+    consoleHandler.setFormatter(loggerFormatter)
+    logger.addHandler(consoleHandler)
+
+    intendedLen = 120
+    formatPrefixLen = 48
+    restLen = intendedLen - formatPrefixLen
+    logger.info('=' * restLen)
+    logger.info(str.format('{0:^' + repr(restLen) + 's}', 'START'))
+    logger.info('=' * restLen)
+
+    return logger
+
+
+########################################################################################################################
+
+
 # Sending service messages that will add/update build parameters.
-def main(args):
-    curUtcDateTime      = datetime.now() if args.use_local_time != 0 else datetime.utcnow()
+def main(parsedArgs):
+    """ Main script function.
+
+    :param parsedArgs: Arguments parsed by argparse.ArgumentParser class.
+    :return: Exit code for script.
+    :rtype: int
+    """
+
+    logger              = initLogger('BUILD INFO', parsedArgs.log_file)
+    curUtcDateTime      = datetime.now() if parsedArgs.use_local_time != 0 else datetime.utcnow()
     curUtcDateTimeBerta = curUtcDateTime.strftime('%Y-%m-%d %H:%M:%S')
 
     updateTcParameter('my.build.info.utcdatetime.berta', curUtcDateTimeBerta)
-    updateTcBuildNumber(args.format.format(
-        counter   = args.counter,
-        id        = args.id,
-        id_f4     = args.id[:4],
-        id_l4     = args.id[-4:],
-        id_f8     = args.id[:8],
-        id_l8     = args.id[-8:],
-        vcs_id    = args.vcs_id,
-        vcs_id_f4 = args.vcs_id[:4],
-        vcs_id_l4 = args.vcs_id[-4:],
-        vcs_id_f8 = args.vcs_id[:8],
-        vcs_id_l8 = args.vcs_id[-8:],
-        name      = args.name,
+    updateTcBuildNumber(parsedArgs.format.format(
+        counter   = parsedArgs.counter,
+        id        = parsedArgs.id,
+        id_f4     = parsedArgs.id[:4],
+        id_l4     = parsedArgs.id[-4:],
+        id_f8     = parsedArgs.id[:8],
+        id_l8     = parsedArgs.id[-8:],
+        vcs_id    = parsedArgs.vcs_id,
+        vcs_id_f4 = parsedArgs.vcs_id[:4],
+        vcs_id_l4 = parsedArgs.vcs_id[-4:],
+        vcs_id_f8 = parsedArgs.vcs_id[:8],
+        vcs_id_l8 = parsedArgs.vcs_id[-8:],
+        name      = parsedArgs.name,
     ))
 
     # Getting name and e-mail of the person who triggered build or author of last commit (if possible).
-    lastCommitAuthId    = args.change_auth  # ID -> AD SID
+    lastCommitAuthId    = parsedArgs.change_auth  # ID -> AD SID
     lastCommitAuth      = ''
     lastCommitAuthEMail = ''
 
-    if args.change_auth != '' and args.tc_url != '':
-        conn = prepareTcRestConnection(args.tc_url, args.agent_user, args.agent_pass)
+    if parsedArgs.change_auth != '' and parsedArgs.tc_url != '':
+        conn = prepareTcRestConnection(parsedArgs.tc_url, parsedArgs.agent_user, parsedArgs.agent_pass)
         try:
-            print "Trying to get author name and e-mail from TeamCity users information (REST API)."
-            authInfo = conn('users/username:{userName}', userName = args.change_auth)
+            logger.debug("Trying to get author name and e-mail from TeamCity users information (REST API).")
+            authInfo = conn('users/username:{userName}', userName = parsedArgs.change_auth)
             lastCommitAuthId    = authInfo['username'] if authInfo['username'] != '' else lastCommitAuthId
             lastCommitAuth      = authInfo['name']
             lastCommitAuthEMail = authInfo['email']
         except:
-            print "Fetching TeamCity users information failed."
+            logger.warning("Fetching TeamCity users information failed.")
 
     if lastCommitAuth == '':
         try:
-            print "Trying to get author name from last (HEAD) commit in Git repository."
+            logger.debug("Trying to get author name from last (HEAD) commit in Git repository.")
             lastCommitAuth = subprocess.check_output(['git', 'show', '-s', '--format=%aN'],
                                                      universal_newlines = True).strip()
         except:
-            print "Fetching Git users information failed."
+            logger.warning("Fetching Git users information failed.")
 
     if lastCommitAuthEMail == '':
         try:
-            print "Trying to get author e-mail from last (HEAD) commit in Git repository."
+            logger.debug("Trying to get author e-mail from last (HEAD) commit in Git repository.")
             lastCommitAuthEMail = subprocess.check_output(['git', 'show', '-s', '--format=%aE'],
                                                           universal_newlines = True).strip()
         except:
-            print "Fetching Git users information failed."
+            logger.warning("Fetching Git users information failed.")
 
     lastCommitAuth = lastCommitAuth if lastCommitAuth != '' else lastCommitAuthId
     if lastCommitAuth != '':
@@ -170,6 +225,7 @@ if __name__ == "__main__":
     parser.add_argument('-tc',  '--tc-server-url',  dest = 'tc_url',         metavar = '<teamcity-url>',        type = unicode, default = '',                                          help = 'URL to TeamCity server.')
     parser.add_argument('-au',  '--agent-user',     dest = 'agent_user',     metavar = '<agent-user-id>',       type = unicode, default = '',                                          help = 'Temporary agent user ID for TeamCity (to access TeamCity data).')
     parser.add_argument('-ap',  '--agent-password', dest = 'agent_pass',     metavar = '<agent-pass>',          type = unicode, default = '',                                          help = 'Temporary agent password for TeamCity (to access TeamCity data).')
+    parser.add_argument('-l',   '--log-file',       dest = 'log_file',       metavar = '<log-file>',            type = unicode, default = None,                                        help = 'Path to log file.')
     parser.add_argument('--version',                                                                                            action = 'version',                                    version = '%(prog)s 1.0')
 
     args = parser.parse_args()
