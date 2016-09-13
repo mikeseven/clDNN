@@ -16,9 +16,10 @@
 
 #include "convolution_common_gpu.h"
 
-namespace neural {
+namespace neural 
+{
 
-    const char convolution_code_yxfb[] = R"__CC(
+	const char convolution_code_yxfb[] = R"__CC(
         const __global uint* input_size = get_raw(input_mem);
         const __global uint* dst_size = get_raw(dst_mem);
         const __global float* input = (const __global float*)get_data(input_mem);
@@ -78,9 +79,7 @@ namespace neural {
             }
         }
         
-#ifdef RELU
-    pDst[global_id] = max(pDst[global_id], 0.0f) + NEGATIVE_SLOPE * min(pDst[global_id], 0.0f);
-#endif
+    ACTIVATION(pDst[global_id], pDst[global_id]);
     )__CC";
 
     const char convolution_code_bfxy[] = R"__CC(
@@ -132,9 +131,7 @@ namespace neural {
         }
         // TODO!!!! change [0] from BIAS and FILTER to something that works - [0] is for temporary compilation
         pDst[global_id] += BIAS[0][output_feature_idx];
-#ifdef RELU
-    pDst[global_id] = max(pDst[global_id], 0.0f) + NEGATIVE_SLOPE * min(pDst[global_id], 0.0f);
-#endif
+		ACTIVATION(pDst[global_id], pDst[global_id]);
     )__CC";
 
     const char convolution_code_yxfb_memory[] = R"__CC(
@@ -203,11 +200,7 @@ namespace neural {
                 }
             }
         }
-#ifdef RELU
-        pDst[global_id] = max(result, 0.0f) + NEGATIVE_SLOPE * min(result, 0.0f);
-#else
-        pDst[global_id] = result;
-#endif
+		ACTIVATION(pDst[global_id], result);
     )__CC";
 
     const char convolution_code_yxfb_yxoi_memory[] = R"__CC(
@@ -272,11 +265,7 @@ namespace neural {
                 }
             }
         }
-#ifdef RELU
-        pDst[global_id] = max(result, 0.0f) + NEGATIVE_SLOPE * min(result, 0.0f);
-#else
-        pDst[global_id] = result;
-#endif;
+		ACTIVATION(pDst[global_id], result);
     )__CC";
 
     const char convolution_code_yxfb_oyxi_memory[] = R"__CC(
@@ -342,11 +331,7 @@ namespace neural {
                 }
             }
         }
-#ifdef RELU
-        pDst[global_id] = max(result, 0.0f) + NEGATIVE_SLOPE * min(result, 0.0f);
-#else
-        pDst[global_id] = result;
-#endif
+		ACTIVATION(pDst[global_id], result);
     )__CC";
 
     const char convolution_code_yxfb_yxoi_b8_memory[] = R"__CC(
@@ -444,21 +429,21 @@ namespace neural {
 
         ADD_BIAS_8(_data0, bias[ofm_offset + sub_group_id]);
         ADD_BIAS_8(_data1, bias[ofm_offset + sub_group_id + 8]);
-#ifdef RELU
+
 #define RELU_8(_result) \
 { \
-        _result.s0 = max(_result.s0, 0.0f) + NEGATIVE_SLOPE * min(_result.s0, 0.0f); \
-        _result.s1 = max(_result.s1, 0.0f) + NEGATIVE_SLOPE * min(_result.s1, 0.0f); \
-        _result.s2 = max(_result.s2, 0.0f) + NEGATIVE_SLOPE * min(_result.s2, 0.0f); \
-        _result.s3 = max(_result.s3, 0.0f) + NEGATIVE_SLOPE * min(_result.s3, 0.0f); \
-        _result.s4 = max(_result.s4, 0.0f) + NEGATIVE_SLOPE * min(_result.s4, 0.0f); \
-        _result.s5 = max(_result.s5, 0.0f) + NEGATIVE_SLOPE * min(_result.s5, 0.0f); \
-        _result.s6 = max(_result.s6, 0.0f) + NEGATIVE_SLOPE * min(_result.s6, 0.0f); \
-        _result.s7 = max(_result.s7, 0.0f) + NEGATIVE_SLOPE * min(_result.s7, 0.0f); \
+        ACTIVATION(_result.s0, _result.s0); \
+        ACTIVATION(_result.s1, _result.s1); \
+        ACTIVATION(_result.s2, _result.s2); \
+        ACTIVATION(_result.s3, _result.s3); \
+        ACTIVATION(_result.s4, _result.s4); \
+        ACTIVATION(_result.s5, _result.s5); \
+        ACTIVATION(_result.s6, _result.s6); \
+        ACTIVATION(_result.s7, _result.s7); \
 }
         RELU_8(_data0);
         RELU_8(_data1);
-#endif
+
         intel_sub_group_block_write8((__global uint*)pDst + out_id, as_uint8(_data0));
         intel_sub_group_block_write8((__global uint*)pDst + out_id + 8 * batch_num, as_uint8(_data1));
     )__CC";
@@ -590,21 +575,21 @@ namespace neural {
 
         ADD_BIAS_8(_data0, bias[ofm_offset + sub_group_id]);
         ADD_BIAS_8(_data1, bias[ofm_offset + sub_group_id + 8]);
-#ifdef RELU
+
 #define RELU_8(_result) \
 { \
-        _result.s0 = max(_result.s0, 0.0f) + NEGATIVE_SLOPE * min(_result.s0, 0.0f); \
-        _result.s1 = max(_result.s1, 0.0f) + NEGATIVE_SLOPE * min(_result.s1, 0.0f); \
-        _result.s2 = max(_result.s2, 0.0f) + NEGATIVE_SLOPE * min(_result.s2, 0.0f); \
-        _result.s3 = max(_result.s3, 0.0f) + NEGATIVE_SLOPE * min(_result.s3, 0.0f); \
-        _result.s4 = max(_result.s4, 0.0f) + NEGATIVE_SLOPE * min(_result.s4, 0.0f); \
-        _result.s5 = max(_result.s5, 0.0f) + NEGATIVE_SLOPE * min(_result.s5, 0.0f); \
-        _result.s6 = max(_result.s6, 0.0f) + NEGATIVE_SLOPE * min(_result.s6, 0.0f); \
-        _result.s7 = max(_result.s7, 0.0f) + NEGATIVE_SLOPE * min(_result.s7, 0.0f); \
+        ACTIVATION(_result.s0, _result.s0); \
+        ACTIVATION(_result.s1, _result.s1); \
+        ACTIVATION(_result.s2, _result.s2); \
+        ACTIVATION(_result.s3, _result.s3); \
+        ACTIVATION(_result.s4, _result.s4); \
+        ACTIVATION(_result.s5, _result.s5); \
+        ACTIVATION(_result.s6, _result.s6); \
+        ACTIVATION(_result.s7, _result.s7); \
 }
         RELU_8(_data0);
         RELU_8(_data1);
-#endif
+
         intel_sub_group_block_write8((__global uint*)pDst + out_id, as_uint8(_data0));
         intel_sub_group_block_write8((__global uint*)pDst + out_id + 8 * batch_num, as_uint8(_data1));
     )__CC";
@@ -689,10 +674,6 @@ namespace neural {
         result += _data.s0 + _data.s1 + _data.s2 + _data.s3 +
                   _data.s4 + _data.s5 + _data.s6 + _data.s7;
 
-#ifdef RELU
-    pDst[global_id] = max(result, 0.0f) + NEGATIVE_SLOPE * min(result, 0.0f);
-#else
-    pDst[global_id] = result;
-#endif
+	ACTIVATION(pDst[global_id], result);
     )__CC";
 }

@@ -17,6 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
 #include "fully_connected_common_gpu.h"
+#include "relu_gpu.h"
 #include "implementation_map.h"
 #include "kernel.h"
 
@@ -268,14 +269,14 @@ namespace neural {
 namespace {
     struct attach {
         attach() {
-            gpu::kernel_templates::add(kernelName_xb, kernelCode_xb_Begin + fully_connected_code_xb + kernelCode_End);
-            gpu::kernel_templates::add(kernelName_xb_bx, kernelCode_xb_bx_Begin + fully_connected_code_xb_bx + kernelCode_End);
-            gpu::kernel_templates::add(kernelName_yxfn, kernelCode_yxfn_Begin + fully_connected_code_yxfn + kernelCode_End);
-            gpu::kernel_templates::add(kernelName_xb_memory, kernelCode_xb_memory_Begin + fully_connected_code_xb_memory + kernelCode_End);
-            gpu::kernel_templates::add(kernelName_xb_bx_memory, kernelCode_xb_bx_memory_Begin + fully_connected_code_xb_bx_memory + kernelCode_End);
-            gpu::kernel_templates::add(kernelName_yxfn_memory, kernelCode_yxfn_memory_Begin + fully_connected_code_yxfn_memory + kernelCode_End);
-            gpu::kernel_templates::add(kernelName_yxfn_byxf_memory, kernelCode_yxfn_byxf_memory_Begin + fully_connected_code_yxfn_byxf_memory + kernelCode_End);
-            gpu::kernel_templates::add(kernelName_yxfn_byxf_b8_f8_memory, kernelCode_yxfn_byxf_b8_f8_memory_Begin + fully_connected_code_yxfn_byxf_b8_f8_memory + kernelCode_End);
+            gpu::kernel_templates::add(kernelName_xb, inline_utils_float + kernelCode_xb_Begin + fully_connected_code_xb + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(kernelName_xb_bx, inline_utils_float + kernelCode_xb_bx_Begin + fully_connected_code_xb_bx + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(kernelName_yxfn, inline_utils_float + kernelCode_yxfn_Begin + fully_connected_code_yxfn + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(kernelName_xb_memory, inline_utils_float + kernelCode_xb_memory_Begin + fully_connected_code_xb_memory + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(kernelName_xb_bx_memory, inline_utils_float + kernelCode_xb_bx_memory_Begin + fully_connected_code_xb_bx_memory + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(kernelName_yxfn_memory, inline_utils_float + kernelCode_yxfn_memory_Begin + fully_connected_code_yxfn_memory + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(kernelName_yxfn_byxf_memory, inline_utils_float + kernelCode_yxfn_byxf_memory_Begin + fully_connected_code_yxfn_byxf_memory + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(kernelName_yxfn_byxf_b8_f8_memory, inline_utils_float + kernelCode_yxfn_byxf_b8_f8_memory_Begin + fully_connected_code_yxfn_byxf_b8_f8_memory + kernelCode_End + inline_utils_float_end);
 
             auto val_fw = fully_connected_gpu::create;
 
