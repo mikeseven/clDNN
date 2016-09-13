@@ -5,7 +5,7 @@ import os
 import sys
 import json
 from datetime import datetime
-import bertaapi
+import berta_api
 import getpass
 import textwrap
 import logging
@@ -102,7 +102,7 @@ def init_settings(args):
 
         # Initialize the Berta class
         global berta_server
-        berta_server = bertaapi.BertaApi(settings['berta_server_url'], username, passwd)
+        berta_server = berta_api.BertaApi(settings['berta_server_url'], username, passwd)
         if berta_server == None:
             log.error('Failed to create berta server ' + settings['berta_server_url'])
             return False

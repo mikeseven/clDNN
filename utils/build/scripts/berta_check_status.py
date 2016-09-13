@@ -1,22 +1,24 @@
 #!/usr/bin/env python2
 
 
-import os
-import sys
-import json
-import bertaapi
+import argparse
 import getpass
-import textwrap
+import json
 import logging
 import logging.handlers
-import time
-import argparse
+import os
+import sys
 
-settings = {} # Global settings file
-log = None # Global log handle
-berta_server = None # Global BertaApi class
+import berta_api
+import teamcity_utils as tcu
 
-def load_json(file, data=None):
+
+settings = {}        # Global settings file
+log = None           # Global log handle
+berta_server = None  # Global BertaApi class
+
+
+def load_json(file, data = None):
     """ Loads a local JSON file using the specified file key. A default
     JSON data object can be optionally passed in so default properties
     can be guranteed to exist """
@@ -71,7 +73,7 @@ def init_settings( args ):
 
         # Initialize the Berta class
         global berta_server
-        berta_server = bertaapi.BertaApi(settings['berta_server'], username, passwd)
+        berta_server = berta_api.BertaApi(settings['berta_server'], username, passwd)
         if berta_server == None:
             log.error('Failed to create berta server object for ' + settings['berta_server'])
             return False
@@ -132,14 +134,14 @@ def get_build_status( build_id, stream_names ):
 
     # Loop through the test sessions and find the one that matches the stream id
     status = True
-    found_session = False
+    found_sessions = []
     # Walk through each test session and find the one that matches the specified session ID
     for session in test_sessions:
         # Loop over the streams
         for stream in streams:        
             if session['stream_id'] == stream['id']:
                 # Found the session matching session_id.  Now check if it is still running or not
-                found_session = True
+                found_sessions.append(session['id'])
 
                 if session['still_testing']:
                     # Tests are still running
@@ -148,16 +150,47 @@ def get_build_status( build_id, stream_names ):
                     # Testing is complete
                     status = False 
 
-    if found_session == False:
+    if len(found_sessions) == 0:
         # If test session not found then probably script didn't receive complete test_session list. 
         # Return True so it will try again next time
         log.error('Failed to find any test sessions associated with streams ' + stream_names )
         status = True
 
-    return status
-    
+    return status, found_sessions
+
+def getRegressions(sessionIds):
+    """ Fetches information about all regression from specific test sessions.
+
+    :param sessionIds: List of identifiers of test sessions to check.
+    :type sessionIds: list[int]
+    """
+    try:
+        allRegressions = []
+        allRegressionsCount = 0
+        for sessionId in sessionIds:
+            regressions, regressionsCount = berta_server.show_test_session_regressions(sessionId)
+            allRegressions.extend(regressions)
+            allRegressionsCount += regressionsCount
+
+        if allRegressionsCount > 0:
+            testSuite = tcu.reportTcTestSuiteStart('Berta Test Changes')
+            for regression in allRegressions:
+                testCase = testSuite.reportTestStart(regression['test_case_name'])
+                testMessage = 'Test:        {0}\nTest status: {1}\n\nTest change: {2} -> {1}' \
+                    .format(regression['cmd_line'], regression['result'], regression['prev_result'])
+                if regression['prev_status_changes'] > 0:
+                    testCase.reportStdOut(testMessage)
+                else:
+                    testCase.reportFailed('REGRESSION', testMessage)
+            testSuite.finish()
+
+        return False
+    except:
+        log.error('Fetching list of regressions failed for one of test sessions (ids = {})'.format(sessionIds))
+        return True
+
+
 def main( args ):
-    
     init_logging()
     success = init_settings( args )
     
@@ -177,13 +210,14 @@ def main( args ):
         log.error('Specified build %s doesn\'t exist in Berta product_id = %. Exiting with code (1) ' %(settings['build_version'],settings['product']))
         return 1
 
-    status = get_build_status( build['id'], settings['berta_streams'])
+    status, found_sessions = get_build_status( build['id'], settings['berta_streams'])
+    if not status:
+        status = getRegressions(found_sessions[-1:])
 
     # Exit
-    if status == True:
+    if status:
         log.info('Build is still running')
     else:
-        berta_server.show_tasks_with_regressions()
         log.info('Build is complete')
     return status
 
