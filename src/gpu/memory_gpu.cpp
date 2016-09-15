@@ -25,17 +25,14 @@ namespace neural { namespace gpu {
         _data_size(neural_memory::datasize(arg)),
         _buffer(context()->context(), CL_MEM_READ_WRITE, _buffer_size),
         _mapped_ptr(nullptr) {
-        gpu_buffer::lock();
-        gpu_buffer::release();
+        auto header = neural_memory::create_header(arg);
+        cl::copy(context()->queue(), header.begin(), header.end(), _buffer);
     }
 
     void* gpu_buffer::lock() {
         std::lock_guard<std::mutex> locker(_mutex);
         if (0 == _ref_count) {
-            cl::Event end_event;
-            _mapped_ptr = reinterpret_cast<neural_memory*>(context()->queue().enqueueMapBuffer(_buffer, true, CL_MAP_WRITE, 0, _buffer_size, 0, &end_event));
-            end_event.wait();
-            _mapped_ptr->initialize(_argument);
+            _mapped_ptr = reinterpret_cast<neural_memory*>(context()->queue().enqueueMapBuffer(_buffer, CL_TRUE, CL_MAP_WRITE, 0, _buffer_size));
         }
         _ref_count++;
         return _mapped_ptr->pointer();
@@ -45,9 +42,7 @@ namespace neural { namespace gpu {
         std::lock_guard<std::mutex> locker(_mutex);
         _ref_count--;
         if (0 == _ref_count) {
-            cl::Event end_event;
-            context()->queue().enqueueUnmapMemObject(_buffer, _mapped_ptr, 0, &end_event);
-            end_event.wait();
+            context()->queue().enqueueUnmapMemObject(_buffer, _mapped_ptr);
             _mapped_ptr = nullptr;
         }
     }

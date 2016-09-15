@@ -81,8 +81,7 @@ struct lrn_gpu : is_an_implementation {
 
         auto size = outer.argument.size;
 
-        vector<int32_t> help_input_offset({ outer.argument.input_offset });
-        help_input_offset.feature[0] -= static_cast<int32_t>(size / 2);
+        cl_int help_input_offset = outer.argument.input_offset.feature[0] - static_cast<cl_int>(size / 2);
 
         auto k = outer.argument.k;
         auto alpha = outer.argument.alpha;
@@ -101,7 +100,7 @@ struct lrn_gpu : is_an_implementation {
         switch (padding) {
         case padding::zero:
         {
-            me->_kernel.run<gpu::input_mem, gpu::output_mem, cl_uint, cl_float, cl_float, cl_float, int32_t>
+            me->_kernel.run<gpu::input_mem, gpu::output_mem, cl_uint, cl_float, cl_float, cl_float, cl_int>
                 ({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) },
                     input_mem,
                     output_mem,
@@ -109,7 +108,7 @@ struct lrn_gpu : is_an_implementation {
                     k,
                     alpha,
                     beta,
-                    help_input_offset.feature[0]);
+                    help_input_offset);
             break;
         }
         default:

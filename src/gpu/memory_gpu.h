@@ -100,6 +100,18 @@ struct neural_memory {
         std::copy(std::begin(arg.size.raw), std::end(arg.size.raw), arr_begin(raw_begin(), raw_size()));
     }
 
+    static std::vector<cl_uint> create_header(const neural::memory::arguments& arg) {
+        std::vector<cl_uint> result {
+            static_cast<cl_uint>(arg.format),
+            static_cast<cl_uint>(arg.size.batch.size()),
+            static_cast<cl_uint>(arg.size.batch.size() + arg.size.feature.size()),
+            static_cast<cl_uint>(arg.size.raw.size()),
+            static_cast<cl_uint>(get_data_offset(arg)),
+        };
+        result.insert(result.end(), arg.size.raw.begin(), arg.size.raw.end());
+        return result;
+    }
+
     static size_t header_size() {
         return sizeof(neural_memory) - sizeof(neural_memory::data);
     }

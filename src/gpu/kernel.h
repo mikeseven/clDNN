@@ -276,14 +276,12 @@ public:
     template<typename... Args>
     void run(const kernel_execution_options& options, Args... args) const {
         auto clkernel = kernels_cache::get().get_kernel(context(), _kernel_id);
-        setArgs<0>(clkernel, std::forward<Args>(args)...);
-
         auto enable_profiling = context()->profiling_enabled();
         neural::instrumentation::timer<> kernel_timer;
         try {
-            cl::Event end_event;
-            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), 0, &end_event);
-            end_event.wait();
+            setArgs<0>(clkernel, std::forward<Args>(args)...);
+
+            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range());
         } catch(cl::Error err) {
             std::cerr << "ERROR:" << err.what() << std::endl;
         }

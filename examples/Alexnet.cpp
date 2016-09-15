@@ -258,7 +258,14 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         fc8,
         softmax,output }, workers).wait();
 
+    //GPU primitives scheduled in unblocked manner
+    auto scheduling_time(timer_execution.uptime());
+
+    //OCL buffers mapping blocks until all primitives are completed
+    output.as<const neural::memory&>().pointer<float>();
+
     auto execution_time(timer_execution.uptime());
+    std::cout << "Alexnet scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
     std::cout << "Alexnet execution finished in " << instrumentation::to_string(execution_time) << std::endl;
     //instrumentation::log_memory_to_file(conv1.output[0],"conv1");
     if (dump_hl)
@@ -303,7 +310,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
 void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool dump_hl)
 {
     auto input = memory::allocate({ engine::reference, memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3, } });
-    auto output = memory::allocate({ engine::reference, memory::format::xb_f32,{ batch_size,{ 1000 } } });
+    auto output = memory::allocate({ eng, memory::format::xb_f32,{ batch_size,{ 1000 } } });
     auto img_list = get_directory_images(img_dir);
     if (img_list.empty())
         throw std::runtime_error("Specified path doesn't contain image data\n");
@@ -325,9 +332,8 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool du
         auto reordered_input = reorder::create(
         {
             engine::reference,
-            memory::format::yxfb_f32,
-            input.as<const memory&>().argument.size, // do not resize
-            input
+            input,
+            memory::allocate({eng, memory::format::yxfb_f32, input.as<const memory&>().argument.size }) // do not resize
         });
         // reorder data
         execute({ reordered_input }).wait();
