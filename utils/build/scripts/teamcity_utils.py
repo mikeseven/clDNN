@@ -50,6 +50,7 @@ def updateTcBuildNumber(number):
     print u"""##teamcity[buildNumber '{0}']""".format(bNumber)
 
 
+########################################################################################################################
 
 
 def reportTcTestSuiteStart(suiteName):
@@ -242,7 +243,6 @@ def reportTcTestSuiteStart(suiteName):
                 self.name = None
 
     return TestSuiteReporter(suiteName)
-
 
 
 ########################################################################################################################

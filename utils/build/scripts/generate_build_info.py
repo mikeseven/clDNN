@@ -12,6 +12,8 @@ import teamcity_utils as tcu
 def main(parsedArgs):
     """ Main script function.
 
+    The script generates additional build information useful for TeamCity and Berta.
+
     :param parsedArgs: Arguments parsed by argparse.ArgumentParser class.
     :return: Exit code for script.
     :rtype: int
