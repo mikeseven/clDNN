@@ -243,10 +243,23 @@ primitive read_file_v3(engine::type eng, std::ifstream &rfile, file_header &file
         break;
     }
     case memory::format::byxf_f32:
+    case memory::format::yxfb_f32:
     {
-        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ eng, format,{ static_cast<uint32_t>(array[0]),
+        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ eng, format,{ static_cast<uint32_t>(array[0]), // batch
         { static_cast<uint32_t>(array[2]), static_cast<uint32_t>(array[3]) }, // kernel spatials x, y
-        { static_cast<uint32_t>(array[1]) } } })); // batch, fm
+        { static_cast<uint32_t>(array[1]) } } })); // fm
+        break;
+    }
+    case memory::format::xb_f32:
+    {
+        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments(
+        { eng, format,
+        {
+            static_cast<uint32_t>(array[0]),
+            { { static_cast<uint32_t>(array[1]) } },
+            1
+        }
+        }));
         break;
     }
     default:
@@ -306,10 +319,19 @@ void file::serialize(const primitive& data, const std::string& name)
     fstream.write(reinterpret_cast<const char*>(&fh),sizeof(fh));
     fstream.write(reinterpret_cast<const char*>(&fh_ext), sizeof(fh_ext));
     std::vector<uint64_t> array(fh.dimension);
-    const auto dimension_offset = size.raw.size() - 4; // TODO!!! do it better way, this is needed because weights can have 5 dimensions with batch dimension always equal 1!
-    for (auto ar = 0; ar < fh.dimension; ar++)
+    if (format == memory::format::type::xb_f32 ||
+        format == memory::format::type::bx_f32)
     {
-        array[ar] = size.raw[dimension_offset + ar];
+        array[0] = size.batch[0];
+        array[1] = size.spatial[0];
+    }
+    else
+    {
+        const auto dimension_offset = size.raw.size() - fh.dimension; // TODO!!! do it better way, this is needed because weights can have 5 dimensions with batch dimension always equal 1!
+        for (auto ar = 0; ar < fh.dimension; ar++)
+        {
+            array[ar] = size.raw[dimension_offset + ar];
+        }
     }
     fstream.write(reinterpret_cast<const char*>(&array[0]), array.size()*sizeof(uint64_t));
     auto ptr = data.as<const memory&>().pointer<char>();

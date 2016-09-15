@@ -76,6 +76,17 @@ KERNEL (Fully_Connected_GPU_xb_bx_b8_memory)(
 {
 )__krnl";
 
+const std::string kernelName_xb_xb_b8_x8_memory = "Fully_Connected_GPU_xb_xb_b8_x8_memory";
+const std::string kernelCode_xb_xb_b8_x8_memory_Begin = R"__krnl(
+__attribute__((reqd_work_group_size(8, 1, 1)))
+KERNEL (Fully_Connected_GPU_xb_xb_b8_x8_memory)(
+    const __global neural_memory* input_mem, 
+    __global neural_memory* dst_mem, 
+    const __global neural_memory* weights_mem,
+    const __global neural_memory* bias_mem)
+{
+)__krnl";
+
 const std::string kernelName_yxfn_memory = "Fully_Connected_GPU_yxfn_memory";
 const std::string kernelCode_yxfn_memory_Begin = R"__krnl(
 KERNEL (Fully_Connected_GPU_yxfn_memory)(
@@ -116,7 +127,7 @@ namespace neural {
         fully_connected &outer;
         bool inline_memory;
         gpu::kernel _kernel;
-
+       
         fully_connected_gpu(fully_connected &arg)
             : is_an_implementation(neural::type_id<fully_connected_gpu>())
             , outer(arg)
@@ -132,7 +143,7 @@ namespace neural {
             // input
             auto& input_mem = outer.input_memory(0);
             auto& weight_mem = outer.input_memory(1);
-
+            auto& output_mem = outer.output_memory(0);
             if (input_mem.argument.format == memory::format::yxfb_f32) {
                 if (weight_mem.argument.format == memory::format::byxf_f32)
                 {
@@ -144,6 +155,14 @@ namespace neural {
                     {
                         return kernelName_yxfn_byxf_memory;
                     }
+                }
+                else if (weight_mem.argument.format == memory::format::yxfb_f32)
+                {
+                    if (input_mem.argument.size.batch[0] % 8 == 0 &&
+                        (output_mem.count() / output_mem.argument.size.batch[0]) % 8 == 0)
+                        return kernelName_xb_xb_b8_x8_memory;
+                    else
+                        throw std::runtime_error("yxfb_f32 for input not multiple of 64 not implemented yet");
                 }
                 else
                 {
@@ -159,6 +178,14 @@ namespace neural {
                     }
                     else
                         return inline_memory ? kernelName_xb_bx : kernelName_xb_bx_memory;
+                }
+                else if (outer.input_memory(1).argument.format == memory::format::xb_f32)
+                {
+                    if (input_mem.argument.size.batch[0] % 8 == 0 &&
+                        (output_mem.count() / output_mem.argument.size.batch[0]) % 8 == 0)
+                        return kernelName_xb_xb_b8_x8_memory;
+                    else
+                        throw std::runtime_error("xb_f32 for input not multiple of 64 not implemented yet");
                 }
                 else
                     return inline_memory ? kernelName_xb : kernelName_xb_memory;
@@ -182,6 +209,15 @@ namespace neural {
                 gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", std::to_string(input_mem.count() / input_mem.argument.size.batch[0]))
             };
 
+            if (weight_mem.argument.format == memory::format::type::yxfb_f32 ||
+                weight_mem.argument.format == memory::format::type::xb_f32)
+            {
+                auto out_elements_count_per_batch = output_mem.count() / output_mem.argument.size.batch[0];
+                if (out_elements_count_per_batch % 16 == 0)
+                    mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", std::to_string(16)));
+                else if(out_elements_count_per_batch % 8 == 0)
+                    mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", std::to_string(8)));
+            }
             if (outer.argument.use_relu)
             {
                 mem_consts.add_constant(gpu::make_jit_constant("RELU", ""));
@@ -229,6 +265,18 @@ namespace neural {
                 {
                     me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
                         ({ output_bufSize, 8 }, input_mem, output_mem, weight_mem, bias_mem);
+                }
+                else if (weight_mem.argument.format == memory::format::yxfb_f32 ||
+                        weight_mem.argument.format == memory::format::xb_f32)
+                {
+                    auto out_elements_count_per_batch = output_mem.count() / output_mem.argument.size.batch[0];
+                    auto neurons_per_workitem=1;
+                    if (out_elements_count_per_batch % 16 == 0)
+                        neurons_per_workitem = 16;
+                    else if (out_elements_count_per_batch % 8 == 0)
+                        neurons_per_workitem = 8;
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                        ({ output_bufSize / neurons_per_workitem, 8 }, input_mem, output_mem, weight_mem, bias_mem);
                 }
                 else
                 {
@@ -292,6 +340,7 @@ namespace {
             gpu::kernel_templates::add(kernelName_xb_memory, inline_utils_float + kernelCode_xb_memory_Begin + fully_connected_code_xb_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_xb_bx_memory, inline_utils_float + kernelCode_xb_bx_memory_Begin + fully_connected_code_xb_bx_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_xb_bx_b8_memory, inline_utils_float + kernelCode_xb_bx_b8_memory_Begin + fully_connected_code_xb_bx_b8_memory + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(kernelName_xb_xb_b8_x8_memory, inline_utils_float + kernelCode_xb_xb_b8_x8_memory_Begin + fully_connected_code_xb_xb_b8_x8_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_yxfn_memory, inline_utils_float + kernelCode_yxfn_memory_Begin + fully_connected_code_yxfn_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_yxfn_byxf_memory, inline_utils_float + kernelCode_yxfn_byxf_memory_Begin + fully_connected_code_yxfn_byxf_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_yxfn_byxf_b8_f8_memory, inline_utils_float + kernelCode_yxfn_byxf_b8_f8_memory_Begin + fully_connected_code_yxfn_byxf_b8_f8_memory + kernelCode_End + inline_utils_float_end);

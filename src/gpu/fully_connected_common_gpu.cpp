@@ -162,6 +162,58 @@ namespace neural {
 		 ACTIVATION(pDst[x], result);
     )__CC";
 
+    const char fully_connected_code_xb_xb_b8_x8_memory[] = R"__CC(
+        __global float* input = (__global float*)get_data(input_mem);
+        __global float* pDst = (__global float*)get_data(dst_mem);
+
+        const __global float* weight = (const __global float*)get_data(weights_mem);
+        const __global float* bias = (const __global float*)get_data(bias_mem);
+
+        const uint global_id = get_global_id(0);
+        const int x = get_global_id(0);
+        const uint batch_id = x % INPUT_BATCH_NUM;
+
+        uint neuronIdx = (x / INPUT_BATCH_NUM) * NEURONS_PER_WORK_ITEM;
+
+        const uint sub_group_id = get_local_id(0);
+        const uint batch_num = INPUT_BATCH_NUM;
+
+        const int out_id = (global_id / batch_num) * NEURONS_PER_WORK_ITEM * batch_num + batch_id;
+
+        const int ofm_offset = (global_id * NEURONS_PER_WORK_ITEM) / batch_num;
+
+        float8 _data0 = 0.f;
+#if NEURONS_PER_WORK_ITEM > 8
+        float8 _data1 = 0.f;
+#endif
+
+        uint weight_offset = sub_group_id + neuronIdx;
+
+        for(uint h = 0; h < INPUT_ELEMENTS_COUNT; h++)
+        {
+            DOT_PRODUCT_8(_data0, input[h * batch_num + batch_id], weight[weight_offset])
+#if NEURONS_PER_WORK_ITEM > 8
+            DOT_PRODUCT_8(_data1, input[h * batch_num + batch_id], weight[weight_offset + 8])
+#endif
+            weight_offset+= WEIGHTS_BATCH_NUM;
+        }
+
+
+    ADD_BIAS_8(_data0, bias[neuronIdx + sub_group_id]);
+#if NEURONS_PER_WORK_ITEM > 8
+    ADD_BIAS_8(_data1, bias[neuronIdx + sub_group_id + 8]);
+#endif
+    RELU_8(_data0);
+#if NEURONS_PER_WORK_ITEM > 8
+    RELU_8(_data1);
+#endif
+ 
+    intel_sub_group_block_write8((__global uint*)pDst + out_id, as_uint8(_data0));
+#if NEURONS_PER_WORK_ITEM > 8
+    intel_sub_group_block_write8((__global uint*)pDst + out_id + 8 * batch_num, as_uint8(_data1));
+#endif
+    )__CC";
+
     const char fully_connected_code_yxfn_memory[] = R"__CC(
         __global float* input = (__global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);
