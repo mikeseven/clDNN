@@ -162,7 +162,7 @@ namespace neural {
                         (output_mem.count() / output_mem.argument.size.batch[0]) % 8 == 0)
                         return kernelName_xb_xb_b8_x8_memory;
                     else
-                        throw std::runtime_error("yxfb_f32 for input not multiple of 64 not implemented yet");
+                        return inline_memory ? kernelName_yxfn : kernelName_yxfn_memory;
                 }
                 else
                 {
@@ -185,7 +185,7 @@ namespace neural {
                         (output_mem.count() / output_mem.argument.size.batch[0]) % 8 == 0)
                         return kernelName_xb_xb_b8_x8_memory;
                     else
-                        throw std::runtime_error("xb_f32 for input not multiple of 64 not implemented yet");
+                        return inline_memory ? kernelName_xb : kernelName_xb_memory;
                 }
                 else
                     return inline_memory ? kernelName_xb : kernelName_xb_memory;
@@ -269,14 +269,29 @@ namespace neural {
                 else if (weight_mem.argument.format == memory::format::yxfb_f32 ||
                         weight_mem.argument.format == memory::format::xb_f32)
                 {
-                    auto out_elements_count_per_batch = output_mem.count() / output_mem.argument.size.batch[0];
-                    auto neurons_per_workitem=1;
-                    if (out_elements_count_per_batch % 16 == 0)
-                        neurons_per_workitem = 16;
-                    else if (out_elements_count_per_batch % 8 == 0)
-                        neurons_per_workitem = 8;
-                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-                        ({ output_bufSize / neurons_per_workitem, 8 }, input_mem, output_mem, weight_mem, bias_mem);
+                    if (input_mem.argument.size.batch[0] % 8 == 0)
+                    {
+                        auto out_elements_count_per_batch = output_mem.count() / output_mem.argument.size.batch[0];
+                        auto neurons_per_workitem = 1;
+                        if (out_elements_count_per_batch % 16 == 0)
+                            neurons_per_workitem = 16;
+                        else if (out_elements_count_per_batch % 8 == 0)
+                            neurons_per_workitem = 8;
+                        me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                            ({ output_bufSize / neurons_per_workitem, 8 }, input_mem, output_mem, weight_mem, bias_mem);
+
+                    }
+                    else
+                    {
+                        if (me->inline_memory) {
+                            me->_kernel.run<gpu::input_mem, gpu::output_mem >
+                                ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
+                        }
+                        else {
+                            me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                                ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
+                        }
+                    }
                 }
                 else
                 {
