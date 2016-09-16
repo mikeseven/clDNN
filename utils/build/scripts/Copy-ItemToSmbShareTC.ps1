@@ -120,9 +120,10 @@ function resizeTcPsConsole() {
     }
 }
 
-Write-Verbose ('=' * 111);
-Write-Verbose 'Resizing Teamcity console (powershell runner console) to at least 500 lines.';
 resizeTcPsConsole;
+
+Write-Verbose ('=' * 111);
+Write-Verbose 'Resizing Teamcity console (powershell runner console) to at least 500 characters per line.';
 
 # Get scripts location.
 if (![string]::IsNullOrEmpty($PSCmdlet.MyInvocation.MyCommand.Path)) {

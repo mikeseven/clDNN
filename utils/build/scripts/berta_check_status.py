@@ -28,6 +28,7 @@ import logging
 import logging.handlers
 import os
 import sys
+import time
 
 import berta_api
 import teamcity_utils as tcu
@@ -178,12 +179,15 @@ def get_build_status( build_id, stream_names ):
 
     return status, found_sessions
 
+
 def getRegressions(sessionIds):
     """ Fetches information about all regression from specific test sessions.
 
     :param sessionIds: List of identifiers of test sessions to check.
     :type sessionIds: list[int]
     """
+
+    log.debug('getRegressions(sessionIds = {0})'.format(repr(sessionIds)))
     try:
         allRegressions = []
         allRegressionsCount = 0
@@ -193,6 +197,8 @@ def getRegressions(sessionIds):
             allRegressionsCount += regressionsCount
 
         if allRegressionsCount > 0:
+            log.debug('Analysing possible regressions (count: {0:>4d})'.format(allRegressionsCount))
+
             testSuite = tcu.reportTcTestSuiteStart('Berta Test Changes')
             for regression in allRegressions:
                 testCase = testSuite.reportTestStart(regression['test_case_name'])
@@ -224,13 +230,21 @@ def main( args ):
         log.error('Specified product %s do not exists in Berta. Exiting with code (1)' % (settings['product']))
         return 1
 
-   # Check if the build is available in Berta. If not, exit since there is no build check status of
+    # Check if the build is available in Berta. If not, exit since there is no build check status of
     build = check_build_existance(settings['build_version'], product['id'])
     if not build:
         log.error('Specified build %s doesn\'t exist in Berta product_id = %. Exiting with code (1) ' %(settings['build_version'],settings['product']))
         return 1
 
-    status, found_sessions = get_build_status( build['id'], settings['berta_streams'])
+    # Waiting for build to end.
+    status, found_sessions = get_build_status(build['id'], settings['berta_streams'])
+    while status and args.interval > 0:
+        log.info('Build is still running. Waiting {0:>3d} seconds...'.format(args.interval))
+        time.sleep(args.interval)
+
+        status, found_sessions = get_build_status(build['id'], settings['berta_streams'])
+
+    # Getting regressions.
     if not status:
         status = getRegressions(found_sessions)
 
@@ -248,6 +262,7 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--buildversion', help='berta build name to check if it has any running test sessions in the specified streams, ie. ci-dev-igc-12345', required=True)
     parser.add_argument('-m', '--streams', help='berta streams associated with product, comma separated. e.g. unified-smoke,dev-igc', required=True)
     parser.add_argument('-p', '--product', help='berta product associated with build', required=True)
+    parser.add_argument('-i', '--interval', metavar = '<interval>', type = int, default = 60, help = 'Interval of checking for status in seconds. If zero is specified, the script will not wait for status. Default: 60.')
     args = parser.parse_args()
 
     exit_code = main(args)
