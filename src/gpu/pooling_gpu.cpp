@@ -23,25 +23,23 @@ const std::string kernelName = "Pooling_GPU_max";
 const std::string kernelCode = R"__krnl(
 KERNEL(Pooling_GPU_max)(__global neural_memory* input_mem, __global neural_memory* output_mem)
 {
-    __global uint* input_size = get_raw(input_mem);
     __global float* input = (__global float*)get_data(input_mem);
-    __global uint* output_size = get_raw(output_mem);
     __global float* output = (__global float*)get_data(output_mem);
 
     const int global_id = get_global_id(0);
 
-    const int batch_num = output_size[0];
+    const int batch_num = OUTPUT_BATCH_NUM;
     const int batch_offset = global_id % batch_num;
 
-    const int ofm_num = output_size[1];
+    const int ofm_num = OUTPUT_FEATURE_NUM_0;
     const int ofm_offset = (global_id / batch_num) % ofm_num;
 
     const int idx = (global_id / batch_num);
 
-    const int i_fm_num = input_size[1];
+    const int i_fm_num = INPUT_FEATURE_NUM_0;
 
-    const int filter_application_count_x = output_size[2]; // how many times we need to apply filter in X dimension
-    const int filter_application_count_y = output_size[3]; // how many times we need to apply filter in Y dimension
+    const int filter_application_count_x = OUTPUT_SIZE_X; // how many times we need to apply filter in X dimension
+    const int filter_application_count_y = OUTPUT_SIZE_Y; // how many times we need to apply filter in Y dimension
 
     const int offset_x = (idx / ofm_num) % filter_application_count_x * STRIDE_SIZE_X;
     const int offset_y = ((idx / ofm_num) / filter_application_count_x) % filter_application_count_y * STRIDE_SIZE_Y; 
@@ -51,7 +49,7 @@ KERNEL(Pooling_GPU_max)(__global neural_memory* input_mem, __global neural_memor
     {
         for(uint i = 0; i < WINDOW_SIZE_X; i++)
         {
-            int input_idx = (i + offset_x + (j + offset_y) * input_size[2]) * batch_num * i_fm_num + ofm_offset * batch_num + batch_offset;
+            int input_idx = (i + offset_x + (j + offset_y) * INPUT_SIZE_X) * batch_num * i_fm_num + ofm_offset * batch_num + batch_offset;
             output[global_id] = max(output[global_id], input[input_idx]);
         }
     }
@@ -73,12 +71,11 @@ struct pooling_gpu : is_an_implementation {
     }
 
     gpu::jit_constants get_jit_constants() const {
-        auto& window = outer.argument.size;
-        auto& stride = outer.argument.stride;
-
-        return gpu::jit_constants {
-            gpu::make_jit_constant("WINDOW", window),
-            gpu::make_jit_constant("STRIDE", stride)
+        return {
+            gpu::make_jit_constant("INPUT", outer.input_memory(0).argument.size),
+            gpu::make_jit_constant("OUTPUT", outer.output_memory(0).argument.size),
+            gpu::make_jit_constant("WINDOW", outer.argument.size),
+            gpu::make_jit_constant("STRIDE", outer.argument.stride)
         };
     }
 

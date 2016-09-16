@@ -22,18 +22,6 @@
 
 namespace neural { namespace gpu {
 
-    vector_arg::vector_arg(const neural::vector<uint32_t>& arg) : _vec(arg) {
-        _clBuffer = cl::Buffer(context()->context(), CL_MEM_READ_ONLY, neural_vector::size_of_vector(arg));
-        cl::Event end_event;
-        auto mapped_vec = reinterpret_cast<neural_vector*>(context()->queue().enqueueMapBuffer(_clBuffer, true, CL_MAP_WRITE, 0, neural_vector::size_of_vector(_vec), 0, &end_event));
-        end_event.wait();
-        mapped_vec->initialize(_vec);
-        context()->queue().enqueueUnmapMemObject(_clBuffer, mapped_vec, 0, &end_event);
-        end_event.wait();
-    }
-
-    vector_arg::~vector_arg() {}
-
     memory_arg::memory_arg(const neural::memory& mem, bool copy_input, bool copy_output) : _mem(mem), _copy_input(copy_input), _copy_output(copy_output) {
         if (is_own()) {
             _gpu_buffer = std::static_pointer_cast<gpu_buffer>(_mem.get_buffer());

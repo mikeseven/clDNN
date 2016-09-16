@@ -187,7 +187,9 @@ struct convolution_gpu : is_an_implementation {
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT", input_mem.argument.size),
+            gpu::make_jit_constant("INPUT_FEATURE_NUM", "INPUT_FEATURE_NUM_0"),
             gpu::make_jit_constant("OUTPUT", output_mem.argument.size),
+            gpu::make_jit_constant("OUTPUT_FEATURE_NUM", "OUTPUT_FEATURE_NUM_0"),
             gpu::make_jit_constant("STRIDE", stride),
             gpu::make_jit_constant("INPUT_OFFSET", input_offset),
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
@@ -218,6 +220,9 @@ struct convolution_gpu : is_an_implementation {
             mem_consts.add_constant(gpu::make_jit_constant("FILTER", outer.input_memory(1).argument.size));
             mem_consts.add_constant(gpu::make_jit_constant("FILTER_ARRAY_NUM", std::to_string(split)));
         }
+
+        mem_consts.add_constant(gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"));
+        mem_consts.add_constant(gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_1"));
         return mem_consts;
     }
 

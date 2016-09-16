@@ -205,6 +205,7 @@ namespace neural {
 
             gpu::jit_constants mem_consts{
                 gpu::make_jit_constant("INPUT", input_mem.argument.size),
+                gpu::make_jit_constant("INPUT_FEATURE_NUM", "INPUT_FEATURE_NUM_0"),
                 gpu::make_jit_constant("OUTPUT", output_mem.argument.size),
                 gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", std::to_string(input_mem.count() / input_mem.argument.size.batch[0]))
             };

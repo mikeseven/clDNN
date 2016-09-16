@@ -50,13 +50,12 @@ float FUNC(find_max_value)(const int idx, __global float* input)
 
 KERNEL (softmax_gpu)(__global neural_memory* input_mem, __global neural_memory* dst_mem)
 {
-    __global uint* input_size = get_raw(input_mem);
     __global float* input = (__global float*)get_data(input_mem);
     __global float* pDst = (__global float*)get_data(dst_mem);
 
     const int idx = get_global_id(0);
 
-    const int batch_num = input_size[0];
+    const int batch_num = INPUT_BATCH_NUM;
     const int batch_offset = idx % batch_num;
 
     float max_value = FUNC_CALL(find_max_value)(idx, input);
@@ -129,11 +128,10 @@ float FUNC(find_max_value)(const int global_id, const int idx, const int batch_o
 
 KERNEL (softmax_gpu_batches)(__global neural_memory* input_mem, __global neural_memory* dst_mem)
 {
-    __global uint* input_size = get_raw(input_mem);
     __global float* input = (__global float*)get_data(input_mem);
     __global float* pDst = (__global float*)get_data(dst_mem);
 
-    const int batch_num = input_size[0];
+    const int batch_num = INPUT_BATCH_NUM;
     const int global_id = get_global_id(0);
     const int idx = global_id / batch_num;
 
@@ -229,6 +227,7 @@ struct softmax_gpu : is_an_implementation {
         assert(items_num > 0 && preferred_lws > 0 && preferred_gws > 0 && leftovers > 0);
 
         return gpu::jit_constants{
+            gpu::make_jit_constant("INPUT", outer.input_memory(0).argument.size),
             gpu::make_jit_constant("ITEMS_NUM", std::to_string(items_num)),
             gpu::make_jit_constant("LWS", std::to_string(preferred_lws)),
             gpu::make_jit_constant("GWS", std::to_string(preferred_gws)),

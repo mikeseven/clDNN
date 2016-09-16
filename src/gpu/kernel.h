@@ -24,16 +24,6 @@
 
 namespace neural { namespace gpu {
 
-class vector_arg : public context_holder {
-    const neural::vector<uint32_t>& _vec;
-    cl::Buffer _clBuffer;
-public:
-    vector_arg(const neural::vector<uint32_t>& arg);
-    const cl::Buffer& get_buffer() const { return _clBuffer; };
-
-    ~vector_arg();
-};
-
 class memory_arg : public context_holder {
     const neural::memory& _mem;
     std::shared_ptr<gpu_buffer> _gpu_buffer;
@@ -87,6 +77,10 @@ inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, 
     return std::static_pointer_cast<jit_constant>(std::make_shared<simple_jit_constant>(name, value));
 }
 
+inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, float value) {
+    return std::static_pointer_cast<jit_constant>(std::make_shared<simple_jit_constant>(name, std::to_string(value) + "f"));
+}
+
 template<typename T>
 class vector_jit_constant : public jit_constant {
     const neural::vector<T> _vec;
@@ -96,15 +90,26 @@ public:
         : jit_constant(name), _vec(vec) {}
 
     kernels_cache::jit_definitions get_definitions() const override {
-        auto feature_offset = _vec.batch.size();
-        auto spatial_offset = _vec.feature.size() + feature_offset;
-        return kernels_cache::jit_definitions{
-            { _name + "_BATCH_NUM", std::to_string(_vec.raw[0]) },
-            { _name + "_SIZE_X", std::to_string(_vec.raw[0 + spatial_offset]) },
-            { _name + "_SIZE_Y", _vec.spatial.size() > 1 ? std::to_string(_vec.raw[1 + spatial_offset]) : "1" },
-            {  _vec.feature.size() > 1 ? _name + "_OUTPUT_FEATURE_NUM" : _name + "_FEATURE_NUM", std::to_string(_vec.raw[0 + feature_offset]) },
-            { _name + "_INPUT_FEATURE_NUM", _vec.feature.size() > 1 ? std::to_string(_vec.raw[1 + feature_offset]) : "1" }
+
+        kernels_cache::jit_definitions definitions{
+            { _name + "_BATCH_NUM", std::to_string(_vec.batch[0]) },
         };
+
+        const char* spatial_names[] = { "X", "Y", "Z", "W" };
+        if (_vec.spatial.size() > std::size(spatial_names))
+            throw std::runtime_error("max 4D images are supported");
+
+        for (size_t i = 0; i < std::max(_vec.spatial.size(), static_cast<size_t>(2)); ++i) {
+            definitions.emplace_back( _name + "_SIZE_" + spatial_names[i],
+                                      _vec.spatial.size() > i ? std::to_string(_vec.spatial[i]) : "1" );
+        }
+
+        for (size_t i = 0; i < std::max(_vec.feature.size(), static_cast<size_t>(2)); ++i) {
+            definitions.emplace_back( _name + "_FEATURE_NUM_" + std::to_string(i),
+                                      _vec.feature.size() > i ? std::to_string(_vec.feature[i]) : "1" );
+        }
+
+        return definitions;
     }
 };
 
@@ -148,7 +153,7 @@ public:
         for (size_t i = 1; i < _mem.size(); i++)
         {
             if (_mem[0].get().count() != _mem[i].get().count())
-                throw std::runtime_error("All memories must contain the same number of elements!");
+                throw std::exception("All memories must contain the same number of elements!");
         }
         auto result = vector_jit_constant::get_definitions();
         result.push_back({ _name + "_ARRAY_NUM", std::to_string(_mem.size()) });
@@ -207,12 +212,6 @@ template<typename T>
 struct kernel_arg_handler<T, typename std::enable_if<std::is_base_of<memory_arg, T>::value>::type> {
     static const cl::Buffer& get(const T& arg) { return arg.get_buffer(); }
 };
-
-template<>
-struct kernel_arg_handler<vector_arg> {
-    static const cl::Buffer& get(const vector_arg& arg) { return arg.get_buffer(); };
-};
-
 
 class kernel_execution_options {
     cl::NDRange _global;
