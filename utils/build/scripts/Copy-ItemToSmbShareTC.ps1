@@ -20,12 +20,16 @@
 
 <#
     .SYNOPSIS
-        Copies items to Windows/Samba share.
+        Copies items to Windows/Samba share (TeamCity wrapper for script).
 
     .DESCRIPTION
         Copies items from source directory to destination directory in specified Windows/Samba share.
 
         The script allows to specify plain credentials for share.
+
+        This is TeamCity wrapper for Copy-ItemToSmbShare.ps1 script. The script provides the following:
+         * Better support for TeamCity build console.
+         * Disabled pipelining (workaround for TeamCity 9.x bug where process section is not called).
 
     .PARAMETER Path
         List of items to copy. Wildards are allowed.
@@ -67,38 +71,32 @@
 [CmdletBinding(DefaultParameterSetName = 'wildcards')]
 param(
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'wildcards',
-               ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true,
                HelpMessage = 'Specify source items to copy (wildcards allowed).')]
     [Alias('SourcePath', 'SrcPath')]
     [AllowEmptyCollection()]
     [string[]] $Path,
 
     [Parameter(Mandatory = $true, ParameterSetName = 'literal',
-               ValueFromPipelineByPropertyName = $true,
                HelpMessage = 'Specify source items to copy (literal paths).')]
     [AllowEmptyCollection()]
     [string[]] $LiteralPath,
 
     [Parameter(Mandatory = $true, Position = 1,
-               ValueFromPipelineByPropertyName = $true,
                HelpMessage = 'Specify path to destination Windows/Samba share.')]
     [Alias('SambaSharePath', 'SmbSharePath', 'SambaPath', 'SmbPath')]
     [string] $SharePath,
 
-    [Parameter(Mandatory = $false, Position = 2,
-               ValueFromPipelineByPropertyName = $true)]
+    [Parameter(Mandatory = $false, Position = 2)]
     [Alias('DstPath')]
     [string] $DestinationPath = '',
 
     [Parameter(Mandatory = $false)]
     [switch] $Container,
 
-    [Parameter(Mandatory = $false,
-               ValueFromPipelineByPropertyName = $true)]
+    [Parameter(Mandatory = $false)]
     [string] $User = $null,
 
-    [Parameter(Mandatory = $false,
-               ValueFromPipelineByPropertyName = $true)]
+    [Parameter(Mandatory = $false)]
     [string] $Password = $null,
 
     [Parameter(Mandatory = $false)]
@@ -107,68 +105,46 @@ param(
     [Parameter(Mandatory = $false)]
     [switch] $Recurse
 );
-begin {
-    $ScriptVerbose = [bool] $PSBoundParameters['Verbose'].IsPresent;
-
-    Write-Verbose 'Starting upload script.';
-}
-process {
-    # Constructing credential objects (if credentials are specified).
-    Write-Verbose 'Preparing credentials.';
-    if (![string]::IsNullOrEmpty($Password)) { $SecPassword = ConvertTo-SecureString $Password -AsPlainText -Force; }
-    else { $SecPassword = New-Object SecureString; }
-
-    if (![string]::IsNullOrEmpty($User)) { $ShareCredential = New-Object PSCredential $User, $SecPassword; }
-    else { $ShareCredential = $null; }
 
 
-    # Preparing parameters for creating temporary drive.
-    $NewDriveParams = @{};
-    if ($ShareCredential -ne $null) { $NewDriveParams['Credential'] = $ShareCredential; }
-
-
-    # Preparing parameters for copy operation.
-    $CopyParams = @{
-        'Force'   = $Force.IsPresent;
-        'Recurse' = $Recurse.IsPresent;
-    };
-
-    if ($PSCmdlet.ParameterSetName -eq 'literal') { $CopyParams['LiteralPath'] = $LiteralPath; }
-    else { $CopyParams['Path'] = $Path; }
-
-
-    # Create temporary drive to share.
-    Write-Verbose 'Creating temporary drive for share.';
-    $TmpDrive     = $null;
-    $TmpDriveName = 'tmpShare1';
-    try {
-        $TmpDrive = New-PSDrive $TmpDriveName FileSystem $SharePath @NewDriveParams -Verbose:$ScriptVerbose -ErrorAction Stop;
-
-        $TmpDstPath = Join-Path "${TmpDriveName}:" $DestinationPath;
-        if ($Container.IsPresent -or $TmpDstPath.EndsWith([System.IO.Path]::DirectorySeparatorChar))  {
-            $TmpDstDir = $TmpDstPath;
+# Resizes Powershell console to at least 500 characters.
+function resizeTcPsConsole() {
+    if (Test-Path 'env:TEAMCITY_VERSION') {
+        try {
+            $RawUI = (Get-Host).UI.RawUI
+            $CurrentUIWidth = $RawUI.MaxPhysicalWindowSize.Width
+            $RawUI.BufferSize = New-Object 'Management.Automation.Host.Size' @([Math]::Max($CurrentUIWidth, 500), $RawUI.BufferSize.Height)
+            $RawUI.WindowSize = New-Object 'Management.Automation.Host.Size' @($CurrentUIWidth, $RawUI.WindowSize.Height)
         }
-        else {
-            $TmpDstDir = Split-Path $TmpDstPath;
-        }
-        $CopyParams['Destination'] = $TmpDstPath;
-
-        Write-Verbose 'Checking and creating destination directories.';
-        try { mkdir $TmpDstDir -Force -Verbose:$ScriptVerbose -ErrorAction Stop | Out-Null; } catch {}
-        Write-Verbose 'Copying files to destination.';
-        if ($Path.Count -gt 0) {
-            Copy-Item @CopyParams -Verbose:$ScriptVerbose -ErrorAction Stop;
-        }
-    }
-    catch {
-        Write-Verbose 'Terminating with error.';
-        Write-Error -Exception $_;
-        $PSCmdlet.ThrowTerminatingError($_);
-    }
-    finally {
-        if ($TmpDrive -ne $null) { Remove-PSDrive $TmpDrive; }
+        catch {}
     }
 }
-end {
-    Write-Verbose 'Completed upload script.';
+
+Write-Verbose ('=' * 111);
+Write-Verbose 'Resizing Teamcity console (powershell runner console) to at least 500 lines.';
+resizeTcPsConsole;
+
+# Get scripts location.
+if (![string]::IsNullOrEmpty($PSCmdlet.MyInvocation.MyCommand.Path)) {
+    $ScriptDir = Split-Path $PSCmdlet.MyInvocation.MyCommand.Path;
 }
+else {
+    $ScriptDir = (Get-Location).Path;
+}
+Write-Verbose ('Locating script directory: "{0}"' -f $ScriptDir);
+
+# Get scipt path.
+$ScriptFile = 'Copy-ItemToSmbShare.ps1';
+
+if (Split-Path -IsAbsolute $ScriptFile) {
+    $ScriptFilePath = (Resolve-Path $ScriptFile -ErrorAction Stop).Path
+}
+else {
+    $ScriptFilePath = Join-Path $ScriptDir $ScriptFile -Resolve -ErrorAction Stop;
+}
+Write-Verbose ('Executing script file: "{0}"' -f $ScriptFilePath);
+Write-Verbose ('=' * 111);
+
+& $ScriptFilePath @PSBoundParameters;
+
+Write-Verbose ('=' * 111);
