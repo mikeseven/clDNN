@@ -752,24 +752,19 @@ private:
 };
 
 class program_builder;
+namespace instrumentation {
+    struct profiling_info;
+}
 struct worker_gpu : is_a_worker 
 {
-    struct arguments 
-	{
-        bool profiling_enabled;
-
-        DLL_SYM arguments();
-        DLL_SYM arguments(bool profiling);
-    };
-
-    DLL_SYM static worker create(arguments arg = arguments());
+    DLL_SYM static worker create();
     DLL_SYM void execute(const neural::task_group& requests) const override;
     neural::engine::type engine() const override { return neural::engine::gpu; }
-    DLL_SYM std::vector<std::pair<std::string, std::chrono::nanoseconds>> get_profiling_info() const;
+    DLL_SYM const std::vector<instrumentation::profiling_info>& get_profiling_info() const;
 
 private:
     std::shared_ptr<program_builder> builder;
-    worker_gpu(arguments);
+    worker_gpu();
 };
 
 } // namespace neural

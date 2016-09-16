@@ -23,25 +23,16 @@ namespace neural {
 class program_builder : public gpu::context_holder {
     gpu::kernels_cache::program_type _program;
 public:
-    program_builder(bool profiling_enabled) {
-        context()->profiling_enabled(profiling_enabled);
+    program_builder() {
         _program = gpu::kernels_cache::get().get_program(context());
     }
 
     auto get_profiling_info() const -> decltype(context()->get_profiling_info()) { return context()->get_profiling_info(); }
 };
 
-worker_gpu::arguments::arguments()
-    : arguments(false)
-    {}
-
-worker_gpu::arguments::arguments(bool profiling)
-    : profiling_enabled(profiling)
-    {}
-
-worker_gpu::worker_gpu(arguments arg)
+worker_gpu::worker_gpu()
     : is_a_worker(type_id<neural::worker_gpu>())
-    , builder(new program_builder(arg.profiling_enabled))
+    , builder(new program_builder())
 {}
 
 void worker_gpu::execute(const neural::task_group& requests) const {
@@ -50,12 +41,12 @@ void worker_gpu::execute(const neural::task_group& requests) const {
     }
 }
 
-std::vector<std::pair<std::string, std::chrono::nanoseconds>> worker_gpu::get_profiling_info() const {
+const std::vector<instrumentation::profiling_info>& worker_gpu::get_profiling_info() const {
     return builder->get_profiling_info();
 }
 
-worker worker_gpu::create(arguments arg) {
-    return new worker_gpu(arg);
+worker worker_gpu::create() {
+    return new worker_gpu();
 }
 
 }

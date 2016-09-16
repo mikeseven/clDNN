@@ -275,17 +275,27 @@ public:
 
     template<typename... Args>
     void run(const kernel_execution_options& options, Args... args) const {
-        auto clkernel = kernels_cache::get().get_kernel(context(), _kernel_id);
-        auto enable_profiling = context()->profiling_enabled();
-        neural::instrumentation::timer<> kernel_timer;
-        try {
+        if (configuration::get().enable_profiling) {
+            instrumentation::timer<> pre_enqueue_timer;
+            auto clkernel = kernels_cache::get().get_kernel(context(), _kernel_id);
             setArgs<0>(clkernel, std::forward<Args>(args)...);
-
-            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range());
-        } catch(cl::Error err) {
-            std::cerr << "ERROR:" << err.what() << std::endl;
+            auto pre_enqueue_time = pre_enqueue_timer.uptime();
+            cl::Event end_event;
+            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), 0, &end_event);
+            end_event.wait();
+            context()->report_profiling({ _kernel_id,
+                {
+                    {"pre-enqueue", std::make_shared<instrumentation::profiling_period_basic>(pre_enqueue_time)},
+                    {"submission",  std::make_shared<profiling_period_event>(end_event, CL_PROFILING_COMMAND_QUEUED, CL_PROFILING_COMMAND_SUBMIT)},
+                    {"starting",    std::make_shared<profiling_period_event>(end_event, CL_PROFILING_COMMAND_SUBMIT, CL_PROFILING_COMMAND_START)},
+                    {"executing",   std::make_shared<profiling_period_event>(end_event, CL_PROFILING_COMMAND_START,  CL_PROFILING_COMMAND_END)}
+                } });
         }
-        if(enable_profiling) context()->report_profiling(_kernel_id, kernel_timer.uptime());
+        else {
+            auto clkernel = kernels_cache::get().get_kernel(context(), _kernel_id);
+            setArgs<0>(clkernel, std::forward<Args>(args)...);
+            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range());
+        }
     }
 };
 

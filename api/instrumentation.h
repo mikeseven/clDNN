@@ -15,12 +15,28 @@
 */
 
 #pragma once
-#include "neural_base.h"
+#include "neural.h"
 #include <chrono>
 #include <sstream>
 #include <iomanip>
 
-namespace neural { namespace instrumentation {
+namespace neural {
+namespace gpu {
+    struct configuration {
+        enum device_types { default_device = 0, cpu, gpu, accelerator };
+
+        DLL_SYM static configuration& get();
+
+        bool enable_profiling;
+        device_types device_type;
+        uint32_t device_vendor;
+        std::string compiler_options;
+    private:
+        configuration();
+    };
+}
+
+namespace instrumentation {
 
     template<class ClockTy = std::chrono::steady_clock>
     class timer {
@@ -38,13 +54,14 @@ namespace neural { namespace instrumentation {
         const ch::microseconds us(1);
         const ch::milliseconds ms(1);
         const ch::seconds s(1);
+        const std::chrono::duration<Rep, Period> abs_val(std::abs(val.count()));
 
         std::ostringstream os;
         os << std::setprecision(3) << std::fixed;
-        if (val > s)       os << std::chrono::duration_cast<ch::duration<double, ch::seconds::period>>(val).count() << " s";
-        else if (val > ms) os << std::chrono::duration_cast<ch::duration<double, ch::milliseconds::period>>(val).count() << " ms";
-        else if (val > us) os << std::chrono::duration_cast<ch::duration<double, ch::microseconds::period>>(val).count() << " us";
-        else               os << std::chrono::duration_cast<ch::nanoseconds>(val).count() << " ns";
+        if (abs_val > s)       os << ch::duration_cast<ch::duration<double, ch::seconds::period>>(val).count() << " s";
+        else if (abs_val > ms) os << ch::duration_cast<ch::duration<double, ch::milliseconds::period>>(val).count() << " ms";
+        else if (abs_val > us) os << ch::duration_cast<ch::duration<double, ch::microseconds::period>>(val).count() << " us";
+        else               os << ch::duration_cast<ch::nanoseconds>(val).count() << " ns";
         return os.str();
     }
 
@@ -55,4 +72,30 @@ namespace neural { namespace instrumentation {
         static const std::string dump_dir;
     };
 
+    struct profiling_period
+    {
+        virtual std::chrono::nanoseconds value() const = 0;
+        virtual ~profiling_period() = default;
+    };
+
+    struct profiling_period_basic : profiling_period
+    {
+        template<class _Rep, class _Period>
+        profiling_period_basic(const std::chrono::duration<_Rep, _Period>& val) :
+            _value(std::chrono::duration_cast<std::chrono::nanoseconds>(val)){}
+
+        std::chrono::nanoseconds value() const override { return _value; }
+    private:
+        std::chrono::nanoseconds _value;
+    };
+
+    struct profiling_interval {
+        std::string name;
+        std::shared_ptr<profiling_period> value;
+    };
+
+    struct profiling_info {
+        std::string name;
+        std::vector<profiling_interval> intervals;
+    };
 } }

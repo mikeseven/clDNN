@@ -24,6 +24,73 @@
 
 using namespace neural;
 
+void print_profiling_table(std::ostream& os ,const std::vector<instrumentation::profiling_info>& profiling_info) {
+    if (profiling_info.size() == 0)
+        return;
+
+    const size_t numbers_width = 10;
+
+    os << "Kernels profiling info (in microseconds): \n\n";
+
+    // build column headers
+    std::vector<std::string> column_headers;
+    for(auto& info: profiling_info) {
+        for(auto& interval: info.intervals) {
+            if(std::count(column_headers.begin(), column_headers.end(), interval.name) == 0) {
+                column_headers.push_back(interval.name);
+            }
+        }
+    }
+
+    size_t action_column_len = 0;
+    for (auto& info : profiling_info) {
+        action_column_len = std::max(action_column_len, info.name.length());
+    }
+
+    // print column headers
+    auto column_width = std::max(action_column_len, numbers_width);
+    std::string separation_line(column_width, '-');
+    os << std::setw(column_width) << std::left << "Action";
+    for(auto& header: column_headers) {
+        column_width = std::max(header.length(), numbers_width);
+        separation_line += "+" + std::string(column_width, '-');
+        os << "|"
+           << std::setw(column_width) << std::right
+           << header;
+    }
+    os << "\n";
+
+    std::chrono::nanoseconds total(0);
+
+    // print rows
+    size_t row_num = 0;
+    for (auto& info : profiling_info) {
+        if((row_num++) % 4 == 0) {
+            os << separation_line << "\n";
+        }
+        os << std::setw(action_column_len) << std::left << info.name;
+        // prepare values per column
+        std::vector<double> values(column_headers.size(), 0.0);
+        for (auto& interval : info.intervals) {
+            auto value = interval.value->value();
+            total += value;
+            auto value_d = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::microseconds::period>>(value).count();
+            auto column_index = std::find(column_headers.begin(), column_headers.end(), interval.name) - column_headers.begin();
+            values[column_index] = value_d;
+        }
+        // print values in columns
+        for(size_t i = 0; i < values.size(); ++i)
+        {
+            auto& header = column_headers[i];
+            os << "|"
+               << std::setw(std::max(header.length(), numbers_width)) << std::right
+               << std::setprecision(3) << std::fixed << values[i];
+        }
+        os << "\n";
+    }
+    os << "\nTotal profiled time: " << instrumentation::to_string(total) << std::endl;
+}
+
 // AlexNet with weights & biases from file
 std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, engine::type eng, bool dump_hl)
 {
@@ -235,7 +302,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
     {
         std::cout << "GPU Program compilation started" << std::endl;
         instrumentation::timer<> timer_compilation;
-        workers.push_back(worker_gpu::create({true}));
+        workers.push_back(worker_gpu::create());
         auto compile_time = timer_compilation.uptime();
         std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
     }
@@ -293,22 +360,15 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
     }
 
     if (eng == engine::gpu) {
-        auto profiling_info = workers[0].as<worker_gpu&>().get_profiling_info();
-        if (profiling_info.size() > 0) {
-            auto max_len_it = std::max_element(std::begin(profiling_info), std::end(profiling_info), [](decltype(profiling_info)::value_type& a, decltype(profiling_info)::value_type& b) {return a.first.length() < b.first.length(); });
-            std::cout << "Kernels profiling info: " << std::endl;
-            auto max_len = max_len_it->first.length();
-            for (auto& pi : profiling_info) {
-                std::cout << std::setw(max_len) << std::left << pi.first << " " << instrumentation::to_string(pi.second) << std::endl;
-            }
-        }
+        print_profiling_table(std::cout, workers[0].as<worker_gpu&>().get_profiling_info());
     }
 
     return std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time);
 }
 
-void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool dump_hl)
+void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool dump_hl, bool profiling)
 {
+    gpu::configuration::get().enable_profiling = profiling;
     auto input = memory::allocate({ engine::reference, memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3, } });
     auto output = memory::allocate({ eng, memory::format::xb_f32,{ batch_size,{ 1000 } } });
     auto img_list = get_directory_images(img_dir);

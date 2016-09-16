@@ -44,7 +44,7 @@ void parse_parameters(std::map<std::string, std::string> &config, std::vector<st
 int main(int argc, char *argv[])
 {
     // TODO: create header file for all examples
-    extern void alexnet(uint32_t, std::string, neural::engine::type,bool);
+    extern void alexnet(uint32_t, std::string, neural::engine::type,bool,bool);
     extern void convert_weights(neural::memory::format::type, std::string);
     if (argc <= 1)
     {
@@ -65,11 +65,14 @@ int main(int argc, char *argv[])
             --convertion_path=<path>
             name, or substring in file name to be converte. i.e. "conv1" - first convolution, "fc" every fully connected
             --input=<directory>
-            path to directory that contains images to be classfied)_help_";
+            path to directory that contains images to be classfied
+            --profiling
+            enable profiling report)_help_";
     }
     else
     {
         bool dump_results = false;
+        bool profiling = false;
         std::vector<std::string> arg;
         for (int n = 1; n<argc; ++n) arg.push_back(argv[n]);
         // parse configuration (command line and from file)
@@ -89,6 +92,7 @@ int main(int argc, char *argv[])
         if (config.find("model") == not_found) config["model"] = "alexnet";
         if (config.find("engine") == not_found) config["engine"] = "referenced";
         if (config.find("dump_hidden_layers") != not_found) dump_results = true;
+        if (config.find("profiling") != not_found) profiling = true;
         if (config.find("input") == not_found)
         {
             std::cout << "Directory path has to be defined using current dir"<<std::endl;
@@ -101,7 +105,8 @@ int main(int argc, char *argv[])
                     std::stoi(config["batch"]),
                     config["input"],
                     config["engine"].compare("gpu") == 0 ? neural::engine::gpu : neural::engine::reference,
-                    dump_results);
+                    dump_results,
+                    profiling);
             }
             catch (std::exception &e) {
                 std::cerr << e.what() << std::endl;

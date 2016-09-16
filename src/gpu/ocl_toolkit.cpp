@@ -19,6 +19,27 @@
 
 namespace neural { namespace gpu {
 
+configuration::configuration()
+    : enable_profiling(false)
+    , device_type(gpu)
+    , device_vendor(0x8086)
+    , compiler_options("")
+{}
+
+configuration& configuration::get() {
+    static configuration instance;
+    return instance;
+}
+
+cl_device_type convert_configuration_device_type(configuration::device_types device_type) {
+    cl_device_type device_types[] = {
+            CL_DEVICE_TYPE_DEFAULT,
+            CL_DEVICE_TYPE_CPU,
+            CL_DEVICE_TYPE_GPU,
+            CL_DEVICE_TYPE_ACCELERATOR };
+    return device_types[device_type];
+}
+
 cl::Device get_gpu_device() {
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
@@ -27,10 +48,10 @@ cl::Device get_gpu_device() {
         std::vector<cl::Device> devices;
         p.getDevices(CL_DEVICE_TYPE_ALL, &devices);
         for (auto& d : devices) {
-            if (d.getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_GPU) {
+            if (d.getInfo<CL_DEVICE_TYPE>() == convert_configuration_device_type(configuration::get().device_type)) {
                 auto vendor_id = d.getInfo<CL_DEVICE_VENDOR_ID>();
                 //set Intel GPU device default
-                if (vendor_id == 0x8086) {
+                if (vendor_id == configuration::get().device_vendor) {
                     return d;
                 }
             }
@@ -42,7 +63,12 @@ cl::Device get_gpu_device() {
 gpu_toolkit::gpu_toolkit() 
     : _device(get_gpu_device())
     , _context(_device)
-    , _command_queue(_context, _device) {}
+    , _command_queue(_context,
+                     _device,
+                     configuration::get().enable_profiling
+                        ? cl::QueueProperties::Profiling
+                        : cl::QueueProperties::None)
+    {}
 
 std::shared_ptr<gpu_toolkit> gpu_toolkit::get() {
     static std::recursive_mutex mutex;

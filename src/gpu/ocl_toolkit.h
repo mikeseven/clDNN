@@ -24,6 +24,7 @@
 #include <cl2_wrapper.h>
 #include <memory>
 #include <chrono>
+#include "api/instrumentation.h"
 
 namespace neural { namespace gpu {
 class gpu_toolkit;
@@ -36,15 +37,33 @@ protected:
     const std::shared_ptr<gpu_toolkit>& context() const { return _context; }
 };
 
-typedef std::pair<std::string, std::chrono::nanoseconds> profiling_info;
+struct profiling_period_event : instrumentation::profiling_period {
+    profiling_period_event(const cl::Event& event, cl_profiling_info start, cl_profiling_info end )
+        : _event(event)
+        , _start(start)
+        , _end(end)
+        {}
+
+    std::chrono::nanoseconds value() const override {
+        size_t start_nanoseconds;
+        _event.getProfilingInfo(_start, &start_nanoseconds);
+        size_t end_nanoseconds;
+        _event.getProfilingInfo(_end, &end_nanoseconds);
+        return std::chrono::nanoseconds(static_cast<long long>(end_nanoseconds - start_nanoseconds));
+    }
+
+private:
+    cl::Event _event;
+    cl_profiling_info _start;
+    cl_profiling_info _end;
+};
 
 class gpu_toolkit {
     cl::Device _device;
     cl::Context _context;
     cl::CommandQueue _command_queue;
     cl::Program _program;
-    bool _profiling_enabled = false;
-    std::vector<profiling_info> _profiling_info;
+    std::vector<instrumentation::profiling_info> _profiling_info;
 
     gpu_toolkit();
 
@@ -56,10 +75,8 @@ public:
     cl::Context& context() { return _context; }
     cl::CommandQueue& queue() { return _command_queue; }
     cl::Program& program() { return _program; }
-    bool profiling_enabled() const { return _profiling_enabled; }
-    void profiling_enabled(bool enable) { _profiling_enabled = enable; }
-    void report_profiling(std::string desc, std::chrono::nanoseconds data) { _profiling_info.emplace_back( desc, data ); }
-    std::vector<profiling_info> get_profiling_info() const { return _profiling_info; }
+    void report_profiling(const instrumentation::profiling_info& info) { _profiling_info.push_back(info); }
+    const std::vector<instrumentation::profiling_info>& get_profiling_info() const { return _profiling_info; }
 
     gpu_toolkit(const gpu_toolkit& other) = delete;
     gpu_toolkit(gpu_toolkit&& other) = delete;
