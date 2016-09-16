@@ -113,6 +113,7 @@ begin {
 }
 process {
     # Constructing credential objects (if credentials are specified).
+    Write-Verbose 'Preparing credentials.';
     if (![string]::IsNullOrEmpty($Password)) { $SecPassword = ConvertTo-SecureString $Password -AsPlainText -Force; }
     else { $SecPassword = New-Object SecureString; }
 
@@ -136,6 +137,7 @@ process {
 
 
     # Create temporary drive to share.
+    Write-Verbose 'Creating temporary drive for share.';
     $TmpDrive     = $null;
     $TmpDriveName = 'tmpShare1';
     try {
@@ -150,13 +152,17 @@ process {
         }
         $CopyParams['Destination'] = $TmpDstPath;
 
+        Write-Verbose 'Checking and creating destination directories.';
         try { mkdir $TmpDstDir -Force -Verbose:$ScriptVerbose -ErrorAction Stop | Out-Null; } catch {}
+        Write-Verbose 'Copying files to destination.';
         if ($Path.Count -gt 0) {
             Copy-Item @CopyParams -Verbose:$ScriptVerbose -ErrorAction Stop;
         }
     }
     catch {
-        $PSCmdlet.ThrowTerminatingError($_)
+        Write-Verbose 'Terminating with error.';
+        Write-Error -Exception $_;
+        $PSCmdlet.ThrowTerminatingError($_);
     }
     finally {
         if ($TmpDrive -ne $null) { Remove-PSDrive $TmpDrive; }
