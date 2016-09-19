@@ -123,7 +123,7 @@ public:
         };
 
         const char* spatial_names[] = { "X", "Y", "Z", "W" };
-        if (_vec.spatial.size() > std::size(spatial_names))
+        if (_vec.spatial.size() > (sizeof(spatial_names)/sizeof(spatial_names[0])))
             throw std::runtime_error("max 4D images are supported");
 
         for (size_t i = 0; i < std::max(_vec.spatial.size(), static_cast<size_t>(2)); ++i) {
@@ -187,7 +187,7 @@ public:
         for (size_t i = 1; i < _mem.size(); i++)
         {
             if (_mem[0].get().count() != _mem[i].get().count())
-                throw std::exception("All memories must contain the same number of elements!");
+                throw std::invalid_argument("All memories must contain the same number of elements!");
         }
         auto result = vector_jit_constant::get_definitions();
         result.push_back({ _name + "_ARRAY_NUM", std::to_string(_mem.size()) });
