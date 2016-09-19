@@ -51,6 +51,36 @@ public:
     output_mem(const neural::memory& mem) :memory_arg(mem, false, true) {}
 };
 
+// TODO improve to_code_string specializations
+template<typename T>
+std::string to_code_string(T val) { return std::to_string(val); }
+
+template<>
+inline std::string to_code_string<std::string>(std::string val) { return val; }
+
+template<>
+inline std::string to_code_string<const char*>(const char* val) { return val; }
+
+template<>
+inline std::string to_code_string<char*>(char* val) { return val; }
+
+template<>
+inline std::string to_code_string<float>(float val) {
+    // 64 chars should be enought to store: "-0x0.123456p-123f /*-0.123456e-123*/"
+    char buffer[64] = "";
+    std::snprintf(buffer, sizeof(buffer), "%.6af /*%.4g*/", double(val), double(val));
+    return buffer;
+}
+
+template<>
+inline std::string to_code_string<double>(double val) {
+    // 64 chars should be enought to store: "-0x0.1234567890123p-1234 /*-0.1234567890123e-1074*/"
+    char buffer[64] = "";
+    std::snprintf(buffer, sizeof(buffer), "%.13a /*%.4g*/", val, val);
+    return buffer;
+}
+
+// TODO refactor jit_constant, make_jit_constant, etc...
 class jit_constant {
 protected:
     const std::string _name;
@@ -73,12 +103,9 @@ public:
     }
 };
 
-inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const std::string& value) {
-    return std::static_pointer_cast<jit_constant>(std::make_shared<simple_jit_constant>(name, value));
-}
-
-inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, float value) {
-    return std::static_pointer_cast<jit_constant>(std::make_shared<simple_jit_constant>(name, std::to_string(value) + "f"));
+template<typename T>
+std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, T value) {
+    return std::static_pointer_cast<jit_constant>(std::make_shared<simple_jit_constant>(name, to_code_string(value)));
 }
 
 template<typename T>
@@ -104,11 +131,18 @@ public:
                                       _vec.spatial.size() > i ? std::to_string(_vec.spatial[i]) : "1" );
         }
 
-        for (size_t i = 0; i < std::max(_vec.feature.size(), static_cast<size_t>(2)); ++i) {
-            definitions.emplace_back( _name + "_FEATURE_NUM_" + std::to_string(i),
-                                      _vec.feature.size() > i ? std::to_string(_vec.feature[i]) : "1" );
+        assert(_vec.feature.size() > 0);
+        if (_vec.feature.size() > 0) {
+            // if number of feature nums is 1 then no suffix
+            if(_vec.feature.size() == 1) {
+                definitions.emplace_back(_name + "_FEATURE_NUM", std::to_string(_vec.feature[0]));
+            }
+            else { // else add suffixes
+                for (size_t i = 0; i < _vec.feature.size(); ++i) {
+                    definitions.emplace_back(_name + "_FEATURE_NUM_" + std::to_string(i), std::to_string(_vec.feature[i]));
+                }
+            }
         }
-
         return definitions;
     }
 };
@@ -131,7 +165,7 @@ public:
         std::stringstream ss;
         ss << "(float[]){ ";
         for (size_t i = 0; i < _mem.count(); i++)
-            ss << data[i] << ",";
+            ss << to_code_string(data[i]) << ",";
         ss << " } ";
         result.push_back({ _name, ss.str() });
         return result;
@@ -165,7 +199,7 @@ public:
             auto data = _m.pointer<float>();
             ss << "{ ";
             for (size_t i = 0; i < _m.count(); i++)
-                ss << data[i] << ",";
+                ss << to_code_string(data[i]) << ",";
             ss << " } ,";
         }
         ss << " } ";

@@ -33,7 +33,7 @@ namespace neural
 
         const int idx = (global_id / batch_num) / FILTER_ARRAY_NUM;
 
-        const int i_ifm_num = INPUT_FEATURE_NUM_0;
+        const int i_ifm_num = INPUT_FEATURE_NUM;
 
         const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % OUTPUT_SIZE_X) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
         const int y = ((idx / FILTER_OUTPUT_FEATURE_NUM) / OUTPUT_SIZE_X * STRIDE_SIZE_Y) + INPUT_OFFSET_SIZE_Y;
@@ -99,7 +99,7 @@ namespace neural
         const int filter_output_feature_size = FILTER_INPUT_FEATURE_NUM * filter_input_feature_size;
         const int filter_output_feature_offset = output_feature_idx * filter_output_feature_size;
     
-        const int input_feature_num = INPUT_FEATURE_NUM_0;
+        const int input_feature_num = INPUT_FEATURE_NUM;
         const int input_feature_size = INPUT_SIZE_X * INPUT_SIZE_Y;
 
         const int input_batch_size = input_feature_num * input_feature_size;

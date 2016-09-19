@@ -31,7 +31,7 @@ KERNEL (lrn_GPU)(__global neural_memory* input_mem, __global neural_memory* dst_
     const int batch_num = INPUT_BATCH_NUM;
     const int batch_offset = global_id % batch_num;
 
-    const int ifm_num = INPUT_FEATURE_NUM_0;
+    const int ifm_num = INPUT_FEATURE_NUM;
     const int ifm_offset = (global_id / batch_num) % ifm_num;
 
     const int x = (global_id / batch_num) / ifm_num;

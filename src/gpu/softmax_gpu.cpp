@@ -228,10 +228,10 @@ struct softmax_gpu : is_an_implementation {
 
         return gpu::jit_constants{
             gpu::make_jit_constant("INPUT", outer.input_memory(0).argument.size),
-            gpu::make_jit_constant("ITEMS_NUM", std::to_string(items_num)),
-            gpu::make_jit_constant("LWS", std::to_string(preferred_lws)),
-            gpu::make_jit_constant("GWS", std::to_string(preferred_gws)),
-            gpu::make_jit_constant("LEFTOVERS", std::to_string(leftovers))
+            gpu::make_jit_constant("ITEMS_NUM", items_num),
+            gpu::make_jit_constant("LWS", preferred_lws),
+            gpu::make_jit_constant("GWS", preferred_gws),
+            gpu::make_jit_constant("LEFTOVERS", leftovers)
         };
     }
 

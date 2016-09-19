@@ -31,12 +31,12 @@ KERNEL(Pooling_GPU_max)(__global neural_memory* input_mem, __global neural_memor
     const int batch_num = OUTPUT_BATCH_NUM;
     const int batch_offset = global_id % batch_num;
 
-    const int ofm_num = OUTPUT_FEATURE_NUM_0;
+    const int ofm_num = OUTPUT_FEATURE_NUM;
     const int ofm_offset = (global_id / batch_num) % ofm_num;
 
     const int idx = (global_id / batch_num);
 
-    const int i_fm_num = INPUT_FEATURE_NUM_0;
+    const int i_fm_num = INPUT_FEATURE_NUM;
 
     const int filter_application_count_x = OUTPUT_SIZE_X; // how many times we need to apply filter in X dimension
     const int filter_application_count_y = OUTPUT_SIZE_Y; // how many times we need to apply filter in Y dimension
