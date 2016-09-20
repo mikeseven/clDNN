@@ -23,16 +23,15 @@ const std::string kernelName = "lrn_GPU";
 const std::string kernelCode = R"__krnl(
 KERNEL (lrn_GPU)(__global neural_memory* input_mem, __global neural_memory* dst_mem, uint pSize, float k, float alpha, float beta, int helper_input_offset_feature)
 {
-    __global uint* input_size = get_raw(input_mem);
     __global float* input = (__global float*)get_data(input_mem);
     __global float* pDst = (__global float*)get_data(dst_mem);
 
     const int global_id = get_global_id(0);
 
-    const int batch_num = input_size[0];
+    const int batch_num = INPUT_BATCH_NUM;
     const int batch_offset = global_id % batch_num;
 
-    const int ifm_num = input_size[1];
+    const int ifm_num = INPUT_FEATURE_NUM;
     const int ifm_offset = (global_id / batch_num) % ifm_num;
 
     const int x = (global_id / batch_num) / ifm_num;
@@ -69,7 +68,7 @@ struct lrn_gpu : is_an_implementation {
 
     lrn_gpu(normalization::response &arg): is_an_implementation(neural::type_id<lrn_gpu>())
         , outer(arg)
-        , _kernel(kernelName)
+        , _kernel(kernelName, {gpu::make_jit_constant("INPUT", outer.input_memory(0).argument.size)})
     {}
 
     static void implementation(const void *ptr) {

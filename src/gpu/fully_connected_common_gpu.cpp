@@ -19,7 +19,6 @@
 namespace neural {
 
     const char fully_connected_code_xb[] = R"__CC(
-        __global uint* input_size = get_raw(input_mem);
         __global float* input = (__global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);
 
@@ -38,7 +37,6 @@ namespace neural {
     )__CC";
 
     const char fully_connected_code_xb_bx[] = R"__CC(
-        __global uint* input_size = get_raw(input_mem);
         __global float* input = (__global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);
 
@@ -56,8 +54,6 @@ namespace neural {
     )__CC";
 
     const char fully_connected_code_yxfn[] = R"__CC(
-        __global uint* input_size = get_raw(input_mem);
-        __global uint* output_size = get_raw(dst_mem);
         __global float* input = (__global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);
 
@@ -79,7 +75,6 @@ namespace neural {
     )__CC";
 
     const char fully_connected_code_xb_memory[] = R"__CC(
-        __global uint* input_size = get_raw(input_mem);
         __global float* input = (__global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);
 

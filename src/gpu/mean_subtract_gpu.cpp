@@ -28,18 +28,15 @@ KERNEL(Mean_subtract_GPU)(const __global neural_memory* input_mem, __global neur
     const __global float* input = (const __global float*)get_data(input_mem);
     __global float* output = (__global float*)get_data(output_mem);
     const __global float* mean = (const __global float*)get_data(mean_mem);
- 
-    __global uint* input_size = get_raw(input_mem);
-    __global uint* mean_size = get_raw(mean_mem);
 
-    const uint batch_num = input_size[0];
+    const uint batch_num = INPUT_BATCH_NUM;
 
     const int global_id = get_global_id(0);
     const int batch_id = global_id % batch_num;
-    const int feature_id = (global_id / batch_num) % input_size[1];
-    const int x = ((global_id / batch_num) / input_size[1]) % input_size[2];
-    const int y = ((global_id / batch_num) / input_size[1]) / input_size[2];
-    output[global_id] = input[global_id] - mean[x + mean_size[2] * (y + mean_size[3] * (feature_id + mean_size[1] * (batch_id % mean_size[0])))];
+    const int feature_id = (global_id / batch_num) % INPUT_FEATURE_NUM;
+    const int x = ((global_id / batch_num) / INPUT_FEATURE_NUM) % INPUT_SIZE_X;
+    const int y = ((global_id / batch_num) / INPUT_FEATURE_NUM) / INPUT_SIZE_X;
+    output[global_id] = input[global_id] - mean[x + MEAN_SIZE_X * (y + MEAN_SIZE_Y * (feature_id + MEAN_FEATURE_NUM * (batch_id % MEAN_BATCH_NUM)))];
 }
 )__krnl";
 
@@ -50,8 +47,15 @@ struct mean_subtract_gpu : is_an_implementation {
     mean_subtract_gpu(mean_subtract &arg)
         : is_an_implementation(neural::type_id<mean_subtract_gpu>())
         , outer(arg)
-        , _kernel(kernelName)
+        , _kernel(kernelName, get_jit_constants())
     {}
+
+    gpu::jit_constants get_jit_constants() const {
+        return{
+            gpu::make_jit_constant("INPUT", outer.input_memory(0).argument.size),
+            gpu::make_jit_constant("MEAN" , outer.input_memory(1).argument.size),
+        };
+    }
 
     static void implementation(const void *ptr) {
         auto me = static_cast<const mean_subtract_gpu*>(ptr);

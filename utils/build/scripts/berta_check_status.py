@@ -1,19 +1,45 @@
-import os
-import sys
-import json
-import bertaapi
+#!/usr/bin/env python2
+
+# INTEL CONFIDENTIAL
+# Copyright 2016 Intel Corporation
+#
+# The source code contained or described herein and all documents related to the source code ("Material") are owned by
+# Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its
+# suppliers and licensors. The Material contains trade secrets and proprietary and confidential information of Intel
+# or its suppliers and licensors. The Material is protected by worldwide copyright and trade secret laws and treaty
+# provisions. No part of the Material may be used, copied, reproduced, modified, published, uploaded, posted,
+# transmitted, distributed, or disclosed in any way without Intel's prior express written permission.
+#
+# No license under any patent, copyright, trade secret or other intellectual property right is granted to
+# or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement,
+# estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel
+# in writing.
+#
+#
+# For details about script please contact following people:
+#  * [Version: 1.0] Sluis, Benjamin <benjamin.sluis@intel.com>
+#  * [Version: 1.1] Walkowiak, Marcin <marcin.walkowiak@intel.com>   (Adaptation for TeamCity and fetching regressions)
+
+
+import argparse
 import getpass
-import textwrap
+import json
 import logging
 import logging.handlers
+import os
+import sys
 import time
-import argparse
 
-settings = {} # Global settings file
-log = None # Global log handle
-berta_server = None # Global BertaApi class
+import berta_api
+import teamcity_utils as tcu
 
-def load_json(file, data=None):
+
+settings = {}        # Global settings file
+log = None           # Global log handle
+berta_server = None  # Global BertaApi class
+
+
+def load_json(file, data = None):
     """ Loads a local JSON file using the specified file key. A default
     JSON data object can be optionally passed in so default properties
     can be guranteed to exist """
@@ -68,7 +94,7 @@ def init_settings( args ):
 
         # Initialize the Berta class
         global berta_server
-        berta_server = bertaapi.BertaApi(settings['berta_server'], username, passwd)
+        berta_server = berta_api.BertaApi(settings['berta_server'], username, passwd)
         if berta_server == None:
             log.error('Failed to create berta server object for ' + settings['berta_server'])
             return False
@@ -129,14 +155,14 @@ def get_build_status( build_id, stream_names ):
 
     # Loop through the test sessions and find the one that matches the stream id
     status = True
-    found_session = False
+    found_sessions = []
     # Walk through each test session and find the one that matches the specified session ID
     for session in test_sessions:
         # Loop over the streams
         for stream in streams:        
             if session['stream_id'] == stream['id']:
                 # Found the session matching session_id.  Now check if it is still running or not
-                found_session = True
+                found_sessions.append(session['id'])
 
                 if session['still_testing']:
                     # Tests are still running
@@ -145,16 +171,75 @@ def get_build_status( build_id, stream_names ):
                     # Testing is complete
                     status = False 
 
-    if found_session == False:
+    if len(found_sessions) == 0:
         # If test session not found then probably script didn't receive complete test_session list. 
         # Return True so it will try again next time
         log.error('Failed to find any test sessions associated with streams ' + stream_names )
         status = True
 
-    return status
-    
+    return status, found_sessions
+
+
+def getRegressions(sessionIds):
+    """ Fetches information about all regression from specific test sessions.
+
+    :param sessionIds: List of identifiers of test sessions to check.
+    :type sessionIds: list[int]
+    """
+
+    log.debug('getRegressions(sessionIds = {0})'.format(repr(sessionIds)))
+    try:
+        allRegressions = []
+        allRegressionsCount = 0
+        for sessionId in sessionIds:
+            regressions, regressionsCount = berta_server.show_test_session_regressions(sessionId)
+            allRegressions.extend(regressions)
+            allRegressionsCount += regressionsCount
+
+        if allRegressionsCount > 0:
+            log.debug('Analysing possible regressions (count: {0:>4d})'.format(allRegressionsCount))
+
+            testSuite = tcu.reportTcTestSuiteStart('Berta Test Changes')
+            for regression in allRegressions:
+                testCase = testSuite.reportTestStart(regression['test_case_name'])
+
+                isRegression = regression['prev_status_changes'] == 0
+                if regression['perf']:
+                    if regression['perf_status'] == 'perf_imp':
+                        testStatus = 'IMPROVEMENT'
+                        isRegression = False
+                    elif regression['perf_status'] == 'perf_ok':
+                        testStatus = 'NO CHANGE'
+                        isRegression = False
+                    elif regression['perf_status'] == 'perf_reg':
+                        testStatus = 'REGRESSION'
+                    else:
+                        testStatus = 'UNKNOWN ({0})'.format(regression['perf_status'])
+
+                    testMessage = 'Test:        {0}\nTest status: {1}\n\nTest change: {2} -> {3} [diff: {4}]' \
+                        .format(regression['cmd_line'], testStatus, regression['prev_result'], regression['result'],
+                                regression['perf_diff'])
+                else:
+                    if unicode(regression['result']).lower().startswith('pass'):
+                        isRegression = False
+
+                    testMessage = 'Test:        {0}\nTest status: {1}\n\nTest change: {2} -> {1}' \
+                        .format(regression['cmd_line'], regression['result'], regression['prev_result'])
+
+                if isRegression:
+                    testCase.reportFailed('REGRESSION', testMessage)
+                else:
+                    testCase.reportStdOut(testMessage)
+            testSuite.finish()
+            sys.stdout.flush()
+
+        return False
+    except:
+        log.error('Fetching list of regressions failed for one of test sessions (ids = {})'.format(sessionIds))
+        return True
+
+
 def main( args ):
-    
     init_logging()
     success = init_settings( args )
     
@@ -168,16 +253,26 @@ def main( args ):
         log.error('Specified product %s do not exists in Berta. Exiting with code (1)' % (settings['product']))
         return 1
 
-   # Check if the build is available in Berta. If not, exit since there is no build check status of
+    # Check if the build is available in Berta. If not, exit since there is no build check status of
     build = check_build_existance(settings['build_version'], product['id'])
     if not build:
         log.error('Specified build %s doesn\'t exist in Berta product_id = %. Exiting with code (1) ' %(settings['build_version'],settings['product']))
         return 1
 
-    status = get_build_status( build['id'], settings['berta_streams'])
+    # Waiting for build to end.
+    status, found_sessions = get_build_status(build['id'], settings['berta_streams'])
+    while status and args.interval > 0:
+        log.info('Build is still running. Waiting {0:>3d} seconds...'.format(args.interval))
+        time.sleep(args.interval)
+
+        status, found_sessions = get_build_status(build['id'], settings['berta_streams'])
+
+    # Getting regressions.
+    if not status:
+        status = getRegressions(found_sessions)
 
     # Exit
-    if status == True:
+    if status:
         log.info('Build is still running')
     else:
         log.info('Build is complete')
@@ -190,6 +285,7 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--buildversion', help='berta build name to check if it has any running test sessions in the specified streams, ie. ci-dev-igc-12345', required=True)
     parser.add_argument('-m', '--streams', help='berta streams associated with product, comma separated. e.g. unified-smoke,dev-igc', required=True)
     parser.add_argument('-p', '--product', help='berta product associated with build', required=True)
+    parser.add_argument('-i', '--interval', metavar = '<interval>', type = int, default = 60, help = 'Interval of checking for status in seconds. If zero is specified, the script will not wait for status. Default: 60.')
     args = parser.parse_args()
 
     exit_code = main(args)

@@ -20,8 +20,11 @@
 #include <algorithm>
 #include <cassert>
 #include <sstream>
+#include <fstream>
 
 namespace neural { namespace gpu {
+
+const char program_dump_file_name[] = "clDNN_program.cl";
 
 static const char* kernels_header = R"__krnl(
 enum neural_memory_format {
@@ -40,76 +43,10 @@ enum neural_memory_format {
     any=-1
 };
 
-#pragma pack(push, 4)
-typedef struct _neural_memory_tag {
-    uint format;
-    uint feature_offset;
-    uint spatial_offset;
-    uint vector_size;
-    uint data_offset;
-    uint data[1];
-} neural_memory;
+#define neural_memory float
 
-typedef struct _neural_vector_tag {
-    uint feature_offset;
-    uint spatial_offset;
-    uint raw_size;
-    uint data[1];
-} neural_vector;
-#pragma pack(pop)
-
-// neural_memory accessors
-__attribute__((overloadable)) __global uint* get_raw(__global neural_memory* mem) { return &(mem->data[0]); }
-__attribute__((overloadable)) const __global uint* get_raw(const __global neural_memory* mem) { return &(mem->data[0]); }
-__attribute__((overloadable)) uint get_raw_size(const __global neural_memory* mem) { return mem->vector_size; } 
-
-__attribute__((overloadable)) __global uint* get_batch(__global neural_memory* mem) { return get_raw(mem); }
-__attribute__((overloadable)) const __global uint* get_batch(const __global neural_memory* mem) { return get_raw(mem); }
-__attribute__((overloadable)) uint get_batch_size(const __global neural_memory* mem) { return mem->feature_offset; }
-
-__attribute__((overloadable)) __global uint* get_feature(__global neural_memory* mem) { return &(mem->data[mem->feature_offset]); }
-__attribute__((overloadable)) const __global uint* get_feature(const __global neural_memory* mem) { return &(mem->data[mem->feature_offset]); }
-__attribute__((overloadable)) uint get_feature_size(const __global neural_memory* mem) { return mem->spatial_offset - mem->feature_offset; }
-
-__attribute__((overloadable)) __global uint* get_spatial(__global neural_memory* mem) { return &(mem->data[mem->spatial_offset]); }
-__attribute__((overloadable)) const __global uint* get_spatial(const __global neural_memory* mem) { return &(mem->data[mem->spatial_offset]); }
-__attribute__((overloadable)) uint get_spatial_size(const __global neural_memory* mem) { return get_raw_size(mem) - mem->spatial_offset; } 
-
-__attribute__((overloadable)) __global void* get_data(__global neural_memory* mem) { return &(mem->data[mem->data_offset]); }
-__attribute__((overloadable)) const __global void* get_data(const __global neural_memory* mem) { return &(mem->data[mem->data_offset]); }
-__attribute__((overloadable)) size_t get_element_size(const __global neural_memory* mem) { return sizeof(float); }
-
-__attribute__((overloadable)) size_t get_data_size(const __global neural_memory* mem) {
-    size_t result = get_element_size(mem);
-
-    const __global uint* raw = get_raw(mem);
-    uint raw_size = get_raw_size(mem);
-
-    for(uint i = 0; i < raw_size; i++) {
-        result *= raw[i];
-    }
-    return result;
-}
-
-// neural_vector accessors
-// TODO NOTE: non-const accessors are disabled now, because read-only neural_vector argument is only supported now
-
-//__attribute__((overloadable)) __global uint* get_raw(__global neural_vector* v) { return &(v->data[0]); }
-__attribute__((overloadable)) const __global uint* get_raw(const __global neural_vector* v) { return &(v->data[0]); }
-__attribute__((overloadable)) uint get_raw_size(const __global neural_vector* v) { return v->raw_size; } 
-
-//__attribute__((overloadable)) __global uint* get_batch(__global neural_vector* v) { return get_raw(v); }
-__attribute__((overloadable)) const __global uint* get_batch(const __global neural_vector* v) { return get_raw(v); }
-__attribute__((overloadable)) uint get_batch_size(const __global neural_vector* v) { return v->feature_offset; }
-
-//__attribute__((overloadable)) __global uint* get_feature(__global neural_vector* v) { return &(v->data[v->feature_offset]); }
-__attribute__((overloadable)) const __global uint* get_feature(const __global neural_vector* v) { return &(v->data[v->feature_offset]); }
-__attribute__((overloadable)) uint get_feature_size(const __global neural_vector* v) { return v->spatial_offset - v->feature_offset; }
-
-//__attribute__((overloadable)) __global uint* get_spatial(__global neural_vector* v) { return &(v->data[v->spatial_offset]); }
-__attribute__((overloadable)) const __global uint* get_spatial(const __global neural_vector* v) { return &(v->data[v->spatial_offset]); }
-__attribute__((overloadable)) uint get_spatial_size(const __global neural_vector* v) { return get_raw_size(v) - v->spatial_offset; } 
-
+__attribute__((overloadable)) __global void* get_data(__global neural_memory* mem) { return mem; }
+__attribute__((overloadable)) const __global void* get_data(const __global neural_memory* mem) { return mem; }
 )__krnl";
 
 std::vector<std::string> kernels_cache::get_program_source() const {
@@ -143,6 +80,11 @@ namespace {
             return *this;
         }
 
+        code_builder& add_line(const std::string& line) {
+            oss << line << "\n";
+            return *this;
+        }
+
         code_builder& decoration_macro(const std::string& name, const std::string& prefix, const std::string& postfix)
         {
             oss << "#define " << name << "(name) " << prefix << " name" << (postfix.empty() ? "" : "##_") << postfix << std::endl;
@@ -173,7 +115,10 @@ kernels_cache::kernel_id kernels_cache::create_kernel_from_template(std::shared_
     auto kernel_name = template_name + (kernel_num.empty() ? "" : "_") + kernel_num;
 
     class code_builder code;
-    code.decoration_macro("KERNEL", "__kernel void", kernel_num)
+    code.add_line("\n//====================================================")
+        .add_line("// Kernel template: " + template_name + " ")
+        .add_line("// Kernel name: " + kernel_name)
+        .decoration_macro("KERNEL", "__kernel void", kernel_num)
         .decoration_macro("FUNC", "", kernel_num)
         .decoration_macro("FUNC_CALL", "", kernel_num);
     for (auto& definition : definitions) {
@@ -192,12 +137,49 @@ kernels_cache::kernel_id kernels_cache::create_kernel_from_template(std::shared_
 
 kernels_cache::program_type kernels_cache::get_program(std::shared_ptr<neural::gpu::gpu_toolkit> context) {
     assert(context != nullptr);
-    std::lock_guard<std::mutex> lock(_mutex);
-    if (_modified){
-        context->program() = cl::Program(context->context(), get_program_source());
-        context->program().build({ context->device() });
+
+    try {
+        std::lock_guard<std::mutex> lock(_mutex);
+        if (_modified) {
+            auto program_source = get_program_source();
+#ifndef NDEBUG
+            {
+                std::ofstream os(program_dump_file_name);
+                for (auto& s : program_source)
+                    os << s;
+            }
+#endif
+            context->program() = cl::Program(context->context(), program_source);
+            context->program().build({ context->device() }, "-cl-mad-enable");
+#ifndef NDEBUG
+            {
+                std::ofstream os(program_dump_file_name, std::ios_base::app);
+                os << "\n/* Build Log:\n";
+                for (auto& p : context->program().getBuildInfo<CL_PROGRAM_BUILD_LOG>()) {
+                    os << p.second << "\n";
+                }
+                os << "*/\n";
+            }
+#endif
+        }
+        _modified = false;
     }
-    _modified = false;
+    catch (const cl::BuildError& err) {
+        std::string build_log{"Build program error "};
+        build_log += err.what();
+#ifndef NDEBUG
+        {
+            std::ofstream os(program_dump_file_name, std::ios_base::app);
+            os << "\n/* Build Log:\n";
+            for (auto& p : err.getBuildLog()) {
+                os << p.second << "\n";
+                build_log += "\n" + p.second;
+            }
+            os << "*/\n";
+        }
+#endif
+        throw std::runtime_error(build_log);
+    }
     return context->program();
 }
 

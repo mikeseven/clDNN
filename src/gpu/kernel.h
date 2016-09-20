@@ -24,16 +24,6 @@
 
 namespace neural { namespace gpu {
 
-class vector_arg : public context_holder {
-    const neural::vector<uint32_t>& _vec;
-    cl::Buffer _clBuffer;
-public:
-    vector_arg(const neural::vector<uint32_t>& arg);
-    const cl::Buffer& get_buffer() const { return _clBuffer; };
-
-    ~vector_arg();
-};
-
 class memory_arg : public context_holder {
     const neural::memory& _mem;
     std::shared_ptr<gpu_buffer> _gpu_buffer;
@@ -61,6 +51,36 @@ public:
     output_mem(const neural::memory& mem) :memory_arg(mem, false, true) {}
 };
 
+// TODO improve to_code_string specializations
+template<typename T>
+std::string to_code_string(T val) { return std::to_string(val); }
+
+template<>
+inline std::string to_code_string<std::string>(std::string val) { return val; }
+
+template<>
+inline std::string to_code_string<const char*>(const char* val) { return val; }
+
+template<>
+inline std::string to_code_string<char*>(char* val) { return val; }
+
+template<>
+inline std::string to_code_string<float>(float val) {
+    // 64 chars should be enought to store: "-0x0.123456p-123f /*-0.123456e-123*/"
+    char buffer[64] = "";
+    std::snprintf(buffer, sizeof(buffer), "%.6af /*%.4g*/", double(val), double(val));
+    return buffer;
+}
+
+template<>
+inline std::string to_code_string<double>(double val) {
+    // 64 chars should be enought to store: "-0x0.1234567890123p-1234 /*-0.1234567890123e-1074*/"
+    char buffer[64] = "";
+    std::snprintf(buffer, sizeof(buffer), "%.13a /*%.4g*/", val, val);
+    return buffer;
+}
+
+// TODO refactor jit_constant, make_jit_constant, etc...
 class jit_constant {
 protected:
     const std::string _name;
@@ -83,8 +103,9 @@ public:
     }
 };
 
-inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const std::string& value) {
-    return std::static_pointer_cast<jit_constant>(std::make_shared<simple_jit_constant>(name, value));
+template<typename T>
+std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, T value) {
+    return std::static_pointer_cast<jit_constant>(std::make_shared<simple_jit_constant>(name, to_code_string(value)));
 }
 
 template<typename T>
@@ -96,15 +117,33 @@ public:
         : jit_constant(name), _vec(vec) {}
 
     kernels_cache::jit_definitions get_definitions() const override {
-        auto feature_offset = _vec.batch.size();
-        auto spatial_offset = _vec.feature.size() + feature_offset;
-        return kernels_cache::jit_definitions{
-            { _name + "_BATCH_NUM", std::to_string(_vec.raw[0]) },
-            { _name + "_SIZE_X", std::to_string(_vec.raw[0 + spatial_offset]) },
-            { _name + "_SIZE_Y", _vec.spatial.size() > 1 ? std::to_string(_vec.raw[1 + spatial_offset]) : "1" },
-            {  _vec.feature.size() > 1 ? _name + "_OUTPUT_FEATURE_NUM" : _name + "_FEATURE_NUM", std::to_string(_vec.raw[0 + feature_offset]) },
-            { _name + "_INPUT_FEATURE_NUM", _vec.feature.size() > 1 ? std::to_string(_vec.raw[1 + feature_offset]) : "1" }
+
+        kernels_cache::jit_definitions definitions{
+            { _name + "_BATCH_NUM", std::to_string(_vec.batch[0]) },
         };
+
+        const char* spatial_names[] = { "X", "Y", "Z", "W" };
+        if (_vec.spatial.size() > (sizeof(spatial_names)/sizeof(spatial_names[0])))
+            throw std::runtime_error("max 4D images are supported");
+
+        for (size_t i = 0; i < std::max(_vec.spatial.size(), static_cast<size_t>(2)); ++i) {
+            definitions.emplace_back( _name + "_SIZE_" + spatial_names[i],
+                                      _vec.spatial.size() > i ? std::to_string(_vec.spatial[i]) : "1" );
+        }
+
+        assert(_vec.feature.size() > 0);
+        if (_vec.feature.size() > 0) {
+            // if number of feature nums is 1 then no suffix
+            if(_vec.feature.size() == 1) {
+                definitions.emplace_back(_name + "_FEATURE_NUM", std::to_string(_vec.feature[0]));
+            }
+            else { // else add suffixes
+                for (size_t i = 0; i < _vec.feature.size(); ++i) {
+                    definitions.emplace_back(_name + "_FEATURE_NUM_" + std::to_string(i), std::to_string(_vec.feature[i]));
+                }
+            }
+        }
+        return definitions;
     }
 };
 
@@ -126,7 +165,7 @@ public:
         std::stringstream ss;
         ss << "(float[]){ ";
         for (size_t i = 0; i < _mem.count(); i++)
-            ss << data[i] << ",";
+            ss << to_code_string(data[i]) << ",";
         ss << " } ";
         result.push_back({ _name, ss.str() });
         return result;
@@ -148,7 +187,7 @@ public:
         for (size_t i = 1; i < _mem.size(); i++)
         {
             if (_mem[0].get().count() != _mem[i].get().count())
-                throw std::runtime_error("All memories must contain the same number of elements!");
+                throw std::invalid_argument("All memories must contain the same number of elements!");
         }
         auto result = vector_jit_constant::get_definitions();
         result.push_back({ _name + "_ARRAY_NUM", std::to_string(_mem.size()) });
@@ -160,7 +199,7 @@ public:
             auto data = _m.pointer<float>();
             ss << "{ ";
             for (size_t i = 0; i < _m.count(); i++)
-                ss << data[i] << ",";
+                ss << to_code_string(data[i]) << ",";
             ss << " } ,";
         }
         ss << " } ";
@@ -207,12 +246,6 @@ template<typename T>
 struct kernel_arg_handler<T, typename std::enable_if<std::is_base_of<memory_arg, T>::value>::type> {
     static const cl::Buffer& get(const T& arg) { return arg.get_buffer(); }
 };
-
-template<>
-struct kernel_arg_handler<vector_arg> {
-    static const cl::Buffer& get(const vector_arg& arg) { return arg.get_buffer(); };
-};
-
 
 class kernel_execution_options {
     cl::NDRange _global;

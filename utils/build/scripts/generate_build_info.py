@@ -1,127 +1,107 @@
 #!/usr/bin/env python2
 
+# INTEL CONFIDENTIAL
+# Copyright 2016 Intel Corporation
+#
+# The source code contained or described herein and all documents related to the source code ("Material") are owned by
+# Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its
+# suppliers and licensors. The Material contains trade secrets and proprietary and confidential information of Intel
+# or its suppliers and licensors. The Material is protected by worldwide copyright and trade secret laws and treaty
+# provisions. No part of the Material may be used, copied, reproduced, modified, published, uploaded, posted,
+# transmitted, distributed, or disclosed in any way without Intel's prior express written permission.
+#
+# No license under any patent, copyright, trade secret or other intellectual property right is granted to
+# or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement,
+# estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel
+# in writing.
+#
+#
+# For details about script please contact following people:
+#  * [Version: 1.0] Walkowiak, Marcin <marcin.walkowiak@intel.com>
+
 
 import argparse
-import json
-import re
 import subprocess
-import urllib2
-import urlparse
-
 from datetime import datetime
 
-
-def escapeTeamCityMsg(message):
-    """ Escapes TeamCity server messages. """
-
-    if not isinstance(message, (str, unicode)) or message == u'':
-        return u'';
-    return re.sub(ur'''['|\[\]]''', ur'|\g<0>', unicode(message)).replace(u'\n', u'|n').replace(u'\r', u'|r') \
-        .replace(u'\u0085', '|x').replace(u'\u2028', '|l').replace(u'\u2029', '|p')
-
-
-def updateTcParameter(paramName, message):
-    """ Sends log service message to TeamCity which updates/adds build configuration parameter. """
-
-    pName = escapeTeamCityMsg(paramName)
-    msg   = escapeTeamCityMsg(message)
-    print u"""##teamcity[setParameter name='{0}' value='{1}']""".format(pName, msg)
-
-
-def updateTcBuildNumber(number):
-    """ Sends log service message to TeamCity which updates build number for current build. """
-
-    bNumber = escapeTeamCityMsg(number)
-    print u"""##teamcity[buildNumber '{0}']""".format(bNumber)
-
-
-def prepareTcRestConnection(teamCityUrl, agentUser, agentPass):
-    if agentUser != None and agentUser != '':
-        passMgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-        passMgr.add_password(None, teamCityUrl, agentUser, agentPass)
-        authHandler = urllib2.HTTPBasicAuthHandler(passMgr)
-        restOpener = urllib2.build_opener(authHandler)
-        urllib2.install_opener(restOpener)
-
-    def prepareGetRequest(restGetRequest, **args):
-        getRequestPart = unicode(restGetRequest).format(
-            **{k: urllib2.quote(v, safe = '') for (k, v) in args.iteritems()})
-        getRequestFragment = u'/httpAuth/app/rest/{0}'.format(getRequestPart)
-        getRequestUrl = urlparse.urljoin(teamCityUrl, getRequestFragment)
-
-        getRequest = urllib2.Request(getRequestUrl, headers = {'Accept' : 'application/json'})
-        return json.loads(urllib2.urlopen(getRequest).read())
-
-    return prepareGetRequest
+import teamcity_utils as tcu
 
 
 # Sending service messages that will add/update build parameters.
-def main(args):
-    curUtcDateTime = datetime.now() if args.use_local_time != 0 else datetime.utcnow()
+def main(parsedArgs):
+    """ Main script function.
+
+    The script generates additional build information useful for TeamCity and Berta.
+
+    :param parsedArgs: Arguments parsed by argparse.ArgumentParser class.
+    :return: Exit code for script.
+    :rtype: int
+    """
+
+    logger              = tcu.initLogger('BUILD INFO', parsedArgs.log_file)
+    curUtcDateTime      = datetime.now() if parsedArgs.use_local_time != 0 else datetime.utcnow()
     curUtcDateTimeBerta = curUtcDateTime.strftime('%Y-%m-%d %H:%M:%S')
 
-    updateTcParameter('my.build.info.utcdatetime.berta', curUtcDateTimeBerta)
-    updateTcBuildNumber(args.format.format(
-            counter   = args.counter,
-            id        = args.id,
-            id_f4     = args.id[:4],
-            id_l4     = args.id[-4:],
-            id_f8     = args.id[:8],
-            id_l8     = args.id[-8:],
-            vcs_id    = args.vcs_id,
-            vcs_id_f4 = args.vcs_id[:4],
-            vcs_id_l4 = args.vcs_id[-4:],
-            vcs_id_f8 = args.vcs_id[:8],
-            vcs_id_l8 = args.vcs_id[-8:],
-            name      = args.name,
-        ))
+    tcu.updateTcParameter('my.build.info.utcdatetime.berta', curUtcDateTimeBerta)
+    tcu.updateTcBuildNumber(parsedArgs.format.format(
+        counter   = parsedArgs.counter,
+        id        = parsedArgs.id,
+        id_f4     = parsedArgs.id[:4],
+        id_l4     = parsedArgs.id[-4:],
+        id_f8     = parsedArgs.id[:8],
+        id_l8     = parsedArgs.id[-8:],
+        vcs_id    = parsedArgs.vcs_id,
+        vcs_id_f4 = parsedArgs.vcs_id[:4],
+        vcs_id_l4 = parsedArgs.vcs_id[-4:],
+        vcs_id_f8 = parsedArgs.vcs_id[:8],
+        vcs_id_l8 = parsedArgs.vcs_id[-8:],
+        name      = parsedArgs.name,
+    ))
 
     # Getting name and e-mail of the person who triggered build or author of last commit (if possible).
-    lastCommitAuthId     = args.change_auth  #ID -> AD SID
-    lastCommitAuth       = ''
-    lastCommitAuthEMail  = ''
-    lastCommitPrettyAuth = ''
+    lastCommitAuthId    = parsedArgs.change_auth  # ID -> AD SID
+    lastCommitAuth      = ''
+    lastCommitAuthEMail = ''
 
-    if args.change_auth != '' and args.tc_url != '':
-        conn = prepareTcRestConnection(args.tc_url, args.agent_user, args.agent_pass)
+    if parsedArgs.change_auth != '' and parsedArgs.tc_url != '':
+        conn = tcu.prepareTcRestConnection(parsedArgs.tc_url, parsedArgs.agent_user, parsedArgs.agent_pass)
         try:
-            print "Trying to get author name and e-mail from TeamCity users information (REST API)."
-            authInfo = conn('users/username:{userName}', userName = args.change_auth)
+            logger.debug("Trying to get author name and e-mail from TeamCity users information (REST API).")
+            authInfo = conn('users/username:{userName}', userName = parsedArgs.change_auth)
             lastCommitAuthId    = authInfo['username'] if authInfo['username'] != '' else lastCommitAuthId
             lastCommitAuth      = authInfo['name']
             lastCommitAuthEMail = authInfo['email']
         except:
-            print "Fetching TeamCity users information failed."
+            logger.warning("Fetching TeamCity users information failed.")
 
     if lastCommitAuth == '':
         try:
-            print "Trying to get author name from last (HEAD) commit in Git repository."
+            logger.debug("Trying to get author name from last (HEAD) commit in Git repository.")
             lastCommitAuth = subprocess.check_output(['git', 'show', '-s', '--format=%aN'],
                                                      universal_newlines = True).strip()
         except:
-            print "Fetching Git users information failed."
+            logger.warning("Fetching Git users information failed.")
 
     if lastCommitAuthEMail == '':
         try:
-            print "Trying to get author e-mail from last (HEAD) commit in Git repository."
+            logger.debug("Trying to get author e-mail from last (HEAD) commit in Git repository.")
             lastCommitAuthEMail = subprocess.check_output(['git', 'show', '-s', '--format=%aE'],
                                                           universal_newlines = True).strip()
         except:
-            print "Fetching Git users information failed."
+            logger.warning("Fetching Git users information failed.")
 
     lastCommitAuth = lastCommitAuth if lastCommitAuth != '' else lastCommitAuthId
     if lastCommitAuth != '':
-        updateTcParameter('my.build.info.change.auth.user', lastCommitAuth)
+        tcu.updateTcParameter('my.build.info.change.auth.user', lastCommitAuth)
     if lastCommitAuthEMail != '':
-        updateTcParameter('my.build.info.change.auth.email', lastCommitAuthEMail)
+        tcu.updateTcParameter('my.build.info.change.auth.email', lastCommitAuthEMail)
         lastCommitPrettyAuth = u'{0} <{1}>'.format(lastCommitAuth, lastCommitAuthEMail)
     else:
         lastCommitPrettyAuth = u'{0}'.format(lastCommitAuth)
     if lastCommitPrettyAuth != '':
-        updateTcParameter('my.build.info.change.auth.pretty', lastCommitPrettyAuth)
+        tcu.updateTcParameter('my.build.info.change.auth.pretty', lastCommitPrettyAuth)
 
     return 0
-
 
 
 if __name__ == "__main__":
@@ -136,6 +116,7 @@ if __name__ == "__main__":
     parser.add_argument('-tc',  '--tc-server-url',  dest = 'tc_url',         metavar = '<teamcity-url>',        type = unicode, default = '',                                          help = 'URL to TeamCity server.')
     parser.add_argument('-au',  '--agent-user',     dest = 'agent_user',     metavar = '<agent-user-id>',       type = unicode, default = '',                                          help = 'Temporary agent user ID for TeamCity (to access TeamCity data).')
     parser.add_argument('-ap',  '--agent-password', dest = 'agent_pass',     metavar = '<agent-pass>',          type = unicode, default = '',                                          help = 'Temporary agent password for TeamCity (to access TeamCity data).')
+    parser.add_argument('-l',   '--log-file',       dest = 'log_file',       metavar = '<log-file>',            type = unicode, default = None,                                        help = 'Path to log file.')
     parser.add_argument('--version',                                                                                            action = 'version',                                    version = '%(prog)s 1.0')
 
     args = parser.parse_args()

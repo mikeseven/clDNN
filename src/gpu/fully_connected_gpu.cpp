@@ -206,7 +206,7 @@ namespace neural {
             gpu::jit_constants mem_consts{
                 gpu::make_jit_constant("INPUT", input_mem.argument.size),
                 gpu::make_jit_constant("OUTPUT", output_mem.argument.size),
-                gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", std::to_string(input_mem.count() / input_mem.argument.size.batch[0]))
+                gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", input_mem.count() / input_mem.argument.size.batch[0])
             };
 
             if (weight_mem.argument.format == memory::format::type::yxfb_f32 ||
@@ -214,14 +214,14 @@ namespace neural {
             {
                 auto out_elements_count_per_batch = output_mem.count() / output_mem.argument.size.batch[0];
                 if (out_elements_count_per_batch % 16 == 0)
-                    mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", std::to_string(16)));
+                    mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", 16));
                 else if(out_elements_count_per_batch % 8 == 0)
-                    mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", std::to_string(8)));
+                    mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", 8));
             }
             if (outer.argument.use_relu)
             {
                 mem_consts.add_constant(gpu::make_jit_constant("RELU", ""));
-                mem_consts.add_constant(gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(negative_slope)));
+                mem_consts.add_constant(gpu::make_jit_constant("NEGATIVE_SLOPE", negative_slope));
             }
             if (inline_memory)
             {

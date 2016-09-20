@@ -21,21 +21,17 @@
 namespace neural { namespace gpu {
     gpu_buffer::gpu_buffer(memory::arguments arg) : _argument(arg),
         _ref_count(0),
-        _buffer_size(neural_memory::size_of_memory(arg)),
-        _data_size(neural_memory::datasize(arg)),
-        _buffer(context()->context(), CL_MEM_READ_WRITE, _buffer_size),
-        _mapped_ptr(nullptr) {
-        auto header = neural_memory::create_header(arg);
-        cl::copy(context()->queue(), header.begin(), header.end(), _buffer);
-    }
+        _data_size(memory::size_of(arg)),
+        _buffer(context()->context(), CL_MEM_READ_WRITE, _data_size),
+        _mapped_ptr(nullptr) {}
 
     void* gpu_buffer::lock() {
         std::lock_guard<std::mutex> locker(_mutex);
         if (0 == _ref_count) {
-            _mapped_ptr = reinterpret_cast<neural_memory*>(context()->queue().enqueueMapBuffer(_buffer, CL_TRUE, CL_MAP_WRITE, 0, _buffer_size));
+            _mapped_ptr = context()->queue().enqueueMapBuffer(_buffer, CL_TRUE, CL_MAP_WRITE, 0, _data_size);
         }
         _ref_count++;
-        return _mapped_ptr->pointer();
+        return _mapped_ptr;
     }
 
     void gpu_buffer::release() {

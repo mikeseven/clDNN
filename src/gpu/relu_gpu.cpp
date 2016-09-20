@@ -60,7 +60,7 @@ struct relu_gpu : is_an_implementation {
 		gpu::jit_constants mem_consts
 		{
 			gpu::make_jit_constant("RELU", ""),
-			gpu::make_jit_constant("NEGATIVE_SLOPE", std::to_string(outer.argument.negative_slope)),
+			gpu::make_jit_constant("NEGATIVE_SLOPE", outer.argument.negative_slope),
 		};
 
 		return mem_consts;
