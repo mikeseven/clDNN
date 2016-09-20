@@ -202,13 +202,36 @@ def getRegressions(sessionIds):
             testSuite = tcu.reportTcTestSuiteStart('Berta Test Changes')
             for regression in allRegressions:
                 testCase = testSuite.reportTestStart(regression['test_case_name'])
-                testMessage = 'Test:        {0}\nTest status: {1}\n\nTest change: {2} -> {1}' \
-                    .format(regression['cmd_line'], regression['result'], regression['prev_result'])
-                if regression['prev_status_changes'] > 0:
-                    testCase.reportStdOut(testMessage)
+
+                isRegression = regression['prev_status_changes'] == 0
+                if regression['perf']:
+                    if regression['perf_status'] == 'perf_imp':
+                        testStatus = 'IMPROVEMENT'
+                        isRegression = False
+                    elif regression['perf_status'] == 'perf_ok':
+                        testStatus = 'NO CHANGE'
+                        isRegression = False
+                    elif regression['perf_status'] == 'perf_reg':
+                        testStatus = 'REGRESSION'
+                    else:
+                        testStatus = 'UNKNOWN ({0})'.format(regression['perf_status'])
+
+                    testMessage = 'Test:        {0}\nTest status: {1}\n\nTest change: {2} -> {3} [diff: {4}]' \
+                        .format(regression['cmd_line'], testStatus, regression['prev_result'], regression['result'],
+                                regression['perf_diff'])
                 else:
+                    if unicode(regression['result']).lower().startswith('pass'):
+                        isRegression = False
+
+                    testMessage = 'Test:        {0}\nTest status: {1}\n\nTest change: {2} -> {1}' \
+                        .format(regression['cmd_line'], regression['result'], regression['prev_result'])
+
+                if isRegression:
                     testCase.reportFailed('REGRESSION', testMessage)
+                else:
+                    testCase.reportStdOut(testMessage)
             testSuite.finish()
+            sys.stdout.flush()
 
         return False
     except:
