@@ -21,37 +21,26 @@
 
 const std::string kernelName = "reorder_GPU";
 const std::string kernelCode = R"__krnl(
-//uint FUNC(YXFB)(uint size[4], uint pos[4]) {
-//    return pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + size[3] * pos[0]));
-//}
-KERNEL (reorder_GPU)(__global neural_memory* input_mem, __global neural_memory* dst_mem)
+uint FUNC(OUT_FORMAT)(uint size[4], uint pos[4]) {
+    OUT_FORMAT_IMPLEMENTATION
+}
+KERNEL (reorder_GPU)(__global neural_memory* in_mem, __global neural_memory* out_mem)
 {
-    __global uint* input_size = get_raw(input_mem);
-    __global float* input = (__global float*)get_data(input_mem);
-    __global float* pDst = (__global float*)get_data(dst_mem);
+    __global float* input = (__global float*)get_data(in_mem);
+    __global float* output = (__global float*)get_data(out_mem);
 
-    const int global_id = get_global_id(0);
-
-    const int batch_num = input_size[0];
-    const int batch_offset = global_id % batch_num;
-
-    const int ifm_num = input_size[1];
-    const int ifm_offset = (global_id / batch_num) % ifm_num;
-
-    const int x = (global_id / batch_num) / ifm_num;
-
-    uint pos1D = global_id;
+    uint pos1D = get_global_id(0);
     uint pos[DIMENSIONS]; // position in each of dimensions
-    for(uint i = DIMENSIONS-1; i >= 0 ; i--)
+	for(uint i = 0; i < DIMENSIONS; i++)
     {
-        //pos[i] = pos1D % SIZE[i];
-        pos1D /= SIZE[i]; 
+		uint order_idx = CALCULATION_ORDER[i];
+		pos[order_idx] = pos1D % SIZE[order_idx];
+        pos1D /= SIZE[order_idx]; 
     }
 
-    //uint input_pos=0;// = FUNC_CALL(YXFB)(SIZE, pos);
-    //uint output_pos=0;
+    uint output_pos = FUNC_CALL(OUT_FORMAT)(SIZE, pos);
 
-    //pDst[output_pos] = input[input_pos];
+    output[output_pos] = input[get_global_id(0)];
 }
 )__krnl";
 
@@ -64,6 +53,33 @@ struct reorder_gpu : is_an_implementation {
         , outer(arg)
         , _kernel(kernelName, get_jit_constants())
     {}
+
+	// We need to specify the output idx based on input position
+	static std::string get_output_idx_calculation(memory::format::type type) {
+		switch (type)
+		{
+		case memory::format::type::yxfb_f32:
+			return "return pos[0] + size[0] * (pos[1] + size[1]*(pos[2] + size[2] * pos[3]));";
+		case memory::format::type::byxf_f32:
+			return "return pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + size[3] * pos[0]));";
+		default:
+			throw std::invalid_argument("This format is not supported in GPU reorder");
+		}
+	}
+
+	// To read input memory linearly we need to specify the order of reading
+	static std::string get_calculation_order(memory::format::type type)
+	{
+		switch (type)
+		{
+		case memory::format::type::byxf_f32:
+			return "(uint[]){ 1, 2, 3, 0 }";
+		case memory::format::type::yxfb_f32:
+			return "(uint[]){ 0, 1, 2, 3 }";
+		default:
+			throw std::invalid_argument("This format is not supported in GPU reorder");
+		}
+	}
 
     gpu::jit_constants get_jit_constants() const {
         auto& input_mem = outer.input_memory(0);
@@ -78,10 +94,10 @@ struct reorder_gpu : is_an_implementation {
         s << " }";
         
         gpu::jit_constants mem_consts{
-            gpu::make_jit_constant("INPUT", input_mem.argument.size),
-            gpu::make_jit_constant("OUTPUT", output_mem.argument.size),
             gpu::make_jit_constant("DIMENSIONS", std::to_string(input_mem.argument.size.raw.size())),
-            gpu::make_jit_constant("SIZE", s.str())
+            gpu::make_jit_constant("SIZE", s.str()),
+			gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", get_output_idx_calculation(output_mem.argument.format)),
+			gpu::make_jit_constant("CALCULATION_ORDER", get_calculation_order(input_mem.argument.format))
         };
 
         return mem_consts;
