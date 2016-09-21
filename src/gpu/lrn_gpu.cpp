@@ -21,43 +21,33 @@
 
 const std::string kernelName = "lrn_GPU";
 const std::string kernelCode = R"__krnl(
-KERNEL (lrn_GPU)(__global neural_memory* input_mem, __global neural_memory* dst_mem, uint pSize, float k, float alpha, float beta, int helper_input_offset_feature)
+KERNEL (lrn_GPU)(__global float* input, __global float* output, uint pSize, float k, float alpha, float beta, int helper_input_offset_feature)
 {
-    __global float* input = (__global float*)get_data(input_mem);
-    __global float* pDst = (__global float*)get_data(dst_mem);
-
     const int global_id = get_global_id(0);
 
-    const int batch_num = INPUT_BATCH_NUM;
-    const int batch_offset = global_id % batch_num;
+    const int batch_offset = global_id % INPUT_BATCH_NUM;
 
-    const int ifm_num = INPUT_FEATURE_NUM;
-    const int ifm_offset = (global_id / batch_num) % ifm_num;
+    const int ifm_offset = (global_id / INPUT_BATCH_NUM) % INPUT_FEATURE_NUM;
 
-    const int x = (global_id / batch_num) / ifm_num;
+    const int x = (global_id / INPUT_BATCH_NUM) / INPUT_FEATURE_NUM;
 
     float acc = 0;
 
+	int input_offset_f = ifm_offset + helper_input_offset_feature;
+	int input_idx = batch_offset + INPUT_BATCH_NUM * ( input_offset_f + x * INPUT_FEATURE_NUM);
     for (int i = 0; i < pSize; i++)
     {
-        int input_offset_f = i + ifm_offset + helper_input_offset_feature;
-        bool zero = false;
-        
-        zero = input_offset_f < 0 ? true : zero;
-        zero = input_offset_f >= ifm_num ? true : zero;
+        bool zero = input_offset_f < 0 || input_offset_f >= INPUT_FEATURE_NUM;
 
-        int input_idx = input_offset_f * batch_num + x * ifm_num * batch_num + batch_offset;
-        
         float value = zero ? 0 : input[input_idx];
-        acc += value * value;
-        
-        //if(i==0)
-        //pDst[global_id] = input_offset_f;
+        acc = mad(value, value, acc);
+		input_offset_f++;
+		input_idx += INPUT_BATCH_NUM;
     }
-    acc = acc * alpha + k;
+    acc = mad(acc, alpha, k);
     acc = pow(acc, -beta);
 
-    pDst[global_id] = acc * input[global_id];
+    output[global_id] = acc * input[global_id];
 }
 )__krnl";
 
@@ -90,7 +80,7 @@ struct lrn_gpu : is_an_implementation {
 
         size_t dstSize = output_mem.count();
 
-        int lws = 16;
+        int lws = 32;
         while (dstSize % lws)
         {
             lws--;

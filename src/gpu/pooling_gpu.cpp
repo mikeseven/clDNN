@@ -21,38 +21,33 @@
 
 const std::string kernelName = "Pooling_GPU_max";
 const std::string kernelCode = R"__krnl(
-KERNEL(Pooling_GPU_max)(__global neural_memory* input_mem, __global neural_memory* output_mem)
+KERNEL(Pooling_GPU_max)(__global float* input, __global float* output)
 {
-    __global float* input = (__global float*)get_data(input_mem);
-    __global float* output = (__global float*)get_data(output_mem);
-
     const int global_id = get_global_id(0);
 
-    const int batch_num = OUTPUT_BATCH_NUM;
-    const int batch_offset = global_id % batch_num;
+    const int batch_offset = global_id % OUTPUT_BATCH_NUM;
 
-    const int ofm_num = OUTPUT_FEATURE_NUM;
-    const int ofm_offset = (global_id / batch_num) % ofm_num;
+    const int ofm_offset = (global_id / OUTPUT_BATCH_NUM) % OUTPUT_FEATURE_NUM;
 
-    const int idx = (global_id / batch_num);
+    const int idx = (global_id / OUTPUT_BATCH_NUM);
 
-    const int i_fm_num = INPUT_FEATURE_NUM;
+    const int offset_x = (idx / OUTPUT_FEATURE_NUM) % OUTPUT_SIZE_X * STRIDE_SIZE_X;
+    const int offset_y = ((idx / OUTPUT_FEATURE_NUM) / OUTPUT_SIZE_X) % OUTPUT_SIZE_Y * STRIDE_SIZE_Y; 
 
-    const int filter_application_count_x = OUTPUT_SIZE_X; // how many times we need to apply filter in X dimension
-    const int filter_application_count_y = OUTPUT_SIZE_Y; // how many times we need to apply filter in Y dimension
-
-    const int offset_x = (idx / ofm_num) % filter_application_count_x * STRIDE_SIZE_X;
-    const int offset_y = ((idx / ofm_num) / filter_application_count_x) % filter_application_count_y * STRIDE_SIZE_Y; 
-
-    output[global_id] = -FLT_MAX;
+    float result = -FLT_MAX;
+    int input_idx = batch_offset + OUTPUT_BATCH_NUM * (ofm_offset + INPUT_FEATURE_NUM * (offset_x + offset_y * INPUT_SIZE_X));
     for(uint j = 0; j < WINDOW_SIZE_Y; j++)
     {
         for(uint i = 0; i < WINDOW_SIZE_X; i++)
         {
-            int input_idx = (i + offset_x + (j + offset_y) * INPUT_SIZE_X) * batch_num * i_fm_num + ofm_offset * batch_num + batch_offset;
-            output[global_id] = max(output[global_id], input[input_idx]);
+            result = max(result, input[input_idx]);
+            input_idx += OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM;
         }
+        input_idx -= OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * WINDOW_SIZE_X;
+        input_idx += OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * INPUT_SIZE_X;
+
     }
+    output[global_id] = result;
 }
 )__krnl";
 
@@ -94,7 +89,7 @@ struct pooling_gpu : is_an_implementation {
         switch (outer.argument.mode) {
         case pooling::mode::max:
             me->_kernel.run<gpu::input_mem, gpu::output_mem>
-                ({ dstSize, std::min(dstSize, static_cast<size_t>(16)) }, input_mem, output_mem);
+                ({ dstSize, std::min(dstSize, static_cast<size_t>(32)) }, input_mem, output_mem);
             break;
         case pooling::mode::average:
             break;
