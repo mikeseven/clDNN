@@ -21,21 +21,18 @@
 
 const std::string kernelName = "lrn_GPU";
 const std::string kernelCode = R"__krnl(
-KERNEL (lrn_GPU)(__global float* input, __global float* output, uint pSize, float k, float alpha, float beta, int helper_input_offset_feature)
+KERNEL (lrn_GPU)(__global float* input, __global float* output)
 {
     const int global_id = get_global_id(0);
-
     const int batch_offset = global_id % INPUT_BATCH_NUM;
-
     const int ifm_offset = (global_id / INPUT_BATCH_NUM) % INPUT_FEATURE_NUM;
-
     const int x = (global_id / INPUT_BATCH_NUM) / INPUT_FEATURE_NUM;
 
     float acc = 0;
 
-	int input_offset_f = ifm_offset + helper_input_offset_feature;
+	int input_offset_f = ifm_offset + HELP_INPUT_OFFSET;
 	int input_idx = batch_offset + INPUT_BATCH_NUM * ( input_offset_f + x * INPUT_FEATURE_NUM);
-    for (int i = 0; i < pSize; i++)
+    for (int i = 0; i < P_SIZE; i++)
     {
         bool zero = input_offset_f < 0 || input_offset_f >= INPUT_FEATURE_NUM;
 
@@ -44,8 +41,8 @@ KERNEL (lrn_GPU)(__global float* input, __global float* output, uint pSize, floa
 		input_offset_f++;
 		input_idx += INPUT_BATCH_NUM;
     }
-    acc = mad(acc, alpha, k);
-    acc = pow(acc, -beta);
+    acc = mad(acc, ALPHA, K);
+    acc = pow(acc, -BETA);
 
     output[global_id] = acc * input[global_id];
 }
@@ -58,8 +55,23 @@ struct lrn_gpu : is_an_implementation {
 
     lrn_gpu(normalization::response &arg): is_an_implementation(neural::type_id<lrn_gpu>())
         , outer(arg)
-        , _kernel(kernelName, {gpu::make_jit_constant("INPUT", outer.input_memory(0).argument.size)})
+        , _kernel(kernelName, get_jit_constants())
     {}
+
+    gpu::jit_constants get_jit_constants() const {
+        auto size = outer.argument.size;
+
+        gpu::jit_constants mem_consts{
+            gpu::make_jit_constant("INPUT", outer.input_memory(0).argument.size),
+            gpu::make_jit_constant("P_SIZE", size),
+            gpu::make_jit_constant("ALPHA", outer.argument.alpha),
+            gpu::make_jit_constant("BETA", outer.argument.beta),
+            gpu::make_jit_constant("K", outer.argument.k),
+            gpu::make_jit_constant("HELP_INPUT_OFFSET", outer.argument.input_offset.feature[0] - static_cast<cl_int>(size / 2))
+        };
+
+        return mem_consts;
+    }
 
     static void implementation(const void *ptr) {
         auto me = static_cast<const lrn_gpu*>(ptr);
@@ -67,14 +79,6 @@ struct lrn_gpu : is_an_implementation {
 
         auto& input_mem = outer.input_memory(0);
         auto& output_mem = outer.output_memory(0);
-
-        auto size = outer.argument.size;
-
-        cl_int help_input_offset = outer.argument.input_offset.feature[0] - static_cast<cl_int>(size / 2);
-
-        auto k = outer.argument.k;
-        auto alpha = outer.argument.alpha;
-        auto beta = outer.argument.beta;
 
         auto padding = outer.argument.padding;
 
@@ -89,15 +93,10 @@ struct lrn_gpu : is_an_implementation {
         switch (padding) {
         case padding::zero:
         {
-            me->_kernel.run<gpu::input_mem, gpu::output_mem, cl_uint, cl_float, cl_float, cl_float, cl_int>
+            me->_kernel.run<gpu::input_mem, gpu::output_mem>
                 ({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) },
                     input_mem,
-                    output_mem,
-                    size,
-                    k,
-                    alpha,
-                    beta,
-                    help_input_offset);
+                    output_mem);
             break;
         }
         default:
@@ -127,14 +126,13 @@ struct lrn_gpu : is_an_implementation {
                 auto key = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
                 auto val_fw = lrn_gpu::create;
 
-                implementation_map<normalization::response>::add(key, val_fw); //todo keys should be different
-                //lrn_bw_implementation_map.insert({ key, val_bw });
+                implementation_map<normalization::response>::add(key, val_fw); 
             }
             ~attach() {}
         };
 
 #ifdef __GNUC__
-        __attribute__((visibility("default"))) //todo meybe dll_sym?
+        __attribute__((visibility("default"))) //todo maybe dll_sym?
 #elif _MSC_VER
 #   pragma section(".nn_init$m", read, write)
 #endif
