@@ -23,19 +23,15 @@ const std::string kernelName = "Pooling_GPU_max";
 const std::string kernelCode = R"__krnl(
 KERNEL(Pooling_GPU_max)(__global float* input, __global float* output)
 {
-    const int global_id = get_global_id(0);
+    const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
 
-    const int batch_offset = global_id % OUTPUT_BATCH_NUM;
-
-    const int ofm_offset = (global_id / OUTPUT_BATCH_NUM) % OUTPUT_FEATURE_NUM;
-
-    const int idx = (global_id / OUTPUT_BATCH_NUM);
-
-    const int offset_x = (idx / OUTPUT_FEATURE_NUM) % OUTPUT_SIZE_X * STRIDE_SIZE_X;
-    const int offset_y = ((idx / OUTPUT_FEATURE_NUM) / OUTPUT_SIZE_X) % OUTPUT_SIZE_Y * STRIDE_SIZE_Y; 
+    const int offset_x = get_global_id(1) * STRIDE_SIZE_X;
+    const int offset_y = get_global_id(2) * STRIDE_SIZE_Y;
 
     float result = -FLT_MAX;
-    int input_idx = batch_offset + OUTPUT_BATCH_NUM * (ofm_offset + INPUT_FEATURE_NUM * (offset_x + offset_y * INPUT_SIZE_X));
+
+    const int batch_and_feature_offset = get_global_id(0);
+    int input_idx = batch_and_feature_offset + OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (offset_x + offset_y * INPUT_SIZE_X);
     for(uint j = 0; j < WINDOW_SIZE_Y; j++)
     {
         for(uint i = 0; i < WINDOW_SIZE_X; i++)
@@ -43,11 +39,9 @@ KERNEL(Pooling_GPU_max)(__global float* input, __global float* output)
             result = max(result, input[input_idx]);
             input_idx += OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM;
         }
-        input_idx -= OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * WINDOW_SIZE_X;
-        input_idx += OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * INPUT_SIZE_X;
-
+        input_idx += OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (INPUT_SIZE_X - WINDOW_SIZE_X);
     }
-    output[global_id] = result;
+    output[linear_id_xyz] = result;
 }
 )__krnl";
 
@@ -84,12 +78,12 @@ struct pooling_gpu : is_an_implementation {
         // output
         auto& output_mem = outer.output_memory(0);
 
-        size_t dstSize = output_mem.count();
+        size_t gws0 = output_mem.argument.size.batch[0] * output_mem.argument.size.feature[0];
 
         switch (outer.argument.mode) {
         case pooling::mode::max:
             me->_kernel.run<gpu::input_mem, gpu::output_mem>
-                ({ dstSize, std::min(dstSize, static_cast<size_t>(32)) }, input_mem, output_mem);
+                ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1]}, { std::min(gws0, static_cast<size_t>(32)), 1, 1 } }, input_mem, output_mem);
             break;
         case pooling::mode::average:
             break;
