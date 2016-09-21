@@ -97,20 +97,22 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     std::cout << "Building Alexnet started" << std::endl;
     instrumentation::timer<> timer_build;
-    auto mean = mean_subtract::create(
-    {
-        eng,
-        memory::format::yxfb_f32,
-        input,
-        file::create({ eng,"weights/imagenet_mean.nnd" })
-    });
+
+	// create conversion to yxfb format and subtract mean values
+	auto reordered_input = reorder::create(
+	{
+		engine::gpu,
+		memory::allocate({ eng, memory::format::yxfb_f32, input.as<const memory&>().argument.size }), // do not resize
+		input,
+		file::create({ eng,"weights/imagenet_mean.nnd" })
+	});
 
     auto conv1 = convolution::create(
     {
         eng,
         memory::format::yxfb_f32,
         {
-            mean,
+			reordered_input,
             file::create({ eng, "weights/conv1_weights.nnd" }),
             file::create({ eng, "weights/conv1_biases.nnd" })
         },
@@ -314,7 +316,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
     std::cout << "Start execution" << std::endl;
     instrumentation::timer<> timer_execution;
     execute({
-        mean, //mean
+		reordered_input,
         conv1, pool1, lrn1, //stage 0
         conv2_group2, pool2, lrn2,
         conv3,
@@ -338,7 +340,6 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
     if (dump_hl)
     {
         instrumentation::logger::log_memory_to_file(input, "input0");
-        instrumentation::logger::log_memory_to_file(mean, "mean");
         instrumentation::logger::log_memory_to_file(conv1.output[0], "conv1");
         instrumentation::logger::log_memory_to_file(lrn1.output[0], "lrn1");
         instrumentation::logger::log_memory_to_file(pool1.output[0], "pool1");
@@ -388,16 +389,7 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool du
         // load croped and resized images into input
         load_images_from_file_list(image_in_batches, input);
 
-        // create conversion to yxfb format
-        auto reordered_input = reorder::create(
-        {
-            engine::reference,
-            input,
-            memory::allocate({eng, memory::format::yxfb_f32, input.as<const memory&>().argument.size }) // do not resize
-        });
-        // reorder data
-        execute({ reordered_input }).wait();
-        auto time = execute_alexnet(reordered_input, output, eng, dump_hl);
+        auto time = execute_alexnet(input, output, eng, dump_hl);
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
 		output_file.batch(output.as<const neural::memory&>( ), "names.txt", image_in_batches);
         if (time_in_sec != 0.0)

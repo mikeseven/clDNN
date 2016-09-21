@@ -136,6 +136,12 @@ namespace neural {
         : engine(_engine)
         , output({_out})
         , input({_in}) {}
+
+	reorder::arguments::arguments(neural::engine::type _engine, primitive _out, primitive _in, primitive subtract_values)
+		: engine(_engine)
+		, output({ _out })
+		, input({ _in, subtract_values }) {}
+
     reorder::arguments::arguments(neural::engine::type _engine, neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in)
         : engine(_engine)
         , output( {memory::allocate({_engine, _out_layout, _out_sizes})} )

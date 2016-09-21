@@ -253,7 +253,8 @@ private:
 //
 // Changes how data is ordered in memory. Value type is not changed & all information is preserved.
 // Corresponding values are bitwise equal before/after reorder.
-//
+// Also merged with subtraction layer, which can subtract values while doing reordering.
+// NOTE THAT THIS WILL SUBTRACT THE SAME VALUES FROM EACH BATCH.
 //
 // Examples:
 //
@@ -267,9 +268,10 @@ struct reorder : is_a_primitive
 	{
         neural::engine::type        engine;
         std::vector<primitive>      output;
-        std::vector<primitive_at>   input;  // 1: {input}
+        std::vector<primitive_at>   input;  // 1/2: {input} / {input, subtract_values}
 
         DLL_SYM arguments(neural::engine::type engine, primitive_at input, primitive output);
+		DLL_SYM arguments(neural::engine::type engine, primitive output, primitive input, primitive subtract_values);
         DLL_SYM arguments(neural::engine::type engine, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input);
     };
     const arguments argument;

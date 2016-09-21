@@ -44,24 +44,60 @@ KERNEL (reorder_GPU)(__global neural_memory* in_mem, __global neural_memory* out
 }
 )__krnl";
 
+const std::string kernelName_subtract = "reorder_subtract_GPU";
+const std::string kernelCode_subtract = R"__krnl(
+uint FUNC(OUT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS]) {
+    OUT_FORMAT_IMPLEMENTATION
+}
+uint FUNC(SUBTRACT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS]) {
+
+	SUBTRACT_FORMAT_IMPLEMENTATION
+}
+KERNEL (reorder_subtract_GPU)(__global neural_memory* in_mem, __global neural_memory* out_mem, __global neural_memory* subtract_values)
+{
+    __global float* input = (__global float*)get_data(in_mem);
+    __global float* output = (__global float*)get_data(out_mem);
+    __global float* subtract = (__global float*)get_data(subtract_values);
+
+    uint pos1D = get_global_id(0);
+    uint pos[DIMENSIONS]; // position in each of dimensions
+	for(uint i = 0; i < DIMENSIONS; i++)
+    {
+		uint order_idx = CALCULATION_ORDER[i];
+		pos[order_idx] = pos1D % SIZE[order_idx];
+        pos1D /= SIZE[order_idx]; 
+    }
+
+    uint output_pos = FUNC_CALL(OUT_FORMAT)(SIZE, pos);
+	// We set it to 0 because we subtract the same values from every input batch
+	pos[0] = 0;
+	uint subtract_pos = FUNC_CALL(SUBTRACT_FORMAT)(SIZE, pos);
+    output[output_pos] = input[get_global_id(0)] - subtract[subtract_pos];
+}
+)__krnl";
+
 namespace neural {
 struct reorder_gpu : is_an_implementation {
     const reorder& outer;
-        gpu::kernel _kernel;
+	bool have_subtraction;
+	gpu::kernel _kernel;
 
         reorder_gpu(reorder &arg): is_an_implementation(neural::type_id<reorder_gpu>())
         , outer(arg)
-        , _kernel(kernelName, get_jit_constants())
+		, have_subtraction(arg.argument.input.size() > 1)
+        , _kernel(select_kernel_name(), get_jit_constants())
     {}
 
 	// We need to specify the output idx based on input position
-	static std::string get_output_idx_calculation(memory::format::type type) {
+	static std::string get_idx_calculation(memory::format::type type) {
 		switch (type)
 		{
 		case memory::format::type::yxfb_f32:
 			return "return pos[0] + size[0] * (pos[1] + size[1]*(pos[2] + size[2] * pos[3]));";
 		case memory::format::type::byxf_f32:
 			return "return pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + size[3] * pos[0]));";
+		case memory::format::type::bfyx_f32:
+			return "return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));";
 		default:
 			throw std::invalid_argument("This format is not supported in GPU reorder");
 		}
@@ -76,11 +112,21 @@ struct reorder_gpu : is_an_implementation {
 			return "(uint[]){ 1, 2, 3, 0 }";
 		case memory::format::type::yxfb_f32:
 			return "(uint[]){ 0, 1, 2, 3 }";
+		case memory::format::type::bfyx_f32:
+			return "(uint[]){ 2, 3, 1, 0 }";
 		default:
 			throw std::invalid_argument("This format is not supported in GPU reorder");
 		}
 	}
 
+	const std::string& select_kernel_name() const {
+		// if we got values to subtract, then choose apropriate kernel
+		if (this->have_subtraction)
+			return kernelName_subtract;
+		else
+			return kernelName;
+
+	}
     gpu::jit_constants get_jit_constants() const {
         auto& input_mem = outer.input_memory(0);
         auto& output_mem = outer.output_memory(0);
@@ -96,10 +142,15 @@ struct reorder_gpu : is_an_implementation {
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("DIMENSIONS", std::to_string(input_mem.argument.size.raw.size())),
             gpu::make_jit_constant("SIZE", s.str()),
-			gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", get_output_idx_calculation(output_mem.argument.format)),
+			gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", get_idx_calculation(output_mem.argument.format)),
 			gpu::make_jit_constant("CALCULATION_ORDER", get_calculation_order(input_mem.argument.format))
         };
 
+		if (this->have_subtraction)
+		{
+			auto& subtract_mem = outer.input_memory(1);
+			mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_FORMAT_IMPLEMENTATION", get_idx_calculation(subtract_mem.argument.format)));
+		}
         return mem_consts;
     }
     static void implementation(const void *ptr) {
@@ -119,10 +170,21 @@ struct reorder_gpu : is_an_implementation {
             lws--;
         }
 
-        me->_kernel.run<gpu::input_mem, gpu::output_mem>
-            ({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) },
-                input_mem,
-                output_mem);
+		if (me->have_subtraction)
+		{
+			me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>
+				({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) },
+					input_mem,
+					output_mem,
+					outer.input_memory(1));
+		}
+		else
+		{
+			me->_kernel.run<gpu::input_mem, gpu::output_mem>
+				({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) },
+					input_mem,
+					output_mem);
+		}
     }
 
 
@@ -147,6 +209,7 @@ struct reorder_gpu : is_an_implementation {
         struct attach {
             attach() {
                 gpu::kernel_templates::add(kernelName, kernelCode);
+				gpu::kernel_templates::add(kernelName_subtract, kernelCode_subtract);
                 implementation_map<reorder>::add({
                     { engine::type::gpu, reorder_gpu::create }
                 });
