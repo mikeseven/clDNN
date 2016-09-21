@@ -101,8 +101,9 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
 	// create conversion to yxfb format and subtract mean values
 	auto reordered_input = reorder::create(
 	{
-		engine::gpu,
-		memory::allocate({ eng, memory::format::yxfb_f32, input.as<const memory&>().argument.size }), // do not resize
+		eng,
+		memory::format::yxfb_f32,
+		input.as<const memory&>().argument.size,
 		input,
 		file::create({ eng,"weights/imagenet_mean.nnd" })
 	});

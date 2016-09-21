@@ -273,7 +273,8 @@ struct reorder : is_a_primitive
         DLL_SYM arguments(neural::engine::type engine, primitive_at input, primitive output);
 		DLL_SYM arguments(neural::engine::type engine, primitive output, primitive input, primitive subtract_values);
         DLL_SYM arguments(neural::engine::type engine, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input);
-    };
+		DLL_SYM arguments(neural::engine::type engine, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input, primitive_at subtract_values);
+	};
     const arguments argument;
 
     struct query_entry : is_a_query_entry { reorder::arguments arguments; };

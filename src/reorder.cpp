@@ -116,12 +116,34 @@ namespace neural {
                 auto calc_in_idx = nd::choose_calculate_idx(input_format);
                 auto calc_out_idx = nd::choose_calculate_idx(output_format);
 
-                for(auto pos : range) {
-                    auto in_idx  = calc_in_idx(input_size.raw, pos);
-                    auto out_idx = calc_out_idx(output_size.raw, pos);
+				bool have_subtraction = this_reorder->argument.input.size() > 1;
+				if (have_subtraction)
+				{
+					auto subtract = this_reorder->input_memory(1).pointer<float>();
+					auto& subtract_memory_arg = this_reorder->input_memory(1).argument;
+					auto& subtract_size = subtract_memory_arg.size;
+					auto calc_subtract_idx = nd::choose_calculate_idx(subtract_memory_arg.format);
+					for (auto pos : range) {
+						auto in_idx = calc_in_idx(input_size.raw, pos);
+						auto out_idx = calc_out_idx(output_size.raw, pos);
+						// we need to set batch position to 0 for subtraction because we need to subtract the same values for each batch
+						auto _tmp_pos = pos[0];
+						pos[0] = 0;
+						auto subtract_idx = calc_subtract_idx(subtract_size.raw, pos);
+						pos[0] = _tmp_pos;
+						output[out_idx] = input[in_idx] - subtract[subtract_idx];
+					}
+				}
+				else
+				{
+					for (auto pos : range) {
+						auto in_idx = calc_in_idx(input_size.raw, pos);
+						auto out_idx = calc_out_idx(output_size.raw, pos);
 
-                    output[out_idx] = input[in_idx];
-                }
+						output[out_idx] = input[in_idx];
+					}
+
+				}
             }
 
             task_group work() {
@@ -146,6 +168,11 @@ namespace neural {
         : engine(_engine)
         , output( {memory::allocate({_engine, _out_layout, _out_sizes})} )
         , input({_in}) {}
+
+	reorder::arguments::arguments(neural::engine::type _engine, neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in, primitive_at _subtract)
+		: engine(_engine)
+		, output({ memory::allocate({ _engine, _out_layout, _out_sizes }) })
+		, input({ _in, _subtract }) {}
 
     template<>
     struct implementation_key<reorder> {
