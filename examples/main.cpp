@@ -15,10 +15,17 @@
 */
 
 #include "api/neural.h"
-#include <iostream>
-#include <string>
+
+#include <boost/filesystem.hpp>
+#include <boost/program_options.hpp>
+
 #include <algorithm>
-#include <regex> 
+#include <cstdint>
+#include <iostream>
+#include <regex>
+#include <string>
+#include <type_traits>
+
 
 // parses parameters stored as vector of strings and insersts them into map
 void parse_parameters(std::map<std::string, std::string> &config, std::vector<std::string> &input) {
@@ -41,11 +48,61 @@ void parse_parameters(std::map<std::string, std::string> &config, std::vector<st
     }
 }
 
+boost::program_options::variables_map parse_cmdline_options(int argc, const char* const argv[])
+{
+    namespace bpo = boost::program_options;
+    namespace bfs = boost::filesystem;
+
+    bpo::options_description standard_cmdline_options("Standard options");
+    standard_cmdline_options.add_options()
+        ("batch", bpo::value<std::uint32_t>()->value_name("<batch-size>")->default_value(32),
+            "Size of a group of images that are classified together (large batch sizes have better performance).")
+        ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
+            "Name of a neural network model that is used for classification.\n"
+            "It can be one of:\n  \talexnet, caffenet_float, caffenet_int16, lenet_float.")
+        ("engine", bpo::value<std::string>()->value_name("<engine-type>")->default_value("reference"),
+            "Type of an engine used for classification.\nIt can be one of:\n  \treference, gpu.")
+        ("dump_hidden_layers", bpo::bool_switch(),
+            "Dump results from hidden layers of network to files.")
+        ("input", bpo::value<std::string>()->value_name("<input-dir>")->default_value("."),
+            "Path to input directory containing images to classify.")
+        ("profiling", bpo::bool_switch(),
+            "Enable profiling and create profiling report.")
+        ("help", "Show help message and available command-line options.");
+
+    bpo::options_description weights_conv_cmdline_options("Weights conversion options");
+    weights_conv_cmdline_options.add_options()
+        ("convert", bpo::value<std::underlying_type_t<neural::memory::format::type>>()->value_name("<format-type>"),
+            "Convert weights of a neural network to given format (<format-type> represents numeric value of "
+            "neural::memory::format enum).")
+        ("convert_filter", bpo::value<std::string>()->value_name("<filter>"),
+            "Name or part of the name of weight file(s) to be converted.\nFor example:\n  \"conv1\" - first convolution,\n  \"fc\" - every fully connected.");
+
+
+    bpo::variables_map vars_map;
+    store(bpo::command_line_parser(argc, argv).options(standard_cmdline_options).options(weights_conv_cmdline_options).run(), vars_map);
+    notify(vars_map);
+
+    auto exec_abs_path = bfs::system_complete(argv[0]);
+
+    std::cout << "Usage:\n  " << exec_abs_path.stem().string() << " [standard options]\n";
+    std::cout << "  " << exec_abs_path.stem().string() << " [weights conversion options]\n" << std::endl;
+    std::cout << standard_cmdline_options << std::endl;
+    std::cout << weights_conv_cmdline_options << std::endl;
+
+    return vars_map;
+}
+
+
 int main(int argc, char *argv[])
 {
     // TODO: create header file for all examples
     extern void alexnet(uint32_t, std::string, neural::engine::type,bool,bool);
     extern void convert_weights(neural::memory::format::type, std::string);
+
+    parse_cmdline_options(argc, argv);
+    return 0;
+
     if (argc <= 1)
     {
         std::cout <<
