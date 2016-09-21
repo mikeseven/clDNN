@@ -21,35 +21,12 @@
 #include <boost/numeric/conversion/cast.hpp>
 #include <boost/program_options.hpp>
 
-#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <regex>
 #include <string>
 #include <sstream>
 #include <type_traits>
-
-
-// parses parameters stored as vector of strings and insersts them into map
-void parse_parameters(std::map<std::string, std::string> &config, std::vector<std::string> &input) {
-    std::regex regex[] = {
-        std::regex("(--|-|\\/)([a-z][a-z\\-_]*)=(.*)")    // key-value pair
-        , std::regex("(--|-|\\/)([a-z][a-z\\-_]*)")         // key only
-        , std::regex(".+")                                  // this must be last in regex[]; what is left is a filename
-    };
-    for (std::string &in : input) {
-        std::cmatch result;
-        const auto regex_count = sizeof(regex) / sizeof(regex[0]);
-        const auto regex_last = regex_count - 1;
-        for (size_t index = 0; index<regex_count; ++index)
-            if (std::regex_match(in.c_str(), result, regex[index])) {
-                std::string key = index == regex_last ? std::string("input") : result[2];
-                std::string value = result[index == regex_last ? 0 : 3];
-                config.insert(std::make_pair(key, value));
-                break;
-            }
-    }
-}
 
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -198,7 +175,9 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
     // Standard options.
     bpo::options_description standard_cmdline_options("Standard options");
     standard_cmdline_options.add_options()
-        ("batch", bpo::value<std::uint32_t>()->value_name("<batch-size>")->default_value(32),
+        ("input", bpo::value<std::string>()->value_name("<input-dir>"),
+            "Path to input directory containing images to classify (mandatory when running classification).")
+        ("batch", bpo::value<std::uint32_t>()->value_name("<batch-size>")->default_value(8),
             "Size of a group of images that are classified together (large batch sizes have better performance).")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
@@ -207,8 +186,9 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Type of an engine used for classification.\nIt can be one of:\n  \treference, gpu.")
         ("dump_hidden_layers", bpo::bool_switch(),
             "Dump results from hidden layers of network to files.")
-        ("input", bpo::value<std::string>()->value_name("<input-dir>"),
-            "Path to input directory containing images to classify.")
+        ("weights", bpo::value<std::string>()->value_name("<weights-dir>"),
+            "Path to directory containing weights used in classification.\n"
+            "If not specified, the \"<executable-dir>/weights\" path is used.")
         ("profiling", bpo::bool_switch(),
             "Enable profiling and create profiling report.")
         ("version", "Show version of the application.")
@@ -273,6 +253,8 @@ static boost::program_options::variables_map parse_cmdline_options(
     return vars_map;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
 int main(int argc, char *argv[])
 {
     // TODO: create header file for all examples
@@ -281,99 +263,79 @@ int main(int argc, char *argv[])
 
     set_executable_info(argc, argv); // Must be set before using get_executable_info().
 
+    // Parsing command-line and handling/presenting basic options.
     auto exec_info = get_executable_info();
     auto options = prepare_cmdline_options(exec_info);
+    boost::program_options::variables_map parsed_args;
     try
     {
-        auto m = parse_cmdline_options(options, argc, argv);
+        parsed_args = parse_cmdline_options(options, argc, argv);
 
-        std::cout << "batch:   " << m["batch"].as<std::uint32_t>() << std::endl;
-        for (const auto &mv : m)
+        if (parsed_args.count("help"))
         {
-            std::cout << mv.first << ":   " << mv.second.value().type().name() << std::endl;
+            std::cerr << options.version_message() << "\n\n";
+            std::cerr << options.help_message() << std::endl;
+            return 1;
+        }
+        if (parsed_args.count("version"))
+        {
+            std::cerr << options.version_message() << std::endl;
+            return 1;
+        }
+        if (!parsed_args.count("input") && !parsed_args.count("convert"))
+        {
+            std::cerr << "ERROR: none of required options was specified (either --input or\n";
+            std::cerr << "       --convert is needed)!!!\n\n";
+            std::cerr << options.help_message() << std::endl;
+            return 1;
         }
     }
     catch (const std::exception &ex)
     {
-        std::cerr << "ERROR: " << ex.what() << std::endl;
+        std::cerr << "ERROR: " << ex.what() << "!!!\n\n";
         std::cerr << options.help_message() << std::endl;
         return 1;
     }
-    return 0;
 
-    if (argc <= 1)
+    // Execute network or convert weights.
+    try
     {
-        std::cout <<
-            R"_help_(<parameters> include:
-            --batch=<value>
-            size of group of images that are classified together;  large batch
-            sizes have better performance
-            --model=<name>
-            name of network model that is used for classfication
-            can be : alexnet, caffenet_float, caffenet_int16 or lenet_float
-            --engine=<type>
-            engine type: can be referenced or gpu
-            --dump_hidden_layers
-            dumps results from hidden layers
-            --convert=<format_num> 
-            converts weights to given format (format_num represents format enum)
-            --convertion_path=<path>
-            name, or substring in file name to be converte. i.e. "conv1" - first convolution, "fc" every fully connected
-            --input=<directory>
-            path to directory that contains images to be classfied
-            --profiling
-            enable profiling report)_help_";
-    }
-    else
-    {
-        bool dump_results = false;
-        bool profiling = false;
-        std::vector<std::string> arg;
-        for (int n = 1; n<argc; ++n) arg.push_back(argv[n]);
-        // parse configuration (command line and from file)
-        using config_t = std::map<std::string, std::string>;
-        config_t config;
-        parse_parameters(config, arg);
-        // Validate params and set defaults
-        auto not_found = std::end(config);
-        if (config.find("convert") != not_found) {
-            if (config.find("convertion_path") == not_found)
-                config["convertion_path"] = "";
-            convert_weights(static_cast<neural::memory::format::type>(std::stoi(config["convert"])),
-                config["convertion_path"]);
+        // Convert weights if convertion options are used.
+        if (parsed_args.count("convert"))
+        {
+            auto convert_filter = parsed_args.count("convert_filter")
+                ? parsed_args["convert_filter"].as<std::string>()
+                : "";
+            convert_weights(parsed_args["convert"].as<neural::memory::format::type>(), convert_filter);
             return 0;
         }
-        if (config.find("batch") == not_found) config["batch"] = "32";
-        if (config.find("model") == not_found) config["model"] = "alexnet";
-        if (config.find("engine") == not_found) config["engine"] = "referenced";
-        if (config.find("dump_hidden_layers") != not_found) dump_results = true;
-        if (config.find("profiling") != not_found) profiling = true;
-        if (config.find("input") == not_found)
+        // Execute network otherwise.
+        if (parsed_args.count("input"))
         {
-            std::cout << "Directory path has to be defined using current dir"<<std::endl;
-            config["input"] = "./";
-        }
-        if (config["model"].compare("alexnet") == 0)
-        {
-            try {
+            if (parsed_args["model"].as<std::string>() == "alexnet")
+            {
                 alexnet(
-                    std::stoi(config["batch"]),
-                    config["input"],
-                    config["engine"].compare("gpu") == 0 ? neural::engine::gpu : neural::engine::reference,
-                    dump_results,
-                    profiling);
+                    parsed_args["batch"].as<std::uint32_t>(),
+                    parsed_args["input"].as<std::string>(),
+                    parsed_args["engine"].as<neural::engine::type>(),
+                    parsed_args["dump_hidden_layers"].as<bool>(),
+                    parsed_args["profiling"].as<bool>());
+                return 0;
             }
-            catch (std::exception &e) {
-                std::cerr << e.what() << std::endl;
-            }
-            catch (...) {
-                std::cerr << "Unknown exceptions." << std::endl;
-            }
-        }
-        else
-        {
-            std::cout << "Topology not implemented" << std::endl;
+
+            std::cerr << "ERROR: model/topology (\"" << parsed_args["model"].as<std::string>()
+                << "\") is not implemented!!!" << std::endl;
+            return 1;
         }
     }
-    return 0;
+    catch (const std::exception &ex)
+    {
+        std::cerr << "ERROR: " << ex.what() << "!!!" << std::endl;
+        return 1;
+    }
+    catch (...)
+    {
+        std::cerr << "ERROR: unknown exception!!!" << std::endl;
+        return 1;
+    }
 }
