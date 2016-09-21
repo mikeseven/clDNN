@@ -17,14 +17,30 @@
 #include "api/neural.h"
 #include "ocl_toolkit.h"
 #include "kernels_cache.h"
+#include "kernel.h"
 
 namespace neural {
 
+const char warmup_kernel_name[] = "warm_up_gpu";
+const char warmup_kernel_code[] = R"__CC(
+KERNEL(warm_up_gpu)(int c, int a, int b, __global int* out)
+{
+    int res = (get_global_id(0) * a + get_global_id(1)) * b + get_global_id(2);
+    if(a >> 3)
+        res += get_local_id(1);
+    if(c)
+        out[get_local_id(0)] = res;
+}
+)__CC";
+
 class program_builder : public gpu::context_holder {
-    gpu::kernels_cache::program_type _program;
+
 public:
     program_builder() {
-        _program = gpu::kernels_cache::get().get_program(context());
+        gpu::kernel warmup_kernel(warmup_kernel_name);
+        gpu::kernels_cache::get().get_program(context());
+        cl::Buffer out;
+        warmup_kernel.run<cl_int, cl_int, cl_int, cl::Buffer>({ 1024, 8 }, 0, 111, 7, out);
     }
 
     auto get_profiling_info() const -> decltype(context()->get_profiling_info()) { return context()->get_profiling_info(); }
@@ -49,4 +65,20 @@ worker worker_gpu::create() {
     return new worker_gpu();
 }
 
+namespace {
+    struct attach {
+        attach() {
+            gpu::kernel_templates::add(warmup_kernel_name, warmup_kernel_code);
+        }
+        ~attach() {}
+    };
+
+#ifdef __GNUC__
+    __attribute__((visibility("default"))) //todo meybe dll_sym?
+#elif _MSC_VER
+#   pragma section(".nn_init$m", read, write)
+#endif
+    attach attach_impl;
+
+}
 }

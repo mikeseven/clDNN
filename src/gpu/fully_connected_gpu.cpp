@@ -67,7 +67,7 @@ KERNEL (Fully_Connected_GPU_xb_bx_memory)(
 
 const std::string kernelName_xb_bx_b8_memory = "Fully_Connected_GPU_xb_bx_b8_memory";
 const std::string kernelCode_xb_bx_b8_memory_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((reqd_sub_group_size(8, 1, 1)))
 KERNEL (Fully_Connected_GPU_xb_bx_b8_memory)(
     const __global neural_memory* input_mem, 
     __global neural_memory* dst_mem, 
@@ -170,7 +170,7 @@ namespace neural {
                 }
             }
             else {
-                if (outer.input_memory(1).argument.format == memory::format::bx_f32)
+                if (weight_mem.argument.format == memory::format::bx_f32)
                 {
                     if (input_mem.argument.size.batch[0] % 8 == 0)
                     {
@@ -179,7 +179,7 @@ namespace neural {
                     else
                         return inline_memory ? kernelName_xb_bx : kernelName_xb_bx_memory;
                 }
-                else if (outer.input_memory(1).argument.format == memory::format::xb_f32)
+                else if (weight_mem.argument.format == memory::format::xb_f32)
                 {
                     if (input_mem.argument.size.batch[0] % 8 == 0 &&
                         (output_mem.count() / output_mem.argument.size.batch[0]) % 8 == 0)
@@ -263,8 +263,10 @@ namespace neural {
                     weight_mem.argument.format == memory::format::bx_f32) &&
                     input_mem.argument.size.batch[0] % 8 == 0)
                 {
+                    auto gws_batch = output_mem.argument.size.batch[0];
+                    auto gws_x = output_mem.argument.size.spatial[0];
                     me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-                        ({ output_bufSize, 8 }, input_mem, output_mem, weight_mem, bias_mem);
+                        ({ {gws_batch, gws_x}, {8,1} }, input_mem, output_mem, weight_mem, bias_mem);
                 }
                 else if (weight_mem.argument.format == memory::format::yxfb_f32 ||
                         weight_mem.argument.format == memory::format::xb_f32)
@@ -278,7 +280,7 @@ namespace neural {
                         else if (out_elements_count_per_batch % 8 == 0)
                             neurons_per_workitem = 8;
                         me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-                            ({ output_bufSize / neurons_per_workitem, 8 }, input_mem, output_mem, weight_mem, bias_mem);
+                            ({ {output_mem.argument.size.batch[0], out_elements_count_per_batch / neurons_per_workitem}, {8,1} }, input_mem, output_mem, weight_mem, bias_mem);
 
                     }
                     else

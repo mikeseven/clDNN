@@ -269,6 +269,19 @@ public:
     kernel_execution_options(range2d work_items, range2d parallel_items) : _global(work_items), _local(parallel_items){}
     kernel_execution_options(range3d work_items, range3d parallel_items) : _global(work_items), _local(parallel_items) {}
 
+    kernel_execution_options(const kernel_execution_options& other)
+        : _global(other._global),
+        _local(other._local) {}
+
+    kernel_execution_options& operator=(const kernel_execution_options& other) {
+        if (this == &other)
+            return *this;
+        _global = other._global;
+        _local = other._local;
+        return *this;
+    }
+
+
     cl::NDRange global_range() const { return _global; }
     cl::NDRange local_range() const { return _local; }
 };

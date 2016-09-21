@@ -122,10 +122,10 @@ namespace neural {
         const __global float* weight = (const __global float*)get_data(weights_mem);
         const __global float* bias = (const __global float*)get_data(bias_mem);
 
-        const int x = get_global_id(0);
-        const uint batch_id = x % INPUT_BATCH_NUM;
+        //const int x = get_global_id(0);
+        const uint batch_id = get_global_id(0);
 
-        uint outXIdx = x / INPUT_BATCH_NUM;
+        uint outXIdx = get_global_id(1);
         uint weight_offset = outXIdx * INPUT_ELEMENTS_COUNT + batch_id;
         float result = bias[outXIdx];
 
@@ -154,7 +154,7 @@ namespace neural {
         result += _data.s0 + _data.s1 + _data.s2 + _data.s3 +
                   _data.s4 + _data.s5 + _data.s6 + _data.s7;
 
-		 ACTIVATION(pDst[x], result);
+		 ACTIVATION(pDst[outXIdx * INPUT_BATCH_NUM + batch_id], result);
     )__CC";
 
     const char fully_connected_code_xb_xb_b8_x8_memory[] = R"__CC(
@@ -164,18 +164,16 @@ namespace neural {
         const __global float* weight = (const __global float*)get_data(weights_mem);
         const __global float* bias = (const __global float*)get_data(bias_mem);
 
-        const uint global_id = get_global_id(0);
-        const int x = get_global_id(0);
-        const uint batch_id = x % INPUT_BATCH_NUM;
+        const uint batch_id = get_global_id(0);
+        const uint x = get_global_id(1);
 
-        uint neuronIdx = (x / INPUT_BATCH_NUM) * NEURONS_PER_WORK_ITEM;
+        uint neuronIdx = x * NEURONS_PER_WORK_ITEM;
 
         const uint sub_group_id = get_local_id(0);
-        const uint batch_num = INPUT_BATCH_NUM;
 
-        const int out_id = (global_id / batch_num) * NEURONS_PER_WORK_ITEM * batch_num + batch_id;
+        const int out_id = x * NEURONS_PER_WORK_ITEM * INPUT_BATCH_NUM + batch_id;
 
-        const int ofm_offset = (global_id * NEURONS_PER_WORK_ITEM) / batch_num;
+        const int ofm_offset = x * NEURONS_PER_WORK_ITEM;
 
         float8 _data0 = 0.f;
 #if NEURONS_PER_WORK_ITEM > 8
@@ -186,9 +184,9 @@ namespace neural {
 
         for(uint h = 0; h < INPUT_ELEMENTS_COUNT; h++)
         {
-            DOT_PRODUCT_8(_data0, input[h * batch_num + batch_id], weight[weight_offset])
+            DOT_PRODUCT_8(_data0, input[h * INPUT_BATCH_NUM + batch_id], weight[weight_offset])
 #if NEURONS_PER_WORK_ITEM > 8
-            DOT_PRODUCT_8(_data1, input[h * batch_num + batch_id], weight[weight_offset + 8])
+            DOT_PRODUCT_8(_data1, input[h * INPUT_BATCH_NUM + batch_id], weight[weight_offset + 8])
 #endif
             weight_offset+= WEIGHTS_BATCH_NUM;
         }
@@ -205,7 +203,7 @@ namespace neural {
  
     intel_sub_group_block_write8((__global uint*)pDst + out_id, as_uint8(_data0));
 #if NEURONS_PER_WORK_ITEM > 8
-    intel_sub_group_block_write8((__global uint*)pDst + out_id + 8 * batch_num, as_uint8(_data1));
+    intel_sub_group_block_write8((__global uint*)pDst + out_id + 8 * INPUT_BATCH_NUM, as_uint8(_data1));
 #endif
     )__CC";
 
