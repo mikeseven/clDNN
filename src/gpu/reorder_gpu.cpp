@@ -133,7 +133,7 @@ struct reorder_gpu : is_an_implementation {
 
         std::stringstream s;
         s << "(uint[]){ ";
-        for (auto i = 0; i < input_mem.argument.size.raw.size(); i++)
+        for (uint32_t i = 0; i < input_mem.argument.size.raw.size(); i++)
         {
             s << static_cast<float>(input_mem.argument.size.raw[i]) << ", ";
         }
