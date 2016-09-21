@@ -14,8 +14,9 @@
 // limitations under the License.
 */
 
+#include "common_tools.h"
+
 #include "FreeImage_wraps.h"
-#include "api/neural.h"
 
 #include <boost/filesystem.hpp>
 
@@ -24,6 +25,60 @@
 
 
 using namespace boost::filesystem;
+
+
+
+/// Global weak pointer to executable information.
+///
+/// Used to detect misuses:
+///  * Using get_executable_info() before set_executable_info().
+///  * Using get_executable_info() after destructon of global info object (during global destruction).
+static std::weak_ptr<const executable_info> exec_info_ptr;
+
+/// Sets information about executable based on "main"'s command-line arguments.
+///
+/// It works only once (if successful). Next calls to this function will not modify
+/// global executable's information object.
+///
+/// @param argc Main function arguments count.
+/// @param argv Main function argument values.
+///
+/// @exception std::runtime_error Main function arguments do not contain executable name.
+/// @exception boost::filesystem::filesystem_error Cannot compute absolute path to executable.
+void set_executable_info(int argc, const char *const argv[])
+{
+    if (argc <= 0)
+        throw std::runtime_error("Arguments of \"main\" function do not contain executable name.");
+
+    const std::string exec_name_arg = argv[0];
+    if (exec_name_arg.empty())
+        throw std::runtime_error("Arguments of \"main\" function do not contain executable name.");
+
+    auto exec_abs_path = system_complete(exec_name_arg);
+
+    
+    // Safe (guarded call-once) creation of information object.
+    static auto info = std::make_shared<executable_info>(
+        exec_abs_path.string(), exec_abs_path.stem().string(), exec_abs_path.parent_path().string());
+    exec_info_ptr = info;
+}
+
+/// Gets information about executable.
+///
+/// Information is fetched only if information was set using set_executable_info() and not yet
+/// destroyed (during global destruction). Otherwise, exception is thrown.
+///
+/// @return Shared pointer pointing to valid executable information.
+///
+/// @exception std::runtime_error Executable information was not set or it is no longer valid.
+std::shared_ptr<const executable_info> get_executable_info()
+{
+    auto exec_info = exec_info_ptr.lock();
+    if (exec_info == nullptr)
+        throw std::runtime_error("Executable information was not set or it is already destroyed.");
+
+    return exec_info; // NRVO
+}
 
 
 // returns list of files (path+filename) from specified directory
