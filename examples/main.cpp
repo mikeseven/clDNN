@@ -189,6 +189,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Dump results from hidden layers of network to files.")
         ("weights", bpo::value<std::string>()->value_name("<weights-dir>"),
             "Path to directory containing weights used in classification.\n"
+            "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
             "If not specified, the \"<executable-dir>/weights\" path is used.")
         ("profiling", bpo::bool_switch(),
             "Enable profiling and create profiling report.")
