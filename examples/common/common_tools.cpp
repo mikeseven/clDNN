@@ -45,7 +45,7 @@ static std::weak_ptr<const executable_info> exec_info_ptr;
 ///
 /// @exception std::runtime_error Main function arguments do not contain executable name.
 /// @exception boost::filesystem::filesystem_error Cannot compute absolute path to executable.
-void set_executable_info(int argc, const char *const argv[])
+void set_executable_info(int argc, const char* const argv[])
 {
     if (argc <= 0)
         throw std::runtime_error("Arguments of \"main\" function do not contain executable name.");
@@ -87,18 +87,19 @@ std::shared_ptr<const executable_info> get_executable_info()
 /// @param child  Child part of path.
 ///
 /// @return Joined path.
-std::string join_path(const std::string &parent, const std::string &child)
+std::string join_path(const std::string& parent, const std::string& child)
 {
     return (path(parent) / child).string();
 }
 
 
 // returns list of files (path+filename) from specified directory
-static inline std::vector<std::string> get_directory_files(const std::string &images_path, const std::regex& extension)
+static inline std::vector<std::string> get_directory_files(const std::string& images_path, const std::regex& extension)
 {
     std::vector<std::string> result;
 
-    for (const directory_entry &dir_entry : directory_iterator(images_path)) {
+    for (const directory_entry& dir_entry : directory_iterator(images_path))
+    {
         if (dir_entry.status().type() == file_type::regular_file && std::regex_match(dir_entry.path().extension().string(), extension))
         {
             result.push_back(absolute(dir_entry.path()).string());
@@ -108,7 +109,7 @@ static inline std::vector<std::string> get_directory_files(const std::string &im
 }
 
 // returns list of files (path+filename) from specified directory
-std::vector<std::string> get_directory_images(const std::string &images_path)
+std::vector<std::string> get_directory_images(const std::string& images_path)
 {
     std::regex allowed_exts("^\\.(jpe?g|png|bmp|gif|j2k|jp2|tiff)$",
                             std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
@@ -116,7 +117,7 @@ std::vector<std::string> get_directory_images(const std::string &images_path)
 }
 
 // returns list of files (path+filename) from specified directory
-std::vector<std::string> get_directory_weights(const std::string &images_path) 
+std::vector<std::string> get_directory_weights(const std::string& images_path)
 {
     std::regex allowed_exts("^\\.nnd$",
         std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);

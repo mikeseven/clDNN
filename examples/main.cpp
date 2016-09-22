@@ -70,9 +70,9 @@ public:
     /// Creates instance of helper class.
     ///
     /// @param all_options     All options that will be parsed by parser.
-    /// @param help_message    Application help message.
-    /// @param version_message Application version message.
-    cmdline_options(const boost::program_options::options_description &all_options, std::string &&help_message, std::string &&version_message)
+    /// @param help_message    Application help message (temporary).
+    /// @param version_message Application version message (temporary).
+    cmdline_options(const boost::program_options::options_description& all_options, std::string&& help_message, std::string&& version_message)
         : _all_options(all_options),
           _help_message(std::move(help_message)),
           _version_message(std::move(version_message))
@@ -95,12 +95,12 @@ namespace neural
 /// @param values           Input strings representing tokens with values for specific outVar variable.
 ///
 /// @exception boost::program_options::validation_error Parsing/validation failed on value of an option.
-void validate(boost::any &outVar, const std::vector<std::string> &values, neural::engine::type *, int)
+void validate(boost::any& outVar, const std::vector<std::string>& values, neural::engine::type*, int)
 {
     namespace bpo = boost::program_options;
 
     bpo::validators::check_first_occurrence(outVar);
-    const auto &value = bpo::validators::get_single_string(values);
+    const auto& value = bpo::validators::get_single_string(values);
 
     std::regex val_gpu_pattern("^gpu$",
         std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
@@ -131,12 +131,12 @@ void validate(boost::any &outVar, const std::vector<std::string> &values, neural
 /// @param values           Input strings representing tokens with values for specific outVar variable.
 ///
 /// @exception boost::program_options::validation_error Parsing/validation failed on value of an option.
-void validate(boost::any &outVar, const std::vector<std::string> &values, neural::memory::format::type *, int)
+void validate(boost::any& outVar, const std::vector<std::string>& values, neural::memory::format::type*, int)
 {
     namespace bpo = boost::program_options;
 
     bpo::validators::check_first_occurrence(outVar);
-    const auto &value = bpo::validators::get_single_string(values);
+    const auto& value = bpo::validators::get_single_string(values);
 
     std::regex val_numeric_pattern("^[0-9]+$",
         std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
@@ -166,8 +166,9 @@ void validate(boost::any &outVar, const std::vector<std::string> &values, neural
 /// Prepares command-line options for current application.
 ///
 /// @param exec_info Executable information.
+///
 /// @return Helper class with basic messages and command-line options.
-static cmdline_options prepare_cmdline_options(const std::shared_ptr<const executable_info> &exec_info)
+static cmdline_options prepare_cmdline_options(const std::shared_ptr<const executable_info>& exec_info)
 {
     namespace bpo = boost::program_options;
 
@@ -242,7 +243,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
 ///
 /// @return Variable map with parsed options.
 static boost::program_options::variables_map parse_cmdline_options(
-    const cmdline_options &options, int argc, const char *const argv[])
+    const cmdline_options& options, int argc, const char* const argv[])
 {
     namespace bpo = boost::program_options;
 
@@ -255,12 +256,13 @@ static boost::program_options::variables_map parse_cmdline_options(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     namespace bpo = boost::program_options;
+    namespace bfs = boost::filesystem;
 
     // TODO: create header file for all examples
-    extern void alexnet(uint32_t, std::string, neural::engine::type, const std::string &, bool, bool);
+    extern void alexnet(uint32_t, std::string, neural::engine::type, const std::string&, bool, bool);
     extern void convert_weights(neural::memory::format::type, std::string);
 
 
@@ -293,7 +295,7 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
-    catch (const std::exception &ex)
+    catch (const std::exception& ex)
     {
         std::cerr << "ERROR: " << ex.what() << "!!!\n\n";
         std::cerr << options.help_message() << std::endl;
@@ -315,17 +317,33 @@ int main(int argc, char *argv[])
         // Execute network otherwise.
         if (parsed_args.count("input"))
         {
+            // Validate input directory.
+            auto input_dir = parsed_args["input"].as<std::string>();
+            if (!bfs::exists(input_dir) || !bfs::is_directory(input_dir))
+            {
+                std::cerr << "ERROR: specified input images path (\"" << input_dir
+                    << "\") does not exist or does not point to directory (--input option invalid)!!!" << std::endl;
+                return 1;
+            }
+
             // Determine weights directory (either based on executable directory - if not specified, or
             // relative to current working directory or absolute - if specified).
             auto weights_dir = parsed_args.count("weights")
-                ? parsed_args["weights"].as<std::string>()
+                ? bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string()
                 : join_path(exec_info->dir(), "weights");
+            // Validate weights directory.
+            if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
+            {
+                std::cerr << "ERROR: specified network weights path (\"" << weights_dir
+                    << "\") does not exist or does not point to directory (--weights option invald)!!!" << std::endl;
+                return 1;
+            }
 
             if (parsed_args["model"].as<std::string>() == "alexnet")
             {
                 alexnet(
                     parsed_args["batch"].as<std::uint32_t>(),
-                    parsed_args["input"].as<std::string>(),
+                    input_dir,
                     parsed_args["engine"].as<neural::engine::type>(),
                     weights_dir,
                     parsed_args["dump_hidden_layers"].as<bool>(),
@@ -335,17 +353,17 @@ int main(int argc, char *argv[])
 
             std::cerr << "ERROR: model/topology (\"" << parsed_args["model"].as<std::string>()
                 << "\") is not implemented!!!" << std::endl;
-            return 1;
         }
+
+        // No need for "else": We already handled when neither --input nor --convert is specified.
     }
-    catch (const std::exception &ex)
+    catch (const std::exception& ex)
     {
         std::cerr << "ERROR: " << ex.what() << "!!!" << std::endl;
-        return 1;
     }
     catch (...)
     {
         std::cerr << "ERROR: unknown exception!!!" << std::endl;
-        return 1;
     }
+    return 1;
 }

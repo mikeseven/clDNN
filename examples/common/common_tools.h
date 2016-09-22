@@ -36,19 +36,19 @@ class executable_info
 
 public:
     /// Gets absolute path to executable.
-    const std::string &path() const
+    const std::string& path() const
     {
         return _path;
     }
 
     /// Gets executable file name without extension (stem name).
-    const std::string &file_name_wo_ext() const
+    const std::string& file_name_wo_ext() const
     {
         return _file_name_wo_ext;
     }
 
     /// Gets aboulte path to executable directory.
-    const std::string &dir() const
+    const std::string& dir() const
     {
         return _dir;
     }
@@ -66,7 +66,7 @@ public:
               typename = std::enable_if_t<std::is_constructible<std::string, StrTy1_>::value &&
                                           std::is_constructible<std::string, StrTy2_>::value &&
                                           std::is_constructible<std::string, StrTy3_>::value, void>>
-    executable_info(StrTy1_ &&path, StrTy2_ &&file_name_wo_ext, StrTy3_ &&dir)
+    executable_info(StrTy1_&& path, StrTy2_&& file_name_wo_ext, StrTy3_&& dir)
         : _path(std::forward<StrTy1_>(path)),
           _file_name_wo_ext(std::forward<StrTy2_>(file_name_wo_ext)),
           _dir(std::forward<StrTy3_>(dir))
@@ -84,7 +84,7 @@ public:
 ///
 /// @exception std::runtime_error Main function arguments do not contain executable name.
 /// @exception boost::filesystem::filesystem_error Cannot compute absolute path to executable.
-void set_executable_info(int argc, const char *const argv[]);
+void set_executable_info(int argc, const char* const argv[]);
 
 /// Gets information about executable.
 ///
@@ -103,9 +103,9 @@ std::shared_ptr<const executable_info> get_executable_info();
 /// @param child  Child part of path.
 ///
 /// @return Joined path.
-std::string join_path(const std::string &parent, const std::string &child);
+std::string join_path(const std::string& parent, const std::string& child);
 
 
-std::vector<std::string> get_directory_images(const std::string &images_path);
-std::vector<std::string> get_directory_weights(const std::string &images_path);
-void load_images_from_file_list(const std::vector<std::string> &images_list, neural::primitive &memory); 
+std::vector<std::string> get_directory_images(const std::string& images_path);
+std::vector<std::string> get_directory_weights(const std::string& images_path);
+void load_images_from_file_list(const std::vector<std::string>& images_list, neural::primitive& memory); 

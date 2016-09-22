@@ -92,7 +92,7 @@ void print_profiling_table(std::ostream& os ,const std::vector<instrumentation::
 }
 
 // AlexNet with weights & biases from file
-std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, engine::type eng, const std::string &weights_dir, bool dump_hl)
+std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, engine::type eng, const std::string& weights_dir, bool dump_hl)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     std::cout << "Building Alexnet started" << std::endl;
@@ -366,14 +366,14 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
     return std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time);
 }
 
-void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, const std::string &weights_dir, bool dump_hl, bool profiling)
+void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, const std::string& weights_dir, bool dump_hl, bool profiling)
 {
     gpu::configuration::get().enable_profiling = profiling;
     auto input = memory::allocate({ engine::reference, memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3, } });
     auto output = memory::allocate({ eng, memory::format::xb_f32,{ batch_size,{ 1000 } } });
     auto img_list = get_directory_images(img_dir);
     if (img_list.empty())
-        throw std::runtime_error("Specified path doesn't contain image data\n");
+        throw std::runtime_error("specified input images directory is empty (does not contain image data)");
     auto images_list_iterator = img_list.begin();
     auto images_list_end = img_list.end();
     auto number_of_batches = (img_list.size() % batch_size == 0)
