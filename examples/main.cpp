@@ -258,11 +258,11 @@ static boost::program_options::variables_map parse_cmdline_options(
 int main(int argc, char *argv[])
 {
     namespace bpo = boost::program_options;
-    namespace bfs = boost::filesystem;
 
     // TODO: create header file for all examples
     extern void alexnet(uint32_t, std::string, neural::engine::type, const std::string &, bool, bool);
     extern void convert_weights(neural::memory::format::type, std::string);
+
 
     set_executable_info(argc, argv); // Must be set before using get_executable_info().
 

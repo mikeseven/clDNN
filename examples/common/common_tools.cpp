@@ -80,6 +80,7 @@ std::shared_ptr<const executable_info> get_executable_info()
     return exec_info; // NRVO
 }
 
+
 /// Joins path using native path/directory separator.
 ///
 /// @param parent Parent path.
