@@ -23,10 +23,10 @@ const std::string kernelName = "lrn_GPU";
 const std::string kernelCode = R"__krnl(
 KERNEL (lrn_GPU)(__global float* input, __global float* output)
 {
-    const int global_id = get_global_id(0);
-    const int batch_offset = global_id % INPUT_BATCH_NUM;
-    const int ifm_offset = (global_id / INPUT_BATCH_NUM) % INPUT_FEATURE_NUM;
-    const int x = (global_id / INPUT_BATCH_NUM) / INPUT_FEATURE_NUM;
+    const uint global_id = get_global_id(0);
+    const uint batch_offset = global_id % INPUT_BATCH_NUM;
+    const uint ifm_offset = (global_id / INPUT_BATCH_NUM) % INPUT_FEATURE_NUM;
+    const uint x = (global_id / INPUT_BATCH_NUM) / INPUT_FEATURE_NUM;
 
     float acc = 0;
 

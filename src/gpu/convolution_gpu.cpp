@@ -110,11 +110,15 @@ const std::string kernelCode_End = R"__krnl(
 struct convolution_gpu : is_an_implementation {
     convolution &outer;
     bool inline_memory;
+    bool in_feature_multiple_of_8; // if input feature maps are multiple of 8
+    bool out_feature_multiple_of_8; // if output feature maps are multiple of 8
     gpu::kernel _kernel;
 
     convolution_gpu(convolution &arg): is_an_implementation(neural::type_id<convolution_gpu>())
         , outer(arg)
         , inline_memory(can_inline_memory(arg.input_memory(1)))
+        , in_feature_multiple_of_8(outer.input_memory(0).argument.size.feature[0] % 8 == 0)
+        , out_feature_multiple_of_8(outer.output_memory(0).argument.size.feature[0] % 8 == 0)
         , _kernel(select_kernel_name(), get_jit_constants())
     {}
 
@@ -126,7 +130,6 @@ struct convolution_gpu : is_an_implementation {
         // input
         auto& input_mem = outer.input_memory(0);
         auto& filter_mem = outer.input_memory(1);
-        auto& output_mem = outer.output_memory(0);
 
         if (padding::zero != outer.argument.padding)
             throw std::invalid_argument("Unknown padding mode in convolution.");
@@ -142,9 +145,9 @@ struct convolution_gpu : is_an_implementation {
                 return inline_memory ? kernelName_YXFB : kernelName_YXFB_memory;
             case memory::format::yxoi_f32:
                 if (input_mem.argument.size.batch[0] == 8 &&
-                    output_mem.argument.size.feature[0] % 8 == 0)
+                    out_feature_multiple_of_8)
                 {
-                    if (input_mem.argument.size.feature[0] % 8 == 0)
+                    if (in_feature_multiple_of_8)
                         return kernelName_YXFB_YXOI_B8_F8_memory;
                     else
                         return kernelName_YXFB_YXOI_B8_memory;
@@ -233,7 +236,7 @@ struct convolution_gpu : is_an_implementation {
 
         auto& input_mem = outer.input_memory(0);
         auto& output_mem = outer.output_memory(0);
-
+        auto& filter_mem = outer.input_memory(1);
         // weights neural::vector is: {b}, {ofm, ifm} {spatials}
         // ofm - output feature maps
         // ifm - input feature maps
@@ -255,27 +258,65 @@ struct convolution_gpu : is_an_implementation {
                 ({ { dstSize, 1 } ,{ std::min(dstSize, static_cast<size_t>(16)), 1 } }, input_mem, output_mem);
             break;
         case memory::format::yxfb_f32:
-            if (outer.input_memory(1).argument.format == memory::format::yxoi_f32 &&
-                input_mem.argument.size.batch[0] == 8 &&
-                (output_mem.argument.size.feature[0] % 8) == 0)
+            size_t gws0;
+            switch (filter_mem.argument.format)
             {
-                if (input_mem.argument.size.feature[0] % 8 == 0)
+            case memory::format::yxoi_f32:
+                if (input_mem.argument.size.batch[0] == 8 &&
+                    me->out_feature_multiple_of_8)
                 {
-                    for (uint32_t i = 0; i < split; i++) {
-                        me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                            ({ { (output_mem.argument.size.feature[0] * 8) / split, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
-                                input_mem,
-                                output_mem,
-                                outer.input_memory(i * 2 + 1), //filters
-                                outer.input_memory(i * 2 + 2), //biases
-                                i);
+                    if (me->in_feature_multiple_of_8)
+                    {
+                        gws0 = (output_mem.argument.size.feature[0] * 8) / split;
+                    }
+                    else
+                    {
+                        uint32_t ofm_per_workitem = 16;
+                        gws0 = (output_mem.argument.size.feature[0] / (ofm_per_workitem / output_mem.argument.size.batch[0])) / split;
                     }
                 }
                 else
                 {
+                    gws0 = dstSize / split;
+                }
+                for (uint32_t i = 0; i < split; i++) {
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
+                        ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
+                            input_mem,
+                            output_mem,
+                            outer.input_memory(i * 2 + 1), //filters
+                            outer.input_memory(i * 2 + 2), //biases
+                            i);
+                }
+                break;
+            case memory::format::yxio_f32:
+            {
+                uint32_t ofm_per_workitem = 16;
+                gws0 = (output_mem.argument.size.feature[0] / (ofm_per_workitem / output_mem.argument.size.batch[0])) / split;
+                for (uint32_t i = 0; i < split; i++) {
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
+                        ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
+                            input_mem,
+                            output_mem,
+                            outer.input_memory(i * 2 + 1), //filters
+                            outer.input_memory(i * 2 + 2), //biases
+                            i);
+                }
+                break;
+            }
+            case memory::format::oiyx_f32:
+            case memory::format::oyxi_f32:
+                if (me->inline_memory)
+                {
+                    me->_kernel.run<gpu::input_mem, gpu::output_mem>
+                        ({ { dstSize, 1 } ,{ std::min(dstSize, static_cast<size_t>(16)), 1 } }, input_mem, output_mem);
+                }
+                else
+                {
+                    gws0 = dstSize / split;
                     for (uint32_t i = 0; i < split; i++) {
                         me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                            ({ { (output_mem.argument.size.feature[0] / 2)/ split, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
+                            ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
                                 input_mem,
                                 output_mem,
                                 outer.input_memory(i * 2 + 1), //filters
@@ -283,34 +324,9 @@ struct convolution_gpu : is_an_implementation {
                                 i);
                     }
                 }
-            }
-            else if (outer.input_memory(1).argument.format == memory::format::yxio_f32)
-            {
-                for (uint32_t i = 0; i < split; i++) {
-                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                        ({ { (output_mem.argument.size.feature[0] / 2) / split, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
-                            input_mem,
-                            output_mem,
-                            outer.input_memory(i * 2 + 1), //filters
-                            outer.input_memory(i * 2 + 2), //biases
-                            i);
-                }
-            }
-            else if (me->inline_memory) {
-                me->_kernel.run<gpu::input_mem, gpu::output_mem>
-                    ({ { dstSize, 1 } ,{ std::min(dstSize, static_cast<size_t>(16)), 1 } }, input_mem, output_mem);
-            }
-            else {
-                size_t workitems_per_enqueue = dstSize / split;
-                for (uint32_t i = 0; i < split; i++) {
-                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                        ({ { workitems_per_enqueue, 1 } ,{ std::min(workitems_per_enqueue, static_cast<size_t>(8)), 1 } },
-                            input_mem,
-                            output_mem,
-                            outer.input_memory(i * 2 + 1), //filters
-                            outer.input_memory(i * 2 + 2), //biases
-                            i);
-                }
+                break;
+            default:
+                throw std::invalid_argument("Filter memory format is not supported");
             }
             break;
         default:

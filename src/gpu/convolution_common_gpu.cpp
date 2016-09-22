@@ -482,7 +482,7 @@ namespace neural
 
         const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
         // we're computing 8 OUTPUT_FEATURE_MAP so we must divide by 8, but we got 8 batches, so no division is needed.
-        int global_id = (get_global_id(0) / batch_num) * 8 + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * batch_num; 
+        int global_id = (get_global_id(0) / batch_num) * batch_num + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * batch_num; 
 
         const uint out_batch_id = get_local_id(0);
         const uint out_x = get_global_id(1);
@@ -533,7 +533,7 @@ namespace neural
                             {
                                 uint h = _h*8;
                                 float8 _input = as_float8(intel_sub_group_block_read8((const __global uint*)input + input_idx + h * batch_num));
-                                                                
+
                                 DOT_PRODUCT_8(_data0, _input.s0, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
                                 DOT_PRODUCT_8(_data1, _input.s0, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
                                 
