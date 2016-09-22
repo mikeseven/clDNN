@@ -257,8 +257,11 @@ static boost::program_options::variables_map parse_cmdline_options(
 
 int main(int argc, char *argv[])
 {
+    namespace bpo = boost::program_options;
+    namespace bfs = boost::filesystem;
+
     // TODO: create header file for all examples
-    extern void alexnet(uint32_t, std::string, neural::engine::type, bool, bool);
+    extern void alexnet(uint32_t, std::string, neural::engine::type, const std::string &, bool, bool);
     extern void convert_weights(neural::memory::format::type, std::string);
 
     set_executable_info(argc, argv); // Must be set before using get_executable_info().
@@ -266,7 +269,7 @@ int main(int argc, char *argv[])
     // Parsing command-line and handling/presenting basic options.
     auto exec_info = get_executable_info();
     auto options = prepare_cmdline_options(exec_info);
-    boost::program_options::variables_map parsed_args;
+    bpo::variables_map parsed_args;
     try
     {
         parsed_args = parse_cmdline_options(options, argc, argv);
@@ -312,12 +315,19 @@ int main(int argc, char *argv[])
         // Execute network otherwise.
         if (parsed_args.count("input"))
         {
+            // Determine weights directory (either based on executable directory - if not specified, or
+            // relative to current working directory or absolute - if specified).
+            auto weights_dir = parsed_args.count("weights")
+                ? parsed_args["weights"].as<std::string>()
+                : join_path(exec_info->dir(), "weights");
+
             if (parsed_args["model"].as<std::string>() == "alexnet")
             {
                 alexnet(
                     parsed_args["batch"].as<std::uint32_t>(),
                     parsed_args["input"].as<std::string>(),
                     parsed_args["engine"].as<neural::engine::type>(),
+                    weights_dir,
                     parsed_args["dump_hidden_layers"].as<bool>(),
                     parsed_args["profiling"].as<bool>());
                 return 0;

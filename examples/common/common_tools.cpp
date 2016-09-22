@@ -80,6 +80,17 @@ std::shared_ptr<const executable_info> get_executable_info()
     return exec_info; // NRVO
 }
 
+/// Joins path using native path/directory separator.
+///
+/// @param parent Parent path.
+/// @param child  Child part of path.
+///
+/// @return Joined path.
+std::string join_path(const std::string &parent, const std::string &child)
+{
+    return (path(parent) / child).string();
+}
+
 
 // returns list of files (path+filename) from specified directory
 static inline std::vector<std::string> get_directory_files(const std::string &images_path, const std::regex& extension)

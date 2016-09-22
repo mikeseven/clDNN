@@ -97,6 +97,15 @@ void set_executable_info(int argc, const char *const argv[]);
 std::shared_ptr<const executable_info> get_executable_info();
 
 
+/// Joins path using native path/directory separator.
+///
+/// @param parent Parent path.
+/// @param child  Child part of path.
+///
+/// @return Joined path.
+std::string join_path(const std::string &parent, const std::string &child);
+
+
 std::vector<std::string> get_directory_images(const std::string &images_path);
 std::vector<std::string> get_directory_weights(const std::string &images_path);
 void load_images_from_file_list(const std::vector<std::string> &images_list, neural::primitive &memory); 
