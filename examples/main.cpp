@@ -14,111 +14,357 @@
 // limitations under the License.
 */
 
-#include "api/neural.h"
-#include <iostream>
-#include <string>
-#include <algorithm>
-#include <regex> 
+#include "common/common_tools.h"
 
-// parses parameters stored as vector of strings and insersts them into map
-void parse_parameters(std::map<std::string, std::string> &config, std::vector<std::string> &input) {
-    std::regex regex[] = {
-        std::regex("(--|-|\\/)([a-z][a-z\\-_]*)=(.*)")    // key-value pair
-        , std::regex("(--|-|\\/)([a-z][a-z\\-_]*)")         // key only
-        , std::regex(".+")                                  // this must be last in regex[]; what is left is a filename
-    };
-    for (std::string &in : input) {
-        std::cmatch result;
-        const auto regex_count = sizeof(regex) / sizeof(regex[0]);
-        const auto regex_last = regex_count - 1;
-        for (size_t index = 0; index<regex_count; ++index)
-            if (std::regex_match(in.c_str(), result, regex[index])) {
-                std::string key = index == regex_last ? std::string("input") : result[2];
-                std::string value = result[index == regex_last ? 0 : 3];
-                config.insert(std::make_pair(key, value));
-                break;
-            }
+#include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/numeric/conversion/cast.hpp>
+#include <boost/program_options.hpp>
+
+#include <cstdint>
+#include <iostream>
+#include <regex>
+#include <string>
+#include <sstream>
+#include <type_traits>
+
+
+// --------------------------------------------------------------------------------------------------------------------
+// Command-line parsing.
+// --------------------------------------------------------------------------------------------------------------------
+
+/// Application version.
+static const unsigned long app_version = 0x10100L;
+
+
+// Helper classes.
+namespace
+{
+/// Helper class that provides elements for command-line parsing and message presentation.
+class cmdline_options
+{
+    boost::program_options::options_description _all_options;
+    std::string _help_message;
+    std::string _version_message;
+
+public:
+    /// Gets description of all options that will be parsed by command-line parser.
+    const boost::program_options::options_description& all_options() const
+    {
+        return _all_options;
     }
+
+    /// Gets help message for command-line.
+    const std::string& help_message() const
+    {
+        return _help_message;
+    }
+
+    /// Gets version message for command-line.
+    const std::string& version_message() const
+    {
+        return _version_message;
+    }
+
+
+    /// Creates instance of helper class.
+    ///
+    /// @param all_options     All options that will be parsed by parser.
+    /// @param help_message    Application help message (temporary).
+    /// @param version_message Application version message (temporary).
+    cmdline_options(const boost::program_options::options_description& all_options, std::string&& help_message, std::string&& version_message)
+        : _all_options(all_options),
+          _help_message(std::move(help_message)),
+          _version_message(std::move(version_message))
+    {}
+};
 }
 
-int main(int argc, char *argv[])
+// ADL-enabled parser / validators for some command-line options.
+namespace neural
 {
-    // TODO: create header file for all examples
-    extern void alexnet(uint32_t, std::string, neural::engine::type,bool,bool);
-    extern void convert_weights(neural::memory::format::type, std::string);
-    if (argc <= 1)
+/// ADL-accessible validation/parsing route for neural::engine::type enum.
+///
+/// This function is specific to examples main command-line parser. Please do not move it to any
+/// headers (to avoid confict with different implementations in other source files).
+///
+/// The last two parameters represents match type for validator (pointer to matched type) and
+/// int type (to properly order overloads).
+///
+/// @param [in, out] outVar Output variable where parsing/verification result will be stored.
+/// @param values           Input strings representing tokens with values for specific outVar variable.
+///
+/// @exception boost::program_options::validation_error Parsing/validation failed on value of an option.
+void validate(boost::any& outVar, const std::vector<std::string>& values, neural::engine::type*, int)
+{
+    namespace bpo = boost::program_options;
+
+    bpo::validators::check_first_occurrence(outVar);
+    const auto& value = bpo::validators::get_single_string(values);
+
+    std::regex val_gpu_pattern("^gpu$",
+        std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+    std::regex val_ref_pattern("^(ref|reference)$",
+        std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+
+    if (std::regex_match(value, val_gpu_pattern))
     {
-        std::cout <<
-            R"_help_(<parameters> include:
-            --batch=<value>
-            size of group of images that are classified together;  large batch
-            sizes have better performance
-            --model=<name>
-            name of network model that is used for classfication
-            can be : alexnet, caffenet_float, caffenet_int16 or lenet_float
-            --engine=<type>
-            engine type: can be referenced or gpu
-            --dump_hidden_layers
-            dumps results from hidden layers
-            --convert=<format_num> 
-            converts weights to given format (format_num represents format enum)
-            --convertion_path=<path>
-            name, or substring in file name to be converte. i.e. "conv1" - first convolution, "fc" every fully connected
-            --input=<directory>
-            path to directory that contains images to be classfied
-            --profiling
-            enable profiling report)_help_";
+        outVar = boost::any(neural::engine::gpu);
+    }
+    else if (std::regex_match(value, val_ref_pattern))
+    {
+        outVar = boost::any(neural::engine::reference);
     }
     else
+        throw bpo::invalid_option_value(value);
+}
+
+/// ADL-accessible validation/parsing route for neural::memory::format::type enum.
+///
+/// This function is specific to examples main command-line parser. Please do not move it to any
+/// headers (to avoid confict with different implementations in other source files).
+///
+/// The last two parameters represents match type for validator (pointer to matched type) and
+/// int type (to properly order overloads).
+///
+/// @param [in, out] outVar Output variable where parsing/verification result will be stored.
+/// @param values           Input strings representing tokens with values for specific outVar variable.
+///
+/// @exception boost::program_options::validation_error Parsing/validation failed on value of an option.
+void validate(boost::any& outVar, const std::vector<std::string>& values, neural::memory::format::type*, int)
+{
+    namespace bpo = boost::program_options;
+
+    bpo::validators::check_first_occurrence(outVar);
+    const auto& value = bpo::validators::get_single_string(values);
+
+    std::regex val_numeric_pattern("^[0-9]+$",
+        std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+
+    // Underlying type of neural::memory::format::type.
+    using format_ut = std::underlying_type_t<neural::memory::format::type>;
+    // Type used for conversion/lexical_cast for neural::memory::format::type (to avoid problems with char types
+    // in lexical_cast).
+    using format_pt = std::common_type_t<format_ut, unsigned>; 
+    if (std::regex_match(value, val_numeric_pattern))
     {
-        bool dump_results = false;
-        bool profiling = false;
-        std::vector<std::string> arg;
-        for (int n = 1; n<argc; ++n) arg.push_back(argv[n]);
-        // parse configuration (command line and from file)
-        using config_t = std::map<std::string, std::string>;
-        config_t config;
-        parse_parameters(config, arg);
-        // Validate params and set defaults
-        auto not_found = std::end(config);
-        if (config.find("convert") != not_found) {
-            if (config.find("convertion_path") == not_found)
-                config["convertion_path"] = "";
-            convert_weights(static_cast<neural::memory::format::type>(std::stoi(config["convert"])),
-                config["convertion_path"]);
-            return 0;
-        }
-        if (config.find("batch") == not_found) config["batch"] = "32";
-        if (config.find("model") == not_found) config["model"] = "alexnet";
-        if (config.find("engine") == not_found) config["engine"] = "referenced";
-        if (config.find("dump_hidden_layers") != not_found) dump_results = true;
-        if (config.find("profiling") != not_found) profiling = true;
-        if (config.find("input") == not_found)
+        try
         {
-            std::cout << "Directory path has to be defined using current dir"<<std::endl;
-            config["input"] = "./";
+            outVar = boost::any(static_cast<neural::memory::format::type>(
+                boost::numeric_cast<format_ut>(boost::lexical_cast<format_pt>(value))));
         }
-        if (config["model"].compare("alexnet") == 0)
+        catch (...)
         {
-            try {
-                alexnet(
-                    std::stoi(config["batch"]),
-                    config["input"],
-                    config["engine"].compare("gpu") == 0 ? neural::engine::gpu : neural::engine::reference,
-                    dump_results,
-                    profiling);
-            }
-            catch (std::exception &e) {
-                std::cerr << e.what() << std::endl;
-            }
-            catch (...) {
-                std::cerr << "Unknown exceptions." << std::endl;
-            }
-        }
-        else
-        {
-            std::cout << "Topology not implemented" << std::endl;
+            throw bpo::invalid_option_value(value);
         }
     }
-    return 0;
+    else
+        throw bpo::invalid_option_value(value);
+}
+} // namespace neural
+
+/// Prepares command-line options for current application.
+///
+/// @param exec_info Executable information.
+///
+/// @return Helper class with basic messages and command-line options.
+static cmdline_options prepare_cmdline_options(const std::shared_ptr<const executable_info>& exec_info)
+{
+    namespace bpo = boost::program_options;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Standard options.
+    bpo::options_description standard_cmdline_options("Standard options");
+    standard_cmdline_options.add_options()
+        ("input", bpo::value<std::string>()->value_name("<input-dir>"),
+            "Path to input directory containing images to classify (mandatory when running classification).")
+        ("batch", bpo::value<std::uint32_t>()->value_name("<batch-size>")->default_value(8),
+            "Size of a group of images that are classified together (large batch sizes have better performance).")
+        ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
+            "Name of a neural network model that is used for classification.\n"
+            "It can be one of:\n  \talexnet, caffenet_float, caffenet_int16, lenet_float.")
+        ("engine", bpo::value<neural::engine::type>()->value_name("<eng-type>")->default_value(neural::engine::reference, "reference"),
+            "Type of an engine used for classification.\nIt can be one of:\n  \treference, gpu.")
+        ("dump_hidden_layers", bpo::bool_switch(),
+            "Dump results from hidden layers of network to files.")
+        ("weights", bpo::value<std::string>()->value_name("<weights-dir>"),
+            "Path to directory containing weights used in classification.\n"
+            "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
+            "If not specified, the \"<executable-dir>/weights\" path is used.")
+        ("profiling", bpo::bool_switch(),
+            "Enable profiling and create profiling report.")
+        ("version", "Show version of the application.")
+        ("help", "Show help message and available command-line options.");
+
+    // Conversions options.
+    bpo::options_description weights_conv_cmdline_options("Weights conversion options");
+    weights_conv_cmdline_options.add_options()
+        ("convert", bpo::value<neural::memory::format::type>()->value_name("<format-type>"),
+            "Convert weights of a neural network to given format (<format-type> represents numeric value of "
+            "neural::memory::format enum).")
+        ("convert_filter", bpo::value<std::string>()->value_name("<filter>"),
+            "Name or part of the name of weight file(s) to be converted.\nFor example:\n"
+             "  \"conv1\" - first convolution,\n  \"fc\" - every fully connected.");
+
+    // All options.
+    bpo::options_description all_cmdline_options;
+    all_cmdline_options.add(standard_cmdline_options).add(weights_conv_cmdline_options);
+    // All visible options.
+    bpo::options_description all_visible_cmdline_options;
+    all_visible_cmdline_options.add(standard_cmdline_options).add(weights_conv_cmdline_options);
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Version message.
+    std::ostringstream version_msg_out;
+    version_msg_out << exec_info->file_name_wo_ext() << "   (version: "
+        << (app_version >> 16) << "." << ((app_version >> 8) & 0xFF) << "." << (app_version & 0xFF)
+        << ")";
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Help message.
+    std::ostringstream help_msg_out;
+    help_msg_out << "Usage:\n  " << exec_info->file_name_wo_ext() << " [standard options]\n";
+    help_msg_out << "  " << exec_info->file_name_wo_ext() << " [weights conversion options]\n\n";
+    help_msg_out << "Executes classification on specified neural network (standard options),\n";
+    help_msg_out << "or converts network weights (weights conversion options).\n\n";
+    help_msg_out << "When conversion options are specified execution options are ignored.\n\n";
+    help_msg_out << all_visible_cmdline_options;
+
+
+    return {all_cmdline_options, help_msg_out.str(), version_msg_out.str()};
+}
+
+/// Parses command-line options.
+///
+/// Throws exception on parse errors.
+///
+/// @param options Options helper class with all options and basic messages.
+/// @param argc    Main function arguments count.
+/// @param argv    Main function argument values.
+///
+/// @return Variable map with parsed options.
+static boost::program_options::variables_map parse_cmdline_options(
+    const cmdline_options& options, int argc, const char* const argv[])
+{
+    namespace bpo = boost::program_options;
+
+    bpo::variables_map vars_map;
+    store(bpo::parse_command_line(argc, argv, options.all_options()), vars_map);
+    notify(vars_map);
+
+    return vars_map;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+int main(int argc, char* argv[])
+{
+    namespace bpo = boost::program_options;
+    namespace bfs = boost::filesystem;
+
+    // TODO: create header file for all examples
+    extern void alexnet(uint32_t, std::string, neural::engine::type, const std::string&, bool, bool);
+    extern void convert_weights(neural::memory::format::type, std::string);
+
+
+    set_executable_info(argc, argv); // Must be set before using get_executable_info().
+
+    // Parsing command-line and handling/presenting basic options.
+    auto exec_info = get_executable_info();
+    auto options = prepare_cmdline_options(exec_info);
+    bpo::variables_map parsed_args;
+    try
+    {
+        parsed_args = parse_cmdline_options(options, argc, argv);
+
+        if (parsed_args.count("help"))
+        {
+            std::cerr << options.version_message() << "\n\n";
+            std::cerr << options.help_message() << std::endl;
+            return 1;
+        }
+        if (parsed_args.count("version"))
+        {
+            std::cerr << options.version_message() << std::endl;
+            return 1;
+        }
+        if (!parsed_args.count("input") && !parsed_args.count("convert"))
+        {
+            std::cerr << "ERROR: none of required options was specified (either --input or\n";
+            std::cerr << "       --convert is needed)!!!\n\n";
+            std::cerr << options.help_message() << std::endl;
+            return 1;
+        }
+    }
+    catch (const std::exception& ex)
+    {
+        std::cerr << "ERROR: " << ex.what() << "!!!\n\n";
+        std::cerr << options.help_message() << std::endl;
+        return 1;
+    }
+
+    // Execute network or convert weights.
+    try
+    {
+        // Convert weights if convertion options are used.
+        if (parsed_args.count("convert"))
+        {
+            auto convert_filter = parsed_args.count("convert_filter")
+                ? parsed_args["convert_filter"].as<std::string>()
+                : "";
+            convert_weights(parsed_args["convert"].as<neural::memory::format::type>(), convert_filter);
+            return 0;
+        }
+        // Execute network otherwise.
+        if (parsed_args.count("input"))
+        {
+            // Validate input directory.
+            auto input_dir = parsed_args["input"].as<std::string>();
+            if (!bfs::exists(input_dir) || !bfs::is_directory(input_dir))
+            {
+                std::cerr << "ERROR: specified input images path (\"" << input_dir
+                    << "\") does not exist or does not point to directory (--input option invalid)!!!" << std::endl;
+                return 1;
+            }
+
+            // Determine weights directory (either based on executable directory - if not specified, or
+            // relative to current working directory or absolute - if specified).
+            auto weights_dir = parsed_args.count("weights")
+                ? bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string()
+                : join_path(exec_info->dir(), "weights");
+            // Validate weights directory.
+            if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
+            {
+                std::cerr << "ERROR: specified network weights path (\"" << weights_dir
+                    << "\") does not exist or does not point to directory (--weights option invald)!!!" << std::endl;
+                return 1;
+            }
+
+            if (parsed_args["model"].as<std::string>() == "alexnet")
+            {
+                alexnet(
+                    parsed_args["batch"].as<std::uint32_t>(),
+                    input_dir,
+                    parsed_args["engine"].as<neural::engine::type>(),
+                    weights_dir,
+                    parsed_args["dump_hidden_layers"].as<bool>(),
+                    parsed_args["profiling"].as<bool>());
+                return 0;
+            }
+
+            std::cerr << "ERROR: model/topology (\"" << parsed_args["model"].as<std::string>()
+                << "\") is not implemented!!!" << std::endl;
+        }
+
+        // No need for "else": We already handled when neither --input nor --convert is specified.
+    }
+    catch (const std::exception& ex)
+    {
+        std::cerr << "ERROR: " << ex.what() << "!!!" << std::endl;
+    }
+    catch (...)
+    {
+        std::cerr << "ERROR: unknown exception!!!" << std::endl;
+    }
+    return 1;
 }

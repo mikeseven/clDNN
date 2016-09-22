@@ -92,30 +92,30 @@ void print_profiling_table(std::ostream& os ,const std::vector<instrumentation::
 }
 
 // AlexNet with weights & biases from file
-std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, engine::type eng, bool dump_hl)
+std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, engine::type eng, const std::string& weights_dir, bool dump_hl)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     std::cout << "Building Alexnet started" << std::endl;
     instrumentation::timer<> timer_build;
 
-	// create conversion to yxfb format and subtract mean values
-	auto reordered_input = reorder::create(
-	{
-		eng,
-		memory::format::yxfb_f32,
-		input.as<const memory&>().argument.size,
-		input,
-		file::create({ eng,"weights/imagenet_mean.nnd" })
-	});
+    // create conversion to yxfb format and subtract mean values
+    auto reordered_input = reorder::create(
+    {
+        eng,
+        memory::format::yxfb_f32,
+        input.as<const memory&>().argument.size,
+        input,
+        file::create({ eng, join_path(weights_dir, "imagenet_mean.nnd") })
+    });
 
     auto conv1 = convolution::create(
     {
         eng,
         memory::format::yxfb_f32,
         {
-			reordered_input,
-            file::create({ eng, "weights/conv1_weights.nnd" }),
-            file::create({ eng, "weights/conv1_biases.nnd" })
+            reordered_input,
+            file::create({ eng, join_path(weights_dir, "conv1_weights.nnd") }),
+            file::create({ eng, join_path(weights_dir, "conv1_biases.nnd") })
         },
         { 0,{ 0, 0 }, 0 },
         { 1,{ 4, 4 }, 1 },
@@ -152,10 +152,10 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         memory::format::yxfb_f32,
         {
             lrn1,
-            file::create({ eng, "weights/conv2_g1_weights.nnd" }),
-            file::create({ eng, "weights/conv2_g1_biases.nnd" }),
-            file::create({ eng, "weights/conv2_g2_weights.nnd" }),
-            file::create({ eng, "weights/conv2_g2_biases.nnd" }),
+            file::create({ eng, join_path(weights_dir, "conv2_g1_weights.nnd") }),
+            file::create({ eng, join_path(weights_dir, "conv2_g1_biases.nnd") }),
+            file::create({ eng, join_path(weights_dir, "conv2_g2_weights.nnd") }),
+            file::create({ eng, join_path(weights_dir, "conv2_g2_biases.nnd") }),
         },
         { 0,{ -2, -2 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -194,8 +194,8 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         memory::format::yxfb_f32,
         {
             lrn2,
-            file::create({ eng, "weights/conv3_weights.nnd" }),
-            file::create({ eng, "weights/conv3_biases.nnd" }),
+            file::create({ eng, join_path(weights_dir, "conv3_weights.nnd") }),
+            file::create({ eng, join_path(weights_dir, "conv3_biases.nnd") }),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -210,10 +210,10 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         memory::format::yxfb_f32,
         {
             conv3,
-            file::create({ eng, "weights/conv4_g1_weights.nnd" }),
-            file::create({ eng, "weights/conv4_g1_biases.nnd" }),
-            file::create({ eng, "weights/conv4_g2_weights.nnd" }),
-            file::create({ eng, "weights/conv4_g2_biases.nnd" }),
+            file::create({ eng, join_path(weights_dir, "conv4_g1_weights.nnd") }),
+            file::create({ eng, join_path(weights_dir, "conv4_g1_biases.nnd") }),
+            file::create({ eng, join_path(weights_dir, "conv4_g2_weights.nnd") }),
+            file::create({ eng, join_path(weights_dir, "conv4_g2_biases.nnd") }),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -229,10 +229,10 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         memory::format::yxfb_f32,
         {
             conv4_group2,
-            file::create({ eng, "weights/conv5_g1_weights.nnd" }),
-            file::create({ eng, "weights/conv5_g1_biases.nnd" }),
-            file::create({ eng, "weights/conv5_g2_weights.nnd" }),
-            file::create({ eng, "weights/conv5_g2_biases.nnd" }),
+            file::create({ eng, join_path(weights_dir, "conv5_g1_weights.nnd") }),
+            file::create({ eng, join_path(weights_dir, "conv5_g1_biases.nnd") }),
+            file::create({ eng, join_path(weights_dir, "conv5_g2_weights.nnd") }),
+            file::create({ eng, join_path(weights_dir, "conv5_g2_biases.nnd") }),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -258,8 +258,8 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         eng,
         memory::format::xb_f32,
         pool5,
-        file::create({ eng, "weights/fc6_weights.nnd", file::weights_type::fully_connected }),
-        file::create({ eng, "weights/fc6_biases.nnd" }),
+        file::create({ eng, join_path(weights_dir, "fc6_weights.nnd"), file::weights_type::fully_connected }),
+        file::create({ eng, join_path(weights_dir, "fc6_biases.nnd") }),
         true,
         0
     });
@@ -269,8 +269,8 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         eng,
         memory::format::xb_f32,
         fc6,
-        file::create({ eng, "weights/fc7_weights.nnd", file::weights_type::fully_connected }),
-        file::create({ eng, "weights/fc7_biases.nnd" }),
+        file::create({ eng, join_path(weights_dir, "fc7_weights.nnd"), file::weights_type::fully_connected }),
+        file::create({ eng, join_path(weights_dir, "fc7_biases.nnd") }),
         true,
         0
     });
@@ -280,8 +280,8 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         eng,
         memory::format::xb_f32,
         fc7,
-        file::create({ eng, "weights/fc8_weights.nnd", file::weights_type::fully_connected }),
-        file::create({ eng, "weights/fc8_biases.nnd" }),
+        file::create({ eng, join_path(weights_dir, "fc8_weights.nnd"), file::weights_type::fully_connected }),
+        file::create({ eng, join_path(weights_dir, "fc8_biases.nnd") }),
         true,
         0
     });
@@ -317,7 +317,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
     std::cout << "Start execution" << std::endl;
     instrumentation::timer<> timer_execution;
     execute({
-		reordered_input,
+        reordered_input,
         conv1, pool1, lrn1, //stage 0
         conv2_group2, pool2, lrn2,
         conv3,
@@ -368,14 +368,14 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
     return std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time);
 }
 
-void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool dump_hl, bool profiling)
+void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, const std::string& weights_dir, bool dump_hl, bool profiling)
 {
     gpu::configuration::get().enable_profiling = profiling;
     auto input = memory::allocate({ engine::reference, memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3, } });
     auto output = memory::allocate({ eng, memory::format::xb_f32,{ batch_size,{ 1000 } } });
     auto img_list = get_directory_images(img_dir);
     if (img_list.empty())
-        throw std::runtime_error("Specified path doesn't contain image data\n");
+        throw std::runtime_error("specified input images directory is empty (does not contain image data)");
     auto images_list_iterator = img_list.begin();
     auto images_list_end = img_list.end();
     auto number_of_batches = (img_list.size() % batch_size == 0)
@@ -390,9 +390,9 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, bool du
         // load croped and resized images into input
         load_images_from_file_list(image_in_batches, input);
 
-        auto time = execute_alexnet(input, output, eng, dump_hl);
-        auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-		output_file.batch(output.as<const neural::memory&>( ), "names.txt", image_in_batches);
+        auto time = execute_alexnet(input, output, eng, weights_dir, dump_hl);
+        auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count(); 
+        output_file.batch(output.as<const neural::memory&>( ), join_path(get_executable_info()->dir(), "names.txt"), image_in_batches);
         if (time_in_sec != 0.0)
             std::cout << "Frames per second:" << (double)batch_size / time_in_sec << std::endl;
     }    

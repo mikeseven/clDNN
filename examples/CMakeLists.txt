@@ -23,6 +23,7 @@ set(CLDNN_BUILD__PROJ_OUTPUT_NAME "${CLDNN_BUILD__PROJ}${CLDNN__OUT_CPU_SUFFIX}"
 
 intel_config_flag_apply_settings(CompilerOptions CMAKE_CXX_FLAGS ALL_PATTERN ""
     SET
+      RttiEnabled
       WarnLevel3
       TreatWarnAsErrorDisabled
   )
@@ -75,6 +76,7 @@ target_link_libraries("${CLDNN_BUILD__PROJ}"
     "${CLDNN_BUILD__PROJ__clDNN}"
     FreeImage
     Boost::filesystem
+    Boost::program_options
     Boost::system
   )
 
