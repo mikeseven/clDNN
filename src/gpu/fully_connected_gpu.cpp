@@ -67,7 +67,7 @@ KERNEL (Fully_Connected_GPU_xb_bx_memory)(
 
 const std::string kernelName_xb_bx_b8_memory = "Fully_Connected_GPU_xb_bx_b8_memory";
 const std::string kernelCode_xb_bx_b8_memory_Begin = R"__krnl(
-__attribute__((reqd_sub_group_size(8, 1, 1)))
+__attribute__((reqd_work_group_size(8, 1, 1)))
 KERNEL (Fully_Connected_GPU_xb_bx_b8_memory)(
     const __global neural_memory* input_mem, 
     __global neural_memory* dst_mem, 
