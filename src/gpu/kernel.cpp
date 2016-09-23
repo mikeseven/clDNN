@@ -44,4 +44,22 @@ namespace neural { namespace gpu {
         }
     }
 
+void kernel_execution_options::set_local_sizes()
+{
+    const size_t optimal_lws_values[] = { 256, 224, 192, 160, 128, 96, 64, 32, 16, 8, 7, 6, 5, 4, 3, 2, 1 };
+    auto total_lws = std::accumulate(std::begin(_local), std::end(_local), size_t(1), std::multiplies<size_t>());
+    assert(total_lws != 0 && total_lws <= 256);
+
+    for (auto i = _local.size(); i < _global.size(); ++i)
+    {
+        auto rest_lws = lws_max / total_lws;
+        size_t lws_idx = 0;
+        while(rest_lws < optimal_lws_values[lws_idx]) lws_idx++;
+
+        while (_global[i] % optimal_lws_values[lws_idx]) lws_idx++;
+
+        _local.push_back(optimal_lws_values[lws_idx]);
+        total_lws *= optimal_lws_values[lws_idx];
+    }
+}
 } }

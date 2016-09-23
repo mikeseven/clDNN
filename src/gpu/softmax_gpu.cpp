@@ -57,9 +57,9 @@ KERNEL (softmax_gpu)(__global float* input, __global float* pDst)
     float tmp_vals[ITEMS_NUM + 1];
     for(int i = 0; i < ITEMS_NUM; i++)
     {
-        tmp_vals[i] = exp(input[LWS * i + idx] - max_value);
+        tmp_vals[i] = native_exp(input[LWS * i + idx] - max_value);
     }
-    tmp_vals[ITEMS_NUM] = idx < LEFTOVERS ? exp(input[LWS * ITEMS_NUM + idx] - max_value) : 0;
+    tmp_vals[ITEMS_NUM] = idx < LEFTOVERS ? native_exp(input[LWS * ITEMS_NUM + idx] - max_value) : 0;
 
     // accumulate all values;
     __local float partial_acc[LWS]; // all values accumulated;
@@ -136,9 +136,9 @@ KERNEL (softmax_gpu_batches)(__global neural_memory* input_mem, __global neural_
     float tmp_vals[ITEMS_NUM + 1];
     for(int i = 0; i < ITEMS_NUM; i++)
     {
-        tmp_vals[i] = exp(input[LWS * i + global_id] - max_value);
+        tmp_vals[i] = native_exp(input[LWS * i + global_id] - max_value);
     }
-    tmp_vals[ITEMS_NUM] = global_id < LEFTOVERS ? exp(input[LWS * ITEMS_NUM + global_id] - max_value) : 0;
+    tmp_vals[ITEMS_NUM] = global_id < LEFTOVERS ? native_exp(input[LWS * ITEMS_NUM + global_id] - max_value) : 0;
 
     // accumulate all values;
     __local float partial_acc[LWS]; // all values accumulated;

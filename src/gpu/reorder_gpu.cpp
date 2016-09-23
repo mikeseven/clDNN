@@ -192,14 +192,7 @@ struct reorder_gpu : is_an_implementation {
             gws_0 *= input_size_raw[order[i]];
         }
 
-        size_t lws_0 = 8;
-        while (gws_0 % lws_0) --lws_0;
-        size_t lws_1 = 8;
-        while (gws_1 % lws_1) --lws_1;
-        size_t lws_2 = 8;
-        while (gws_2 % lws_2) --lws_2;
-
-        return{ {gws_0, gws_1, gws_2}, {lws_0, lws_1, lws_2} };
+        return { {gws_0, gws_1, gws_2} };
     }
 
     static void implementation(const void *ptr) {

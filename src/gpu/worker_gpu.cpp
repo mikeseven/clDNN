@@ -39,7 +39,7 @@ public:
     program_builder() {
         gpu::kernel warmup_kernel(warmup_kernel_name);
         gpu::kernels_cache::get().get_program(context());
-        cl::Buffer out;
+        cl::Buffer out(context()->context(), CL_MEM_READ_ONLY, 1);
         warmup_kernel.run<cl_int, cl_int, cl_int, cl::Buffer>({ 1024, 8 }, 0, 111, 7, out);
     }
 

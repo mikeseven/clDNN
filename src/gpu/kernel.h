@@ -248,26 +248,49 @@ struct kernel_arg_handler<T, typename std::enable_if<std::is_base_of<memory_arg,
 };
 
 class kernel_execution_options {
-    cl::NDRange _global;
-    cl::NDRange _local;
+    const size_t lws_max = 256;
+    std::vector<size_t> _global;
+    std::vector<size_t> _local;
+
+    void set_local_sizes();
+
+    static cl::NDRange to_nd_range(const std::vector<size_t>& v)
+    {
+        switch (v.size())
+        {
+        case 1:
+            return cl::NDRange(v[0]);
+        case 2:
+            return cl::NDRange(v[0], v[1]);
+        case 3:
+            return cl::NDRange(v[0], v[1], v[2]);
+        default:
+            throw std::logic_error("Unacceptable NDRange dimension: " + std::to_string(v.size()));
+        }
+    }
+
 public:
-    class range2d {
-        size_t x; size_t y;
-    public:
-        range2d(size_t x, size_t y) :x(x), y(y) {}
-        operator cl::NDRange() const { return cl::NDRange(x, y); }
-    };
+    kernel_execution_options(const std::vector<size_t>& work_items, const std::vector<size_t>& parallel_items) : _global(work_items), _local(parallel_items)
+    {
+        set_local_sizes();
+        assert(_global.size() < 4 && _global.size() > 0 && _global.size() == _local.size());
+    }
 
-    class range3d {
-        size_t x; size_t y; size_t z;
-    public:
-        range3d(size_t x, size_t y, size_t z) :x(x), y(y), z(z) {}
-        operator cl::NDRange() const { return cl::NDRange(x, y, z); }
-    };
+    kernel_execution_options(size_t work_items)
+        : kernel_execution_options(std::vector<size_t>({ work_items }), std::vector<size_t>())
+    {}
 
-    kernel_execution_options(size_t work_items, size_t parallel_items) : _global(work_items), _local(parallel_items) {}
-    kernel_execution_options(range2d work_items, range2d parallel_items) : _global(work_items), _local(parallel_items){}
-    kernel_execution_options(range3d work_items, range3d parallel_items) : _global(work_items), _local(parallel_items) {}
+    kernel_execution_options(size_t work_items, size_t parallel_items)
+        : kernel_execution_options(std::vector<size_t>({ work_items }), std::vector<size_t>({parallel_items}))
+    {}
+
+    kernel_execution_options(const std::vector<size_t>& work_items)
+        : kernel_execution_options(work_items, std::vector<size_t>())
+    {}
+
+    kernel_execution_options(const std::vector<size_t>& work_items, size_t parallel_items)
+        : kernel_execution_options(work_items, std::vector<size_t>({ parallel_items }))
+    {}
 
     kernel_execution_options(const kernel_execution_options& other)
         : _global(other._global),
@@ -281,9 +304,8 @@ public:
         return *this;
     }
 
-
-    cl::NDRange global_range() const { return _global; }
-    cl::NDRange local_range() const { return _local; }
+    cl::NDRange global_range() const { return to_nd_range(_global); }
+    cl::NDRange local_range() const { return to_nd_range(_local); }
 };
 
 class kernel : public context_holder {

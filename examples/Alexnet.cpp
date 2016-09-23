@@ -371,7 +371,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
 void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, const std::string& weights_dir, bool dump_hl, bool profiling)
 {
     gpu::configuration::get().enable_profiling = profiling;
-    auto input = memory::allocate({ engine::reference, memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3, } });
+    auto input = memory::allocate({ eng, memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3, } });
     auto output = memory::allocate({ eng, memory::format::xb_f32,{ batch_size,{ 1000 } } });
     auto img_list = get_directory_images(img_dir);
     if (img_list.empty())

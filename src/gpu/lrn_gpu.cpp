@@ -42,7 +42,7 @@ KERNEL (lrn_GPU)(__global float* input, __global float* output)
 		input_idx += INPUT_BATCH_NUM;
     }
     acc = mad(acc, ALPHA, K);
-    acc = pow(acc, -BETA);
+    acc = native_powr(acc, -BETA);
 
     output[global_id] = acc * input[global_id];
 }
