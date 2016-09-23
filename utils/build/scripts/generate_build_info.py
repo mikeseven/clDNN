@@ -63,16 +63,29 @@ def main(parsedArgs):
     lastCommitAuth      = ''
     lastCommitAuthEMail = ''
 
-    if parsedArgs.change_auth != '' and parsedArgs.tc_url != '':
+    if parsedArgs.tc_url != '':
         conn = tcu.prepareTcRestConnection(parsedArgs.tc_url, parsedArgs.agent_user, parsedArgs.agent_pass)
+        if parsedArgs.change_auth != '':
+            try:
+                logger.debug("Trying to get author name and e-mail from TeamCity users information (REST API).")
+                authInfo = conn('users/username:{userName}', userName = parsedArgs.change_auth)
+                lastCommitAuthId    = authInfo['username'] if authInfo['username'] != '' else lastCommitAuthId
+                lastCommitAuth      = authInfo['name']
+                lastCommitAuthEMail = authInfo['email']
+            except:
+                logger.warning("Fetching TeamCity users information failed.")
+
         try:
-            logger.debug("Trying to get author name and e-mail from TeamCity users information (REST API).")
-            authInfo = conn('users/username:{userName}', userName = parsedArgs.change_auth)
-            lastCommitAuthId    = authInfo['username'] if authInfo['username'] != '' else lastCommitAuthId
-            lastCommitAuth      = authInfo['name']
-            lastCommitAuthEMail = authInfo['email']
-        except:
-            logger.warning("Fetching TeamCity users information failed.")
+            logger.debug("Trying to get information about latest good correlation build from TeamCity (REST API).")
+            buildsInfo = conn("builds/?locator=buildType:(id:{corrConfigId}),status:SUCCESS,personal:false,canceled:false,failedToStart:false,running:false,branch:(default:true),tags:CORR-WEEK,count:1",
+                              corrConfigId = parsedArgs.corr_config_id)
+            print repr(buildsInfo)
+            print buildsInfo["build"][0]["id"]
+            buildInfo = conn("builds/id:{id}", id = buildsInfo["build"][0]["id"])
+            print buildInfo["finishDate"]
+        except BaseException as ex:
+            print ex
+            logger.warning("Fetching TeamCity builds information failed.")
 
     if lastCommitAuth == '':
         try:
@@ -113,6 +126,7 @@ if __name__ == "__main__":
     parser.add_argument('-f',   '--format',         dest = 'format',         metavar = '<build-number-format>', type = unicode, default = '{name}-{counter:0>5d}---{vcs_id_f8}',       help = 'Format for build number. Use "name", "counter", "id", "vcs_id", "vcs_id_f8" elements and .format() formatting.')
     parser.add_argument('-ult', '--use-local-time', dest = 'use_local_time', metavar = '<ult>',                 type = int,     nargs = '?', const = 1, default = 0, choices = (0, 1), help = 'Boolean int value / Flag which indicates that the local time should be used instead of UTC time in some build parameters.')
     parser.add_argument('-ca',  '--change-author',  dest = 'change_auth',    metavar = '<change-author>',       type = unicode, default = '',                                          help = 'TeamCity user name who triggered build. If the value is specified and verified by TeamCity REST API, VCS deduction (last commit author) is not performed.')
+    parser.add_argument('-cci', '--corr-config-id', dest = 'corr_config_id', metavar = '<build-config-id>',     type = unicode, default = 'SEIgk1_GenGpuClDNN_CiMain',                 help = 'Identifier of build configuration that will be used as source of correlation builds.')
     parser.add_argument('-tc',  '--tc-server-url',  dest = 'tc_url',         metavar = '<teamcity-url>',        type = unicode, default = '',                                          help = 'URL to TeamCity server.')
     parser.add_argument('-au',  '--agent-user',     dest = 'agent_user',     metavar = '<agent-user-id>',       type = unicode, default = '',                                          help = 'Temporary agent user ID for TeamCity (to access TeamCity data).')
     parser.add_argument('-ap',  '--agent-password', dest = 'agent_pass',     metavar = '<agent-pass>',          type = unicode, default = '',                                          help = 'Temporary agent password for TeamCity (to access TeamCity data).')

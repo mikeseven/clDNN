@@ -299,7 +299,7 @@ def prepareTcRestConnection(teamCityUrl, agentUser, agentPass):
         """
 
         getRequestPart = unicode(restGetRequest).format(
-            **{k: urllib2.quote(v, safe = '') for (k, v) in requestArgs.iteritems()})
+            **{k: urllib2.quote(unicode(v), safe = '') for (k, v) in requestArgs.iteritems()})
         getRequestFragment = u'/httpAuth/app/rest/{0}'.format(getRequestPart)
         getRequestUrl = urlparse.urljoin(teamCityUrl, getRequestFragment)
 
