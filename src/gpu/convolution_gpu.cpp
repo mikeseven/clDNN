@@ -82,7 +82,7 @@ KERNEL(Convolution_GPU_YXFB_YXOI_B8_memory)(
 
 const std::string kernelName_YXFB_YXIO_B8_memory = "Convolution_GPU_YXFB_YXIO_B8_memory";
 const std::string kernelCode_YXFB_YXIO_B8_memory_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(8, 1, 1))) 
+__attribute__((reqd_work_group_size(16, 1, 1))) 
 KERNEL(Convolution_GPU_YXFB_YXIO_B8_memory)(
     const __global neural_memory* input_mem,
     __global neural_memory* dst_mem,
@@ -224,6 +224,16 @@ struct convolution_gpu : is_an_implementation {
 
         mem_consts.add_constant(gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"));
         mem_consts.add_constant(gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_1"));
+
+		// temporary for testing purposes
+		const int simd_size = 16;
+		const int batch_size = output_mem.argument.size.batch[0];
+        const int batches_per_work_item = 2;//std::max(batch_size / simd_size, 1);
+        const int ofm_per_work_item = 8;
+		mem_consts.add_constant(gpu::make_jit_constant("SIMD_SIZE", simd_size));
+        mem_consts.add_constant(gpu::make_jit_constant("OFM_PER_WORK_ITEM", ofm_per_work_item)); // how many output feature maps will a single work item produce
+        mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item)); // how many batches will a single workitem compute
+        mem_consts.add_constant(gpu::make_jit_constant("SIMDS_PER_SINGLE_BATCHES_ELEMENTS", std::max((batch_size / batches_per_work_item) / simd_size, 1))); // how many simds we need to compute single element for each batch
         return mem_consts;
     }
 
@@ -291,11 +301,13 @@ struct convolution_gpu : is_an_implementation {
                 break;
             case memory::format::yxio_f32:
             {
-                uint32_t ofm_per_workitem = 16;
-                gws0 = (output_mem.argument.size.feature[0] / (ofm_per_workitem / output_mem.argument.size.batch[0])) / split;
+                uint32_t ofm_per_workitem = 8;
+                //uint32_t simd_size = 8;
+                uint32_t batch_per_workitem = 2;//output_mem.argument.size.batch[0] / simd_size;
+                gws0 = (output_mem.argument.size.feature[0] * output_mem.argument.size.batch[0] / (ofm_per_workitem * batch_per_workitem)) / split;
                 for (uint32_t i = 0; i < split; i++) {
                     me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                        ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
+                        ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 16, 1, 1 } },
                             input_mem,
                             output_mem,
                             outer.input_memory(i * 2 + 1), //filters

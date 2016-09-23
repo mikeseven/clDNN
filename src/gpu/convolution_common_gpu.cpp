@@ -448,7 +448,6 @@ namespace neural
 
 
     const char convolution_code_yxfb_yxio_b8_memory[] = R"__CC(
-#define OFM_PER_WORK_ITEM 16
 #define DOT_PRODUCT_8( _result, _rowA, colB )    \
 {   \
         _result.s0 = mad( _rowA, intel_sub_group_shuffle( colB, 0 ), _result.s0 );  \
@@ -478,19 +477,19 @@ namespace neural
         const __global float* filter = (const __global float*)get_data(filter_mem);
         const __global float* bias = (const __global float*)get_data(bias_mem);
 
-        const int batch_num = INPUT_BATCH_NUM;
+        const uint batch_num = INPUT_BATCH_NUM;
 
         const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
         // we're computing 8 OUTPUT_FEATURE_MAP so we must divide by 8, but we got 8 batches, so no division is needed.
-        int global_id = (get_global_id(0) / batch_num) * batch_num + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * batch_num; 
+        uint global_id = (get_global_id(0) / (SIMD_SIZE * SIMDS_PER_SINGLE_BATCHES_ELEMENTS)) * SIMD_SIZE * SIMDS_PER_SINGLE_BATCHES_ELEMENTS + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * SIMD_SIZE * SIMDS_PER_SINGLE_BATCHES_ELEMENTS; 
 
-        const uint out_batch_id = get_local_id(0);
+        const uint out_batch_id = get_local_id(0) + SIMD_SIZE * (get_group_id(0) % SIMDS_PER_SINGLE_BATCHES_ELEMENTS);
         const uint out_x = get_global_id(1);
         const uint out_y = get_global_id(2);
 
-        const int out_id = (global_id / batch_num) * OFM_PER_WORK_ITEM * batch_num + out_batch_id;
+        const uint out_id = (global_id / (SIMD_SIZE * SIMDS_PER_SINGLE_BATCHES_ELEMENTS)) * OFM_PER_WORK_ITEM * batch_num + out_batch_id;
 
-        const int ofm_offset = (global_id * (OFM_PER_WORK_ITEM / batch_num)) % FILTER_OUTPUT_FEATURE_NUM;
+        const uint ofm_offset = ((global_id * OFM_PER_WORK_ITEM) / (SIMD_SIZE * SIMDS_PER_SINGLE_BATCHES_ELEMENTS)) % FILTER_OUTPUT_FEATURE_NUM;
 
         bool finish = false;
 
@@ -499,9 +498,11 @@ namespace neural
 
         const uint sub_group_id = get_local_id(0);
 
-        float8 _data0 = 0.f;
-        float8 _data1 = 0.f;
-
+        float8 _data[BATCHES_PER_WORK_ITEM];
+        for(uint i = 0; i < BATCHES_PER_WORK_ITEM; i++)
+        {
+            _data[i] = 0.f;
+        }
         if(!finish)
         {
             const int x = out_x * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
@@ -528,40 +529,16 @@ namespace neural
                         
                             //sub_group_id used as offset to make each workitem load different filter, and then shuffle it
                             int filter_idx = ofm_offset + sub_group_id + FILTER_INPUT_FEATURE_NUM * (FILTER_OUTPUT_FEATURE_NUM * (i * FILTER_SIZE_X + j));
-    
-                            for (uint _h = 0; _h < FILTER_INPUT_FEATURE_NUM/8; _h++)
+
+                            for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
                             {
-                                uint h = _h*8;
-                                float8 _input = as_float8(intel_sub_group_block_read8((const __global uint*)input + input_idx + h * batch_num));
-
-                                DOT_PRODUCT_8(_data0, _input.s0, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
-                                DOT_PRODUCT_8(_data1, _input.s0, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
-                                
-                                DOT_PRODUCT_8(_data0, _input.s1, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
-                                DOT_PRODUCT_8(_data1, _input.s1, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
-
-                                DOT_PRODUCT_8(_data0, _input.s2, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
-                                DOT_PRODUCT_8(_data1, _input.s2, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
-
-                                DOT_PRODUCT_8(_data0, _input.s3, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
-                                DOT_PRODUCT_8(_data1, _input.s3, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
-
-                                DOT_PRODUCT_8(_data0, _input.s4, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
-                                DOT_PRODUCT_8(_data1, _input.s4, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
-
-                                DOT_PRODUCT_8(_data0, _input.s5, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
-                                DOT_PRODUCT_8(_data1, _input.s5, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
-
-                                DOT_PRODUCT_8(_data0, _input.s6, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
-                                DOT_PRODUCT_8(_data1, _input.s6, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
-
-                                DOT_PRODUCT_8(_data0, _input.s7, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
-                                DOT_PRODUCT_8(_data1, _input.s7, filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8]) h++;
-                            }
-                            for (uint h = FILTER_INPUT_FEATURE_NUM - (FILTER_INPUT_FEATURE_NUM % 8); h < FILTER_INPUT_FEATURE_NUM; h++)
-                            {
-                                DOT_PRODUCT_8(_data0, input[input_idx + h * batch_num], filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM])
-                                DOT_PRODUCT_8(_data1, input[input_idx + h * batch_num], filter[filter_idx + h * FILTER_OUTPUT_FEATURE_NUM + 8])
+                                for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
+                                {
+                                    DOT_PRODUCT_8(_data[s], input[input_idx], filter[filter_idx])
+                                    input_idx += SIMD_SIZE;
+                                }
+                                input_idx += INPUT_BATCH_NUM - BATCHES_PER_WORK_ITEM * SIMD_SIZE;
+                                filter_idx += FILTER_OUTPUT_FEATURE_NUM;
                             }
                         }
                     } 
@@ -569,8 +546,11 @@ namespace neural
             }
         }
 
-        ADD_BIAS_8(_data0, bias[ofm_offset + sub_group_id]);
-        ADD_BIAS_8(_data1, bias[ofm_offset + sub_group_id + 8]);
+        for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
+        {
+            float bias_val = bias[ofm_offset + sub_group_id];
+            ADD_BIAS_8(_data[s], bias_val);
+        }
 
 #define RELU_8(_result) \
 { \
@@ -583,11 +563,23 @@ namespace neural
         ACTIVATION(_result.s6, _result.s6); \
         ACTIVATION(_result.s7, _result.s7); \
 }
-        RELU_8(_data0);
-        RELU_8(_data1);
+        for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
+        {
+            RELU_8(_data[s]);
+        }
 
-        intel_sub_group_block_write8((__global uint*)pDst + out_id, as_uint8(_data0));
-        intel_sub_group_block_write8((__global uint*)pDst + out_id + 8 * batch_num, as_uint8(_data1));
+        for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
+        {
+            int _out_id = out_id + s * SIMD_SIZE;
+            pDst[_out_id] = _data[s].s0; _out_id += INPUT_BATCH_NUM;
+            pDst[_out_id] = _data[s].s1; _out_id += INPUT_BATCH_NUM;
+            pDst[_out_id] = _data[s].s2; _out_id += INPUT_BATCH_NUM;
+            pDst[_out_id] = _data[s].s3; _out_id += INPUT_BATCH_NUM;
+            pDst[_out_id] = _data[s].s4; _out_id += INPUT_BATCH_NUM;
+            pDst[_out_id] = _data[s].s5; _out_id += INPUT_BATCH_NUM;
+            pDst[_out_id] = _data[s].s6; _out_id += INPUT_BATCH_NUM;
+            pDst[_out_id] = _data[s].s7; _out_id += INPUT_BATCH_NUM;
+        }
     )__CC";
 
 
