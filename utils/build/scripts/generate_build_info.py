@@ -75,16 +75,47 @@ def main(parsedArgs):
             except:
                 logger.warning("Fetching TeamCity users information failed.")
 
+        # Designate good correlation build.
         try:
             logger.debug("Trying to get information about latest good correlation build from TeamCity (REST API).")
-            buildsInfo = conn("builds/?locator=buildType:(id:{corrConfigId}),status:SUCCESS,personal:false,canceled:false,failedToStart:false,running:false,branch:(default:true),tags:CORR-WEEK,count:1",
-                              corrConfigId = parsedArgs.corr_config_id)
-            print repr(buildsInfo)
-            print buildsInfo["build"][0]["id"]
-            buildInfo = conn("builds/id:{id}", id = buildsInfo["build"][0]["id"])
-            print buildInfo["finishDate"]
-        except BaseException as ex:
-            print ex
+            buildStepCount = 100
+            buildStartIdx = 0
+            buildCount = buildStepCount
+            foundGoodCorrBuild = False
+
+            while buildCount >= buildStepCount and not foundGoodCorrBuild:
+                logger.debug("Scanning latest successful finished ci-main builds run on default branch ({0}-{1})..."
+                             .format(buildStartIdx + 1, buildStartIdx + buildCount))
+                buildsInfo = conn("builds/?locator=buildType:(id:{corrConfigId}),status:SUCCESS,personal:false,canceled:false,failedToStart:false,running:false,branch:(default:true),start:{startIdx},count:{count}&fields=count,build(id,number,finishDate,tags(count,tag))",
+                                  corrConfigId = parsedArgs.corr_config_id, startIdx = buildStartIdx,
+                                  count = buildCount)
+
+                buildCount = buildsInfo["count"]
+                buildStartIdx += buildCount
+                if buildCount > 0:
+                    for buildInfo in buildsInfo["build"]:
+                        isGoodCorrBuild = True
+                        print buildInfo
+                        if buildInfo["tags"]["count"] > 0:
+                            for buildTag in buildInfo["tags"]["tag"]:
+                                if unicode(buildTag["name"]).lower().strip() == 'bad-corr':
+                                    isGoodCorrBuild = False
+                                    break
+
+                        if not isGoodCorrBuild:
+                            logger.debug("Build {0:>12d} (finished: {1:<20s}, number: {2}) was rejected as correlation build due to being tagged as 'BAD-CORR'."
+                                         .format(buildInfo["id"], buildInfo["finishDate"], buildInfo["number"]))
+                            continue
+
+                        logger.debug("Build {0:>12d} (finished: {1:<20s}, number: {2}) is selected as correlation."
+                                     .format(buildInfo["id"], buildInfo["finishDate"], buildInfo["number"]))
+                        tcu.updateTcParameter('my.build.info.corr.berta', buildInfo["number"])
+                        foundGoodCorrBuild = True
+                        break
+
+            if not foundGoodCorrBuild:
+                logger.warning("Could not locate good correlation build in TeamCity.")
+        except:
             logger.warning("Fetching TeamCity builds information failed.")
 
     if lastCommitAuth == '':
