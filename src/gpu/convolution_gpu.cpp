@@ -94,10 +94,10 @@ KERNEL(Convolution_GPU_YXFB_YXIO_B8_memory)(
 const std::string kernelName_YXFB_YXIO_B16_memory = "Convolution_GPU_YXFB_YXIO_B16_memory";
 const std::string kernelCode_YXFB_YXIO_B16_memory_Begin = R"__krnl(
 KERNEL(Convolution_GPU_YXFB_YXIO_B16_memory)(
-    const __global neural_memory* input_mem,
-    __global neural_memory* dst_mem,
-    const __global neural_memory* filter_mem,
-    const __global neural_memory* bias_mem,
+    const __global float* input,
+    __global float* output,
+    const __global float* filter,
+    const __global float* bias,
     uint split_idx)
 {)__krnl";
 
@@ -191,6 +191,11 @@ struct convolution_gpu : is_an_implementation {
         return batch_size > 16 ? 2 : 1;
     }
 
+    static int get_local_work_group_size(const int batch_size)
+    {
+        return batch_size > 8 ? 16 : 8;
+    }
+
     gpu::jit_constants get_jit_constants() const {
 
         auto& input_mem = outer.input_memory(0);
@@ -210,7 +215,7 @@ struct convolution_gpu : is_an_implementation {
         // ofm - output feature maps
         // ifm - input feature maps
         // b = 1 always
-        // (weights can't have batch so it is equall to 1)
+        // (weights can't have batch so it is equal to 1)
         // Ofm and batch is cropped, ofm will be hold manually
         // Batch is included in output size
 
@@ -255,11 +260,12 @@ struct convolution_gpu : is_an_implementation {
         {
             const int batch_size = output_mem.argument.size.batch[0];
             const int batches_per_work_item = get_batches_per_work_item(batch_size);
-            const int simd_size = batch_size > 8 ? 16 : 8;
-            mem_consts.add_constant(gpu::make_jit_constant("SIMD_SIZE", simd_size));
+            const int local_work_group_size = get_local_work_group_size(batch_size);
+            mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size));
             mem_consts.add_constant(gpu::make_jit_constant("OFM_PER_WORK_ITEM", get_ofm_per_work_item(batch_size))); // how many output feature maps for a single batch will a single work item produce
             mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item)); // how many batches will a single work item compute
-            mem_consts.add_constant(gpu::make_jit_constant("SIMDS_PER_SINGLE_BATCHES_ELEMENTS", std::max((batch_size / batches_per_work_item) / simd_size, 1))); // how many simds we need to compute single element for each batch
+            mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max((batch_size / batches_per_work_item) / local_work_group_size, 1))); // how many local work groups we need to compute single element for each batch
+            mem_consts.add_constant(gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / batches_per_work_item)); // how many work items we need to compute single element for each batch
         }
         return mem_consts;
     }
@@ -278,7 +284,7 @@ struct convolution_gpu : is_an_implementation {
         // ofm - output feature maps
         // ifm - input feature maps
         // b = 1 always
-        // (weights can't have batch so it is equall to 1)
+        // (weights can't have batch so it is equal to 1)
         // Ofm and batch is cropped, ofm will be hold manually
         // Batch is included in output size
 
@@ -330,12 +336,11 @@ struct convolution_gpu : is_an_implementation {
             {
                 uint32_t batch_size = output_mem.argument.size.batch[0];
                 uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size);
-                uint32_t simd_size = batch_size > 8 ? 16 : 8;
                 uint32_t batches_per_workitem = get_batches_per_work_item(batch_size);
                 gws0 = (output_mem.argument.size.feature[0] * batch_size / (ofm_per_workitem * batches_per_workitem)) / split;
                 for (uint32_t i = 0; i < split; i++) {
                     me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                        ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ simd_size, 1, 1 } },
+                        ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ static_cast<size_t>(get_local_work_group_size(batch_size)), 1, 1 } },
                             input_mem,
                             output_mem,
                             outer.input_memory(i * 2 + 1), //filters
