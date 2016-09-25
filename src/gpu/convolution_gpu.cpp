@@ -27,45 +27,45 @@ namespace neural
 const std::string kernelName_YXFB = "Convolution_GPU_YXFB";
 const std::string kernelCode_YXFB_Begin = R"__krnl(
 KERNEL(Convolution_GPU_YXFB)(
-    const __global neural_memory* input_mem,
-    __global neural_memory* dst_mem)
+    const __global float* input,
+    __global float* output)
 {)__krnl";
 
 const std::string kernelName_BFXY = "Convolution_GPU_BFXY";
 const std::string kernelCode_BFXY_Begin = R"__krnl(
 KERNEL(Convolution_GPU_BFXY)(
-    const __global neural_memory* input_mem,
-    __global neural_memory* dst_mem)
+    const __global float* input,
+    __global float* output)
 {
 )__krnl";
 
 const std::string kernelName_YXFB_memory = "Convolution_GPU_YXFB_memory";
 const std::string kernelCode_YXFB_memory_Begin = R"__krnl(
 KERNEL(Convolution_GPU_YXFB_memory)(
-    const __global neural_memory* input_mem,
-    __global neural_memory* dst_mem,
-    const __global neural_memory* filter_mem,
-    const __global neural_memory* bias_mem,
+    const __global float* input,
+    __global float* output,
+    const __global float* filter,
+    const __global float* bias,
     uint split_idx)
 {)__krnl";
 
 const std::string kernelName_YXFB_OYXI_memory = "Convolution_GPU_YXFB_OYXI_memory";
 const std::string kernelCode_YXFB_OYXI_memory_Begin = R"__krnl(
 KERNEL(Convolution_GPU_YXFB_OYXI_memory)(
-    const __global neural_memory* input_mem,
-    __global neural_memory* dst_mem,
-    const __global neural_memory* filter_mem,
-    const __global neural_memory* bias_mem,
+    const __global float* input,
+    __global float* output,
+    const __global float* filter,
+    const __global float* bias,
     uint split_idx)
 {)__krnl";
 
 const std::string kernelName_YXFB_YXOI_memory = "Convolution_GPU_YXFB_YXOI_memory";
 const std::string kernelCode_YXFB_YXOI_memory_Begin = R"__krnl(
 KERNEL(Convolution_GPU_YXFB_YXOI_memory)(
-    const __global neural_memory* input_mem,
-    __global neural_memory* dst_mem,
-    const __global neural_memory* filter_mem,
-    const __global neural_memory* bias_mem,
+    const __global float* input,
+    __global float* output,
+    const __global float* filter,
+    const __global float* bias,
     uint split_idx)
 {)__krnl";
 
@@ -73,10 +73,10 @@ const std::string kernelName_YXFB_YXOI_B8_memory = "Convolution_GPU_YXFB_YXOI_B8
 const std::string kernelCode_YXFB_YXOI_B8_memory_Begin = R"__krnl(
 __attribute__((reqd_work_group_size(8, 1, 1))) 
 KERNEL(Convolution_GPU_YXFB_YXOI_B8_memory)(
-    const __global neural_memory* input_mem,
-    __global neural_memory* dst_mem,
-    const __global neural_memory* filter_mem,
-    const __global neural_memory* bias_mem,
+    const __global float* input,
+    __global float* output,
+    const __global float* filter,
+    const __global float* bias,
     uint split_idx)
 {)__krnl";
 
@@ -84,10 +84,10 @@ const std::string kernelName_YXFB_YXIO_B8_memory = "Convolution_GPU_YXFB_YXIO_B8
 const std::string kernelCode_YXFB_YXIO_B8_memory_Begin = R"__krnl(
 __attribute__((reqd_work_group_size(8, 1, 1)))
 KERNEL(Convolution_GPU_YXFB_YXIO_B8_memory)(
-    const __global neural_memory* input_mem,
-    __global neural_memory* dst_mem,
-    const __global neural_memory* filter_mem,
-    const __global neural_memory* bias_mem,
+    const __global float* input,
+    __global float* output,
+    const __global float* filter,
+    const __global float* bias,
     uint split_idx)
 {)__krnl";
 
@@ -105,10 +105,10 @@ const std::string kernelName_YXFB_YXOI_B8_F8_memory = "Convolution_GPU_YXFB_YXOI
 const std::string kernelCode_YXFB_YXOI_B8_F8_memory_Begin = R"__krnl(
 __attribute__((reqd_work_group_size(8, 1, 1))) 
 KERNEL(Convolution_GPU_YXFB_YXOI_B8_F8_memory)(
-    const __global neural_memory* input_mem,
-    __global neural_memory* dst_mem,
-    const __global neural_memory* filter_mem,
-    const __global neural_memory* bias_mem,
+    const __global float* input,
+    __global float* output,
+    const __global float* filter,
+    const __global float* bias,
     uint split_idx)
 {)__krnl";
 
@@ -256,7 +256,8 @@ struct convolution_gpu : is_an_implementation {
         mem_consts.add_constant(gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"));
         mem_consts.add_constant(gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_1"));
 
-        if (filter_mem.argument.format == memory::format::yxio_f32)
+        if (filter_mem.argument.format == memory::format::yxio_f32 ||
+            filter_mem.argument.format == memory::format::yxoi_f32)
         {
             const int batch_size = output_mem.argument.size.batch[0];
             const int batches_per_work_item = get_batches_per_work_item(batch_size);
@@ -305,7 +306,9 @@ struct convolution_gpu : is_an_implementation {
             switch (filter_mem.argument.format)
             {
             case memory::format::yxoi_f32:
-                if (input_mem.argument.size.batch[0] == 8 &&
+            {
+                uint32_t batch_size = input_mem.argument.size.batch[0];
+                if (batch_size == 8 &&
                     me->out_feature_multiple_of_8)
                 {
                     if (me->in_feature_multiple_of_8)
@@ -314,8 +317,8 @@ struct convolution_gpu : is_an_implementation {
                     }
                     else
                     {
-                        uint32_t ofm_per_workitem = 16;
-                        gws0 = (output_mem.argument.size.feature[0] / (ofm_per_workitem / output_mem.argument.size.batch[0])) / split;
+                        uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size);
+                        gws0 = (output_mem.argument.size.feature[0] / (ofm_per_workitem / batch_size)) / split;
                     }
                 }
                 else
@@ -332,6 +335,7 @@ struct convolution_gpu : is_an_implementation {
                             i);
                 }
                 break;
+            }
             case memory::format::yxio_f32:
             {
                 uint32_t batch_size = output_mem.argument.size.batch[0];

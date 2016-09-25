@@ -49,16 +49,13 @@ namespace neural
     )__CC";
 
 	const char convolution_code_yxfb[] = R"__CC(
-        const __global float* input = (const __global float*)get_data(input_mem);
-        __global float* pDst = (__global float*)get_data(dst_mem);
+        const uint global_id = get_global_id(0);
+        const uint batch_num = OUTPUT_BATCH_NUM;
+        const uint batch_offset = global_id % batch_num;
 
-        int global_id = get_global_id(0);
-        const int batch_num = OUTPUT_BATCH_NUM;
-        const int batch_offset = global_id % batch_num;
+        const uint ofm_offset = (global_id / batch_num) % (OUTPUT_FEATURE_NUM / FILTER_ARRAY_NUM);
 
-        const int ofm_offset = (global_id / batch_num) % (OUTPUT_FEATURE_NUM / FILTER_ARRAY_NUM);
-
-        const int f_ofm_offset = ofm_offset * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
+        const uint f_ofm_offset = ofm_offset * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
 
         const int idx = (global_id / batch_num) / FILTER_ARRAY_NUM;
 
@@ -68,7 +65,7 @@ namespace neural
         const int y = ((idx / FILTER_OUTPUT_FEATURE_NUM) / OUTPUT_SIZE_X * STRIDE_SIZE_Y) + INPUT_OFFSET_SIZE_Y;
 
         const int split_idx = ((global_id / batch_num) / FILTER_OUTPUT_FEATURE_NUM) % FILTER_ARRAY_NUM;
-        pDst[global_id] = BIAS[split_idx][ofm_offset];
+        float result = BIAS[split_idx][ofm_offset];
 
         bool finish = false;
         const uint out_x = global_id % OUTPUT_SIZE_X;
@@ -100,19 +97,16 @@ namespace neural
                         input_idx += h * batch_num;
                         input_idx += batch_offset;
                         int filter_idx = (i * FILTER_SIZE_X + j) + f_ofm_offset + f_ifm_offset;
-                        pDst[global_id] += zero ? 0 : input[input_idx] * FILTER[split_idx][filter_idx];
+                        result += zero ? 0 : input[input_idx] * FILTER[split_idx][filter_idx];
                     }
                 }
             }
         }
         
-    ACTIVATION(pDst[global_id], pDst[global_id]);
+    ACTIVATION(output[global_id], result);
     )__CC";
 
     const char convolution_code_bfxy[] = R"__CC(
-        const __global float* input = (const __global float*)get_data(input_mem);
-        __global float* pDst = (__global float*)get_data(dst_mem);
-
         const int global_id = get_global_id(0);
 
         const int output_feature_num = OUTPUT_FEATURE_NUM;
@@ -139,7 +133,9 @@ namespace neural
     
         const int input_offset = input_batch_offset + input_y_offset * INPUT_SIZE_X + input_x_offset;
     
-        pDst[global_id] = 0;
+        // TODO!!!! change [0] from BIAS and FILTER to something that works - [0] is for temporary compilation
+        float result = BIAS[0][output_feature_idx];
+
         for(uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
         {
             const int filter_input_feature_offset = h * filter_input_feature_size;   
@@ -150,22 +146,14 @@ namespace neural
                 {
                     int input_idx = j + i * INPUT_SIZE_X + input_offset + input_feature_offset;
                     int filter_idx = (i * FILTER_SIZE_X + j) + filter_output_feature_offset + filter_input_feature_offset;
-                    pDst[global_id] += input[input_idx] * FILTER[0][filter_idx];
+                    result += input[input_idx] * FILTER[0][filter_idx];
                 }
             }
         }
-        // TODO!!!! change [0] from BIAS and FILTER to something that works - [0] is for temporary compilation
-        pDst[global_id] += BIAS[0][output_feature_idx];
-        ACTIVATION(pDst[global_id], pDst[global_id]);
+        ACTIVATION(output[global_id], result);
     )__CC";
 
     const char convolution_code_yxfb_memory[] = R"__CC(
-        const __global float* input = (const __global float*)get_data(input_mem);
-        __global float* pDst = (__global float*)get_data(dst_mem);
-
-        const __global float* filter = (const __global float*)get_data(filter_mem);
-        const __global float* bias = (const __global float*)get_data(bias_mem);
-
         const int batch_num = INPUT_BATCH_NUM;
 
         const int bifn_num = batch_num * FILTER_OUTPUT_FEATURE_NUM;
@@ -225,16 +213,10 @@ namespace neural
                 }
             }
         }
-		ACTIVATION(pDst[global_id], result);
+		ACTIVATION(output[global_id], result);
     )__CC";
 
     const char convolution_code_yxfb_yxoi_memory[] = R"__CC(
-        const __global float* input = (const __global float*)get_data(input_mem);
-        __global float* pDst = (__global float*)get_data(dst_mem);
-
-        const __global float* filter = (const __global float*)get_data(filter_mem);
-        const __global float* bias = (const __global float*)get_data(bias_mem);
-
         const int batch_num = INPUT_BATCH_NUM;
 
         const int bifn_num = batch_num * FILTER_OUTPUT_FEATURE_NUM;
@@ -290,16 +272,10 @@ namespace neural
                 }
             }
         }
-		ACTIVATION(pDst[global_id], result);
+		ACTIVATION(output[global_id], result);
     )__CC";
 
     const char convolution_code_yxfb_oyxi_memory[] = R"__CC(
-        const __global float* input = (const __global float*)get_data(input_mem);
-        __global float* pDst = (__global float*)get_data(dst_mem);
-
-        const __global float* filter = (const __global float*)get_data(filter_mem);
-        const __global float* bias = (const __global float*)get_data(bias_mem);
-
         const int batch_num = INPUT_BATCH_NUM;
 
         const int bifn_num = batch_num * FILTER_OUTPUT_FEATURE_NUM;
@@ -356,19 +332,10 @@ namespace neural
                 }
             }
         }
-		ACTIVATION(pDst[global_id], result);
+		ACTIVATION(output[global_id], result);
     )__CC";
 
     const char convolution_code_yxfb_yxoi_b8_memory[] = R"__CC(
-#define OFM_PER_WORK_ITEM 16
-
-
-        const __global float* input = (const __global float*)get_data(input_mem);
-        __global float* pDst = (__global float*)get_data(dst_mem);
-
-        const __global float* filter = (const __global float*)get_data(filter_mem);
-        const __global float* bias = (const __global float*)get_data(bias_mem);
-
         const int batch_num = INPUT_BATCH_NUM;
 
         const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
@@ -448,25 +415,19 @@ namespace neural
         RELU_8(_data0);
         RELU_8(_data1);
 
-        intel_sub_group_block_write8((__global uint*)pDst + out_id, as_uint8(_data0));
-        intel_sub_group_block_write8((__global uint*)pDst + out_id + 8 * batch_num, as_uint8(_data1));
+        intel_sub_group_block_write8((__global uint*)output + out_id, as_uint8(_data0));
+        intel_sub_group_block_write8((__global uint*)output + out_id + 8 * batch_num, as_uint8(_data1));
     )__CC";
 
 
 
 
     const char convolution_code_yxfb_yxio_b8_memory[] = R"__CC(
-        const __global float* input = (const __global float*)get_data(input_mem);
-        __global float* pDst = (__global float*)get_data(dst_mem);
-
-        const __global float* filter = (const __global float*)get_data(filter_mem);
-        const __global float* bias = (const __global float*)get_data(bias_mem);
-
-        const int batch_num = INPUT_BATCH_NUM;
+        const uint batch_num = INPUT_BATCH_NUM;
 
         const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
         // we're computing 8 OUTPUT_FEATURE_MAP so we must divide by 8, but we got 8 batches, so no division is needed.
-        int global_id = (get_global_id(0) / batch_num) * batch_num + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * batch_num; 
+        uint global_id = (get_global_id(0) / batch_num) * batch_num + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * batch_num; 
 
         const uint out_batch_id = get_local_id(0);
         const uint out_x = get_global_id(1);
@@ -570,8 +531,8 @@ namespace neural
         RELU_8(_data0);
         RELU_8(_data1);
 
-        intel_sub_group_block_write8((__global uint*)pDst + out_id, as_uint8(_data0));
-        intel_sub_group_block_write8((__global uint*)pDst + out_id + 8 * batch_num, as_uint8(_data1));
+        intel_sub_group_block_write8((__global uint*)output + out_id, as_uint8(_data0));
+        intel_sub_group_block_write8((__global uint*)output + out_id + 8 * batch_num, as_uint8(_data1));
     )__CC";
 
 
@@ -685,13 +646,7 @@ namespace neural
 
 
     const char convolution_code_yxfb_yxoi_B8_F8_memory[] = R"__CC(
-        const __global float* input = (const __global float*)get_data(input_mem);
-        __global float* pDst = (__global float*)get_data(dst_mem);
-
-        const __global float* filter = (const __global float*)get_data(filter_mem);
-        const __global float* bias = (const __global float*)get_data(bias_mem);
-
-        const int batch_num = INPUT_BATCH_NUM;
+        const uint batch_num = INPUT_BATCH_NUM;
 
         const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
         const uint global_id = get_global_id(0) + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * FILTER_OUTPUT_FEATURE_NUM * batch_num;
@@ -761,6 +716,6 @@ namespace neural
         result += _data.s0 + _data.s1 + _data.s2 + _data.s3 +
                   _data.s4 + _data.s5 + _data.s6 + _data.s7;
 
-	ACTIVATION(pDst[global_id], result);
+	ACTIVATION(output[global_id], result);
     )__CC";
 }
