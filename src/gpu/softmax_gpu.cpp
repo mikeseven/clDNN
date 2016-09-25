@@ -219,7 +219,7 @@ struct softmax_gpu : is_an_implementation {
             leftovers = dstSize % _preferred_lws;
         }
 
-        assert(items_num > 0 && _preferred_lws > 0 && _preferred_gws > 0 && leftovers > 0);
+        assert(items_num > 0 && _preferred_lws > 0 && _preferred_gws > 0);
 
         return gpu::jit_constants{
             gpu::make_jit_constant("INPUT", outer.input_memory(0).argument.size),

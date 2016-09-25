@@ -18,41 +18,12 @@
 
 namespace neural 
 {
-    const char float8_helper_defines[] = R"__CC(
-    #define DOT_PRODUCT_8( _result, _rowA, colB )    \
-    {   \
-            _result.s0 = mad( _rowA, intel_sub_group_shuffle( colB, 0 ), _result.s0 );  \
-            _result.s1 = mad( _rowA, intel_sub_group_shuffle( colB, 1 ), _result.s1 );  \
-            _result.s2 = mad( _rowA, intel_sub_group_shuffle( colB, 2 ), _result.s2 );  \
-            _result.s3 = mad( _rowA, intel_sub_group_shuffle( colB, 3 ), _result.s3 );  \
-            _result.s4 = mad( _rowA, intel_sub_group_shuffle( colB, 4 ), _result.s4 );  \
-            _result.s5 = mad( _rowA, intel_sub_group_shuffle( colB, 5 ), _result.s5 );  \
-            _result.s6 = mad( _rowA, intel_sub_group_shuffle( colB, 6 ), _result.s6 );  \
-            _result.s7 = mad( _rowA, intel_sub_group_shuffle( colB, 7 ), _result.s7 );  \
-    }
-    #define ADD_BIAS_8( _result, _biasVal) \
-    { \
-        _result.s0 += intel_sub_group_shuffle( _biasVal, 0 ); \
-        _result.s1 += intel_sub_group_shuffle( _biasVal, 1 ); \
-        _result.s2 += intel_sub_group_shuffle( _biasVal, 2 ); \
-        _result.s3 += intel_sub_group_shuffle( _biasVal, 3 ); \
-        _result.s4 += intel_sub_group_shuffle( _biasVal, 4 ); \
-        _result.s5 += intel_sub_group_shuffle( _biasVal, 5 ); \
-        _result.s6 += intel_sub_group_shuffle( _biasVal, 6 ); \
-        _result.s7 += intel_sub_group_shuffle( _biasVal, 7 ); \
-    }
-    )__CC";
-
-    const char float8_helper_undefines[] = R"__CC(
-    #undef ADD_BIAS_8
-    #undef DOT_PRODUCT_8
-    )__CC";
-
-	const char convolution_code_yxfb[] = R"__CC(
+    const char convolution_code_yxfb[] = R"__CC(
         const uint global_id = get_global_id(0);
         const uint batch_num = OUTPUT_BATCH_NUM;
         const uint batch_offset = global_id % batch_num;
 
+        const uint linear_id = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
         const uint ofm_offset = (global_id / batch_num) % (OUTPUT_FEATURE_NUM / FILTER_ARRAY_NUM);
 
         const uint f_ofm_offset = ofm_offset * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
@@ -61,15 +32,16 @@ namespace neural
 
         const int i_ifm_num = INPUT_FEATURE_NUM;
 
-        const int x = ((idx / FILTER_OUTPUT_FEATURE_NUM) % OUTPUT_SIZE_X) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
-        const int y = ((idx / FILTER_OUTPUT_FEATURE_NUM) / OUTPUT_SIZE_X * STRIDE_SIZE_Y) + INPUT_OFFSET_SIZE_Y;
+        const uint out_x = get_global_id(1);
+        const uint out_y = get_global_id(2);
+
+        const int x = out_x * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
+        const int y = out_y * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
 
         const int split_idx = ((global_id / batch_num) / FILTER_OUTPUT_FEATURE_NUM) % FILTER_ARRAY_NUM;
         float result = BIAS[split_idx][ofm_offset];
 
         bool finish = false;
-        const uint out_x = global_id % OUTPUT_SIZE_X;
-        const uint out_y = (global_id % (OUTPUT_SIZE_X * OUTPUT_SIZE_Y)) / OUTPUT_SIZE_X;
 
         finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_OFFSET_SIZE_X;
         finish = (out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_OFFSET_SIZE_Y) ? true : finish;
@@ -103,7 +75,7 @@ namespace neural
             }
         }
         
-    ACTIVATION(output[global_id], result);
+    ACTIVATION(output[linear_id], result);
     )__CC";
 
     const char convolution_code_bfxy[] = R"__CC(
@@ -401,19 +373,8 @@ namespace neural
         ADD_BIAS_8(_data0, bias[ofm_offset + sub_group_id]);
         ADD_BIAS_8(_data1, bias[ofm_offset + sub_group_id + 8]);
 
-#define RELU_8(_result) \
-{ \
-        ACTIVATION(_result.s0, _result.s0); \
-        ACTIVATION(_result.s1, _result.s1); \
-        ACTIVATION(_result.s2, _result.s2); \
-        ACTIVATION(_result.s3, _result.s3); \
-        ACTIVATION(_result.s4, _result.s4); \
-        ACTIVATION(_result.s5, _result.s5); \
-        ACTIVATION(_result.s6, _result.s6); \
-        ACTIVATION(_result.s7, _result.s7); \
-}
-        RELU_8(_data0);
-        RELU_8(_data1);
+        ACTIVATION_8(_data0);
+        ACTIVATION_8(_data1);
 
         intel_sub_group_block_write8((__global uint*)output + out_id, as_uint8(_data0));
         intel_sub_group_block_write8((__global uint*)output + out_id + 8 * batch_num, as_uint8(_data1));
@@ -433,9 +394,9 @@ namespace neural
         const uint out_x = get_global_id(1);
         const uint out_y = get_global_id(2);
 
-        const int out_id = (global_id / batch_num) * OFM_PER_WORK_ITEM * batch_num + out_batch_id;
+        const uint out_id = (global_id / batch_num) * OFM_PER_WORK_ITEM * batch_num + out_batch_id;
 
-        const int ofm_offset = (global_id * (OFM_PER_WORK_ITEM / batch_num)) % FILTER_OUTPUT_FEATURE_NUM;
+        const uint ofm_offset = (global_id * (OFM_PER_WORK_ITEM / batch_num)) % FILTER_OUTPUT_FEATURE_NUM;
 
         bool finish = false;
 
@@ -517,19 +478,8 @@ namespace neural
         ADD_BIAS_8(_data0, bias[ofm_offset + sub_group_id]);
         ADD_BIAS_8(_data1, bias[ofm_offset + sub_group_id + 8]);
 
-#define RELU_8(_result) \
-{ \
-        ACTIVATION(_result.s0, _result.s0); \
-        ACTIVATION(_result.s1, _result.s1); \
-        ACTIVATION(_result.s2, _result.s2); \
-        ACTIVATION(_result.s3, _result.s3); \
-        ACTIVATION(_result.s4, _result.s4); \
-        ACTIVATION(_result.s5, _result.s5); \
-        ACTIVATION(_result.s6, _result.s6); \
-        ACTIVATION(_result.s7, _result.s7); \
-}
-        RELU_8(_data0);
-        RELU_8(_data1);
+        ACTIVATION_8(_data0);
+        ACTIVATION_8(_data1);
 
         intel_sub_group_block_write8((__global uint*)output + out_id, as_uint8(_data0));
         intel_sub_group_block_write8((__global uint*)output + out_id + 8 * batch_num, as_uint8(_data1));
@@ -612,20 +562,9 @@ namespace neural
             ADD_BIAS_8(_data[s], bias_val);
         }
 
-#define RELU_8(_result) \
-{ \
-        ACTIVATION(_result.s0, _result.s0); \
-        ACTIVATION(_result.s1, _result.s1); \
-        ACTIVATION(_result.s2, _result.s2); \
-        ACTIVATION(_result.s3, _result.s3); \
-        ACTIVATION(_result.s4, _result.s4); \
-        ACTIVATION(_result.s5, _result.s5); \
-        ACTIVATION(_result.s6, _result.s6); \
-        ACTIVATION(_result.s7, _result.s7); \
-}
         for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
         {
-            RELU_8(_data[s]);
+            ACTIVATION_8(_data[s]);
         }
 
         for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)

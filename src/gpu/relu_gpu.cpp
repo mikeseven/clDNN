@@ -29,9 +29,22 @@ const char inline_utils_float[] = R"__CC(
 #else
 #define ACTIVATION(output, input) output = input;
 #endif
+
+#define ACTIVATION_8(_result) \
+{ \
+        ACTIVATION(_result.s0, _result.s0); \
+        ACTIVATION(_result.s1, _result.s1); \
+        ACTIVATION(_result.s2, _result.s2); \
+        ACTIVATION(_result.s3, _result.s3); \
+        ACTIVATION(_result.s4, _result.s4); \
+        ACTIVATION(_result.s5, _result.s5); \
+        ACTIVATION(_result.s6, _result.s6); \
+        ACTIVATION(_result.s7, _result.s7); \
+}
 )__CC";
 
 const char inline_utils_float_end[] = R"__CC(
+#undef ACTIVATION_8
 #undef ACTIVATION
 )__CC";
 

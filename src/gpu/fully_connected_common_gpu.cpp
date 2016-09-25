@@ -198,9 +198,9 @@ namespace neural {
 #if NEURONS_PER_WORK_ITEM > 8
     ADD_BIAS_8(_data1, bias[neuronIdx + sub_group_id + 8]);
 #endif
-    RELU_8(_data0);
+    ACTIVATION_8(_data0);
 #if NEURONS_PER_WORK_ITEM > 8
-    RELU_8(_data1);
+    ACTIVATION_8(_data1);
 #endif
  
     intel_sub_group_block_write8((__global uint*)pDst + out_id, as_uint8(_data0));
