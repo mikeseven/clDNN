@@ -82,8 +82,18 @@ KERNEL(Convolution_GPU_YXFB_YXOI_B8_memory)(
 
 const std::string kernelName_YXFB_YXIO_B8_memory = "Convolution_GPU_YXFB_YXIO_B8_memory";
 const std::string kernelCode_YXFB_YXIO_B8_memory_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(16, 1, 1))) 
+__attribute__((reqd_work_group_size(8, 1, 1)))
 KERNEL(Convolution_GPU_YXFB_YXIO_B8_memory)(
+    const __global neural_memory* input_mem,
+    __global neural_memory* dst_mem,
+    const __global neural_memory* filter_mem,
+    const __global neural_memory* bias_mem,
+    uint split_idx)
+{)__krnl";
+
+const std::string kernelName_YXFB_YXIO_B16_memory = "Convolution_GPU_YXFB_YXIO_B16_memory";
+const std::string kernelCode_YXFB_YXIO_B16_memory_Begin = R"__krnl(
+KERNEL(Convolution_GPU_YXFB_YXIO_B16_memory)(
     const __global neural_memory* input_mem,
     __global neural_memory* dst_mem,
     const __global neural_memory* filter_mem,
@@ -155,7 +165,10 @@ struct convolution_gpu : is_an_implementation {
                 else
                     return kernelName_YXFB_YXOI_memory;
             case memory::format::yxio_f32:
-                return kernelName_YXFB_YXIO_B8_memory;
+                if (input_mem.argument.size.batch[0] > 8)
+                    return kernelName_YXFB_YXIO_B16_memory;
+                else
+                    return kernelName_YXFB_YXIO_B8_memory;
             case memory::format::oyxi_f32:
                 return kernelName_YXFB_OYXI_memory;
             default:
@@ -166,6 +179,18 @@ struct convolution_gpu : is_an_implementation {
         }
     }
 
+    // how many output feature maps for a single batch will a single work item produce 
+    static int get_ofm_per_work_item(const int batch_size)
+    {
+        return batch_size > 8 ? 8 : 16;
+    }
+
+    // how many batches will a single work item compute
+    static int get_batches_per_work_item(const int batch_size)
+    {
+        return batch_size > 16 ? 2 : 1;
+    }
+
     gpu::jit_constants get_jit_constants() const {
 
         auto& input_mem = outer.input_memory(0);
@@ -173,6 +198,7 @@ struct convolution_gpu : is_an_implementation {
         auto& output_mem = outer.output_memory(0);
         auto& output_offset = outer.argument.output_offset;
         auto& output_size = outer.argument.output_size;
+        auto& filter_mem = outer.input_memory(1);
         auto split = outer.argument.split;
         auto negative_slope = outer.argument.negative_slope;
 
@@ -225,15 +251,16 @@ struct convolution_gpu : is_an_implementation {
         mem_consts.add_constant(gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"));
         mem_consts.add_constant(gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_1"));
 
-		// temporary for testing purposes
-		const int simd_size = 16;
-		const int batch_size = output_mem.argument.size.batch[0];
-        const int batches_per_work_item = 2;//std::max(batch_size / simd_size, 1);
-        const int ofm_per_work_item = 8;
-		mem_consts.add_constant(gpu::make_jit_constant("SIMD_SIZE", simd_size));
-        mem_consts.add_constant(gpu::make_jit_constant("OFM_PER_WORK_ITEM", ofm_per_work_item)); // how many output feature maps will a single work item produce
-        mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item)); // how many batches will a single workitem compute
-        mem_consts.add_constant(gpu::make_jit_constant("SIMDS_PER_SINGLE_BATCHES_ELEMENTS", std::max((batch_size / batches_per_work_item) / simd_size, 1))); // how many simds we need to compute single element for each batch
+        if (filter_mem.argument.format == memory::format::yxio_f32)
+        {
+            const int batch_size = output_mem.argument.size.batch[0];
+            const int batches_per_work_item = get_batches_per_work_item(batch_size);
+            const int simd_size = batch_size > 8 ? 16 : 8;
+            mem_consts.add_constant(gpu::make_jit_constant("SIMD_SIZE", simd_size));
+            mem_consts.add_constant(gpu::make_jit_constant("OFM_PER_WORK_ITEM", get_ofm_per_work_item(batch_size))); // how many output feature maps for a single batch will a single work item produce
+            mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item)); // how many batches will a single work item compute
+            mem_consts.add_constant(gpu::make_jit_constant("SIMDS_PER_SINGLE_BATCHES_ELEMENTS", std::max((batch_size / batches_per_work_item) / simd_size, 1))); // how many simds we need to compute single element for each batch
+        }
         return mem_consts;
     }
 
@@ -301,13 +328,14 @@ struct convolution_gpu : is_an_implementation {
                 break;
             case memory::format::yxio_f32:
             {
-                uint32_t ofm_per_workitem = 8;
-                //uint32_t simd_size = 8;
-                uint32_t batch_per_workitem = 2;//output_mem.argument.size.batch[0] / simd_size;
-                gws0 = (output_mem.argument.size.feature[0] * output_mem.argument.size.batch[0] / (ofm_per_workitem * batch_per_workitem)) / split;
+                uint32_t batch_size = output_mem.argument.size.batch[0];
+                uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size);
+                uint32_t simd_size = batch_size > 8 ? 16 : 8;
+                uint32_t batches_per_workitem = get_batches_per_work_item(batch_size);
+                gws0 = (output_mem.argument.size.feature[0] * batch_size / (ofm_per_workitem * batches_per_workitem)) / split;
                 for (uint32_t i = 0; i < split; i++) {
                     me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                        ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 16, 1, 1 } },
+                        ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ simd_size, 1, 1 } },
                             input_mem,
                             output_mem,
                             outer.input_memory(i * 2 + 1), //filters
@@ -373,8 +401,9 @@ namespace{
             gpu::kernel_templates::add(kernelName_YXFB_memory, inline_utils_float + kernelCode_YXFB_memory_Begin + convolution_code_yxfb_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_YXFB_YXOI_memory, inline_utils_float + kernelCode_YXFB_YXOI_memory_Begin + convolution_code_yxfb_yxoi_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_YXFB_OYXI_memory, inline_utils_float + kernelCode_YXFB_OYXI_memory_Begin + convolution_code_yxfb_oyxi_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, inline_utils_float + kernelCode_YXFB_YXOI_B8_memory_Begin + convolution_code_yxfb_yxoi_b8_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B8_memory, inline_utils_float + kernelCode_YXFB_YXIO_B8_memory_Begin + convolution_code_yxfb_yxio_b8_memory + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, std::string("") + float8_helper_defines + inline_utils_float + kernelCode_YXFB_YXOI_B8_memory_Begin + convolution_code_yxfb_yxoi_b8_memory + kernelCode_End + inline_utils_float_end + float8_helper_undefines);
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B8_memory, std::string("") + float8_helper_defines+ inline_utils_float + kernelCode_YXFB_YXIO_B8_memory_Begin + convolution_code_yxfb_yxio_b8_memory + kernelCode_End + inline_utils_float_end + float8_helper_undefines);
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B16_memory, std::string("") + float8_helper_defines + inline_utils_float + kernelCode_YXFB_YXIO_B16_memory_Begin + convolution_code_yxfb_yxio_b16_memory + kernelCode_End + inline_utils_float_end + float8_helper_undefines);
             gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_F8_memory, inline_utils_float + kernelCode_YXFB_YXOI_B8_F8_memory_Begin + convolution_code_yxfb_yxoi_B8_F8_memory + kernelCode_End + inline_utils_float_end);
             auto val_fw = convolution_gpu::create;
 
