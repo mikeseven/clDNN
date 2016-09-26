@@ -209,6 +209,63 @@ namespace neural {
 #endif
     )__CC";
 
+    const char fully_connected_code_xb_xb_b16_memory[] = R"__CC(
+        const uint global_id = get_global_id(0);
+        const int x = get_global_id(0);
+        const uint batch_id = x % INPUT_BATCH_NUM;
+
+        uint neuronIdx = (x / INPUT_BATCH_NUM) * NEURONS_PER_WORK_ITEM;
+
+        const uint sub_group_id = get_local_id(0);
+        const uint batch_num = INPUT_BATCH_NUM;
+
+        const int out_id = (global_id / batch_num) * NEURONS_PER_WORK_ITEM * batch_num + batch_id;
+
+        const int ofm_offset = (global_id * NEURONS_PER_WORK_ITEM) / batch_num;
+
+        float8 _data[BATCHES_PER_WORK_ITEM];
+        for(uint i = 0; i < BATCHES_PER_WORK_ITEM; i++)
+        {
+            _data[i] = 0.f;
+        }
+
+        uint weight_offset = sub_group_id + neuronIdx;
+
+        for(uint h = 0; h < INPUT_ELEMENTS_COUNT; h++)
+        {
+            for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
+            {
+                DOT_PRODUCT_8(_data[s], input[h * batch_num + batch_id], weights[weight_offset])
+            }
+            weight_offset+= WEIGHTS_BATCH_NUM;
+        }
+
+
+        for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
+        {
+            float bias_val = bias[neuronIdx + sub_group_id];
+            ADD_BIAS_8(_data[s], bias_val);
+        }
+
+        for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
+        {
+            ACTIVATION_8(_data[s]);
+        }
+
+        for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
+        {
+            int _out_id = out_id + s * LOCAL_WORK_GROUP_SIZE;
+            output[_out_id] = _data[s].s0; _out_id += INPUT_BATCH_NUM;
+            output[_out_id] = _data[s].s1; _out_id += INPUT_BATCH_NUM;
+            output[_out_id] = _data[s].s2; _out_id += INPUT_BATCH_NUM;
+            output[_out_id] = _data[s].s3; _out_id += INPUT_BATCH_NUM;
+            output[_out_id] = _data[s].s4; _out_id += INPUT_BATCH_NUM;
+            output[_out_id] = _data[s].s5; _out_id += INPUT_BATCH_NUM;
+            output[_out_id] = _data[s].s6; _out_id += INPUT_BATCH_NUM;
+            output[_out_id] = _data[s].s7; _out_id += INPUT_BATCH_NUM;
+        }
+    )__CC";
+
     const char fully_connected_code_yxfn_memory[] = R"__CC(
         __global float* input = (__global float*)get_data(input_mem);
         __global float* pDst = (__global float*)get_data(dst_mem);
