@@ -220,8 +220,6 @@ namespace neural {
 
         const int out_id = (global_id / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) * NEURONS_PER_WORK_ITEM * INPUT_BATCH_NUM + batch_id;
 
-        const int ofm_offset = (global_id * NEURONS_PER_WORK_ITEM) / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS;
-
         float8 _data[BATCHES_PER_WORK_ITEM];
         for(uint i = 0; i < BATCHES_PER_WORK_ITEM; i++)
         {
@@ -229,13 +227,16 @@ namespace neural {
         }
 
         uint weight_offset = sub_group_id + neuronIdx;
+        uint input_idx = batch_id;
 
         for(uint h = 0; h < INPUT_ELEMENTS_COUNT; h++)
         {
             for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
             {
-                DOT_PRODUCT_8(_data[s], input[h * batch_num + batch_id + s * LOCAL_WORK_GROUP_SIZE], weights[weight_offset])
+                DOT_PRODUCT_8(_data[s], input[input_idx], weights[weight_offset])
+                input_idx += LOCAL_WORK_GROUP_SIZE;
             }
+            input_idx += INPUT_BATCH_NUM - BATCHES_PER_WORK_ITEM * LOCAL_WORK_GROUP_SIZE;
             weight_offset+= WEIGHTS_BATCH_NUM;
         }
 

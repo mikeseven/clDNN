@@ -47,6 +47,42 @@ enum neural_memory_format {
 
 __attribute__((overloadable)) __global void* get_data(__global neural_memory* mem) { return mem; }
 __attribute__((overloadable)) const __global void* get_data(const __global neural_memory* mem) { return mem; }
+
+#define DOT_PRODUCT_8( _result, _rowA, colB )    \
+{   \
+        _result.s0 = mad( _rowA, intel_sub_group_shuffle( colB, 0 ), _result.s0 );  \
+        _result.s1 = mad( _rowA, intel_sub_group_shuffle( colB, 1 ), _result.s1 );  \
+        _result.s2 = mad( _rowA, intel_sub_group_shuffle( colB, 2 ), _result.s2 );  \
+        _result.s3 = mad( _rowA, intel_sub_group_shuffle( colB, 3 ), _result.s3 );  \
+        _result.s4 = mad( _rowA, intel_sub_group_shuffle( colB, 4 ), _result.s4 );  \
+        _result.s5 = mad( _rowA, intel_sub_group_shuffle( colB, 5 ), _result.s5 );  \
+        _result.s6 = mad( _rowA, intel_sub_group_shuffle( colB, 6 ), _result.s6 );  \
+        _result.s7 = mad( _rowA, intel_sub_group_shuffle( colB, 7 ), _result.s7 );  \
+}
+#define ADD_BIAS_8( _result, _biasVal) \
+{ \
+    _result.s0 += intel_sub_group_shuffle( _biasVal, 0 ); \
+    _result.s1 += intel_sub_group_shuffle( _biasVal, 1 ); \
+    _result.s2 += intel_sub_group_shuffle( _biasVal, 2 ); \
+    _result.s3 += intel_sub_group_shuffle( _biasVal, 3 ); \
+    _result.s4 += intel_sub_group_shuffle( _biasVal, 4 ); \
+    _result.s5 += intel_sub_group_shuffle( _biasVal, 5 ); \
+    _result.s6 += intel_sub_group_shuffle( _biasVal, 6 ); \
+    _result.s7 += intel_sub_group_shuffle( _biasVal, 7 ); \
+}
+
+#define ACTIVATION_8(_result) \
+{ \
+        ACTIVATION(_result.s0, _result.s0); \
+        ACTIVATION(_result.s1, _result.s1); \
+        ACTIVATION(_result.s2, _result.s2); \
+        ACTIVATION(_result.s3, _result.s3); \
+        ACTIVATION(_result.s4, _result.s4); \
+        ACTIVATION(_result.s5, _result.s5); \
+        ACTIVATION(_result.s6, _result.s6); \
+        ACTIVATION(_result.s7, _result.s7); \
+}
+
 )__krnl";
 
 std::vector<std::string> kernels_cache::get_program_source() const {

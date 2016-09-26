@@ -18,7 +18,6 @@
 #include "multidimensional_counter.h"
 #include "convolution_common_gpu.h"
 #include "relu_gpu.h"
-#include "helper_defines.h"
 #include "implementation_map.h"
 #include "kernel.h"
 
@@ -414,9 +413,9 @@ namespace{
             gpu::kernel_templates::add(kernelName_YXFB_memory, inline_utils_float + kernelCode_YXFB_memory_Begin + convolution_code_yxfb_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_YXFB_YXOI_memory, inline_utils_float + kernelCode_YXFB_YXOI_memory_Begin + convolution_code_yxfb_yxoi_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_YXFB_OYXI_memory, inline_utils_float + kernelCode_YXFB_OYXI_memory_Begin + convolution_code_yxfb_oyxi_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, std::string("") + helper_defines + inline_utils_float + kernelCode_YXFB_YXOI_B8_memory_Begin + convolution_code_yxfb_yxoi_b8_memory + kernelCode_End + inline_utils_float_end + helper_undefines);
-            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B8_memory, std::string("") + helper_defines + inline_utils_float + kernelCode_YXFB_YXIO_B8_memory_Begin + convolution_code_yxfb_yxio_b8_memory + kernelCode_End + inline_utils_float_end + helper_undefines);
-            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B16_memory, std::string("") + helper_defines + inline_utils_float + kernelCode_YXFB_YXIO_B16_memory_Begin + convolution_code_yxfb_yxio_b16_memory + kernelCode_End + inline_utils_float_end + helper_undefines);
+            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, inline_utils_float + kernelCode_YXFB_YXOI_B8_memory_Begin + convolution_code_yxfb_yxoi_b8_memory + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B8_memory, inline_utils_float + kernelCode_YXFB_YXIO_B8_memory_Begin + convolution_code_yxfb_yxio_b8_memory + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B16_memory, inline_utils_float + kernelCode_YXFB_YXIO_B16_memory_Begin + convolution_code_yxfb_yxio_b16_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_F8_memory, inline_utils_float + kernelCode_YXFB_YXOI_B8_F8_memory_Begin + convolution_code_yxfb_yxoi_B8_F8_memory + kernelCode_End + inline_utils_float_end);
             auto val_fw = convolution_gpu::create;
 

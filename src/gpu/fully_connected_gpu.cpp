@@ -18,7 +18,6 @@
 #include "api/neural.h"
 #include "fully_connected_common_gpu.h"
 #include "relu_gpu.h"
-#include "helper_defines.h"
 #include "implementation_map.h"
 #include "kernel.h"
 
@@ -237,7 +236,12 @@ namespace neural {
         // how many batches will a single work item compute
         static int get_batches_per_work_item(const int batch_size)
         {
-            return batch_size > 16 ? 2 : 1;
+            if (batch_size <= 8)
+                return 8;
+
+            int lws = get_local_work_group_size(batch_size);
+            int batches_per_work_item = std::min(4, batch_size / lws);
+            return batches_per_work_item;
         }
 
         static int get_local_work_group_size(const int batch_size)
@@ -409,8 +413,8 @@ namespace {
             gpu::kernel_templates::add(kernelName_xb_memory, inline_utils_float + kernelCode_xb_memory_Begin + fully_connected_code_xb_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_xb_bx_memory, inline_utils_float + kernelCode_xb_bx_memory_Begin + fully_connected_code_xb_bx_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_xb_bx_b8_memory, inline_utils_float + kernelCode_xb_bx_b8_memory_Begin + fully_connected_code_xb_bx_b8_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_xb_xb_b8_x8_memory, std::string("") + helper_defines + inline_utils_float + kernelCode_xb_xb_b8_x8_memory_Begin + fully_connected_code_xb_xb_b8_x8_memory + kernelCode_End + inline_utils_float_end + helper_undefines);
-            gpu::kernel_templates::add(kernelName_xb_xb_b16_memory, std::string("") + helper_defines + inline_utils_float + kernelCode_xb_xb_b16_memory_Begin + fully_connected_code_xb_xb_b16_memory + kernelCode_End + inline_utils_float_end + helper_undefines);
+            gpu::kernel_templates::add(kernelName_xb_xb_b8_x8_memory, inline_utils_float + kernelCode_xb_xb_b8_x8_memory_Begin + fully_connected_code_xb_xb_b8_x8_memory + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(kernelName_xb_xb_b16_memory, inline_utils_float + kernelCode_xb_xb_b16_memory_Begin + fully_connected_code_xb_xb_b16_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_yxfn_memory, inline_utils_float + kernelCode_yxfn_memory_Begin + fully_connected_code_yxfn_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_yxfn_byxf_memory, inline_utils_float + kernelCode_yxfn_byxf_memory_Begin + fully_connected_code_yxfn_byxf_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_yxfn_byxf_b8_f8_memory, inline_utils_float + kernelCode_yxfn_byxf_b8_f8_memory_Begin + fully_connected_code_yxfn_byxf_b8_f8_memory + kernelCode_End + inline_utils_float_end);
