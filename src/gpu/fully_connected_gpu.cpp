@@ -237,7 +237,7 @@ namespace neural {
         static int get_batches_per_work_item(const int batch_size)
         {
             if (batch_size <= 8)
-                return 8;
+                return 1;
 
             int lws = get_local_work_group_size(batch_size);
             int batches_per_work_item = std::min(4, batch_size / lws);
