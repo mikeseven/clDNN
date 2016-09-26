@@ -240,7 +240,7 @@ namespace neural {
                 return 1;
 
             int lws = get_local_work_group_size(batch_size);
-            int batches_per_work_item = std::min(4, batch_size / lws);
+            int batches_per_work_item = std::min(2, batch_size / lws);
             return batches_per_work_item;
         }
 

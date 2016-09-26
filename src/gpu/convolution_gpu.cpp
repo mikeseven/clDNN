@@ -267,6 +267,12 @@ struct convolution_gpu : is_an_implementation {
             mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item)); // how many batches will a single work item compute
             mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max((batch_size / batches_per_work_item) / local_work_group_size, 1))); // how many local work groups we need to compute single element for each batch
             mem_consts.add_constant(gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / batches_per_work_item)); // how many work items we need to compute single element for each batch
+            // A LITTLE HACK, for convolutions with low number of input features don't use block reads, and it will speed up by 25%
+            // TODO - investigate why is this happening
+            if (input_mem.argument.size.feature[0] > 4)
+            {
+                mem_consts.add_constant(gpu::make_jit_constant("USE_BLOCK_READ_2", ""));
+            }
         }
         return mem_consts;
     }

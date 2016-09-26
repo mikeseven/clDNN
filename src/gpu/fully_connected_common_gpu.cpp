@@ -211,14 +211,12 @@ namespace neural {
 
     const char fully_connected_code_xb_xb_b16_memory[] = R"__CC(
         const uint global_id = get_global_id(0);
-        const uint batch_id = get_local_id(0) + get_local_size(0) * (get_group_id(0) % LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS);
+        const uint local_id = get_local_id(0);
+        const uint batch_id = local_id + get_local_size(0) * (get_group_id(0) % LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS);
 
         uint neuronIdx = (global_id / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) * NEURONS_PER_WORK_ITEM;
 
-        const uint sub_group_id = get_local_id(0);
-        const uint batch_num = INPUT_BATCH_NUM;
-
-        const int out_id = (global_id / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) * NEURONS_PER_WORK_ITEM * INPUT_BATCH_NUM + batch_id;
+        const int out_id = neuronIdx * INPUT_BATCH_NUM + batch_id;
 
         float8 _data[BATCHES_PER_WORK_ITEM];
         for(uint i = 0; i < BATCHES_PER_WORK_ITEM; i++)
@@ -226,24 +224,31 @@ namespace neural {
             _data[i] = 0.f;
         }
 
-        uint weight_offset = sub_group_id + neuronIdx;
+        uint weight_offset = local_id + neuronIdx;
         uint input_idx = batch_id;
 
         for(uint h = 0; h < INPUT_ELEMENTS_COUNT; h++)
         {
+#if BATCHES_PER_WORK_ITEM == 2
+            float2 _input = as_float2(intel_sub_group_block_read2((const __global uint*)input + input_idx));
+            DOT_PRODUCT_8(_data[0], _input.s0, weights[weight_offset])
+            DOT_PRODUCT_8(_data[1], _input.s1, weights[weight_offset])
+            input_idx += INPUT_BATCH_NUM;
+#else
             for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
             {
                 DOT_PRODUCT_8(_data[s], input[input_idx], weights[weight_offset])
                 input_idx += LOCAL_WORK_GROUP_SIZE;
             }
             input_idx += INPUT_BATCH_NUM - BATCHES_PER_WORK_ITEM * LOCAL_WORK_GROUP_SIZE;
+#endif
             weight_offset+= WEIGHTS_BATCH_NUM;
         }
 
 
         for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
         {
-            float bias_val = bias[neuronIdx + sub_group_id];
+            float bias_val = bias[neuronIdx + local_id];
             ADD_BIAS_8(_data[s], bias_val);
         }
 
