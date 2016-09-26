@@ -50,6 +50,23 @@ namespace neural {
             int input_it = 0;
             switch (mem_arg.format)
             {
+			case memory::format::byxf_f32:
+				for (uint32_t b = 0; b < mem_arg.size.batch[0]; b++)
+				{
+                    for (uint32_t y = 0; y < mem_arg.size.spatial[1]; y++)
+                    {
+                        for (uint32_t x = 0; x < mem_arg.size.spatial[0]; x++)
+                        {
+                            for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
+                            {
+                                files_handels[b][f] << mem_ptr[input_it++] << " ";
+                                if (x == sizex - 1)
+                                    files_handels[b][f] << std::endl;
+                            }
+                        }
+                    }
+				}
+                break;
             case memory::format::yxfb_f32:
                 for (uint32_t y = 0; y < mem_arg.size.spatial[1];y++)
                 {

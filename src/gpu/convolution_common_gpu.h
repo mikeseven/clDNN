@@ -28,4 +28,5 @@ namespace neural
     extern const char convolution_code_yxfb_yxoi_b8_memory[];
     extern const char convolution_code_yxfb_yxoi_B8_F8_memory[];
     extern const char convolution_code_yxfb_yxio_b8_memory[];
+    extern const char convolution_code_yxfb_yxio_b16_memory[];
 }
