@@ -287,7 +287,8 @@ namespace neural {
                 mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size));
                 mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", get_neurons_per_work_item(output_mem))); // how many neurons for a single batch will a single work item produce
                 mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item)); // how many batches will a single work item compute
-
+                mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max((batch_size / batches_per_work_item) / local_work_group_size, 1))); // how many local work groups we need to compute single element for each batch
+                mem_consts.add_constant(gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / batches_per_work_item)); // how many work items we need to compute single element for each batch
             }
             return mem_consts;
         }
@@ -329,9 +330,9 @@ namespace neural {
                     if (input_mem.argument.size.batch[0] % 8 == 0)
                     {
                         uint32_t batch_size = output_mem.argument.size.batch[0];
-                        auto neurons_per_workitem = get_neurons_per_work_item(output_mem);
+                        size_t gws0 = output_bufSize / (get_neurons_per_work_item(output_mem) * get_batches_per_work_item(batch_size));
                         me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-                            ({ output_bufSize / neurons_per_workitem, static_cast<size_t>(get_local_work_group_size(batch_size)) }, input_mem, output_mem, weight_mem, bias_mem);
+                            ({ gws0, static_cast<size_t>(get_local_work_group_size(batch_size)) }, input_mem, output_mem, weight_mem, bias_mem);
 
                     }
                     else
