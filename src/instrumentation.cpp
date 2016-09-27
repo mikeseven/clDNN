@@ -40,13 +40,11 @@ namespace neural {
             auto sizex = mem_arg.size.spatial[0];
             auto eng_type = mem_arg.engine == engine::type::gpu ? "gpu" : "reference";
             std::vector<std::vector<std::ofstream>> files_handels(batch);
-
-            for (uint32_t i = 0; i < batch; i++)
-                for (uint32_t j = 0; j < feature;j++)
-                {
-                    std::string filename((dump_dir + "/" + prefix +"_" + eng_type + "_b" + std::to_string(i) + "_f" + std::to_string(j) + ".txt"));
-                    files_handels[i].push_back(std::ofstream(filename, std::ios::out));
-                }
+            std::vector<std::vector<std::stringstream>> streams(batch);
+            for(uint32_t b = 0; b < batch; b++)
+            {
+                streams[b].resize(feature);
+            }
             int input_it = 0;
             switch (mem_arg.format)
             {
@@ -59,9 +57,9 @@ namespace neural {
                         {
                             for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
                             {
-                                files_handels[b][f] << mem_ptr[input_it++] << " ";
+                                streams[b][f] << mem_ptr[input_it++] << " ";
                                 if (x == sizex - 1)
-                                    files_handels[b][f] << std::endl;
+                                    streams[b][f] << std::endl;
                             }
                         }
                     }
@@ -74,16 +72,16 @@ namespace neural {
                         for (uint32_t feature_it = 0; feature_it < feature; feature_it++)
                             for (uint32_t batch_it = 0; batch_it < batch; batch_it++)
                             {
-                                files_handels[batch_it][feature_it] << mem_ptr[input_it++] << " ";
+                                streams[batch_it][feature_it] << mem_ptr[input_it++] << " ";
                                 if (x == sizex - 1)
-                                    files_handels[batch_it][feature_it] << std::endl;
+                                    streams[batch_it][feature_it] << std::endl;
                             }
                 }
                 break;
             case memory::format::xb_f32:
                 for (uint32_t x = 0; x < sizex;x++)
                     for (uint32_t batch_it = 0; batch_it < batch; batch_it++)
-                        files_handels[batch_it][0] << mem_ptr[input_it++] << std::endl;
+                        streams[batch_it][0] << mem_ptr[input_it++] << std::endl;
                 break;
             default:
                 throw std::runtime_error("format not implemented yet");
@@ -92,8 +90,13 @@ namespace neural {
 
 
             for (uint32_t i = 0; i < batch; i++)
-                for (uint32_t j = 0; j < feature;j++)
-                    files_handels[i][j].close();
+                for (uint32_t j = 0; j < feature; j++)
+                {
+                    std::string filename((dump_dir + "/" + prefix + "_" + eng_type + "_b" + std::to_string(i) + "_f" + std::to_string(j) + ".txt"));
+                    std::ofstream file_stream = std::ofstream(filename, std::ios::out);
+                    file_stream << streams[i][j].str();
+                    file_stream.close();
+                }
         }
     }
 }
