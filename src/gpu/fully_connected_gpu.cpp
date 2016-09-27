@@ -24,44 +24,44 @@
 const std::string kernelName_xb = "Fully_Connected_GPU_xb";
 const std::string kernelCode_xb_Begin = R"__krnl(
 KERNEL (Fully_Connected_GPU_xb)(
-    const __global neural_memory* input_mem,
-    __global neural_memory* dst_mem)
+    const __global float* input,
+    __global float* output)
 {
 )__krnl";
 
 const std::string kernelName_xb_bx = "Fully_Connected_GPU_xb_bx";
 const std::string kernelCode_xb_bx_Begin = R"__krnl(
 KERNEL (Fully_Connected_GPU_xb_bx)(
-    const __global neural_memory* input_mem,
-    __global neural_memory* dst_mem)
+    const __global float* input,
+    __global float* output)
 {
 )__krnl";
 
 const std::string kernelName_yxfn = "Fully_Connected_GPU_yxfn";
 const std::string kernelCode_yxfn_Begin = R"__krnl(
 KERNEL (Fully_Connected_GPU_yxfn)(
-    const __global neural_memory* input_mem,
-    __global neural_memory* dst_mem)
+    const __global float* input,
+    __global float* output)
 {
 )__krnl";
 
 const std::string kernelName_xb_memory = "Fully_Connected_GPU_xb_memory";
 const std::string kernelCode_xb_memory_Begin = R"__krnl(
 KERNEL (Fully_Connected_GPU_xb_memory)(
-    const __global neural_memory* input_mem, 
-    __global neural_memory* dst_mem, 
-    const __global neural_memory* weights_mem,
-    const __global neural_memory* bias_mem)
+    const __global float* input, 
+    __global float* output, 
+    const __global float* weight,
+    const __global float* bias)
 {
 )__krnl";
 
 const std::string kernelName_xb_bx_memory = "Fully_Connected_GPU_xb_bx_memory";
 const std::string kernelCode_xb_bx_memory_Begin = R"__krnl(
 KERNEL (Fully_Connected_GPU_xb_bx_memory)(
-    const __global neural_memory* input_mem, 
-    __global neural_memory* dst_mem, 
-    const __global neural_memory* weights_mem,
-    const __global neural_memory* bias_mem)
+    const __global float* input, 
+    __global float* output, 
+    const __global float* weight,
+    const __global float* bias)
 {
 )__krnl";
 
@@ -69,10 +69,10 @@ const std::string kernelName_xb_bx_b8_memory = "Fully_Connected_GPU_xb_bx_b8_mem
 const std::string kernelCode_xb_bx_b8_memory_Begin = R"__krnl(
 __attribute__((reqd_work_group_size(8, 1, 1)))
 KERNEL (Fully_Connected_GPU_xb_bx_b8_memory)(
-    const __global neural_memory* input_mem, 
-    __global neural_memory* dst_mem, 
-    const __global neural_memory* weights_mem,
-    const __global neural_memory* bias_mem)
+    const __global float* input, 
+    __global float* output, 
+    const __global float* weight,
+    const __global float* bias)
 {
 )__krnl";
 
@@ -80,10 +80,10 @@ const std::string kernelName_xb_xb_b8_x8_memory = "Fully_Connected_GPU_xb_xb_b8_
 const std::string kernelCode_xb_xb_b8_x8_memory_Begin = R"__krnl(
 __attribute__((reqd_work_group_size(8, 1, 1)))
 KERNEL (Fully_Connected_GPU_xb_xb_b8_x8_memory)(
-    const __global neural_memory* input_mem, 
-    __global neural_memory* dst_mem, 
-    const __global neural_memory* weights_mem,
-    const __global neural_memory* bias_mem)
+    const __global float* input, 
+    __global float* output, 
+    const __global float* weight,
+    const __global float* bias)
 {
 )__krnl";
 
@@ -100,20 +100,20 @@ KERNEL (Fully_Connected_GPU_xb_xb_b16_memory)(
 const std::string kernelName_yxfn_memory = "Fully_Connected_GPU_yxfn_memory";
 const std::string kernelCode_yxfn_memory_Begin = R"__krnl(
 KERNEL (Fully_Connected_GPU_yxfn_memory)(
-    const __global neural_memory* input_mem, 
-    __global neural_memory* dst_mem, 
-    const __global neural_memory* weights_mem,
-    const __global neural_memory* bias_mem)
+    const __global float* input, 
+    __global float* output, 
+    const __global float* weight,
+    const __global float* bias)
 {
 )__krnl";
 
 const std::string kernelName_yxfn_byxf_memory = "Fully_Connected_GPU_yxfn_byxf_memory";
 const std::string kernelCode_yxfn_byxf_memory_Begin = R"__krnl(
 KERNEL (Fully_Connected_GPU_yxfn_byxf_memory)(
-    const __global neural_memory* input_mem, 
-    __global neural_memory* dst_mem, 
-    const __global neural_memory* weights_mem,
-    const __global neural_memory* bias_mem)
+    const __global float* input, 
+    __global float* output, 
+    const __global float* weight,
+    const __global float* bias)
 {
 )__krnl";
 
@@ -121,10 +121,10 @@ const std::string kernelName_yxfn_byxf_b8_f8_memory = "Fully_Connected_GPU_yxfn_
 const std::string kernelCode_yxfn_byxf_b8_f8_memory_Begin = R"__krnl(
 __attribute__((reqd_work_group_size(8, 1, 1)))
 KERNEL (Fully_Connected_GPU_yxfn_byxf_b8_f8_memory)(
-    const __global neural_memory* input_mem, 
-    __global neural_memory* dst_mem, 
-    const __global neural_memory* weights_mem,
-    const __global neural_memory* bias_mem)
+    const __global float* input, 
+    __global float* output, 
+    const __global float* weight,
+    const __global float* bias)
 {
 )__krnl";
 const std::string kernelCode_End = R"__krnl(
