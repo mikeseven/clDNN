@@ -374,7 +374,7 @@ struct convolution_gpu : is_an_implementation {
                     gws0 = dstSize / split;
                     for (uint32_t i = 0; i < split; i++) {
                         me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                            ({ { gws0 } ,{ std::min(gws0, static_cast<size_t>(8)) } },
+                            ({ gws0, std::min(gws0, static_cast<size_t>(8)) },
                                 input_mem,
                                 output_mem,
                                 outer.input_memory(i * 2 + 1), //filters
