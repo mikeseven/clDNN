@@ -177,7 +177,7 @@ namespace neural {
     const char fully_connected_code_xb_xb_b16_memory[] = R"__CC(
         const uint global_id = get_global_id(0);
         const uint local_id = get_local_id(0);
-        const uint batch_id = local_id + get_local_size(0) * (get_group_id(0) % LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS);
+        const uint batch_id = local_id + get_local_size(0) * BATCHES_PER_WORK_ITEM * (get_group_id(0) % LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS);
 
         uint neuronIdx = (global_id / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) * NEURONS_PER_WORK_ITEM;
 
