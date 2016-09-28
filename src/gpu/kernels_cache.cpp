@@ -48,6 +48,16 @@ enum neural_memory_format {
 __attribute__((overloadable)) __global void* get_data(__global neural_memory* mem) { return mem; }
 __attribute__((overloadable)) const __global void* get_data(const __global neural_memory* mem) { return mem; }
 
+#define TRANSPOSE_BLOCK_8( _block )   \
+        (float8)( intel_sub_group_shuffle( _block, 0 ), \
+                  intel_sub_group_shuffle( _block, 1 ), \
+                  intel_sub_group_shuffle( _block, 2 ), \
+                  intel_sub_group_shuffle( _block, 3 ), \
+                  intel_sub_group_shuffle( _block, 4 ), \
+                  intel_sub_group_shuffle( _block, 5 ), \
+                  intel_sub_group_shuffle( _block, 6 ), \
+                  intel_sub_group_shuffle( _block, 7 ) );
+
 #define DOT_PRODUCT_8( _result, _rowA, colB )    \
 {   \
         _result.s0 = mad( _rowA, intel_sub_group_shuffle( colB, 0 ), _result.s0 );  \

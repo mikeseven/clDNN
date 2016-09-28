@@ -542,13 +542,15 @@ namespace neural
                             {
 #ifdef USE_BLOCK_READ_2
                                 float2 _input = as_float2(intel_sub_group_block_read2((const __global uint*)input + input_idx));
-                                DOT_PRODUCT_8(_data[0], _input.s0, filter[filter_idx])
-                                DOT_PRODUCT_8(_data[1], _input.s1, filter[filter_idx])
+                                float8 _filter = TRANSPOSE_BLOCK_8(filter[filter_idx]);
+                                _data[0] = mad(_input.s0, _filter, _data[0]);
+                                _data[1] = mad(_input.s1, _filter, _data[1]);
                                 input_idx += INPUT_BATCH_NUM;
 #else
+                                float8 _filter = TRANSPOSE_BLOCK_8(filter[filter_idx]);
                                 for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
                                 {
-                                    DOT_PRODUCT_8(_data[s], input[input_idx], filter[filter_idx])
+                                    _data[s] = mad(input[input_idx], _filter, _data[s]);
                                     input_idx += LOCAL_WORK_GROUP_SIZE;
                                 }
                                 input_idx += INPUT_BATCH_NUM - BATCHES_PER_WORK_ITEM * LOCAL_WORK_GROUP_SIZE;
