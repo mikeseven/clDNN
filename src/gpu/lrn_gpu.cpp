@@ -24,27 +24,27 @@ const std::string kernelCode = R"__krnl(
 KERNEL (lrn_GPU)(__global float* input, __global float* output)
 {
     const uint global_id = get_global_id(0);
-    const uint batch_offset = global_id % INPUT_BATCH_NUM;
-    const uint ifm_offset = (global_id / INPUT_BATCH_NUM) % INPUT_FEATURE_NUM;
-    const uint x = (global_id / INPUT_BATCH_NUM) / INPUT_FEATURE_NUM;
+    const uint element_offset = get_global_id(1) * INPUT_BATCH_NUM * INPUT_FEATURE_NUM;
 
+    const uint linear_id = global_id + element_offset;
     float acc = 0;
 
-	int input_offset_f = ifm_offset + HELP_INPUT_OFFSET;
-	int input_idx = batch_offset + INPUT_BATCH_NUM * ( input_offset_f + x * INPUT_FEATURE_NUM);
+    int input_offset_f = global_id + HELP_INPUT_OFFSET * INPUT_BATCH_NUM;
+    int input_idx = input_offset_f + element_offset;
     for (int i = 0; i < P_SIZE; i++)
     {
-        bool zero = input_offset_f < 0 || input_offset_f >= INPUT_FEATURE_NUM;
+        bool zero = input_offset_f < 0 || input_offset_f >= INPUT_FEATURE_NUM * INPUT_BATCH_NUM;
 
         float value = zero ? 0 : input[input_idx];
         acc = mad(value, value, acc);
-		input_offset_f++;
-		input_idx += INPUT_BATCH_NUM;
+
+        input_offset_f+= INPUT_BATCH_NUM;
+        input_idx += INPUT_BATCH_NUM;
     }
     acc = mad(acc, ALPHA, K);
     acc = native_powr(acc, -BETA);
 
-    output[global_id] = acc * input[global_id];
+    output[linear_id] = acc * input[linear_id];
 }
 )__krnl";
 
@@ -82,19 +82,19 @@ struct lrn_gpu : is_an_implementation {
 
         auto padding = outer.argument.padding;
 
-        size_t dstSize = output_mem.count();
-
-        int lws = 32;
-        while (dstSize % lws)
-        {
-            lws--;
-        }
-
         switch (padding) {
         case padding::zero:
         {
+            auto batch_size = input_mem.argument.size.batch[0];
+            auto feature_size = input_mem.argument.size.feature[0];
+            size_t gws0 = batch_size * feature_size;
+            int lws = 32;
+            while (gws0 % lws)
+            {
+                lws--;
+            }
             me->_kernel.run<gpu::input_mem, gpu::output_mem>
-                ({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) },
+                ({ { gws0, input_mem.argument.size.spatial[0] * input_mem.argument.size.spatial[1] } , { std::min(gws0, static_cast<size_t>(lws)), 1 } },
                     input_mem,
                     output_mem);
             break;
