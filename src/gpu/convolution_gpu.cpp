@@ -82,7 +82,7 @@ KERNEL(Convolution_GPU_YXFB_YXOI_B8_memory)(
 
 const std::string kernelName_YXFB_YXIO_B8_memory = "Convolution_GPU_YXFB_YXIO_B8_memory";
 const std::string kernelCode_YXFB_YXIO_B8_memory_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
 KERNEL(Convolution_GPU_YXFB_YXIO_B8_memory)(
     const __global float* input,
     __global float* output,
@@ -165,7 +165,7 @@ struct convolution_gpu : is_an_implementation {
                 else
                     return kernelName_YXFB_YXOI_memory;
             case memory::format::yxio_f32:
-                if (input_mem.argument.size.batch[0] > 8)
+                if (input_mem.argument.size.batch[0] > 16)
                     return kernelName_YXFB_YXIO_B16_memory;
                 else
                     return kernelName_YXFB_YXIO_B8_memory;
@@ -182,7 +182,7 @@ struct convolution_gpu : is_an_implementation {
     // how many output feature maps for a single batch will a single work item produce 
     static int get_ofm_per_work_item(const int batch_size)
     {
-        return batch_size > 8 ? 8 : 16;
+        return batch_size > 16 ? 8 : 16;
     }
 
     // how many batches will a single work item compute
