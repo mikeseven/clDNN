@@ -68,6 +68,7 @@ gpu_toolkit::gpu_toolkit()
                      configuration::get().enable_profiling
                         ? cl::QueueProperties::Profiling
                         : cl::QueueProperties::None)
+    , _kernels_cache(*this)
     {}
 
 std::shared_ptr<gpu_toolkit> gpu_toolkit::get() {
