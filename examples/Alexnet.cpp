@@ -314,9 +314,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         workers.push_back(worker_cpu::create({}));
     }
 
-    std::cout << "Start execution" << std::endl;
-    instrumentation::timer<> timer_execution;
-    execute({
+    std::vector<primitive> primitives {
         reordered_input,
         conv1, pool1, lrn1, //stage 0
         conv2_group2, pool2, lrn2,
@@ -326,7 +324,14 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         fc6,
         fc7,
         fc8,
-        softmax,output }, workers).wait();
+        softmax,output };
+
+    std::cout << "Start execution" << std::endl;
+    instrumentation::timer<> timer_execution;
+    for (auto& p : primitives)
+    {
+        workers[0].execute(p.work());
+    }
 
     //GPU primitives scheduled in unblocked manner
     auto scheduling_time(timer_execution.uptime());

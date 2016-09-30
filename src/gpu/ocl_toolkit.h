@@ -25,6 +25,7 @@
 #include <memory>
 #include <chrono>
 #include "api/instrumentation.h"
+#include "kernels_cache.h"
 
 namespace neural { namespace gpu {
 class gpu_toolkit;
@@ -62,7 +63,8 @@ class gpu_toolkit {
     cl::Device _device;
     cl::Context _context;
     cl::CommandQueue _command_queue;
-    cl::Program _program;
+    kernels_cache _kernels_cache;
+//    cl::Program _program;
     std::vector<instrumentation::profiling_info> _profiling_info;
 
     gpu_toolkit();
@@ -74,7 +76,8 @@ public:
     cl::Device& device() { return _device; }
     cl::Context& context() { return _context; }
     cl::CommandQueue& queue() { return _command_queue; }
-    cl::Program& program() { return _program; }
+//    cl::Program& program() { return _program; }
+    kernels_cache& kernels_cache() { return _kernels_cache; }
     void report_profiling(const instrumentation::profiling_info& info) { _profiling_info.push_back(info); }
     const std::vector<instrumentation::profiling_info>& get_profiling_info() const { return _profiling_info; }
 

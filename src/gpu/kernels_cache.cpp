@@ -145,7 +145,7 @@ namespace {
 
 }
 
-kernels_cache::kernel_id kernels_cache::create_kernel_from_template(std::shared_ptr<neural::gpu::gpu_toolkit>, const std::string& template_name, jit_definitions definitions) {
+kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, jit_definitions definitions) {
     // TODO: FIXIT: more than one kernel can be created for same template_name and definitions
     auto kernel_num = definitions.empty() ? "" : std::to_string(_kernel_codes.size());
     auto kernel_name = template_name + (kernel_num.empty() ? "" : "_") + kernel_num;
@@ -171,9 +171,7 @@ kernels_cache::kernel_id kernels_cache::create_kernel_from_template(std::shared_
     return kernel_name;
 }
 
-kernels_cache::program_type kernels_cache::get_program(std::shared_ptr<neural::gpu::gpu_toolkit> context) {
-    assert(context != nullptr);
-
+void kernels_cache::build_program() {
     try {
         std::lock_guard<std::mutex> lock(_mutex);
         if (_modified) {
@@ -185,8 +183,8 @@ kernels_cache::program_type kernels_cache::get_program(std::shared_ptr<neural::g
                     os << s;
             }
 #endif
-            context->program() = cl::Program(context->context(), program_source);
-            context->program().build({ context->device() }, "-cl-mad-enable");
+            cl::Program program(_context.context(), program_source);
+            program.build({ _context.device() }, "-cl-mad-enable");
 #ifndef NDEBUG
             {
                 std::ofstream os(program_dump_file_name, std::ios_base::app);
@@ -197,6 +195,14 @@ kernels_cache::program_type kernels_cache::get_program(std::shared_ptr<neural::g
                 os << "*/\n";
             }
 #endif
+            cl::vector<cl::Kernel> kernels;
+            program.createKernels(&kernels);
+            _kernels.clear();
+            for(auto& k : kernels)
+            {
+                auto kernel_name = k.getInfo<CL_KERNEL_FUNCTION_NAME>();
+                _kernels.emplace(kernel_name, k);
+            }
         }
         _modified = false;
     }
@@ -216,17 +222,11 @@ kernels_cache::program_type kernels_cache::get_program(std::shared_ptr<neural::g
 #endif
         throw std::runtime_error(build_log);
     }
-    return context->program();
 }
 
-kernels_cache::kernel_type kernels_cache::get_kernel(std::shared_ptr<neural::gpu::gpu_toolkit> context, kernel_id id) {
-    assert(context != nullptr);
-    return cl::Kernel(get_program(context), id.c_str());
-}
-
-kernels_cache& kernels_cache::get() {
-    static kernels_cache instance;
-    return instance;
+kernels_cache::kernel_type kernels_cache::get_kernel(kernel_id id) {
+    build_program();
+    return _kernels.at(id);
 }
 
 }}

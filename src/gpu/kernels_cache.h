@@ -17,13 +17,11 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include <map>
-#include <memory>
 #include <mutex>
 #include <vector>
 
 namespace cl {
 class Kernel;
-class Program;
 }
 
 namespace neural {namespace gpu {
@@ -59,23 +57,23 @@ class kernels_cache {
 public:
     typedef std::string kernel_id;
     typedef std::vector<std::pair<std::string, std::string>> jit_definitions;
-    typedef cl::Program program_type;
     typedef cl::Kernel kernel_type;
 
 private:
+    gpu_toolkit& _context;
     std::mutex _mutex;
     std::map<std::string, std::string> _kernel_codes;
+    std::map<std::string, kernel_type> _kernels;
     bool _modified = true;
 
     std::vector<std::string> get_program_source() const;
-    kernels_cache() = default;
+    friend class gpu_toolkit;
+    explicit kernels_cache(gpu_toolkit& context): _context(context){}
+    void build_program();
 
 public:
-    static kernels_cache& get();
-
-    kernel_id create_kernel_from_template(std::shared_ptr<neural::gpu::gpu_toolkit> context, const std::string& template_name, jit_definitions definitions = jit_definitions());
-    kernel_type get_kernel(std::shared_ptr<neural::gpu::gpu_toolkit> context, kernel_id id);
-    program_type get_program(std::shared_ptr<neural::gpu::gpu_toolkit> context);
+    kernel_id create_kernel_from_template(const std::string& template_name, jit_definitions definitions = jit_definitions());
+    kernel_type get_kernel(kernel_id id);
 };
 
 }}
