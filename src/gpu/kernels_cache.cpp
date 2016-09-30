@@ -189,7 +189,7 @@ void kernels_cache::build_program() {
             {
                 std::ofstream os(program_dump_file_name, std::ios_base::app);
                 os << "\n/* Build Log:\n";
-                for (auto& p : context->program().getBuildInfo<CL_PROGRAM_BUILD_LOG>()) {
+                for (auto& p : program.getBuildInfo<CL_PROGRAM_BUILD_LOG>()) {
                     os << p.second << "\n";
                 }
                 os << "*/\n";
