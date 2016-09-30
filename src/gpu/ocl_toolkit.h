@@ -77,7 +77,7 @@ public:
     cl::Context& context() { return _context; }
     cl::CommandQueue& queue() { return _command_queue; }
 //    cl::Program& program() { return _program; }
-    kernels_cache& kernels_cache() { return _kernels_cache; }
+    kernels_cache& get_kernels_cache() { return _kernels_cache; }
     void report_profiling(const instrumentation::profiling_info& info) { _profiling_info.push_back(info); }
     const std::vector<instrumentation::profiling_info>& get_profiling_info() const { return _profiling_info; }
 
