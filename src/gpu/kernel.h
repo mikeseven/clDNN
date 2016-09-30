@@ -328,9 +328,9 @@ class kernel : public context_holder {
 
 public:
     explicit kernel(const std::string& name, kernels_cache::jit_definitions definitions = kernels_cache::jit_definitions())
-        : _kernel_id(kernels_cache::get().create_kernel_from_template(context(), name, definitions)) {}
+        : _kernel_id(context()->get_kernels_cache().create_kernel_from_template(name, definitions)) {}
     explicit kernel(const std::string& name, const jit_constants& constants) 
-        : _kernel_id(kernels_cache::get().create_kernel_from_template(context(), name, constants.get_definitions())) {}
+        : _kernel_id(context()->get_kernels_cache().create_kernel_from_template(name, constants.get_definitions())) {}
 
     kernel(const kernel& other) : _kernel_id(other._kernel_id) {}
 
@@ -345,7 +345,7 @@ public:
     void run(const kernel_execution_options& options, Args... args) const {
         if (configuration::get().enable_profiling) {
             instrumentation::timer<> pre_enqueue_timer;
-            auto clkernel = kernels_cache::get().get_kernel(context(), _kernel_id);
+            auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
             setArgs<0>(clkernel, std::forward<Args>(args)...);
             auto pre_enqueue_time = pre_enqueue_timer.uptime();
             cl::Event end_event;
@@ -360,7 +360,7 @@ public:
                 } });
         }
         else {
-            auto clkernel = kernels_cache::get().get_kernel(context(), _kernel_id);
+            auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
             setArgs<0>(clkernel, std::forward<Args>(args)...);
             context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range());
         }

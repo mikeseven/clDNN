@@ -33,9 +33,8 @@ code inject_jit(const jit& compile_options, const code& code)
 binary_data gpu_compiler::compile(context* context, const jit& compile_options, const code& code_src) // throws cl::BuildError
 {
     auto& clContext = context->context();
-    auto& program = context->program();
     code source = inject_jit(compile_options, code_src);
-    program = cl::Program(clContext, source, false);
+    cl::Program program(clContext, source, false);
 	program.compile();
     auto binaries = program.getInfo<CL_PROGRAM_BINARIES>();
 	assert(binaries.size() == 1 && "There should be only one binary");
