@@ -188,14 +188,7 @@ namespace neural {
                     if (input_mem.argument.size.batch[0] % 8 == 0 &&
                         (output_mem.count() / output_mem.argument.size.batch[0]) % 8 == 0)
                     {
-                        if (input_mem.argument.size.batch[0] <= 128)
-                        {
-                            return KernelName_xb_xb_b8_x8_memory_vload;
-                        }
-                        else
-                        {
-                            return kernelName_xb_xb_b16_memory;
-                        }
+                        return KernelName_xb_xb_b8_x8_memory_vload;
                     }
                     else
                     {
@@ -249,14 +242,7 @@ namespace neural {
                     if (input_mem.argument.size.batch[0] % 8 == 0 &&
                         (output_mem.count() / output_mem.argument.size.batch[0]) % 8 == 0)
                     {
-                        if (input_mem.argument.size.batch[0] <= 128)
-                        {
-                            return KernelName_xb_xb_b8_x8_memory_vload;
-                        }
-                        else
-                        {
-                            return kernelName_xb_xb_b16_memory;
-                        }
+                        return KernelName_xb_xb_b8_x8_memory_vload;
                     }
                     else
                     {
@@ -285,8 +271,6 @@ namespace neural {
         static int get_neurons_per_work_item(const neural::memory &output_mem)
         {
             int batch_size = output_mem.argument.size.batch[0];
-            if (batch_size > 128)
-                return 8;
             auto out_elements_count_per_batch = output_mem.count() / batch_size;
             if (out_elements_count_per_batch % 16 == 0)
                 return 2;
@@ -298,26 +282,13 @@ namespace neural {
         static int get_batches_per_work_item(const neural::memory &output_mem)
         {
             int batch_size = output_mem.argument.size.batch[0];
-            if (batch_size == 8)
-                return 8;
-            if (batch_size == 16)
-                return 16;
-            if (batch_size >= 32)
-                return 32;
-
-            int lws = get_local_work_group_size(output_mem);
-            int batches_per_work_item = std::min(2, batch_size / lws);
-            return batches_per_work_item;
+            return std::min(batch_size, 32);
         }
 
         static int get_local_work_group_size(const neural::memory &output_mem)
         {
             int batch_size = output_mem.argument.size.batch[0];
-            if (batch_size > 32)
-                return 8;
-            if (batch_size == 32)
-                return 8;
-            if (batch_size == 16)
+            if (batch_size >= 16)
                 return 8;
             auto out_elements_count_per_batch = output_mem.count() / batch_size;
             if (out_elements_count_per_batch % 16 == 0)

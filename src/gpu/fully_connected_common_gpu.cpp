@@ -237,7 +237,6 @@ namespace neural {
     )__CC";
 
     const char fully_connected_code_xb_xb_b8_x8_memory_vload[] = R"__CC(
-
         const uint global_id = get_global_id(0);
         const uint group_id = get_global_id(1); // which part of batches we are computing, for example for batch 64 we compute batches 0..31 for group_id == 0 and batches 32..65 for group_id == 1
         uint sub_group_idx = get_local_id(0) % 8;
@@ -262,10 +261,13 @@ namespace neural {
         float8 blockC13 = 0.f;
 #endif
 
-        uint weight_offset = sub_group_idx + (global_id / 8) * 8 * NEURONS_PER_WORK_ITEM;
+        uint weight_offset = neuronIdx;
 #if NEURONS_PER_WORK_ITEM > 1
-        uint weight_offset2 = weight_offset + 8;
-#endif
+
+        uint weight_offset2 = neuronIdx + 8;
+
+#endif // #if NEURONS_PER_WORK_ITEM > 1
+
         uint input_idx = sub_group_idx * (BATCHES_PER_WORK_ITEM / 8) * get_global_size(1) + (group_id * BATCHES_PER_WORK_ITEM) / 8;
         for(uint h = 0; h < INPUT_ELEMENTS_COUNT / 8; h++)
         {
@@ -300,6 +302,7 @@ namespace neural {
 #endif
 
 #if NEURONS_PER_WORK_ITEM > 1
+
             float8 blockB10;
             blockB10.s0 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
             blockB10.s1 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
@@ -308,7 +311,7 @@ namespace neural {
             blockB10.s4 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
             blockB10.s5 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
             blockB10.s6 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
-            blockB10.s7 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;           
+            blockB10.s7 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
             MULTIPLY_BLOCKS_8x8(blockC10, blockA00, blockB10)
 
 #if BATCHES_PER_WORK_ITEM >= 16
@@ -319,7 +322,7 @@ namespace neural {
             MULTIPLY_BLOCKS_8x8(blockC13, blockA03, blockB10)
 #endif
 
-#endif
+#endif // #if NEURONS_PER_WORK_ITEM > 1
             input_idx += INPUT_BATCH_NUM; // we don't need to multiply by 8 because of vload8
         }
 
@@ -334,6 +337,7 @@ namespace neural {
 #endif
 
 #if NEURONS_PER_WORK_ITEM > 1
+
     blockC10 += bias[neuronIdx+8];
 #if BATCHES_PER_WORK_ITEM >= 16
     blockC11 += bias[neuronIdx+8];
@@ -342,7 +346,8 @@ namespace neural {
     blockC12 += bias[neuronIdx+8];
     blockC13 += bias[neuronIdx+8];
 #endif
-#endif
+
+#endif // #if NEURONS_PER_WORK_ITEM > 1
 
     ACTIVATION_8(blockC00);
 #if BATCHES_PER_WORK_ITEM >= 16
@@ -354,6 +359,7 @@ namespace neural {
 #endif
 
 #if NEURONS_PER_WORK_ITEM > 1
+
     ACTIVATION_8(blockC10);
 #if BATCHES_PER_WORK_ITEM >= 16
     ACTIVATION_8(blockC11);
@@ -362,7 +368,9 @@ namespace neural {
     ACTIVATION_8(blockC12);
     ACTIVATION_8(blockC13);
 #endif
-#endif
+
+#endif // #if NEURONS_PER_WORK_ITEM > 1
+
     vstore8(blockC00, out_id, output);
 #if BATCHES_PER_WORK_ITEM >= 16
     vstore8(blockC01, out_id + 1, output);
@@ -373,6 +381,7 @@ namespace neural {
 #endif
 
 #if NEURONS_PER_WORK_ITEM > 1
+
     vstore8(blockC10, out_id+INPUT_BATCH_NUM, output);
 
 #if BATCHES_PER_WORK_ITEM >= 16
@@ -384,7 +393,7 @@ namespace neural {
     vstore8(blockC13, out_id+INPUT_BATCH_NUM+3, output);
 #endif
 
-#endif
+#endif // #if NEURONS_PER_WORK_ITEM > 1
     )__CC";
 
     const char fully_connected_code_yxfn_memory[] = R"__CC(
