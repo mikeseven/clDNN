@@ -42,14 +42,14 @@ def main(parsedArgs):
     scanDirectory = parsedArgs.dir if parsedArgs.dir is not None and parsedArgs.dir != '' else os.curdir
     baseDirectory = parsedArgs.base if parsedArgs.base is not None and parsedArgs.base != '' else os.curdir
 
-    scanDirectory = unicode(os.path.normpath(scanDirectory))
-    baseDirectory = unicode(os.path.normpath(baseDirectory))
+    scanDirectory = tcu.cvtUni(os.path.normpath(scanDirectory))
+    baseDirectory = tcu.cvtUni(os.path.normpath(baseDirectory))
 
     logger.debug('Scanning directory for files (recursive): "{0}"'.format(scanDirectory))
 
     allFilePaths = []
     for currentDir, subdirNames, fileNames in os.walk(scanDirectory):
-        allFilePaths.extend([unicode(os.path.join(currentDir, fileName)) for fileName in fileNames])
+        allFilePaths.extend([tcu.cvtUni(os.path.join(currentDir, fileName)) for fileName in fileNames])
 
     logger.debug('Found {0:>4d} files.'.format(len(allFilePaths)))
 
@@ -57,12 +57,12 @@ def main(parsedArgs):
     if parsedArgs.absolute:
         logger.debug('Absolute paths will be outputted.')
 
-        allFilePaths = [unicode(os.path.abspath(filePath)) for filePath in allFilePaths]
+        allFilePaths = [tcu.cvtUni(os.path.abspath(filePath)) for filePath in allFilePaths]
     else:
         logger.debug('Relative paths will be outputted.')
         logger.debug('Paths are converted to relative form against base directory: "{0}"'.format(baseDirectory))
 
-        allFilePaths = [unicode(os.path.relpath(filePath, baseDirectory)) for filePath in allFilePaths]
+        allFilePaths = [tcu.cvtUni(os.path.relpath(filePath, baseDirectory)) for filePath in allFilePaths]
         if not parsedArgs.no_slash:
             allFilePaths = [filePath if filePath.startswith(os.sep) else ('/' + filePath) for filePath in allFilePaths]
 

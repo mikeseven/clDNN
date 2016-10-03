@@ -29,6 +29,14 @@ import urlparse
 import weakref
 
 
+def cvtUni(message):
+    """ Converts string to unicode (assumes utf-8). """
+    if isinstance(message, unicode):
+        return message
+    else:
+        return unicode(message, encoding = 'utf-8', errors = 'replace')
+
+
 def escapeTeamCityMsg(message):
     """ Escapes TeamCity server messages.
 
@@ -38,10 +46,10 @@ def escapeTeamCityMsg(message):
     :rtype: unicode
     """
 
-    if not isinstance(message, (str, unicode)) or message == u'':
+    if not isinstance(message, (str, unicode)) or cvtUni(message) == u'':
         return u''
-    return re.sub(ur'''['|\[\]]''', ur'|\g<0>', unicode(message)).replace(u'\n', u'|n').replace(u'\r', u'|r') \
-        .replace(u'\u0085', '|x').replace(u'\u2028', '|l').replace(u'\u2029', '|p')
+    return re.sub(ur'''['|\[\]]''', ur'|\g<0>', cvtUni(message)).replace(u'\n', u'|n') \
+        .replace(u'\r', u'|r').replace(u'\u0085', '|x').replace(u'\u2028', '|l').replace(u'\u2029', '|p')
 
 
 def updateTcParameter(paramName, value):
@@ -298,8 +306,8 @@ def prepareTcRestConnection(teamCityUrl, agentUser, agentPass):
         :return: Parsed response (from returned JSON).
         """
 
-        getRequestPart = unicode(restGetRequest).format(
-            **{k: urllib2.quote(unicode(v), safe = '') for (k, v) in requestArgs.iteritems()})
+        getRequestPart = cvtUni(restGetRequest).format(
+            **{k: urllib2.quote(cvtUni(v), safe = '') for (k, v) in requestArgs.iteritems()})
         getRequestFragment = u'/httpAuth/app/rest/{0}'.format(getRequestPart)
         getRequestUrl = urlparse.urljoin(teamCityUrl, getRequestFragment)
 

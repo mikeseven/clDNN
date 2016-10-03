@@ -220,7 +220,7 @@ def getRegressions(sessionIds):
                         .format(regression['cmd_line'], testStatus, regression['prev_result'], regression['result'],
                                 regression['perf_diff'])
                 else:
-                    if unicode(regression['result']).lower().startswith('pass'):
+                    if tcu.cvtUni(regression['result']).lower().startswith('pass'):
                         isRegression = False
 
                     testMessage = 'Test:        {0}\nTest status: {1}\n\nTest change: {2} -> {1}' \
