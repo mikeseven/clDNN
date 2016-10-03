@@ -237,24 +237,35 @@ namespace neural {
     )__CC";
 
     const char fully_connected_code_xb_xb_b8_x8_memory_vload[] = R"__CC(
+
         const uint global_id = get_global_id(0);
         uint sub_group_idx = get_local_id(0) % 8;
 
-        const uint out_id = sub_group_idx + (global_id / 8) * NEURONS_PER_WORK_ITEM;
+        const uint out_id = (sub_group_idx * BATCHES_PER_WORK_ITEM) / 8 + (global_id / 8) * BATCHES_PER_WORK_ITEM * NEURONS_PER_WORK_ITEM;
 
-        uint neuronIdx = out_id;
+        uint neuronIdx = sub_group_idx + (global_id / 8) * 8 * NEURONS_PER_WORK_ITEM;
 
-        float8 _data0 = 0.f;
-        float8 _data1 = 0.f;
+        float8 blockC00 = 0.f;
+        float8 blockC10 = 0.f;
 
-        uint weight_offset = sub_group_idx + (global_id / 8) * NEURONS_PER_WORK_ITEM;
-#if NEURONS_PER_WORK_ITEM > 8
+#if BATCHES_PER_WORK_ITEM >= 16
+        float8 blockC01 = 0.f;
+        float8 blockC11 = 0.f;
+#endif
+
+        uint weight_offset = sub_group_idx + (global_id / 8) * 8 * NEURONS_PER_WORK_ITEM;
+#if NEURONS_PER_WORK_ITEM > 1
         uint weight_offset2 = weight_offset + 8;
 #endif
-        uint input_idx = sub_group_idx;
+        uint input_idx = sub_group_idx * BATCHES_PER_WORK_ITEM / 8;
         for(uint h = 0; h < INPUT_ELEMENTS_COUNT / 8; h++)
         {
-            float8 _input = vload8(input_idx, input);
+            float8 blockA00 = vload8(input_idx, input);
+
+#if BATCHES_PER_WORK_ITEM >= 16
+            float8 blockA01 = vload8(input_idx + 1, input);
+#endif
+
             float8 _weights;
             _weights.s0 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
             _weights.s1 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
@@ -264,8 +275,13 @@ namespace neural {
             _weights.s5 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
             _weights.s6 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
             _weights.s7 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
-            MULTIPLY_BLOCKS_8x8(_data0, _input, _weights)
-#if NEURONS_PER_WORK_ITEM > 8
+            MULTIPLY_BLOCKS_8x8(blockC00, blockA00, _weights)
+
+#if BATCHES_PER_WORK_ITEM >= 16
+            MULTIPLY_BLOCKS_8x8(blockC01, blockA01, _weights)
+#endif
+
+#if NEURONS_PER_WORK_ITEM > 1
             float8 _weights2;
             _weights2.s0 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
             _weights2.s1 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
@@ -275,21 +291,45 @@ namespace neural {
             _weights2.s5 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
             _weights2.s6 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
             _weights2.s7 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;           
-            MULTIPLY_BLOCKS_8x8(_data1, _input, _weights2)
+            MULTIPLY_BLOCKS_8x8(blockC10, blockA00, _weights2)
+
+#if BATCHES_PER_WORK_ITEM >= 16
+            MULTIPLY_BLOCKS_8x8(blockC11, blockA01, _weights2)
 #endif
-            input_idx+=8; // we don't need to multiply by 8 because of vload8
+
+#endif
+            input_idx += INPUT_BATCH_NUM; // we don't need to multiply by 8 because of vload8
         }
 
-    float _bias = bias[neuronIdx];
-    _data0 += _bias;
-    float _bias2 = bias[neuronIdx+8];
-    _data1 += _bias2;
+    blockC00 += bias[neuronIdx];
+    blockC10 += bias[neuronIdx+8];
 
-    ACTIVATION_8(_data0);
-    ACTIVATION_8(_data1);
-    vstore8(_data0, out_id, output);
-#if NEURONS_PER_WORK_ITEM > 8
-    vstore8(_data1, out_id+8, output);
+#if BATCHES_PER_WORK_ITEM >= 16
+    blockC01 += bias[neuronIdx];
+    blockC11 += bias[neuronIdx+8];
+#endif
+
+
+    ACTIVATION_8(blockC00);
+    ACTIVATION_8(blockC10);
+
+#if BATCHES_PER_WORK_ITEM >= 16
+    ACTIVATION_8(blockC01);
+    ACTIVATION_8(blockC11);
+#endif
+
+    vstore8(blockC00, out_id, output);
+#if BATCHES_PER_WORK_ITEM >= 16
+    vstore8(blockC01, out_id + 1, output);
+#endif
+
+#if NEURONS_PER_WORK_ITEM > 1
+    vstore8(blockC10, out_id+INPUT_BATCH_NUM, output);
+
+#if BATCHES_PER_WORK_ITEM >= 16
+    vstore8(blockC11, out_id+INPUT_BATCH_NUM+1, output);
+#endif
+
 #endif
     )__CC";
 
