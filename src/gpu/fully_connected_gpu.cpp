@@ -154,8 +154,13 @@ namespace neural {
             auto& input_mem = outer.input_memory(0);
             auto& weight_mem = outer.input_memory(1);
             auto& output_mem = outer.output_memory(0);
-            if (input_mem.argument.format == memory::format::yxfb_f32) {
-                if (weight_mem.argument.format == memory::format::byxf_f32)
+            switch (input_mem.argument.format)
+            {
+            case memory::format::yxfb_f32:
+            {
+                switch (weight_mem.argument.format)
+                {
+                case memory::format::byxf_f32:
                 {
                     if (input_mem.argument.size.batch[0] % 8 == 0)
                     {
@@ -165,8 +170,9 @@ namespace neural {
                     {
                         return kernelName_yxfn_byxf_memory;
                     }
+                    break;
                 }
-                else if (weight_mem.argument.format == memory::format::yxfb_f32)
+                case memory::format::yxfb_f32:
                 {
                     if (input_mem.argument.size.batch[0] % 8 == 0 &&
                         (output_mem.count() / output_mem.argument.size.batch[0]) % 8 == 0)
@@ -181,24 +187,53 @@ namespace neural {
                         }
                     }
                     else
-                        return inline_memory ? kernelName_yxfn : kernelName_yxfn_memory;
+                    {
+                        throw std::invalid_argument("Weight memory format is not supported");
+                    }
+                    break;
                 }
-                else
+                case memory::format::bfyx_f32:
                 {
-                    return inline_memory ? kernelName_yxfn : kernelName_yxfn_memory;
+                    if (inline_memory)
+                    {
+                        return kernelName_yxfn;
+                    }
+                    else
+                    {
+                        return kernelName_yxfn_memory;
+                    }
+                    break;
                 }
+                default:
+                    throw std::invalid_argument("Weight memory format is not supported");
+                }
+                break;
             }
-            else {
-                if (weight_mem.argument.format == memory::format::bx_f32)
+            case memory::format::xb_f32:
+            case memory::format::x_f32:
+            {
+                switch (weight_mem.argument.format)
+                {
+                case memory::format::bx_f32:
                 {
                     if (input_mem.argument.size.batch[0] % 8 == 0)
                     {
                         return kernelName_xb_bx_b8_memory;
                     }
                     else
-                        return inline_memory ? kernelName_xb_bx : kernelName_xb_bx_memory;
+                    {
+                        if (inline_memory)
+                        {
+                            return kernelName_xb_bx;
+                        }
+                        else
+                        {
+                            return kernelName_xb_bx_memory;
+                        }
+                    }
+                    break;
                 }
-                else if (weight_mem.argument.format == memory::format::xb_f32)
+                case memory::format::xb_f32:
                 {
                     if (input_mem.argument.size.batch[0] % 8 == 0 &&
                         (output_mem.count() / output_mem.argument.size.batch[0]) % 8 == 0)
@@ -213,10 +248,25 @@ namespace neural {
                         }
                     }
                     else
-                        return inline_memory ? kernelName_xb : kernelName_xb_memory;
+                    {
+                        if (inline_memory)
+                        {
+                            return kernelName_xb;
+                        }
+                        else
+                        {
+                            return kernelName_xb_memory;
+                        }
+                    }
+                    break;
                 }
-                else
-                    return inline_memory ? kernelName_xb : kernelName_xb_memory;
+                default:
+                    throw std::invalid_argument("Weight memory format is not supported");
+                }
+                break;
+            }
+            default:
+                throw std::invalid_argument("Input memory format is not supported");
             }
         }
 
