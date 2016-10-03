@@ -17,7 +17,7 @@ with open(out_file_name, 'w') as out_file:
             print('processing {}'.format(file_name))
             with open(os.path.join(kernels_dir_name, 
                                    file_name), 'r') as kernel_file:
-                out_file.write('{{"{}",\nR"{}"}},\n\n'.format(file_name[:file_name.find('.')],
+                out_file.write('{{"{}",\nR"__krnl({})__krnl"}},\n\n'.format(file_name[:file_name.find('.')],
                                                         kernel_file.read()))
                 
     
