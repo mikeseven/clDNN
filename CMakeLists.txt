@@ -779,7 +779,7 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
         "${__CLDNN_CompilerFlagName}"
         ALL_PATTERN ""
         SET_RAW
-          "/arch:AVX2"
+          "/arch:AVX"
           "/sdl"
       )
   # Adding needed settings specific to GCC.
@@ -818,8 +818,6 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
           -msse4.1
           -msse4.2
           -mavx
-          -mavx2
-          -mfma
           -ffast-math
           -fvisibility=hidden
           -finline
