@@ -239,9 +239,10 @@ namespace neural {
     const char fully_connected_code_xb_xb_b8_x8_memory_vload[] = R"__CC(
 
         const uint global_id = get_global_id(0);
+        const uint group_id = get_global_id(1); // which part of batches we are computing, for example for batch 64 we compute batches 0..31 for group_id == 0 and batches 32..65 for group_id == 1
         uint sub_group_idx = get_local_id(0) % 8;
 
-        const uint out_id = (sub_group_idx * BATCHES_PER_WORK_ITEM) / 8 + (global_id / 8) * BATCHES_PER_WORK_ITEM * NEURONS_PER_WORK_ITEM;
+        const uint out_id = (sub_group_idx * BATCHES_PER_WORK_ITEM * get_global_size(1)) / 8 + (global_id / 8) * BATCHES_PER_WORK_ITEM * NEURONS_PER_WORK_ITEM * get_global_size(1) + (BATCHES_PER_WORK_ITEM * group_id) / 8;
 
         uint neuronIdx = sub_group_idx + (global_id / 8) * 8 * NEURONS_PER_WORK_ITEM;
 
@@ -265,7 +266,7 @@ namespace neural {
 #if NEURONS_PER_WORK_ITEM > 1
         uint weight_offset2 = weight_offset + 8;
 #endif
-        uint input_idx = sub_group_idx * BATCHES_PER_WORK_ITEM / 8;
+        uint input_idx = sub_group_idx * (BATCHES_PER_WORK_ITEM / 8) * get_global_size(1) + (group_id * BATCHES_PER_WORK_ITEM) / 8;
         for(uint h = 0; h < INPUT_ELEMENTS_COUNT / 8; h++)
         {
             float8 blockA00 = vload8(input_idx, input);
@@ -362,7 +363,6 @@ namespace neural {
     ACTIVATION_8(blockC13);
 #endif
 #endif
-
     vstore8(blockC00, out_id, output);
 #if BATCHES_PER_WORK_ITEM >= 16
     vstore8(blockC01, out_id + 1, output);
