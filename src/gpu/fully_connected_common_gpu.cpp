@@ -236,6 +236,63 @@ namespace neural {
         }
     )__CC";
 
+    const char fully_connected_code_xb_xb_b8_x8_memory_vload[] = R"__CC(
+        const uint global_id = get_global_id(0);
+        uint sub_group_idx = get_local_id(0) % 8;
+
+        const uint out_id = sub_group_idx + (global_id / 8) * NEURONS_PER_WORK_ITEM;
+
+        uint neuronIdx = out_id;
+
+        float8 _data0 = 0.f;
+        float8 _data1 = 0.f;
+
+        uint weight_offset = sub_group_idx + (global_id / 8) * NEURONS_PER_WORK_ITEM;
+#if NEURONS_PER_WORK_ITEM > 8
+        uint weight_offset2 = weight_offset + 8;
+#endif
+        uint input_idx = sub_group_idx;
+        for(uint h = 0; h < INPUT_ELEMENTS_COUNT / 8; h++)
+        {
+            float8 _input = vload8(input_idx, input);
+            float8 _weights;
+            _weights.s0 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
+            _weights.s1 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
+            _weights.s2 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
+            _weights.s3 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
+            _weights.s4 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
+            _weights.s5 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
+            _weights.s6 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
+            _weights.s7 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
+            MULTIPLY_BLOCKS_8x8(_data0, _input, _weights)
+#if NEURONS_PER_WORK_ITEM > 8
+            float8 _weights2;
+            _weights2.s0 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
+            _weights2.s1 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
+            _weights2.s2 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
+            _weights2.s3 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
+            _weights2.s4 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
+            _weights2.s5 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
+            _weights2.s6 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
+            _weights2.s7 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;           
+            MULTIPLY_BLOCKS_8x8(_data1, _input, _weights2)
+#endif
+            input_idx+=8; // we don't need to multiply by 8 because of vload8
+        }
+
+    float _bias = bias[neuronIdx];
+    _data0 += _bias;
+    float _bias2 = bias[neuronIdx+8];
+    _data1 += _bias2;
+
+    ACTIVATION_8(_data0);
+    ACTIVATION_8(_data1);
+    vstore8(_data0, out_id, output);
+#if NEURONS_PER_WORK_ITEM > 8
+    vstore8(_data1, out_id+8, output);
+#endif
+    )__CC";
+
     const char fully_connected_code_yxfn_memory[] = R"__CC(
         const uint x = get_global_id(0);
         const int batch_id = x % INPUT_BATCH_NUM;
