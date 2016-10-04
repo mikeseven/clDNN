@@ -29,13 +29,6 @@
 #if defined _MSC_VER
     #pragma warning(push)
     #pragma warning(disable: 4018 4100 4505)
-#elif defined __GNUC__
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wsign-compare"
-    #pragma GCC diagnostic ignored "-Wunused-parameter"
-    #pragma GCC diagnostic ignored "-Wunused-variable"
-    #pragma GCC diagnostic ignored "-Wunused-function"
-    #pragma GCC diagnostic ignored "-Wignored-qualifiers"
 #elif defined __clang__
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Wsign-compare"
@@ -43,6 +36,13 @@
     #pragma clang diagnostic ignored "-Wunused-variable"
     #pragma clang diagnostic ignored "-Wunused-function"
     #pragma clang diagnostic ignored "-Wignored-qualifiers"
+#elif defined __GNUC__
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wsign-compare"
+    #pragma GCC diagnostic ignored "-Wunused-parameter"
+    #pragma GCC diagnostic ignored "-Wunused-variable"
+    #pragma GCC diagnostic ignored "-Wunused-function"
+    #pragma GCC diagnostic ignored "-Wignored-qualifiers"
 #else
     #pragma message("Unknown compiler. No changes in diagnostics will be done.")
 #endif
@@ -54,10 +54,10 @@
 // Restore specific diagnostics.
 #if defined _MSC_VER
     #pragma warning(pop)
-#elif defined __GNUC__
-    #pragma GCC diagnostic pop
 #elif defined __clang__
     #pragma clang diagnostic pop
+#elif defined __GNUC__
+    #pragma GCC diagnostic pop
 #endif
 
 #endif // CL2_WRAPPER_H_
