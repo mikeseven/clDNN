@@ -98,7 +98,7 @@ def main(parsedArgs):
                         print buildInfo
                         if buildInfo["tags"]["count"] > 0:
                             for buildTag in buildInfo["tags"]["tag"]:
-                                if unicode(buildTag["name"]).lower().strip() == 'bad-corr':
+                                if tcu.cvtUni(buildTag["name"]).lower().strip() == 'bad-corr':
                                     isGoodCorrBuild = False
                                     break
 
@@ -121,16 +121,16 @@ def main(parsedArgs):
     if lastCommitAuth == '':
         try:
             logger.debug("Trying to get author name from last (HEAD) commit in Git repository.")
-            lastCommitAuth = subprocess.check_output(['git', 'show', '-s', '--format=%aN'],
-                                                     universal_newlines = True).strip()
+            lastCommitAuth = tcu.cvtUni(subprocess.check_output(['git', 'show', '-s', '--format=%aN'],
+                                                                universal_newlines = True)).strip()
         except:
             logger.warning("Fetching Git users information failed.")
 
     if lastCommitAuthEMail == '':
         try:
             logger.debug("Trying to get author e-mail from last (HEAD) commit in Git repository.")
-            lastCommitAuthEMail = subprocess.check_output(['git', 'show', '-s', '--format=%aE'],
-                                                          universal_newlines = True).strip()
+            lastCommitAuthEMail = tcu.cvtUni(subprocess.check_output(['git', 'show', '-s', '--format=%aE'],
+                                                                     universal_newlines = True)).strip()
         except:
             logger.warning("Fetching Git users information failed.")
 
