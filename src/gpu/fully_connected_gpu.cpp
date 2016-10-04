@@ -97,6 +97,17 @@ KERNEL (Fully_Connected_GPU_xb_xb_b16_memory)(
 {
 )__krnl";
 
+const std::string KernelName_xb_xb_b8_x8_memory_vload = "Fully_Connected_GPU_xb_xb_b8_x8_memory_vload";
+const std::string kernelCode_xb_xb_b8_x8_memory_vload_Begin = R"__krnl(
+__attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
+KERNEL (Fully_Connected_GPU_xb_xb_b8_x8_memory_vload)(
+    const __global float* input, 
+    __global float* output, 
+    const __global float* weight,
+    const __global float* bias)
+{
+)__krnl";
+
 const std::string kernelName_yxfn_memory = "Fully_Connected_GPU_yxfn_memory";
 const std::string kernelCode_yxfn_memory_Begin = R"__krnl(
 KERNEL (Fully_Connected_GPU_yxfn_memory)(
@@ -177,14 +188,7 @@ namespace neural {
                     if (input_mem.argument.size.batch[0] % 8 == 0 &&
                         (output_mem.count() / output_mem.argument.size.batch[0]) % 8 == 0)
                     {
-                        if (input_mem.argument.size.batch[0] == 8)
-                        {
-                            return kernelName_xb_xb_b8_x8_memory;
-                        }
-                        else
-                        {
-                            return kernelName_xb_xb_b16_memory;
-                        }
+                        return KernelName_xb_xb_b8_x8_memory_vload;
                     }
                     else
                     {
@@ -238,14 +242,7 @@ namespace neural {
                     if (input_mem.argument.size.batch[0] % 8 == 0 &&
                         (output_mem.count() / output_mem.argument.size.batch[0]) % 8 == 0)
                     {
-                        if (input_mem.argument.size.batch[0] == 8)
-                        {
-                            return kernelName_xb_xb_b8_x8_memory;
-                        }
-                        else
-                        {
-                            return kernelName_xb_xb_b16_memory;
-                        }
+                        return KernelName_xb_xb_b8_x8_memory_vload;
                     }
                     else
                     {
@@ -274,7 +271,24 @@ namespace neural {
         static int get_neurons_per_work_item(const neural::memory &output_mem)
         {
             int batch_size = output_mem.argument.size.batch[0];
-            if (batch_size > 8)
+            auto out_elements_count_per_batch = output_mem.count() / batch_size;
+            if (out_elements_count_per_batch % 16 == 0)
+                return 2;
+            else
+                return 1;
+        }
+
+        // how many batches will a single work item compute
+        static int get_batches_per_work_item(const neural::memory &output_mem)
+        {
+            int batch_size = output_mem.argument.size.batch[0];
+            return std::min(batch_size, 32);
+        }
+
+        static int get_local_work_group_size(const neural::memory &output_mem)
+        {
+            int batch_size = output_mem.argument.size.batch[0];
+            if (batch_size >= 16)
                 return 8;
             auto out_elements_count_per_batch = output_mem.count() / batch_size;
             if (out_elements_count_per_batch % 16 == 0)
@@ -283,20 +297,10 @@ namespace neural {
                 return 8;
         }
 
-        // how many batches will a single work item compute
-        static int get_batches_per_work_item(const int batch_size)
+        static int get_local_groups_size(const neural::memory &output_mem)
         {
-            if (batch_size <= 8)
-                return 1;
-
-            int lws = get_local_work_group_size(batch_size);
-            int batches_per_work_item = std::min(2, batch_size / lws);
-            return batches_per_work_item;
-        }
-
-        static int get_local_work_group_size(const int batch_size)
-        {
-            return batch_size > 8 ? 16 : 8;
+            int batch_size = output_mem.argument.size.batch[0];
+            return std::max(1, batch_size / get_batches_per_work_item(output_mem));
         }
 
         gpu::jit_constants get_jit_constants() const {
@@ -336,8 +340,8 @@ namespace neural {
                 weight_mem.argument.format == memory::format::type::xb_f32)
             {
                 int batch_size = input_mem.argument.size.batch[0];
-                const int batches_per_work_item = get_batches_per_work_item(batch_size);
-                const int local_work_group_size = get_local_work_group_size(batch_size);
+                const int batches_per_work_item = get_batches_per_work_item(output_mem);
+                const int local_work_group_size = get_local_work_group_size(output_mem);
                 mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size));
                 mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", get_neurons_per_work_item(output_mem))); // how many neurons for a single batch will a single work item produce
                 mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item)); // how many batches will a single work item compute
@@ -385,10 +389,10 @@ namespace neural {
                 {
                     if (input_mem.argument.size.batch[0] % 8 == 0)
                     {
-                        uint32_t batch_size = output_mem.argument.size.batch[0];
-                        size_t gws0 = output_bufSize / (get_neurons_per_work_item(output_mem) * get_batches_per_work_item(batch_size));
+                        size_t groups_per_batches = get_local_groups_size(output_mem);
+                        size_t gws0 = output_bufSize / (get_neurons_per_work_item(output_mem) * get_batches_per_work_item(output_mem) * groups_per_batches);
                         me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-                            ({ gws0, static_cast<size_t>(get_local_work_group_size(batch_size)) }, input_mem, output_mem, weight_mem, bias_mem);
+                            ({ { gws0, groups_per_batches }, { static_cast<size_t>(get_local_work_group_size(output_mem)), 1} }, input_mem, output_mem, weight_mem, bias_mem);
 
                     }
                     else
@@ -466,6 +470,7 @@ namespace {
             gpu::kernel_templates::add(kernelName_xb_bx_memory, inline_utils_float + kernelCode_xb_bx_memory_Begin + fully_connected_code_xb_bx_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_xb_bx_b8_memory, inline_utils_float + kernelCode_xb_bx_b8_memory_Begin + fully_connected_code_xb_bx_b8_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_xb_xb_b8_x8_memory, inline_utils_float + kernelCode_xb_xb_b8_x8_memory_Begin + fully_connected_code_xb_xb_b8_x8_memory + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(KernelName_xb_xb_b8_x8_memory_vload, inline_utils_float + kernelCode_xb_xb_b8_x8_memory_vload_Begin + fully_connected_code_xb_xb_b8_x8_memory_vload + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_xb_xb_b16_memory, inline_utils_float + kernelCode_xb_xb_b16_memory_Begin + fully_connected_code_xb_xb_b16_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_yxfn_memory, inline_utils_float + kernelCode_yxfn_memory_Begin + fully_connected_code_yxfn_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_yxfn_byxf_memory, inline_utils_float + kernelCode_yxfn_byxf_memory_Begin + fully_connected_code_yxfn_byxf_memory + kernelCode_End + inline_utils_float_end);
