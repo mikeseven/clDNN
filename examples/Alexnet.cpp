@@ -339,7 +339,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 std::chrono::nanoseconds execute_alexnet(const worker& worker, const std::vector<std::pair<primitive, std::string>>& primitives, const primitive& output, engine::type eng, bool dump_hl)
 {
     // we need this exact number of primitives(those are created in create_alexnet) 
-    assert(primitives.size() == 16);
+    assert(primitives.size() == 15);
 
     std::cout << "Start execution" << std::endl;
     instrumentation::timer<> timer_execution;
