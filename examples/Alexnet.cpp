@@ -91,8 +91,30 @@ void print_profiling_table(std::ostream& os ,const std::vector<instrumentation::
     os << "\nTotal profiled time: " << instrumentation::to_string(total) << std::endl;
 }
 
-// AlexNet with weights & biases from file
-std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, engine::type eng, const std::string& weights_dir, bool dump_hl)
+// Create workers
+std::vector<worker> create_workers(engine::type eng)
+{
+    std::vector<worker> workers;
+
+    switch (eng)
+    {
+    case engine::gpu:
+    {
+        std::cout << "GPU Program compilation started" << std::endl;
+        instrumentation::timer<> timer_compilation;
+        workers.push_back(worker_gpu::create());
+        auto compile_time = timer_compilation.uptime();
+        std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
+    }
+    break;
+    default:
+        workers.push_back(worker_cpu::create({}));
+    }
+    return workers;
+}
+
+// Building AlexNet network with loading weights & biases from file
+std::vector<primitive> build_alexnet(primitive& input, primitive& output, engine::type eng, const std::string& weights_dir)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     std::cout << "Building Alexnet started" << std::endl;
@@ -296,25 +318,7 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
     auto build_time = timer_build.uptime();
     std::cout << "Building Alexnet finished in " << instrumentation::to_string(build_time) << std::endl;
 
-
-    std::vector<worker> workers;
-
-    switch(eng) 
-    {
-    case engine::gpu:
-    {
-        std::cout << "GPU Program compilation started" << std::endl;
-        instrumentation::timer<> timer_compilation;
-        workers.push_back(worker_gpu::create());
-        auto compile_time = timer_compilation.uptime();
-        std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
-    }
-        break;
-    default:
-        workers.push_back(worker_cpu::create({}));
-    }
-
-    std::vector<primitive> primitives {
+    return std::vector<primitive> {
         reordered_input,
         conv1, pool1, lrn1, //stage 0
         conv2_group2, pool2, lrn2,
@@ -324,15 +328,23 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
         fc6,
         fc7,
         fc8,
-        softmax,output };
+        softmax, output };
+}
 
+// AlexNet execution
+std::chrono::nanoseconds execute_alexnet(std::vector<worker> &workers, std::vector<primitive> & primitives, primitive& output, engine::type eng, bool dump_hl)
+{
     std::cout << "Start execution" << std::endl;
     instrumentation::timer<> timer_execution;
+
     for (auto& p : primitives)
     {
         workers[0].execute(p.work());
     }
 
+    // we need this exact number of primitives(those are created in create_alexnet) 
+    assert(primitives.size() == 16);
+    
     //GPU primitives scheduled in unblocked manner
     auto scheduling_time(timer_execution.uptime());
 
@@ -342,28 +354,27 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
     auto execution_time(timer_execution.uptime());
     std::cout << "Alexnet scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
     std::cout << "Alexnet execution finished in " << instrumentation::to_string(execution_time) << std::endl;
-    //instrumentation::log_memory_to_file(conv1.output[0],"conv1");
     if (dump_hl)
     {
-        instrumentation::logger::log_memory_to_file(input, "input0");
-        instrumentation::logger::log_memory_to_file(conv1.output[0], "conv1");
-        instrumentation::logger::log_memory_to_file(lrn1.output[0], "lrn1");
-        instrumentation::logger::log_memory_to_file(pool1.output[0], "pool1");
-        instrumentation::logger::log_memory_to_file(conv2_group2.output[0], "conv2_group2");
-        instrumentation::logger::log_memory_to_file(pool2.output[0], "pool2");
-        instrumentation::logger::log_memory_to_file(lrn2.output[0], "lrn2");
-        instrumentation::logger::log_memory_to_file(conv3.output[0], "conv3");
-        instrumentation::logger::log_memory_to_file(conv4_group2.output[0], "conv4_group2");
-        instrumentation::logger::log_memory_to_file(conv5_group2.output[0], "conv5_group2");
-        instrumentation::logger::log_memory_to_file(pool5.output[0], "pool5");
-        instrumentation::logger::log_memory_to_file(fc6.output[0], "fc6");
-        instrumentation::logger::log_memory_to_file(fc8.output[0], "fc8");
-        instrumentation::logger::log_memory_to_file(softmax.output[0], "softmax");
+        instrumentation::logger::log_memory_to_file(primitives[0].input[0].primitive(), "input0");
+        instrumentation::logger::log_memory_to_file(primitives[1].output[0], "conv1");
+        instrumentation::logger::log_memory_to_file(primitives[2].output[0], "pool1");
+        instrumentation::logger::log_memory_to_file(primitives[3].output[0], "lrn1");
+        instrumentation::logger::log_memory_to_file(primitives[4].output[0], "conv2_group2");
+        instrumentation::logger::log_memory_to_file(primitives[5].output[0], "pool2");
+        instrumentation::logger::log_memory_to_file(primitives[6].output[0], "lrn2");
+        instrumentation::logger::log_memory_to_file(primitives[7].output[0], "conv3");
+        instrumentation::logger::log_memory_to_file(primitives[8].output[0], "conv4_group2");
+        instrumentation::logger::log_memory_to_file(primitives[9].output[0], "conv5_group2");
+        instrumentation::logger::log_memory_to_file(primitives[10].output[0], "pool5");
+        instrumentation::logger::log_memory_to_file(primitives[11].output[0], "fc6");
+        instrumentation::logger::log_memory_to_file(primitives[13].output[0], "fc8");
+        instrumentation::logger::log_memory_to_file(primitives[14].output[0], "softmax");
         // for now its enought. rest wil be done when we have equals those values
     }
     else
     {
-        instrumentation::logger::log_memory_to_file(output, "final_result");
+        instrumentation::logger::log_memory_to_file(primitives[15], "final_result");
     }
 
     if (eng == engine::gpu) {
@@ -376,26 +387,40 @@ std::chrono::nanoseconds execute_alexnet(primitive& input, primitive& output, en
 void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, const std::string& weights_dir, bool dump_hl, bool profiling)
 {
     gpu::configuration::get().enable_profiling = profiling;
+
     auto input = memory::allocate({ eng, memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3, } });
     auto output = memory::allocate({ eng, memory::format::xb_f32,{ batch_size,{ 1000 } } });
+
     auto img_list = get_directory_images(img_dir);
     if (img_list.empty())
         throw std::runtime_error("specified input images directory is empty (does not contain image data)");
+
     auto images_list_iterator = img_list.begin();
     auto images_list_end = img_list.end();
+
     auto number_of_batches = (img_list.size() % batch_size == 0)
         ? img_list.size() / batch_size : img_list.size() / batch_size + 1;
     std::vector<std::string> image_in_batches;
     html output_file("alexnet", "alexnet run");
+
+    // build alexnet
+    std::vector<primitive> alexnet_primitives = build_alexnet(input, output, eng, weights_dir);
+
+    // create workers
+    std::vector<worker> workers = create_workers(eng);
+
     for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
     {
         image_in_batches.clear();
         for (uint32_t i = 0; i < batch_size && images_list_iterator != images_list_end; i++, images_list_iterator++)
             image_in_batches.push_back(*images_list_iterator);
+        
         // load croped and resized images into input
         load_images_from_file_list(image_in_batches, input);
 
-        auto time = execute_alexnet(input, output, eng, weights_dir, dump_hl);
+        // execute alexnet
+        auto time = execute_alexnet(workers, alexnet_primitives, output, eng, dump_hl);
+
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count(); 
         output_file.batch(output.as<const neural::memory&>( ), join_path(get_executable_info()->dir(), "names.txt"), image_in_batches);
         if (time_in_sec != 0.0)
