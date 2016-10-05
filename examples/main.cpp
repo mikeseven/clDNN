@@ -83,41 +83,6 @@ public:
 // ADL-enabled parser / validators for some command-line options.
 namespace neural
 {
-/// ADL-accessible validation/parsing route for neural::engine::type enum.
-///
-/// This function is specific to examples main command-line parser. Please do not move it to any
-/// headers (to avoid confict with different implementations in other source files).
-///
-/// The last two parameters represents match type for validator (pointer to matched type) and
-/// int type (to properly order overloads).
-///
-/// @param [in, out] outVar Output variable where parsing/verification result will be stored.
-/// @param values           Input strings representing tokens with values for specific outVar variable.
-///
-/// @exception boost::program_options::validation_error Parsing/validation failed on value of an option.
-void validate(boost::any& outVar, const std::vector<std::string>& values, neural::engine::type*, int)
-{
-    namespace bpo = boost::program_options;
-
-    bpo::validators::check_first_occurrence(outVar);
-    const auto& value = bpo::validators::get_single_string(values);
-
-    std::regex val_gpu_pattern("^gpu$",
-        std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
-    std::regex val_ref_pattern("^(ref|reference)$",
-        std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
-
-    if (std::regex_match(value, val_gpu_pattern))
-    {
-        outVar = boost::any(neural::engine::gpu);
-    }
-    else if (std::regex_match(value, val_ref_pattern))
-    {
-        outVar = boost::any(neural::engine::reference);
-    }
-    else
-        throw bpo::invalid_option_value(value);
-}
 
 /// ADL-accessible validation/parsing route for neural::memory::format::type enum.
 ///
@@ -183,8 +148,6 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
             "It can be one of:\n  \talexnet, caffenet_float, caffenet_int16, lenet_float.")
-        ("engine", bpo::value<neural::engine::type>()->value_name("<eng-type>")->default_value(neural::engine::reference, "reference"),
-            "Type of an engine used for classification.\nIt can be one of:\n  \treference, gpu.")
         ("dump_hidden_layers", bpo::bool_switch(),
             "Dump results from hidden layers of network to files.")
         ("weights", bpo::value<std::string>()->value_name("<weights-dir>"),
@@ -263,7 +226,7 @@ int main(int argc, char* argv[])
     namespace bfs = boost::filesystem;
 
     // TODO: create header file for all examples
-    extern void alexnet(uint32_t, std::string, neural::engine::type, const std::string&, bool, bool);
+    extern void alexnet(uint32_t, std::string, const std::string&, bool, bool);
     extern void convert_weights(neural::memory::format::type, std::string);
 
 
@@ -345,7 +308,6 @@ int main(int argc, char* argv[])
                 alexnet(
                     parsed_args["batch"].as<std::uint32_t>(),
                     input_dir,
-                    parsed_args["engine"].as<neural::engine::type>(),
                     weights_dir,
                     parsed_args["dump_hidden_layers"].as<bool>(),
                     parsed_args["profiling"].as<bool>());

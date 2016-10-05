@@ -14,17 +14,17 @@
 // limitations under the License.
 */
 
-#include "memory.h"
-
 #include <functional>
 #include <numeric>
 #include <atomic>
 
+//todo(usarel) : collapse memory/memory_gpu
+#include "gpu/memory_gpu.h"
+
 namespace neural {
 
-memory::arguments::arguments(neural::engine::type aengine, memory::format::type aformat, vector<uint32_t> asize)
-    : engine(aengine)
-    , format(aformat)
+memory::arguments::arguments(memory::format::type aformat, vector<uint32_t> asize)
+    : format(aformat)
     , size(asize) {}
 
 size_t memory::count() const 
@@ -42,96 +42,21 @@ size_t memory::size_of(arguments arg)
     );
 }
 
-std::shared_ptr<memory::buffer> create_buffer(memory::arguments arg, bool allocate)
+std::shared_ptr<memory::buffer> create_buffer(memory::arguments arg)
 {
-    auto key = arg.engine;
-    auto it = allocators_map::instance().find(key);
-    if (it == std::end(allocators_map::instance())) throw std::runtime_error("Memory allocator is not yet implemented.");
-
-    return it->second(arg, allocate);
+	return std::make_shared<gpu::gpu_buffer>(arg);
 }
 
 primitive memory::describe(memory::arguments arg)
 {
-    auto buffer = create_buffer(arg, false);
+    auto buffer = create_buffer(arg);
     return new memory(arg, buffer);
 }
 
 primitive memory::allocate(memory::arguments arg)
 {
-    auto buffer = create_buffer(arg, true);
+    auto buffer = create_buffer(arg);
     return new memory(arg, buffer);
-}
-
-namespace {
-    // simple CPU memory buffer
-    struct cpu_buffer : public memory::buffer 
-    {
-        explicit cpu_buffer(size_t size, bool allocate = true) : _size(size),
-                                                                 _pointer(nullptr) 
-        {
-            if (allocate) 
-            {
-                not_my_pointer.clear();
-                _pointer = new char[_size];
-            }
-            else
-            {
-                not_my_pointer.test_and_set();
-            }
-        }
-
-        ~cpu_buffer() override 
-        {
-            clear();
-        }
-
-        void* lock() override 
-        {
-            return _pointer;
-        }
-
-        void release() override {}
-
-        void reset(void* ptr) override 
-        {
-            clear();
-            _pointer = static_cast<char *>(ptr);
-        }
-
-        size_t size() override { return _size; }
-
-    private:
-        void clear() 
-        {
-            if (!not_my_pointer.test_and_set())
-                delete[] _pointer;
-        }
-        std::atomic_flag not_my_pointer;
-        size_t _size;
-        char* _pointer;
-    };
-
-    struct attach 
-    {
-        attach() 
-        {
-            auto create_buff = [](memory::arguments arg, bool allocate) -> std::shared_ptr<memory::buffer> 
-            {
-                return std::make_shared<cpu_buffer>(memory::size_of(arg), allocate);
-            };
-            allocators_map::instance().insert({ engine::reference, create_buff });
-            allocators_map::instance().insert({ engine::cpu, create_buff });
-        }
-        ~attach() {}
-    };
-
-#ifdef __GNUC__
-    __attribute__((visibility("default"))) //todo meybe dll_sym?
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
-    attach attach_impl;
 }
 
 } // namespace neural

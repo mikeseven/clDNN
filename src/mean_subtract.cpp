@@ -21,19 +21,15 @@
 
 namespace neural {
 
-mean_subtract::arguments::arguments( neural::engine::type   eng,
-                                       primitive            out,
-                                       primitive            in,
-                                       primitive            mean)
-: engine(eng)
-, output({out})
+mean_subtract::arguments::arguments( primitive            out,
+                                     primitive            in,
+                                     primitive            mean)
+: output({out})
 , input({in, mean}) {}
 
-mean_subtract::arguments::arguments(neural::engine::type            eng,
-                                       neural::memory::format::type out_fmt,
-                                       primitive                    in,
-                                       primitive                    mean)
-: engine(eng)
+mean_subtract::arguments::arguments( neural::memory::format::type out_fmt,
+                                     primitive                    in,
+                                     primitive                    mean)
 {
     // if input is previouse layer, not memory primitive need to set input to output memory of this primitive
     auto input_mem = in.id() == type_id<const memory>()->id ? in : in.output[0];
@@ -51,7 +47,7 @@ mean_subtract::arguments::arguments(neural::engine::type            eng,
         input_arg.size.feature[0]
     };
 
-    output = { memory::allocate({ eng, out_fmt, output_size }) };
+    output = { memory::allocate({ out_fmt, output_size }) };
 }
 
 // creates primitive with fully_connected implementation that supports provided arguments

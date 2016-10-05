@@ -38,7 +38,7 @@ namespace neural {
             auto batch = mem_arg.size.batch[0];
             auto feature = mem_arg.size.feature[0];
             auto sizex = mem_arg.size.spatial[0];
-            auto eng_type = mem_arg.engine == engine::type::gpu ? "gpu" : "reference";
+            auto eng_type =  "gpu" ;
             std::vector<std::vector<std::ofstream>> files_handels(batch);
             std::vector<std::vector<std::stringstream>> streams(batch);
             for(uint32_t b = 0; b < batch; b++)

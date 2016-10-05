@@ -40,9 +40,9 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
     //  Expected output:
     //  [ 2.0]
 
-    auto input_prim = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1,{ 3, 3 }, 1 } });
-    auto output_prim = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1,{ 1, 1 }, 1 } });
-    auto pool_prim = pooling::create({ engine::gpu, pooling::mode::max, output_prim, input_prim,{ 1,{ 1, 1 }, 1 },{ 1,{ 3, 3 }, 1 }, padding::type::zero });
+    auto input_prim = memory::allocate({  memory::format::yxfb_f32,{ 1,{ 3, 3 }, 1 } });
+    auto output_prim = memory::allocate({  memory::format::yxfb_f32,{ 1,{ 1, 1 }, 1 } });
+    auto pool_prim = pooling::create({  pooling::mode::max, output_prim, input_prim,{ 1,{ 1, 1 }, 1 },{ 1,{ 3, 3 }, 1 }, padding::type::zero });
 
     set_values(input_prim, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f });
 
@@ -69,9 +69,9 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
     //  [ 2.0,  1.5]
     //  [ 2.0,  1.5]
 
-    auto input_prim = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1,{ 3, 3 }, 1 } });
-    auto output_prim = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
-    auto pool_prim = pooling::create({ engine::gpu, pooling::mode::max, output_prim, input_prim,{ 1,{ 1, 1 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
+    auto input_prim = memory::allocate({  memory::format::yxfb_f32,{ 1,{ 3, 3 }, 1 } });
+    auto output_prim = memory::allocate({  memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
+    auto pool_prim = pooling::create({  pooling::mode::max, output_prim, input_prim,{ 1,{ 1, 1 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
 
     set_values(input_prim, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f });
 
@@ -102,9 +102,9 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
     //  [ 2.0,  0.5]
     //  [ 0.5,  0.5]
 
-    auto input_prim = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1,{ 4, 4 }, 1 } });
-    auto output_prim = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
-    auto pool_prim = pooling::create({ engine::gpu, pooling::mode::max, output_prim, input_prim,{ 1,{ 2, 2 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
+    auto input_prim = memory::allocate({  memory::format::yxfb_f32,{ 1,{ 4, 4 }, 1 } });
+    auto output_prim = memory::allocate({  memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
+    auto pool_prim = pooling::create({  pooling::mode::max, output_prim, input_prim,{ 1,{ 2, 2 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
 
     set_values(input_prim, { -0.25f, 1.00f, 0.50f, 0.25f, 2.00f, 1.50f, -0.50f, -0.75f, 0.00f, -1.00f, 0.50f, 0.25f, 0.50f, -2.00f, -1.50f, -2.50f });
 
@@ -145,9 +145,9 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
     //  [ 0.5,  1.0]         [ 1.0,  0.5]
     //  [-0.5,  1.5]         [ 1.0,  0.0]
 
-    auto input_prim = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 2,{ 3, 3 }, 2 } });
-    auto output_prim = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
-    auto pool_prim = pooling::create({ engine::gpu, pooling::mode::max, output_prim, input_prim,{ 1,{ 1, 1 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
+    auto input_prim = memory::allocate({  memory::format::yxfb_f32,{ 2,{ 3, 3 }, 2 } });
+    auto output_prim = memory::allocate({  memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
+    auto pool_prim = pooling::create({  pooling::mode::max, output_prim, input_prim,{ 1,{ 1, 1 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
 
     set_values(input_prim, { -0.5f, 0.5f, -1.5f, 0.0f, 0.5f, 0.0f, -0.5f, 0.5f, 0.0f, -0.5f, 0.0f, -0.5f, 1.0f, -2.0f, 0.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -2.0f, 1.0f, 1.5f, 0.0f, -1.0f, -0.5f, -2.0f, 0.5f, -0.5f, -1.0f, 1.0f, -0.5f, -0.5f, 1.5f, -0.5f, 0.0f });
 

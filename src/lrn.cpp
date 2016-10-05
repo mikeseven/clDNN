@@ -20,7 +20,6 @@
 namespace neural {
 
 normalization::response::arguments::arguments(
-                 neural::engine::type aengine,
                  primitive aoutput,
                  primitive ainput,
                  uint32_t  asize,
@@ -28,8 +27,7 @@ normalization::response::arguments::arguments(
                  float ak,
                  float aalpha,
                  float abeta)
-    : engine(aengine)
-    , output({ aoutput })
+    : output({ aoutput })
     , output_offset(aoutput.as<const memory&>().argument.size.batch.size(), aoutput.as<const memory&>().argument.size.spatial.size(), aoutput.as<const memory&>().argument.size.feature.size())
     , output_size(aoutput.as<const memory&>().argument.size)
     , input({ ainput })
@@ -41,7 +39,6 @@ normalization::response::arguments::arguments(
     , beta(abeta) {}
 
 normalization::response::arguments::arguments(
-                 neural::engine::type aengine,
                  memory::format::type aoutput_fmt,
                  primitive ainput,
                  uint32_t  asize,
@@ -49,8 +46,7 @@ normalization::response::arguments::arguments(
                  float ak,
                  float aalpha,
                  float abeta)
-    : engine(aengine)
-    , input({ ainput })
+    : input({ ainput })
     , size(asize)
     , padding(apadding)
     , k(ak)
@@ -75,14 +71,12 @@ normalization::response::arguments::arguments(
     output = {
         memory::allocate(
         {
-            aengine,
             aoutput_fmt,
             output_size
         }) };
 }
 
 normalization::response::arguments::arguments(
-                 neural::engine::type aengine,
                  primitive aoutput,
                  vector<uint32_t> aoutput_offset,
                  vector<uint32_t> aoutput_size,
@@ -93,8 +87,7 @@ normalization::response::arguments::arguments(
                  float ak,
                  float aalpha,
                  float abeta)
-    : engine (aengine)
-    , output({ aoutput })
+    : output({ aoutput })
     , output_offset (aoutput_offset)
     , output_size (aoutput_size)
     , input({ ainput })

@@ -34,11 +34,24 @@ class singleton_map : public std::map<T, U> {
 namespace neural {
 
 template<typename primitive_kind>
-struct implementation_key {
+struct implementation_key 
+{
     typedef std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type> type;
-    type operator()(primitive_kind& primitive) {
-        return std::make_tuple(primitive.argument.engine, primitive.input_memory(0).argument.format, primitive.output_memory(0).argument.format);
+    type operator()(primitive_kind& primitive) 
+	{
+        return std::make_tuple(neural::engine::gpu, primitive.input_memory(0).argument.format, primitive.output_memory(0).argument.format);
     }
+};
+
+template<>
+struct implementation_key<reorder>
+{
+	typedef neural::engine::type type;
+	type operator()(reorder& primitive)
+	{
+		(void)primitive;
+		return neural::engine::gpu;
+	}
 };
 
 template<typename primitive_kind>
@@ -69,14 +82,15 @@ public:
 };
 
 template <class primitive_kind>
-is_a_primitive* is_a_primitive::create(typename primitive_kind::arguments arg) {
+is_a_primitive* is_a_primitive::create(typename primitive_kind::arguments arg) 
+{
     std::unique_ptr<primitive_kind> result(new primitive_kind(arg));
-    if (0 == (arg.engine & engine::lazy)) {
-        auto factory = implementation_map<primitive_kind>::get(*result);
-        auto implementation = factory(*result);
-        result->_impl.reset(implementation);
-        result->_work = implementation->work();
-    }
+
+     auto factory = implementation_map<primitive_kind>::get(*result);
+     auto implementation = factory(*result);
+     result->_impl.reset(implementation);
+     result->_work = implementation->work();
+
     return result.release();
 }
 

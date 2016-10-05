@@ -20,7 +20,7 @@
 
 namespace neural {
 
-convolution::arguments::arguments(neural::engine::type     eng,
+convolution::arguments::arguments(
     primitive                out,
     neural::vector<uint32_t> out_off,
     neural::vector<uint32_t> out_siz,
@@ -31,8 +31,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
     size_t                   splt,
     bool                     use_relu,
     float                    negative_slope)
-    : engine(eng)
-    , output({ out })
+    : output({ out })
     , output_offset(out_off)
     , output_size(out_siz)
     , input(in)
@@ -43,7 +42,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
     , use_relu(use_relu)
     , negative_slope(negative_slope){}
 
-convolution::arguments::arguments(neural::engine::type     eng,
+convolution::arguments::arguments(
     primitive                out,
     std::vector<primitive_at>in,
     neural::vector<uint32_t> strd,
@@ -51,8 +50,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
     size_t                   splt,
     bool                     use_relu,
     float                    negative_slope)
-    : engine(eng)
-    , output({ out })
+    : output({ out })
     , output_offset(out.as<const memory&>().argument.size.batch.size(),
         out.as<const memory&>().argument.size.spatial.size(),
         out.as<const memory&>().argument.size.feature.size())
@@ -67,7 +65,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
     , use_relu(use_relu)
     , negative_slope(negative_slope){}
 
-convolution::arguments::arguments(neural::engine::type     eng,
+convolution::arguments::arguments(
     memory::format::type     out_fmt,
     std::vector<primitive_at>in,
     neural::vector<int32_t>  in_off,
@@ -76,8 +74,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
     size_t                   splt,
     bool                     use_relu,
     float                    negative_slope)
-    : engine(eng)
-    , input_offset(in_off)
+    : input_offset(in_off)
     , stride(strd)
     , padding(padd)
     , split(splt)
@@ -111,7 +108,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
         { output_spatial_x, output_spatial_y },
         number_of_batches
     };
-    output = { memory::allocate({ eng, out_fmt,output_size }) };
+    output = { memory::allocate({ out_fmt,output_size }) };
     output_offset = {
         output[0].as<const memory&>().argument.size.batch.size(),
         output[0].as<const memory&>().argument.size.spatial.size(),
@@ -119,7 +116,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
     };
 }
 
-convolution::arguments::arguments(neural::engine::type     eng,
+convolution::arguments::arguments(
     memory::format::type     out_fmt,
     std::vector<primitive_at>in,
     neural::vector<uint32_t> strd,
@@ -127,7 +124,7 @@ convolution::arguments::arguments(neural::engine::type     eng,
     size_t                   splt,
     bool                     use_relu,
     float                    negative_slope)
-    : arguments(eng,
+    : arguments(
         out_fmt,
         in,
         {
@@ -141,15 +138,14 @@ convolution::arguments::arguments(neural::engine::type     eng,
         use_relu,
         negative_slope) {}
 
-convolution::arguments::arguments(neural::engine::type     eng,
+convolution::arguments::arguments(
     primitive                out,
     std::vector<primitive_at>in,
     neural::padding::type    padd,
     size_t                   splt,
     bool                     use_relu,
     float                    negative_slope)
-    : engine(eng)
-    , output({ out })
+    : output({ out })
     , output_offset(out.as<const memory&>().argument.size.batch.size(),
         out.as<const memory&>().argument.size.spatial.size(),
         out.as<const memory&>().argument.size.feature.size())

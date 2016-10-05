@@ -265,9 +265,6 @@ class engine  { engine();  public: enum type {
     // attributies
     , lazy = 0x80000000             // lazy evaluation
 }; };
-inline engine::type operator|(engine::type a, engine::type b) { return static_cast<engine::type>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b)); }
-inline engine::type operator&(engine::type a, engine::type b) { return static_cast<engine::type>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b)); }
-
 class padding { padding(); public: enum type { zero, one, two }; };
 
 // value in any format
@@ -343,7 +340,6 @@ public:
     virtual any_value_type_lookup operator[](std::string &key) const { return any_value_type_lookup(_map, key); }
 
     virtual void execute(const neural::task_group& requests) const = 0;
-    virtual neural::engine::type engine() const = 0;
 };
 
 class worker {
@@ -359,7 +355,6 @@ public:
         return *this;
     }
 
-    neural::engine::type engine() const { return _pointer->engine(); }
     void execute(const neural::task_group& requests) const { _pointer->execute(requests);}
 
     template<typename T> T as() const  {

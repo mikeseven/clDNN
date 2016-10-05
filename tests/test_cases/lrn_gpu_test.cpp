@@ -48,14 +48,14 @@ TEST(local_response_normalization_gpu, lrn_test) {
                                                                                         // lrn parameters:
     const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
 
-    auto input = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
-    auto output = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
-    auto output_oracle = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
+    auto input = memory::allocate({ memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
+    auto output = memory::allocate({ memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
+    auto output_oracle = memory::allocate({ memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
 
     set_values(input, input_oracle_init);
     set_values(output_oracle, output_oracle_init);
 
-    auto lrn = normalization::response::create({ engine::gpu, output, input, psize, padding::zero, pk, palpha, pbeta });
+    auto lrn = normalization::response::create({ output, input, psize, padding::zero, pk, palpha, pbeta });
 
     // ------------------------------------------------------------------------------------------------
     // test run
@@ -130,14 +130,14 @@ TEST(local_response_normalization_gpu, lrn_test_batches) {
                                                                                         // lrn parameters:
     const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
 
-    auto input = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
-    auto output = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
-    auto output_oracle = memory::allocate({ engine::gpu, memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
+    auto input = memory::allocate({ memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
+    auto output = memory::allocate({ memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
+    auto output_oracle = memory::allocate({ memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
 
     set_values(input, input_oracle_init);
     set_values(output_oracle, output_oracle_init);
 
-    auto lrn = normalization::response::create({ engine::gpu, output, input, psize, padding::zero, pk, palpha, pbeta });
+    auto lrn = normalization::response::create({ output, input, psize, padding::zero, pk, palpha, pbeta });
 
     // ------------------------------------------------------------------------------------------------
     // test run

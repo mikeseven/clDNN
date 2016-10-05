@@ -19,8 +19,7 @@
 
 namespace neural {
 
-pooling::arguments::arguments( neural::engine::type     eng,
-                               pooling::mode::type      p_mode,
+pooling::arguments::arguments( pooling::mode::type      p_mode,
                                memory::format::type     o_frmt,
                                neural::vector<uint32_t> out_off,
                                neural::vector<uint32_t> out_siz,
@@ -29,9 +28,8 @@ pooling::arguments::arguments( neural::engine::type     eng,
                                neural::vector<uint32_t> strd,
                                neural::vector<uint32_t> siz,
                                neural::padding::type    padd)
-    : engine(eng)
-    , mode(p_mode)
-    , output( {memory::allocate({eng, o_frmt, out_siz})} )
+    : mode(p_mode)
+    , output( {memory::allocate({ o_frmt, out_siz})} )
     , output_offset(out_off)
     , output_size(out_siz)
     , input({in})
@@ -40,15 +38,13 @@ pooling::arguments::arguments( neural::engine::type     eng,
     , size(siz)
     , padding(padd) {}
 
-pooling::arguments::arguments( neural::engine::type     eng,
-                               pooling::mode::type      p_mode,
+pooling::arguments::arguments( pooling::mode::type      p_mode,
                                memory::format::type     o_frmt,
                                primitive                in,
                                neural::vector<uint32_t> strd,
                                neural::vector<uint32_t> siz,
                                neural::padding::type    padd)
-    : engine(eng)
-    , mode(p_mode)
+    : mode(p_mode)
     , input({in})
     , stride(strd)
     , size(siz)
@@ -69,7 +65,7 @@ pooling::arguments::arguments( neural::engine::type     eng,
         },
         output_memory.size.feature[0]
     };
-    output = { memory::allocate({eng, o_frmt, output_size }) };
+    output = { memory::allocate({ o_frmt, output_size }) };
     output_offset = vector<uint32_t>(
         output[0].as<const memory&>().argument.size.batch.size(),
         output[0].as<const memory&>().argument.size.spatial.size(),
@@ -83,8 +79,7 @@ pooling::arguments::arguments( neural::engine::type     eng,
 }
 
 
-pooling::arguments::arguments( neural::engine::type     eng,
-                               pooling::mode::type      p_mode,
+pooling::arguments::arguments( pooling::mode::type      p_mode,
                                primitive                out,
                                neural::vector<uint32_t> out_off,
                                neural::vector<uint32_t> out_siz,
@@ -93,8 +88,7 @@ pooling::arguments::arguments( neural::engine::type     eng,
                                neural::vector<uint32_t> strd,
                                neural::vector<uint32_t> siz,
                                neural::padding::type    padd)
-    : engine(eng)
-    , mode(p_mode)
+    : mode(p_mode)
     , output({out})
     , output_offset(out_off)
     , output_size(out_siz)
@@ -104,15 +98,13 @@ pooling::arguments::arguments( neural::engine::type     eng,
     , size(siz)
     , padding(padd) {}
 
-pooling::arguments::arguments( neural::engine::type     eng,
-                               pooling::mode::type      p_mode,
+pooling::arguments::arguments( pooling::mode::type      p_mode,
                                primitive                out,
                                primitive                in,
                                neural::vector<uint32_t> strd,
                                neural::vector<uint32_t> siz,
                                neural::padding::type    padd)
-    : engine(eng)
-    , mode(p_mode)
+    : mode(p_mode)
     , output({out})
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)
@@ -133,16 +125,14 @@ pooling::arguments::arguments( neural::engine::type     eng,
     };
 }
 
-pooling::arguments::arguments( neural::engine::type     eng,
-                               pooling::mode::type      p_mode,
+pooling::arguments::arguments( pooling::mode::type      p_mode,
                                primitive                out,
                                primitive                in,
                                neural::vector<int32_t>  in_off,
                                neural::vector<uint32_t> strd,
                                neural::vector<uint32_t> siz,
                                neural::padding::type    padd)
-    : engine(eng)
-    , mode(p_mode)
+    : mode(p_mode)
     , output({out})
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)

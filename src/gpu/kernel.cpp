@@ -22,27 +22,12 @@
 
 namespace neural { namespace gpu {
 
-    memory_arg::memory_arg(const neural::memory& mem, bool copy_input, bool copy_output) : _mem(mem), _copy_input(copy_input), _copy_output(copy_output) {
-        if (is_own()) {
-            _gpu_buffer = std::static_pointer_cast<gpu_buffer>(_mem.get_buffer());
-        }
-        else {
-            _gpu_buffer = std::make_shared<gpu_buffer>(_mem.argument);
-            if (_copy_input) {
-                auto src = mem.pointer<char>();
-                memory::ptr<char> dst(_gpu_buffer);
-                std::copy(std::begin(src), std::end(src), std::begin(dst));
-            }
-        }
+    memory_arg::memory_arg(const neural::memory& mem, bool copy_input, bool copy_output) : _mem(mem), _copy_input(copy_input), _copy_output(copy_output) 
+    {
+        _gpu_buffer = std::static_pointer_cast<gpu_buffer>(_mem.get_buffer());
     }
 
-    memory_arg::~memory_arg() {
-        if (_copy_output && !is_own()) {
-            memory::ptr<char> src(_gpu_buffer);
-            auto dst = _mem.pointer<char>();
-            std::copy(std::begin(src),std::end(src), std::begin(dst));
-        }
-    }
+    memory_arg::~memory_arg() {}
 
 void kernel_execution_options::set_local_sizes()
 {

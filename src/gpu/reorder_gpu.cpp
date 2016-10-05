@@ -240,12 +240,7 @@ struct reorder_gpu : is_an_implementation {
     task_group work() override { return{ { task{ implementation, this } }, schedule::single }; }
 
 };
-    
-    template<>
-    struct implementation_key<reorder> {
-        typedef neural::engine::type type;
-        type operator()(reorder& primitive) { return primitive.argument.engine; }
-    };
+
 
     namespace {
         struct attach {

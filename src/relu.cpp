@@ -18,9 +18,8 @@
 
 namespace neural {
 
-relu::arguments::arguments(neural::engine::type engine, memory::format::type out_fmt, primitive in)
-    : engine(engine)
-    , negative_slope(0.0f) 
+relu::arguments::arguments(memory::format::type out_fmt, primitive in)
+    : negative_slope(0.0f) 
 {
     if (in.id() == type_id<const memory>()->id)
     {
@@ -38,7 +37,7 @@ relu::arguments::arguments(neural::engine::type engine, memory::format::type out
         input[0].primitive().as<const memory&>().argument.size.feature.size(),
     };
     output_size = input[0].primitive().as<const memory&>().argument.size;
-    output = { memory::allocate({engine, out_fmt, output_size}) };
+    output = { memory::allocate({out_fmt, output_size}) };
     output_offset = 
     {
         output_size.batch.size(),
@@ -47,36 +46,32 @@ relu::arguments::arguments(neural::engine::type engine, memory::format::type out
     };
 }
 
-relu::arguments::arguments(neural::engine::type engine, primitive out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, float slp)
-    : engine(engine)
-    , output({ out })
+relu::arguments::arguments(primitive out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, float slp)
+    : output({ out })
     , output_offset({ out_off })
     , output_size({ out_siz })
     , input({ in })
     , input_offset({ in_off })
     , negative_slope(slp) {}
 
-relu::arguments::arguments(neural::engine::type engine, primitive out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off)
-    : engine(engine)
-    , output({ out })
+relu::arguments::arguments(primitive out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off)
+    : output({ out })
     , output_offset({ out_off })
     , output_size({ out_siz })
     , input({ in })
     , input_offset({ in_off })
     , negative_slope(0.0f) {}
 
-relu::arguments::arguments(neural::engine::type engine, primitive out, primitive in, float slp)
-    : engine(engine)
-    , output({ out })
+relu::arguments::arguments(primitive out, primitive in, float slp)
+    : output({ out })
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)
     , input({ in })
     , input_offset(in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size())
     , negative_slope(slp) {}
 
-relu::arguments::arguments(neural::engine::type engine, primitive out, primitive in)
-    : engine(engine)
-    , output({ out })
+relu::arguments::arguments(primitive out, primitive in)
+    : output({ out })
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)
     , negative_slope(0.0f) 

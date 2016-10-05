@@ -37,11 +37,11 @@ namespace neural
 //
 // Examples:
 //
-//   Describe memory avaialble to 'cpu' engine, with memory format yxfb_f32, 3 feature maps, resolution 224x224 and batch 24.
-//     auto input  = memory::describe({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+//   Describe memory available to gpu, with memory format yxfb_f32, 3 feature maps, resolution 224x224 and batch 24.
+//     auto input  = memory::describe({memory::format::yxfb_f32, {3,  {224, 224}, 24}});
 //
-//   Allocate memory avaialble to 'cpu' engine, with memory format yxfb_f32, 3 feature maps, resolution 224x224 and batch 24.
-//     auto input  = memory::allocate({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+//   Allocate memory available to gpu, with memory format yxfb_f32, 3 feature maps, resolution 224x224 and batch 24.
+//     auto input  = memory::allocate({memory::format::yxfb_f32, {3,  {224, 224}, 24}});
 struct memory : is_a_primitive 
 {
     struct format_traits 
@@ -104,11 +104,10 @@ struct memory : is_a_primitive
 
     struct arguments 
 	{
-        neural::engine::type            engine;
         neural::memory::format::type    format;
         neural::vector<uint32_t>        size;
 
-        DLL_SYM arguments(neural::engine::type aengine, memory::format::type aformat, neural::vector<uint32_t> asize);
+        DLL_SYM arguments(memory::format::type aformat, neural::vector<uint32_t> asize);
     };
 
     struct buffer
@@ -213,11 +212,11 @@ private:
 //
 // Examples:
 //
-//   Load data from file into memory available to CPU.
-//     auto weight = file::create({engine::cpu, "weight.nnb"});
+//   Load data from file into memory available to GPU.
+//     auto weight = file::create({"weight.nnb"});
 //
-//   Load data from file into memory available to CPU & validate that format is yxfb_f32, 96 feature maps, 3D data [224x224x3].
-//     auto weight = file::create({engine::cpu, "weight.nnb"}, memory::format::yxfb_f32, {96, {224, 224, 3}}});
+//   Load data from file into memory available to GPU & validate that format is yxfb_f32, 96 feature maps, 3D data [224x224x3].
+//     auto weight = file::create({"weight.nnb"}, memory::format::yxfb_f32, {96, {224, 224, 3}}});
 struct file : is_a_primitive 
 {
     enum weights_type
@@ -227,14 +226,13 @@ struct file : is_a_primitive
     };
     struct arguments 
 	{
-        neural::engine::type         engine;
         std::string                  name;
         weights_type                 weight_type;
         std::vector<primitive>       output;
 
-        DLL_SYM arguments(neural::engine::type aengine, std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize);
-        DLL_SYM arguments(neural::engine::type aengine, std::string aname, primitive aoutput);
-        DLL_SYM arguments(neural::engine::type aengine, std::string aname, weights_type = weights_type::convolution);
+        DLL_SYM arguments(std::string aname, memory::format::type aformat, std::vector<uint32_t> &asize);
+        DLL_SYM arguments(std::string aname, primitive aoutput);
+        DLL_SYM arguments(std::string aname, weights_type = weights_type::convolution);
     };
     const arguments argument;
 
@@ -258,22 +256,21 @@ private:
 //
 // Examples:
 //
-//   Reorder yxfb_f32 to byxf_f32 on user-specified buffers on reference engine.
-//     neural::primitive input   = memory::describe({engine::reference, memory::format::yxfb_f32, {16, {4, 8}, 1}});
-//     neural::primitive output  = memory::describe({engine::reference, memory::format::byxf_f32, {16, {4, 8}, 1}});
-//     neural::primitive reorder = reorder::create(reorder::arguments{engine::reference,input,output});
+//   Reorder yxfb_f32 to byxf_f32 on user-specified buffers .
+//     neural::primitive input   = memory::describe({memory::format::yxfb_f32, {16, {4, 8}, 1}});
+//     neural::primitive output  = memory::describe({memory::format::byxf_f32, {16, {4, 8}, 1}});
+//     neural::primitive reorder = reorder::create(reorder::arguments{input,output});
 struct reorder : is_a_primitive 
 {
     struct arguments 
 	{
-        neural::engine::type        engine;
         std::vector<primitive>      output;
         std::vector<primitive_at>   input;  // 1/2: {input} / {input, subtract_values}
 
-        DLL_SYM arguments(neural::engine::type engine, primitive_at input, primitive output);
-		DLL_SYM arguments(neural::engine::type engine, primitive output, primitive input, primitive subtract_values);
-        DLL_SYM arguments(neural::engine::type engine, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input);
-		DLL_SYM arguments(neural::engine::type engine, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input, primitive_at subtract_values);
+        DLL_SYM arguments(primitive_at input, primitive output);
+		DLL_SYM arguments(primitive output, primitive input, primitive subtract_values);
+        DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input);
+		DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input, primitive_at subtract_values);
 	};
     const arguments argument;
 
@@ -295,21 +292,20 @@ private:
 //
 // Example:
 //
-//  auto input = memory::describe({engine::refetence, memory::format::yxfb_f32, { 16, {4, 8}, 3 }));
-//  auto output = memory::describe({engine::refetence, memory::format::yxfb_f32, { 16, {4, 8}, 3 }));
-//  auto mean = file::create({engine::cpu, "mean.nnb"});
-//  neural::primitive mean_subtract = mean_subtract::create({engine::reference, output, input, mean});
+//  auto input = memory::describe({memory::format::yxfb_f32, { 16, {4, 8}, 3 }));
+//  auto output = memory::describe({ememory::format::yxfb_f32, { 16, {4, 8}, 3 }));
+//  auto mean = file::create({"mean.nnb"});
+//  neural::primitive mean_subtract = mean_subtract::create({output, input, mean});
 //
 struct mean_subtract : is_a_primitive 
 {
     struct arguments 
 	{
-        neural::engine::type      engine;
         std::vector<primitive>    output;
         std::vector<primitive_at> input; // 2: input, mean
 
-        DLL_SYM arguments(neural::engine::type, primitive out, primitive in, primitive mean);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, primitive in, primitive mean);
+        DLL_SYM arguments(primitive out, primitive in, primitive mean);
+        DLL_SYM arguments(neural::memory::format::type out_fmt, primitive in, primitive mean);
     };
     const arguments argument;
 
@@ -335,30 +331,29 @@ private:
 // Example:
 //
 //   In batch 24 convolve 224x224 3-feature-map user-specified inputs into 96-feature-map user-specified outputs.
-//     auto input  = memory::describe({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
-//     auto output = memory::describe({engine::cpu, memory::format::yxfb_f32, {96, {224, 224}, 24}});
-//     auto weight = file::create({engine::cpu, "weight.nnb"});
-//     auto bias   = file::create({engine::cpu, "bias.nnb"});
-//     auto conv   = convolution::create({engine::cpu, output, input, weight, bias, padding::zero});
+//     auto input  = memory::describe({memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+//     auto output = memory::describe({memory::format::yxfb_f32, {96, {224, 224}, 24}});
+//     auto weight = file::create({"weight.nnb"});
+//     auto bias   = file::create({"bias.nnb"});
+//     auto conv   = convolution::create({output, input, weight, bias, padding::zero});
 //
 //   As above, but convolution allocated it's output buffer.
-//     auto input  = memory::describe({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
-//     auto weight = file::create({engine::cpu, "weight.nnb"});
-//     auto bias   = file::create({engine::cpu, "bias.nnb"});
-//     auto conv   = convolution::create({engine::cpu, memory::format::yxfb_f32, input, weight, bias, padding::zero});
+//     auto input  = memory::describe({memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+//     auto weight = file::create({"weight.nnb"});
+//     auto bias   = file::create({"bias.nnb"});
+//     auto conv   = convolution::create({memory::format::yxfb_f32, input, weight, bias, padding::zero});
 //
 // Example:
 //   In batch 24 convolve & relu-activate 224x224 3-feature-map user-specified inputs into 96-feature-map user-specified outputs.
-//     auto input  = memory::describe({engine::cpu, memory::format::yxfb_f32, {3,  {224, 224}, 24}});
-//     auto output = memory::describe({engine::cpu, memory::format::yxfb_f32, {96, {224, 224}, 24}});
-//     auto weight = file::create({engine::cpu, "weight.nnb"});
-//     auto bias   = file::create({engine::cpu, "bias.nnb"});
-//     auto conv   = convolution::create({engine::cpu, output, input, weight, bias, padding::zero, 0.0f, 1, true});
+//     auto input  = memory::describe({memory::format::yxfb_f32, {3,  {224, 224}, 24}});
+//     auto output = memory::describe({memory::format::yxfb_f32, {96, {224, 224}, 24}});
+//     auto weight = file::create({"weight.nnb"});
+//     auto bias   = file::create({"bias.nnb"});
+//     auto conv   = convolution::create({output, input, weight, bias, padding::zero, 0.0f, 1, true});
 struct convolution : is_a_primitive 
 {
     struct arguments 
 	{
-        neural::engine::type      engine;
         std::vector<primitive>    output;
         neural::vector<uint32_t>  output_offset;
         neural::vector<uint32_t>  output_size;
@@ -370,13 +365,13 @@ struct convolution : is_a_primitive
         bool                      use_relu;
         float                     negative_slope;
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                 neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                 uint32_t                 stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                                                  neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,                                                                         std::vector<primitive_at> in,                                 neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,                                                                         std::vector<primitive_at> in,                                                                  neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,     neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                 neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                 uint32_t                 stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(neural::memory::format::type out_fmt,                                                                     std::vector<primitive_at> in,                                                                  neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(primitive                    out,                                                                         std::vector<primitive_at> in,                                 neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(primitive                    out,                                                                         std::vector<primitive_at> in,                                                                  neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(primitive                    out,     neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, std::vector<primitive_at> in, neural::vector<int32_t> in_off, neural::vector<uint32_t> stride, neural::padding::type = neural::padding::type::zero, size_t split=1, bool use_relu=false, float negative_slope=0.0f);
     };
     const arguments argument;
 
@@ -399,31 +394,30 @@ private:
 //
 // Example:
 //    6 input neurons 7 output neurons.
-//     auto input   = memory::describe({engine::reference, memory::format::xb_f32, { 1, {{6}},  1} });
-//     auto output  = memory::describe({engine::reference, memory::format::xb_f32, { 1, {{7}},  1} });
-//     auto weights = memory::describe({engine::reference, memory::format::xy_f32, { 1, {6, 7}, 1} });
-//     auto biases  = memory::describe({engine::reference, memory::format::x_f32,  { 1, {{7}},  1} });
-//     auto act = fully_connected::create({engine::reference, output, input, weights, biases});
+//     auto input   = memory::describe({memory::format::xb_f32, { 1, {{6}},  1} });
+//     auto output  = memory::describe({memory::format::xb_f32, { 1, {{7}},  1} });
+//     auto weights = memory::describe({memory::format::xy_f32, { 1, {6, 7}, 1} });
+//     auto biases  = memory::describe({memory::format::x_f32,  { 1, {{7}},  1} });
+//     auto act = fully_connected::create({output, input, weights, biases});
 //
 // Example:
 //    6 input neurons 7 output neurons with relu activation.
-//     auto input   = memory::describe({engine::reference, memory::format::xb_f32, { 1, {{6}},  1} });
-//     auto output  = memory::describe({engine::reference, memory::format::xb_f32, { 1, {{7}},  1} });
-//     auto weights = memory::describe({engine::reference, memory::format::xy_f32, { 1, {6, 7}, 1} });
-//     auto biases  = memory::describe({engine::reference, memory::format::x_f32,  { 1, {{7}},  1} });
-//     auto act = fully_connected::create({engine::reference, output, input, weights, biases, true, 0.0f});
+//     auto input   = memory::describe({memory::format::xb_f32, { 1, {{6}},  1} });
+//     auto output  = memory::describe({memory::format::xb_f32, { 1, {{7}},  1} });
+//     auto weights = memory::describe({memory::format::xy_f32, { 1, {6, 7}, 1} });
+//     auto biases  = memory::describe({memory::format::x_f32,  { 1, {{7}},  1} });
+//     auto act = fully_connected::create({output, input, weights, biases, true, 0.0f});
 struct fully_connected : is_a_primitive 
 {
     struct arguments
 	{
-        neural::engine::type        engine;
         std::vector<primitive>      output;
         std::vector<primitive_at>   input;  // 3: {input, weights, bias}
         bool                        use_relu;
         float                       negative_slope;
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, primitive in, primitive weights, primitive bias, bool use_relu=false, float negative_slope=0.0f);
-        DLL_SYM arguments(neural::engine::type, primitive                    out,     primitive in, primitive weights, primitive bias, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(neural::memory::format::type out_fmt, primitive in, primitive weights, primitive bias, bool use_relu=false, float negative_slope=0.0f);
+        DLL_SYM arguments(primitive                    out,     primitive in, primitive weights, primitive bias, bool use_relu=false, float negative_slope=0.0f);
     };
     const arguments argument;
 
@@ -446,14 +440,13 @@ private:
 //
 // Example:
 //   Perform max(x,0) activation on user specified buffers.
-//     auto input  = memory::describe({engine::cpu, memory::format::yxfb_f32, {224, 224, 3, 24}});
-//     auto output = memory::describe({engine::cpu, memory::format::yxfb_f32, {224, 224, 3, 24}});
-//     auto act    = relu::create({engine::cpu, output, input});
+//     auto input  = memory::describe({memory::format::yxfb_f32, {224, 224, 3, 24}});
+//     auto output = memory::describe({memory::format::yxfb_f32, {224, 224, 3, 24}});
+//     auto act    = relu::create({output, input});
 struct relu : is_a_primitive 
 {
     struct arguments 
 	{
-        neural::engine::type      engine;
         std::vector<primitive>    output;
         neural::vector<uint32_t>  output_offset;
         neural::vector<uint32_t>  output_size;
@@ -461,13 +454,13 @@ struct relu : is_a_primitive
         neural::vector<int32_t>   input_offset;
         float                     negative_slope;
 
-        DLL_SYM arguments(neural::engine::type, memory::format::type out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, float slp);
-        DLL_SYM arguments(neural::engine::type, memory::format::type out,                                                                     primitive in,                                 float slp);
-        DLL_SYM arguments(neural::engine::type, memory::format::type out,                                                                     primitive in);
-        DLL_SYM arguments(neural::engine::type, primitive            out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, float slp);
-        DLL_SYM arguments(neural::engine::type, primitive            out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
-        DLL_SYM arguments(neural::engine::type, primitive            out,                                                                     primitive in,                                  float slp);
-        DLL_SYM arguments(neural::engine::type, primitive            out,                                                                     primitive in);
+        DLL_SYM arguments(memory::format::type out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, float slp);
+        DLL_SYM arguments(memory::format::type out,                                                                     primitive in,                                 float slp);
+        DLL_SYM arguments(memory::format::type out,                                                                     primitive in);
+        DLL_SYM arguments(primitive            out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, float slp);
+        DLL_SYM arguments(primitive            out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
+        DLL_SYM arguments(primitive            out,                                                                     primitive in,                                  float slp);
+        DLL_SYM arguments(primitive            out,                                                                     primitive in);
     };
     const arguments argument;
 
@@ -490,9 +483,9 @@ private:
 //
 // Example:
 //   2x2 max pooling with stride 1 and offset.
-//     auto input  = memory::describe({engine::reference, memory::format::yxfb_f32, { 2, {6, 6}, 2}});
-//     auto output = memory::describe({engine::reference, memory::format::yxfb_f32, { 3, {7, 7}, 3}});
-//     auto pool  = pooling::create({engine::reference, pooling::mode::max,
+//     auto input  = memory::describe({memory::format::yxfb_f32, { 2, {6, 6}, 2}});
+//     auto output = memory::describe({memory::format::yxfb_f32, { 3, {7, 7}, 3}});
+//     auto pool  = pooling::create({pooling::mode::max,
 //                                     output, {0,{1,2},1}, {2,{5,5},2},    // output primitive, offset, size
 //                                     input, {0,{0,0},0},                  // input primitive, offset
 //                                     {1,{1,1},1},                         // stride
@@ -504,7 +497,6 @@ struct pooling : is_a_primitive
 
     struct arguments 
 	{
-        neural::engine::type      engine;
         pooling::mode::type       mode;
         std::vector<primitive>    output;
         neural::vector<uint32_t>  output_offset;
@@ -515,16 +507,16 @@ struct pooling : is_a_primitive
         neural::vector<uint32_t>  size;
         neural::padding::type     padding;
 
-        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, neural::vector<uint32_t> strd, neural::vector<uint32_t> siz, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                                     primitive in,                                 neural::vector<uint32_t> strd, neural::vector<uint32_t> siz, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                                     primitive in,                                 uint32_t                 strd, uint32_t                 siz, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                        primitive in,                                 uint32_t                 strd, uint32_t                 siz, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                        primitive in,                                 neural::vector<uint32_t> strd, neural::vector<uint32_t> siz, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                        primitive in, neural::vector<int32_t> in_off, neural::vector<uint32_t> strd, neural::vector<uint32_t> siz, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                        primitive in, neural::vector<int32_t> in_off, uint32_t                 strd, uint32_t                 siz, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,    neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, neural::vector<uint32_t> strd, neural::vector<uint32_t> siz, neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                        primitive in,                                 neural::vector<uint32_t> strd,                               neural::padding::type);
-        DLL_SYM arguments(neural::engine::type, neural::pooling::mode::type, primitive                    out,                                                                        primitive in,                                 uint32_t                 strd,                               neural::padding::type);
+        DLL_SYM arguments(neural::pooling::mode::type, neural::memory::format::type o_frmt, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, neural::vector<uint32_t> strd, neural::vector<uint32_t> siz, neural::padding::type);
+        DLL_SYM arguments(neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                                     primitive in,                                 neural::vector<uint32_t> strd, neural::vector<uint32_t> siz, neural::padding::type);
+        DLL_SYM arguments(neural::pooling::mode::type, neural::memory::format::type o_frmt,                                                                     primitive in,                                 uint32_t                 strd, uint32_t                 siz, neural::padding::type);
+        DLL_SYM arguments(neural::pooling::mode::type, primitive                    out,                                                                        primitive in,                                 uint32_t                 strd, uint32_t                 siz, neural::padding::type);
+        DLL_SYM arguments(neural::pooling::mode::type, primitive                    out,                                                                        primitive in,                                 neural::vector<uint32_t> strd, neural::vector<uint32_t> siz, neural::padding::type);
+        DLL_SYM arguments(neural::pooling::mode::type, primitive                    out,                                                                        primitive in, neural::vector<int32_t> in_off, neural::vector<uint32_t> strd, neural::vector<uint32_t> siz, neural::padding::type);
+        DLL_SYM arguments(neural::pooling::mode::type, primitive                    out,                                                                        primitive in, neural::vector<int32_t> in_off, uint32_t                 strd, uint32_t                 siz, neural::padding::type);
+        DLL_SYM arguments(neural::pooling::mode::type, primitive                    out,    neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off, neural::vector<uint32_t> strd, neural::vector<uint32_t> siz, neural::padding::type);
+        DLL_SYM arguments(neural::pooling::mode::type, primitive                    out,                                                                        primitive in,                                 neural::vector<uint32_t> strd,                               neural::padding::type);
+        DLL_SYM arguments(neural::pooling::mode::type, primitive                    out,                                                                        primitive in,                                 uint32_t                 strd,                               neural::padding::type);
     };
     const arguments argument;
 
@@ -547,7 +539,7 @@ namespace normalization
 //
 // Forward local response normalization as described in chapter 3.3 of "ImageNet Classification with Deep Convolutional
 // Neural Networks" by Khrizevsky, Sutskever, Hinton. see: http://www.cs.toronto.edu/~fritz/absps/imagenet.pdf
-// Alogrithm:
+// Algorithm:
 //   b(i,x,y) = a(i,x,y) / (k+alpha*sum(min(N-1, i+n/2); j=max(0,i-n/2); a(j,x,y)^2))
 // Where:
 //   b(i,x,y) : value at x, y from i-th feature map after normalization
@@ -559,15 +551,14 @@ namespace normalization
 //
 // Example:
 //
-//   LRN on ragion of 3 with [k,alpha,beta] = [1,1,0.75]
-//     auto  input = memory::describe({ engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 7}});
-//     auto output = memory::describe({ engine::reference, memory::format::yxfb_f32, {1, {2, 2}, 7}});
-//     auto lrn = normalization::response::create({engine::reference, output, input, 3, padding::zero, 1.0f, 1.0f, 0.75f});
+//   LRN on region of 3 with [k,alpha,beta] = [1,1,0.75]
+//     auto  input = memory::describe({ memory::format::yxfb_f32, {1, {2, 2}, 7}});
+//     auto output = memory::describe({ memory::format::yxfb_f32, {1, {2, 2}, 7}});
+//     auto lrn = normalization::response::create({output, input, 3, padding::zero, 1.0f, 1.0f, 0.75f});
 struct /*normalization*/response : is_a_primitive 
 {
     struct arguments 
 	{
-        neural::engine::type        engine;
         std::vector<primitive>      output;
         vector<uint32_t>            output_offset;
         vector<uint32_t>            output_size;
@@ -579,9 +570,9 @@ struct /*normalization*/response : is_a_primitive
         float                       alpha;
         float                       beta;
 
-        DLL_SYM arguments(neural::engine::type _engine, primitive _output,          primitive _input, uint32_t  _size, neural::padding::type _padding, float _k, float _alpha, float _beta);
-        DLL_SYM arguments(neural::engine::type _engine, memory::format::type _output_fmt, primitive _input, uint32_t  _size, neural::padding::type _padding, float _k, float _alpha, float _beta);
-        DLL_SYM arguments(neural::engine::type _engine, primitive _output,          vector<uint32_t> _output_offset, vector<uint32_t> _output_size, primitive _input, vector<int32_t> _input_offset, uint32_t _input_size, neural::padding::type _padding, float _k, float _alfa, float _beta);
+        DLL_SYM arguments(primitive _output,          primitive _input, uint32_t  _size, neural::padding::type _padding, float _k, float _alpha, float _beta);
+        DLL_SYM arguments(memory::format::type _output_fmt, primitive _input, uint32_t  _size, neural::padding::type _padding, float _k, float _alpha, float _beta);
+        DLL_SYM arguments(primitive _output,          vector<uint32_t> _output_offset, vector<uint32_t> _output_size, primitive _input, vector<int32_t> _input_offset, uint32_t _input_size, neural::padding::type _padding, float _k, float _alfa, float _beta);
     };
     const arguments argument;
 
@@ -610,17 +601,16 @@ struct /*normalization*/softmax : is_a_primitive
 {
     struct arguments 
 	{
-        neural::engine::type      engine;
         std::vector<primitive>    output;
         neural::vector<uint32_t>  output_offset;
         neural::vector<uint32_t>  output_size;
         std::vector<primitive_at> input;          // 1: input
         neural::vector<int32_t>   input_offset;
 
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
-        DLL_SYM arguments(neural::engine::type, neural::memory::format::type out_fmt, primitive in);
-        DLL_SYM arguments(neural::engine::type, primitive                             out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
-        DLL_SYM arguments(neural::engine::type, primitive                             out, primitive in);
+        DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
+        DLL_SYM arguments(neural::memory::format::type out_fmt, primitive in);
+        DLL_SYM arguments(primitive                             out, neural::vector<uint32_t> out_off, neural::vector<uint32_t> out_siz, primitive in, neural::vector<int32_t> in_off);
+        DLL_SYM arguments(primitive                             out, primitive in);
     };
     const arguments argument;
 
@@ -635,124 +625,8 @@ private:
     friend class is_a_primitive;
 };
 
-
-// neural::normalization::batch_training_forward
-//
-// Performs batch normalization as discribed in "Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift"
-// by Ioffe, Szegedy, see: http://arxiv.org/abs/1502.03167
-// This is forward pass ran during training.
-//
-//
-// Example:
-//   Normalize 320x240, 3 feature maps images in batch 16.
-//     auto input               = memory::describe({ engine::reference, memory::format::yxfb_f32, {16, {240, 320}, 3}});
-//     auto bias                = memory::describe({ engine::reference, memory::format::yxfb_f32, { 1, {  1,   1}, 3}});
-//     auto scale               = memory::describe({ engine::reference, memory::format::yxfb_f32, { 1, {  1,   1}, 3}});
-//     auto output              = memory::describe({ engine::reference, memory::format::yxfb_f32, {16, {240, 320}, 3}});
-//     auto current_inv_std_dev = memory::describe({ engine::reference, memory::format::yxfb_f32, { 1, {  1,   1}, 3}});
-//     auto moving_average      = memory::describe({ engine::reference, memory::format::yxfb_f32, { 1, {  1,   1}, 3}});
-//     auto moving_inv_std_dev  = memory::describe({ engine::reference, memory::format::yxfb_f32, { 1, {  1,   1}, 3}});
-//     auto current_average     = memory::describe({ engine::reference, memory::format::yxfb_f32, { 1, {  1,   1}, 3}});
-//     auto bn = normalization::batch_training_forward::create({engine::reference, {output, current_average, current_inv_std_dev, moving_average, moving_inv_std_dev}, {input, scale, bias}, 1.0, std::numeric_limits<float>::epsilon()});
-
-struct /*normalization*/batch_training_forward : is_a_primitive 
-{
-    struct arguments 
-	{
-        neural::engine::type        engine;
-        std::vector<primitive>      output;         // 3-5: {output, current_mean, current_inv_std_dev, [moving_mean, moving_inv_std_dev]}
-        std::vector<primitive_at>   input;          // 3: {input, scale, bias}
-        bool                        spatial;
-        double                      exp_avg_factor;
-        double                      epsilon;
-
-        DLL_SYM arguments(neural::engine::type, std::vector<primitive>, std::vector<primitive_at>, bool, double, double);
-    };
-    const arguments argument;
-
-    struct query_entry : is_a_query_entry { batch_training_forward::arguments arguments; };
-    static std::vector<query_entry> query(arguments);
-    DLL_SYM static primitive create(arguments);
-    const std::vector<primitive_at>  &input() const  { return argument.input; };
-    const std::vector<primitive>     &output() const { return argument.output; };
-
-private:
-    batch_training_forward(arguments arg) : is_a_primitive(type_id<const batch_training_forward>()), argument(arg) {};
-    friend class is_a_primitive;
-};
-
-
-// neural::normalization::batch_inference
-//
-// Batch normalization, forward pass for inference.
-//
-//
-// Example:
-//   Inference pass of batch normalization on 16x32 images with 64 feature maps and batch 128.
-//     auto input       = memory::describe({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
-//     auto scale       = memory::describe({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
-//     auto bias        = memory::describe({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
-//     auto average     = memory::describe({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
-//     auto inv_std_dev = memory::describe({engine::reference, memory::format::yxfb_f32, {1, {1, 1}, 64}});
-//     auto output      = memory::describe({engine::reference, memory::format::yxfb_f32, {128, {16, 32}, 64}});
-//     auto bn = normalization::batch_inference::create({engine::reference, {output}, {input, scale, bias, average, inv_std_dev}, true});
-
-struct /*normalization*/batch_inference : is_a_primitive
-{
-    struct arguments
-    {
-        neural::engine::type        engine;
-        std::vector<primitive>      output;         // 1: {output}
-        std::vector<primitive_at>   input;          // 5: {input, scale, bias, precomputed_mean, precomputed_inv_std_dev}
-        bool                        spatial;
-
-        DLL_SYM arguments(neural::engine::type, std::vector<primitive>, std::vector<primitive_at>, bool);
-    };
-    const arguments argument;
-
-    struct query_entry : is_a_query_entry { batch_inference::arguments arguments; };
-    static std::vector<query_entry> query(arguments);
-    DLL_SYM static primitive create(arguments);
-    const std::vector<primitive_at>  &input() const  { return argument.input; };
-    const std::vector<primitive>     &output() const { return argument.output; };
-
-private:
-    batch_inference(arguments arg) : is_a_primitive(type_id<const batch_inference>()), argument(arg) {};
-    friend class is_a_primitive;
-};
 }//normalization /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-// neural::worker_cpu
-//
-// Worker for executing primitives for engine::cpu.
-// Internally implemented as thread pool.
-class nn_thread_worker_pool;
-struct worker_cpu : is_a_worker 
-{
-    struct arguments 
-	{
-        uint32_t thread_pool_size;
-
-        DLL_SYM arguments(uint32_t arg_threadpool_size);
-        DLL_SYM arguments(                            );
-    };
-    arguments argument;
-
-    const bool owns_pool;
-    const std::unique_ptr<nn_thread_worker_pool> thread_pool;
-
-    DLL_SYM static worker create(arguments);
-    DLL_SYM static worker create(arguments, nn_thread_worker_pool &);
-    DLL_SYM void execute(const neural::task_group& requests) const;
-    DLL_SYM neural::engine::type engine() const {return neural::engine::cpu;}
-
-    ~worker_cpu();
-
-private:
-    worker_cpu(arguments arg);
-    worker_cpu(arguments arg, nn_thread_worker_pool &);
-};
 
 class program_builder;
 namespace instrumentation {
@@ -762,7 +636,6 @@ struct worker_gpu : is_a_worker
 {
     DLL_SYM static worker create();
     DLL_SYM void execute(const neural::task_group& requests) const override;
-    neural::engine::type engine() const override { return neural::engine::gpu; }
     DLL_SYM const std::vector<instrumentation::profiling_info>& get_profiling_info() const;
 
 private:

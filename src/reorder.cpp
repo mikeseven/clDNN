@@ -78,122 +78,27 @@ namespace neural {
            }
         };
 
-        struct reorder_reference : is_an_implementation {
-            const reorder &outer;
-            reorder_reference(reorder &arg)
-                : is_an_implementation(neural::type_id<reorder_reference>())
-                , outer(arg)
-            {};
-            ~reorder_reference() {}
-
-            static void implementation(const void *ptr) {
-                auto this_reorder = static_cast<const reorder *>(ptr);
-                auto input = this_reorder->input_memory(0).pointer<float>();
-                auto output = this_reorder->output_memory(0).pointer<float>();
-
-                auto& input_memory_arg  = this_reorder->input_memory(0).argument;
-                auto& input_format = input_memory_arg.format;
-
-                auto& output_memory_arg = this_reorder->output_memory(0).argument;
-                auto& output_format= output_memory_arg.format;
-
-                if (input_format == output_format)
-                {
-                    if (input != output)
-                        std::copy(std::begin(input), std::end(input), std::begin(output));
-                        //memcpy(output, input, this_reorder->output_memory(0).count() * memory::traits(output_format).type->size);
-
-                    return;
-                }
-
-                auto& input_size = input_memory_arg.size;
-                auto& output_size= output_memory_arg.size;
-
-                if(input_size.raw.size() != output_size.raw.size()) throw std::runtime_error("Reorder input/output number of dimension does not match.");
-
-                namespace nd = ndimensional;
-                nd::value<uint32_t> range (output_size);
-                auto calc_in_idx = nd::choose_calculate_idx(input_format);
-                auto calc_out_idx = nd::choose_calculate_idx(output_format);
-
-				bool have_subtraction = this_reorder->argument.input.size() > 1;
-				if (have_subtraction)
-				{
-					auto subtract = this_reorder->input_memory(1).pointer<float>();
-					auto& subtract_memory_arg = this_reorder->input_memory(1).argument;
-					auto& subtract_size = subtract_memory_arg.size;
-					auto calc_subtract_idx = nd::choose_calculate_idx(subtract_memory_arg.format);
-					for (auto pos : range) {
-						auto in_idx = calc_in_idx(input_size.raw, pos);
-						auto out_idx = calc_out_idx(output_size.raw, pos);
-						// we need to set batch position to 0 for subtraction because we need to subtract the same values for each batch
-						auto _tmp_pos = pos[0];
-						pos[0] = 0;
-						auto subtract_idx = calc_subtract_idx(subtract_size.raw, pos);
-						pos[0] = _tmp_pos;
-						output[out_idx] = input[in_idx] - subtract[subtract_idx];
-					}
-				}
-				else
-				{
-					for (auto pos : range) {
-						auto in_idx = calc_in_idx(input_size.raw, pos);
-						auto out_idx = calc_out_idx(output_size.raw, pos);
-
-						output[out_idx] = input[in_idx];
-					}
-
-				}
-            }
-
-            task_group work() {
-                return {{task{implementation, &outer}}, schedule::unordered};
-            }
-
-            static is_an_implementation *create(reorder &arg) { return new reorder_reference(arg); };
-        };
-
    }
-    reorder::arguments::arguments(neural::engine::type _engine, primitive_at _in, primitive _out) //todo Artur fix arguments order
-        : engine(_engine)
-        , output({_out})
+    reorder::arguments::arguments(primitive_at _in, primitive _out) //todo Artur fix arguments order
+        : output({_out})
         , input({_in}) {}
 
-	reorder::arguments::arguments(neural::engine::type _engine, primitive _out, primitive _in, primitive subtract_values)
-		: engine(_engine)
-		, output({ _out })
+	reorder::arguments::arguments(primitive _out, primitive _in, primitive subtract_values)
+		: output({ _out })
 		, input({ _in, subtract_values }) {}
 
-    reorder::arguments::arguments(neural::engine::type _engine, neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in)
-        : engine(_engine)
-        , output( {memory::allocate({_engine, _out_layout, _out_sizes})} )
+    reorder::arguments::arguments(neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in)
+        : output( {memory::allocate({_out_layout, _out_sizes})} )
         , input({_in}) {}
 
-	reorder::arguments::arguments(neural::engine::type _engine, neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in, primitive_at _subtract)
-		: engine(_engine)
-		, output({ memory::allocate({ _engine, _out_layout, _out_sizes }) })
+	reorder::arguments::arguments(neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in, primitive_at _subtract)
+		: output({ memory::allocate({ _out_layout, _out_sizes }) })
 		, input({ _in, _subtract }) {}
 
-    template<>
-    struct implementation_key<reorder> {
-        typedef neural::engine::type type;
-        type operator()(reorder& primitive) { return primitive.argument.engine; }
-    };
-
-    namespace {
-        struct attach {
-            attach() {
-                implementation_map<reorder>::add({
-                    { engine::type::reference, reorder_reference::create },
-                    { engine::type::cpu, reorder_reference::create },
-                });
-            }
-        };
-    }
 
     // creates primitive with reorder implementation that supports provided arguments
-    primitive reorder::create(reorder::arguments arg) {
-        static attach attach_impl;
+    primitive reorder::create(reorder::arguments arg) 
+	{
         if (arg.input[0].primitive().as<const memory&>().argument.size.raw.size() != arg.output[0].as<const memory&>().argument.size.raw.size())
             //            throw std::runtime_error("Number of dimensions in reorder does not match. Meybe you want to use reshape primitive?"); //todo reshape
             throw std::runtime_error("Number of dimensions in reorder does not match.");

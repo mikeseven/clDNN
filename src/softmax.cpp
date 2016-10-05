@@ -20,18 +20,16 @@
 namespace neural {
 namespace normalization {
 
-softmax::arguments::arguments(neural::engine::type eng, primitive out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off)
-    : engine(eng)
-    , output({out})
+softmax::arguments::arguments(primitive out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off)
+    : output({out})
     , output_offset(out_off)
     , output_size(out_siz)
     , input({in})
     , input_offset(in_off)
     {}
 
-softmax::arguments::arguments(neural::engine::type eng, primitive out, primitive in)
-    : engine(eng)
-    , output({out})
+softmax::arguments::arguments(primitive out, primitive in)
+    : output({out})
     , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
     , output_size(out.as<const memory&>().argument.size)
  {

@@ -19,13 +19,15 @@
 #include <thread>
 #include <atomic>
 
-namespace neural {
+namespace neural 
+{
 
-class async_execution {
+class async_execution 
+{
     std::atomic<size_t> _tasks_left;
     const std::vector<primitive> _primitives;
     const std::vector<worker> _workers;
-    bool is_lazy() { return !!(_workers[0].engine()&engine::lazy); }
+
     void start() {
         _tasks_left = _primitives.size();
         auto thread_function = [&]() {
@@ -48,35 +50,27 @@ public:
         , _primitives(primitives)
         , _workers(workers)
     {
-        // validate than all engines are lazy or non-lazy
-        for(auto worker : _workers)
-            if(is_lazy()!=!!(worker.engine()&engine::lazy)) throw std::runtime_error("async_execution: lazy engines mixed with non-lazy one");
-
-        // for non-lazy - start execution immediately
-        if(!is_lazy()) start();
     }
 
     ~async_execution() { wait(); }
 
     size_t tasks_left() { return _tasks_left; }
 
-    void wait() {
-        if(is_lazy()) {
-            // all primitves are in; can do pattern match-replace here
-
-            // start execution
-            start();
-        }
+    void wait() 
+	{
+        start();
         // wait for completion
         while(_tasks_left) std::this_thread::yield();
     }
 };
 
 
-async_result execute(std::vector<primitive> primitives, std::vector<worker> workers) {
-    if(0==workers.size()) {
-        static auto cpu_worker = worker_cpu::create({});
-        workers.push_back(cpu_worker);
+async_result execute(std::vector<primitive> primitives, std::vector<worker> workers) 
+{
+    if(0==workers.size()) 
+	{
+        static auto gpu_worker = worker_gpu::create();
+        workers.push_back(gpu_worker);
     }
     assert(1==workers.size()); // currently only one worker at time
 

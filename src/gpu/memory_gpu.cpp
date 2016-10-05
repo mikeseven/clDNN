@@ -49,22 +49,4 @@ namespace neural { namespace gpu {
         release();
     }
 
-namespace {
-    struct attach_gpu_allocator {
-        attach_gpu_allocator() {
-            allocators_map::instance().insert({ engine::gpu, [](memory::arguments arg, bool) -> std::shared_ptr<memory::buffer> {
-                return std::make_shared<gpu_buffer>(arg);
-            } });
-        }
-        ~attach_gpu_allocator() {}
-    };
-
-#ifdef __GNUC__
-    __attribute__((visibility("default"))) //todo meybe dll_sym?
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
-    attach_gpu_allocator attach_impl;
-}
-
 }}

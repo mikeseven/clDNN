@@ -28,10 +28,9 @@ void convert_weights(neural::memory::format::type format, std::string convertion
     {
         if (w.find(convertion_path) != std::string::npos)
         {
-            auto mem = file::create({ engine::cpu, w.c_str() });
+            auto mem = file::create({ w.c_str() });
             auto reordered_mem = reorder::create(
             {
-                engine::cpu,
                 (format),
                 mem.as<const memory&>().argument.size, // do not resize
                 mem

@@ -27,9 +27,6 @@ namespace neural { namespace gpu {
 class memory_arg : public context_holder {
     const neural::memory& _mem;
     std::shared_ptr<gpu_buffer> _gpu_buffer;
-    bool is_own() const {
-        return _mem.argument.engine == neural::engine::gpu;
-    }
     bool _copy_input;
     bool _copy_output;
 
