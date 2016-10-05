@@ -91,30 +91,28 @@ void print_profiling_table(std::ostream& os ,const std::vector<instrumentation::
     os << "\nTotal profiled time: " << instrumentation::to_string(total) << std::endl;
 }
 
-// Create workers
-std::vector<worker> create_workers(engine::type eng)
+// Create worker
+worker create_worker(engine::type eng)
 {
-    std::vector<worker> workers;
-
     switch (eng)
     {
     case engine::gpu:
     {
         std::cout << "GPU Program compilation started" << std::endl;
         instrumentation::timer<> timer_compilation;
-        workers.push_back(worker_gpu::create());
+        auto worker = worker_gpu::create();
         auto compile_time = timer_compilation.uptime();
         std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
+        return worker;
     }
     break;
     default:
-        workers.push_back(worker_cpu::create({}));
+        return worker_cpu::create({});
     }
-    return workers;
 }
 
 // Building AlexNet network with loading weights & biases from file
-std::vector<primitive> build_alexnet(primitive& input, primitive& output, engine::type eng, const std::string& weights_dir)
+std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& input, const primitive& output, engine::type eng, const std::string& weights_dir)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     std::cout << "Building Alexnet started" << std::endl;
@@ -318,33 +316,39 @@ std::vector<primitive> build_alexnet(primitive& input, primitive& output, engine
     auto build_time = timer_build.uptime();
     std::cout << "Building Alexnet finished in " << instrumentation::to_string(build_time) << std::endl;
 
-    return std::vector<primitive> {
-        reordered_input,
-        conv1, pool1, lrn1, //stage 0
-        conv2_group2, pool2, lrn2,
-        conv3,
-        conv4_group2,
-        conv5_group2, pool5,
-        fc6,
-        fc7,
-        fc8,
-        softmax, output };
+    return std::vector<std::pair<primitive, std::string>> {
+        { reordered_input, "reorder"},
+        { conv1, "conv1"},
+        { pool1, "pool1"},
+        { lrn1, "lrn1"},
+        { conv2_group2, "conv2_group2"},
+        { pool2, "pool2"},
+        { lrn2, "lrn2"},
+        { conv3, "conv3"},
+        { conv4_group2, "conv4_gorup2"},
+        { conv5_group2, "conv5_group2"},
+        { pool5, "pool5"},
+        { fc6, "fc6"},
+        { fc7, "fc7"},
+        { fc8, "fc8"},
+        { softmax, "softmax"}
+    };
 }
 
 // AlexNet execution
-std::chrono::nanoseconds execute_alexnet(std::vector<worker> &workers, std::vector<primitive> & primitives, primitive& output, engine::type eng, bool dump_hl)
+std::chrono::nanoseconds execute_alexnet(const worker& worker, const std::vector<std::pair<primitive, std::string>>& primitives, const primitive& output, engine::type eng, bool dump_hl)
 {
+    // we need this exact number of primitives(those are created in create_alexnet) 
+    assert(primitives.size() == 16);
+
     std::cout << "Start execution" << std::endl;
     instrumentation::timer<> timer_execution;
 
     for (auto& p : primitives)
     {
-        workers[0].execute(p.work());
+        worker.execute(p.first.work());
     }
 
-    // we need this exact number of primitives(those are created in create_alexnet) 
-    assert(primitives.size() == 16);
-    
     //GPU primitives scheduled in unblocked manner
     auto scheduling_time(timer_execution.uptime());
 
@@ -356,29 +360,20 @@ std::chrono::nanoseconds execute_alexnet(std::vector<worker> &workers, std::vect
     std::cout << "Alexnet execution finished in " << instrumentation::to_string(execution_time) << std::endl;
     if (dump_hl)
     {
-        instrumentation::logger::log_memory_to_file(primitives[0].input[0].primitive(), "input0");
-        instrumentation::logger::log_memory_to_file(primitives[1].output[0], "conv1");
-        instrumentation::logger::log_memory_to_file(primitives[2].output[0], "pool1");
-        instrumentation::logger::log_memory_to_file(primitives[3].output[0], "lrn1");
-        instrumentation::logger::log_memory_to_file(primitives[4].output[0], "conv2_group2");
-        instrumentation::logger::log_memory_to_file(primitives[5].output[0], "pool2");
-        instrumentation::logger::log_memory_to_file(primitives[6].output[0], "lrn2");
-        instrumentation::logger::log_memory_to_file(primitives[7].output[0], "conv3");
-        instrumentation::logger::log_memory_to_file(primitives[8].output[0], "conv4_group2");
-        instrumentation::logger::log_memory_to_file(primitives[9].output[0], "conv5_group2");
-        instrumentation::logger::log_memory_to_file(primitives[10].output[0], "pool5");
-        instrumentation::logger::log_memory_to_file(primitives[11].output[0], "fc6");
-        instrumentation::logger::log_memory_to_file(primitives[13].output[0], "fc8");
-        instrumentation::logger::log_memory_to_file(primitives[14].output[0], "softmax");
+        instrumentation::logger::log_memory_to_file(primitives[0].first.input[0].primitive(), "input0");
+        for (auto& p : primitives)
+        {
+            instrumentation::logger::log_memory_to_file(p.first, p.second);
+        }
         // for now its enought. rest wil be done when we have equals those values
     }
     else
     {
-        instrumentation::logger::log_memory_to_file(primitives[15], "final_result");
+        instrumentation::logger::log_memory_to_file(output, "final_result");
     }
 
     if (eng == engine::gpu) {
-        print_profiling_table(std::cout, workers[0].as<worker_gpu&>().get_profiling_info());
+        print_profiling_table(std::cout, worker.as<worker_gpu&>().get_profiling_info());
     }
 
     return std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time);
@@ -404,10 +399,10 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, const s
     html output_file("alexnet", "alexnet run");
 
     // build alexnet
-    std::vector<primitive> alexnet_primitives = build_alexnet(input, output, eng, weights_dir);
+    std::vector<std::pair<primitive, std::string>> alexnet_primitives = build_alexnet(input, output, eng, weights_dir);
 
-    // create workers
-    std::vector<worker> workers = create_workers(eng);
+    // create worker
+    worker worker = create_worker(eng);
 
     for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
     {
@@ -419,7 +414,7 @@ void alexnet(uint32_t batch_size, std::string img_dir, engine::type eng, const s
         load_images_from_file_list(image_in_batches, input);
 
         // execute alexnet
-        auto time = execute_alexnet(workers, alexnet_primitives, output, eng, dump_hl);
+        auto time = execute_alexnet(worker, alexnet_primitives, output, eng, dump_hl);
 
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count(); 
         output_file.batch(output.as<const neural::memory&>( ), join_path(get_executable_info()->dir(), "names.txt"), image_in_batches);
