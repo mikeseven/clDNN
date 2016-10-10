@@ -209,7 +209,7 @@ struct convolution_gpu : is_an_implementation {
     static int get_local_work_group_size(const int batch_size)
     {
         if (batch_size == 1)
-            return 32;
+            return 16;
         return batch_size > 8 ? 16 : 8;
     }
 

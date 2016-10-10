@@ -430,9 +430,32 @@ namespace neural
                         
                             //sub_group_id used as offset to make each workitem load different filter, and then shuffle it
                             uint filter_idx = ofm_offset + sub_group_id + FILTER_INPUT_FEATURE_NUM * (FILTER_OUTPUT_FEATURE_NUM * (i * FILTER_SIZE_X + j));
-                            uint filter_idx2 = filter_idx + 8;
 
+#if INPUT_BATCH_NUM == 1
+                            float8 _tmp_data0 = 0;
+                            uint _input_idx = input_idx / 8;
+                            for(uint h = 0; h < FILTER_INPUT_FEATURE_NUM / 8; h++)
+                            {
+                                float8 _input = vload8(_input_idx, input);
+                                float8 _filter;
+                                _filter.s0 = filter[filter_idx]; filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter.s1 = filter[filter_idx]; filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter.s2 = filter[filter_idx]; filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter.s3 = filter[filter_idx]; filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter.s4 = filter[filter_idx]; filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter.s5 = filter[filter_idx]; filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter.s6 = filter[filter_idx]; filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter.s7 = filter[filter_idx]; filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _tmp_data0 = mad(_input, _filter, _tmp_data0);
+                                _input_idx += INPUT_BATCH_NUM;
+                            }
+                            input_idx += (FILTER_INPUT_FEATURE_NUM / 8) * 8 * INPUT_FEATURE_NUM;
+                            _data0 += _tmp_data0.s0 + _tmp_data0.s1 + _tmp_data0.s2 + _tmp_data0.s3 +
+                                      _tmp_data0.s4 + _tmp_data0.s5 + _tmp_data0.s6 + _tmp_data0.s7;
+                            for (uint h = FILTER_INPUT_FEATURE_NUM - (FILTER_INPUT_FEATURE_NUM % 8); h < FILTER_INPUT_FEATURE_NUM; h++)
+#else
                             for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
+#endif
                             {
                                 _data0 = mad(input[input_idx], filter[filter_idx], _data0);
                                 filter_idx += FILTER_OUTPUT_FEATURE_NUM;
