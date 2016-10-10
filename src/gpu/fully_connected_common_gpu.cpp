@@ -79,6 +79,21 @@ namespace neural {
 		ACTIVATION(output[x], result);
     )__CC";
 
+    const char fully_connected_code_xb_xb_memory[] = R"__CC(
+        const int x = get_global_id(0);
+        const uint batch_id = x % INPUT_BATCH_NUM;
+
+        uint outXIdx = x / INPUT_BATCH_NUM;
+        uint weightBatchIdx = outXIdx;
+        float result = bias[outXIdx];
+        for (uint i = 0; i < INPUT_ELEMENTS_COUNT; i++)
+        {
+            result += input[i * INPUT_BATCH_NUM + batch_id] * weight[weightBatchIdx + i * WEIGHTS_BATCH_NUM];
+        }
+
+		ACTIVATION(output[x], result);
+    )__CC";
+
     const char fully_connected_code_xb_bx_memory[] = R"__CC(
         const int x = get_global_id(0);
         const uint batch_id = x % INPUT_BATCH_NUM;

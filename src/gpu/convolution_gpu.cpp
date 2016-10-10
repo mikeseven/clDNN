@@ -208,6 +208,8 @@ struct convolution_gpu : is_an_implementation {
 
     static int get_local_work_group_size(const int batch_size)
     {
+        if (batch_size == 1)
+            return 32;
         return batch_size > 8 ? 16 : 8;
     }
 
@@ -359,6 +361,7 @@ struct convolution_gpu : is_an_implementation {
             }
             case memory::format::yxio_f32:
             {
+                
                 uint32_t batch_size = output_mem.argument.size.batch[0];
                 uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size);
                 uint32_t batches_per_workitem = get_batches_per_work_item(batch_size);
