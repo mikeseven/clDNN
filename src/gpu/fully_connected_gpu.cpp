@@ -55,6 +55,16 @@ KERNEL (Fully_Connected_GPU_xb_memory)(
 {
 )__krnl";
 
+const std::string kernelName_xb_xb_memory = "Fully_Connected_GPU_xb_xb_memory";
+const std::string kernelCode_xb_xb_memory_Begin = R"__krnl(
+KERNEL (Fully_Connected_GPU_xb_xb_memory)(
+    const __global float* input, 
+    __global float* output, 
+    const __global float* weight,
+    const __global float* bias)
+{
+)__krnl";
+
 const std::string kernelName_xb_bx_memory = "Fully_Connected_GPU_xb_bx_memory";
 const std::string kernelCode_xb_bx_memory_Begin = R"__krnl(
 KERNEL (Fully_Connected_GPU_xb_bx_memory)(
@@ -192,7 +202,7 @@ namespace neural {
                     }
                     else
                     {
-                        throw std::invalid_argument("Weight memory format is not supported");
+                        return kernelName_xb_xb_memory;//..throw std::invalid_argument("Weight memory format is not supported");
                     }
                     break;
                 }
@@ -252,7 +262,7 @@ namespace neural {
                         }
                         else
                         {
-                            return kernelName_xb_memory;
+                            return kernelName_xb_xb_memory;
                         }
                     }
                     break;
@@ -367,7 +377,7 @@ namespace neural {
             auto output_bufSize = output_mem.count();
 
             // calculate local workgroup size
-            int lws = 16;
+            int lws = 32;
             while (output_bufSize % lws) {
                 lws--;
             }
@@ -467,6 +477,9 @@ namespace {
             gpu::kernel_templates::add(kernelName_xb_bx, inline_utils_float + kernelCode_xb_bx_Begin + fully_connected_code_xb_bx + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_yxfn, inline_utils_float + kernelCode_yxfn_Begin + fully_connected_code_yxfn + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_xb_memory, inline_utils_float + kernelCode_xb_memory_Begin + fully_connected_code_xb_memory + kernelCode_End + inline_utils_float_end);
+            
+            gpu::kernel_templates::add(kernelName_xb_xb_memory, inline_utils_float + kernelCode_xb_xb_memory_Begin + fully_connected_code_xb_xb_memory + kernelCode_End + inline_utils_float_end);
+
             gpu::kernel_templates::add(kernelName_xb_bx_memory, inline_utils_float + kernelCode_xb_bx_memory_Begin + fully_connected_code_xb_bx_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_xb_bx_b8_memory, inline_utils_float + kernelCode_xb_bx_b8_memory_Begin + fully_connected_code_xb_bx_b8_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_xb_xb_b8_x8_memory, inline_utils_float + kernelCode_xb_xb_b8_x8_memory_Begin + fully_connected_code_xb_xb_b8_x8_memory + kernelCode_End + inline_utils_float_end);
