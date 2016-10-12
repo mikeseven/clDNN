@@ -353,12 +353,37 @@ std::chrono::nanoseconds execute_alexnet(const worker& worker, const std::vector
     return std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time);
 }
 
+uint32_t get_next_nearest_power_of_two(int number)
+{
+    int tmp_number = number;
+    uint32_t power = 1;
+    while (tmp_number >>= 1) power <<= 1;
+    if (number % power == 0)
+        return power;
+    return power << 1;
+}
+
+uint32_t get_gpu_batch_size(int number)
+{
+    uint32_t nearest_power_of_two = get_next_nearest_power_of_two(number);
+    // we do not support batch of size 2 or 4 so we need to get rid of those
+    if (nearest_power_of_two < 8 && nearest_power_of_two > 1)
+        return 8;
+    return nearest_power_of_two;
+}
+
 void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weights_dir, bool dump_hl, bool profiling)
 {
+    uint32_t gpu_batch_size = get_gpu_batch_size(batch_size);
+    if (gpu_batch_size != batch_size)
+    {
+        std::cout << "WARNING: This is not the optimal batch size. You have " << (gpu_batch_size - batch_size) 
+                  << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;
+    }
     gpu::configuration::get().enable_profiling = profiling;
 
-    auto input = memory::allocate({  memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3, } });
-    auto output = memory::allocate({  memory::format::xb_f32,{ batch_size,{ 1000 } } });
+    auto input = memory::allocate({  memory::format::byxf_f32,{ gpu_batch_size,{ 227, 227 }, 3, } });
+    auto output = memory::allocate({  memory::format::xb_f32,{ gpu_batch_size,{ 1000 } } });
 
     auto img_list = get_directory_images(img_dir);
     if (img_list.empty())
