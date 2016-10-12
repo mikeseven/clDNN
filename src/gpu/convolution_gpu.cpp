@@ -329,9 +329,12 @@ struct convolution_gpu : is_an_implementation {
 
         auto dstSize = output_mem.count();
 
+        size_t gws0;
+        size_t lws0;
+
+        // compute global and local work sizes for kernels
         switch (input_mem.argument.format) {
         case memory::format::yxfb_f32:
-            size_t gws0;
             switch (filter_mem.argument.format)
             {
             case memory::format::yxoi_f32:
@@ -354,54 +357,43 @@ struct convolution_gpu : is_an_implementation {
                 {
                     gws0 = dstSize / split;
                 }
-                for (uint32_t i = 0; i < split; i++) {
-                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                        ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ 8, 1, 1 } },
-                            input_mem,
-                            output_mem,
-                            outer.input_memory(i * 2 + 1), //filters
-                            outer.input_memory(i * 2 + 2), //biases
-                            i);
-                }
+                lws0 = 8;
                 break;
             }
             case memory::format::yxio_f32:
             {
-                
                 uint32_t batch_size = output_mem.argument.size.batch[0];
                 uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
                 uint32_t batches_per_workitem = get_batches_per_work_item(batch_size);
                 gws0 = (output_mem.argument.size.feature[0] * batch_size / (ofm_per_workitem * batches_per_workitem)) / split;
-                for (uint32_t i = 0; i < split; i++) {
-                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                        ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] } ,{ static_cast<size_t>(get_local_work_group_size(batch_size)), 1, 1 } },
-                            input_mem,
-                            output_mem,
-                            outer.input_memory(i * 2 + 1), //filters
-                            outer.input_memory(i * 2 + 2), //biases
-                            i);
-                }
+                lws0 = static_cast<size_t>(get_local_work_group_size(batch_size));
                 break;
             }
             case memory::format::oiyx_f32:
             case memory::format::oyxi_f32:
-                gws0 = dstSize / split;
-                for (uint32_t i = 0; i < split; i++) {
-                    me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                        ({ gws0, std::min(gws0, static_cast<size_t>(8)) },
-                            input_mem,
-                            output_mem,
-                            outer.input_memory(i * 2 + 1), //filters
-                            outer.input_memory(i * 2 + 2), //biases
-                            i);
-                }
+            {
+                uint32_t batch_size = output_mem.argument.size.batch[0];
+                gws0 = (output_mem.argument.size.feature[0] * batch_size) / split;
+                lws0 = std::min(gws0, static_cast<size_t>(8));
                 break;
+            }
             default:
                 throw std::invalid_argument("Filter memory format is not supported");
             }
             break;
         default:
             throw std::invalid_argument("Input memory format is not supported");
+        }
+
+        // execute kernels
+        for (uint32_t i = 0; i < split; i++) {
+            me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
+                ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] },{ lws0, 1, 1 } },
+                    input_mem,
+                    output_mem,
+                    outer.input_memory(i * 2 + 1), //filters
+                    outer.input_memory(i * 2 + 2), //biases
+                    i);
         }
     }
 
