@@ -91,6 +91,17 @@ KERNEL(Convolution_GPU_YXFB_YXIO_B1_memory)(
     uint split_idx)
 {)__krnl";
 
+const std::string kernelName_YXFB_YXIO_B1_vload_memory = "Convolution_GPU_YXFB_YXIO_B1_vload_memory";
+const std::string kernelCode_YXFB_YXIO_B1_vload_memory_Begin = R"__krnl(
+__attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
+KERNEL(Convolution_GPU_YXFB_YXIO_B1_vload_memory)(
+    const __global float* input,
+    __global float* output,
+    const __global float* filter,
+    const __global float* bias,
+    uint split_idx)
+{)__krnl";
+
 const std::string kernelName_YXFB_YXIO_B8_memory = "Convolution_GPU_YXFB_YXIO_B8_memory";
 const std::string kernelCode_YXFB_YXIO_B8_memory_Begin = R"__krnl(
 __attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
@@ -177,7 +188,16 @@ struct convolution_gpu : is_an_implementation {
                     return kernelName_YXFB_YXOI_memory;
             case memory::format::yxio_f32:
                 if (input_mem.argument.size.batch[0] == 1)
-                    return kernelName_YXFB_YXIO_B1_memory;
+                {
+                    int batch_size = input_mem.argument.size.batch[0];
+                    int ofm_per_work_item = get_ofm_per_work_item(batch_size, filter_mem);
+                    if (ofm_per_work_item == 8 ||
+                        ofm_per_work_item == 4 ||
+                        ofm_per_work_item == 2)
+                        return kernelName_YXFB_YXIO_B1_vload_memory;
+                    else
+                        return kernelName_YXFB_YXIO_B1_memory;
+                }
                 if (input_mem.argument.size.batch[0] > 16)
                     return kernelName_YXFB_YXIO_B16_memory;
                 else
@@ -193,10 +213,25 @@ struct convolution_gpu : is_an_implementation {
     }
 
     // how many output feature maps for a single batch will a single work item produce 
-    static int get_ofm_per_work_item(const int batch_size)
+    static int get_ofm_per_work_item(const int batch_size, const neural::memory& filter_mem)
     {
         if (batch_size == 1)
+        {
+            int output_feature_count = filter_mem.argument.size.feature[0];
+            if (output_feature_count % 128 == 0)
+            {
+                return 8;
+            }
+            else if (output_feature_count % 64 == 0)
+            {
+                return 4;
+            }
+            else if (output_feature_count % 32 == 0)
+            {
+                return 2;
+            }
             return 1;
+        }
         return batch_size > 16 ? 8 : 16;
     }
 
@@ -209,7 +244,9 @@ struct convolution_gpu : is_an_implementation {
     static int get_local_work_group_size(const int batch_size)
     {
         if (batch_size == 1)
+        {
             return 16;
+        }
         return batch_size > 8 ? 16 : 8;
     }
 
@@ -280,7 +317,7 @@ struct convolution_gpu : is_an_implementation {
             const int batches_per_work_item = get_batches_per_work_item(batch_size);
             const int local_work_group_size = get_local_work_group_size(batch_size);
             mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size));
-            mem_consts.add_constant(gpu::make_jit_constant("OFM_PER_WORK_ITEM", get_ofm_per_work_item(batch_size))); // how many output feature maps for a single batch will a single work item produce
+            mem_consts.add_constant(gpu::make_jit_constant("OFM_PER_WORK_ITEM", get_ofm_per_work_item(batch_size, filter_mem))); // how many output feature maps for a single batch will a single work item produce
             mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item)); // how many batches will a single work item compute
             mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max((batch_size / batches_per_work_item) / local_work_group_size, 1))); // how many local work groups we need to compute single element for each batch
             mem_consts.add_constant(gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / batches_per_work_item)); // how many work items we need to compute single element for each batch
@@ -289,6 +326,22 @@ struct convolution_gpu : is_an_implementation {
             if (input_mem.argument.size.feature[0] > 4)
             {
                 mem_consts.add_constant(gpu::make_jit_constant("USE_BLOCK_READ_2", ""));
+            }
+            if (batch_size == 1)
+            {
+                int ofm_per_work_item = get_ofm_per_work_item(batch_size, filter_mem);
+                if (ofm_per_work_item == 8)
+                {
+                    mem_consts.add_constant(gpu::make_jit_constant("USE_VECTOR_8", ""));
+                }
+                else if (ofm_per_work_item == 4)
+                {
+                    mem_consts.add_constant(gpu::make_jit_constant("USE_VECTOR_4", ""));
+                }
+                else if(ofm_per_work_item == 2)
+                {
+                    mem_consts.add_constant(gpu::make_jit_constant("USE_VECTOR_2", ""));
+                }
             }
         }
         return mem_consts;
@@ -340,7 +393,7 @@ struct convolution_gpu : is_an_implementation {
                     }
                     else
                     {
-                        uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size);
+                        uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
                         gws0 = (output_mem.argument.size.feature[0] / (ofm_per_workitem / batch_size)) / split;
                     }
                 }
@@ -363,7 +416,7 @@ struct convolution_gpu : is_an_implementation {
             {
                 
                 uint32_t batch_size = output_mem.argument.size.batch[0];
-                uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size);
+                uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
                 uint32_t batches_per_workitem = get_batches_per_work_item(batch_size);
                 gws0 = (output_mem.argument.size.feature[0] * batch_size / (ofm_per_workitem * batches_per_workitem)) / split;
                 for (uint32_t i = 0; i < split; i++) {
@@ -439,6 +492,7 @@ namespace{
             gpu::kernel_templates::add(kernelName_YXFB_OYXI_memory, inline_utils_float + kernelCode_YXFB_OYXI_memory_Begin + convolution_code_yxfb_oyxi_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, inline_utils_float + kernelCode_YXFB_YXOI_B8_memory_Begin + convolution_code_yxfb_yxoi_b8_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_memory, inline_utils_float + kernelCode_YXFB_YXIO_B1_memory_Begin + convolution_code_yxfb_yxio_b1_memory + kernelCode_End + inline_utils_float_end);
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_vload_memory, inline_utils_float + kernelCode_YXFB_YXIO_B1_vload_memory_Begin + convolution_code_yxfb_yxio_b1_vload_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_YXFB_YXIO_B8_memory, inline_utils_float + kernelCode_YXFB_YXIO_B8_memory_Begin + convolution_code_yxfb_yxio_b8_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_YXFB_YXIO_B16_memory, inline_utils_float + kernelCode_YXFB_YXIO_B16_memory_Begin + convolution_code_yxfb_yxio_b16_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_F8_memory, inline_utils_float + kernelCode_YXFB_YXOI_B8_F8_memory_Begin + convolution_code_yxfb_yxoi_B8_F8_memory + kernelCode_End + inline_utils_float_end);
