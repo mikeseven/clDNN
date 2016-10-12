@@ -141,6 +141,7 @@ struct convolution_gpu : is_an_implementation {
         // input
         auto& input_mem = outer.input_memory(0);
         auto& filter_mem = outer.input_memory(1);
+        auto batch_size = input_mem.argument.size.batch[0];
 
         if (padding::zero != outer.argument.padding)
             throw std::invalid_argument("Unknown padding mode in convolution.");
@@ -151,7 +152,7 @@ struct convolution_gpu : is_an_implementation {
             case memory::format::oiyx_f32:
                 return kernelName_YXFB_memory;
             case memory::format::yxoi_f32:
-                if (input_mem.argument.size.batch[0] == 8 &&
+                if (batch_size == 8 &&
                     out_feature_multiple_of_8)
                 {
                     if (in_feature_multiple_of_8)
@@ -162,9 +163,8 @@ struct convolution_gpu : is_an_implementation {
                 else
                     return kernelName_YXFB_YXOI_memory;
             case memory::format::yxio_f32:
-                if (input_mem.argument.size.batch[0] == 1)
+                if (batch_size == 1)
                 {
-                    int batch_size = input_mem.argument.size.batch[0];
                     int ofm_per_work_item = get_ofm_per_work_item(batch_size, filter_mem);
                     if (ofm_per_work_item == 8 ||
                         ofm_per_work_item == 4 ||
@@ -332,6 +332,8 @@ struct convolution_gpu : is_an_implementation {
         size_t gws0;
         size_t lws0;
 
+        uint32_t batch_size = output_mem.argument.size.batch[0];
+
         // compute global and local work sizes for kernels
         switch (input_mem.argument.format) {
         case memory::format::yxfb_f32:
@@ -339,7 +341,6 @@ struct convolution_gpu : is_an_implementation {
             {
             case memory::format::yxoi_f32:
             {
-                uint32_t batch_size = input_mem.argument.size.batch[0];
                 if (batch_size == 8 &&
                     me->out_feature_multiple_of_8)
                 {
@@ -362,7 +363,6 @@ struct convolution_gpu : is_an_implementation {
             }
             case memory::format::yxio_f32:
             {
-                uint32_t batch_size = output_mem.argument.size.batch[0];
                 uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
                 uint32_t batches_per_workitem = get_batches_per_work_item(batch_size);
                 gws0 = (output_mem.argument.size.feature[0] * batch_size / (ofm_per_workitem * batches_per_workitem)) / split;
@@ -372,9 +372,8 @@ struct convolution_gpu : is_an_implementation {
             case memory::format::oiyx_f32:
             case memory::format::oyxi_f32:
             {
-                uint32_t batch_size = output_mem.argument.size.batch[0];
                 gws0 = (output_mem.argument.size.feature[0] * batch_size) / split;
-                lws0 = std::min(gws0, static_cast<size_t>(8));
+                lws0 = std::min(gws0, static_cast<size_t>(32));
                 break;
             }
             default:
