@@ -21,40 +21,6 @@
 #include "implementation_map.h"
 #include "kernel.h"
 
-const std::string kernelName_xb = "Fully_Connected_GPU_xb";
-const std::string kernelCode_xb_Begin = R"__krnl(
-KERNEL (Fully_Connected_GPU_xb)(
-    const __global float* input,
-    __global float* output)
-{
-)__krnl";
-
-const std::string kernelName_xb_bx = "Fully_Connected_GPU_xb_bx";
-const std::string kernelCode_xb_bx_Begin = R"__krnl(
-KERNEL (Fully_Connected_GPU_xb_bx)(
-    const __global float* input,
-    __global float* output)
-{
-)__krnl";
-
-const std::string kernelName_yxfn = "Fully_Connected_GPU_yxfn";
-const std::string kernelCode_yxfn_Begin = R"__krnl(
-KERNEL (Fully_Connected_GPU_yxfn)(
-    const __global float* input,
-    __global float* output)
-{
-)__krnl";
-
-const std::string kernelName_xb_memory = "Fully_Connected_GPU_xb_memory";
-const std::string kernelCode_xb_memory_Begin = R"__krnl(
-KERNEL (Fully_Connected_GPU_xb_memory)(
-    const __global float* input, 
-    __global float* output, 
-    const __global float* weight,
-    const __global float* bias)
-{
-)__krnl";
-
 const std::string kernelName_xb_xb_memory = "Fully_Connected_GPU_xb_xb_memory";
 const std::string kernelCode_xb_xb_memory_Begin = R"__krnl(
 KERNEL (Fully_Connected_GPU_xb_xb_memory)(
@@ -128,26 +94,6 @@ KERNEL (Fully_Connected_GPU_yxfn_memory)(
 {
 )__krnl";
 
-const std::string kernelName_yxfn_byxf_memory = "Fully_Connected_GPU_yxfn_byxf_memory";
-const std::string kernelCode_yxfn_byxf_memory_Begin = R"__krnl(
-KERNEL (Fully_Connected_GPU_yxfn_byxf_memory)(
-    const __global float* input, 
-    __global float* output, 
-    const __global float* weight,
-    const __global float* bias)
-{
-)__krnl";
-
-const std::string kernelName_yxfn_byxf_b8_f8_memory = "Fully_Connected_GPU_yxfn_byxf_b8_f8_memory";
-const std::string kernelCode_yxfn_byxf_b8_f8_memory_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(8, 1, 1)))
-KERNEL (Fully_Connected_GPU_yxfn_byxf_b8_f8_memory)(
-    const __global float* input, 
-    __global float* output, 
-    const __global float* weight,
-    const __global float* bias)
-{
-)__krnl";
 const std::string kernelCode_End = R"__krnl(
 }
 )__krnl";
@@ -156,19 +102,13 @@ namespace neural {
 
     struct fully_connected_gpu : is_an_implementation {
         fully_connected &outer;
-        bool inline_memory;
         gpu::kernel _kernel;
        
         fully_connected_gpu(fully_connected &arg)
             : is_an_implementation(neural::type_id<fully_connected_gpu>())
             , outer(arg)
-            , inline_memory(can_inline_memory(arg.input_memory(1)))
             , _kernel(select_kernel_name(), get_jit_constants())
         {}
-
-        static bool can_inline_memory(const neural::memory& mem) {
-            return mem.count() <= 1024;
-        }
 
         const std::string& select_kernel_name() const {
             // input
@@ -189,7 +129,7 @@ namespace neural {
                     }
                     else
                     {
-                        return kernelName_yxfn_byxf_memory;
+                        return kernelName_xb_bx_memory;
                     }
                     break;
                 }
@@ -202,21 +142,13 @@ namespace neural {
                     }
                     else
                     {
-                        return kernelName_xb_xb_memory;//..throw std::invalid_argument("Weight memory format is not supported");
+                        return kernelName_xb_xb_memory;
                     }
                     break;
                 }
                 case memory::format::bfyx_f32:
                 {
-                    if (inline_memory)
-                    {
-                        return kernelName_yxfn;
-                    }
-                    else
-                    {
-                        return kernelName_yxfn_memory;
-                    }
-                    break;
+                    return kernelName_yxfn_memory;
                 }
                 default:
                     throw std::invalid_argument("Weight memory format is not supported");
@@ -236,14 +168,7 @@ namespace neural {
                     }
                     else
                     {
-                        if (inline_memory)
-                        {
-                            return kernelName_xb_bx;
-                        }
-                        else
-                        {
-                            return kernelName_xb_bx_memory;
-                        }
+                        return kernelName_xb_bx_memory;
                     }
                     break;
                 }
@@ -256,14 +181,7 @@ namespace neural {
                     }
                     else
                     {
-                        if (inline_memory)
-                        {
-                            return kernelName_xb;
-                        }
-                        else
-                        {
-                            return kernelName_xb_xb_memory;
-                        }
+                        return kernelName_xb_xb_memory;
                     }
                     break;
                 }
@@ -319,8 +237,6 @@ namespace neural {
 
             // weights
             auto& weight_mem = outer.input_memory(1);
-            // bias
-            auto& bias_mem = outer.input_memory(2);
 
             float negative_slope = outer.argument.negative_slope;
 
@@ -335,15 +251,8 @@ namespace neural {
                 mem_consts.add_constant(gpu::make_jit_constant("RELU", ""));
                 mem_consts.add_constant(gpu::make_jit_constant("NEGATIVE_SLOPE", negative_slope));
             }
-            if (inline_memory)
-            {
-                mem_consts.add_constant(gpu::make_jit_constant("WEIGHTS", weight_mem));
-                mem_consts.add_constant(gpu::make_jit_constant("BIASES", bias_mem));
-            }
-            else
-            {
-                mem_consts.add_constant(gpu::make_jit_constant("WEIGHTS", weight_mem.argument.size));
-            }
+
+            mem_consts.add_constant(gpu::make_jit_constant("WEIGHTS", weight_mem.argument.size));
 
             // temporary values
             if (weight_mem.argument.format == memory::format::type::yxfb_f32 ||
@@ -407,36 +316,19 @@ namespace neural {
                     }
                     else
                     {
-                        if (me->inline_memory) {
-                            me->_kernel.run<gpu::input_mem, gpu::output_mem >
-                                ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
-                        }
-                        else {
-                            me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-                                ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
-                        }
-                    }
-                }
-                else
-                {
-                    if (me->inline_memory) {
-                        me->_kernel.run<gpu::input_mem, gpu::output_mem >
-                            ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
-                    }
-                    else {
                         me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
                             ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
                     }
                 }
-                break;
-            case memory::format::x_f32:
-                if (me->inline_memory) {
-                    me->_kernel.run<gpu::input_mem, gpu::output_mem>
-                        ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
-                } else {
+                else
+                {
                     me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
                         ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
                 }
+                break;
+            case memory::format::x_f32:
+                me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                    ({ output_bufSize, std::min(output_bufSize, static_cast<size_t>(lws)) }, input_mem, output_mem, weight_mem, bias_mem);
                 break;
             default:
                 throw std::invalid_argument("Input memory format is not supported");
@@ -473,21 +365,13 @@ namespace neural {
 namespace {
     struct attach {
         attach() {
-            gpu::kernel_templates::add(kernelName_xb, inline_utils_float + kernelCode_xb_Begin + fully_connected_code_xb + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_xb_bx, inline_utils_float + kernelCode_xb_bx_Begin + fully_connected_code_xb_bx + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_yxfn, inline_utils_float + kernelCode_yxfn_Begin + fully_connected_code_yxfn + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_xb_memory, inline_utils_float + kernelCode_xb_memory_Begin + fully_connected_code_xb_memory + kernelCode_End + inline_utils_float_end);
-            
             gpu::kernel_templates::add(kernelName_xb_xb_memory, inline_utils_float + kernelCode_xb_xb_memory_Begin + fully_connected_code_xb_xb_memory + kernelCode_End + inline_utils_float_end);
-
             gpu::kernel_templates::add(kernelName_xb_bx_memory, inline_utils_float + kernelCode_xb_bx_memory_Begin + fully_connected_code_xb_bx_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_xb_bx_b8_memory, inline_utils_float + kernelCode_xb_bx_b8_memory_Begin + fully_connected_code_xb_bx_b8_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_xb_xb_b8_x8_memory, inline_utils_float + kernelCode_xb_xb_b8_x8_memory_Begin + fully_connected_code_xb_xb_b8_x8_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(KernelName_xb_xb_b8_x8_memory_vload, inline_utils_float + kernelCode_xb_xb_b8_x8_memory_vload_Begin + fully_connected_code_xb_xb_b8_x8_memory_vload + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_xb_xb_b16_memory, inline_utils_float + kernelCode_xb_xb_b16_memory_Begin + fully_connected_code_xb_xb_b16_memory + kernelCode_End + inline_utils_float_end);
             gpu::kernel_templates::add(kernelName_yxfn_memory, inline_utils_float + kernelCode_yxfn_memory_Begin + fully_connected_code_yxfn_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_yxfn_byxf_memory, inline_utils_float + kernelCode_yxfn_byxf_memory_Begin + fully_connected_code_yxfn_byxf_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_yxfn_byxf_b8_f8_memory, inline_utils_float + kernelCode_yxfn_byxf_b8_f8_memory_Begin + fully_connected_code_yxfn_byxf_b8_f8_memory + kernelCode_End + inline_utils_float_end);
 
             auto val_fw = fully_connected_gpu::create;
 

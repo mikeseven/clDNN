@@ -51,7 +51,7 @@ TEST(fully_connected_gpu, xb_f32_batch_1) {
 
     auto input_prim = memory::allocate({ memory::format::xb_f32,{ input_b ,{ { input_x } },{ 1 } } });
     auto output_prim = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } },{ 1 } } });
-    auto weights_prim = memory::allocate({ memory::format::xb_f32,{ weight_y,{ { weight_x } },{ 1 } } });
+    auto weights_prim = memory::allocate({ memory::format::bx_f32,{ weight_y,{ { weight_x } },{ 1 } } });
     auto bias_prim = memory::allocate({ memory::format::x_f32,{ 1,{ { output_x } },{ 1 } } });
 
     set_values(input_prim, { -0.5f, 2.0f, 0.5f });
@@ -97,7 +97,7 @@ TEST(fully_connected_gpu, xb_f32_batch_2) {
 
     auto input_prim   = memory::allocate({ memory::format::xb_f32,{ input_b ,{ { input_x  } }, 1 } });
     auto output_prim  = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } }, 1 } });
-    auto weights_prim = memory::allocate({ memory::format::xb_f32,{ weight_y,{ { weight_x } }, 1 } });
+    auto weights_prim = memory::allocate({ memory::format::bx_f32,{ weight_y,{ { weight_x } }, 1 } });
     auto bias_prim =    memory::allocate({ memory::format::x_f32, { 1,{ { output_x } }, 1 } });
 
     set_values(input_prim, { -0.5f, 1.0f, 2.0f, 1.5f, 0.5f, 0.0f });
@@ -145,7 +145,7 @@ TEST(fully_connected_gpu, x_f32) {
 
     auto input_prim   = memory::allocate({ memory::format::x_f32, { 1       ,{ { input_x  } }, 1 } });
     auto output_prim  = memory::allocate({ memory::format::x_f32, { 1       ,{ { output_x } }, 1 } });
-    auto weights_prim = memory::allocate({ memory::format::xb_f32,{ weight_y,{ { weight_x } }, 1 } });
+    auto weights_prim = memory::allocate({ memory::format::bx_f32,{ weight_y,{ { weight_x } }, 1 } });
     auto bias_prim    = memory::allocate({ memory::format::x_f32, { 1,{ { output_x } }, 1 } });
 
     set_values(input_prim, { -0.5f, 2.0f, 0.5f });
@@ -230,7 +230,7 @@ TEST(fully_connected_gpu, xb_f32_batch_1_relu) {
 
     auto input_prim = memory::allocate({ memory::format::xb_f32,{ input_b ,{ { input_x } },{ 1 } } });
     auto output_prim = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } },{ 1 } } });
-    auto weights_prim = memory::allocate({ memory::format::xb_f32,{ weight_y,{ { weight_x } },{ 1 } } });
+    auto weights_prim = memory::allocate({ memory::format::bx_f32,{ weight_y,{ { weight_x } },{ 1 } } });
     auto bias_prim = memory::allocate({ memory::format::x_f32,{ 1,{ { output_x } },{ 1 } } });
 
     set_values(input_prim, { -0.5f, 2.0f, 0.5f });
@@ -276,7 +276,7 @@ TEST(fully_connected_gpu, xb_f32_batch_2_relu) {
 
     auto input_prim = memory::allocate({ memory::format::xb_f32,{ input_b ,{ { input_x } }, 1 } });
     auto output_prim = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } }, 1 } });
-    auto weights_prim = memory::allocate({ memory::format::xb_f32,{ weight_y,{ { weight_x } }, 1 } });
+    auto weights_prim = memory::allocate({ memory::format::bx_f32,{ weight_y,{ { weight_x } }, 1 } });
     auto bias_prim = memory::allocate({ memory::format::x_f32,{ 1,{ { output_x } }, 1 } });
 
     set_values(input_prim, { -0.5f, 1.0f, 2.0f, 1.5f, 0.5f, 0.0f });
@@ -323,7 +323,7 @@ TEST(fully_connected_gpu, x_f32_relu) {
 
     auto input_prim = memory::allocate({ memory::format::x_f32,{ 1       ,{ { input_x } }, 1 } });
     auto output_prim = memory::allocate({ memory::format::x_f32,{ 1       ,{ { output_x } }, 1 } });
-    auto weights_prim = memory::allocate({ memory::format::xb_f32,{ weight_y,{ { weight_x } }, 1 } });
+    auto weights_prim = memory::allocate({ memory::format::bx_f32,{ weight_y,{ { weight_x } }, 1 } });
     auto bias_prim = memory::allocate({ memory::format::x_f32,{ 1,{ { output_x } }, 1 } });
 
     set_values(input_prim, { -0.5f, 2.0f, 0.5f });

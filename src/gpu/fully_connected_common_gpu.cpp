@@ -18,67 +18,6 @@
 
 namespace neural {
 
-    const char fully_connected_code_xb[] = R"__CC(
-        const int x = get_global_id(0);
-
-        uint outXIdx = x / INPUT_BATCH_NUM;
-        uint inputBatchIdx = x % INPUT_BATCH_NUM;
-        uint weightBatchIdx = outXIdx * WEIGHTS_BATCH_NUM;
-        float result = BIASES[outXIdx];
-        for (uint i = 0; i < INPUT_SIZE_X; i++)
-        {
-            result += input[i * INPUT_BATCH_NUM + inputBatchIdx] * WEIGHTS[weightBatchIdx + i];
-        }
-        ACTIVATION(output[x], result);
-    )__CC";
-
-    const char fully_connected_code_xb_bx[] = R"__CC(
-        const int x = get_global_id(0);
-        const uint batch_id = x % INPUT_BATCH_NUM;
-
-        uint outXIdx = x / INPUT_BATCH_NUM;
-        uint weightBatchIdx = outXIdx * WEIGHTS_BATCH_NUM;
-        float result = BIASES[outXIdx];
-        for (uint i = 0; i < INPUT_SIZE_X; i++)
-        {
-            result += input[i * INPUT_BATCH_NUM + batch_id] * WEIGHTS[weightBatchIdx + i];
-        }
-        ACTIVATION(output[x], result);
-    )__CC";
-
-    const char fully_connected_code_yxfn[] = R"__CC(
-        const uint x = get_global_id(0);
-        const int batch_id = x % INPUT_BATCH_NUM;
-        uint neuronIdx = x / INPUT_BATCH_NUM;
-
-        float result = BIASES[neuronIdx];
-
-        uint weight_idx = 0;
-        uint weight_offset = neuronIdx * INPUT_FEATURE_NUM * INPUT_SIZE_Y * INPUT_SIZE_X;
-        for(int k = 0; k < INPUT_FEATURE_NUM; k++)
-            for(int j = 0; j < INPUT_SIZE_Y; j++)
-                for(int i = 0; i < INPUT_SIZE_X; i++)
-                {
-                    result += input[(k + INPUT_FEATURE_NUM * ( i + j * INPUT_SIZE_X)) * INPUT_BATCH_NUM + batch_id] * WEIGHTS[weight_offset + weight_idx++];
-                } 
-        ACTIVATION(output[neuronIdx], result);
-    )__CC";
-
-    const char fully_connected_code_xb_memory[] = R"__CC(
-        const int x = get_global_id(0);
-        const uint batch_id = x % INPUT_BATCH_NUM;
-
-        uint outXIdx = x / INPUT_BATCH_NUM;
-        uint weightBatchIdx = outXIdx * WEIGHTS_BATCH_NUM;
-        float result = bias[outXIdx];
-        for (uint i = 0; i < INPUT_SIZE_X; i++)
-        {
-            result += input[i * INPUT_BATCH_NUM + batch_id] * weight[weightBatchIdx + i];
-        }
-
-		ACTIVATION(output[x], result);
-    )__CC";
-
     const char fully_connected_code_xb_xb_memory[] = R"__CC(
         const uint x = get_global_id(0);
         const uint batch_id = x % INPUT_BATCH_NUM;
@@ -105,10 +44,12 @@ namespace neural {
 
         uint outXIdx = x / INPUT_BATCH_NUM;
         uint weight_offset = outXIdx * INPUT_ELEMENTS_COUNT;
+        uint input_idx = batch_id;
         float result = bias[outXIdx];
         for (uint i = 0; i < INPUT_ELEMENTS_COUNT; i++)
         {
-            result += input[i * INPUT_BATCH_NUM + batch_id] * weight[weight_offset++];
+            result += input[input_idx] * weight[weight_offset++];
+            input_idx += INPUT_BATCH_NUM;
         }
 		 ACTIVATION(output[x], result);
     )__CC";
@@ -430,65 +371,7 @@ namespace neural {
                 {
                     result += input[(k + INPUT_FEATURE_NUM * ( i + j * INPUT_SIZE_X)) * INPUT_BATCH_NUM + batch_id] * weight[weight_offset++];
                 }
-		 ACTIVATION(output[x], result);
+        ACTIVATION(output[x], result);
     )__CC";
 
-    const char fully_connected_code_yxfn_byxf_memory[] = R"__CC(
-        const uint x = get_global_id(0);
-        const int batch_id = x % INPUT_BATCH_NUM;
-        uint neuronIdx = x / INPUT_BATCH_NUM;
-
-        float result = bias[neuronIdx];
-
-        uint weight_offset = neuronIdx * INPUT_FEATURE_NUM * INPUT_SIZE_Y * INPUT_SIZE_X;
-        for(int j = 0; j < INPUT_SIZE_Y; j++)
-            for(int i = 0; i < INPUT_SIZE_X; i++)
-            {    
-                int input_idx = (i + j * INPUT_SIZE_X) * INPUT_FEATURE_NUM * INPUT_BATCH_NUM + batch_id;
-                for(int k = 0; k < INPUT_FEATURE_NUM; k++)
-                {
-                    result += input[input_idx + k * INPUT_BATCH_NUM] * weight[weight_offset++];
-                }
-            }
-		 ACTIVATION(output[x], result);
-    )__CC";
-
-    const char fully_connected_code_yxfn_byxf_b8_f8_memory[] = R"__CC(
-        const uint x = get_global_id(0);
-        const int batch_id = x % INPUT_BATCH_NUM;
-        uint neuronIdx = x / INPUT_BATCH_NUM;
-
-        float result = bias[neuronIdx];
-
-        float8 _data = 0.f;
-
-        const uint sub_group_id = get_local_id(0);
-
-        uint weight_offset = sub_group_id + neuronIdx * INPUT_FEATURE_NUM * INPUT_SIZE_Y * INPUT_SIZE_X;
-        for(int j = 0; j < INPUT_SIZE_Y; j++)
-        {
-            for(int i = 0; i < INPUT_SIZE_X; i++)
-            {    
-                int input_idx = (i + j * INPUT_SIZE_X) * INPUT_FEATURE_NUM * INPUT_BATCH_NUM + batch_id;
-                for(int k = 0; k < INPUT_FEATURE_NUM; k+=8)
-                {
-                    const float weight_val = weight[weight_offset];
-                    const float8 _input = as_float8(intel_sub_group_block_read8((const __global uint*)input + input_idx + k * INPUT_BATCH_NUM));
-                    _data.s0 = fma(_input.s0, intel_sub_group_shuffle(weight_val, 0), _data.s0);
-                    _data.s1 = fma(_input.s1, intel_sub_group_shuffle(weight_val, 1), _data.s1);                                
-                    _data.s2 = fma(_input.s2, intel_sub_group_shuffle(weight_val, 2), _data.s2);
-                    _data.s3 = fma(_input.s3, intel_sub_group_shuffle(weight_val, 3), _data.s3);
-                    _data.s4 = fma(_input.s4, intel_sub_group_shuffle(weight_val, 4), _data.s4);
-                    _data.s5 = fma(_input.s5, intel_sub_group_shuffle(weight_val, 5), _data.s5);
-                    _data.s6 = fma(_input.s6, intel_sub_group_shuffle(weight_val, 6), _data.s6);
-                    _data.s7 = fma(_input.s7, intel_sub_group_shuffle(weight_val, 7), _data.s7);
-                    weight_offset += 8;
-                }
-            }
-        }
-        result += _data.s0 + _data.s1 + _data.s2 + _data.s3 +
-                  _data.s4 + _data.s5 + _data.s6 + _data.s7;
-
-		ACTIVATION(output[x], result);
-    )__CC";
 }

@@ -19,10 +19,6 @@
 #include <string>
 
 namespace neural {
-    extern const char fully_connected_code_xb[];
-    extern const char fully_connected_code_xb_bx[];
-    extern const char fully_connected_code_yxfn[];
-    extern const char fully_connected_code_xb_memory[];
     extern const char fully_connected_code_xb_xb_memory[];
     extern const char fully_connected_code_xb_bx_memory[];
     extern const char fully_connected_code_xb_bx_b8_memory[];
@@ -30,6 +26,4 @@ namespace neural {
     extern const char fully_connected_code_xb_xb_b8_x8_memory_vload[];
     extern const char fully_connected_code_xb_xb_b16_memory[];
     extern const char fully_connected_code_yxfn_memory[];
-    extern const char fully_connected_code_yxfn_byxf_memory[];
-    extern const char fully_connected_code_yxfn_byxf_b8_f8_memory[];
 }
