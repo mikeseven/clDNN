@@ -293,6 +293,8 @@ namespace neural {
                             lws1 = 1;
                         }
                         break;
+                    default:
+                        std::invalid_argument("Weight memory format is not supported");
                 }
                 break;
             case memory::format::x_f32:
