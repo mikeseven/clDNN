@@ -42,7 +42,7 @@ namespace neural {
         depth_concatenate_gpu(depth_concatenate &arg) : is_an_implementation(neural::type_id<depth_concatenate_gpu>())
             , outer(arg)
         {
-            for (int i = 0; i < outer.argument.input.size(); i++)
+            for (size_t i = 0; i < outer.argument.input.size(); i++)
             {
                 _kernel.emplace_back(select_kernel_name(), get_jit_constants(i));
             }
@@ -52,7 +52,7 @@ namespace neural {
             return kernelName;
         }
 
-        gpu::jit_constants get_jit_constants(uint32_t input_id) {
+        gpu::jit_constants get_jit_constants(size_t input_id) {
             return gpu::jit_constants{
                 gpu::make_jit_constant("INPUT", outer.input_memory(input_id).argument.size),
                 gpu::make_jit_constant("OUTPUT", outer.output_memory(0).argument.size)
