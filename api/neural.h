@@ -286,6 +286,43 @@ private:
 };
 
 
+
+// neural::depth_concatenate
+//
+// Concatenates two or more input data into one output data.
+// TODO!!!! Write some good documentation here!
+//
+// Examples:
+//
+//   Concatenate two yxfb_f32 inputs into one yxfb_f32 output.
+//     neural::primitive input1  = memory::describe({memory::format::yxfb_f32, {16, {4, 8}, 2}});
+//     neural::primitive input2  = memory::describe({memory::format::yxfb_f32, {16, {4, 8}, 2}});
+//     neural::primitive output  = memory::describe({memory::format::yxfb_f32, {16, {4, 8}, 4}});
+//     neural::primitive depth_concatenate = depth_concatenate::create( reorder::arguments{ { input1, input2 }, output } );
+struct depth_concatenate : is_a_primitive
+{
+    struct arguments
+    {
+        std::vector<primitive>      output;
+        std::vector<primitive_at>   input;
+
+        DLL_SYM arguments(std::vector<primitive_at> input, primitive output);
+        DLL_SYM arguments(neural::memory::format::type out_fmt, std::vector<primitive_at> input);
+    };
+    const arguments argument;
+
+    struct query_entry : is_a_query_entry { depth_concatenate::arguments arguments; };
+    static std::vector<query_entry> query(arguments);
+    DLL_SYM static primitive create(arguments);
+
+private:
+    depth_concatenate(arguments arg) : is_a_primitive(type_id<const depth_concatenate>()), argument(arg) {};
+    const std::vector<primitive_at>  &input() const { return argument.input; };
+    const std::vector<primitive>     &output() const { return argument.output; };
+    friend class is_a_primitive;
+};
+
+
 // neural::mean_subtract
 //
 // Subtract mean from input
