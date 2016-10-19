@@ -389,6 +389,7 @@ namespace neural
         #define VECTOR_SIZE 2
         #define VECTOR_FLOAT float2
 #endif
+#define FILTER_STRIDE FILTER_OUTPUT_FEATURE_NUM / VECTOR_SIZE
 
         const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
         uint global_id = (get_global_id(0) / batch_num) * batch_num + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * batch_num; 
@@ -434,35 +435,35 @@ namespace neural
                         
                             //sub_group_id used as offset to make each workitem load different filter, and then shuffle it
                             uint filter_idx = ofm_offset + sub_group_id + FILTER_INPUT_FEATURE_NUM * (FILTER_OUTPUT_FEATURE_NUM * (i * FILTER_SIZE_X + j));
-
+                            filter_idx /= VECTOR_SIZE;
 #if INPUT_BATCH_NUM == 1
                             uint _input_idx = input_idx / 8;
                             for(uint h = 0; h < FILTER_INPUT_FEATURE_NUM / 8; h++)
                             {
                                 float8 _input = vload8(_input_idx, input);
                                 VECTOR_FLOAT _filter;
-                                _filter = VLOAD(filter_idx / VECTOR_SIZE, filter); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter = VLOAD(filter_idx, filter); filter_idx += FILTER_STRIDE;
                                 _data0 = mad(_input.s0, _filter, _data0);
 
-                                _filter = VLOAD(filter_idx / VECTOR_SIZE, filter); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter = VLOAD(filter_idx, filter); filter_idx += FILTER_STRIDE;
                                 _data0 = mad(_input.s1, _filter, _data0);
 
-                                _filter = VLOAD(filter_idx / VECTOR_SIZE, filter); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter = VLOAD(filter_idx, filter); filter_idx += FILTER_STRIDE;
                                 _data0 = mad(_input.s2, _filter, _data0);
 
-                                _filter = VLOAD(filter_idx / VECTOR_SIZE, filter); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter = VLOAD(filter_idx, filter); filter_idx += FILTER_STRIDE;
                                 _data0 = mad(_input.s3, _filter, _data0);
 
-                                _filter = VLOAD(filter_idx / VECTOR_SIZE, filter); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter = VLOAD(filter_idx, filter); filter_idx += FILTER_STRIDE;
                                 _data0 = mad(_input.s4, _filter, _data0);
 
-                                _filter = VLOAD(filter_idx / VECTOR_SIZE, filter); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter = VLOAD(filter_idx, filter); filter_idx += FILTER_STRIDE;
                                 _data0 = mad(_input.s5, _filter, _data0);
 
-                                _filter = VLOAD(filter_idx / VECTOR_SIZE, filter); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter = VLOAD(filter_idx, filter); filter_idx += FILTER_STRIDE;
                                 _data0 = mad(_input.s6, _filter, _data0);
 
-                                _filter = VLOAD(filter_idx / VECTOR_SIZE, filter); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                _filter = VLOAD(filter_idx, filter); filter_idx += FILTER_STRIDE;
                                 _data0 = mad(_input.s7, _filter, _data0);
 
                                 _input_idx += INPUT_BATCH_NUM;
@@ -473,9 +474,9 @@ namespace neural
                             for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
 #endif
                             {
-                                VECTOR_FLOAT _filter = VLOAD(filter_idx / VECTOR_SIZE, filter);
+                                VECTOR_FLOAT _filter = VLOAD(filter_idx, filter);
                                 _data0 = mad(input[input_idx], _filter, _data0);
-                                filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                                filter_idx += FILTER_STRIDE;
                                 input_idx += INPUT_BATCH_NUM;
                             }
                         }
@@ -489,6 +490,7 @@ namespace neural
 
         VSTORE(_data0, out_id / VECTOR_SIZE, output);
 
+#undef FILTER_STRIDE
 #if defined(USE_VECTOR_8) || defined(USE_VECTOR_4) || defined(USE_VECTOR_2)
     #undef VLOAD
     #undef VSTORE

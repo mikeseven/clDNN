@@ -193,15 +193,16 @@ struct convolution_gpu : is_an_implementation {
         if (batch_size == 1)
         {
             int output_feature_count = filter_mem.argument.size.feature[0];
-            if (output_feature_count % 128 == 0)
+            int lws = get_local_work_group_size(batch_size);
+            if (output_feature_count % (lws * 8) == 0)
             {
                 return 8;
             }
-            else if (output_feature_count % 64 == 0)
+            else if (output_feature_count % (lws * 4) == 0)
             {
                 return 4;
             }
-            else if (output_feature_count % 32 == 0)
+            else if (output_feature_count % (lws * 2) == 0)
             {
                 return 2;
             }
@@ -220,7 +221,7 @@ struct convolution_gpu : is_an_implementation {
     {
         if (batch_size == 1)
         {
-            return 16;
+            return 8;
         }
         return batch_size > 8 ? 16 : 8;
     }
