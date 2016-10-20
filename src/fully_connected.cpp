@@ -65,7 +65,7 @@ fully_connected::arguments::arguments(
 primitive fully_connected::create(fully_connected::arguments arg) {
     auto& input_arg = arg.input[0].primitive().as<const memory&>().argument;
     auto& output_arg = arg.output[0].as<const memory&>().argument;
-    auto& weight_arg = arg.input[1].primitive().as<const memory&>().argument;
+    auto& weight_arg = get_memory_primitive(arg.input[1].primitive()).argument;
     
     if (input_arg.format == memory::format::yxfb_f32)
     {

@@ -91,11 +91,6 @@ namespace neural {
 
     };
 
-    const memory* get_memory_primitive(neural::primitive p)
-    {
-        return p.id() != type_id<const memory>()->id ? &p.output[0].as<const memory&>() : &p.as<const memory&>();
-    }
-
     depth_concatenate::arguments::arguments(std::vector<primitive_at> in, primitive out)
     : output({out})
     , input({in})
@@ -109,7 +104,7 @@ namespace neural {
         {
             out_depth_count += i.primitive().as<const memory&>().argument.size.feature[0];
         }
-        auto output_size = get_memory_primitive(input[0].primitive())->argument.size;
+        auto output_size = get_memory_primitive(input[0].primitive()).argument.size;
         output_size.feature[0] = out_depth_count;
         output = { memory::allocate({ out_fmt, output_size }) };
     }

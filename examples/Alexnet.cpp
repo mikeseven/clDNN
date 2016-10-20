@@ -21,6 +21,7 @@
 #include <iostream>
 #include <string>
 #include "api/instrumentation.h"
+#include "weights_optimizer.h"
 
 using namespace neural;
 
@@ -103,7 +104,7 @@ worker create_worker()
 }
 
 // Building AlexNet network with loading weights & biases from file
-std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& input, const primitive& output, const std::string& weights_dir)
+std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& input, const primitive& output, const std::string& weights_dir, Weights_optimizer &wo)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     std::cout << "Building Alexnet started" << std::endl;
@@ -115,7 +116,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
         memory::format::yxfb_f32,
         input.as<const memory&>().argument.size,
         input,
-        file::create({  join_path(weights_dir, "imagenet_mean.nnd") })
+        wo.create_weights_from_file(join_path(weights_dir, "imagenet_mean.nnd"), file::mean)
     });
 
     auto conv1 = convolution::create(
@@ -123,8 +124,8 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
         memory::format::yxfb_f32,
         {
             reordered_input,
-            file::create({  join_path(weights_dir, "conv1_weights.nnd") }),
-            file::create({  join_path(weights_dir, "conv1_biases.nnd") })
+            wo.create_weights_from_file(join_path(weights_dir, "conv1_weights.nnd"), file::convolution),
+            wo.create_weights_from_file(join_path(weights_dir, "conv1_biases.nnd"),  file::bias)
         },
         { 0,{ 0, 0 }, 0 },
         { 1,{ 4, 4 }, 1 },
@@ -158,10 +159,10 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
         memory::format::yxfb_f32,
         {
             lrn1,
-            file::create({  join_path(weights_dir, "conv2_g1_weights.nnd") }),
-            file::create({  join_path(weights_dir, "conv2_g1_biases.nnd") }),
-            file::create({  join_path(weights_dir, "conv2_g2_weights.nnd") }),
-            file::create({  join_path(weights_dir, "conv2_g2_biases.nnd") }),
+            wo.create_weights_from_file(join_path(weights_dir, "conv2_g1_weights.nnd"), file::convolution),
+            wo.create_weights_from_file(join_path(weights_dir, "conv2_g1_biases.nnd"),  file::bias),
+            wo.create_weights_from_file(join_path(weights_dir, "conv2_g2_weights.nnd"), file::convolution),
+            wo.create_weights_from_file(join_path(weights_dir, "conv2_g2_biases.nnd"),  file::bias),
         },
         { 0,{ -2, -2 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -197,8 +198,8 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
         memory::format::yxfb_f32,
         {
             lrn2,
-            file::create({  join_path(weights_dir, "conv3_weights.nnd") }),
-            file::create({  join_path(weights_dir, "conv3_biases.nnd") }),
+            wo.create_weights_from_file(join_path(weights_dir, "conv3_weights.nnd"), file::convolution),
+            wo.create_weights_from_file(join_path(weights_dir, "conv3_biases.nnd"),  file::bias),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -212,10 +213,10 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
         memory::format::yxfb_f32,
         {
             conv3,
-            file::create({  join_path(weights_dir, "conv4_g1_weights.nnd") }),
-            file::create({  join_path(weights_dir, "conv4_g1_biases.nnd") }),
-            file::create({  join_path(weights_dir, "conv4_g2_weights.nnd") }),
-            file::create({  join_path(weights_dir, "conv4_g2_biases.nnd") }),
+            wo.create_weights_from_file(join_path(weights_dir, "conv4_g1_weights.nnd"), file::convolution),
+            wo.create_weights_from_file(join_path(weights_dir, "conv4_g1_biases.nnd"),  file::bias),
+            wo.create_weights_from_file(join_path(weights_dir, "conv4_g2_weights.nnd"), file::convolution),
+            wo.create_weights_from_file(join_path(weights_dir, "conv4_g2_biases.nnd"),  file::bias),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -230,10 +231,10 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
         memory::format::yxfb_f32,
         {
             conv4_group2,
-            file::create({  join_path(weights_dir, "conv5_g1_weights.nnd") }),
-            file::create({  join_path(weights_dir, "conv5_g1_biases.nnd") }),
-            file::create({  join_path(weights_dir, "conv5_g2_weights.nnd") }),
-            file::create({  join_path(weights_dir, "conv5_g2_biases.nnd") }),
+            wo.create_weights_from_file(join_path(weights_dir, "conv5_g1_weights.nnd"), file::convolution),
+            wo.create_weights_from_file(join_path(weights_dir, "conv5_g1_biases.nnd"),  file::bias),
+            wo.create_weights_from_file(join_path(weights_dir, "conv5_g2_weights.nnd"), file::convolution),
+            wo.create_weights_from_file(join_path(weights_dir, "conv5_g2_biases.nnd"),  file::bias),
         },
         { 0,{ -1, -1 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -257,8 +258,8 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
     {
         memory::format::xb_f32,
         pool5,
-        file::create({  join_path(weights_dir, "fc6_weights.nnd"), file::weights_type::fully_connected }),
-        file::create({  join_path(weights_dir, "fc6_biases.nnd") }),
+        wo.create_weights_from_file(join_path(weights_dir, "fc6_weights.nnd"), file::fully_connected),
+        wo.create_weights_from_file(join_path(weights_dir, "fc6_biases.nnd"),  file::bias),
         true,
         0
     });
@@ -267,8 +268,8 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
     {
         memory::format::xb_f32,
         fc6,
-        file::create({  join_path(weights_dir, "fc7_weights.nnd"), file::weights_type::fully_connected }),
-        file::create({  join_path(weights_dir, "fc7_biases.nnd") }),
+        wo.create_weights_from_file(join_path(weights_dir, "fc7_weights.nnd"), file::fully_connected),
+        wo.create_weights_from_file(join_path(weights_dir, "fc7_biases.nnd"),  file::bias),
         true,
         0
     });
@@ -277,8 +278,8 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
     {
         memory::format::xb_f32,
         fc7,
-        file::create({  join_path(weights_dir, "fc8_weights.nnd"), file::weights_type::fully_connected }),
-        file::create({  join_path(weights_dir, "fc8_biases.nnd") }),
+        wo.create_weights_from_file(join_path(weights_dir, "fc8_weights.nnd"), file::fully_connected),
+        wo.create_weights_from_file(join_path(weights_dir, "fc8_biases.nnd"),  file::bias),
         true,
         0
     });
@@ -309,6 +310,16 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
         { fc8, "fc8"},
         { softmax, "softmax"}
     };
+}
+
+// Optimizing weights
+void weight_optimization(Weights_optimizer &wo, const worker& worker)
+{
+    std::cout << "Weights optimization started" << std::endl;
+    instrumentation::timer<> timer_execution;
+    wo.optimize(worker);
+    auto optimizing_time(timer_execution.uptime());
+    std::cout << "Weights optimization finished in " << instrumentation::to_string(optimizing_time) << std::endl;
 }
 
 // AlexNet execution
@@ -372,7 +383,7 @@ uint32_t get_gpu_batch_size(int number)
     return nearest_power_of_two;
 }
 
-void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weights_dir, bool dump_hl, bool profiling)
+void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weights_dir, bool dump_hl, bool profiling, bool optimize_weights)
 {
     uint32_t gpu_batch_size = get_gpu_batch_size(batch_size);
     if (gpu_batch_size != batch_size)
@@ -382,42 +393,54 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
     }
     gpu::configuration::get().enable_profiling = profiling;
 
-    auto input = memory::allocate({  memory::format::byxf_f32,{ gpu_batch_size,{ 227, 227 }, 3, } });
-    auto output = memory::allocate({  memory::format::xb_f32,{ gpu_batch_size,{ 1000 } } });
-
     auto img_list = get_directory_images(img_dir);
     if (img_list.empty())
         throw std::runtime_error("specified input images directory is empty (does not contain image data)");
 
-    auto images_list_iterator = img_list.begin();
-    auto images_list_end = img_list.end();
-
     auto number_of_batches = (img_list.size() % batch_size == 0)
         ? img_list.size() / batch_size : img_list.size() / batch_size + 1;
-    std::vector<std::string> image_in_batches;
+    
     html output_file("alexnet", "alexnet run");
 
+    Weights_optimizer weights_optimizer(optimize_weights);
+
+    auto input = memory::allocate({ memory::format::byxf_f32,{ gpu_batch_size,{ 227, 227 }, 3, } });
+    auto output = memory::allocate({ memory::format::xb_f32,{ gpu_batch_size,{ 1000 } } });
+
     // build alexnet
-    std::vector<std::pair<primitive, std::string>> alexnet_primitives = build_alexnet(input, output, weights_dir);
+    std::vector<std::pair<primitive, std::string>> alexnet_primitives = build_alexnet(input, output, weights_dir, weights_optimizer);
 
     // create worker
     worker worker = create_worker();
 
+    // optimize weights if needed
+    if (optimize_weights)
+    {
+        weight_optimization(weights_optimizer, worker);
+    }
+
+    std::vector<std::string> images_in_batch;
+    auto images_list_iterator = img_list.begin();
+    auto images_list_end = img_list.end();
     for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
     {
-        image_in_batches.clear();
+        images_in_batch.clear();
         for (uint32_t i = 0; i < batch_size && images_list_iterator != images_list_end; i++, images_list_iterator++)
-            image_in_batches.push_back(*images_list_iterator);
-        
+        {
+            images_in_batch.push_back(*images_list_iterator);
+        }
+
         // load croped and resized images into input
-        load_images_from_file_list(image_in_batches, input);
+        load_images_from_file_list(images_in_batch, input);
 
         // execute alexnet
         auto time = execute_alexnet(worker, alexnet_primitives, output, dump_hl);
 
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count(); 
-        output_file.batch(output.as<const neural::memory&>( ), join_path(get_executable_info()->dir(), "names.txt"), image_in_batches);
+        output_file.batch(output.as<const neural::memory&>( ), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch);
         if (time_in_sec != 0.0)
+        {
             std::cout << "Frames per second:" << (double)batch_size / time_in_sec << std::endl;
+        }
     }    
 }
