@@ -24,84 +24,6 @@
 
 using namespace neural;
 
-void print_profiling_table(std::ostream& os ,const std::vector<instrumentation::profiling_info>& profiling_info) {
-    if (profiling_info.size() == 0)
-        return;
-
-    const size_t numbers_width = 10;
-
-    os << "Kernels profiling info (in microseconds): \n\n";
-
-    // build column headers
-    std::vector<std::string> column_headers;
-    for(auto& info: profiling_info) {
-        for(auto& interval: info.intervals) {
-            if(std::count(column_headers.begin(), column_headers.end(), interval.name) == 0) {
-                column_headers.push_back(interval.name);
-            }
-        }
-    }
-
-    size_t action_column_len = 0;
-    for (auto& info : profiling_info) {
-        action_column_len = std::max(action_column_len, info.name.length());
-    }
-
-    // print column headers
-    auto column_width = std::max(action_column_len, numbers_width);
-    std::string separation_line(column_width, '-');
-    os << std::setw(column_width) << std::left << "Action";
-    for(auto& header: column_headers) {
-        column_width = std::max(header.length(), numbers_width);
-        separation_line += "+" + std::string(column_width, '-');
-        os << "|"
-           << std::setw(column_width) << std::right
-           << header;
-    }
-    os << "\n";
-
-    std::chrono::nanoseconds total(0);
-
-    // print rows
-    size_t row_num = 0;
-    for (auto& info : profiling_info) {
-        if((row_num++) % 4 == 0) {
-            os << separation_line << "\n";
-        }
-        os << std::setw(action_column_len) << std::left << info.name;
-        // prepare values per column
-        std::vector<double> values(column_headers.size(), 0.0);
-        for (auto& interval : info.intervals) {
-            auto value = interval.value->value();
-            total += value;
-            auto value_d = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::microseconds::period>>(value).count();
-            auto column_index = std::find(column_headers.begin(), column_headers.end(), interval.name) - column_headers.begin();
-            values[column_index] = value_d;
-        }
-        // print values in columns
-        for(size_t i = 0; i < values.size(); ++i)
-        {
-            auto& header = column_headers[i];
-            os << "|"
-               << std::setw(std::max(header.length(), numbers_width)) << std::right
-               << std::setprecision(3) << std::fixed << values[i];
-        }
-        os << "\n";
-    }
-    os << "\nTotal profiled time: " << instrumentation::to_string(total) << std::endl;
-}
-
-// Create worker
-worker create_worker()
-{
-    std::cout << "GPU Program compilation started" << std::endl;
-    instrumentation::timer<> timer_compilation;
-    auto worker = worker_gpu::create();
-    auto compile_time = timer_compilation.uptime();
-    std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
-    return worker;
-}
-
 // Building AlexNet network with loading weights & biases from file
 std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& input, const primitive& output, const std::string& weights_dir)
 {
@@ -314,6 +236,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 // AlexNet execution
 std::chrono::nanoseconds execute_alexnet(const worker& worker, const std::vector<std::pair<primitive, std::string>>& primitives, const primitive& output, bool dump_hl)
 {
+
     // we need this exact number of primitives(those are created in create_alexnet) 
     assert(primitives.size() == 15);
 
@@ -351,25 +274,6 @@ std::chrono::nanoseconds execute_alexnet(const worker& worker, const std::vector
     print_profiling_table(std::cout, worker.as<worker_gpu&>().get_profiling_info());
 
     return std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time);
-}
-
-uint32_t get_next_nearest_power_of_two(int number)
-{
-    int tmp_number = number;
-    uint32_t power = 1;
-    while (tmp_number >>= 1) power <<= 1;
-    if (number % power == 0)
-        return power;
-    return power << 1;
-}
-
-uint32_t get_gpu_batch_size(int number)
-{
-    uint32_t nearest_power_of_two = get_next_nearest_power_of_two(number);
-    // we do not support batch of size 2 or 4 so we need to get rid of those
-    if (nearest_power_of_two < 8 && nearest_power_of_two > 1)
-        return 8;
-    return nearest_power_of_two;
 }
 
 void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weights_dir, bool dump_hl, bool profiling)
@@ -421,3 +325,4 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
             std::cout << "Frames per second:" << (double)batch_size / time_in_sec << std::endl;
     }    
 }
+

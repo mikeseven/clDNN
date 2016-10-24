@@ -18,6 +18,7 @@
 #pragma once
 
 #include "api/neural.h"
+#include "api/instrumentation.h"
 
 #include <memory>
 #include <string>
@@ -109,3 +110,8 @@ std::string join_path(const std::string& parent, const std::string& child);
 std::vector<std::string> get_directory_images(const std::string& images_path);
 std::vector<std::string> get_directory_weights(const std::string& images_path);
 void load_images_from_file_list(const std::vector<std::string>& images_list, neural::primitive& memory); 
+
+void print_profiling_table(std::ostream& os, const std::vector<neural::instrumentation::profiling_info>& profiling_info);
+neural::worker create_worker();
+uint32_t get_next_nearest_power_of_two(int number);
+uint32_t get_gpu_batch_size(int number);

@@ -258,6 +258,7 @@ int main(int argc, char* argv[])
 
     // TODO: create header file for all examples
     extern void alexnet(uint32_t, std::string, const std::string&, bool, bool);
+	extern void vgg16(uint32_t, std::string, const std::string&, bool, bool);
     extern void convert_weights(neural::memory::format::type, std::string);
 
 
@@ -344,6 +345,16 @@ int main(int argc, char* argv[])
                     parsed_args["profiling"].as<bool>());
                 return 0;
             }
+			else if (parsed_args["model"].as<std::string>() == "vgg16")
+			{
+				vgg16(
+					parsed_args["batch"].as<std::uint32_t>(),
+					input_dir,
+					weights_dir,
+					parsed_args["dump_hidden_layers"].as<bool>(),
+					parsed_args["profiling"].as<bool>());
+				return 0;
+			}
 
             std::cerr << "ERROR: model/topology (\"" << parsed_args["model"].as<std::string>()
                 << "\") is not implemented!!!" << std::endl;
