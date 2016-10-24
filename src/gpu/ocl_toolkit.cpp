@@ -19,18 +19,6 @@
 
 namespace neural { namespace gpu {
 
-configuration::configuration()
-    : enable_profiling(false)
-    , device_type(gpu)
-    , device_vendor(0x8086)
-    , compiler_options("")
-{}
-
-configuration& configuration::get() {
-    static configuration instance;
-    return instance;
-}
-
 cl_device_type convert_configuration_device_type(configuration::device_types device_type) {
     cl_device_type device_types[] = {
             CL_DEVICE_TYPE_DEFAULT,

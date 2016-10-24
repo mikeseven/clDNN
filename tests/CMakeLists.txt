@@ -57,6 +57,14 @@ file(GLOB __CLDNN_Sources__test_utils
     "${__CLDNN_Directory__test_utils}/*.cpp"
   )
 
+set(__CLDNN_Directory__module_tests      "${CMAKE_CURRENT_SOURCE_DIR}/module_tests")
+set(__CLDNN_Label__module_tests          "module tests")
+file(GLOB __CLDNN_Sources__module_tests
+    "${__CLDNN_Directory__module_tests}/*.h"
+    "${__CLDNN_Directory__module_tests}/*.hpp"
+    "${__CLDNN_Directory__module_tests}/*.cpp"
+  )
+
 set(__CLDNN_Directory__gtest           "${CLDNN__GTEST_DIR}")
 set(__CLDNN_Label__gtest               "google test framework")
 file(GLOB __CLDNN_Sources__gtest
@@ -68,15 +76,17 @@ set(__CLDNN_AllSources
     ${__CLDNN_Sources__main}
     ${__CLDNN_Sources__test_cases}
     ${__CLDNN_Sources__test_utils}
+    ${__CLDNN_Sources__module_tests}
     ${__CLDNN_Sources__gtest}
   )
 
 # =============================================== Filters ==============================================
 
-source_group("${__CLDNN_Label__main}"       FILES ${__CLDNN_Sources__main})
-source_group("${__CLDNN_Label__test_cases}" FILES ${__CLDNN_Sources__test_cases})
-source_group("${__CLDNN_Label__test_utils}" FILES ${__CLDNN_Sources__test_utils})
-source_group("${__CLDNN_Label__gtest}"      FILES ${__CLDNN_Sources__gtest})
+source_group("${__CLDNN_Label__main}"         FILES ${__CLDNN_Sources__main})
+source_group("${__CLDNN_Label__test_cases}"   FILES ${__CLDNN_Sources__test_cases})
+source_group("${__CLDNN_Label__test_utils}"   FILES ${__CLDNN_Sources__test_utils})
+source_group("${__CLDNN_Label__module_tests}" FILES ${__CLDNN_Sources__module_tests})
+source_group("${__CLDNN_Label__gtest}"        FILES ${__CLDNN_Sources__gtest})
 
 # ===================================== Include/Link directories =======================================
 
@@ -102,6 +112,12 @@ set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD
 target_link_libraries("${CLDNN_BUILD__PROJ}"
     "${CLDNN_BUILD__PROJ__clDNN}"
   )
+
+if(WIN32)
+  target_link_libraries("${CLDNN_BUILD__PROJ}" setupapi)
+elseif(UNIX)
+  target_link_libraries("${CLDNN_BUILD__PROJ}" pthread)
+endif()
 
 # =================================== Custom pre- and post-steps =======================================
 

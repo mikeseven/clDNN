@@ -69,7 +69,7 @@ async_result execute(std::vector<primitive> primitives, std::vector<worker> work
 {
     if(0==workers.size()) 
 	{
-        static auto gpu_worker = worker_gpu::create();
+        auto gpu_worker = worker_gpu::create();
         workers.push_back(gpu_worker);
     }
     assert(1==workers.size()); // currently only one worker at time

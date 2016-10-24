@@ -47,6 +47,7 @@ file(GLOB __CLDNN_Sources__gpu
     "${__CLDNN_Directory__gpu}/*.h"
     "${__CLDNN_Directory__gpu}/*.hpp"
     "${__CLDNN_Directory__gpu}/*.cpp"
+    "${__CLDNN_Directory__gpu}/*.inc"
   )
 
 set(__CLDNN_Directory__cache           "${__CLDNN_Directory__gpu}/cache")
@@ -114,7 +115,10 @@ target_link_libraries("${CLDNN_BUILD__PROJ}"
     Boost::filesystem
     Boost::system
   )
-if(UNIX)
+
+if(WIN32)
+  target_link_libraries("${CLDNN_BUILD__PROJ}" setupapi)
+elseif(UNIX)
   target_link_libraries("${CLDNN_BUILD__PROJ}" pthread)
 endif()
 
