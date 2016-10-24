@@ -350,49 +350,6 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 	};
 }
 
-
-// AlexNet execution
-std::chrono::nanoseconds execute_vgg16(const worker& worker, const std::vector<std::pair<primitive, std::string>>& primitives, const primitive& output, bool dump_hl)
-{
-	// we need this exact number of primitives(those are created in create_alexnet) 
-	assert(primitives.size() == 23);
-
-	std::cout << "Start execution" << std::endl;
-	instrumentation::timer<> timer_execution;
-
-	for (auto& p : primitives)
-	{
-		worker.execute(p.first.work());
-	}
-
-	//GPU primitives scheduled in unblocked manner
-	auto scheduling_time(timer_execution.uptime());
-
-	//OCL buffers mapping blocks until all primitives are completed
-	output.as<const neural::memory&>().pointer<float>();
-
-	auto execution_time(timer_execution.uptime());
-	std::cout << "VGG16 scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
-	std::cout << "VGG16 execution finished in " << instrumentation::to_string(execution_time) << std::endl;
-	if (dump_hl)
-	{
-		instrumentation::logger::log_memory_to_file(primitives[0].first.input[0].primitive(), "input0");
-		for (auto& p : primitives)
-		{
-			instrumentation::logger::log_memory_to_file(p.first, p.second);
-		}
-		// for now its enought. rest wil be done when we have equals those values
-	}
-	else
-	{
-		instrumentation::logger::log_memory_to_file(output, "final_result");
-	}
-
-	//print_profiling_table(std::cout, worker.as<worker_gpu&>().get_profiling_info());
-
-	return std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time);
-}
-
 void vgg16(uint32_t batch_size, std::string img_dir, const std::string& weights_dir, bool dump_hl, bool profiling)
 {
 	extern worker create_worker();
@@ -422,8 +379,8 @@ void vgg16(uint32_t batch_size, std::string img_dir, const std::string& weights_
 	std::vector<std::string> image_in_batches;
 	html output_file("VGG16", "VGG16 run");
 
-	// build alexnet
-	std::vector<std::pair<primitive, std::string>> alexnet_primitives = build_vgg16(input, output, weights_dir);
+	// build vgg16
+	std::vector<std::pair<primitive, std::string>> primitives = build_vgg16(input, output, weights_dir);
 
 	// create worker
 	worker worker = create_worker();
@@ -437,8 +394,8 @@ void vgg16(uint32_t batch_size, std::string img_dir, const std::string& weights_
 		// load croped and resized images into input
 		load_images_from_file_list(image_in_batches, input);
 
-		// execute alexnet
-		auto time = execute_vgg16(worker, alexnet_primitives, output, dump_hl);
+		// execution
+		auto time = execute_topology(worker, primitives, output, dump_hl, "vgg16", 23);
 
 		auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
 		output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), image_in_batches);

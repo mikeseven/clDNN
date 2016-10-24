@@ -233,49 +233,6 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
     };
 }
 
-// AlexNet execution
-std::chrono::nanoseconds execute_alexnet(const worker& worker, const std::vector<std::pair<primitive, std::string>>& primitives, const primitive& output, bool dump_hl)
-{
-
-    // we need this exact number of primitives(those are created in create_alexnet) 
-    assert(primitives.size() == 15);
-
-    std::cout << "Start execution" << std::endl;
-    instrumentation::timer<> timer_execution;
-
-    for (auto& p : primitives)
-    {
-        worker.execute(p.first.work());
-    }
-
-    //GPU primitives scheduled in unblocked manner
-    auto scheduling_time(timer_execution.uptime());
-
-    //OCL buffers mapping blocks until all primitives are completed
-    output.as<const neural::memory&>().pointer<float>();
-
-    auto execution_time(timer_execution.uptime());
-    std::cout << "Alexnet scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
-    std::cout << "Alexnet execution finished in " << instrumentation::to_string(execution_time) << std::endl;
-    if (dump_hl)
-    {
-        instrumentation::logger::log_memory_to_file(primitives[0].first.input[0].primitive(), "input0");
-        for (auto& p : primitives)
-        {
-            instrumentation::logger::log_memory_to_file(p.first, p.second);
-        }
-        // for now its enought. rest wil be done when we have equals those values
-    }
-    else
-    {
-        instrumentation::logger::log_memory_to_file(output, "final_result");
-    }
-
-    print_profiling_table(std::cout, worker.as<worker_gpu&>().get_profiling_info());
-
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time);
-}
-
 void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weights_dir, bool dump_hl, bool profiling)
 {
     uint32_t gpu_batch_size = get_gpu_batch_size(batch_size);
@@ -302,7 +259,7 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
     html output_file("alexnet", "alexnet run");
 
     // build alexnet
-    std::vector<std::pair<primitive, std::string>> alexnet_primitives = build_alexnet(input, output, weights_dir);
+    std::vector<std::pair<primitive, std::string>> primitives = build_alexnet(input, output, weights_dir);
 
     // create worker
     worker worker = create_worker();
@@ -317,7 +274,7 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
         load_images_from_file_list(image_in_batches, input);
 
         // execute alexnet
-        auto time = execute_alexnet(worker, alexnet_primitives, output, dump_hl);
+        auto time = execute_topology(worker, primitives, output, dump_hl, "alexnet", 15);
 
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count(); 
         output_file.batch(output.as<const neural::memory&>( ), join_path(get_executable_info()->dir(), "names.txt"), image_in_batches);

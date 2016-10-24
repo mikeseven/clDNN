@@ -294,3 +294,44 @@ uint32_t get_gpu_batch_size(int number)
 		return 8;
 	return nearest_power_of_two;
 }
+
+std::chrono::nanoseconds execute_topology(const worker& worker, const std::vector<std::pair<primitive, std::string>>& primitives, const primitive& output, bool dump_hl, char* topology, size_t primitives_number)
+{
+	// we need this exact number of primitives(those are created in create_alexnet) 
+	assert(primitives.size() == primitives_number);
+
+	std::cout << "Start execution" << std::endl;
+	instrumentation::timer<> timer_execution;
+
+	for (auto& p : primitives)
+	{
+		worker.execute(p.first.work());
+	}
+
+	//GPU primitives scheduled in unblocked manner
+	auto scheduling_time(timer_execution.uptime());
+
+	//OCL buffers mapping blocks until all primitives are completed
+	output.as<const neural::memory&>().pointer<float>();
+
+	auto execution_time(timer_execution.uptime());
+	std::cout << topology << " scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
+	std::cout << topology << " execution finished in " << instrumentation::to_string(execution_time) << std::endl;
+	if (dump_hl)
+	{
+		instrumentation::logger::log_memory_to_file(primitives[0].first.input[0].primitive(), "input0");
+		for (auto& p : primitives)
+		{
+			instrumentation::logger::log_memory_to_file(p.first, p.second);
+		}
+		// for now its enough. rest will be done when we have equals those values
+	}
+	else
+	{
+		instrumentation::logger::log_memory_to_file(output, "final_result");
+	}
+
+	print_profiling_table(std::cout, worker.as<worker_gpu&>().get_profiling_info());
+
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time);
+}
