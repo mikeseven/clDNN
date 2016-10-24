@@ -21,7 +21,6 @@
 #include <iostream>
 #include <string>
 #include "api/instrumentation.h"
-#include "weights_optimizer.h"
 
 using namespace neural;
 
@@ -53,7 +52,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
         { 1,{ 4, 4 }, 1 },
         padding::zero,
         1,
-        true});
+        true });
 
     auto pool1 = pooling::create(
     {
@@ -217,40 +216,33 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
     return std::vector<std::pair<primitive, std::string>> {
         { reordered_input, "reorder"},
-        { conv1, "conv1"},
-        { pool1, "pool1"},
-        { lrn1, "lrn1"},
-        { conv2_group2, "conv2_group2"},
-        { pool2, "pool2"},
-        { lrn2, "lrn2"},
-        { conv3, "conv3"},
-        { conv4_group2, "conv4_gorup2"},
-        { conv5_group2, "conv5_group2"},
-        { pool5, "pool5"},
-        { fc6, "fc6"},
-        { fc7, "fc7"},
-        { fc8, "fc8"},
-        { softmax, "softmax"}
+        { conv1, "conv1" },
+        { pool1, "pool1" },
+        { lrn1, "lrn1" },
+        { conv2_group2, "conv2_group2" },
+        { pool2, "pool2" },
+        { lrn2, "lrn2" },
+        { conv3, "conv3" },
+        { conv4_group2, "conv4_gorup2" },
+        { conv5_group2, "conv5_group2" },
+        { pool5, "pool5" },
+        { fc6, "fc6" },
+        { fc7, "fc7" },
+        { fc8, "fc8" },
+        { softmax, "softmax" }
     };
 }
 
-// Optimizing weights
-void weight_optimization(Weights_optimizer &wo, const worker& worker)
-{
-    std::cout << "Weights optimization started" << std::endl;
-    instrumentation::timer<> timer_execution;
-    wo.optimize(worker);
-    auto optimizing_time(timer_execution.uptime());
-    std::cout << "Weights optimization finished in " << instrumentation::to_string(optimizing_time) << std::endl;
-}
+
+
 
 void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weights_dir, bool dump_hl, bool profiling, bool optimize_weights)
 {
     uint32_t gpu_batch_size = get_gpu_batch_size(batch_size);
     if (gpu_batch_size != batch_size)
     {
-        std::cout << "WARNING: This is not the optimal batch size. You have " << (gpu_batch_size - batch_size) 
-                  << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;
+        std::cout << "WARNING: This is not the optimal batch size. You have " << (gpu_batch_size - batch_size)
+            << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;
     }
     gpu::configuration::get().enable_profiling = profiling;
 
@@ -260,7 +252,7 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
 
     auto number_of_batches = (img_list.size() % batch_size == 0)
         ? img_list.size() / batch_size : img_list.size() / batch_size + 1;
-    
+
     html output_file("alexnet", "alexnet run");
 
     Weights_optimizer weights_optimizer(optimize_weights);
@@ -297,12 +289,12 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
         // execute alexnet
         auto time = execute_topology(worker, primitives, output, dump_hl, "alexnet", 15);
 
-        auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count(); 
-        output_file.batch(output.as<const neural::memory&>( ), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch);
+        auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
+        output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch);
         if (time_in_sec != 0.0)
         {
             std::cout << "Frames per second:" << (double)batch_size / time_in_sec << std::endl;
         }
-    }    
+    }
 }
 
