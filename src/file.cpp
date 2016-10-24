@@ -142,8 +142,8 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
         p_arg = std::unique_ptr<memory::arguments>(new memory::arguments(
         { memory::format::bx_f32,
         {
-            static_cast<uint32_t>(array[0]),
-            { { static_cast<uint32_t>(array[1]) } },
+            static_cast<uint32_t>(array[1]),
+            { { static_cast<uint32_t>(array[0]) } },
             1
         }
         }));

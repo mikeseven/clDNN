@@ -94,14 +94,16 @@ convolution::arguments::arguments(
 
     auto &input_mem = input[0].primitive().as<const memory&>();
 
+    auto &filter_mem = get_memory_primitive(in[1].primitive());
+
     // compute how many outputs in rows and columns will be generate by filter. 
     // outp <= (input_size - (2*input_offset) - kernel_size)/ stride 
-    auto kernel_xy = in[1].primitive().as<const memory&>().argument.size.spatial;
+    auto kernel_xy = filter_mem.argument.size.spatial;
     auto output_spatial_x = (input_mem.argument.size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_xy[0]) / strd.spatial[0] + 1;
     auto output_spatial_y = (input_mem.argument.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_xy[1]) / strd.spatial[1] + 1;
     auto input_x = input_mem.argument;
     // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
-    auto ofm = in[1].primitive().as<const memory&>().argument;
+    auto ofm = filter_mem.argument;
     auto number_of_batches = ofm.size.raw[1] * static_cast<uint32_t>(split);
     output_size = {
         input_mem.argument.size.batch[0],
@@ -175,7 +177,8 @@ primitive convolution::create(convolution::arguments arg) {
     const size_t split = arg.split;
     for (size_t j = 0; j < split; j++)
     {
-        auto& filter_arg = arg.input[j * 2 + 1].primitive().as<const memory&>().argument; //convolution filter
+        auto& filter_mem = get_memory_primitive(arg.input[j * 2 + 1].primitive());
+        auto& filter_arg = filter_mem.argument; //convolution filter
         auto& bias_arg = arg.input[j * 2 + 2].primitive().as<const memory&>().argument;
 
         auto& input_offset = arg.input_offset;

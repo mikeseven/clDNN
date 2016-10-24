@@ -48,6 +48,40 @@ KERNEL (lrn_GPU)(__global float* input, __global float* output)
 }
 )__krnl";
 
+const std::string kernelName_b8 = "lrn_b8_GPU";
+const std::string kernelCode_b8 = R"__krnl(
+__attribute__((reqd_work_group_size(8, 1, 1)))
+KERNEL (lrn_b8_GPU)(__global float* input, __global float* output)
+{
+    const uint global_id = get_global_id(0);
+    const uint element_offset = get_global_id(1) * (INPUT_BATCH_NUM/8) * INPUT_FEATURE_NUM;
+
+    const uint linear_id = global_id + element_offset;
+    float8 acc = 0;
+
+    int input_offset_f = global_id + HELP_INPUT_OFFSET * (INPUT_BATCH_NUM/8);
+    int input_idx = input_offset_f + element_offset;
+    for (int i = 0; i < P_SIZE; i++)
+    {
+        bool zero = input_offset_f < 0 || input_offset_f >= INPUT_FEATURE_NUM * (INPUT_BATCH_NUM/8);
+
+        if(!zero)
+        {
+            float8 value = vload8(input_idx, input);
+            acc = mad(value, value, acc);
+        }
+
+        input_offset_f+= INPUT_BATCH_NUM/8;
+        input_idx += INPUT_BATCH_NUM/8;
+    }
+    acc = mad(acc, ALPHA, K);
+    acc = native_powr(acc, -BETA);
+
+    float8 _in = vload8(linear_id, input);
+    vstore8(acc * _in, linear_id, output);
+}
+)__krnl";
+
 namespace neural {
 struct lrn_gpu : is_an_implementation {
     normalization::response& outer;
@@ -55,8 +89,17 @@ struct lrn_gpu : is_an_implementation {
 
     lrn_gpu(normalization::response &arg): is_an_implementation(neural::type_id<lrn_gpu>())
         , outer(arg)
-        , _kernel(kernelName, get_jit_constants())
+        , _kernel(select_kernel_name(), get_jit_constants())
     {}
+
+    const std::string& select_kernel_name() const {
+        auto& input_mem = outer.input_memory(0);
+        if (input_mem.argument.size.batch[0] % 8 == 0)
+        {
+            return kernelName_b8;
+        }
+        return kernelName;
+    }
 
     gpu::jit_constants get_jit_constants() const {
         auto size = outer.argument.size;
@@ -89,6 +132,11 @@ struct lrn_gpu : is_an_implementation {
             auto feature_size = input_mem.argument.size.feature[0];
             size_t gws0 = batch_size * feature_size;
             int lws = 32;
+            if (batch_size % 8 == 0)
+            {
+                gws0 /= 8;
+                lws = 8;
+            }
             while (gws0 % lws)
             {
                 lws--;
@@ -123,6 +171,7 @@ struct lrn_gpu : is_an_implementation {
         struct attach {
             attach() {
                 gpu::kernel_templates::add(kernelName, kernelCode);
+                gpu::kernel_templates::add(kernelName_b8, kernelCode_b8);
                 auto key = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
                 auto val_fw = lrn_gpu::create;
 

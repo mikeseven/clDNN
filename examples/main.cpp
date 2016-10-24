@@ -187,6 +187,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "If not specified, the \"<executable-dir>/weights\" path is used.")
         ("profiling", bpo::bool_switch(),
             "Enable profiling and create profiling report.")
+        ("optimize_weights", bpo::bool_switch(),
+            "Perform weights convertion to most desirable format for each network layer while building network.")
         ("version", "Show version of the application.")
         ("help", "Show help message and available command-line options.");
 
@@ -257,7 +259,7 @@ int main(int argc, char* argv[])
     namespace bfs = boost::filesystem;
 
     // TODO: create header file for all examples
-    extern void alexnet(uint32_t, std::string, const std::string&, bool, bool);
+    extern void alexnet(uint32_t, std::string, const std::string&, bool, bool, bool);
 	extern void vgg16(uint32_t, std::string, const std::string&, bool, bool);
     extern void convert_weights(neural::memory::format::type, std::string);
 
@@ -342,7 +344,8 @@ int main(int argc, char* argv[])
                     input_dir,
                     weights_dir,
                     parsed_args["dump_hidden_layers"].as<bool>(),
-                    parsed_args["profiling"].as<bool>());
+                    parsed_args["profiling"].as<bool>(),
+                    parsed_args["optimize_weights"].as<bool>());
                 return 0;
             }
 			else if (parsed_args["model"].as<std::string>() == "vgg16")

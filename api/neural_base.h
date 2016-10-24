@@ -465,6 +465,9 @@ inline const primitive              primitive::output::operator[](uint32_t at) c
 inline size_t                       primitive::output::size() const { return base->_pointer->output().size(); }
 inline any_value_type_lookup        primitive::operator[](const std::string &key) const { return any_value_type_lookup(_pointer->_map, key); }
 
+// helper function to get memory primitive from any primitive
+inline const memory& get_memory_primitive(const neural::primitive& p) { return p.id() != type_id<const memory>()->id ? p.output[0].as<const memory&>() : p.as<const memory&>(); }
+
 
 template<typename T> T primitive::as() const {
     // [C++1x] replace with static_assert

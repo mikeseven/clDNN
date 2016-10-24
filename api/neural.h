@@ -221,8 +221,10 @@ struct file : is_a_primitive
 {
     enum weights_type
     {
+        bias,
         convolution,
-        fully_connected
+        fully_connected,
+        mean
     };
     struct arguments 
 	{
