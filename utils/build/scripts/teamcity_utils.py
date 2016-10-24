@@ -33,8 +33,10 @@ def cvtUni(message):
     """ Converts string to unicode (assumes utf-8). """
     if isinstance(message, unicode):
         return message
-    else:
+    elif isinstance(message, str):
         return unicode(message, encoding = 'utf-8', errors = 'replace')
+    else:
+        return unicode(message)
 
 
 def escapeTeamCityMsg(message):
