@@ -19,8 +19,8 @@
 #include "implementation_map.h"
 #include "kernel.h"
 
-const std::string kernelName = "Pooling_GPU_max";
-const std::string kernelCode = R"__krnl(
+const std::string kernelName_max = "Pooling_GPU_max";
+const std::string kernelCode_max = R"__krnl(
 KERNEL(Pooling_GPU_max)(__global float* input, __global float* output)
 {
     const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
@@ -45,6 +45,32 @@ KERNEL(Pooling_GPU_max)(__global float* input, __global float* output)
 }
 )__krnl";
 
+const std::string kernelName_average = "Pooling_GPU_average";
+const std::string kernelCode_average = R"__krnl(
+KERNEL(Pooling_GPU_average)(__global float* input, __global float* output)
+{
+    const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
+
+    const int offset_x = get_global_id(1) * STRIDE_SIZE_X;
+    const int offset_y = get_global_id(2) * STRIDE_SIZE_Y;
+
+    float result = 0;
+
+    const int batch_and_feature_offset = get_global_id(0);
+    int input_idx = batch_and_feature_offset + OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (offset_x + offset_y * INPUT_SIZE_X);
+    for(uint j = 0; j < WINDOW_SIZE_Y; j++)
+    {
+        for(uint i = 0; i < WINDOW_SIZE_X; i++)
+        {
+            result += input[input_idx];
+            input_idx += OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM;
+        }
+        input_idx += OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (INPUT_SIZE_X - WINDOW_SIZE_X);
+    }
+    output[linear_id_xyz] = result / (float)(WINDOW_SIZE_Y * WINDOW_SIZE_X);
+}
+)__krnl";
+
 namespace neural {
 struct pooling_gpu : is_an_implementation {
     pooling &outer;
@@ -56,7 +82,15 @@ struct pooling_gpu : is_an_implementation {
     {}
 
     const std::string& select_kernel_name() const {
-        return kernelName;
+        switch (outer.argument.mode)
+        {
+        case pooling::mode::max:
+            return kernelName_max;
+        case pooling::mode::average:
+            return kernelName_average;
+        default:
+            throw std::runtime_error("Unknown pooling mode.");
+        }
     }
 
     gpu::jit_constants get_jit_constants() const {
@@ -80,16 +114,8 @@ struct pooling_gpu : is_an_implementation {
 
         size_t gws0 = output_mem.argument.size.batch[0] * output_mem.argument.size.feature[0];
 
-        switch (outer.argument.mode) {
-        case pooling::mode::max:
-            me->_kernel.run<gpu::input_mem, gpu::output_mem>
-                ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1]}, { std::min(gws0, static_cast<size_t>(32)), 1, 1 } }, input_mem, output_mem);
-            break;
-        case pooling::mode::average:
-            break;
-        default:
-            throw std::runtime_error("Unknown pooling mode.");
-        }
+        me->_kernel.run<gpu::input_mem, gpu::output_mem>
+            ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1]}, { std::min(gws0, static_cast<size_t>(32)), 1, 1 } }, input_mem, output_mem);
     }
 
     static is_an_implementation *create(pooling &arg) {
@@ -134,7 +160,9 @@ namespace
     {
         attach()
         {
-            gpu::kernel_templates::add(kernelName, kernelCode);
+            gpu::kernel_templates::add(kernelName_max, kernelCode_max);
+            gpu::kernel_templates::add(kernelName_average, kernelCode_average);
+
             auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = pooling_gpu::create;
 
