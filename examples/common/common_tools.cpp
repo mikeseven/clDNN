@@ -21,7 +21,6 @@
 
 #include <boost/filesystem.hpp>
 
-#include <immintrin.h>
 #include <iostream>
 
 #include <regex>
