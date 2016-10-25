@@ -25,16 +25,19 @@
 using namespace neural;
 
 // Building AlexNet network with loading weights & biases from file
-std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& input, const primitive& output, const std::string& weights_dir, weights_optimizer &wo)
+std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& input, const primitive& output, const std::string& weights_dir, weights_optimizer& wo, bool use_half)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     std::cout << "Building Alexnet started" << std::endl;
     instrumentation::timer<> timer_build;
 
+    auto mem_format = use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
+    auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
+
     // create conversion to yxfb format and subtract mean values
     auto reordered_input = reorder::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         input.as<const memory&>().argument.size,
         input,
         wo.create_weights_from_file(join_path(weights_dir, "imagenet_mean.nnd"), file::mean)
@@ -42,7 +45,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
     auto conv1 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             reordered_input,
             wo.create_weights_from_file(join_path(weights_dir, "conv1_weights.nnd"), file::convolution),
@@ -57,7 +60,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
     auto pool1 = pooling::create(
     {
         pooling::mode::max,
-        memory::format::yxfb_f32,
+        mem_format,
         conv1,
         { 1,{ 2,2 },1 }, // strd
         { 1,{ 3,3 },1 }, // kernel
@@ -66,7 +69,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
     auto lrn1 = normalization::response::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         pool1,
         5,
         padding::zero,
@@ -77,7 +80,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
     auto conv2_group2 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             lrn1,
             wo.create_weights_from_file(join_path(weights_dir, "conv2_g1_weights.nnd"), file::convolution),
@@ -96,7 +99,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
     auto pool2 = pooling::create(
     {
         pooling::mode::max,
-        memory::format::yxfb_f32,
+        mem_format,
         conv2_group2,
         { 1,{ 2,2 },1 }, // strd
         { 1,{ 3,3 },1 }, // kernel
@@ -105,7 +108,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
     auto lrn2 = normalization::response::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         pool2,
         5,
         padding::zero,
@@ -116,7 +119,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
     auto conv3 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             lrn2,
             wo.create_weights_from_file(join_path(weights_dir, "conv3_weights.nnd"), file::convolution),
@@ -131,7 +134,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
     auto conv4_group2 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             conv3,
             wo.create_weights_from_file(join_path(weights_dir, "conv4_g1_weights.nnd"), file::convolution),
@@ -149,7 +152,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
     auto conv5_group2 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             conv4_group2,
             wo.create_weights_from_file(join_path(weights_dir, "conv5_g1_weights.nnd"), file::convolution),
@@ -168,7 +171,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
     auto pool5 = pooling::create(
     {
         pooling::mode::max,
-        memory::format::yxfb_f32,
+        mem_format,
         conv5_group2,
         { 1,{ 2,2 },1 }, // strd
         { 1,{ 3,3 },1 }, // kernel
@@ -177,7 +180,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
     auto fc6 = fully_connected::create(
     {
-        memory::format::xb_f32,
+        fc_mem_format,
         pool5,
         wo.create_weights_from_file(join_path(weights_dir, "fc6_weights.nnd"), file::fully_connected),
         wo.create_weights_from_file(join_path(weights_dir, "fc6_biases.nnd"),  file::bias),
@@ -187,7 +190,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
     auto fc7 = fully_connected::create(
     {
-        memory::format::xb_f32,
+        fc_mem_format,
         fc6,
         wo.create_weights_from_file(join_path(weights_dir, "fc7_weights.nnd"), file::fully_connected),
         wo.create_weights_from_file(join_path(weights_dir, "fc7_biases.nnd"),  file::bias),
@@ -197,7 +200,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
     auto fc8 = fully_connected::create(
     {
-        memory::format::xb_f32,
+        fc_mem_format,
         fc7,
         wo.create_weights_from_file(join_path(weights_dir, "fc8_weights.nnd"), file::fully_connected),
         wo.create_weights_from_file(join_path(weights_dir, "fc8_biases.nnd"),  file::bias),
@@ -236,7 +239,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
 
 
-void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weights_dir, bool dump_hl, bool profiling, bool optimize_weights)
+void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weights_dir, bool dump_hl, bool profiling, bool optimize_weights, bool use_half)
 {
     uint32_t gpu_batch_size = get_gpu_batch_size(batch_size);
     if (gpu_batch_size != batch_size)
@@ -257,11 +260,11 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
 
     weights_optimizer weights_optimizer(optimize_weights);
 
-    auto input = memory::allocate({ memory::format::byxf_f32,{ gpu_batch_size,{ 227, 227 }, 3, } });
-    auto output = memory::allocate({ memory::format::xb_f32,{ gpu_batch_size,{ 1000 } } });
+    auto input = memory::allocate({use_half ? memory::format::byxf_f16 : memory::format::byxf_f32, {gpu_batch_size, {227, 227}, 3}});
+    auto output = memory::allocate({use_half ? memory::format::xb_f16 : memory::format::xb_f32, {gpu_batch_size, {1000}}});
 
     // build alexnet
-    std::vector<std::pair<primitive, std::string>> primitives = build_alexnet(input, output, weights_dir, weights_optimizer);
+    std::vector<std::pair<primitive, std::string>> primitives = build_alexnet(input, output, weights_dir, weights_optimizer, use_half);
 
     // create worker
     worker worker = create_worker();
@@ -278,13 +281,20 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
     for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
     {
         images_in_batch.clear();
-        for (uint32_t i = 0; i < batch_size && images_list_iterator != images_list_end; i++, images_list_iterator++)
+        for (uint32_t i = 0; i < batch_size && images_list_iterator != images_list_end; ++i, ++images_list_iterator)
         {
             images_in_batch.push_back(*images_list_iterator);
         }
 
         // load croped and resized images into input
-        load_images_from_file_list(images_in_batch, input);
+        if (use_half)
+        {
+            load_images_from_file_list<half_t>(images_in_batch, input);
+        }
+        else
+        {
+            load_images_from_file_list(images_in_batch, input);
+        }
 
         // execute alexnet
         auto time = execute_topology(worker, primitives, output, dump_hl, "alexnet", 15);

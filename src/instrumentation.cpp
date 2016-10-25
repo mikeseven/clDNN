@@ -30,10 +30,61 @@ namespace neural {
         // initalize dumping directory for whole run
         const std::string logger::dump_dir = std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 
+        static float convert_half_to_float(half_t val, bool flush_denorm_to_zero = false)
+        {
+#if defined HALF_HALF_HPP
+            return val;
+#else
+            // FP32 parts extracted from FP16.
+            uint32_t sign = (static_cast<uint16_t>(val) & 0x8000U) << 16;
+            uint32_t mantissa = (static_cast<uint16_t>(val) & 0x3FFU) << 13;
+
+            uint32_t exp_val_f16 = (static_cast<uint16_t>(val) & 0x7C00U) >> 10;
+            uint32_t exp;
+            if (exp_val_f16 == 0)
+            {
+                // Handling +/-0 and denormals.
+                if (mantissa == 0)
+                {
+                    exp = 0;
+                }
+                else if (flush_denorm_to_zero)
+                {
+                    sign = 0;
+                    exp = 0;
+                    mantissa = 0;
+                }
+                else
+                {
+                    // Denorms conversion to normal numbers.
+                    exp = 127 - 15;
+                    while (!(mantissa & 0x400000U))
+                    {
+                        mantissa <<= 1;
+                        --exp;
+                    }
+                    mantissa = (mantissa << 1) & 0x7FFFFFU;
+                    exp = (exp - 1U) << 23;
+                }
+            }
+            else
+            {
+                // Handling +/-infinity, NaN and normal numbers.
+                exp = (exp_val_f16 == 0x1FU ? 0xFFU : exp_val_f16) << 23;
+            }
+
+            float ret;
+            reinterpret_cast<uint32_t&>(ret) = sign | exp | mantissa;
+
+            return ret;
+#endif
+        }
+
         void logger::log_memory_to_file(const primitive& mem, std::string prefix)
         {
-            auto mem_arg = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>().argument : mem.output[0].as<const memory&>().argument;
-            auto mem_ptr = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>().pointer<float>() : mem.output[0].as<const memory&>().pointer<float>();
+            const auto& mem_prim = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>() : mem.output[0].as<const memory&>();
+            auto mem_arg = mem_prim.argument;
+
             boost::filesystem::create_directories(dump_dir);
             auto batch = mem_arg.size.batch[0];
             auto feature = mem_arg.size.feature[0];
@@ -48,44 +99,105 @@ namespace neural {
             int input_it = 0;
             switch (mem_arg.format)
             {
-			case memory::format::byxf_f32:
-				for (uint32_t b = 0; b < mem_arg.size.batch[0]; b++)
-				{
-                    for (uint32_t y = 0; y < mem_arg.size.spatial[1]; y++)
+            // FP32 (float)
+            case memory::format::byxf_f32:
+                {
+                    auto mem_ptr = mem_prim.pointer<float>();
+
+                    for (uint32_t b = 0; b < mem_arg.size.batch[0]; b++)
                     {
-                        for (uint32_t x = 0; x < mem_arg.size.spatial[0]; x++)
+                        for (uint32_t y = 0; y < mem_arg.size.spatial[1]; y++)
                         {
-                            for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
+                            for (uint32_t x = 0; x < mem_arg.size.spatial[0]; x++)
                             {
-                                streams[b][f] << mem_ptr[input_it++] << " ";
-                                if (x == sizex - 1)
-                                    streams[b][f] << std::endl;
+                                for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
+                                {
+                                    streams[b][f] << mem_ptr[input_it++] << " ";
+                                    if (x == sizex - 1)
+                                        streams[b][f] << std::endl;
+                                }
                             }
                         }
                     }
-				}
+                }
                 break;
             case memory::format::yxfb_f32:
-                for (uint32_t y = 0; y < mem_arg.size.spatial[1];y++)
                 {
-                    for (uint32_t x = 0; x < sizex;x++)
-                        for (uint32_t feature_it = 0; feature_it < feature; feature_it++)
-                            for (uint32_t batch_it = 0; batch_it < batch; batch_it++)
-                            {
-                                streams[batch_it][feature_it] << mem_ptr[input_it++] << " ";
-                                if (x == sizex - 1)
-                                    streams[batch_it][feature_it] << std::endl;
-                            }
+                    auto mem_ptr = mem_prim.pointer<float>();
+
+                    for (uint32_t y = 0; y < mem_arg.size.spatial[1];y++)
+                    {
+                        for (uint32_t x = 0; x < sizex;x++)
+                            for (uint32_t feature_it = 0; feature_it < feature; feature_it++)
+                                for (uint32_t batch_it = 0; batch_it < batch; batch_it++)
+                                {
+                                    streams[batch_it][feature_it] << mem_ptr[input_it++] << " ";
+                                    if (x == sizex - 1)
+                                        streams[batch_it][feature_it] << std::endl;
+                                }
+                    }
                 }
                 break;
             case memory::format::xb_f32:
-                for (uint32_t x = 0; x < sizex;x++)
-                    for (uint32_t batch_it = 0; batch_it < batch; batch_it++)
-                        streams[batch_it][0] << mem_ptr[input_it++] << std::endl;
+                {
+                    auto mem_ptr = mem_prim.pointer<float>();
+
+                    for (uint32_t x = 0; x < sizex;x++)
+                        for (uint32_t batch_it = 0; batch_it < batch; batch_it++)
+                            streams[batch_it][0] << mem_ptr[input_it++] << std::endl;
+                }
+                break;
+
+            // FP16 (half)
+            case memory::format::byxf_f16:
+                {
+                    auto mem_ptr = mem_prim.pointer<half_t>();
+
+                    for (uint32_t b = 0; b < mem_arg.size.batch[0]; b++)
+                    {
+                        for (uint32_t y = 0; y < mem_arg.size.spatial[1]; y++)
+                        {
+                            for (uint32_t x = 0; x < mem_arg.size.spatial[0]; x++)
+                            {
+                                for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
+                                {
+                                    streams[b][f] << convert_half_to_float(mem_ptr[input_it++]) << " ";
+                                    if (x == sizex - 1)
+                                        streams[b][f] << std::endl;
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+            case memory::format::yxfb_f16:
+                {
+                    auto mem_ptr = mem_prim.pointer<half_t>();
+
+                    for (uint32_t y = 0; y < mem_arg.size.spatial[1];y++)
+                    {
+                        for (uint32_t x = 0; x < sizex;x++)
+                            for (uint32_t feature_it = 0; feature_it < feature; feature_it++)
+                                for (uint32_t batch_it = 0; batch_it < batch; batch_it++)
+                                {
+                                    streams[batch_it][feature_it] << convert_half_to_float(mem_ptr[input_it++]) << " ";
+                                    if (x == sizex - 1)
+                                        streams[batch_it][feature_it] << std::endl;
+                                }
+                    }
+                }
+                break;
+            case memory::format::xb_f16:
+                {
+                    auto mem_ptr = mem_prim.pointer<half_t>();
+
+                    for (uint32_t x = 0; x < sizex;x++)
+                        for (uint32_t batch_it = 0; batch_it < batch; batch_it++)
+                            streams[batch_it][0] << convert_half_to_float(mem_ptr[input_it++]) << std::endl;
+                }
                 break;
             default:
                 throw std::runtime_error("format not implemented yet");
-                break;
             }
 
 

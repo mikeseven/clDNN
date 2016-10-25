@@ -25,8 +25,11 @@
 using namespace neural;
 
 // Building vgg16 network with loading weights & biases from file
-std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& input, const primitive& output, const std::string& weights_dir, weights_optimizer &wo)
+std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& input, const primitive& output, const std::string& weights_dir, weights_optimizer& wo, bool use_half)
 {
+    auto mem_format = use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
+    auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
+
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
     std::cout << "Building vgg16 started" << std::endl;
     instrumentation::timer<> timer_build;
@@ -34,7 +37,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
     // create conversion to yxfb format and subtract mean values
     auto reordered_input = reorder::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         input.as<const memory&>().argument.size,
         input,
         wo.create_weights_from_file(join_path(weights_dir, "imagenet_mean.nnd"), file::mean)
@@ -42,7 +45,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto conv1_1 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             reordered_input,
             wo.create_weights_from_file(join_path(weights_dir, "conv1_1_weights.nnd"), file::convolution),
@@ -56,7 +59,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto conv1_2 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             conv1_1,
             wo.create_weights_from_file(join_path(weights_dir, "conv1_2_weights.nnd"), file::convolution),
@@ -72,7 +75,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
     auto pool1 = pooling::create(
     {
         pooling::mode::max,
-        memory::format::yxfb_f32,
+        mem_format,
         conv1_2,
         { 1,{ 2,2 },1 }, // strd
         { 1,{ 2,2 },1 }, // kernel
@@ -81,7 +84,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto conv2_1 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             pool1,
             wo.create_weights_from_file(join_path(weights_dir, "conv2_1_weights.nnd"), file::convolution),
@@ -96,7 +99,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto conv2_2 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             conv2_1,
             wo.create_weights_from_file(join_path(weights_dir, "conv2_2_weights.nnd"), file::convolution),
@@ -112,7 +115,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
     auto pool2 = pooling::create(
     {
         pooling::mode::max,
-        memory::format::yxfb_f32,
+        mem_format,
         conv2_2,
         { 1,{ 2,2 },1 }, // strd
         { 1,{ 2,2 },1 }, // kernel
@@ -121,7 +124,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto conv3_1 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             pool2,
             wo.create_weights_from_file(join_path(weights_dir, "conv3_1_weights.nnd"), file::convolution),
@@ -136,7 +139,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto conv3_2 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             conv3_1,
             wo.create_weights_from_file(join_path(weights_dir, "conv3_2_weights.nnd"), file::convolution),
@@ -151,7 +154,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto conv3_3 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             conv3_2,
             wo.create_weights_from_file(join_path(weights_dir, "conv3_3_weights.nnd"), file::convolution),
@@ -167,7 +170,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
     auto pool3 = pooling::create(
     {
         pooling::mode::max,
-        memory::format::yxfb_f32,
+        mem_format,
         conv3_3,
         { 1,{ 2,2 },1 }, // strd
         { 1,{ 2,2 },1 }, // kernel
@@ -176,7 +179,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto conv4_1 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             pool3,
             wo.create_weights_from_file(join_path(weights_dir, "conv4_1_weights.nnd"), file::convolution),
@@ -191,7 +194,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto conv4_2 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             conv4_1,
             wo.create_weights_from_file(join_path(weights_dir, "conv4_2_weights.nnd"), file::convolution),
@@ -206,7 +209,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto conv4_3 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             conv4_2,
             wo.create_weights_from_file(join_path(weights_dir, "conv4_3_weights.nnd"), file::convolution),
@@ -222,7 +225,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
     auto pool4 = pooling::create(
     {
         pooling::mode::max,
-        memory::format::yxfb_f32,
+        mem_format,
         conv4_3,
         { 1,{ 2,2 },1 }, // strd
         { 1,{ 2,2 },1 }, // kernel
@@ -231,7 +234,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto conv5_1 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             pool4,
             wo.create_weights_from_file(join_path(weights_dir, "conv5_1_weights.nnd"), file::convolution),
@@ -246,7 +249,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto conv5_2 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             conv5_1,
             wo.create_weights_from_file(join_path(weights_dir, "conv5_2_weights.nnd"), file::convolution),
@@ -261,7 +264,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto conv5_3 = convolution::create(
     {
-        memory::format::yxfb_f32,
+        mem_format,
         {
             conv5_2,
             wo.create_weights_from_file(join_path(weights_dir, "conv5_3_weights.nnd"), file::convolution),
@@ -277,7 +280,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
     auto pool5 = pooling::create(
     {
         pooling::mode::max,
-        memory::format::yxfb_f32,
+        mem_format,
         conv5_3,
         { 1,{ 2,2 },1 }, // strd
         { 1,{ 2,2 },1 }, // kernel
@@ -286,7 +289,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto fc6 = fully_connected::create(
     {
-        memory::format::xb_f32,
+        fc_mem_format,
         pool5,
         wo.create_weights_from_file(join_path(weights_dir, "fc6_weights.nnd"), file::fully_connected),
         wo.create_weights_from_file(join_path(weights_dir, "fc6_bias.nnd"),  file::bias),
@@ -296,7 +299,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto fc7 = fully_connected::create(
     {
-        memory::format::xb_f32,
+        fc_mem_format,
         fc6,
         wo.create_weights_from_file(join_path(weights_dir, "fc7_weights.nnd"), file::fully_connected),
         wo.create_weights_from_file(join_path(weights_dir, "fc7_bias.nnd"),  file::bias),
@@ -306,7 +309,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
     auto fc8 = fully_connected::create(
     {
-        memory::format::xb_f32,
+        fc_mem_format,
         fc7,
         wo.create_weights_from_file(join_path(weights_dir, "fc8_weights.nnd"), file::fully_connected),
         wo.create_weights_from_file(join_path(weights_dir, "fc8_bias.nnd"),  file::bias),
@@ -352,7 +355,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
 
 
 
-void vgg16(uint32_t batch_size, std::string img_dir, const std::string& weights_dir, bool dump_hl, bool profiling, bool optimize_weights)
+void vgg16(uint32_t batch_size, std::string img_dir, const std::string& weights_dir, bool dump_hl, bool profiling, bool optimize_weights, bool use_half)
 {
     uint32_t gpu_batch_size = get_gpu_batch_size(batch_size);
     if (gpu_batch_size != batch_size)
@@ -373,11 +376,11 @@ void vgg16(uint32_t batch_size, std::string img_dir, const std::string& weights_
 
     weights_optimizer weights_optimizer(optimize_weights);
 
-    auto input = memory::allocate({ memory::format::byxf_f32,{ gpu_batch_size,{ 224, 224 }, 3, } });
-    auto output = memory::allocate({ memory::format::xb_f32,{ gpu_batch_size,{ 1000 } } });
+    auto input = memory::allocate({use_half ? memory::format::byxf_f16 : memory::format::byxf_f32, {gpu_batch_size, {224, 224}, 3}});
+    auto output = memory::allocate({use_half ? memory::format::xb_f16 : memory::format::xb_f32, {gpu_batch_size, {1000}}});
 
     // build vgg16
-    std::vector<std::pair<primitive, std::string>> primitives = build_vgg16(input, output, weights_dir, weights_optimizer);
+    std::vector<std::pair<primitive, std::string>> primitives = build_vgg16(input, output, weights_dir, weights_optimizer, use_half);
 
     // create worker
     worker worker = create_worker();
@@ -394,13 +397,20 @@ void vgg16(uint32_t batch_size, std::string img_dir, const std::string& weights_
     for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
     {
         images_in_batch.clear();
-        for (uint32_t i = 0; i < batch_size && images_list_iterator != images_list_end; i++, images_list_iterator++)
+        for (uint32_t i = 0; i < batch_size && images_list_iterator != images_list_end; ++i, ++images_list_iterator)
         {
             images_in_batch.push_back(*images_list_iterator);
         }
 
         // load croped and resized images into input
-        load_images_from_file_list(images_in_batch, input);
+        if (use_half)
+        {
+            load_images_from_file_list<half_t>(images_in_batch, input);
+        }
+        else
+        {
+            load_images_from_file_list(images_in_batch, input);
+        }
 
         // execute vgg16
         auto time = execute_topology(worker, primitives, output, dump_hl, "vgg16", 23);

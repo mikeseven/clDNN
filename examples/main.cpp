@@ -185,6 +185,9 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Path to directory containing weights used in classification.\n"
             "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
             "If not specified, the \"<executable-dir>/weights\" path is used.")
+        ("use_half", bpo::bool_switch(),
+            "Uses half precision floating point numbers (FP16, halfs) instead of single precision ones (float) in "
+            "computations of selected model.")
         ("profiling", bpo::bool_switch(),
             "Enable profiling and create profiling report.")
         ("optimize_weights", bpo::bool_switch(),
@@ -227,7 +230,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
     help_msg_out << all_visible_cmdline_options;
 
 
-    return{ all_cmdline_options, help_msg_out.str(), version_msg_out.str() };
+    return {all_cmdline_options, help_msg_out.str(), version_msg_out.str()};
 }
 
 /// Parses command-line options.
@@ -259,8 +262,8 @@ int main(int argc, char* argv[])
     namespace bfs = boost::filesystem;
 
     // TODO: create header file for all examples
-    extern void alexnet(uint32_t, std::string, const std::string&, bool, bool, bool);
-    extern void vgg16(uint32_t, std::string, const std::string&, bool, bool, bool);
+    extern void alexnet(uint32_t, std::string, const std::string&, bool, bool, bool, bool);
+    extern void vgg16(uint32_t, std::string, const std::string&, bool, bool, bool, bool);
     extern void convert_weights(neural::memory::format::type, std::string);
 
 
@@ -345,7 +348,8 @@ int main(int argc, char* argv[])
                     weights_dir,
                     parsed_args["dump_hidden_layers"].as<bool>(),
                     parsed_args["profiling"].as<bool>(),
-                    parsed_args["optimize_weights"].as<bool>());
+                    parsed_args["optimize_weights"].as<bool>(),
+                    parsed_args["use_half"].as<bool>());
                 return 0;
             }
             else if (parsed_args["model"].as<std::string>() == "vgg16")
@@ -356,7 +360,8 @@ int main(int argc, char* argv[])
                     weights_dir,
                     parsed_args["dump_hidden_layers"].as<bool>(),
                     parsed_args["profiling"].as<bool>(),
-                    parsed_args["optimize_weights"].as<bool>());
+                    parsed_args["optimize_weights"].as<bool>(),
+                    parsed_args["use_half"].as<bool>());
                 return 0;
             }
 

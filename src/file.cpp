@@ -117,8 +117,9 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
 
     // load header, verify 32-bit crc
     if (read_crc() != crc32(&file_head, sizeof(file_head), CRC_INIT)) throw std::runtime_error("nn_data_t header crc mismatch");
-    if (file_head.data_sizeof != sizeof(float)
-        || file_head.data_type != 'F') throw std::runtime_error("nn_data_t has invalid type");
+    if ((file_head.data_sizeof != sizeof(float) || file_head.data_type != 'F') &&
+        (file_head.data_sizeof != sizeof(half_t) || file_head.data_type != 'H')) throw std::runtime_error("nn_data_t has invalid type");
+    auto use_fp16_data = file_head.data_type == 'H';
     // load size array, verify 32-bit crc
     auto array = std::vector<uint64_t>(file_head.dimension);
     //std::unique_ptr<uint64_t>(new uint64_t[file_head.dimension]);
@@ -134,13 +135,15 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
     {
     case 1: // biases 1D
     {
-        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ memory::format::x_f32,{ 1,{ { static_cast<uint32_t>(array[0]) } }, 1 } }));
+        auto fmt = use_fp16_data ? memory::format::x_f16 : memory::format::x_f32;
+        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ fmt,{ 1,{ { static_cast<uint32_t>(array[0]) } }, 1 } }));
         break;
     }
     case 2: // 2D i.e. fully connected
     {
+        auto fmt = use_fp16_data ? memory::format::bx_f16 : memory::format::bx_f32;
         p_arg = std::unique_ptr<memory::arguments>(new memory::arguments(
-        { memory::format::bx_f32,
+        { fmt,
         {
             static_cast<uint32_t>(array[1]),
             { { static_cast<uint32_t>(array[0]) } },
@@ -151,10 +154,11 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
     }
     case 3: // 3D mean
     {
+        auto fmt = use_fp16_data ? memory::format::bfyx_f16 : memory::format::bfyx_f32;
         auto a = array[0], b = array[1], c = array[2];
         p_arg = std::unique_ptr<memory::arguments>(new memory::arguments(
         {
-            memory::format::bfyx_f32,
+            fmt,
             {
                 { 1 },
                 { static_cast<uint32_t>(a), static_cast<uint32_t>(b) },
@@ -166,13 +170,17 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
     case 4: // 4D convolution or convolution to fc conversion
     {
         if (type == file::weights_type::convolution)
-            p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({  memory::format::oiyx_f32,{ 1,
+        {
+            auto fmt = use_fp16_data ? memory::format::oiyx_f16 : memory::format::oiyx_f32;
+            p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ fmt, { 1,
             { static_cast<uint32_t>(array[0]), static_cast<uint32_t>(array[1]) }, // kernel spatials x, y
             { static_cast<uint32_t>(array[3]), static_cast<uint32_t>(array[2]) } } })); // ofm, ifm
+        }
         else if (type == file::weights_type::fully_connected)
         {
+            auto fmt = use_fp16_data ? memory::format::bfyx_f16 : memory::format::bfyx_f32;
             p_arg = std::unique_ptr<memory::arguments>( new memory::arguments(
-            {  memory::format::bfyx_f32,
+            {  fmt,
             {
                 { static_cast<uint32_t>(array[3]) }, // batches
                 { static_cast<uint32_t>(array[1]), static_cast<uint32_t>(array[0]) },
@@ -214,8 +222,8 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
     // load header, verify 32-bit crc
     // TODO!!!! create CRC for files with version 2 and then compare it here!
     //if (read_crc() != crc32(&file_head, sizeof(file_head), CRC_INIT)) throw std::runtime_error("nn_data_t header crc mismatch");
-    if (file_head.data_sizeof != sizeof(float)
-        || file_head.data_type != 'F') throw std::runtime_error("nn_data_t has invalid type");
+    if ((file_head.data_sizeof != sizeof(float) || file_head.data_type != 'F') &&
+        (file_head.data_sizeof != sizeof(half_t) || file_head.data_type != 'H')) throw std::runtime_error("nn_data_t has invalid type");
     // load size array, verify 32-bit crc
     auto array = std::vector<uint64_t>(file_head.dimension);
     //std::unique_ptr<uint64_t>(new uint64_t[file_head.dimension]);
@@ -230,24 +238,38 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
 
     switch (format)
     {
+    // FP32
     case memory::format::oyxi_f32:
     case memory::format::yxoi_f32:
     case memory::format::yxio_f32:
+    // FP16
+    case memory::format::oyxi_f16:
+    case memory::format::yxoi_f16:
+    case memory::format::yxio_f16:
     {
         p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({  format,{ 1,
         { static_cast<uint32_t>(array[2]), static_cast<uint32_t>(array[3]) }, // kernel spatials x, y
         { static_cast<uint32_t>(array[0]), static_cast<uint32_t>(array[1]) } } })); // ofm, ifm
         break;
     }
+
+    // FP32
     case memory::format::byxf_f32:
     case memory::format::yxfb_f32:
+    // FP16
+    case memory::format::byxf_f16:
+    case memory::format::yxfb_f16:
     {
         p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({  format,{ static_cast<uint32_t>(array[0]), // batch
         { static_cast<uint32_t>(array[2]), static_cast<uint32_t>(array[3]) }, // kernel spatials x, y
         { static_cast<uint32_t>(array[1]) } } })); // fm
         break;
     }
+
+    // FP32
     case memory::format::xb_f32:
+    // FP16
+    case memory::format::xb_f16:
     {
         p_arg = std::unique_ptr<memory::arguments>(new memory::arguments(
         {  format,
@@ -259,11 +281,9 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
         }));
         break;
     }
+
     default:
-    {
         throw std::runtime_error("unsupported format");
-        break;
-    }
     }
 
     auto memory_primitive = memory::allocate(*p_arg); // ofm, ifm
@@ -306,8 +326,16 @@ void file::serialize(const primitive& data, const std::string& name)
     std::ofstream fstream( dir_path.string(), std::ios::out | std::ios::binary );
     file_header fh;
     file_header_ext_2 fh_ext;
-    fh.data_type = 'F';
-    fh.data_sizeof = sizeof(float);
+    if (memory::traits(format).type->id == type_id<half_t>()->id)
+    {
+        fh.data_type = 'H';
+        fh.data_sizeof = sizeof(half_t);
+    }
+    else
+    {
+        fh.data_type = 'F';
+        fh.data_sizeof = sizeof(float);
+    }
     fh.version = 3;
     fh.dimension = memory::traits(format).dimension;
     if (fh.dimension == 0 || fh.dimension > 4) throw std::runtime_error("dimensions mismatch");
@@ -316,8 +344,8 @@ void file::serialize(const primitive& data, const std::string& name)
     fstream.write(reinterpret_cast<const char*>(&fh),sizeof(fh));
     fstream.write(reinterpret_cast<const char*>(&fh_ext), sizeof(fh_ext));
     std::vector<uint64_t> array(fh.dimension);
-    if (format == memory::format::type::xb_f32 ||
-        format == memory::format::type::bx_f32)
+    if (format == memory::format::type::xb_f32 || format == memory::format::type::bx_f32 ||
+        format == memory::format::type::xb_f16 || format == memory::format::type::bx_f16)
     {
         array[0] = size.batch[0];
         array[1] = size.spatial[0];
