@@ -21,7 +21,9 @@
 
 #include <boost/filesystem.hpp>
 
+#include <immintrin.h>
 #include <iostream>
+
 #include <regex>
 #include <string>
 
@@ -114,7 +116,7 @@ static inline std::vector<std::string> get_directory_files(const std::string& im
 std::vector<std::string> get_directory_images(const std::string& images_path)
 {
     std::regex allowed_exts("^\\.(jpe?g|png|bmp|gif|j2k|jp2|tiff)$",
-        std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+                            std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
     return get_directory_files(images_path, allowed_exts);
 }
 
@@ -169,14 +171,99 @@ void nn_data_load_from_image(
     }
 };
 
+static neural::half_t convert_pixel_channel_to_half(uint8_t val)
+{
+#if defined HALF_HALF_HPP
+    return val;
+#else
+    if (!val)
+        return neural::half_t(0x0000U);
+
+    if (val >> 4) // 4..7
+    {
+        if (val >> 6) // 6..7
+        {
+            return (val & 0x80)
+                ? neural::half_t(0x5800U | ((val & 0x7FU) << 3))
+                : neural::half_t(0x5400U | ((val & 0x3FU) << 4));
+        }
+        else //  4..5
+        {
+            return (val & 0x20)
+                ? neural::half_t(0x5000U | ((val & 0x1FU) << 5))
+                : neural::half_t(0x4C00U | ((val & 0x0FU) << 6));
+        }
+    }
+    else // 0..3
+    {
+        if (val >> 2) // 2..3
+        {
+            return (val & 0x08)
+                ? neural::half_t(0x4800U | ((val & 0x07U) << 7))
+                : neural::half_t(0x4400U | ((val & 0x03U) << 8));
+        }
+        else // 0..1
+        {
+            return (val & 0x02)
+                ? neural::half_t(0x4000U | ((val & 0x01U) << 9))
+                : neural::half_t(0x3C00U);
+        }
+    }
+#endif
+}
+
+void nn_data_load_from_image(
+    std::string  filename,                       // Load of all data from a image filename
+    neural::memory::ptr<neural::half_t>::iterator dst_buffer,
+    uint32_t                   std_size,         // size of image both: height and width
+    bool                       RGB_order)        // if true - image have RGB order, otherwise BGR
+                                                 // supported formats: JPEG, J2K, JP2, PNG, BMP, WEBP, GIF, TIFF
+{
+    if (FIBITMAP *bitmap_raw = fi::crop_image_to_square_and_resize(fi::load_image_from_file(filename), std_size)) {
+        FIBITMAP *bitmap;
+        if (FreeImage_GetBPP(bitmap_raw) != 24) {
+            bitmap = FreeImage_ConvertTo24Bits(bitmap_raw);
+            FreeImage_Unload(bitmap_raw);
+        }
+        else bitmap = bitmap_raw;
+
+        auto bytes_per_pixel = FreeImage_GetLine(bitmap) / std_size;
+        auto data_buffer = dst_buffer;
+        if (RGB_order) {
+            for (uint32_t y = 0u; y<std_size; ++y) {
+                uint8_t *pixel = FreeImage_GetScanLine(bitmap, std_size - y - 1);
+                for (uint32_t x = 0u; x<std_size; ++x) {
+                    *(data_buffer + 0 + x * 3 + y * 3 * std_size) = convert_pixel_channel_to_half(pixel[FI_RGBA_RED]);
+                    *(data_buffer + 1 + x * 3 + y * 3 * std_size) = convert_pixel_channel_to_half(pixel[FI_RGBA_GREEN]);
+                    *(data_buffer + 2 + x * 3 + y * 3 * std_size) = convert_pixel_channel_to_half(pixel[FI_RGBA_BLUE]);
+                    pixel += bytes_per_pixel;
+                }
+            }
+        }
+        else {
+            for (uint32_t y = 0u; y<std_size; ++y) {
+                uint8_t *pixel = FreeImage_GetScanLine(bitmap, std_size - y - 1);
+                for (uint32_t x = 0u; x<std_size; ++x) {
+                    *(data_buffer + 0 + x * 3 + y * 3 * std_size) = convert_pixel_channel_to_half(pixel[FI_RGBA_BLUE]);
+                    *(data_buffer + 1 + x * 3 + y * 3 * std_size) = convert_pixel_channel_to_half(pixel[FI_RGBA_GREEN]);
+                    *(data_buffer + 2 + x * 3 + y * 3 * std_size) = convert_pixel_channel_to_half(pixel[FI_RGBA_RED]);
+                    pixel += bytes_per_pixel;
+                }
+            }
+        }
+        FreeImage_Unload(bitmap);
+    }
+};
+
 // i am not sure what is better: pass memory as primitive where layout, ptr and size are included
 // or pass as separate parameters to avoid including neural.h in common tools?
+template <typename MemElemTy>
 void load_images_from_file_list(
     const std::vector<std::string>& images_list,
     neural::primitive& memory)
 {
     auto memory_primitive = memory.as<const neural::memory&>().argument;
-    auto dst_ptr = memory.as<const neural::memory&>().pointer<float>();
+    auto dst_ptr = memory.as<const neural::memory&>().pointer<MemElemTy>();
     auto it = dst_ptr.begin();
     // validate if primitvie is memory type
     if (!memory.is<const neural::memory&>()) throw std::runtime_error("Given primitive is not a memory");
@@ -185,7 +272,10 @@ void load_images_from_file_list(
     auto dim = memory_primitive.size.spatial;
 
     if (dim[0] != dim[1]) throw std::runtime_error("w and h aren't equal");
-    if (memory_primitive.format != neural::memory::format::byxf_f32) throw std::runtime_error("Only bfyx format is supported as input to images from files");
+    if (memory_primitive.format != neural::memory::format::byxf_f32 &&
+        memory_primitive.format != neural::memory::format::byxf_f16) throw std::runtime_error("Only bfyx format is supported as input to images from files");
+    if (neural::memory::traits(memory_primitive.format).type->id != neural::template type_id<MemElemTy>()->id)
+        throw std::runtime_error("Memory format expects different type of elements than specified");
     auto single_image_size = dim[0] * dim[0] * 3;
     for (auto img : images_list)
     {
@@ -195,6 +285,8 @@ void load_images_from_file_list(
     }
 }
 
+template void load_images_from_file_list<float>(const std::vector<std::string>&, neural::primitive&);
+template void load_images_from_file_list<neural::half_t>(const std::vector<std::string>&, neural::primitive&);
 using namespace neural;
 
 void print_profiling_table(std::ostream& os, const std::vector<instrumentation::profiling_info>& profiling_info) {
@@ -294,7 +386,12 @@ uint32_t get_gpu_batch_size(int number)
     return nearest_power_of_two;
 }
 
-std::chrono::nanoseconds execute_topology(const worker& worker, const std::vector<std::pair<primitive, std::string>>& primitives, const primitive& output, bool dump_hl, char* topology, size_t primitives_number)
+std::chrono::nanoseconds execute_topology(const worker& worker,
+                                          const std::vector<std::pair<primitive, std::string>>& primitives,
+                                          const primitive& output,
+                                          bool dump_hl,
+                                          const std::string& topology,
+                                          size_t primitives_number)
 {
     // we need this exact number of primitives(those are created in create_alexnet) 
     assert(primitives.size() == primitives_number);
@@ -311,7 +408,7 @@ std::chrono::nanoseconds execute_topology(const worker& worker, const std::vecto
     auto scheduling_time(timer_execution.uptime());
 
     //OCL buffers mapping blocks until all primitives are completed
-    output.as<const neural::memory&>().pointer<float>();
+    output.as<const neural::memory&>().pointer<char>();
 
     auto execution_time(timer_execution.uptime());
     std::cout << topology << " scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
