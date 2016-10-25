@@ -284,8 +284,11 @@ void load_images_from_file_list(
     }
 }
 
+// Explicit instantiation of all used template function instances used in examples.
 template void load_images_from_file_list<float>(const std::vector<std::string>&, neural::primitive&);
 template void load_images_from_file_list<neural::half_t>(const std::vector<std::string>&, neural::primitive&);
+
+
 using namespace neural;
 
 void print_profiling_table(std::ostream& os, const std::vector<instrumentation::profiling_info>& profiling_info) {

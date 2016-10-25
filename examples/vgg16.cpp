@@ -403,7 +403,14 @@ void vgg16(uint32_t batch_size, std::string img_dir, const std::string& weights_
         }
 
         // load croped and resized images into input
-        load_images_from_file_list(images_in_batch, input);
+        if (use_half)
+        {
+            load_images_from_file_list<half_t>(images_in_batch, input);
+        }
+        else
+        {
+            load_images_from_file_list(images_in_batch, input);
+        }
 
         // execute vgg16
         auto time = execute_topology(worker, primitives, output, dump_hl, "vgg16", 23);
