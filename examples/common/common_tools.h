@@ -18,14 +18,13 @@
 #pragma once
 
 #include "api/neural.h"
-
+#include "weights_optimizer.h"
 
 #include <memory>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include "weights_optimizer.h"
 
 /// Information about executable.
 class executable_info
@@ -111,10 +110,11 @@ std::vector<std::string> get_directory_images(const std::string& images_path);
 std::vector<std::string> get_directory_weights(const std::string& images_path);
 void load_images_from_file_list(const std::vector<std::string>& images_list, neural::primitive& memory); 
 
+/// function moved from alexnet.cpp, they will be probably used by each topology
 void print_profiling_table(std::ostream& os, const std::vector<neural::instrumentation::profiling_info>& profiling_info);
 neural::worker create_worker();
 uint32_t get_next_nearest_power_of_two(int number);
 uint32_t get_gpu_batch_size(int number);
 
 std::chrono::nanoseconds execute_topology(const neural::worker& worker, const std::vector<std::pair<neural::primitive, std::string>>& primitives, const neural::primitive& output, bool dump_hl, char* topology, size_t primitives_number);
-void weight_optimization(Weights_optimizer &wo, const neural::worker& worker);
+void weight_optimization(weights_optimizer &wo, const neural::worker& worker);

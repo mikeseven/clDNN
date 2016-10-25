@@ -25,7 +25,7 @@
 using namespace neural;
 
 // Building AlexNet network with loading weights & biases from file
-std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& input, const primitive& output, const std::string& weights_dir, Weights_optimizer &wo)
+std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& input, const primitive& output, const std::string& weights_dir, weights_optimizer &wo)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     std::cout << "Building Alexnet started" << std::endl;
@@ -255,7 +255,7 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
 
     html output_file("alexnet", "alexnet run");
 
-    Weights_optimizer weights_optimizer(optimize_weights);
+    weights_optimizer weights_optimizer(optimize_weights);
 
     auto input = memory::allocate({ memory::format::byxf_f32,{ gpu_batch_size,{ 227, 227 }, 3, } });
     auto output = memory::allocate({ memory::format::xb_f32,{ gpu_batch_size,{ 1000 } } });

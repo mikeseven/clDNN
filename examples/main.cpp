@@ -172,24 +172,24 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
     standard_cmdline_options.add_options()
         ("input", bpo::value<std::string>()->value_name("<input-dir>"),
             "Path to input directory containing images to classify (mandatory when running classification).")
-            ("batch", bpo::value<std::uint32_t>()->value_name("<batch-size>")->default_value(8),
-                "Size of a group of images that are classified together (large batch sizes have better performance).")
-                ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
-                    "Name of a neural network model that is used for classification.\n"
-                    "It can be one of:\n  \talexnet, caffenet_float, caffenet_int16, lenet_float.")
-                    ("engine", bpo::value<neural::engine::type>()->value_name("<eng-type>")->default_value(neural::engine::reference, "reference"),
-                        "Type of an engine used for classification.\nIt can be one of:\n  \treference, gpu.")
-                        ("dump_hidden_layers", bpo::bool_switch(),
-                            "Dump results from hidden layers of network to files.")
-                            ("weights", bpo::value<std::string>()->value_name("<weights-dir>"),
-                                "Path to directory containing weights used in classification.\n"
-                                "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
-                                "If not specified, the \"<executable-dir>/weights\" path is used.")
-                                ("profiling", bpo::bool_switch(),
-                                    "Enable profiling and create profiling report.")
-                                    ("optimize_weights", bpo::bool_switch(),
-                                        "Perform weights convertion to most desirable format for each network layer while building network.")
-                                        ("version", "Show version of the application.")
+        ("batch", bpo::value<std::uint32_t>()->value_name("<batch-size>")->default_value(8),
+            "Size of a group of images that are classified together (large batch sizes have better performance).")
+        ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
+            "Name of a neural network model that is used for classification.\n"
+            "It can be one of:\n  \talexnet, vgg16.")
+        ("engine", bpo::value<neural::engine::type>()->value_name("<eng-type>")->default_value(neural::engine::reference, "reference"),
+            "Type of an engine used for classification.\nIt can be one of:\n  \treference, gpu.")
+        ("dump_hidden_layers", bpo::bool_switch(),
+            "Dump results from hidden layers of network to files.")
+        ("weights", bpo::value<std::string>()->value_name("<weights-dir>"),
+            "Path to directory containing weights used in classification.\n"
+            "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
+            "If not specified, the \"<executable-dir>/weights\" path is used.")
+        ("profiling", bpo::bool_switch(),
+            "Enable profiling and create profiling report.")
+        ("optimize_weights", bpo::bool_switch(),
+            "Perform weights convertion to most desirable format for each network layer while building network.")
+        ("version", "Show version of the application.")
         ("help", "Show help message and available command-line options.");
 
     // Conversions options.
@@ -198,9 +198,9 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("convert", bpo::value<neural::memory::format::type>()->value_name("<format-type>"),
             "Convert weights of a neural network to given format (<format-type> represents numeric value of "
             "neural::memory::format enum).")
-            ("convert_filter", bpo::value<std::string>()->value_name("<filter>"),
-                "Name or part of the name of weight file(s) to be converted.\nFor example:\n"
-                "  \"conv1\" - first convolution,\n  \"fc\" - every fully connected.");
+        ("convert_filter", bpo::value<std::string>()->value_name("<filter>"),
+            "Name or part of the name of weight file(s) to be converted.\nFor example:\n"
+            "  \"conv1\" - first convolution,\n  \"fc\" - every fully connected.");
 
     // All options.
     bpo::options_description all_cmdline_options;

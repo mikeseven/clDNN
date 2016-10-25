@@ -25,7 +25,7 @@
 using namespace neural;
 
 // Building vgg16 network with loading weights & biases from file
-std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& input, const primitive& output, const std::string& weights_dir, Weights_optimizer &wo)
+std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& input, const primitive& output, const std::string& weights_dir, weights_optimizer &wo)
 {
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
     std::cout << "Building vgg16 started" << std::endl;
@@ -371,9 +371,9 @@ void vgg16(uint32_t batch_size, std::string img_dir, const std::string& weights_
 
     html output_file("vgg16", "vgg16 run");
 
-    Weights_optimizer weights_optimizer(optimize_weights);
+    weights_optimizer weights_optimizer(optimize_weights);
 
-    auto input = memory::allocate({ memory::format::byxf_f32,{ gpu_batch_size,{ 227, 227 }, 3, } });
+    auto input = memory::allocate({ memory::format::byxf_f32,{ gpu_batch_size,{ 224, 224 }, 3, } });
     auto output = memory::allocate({ memory::format::xb_f32,{ gpu_batch_size,{ 1000 } } });
 
     // build vgg16

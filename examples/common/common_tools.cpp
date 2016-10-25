@@ -14,18 +14,16 @@
 // limitations under the License.
 */
 
+#include "api/instrumentation.h"
 #include "common_tools.h"
-
 #include "FreeImage_wraps.h"
+#include "output_parser.h"
 
 #include <boost/filesystem.hpp>
 
+#include <iostream>
 #include <regex>
 #include <string>
-
-#include "output_parser.h"
-#include <iostream>
-#include "api/instrumentation.h"
 
 
 using namespace boost::filesystem;
@@ -338,7 +336,7 @@ std::chrono::nanoseconds execute_topology(const worker& worker, const std::vecto
 }
 
 // Optimizing weights
-void weight_optimization(Weights_optimizer &wo, const worker& worker)
+void weight_optimization(weights_optimizer &wo, const worker& worker)
 {
     std::cout << "Weights optimization started" << std::endl;
     instrumentation::timer<> timer_execution;
