@@ -16,87 +16,18 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
-#include "fully_connected_common_gpu.h"
 #include "relu_gpu.h"
 #include "implementation_map.h"
 #include "kernel.h"
+#include "cache/primitive_db.h"
 
 const std::string kernelName_xb_xb_memory = "Fully_Connected_GPU_xb_xb_memory";
-const std::string kernelCode_xb_xb_memory_Begin = R"__krnl(
-KERNEL (Fully_Connected_GPU_xb_xb_memory)(
-    const __global float* input, 
-    __global float* output, 
-    const __global float* weight,
-    const __global float* bias)
-{
-)__krnl";
-
 const std::string kernelName_xb_bx_memory = "Fully_Connected_GPU_xb_bx_memory";
-const std::string kernelCode_xb_bx_memory_Begin = R"__krnl(
-KERNEL (Fully_Connected_GPU_xb_bx_memory)(
-    const __global float* input, 
-    __global float* output, 
-    const __global float* weight,
-    const __global float* bias)
-{
-)__krnl";
-
 const std::string kernelName_xb_bx_b8_memory = "Fully_Connected_GPU_xb_bx_b8_memory";
-const std::string kernelCode_xb_bx_b8_memory_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(8, 1, 1)))
-KERNEL (Fully_Connected_GPU_xb_bx_b8_memory)(
-    const __global float* input, 
-    __global float* output, 
-    const __global float* weight,
-    const __global float* bias)
-{
-)__krnl";
-
 const std::string kernelName_xb_xb_b8_x8_memory = "Fully_Connected_GPU_xb_xb_b8_x8_memory";
-const std::string kernelCode_xb_xb_b8_x8_memory_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(8, 1, 1)))
-KERNEL (Fully_Connected_GPU_xb_xb_b8_x8_memory)(
-    const __global float* input, 
-    __global float* output, 
-    const __global float* weight,
-    const __global float* bias)
-{
-)__krnl";
-
 const std::string kernelName_xb_xb_b16_memory = "Fully_Connected_GPU_xb_xb_b16_memory";
-const std::string kernelCode_xb_xb_b16_memory_Begin = R"__krnl(
-KERNEL (Fully_Connected_GPU_xb_xb_b16_memory)(
-    const __global float* input, 
-    __global float* output, 
-    const __global float* weights,
-    const __global float* bias)
-{
-)__krnl";
-
 const std::string KernelName_xb_xb_b8_x8_memory_vload = "Fully_Connected_GPU_xb_xb_b8_x8_memory_vload";
-const std::string kernelCode_xb_xb_b8_x8_memory_vload_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
-KERNEL (Fully_Connected_GPU_xb_xb_b8_x8_memory_vload)(
-    const __global float* input, 
-    __global float* output, 
-    const __global float* weight,
-    const __global float* bias)
-{
-)__krnl";
-
 const std::string kernelName_yxfn_memory = "Fully_Connected_GPU_yxfn_memory";
-const std::string kernelCode_yxfn_memory_Begin = R"__krnl(
-KERNEL (Fully_Connected_GPU_yxfn_memory)(
-    const __global float* input, 
-    __global float* output, 
-    const __global float* weight,
-    const __global float* bias)
-{
-)__krnl";
-
-const std::string kernelCode_End = R"__krnl(
-}
-)__krnl";
 
 namespace neural {
 
@@ -338,13 +269,18 @@ namespace neural {
 namespace {
     struct attach {
         attach() {
-            gpu::kernel_templates::add(kernelName_xb_xb_memory, inline_utils_float + kernelCode_xb_xb_memory_Begin + fully_connected_code_xb_xb_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_xb_bx_memory, inline_utils_float + kernelCode_xb_bx_memory_Begin + fully_connected_code_xb_bx_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_xb_bx_b8_memory, inline_utils_float + kernelCode_xb_bx_b8_memory_Begin + fully_connected_code_xb_bx_b8_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_xb_xb_b8_x8_memory, inline_utils_float + kernelCode_xb_xb_b8_x8_memory_Begin + fully_connected_code_xb_xb_b8_x8_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(KernelName_xb_xb_b8_x8_memory_vload, inline_utils_float + kernelCode_xb_xb_b8_x8_memory_vload_Begin + fully_connected_code_xb_xb_b8_x8_memory_vload + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_xb_xb_b16_memory, inline_utils_float + kernelCode_xb_xb_b16_memory_Begin + fully_connected_code_xb_xb_b16_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_yxfn_memory, inline_utils_float + kernelCode_yxfn_memory_Begin + fully_connected_code_yxfn_memory + kernelCode_End + inline_utils_float_end);
+			// cache implementation phase #1 that is a initial switch for using primitive database instead of string kernels
+			// at later steps primitive database will be created only once per loading library but as for now it would require 
+			// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
+			// from the returned list.
+			gpu::manager::primitive_db database; 
+            gpu::kernel_templates::add(kernelName_xb_xb_memory,	database.get(kernelName_xb_xb_memory)[0]);
+            gpu::kernel_templates::add(kernelName_xb_bx_memory,	database.get(kernelName_xb_bx_memory)[0]);
+            gpu::kernel_templates::add(kernelName_xb_bx_b8_memory, database.get(kernelName_xb_bx_b8_memory)[0]);
+            gpu::kernel_templates::add(kernelName_xb_xb_b8_x8_memory, database.get(kernelName_xb_xb_b8_x8_memory)[0]);
+            gpu::kernel_templates::add(KernelName_xb_xb_b8_x8_memory_vload, database.get(KernelName_xb_xb_b8_x8_memory_vload)[0]);
+            gpu::kernel_templates::add(kernelName_xb_xb_b16_memory,	database.get(kernelName_xb_xb_b16_memory)[0]);
+            gpu::kernel_templates::add(kernelName_yxfn_memory, database.get(kernelName_yxfn_memory)[0]);
 
             auto val_fw = fully_connected_gpu::create;
 

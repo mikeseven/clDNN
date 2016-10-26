@@ -17,21 +17,9 @@
 #include "api/neural.h"
 #include "implementation_map.h"
 #include "gpu/kernel.h"
+#include "gpu/cache/primitive_db.h"
 
 const std::string kernelName = "depth_concatenate_gpu";
-const std::string kernelCode = R"__krnl(
-KERNEL (depth_concatenate_gpu)(__global float* input, __global float* output, uint depth_offset)
-{
-    uint global_id = get_global_id(0);
-
-    uint input_offset = global_id * INPUT_FEATURE_NUM * OUTPUT_BATCH_NUM;
-    uint output_offset = OUTPUT_BATCH_NUM * (depth_offset + global_id * OUTPUT_FEATURE_NUM);
-    for(uint f = 0; f < INPUT_FEATURE_NUM * OUTPUT_BATCH_NUM; f++)
-    {
-        output[output_offset++] = input[input_offset++];
-    }
-}
-)__krnl";
 
 namespace neural {
 
@@ -142,7 +130,12 @@ primitive depth_concatenate::create(depth_concatenate::arguments arg) {
 namespace {
     struct attach {
         attach() {
-            gpu::kernel_templates::add(kernelName, kernelCode);
+			// cache implementation phase #1 that is a initial switch for using primitive database instead of string kernels
+			// at later steps primitive database will be created only once per loading library but as for now it would require 
+			// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
+			// from the returned list.
+			gpu::manager::primitive_db database;
+            gpu::kernel_templates::add(kernelName, database.get(kernelName)[0]);
 
             auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = depth_concatenate_gpu::create;

@@ -19,33 +19,12 @@
 #include "implementation_map.h"
 #include "kernel.h"
 #include "relu_gpu.h"
+#include "cache/primitive_db.h"
 
 namespace neural 
 {
 
-const char inline_utils_float[] = R"__CC(
-#ifdef RELU
-#define ACTIVATION(output, input) output = max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f);
-#else
-#define ACTIVATION(output, input) output = input;
-#endif
-)__CC";
-
-const char inline_utils_float_end[] = R"__CC(
-#undef ACTIVATION
-)__CC";
-
 const std::string kernelName = "Relu_GPU";
-const std::string kernelCode = R"__krnl(
-KERNEL(Relu_GPU)(const __global neural_memory* input_mem, __global neural_memory* output_mem)
-{
-    const __global float* input = (const __global float*)get_data(input_mem);
-    __global float* output = (__global float*)get_data(output_mem);
-    
-    const int global_id = get_global_id(0);
-    ACTIVATION(output[global_id], input[global_id]);
-}
-)__krnl";
 
 struct relu_gpu : is_an_implementation {
     relu &outer;
@@ -94,7 +73,12 @@ struct relu_gpu : is_an_implementation {
 namespace {
 struct attach {
     attach() {
-        gpu::kernel_templates::add(kernelName, inline_utils_float + kernelCode + inline_utils_float_end);
+		// cache implementation phase #1 that is a initial switch for using primitive database instead of string kernels
+		// at later steps primitive database will be created only once per loading library but as for now it would require 
+		// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
+		// from the returned list.
+		gpu::manager::primitive_db database;
+        gpu::kernel_templates::add(kernelName, database.get(kernelName)[0]);
         auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
         auto val_fw = relu_gpu::create;
 

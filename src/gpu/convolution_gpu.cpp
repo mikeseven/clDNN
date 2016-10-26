@@ -16,124 +16,24 @@
 
 #include "api/neural.h"
 #include "multidimensional_counter.h"
-#include "convolution_common_gpu.h"
 #include "relu_gpu.h"
 #include "implementation_map.h"
 #include "kernel.h"
+#include "cache/primitive_db.h"
 
 namespace neural 
 {
 
 const std::string kernelName_YXFB_memory = "Convolution_GPU_YXFB_memory";
-const std::string kernelCode_YXFB_memory_Begin = R"__krnl(
-KERNEL(Convolution_GPU_YXFB_memory)(
-    const __global float* input,
-    __global float* output,
-    const __global float* filter,
-    const __global float* bias,
-    uint split_idx)
-{)__krnl";
-
 const std::string kernelName_YXFB_OYXI_memory = "Convolution_GPU_YXFB_OYXI_memory";
-const std::string kernelCode_YXFB_OYXI_memory_Begin = R"__krnl(
-KERNEL(Convolution_GPU_YXFB_OYXI_memory)(
-    const __global float* input,
-    __global float* output,
-    const __global float* filter,
-    const __global float* bias,
-    uint split_idx)
-{)__krnl";
-
 const std::string kernelName_YXFB_YXOI_memory = "Convolution_GPU_YXFB_YXOI_memory";
-const std::string kernelCode_YXFB_YXOI_memory_Begin = R"__krnl(
-KERNEL(Convolution_GPU_YXFB_YXOI_memory)(
-    const __global float* input,
-    __global float* output,
-    const __global float* filter,
-    const __global float* bias,
-    uint split_idx)
-{)__krnl";
-
 const std::string kernelName_YXFB_YXOI_B8_memory = "Convolution_GPU_YXFB_YXOI_B8_memory";
-const std::string kernelCode_YXFB_YXOI_B8_memory_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(8, 1, 1))) 
-KERNEL(Convolution_GPU_YXFB_YXOI_B8_memory)(
-    const __global float* input,
-    __global float* output,
-    const __global float* filter,
-    const __global float* bias,
-    uint split_idx)
-{)__krnl";
-
 const std::string kernelName_YXFB_YXIO_B1_memory = "Convolution_GPU_YXFB_YXIO_B1_memory";
-const std::string kernelCode_YXFB_YXIO_B1_memory_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
-KERNEL(Convolution_GPU_YXFB_YXIO_B1_memory)(
-    const __global float* input,
-    __global float* output,
-    const __global float* filter,
-    const __global float* bias,
-    uint split_idx)
-{)__krnl";
-
 const std::string kernelName_YXFB_YXIO_B1_vload_memory = "Convolution_GPU_YXFB_YXIO_B1_vload_memory";
-const std::string kernelCode_YXFB_YXIO_B1_vload_memory_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
-KERNEL(Convolution_GPU_YXFB_YXIO_B1_vload_memory)(
-    const __global float* input,
-    __global float* output,
-    const __global float* filter,
-    const __global float* bias,
-    uint split_idx)
-{)__krnl";
-
 const std::string kernelName_YXFB_YXIO_B1_block_memory = "Convolution_GPU_YXFB_YXIO_B1_block_memory";
-const std::string kernelCode_YXFB_YXIO_B1_block_memory_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
-KERNEL(Convolution_GPU_YXFB_YXIO_B1_block_memory)(
-    const __global float* input,
-    __global float* output,
-    const __global float* filter,
-    const __global float* bias,
-    uint split_idx)
-{)__krnl";
-
 const std::string kernelName_YXFB_YXIO_B8_memory = "Convolution_GPU_YXFB_YXIO_B8_memory";
-const std::string kernelCode_YXFB_YXIO_B8_memory_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
-KERNEL(Convolution_GPU_YXFB_YXIO_B8_memory)(
-    const __global float* input,
-    __global float* output,
-    const __global float* filter,
-    const __global float* bias,
-    uint split_idx)
-{)__krnl";
-
 const std::string kernelName_YXFB_YXIO_B16_memory = "Convolution_GPU_YXFB_YXIO_B16_memory";
-const std::string kernelCode_YXFB_YXIO_B16_memory_Begin = R"__krnl(
-KERNEL(Convolution_GPU_YXFB_YXIO_B16_memory)(
-    const __global float* input,
-    __global float* output,
-    const __global float* filter,
-    const __global float* bias,
-    uint split_idx)
-{)__krnl";
-
 const std::string kernelName_YXFB_YXOI_B8_F8_memory = "Convolution_GPU_YXFB_YXOI_B8_F8_memory";
-const std::string kernelCode_YXFB_YXOI_B8_F8_memory_Begin = R"__krnl(
-__attribute__((reqd_work_group_size(8, 1, 1))) 
-KERNEL(Convolution_GPU_YXFB_YXOI_B8_F8_memory)(
-    const __global float* input,
-    __global float* output,
-    const __global float* filter,
-    const __global float* bias,
-    uint split_idx)
-{)__krnl";
-
-const std::string kernelCode_End = R"__krnl(
-}
-)__krnl";
-
 
 struct convolution_gpu : is_an_implementation {
     convolution &outer;
@@ -436,16 +336,21 @@ struct convolution_gpu : is_an_implementation {
 namespace{
     struct attach {
         attach() {
-            gpu::kernel_templates::add(kernelName_YXFB_memory, inline_utils_float + kernelCode_YXFB_memory_Begin + convolution_code_yxfb_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_YXFB_YXOI_memory, inline_utils_float + kernelCode_YXFB_YXOI_memory_Begin + convolution_code_yxfb_yxoi_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_YXFB_OYXI_memory, inline_utils_float + kernelCode_YXFB_OYXI_memory_Begin + convolution_code_yxfb_oyxi_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, inline_utils_float + kernelCode_YXFB_YXOI_B8_memory_Begin + convolution_code_yxfb_yxoi_b8_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_memory, inline_utils_float + kernelCode_YXFB_YXIO_B1_memory_Begin + convolution_code_yxfb_yxio_b1_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_vload_memory, inline_utils_float + kernelCode_YXFB_YXIO_B1_vload_memory_Begin + convolution_code_yxfb_yxio_b1_vload_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_block_memory, inline_utils_float + kernelCode_YXFB_YXIO_B1_block_memory_Begin + convolution_code_yxfb_yxio_b1_block_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B8_memory, inline_utils_float + kernelCode_YXFB_YXIO_B8_memory_Begin + convolution_code_yxfb_yxio_b8_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B16_memory, inline_utils_float + kernelCode_YXFB_YXIO_B16_memory_Begin + convolution_code_yxfb_yxio_b16_memory + kernelCode_End + inline_utils_float_end);
-            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_F8_memory, inline_utils_float + kernelCode_YXFB_YXOI_B8_F8_memory_Begin + convolution_code_yxfb_yxoi_B8_F8_memory + kernelCode_End + inline_utils_float_end);
+			// cache implementation phase #1 that is a initial switch for using primitive database instead of string kernels
+			// at later steps primitive database will be created only once per loading library but as for now it would require 
+			// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
+			// from the returned list.
+			gpu::manager::primitive_db database; 
+            gpu::kernel_templates::add(kernelName_YXFB_memory, database.get(kernelName_YXFB_memory)[0]);
+            gpu::kernel_templates::add(kernelName_YXFB_YXOI_memory, database.get(kernelName_YXFB_YXOI_memory)[0]);
+            gpu::kernel_templates::add(kernelName_YXFB_OYXI_memory, database.get(kernelName_YXFB_OYXI_memory)[0]);
+            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, database.get(kernelName_YXFB_YXOI_B8_memory)[0]);
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_memory, database.get(kernelName_YXFB_YXIO_B1_memory)[0]);
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_vload_memory, database.get(kernelName_YXFB_YXIO_B1_vload_memory)[0]);
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_block_memory, database.get(kernelName_YXFB_YXIO_B1_block_memory)[0]);
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B8_memory, database.get(kernelName_YXFB_YXIO_B8_memory)[0]);
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B16_memory, database.get(kernelName_YXFB_YXIO_B16_memory)[0]);
+            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_F8_memory, database.get(kernelName_YXFB_YXOI_B8_F8_memory)[0]);
             auto val_fw = convolution_gpu::create;
 
             auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
