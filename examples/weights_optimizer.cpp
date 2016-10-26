@@ -18,11 +18,11 @@
 
 using namespace neural;
 
-Weights_optimizer::Weights_optimizer(bool enabled) :
+weights_optimizer::weights_optimizer(bool enabled) :
     enabled(enabled) 
 {}
 
-bool Weights_optimizer::needs_optimization(const primitive & prim, file::weights_type type)
+bool weights_optimizer::needs_optimization(const primitive & prim, file::weights_type type)
 {
     const memory& mem = get_memory_primitive(prim);
     if (type == file::weights_type::bias)
@@ -84,7 +84,7 @@ bool Weights_optimizer::needs_optimization(const primitive & prim, file::weights
     return false;
 }
 
-neural::primitive Weights_optimizer::create_weights_from_file(const std::string& path, neural::file::weights_type type)
+neural::primitive weights_optimizer::create_weights_from_file(const std::string& path, neural::file::weights_type type)
 {
     neural::primitive prim = file::create({ path, type });
     if (enabled)
@@ -97,7 +97,7 @@ neural::primitive Weights_optimizer::create_weights_from_file(const std::string&
     return prim;
 }
 
-void Weights_optimizer::optimize(const neural::worker& worker)
+void weights_optimizer::optimize(const neural::worker& worker)
 {
     if (enabled)
     {

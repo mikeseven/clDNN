@@ -53,6 +53,25 @@
 
 
 namespace neural {
+// There is no portable half precision floating point support.
+// Using wrapped integral type with the same size and alignment restrictions.
+class half_impl
+{
+public:
+    half_impl() = default;
+    explicit half_impl(uint16_t data) : _data(data) {}
+    operator uint16_t() const { return _data; }
+
+private:
+    uint16_t _data;
+};
+// Use complete implementation if necessary.
+#if defined HALF_HALF_HPP
+typedef half half_t;
+#else
+typedef half_impl half_t;
+#endif
+
 
 // task to be performed in form of callback & data for it
 struct task {
@@ -234,9 +253,7 @@ private:
 template<typename T> struct is_floating_point        { static const bool value = false; };
 template<>           struct is_floating_point<float> { static const bool value = true; };
 template<>           struct is_floating_point<double>{ static const bool value = true; };
-#if defined HALF_HALF_HPP
-template<>           struct is_floating_point<half>  { static const bool value = true; };
-#endif
+template<>           struct is_floating_point<half_t>{ static const bool value = true; };
 
 DLL_SYM type_traits* typeid_register(size_t size, bool is_float, const std::string& str);
 
@@ -304,9 +321,7 @@ public:
     }
     template<typename T> operator T() const{ return as<T>(); }
     std::string s()   const { return as<std::string>(); }
-#if defined HALF_HALF_HPP
-    float       f16() const { return as<half>(); }
-#endif
+    half_t      f16() const { return as<half_t>(); }
     float       f32() const { return as<float>(); }
     double      f64() const { return as<double>(); }
     uint8_t     u8()  const { return as<uint8_t>(); }

@@ -40,128 +40,128 @@ static const unsigned long app_version = 0x10100L;
 // Helper classes.
 namespace
 {
-/// Helper class that provides elements for command-line parsing and message presentation.
-class cmdline_options
-{
-    boost::program_options::options_description _all_options;
-    std::string _help_message;
-    std::string _version_message;
-
-public:
-    /// Gets description of all options that will be parsed by command-line parser.
-    const boost::program_options::options_description& all_options() const
+    /// Helper class that provides elements for command-line parsing and message presentation.
+    class cmdline_options
     {
-        return _all_options;
-    }
+        boost::program_options::options_description _all_options;
+        std::string _help_message;
+        std::string _version_message;
 
-    /// Gets help message for command-line.
-    const std::string& help_message() const
-    {
-        return _help_message;
-    }
+    public:
+        /// Gets description of all options that will be parsed by command-line parser.
+        const boost::program_options::options_description& all_options() const
+        {
+            return _all_options;
+        }
 
-    /// Gets version message for command-line.
-    const std::string& version_message() const
-    {
-        return _version_message;
-    }
+        /// Gets help message for command-line.
+        const std::string& help_message() const
+        {
+            return _help_message;
+        }
+
+        /// Gets version message for command-line.
+        const std::string& version_message() const
+        {
+            return _version_message;
+        }
 
 
-    /// Creates instance of helper class.
-    ///
-    /// @param all_options     All options that will be parsed by parser.
-    /// @param help_message    Application help message (temporary).
-    /// @param version_message Application version message (temporary).
-    cmdline_options(const boost::program_options::options_description& all_options, std::string&& help_message, std::string&& version_message)
-        : _all_options(all_options),
-          _help_message(std::move(help_message)),
-          _version_message(std::move(version_message))
-    {}
-};
+        /// Creates instance of helper class.
+        ///
+        /// @param all_options     All options that will be parsed by parser.
+        /// @param help_message    Application help message (temporary).
+        /// @param version_message Application version message (temporary).
+        cmdline_options(const boost::program_options::options_description& all_options, std::string&& help_message, std::string&& version_message)
+            : _all_options(all_options),
+            _help_message(std::move(help_message)),
+            _version_message(std::move(version_message))
+        {}
+    };
 }
 
 // ADL-enabled parser / validators for some command-line options.
 namespace neural
 {
-/// int type (to properly order overloads).
-///
-/// @param [in, out] outVar Output variable where parsing/verification result will be stored.
-/// @param values           Input strings representing tokens with values for specific outVar variable.
-///
-/// @exception boost::program_options::validation_error Parsing/validation failed on value of an option.
-void validate(boost::any& outVar, const std::vector<std::string>& values, neural::engine::type*, int)
-{
-    namespace bpo = boost::program_options;
-
-    bpo::validators::check_first_occurrence(outVar);
-    const auto& value = bpo::validators::get_single_string(values);
-
-    std::regex val_gpu_pattern("^gpu$",
-        std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
-    std::regex val_ref_pattern("^(ref|reference)$",
-        std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
-
-    if (std::regex_match(value, val_gpu_pattern))
+    /// int type (to properly order overloads).
+    ///
+    /// @param [in, out] outVar Output variable where parsing/verification result will be stored.
+    /// @param values           Input strings representing tokens with values for specific outVar variable.
+    ///
+    /// @exception boost::program_options::validation_error Parsing/validation failed on value of an option.
+    void validate(boost::any& outVar, const std::vector<std::string>& values, neural::engine::type*, int)
     {
-        outVar = boost::any(neural::engine::gpu);
-    }
-    else if (std::regex_match(value, val_ref_pattern))
-    {
-        outVar = boost::any(neural::engine::reference);
-    }
-    else
-        throw bpo::invalid_option_value(value);
-}
+        namespace bpo = boost::program_options;
 
-/// ADL-accessible validation/parsing route for neural::memory::format::type enum.
-///
-/// This function is specific to examples main command-line parser. Please do not move it to any
-/// headers (to avoid confict with different implementations in other source files).
-///
-/// The last two parameters represents match type for validator (pointer to matched type) and
-/// int type (to properly order overloads).
-///
-/// @param [in, out] outVar Output variable where parsing/verification result will be stored.
-/// @param values           Input strings representing tokens with values for specific outVar variable.
-///
-/// @exception boost::program_options::validation_error Parsing/validation failed on value of an option.
-void validate(boost::any& outVar, const std::vector<std::string>& values, neural::memory::format::type*, int)
-{
-    namespace bpo = boost::program_options;
+        bpo::validators::check_first_occurrence(outVar);
+        const auto& value = bpo::validators::get_single_string(values);
 
-    bpo::validators::check_first_occurrence(outVar);
-    const auto& value = bpo::validators::get_single_string(values);
+        std::regex val_gpu_pattern("^gpu$",
+            std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+        std::regex val_ref_pattern("^(ref|reference)$",
+            std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
-    std::regex val_numeric_pattern("^[0-9]+$",
-        std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
-
-    // Underlying type of neural::memory::format::type.
-    using format_ut = std::underlying_type_t<neural::memory::format::type>;
-    // Type used for conversion/lexical_cast for neural::memory::format::type (to avoid problems with char types
-    // in lexical_cast).
-    using format_pt = std::common_type_t<format_ut, unsigned>; 
-    if (std::regex_match(value, val_numeric_pattern))
-    {
-        try
+        if (std::regex_match(value, val_gpu_pattern))
         {
-            outVar = boost::any(static_cast<neural::memory::format::type>(
-                boost::numeric_cast<format_ut>(boost::lexical_cast<format_pt>(value))));
+            outVar = boost::any(neural::engine::gpu);
         }
-        catch (...)
+        else if (std::regex_match(value, val_ref_pattern))
         {
+            outVar = boost::any(neural::engine::reference);
+        }
+        else
             throw bpo::invalid_option_value(value);
-        }
     }
-    else
-        throw bpo::invalid_option_value(value);
-}
+
+    /// ADL-accessible validation/parsing route for neural::memory::format::type enum.
+    ///
+    /// This function is specific to examples main command-line parser. Please do not move it to any
+    /// headers (to avoid confict with different implementations in other source files).
+    ///
+    /// The last two parameters represents match type for validator (pointer to matched type) and
+    /// int type (to properly order overloads).
+    ///
+    /// @param [in, out] outVar Output variable where parsing/verification result will be stored.
+    /// @param values           Input strings representing tokens with values for specific outVar variable.
+    ///
+    /// @exception boost::program_options::validation_error Parsing/validation failed on value of an option.
+    void validate(boost::any& outVar, const std::vector<std::string>& values, neural::memory::format::type*, int)
+    {
+        namespace bpo = boost::program_options;
+
+        bpo::validators::check_first_occurrence(outVar);
+        const auto& value = bpo::validators::get_single_string(values);
+
+        std::regex val_numeric_pattern("^[0-9]+$",
+            std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+
+        // Underlying type of neural::memory::format::type.
+        using format_ut = std::underlying_type_t<neural::memory::format::type>;
+        // Type used for conversion/lexical_cast for neural::memory::format::type (to avoid problems with char types
+        // in lexical_cast).
+        using format_pt = std::common_type_t<format_ut, unsigned>;
+        if (std::regex_match(value, val_numeric_pattern))
+        {
+            try
+            {
+                outVar = boost::any(static_cast<neural::memory::format::type>(
+                    boost::numeric_cast<format_ut>(boost::lexical_cast<format_pt>(value))));
+            }
+            catch (...)
+            {
+                throw bpo::invalid_option_value(value);
+            }
+        }
+        else
+            throw bpo::invalid_option_value(value);
+    }
 } // namespace neural
 
-/// Prepares command-line options for current application.
-///
-/// @param exec_info Executable information.
-///
-/// @return Helper class with basic messages and command-line options.
+  /// Prepares command-line options for current application.
+  ///
+  /// @param exec_info Executable information.
+  ///
+  /// @return Helper class with basic messages and command-line options.
 static cmdline_options prepare_cmdline_options(const std::shared_ptr<const executable_info>& exec_info)
 {
     namespace bpo = boost::program_options;
@@ -176,7 +176,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Size of a group of images that are classified together (large batch sizes have better performance).")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
-            "It can be one of:\n  \talexnet, caffenet_float, caffenet_int16, lenet_float.")
+            "It can be one of:\n  \talexnet, vgg16.")
         ("engine", bpo::value<neural::engine::type>()->value_name("<eng-type>")->default_value(neural::engine::reference, "reference"),
             "Type of an engine used for classification.\nIt can be one of:\n  \treference, gpu.")
         ("dump_hidden_layers", bpo::bool_switch(),
@@ -185,6 +185,9 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Path to directory containing weights used in classification.\n"
             "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
             "If not specified, the \"<executable-dir>/weights\" path is used.")
+        ("use_half", bpo::bool_switch(),
+            "Uses half precision floating point numbers (FP16, halfs) instead of single precision ones (float) in "
+            "computations of selected model.")
         ("profiling", bpo::bool_switch(),
             "Enable profiling and create profiling report.")
         ("optimize_weights", bpo::bool_switch(),
@@ -200,7 +203,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "neural::memory::format enum).")
         ("convert_filter", bpo::value<std::string>()->value_name("<filter>"),
             "Name or part of the name of weight file(s) to be converted.\nFor example:\n"
-             "  \"conv1\" - first convolution,\n  \"fc\" - every fully connected.");
+            "  \"conv1\" - first convolution,\n  \"fc\" - every fully connected.");
 
     // All options.
     bpo::options_description all_cmdline_options;
@@ -259,13 +262,14 @@ int main(int argc, char* argv[])
     namespace bfs = boost::filesystem;
 
     // TODO: create header file for all examples
-    extern void alexnet(uint32_t, std::string, const std::string&, bool, bool, bool);
+    extern void alexnet(uint32_t, std::string, const std::string&, bool, bool, bool, bool);
+    extern void vgg16(uint32_t, std::string, const std::string&, bool, bool, bool, bool);
     extern void convert_weights(neural::memory::format::type, std::string);
 
 
     set_executable_info(argc, argv); // Must be set before using get_executable_info().
 
-    // Parsing command-line and handling/presenting basic options.
+                                     // Parsing command-line and handling/presenting basic options.
     auto exec_info = get_executable_info();
     auto options = prepare_cmdline_options(exec_info);
     bpo::variables_map parsed_args;
@@ -344,7 +348,20 @@ int main(int argc, char* argv[])
                     weights_dir,
                     parsed_args["dump_hidden_layers"].as<bool>(),
                     parsed_args["profiling"].as<bool>(),
-                    parsed_args["optimize_weights"].as<bool>());
+                    parsed_args["optimize_weights"].as<bool>(),
+                    parsed_args["use_half"].as<bool>());
+                return 0;
+            }
+            else if (parsed_args["model"].as<std::string>() == "vgg16")
+            {
+                vgg16(
+                    parsed_args["batch"].as<std::uint32_t>(),
+                    input_dir,
+                    weights_dir,
+                    parsed_args["dump_hidden_layers"].as<bool>(),
+                    parsed_args["profiling"].as<bool>(),
+                    parsed_args["optimize_weights"].as<bool>(),
+                    parsed_args["use_half"].as<bool>());
                 return 0;
             }
 

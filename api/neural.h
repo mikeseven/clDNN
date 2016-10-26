@@ -23,7 +23,6 @@
 
 namespace neural 
 {
-
 // neural::memory
 //
 // Primitive that describes data in memory in known format.
@@ -44,19 +43,20 @@ namespace neural
 //     auto input  = memory::allocate({memory::format::yxfb_f32, {3,  {224, 224}, 24}});
 struct memory : is_a_primitive 
 {
-    struct format_traits 
-	{
+    struct format_traits
+    {
         const uint8_t       dimension;
         const type_traits  *type;
     };
 
     class format 
-	{ 
-		format();
+    { 
+        format();
 
-	public:
-		enum type : uint8_t 
-		{
+    public:
+        enum type : uint8_t 
+        {
+            // FP32 (single precision float)
             x_f32,
             xb_f32,     // 1D+batch, float32
             bx_f32,     // 1D+batch, float32
@@ -73,15 +73,34 @@ struct memory : is_a_primitive
             yxoi_o4_f32,       // for convolution_cpu_generic
             os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
             bs_yxf_bv24_f32,
+
+            // FP16 (half precision float)
+            x_f16,
+            xb_f16,            // 1D+batch, FP16 (half precision float)
+            bx_f16,            // 1D+batch, FP16 (half precision float)
+            yxfn_f16,          // 3D + number of neurons - used in fully connected weights
+            yxfb_f16,          // 3D+batch, FP16 (half precision float)
+            byxf_f16,          // for convolution_cpu_jit_batch1
+            bfyx_f16,          // used in Caffe
+            fyxb_f16,          // used in Caffe
+            oiyx_f16,          // format used only for weights: o - output feature maps, i - input feature maps
+            yxoi_f16,          // format used only for weights: o - output feature maps, i - input feature maps
+            oyxi_f16,          // format used only for weights: o - output feature maps, i - input feature maps
+            yxio_f16,          // format used only for weights: o - output feature maps, i - input feature maps
+            byxf_b24_f16,      // for convolution_cpu_generic
+            yxoi_o4_f16,       // for convolution_cpu_generic
+            os_yxi_sv16_f16,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
+            bs_yxf_bv24_f16,
+
             format_num,
             any = static_cast<uint8_t>(-1)
-	    }; 
-	};
+        }; 
+    };
 
     static format_traits traits(format::type fmt) 
-	{
+    {
         switch(fmt) 
-		{
+        {
         case format::   x_f32: return {1, type_id<float>()};
         case format::  bx_f32:
         case format::  xb_f32: return {2, type_id<float>()};
@@ -98,6 +117,23 @@ struct memory : is_a_primitive
         case format::byxf_b24_f32:
         case format::yxoi_o4_f32:
         case format::os_yxi_sv16_f32: return {4, type_id<float>()};
+
+        case format::   x_f16: return {1, type_id<half_t>()};
+        case format::  bx_f16:
+        case format::  xb_f16: return {2, type_id<half_t>()};
+        case format::yxfn_f16:
+        case format::yxfb_f16:
+        case format::byxf_f16:
+        case format::bfyx_f16:
+        case format::oiyx_f16:
+        case format::yxoi_f16:
+        case format::oyxi_f16:
+        case format::yxio_f16:
+        case format::fyxb_f16:
+        case format::bs_yxf_bv24_f16:
+        case format::byxf_b24_f16:
+        case format::yxoi_o4_f16:
+        case format::os_yxi_sv16_f16: return {4, type_id<half_t>()};
         default: throw std::runtime_error("unknown memory::format");
         }
     }

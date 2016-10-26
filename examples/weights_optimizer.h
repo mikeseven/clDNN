@@ -17,14 +17,14 @@
 #include "neural.h"
 
 // TODO!!! - optimize weights based on HW
-class Weights_optimizer
+class weights_optimizer
 {
 private:
     bool enabled;
     std::vector<neural::primitive> primitives;
     bool needs_optimization(const neural::primitive& prim, neural::file::weights_type type);
 public:
-    Weights_optimizer(bool enabled);
+    weights_optimizer(bool enabled);
     neural::primitive create_weights_from_file(const std::string& path, neural::file::weights_type type);
     void optimize(const neural::worker& worker);
 };
