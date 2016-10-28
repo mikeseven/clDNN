@@ -99,7 +99,7 @@ neural::primitive weights_optimizer::create_weights_from_file(const std::string&
 
 void weights_optimizer::optimize(const neural::worker& worker)
 {
-    if (enabled)
+    if (enabled && !primitives.empty())
     {
         for (auto& p : primitives)
         {
