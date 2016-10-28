@@ -304,11 +304,16 @@ struct reorder : is_a_primitive
 	{
         std::vector<primitive>      output;
         std::vector<primitive_at>   input;  // 1/2: {input} / {input, subtract_values}
+        std::vector<float>          subtract_per_feature; // values to subtract from feature/channel, only one value per feature/channel.
+        bool dummy; // TODO!!! - dummy parameter needed because of primitive conversion to anything, so primitive can convert to primitive_at or std::vector<float>... this is because of bad design, need to change it in future!!!!!!
 
         DLL_SYM arguments(primitive_at input, primitive output);
-		DLL_SYM arguments(primitive output, primitive input, primitive subtract_values);
+        DLL_SYM arguments(primitive output, primitive input, primitive values_to_subtract);
+        DLL_SYM arguments(primitive output, primitive input, const std::vector<float>& value_to_subtract, bool dummy);
         DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input);
-		DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input, primitive_at subtract_values);
+        DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input, primitive_at values_to_subtract);
+        DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input, const std::vector<float>& value_to_subtract, bool dummy);
+
 	};
     const arguments argument;
 

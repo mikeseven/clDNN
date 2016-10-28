@@ -1,7 +1,7 @@
 uint FUNC(OUT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS]) {
     OUT_FORMAT_IMPLEMENTATION
 }
-KERNEL (reorder_GPU)(__global float* input, __global float* output)
+KERNEL (reorder_subtract_values_GPU)(__global float* input, __global float* output)
 {
     const uint global_id_0 = get_global_id(0);
     const uint global_id_1 = get_global_id(1);
@@ -22,5 +22,5 @@ KERNEL (reorder_GPU)(__global float* input, __global float* output)
 
     uint output_pos = FUNC_CALL(OUT_FORMAT)(SIZE, pos);
     uint input_idx = (global_id_2 * global_size_1 + global_id_1) * global_size_0 + global_id_0;
-    output[output_pos] = input[input_idx];
+    output[output_pos] = input[input_idx] - VALUE_TO_SUBTRACT[pos[1]];
 }
