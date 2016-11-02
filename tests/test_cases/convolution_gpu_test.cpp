@@ -17,16 +17,32 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "api/neural.h"
+#include "gpu/ocl_toolkit.h"
 #include <gtest/gtest.h>
 #include "test_utils/test_utils.h"
 #include "memory_utils.h"
 #include <algorithm>
+#include <iostream>
+#include <iomanip>
 #include <thread>
 
 #include "multidimensional_counter.h"//todo remove
 
+
 using namespace neural;
 using namespace tests;
+
+namespace
+{
+struct gpu_info_helper : gpu::context_holder
+{
+    gpu::engine_info get_engine_info() const
+    {
+        return context()->get_engine_info();
+    }
+};
+}
+
 
 using VF = std::vector<float>;		// vector
 using VVF = std::vector<VF>;		// feature map
@@ -987,3 +1003,407 @@ TEST(convolution_gpu, relu_with_negative_slope) {
 	EXPECT_FLOAT_EQ(5.0f, get_value<float>(output_ptr, 3));
 }
 
+TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
+{
+#define USE_OLD_WEIGHTS_FORMAT 0
+
+    const auto input_format   = memory::format::yxfb_f32;
+#if USE_OLD_WEIGHTS_FORMAT
+    const auto weights_format = memory::format::oiyx_f32;
+#else
+    const auto weights_format = memory::format::yxio_f32;
+#endif
+    const auto biases_format = memory::format::x_f32;
+    const auto output_format  = input_format;
+
+    const uint32_t batch_size = 16;
+    const uint32_t input_feature_count = 2;
+    const uint32_t output_feature_count = 16;
+
+    const uint32_t stride_x = 2;
+    const uint32_t stride_y = 2;
+
+    const uint32_t input_x = 4;
+    const uint32_t input_y = 4;
+    const uint32_t weights_x = 2;
+    const uint32_t weights_y = 2;
+    const uint32_t output_x = (input_x - weights_x) / stride_x + 1;
+    const uint32_t output_y = (input_y - weights_y) / stride_y + 1;
+
+
+    auto input = memory::allocate({input_format, {batch_size, {input_x, input_y}, input_feature_count}});
+    auto weights = memory::allocate({weights_format, {1, {weights_x, weights_y}, {output_feature_count, input_feature_count}}});
+    auto biases = memory::allocate({biases_format, {1, {{output_feature_count}}, 1}});
+    auto output = memory::allocate({output_format, {batch_size, {output_x, output_y}, output_feature_count}});
+
+
+    // input:
+    std::vector<float> input_vals_template {
+        0.25f, 0.50f, 0.75f, 1.00f,
+        1.25f, 1.50f, 1.75f, 2.00f,
+        2.25f, 2.50f, 2.75f, 3.00f,
+        3.25f, 3.50f, 3.75f, 4.00f,
+    };
+    input_vals_template.resize(input_y * input_x);
+
+    std::vector<float> input_vals;
+    input_vals.reserve(input_y * input_x * input_feature_count * batch_size);
+    for (uint32_t yxi = 0; yxi < input_y * input_x; ++yxi)
+    {
+        for (uint32_t ifi = 0; ifi < input_feature_count; ++ifi)
+        {
+            for (uint32_t bi = 0; bi < batch_size; ++bi)
+            {
+                input_vals.push_back((bi * input_feature_count + ifi + 1) * input_vals_template[yxi]);
+            }
+        }
+    }
+    set_values(input, input_vals);
+
+
+    // weights:
+    std::vector<float> weights_vals_template {
+        -4.0f, -2.0f,
+         4.0f,  4.0f,
+    };
+    weights_vals_template.resize(weights_y * weights_x);
+
+    std::vector<float> weights_vals;
+    weights_vals.reserve(weights_y * weights_x * input_feature_count * output_feature_count);
+#if USE_OLD_WEIGHTS_FORMAT
+    for (uint32_t ofi = 0; ofi < output_feature_count; ++ofi)
+    {
+        for (uint32_t ifi = 0; ifi < input_feature_count; ++ifi)
+        {
+            for (uint32_t yxi = 0; yxi < weights_y * weights_x; ++yxi)
+            {
+                weights_vals.push_back((ofi * input_feature_count + ifi + 1) * weights_vals_template[yxi]);
+            }
+        }
+    }
+#else
+    for (uint32_t yxi = 0; yxi < weights_y * weights_x; ++yxi)
+    {
+        for (uint32_t ifi = 0; ifi < input_feature_count; ++ifi)
+        {
+            for (uint32_t ofi = 0; ofi < output_feature_count; ++ofi)
+            {
+                weights_vals.push_back((ofi * input_feature_count + ifi + 1) * weights_vals_template[yxi]);
+            }
+        }
+    }
+#endif
+    set_values(weights, weights_vals);
+
+
+    // biases:
+    std::vector<float> biases_vals;
+    biases_vals.reserve(output_feature_count);
+    for (uint32_t ofi = 0; ofi < output_feature_count; ++ofi)
+    {
+        biases_vals.push_back(ofi * 1.0f);
+    }
+    set_values(biases, biases_vals);
+
+
+    // output:
+    std::vector<float> output_vals_template {
+         9.0f, 10.0f,
+        13.0f, 14.0f,
+    };
+    output_vals_template.resize(output_y * output_x);
+
+    std::vector<float> output_vals;
+    output_vals.reserve(output_y * output_x * output_feature_count * batch_size);
+    for (uint32_t yxi = 0; yxi < output_y * output_x; ++yxi)
+    {
+        for (uint32_t ofi = 0; ofi < output_feature_count; ++ofi)
+        {
+            for (uint32_t bi = 0; bi < batch_size; ++bi)
+            {
+                uint32_t template_factor = input_feature_count * input_feature_count * input_feature_count * bi * ofi +
+                    input_feature_count * input_feature_count * (input_feature_count + 1) / 2 * (bi + ofi) +
+                    input_feature_count * (input_feature_count + 1) * (2 * input_feature_count + 1) / 6;
+                float bias_factor = ofi * 1.0f;
+
+                output_vals.push_back(template_factor * output_vals_template[yxi] + bias_factor);
+            }
+        }
+    }
+
+
+    // Computing convolution.
+    auto conv = convolution::create({output, {input, weights, biases}, {1, {stride_x, stride_y}, 1}, padding::zero});
+    execute({conv}).wait();
+
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+
+
+    // Checking result.
+    uint32_t i = 0;
+    for (uint32_t yxi = 0; yxi < output_y * output_x; ++yxi)
+    {
+        for (uint32_t ofi = 0; ofi < output_feature_count; ++ofi)
+        {
+            for (uint32_t bi = 0; bi < batch_size; ++bi, ++i)
+            {
+                auto equal = are_equal(output_vals[i], get_value<float>(output_ptr, i));
+                EXPECT_TRUE(equal);
+                if (!equal)
+                {
+                    std::cout << "Failed at position (" << yxi << ", output feature = " << ofi << ", batch = " << bi << "): "
+                        << output_vals[i] << " != " << get_value<float>(output_ptr, i) << std::endl;
+                    return;
+                }
+            }
+        }
+    }
+
+#undef USE_OLD_WEIGHTS_FORMAT
+}
+
+TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
+{
+#define USE_OLD_WEIGHTS_FORMAT 0
+
+    gpu_info_helper gpu_info;
+    if (!gpu_info.get_engine_info().supports_fp16)
+    {
+        std::cout << "[ SKIPPED ] The test is skipped (cl_khr_fp16 is not supported)." << std::endl;
+        EXPECT_EQ(1, 1);
+        return;
+    }
+
+
+    const auto input_format   = memory::format::yxfb_f32;
+#if USE_OLD_WEIGHTS_FORMAT
+    const auto weights_format = memory::format::oiyx_f32;
+#else
+    const auto weights_format = memory::format::yxio_f32;
+#endif
+    const auto biases_format  = memory::format::x_f32;
+    const auto output_format  = input_format;
+
+    const auto input_cvt_format   = memory::format::yxfb_f16;
+#if USE_OLD_WEIGHTS_FORMAT
+    const auto weights_cvt_format = memory::format::oiyx_f16;
+#else
+    const auto weights_cvt_format = memory::format::yxio_f16;
+#endif
+    const auto biases_cvt_format  = memory::format::x_f16;
+    const auto output_cvt_format  = input_cvt_format;
+
+    const uint32_t batch_size = 16;
+    const uint32_t input_feature_count = 2;
+    const uint32_t output_feature_count = 16;
+
+    const uint32_t stride_x = 2;
+    const uint32_t stride_y = 2;
+
+    const uint32_t input_x = 4;
+    const uint32_t input_y = 4;
+    const uint32_t weights_x = 2;
+    const uint32_t weights_y = 2;
+    const uint32_t output_x = (input_x - weights_x) / stride_x + 1;
+    const uint32_t output_y = (input_y - weights_y) / stride_y + 1;
+
+
+    auto input   = memory::allocate({input_format, {batch_size, {input_x, input_y}, input_feature_count}});
+    auto weights = memory::allocate({weights_format, {1, {weights_x, weights_y}, {output_feature_count, input_feature_count}}});
+    auto biases  = memory::allocate({biases_format, {1, {{output_feature_count}}, 1}});
+    auto output  = memory::allocate({output_format, {batch_size, {output_x, output_y}, output_feature_count}});
+
+    auto input_cvtd   = memory::allocate({input_cvt_format, {batch_size, {input_x, input_y}, input_feature_count}});
+    auto weights_cvtd = memory::allocate({weights_cvt_format, {1, {weights_x, weights_y}, {output_feature_count, input_feature_count}}});
+    auto biases_cvtd  = memory::allocate({biases_cvt_format, {1, {{output_feature_count}}, 1}});
+    auto output_cvtd  = memory::allocate({output_cvt_format, {batch_size, {output_x, output_y}, output_feature_count}});
+
+
+    // input:
+    std::vector<float> input_vals_template {
+        0.25f, 0.50f, 0.75f, 1.00f,
+        1.25f, 1.50f, 1.75f, 2.00f,
+        2.25f, 2.50f, 2.75f, 3.00f,
+        3.25f, 3.50f, 3.75f, 4.00f,
+    };
+    input_vals_template.resize(input_y * input_x);
+
+    std::vector<float> input_vals;
+    input_vals.reserve(input_y * input_x * input_feature_count * batch_size);
+    for (uint32_t yxi = 0; yxi < input_y * input_x; ++yxi)
+    {
+        for (uint32_t ifi = 0; ifi < input_feature_count; ++ifi)
+        {
+            for (uint32_t bi = 0; bi < batch_size; ++bi)
+            {
+                input_vals.push_back((bi * input_feature_count + ifi + 1) * input_vals_template[yxi]);
+            }
+        }
+    }
+    set_values(input, input_vals);
+
+
+    // weights:
+    std::vector<float> weights_vals_template {
+        -0.50f, -0.25f,
+         0.50f,  0.50f,
+    };
+    weights_vals_template.resize(weights_y * weights_x);
+
+    std::vector<float> weights_vals;
+    weights_vals.reserve(weights_y * weights_x * input_feature_count * output_feature_count);
+#if USE_OLD_WEIGHTS_FORMAT
+    for (uint32_t ofi = 0; ofi < output_feature_count; ++ofi)
+    {
+        for (uint32_t ifi = 0; ifi < input_feature_count; ++ifi)
+        {
+            for (uint32_t yxi = 0; yxi < weights_y * weights_x; ++yxi)
+            {
+                weights_vals.push_back((ofi * input_feature_count + ifi + 1) * weights_vals_template[yxi]);
+            }
+        }
+    }
+#else
+    for (uint32_t yxi = 0; yxi < weights_y * weights_x; ++yxi)
+    {
+        for (uint32_t ifi = 0; ifi < input_feature_count; ++ifi)
+        {
+            for (uint32_t ofi = 0; ofi < output_feature_count; ++ofi)
+            {
+                weights_vals.push_back((ofi * input_feature_count + ifi + 1) * weights_vals_template[yxi]);
+            }
+        }
+    }
+#endif
+    set_values(weights, weights_vals);
+
+
+    // biases:
+    std::vector<float> biases_vals;
+    biases_vals.reserve(output_feature_count);
+    for (uint32_t ofi = 0; ofi < output_feature_count; ++ofi)
+    {
+        biases_vals.push_back(ofi * 1.0f);
+    }
+    set_values(biases, biases_vals);
+
+
+    // output:
+    std::vector<float> output_vals_template {
+        1.125f,  1.250f,
+        1.625f,  1.750f,
+    };
+    output_vals_template.resize(output_y * output_x);
+
+    std::vector<float> output_vals;
+    output_vals.reserve(output_y * output_x * output_feature_count * batch_size);
+    for (uint32_t yxi = 0; yxi < output_y * output_x; ++yxi)
+    {
+        for (uint32_t ofi = 0; ofi < output_feature_count; ++ofi)
+        {
+            for (uint32_t bi = 0; bi < batch_size; ++bi)
+            {
+                uint32_t template_factor = input_feature_count * input_feature_count * input_feature_count * bi * ofi +
+                    input_feature_count * input_feature_count * (input_feature_count + 1) / 2 * (bi + ofi) +
+                    input_feature_count * (input_feature_count + 1) * (2 * input_feature_count + 1) / 6;
+                float bias_factor = ofi * 1.0f;
+
+                output_vals.push_back(template_factor * output_vals_template[yxi] + bias_factor);
+            }
+        }
+    }
+
+    auto expected_float = memory::allocate({memory::format::x_f32, {1, {{static_cast<uint32_t>(output_vals.size())}}, 1}});
+    auto expected_half  = memory::allocate({memory::format::x_f16, {1, {{static_cast<uint32_t>(output_vals.size())}}, 1}});
+    auto expected       = memory::allocate({memory::format::x_f32, {1, {{static_cast<uint32_t>(output_vals.size())}}, 1}});
+
+//    set_values(expected_float, output_vals);
+//    auto cvt_expected_f32_f16 = reorder::create({expected_float, expected_half});
+//    auto cvt_expected_f16_f32 = reorder::create({expected_half, expected});
+//    execute({cvt_expected_f32_f16, cvt_expected_f16_f32}).wait();
+//
+//    auto expected_ptr = expected.as<const memory&>().pointer<float>();
+
+
+    // Computing convolution.
+    auto cvt_input   = reorder::create({input, input_cvtd});
+    auto cvt_weights = reorder::create({weights, weights_cvtd});
+    auto cvt_biases  = reorder::create({biases, biases_cvtd});
+    auto conv        = convolution::create({output_cvtd, {input_cvtd, weights_cvtd, biases_cvtd}, {1, {stride_x, stride_y}, 1}, padding::zero});
+    auto cvt_output  = reorder::create({output_cvtd, output});
+    execute({cvt_input, cvt_weights, cvt_biases, conv, cvt_output}).wait();
+
+    auto output_ptr = output.as<const memory&>().pointer<float>();
+
+#if 0
+    for (uint32_t bi = 0; bi < /*batch_size*/ 4; ++bi)
+    {
+        std::cout << "Actual (batch: " << std::setw(3) << std::right << bi << "):" << std::endl;
+        for (uint32_t yi = 0; yi < output_y; ++yi)
+        {
+            const char* x_sep = "";
+            const char* f_sep = "";
+            for (uint32_t ofi = 0; ofi < /*output_feature_count*/ 4; ++ofi)
+            {
+                std::cout << f_sep;
+                f_sep = "  |";
+                for (uint32_t xi = 0; xi < output_x; ++xi)
+                {
+                    uint32_t pos = bi + batch_size * (ofi + output_feature_count * (xi + output_x * yi));
+                    auto val = get_value(output_ptr, pos);
+
+                    std::cout << x_sep << std::setw(8) << std::setprecision(2) << std::right << std::fixed << val;
+                    x_sep = "  ";
+                }
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl;
+
+        std::cout << "Expected (batch: " << std::setw(3) << std::right << bi << "):" << std::endl;
+        for (uint32_t yi = 0; yi < output_y; ++yi)
+        {
+            const char* x_sep = "";
+            const char* f_sep = "";
+            for (uint32_t ofi = 0; ofi < /*output_feature_count*/ 4; ++ofi)
+            {
+                std::cout << f_sep;
+                f_sep = "  |";
+                for (uint32_t xi = 0; xi < output_x; ++xi)
+                {
+                    uint32_t pos = bi + batch_size * (ofi + output_feature_count * (xi + output_x * yi));
+                    auto val = output_vals[pos];
+                    //auto val = get_value(expected_ptr, pos);
+
+                    std::cout << x_sep << std::setw(8) << std::setprecision(2) << std::right << std::fixed << val;
+                    x_sep = "  ";
+                }
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl << std::endl;
+    }
+#endif 
+
+    // Checking result.
+    uint32_t i = 0;
+    for (uint32_t yxi = 0; yxi < output_y * output_x; ++yxi)
+    {
+        for (uint32_t ofi = 0; ofi < output_feature_count; ++ofi)
+        {
+            for (uint32_t bi = 0; bi < batch_size; ++bi, ++i)
+            {
+                auto equal = are_equal(output_vals[i] /*get_value(expected_ptr, i)*/, get_value(output_ptr, i), 0.002f);
+                EXPECT_TRUE(equal);
+                if (!equal)
+                {
+                    std::cout << "Failed at position (" << yxi << ", output feature = " << ofi << ", batch = " << bi << "): "
+                        << output_vals[i] /*get_value(expected_ptr, i)*/ << " != " << get_value(output_ptr, i) << std::endl;
+                    return;
+                }
+            }
+        }
+    }
+
+#undef USE_OLD_WEIGHTS_FORMAT
+}

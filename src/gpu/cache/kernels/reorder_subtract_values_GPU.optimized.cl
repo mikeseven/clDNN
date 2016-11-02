@@ -43,3 +43,8 @@ KERNEL (reorder_subtract_values_GPU)(const __global SRC_TYPE* input, __global DE
     float val_to_subtract = VALUE_TO_SUBTRACT[pos[1]];
     output[output_pos] = SRC_DEST_TYPE_CVT_FUNC(input[input_idx] - SUBTRACT_SRC_TYPE_CVT_FUNC(val_to_subtract));
 }
+
+#undef SUBTRACT_SRC_TYPE_CVT_FUNC
+#undef SRC_DEST_TYPE_CVT_FUNC
+#undef TYPE_CVT_FUNC2
+#undef TYPE_CVT_FUNC3
