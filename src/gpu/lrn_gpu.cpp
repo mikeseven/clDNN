@@ -116,8 +116,8 @@ struct lrn_gpu : is_an_implementation {
 				// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
 				// from the returned list.
 				gpu::manager::primitive_db database; 
-                gpu::kernel_templates::add(kernelName, database.get(kernelName)[0]);
-                gpu::kernel_templates::add(kernelName_b8, database.get(kernelName_b8)[0]);
+                gpu::kernel_templates::add(kernelName, database.get(kernelName).at(0));
+                gpu::kernel_templates::add(kernelName_b8, database.get(kernelName_b8).at(0));
                 auto key = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
                 auto val_fw = lrn_gpu::create;
 

@@ -110,8 +110,8 @@ struct attach {
 		// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
 		// from the returned list.
 		gpu::manager::primitive_db database;
-        gpu::kernel_templates::add(kernelName, database.get(kernelName)[0]);
-        gpu::kernel_templates::add(kernelName2, database.get(kernelName2)[0]);
+        gpu::kernel_templates::add(kernelName, database.get(kernelName).at(0));
+        gpu::kernel_templates::add(kernelName2, database.get(kernelName2).at(0));
 
         auto key_fw = std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32);
         auto val_fw = softmax_gpu::create;

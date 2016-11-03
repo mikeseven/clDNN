@@ -341,16 +341,16 @@ namespace{
 			// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
 			// from the returned list.
 			gpu::manager::primitive_db database; 
-            gpu::kernel_templates::add(kernelName_YXFB_memory, database.get(kernelName_YXFB_memory)[0]);
-            gpu::kernel_templates::add(kernelName_YXFB_YXOI_memory, database.get(kernelName_YXFB_YXOI_memory)[0]);
-            gpu::kernel_templates::add(kernelName_YXFB_OYXI_memory, database.get(kernelName_YXFB_OYXI_memory)[0]);
-            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, database.get(kernelName_YXFB_YXOI_B8_memory)[0]);
-            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_memory, database.get(kernelName_YXFB_YXIO_B1_memory)[0]);
-            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_vload_memory, database.get(kernelName_YXFB_YXIO_B1_vload_memory)[0]);
-            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_block_memory, database.get(kernelName_YXFB_YXIO_B1_block_memory)[0]);
-            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B8_memory, database.get(kernelName_YXFB_YXIO_B8_memory)[0]);
-            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B16_memory, database.get(kernelName_YXFB_YXIO_B16_memory)[0]);
-            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_F8_memory, database.get(kernelName_YXFB_YXOI_B8_F8_memory)[0]);
+            gpu::kernel_templates::add(kernelName_YXFB_memory, database.get(kernelName_YXFB_memory).at(0));
+            gpu::kernel_templates::add(kernelName_YXFB_YXOI_memory, database.get(kernelName_YXFB_YXOI_memory).at(0));
+            gpu::kernel_templates::add(kernelName_YXFB_OYXI_memory, database.get(kernelName_YXFB_OYXI_memory).at(0));
+            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, database.get(kernelName_YXFB_YXOI_B8_memory).at(0));
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_memory, database.get(kernelName_YXFB_YXIO_B1_memory).at(0));
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_vload_memory, database.get(kernelName_YXFB_YXIO_B1_vload_memory).at(0));
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_block_memory, database.get(kernelName_YXFB_YXIO_B1_block_memory).at(0));
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B8_memory, database.get(kernelName_YXFB_YXIO_B8_memory).at(0));
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO_B16_memory, database.get(kernelName_YXFB_YXIO_B16_memory).at(0));
+            gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_F8_memory, database.get(kernelName_YXFB_YXOI_B8_F8_memory).at(0));
             auto val_fw = convolution_gpu::create;
 
             auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);

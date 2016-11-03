@@ -204,8 +204,8 @@ struct reorder_gpu : is_an_implementation {
 				// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
 				// from the returned list.
 				gpu::manager::primitive_db database;
-                gpu::kernel_templates::add(kernelName, database.get(kernelName)[0]);
-				gpu::kernel_templates::add(kernelName_subtract, database.get(kernelName_subtract)[0]);
+                gpu::kernel_templates::add(kernelName, database.get(kernelName).at(0));
+				gpu::kernel_templates::add(kernelName_subtract, database.get(kernelName_subtract).at(0));
                 implementation_map<reorder>::add({
                     { engine::type::gpu, reorder_gpu::create }
                 });

@@ -117,8 +117,8 @@ namespace
 			// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
 			// from the returned list.
 			gpu::manager::primitive_db database;
-            gpu::kernel_templates::add(kernelName_max, database.get(kernelName_max)[0]);
-            gpu::kernel_templates::add(kernelName_average, database.get(kernelName_average)[0]);
+            gpu::kernel_templates::add(kernelName_max, database.get(kernelName_max).at(0));
+            gpu::kernel_templates::add(kernelName_average, database.get(kernelName_average).at(0));
 
             auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = pooling_gpu::create;

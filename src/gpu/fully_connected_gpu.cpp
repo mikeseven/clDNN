@@ -274,13 +274,13 @@ namespace {
 			// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
 			// from the returned list.
 			gpu::manager::primitive_db database; 
-            gpu::kernel_templates::add(kernelName_xb_xb_memory,	database.get(kernelName_xb_xb_memory)[0]);
-            gpu::kernel_templates::add(kernelName_xb_bx_memory,	database.get(kernelName_xb_bx_memory)[0]);
-            gpu::kernel_templates::add(kernelName_xb_bx_b8_memory, database.get(kernelName_xb_bx_b8_memory)[0]);
-            gpu::kernel_templates::add(kernelName_xb_xb_b8_x8_memory, database.get(kernelName_xb_xb_b8_x8_memory)[0]);
-            gpu::kernel_templates::add(KernelName_xb_xb_b8_x8_memory_vload, database.get(KernelName_xb_xb_b8_x8_memory_vload)[0]);
-            gpu::kernel_templates::add(kernelName_xb_xb_b16_memory,	database.get(kernelName_xb_xb_b16_memory)[0]);
-            gpu::kernel_templates::add(kernelName_yxfn_memory, database.get(kernelName_yxfn_memory)[0]);
+            gpu::kernel_templates::add(kernelName_xb_xb_memory,	database.get(kernelName_xb_xb_memory).at(0));
+            gpu::kernel_templates::add(kernelName_xb_bx_memory,	database.get(kernelName_xb_bx_memory).at(0));
+            gpu::kernel_templates::add(kernelName_xb_bx_b8_memory, database.get(kernelName_xb_bx_b8_memory).at(0));
+            gpu::kernel_templates::add(kernelName_xb_xb_b8_x8_memory, database.get(kernelName_xb_xb_b8_x8_memory).at(0));
+            gpu::kernel_templates::add(KernelName_xb_xb_b8_x8_memory_vload, database.get(KernelName_xb_xb_b8_x8_memory_vload).at(0));
+            gpu::kernel_templates::add(kernelName_xb_xb_b16_memory,	database.get(kernelName_xb_xb_b16_memory).at(0));
+            gpu::kernel_templates::add(kernelName_yxfn_memory, database.get(kernelName_yxfn_memory).at(0));
 
             auto val_fw = fully_connected_gpu::create;
 

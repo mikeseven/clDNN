@@ -64,7 +64,7 @@ namespace {
 			// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
 			// from the returned list.
 			gpu::manager::primitive_db database;
-            gpu::kernel_templates::add(warmup_kernel_name, database.get(warmup_kernel_name)[0]);
+            gpu::kernel_templates::add(warmup_kernel_name, database.get(warmup_kernel_name).at(0));
         }
         ~attach() {}
     };
