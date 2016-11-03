@@ -306,7 +306,7 @@ struct reorder_gpu : is_an_implementation {
             }
             s << " }";
             mem_consts.add_constant(gpu::make_jit_constant("VALUE_TO_SUBTRACT", s.str()));
-            mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_TYPE", std::string("float")));
+            mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_TYPE", "float"));
             mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_SRC_TYPE_CVT", input_use_half));
         }
         return mem_consts;
