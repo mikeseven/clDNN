@@ -43,7 +43,7 @@ public:
 
     static void add(const std::string& name, const std::string& code) {
         std::lock_guard<std::mutex> lock(instance()._mutex);
-        instance()._templates.insert({ name, code });
+        instance()._templates.insert(std::make_pair(name, code));
     }
     static std::string get(const std::string& name) {
         std::lock_guard<std::mutex> lock(instance()._mutex);
