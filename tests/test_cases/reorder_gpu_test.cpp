@@ -16,6 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/neural.h"
+#include "gpu/ocl_toolkit.h"
 #include "multidimensional_counter.h"
 #include "test_utils/test_utils.h"
 #include "memory_utils.h"
@@ -28,6 +29,17 @@
 using namespace neural;
 using namespace tests;
 using namespace testing;
+
+namespace
+{
+struct gpu_info_helper : gpu::context_holder
+{
+    gpu::engine_info get_engine_info() const
+    {
+        return context()->get_engine_info();
+    }
+};
+}
 
 TEST(reorder_gpu_f32, basic_subtract) {
     //  Input               : 2x2x2x2
@@ -211,6 +223,14 @@ TEST(reorder_gpu_f16, basic_subtract_f32_output_f32) {
     //  b1 f1: 10    7
     //
 
+    gpu_info_helper gpu_info;
+    if (!gpu_info.get_engine_info().supports_fp16)
+    {
+        std::cout << "[ SKIPPED ] The test is skipped (cl_khr_fp16 is not supported)." << std::endl;
+        EXPECT_EQ(1, 1);
+        return;
+    }
+
     auto input = memory::allocate({  memory::format::yxfb_f16,{ 2,{ 2, 2 }, 2 } });
     auto output = memory::allocate({  memory::format::bfyx_f32,{ 2,{ 2, 2 }, 2 } });
     auto subtract = memory::allocate({  memory::format::byxf_f32,{ 1,{ 2, 2 }, 2 } });
@@ -287,6 +307,14 @@ TEST(reorder_gpu_f16, basic_subtract_value) {
     //  b1 f1:  9.5  5.5
     //
 
+    gpu_info_helper gpu_info;
+    if (!gpu_info.get_engine_info().supports_fp16)
+    {
+        std::cout << "[ SKIPPED ] The test is skipped (cl_khr_fp16 is not supported)." << std::endl;
+        EXPECT_EQ(1, 1);
+        return;
+    }
+
     auto input = memory::allocate({  memory::format::yxfb_f16,{ 2,{ 2, 2 }, 2 } });
     auto output = memory::allocate({  memory::format::bfyx_f16,{ 2,{ 2, 2 }, 2 } });
     std::vector<float> subtract_val = { 0.5, 2.5 };
@@ -338,6 +366,14 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
     //
     //  Output is expected to contain the same value as input in range of indices from 0x0000 to 0xF801.
     //
+
+    gpu_info_helper gpu_info;
+    if (!gpu_info.get_engine_info().supports_fp16)
+    {
+        std::cout << "[ SKIPPED ] The test is skipped (cl_khr_fp16 is not supported)." << std::endl;
+        EXPECT_EQ(1, 1);
+        return;
+    }
 
     std::vector<half_t> expected_values;
     expected_values.resize(0xF804);

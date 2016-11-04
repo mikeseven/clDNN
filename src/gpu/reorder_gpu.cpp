@@ -18,10 +18,13 @@
 #include "multidimensional_counter.h"
 #include "implementation_map.h"
 #include "kernel.h"
+#include "ocl_toolkit.h"
 
 const std::string kernelName = "reorder_GPU";
 const std::string kernelCode = R"__krnl(
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#if FP16_SUPPORTED
+    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
 
 #define TYPE_CVT_FUNC3(val, type) convert_##type(val)
 #define TYPE_CVT_FUNC2(val, type) TYPE_CVT_FUNC3(val, type)
@@ -61,7 +64,9 @@ KERNEL (reorder_GPU)(const __global SRC_TYPE* input, __global DEST_TYPE* output)
 
 const std::string kernelName_subtract = "reorder_subtract_GPU";
 const std::string kernelCode_subtract = R"__krnl(
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#if FP16_SUPPORTED
+    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
 
 #define TYPE_CVT_FUNC3(val, type) convert_##type(val)
 #define TYPE_CVT_FUNC2(val, type) TYPE_CVT_FUNC3(val, type)
@@ -114,7 +119,9 @@ KERNEL (reorder_subtract_GPU)(const __global SRC_TYPE* input, __global DEST_TYPE
 
 const std::string kernelName_subtract_values = "reorder_subtract_values_GPU";
 const std::string kernelCode_subtract_values = R"__krnl(
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#if FP16_SUPPORTED
+    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
 
 #define TYPE_CVT_FUNC3(val, type) convert_##type(val)
 #define TYPE_CVT_FUNC2(val, type) TYPE_CVT_FUNC3(val, type)
@@ -159,7 +166,21 @@ KERNEL (reorder_subtract_values_GPU)(const __global SRC_TYPE* input, __global DE
 }
 )__krnl";
 
+
+
 namespace neural {
+// GPU engine information helpers.
+namespace
+{
+struct gpu_info_helper : gpu::context_holder
+{
+    gpu::engine_info get_engine_info() const
+    {
+        return context()->get_engine_info();
+    }
+};
+}
+
 struct reorder_gpu : is_an_implementation {
     const reorder& outer;
     bool have_subtraction;
@@ -257,6 +278,8 @@ struct reorder_gpu : is_an_implementation {
     }
 
     gpu::jit_constants get_jit_constants() const {
+        gpu_info_helper gpu_info;
+
         auto& input_mem = outer.input_memory(0);
         auto& output_mem = outer.output_memory(0);
 
@@ -264,13 +287,17 @@ struct reorder_gpu : is_an_implementation {
         auto output_use_half = memory::traits(output_mem.argument.format).type->name == type_id<half_t>()->name;
         int input_output_type_cvt = input_use_half != output_use_half;
 
+        if (!gpu_info.get_engine_info().supports_fp16 && (input_use_half || output_use_half))
+            throw std::invalid_argument("GPU device does not support halfprecision floating-point formats (cl_khr_fp16 extension)");
+
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("DIMENSIONS", std::to_string(input_mem.argument.size.raw.size())),
             gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", get_idx_calculation(output_mem.argument.format)),
             gpu::make_jit_constant("CALCULATION_ORDER", get_calculation_order_string(input_mem.argument.format)),
             gpu::make_jit_constant("SRC_TYPE", input_use_half ? std::string("half") : std::string("float")),
             gpu::make_jit_constant("DEST_TYPE", output_use_half ? std::string("half") : std::string("float")),
-            gpu::make_jit_constant("SRC_DEST_TYPE_CVT", input_output_type_cvt)
+            gpu::make_jit_constant("SRC_DEST_TYPE_CVT", input_output_type_cvt),
+            gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(gpu_info.get_engine_info().supports_fp16))
         };
 
         {
@@ -285,12 +312,14 @@ struct reorder_gpu : is_an_implementation {
         }
 
         if (have_subtraction)
-
         {
             auto& subtract_mem = outer.input_memory(1);
 
             auto subtract_use_half = memory::traits(subtract_mem.argument.format).type->name == type_id<half_t>()->name;
             int subtract_input_type_cvt = subtract_use_half != input_use_half;
+
+            if (!gpu_info.get_engine_info().supports_fp16 && subtract_use_half)
+                throw std::invalid_argument("GPU device does not support halfprecision floating-point formats (cl_khr_fp16 extension)");
 
             mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_FORMAT_IMPLEMENTATION", get_idx_calculation(subtract_mem.argument.format)));
             mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_TYPE", subtract_use_half ? std::string("half") : std::string("float")));

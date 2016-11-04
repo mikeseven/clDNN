@@ -1,4 +1,6 @@
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#if FP16_SUPPORTED
+    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
 
 #define TYPE_CVT_FUNC3(val, type) convert_##type(val)
 #define TYPE_CVT_FUNC2(val, type) TYPE_CVT_FUNC3(val, type)
