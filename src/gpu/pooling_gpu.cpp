@@ -198,9 +198,13 @@ struct pooling_gpu : is_an_implementation {
         auto& output_mem = outer.output_memory(0);
 
         size_t gws0 = output_mem.argument.size.batch[0] * output_mem.argument.size.feature[0];
-
+        size_t lws0 = std::min(gws0, static_cast<size_t>(32));
+        while (gws0%lws0)
+        {
+            lws0 /= 2;
+        }
         me->_kernel.run<gpu::input_mem, gpu::output_mem>
-            ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1]}, { std::min(gws0, static_cast<size_t>(32)), 1, 1 } }, input_mem, output_mem);
+            ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1]}, { lws0, 1, 1 } }, input_mem, output_mem);
     }
 
     static is_an_implementation *create(pooling &arg) {
