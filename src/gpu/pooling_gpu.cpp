@@ -45,6 +45,40 @@ KERNEL(Pooling_GPU_max)(__global float* input, __global float* output)
 }
 )__krnl";
 
+const std::string kernelName_max_offset = "Pooling_GPU_max_offset";
+const std::string kernelCode_max_offset = R"__krnl(
+KERNEL(Pooling_GPU_max_offset)(__global float* input, __global float* output)
+{
+    const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
+
+    const int offset_x = get_global_id(1) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
+    const int offset_y = get_global_id(2) * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
+
+    float result = -FLT_MAX;
+
+    const int batch_and_feature_offset = get_global_id(0);
+    for(uint j = 0; j < WINDOW_SIZE_Y; j++)
+    {
+        int input_offset_y = offset_y + j;
+        bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
+        if(!zero_y)
+        {
+            for(uint i = 0; i < WINDOW_SIZE_X; i++)
+            {
+                int input_offset_x = offset_x + i;
+                bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
+                if(!zero)
+                {
+                    int input_idx = batch_and_feature_offset + OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (input_offset_x + input_offset_y * INPUT_SIZE_X);
+                    result = max(result, input[input_idx]);
+                }
+            }
+        }
+    }
+    output[linear_id_xyz] = result;
+}
+)__krnl";
+
 const std::string kernelName_average = "Pooling_GPU_average";
 const std::string kernelCode_average = R"__krnl(
 KERNEL(Pooling_GPU_average)(__global float* input, __global float* output)
@@ -71,6 +105,41 @@ KERNEL(Pooling_GPU_average)(__global float* input, __global float* output)
 }
 )__krnl";
 
+const std::string kernelName_average_offset = "Pooling_GPU_average_offset";
+const std::string kernelCode_average_offset = R"__krnl(
+KERNEL(Pooling_GPU_average_offset)(__global float* input, __global float* output)
+{
+    const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
+
+    const int offset_x = get_global_id(1) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
+    const int offset_y = get_global_id(2) * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
+
+    float result = 0;
+
+    const int batch_and_feature_offset = get_global_id(0);
+    int input_idx = batch_and_feature_offset + OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (offset_x + offset_y * INPUT_SIZE_X);
+    for(uint j = 0; j < WINDOW_SIZE_Y; j++)
+    {
+        int input_offset_y = offset_y + j;
+        bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
+        if(!zero_y)
+        {
+            for(uint i = 0; i < WINDOW_SIZE_X; i++)
+            {
+                int input_offset_x = offset_x + i;
+                bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
+                if(!zero)
+                {
+                    int input_idx = batch_and_feature_offset + OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (input_offset_x + input_offset_y * INPUT_SIZE_X);
+                    result += input[input_idx];
+                }
+            }
+        }
+    }
+    output[linear_id_xyz] = result / (float)(WINDOW_SIZE_Y * WINDOW_SIZE_X);
+}
+)__krnl";
+
 namespace neural {
 struct pooling_gpu : is_an_implementation {
     pooling &outer;
@@ -85,21 +154,37 @@ struct pooling_gpu : is_an_implementation {
         switch (outer.argument.mode)
         {
         case pooling::mode::max:
-            return kernelName_max;
+            if (outer.argument.input_offset.spatial[0] != 0 || outer.argument.input_offset.spatial[1] != 0)
+            {
+                return kernelName_max_offset;
+            }
+            else
+            {
+                return kernelName_max;
+            }
         case pooling::mode::average:
-            return kernelName_average;
+            if (outer.argument.input_offset.spatial[0] != 0 || outer.argument.input_offset.spatial[1] != 0)
+            {
+                return kernelName_average_offset;
+            }
+            else
+            {
+                return kernelName_average;
+            }
         default:
             throw std::runtime_error("Unknown pooling mode.");
         }
     }
 
     gpu::jit_constants get_jit_constants() const {
-        return {
+        gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT", outer.input_memory(0).argument.size),
             gpu::make_jit_constant("OUTPUT", outer.output_memory(0).argument.size),
             gpu::make_jit_constant("WINDOW", outer.argument.size),
-            gpu::make_jit_constant("STRIDE", outer.argument.stride)
+            gpu::make_jit_constant("STRIDE", outer.argument.stride),
+            gpu::make_jit_constant("INPUT_OFFSET", outer.argument.input_offset)
         };
+        return mem_consts;
     }
 
     static void implementation(const void *ptr) {
@@ -162,6 +247,8 @@ namespace
         {
             gpu::kernel_templates::add(kernelName_max, kernelCode_max);
             gpu::kernel_templates::add(kernelName_average, kernelCode_average);
+            gpu::kernel_templates::add(kernelName_max_offset, kernelCode_max_offset);
+            gpu::kernel_templates::add(kernelName_average_offset, kernelCode_average_offset);
 
             auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = pooling_gpu::create;
