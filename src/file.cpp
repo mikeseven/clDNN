@@ -125,7 +125,8 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
     //std::unique_ptr<uint64_t>(new uint64_t[file_head.dimension]);
     auto array_size = file_head.dimension * sizeof(uint64_t);
     rfile.read(reinterpret_cast<char *>(&array[0]), array_size);
-    if (read_crc() != crc32(&array[0], array_size, CRC_INIT)) throw std::runtime_error("nn_data_t size array crc mismatch");
+    if (read_crc() != crc32(&array[0], array_size, CRC_INIT)) 
+        throw std::runtime_error("nn_data_t size array crc mismatch");
 
     // create target nn::data & load data into it               
 

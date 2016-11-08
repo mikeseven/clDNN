@@ -222,6 +222,7 @@ std::vector<std::pair<primitive, std::string>> build_googlenetv1(const primitive
         pooling::mode::max,
         mem_format,
         pool2_3x3_s2,
+        { 0,{ -1, -1 },0 }, //padding 
         { 1,{ 1, 1 },1 }, // strd
         { 1,{ 3, 3 },1 }, // kernel
         padding::zero
@@ -343,6 +344,7 @@ std::vector<std::pair<primitive, std::string>> build_googlenetv1(const primitive
         pooling::mode::max,
         mem_format,
         inception_3a_output,
+        { 0,{ -1, -1 },0 }, //padding 
         { 1,{ 1, 1 },1 }, // strd
         { 1,{ 3, 3 },1 }, // kernel
         padding::zero
@@ -474,6 +476,7 @@ std::vector<std::pair<primitive, std::string>> build_googlenetv1(const primitive
         pooling::mode::max,
         mem_format,
         pool3_3x3_s2,
+        { 0,{ -1, -1 },0 }, //padding 
         { 1,{ 1, 1 },1 }, // strd
         { 1,{ 3, 3 },1 }, // kernel
         padding::zero
@@ -594,6 +597,7 @@ std::vector<std::pair<primitive, std::string>> build_googlenetv1(const primitive
         pooling::mode::max,
         mem_format,
         inception_4a_output,
+        { 0,{ -1, -1 },0 }, //padding 
         { 1,{ 1, 1 },1 }, // strd
         { 1,{ 3, 3 },1 }, // kernel
         padding::zero
@@ -714,6 +718,7 @@ std::vector<std::pair<primitive, std::string>> build_googlenetv1(const primitive
         pooling::mode::max,
         mem_format,
         inception_4b_output,
+        { 0,{ -1, -1 },0 }, //padding 
         { 1,{ 1, 1 },1 }, // strd
         { 1,{ 3, 3 },1 }, // kernel
         padding::zero
@@ -832,6 +837,7 @@ std::vector<std::pair<primitive, std::string>> build_googlenetv1(const primitive
         pooling::mode::max,
         mem_format,
         inception_4c_output,
+        { 0,{ -1, -1 },0 }, //padding 
         { 1,{ 1, 1 },1 }, // strd
         { 1,{ 3, 3 },1 }, // kernel
         padding::zero
@@ -950,6 +956,7 @@ std::vector<std::pair<primitive, std::string>> build_googlenetv1(const primitive
         pooling::mode::max,
         mem_format,
         inception_4d_output,
+        { 0,{ -1, -1 },0 }, //padding 
         { 1,{ 1, 1 },1 }, // strd
         { 1,{ 3, 3 },1 }, // kernel
         padding::zero
@@ -1080,6 +1087,7 @@ std::vector<std::pair<primitive, std::string>> build_googlenetv1(const primitive
         pooling::mode::max,
         mem_format,
         pool4_3x3_s2,
+        { 0,{ -1, -1 },0 }, //padding 
         { 1,{ 1, 1 },1 }, // strd
         { 1,{ 3, 3 },1 }, // kernel
         padding::zero
@@ -1198,6 +1206,7 @@ std::vector<std::pair<primitive, std::string>> build_googlenetv1(const primitive
         pooling::mode::max,
         mem_format,
         inception_5a_output,
+        { 0,{ -1, -1 },0 }, //padding 
         { 1,{ 1, 1 },1 }, // strd
         { 1,{ 3, 3 },1 }, // kernel
         padding::zero
