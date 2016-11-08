@@ -38,6 +38,42 @@ pooling::arguments::arguments( pooling::mode::type      p_mode,
     , size(siz)
     , padding(padd) {}
 
+pooling::arguments::arguments(pooling::mode::type      p_mode,
+    memory::format::type     o_frmt,
+    primitive                in,
+    neural::vector<int32_t>  in_off,
+    neural::vector<uint32_t> strd,
+    neural::vector<uint32_t> siz,
+    neural::padding::type    padd)
+    : mode(p_mode)
+    , input({ in })
+    , input_offset(in_off)
+    , stride(strd)
+    , size(siz)
+    , padding(padd) 
+{
+    // verify if primitive has one output.
+    if (in.output.size() != 1) throw std::runtime_error("more than one output in primitive isn't supported yet");
+    auto output_memory = in.output[0].as<const memory&>().argument;
+    // compute size of output after pooling (downsampling)
+    auto spatial_x = ((output_memory.size.spatial[0] - (2 * input_offset.spatial[0]) - siz.spatial[0]) / strd.spatial[0]) + 1;
+    auto spatial_y = ((output_memory.size.spatial[1] - (2 * input_offset.spatial[1]) - siz.spatial[1]) / strd.spatial[1]) + 1;
+
+    output_size = {
+        output_memory.size.batch[0],
+        {
+            spatial_x,
+            spatial_y
+        },
+        output_memory.size.feature[0]
+    };
+    output = { memory::allocate({ o_frmt, output_size }) };
+    output_offset = vector<uint32_t>(
+        output[0].as<const memory&>().argument.size.batch.size(),
+        output[0].as<const memory&>().argument.size.spatial.size(),
+        output[0].as<const memory&>().argument.size.feature.size());
+}
+
 pooling::arguments::arguments( pooling::mode::type      p_mode,
                                memory::format::type     o_frmt,
                                primitive                in,
@@ -54,8 +90,8 @@ pooling::arguments::arguments( pooling::mode::type      p_mode,
     if (in.output.size() != 1) throw std::runtime_error("more than one output in primitive isn't supported yet");
     auto output_memory = in.output[0].as<const memory&>().argument;
     // compute size of output after pooling (downsampling)
-    auto spatial_x = (output_memory.size.spatial[0]) / strd.spatial[0];
-    auto spatial_y = (output_memory.size.spatial[1]) / strd.spatial[1];
+    auto spatial_x = ((output_memory.size.spatial[0] - siz.spatial[0]) / strd.spatial[0]) + 1;
+    auto spatial_y = ((output_memory.size.spatial[1] - siz.spatial[1]) / strd.spatial[1]) + 1;
 
     output_size = { 
         output_memory.size.batch[0],
@@ -113,9 +149,7 @@ pooling::arguments::arguments( pooling::mode::type      p_mode,
     , size(siz)
     , padding(padd) 
 {
-    const auto& input_size = (in.id() == type_id<const memory>()->id)
-        ? in.as<const memory&>().argument.size
-        : in.output[0].as<const memory&>().argument.size;
+    const auto& input_size = get_memory_primitive(in).argument.size;
 
     input_offset =
     {

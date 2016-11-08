@@ -21,7 +21,12 @@
 #include "cache/primitive_db.h"
 
 const std::string kernelName_max = "Pooling_GPU_max";
+
+const std::string kernelName_max_offset = "Pooling_GPU_max_offset";
+
 const std::string kernelName_average = "Pooling_GPU_average";
+
+const std::string kernelName_average_offset = "Pooling_GPU_average_offset";
 
 namespace neural {
 struct pooling_gpu : is_an_implementation {
@@ -37,21 +42,37 @@ struct pooling_gpu : is_an_implementation {
         switch (outer.argument.mode)
         {
         case pooling::mode::max:
-            return kernelName_max;
+            if (outer.argument.input_offset.spatial[0] != 0 || outer.argument.input_offset.spatial[1] != 0)
+            {
+                return kernelName_max_offset;
+            }
+            else
+            {
+                return kernelName_max;
+            }
         case pooling::mode::average:
-            return kernelName_average;
+            if (outer.argument.input_offset.spatial[0] != 0 || outer.argument.input_offset.spatial[1] != 0)
+            {
+                return kernelName_average_offset;
+            }
+            else
+            {
+                return kernelName_average;
+            }
         default:
             throw std::runtime_error("Unknown pooling mode.");
         }
     }
 
     gpu::jit_constants get_jit_constants() const {
-        return {
+        gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT", outer.input_memory(0).argument.size),
             gpu::make_jit_constant("OUTPUT", outer.output_memory(0).argument.size),
             gpu::make_jit_constant("WINDOW", outer.argument.size),
-            gpu::make_jit_constant("STRIDE", outer.argument.stride)
+            gpu::make_jit_constant("STRIDE", outer.argument.stride),
+            gpu::make_jit_constant("INPUT_OFFSET", outer.argument.input_offset)
         };
+        return mem_consts;
     }
 
     static void implementation(const void *ptr) {
@@ -65,9 +86,13 @@ struct pooling_gpu : is_an_implementation {
         auto& output_mem = outer.output_memory(0);
 
         size_t gws0 = output_mem.argument.size.batch[0] * output_mem.argument.size.feature[0];
-
+        size_t lws0 = std::min(gws0, static_cast<size_t>(32));
+        while (gws0%lws0)
+        {
+            lws0 /= 2;
+        }
         me->_kernel.run<gpu::input_mem, gpu::output_mem>
-            ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1]}, { std::min(gws0, static_cast<size_t>(32)), 1, 1 } }, input_mem, output_mem);
+            ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1]}, { lws0, 1, 1 } }, input_mem, output_mem);
     }
 
     static is_an_implementation *create(pooling &arg) {
@@ -119,6 +144,8 @@ namespace
 			gpu::manager::primitive_db database;
             gpu::kernel_templates::add(kernelName_max, database.get(kernelName_max).at(0));
             gpu::kernel_templates::add(kernelName_average, database.get(kernelName_average).at(0));
+            gpu::kernel_templates::add(kernelName_max_offset, database.get(kernelName_max_offset).at(0));
+            gpu::kernel_templates::add(kernelName_average_offset, database.get(kernelName_average_offset).at(0));
 
             auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = pooling_gpu::create;

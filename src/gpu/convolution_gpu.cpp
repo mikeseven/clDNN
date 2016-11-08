@@ -286,6 +286,10 @@ struct convolution_gpu : is_an_implementation {
             {
                 gws0 = (output_mem.argument.size.feature[0] * batch_size) / split;
                 lws0 = std::min(gws0, static_cast<size_t>(32));
+                while (gws0%lws0)
+                {
+                    lws0 /= 2;
+                }
                 break;
             }
             default:

@@ -14,17 +14,33 @@
 // limitations under the License.
 */
 
+#pragma once
+
+
 #include "neural.h"
+
+#include <boost/optional.hpp>
+
 
 // TODO!!! - optimize weights based on HW
 class weights_optimizer
 {
-private:
-    bool enabled;
-    std::vector<neural::primitive> primitives;
-    bool needs_optimization(const neural::primitive& prim, neural::file::weights_type type);
+    bool _enabled;
+    bool _use_half;
+    std::vector<neural::primitive> _primitives;
+
+
+    bool _needs_optimization(const neural::primitive& prim,
+                             neural::file::weights_type type,
+                             bool use_half);
+
 public:
-    weights_optimizer(bool enabled);
-    neural::primitive create_weights_from_file(const std::string& path, neural::file::weights_type type);
+    explicit weights_optimizer(bool enabled = true,
+                               bool use_half = false);
+
+    neural::primitive create_weights_from_file(const std::string& path,
+                                               neural::file::weights_type type,
+                                               const boost::optional<bool>& use_half = boost::none);
+
     void optimize(const neural::worker& worker);
 };

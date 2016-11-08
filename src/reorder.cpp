@@ -81,27 +81,53 @@ namespace neural {
    }
     reorder::arguments::arguments(primitive_at _in, primitive _out) //todo Artur fix arguments order
         : output({_out})
-        , input({_in}) {}
+        , input({_in})
+        , subtract_per_feature(){}
 
 	reorder::arguments::arguments(primitive _out, primitive _in, primitive subtract_values)
-		: output({ _out })
-		, input({ _in, subtract_values }) {}
+        : output({ _out })
+        , input({ _in, subtract_values })
+        , subtract_per_feature(){}
+
+    reorder::arguments::arguments(primitive _out, primitive _in, const std::vector<float>& value_to_subtract, bool dummy)
+        : output({ _out })
+        , input({ _in })
+        , subtract_per_feature(value_to_subtract)
+        , dummy(dummy) {}
 
     reorder::arguments::arguments(neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in)
         : output( {memory::allocate({_out_layout, _out_sizes})} )
-        , input({_in}) {}
+        , input({_in})
+        , subtract_per_feature(){}
 
-	reorder::arguments::arguments(neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in, primitive_at _subtract)
-		: output({ memory::allocate({ _out_layout, _out_sizes }) })
-		, input({ _in, _subtract }) {}
+    reorder::arguments::arguments(neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in, primitive_at _subtract)
+        : output({ memory::allocate({ _out_layout, _out_sizes }) })
+        , input({ _in, _subtract })
+        , subtract_per_feature(){}
 
+#pragma message ("TODO!!! Remove dummy parameter from reorder class - this is due to bad design, need to change it!")
+    reorder::arguments::arguments(neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in, const std::vector<float>& value_to_subtract, bool dummy)
+        : output({ memory::allocate({ _out_layout, _out_sizes }) })
+        , input({ _in })
+        , subtract_per_feature(value_to_subtract)
+        ,dummy(dummy){}
 
     // creates primitive with reorder implementation that supports provided arguments
     primitive reorder::create(reorder::arguments arg) 
 	{
-        if (arg.input[0].primitive().as<const memory&>().argument.size.raw.size() != arg.output[0].as<const memory&>().argument.size.raw.size())
+        auto& input_mem = arg.input[0].primitive().as<const memory&>();
+        if (input_mem.argument.size.raw.size() != arg.output[0].as<const memory&>().argument.size.raw.size())
             //            throw std::runtime_error("Number of dimensions in reorder does not match. Meybe you want to use reshape primitive?"); //todo reshape
             throw std::runtime_error("Number of dimensions in reorder does not match.");
+        if (!arg.subtract_per_feature.empty())
+        {
+            if (input_mem.argument.size.feature.size() > 1)
+            {
+                throw std::runtime_error("Subtracting values work only for formats that have feature dimension == 1");
+            }
+            if (input_mem.argument.size.feature[0] != arg.subtract_per_feature.size())
+                throw std::runtime_error("Number of features/channels in input does not match the number of features/channels in values to subtract");
+        }
         return is_a_primitive::create<reorder>(arg);
     }
 
