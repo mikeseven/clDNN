@@ -374,7 +374,7 @@ void vgg16(uint32_t batch_size, std::string img_dir, const std::string& weights_
 
     html output_file("vgg16", "vgg16 run");
 
-    weights_optimizer weights_optimizer(optimize_weights);
+    weights_optimizer weights_optimizer(optimize_weights, use_half);
 
     auto input = memory::allocate({use_half ? memory::format::byxf_f16 : memory::format::byxf_f32, {gpu_batch_size, {224, 224}, 3}});
     auto output = memory::allocate({use_half ? memory::format::xb_f16 : memory::format::xb_f32, {gpu_batch_size, {1000}}});

@@ -1,16 +1,30 @@
+#if FP16_SUPPORTED
+    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
+#define TYPE_CVT_FUNC3(val, type) convert_##type(val)
+#define TYPE_CVT_FUNC2(val, type) TYPE_CVT_FUNC3(val, type)
+#if SRC_DEST_TYPE_CVT
+    #define SRC_DEST_TYPE_CVT_FUNC(val) TYPE_CVT_FUNC2(val, DEST_TYPE)
+#else
+    #define SRC_DEST_TYPE_CVT_FUNC(val) val
+#endif
+
+#if SUBTRACT_SRC_TYPE_CVT
+    #define SUBTRACT_SRC_TYPE_CVT_FUNC(val) TYPE_CVT_FUNC2(val, SRC_TYPE)
+#else
+    #define SUBTRACT_SRC_TYPE_CVT_FUNC(val) val
+#endif
+
 uint FUNC(OUT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS]) {
     OUT_FORMAT_IMPLEMENTATION
 }
 uint FUNC(SUBTRACT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS]) {
 
-	SUBTRACT_FORMAT_IMPLEMENTATION
+    SUBTRACT_FORMAT_IMPLEMENTATION
 }
-KERNEL (reorder_subtract_GPU)(__global neural_memory* in_mem, __global neural_memory* out_mem, __global neural_memory* subtract_values)
+KERNEL (reorder_subtract_GPU)(const __global SRC_TYPE* input, __global DEST_TYPE* output, const __global SUBTRACT_TYPE* subtract)
 {
-    __global float* input = (__global float*)get_data(in_mem);
-    __global float* output = (__global float*)get_data(out_mem);
-    __global float* subtract = (__global float*)get_data(subtract_values);
-
     const uint global_id_0 = get_global_id(0);
     const uint global_id_1 = get_global_id(1);
     const uint global_id_2 = get_global_id(2);
@@ -21,17 +35,17 @@ KERNEL (reorder_subtract_GPU)(__global neural_memory* in_mem, __global neural_me
     pos[CALCULATION_ORDER[DIMENSIONS-1]] = global_id_2;
     pos[CALCULATION_ORDER[DIMENSIONS-2]] = global_id_1;
     uint pos1D = global_id_0;
-	for(uint i = 0; i < DIMENSIONS-2; i++)
+    for(uint i = 0; i < DIMENSIONS-2; i++)
     {
-		uint order_idx = CALCULATION_ORDER[i];
-		pos[order_idx] = pos1D % SIZE[order_idx];
+        uint order_idx = CALCULATION_ORDER[i];
+        pos[order_idx] = pos1D % SIZE[order_idx];
         pos1D /= SIZE[order_idx];
     }
 
     uint output_pos = FUNC_CALL(OUT_FORMAT)(SIZE, pos);
-	// We set it to 0 because we subtract the same values from every input batch
-	pos[0] = 0;
-	uint subtract_pos = FUNC_CALL(SUBTRACT_FORMAT)(SIZE, pos);
+    // We set it to 0 because we subtract the same values from every input batch
+    pos[0] = 0;
+    uint subtract_pos = FUNC_CALL(SUBTRACT_FORMAT)(SIZE, pos);
     uint input_idx = (global_id_2 * global_size_1 + global_id_1) * global_size_0 + global_id_0;
-    output[output_pos] = input[input_idx] - subtract[subtract_pos];
+    output[output_pos] = SRC_DEST_TYPE_CVT_FUNC(input[input_idx] - SUBTRACT_SRC_TYPE_CVT_FUNC(subtract[subtract_pos]));
 }
