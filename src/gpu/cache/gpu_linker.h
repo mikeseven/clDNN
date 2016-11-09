@@ -17,10 +17,12 @@
 
 #include "cache_types.h"
 #include "manager_types.h"
-
+#include "../ocl_toolkit.h"
 #include <vector>
 
 namespace neural { namespace gpu { namespace manager {
+
+using gpu_program = cl::Program;
 
 /// \brief Class wrapping compile feature of kernel device compiler
 ///
