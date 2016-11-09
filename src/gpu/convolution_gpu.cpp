@@ -16,7 +16,6 @@
 
 #include "api/neural.h"
 #include "multidimensional_counter.h"
-#include "relu_gpu.h"
 #include "implementation_map.h"
 #include "kernel.h"
 #include "cache/primitive_db.h"
