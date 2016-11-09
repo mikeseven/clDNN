@@ -28,6 +28,7 @@ const std::string kernelName_YXFB_memory = "Convolution_GPU_YXFB_memory";
 const std::string kernelName_YXFB_OYXI_memory = "Convolution_GPU_YXFB_OYXI_memory";
 const std::string kernelName_YXFB_YXOI_memory = "Convolution_GPU_YXFB_YXOI_memory";
 const std::string kernelName_YXFB_YXOI_B8_memory = "Convolution_GPU_YXFB_YXOI_B8_memory";
+const std::string kernelName_YXFB_YXIO = "Convolution_GPU_YXFB_YXIO";
 const std::string kernelName_YXFB_YXIO_B1_memory = "Convolution_GPU_YXFB_YXIO_B1_memory";
 const std::string kernelName_YXFB_YXIO_B1_vload_memory = "Convolution_GPU_YXFB_YXIO_B1_vload_memory";
 const std::string kernelName_YXFB_YXIO_B1_block_memory = "Convolution_GPU_YXFB_YXIO_B1_block_memory";
@@ -349,6 +350,7 @@ namespace{
             gpu::kernel_templates::add(kernelName_YXFB_YXOI_memory, database.get(kernelName_YXFB_YXOI_memory).at(0));
             gpu::kernel_templates::add(kernelName_YXFB_OYXI_memory, database.get(kernelName_YXFB_OYXI_memory).at(0));
             gpu::kernel_templates::add(kernelName_YXFB_YXOI_B8_memory, database.get(kernelName_YXFB_YXOI_B8_memory).at(0));
+            gpu::kernel_templates::add(kernelName_YXFB_YXIO, database.get(kernelName_YXFB_YXIO).at(0));
             gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_memory, database.get(kernelName_YXFB_YXIO_B1_memory).at(0));
             gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_vload_memory, database.get(kernelName_YXFB_YXIO_B1_vload_memory).at(0));
             gpu::kernel_templates::add(kernelName_YXFB_YXIO_B1_block_memory, database.get(kernelName_YXFB_YXIO_B1_block_memory).at(0));
