@@ -18,27 +18,11 @@
 #include "implementation_map.h"
 #include "multidimensional_counter.h"
 #include "kernel.h"
+#include "cache/primitive_db.h"
 
 namespace neural {
 
     const std::string kernelName = "Mean_subtract_GPU";
-    const std::string kernelCode = R"__krnl(
-KERNEL(Mean_subtract_GPU)(const __global neural_memory* input_mem, __global neural_memory* output_mem, const __global neural_memory* mean_mem)
-{
-    const __global float* input = (const __global float*)get_data(input_mem);
-    __global float* output = (__global float*)get_data(output_mem);
-    const __global float* mean = (const __global float*)get_data(mean_mem);
-
-    const uint batch_num = INPUT_BATCH_NUM;
-
-    const int global_id = get_global_id(0);
-    const int batch_id = global_id % batch_num;
-    const int feature_id = (global_id / batch_num) % INPUT_FEATURE_NUM;
-    const int x = ((global_id / batch_num) / INPUT_FEATURE_NUM) % INPUT_SIZE_X;
-    const int y = ((global_id / batch_num) / INPUT_FEATURE_NUM) / INPUT_SIZE_X;
-    output[global_id] = input[global_id] - mean[x + MEAN_SIZE_X * (y + MEAN_SIZE_Y * (feature_id + MEAN_FEATURE_NUM * (batch_id % MEAN_BATCH_NUM)))];
-}
-)__krnl";
 
 struct mean_subtract_gpu : is_an_implementation {
     mean_subtract &outer;
@@ -91,7 +75,12 @@ struct mean_subtract_gpu : is_an_implementation {
 namespace {
     struct attach {
         attach() {
-            gpu::kernel_templates::add(kernelName, kernelCode);
+			// cache implementation phase #1 that is a initial switch for using primitive database instead of string kernels
+			// at later steps primitive database will be created only once per loading library but as for now it would require 
+			// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
+			// from the returned list.
+			gpu::manager::primitive_db database;
+            gpu::kernel_templates::add(kernelName, database.get(kernelName).at(0));
 
             auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = mean_subtract_gpu::create;

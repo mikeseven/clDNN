@@ -19,154 +19,11 @@
 #include "implementation_map.h"
 #include "kernel.h"
 #include "ocl_toolkit.h"
+#include "cache/primitive_db.h"
 
 const std::string kernelName = "reorder_GPU";
-const std::string kernelCode = R"__krnl(
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
-
-#define TYPE_CVT_FUNC3(val, type) convert_##type(val)
-#define TYPE_CVT_FUNC2(val, type) TYPE_CVT_FUNC3(val, type)
-#if SRC_DEST_TYPE_CVT
-    #define SRC_DEST_TYPE_CVT_FUNC(val) TYPE_CVT_FUNC2(val, DEST_TYPE)
-#else
-    #define SRC_DEST_TYPE_CVT_FUNC(val) val
-#endif
-
-uint FUNC(OUT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS]) {
-    OUT_FORMAT_IMPLEMENTATION
-}
-KERNEL (reorder_GPU)(const __global SRC_TYPE* input, __global DEST_TYPE* output)
-{
-    const uint global_id_0 = get_global_id(0);
-    const uint global_id_1 = get_global_id(1);
-    const uint global_id_2 = get_global_id(2);
-    const uint global_size_1 = get_global_size(1);
-    const uint global_size_0 = get_global_size(0);
-
-    uint pos[DIMENSIONS]; // position in each of dimensions
-    pos[CALCULATION_ORDER[DIMENSIONS-1]] = global_id_2;
-    pos[CALCULATION_ORDER[DIMENSIONS-2]] = global_id_1;
-    uint pos1D = global_id_0;
-    for(uint i = 0; i < DIMENSIONS-2; i++)
-    {
-        uint order_idx = CALCULATION_ORDER[i];
-        pos[order_idx] = pos1D % SIZE[order_idx];
-        pos1D /= SIZE[order_idx];
-    }
-
-    uint output_pos = FUNC_CALL(OUT_FORMAT)(SIZE, pos);
-    uint input_idx = (global_id_2 * global_size_1 + global_id_1) * global_size_0 + global_id_0;
-    output[output_pos] = SRC_DEST_TYPE_CVT_FUNC(input[input_idx]);
-}
-)__krnl";
-
 const std::string kernelName_subtract = "reorder_subtract_GPU";
-const std::string kernelCode_subtract = R"__krnl(
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
-
-#define TYPE_CVT_FUNC3(val, type) convert_##type(val)
-#define TYPE_CVT_FUNC2(val, type) TYPE_CVT_FUNC3(val, type)
-#if SRC_DEST_TYPE_CVT
-    #define SRC_DEST_TYPE_CVT_FUNC(val) TYPE_CVT_FUNC2(val, DEST_TYPE)
-#else
-    #define SRC_DEST_TYPE_CVT_FUNC(val) val
-#endif
-
-#if SUBTRACT_SRC_TYPE_CVT
-    #define SUBTRACT_SRC_TYPE_CVT_FUNC(val) TYPE_CVT_FUNC2(val, SRC_TYPE)
-#else
-    #define SUBTRACT_SRC_TYPE_CVT_FUNC(val) val
-#endif
-
-uint FUNC(OUT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS]) {
-    OUT_FORMAT_IMPLEMENTATION
-}
-uint FUNC(SUBTRACT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS]) {
-
-	SUBTRACT_FORMAT_IMPLEMENTATION
-}
-KERNEL (reorder_subtract_GPU)(const __global SRC_TYPE* input, __global DEST_TYPE* output, const __global SUBTRACT_TYPE* subtract)
-{
-    const uint global_id_0 = get_global_id(0);
-    const uint global_id_1 = get_global_id(1);
-    const uint global_id_2 = get_global_id(2);
-    const uint global_size_1 = get_global_size(1);
-    const uint global_size_0 = get_global_size(0);
-
-    uint pos[DIMENSIONS]; // position in each of dimensions
-    pos[CALCULATION_ORDER[DIMENSIONS-1]] = global_id_2;
-    pos[CALCULATION_ORDER[DIMENSIONS-2]] = global_id_1;
-    uint pos1D = global_id_0;
-    for(uint i = 0; i < DIMENSIONS-2; i++)
-    {
-        uint order_idx = CALCULATION_ORDER[i];
-        pos[order_idx] = pos1D % SIZE[order_idx];
-        pos1D /= SIZE[order_idx];
-    }
-
-    uint output_pos = FUNC_CALL(OUT_FORMAT)(SIZE, pos);
-    // We set it to 0 because we subtract the same values from every input batch
-    pos[0] = 0;
-    uint subtract_pos = FUNC_CALL(SUBTRACT_FORMAT)(SIZE, pos);
-    uint input_idx = (global_id_2 * global_size_1 + global_id_1) * global_size_0 + global_id_0;
-    output[output_pos] = SRC_DEST_TYPE_CVT_FUNC(input[input_idx] - SUBTRACT_SRC_TYPE_CVT_FUNC(subtract[subtract_pos]));
-}
-)__krnl";
-
 const std::string kernelName_subtract_values = "reorder_subtract_values_GPU";
-const std::string kernelCode_subtract_values = R"__krnl(
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
-
-#define TYPE_CVT_FUNC3(val, type) convert_##type(val)
-#define TYPE_CVT_FUNC2(val, type) TYPE_CVT_FUNC3(val, type)
-#if SRC_DEST_TYPE_CVT
-    #define SRC_DEST_TYPE_CVT_FUNC(val) TYPE_CVT_FUNC2(val, DEST_TYPE)
-#else
-    #define SRC_DEST_TYPE_CVT_FUNC(val) val
-#endif
-
-#if SUBTRACT_SRC_TYPE_CVT
-    #define SUBTRACT_SRC_TYPE_CVT_FUNC(val) TYPE_CVT_FUNC2(val, SRC_TYPE)
-#else
-    #define SUBTRACT_SRC_TYPE_CVT_FUNC(val) val
-#endif
-
-uint FUNC(OUT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS]) {
-    OUT_FORMAT_IMPLEMENTATION
-}
-KERNEL (reorder_subtract_values_GPU)(const __global SRC_TYPE* input, __global DEST_TYPE* output)
-{
-    const uint global_id_0 = get_global_id(0);
-    const uint global_id_1 = get_global_id(1);
-    const uint global_id_2 = get_global_id(2);
-    const uint global_size_1 = get_global_size(1);
-    const uint global_size_0 = get_global_size(0);
-
-    uint pos[DIMENSIONS]; // position in each of dimensions
-    pos[CALCULATION_ORDER[DIMENSIONS-1]] = global_id_2;
-    pos[CALCULATION_ORDER[DIMENSIONS-2]] = global_id_1;
-    uint pos1D = global_id_0;
-    for(uint i = 0; i < DIMENSIONS-2; i++)
-    {
-        uint order_idx = CALCULATION_ORDER[i];
-        pos[order_idx] = pos1D % SIZE[order_idx];
-        pos1D /= SIZE[order_idx];
-    }
-
-    uint output_pos = FUNC_CALL(OUT_FORMAT)(SIZE, pos);
-    uint input_idx = (global_id_2 * global_size_1 + global_id_1) * global_size_0 + global_id_0;
-    float val_to_subtract = VALUE_TO_SUBTRACT[pos[1]];
-    output[output_pos] = SRC_DEST_TYPE_CVT_FUNC(input[input_idx] - SUBTRACT_SRC_TYPE_CVT_FUNC(val_to_subtract));
-}
-)__krnl";
-
-
 
 namespace neural {
 // GPU engine information helpers.
@@ -189,11 +46,11 @@ struct reorder_gpu : is_an_implementation {
 
     reorder_gpu(reorder &arg): is_an_implementation(neural::type_id<reorder_gpu>())
     , outer(arg)
+
     , have_subtraction(arg.argument.input.size() > 1)
     , _kernel(select_kernel_name(), get_jit_constants())
     , _exec_options(get_execution_options())
     {}
-
     // We need to specify the output idx based on input position
     static std::string get_idx_calculation(memory::format::type type) {
         switch (type)
@@ -219,6 +76,7 @@ struct reorder_gpu : is_an_implementation {
         case memory::format::type::xb_f32:
         case memory::format::type::xb_f16:
             return "return pos[0] + size[0]*pos[2];";
+
         default:
             throw std::invalid_argument("This format is not supported in GPU reorder");
         }
@@ -274,7 +132,6 @@ struct reorder_gpu : is_an_implementation {
             return kernelName_subtract_values;
         else
             return kernelName;
-
     }
 
     gpu::jit_constants get_jit_constants() const {
@@ -300,7 +157,6 @@ struct reorder_gpu : is_an_implementation {
             gpu::make_jit_constant("SRC_DEST_TYPE_CVT", input_output_type_cvt),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16))
         };
-
         {
             std::stringstream s;
             s << "(uint[]){ ";
@@ -311,7 +167,6 @@ struct reorder_gpu : is_an_implementation {
             s << " }";
             mem_consts.add_constant(gpu::make_jit_constant("SIZE", s.str()));
         }
-
         if (have_subtraction)
         {
             auto& subtract_mem = outer.input_memory(1);
@@ -401,10 +256,15 @@ struct reorder_gpu : is_an_implementation {
     namespace {
         struct attach {
             attach() {
-                gpu::kernel_templates::add(kernelName, kernelCode);
-                gpu::kernel_templates::add(kernelName_subtract, kernelCode_subtract);
-                gpu::kernel_templates::add(kernelName_subtract_values, kernelCode_subtract_values);
-                implementation_map<reorder>::add({
+                // cache implementation phase #1 that is a initial switch for using primitive database instead of string kernels
+                // at later steps primitive database will be created only once per loading library but as for now it would require 
+                // large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
+                // from the returned list.
+                gpu::manager::primitive_db database;
+                gpu::kernel_templates::add(kernelName, database.get(kernelName).at(0));
+                gpu::kernel_templates::add(kernelName_subtract, database.get(kernelName_subtract).at(0));
+				gpu::kernel_templates::add(kernelName_subtract_values, database.get(kernelName_subtract_values).at(0));
+				implementation_map<reorder>::add({
                     { engine::type::gpu, reorder_gpu::create }
                 });
             }

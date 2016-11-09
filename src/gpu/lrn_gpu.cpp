@@ -18,69 +18,10 @@
 #include "multidimensional_counter.h"
 #include "implementation_map.h"
 #include "kernel.h"
+#include "cache/primitive_db.h"
 
 const std::string kernelName = "lrn_GPU";
-const std::string kernelCode = R"__krnl(
-KERNEL (lrn_GPU)(__global float* input, __global float* output)
-{
-    const uint global_id = get_global_id(0);
-    const uint element_offset = get_global_id(1) * INPUT_BATCH_NUM * INPUT_FEATURE_NUM;
-
-    const uint linear_id = global_id + element_offset;
-    float acc = 0;
-
-    int input_offset_f = global_id + HELP_INPUT_OFFSET * INPUT_BATCH_NUM;
-    int input_idx = input_offset_f + element_offset;
-    for (int i = 0; i < P_SIZE; i++)
-    {
-        bool zero = input_offset_f < 0 || input_offset_f >= INPUT_FEATURE_NUM * INPUT_BATCH_NUM;
-
-        float value = zero ? 0 : input[input_idx];
-        acc = mad(value, value, acc);
-
-        input_offset_f+= INPUT_BATCH_NUM;
-        input_idx += INPUT_BATCH_NUM;
-    }
-    acc = mad(acc, ALPHA, K);
-    acc = native_powr(acc, -BETA);
-
-    output[linear_id] = acc * input[linear_id];
-}
-)__krnl";
-
 const std::string kernelName_b8 = "lrn_b8_GPU";
-const std::string kernelCode_b8 = R"__krnl(
-__attribute__((reqd_work_group_size(8, 1, 1)))
-KERNEL (lrn_b8_GPU)(__global float* input, __global float* output)
-{
-    const uint global_id = get_global_id(0);
-    const uint element_offset = get_group_id(1) * (INPUT_BATCH_NUM/8) * INPUT_FEATURE_NUM;
-
-    const uint linear_id = global_id + element_offset;
-    float8 acc = 0;
-
-    int input_offset_f = global_id + HELP_INPUT_OFFSET * (INPUT_BATCH_NUM/8);
-    int input_idx = input_offset_f + element_offset;
-    for (int i = 0; i < P_SIZE; i++)
-    {
-        bool zero = input_offset_f < 0 || input_offset_f >= INPUT_FEATURE_NUM * (INPUT_BATCH_NUM/8);
-
-        if(!zero)
-        {
-            float8 value = vload8(input_idx, input);
-            acc = mad(value, value, acc);
-        }
-
-        input_offset_f+= INPUT_BATCH_NUM/8;
-        input_idx += INPUT_BATCH_NUM/8;
-    }
-    acc = mad(acc, ALPHA, K);
-    acc = native_powr(acc, -BETA);
-
-    float8 _in = vload8(linear_id, input);
-    vstore8(acc * _in, linear_id, output);
-}
-)__krnl";
 
 namespace neural {
 struct lrn_gpu : is_an_implementation {
@@ -170,8 +111,13 @@ struct lrn_gpu : is_an_implementation {
     namespace {
         struct attach {
             attach() {
-                gpu::kernel_templates::add(kernelName, kernelCode);
-                gpu::kernel_templates::add(kernelName_b8, kernelCode_b8);
+				// cache implementation phase #1 that is a initial switch for using primitive database instead of string kernels
+				// at later steps primitive database will be created only once per loading library but as for now it would require 
+				// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
+				// from the returned list.
+				gpu::manager::primitive_db database; 
+                gpu::kernel_templates::add(kernelName, database.get(kernelName).at(0));
+                gpu::kernel_templates::add(kernelName_b8, database.get(kernelName_b8).at(0));
                 auto key = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
                 auto val_fw = lrn_gpu::create;
 

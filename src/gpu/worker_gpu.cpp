@@ -18,20 +18,11 @@
 #include "ocl_toolkit.h"
 #include "kernels_cache.h"
 #include "kernel.h"
+#include "cache/primitive_db.h"
 
 namespace neural {
 
 const char warmup_kernel_name[] = "warm_up_gpu";
-const char warmup_kernel_code[] = R"__CC(
-KERNEL(warm_up_gpu)(int c, int a, int b, __global int* out)
-{
-    int res = (get_global_id(0) * a + get_global_id(1)) * b + get_global_id(2);
-    if(a >> 3)
-        res += get_local_id(1);
-    if(c)
-        out[get_local_id(0)] = res;
-}
-)__CC";
 
 class program_builder : public gpu::context_holder {
 
@@ -68,7 +59,12 @@ worker worker_gpu::create() {
 namespace {
     struct attach {
         attach() {
-            gpu::kernel_templates::add(warmup_kernel_name, warmup_kernel_code);
+			// cache implementation phase #1 that is a initial switch for using primitive database instead of string kernels
+			// at later steps primitive database will be created only once per loading library but as for now it would require 
+			// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
+			// from the returned list.
+			gpu::manager::primitive_db database;
+            gpu::kernel_templates::add(warmup_kernel_name, database.get(warmup_kernel_name).at(0));
         }
         ~attach() {}
     };

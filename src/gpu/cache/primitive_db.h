@@ -15,7 +15,7 @@
 */
 #pragma once
 
-#include <unordered_map>
+#include <map>
 #include <vector>
 #include "common_types.h"
 #include "manager_types.h"
@@ -31,7 +31,13 @@ struct primitive_db
     std::vector<code> get(const primitive_id& id);
 
 private:
-    std::unordered_multimap<primitive_id, code> primitives;
+	struct case_insensitive_compare {
+		bool operator() (const primitive_id & lhs, const primitive_id & rhs) const {
+			return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
+				[](const char& a, const char& b){ return tolower(a) < tolower(b); });
+		}
+	};
+    std::multimap<primitive_id, code, case_insensitive_compare> primitives;
 };
 
 } } }

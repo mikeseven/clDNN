@@ -18,127 +18,15 @@
 #include "multidimensional_counter.h"
 #include "implementation_map.h"
 #include "kernel.h"
+#include "cache/primitive_db.h"
 
 const std::string kernelName_max = "Pooling_GPU_max";
-const std::string kernelCode_max = R"__krnl(
-KERNEL(Pooling_GPU_max)(__global float* input, __global float* output)
-{
-    const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
-
-    const int offset_x = get_global_id(1) * STRIDE_SIZE_X;
-    const int offset_y = get_global_id(2) * STRIDE_SIZE_Y;
-
-    float result = -FLT_MAX;
-
-    const int batch_and_feature_offset = get_global_id(0);
-    int input_idx = batch_and_feature_offset + OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (offset_x + offset_y * INPUT_SIZE_X);
-    for(uint j = 0; j < WINDOW_SIZE_Y; j++)
-    {
-        for(uint i = 0; i < WINDOW_SIZE_X; i++)
-        {
-            result = max(result, input[input_idx]);
-            input_idx += OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM;
-        }
-        input_idx += OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (INPUT_SIZE_X - WINDOW_SIZE_X);
-    }
-    output[linear_id_xyz] = result;
-}
-)__krnl";
 
 const std::string kernelName_max_offset = "Pooling_GPU_max_offset";
-const std::string kernelCode_max_offset = R"__krnl(
-KERNEL(Pooling_GPU_max_offset)(__global float* input, __global float* output)
-{
-    const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
-
-    const int offset_x = get_global_id(1) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
-    const int offset_y = get_global_id(2) * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
-
-    float result = -FLT_MAX;
-
-    const int batch_and_feature_offset = get_global_id(0);
-    for(uint j = 0; j < WINDOW_SIZE_Y; j++)
-    {
-        int input_offset_y = offset_y + j;
-        bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
-        if(!zero_y)
-        {
-            for(uint i = 0; i < WINDOW_SIZE_X; i++)
-            {
-                int input_offset_x = offset_x + i;
-                bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
-                if(!zero)
-                {
-                    int input_idx = batch_and_feature_offset + OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (input_offset_x + input_offset_y * INPUT_SIZE_X);
-                    result = max(result, input[input_idx]);
-                }
-            }
-        }
-    }
-    output[linear_id_xyz] = result;
-}
-)__krnl";
 
 const std::string kernelName_average = "Pooling_GPU_average";
-const std::string kernelCode_average = R"__krnl(
-KERNEL(Pooling_GPU_average)(__global float* input, __global float* output)
-{
-    const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
-
-    const int offset_x = get_global_id(1) * STRIDE_SIZE_X;
-    const int offset_y = get_global_id(2) * STRIDE_SIZE_Y;
-
-    float result = 0;
-
-    const int batch_and_feature_offset = get_global_id(0);
-    int input_idx = batch_and_feature_offset + OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (offset_x + offset_y * INPUT_SIZE_X);
-    for(uint j = 0; j < WINDOW_SIZE_Y; j++)
-    {
-        for(uint i = 0; i < WINDOW_SIZE_X; i++)
-        {
-            result += input[input_idx];
-            input_idx += OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM;
-        }
-        input_idx += OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (INPUT_SIZE_X - WINDOW_SIZE_X);
-    }
-    output[linear_id_xyz] = result / (float)(WINDOW_SIZE_Y * WINDOW_SIZE_X);
-}
-)__krnl";
 
 const std::string kernelName_average_offset = "Pooling_GPU_average_offset";
-const std::string kernelCode_average_offset = R"__krnl(
-KERNEL(Pooling_GPU_average_offset)(__global float* input, __global float* output)
-{
-    const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
-
-    const int offset_x = get_global_id(1) * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
-    const int offset_y = get_global_id(2) * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
-
-    float result = 0;
-
-    const int batch_and_feature_offset = get_global_id(0);
-    int input_idx = batch_and_feature_offset + OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (offset_x + offset_y * INPUT_SIZE_X);
-    for(uint j = 0; j < WINDOW_SIZE_Y; j++)
-    {
-        int input_offset_y = offset_y + j;
-        bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
-        if(!zero_y)
-        {
-            for(uint i = 0; i < WINDOW_SIZE_X; i++)
-            {
-                int input_offset_x = offset_x + i;
-                bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
-                if(!zero)
-                {
-                    int input_idx = batch_and_feature_offset + OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (input_offset_x + input_offset_y * INPUT_SIZE_X);
-                    result += input[input_idx];
-                }
-            }
-        }
-    }
-    output[linear_id_xyz] = result / (float)(WINDOW_SIZE_Y * WINDOW_SIZE_X);
-}
-)__krnl";
 
 namespace neural {
 struct pooling_gpu : is_an_implementation {
@@ -249,10 +137,15 @@ namespace
     {
         attach()
         {
-            gpu::kernel_templates::add(kernelName_max, kernelCode_max);
-            gpu::kernel_templates::add(kernelName_average, kernelCode_average);
-            gpu::kernel_templates::add(kernelName_max_offset, kernelCode_max_offset);
-            gpu::kernel_templates::add(kernelName_average_offset, kernelCode_average_offset);
+			// cache implementation phase #1 that is a initial switch for using primitive database instead of string kernels
+			// at later steps primitive database will be created only once per loading library but as for now it would require 
+			// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
+			// from the returned list.
+			gpu::manager::primitive_db database;
+            gpu::kernel_templates::add(kernelName_max, database.get(kernelName_max).at(0));
+            gpu::kernel_templates::add(kernelName_average, database.get(kernelName_average).at(0));
+            gpu::kernel_templates::add(kernelName_max_offset, database.get(kernelName_max_offset).at(0));
+            gpu::kernel_templates::add(kernelName_average_offset, database.get(kernelName_average_offset).at(0));
 
             auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = pooling_gpu::create;
