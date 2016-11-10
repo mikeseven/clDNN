@@ -33,21 +33,41 @@ namespace neural {
 
     struct fully_connected_gpu : is_an_implementation {
         fully_connected &outer;
+        struct kernel_data 
+        {
+            size_t gws0, gws1;
+            size_t lws0, lws1;
+            std::string kernel_name;
+        } _kernel_data;
         gpu::kernel _kernel;
        
         fully_connected_gpu(fully_connected &arg)
             : is_an_implementation(neural::type_id<fully_connected_gpu>())
             , outer(arg)
-            , _kernel(select_kernel_name(), get_jit_constants())
+            , _kernel_data(set_kernel_data())
+            , _kernel(_kernel_data.kernel_name, get_jit_constants())
         {}
 
-        const std::string& select_kernel_name() const {
-            // input
+        const kernel_data set_kernel_data() const
+        {
+            kernel_data kd;
+            kd.gws0 = outer.output_memory(0).count();
+            kd.gws1 = 1;
+            kd.lws0 = 32;
+            kd.lws1 = 1;
+
             auto& input_mem = outer.input_memory(0);
             auto& weight_mem = outer.input_memory(1);
             auto& output_mem = outer.output_memory(0);
 
+            auto output_bufSize = output_mem.count();
+
             bool batch_multiple_of_8 = input_mem.argument.size.batch[0] % 8 == 0;
+
+            // calculate local workgroup size
+            while (output_bufSize % kd.lws0) {
+                kd.lws0--;
+            }
 
             switch (input_mem.argument.format)
             {
@@ -62,11 +82,15 @@ namespace neural {
                 {
                     if (batch_multiple_of_8)
                     {
-                        return kernelName_xb_bx_b8_memory;
+                        kd.gws0 = output_mem.argument.size.batch[0];
+                        kd.gws1 = output_mem.argument.size.spatial[0];
+                        kd.lws0 = 8;
+                        kd.lws1 = 1;
+                        kd.kernel_name = kernelName_xb_bx_b8_memory;
                     }
                     else
                     {
-                        return kernelName_xb_bx_memory;
+                        kd.kernel_name = kernelName_xb_bx_memory;
                     }
                     break;
                 }
@@ -76,17 +100,23 @@ namespace neural {
                     if (batch_multiple_of_8 &&
                         (output_mem.count() / output_mem.argument.size.batch[0]) % 8 == 0)
                     {
-                        return KernelName_xb_xb_b8_x8_memory_vload;
+                        size_t groups_per_batches = get_local_groups_size(output_mem);
+                        kd.gws0 = output_mem.count() / (get_neurons_per_work_item(output_mem) * get_batches_per_work_item(output_mem) * groups_per_batches);
+                        kd.gws1 = groups_per_batches;
+                        kd.lws0 = get_local_work_group_size(output_mem);
+                        kd.lws1 = 1;
+                        kd.kernel_name = KernelName_xb_xb_b8_x8_memory_vload;
                     }
                     else
                     {
-                        return kernelName_xb_xb_memory;
+                        kd.kernel_name = kernelName_xb_xb_memory;
                     }
                     break;
                 }
                 case memory::format::bfyx_f32:
                 {
-                    return kernelName_yxfn_memory;
+                    kd.kernel_name = kernelName_yxfn_memory;
+                    break;
                 }
                 default:
                     throw std::invalid_argument("Weight memory format is not supported");
@@ -96,6 +126,7 @@ namespace neural {
             default:
                 throw std::invalid_argument("Input memory format is not supported");
             }
+            return kd;
         }
 
         // how many neurons for a single batch will a single work item produce 
@@ -137,29 +168,23 @@ namespace neural {
         gpu::jit_constants get_jit_constants() const {
             auto& input_mem = outer.input_memory(0);
             auto& output_mem = outer.output_memory(0);
-
-            // weights
             auto& weight_mem = outer.input_memory(1);
-
-            float negative_slope = outer.argument.negative_slope;
 
             gpu::jit_constants mem_consts{
                 gpu::make_jit_constant("INPUT", input_mem.argument.size),
                 gpu::make_jit_constant("OUTPUT", output_mem.argument.size),
-                gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", input_mem.count() / input_mem.argument.size.batch[0])
+                gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", input_mem.count() / input_mem.argument.size.batch[0]),
+                gpu::make_jit_constant("WEIGHTS", weight_mem.argument.size)
             };
 
             if (outer.argument.use_relu)
             {
                 mem_consts.add_constant(gpu::make_jit_constant("RELU", ""));
-                mem_consts.add_constant(gpu::make_jit_constant("NEGATIVE_SLOPE", negative_slope));
+                mem_consts.add_constant(gpu::make_jit_constant("NEGATIVE_SLOPE", outer.argument.negative_slope));
             }
 
-            mem_consts.add_constant(gpu::make_jit_constant("WEIGHTS", weight_mem.argument.size));
-
-            // temporary values
-            if (weight_mem.argument.format == memory::format::type::yxfb_f32 ||
-                weight_mem.argument.format == memory::format::type::xb_f32)
+            if (_kernel_data.kernel_name == KernelName_xb_xb_b8_x8_memory_vload ||
+                _kernel_data.kernel_name == kernelName_xb_xb_b16_memory)
             {
                 int batch_size = input_mem.argument.size.batch[0];
                 const int batches_per_work_item = get_batches_per_work_item(output_mem);
@@ -177,65 +202,15 @@ namespace neural {
             auto me = static_cast<const fully_connected_gpu *>(ptr);
             auto& outer = me->outer;
 
-            // input
             auto& input_mem = outer.input_memory(0);
-            // weights
             auto& weight_mem = outer.input_memory(1);
-            // bias
             auto& bias_mem = outer.input_memory(2);
-            // output
             auto& output_mem = outer.output_memory(0);
 
-            auto output_bufSize = output_mem.count();
-
-            size_t gws0 = output_bufSize;
-            size_t gws1 = 1;
-            size_t lws0 = 32;
-            size_t lws1 = 1;
-
-            // calculate local workgroup size
-            while (output_bufSize % lws0) {
-                lws0--;
-            }
-
-            switch (input_mem.argument.format) {
-            case memory::format::yxfb_f32:
-            case memory::format::xb_f32:
-                switch (weight_mem.argument.format)
-                {
-                case memory::format::byxf_f32:
-                case memory::format::bx_f32:
-                    if (input_mem.argument.size.batch[0] % 8 == 0)
-                    {
-                        gws0 = output_mem.argument.size.batch[0];
-                        gws1 = output_mem.argument.size.spatial[0];
-                        lws0 = 8;
-                        lws1 = 1;
-                    }
-                    break;
-                    case memory::format::yxfb_f32:
-                    case memory::format::xb_f32:
-                        if (input_mem.argument.size.batch[0] % 8 == 0)
-                        {
-                            size_t groups_per_batches = get_local_groups_size(output_mem);
-                            gws0 = output_bufSize / (get_neurons_per_work_item(output_mem) * get_batches_per_work_item(output_mem) * groups_per_batches);
-                            gws1 = groups_per_batches;
-                            lws0 = get_local_work_group_size(output_mem);
-                            lws1 = 1;
-                        }
-                        break;
-                    default:
-                        std::invalid_argument("Weight memory format is not supported");
-                }
-                break;
-            case memory::format::x_f32:
-                break;
-            default:
-                throw std::invalid_argument("Input memory format is not supported");
-            }
+            auto& kd = me->_kernel_data;
 
             me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-                ({ {gws0, gws1 }, {lws0, lws1 } }, input_mem, output_mem, weight_mem, bias_mem);
+                ({ {kd.gws0, kd.gws1 }, { kd.lws0, kd.lws1 } }, input_mem, output_mem, weight_mem, bias_mem);
 
         }
 
@@ -244,9 +219,10 @@ namespace neural {
         }
 
         static is_an_implementation *create(fully_connected &arg) {
-            // input
+
             auto& input_mem = arg.input_memory(0);
             auto& input_size = input_mem.argument.size;
+
             // validate arguments
             if (input_mem.argument.format == memory::format::yxfb_f32) {
                 // weights
