@@ -1269,7 +1269,7 @@ std::vector<std::pair<primitive, std::string>> build_googlenetv1(const primitive
     });
 
     auto build_time = timer_build.uptime();
-    std::cout << "Building VGG16 finished in " << instrumentation::to_string(build_time) << std::endl;
+    std::cout << "Building GoogLeNet finished in " << instrumentation::to_string(build_time) << std::endl;
 
     return std::vector<std::pair<primitive, std::string>> {
         { reordered_input, "reorder"},
