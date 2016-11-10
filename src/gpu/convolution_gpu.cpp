@@ -75,6 +75,10 @@ struct convolution_gpu : is_an_implementation {
                 else
                     return kernelName_YXFB_YXOI_memory;
             case memory::format::yxio_f32:
+                if (filter_mem.argument.size.feature[0] * filter_mem.argument.size.batch[0] % get_local_work_group_size(batch_size) != 0)
+                {
+                    return kernelName_YXFB_YXIO;
+                }
                 if (batch_size == 1)
                 {
                     int ofm_per_work_item = get_ofm_per_work_item(batch_size, filter_mem);
@@ -120,7 +124,15 @@ struct convolution_gpu : is_an_implementation {
             }
             return 1;
         }
-        return batch_size > 16 ? 8 : 16;
+        else if (batch_size < 32)
+        {
+            int lws = get_local_work_group_size(batch_size);
+            if (((filter_mem.argument.size.feature[0] * filter_mem.argument.size.batch[0]) / 16) % lws)
+                return 8;
+            return 16;
+        }
+        else
+            return 8;
     }
 
     // how many batches will a single work item compute
@@ -276,10 +288,22 @@ struct convolution_gpu : is_an_implementation {
             }
             case memory::format::yxio_f32:
             {
-                uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
-                uint32_t batches_per_workitem = get_batches_per_work_item(batch_size);
-                gws0 = (output_mem.argument.size.feature[0] * batch_size / (ofm_per_workitem * batches_per_workitem)) / split;
-                lws0 = static_cast<size_t>(get_local_work_group_size(batch_size));
+                if (filter_mem.argument.size.feature[0] % get_local_work_group_size(batch_size) != 0)
+                {
+                    gws0 = (output_mem.argument.size.feature[0] * output_mem.argument.size.batch[0]) / split;
+                    lws0 = 32;
+                    while (gws0 % lws0)
+                    {
+                        lws0--;
+                    }
+                }
+                else
+                {
+                    uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
+                    uint32_t batches_per_workitem = get_batches_per_work_item(batch_size);
+                    gws0 = (output_mem.argument.size.feature[0] * batch_size / (ofm_per_workitem * batches_per_workitem)) / split;
+                    lws0 = static_cast<size_t>(get_local_work_group_size(batch_size));
+                }
                 break;
             }
             case memory::format::oiyx_f32:
@@ -303,6 +327,7 @@ struct convolution_gpu : is_an_implementation {
 
         // execute kernels
         for (uint32_t i = 0; i < split; i++) {
+            assert(gws0 % lws0 == 0);
             me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
                 ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] },{ lws0, 1, 1 } },
                     input_mem,
