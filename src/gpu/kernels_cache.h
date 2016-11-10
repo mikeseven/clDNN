@@ -19,6 +19,7 @@
 #include <map>
 #include <mutex>
 #include <vector>
+#include "cache/primitive_db.h"
 
 namespace cl {
 class Kernel;
@@ -26,32 +27,6 @@ class Kernel;
 
 namespace neural {namespace gpu {
 class gpu_toolkit;
-
-class kernel_templates {
-    std::mutex _mutex;
-    std::map<std::string, std::string> _templates;
-    kernel_templates(){}
-    static kernel_templates& instance() {
-        static kernel_templates instance;
-        return instance;
-    }
-public:
-    kernel_templates(const kernel_templates& other) = delete;
-    kernel_templates(kernel_templates&& other) = delete;
-    kernel_templates& operator=(const kernel_templates& other) = delete;
-    kernel_templates& operator=(kernel_templates&& other) = delete;
-
-    static void add(const std::string& name, const std::string& code) {
-        std::lock_guard<std::mutex> lock(instance()._mutex);
-        instance()._templates.insert(std::make_pair(name, code));
-    }
-    static std::string get(const std::string& name) {
-        std::lock_guard<std::mutex> lock(instance()._mutex);
-        std::string result = instance()._templates.at(name);
-        return result;
-    }
-
-};
 
 class kernels_cache {
 public:
@@ -64,11 +39,12 @@ private:
     std::mutex _mutex;
     std::map<std::string, std::string> _kernel_codes;
     std::map<std::string, kernel_type> _kernels;
+	manager::primitive_db _database;
     bool _modified = true;
 
     std::vector<std::string> get_program_source() const;
     friend class gpu_toolkit;
-    explicit kernels_cache(gpu_toolkit& context): _context(context){}
+    explicit kernels_cache(gpu_toolkit& context);
     void build_program();
 
 public:

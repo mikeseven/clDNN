@@ -75,13 +75,6 @@ struct mean_subtract_gpu : is_an_implementation {
 namespace {
     struct attach {
         attach() {
-			// cache implementation phase #1 that is a initial switch for using primitive database instead of string kernels
-			// at later steps primitive database will be created only once per loading library but as for now it would require 
-			// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
-			// from the returned list.
-			gpu::manager::primitive_db database;
-            gpu::kernel_templates::add(kernelName, database.get(kernelName).at(0));
-
             auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = mean_subtract_gpu::create;
 

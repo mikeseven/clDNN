@@ -20,6 +20,8 @@
 #include <gtest/gtest.h>
 // include internal code source until new project configuration for module tests support
 #include "gpu/ocl_toolkit.cpp"
+#include "gpu/kernels_cache.cpp"
+#include "gpu/cache/primitive_db.cpp"
 #include "gpu/engine_info.cpp"
 
 

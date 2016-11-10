@@ -90,7 +90,7 @@ namespace neural {
         uint32_t out_depth_count = 0;
         for (auto i : input)
         {
-            out_depth_count += get_memory_primitive(i.primitive()).argument.size.feature[0];
+            out_depth_count += i.primitive().as<const memory&>().argument.size.feature[0];
         }
         auto output_size = get_memory_primitive(input[0].primitive()).argument.size;
         output_size.feature[0] = out_depth_count;
@@ -98,7 +98,7 @@ namespace neural {
     }
 
 primitive depth_concatenate::create(depth_concatenate::arguments arg) {
-    auto& input_arg  = get_memory_primitive(arg.input[0].primitive()).argument;
+    auto& input_arg  = arg.input[0].primitive().as<const memory&>().argument;
     auto& output_arg = arg.output[0].as<const memory&>().argument;
 
     auto format = input_arg.format;
@@ -107,7 +107,7 @@ primitive depth_concatenate::create(depth_concatenate::arguments arg) {
     auto input_size = input_arg.size;
     for (auto i : arg.input)
     {
-        auto& input_mem = get_memory_primitive(i.primitive());
+        auto& input_mem = i.primitive().as<const memory&>();
         if (input_mem.argument.format != format) throw std::runtime_error("Every input must have the same format!");
         if (input_mem.argument.size.batch[0] != input_size.batch[0]) throw std::runtime_error("Every input must have the same number of batches!");
         if (input_mem.argument.size.spatial[0] != input_size.spatial[0]) throw std::runtime_error("Every input must have the same size in X dimension!");
@@ -130,13 +130,6 @@ primitive depth_concatenate::create(depth_concatenate::arguments arg) {
 namespace {
     struct attach {
         attach() {
-			// cache implementation phase #1 that is a initial switch for using primitive database instead of string kernels
-			// at later steps primitive database will be created only once per loading library but as for now it would require 
-			// large refactor, so it will be done in smaller incremental steps. The same goes for picking first implementation
-			// from the returned list.
-			gpu::manager::primitive_db database;
-            gpu::kernel_templates::add(kernelName, database.get(kernelName).at(0));
-
             auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = depth_concatenate_gpu::create;
 
