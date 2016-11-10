@@ -74,7 +74,7 @@ struct convolution_gpu : is_an_implementation {
                 else
                     return kernelName_YXFB_YXOI_memory;
             case memory::format::yxio_f32:
-                if (filter_mem.argument.size.feature[0] * filter_mem.argument.size.batch[0] % get_local_work_group_size(batch_size) != 0)
+                if (filter_mem.argument.size.feature[0] * batch_size % get_local_work_group_size(batch_size) != 0)
                 {
                     return kernelName_YXFB_YXIO;
                 }
