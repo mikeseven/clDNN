@@ -28,6 +28,124 @@
 using namespace neural;
 using namespace tests;
 
+using VF = std::vector<float>;		// vector
+using VVF = std::vector<VF>;		// matrix (vector of vector)
+using VVVF = std::vector<VVF>;		// features (vector of matrix)
+using VVVVF = std::vector<VVVF>;	// batch (vector of features)
+
+VVF convolve(VVF &input, VVF &filter, size_t stride, float bias) {
+	VVF output;
+	size_t output_rows = 1 + (input.size() - filter.size()) / stride;
+	size_t output_columns = 1 + (input[0].size() - filter[0].size()) / stride;
+	output.assign(output_rows, VF(output_columns, 0.0f));
+	for (size_t i = 0; i < output_rows; ++i) {
+		for (size_t j = 0; j < output_columns; ++j) {
+			float val = bias;
+			for (size_t k = 0; k < filter.size(); ++k) {
+				for (size_t l = 0; l < filter[0].size(); ++l) {
+					val += input[k + stride * i][l + stride * j] * filter[k][l];
+				}
+			}
+			output[i][j] = val;
+		}
+	}
+	return output;
+}
+
+VF flatten_mat(VVF &mat) {
+	VF vec(mat.size() * mat[0].size());
+	for (int i = 0; i < mat.size(); ++i) {
+		for (int j = 0; j < mat[0].size(); ++j) {
+			vec[i * mat[0].size() + j] = mat[i][j];
+		}
+	}
+	return vec;
+}
+
+template<typename T>
+std::vector<T> generate_random_vec(size_t n, T min, T max) {
+	static std::default_random_engine generator((unsigned int)std::time(nullptr));
+	std::uniform_real_distribution<T> distribution(min, max);
+	std::vector<T> vec(n);
+	for (int i = 0; i < n; ++i)
+		vec[i] = distribution(generator);
+	return vec;
+}
+
+template<typename T>
+std::vector<std::vector<T>> generate_random_mat(size_t n, size_t m, T min, T max) {
+	std::vector<std::vector<T>> mat(n);
+	for (int i = 0; i < n; ++i)
+		mat[i] = generate_random_vec(m, min, max);
+	return mat;
+}
+
+// rounds floating point number, fraction precision should be in the range [0,23]
+// masks the bits:
+// 1 11111111 11111111111111100000000
+// /\    /\           /\
+// ||    ||           ||
+// sign  exp        fraction
+float float_round(float x, size_t fraction_precision = 15) {
+	uint32_t mask = ~((1 << (23 - fraction_precision)) - 1);
+	reinterpret_cast<uint32_t&>(x) &= mask;
+	return x;
+}
+
+TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_random) {
+	//  Filter : 2x2
+	//  Stride : 2x2
+	//  Input  : 4x4
+	//  Output : 2x2
+	//
+	//  Input:
+	//  rnd  rnd  rnd  rnd
+	//  rnd  rnd  rnd  rnd
+	//  rnd  rnd  rnd  rnd
+	//  rnd  rnd  rnd  rnd
+	//
+	//  Filter
+	//  rnd  rnd
+	//  rnd  rnd
+	//
+	//  Bias
+	//  rnd
+	//
+	//  Output:
+	//  rnd  rnd
+	//  rnd  rnd
+
+	VVF rnd_input = generate_random_mat<float>(4, 4, -10.0f, 10.0f);
+	VVF rnd_filter = generate_random_mat<float>(2, 2, -10.0f, 10.0f);
+	VF rnd_bias = generate_random_vec<float>(1, -10.0f, 10.0f);
+	VVF rnd_output = convolve(rnd_input, rnd_filter, 2, rnd_bias[0]);
+
+	VF rnd_input_vec = flatten_mat(rnd_input);
+	VF rnd_filter_vec = flatten_mat(rnd_filter);
+	VF rnd_output_vec = flatten_mat(rnd_output);
+
+	memory::arguments args = { memory::format::yxfb_f32,{ 1,{ 4, 4 }, 1 } };
+
+	auto input = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 4, 4 }, 1 } });
+	auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
+	auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
+	auto biases = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+
+	set_values(input, rnd_input_vec);
+	set_values(weights, rnd_filter_vec);
+	set_values(biases, rnd_bias);
+
+	auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero });
+
+	execute({ conv }).wait();
+
+	auto output_ptr = output.as<const memory&>().pointer<float>();
+	for (int i = 0; i < rnd_output_vec.size(); ++i) {
+		float x = float_round(rnd_output_vec[i]), y = float_round(output_ptr[i]);
+		EXPECT_FLOAT_EQ(x, y);
+	}
+}
+
 TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     //  Filter : 2x2
     //  Stride : 2x2
