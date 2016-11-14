@@ -391,7 +391,7 @@ uint32_t get_gpu_batch_size(int number)
 std::chrono::nanoseconds execute_topology(const worker& worker,
                                           const std::vector<std::pair<primitive, std::string>>& primitives,
                                           const primitive& output,
-                                          bool dump_hl,
+                                          const execution_params &ep,
                                           const std::string& topology,
                                           size_t primitives_number)
 {
@@ -415,7 +415,7 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
     auto execution_time(timer_execution.uptime());
     std::cout << topology << " scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
     std::cout << topology << " execution finished in " << instrumentation::to_string(execution_time) << std::endl;
-    if (dump_hl)
+    if (ep.dump_hidden_layers)
     {
         instrumentation::logger::log_memory_to_file(primitives[0].first.input[0].primitive(), "input0");
         for (auto& p : primitives)
@@ -423,6 +423,22 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
             instrumentation::logger::log_memory_to_file(p.first, p.second);
         }
         // for now its enough. rest will be done when we have equals those values
+    }
+    else if (!ep.dump_layer_name.empty())
+    {
+        bool found = false;
+        for (auto &p : primitives)
+        {
+            if (p.second == ep.dump_layer_name)
+            {
+                found = true;
+                instrumentation::logger::log_memory_to_file(p.first, p.second);
+            }
+        }
+        if (!found)
+        {
+            std::cout << "WARNING: " << topology << " does not contain " << ep.dump_layer_name << " layer!" << std::endl;
+        }
     }
     else
     {

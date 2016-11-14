@@ -139,7 +139,7 @@ uint32_t get_gpu_batch_size(int number);
 std::chrono::nanoseconds execute_topology(const neural::worker& worker,
                                           const std::vector<std::pair<neural::primitive, std::string>>& primitives,
                                           const neural::primitive& output,
-                                          bool dump_hl,
+                                          const execution_params &ep,
                                           const std::string& topology,
                                           size_t primitives_number);
 

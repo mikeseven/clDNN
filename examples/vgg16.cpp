@@ -415,7 +415,7 @@ void vgg16(const execution_params &ep)
         }
 
         // execute vgg16
-        auto time = execute_topology(worker, primitives, output, ep.dump_hidden_layers, "vgg16", 23);
+        auto time = execute_topology(worker, primitives, output, ep, "vgg16", 23);
 
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
         output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch);
