@@ -363,9 +363,9 @@ int main(int argc, char* argv[])
             ep.use_half = parsed_args["use_half"].as<bool>();
             ep.dump_hidden_layers = parsed_args["dump_hidden_layers"].as<bool>();
             ep.dump_layer_name = dump_layer;
-            ep.dump_single_batch = parsed_args.count("dump_batch") ? true : false;
+            ep.dump_single_batch = parsed_args.count("dump_batch") != 0;
             ep.dump_batch_id = ep.dump_single_batch ? parsed_args["dump_batch"].as<uint32_t>() : 0;
-            ep.dump_single_feature = parsed_args.count("dump_feature") ? true : false;
+            ep.dump_single_feature = parsed_args.count("dump_feature") != 0;
             ep.dump_feature_id = ep.dump_single_feature ? parsed_args["dump_feature"].as<uint32_t>() : 0;
 
             if (ep.topology_name == "alexnet")
