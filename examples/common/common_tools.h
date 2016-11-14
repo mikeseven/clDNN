@@ -105,6 +105,24 @@ std::shared_ptr<const executable_info> get_executable_info();
 /// @return Joined path.
 std::string join_path(const std::string& parent, const std::string& child);
 
+/// Information about executed topology
+struct execution_params {
+    std::string input_dir;
+    std::string weights_dir;
+
+    uint32_t batch;
+    bool profiling;
+    bool optimize_weights;
+    bool use_half;
+
+    // for dumping
+    bool        dump_hidden_layers; // dump all
+    std::string dump_layer_name;    // dump only this specific layer
+    bool        dump_single_batch;
+    uint32_t    dump_batch_id;
+    bool        dump_single_feature;
+    uint32_t    dump_feature_id;
+};
 
 std::vector<std::string> get_directory_images(const std::string& images_path);
 std::vector<std::string> get_directory_weights(const std::string& images_path);

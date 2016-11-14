@@ -239,17 +239,19 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
 
 
-void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weights_dir, bool dump_hl, bool profiling, bool optimize_weights, bool use_half)
+void alexnet(const execution_params &ep)
 {
+    uint32_t batch_size = ep.batch;
+
     uint32_t gpu_batch_size = get_gpu_batch_size(batch_size);
     if (gpu_batch_size != batch_size)
     {
         std::cout << "WARNING: This is not the optimal batch size. You have " << (gpu_batch_size - batch_size)
             << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;
     }
-    gpu::configuration::get().enable_profiling = profiling;
+    gpu::configuration::get().enable_profiling = ep.profiling;
 
-    auto img_list = get_directory_images(img_dir);
+    auto img_list = get_directory_images(ep.input_dir);
     if (img_list.empty())
         throw std::runtime_error("specified input images directory is empty (does not contain image data)");
 
@@ -258,19 +260,19 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
 
     html output_file("alexnet", "alexnet run");
 
-    weights_optimizer weights_optimizer(optimize_weights, use_half);
+    weights_optimizer weights_optimizer(ep.optimize_weights, ep.use_half);
 
-    auto input = memory::allocate({use_half ? memory::format::byxf_f16 : memory::format::byxf_f32, {gpu_batch_size, {227, 227}, 3}});
-    auto output = memory::allocate({use_half ? memory::format::xb_f16 : memory::format::xb_f32, {gpu_batch_size, {1000}}});
+    auto input = memory::allocate({ep.use_half ? memory::format::byxf_f16 : memory::format::byxf_f32, {gpu_batch_size, {227, 227}, 3}});
+    auto output = memory::allocate({ep.use_half ? memory::format::xb_f16 : memory::format::xb_f32, {gpu_batch_size, {1000}}});
 
     // build alexnet
-    std::vector<std::pair<primitive, std::string>> primitives = build_alexnet(input, output, weights_dir, weights_optimizer, use_half);
+    std::vector<std::pair<primitive, std::string>> primitives = build_alexnet(input, output, ep.weights_dir, weights_optimizer, ep.use_half);
 
     // create worker
     worker worker = create_worker();
 
     // optimize weights if needed
-    if (optimize_weights)
+    if (ep.optimize_weights)
     {
         weight_optimization(weights_optimizer, worker);
     }
@@ -287,7 +289,7 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
         }
 
         // load croped and resized images into input
-        if (use_half)
+        if (ep.use_half)
         {
             load_images_from_file_list<half_t>(images_in_batch, input);
         }
@@ -297,7 +299,7 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
         }
 
         // execute alexnet
-        auto time = execute_topology(worker, primitives, output, dump_hl, "alexnet", 15);
+        auto time = execute_topology(worker, primitives, output, ep.dump_hidden_layers, "alexnet", 15);
 
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
         output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch);
