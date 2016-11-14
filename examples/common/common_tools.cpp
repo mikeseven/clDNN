@@ -392,7 +392,6 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
                                           const std::vector<std::pair<primitive, std::string>>& primitives,
                                           const primitive& output,
                                           const execution_params &ep,
-                                          const std::string& topology,
                                           size_t primitives_number)
 {
     // we need this exact number of primitives(those are created in create_alexnet) 
@@ -413,8 +412,8 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
     output.as<const neural::memory&>().pointer<char>();
 
     auto execution_time(timer_execution.uptime());
-    std::cout << topology << " scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
-    std::cout << topology << " execution finished in " << instrumentation::to_string(execution_time) << std::endl;
+    std::cout << ep.topology_name << " scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
+    std::cout << ep.topology_name << " execution finished in " << instrumentation::to_string(execution_time) << std::endl;
     if (ep.dump_hidden_layers)
     {
         instrumentation::logger::log_memory_to_file(primitives[0].first.input[0].primitive(), "input0");
@@ -437,7 +436,7 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
         }
         if (!found)
         {
-            std::cout << "WARNING: " << topology << " does not contain " << ep.dump_layer_name << " layer!" << std::endl;
+            std::cout << "WARNING: " << ep.topology_name << " does not contain " << ep.dump_layer_name << " layer!" << std::endl;
         }
     }
     else

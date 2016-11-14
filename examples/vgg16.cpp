@@ -374,7 +374,7 @@ void vgg16(const execution_params &ep)
     auto number_of_batches = (img_list.size() % batch_size == 0)
         ? img_list.size() / batch_size : img_list.size() / batch_size + 1;
 
-    html output_file("vgg16", "vgg16 run");
+    html output_file(ep.topology_name, ep.topology_name + " run");
 
     weights_optimizer weights_optimizer(ep.optimize_weights, ep.use_half);
 
@@ -415,7 +415,7 @@ void vgg16(const execution_params &ep)
         }
 
         // execute vgg16
-        auto time = execute_topology(worker, primitives, output, ep, "vgg16", 23);
+        auto time = execute_topology(worker, primitives, output, ep, 23);
 
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
         output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch);

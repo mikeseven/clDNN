@@ -109,6 +109,7 @@ std::string join_path(const std::string& parent, const std::string& child);
 struct execution_params {
     std::string input_dir;
     std::string weights_dir;
+    std::string topology_name;
 
     uint32_t batch;
     bool profiling;
@@ -140,7 +141,6 @@ std::chrono::nanoseconds execute_topology(const neural::worker& worker,
                                           const std::vector<std::pair<neural::primitive, std::string>>& primitives,
                                           const neural::primitive& output,
                                           const execution_params &ep,
-                                          const std::string& topology,
                                           size_t primitives_number);
 
 void weight_optimization(weights_optimizer &wo, const neural::worker& worker);

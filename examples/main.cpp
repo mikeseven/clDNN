@@ -356,6 +356,7 @@ int main(int argc, char* argv[])
             execution_params ep;
             ep.input_dir = input_dir;
             ep.weights_dir = weights_dir;
+            ep.topology_name = parsed_args["model"].as<std::string>();
             ep.batch = parsed_args["batch"].as<std::uint32_t>();
             ep.profiling = parsed_args["profiling"].as<bool>();
             ep.optimize_weights = parsed_args["optimize_weights"].as<bool>();
@@ -367,22 +368,21 @@ int main(int argc, char* argv[])
             ep.dump_single_feature = parsed_args.count("dump_feature") ? true : false;
             ep.dump_feature_id = ep.dump_single_feature ? parsed_args["dump_feature"].as<uint32_t>() : 0;
 
-            if (parsed_args["model"].as<std::string>() == "alexnet")
+            if (ep.topology_name == "alexnet")
             {
                 alexnet(ep);
             }
-            else if (parsed_args["model"].as<std::string>() == "vgg16")
+            else if (ep.topology_name == "vgg16")
             {
                 vgg16(ep);
             }
-            else if (parsed_args["model"].as<std::string>() == "googlenet")
+            else if (ep.topology_name == "googlenet")
             {
                 googlenet_v1(ep);
             }
             else
             {
-                std::cerr << "ERROR: model/topology (\"" << parsed_args["model"].as<std::string>()
-                    << "\") is not implemented!!!" << std::endl;
+                std::cerr << "ERROR: model/topology (\"" << ep.topology_name << "\") is not implemented!!!" << std::endl;
             }
         }
 
