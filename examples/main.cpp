@@ -368,6 +368,9 @@ int main(int argc, char* argv[])
             ep.dump_single_feature = parsed_args.count("dump_feature") != 0;
             ep.dump_feature_id = ep.dump_single_feature ? parsed_args["dump_feature"].as<uint32_t>() : 0;
 
+            ep.loop = 100;
+            ep.print_type = Verbose;
+
             if (ep.topology_name == "alexnet" ||
                 ep.topology_name == "vgg16" ||
                 ep.topology_name == "googlenet")

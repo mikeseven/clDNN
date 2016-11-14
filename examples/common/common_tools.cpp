@@ -360,13 +360,22 @@ void print_profiling_table(std::ostream& os, const std::vector<instrumentation::
 }
 
 // Create worker
-worker create_worker()
+worker create_worker(PrintType printType)
 {
-    std::cout << "GPU Program compilation started" << std::endl;
+    if (printType == Verbose)
+    {
+        std::cout << "GPU Program compilation started" << std::endl;
+    }
+
     instrumentation::timer<> timer_compilation;
     auto worker = worker_gpu::create();
     auto compile_time = timer_compilation.uptime();
-    std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
+    
+    if (printType == Verbose)
+    {
+        std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
+    }
+
     return worker;
 }
 
@@ -394,12 +403,23 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
                                           const primitive& output,
                                           const execution_params &ep)
 {
-    std::cout << "Start execution" << std::endl;
+    if (ep.print_type == Verbose)
+    {
+        std::cout << "Start execution";
+        if (ep.loop > 1)
+        {
+            std::cout << " in a loop " << ep.loop << " times:" << std::endl;
+        }
+    }
+
     instrumentation::timer<> timer_execution;
 
-    for (auto& p : primitives)
+    for (int i = 0; i < ep.loop; i++)
     {
-        worker.execute(p.first.work());
+        for (auto& p : primitives)
+        {
+            worker.execute(p.first.work());
+        }
     }
 
     //GPU primitives scheduled in unblocked manner
@@ -409,8 +429,12 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
     output.as<const neural::memory&>().pointer<char>();
 
     auto execution_time(timer_execution.uptime());
-    std::cout << ep.topology_name << " scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
-    std::cout << ep.topology_name << " execution finished in " << instrumentation::to_string(execution_time) << std::endl;
+    if (ep.print_type == Verbose)
+    {
+        std::cout << ep.topology_name << " scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
+        std::cout << ep.topology_name << " execution finished in " << instrumentation::to_string(execution_time) << std::endl;
+    }
+
     if (ep.dump_hidden_layers)
     {
         instrumentation::logger::log_memory_to_file(primitives[0].first.input[0].primitive(), "input0");
