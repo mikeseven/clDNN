@@ -33,25 +33,6 @@ using VVF = std::vector<VF>;		// feature map
 using VVVF = std::vector<VVF>;		// 3d feature map
 using VVVVF = std::vector<VVVF>;	// batch of 3d feature maps
 
-VVF convolve(VVF &input, VVF &filter, size_t stride, float bias) {
-	VVF output;
-	size_t output_rows = 1 + (input.size() - filter.size()) / stride;
-	size_t output_columns = 1 + (input[0].size() - filter[0].size()) / stride;
-	output.assign(output_rows, VF(output_columns, 0.0f));
-	for (size_t i = 0; i < output_rows; ++i) {
-		for (size_t j = 0; j < output_columns; ++j) {
-			float val = bias;
-			for (size_t k = 0; k < filter.size(); ++k) {
-				for (size_t l = 0; l < filter[0].size(); ++l) {
-					val += input[k + stride * i][l + stride * j] * filter[k][l];
-				}
-			}
-			output[i][j] = val;
-		}
-	}
-	return output;
-}
-
 VVF convolve(VVVF &input, VVVF &filter, size_t stride, float bias, size_t f_begin = 0) {
 	VVF output;
 	size_t output_y = 1 + (input[0].size() - filter[0].size()) / stride;
@@ -71,16 +52,6 @@ VVF convolve(VVVF &input, VVVF &filter, size_t stride, float bias, size_t f_begi
 		}
 	}
 	return output;
-}
-
-VF flatten_mat(VVF &mat) {
-	VF vec(mat.size() * mat[0].size());
-	for (size_t i = 0; i < mat.size(); ++i) {
-		for (size_t j = 0; j < mat[0].size(); ++j) {
-			vec[i * mat[0].size() + j] = mat[i][j];
-		}
-	}
-	return vec;
 }
 
 VF flatten_4d(neural::memory::format::type format, VVVVF &data) {
@@ -176,33 +147,86 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_random) {
 	//  rnd  rnd
 	//  rnd  rnd
 
-	VVF rnd_input = generate_random_2d<float>(4, 4, -10.0f, 10.0f);
-	VVF rnd_filter = generate_random_2d<float>(2, 2, -10.0f, 10.0f);
-	VF rnd_bias = generate_random_1d<float>(1, -10.0f, 10.0f);
-	VVF rnd_output = convolve(rnd_input, rnd_filter, 2, rnd_bias[0]);
+	size_t batches = 1, input_f = 1, input_y = 4, input_x = 4;
 
-	VF rnd_input_vec = flatten_mat(rnd_input);
-	VF rnd_filter_vec = flatten_mat(rnd_filter);
-	VF rnd_output_vec = flatten_mat(rnd_output);
-
-	memory::arguments args = { memory::format::yxfb_f32,{ 1,{ 4, 4 }, 1 } };
+	VVVVF input_rnd = generate_random_4d<float>(batches, input_f, input_y, input_x, -10.0f, 10.0f);
+	VF input_rnd_vec = flatten_4d(memory::format::yxfb_f32, input_rnd);
+	VVVVF filter_rnd = generate_random_4d<float>(1, 1, 2, 2, -10.0f, 10.0f);
+	VF filter_rnd_vec = flatten_4d(memory::format::oiyx_f32, filter_rnd);
+	VF bias_rnd = generate_random_1d<float>(1, -10.0f, 10.0f);
+	VVVVF output_rnd(batches, VVVF(filter_rnd.size()));
+	for (size_t b = 0; b < output_rnd.size(); ++b) {
+		for (size_t of = 0; of < filter_rnd.size(); ++of) {
+			output_rnd[b][of] = convolve(input_rnd[b], filter_rnd[of], 2, bias_rnd[of]);
+		}
+	}
+	VF output_rnd_vec = flatten_4d(memory::format::yxfb_f32, output_rnd);
 
 	auto input = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 4, 4 }, 1 } });
 	auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
 	auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
 	auto biases = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
-
-	set_values(input, rnd_input_vec);
-	set_values(weights, rnd_filter_vec);
-	set_values(biases, rnd_bias);
-
+	set_values(input, input_rnd_vec);
+	set_values(weights, filter_rnd_vec);
+	set_values(biases, bias_rnd);
 	auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero });
-
 	execute({ conv }).wait();
-
 	auto output_ptr = output.as<const memory&>().pointer<float>();
-	for (size_t i = 0; i < rnd_output_vec.size(); ++i) {
-		float x = float_round(rnd_output_vec[i]), y = float_round(output_ptr[i]);
+
+	for (size_t i = 0; i < output_rnd.size(); ++i) {
+		float x = float_round(output_rnd_vec[i]), y = float_round(output_ptr[i]);
+		EXPECT_FLOAT_EQ(x, y);
+	}
+}
+
+TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad_random) {
+	//  Filter : 2x2
+	//  Stride : 2x2
+	//  Input  : 2x2x1x2
+	//  Output : 1x1x1x2
+	//
+	//  Input:
+	//  rnd  rnd    rnd  rnd
+	//  rnd  rnd    rnd  rnd
+	//
+	//  Filter:
+	//  rnd  rnd
+	//  rnd  rnd
+	//
+	//  Bias:
+	//  rnd
+	//
+	//  Output:
+	//  rnd  rnd
+
+	size_t batches = 2, input_f = 1, input_y = 2, input_x = 2;
+
+	VVVVF input_rnd = generate_random_4d<float>(batches, input_f, input_y, input_x, -10.0f, 10.0f);
+	VF input_rnd_vec = flatten_4d(memory::format::yxfb_f32, input_rnd);
+	VVVVF filter_rnd = generate_random_4d<float>(1, 1, 2, 2, -10.0f, 10.0f);
+	VF filter_rnd_vec = flatten_4d(memory::format::oiyx_f32, filter_rnd);
+	VF bias_rnd = generate_random_1d<float>(1, -10.0f, 10.0f);
+	VVVVF output_rnd(batches, VVVF(filter_rnd.size()));
+	for (size_t b = 0; b < output_rnd.size(); ++b) {
+		for (size_t of = 0; of < filter_rnd.size(); ++of) {
+			output_rnd[b][of] = convolve(input_rnd[b], filter_rnd[of], 2, bias_rnd[of]);
+		}
+	}
+	VF output_rnd_vec = flatten_4d(memory::format::yxfb_f32, output_rnd);
+
+	auto input = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 1 } });
+	auto output = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 1, 1 }, 1 } });
+	auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
+	auto biases = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+	set_values(input, input_rnd_vec);
+	set_values(weights, filter_rnd_vec);
+	set_values(biases, bias_rnd);
+	auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero });
+	execute({ conv }).wait();
+	auto output_ptr = output.as<const memory&>().pointer<float>();
+
+	for (size_t i = 0; i < output_rnd.size(); ++i) {
+		float x = float_round(output_rnd_vec[i]), y = float_round(output_ptr[i]);
 		EXPECT_FLOAT_EQ(x, y);
 	}
 }
@@ -248,58 +272,6 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     EXPECT_FLOAT_EQ(0.5f, output_ptr[1]);
     EXPECT_FLOAT_EQ(6.0f, output_ptr[2]);
     EXPECT_FLOAT_EQ(9.0f, output_ptr[3]);
-}
-
-TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad_random) {
-	//  Filter : 2x2
-	//  Stride : 2x2
-	//  Input  : 2x2x1x2
-	//  Output : 1x1x1x2
-	//
-	//  Input:
-	//  rnd  rnd    rnd  rnd
-	//  rnd  rnd    rnd  rnd
-	//
-	//  Filter:
-	//  -1.2  1.5
-	//   0.5 -0.5
-	//
-	//  Bias:
-	//  -1
-	//
-	//  Output:
-	//  3.65 -5.36
-	auto input = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 1 } });
-	auto output = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 1, 1 }, 1 } });
-	auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
-	auto biases = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
-
-
-	size_t input_y = 2, input_x = 2, input_f = 1, input_b = 2;
-
-	VVVVF rnd_data = generate_random_4d<float>(input_b, input_f, input_y, input_x, -10.0f, 10.0f);
-	VVVVF rnd_filter = generate_random_4d<float>(1, 1, 2, 2, -10.0f, 10.0f);
-	VF rnd_bias = generate_random_1d<float>(1, -10.0f, 10.0f);
-	VVF rnd_output1 = convolve(rnd_data[0][0], rnd_filter[0][0], 2, rnd_bias[0]);
-	VVF rnd_output2 = convolve(rnd_data[1][0], rnd_filter[0][0], 2, rnd_bias[0]);
-
-	VF rnd_data_vec = flatten_4d(memory::format::yxfb_f32, rnd_data);
-	VF rnd_filter_vec = flatten_4d(memory::format::oiyx_f32, rnd_filter);
-
-	set_values(input, rnd_data_vec);
-	set_values(weights, rnd_filter_vec);
-	set_values(biases, rnd_bias);
-
-	auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero });
-
-	execute({ conv }).wait();
-
-	auto output_ptr = output.as<const memory&>().pointer<float>();
-	float x, y;
-	x = float_round(rnd_output1[0][0]), y = float_round(output_ptr[0]);
-	EXPECT_FLOAT_EQ(x, y);
-	x = float_round(rnd_output2[0][0]), y = float_round(output_ptr[1]);
-	EXPECT_FLOAT_EQ(x, y);
 }
 
 TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
@@ -374,58 +346,6 @@ TEST(convolution_f32_fw_gpu, basic_ofm_wsiz2x1x2x1_in1x2x1_nopad) {
     auto output_ptr = output.as<const memory&>().pointer<float>();
     EXPECT_FLOAT_EQ(5.1f, output_ptr[0]);
     EXPECT_FLOAT_EQ(-5.2f, output_ptr[1]);
-}
-
-TEST(convolution_f32_fw_gpu, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad_random) {
-	//  Filter : 1x3x2x2x1
-	//  Input  : 1x2x2x1
-	//  Output : 1x3x1x1
-	//
-	//  Input:
-	//  1.0    2.0  f=0
-	//  3.0    4.0  f=1
-	//
-	// Filter:
-	//   1.0    2.0  ifm=0  ofm=0
-	//   3.0    4.0  ifm=1
-	//
-	//   5.0    6.0  ifm=0  ofm=1
-	//   7.0    8.0  ifm=1
-	//
-	//   9.0   10.0  ifm=0  ofm=2
-	//  11.0   12.0  ifm=1
-	//  Bias:
-	//   -5     -6     -7
-	//
-	//  Output:
-	//   25.0  f=0
-	//   64,0  f=1
-	//  103.0  f=2
-
-	auto input = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 2, 1 }, 2 } });
-	auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 1, 1 }, 3 } });
-	auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1 ,{ 2, 1 },{ 3, 2 } } });
-	auto biases = memory::allocate({ memory::format::x_f32,{ 1 ,{ { 3 } }, 1 } });
-
-	VVVF input_rnd = generate_random_3d<float>(2, 1, 2, -10.0f, 10.0f);
-	VVVVF filter_rnd = generate_random_4d<float>(3, 2, 1, 2, -10.0f, 10.0f);
-	VF biases_rnd = generate_random_1d<float>(3, -10.0f, 10.0f);
-	VVVF output_rnd(3);
-
-
-
-	set_values(input, { 1.0f, 3.0f, 2.0f, 4.0f });
-	set_values(weights, { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f });
-	set_values(biases, { -5.0f, -6.0f, -7.0f });
-
-	auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 5, 5 }, 1 }, padding::zero });
-
-	execute({ conv }).wait();
-
-	auto output_ptr = output.as<const memory&>().pointer<float>();
-	EXPECT_FLOAT_EQ(25.0f, output_ptr[0]);
-	EXPECT_FLOAT_EQ(64.0f, output_ptr[1]);
-	EXPECT_FLOAT_EQ(103.0f, output_ptr[2]);
 }
 
 TEST(convolution_f32_fw_gpu, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad) {
@@ -1018,3 +938,52 @@ TEST(convolution_gpu, trivial_convolution_relu) {
     EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_ptr, 2));
     EXPECT_FLOAT_EQ(5.0f, get_value<float>(output_ptr, 3));
 }
+
+TEST(convolution_gpu, relu_with_negative_slope) {
+
+	//  Filter : 2x2
+	//  Stride : 2x2
+	//  Input  : 4x4
+	//  Output : 2x2
+
+	//  Input:
+	//  -0.5   1     0.5  2
+	//   1.5  -0.5   0   -1
+	//   0.5   0.5  -1    1
+	//   0.5   2     1.5 -0.5
+	//
+	//  Filter
+	//  -2   0.5
+	//   3.5 1.5
+	//
+	//  Bias
+	//  -2
+	//
+	//  Output:
+	//  4  -0.35
+	//  2  5
+
+	auto input = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 4, 4 }, 1 } });
+	auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
+	auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
+	auto biases = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } }, 1 } });
+
+	set_values(input, {
+		-0.5f,  1.0f,  0.5f,  2.0f,
+		1.5f, -0.5f,  0.0f, -1.0f,
+		0.5f,  0.5f, -1.0f,  1.0f,
+		0.5f,  2.0f,  1.5f, -0.5f
+	});
+	set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f });
+	set_values(biases, { -2.0f });
+
+	auto conv_relu = convolution::create({ output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero, 1, true, 0.1f });
+	execute({ conv_relu }).wait();
+
+	auto output_ptr = output.as<const memory&>().pointer<float>();
+	EXPECT_FLOAT_EQ(4.0f, get_value<float>(output_ptr, 0));
+	EXPECT_FLOAT_EQ(-0.35f, get_value<float>(output_ptr, 1));
+	EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_ptr, 2));
+	EXPECT_FLOAT_EQ(5.0f, get_value<float>(output_ptr, 3));
+}
+
