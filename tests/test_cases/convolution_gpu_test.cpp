@@ -52,25 +52,26 @@ VVF convolve(VVF &input, VVF &filter, size_t stride, float bias) {
 	return output;
 }
 
-/*VVF convolve(VVVF &input, VVVF &filter, size_t stride, float bias) {
+VVF convolve(VVVF &input, VVVF &filter, size_t stride, float bias, size_t f_begin = 0) {
 	VVF output;
-	size_t output_rows = 1 + (input.size() - filter.size()) / stride;
-	size_t output_columns = 1 + (input[0].size() - filter[0].size()) / stride;
-	output.assign(output_rows, VF(output_columns, bias));
-	for (size_t f = 0; f < )
-	for (size_t i = 0; i < output_rows; ++i) {
-		for (size_t j = 0; j < output_columns; ++j) {
-			float val = 0;
-			for (size_t k = 0; k < filter.size(); ++k) {
-				for (size_t l = 0; l < filter[0].size(); ++l) {
-					val += input[k + stride * i][l + stride * j] * filter[k][l];
+	size_t output_y = 1 + (input[0].size() - filter[0].size()) / stride;
+	size_t output_x = 1 + (input[0][0].size() - filter[0][0].size()) / stride;
+	output.assign(output_y, VF(output_x, bias));
+	for (size_t f = 0; f < filter.size(); ++f) {
+		for (size_t y = 0; y < output_y; ++y) {
+			for (size_t x = 0; x < output_x; ++x) {
+				float val = 0;
+				for (size_t yf = 0; yf < filter[0].size(); ++yf) {
+					for (size_t xf = 0; xf < filter[0][0].size(); ++xf) {
+						val += input[f_begin + f][yf + stride * y][xf + stride * x] * filter[f][yf][xf];
+					}
 				}
+				output[y][x] += val;
 			}
-			output[i][j] += val;
 		}
 	}
 	return output;
-}*/
+}
 
 VF flatten_mat(VVF &mat) {
 	VF vec(mat.size() * mat[0].size());
@@ -144,8 +145,7 @@ std::vector<std::vector<std::vector<std::vector<T>>>> generate_random_4d(size_t 
 // rounds floating point number, fraction precision should be in the range [0,23]
 // masks the bits:
 // 1 11111111 11111111111111100000000
-// /\    /\           /\
-// ||    ||           ||
+// |      |            |
 // sign  exp        fraction
 float float_round(float x, size_t fraction_precision = 15) {
 	uint32_t mask = ~((1 << (23 - fraction_precision)) - 1);
@@ -374,6 +374,58 @@ TEST(convolution_f32_fw_gpu, basic_ofm_wsiz2x1x2x1_in1x2x1_nopad) {
     auto output_ptr = output.as<const memory&>().pointer<float>();
     EXPECT_FLOAT_EQ(5.1f, output_ptr[0]);
     EXPECT_FLOAT_EQ(-5.2f, output_ptr[1]);
+}
+
+TEST(convolution_f32_fw_gpu, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad_random) {
+	//  Filter : 1x3x2x2x1
+	//  Input  : 1x2x2x1
+	//  Output : 1x3x1x1
+	//
+	//  Input:
+	//  1.0    2.0  f=0
+	//  3.0    4.0  f=1
+	//
+	// Filter:
+	//   1.0    2.0  ifm=0  ofm=0
+	//   3.0    4.0  ifm=1
+	//
+	//   5.0    6.0  ifm=0  ofm=1
+	//   7.0    8.0  ifm=1
+	//
+	//   9.0   10.0  ifm=0  ofm=2
+	//  11.0   12.0  ifm=1
+	//  Bias:
+	//   -5     -6     -7
+	//
+	//  Output:
+	//   25.0  f=0
+	//   64,0  f=1
+	//  103.0  f=2
+
+	auto input = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 2, 1 }, 2 } });
+	auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 1, 1 }, 3 } });
+	auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1 ,{ 2, 1 },{ 3, 2 } } });
+	auto biases = memory::allocate({ memory::format::x_f32,{ 1 ,{ { 3 } }, 1 } });
+
+	VVVF input_rnd = generate_random_3d<float>(2, 1, 2, -10.0f, 10.0f);
+	VVVVF filter_rnd = generate_random_4d<float>(3, 2, 1, 2, -10.0f, 10.0f);
+	VF biases_rnd = generate_random_1d<float>(3, -10.0f, 10.0f);
+	VVVF output_rnd(3);
+
+
+
+	set_values(input, { 1.0f, 3.0f, 2.0f, 4.0f });
+	set_values(weights, { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f });
+	set_values(biases, { -5.0f, -6.0f, -7.0f });
+
+	auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 5, 5 }, 1 }, padding::zero });
+
+	execute({ conv }).wait();
+
+	auto output_ptr = output.as<const memory&>().pointer<float>();
+	EXPECT_FLOAT_EQ(25.0f, output_ptr[0]);
+	EXPECT_FLOAT_EQ(64.0f, output_ptr[1]);
+	EXPECT_FLOAT_EQ(103.0f, output_ptr[2]);
 }
 
 TEST(convolution_f32_fw_gpu, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad) {
