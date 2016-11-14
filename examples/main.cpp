@@ -181,6 +181,12 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Type of an engine used for classification.\nIt can be one of:\n  \treference, gpu.")
         ("dump_hidden_layers", bpo::bool_switch(),
             "Dump results from hidden layers of network to files.")
+        ("dump_layer", bpo::value<std::string>()->value_name("<layer_name>"),
+            "Dump results of specified network layer to files.")
+        ("dump_batch", bpo::value<std::uint32_t>()->value_name("<batch-id>"),
+            "Dump results only for this specified batch.")
+        ("dump_feature", bpo::value<std::uint32_t>()->value_name("<feature-id>"),
+            "Dump results only for this specified feature.")
         ("weights", bpo::value<std::string>()->value_name("<weights-dir>"),
             "Path to directory containing weights used in classification.\n"
             "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
@@ -262,9 +268,9 @@ int main(int argc, char* argv[])
     namespace bfs = boost::filesystem;
 
     // TODO: create header file for all examples
-    extern void alexnet(uint32_t, std::string, const std::string&, bool, bool, bool, bool);
-    extern void vgg16(uint32_t, std::string, const std::string&, bool, bool, bool, bool);
-    extern void googlenet_v1(uint32_t, std::string, const std::string&, bool, bool, bool, bool);
+    extern void alexnet(const execution_params &ep);
+    extern void vgg16(const execution_params &ep);
+    extern void googlenet_v1(const execution_params &ep);
     extern void convert_weights(neural::memory::format::type, std::string);
 
 
@@ -341,45 +347,43 @@ int main(int argc, char* argv[])
                 return 1;
             }
 
-            if (parsed_args["model"].as<std::string>() == "alexnet")
+            std::string dump_layer = "";
+            if (parsed_args.count("dump_layer"))
             {
-                alexnet(
-                    parsed_args["batch"].as<std::uint32_t>(),
-                    input_dir,
-                    weights_dir,
-                    parsed_args["dump_hidden_layers"].as<bool>(),
-                    parsed_args["profiling"].as<bool>(),
-                    parsed_args["optimize_weights"].as<bool>(),
-                    parsed_args["use_half"].as<bool>());
-                return 0;
-            }
-            else if (parsed_args["model"].as<std::string>() == "vgg16")
-            {
-                vgg16(
-                    parsed_args["batch"].as<std::uint32_t>(),
-                    input_dir,
-                    weights_dir,
-                    parsed_args["dump_hidden_layers"].as<bool>(),
-                    parsed_args["profiling"].as<bool>(),
-                    parsed_args["optimize_weights"].as<bool>(),
-                    parsed_args["use_half"].as<bool>());
-                return 0;
-            }
-            else if (parsed_args["model"].as<std::string>() == "googlenet")
-            {
-                googlenet_v1(
-                    parsed_args["batch"].as<std::uint32_t>(),
-                    input_dir,
-                    weights_dir,
-                    parsed_args["dump_hidden_layers"].as<bool>(),
-                    parsed_args["profiling"].as<bool>(),
-                    parsed_args["optimize_weights"].as<bool>(),
-                    parsed_args["use_half"].as<bool>());
-                return 0;
+                dump_layer = parsed_args["dump_layer"].as<std::string>();
             }
 
-            std::cerr << "ERROR: model/topology (\"" << parsed_args["model"].as<std::string>()
-                << "\") is not implemented!!!" << std::endl;
+            execution_params ep;
+            ep.input_dir = input_dir;
+            ep.weights_dir = weights_dir;
+            ep.topology_name = parsed_args["model"].as<std::string>();
+            ep.batch = parsed_args["batch"].as<std::uint32_t>();
+            ep.profiling = parsed_args["profiling"].as<bool>();
+            ep.optimize_weights = parsed_args["optimize_weights"].as<bool>();
+            ep.use_half = parsed_args["use_half"].as<bool>();
+            ep.dump_hidden_layers = parsed_args["dump_hidden_layers"].as<bool>();
+            ep.dump_layer_name = dump_layer;
+            ep.dump_single_batch = parsed_args.count("dump_batch") != 0;
+            ep.dump_batch_id = ep.dump_single_batch ? parsed_args["dump_batch"].as<uint32_t>() : 0;
+            ep.dump_single_feature = parsed_args.count("dump_feature") != 0;
+            ep.dump_feature_id = ep.dump_single_feature ? parsed_args["dump_feature"].as<uint32_t>() : 0;
+
+            if (ep.topology_name == "alexnet")
+            {
+                alexnet(ep);
+            }
+            else if (ep.topology_name == "vgg16")
+            {
+                vgg16(ep);
+            }
+            else if (ep.topology_name == "googlenet")
+            {
+                googlenet_v1(ep);
+            }
+            else
+            {
+                std::cerr << "ERROR: model/topology (\"" << ep.topology_name << "\") is not implemented!!!" << std::endl;
+            }
         }
 
         // No need for "else": We already handled when neither --input nor --convert is specified.

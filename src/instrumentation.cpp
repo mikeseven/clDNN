@@ -80,7 +80,7 @@ namespace neural {
 #endif
         }
 
-        void logger::log_memory_to_file(const primitive& mem, std::string prefix)
+        void logger::log_memory_to_file(const primitive& mem, std::string prefix, bool single_batch, uint32_t batch_id, bool single_feature, uint32_t feature_id)
         {
             const auto& mem_prim = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>() : mem.output[0].as<const memory&>();
             auto mem_arg = mem_prim.argument;
@@ -112,9 +112,14 @@ namespace neural {
                             {
                                 for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
                                 {
-                                    streams[b][f] << mem_ptr[input_it++] << " ";
-                                    if (x == sizex - 1)
-                                        streams[b][f] << std::endl;
+                                    if ( (!single_batch || b == batch_id) && (!single_feature || f == feature_id) )
+                                    {
+                                        streams[b][f] << mem_ptr[input_it++] << " ";
+                                        if (x == sizex - 1)
+                                            streams[b][f] << std::endl;
+                                    }
+                                    else
+                                        input_it++;
                                 }
                             }
                         }
@@ -128,12 +133,17 @@ namespace neural {
                     for (uint32_t y = 0; y < mem_arg.size.spatial[1];y++)
                     {
                         for (uint32_t x = 0; x < sizex;x++)
-                            for (uint32_t feature_it = 0; feature_it < feature; feature_it++)
-                                for (uint32_t batch_it = 0; batch_it < batch; batch_it++)
+                            for (uint32_t f = 0; f < feature; f++)
+                                for (uint32_t b = 0; b < batch; b++)
                                 {
-                                    streams[batch_it][feature_it] << mem_ptr[input_it++] << " ";
-                                    if (x == sizex - 1)
-                                        streams[batch_it][feature_it] << std::endl;
+                                    if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
+                                    {
+                                        streams[b][f] << mem_ptr[input_it++] << " ";
+                                        if (x == sizex - 1)
+                                            streams[b][f] << std::endl;
+                                    }
+                                    else
+                                        input_it++;
                                 }
                     }
                 }
@@ -143,8 +153,15 @@ namespace neural {
                     auto mem_ptr = mem_prim.pointer<float>();
 
                     for (uint32_t x = 0; x < sizex;x++)
-                        for (uint32_t batch_it = 0; batch_it < batch; batch_it++)
-                            streams[batch_it][0] << mem_ptr[input_it++] << std::endl;
+                        for (uint32_t b = 0; b < batch; b++)
+                        {
+                            if (!single_batch || b == batch_id)
+                            {
+                                streams[b][0] << mem_ptr[input_it++] << std::endl;
+                            }
+                            else
+                                input_it++;
+                        }
                 }
                 break;
 
@@ -161,9 +178,14 @@ namespace neural {
                             {
                                 for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
                                 {
-                                    streams[b][f] << convert_half_to_float(mem_ptr[input_it++]) << " ";
-                                    if (x == sizex - 1)
-                                        streams[b][f] << std::endl;
+                                    if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
+                                    {
+                                        streams[b][f] << convert_half_to_float(mem_ptr[input_it++]) << " ";
+                                        if (x == sizex - 1)
+                                            streams[b][f] << std::endl;
+                                    }
+                                    else
+                                        input_it++;
                                 }
                             }
                         }
@@ -177,12 +199,17 @@ namespace neural {
                     for (uint32_t y = 0; y < mem_arg.size.spatial[1];y++)
                     {
                         for (uint32_t x = 0; x < sizex;x++)
-                            for (uint32_t feature_it = 0; feature_it < feature; feature_it++)
-                                for (uint32_t batch_it = 0; batch_it < batch; batch_it++)
+                            for (uint32_t f = 0; f < feature; f++)
+                                for (uint32_t b = 0; b < batch; b++)
                                 {
-                                    streams[batch_it][feature_it] << convert_half_to_float(mem_ptr[input_it++]) << " ";
-                                    if (x == sizex - 1)
-                                        streams[batch_it][feature_it] << std::endl;
+                                    if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
+                                    {
+                                        streams[b][f] << convert_half_to_float(mem_ptr[input_it++]) << " ";
+                                        if (x == sizex - 1)
+                                            streams[b][f] << std::endl;
+                                    }
+                                    else
+                                        input_it++;
                                 }
                     }
                 }
@@ -191,9 +218,14 @@ namespace neural {
                 {
                     auto mem_ptr = mem_prim.pointer<half_t>();
 
-                    for (uint32_t x = 0; x < sizex;x++)
-                        for (uint32_t batch_it = 0; batch_it < batch; batch_it++)
-                            streams[batch_it][0] << convert_half_to_float(mem_ptr[input_it++]) << std::endl;
+                    for (uint32_t x = 0; x < sizex; x++)
+                        for (uint32_t b = 0; b < batch; b++)
+                            if (!single_batch || b == batch_id)
+                            {
+                                streams[b][0] << convert_half_to_float(mem_ptr[input_it++]) << std::endl;
+                            }
+                            else
+                                input_it++;
                 }
                 break;
             default:
@@ -201,13 +233,16 @@ namespace neural {
             }
 
 
-            for (uint32_t i = 0; i < batch; i++)
-                for (uint32_t j = 0; j < feature; j++)
+            for (uint32_t b = 0; b < batch; b++)
+                for (uint32_t f = 0; f < feature; f++)
                 {
-                    std::string filename((dump_dir + "/" + prefix + "_" + eng_type + "_b" + std::to_string(i) + "_f" + std::to_string(j) + ".txt"));
-                    std::ofstream file_stream = std::ofstream(filename, std::ios::out);
-                    file_stream << streams[i][j].str();
-                    file_stream.close();
+                    if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
+                    {
+                        std::string filename((dump_dir + "/" + prefix + "_" + eng_type + "_b" + std::to_string(b) + "_f" + std::to_string(f) + ".txt"));
+                        std::ofstream file_stream = std::ofstream(filename, std::ios::out);
+                        file_stream << streams[b][f].str();
+                        file_stream.close();
+                    }
                 }
         }
     }
