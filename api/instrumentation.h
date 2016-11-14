@@ -67,7 +67,7 @@ namespace instrumentation {
 
     struct logger
     {
-        DLL_SYM static void log_memory_to_file(const primitive&, std::string prefix = "");
+        DLL_SYM static void log_memory_to_file(const primitive&, std::string prefix = "", bool single_batch=false, uint32_t batch_id=0);
     private:
         static const std::string dump_dir;
     };

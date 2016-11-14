@@ -419,7 +419,7 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
         instrumentation::logger::log_memory_to_file(primitives[0].first.input[0].primitive(), "input0");
         for (auto& p : primitives)
         {
-            instrumentation::logger::log_memory_to_file(p.first, p.second);
+            instrumentation::logger::log_memory_to_file(p.first, p.second, ep.dump_single_batch, ep.dump_batch_id);
         }
         // for now its enough. rest will be done when we have equals those values
     }
@@ -431,7 +431,7 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
             if (p.second == ep.dump_layer_name)
             {
                 found = true;
-                instrumentation::logger::log_memory_to_file(p.first, p.second);
+                instrumentation::logger::log_memory_to_file(p.first, p.second, ep.dump_single_batch, ep.dump_batch_id);
             }
         }
         if (!found)
