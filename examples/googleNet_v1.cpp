@@ -1272,7 +1272,6 @@ std::vector<std::pair<primitive, std::string>> build_googlenetv1(const primitive
     std::cout << "Building GoogLeNet finished in " << instrumentation::to_string(build_time) << std::endl;
 
     return std::vector<std::pair<primitive, std::string>> {
-        { reordered_input, "reorder"},
         { reordered_input,"reordered_input" },
         { conv1_7x7_s2,"conv1_7x7_s2" },
         { pool1_3x3_s2,"pool1_3x3_s2" },

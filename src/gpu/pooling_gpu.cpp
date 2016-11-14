@@ -21,11 +21,8 @@
 #include "cache/primitive_db.h"
 
 const std::string kernelName_max = "Pooling_GPU_max";
-
 const std::string kernelName_max_offset = "Pooling_GPU_max_offset";
-
 const std::string kernelName_average = "Pooling_GPU_average";
-
 const std::string kernelName_average_offset = "Pooling_GPU_average_offset";
 
 namespace neural {
@@ -38,11 +35,31 @@ struct pooling_gpu : is_an_implementation {
         , _kernel(select_kernel_name(), get_jit_constants())
     {}
 
+    // Check if we need boundary checking in kernel
+    bool needs_boundary_check() const
+    {
+        auto& input_mem = outer.input_memory(0);
+        auto& input_offset = outer.argument.input_offset;
+        
+        if (input_offset.spatial[0] || input_offset.spatial[1])
+            return true;
+
+        auto& kernel_size = outer.argument.size;
+        auto& stride = outer.argument.stride;
+
+        // if modulo is not 0 that means it does not divide by stride, so we would go out of boundary
+        auto mod_x = (input_mem.argument.size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_size.spatial[0]) % stride.spatial[0];
+        auto mod_y = (input_mem.argument.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_size.spatial[1]) % stride.spatial[1];
+
+        return mod_x || mod_y;
+    }
+
     const std::string& select_kernel_name() const {
+        bool needs_boundary = needs_boundary_check();
         switch (outer.argument.mode)
         {
         case pooling::mode::max:
-            if (outer.argument.input_offset.spatial[0] != 0 || outer.argument.input_offset.spatial[1] != 0)
+            if (needs_boundary)
             {
                 return kernelName_max_offset;
             }
@@ -51,7 +68,7 @@ struct pooling_gpu : is_an_implementation {
                 return kernelName_max;
             }
         case pooling::mode::average:
-            if (outer.argument.input_offset.spatial[0] != 0 || outer.argument.input_offset.spatial[1] != 0)
+            if (needs_boundary)
             {
                 return kernelName_average_offset;
             }
