@@ -360,13 +360,22 @@ void print_profiling_table(std::ostream& os, const std::vector<instrumentation::
 }
 
 // Create worker
-worker create_worker()
+worker create_worker(PrintType printType)
 {
-    std::cout << "GPU Program compilation started" << std::endl;
+    if (printType == Verbose)
+    {
+        std::cout << "GPU Program compilation started" << std::endl;
+    }
+
     instrumentation::timer<> timer_compilation;
     auto worker = worker_gpu::create();
     auto compile_time = timer_compilation.uptime();
-    std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
+    
+    if (printType == Verbose)
+    {
+        std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
+    }
+
     return worker;
 }
 
@@ -394,12 +403,23 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
                                           const primitive& output,
                                           const execution_params &ep)
 {
-    std::cout << "Start execution" << std::endl;
+    if (ep.print_type == Verbose)
+    {
+        std::cout << "Start execution";
+        if (ep.loop > 1)
+        {
+            std::cout << " in a loop " << ep.loop << " times:" << std::endl;
+        }
+    }
+
     instrumentation::timer<> timer_execution;
 
-    for (auto& p : primitives)
+    for (int i = 0; i < ep.loop; i++)
     {
-        worker.execute(p.first.work());
+        for (auto& p : primitives)
+        {
+            worker.execute(p.first.work());
+        }
     }
 
     //GPU primitives scheduled in unblocked manner
@@ -409,8 +429,12 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
     output.as<const neural::memory&>().pointer<char>();
 
     auto execution_time(timer_execution.uptime());
-    std::cout << ep.topology_name << " scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
-    std::cout << ep.topology_name << " execution finished in " << instrumentation::to_string(execution_time) << std::endl;
+    if (ep.print_type == Verbose)
+    {
+        std::cout << ep.topology_name << " scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
+        std::cout << ep.topology_name << " execution finished in " << instrumentation::to_string(execution_time) << std::endl;
+    }
+
     if (ep.dump_hidden_layers)
     {
         instrumentation::logger::log_memory_to_file(primitives[0].first.input[0].primitive(), "input0");
@@ -485,6 +509,13 @@ void run_topology(const execution_params &ep)
     auto output = memory::allocate({ ep.use_half ? memory::format::xb_f16 : memory::format::xb_f32,{ gpu_batch_size,{ 1000 } } });
 
     std::vector<std::pair<primitive, std::string>> primitives;
+
+    if (ep.print_type == Verbose)
+    {
+        std::cout << "Building " << ep.topology_name << " started" << std::endl;
+    }
+    instrumentation::timer<> timer_build;
+
     if (ep.topology_name == "alexnet")
         primitives = build_alexnet(input, output, ep.weights_dir, weights_optimizer, ep.use_half);
     else if (ep.topology_name == "vgg16")
@@ -493,8 +524,16 @@ void run_topology(const execution_params &ep)
         primitives = build_googlenetv1(input, output, ep.weights_dir, weights_optimizer, ep.use_half);
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
+
+    auto build_time = timer_build.uptime();
+
+    if (ep.print_type == Verbose)
+    {
+        std::cout << "Building " << ep.topology_name << "  finished in " << instrumentation::to_string(build_time) << std::endl;
+    }
+
     // create worker
-    worker worker = create_worker();
+    worker worker = create_worker(ep.print_type);
 
     // optimize weights if needed
     if (ep.optimize_weights)
@@ -527,10 +566,13 @@ void run_topology(const execution_params &ep)
         auto time = execute_topology(worker, primitives, output, ep);
 
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-        output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch);
+        output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch, ep.print_type);
         if (time_in_sec != 0.0)
         {
-            std::cout << "Frames per second:" << (double)batch_size / time_in_sec << std::endl;
+            if (ep.print_type != ExtendedTesting)
+            {
+                std::cout << "Frames per second:" << (double)(ep.loop * batch_size) / time_in_sec << std::endl;
+            }
         }
     }
 }

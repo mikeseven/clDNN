@@ -15,9 +15,7 @@
 */
 
 #include "common/common_tools.h"
-#include <iostream>
 #include <string>
-#include "api/instrumentation.h"
 
 using namespace neural;
 
@@ -28,8 +26,6 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
     auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
 
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
-    std::cout << "Building vgg16 started" << std::endl;
-    instrumentation::timer<> timer_build;
 
     // create conversion to yxfb format and subtract mean values
     auto reordered_input = reorder::create(
@@ -319,9 +315,6 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const primitive& inpu
         output,
         fc8
     });
-
-    auto build_time = timer_build.uptime();
-    std::cout << "Building VGG16 finished in " << instrumentation::to_string(build_time) << std::endl;
 
     return std::vector<std::pair<primitive, std::string>> {
         { reordered_input, "reorder"},
