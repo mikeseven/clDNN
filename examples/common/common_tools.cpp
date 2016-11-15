@@ -469,7 +469,19 @@ void run_topology(const execution_params &ep)
 
     weights_optimizer weights_optimizer(ep.optimize_weights, ep.use_half);
 
-    auto input = memory::allocate({ ep.use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ gpu_batch_size,{ 227, 227 }, 3 } });
+    uint32_t input_size_x = 227;
+    uint32_t input_size_y = 227;
+    if (ep.topology_name == "alexnet")
+    {
+        input_size_x = input_size_y = 227;
+    }
+    else if (ep.topology_name == "vgg16" ||
+             ep.topology_name == "googlenet")
+    {
+        input_size_x = input_size_y = 224;
+    }
+
+    auto input = memory::allocate({ ep.use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ gpu_batch_size,{ input_size_x, input_size_y }, 3 } });
     auto output = memory::allocate({ ep.use_half ? memory::format::xb_f16 : memory::format::xb_f32,{ gpu_batch_size,{ 1000 } } });
 
     std::vector<std::pair<primitive, std::string>> primitives;
