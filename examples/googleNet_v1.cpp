@@ -14,10 +14,7 @@
 // limitations under the License.
 */
 
-
-
 #include "common/common_tools.h"
-#include "output_parser.h"
 #include <iostream>
 #include <string>
 #include "api/instrumentation.h"
@@ -1358,77 +1355,4 @@ std::vector<std::pair<primitive, std::string>> build_googlenetv1(const primitive
         { loss3_classifier,"loss3_classifier" },
         { softmax,"softmax" }
     };
-}
-
-
-
-void googlenet_v1(const execution_params &ep)
-{
-    uint32_t batch_size = ep.batch;
-
-    uint32_t gpu_batch_size = get_gpu_batch_size(batch_size);
-    if (gpu_batch_size != batch_size)
-    {
-        std::cout << "WARNING: This is not the optimal batch size. You have " << (gpu_batch_size - batch_size)
-            << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;
-    }
-    gpu::configuration::get().enable_profiling = ep.profiling;
-
-    auto img_list = get_directory_images(ep.input_dir);
-    if (img_list.empty())
-        throw std::runtime_error("specified input images directory is empty (does not contain image data)");
-
-    auto number_of_batches = (img_list.size() % batch_size == 0)
-        ? img_list.size() / batch_size : img_list.size() / batch_size + 1;
-
-    html output_file(ep.topology_name, ep.topology_name + " run");
-
-    weights_optimizer weights_optimizer(ep.optimize_weights, ep.use_half);
-
-    auto input = memory::allocate({ep.use_half ? memory::format::byxf_f16 : memory::format::byxf_f32, {gpu_batch_size, {224, 224}, 3}});
-    auto output = memory::allocate({ep.use_half ? memory::format::xb_f16 : memory::format::xb_f32, {gpu_batch_size, {1000}}});
-
-    // build googlenet
-    std::vector<std::pair<primitive, std::string>> primitives = build_googlenetv1(input, output, ep.weights_dir, weights_optimizer, ep.use_half);
-
-    // create worker
-    worker worker = create_worker();
-
-    // optimize weights if needed
-    if (ep.optimize_weights)
-    {
-        weight_optimization(weights_optimizer, worker);
-    }
-
-    std::vector<std::string> images_in_batch;
-    auto images_list_iterator = img_list.begin();
-    auto images_list_end = img_list.end();
-    for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
-    {
-        images_in_batch.clear();
-        for (uint32_t i = 0; i < batch_size && images_list_iterator != images_list_end; ++i, ++images_list_iterator)
-        {
-            images_in_batch.push_back(*images_list_iterator);
-        }
-
-        // load croped and resized images into input
-        if (ep.use_half)
-        {
-            load_images_from_file_list<half_t>(images_in_batch, input);
-        }
-        else
-        {
-            load_images_from_file_list(images_in_batch, input);
-        }
-
-        // execute Googlenet
-        auto time = execute_topology(worker, primitives, output, ep, 85);
-
-        auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-        output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch);
-        if (time_in_sec != 0.0)
-        {
-            std::cout << "Frames per second:" << (double)batch_size / time_in_sec << std::endl;
-        }
-    }
 }

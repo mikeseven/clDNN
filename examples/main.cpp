@@ -368,17 +368,11 @@ int main(int argc, char* argv[])
             ep.dump_single_feature = parsed_args.count("dump_feature") != 0;
             ep.dump_feature_id = ep.dump_single_feature ? parsed_args["dump_feature"].as<uint32_t>() : 0;
 
-            if (ep.topology_name == "alexnet")
+            if (ep.topology_name == "alexnet" ||
+                ep.topology_name == "vgg16" ||
+                ep.topology_name == "googlenet")
             {
-                alexnet(ep);
-            }
-            else if (ep.topology_name == "vgg16")
-            {
-                vgg16(ep);
-            }
-            else if (ep.topology_name == "googlenet")
-            {
-                googlenet_v1(ep);
+                run_topology(ep);
             }
             else
             {
