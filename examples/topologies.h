@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "api\neural_base.h"
+#include "api/neural_base.h"
 #include "weights_optimizer.h"
 
 std::vector<std::pair<neural::primitive, std::string>> build_alexnet(
