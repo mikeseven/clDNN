@@ -15,22 +15,14 @@
 */
 
 #include "common/common_tools.h"
-#include <iostream>
 #include <string>
-#include "api/instrumentation.h"
 
 using namespace neural;
 
 // Building AlexNet network with loading weights & biases from file
-std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& input, const primitive& output, const std::string& weights_dir, weights_optimizer& wo, bool use_half, PrintType printType)
+std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& input, const primitive& output, const std::string& weights_dir, weights_optimizer& wo, bool use_half)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
-    if (printType == Verbose)
-    {
-        std::cout << "Building Alexnet started" << std::endl;
-    }
-
-    instrumentation::timer<> timer_build;
 
     auto mem_format = use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
     auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
@@ -215,13 +207,6 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
         fc8
     });
 
-    auto build_time = timer_build.uptime();
-    
-    if (printType == Verbose)
-    {
-        std::cout << "Building Alexnet finished in " << instrumentation::to_string(build_time) << std::endl;
-    }
-
     return std::vector<std::pair<primitive, std::string>> {
         { reordered_input, "reorder"},
         { conv1, "conv1" },
@@ -240,4 +225,3 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
         { softmax, "softmax" }
     };
 }
-                std::cout << "Frames per second:" << (double)(ep.loop * batch_size) / time_in_sec << std::endl;

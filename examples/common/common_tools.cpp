@@ -497,6 +497,13 @@ void run_topology(const execution_params &ep)
     auto output = memory::allocate({ ep.use_half ? memory::format::xb_f16 : memory::format::xb_f32,{ gpu_batch_size,{ 1000 } } });
 
     std::vector<std::pair<primitive, std::string>> primitives;
+
+    if (ep.print_type == Verbose)
+    {
+        std::cout << "Building " << ep.topology_name << " started" << std::endl;
+    }
+    instrumentation::timer<> timer_build;
+
     if (ep.topology_name == "alexnet")
         primitives = build_alexnet(input, output, ep.weights_dir, weights_optimizer, ep.use_half);
     else if (ep.topology_name == "vgg16")
@@ -505,8 +512,16 @@ void run_topology(const execution_params &ep)
         primitives = build_googlenetv1(input, output, ep.weights_dir, weights_optimizer, ep.use_half);
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
+
+    auto build_time = timer_build.uptime();
+
+    if (ep.print_type == Verbose)
+    {
+        std::cout << "Building " << ep.topology_name << "  finished in " << instrumentation::to_string(build_time) << std::endl;
+    }
+
     // create worker
-    worker worker = create_worker();
+    worker worker = create_worker(ep.print_type);
 
     // optimize weights if needed
     if (ep.optimize_weights)
@@ -539,10 +554,13 @@ void run_topology(const execution_params &ep)
         auto time = execute_topology(worker, primitives, output, ep);
 
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-        output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch);
+        output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch, ep.print_type);
         if (time_in_sec != 0.0)
         {
-            std::cout << "Frames per second:" << (double)batch_size / time_in_sec << std::endl;
+            if (ep.print_type != ExtendedTesting)
+            {
+                std::cout << "Frames per second:" << (double)(ep.loop * batch_size) / time_in_sec << std::endl;
+            }
         }
     }
 }

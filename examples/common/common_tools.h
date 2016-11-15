@@ -30,7 +30,9 @@ enum PrintType
 {
     Verbose,
     Perf,
-    ExtendedTesting
+    ExtendedTesting,
+
+    PrintType_count // must be last
 };
 
 /// Information about executable.

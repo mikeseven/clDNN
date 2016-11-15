@@ -174,6 +174,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Path to input directory containing images to classify (mandatory when running classification).")
         ("batch", bpo::value<std::uint32_t>()->value_name("<batch-size>")->default_value(8),
             "Size of a group of images that are classified together (large batch sizes have better performance).")
+        ("loop", bpo::value<std::uint32_t>()->value_name("<loop-count>")->default_value(1),
+            "Number of iterations to run each execution. Can be used for robust benchmarking. (default 1)")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
             "It can be one of:\n  \talexnet, vgg16, googlenet.")
@@ -196,6 +198,10 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "computations of selected model.")
         ("profiling", bpo::bool_switch(),
             "Enable profiling and create profiling report.")
+        ("print_type", bpo::value<std::uint32_t>()->value_name("<print_type>")->default_value(0),
+            "0 = Verbose (default)\n"
+            "1 = only print performance results\n"
+            "2 = only print wrong/correct classification - used for broad correctness testing.")
         ("optimize_weights", bpo::bool_switch(),
             "Perform weights convertion to most desirable format for each network layer while building network.")
         ("version", "Show version of the application.")
@@ -367,9 +373,10 @@ int main(int argc, char* argv[])
             ep.dump_batch_id = ep.dump_single_batch ? parsed_args["dump_batch"].as<uint32_t>() : 0;
             ep.dump_single_feature = parsed_args.count("dump_feature") != 0;
             ep.dump_feature_id = ep.dump_single_feature ? parsed_args["dump_feature"].as<uint32_t>() : 0;
+            ep.loop = parsed_args["loop"].as<std::uint32_t>();
 
-            ep.loop = 100;
-            ep.print_type = Verbose;
+            std::uint32_t print = parsed_args["print_type"].as<std::uint32_t>();
+            ep.print_type = (PrintType)((print >= (std::uint32_t)PrintType::PrintType_count) ? 0 : print);
 
             if (ep.topology_name == "alexnet" ||
                 ep.topology_name == "vgg16" ||
