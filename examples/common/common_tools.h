@@ -19,7 +19,7 @@
 
 #include "api/neural.h"
 #include "weights_optimizer.h"
-
+#include "power_intrumentation.h"
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -135,6 +135,8 @@ struct execution_params {
 
     PrintType print_type = PrintType::Verbose; // printing modes - to support Verbose, vs Perf ony, vs ImageNet testing prints
     size_t loop = 1; // running the same input in a loop for smoothing perf results
+
+    bool perf_per_watt; // power instrumentation
 };
 
 std::vector<std::string> get_directory_images(const std::string& images_path);
@@ -152,7 +154,8 @@ uint32_t get_gpu_batch_size(int number);
 std::chrono::nanoseconds execute_topology(const neural::worker& worker,
                                           const std::vector<std::pair<neural::primitive, std::string>>& primitives,
                                           const neural::primitive& output,
-                                          const execution_params &ep);
+                                          const execution_params &ep,
+                                          CIntelPowerGadgetLib& energyLib);
 
 void run_topology(const execution_params &ep);
 

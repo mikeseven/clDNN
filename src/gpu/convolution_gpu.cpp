@@ -34,6 +34,21 @@ const std::string kernelName_YXFB_YXIO_B1_block_memory = "Convolution_GPU_YXFB_Y
 const std::string kernelName_YXFB_YXIO_B8_memory = "Convolution_GPU_YXFB_YXIO_B8_memory";
 const std::string kernelName_YXFB_YXIO_B16_memory = "Convolution_GPU_YXFB_YXIO_B16_memory";
 const std::string kernelName_YXFB_YXOI_B8_F8_memory = "Convolution_GPU_YXFB_YXOI_B8_F8_memory";
+const std::string kernel_name_yxfb_yxio_b16_fp16_memory = "convolution_gpu_yxfb_yxio_b16_fp16_memory";
+const std::string kernel_name_yxfb_yxio_fp16 = "convolution_gpu_yxfb_yxio_fp16";
+
+
+// GPU engine information helpers.
+namespace
+{
+struct gpu_info_helper : gpu::context_holder
+{
+    gpu::engine_info get_engine_info() const
+    {
+        return context()->get_engine_info();
+    }
+};
+}
 
 struct convolution_gpu : is_an_implementation {
     convolution &outer;
@@ -58,6 +73,7 @@ struct convolution_gpu : is_an_implementation {
             throw std::invalid_argument("Unknown padding mode in convolution.");
 
         switch (input_mem.argument.format) {
+        // FP32 (float)
         case memory::format::yxfb_f32:
             switch (filter_mem.argument.format) {
             case memory::format::oiyx_f32:
@@ -74,7 +90,7 @@ struct convolution_gpu : is_an_implementation {
                 else
                     return kernelName_YXFB_YXOI_memory;
             case memory::format::yxio_f32:
-                if (filter_mem.argument.size.feature[0] * batch_size % get_local_work_group_size(batch_size) != 0)
+                if (filter_mem.argument.size.feature[0] * batch_size % get_local_work_group_size(batch_size, filter_mem) != 0)
                 {
                     return kernelName_YXFB_YXIO;
                 }
@@ -94,9 +110,28 @@ struct convolution_gpu : is_an_implementation {
                     return kernelName_YXFB_YXIO_B8_memory;
             case memory::format::oyxi_f32:
                 return kernelName_YXFB_OYXI_memory;
+
             default:
                 throw std::invalid_argument("Filter memory is not supported");
             }
+
+        // FP16 (half)
+        case memory::format::yxfb_f16:
+            switch (filter_mem.argument.format) {
+            case memory::format::yxio_f16:
+                // Number of output features is positive and dividable by 16.
+                if ((filter_mem.argument.size.feature[0] & ~0xFU) != 0)
+                {
+                    // Batch size is positive and dividable by 16.
+                    if ((input_mem.argument.size.batch[0] & ~0xFU) != 0)
+                        return kernel_name_yxfb_yxio_b16_fp16_memory;
+                }
+                return kernel_name_yxfb_yxio_fp16;
+
+            default:
+                throw std::invalid_argument("Filter memory is not supported");
+            }
+
         default:
             throw std::invalid_argument("Input memory format is not supported");
         }
@@ -108,7 +143,7 @@ struct convolution_gpu : is_an_implementation {
         if (batch_size == 1)
         {
             int output_feature_count = filter_mem.argument.size.feature[0];
-            int lws = get_local_work_group_size(batch_size);
+            int lws = get_local_work_group_size(batch_size, filter_mem);
             if (output_feature_count % (lws * 8) == 0)
             {
                 return 8;
@@ -123,25 +158,36 @@ struct convolution_gpu : is_an_implementation {
             }
             return 1;
         }
-        else if (batch_size < 32)
+        if (memory::traits(filter_mem.argument.format).type->id == type_id<half_t>()->id)
+            return 16;
+        if (batch_size < 32)
         {
-            int lws = get_local_work_group_size(batch_size);
+            int lws = get_local_work_group_size(batch_size, filter_mem);
             if (((filter_mem.argument.size.feature[0] * batch_size) / 16) % lws)
                 return 8;
             return 16;
         }
-        else
-            return 8;
+        return 8;
     }
 
     // how many batches will a single work item compute
-    static int get_batches_per_work_item(const int batch_size)
+    static int get_batches_per_work_item(const int batch_size, const neural::memory& filter_mem)
     {
+        if (memory::traits(filter_mem.argument.format).type->id == type_id<half_t>()->id)
+        {
+            if (batch_size >= 64)
+                return 4; // USE_BLOCK_READ_2 + as_half4
+            if (batch_size >= 32)
+                return 2; // USE_BLOCK_READ_1 + as_half2
+            return 1;
+        }
         return batch_size > 16 ? 2 : 1;
     }
 
-    static int get_local_work_group_size(const int batch_size)
+    static int get_local_work_group_size(const int batch_size, const neural::memory& filter_mem)
     {
+        if (memory::traits(filter_mem.argument.format).type->id == type_id<half_t>()->id)
+            return 16;
         if (batch_size == 1)
         {
             return 16;
@@ -150,6 +196,8 @@ struct convolution_gpu : is_an_implementation {
     }
 
     gpu::jit_constants get_jit_constants() const {
+        gpu_info_helper gpu_info;
+        auto engine_info = gpu_info.get_engine_info();
 
         auto& input_mem = outer.input_memory(0);
         auto& input_offset = outer.argument.input_offset;
@@ -179,6 +227,7 @@ struct convolution_gpu : is_an_implementation {
             gpu::make_jit_constant("INPUT_OFFSET", input_offset),
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
             gpu::make_jit_constant("OUTPUT_LIMIT", output_size),
+            gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16))
         };
 
         if (outer.argument.use_relu)
@@ -194,11 +243,12 @@ struct convolution_gpu : is_an_implementation {
         mem_consts.add_constant(gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_1"));
 
         if (filter_mem.argument.format == memory::format::yxio_f32 ||
-            filter_mem.argument.format == memory::format::yxoi_f32)
+            filter_mem.argument.format == memory::format::yxoi_f32 ||
+            filter_mem.argument.format == memory::format::yxio_f16)
         {
             const int batch_size = output_mem.argument.size.batch[0];
-            const int batches_per_work_item = get_batches_per_work_item(batch_size);
-            const int local_work_group_size = get_local_work_group_size(batch_size);
+            const int batches_per_work_item = get_batches_per_work_item(batch_size, filter_mem);
+            const int local_work_group_size = get_local_work_group_size(batch_size, filter_mem);
             mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size));
             mem_consts.add_constant(gpu::make_jit_constant("OFM_PER_WORK_ITEM", get_ofm_per_work_item(batch_size, filter_mem))); // how many output feature maps for a single batch will a single work item produce
             mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item)); // how many batches will a single work item compute
@@ -206,7 +256,14 @@ struct convolution_gpu : is_an_implementation {
             mem_consts.add_constant(gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / batches_per_work_item)); // how many work items we need to compute single element for each batch
             // A LITTLE HACK, for convolutions with low number of input features don't use block reads, and it will speed up by 25%
             // TODO - investigate why is this happening
-            if (input_mem.argument.size.feature[0] > 4)
+            if (memory::traits(filter_mem.argument.format).type->id == type_id<half_t>()->id)
+            {
+                if (batch_size >= 64)
+                    mem_consts.add_constant(gpu::make_jit_constant("USE_BLOCK_READ_2", ""));
+                else if (batch_size >= 32)
+                    mem_consts.add_constant(gpu::make_jit_constant("USE_BLOCK_READ_1", ""));
+            }
+            else if (input_mem.argument.size.feature[0] > 4)
             {
                 mem_consts.add_constant(gpu::make_jit_constant("USE_BLOCK_READ_2", ""));
             }
@@ -250,6 +307,12 @@ struct convolution_gpu : is_an_implementation {
 
         if (outer.argument.padding != padding::zero)
             throw std::invalid_argument("Unknown padding mode in convolution.");
+
+        // Check whether all memory elements use the same unit type (FP16 or FP32).
+        if (memory::traits(input_mem.argument.format).type->id != memory::traits(output_mem.argument.format).type->id)
+            throw std::invalid_argument("Memory format of input is incompatible with memory format of output.");
+        if (memory::traits(input_mem.argument.format).type->id != memory::traits(filter_mem.argument.format).type->id)
+            throw std::invalid_argument("Memory format of input is incompatible with memory format of filter.");
 
         auto dstSize = output_mem.count();
 
@@ -299,9 +362,9 @@ struct convolution_gpu : is_an_implementation {
                 else
                 {
                     uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
-                    uint32_t batches_per_workitem = get_batches_per_work_item(batch_size);
+                    uint32_t batches_per_workitem = get_batches_per_work_item(batch_size, filter_mem);
                     gws0 = (output_mem.argument.size.feature[0] * batch_size / (ofm_per_workitem * batches_per_workitem)) / split;
-                    lws0 = static_cast<size_t>(get_local_work_group_size(batch_size));
+                    lws0 = static_cast<size_t>(get_local_work_group_size(batch_size, filter_mem));
                 }
                 break;
             }
@@ -313,6 +376,38 @@ struct convolution_gpu : is_an_implementation {
                 while (gws0%lws0)
                 {
                     lws0 /= 2;
+                }
+                break;
+            }
+            default:
+                throw std::invalid_argument("Filter memory format is not supported");
+            }
+            break;
+
+        case memory::format::yxfb_f16:
+            switch (filter_mem.argument.format)
+            {
+            case memory::format::yxio_f16:
+            {
+                // Number of output features is positive and dividable by 16.
+                if ((filter_mem.argument.size.feature[0] & ~0xFU) != 0)
+                {
+                    // Batch size is positive and dividable by 16.
+                    if ((input_mem.argument.size.batch[0] & ~0xFU) != 0)
+                    {
+                        uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
+                        uint32_t batches_per_workitem = get_batches_per_work_item(batch_size, filter_mem);
+                        gws0 = (output_mem.argument.size.feature[0] * batch_size / (ofm_per_workitem * batches_per_workitem)) / split;
+                        lws0 = static_cast<size_t>(get_local_work_group_size(batch_size, filter_mem));
+                        break;
+                    }
+                }
+
+                gws0 = (output_mem.argument.size.feature[0] * output_mem.argument.size.batch[0]) / split;
+                lws0 = 32;
+                while (gws0 % lws0)
+                {
+                    lws0--;
                 }
                 break;
             }
@@ -344,10 +439,16 @@ struct convolution_gpu : is_an_implementation {
         
         switch (filter_arg.format)
         {
+        // FP32 (float)
         case memory::format::oiyx_f32:
         case memory::format::yxoi_f32:
         case memory::format::oyxi_f32:
         case memory::format::yxio_f32:
+        // FP16 (half)
+        case memory::format::oiyx_f16:
+        case memory::format::yxoi_f16:
+        case memory::format::oyxi_f16:
+        case memory::format::yxio_f16:
             break;
         default:
             throw std::runtime_error("Convolution weights format unsupported");
@@ -368,6 +469,8 @@ namespace{
             auto val_fw = convolution_gpu::create;
 
             auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
+            implementation_map<convolution>::add(key_fw, val_fw);
+            key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16);
             implementation_map<convolution>::add(key_fw, val_fw);
         }
         ~attach() {}

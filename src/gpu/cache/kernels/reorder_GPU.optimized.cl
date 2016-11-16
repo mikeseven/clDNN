@@ -36,3 +36,7 @@ KERNEL (reorder_GPU)(const __global SRC_TYPE* input, __global DEST_TYPE* output)
     uint input_idx = (global_id_2 * global_size_1 + global_id_1) * global_size_0 + global_id_0;
     output[output_pos] = SRC_DEST_TYPE_CVT_FUNC(input[input_idx]);
 }
+
+#undef SRC_DEST_TYPE_CVT_FUNC
+#undef TYPE_CVT_FUNC2
+#undef TYPE_CVT_FUNC3

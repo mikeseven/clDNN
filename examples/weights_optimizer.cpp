@@ -28,6 +28,19 @@ bool weights_optimizer::_needs_optimization(const primitive & prim, file::weight
     const memory& mem = get_memory_primitive(prim);
     if (type == file::weights_type::bias)
     {
+        // TODO!!! put better logic here.
+        auto expected_mem_format = use_half ? memory::format::x_f16 : memory::format::x_f32;
+        if (mem.argument.format != expected_mem_format)
+        {
+            auto reordered_prim = neural::reorder::create(
+            {
+                expected_mem_format,
+                mem.argument.size,
+                prim,
+            });
+            _primitives.push_back(reordered_prim);
+            return true;
+        }
         return false;
     }
     else if (type == file::weights_type::mean)
