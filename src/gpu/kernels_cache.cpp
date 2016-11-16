@@ -68,6 +68,16 @@ __attribute__((overloadable)) const __global void* get_data(const __global neura
                   intel_sub_group_shuffle( _block.s6, _col ), \
                   intel_sub_group_shuffle( _block.s7, _col ) );
 
+#define TRANSPOSE_BLOCK_16_FP16(_block)                                  \
+        (half16)(as_half2(intel_sub_group_shuffle(_block, 0)),  \
+                 as_half2(intel_sub_group_shuffle(_block, 1)),  \
+                 as_half2(intel_sub_group_shuffle(_block, 2)),  \
+                 as_half2(intel_sub_group_shuffle(_block, 3)),  \
+                 as_half2(intel_sub_group_shuffle(_block, 4)),  \
+                 as_half2(intel_sub_group_shuffle(_block, 5)),  \
+                 as_half2(intel_sub_group_shuffle(_block, 6)),  \
+                 as_half2(intel_sub_group_shuffle(_block, 7)));
+
 #define MULTIPLY_BLOCKS_8x8(_result, _blockA, _blockB)  \
 {   \
     const float8 acol0 = TRANSPOSE_BLOCK_8_COL( _blockA, 0 ); \
@@ -99,6 +109,7 @@ __attribute__((overloadable)) const __global void* get_data(const __global neura
         _result.s6 = mad( _rowA, intel_sub_group_shuffle( colB, 6 ), _result.s6 );  \
         _result.s7 = mad( _rowA, intel_sub_group_shuffle( colB, 7 ), _result.s7 );  \
 }
+
 #define ADD_BIAS_8( _result, _biasVal) \
 { \
     _result.s0 += intel_sub_group_shuffle( _biasVal, 0 ); \
@@ -109,6 +120,18 @@ __attribute__((overloadable)) const __global void* get_data(const __global neura
     _result.s5 += intel_sub_group_shuffle( _biasVal, 5 ); \
     _result.s6 += intel_sub_group_shuffle( _biasVal, 6 ); \
     _result.s7 += intel_sub_group_shuffle( _biasVal, 7 ); \
+}
+
+#define ADD_BIAS_16_FP16( _result, _biasVal) \
+{ \
+    _result.s01 += as_half2(intel_sub_group_shuffle(_biasVal, 0)); \
+    _result.s23 += as_half2(intel_sub_group_shuffle(_biasVal, 1)); \
+    _result.s45 += as_half2(intel_sub_group_shuffle(_biasVal, 2)); \
+    _result.s67 += as_half2(intel_sub_group_shuffle(_biasVal, 3)); \
+    _result.s89 += as_half2(intel_sub_group_shuffle(_biasVal, 4)); \
+    _result.sab += as_half2(intel_sub_group_shuffle(_biasVal, 5)); \
+    _result.scd += as_half2(intel_sub_group_shuffle(_biasVal, 6)); \
+    _result.sef += as_half2(intel_sub_group_shuffle(_biasVal, 7)); \
 }
 
 #define ACTIVATION_8(_result) \

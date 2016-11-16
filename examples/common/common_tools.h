@@ -26,6 +26,15 @@
 #include <utility>
 #include <vector>
 
+enum PrintType
+{
+    Verbose,
+    Perf,
+    ExtendedTesting,
+
+    PrintType_count // must be last
+};
+
 /// Information about executable.
 class executable_info
 {
@@ -124,6 +133,9 @@ struct execution_params {
     bool        dump_single_feature;
     uint32_t    dump_feature_id;
 
+    PrintType print_type = PrintType::Verbose; // printing modes - to support Verbose, vs Perf ony, vs ImageNet testing prints
+    size_t loop = 1; // running the same input in a loop for smoothing perf results
+
     bool perf_per_watt; // power instrumentation
 };
 
@@ -135,7 +147,7 @@ void load_images_from_file_list(const std::vector<std::string>& images_list, neu
 
 /// function moved from alexnet.cpp, they will be probably used by each topology
 void print_profiling_table(std::ostream& os, const std::vector<neural::instrumentation::profiling_info>& profiling_info);
-neural::worker create_worker();
+neural::worker create_worker(PrintType printType = PrintType::Verbose);
 uint32_t get_next_nearest_power_of_two(int number);
 uint32_t get_gpu_batch_size(int number);
 

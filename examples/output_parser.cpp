@@ -97,7 +97,7 @@ html::html(const std::string & file_name, const std::string & title)
 	}
 }
 
-void html::batch(const neural::memory & mem, const std::string& categories_file, const std::vector<std::string>& image_names)
+void html::batch(const neural::memory & mem, const std::string& categories_file, const std::vector<std::string>& image_names, PrintType printType)
 {
 	auto batch = read_output(mem);
 	auto categories = load_category_names(categories_file);
@@ -110,7 +110,16 @@ void html::batch(const neural::memory & mem, const std::string& categories_file,
 
 		auto& img_name = image_names[img_idx];
 		auto idx = img_name.find_last_of("/\\");
-		auto img_file = img_name.substr(idx == std::string::npos ? 0 : idx + 1);
+    
+        bool not_found = idx == std::string::npos;
+
+		auto img_file = img_name.substr(not_found ? 0 : idx + 1);
+        auto without_file = img_name.substr(0, not_found ? 0 : idx);
+
+        auto idx1 = without_file.find_last_of("/\\");
+        bool not_found1 = idx1 == std::string::npos;
+        auto img_dir = without_file.substr(not_found1 ? 0 : idx1 + 1);
+
 		html_file << "<td class=\"recognition\"><img height=\"150\" alt=\""
 				  << img_name << "\" src=\"" << img_name << "\">" 
 				  << "</p><p>" << img_file << "</p>" << std::endl 
@@ -130,10 +139,30 @@ void html::batch(const neural::memory & mem, const std::string& categories_file,
         // runtime arguments, so user could have choice between
         // html and textlog
         {
-            auto& category = categories[batch[img_idx][0].second];
-            std::cout << "    " << img_file << " ";
-            std::cout << std::setprecision(2) << std::fixed << batch[img_idx][0].first * 100 << "%"<<" ";
-            std::cout << category << std::endl;                           
+            const auto& category = categories[batch[img_idx][0].second];
+
+            switch(printType)
+            {
+			case PrintType::ExtendedTesting:
+			{
+                bool correct = img_dir.compare(category) == 0;
+                std::cout //<< "    " 
+                          /*<< img_file << " "
+                          << std::setprecision(2) << std::fixed << batch[img_idx][0].first * 100 << "%" << " "
+                          << category
+                          << " and we got it - " << (correct ? "CORRECT" : "wrong")*/
+                    << (correct ? "CORRECT" : "wrong")
+                    << std::endl;
+            }
+			break;
+            case PrintType::Verbose:
+            {
+                std::cout << "    " << img_file << " ";
+                std::cout << std::setprecision(2) << std::fixed << batch[img_idx][0].first * 100 << "%"<<" ";
+                std::cout << category << std::endl;                           
+            }
+			break;
+			}
         }
 		// table cell end
 		html_file << "</ol>" << std::endl << "    </td>";

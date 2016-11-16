@@ -179,7 +179,7 @@ primitive convolution::create(convolution::arguments arg) {
     {
         auto& filter_mem = get_memory_primitive(arg.input[j * 2 + 1].primitive());
         auto& filter_arg = filter_mem.argument; //convolution filter
-        auto& bias_arg = arg.input[j * 2 + 2].primitive().as<const memory&>().argument;
+        auto& bias_arg = get_memory_primitive(arg.input[j * 2 + 2].primitive()).argument;
 
         auto& input_offset = arg.input_offset;
         auto& output_offset = arg.output_offset;

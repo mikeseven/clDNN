@@ -21,5 +21,5 @@
 namespace neural 
 {
     extern const char inline_utils_float[];
-	extern const char inline_utils_float_end[];
+    extern const char inline_utils_float_end[];
 }

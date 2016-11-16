@@ -115,7 +115,7 @@ namespace neural {
     // creates primitive with reorder implementation that supports provided arguments
     primitive reorder::create(reorder::arguments arg) 
 	{
-        auto& input_mem = arg.input[0].primitive().as<const memory&>();
+        auto& input_mem = get_memory_primitive(arg.input[0].primitive());
         if (input_mem.argument.size.raw.size() != arg.output[0].as<const memory&>().argument.size.raw.size())
             //            throw std::runtime_error("Number of dimensions in reorder does not match. Meybe you want to use reshape primitive?"); //todo reshape
             throw std::runtime_error("Number of dimensions in reorder does not match.");

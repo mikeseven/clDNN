@@ -24,6 +24,9 @@
 const std::string kernelName = "reorder_GPU";
 const std::string kernelName_subtract = "reorder_subtract_GPU";
 const std::string kernelName_subtract_values = "reorder_subtract_values_GPU";
+const std::string kernel_name_1d_convert = "reorder_gpu_1d_convert";
+const std::string kernel_name_1d_convert_subtract = "reorder_gpu_1d_convert_subtract";
+const std::string kernel_name_1d_convert_subtract_values = "reorder_gpu_1d_convert_subtract_values";
 
 namespace neural {
 // GPU engine information helpers.
@@ -55,12 +58,17 @@ struct reorder_gpu : is_an_implementation {
     static std::string get_idx_calculation(memory::format::type type) {
         switch (type)
         {
-        case memory::format::type::yxfb_f32:
-        case memory::format::type::yxfb_f16:
-            return "return pos[0] + size[0] * (pos[1] + size[1]*(pos[2] + size[2] * pos[3]));";
+        // Reorder and optional conversion cases.
+        // For input formats:
+        // 0 - batch (b), 1 - feature (f), 2, 3 - spatial (x -> 2, y -> 3)
+        // For weights formats:
+        // 0 - batch (b), 1, 2 - feature (o -> 1, i -> 2), 3, 4 - spatial (x -> 3, y -> 4)
         case memory::format::type::byxf_f32:
         case memory::format::type::byxf_f16:
             return "return pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + size[3] * pos[0]));";
+        case memory::format::type::yxfb_f32:
+        case memory::format::type::yxfb_f16:
+            return "return pos[0] + size[0] * (pos[1] + size[1] * (pos[2] + size[2] * pos[3]));";
         case memory::format::type::bfyx_f32:
         case memory::format::type::bfyx_f16:
             return "return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));";
@@ -72,10 +80,14 @@ struct reorder_gpu : is_an_implementation {
             return "return pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + size[3] * pos[4]));";
         case memory::format::type::bx_f32:
         case memory::format::type::bx_f16:
-            return "return pos[2] + size[2]*pos[0];";
+            return "return pos[2] + size[2] * pos[0];";
         case memory::format::type::xb_f32:
         case memory::format::type::xb_f16:
-            return "return pos[0] + size[0]*pos[2];";
+            return "return pos[0] + size[0] * pos[2];";
+        // No reorder, only conversion (use simpler 1D kernels for that).
+        case memory::format::type::x_f32:
+        case memory::format::type::x_f16:
+            return "return pos[2];";
 
         default:
             throw std::invalid_argument("This format is not supported in GPU reorder");
@@ -87,6 +99,11 @@ struct reorder_gpu : is_an_implementation {
     {
         switch(type)
         {
+        // Reorder and optional conversion cases.
+        // For input formats:
+        // 0 - batch (b), 1 - feature (f), 2, 3 - spatial (x -> 2, y -> 3)
+        // For weights formats:
+        // 0 - batch (b), 1, 2 - feature (o -> 1, i -> 2), 3, 4 - spatial (x -> 3, y -> 4)
         case memory::format::type::byxf_f32:
         case memory::format::type::byxf_f16:
             return { 1, 2, 3, 0 };
@@ -108,6 +125,11 @@ struct reorder_gpu : is_an_implementation {
         case memory::format::type::xb_f32:
         case memory::format::type::xb_f16:
             return { 1, 0, 2 };
+        // No reorder, only conversion (use simpler 1D kernels for that).
+        case memory::format::type::x_f32:
+        case memory::format::type::x_f16:
+            return { 0, 1, 2 };
+
         default:
             throw std::invalid_argument("This format is not supported in GPU reorder");
         }
@@ -125,13 +147,23 @@ struct reorder_gpu : is_an_implementation {
     }
 
     const std::string& select_kernel_name() const {
+        auto& input_mem = outer.input_memory(0);
+
+        // 1d conversions (no reorder)
+        if (memory::traits(input_mem.argument.format).dimension == 1)
+        {
+            if (have_subtraction)
+                return kernel_name_1d_convert_subtract;
+            if (!outer.argument.subtract_per_feature.empty())
+                return kernel_name_1d_convert_subtract_values;
+            return kernel_name_1d_convert;
+        }
         // if we got values to subtract, then choose apropriate kernel
         if (have_subtraction)
             return kernelName_subtract;
-        else if (!outer.argument.subtract_per_feature.empty())
+        if (!outer.argument.subtract_per_feature.empty())
             return kernelName_subtract_values;
-        else
-            return kernelName;
+        return kernelName;
     }
 
     gpu::jit_constants get_jit_constants() const {
@@ -221,7 +253,11 @@ struct reorder_gpu : is_an_implementation {
         auto& input_mem = outer.input_memory(0);
         auto& output_mem = outer.output_memory(0);
 
-        if (input_mem.argument.size.raw.size() != output_mem.argument.size.raw.size()) throw std::runtime_error("Reorder input/output number of dimension does not match.");
+        if (input_mem.argument.size.raw.size() != output_mem.argument.size.raw.size() ||
+            memory::traits(input_mem.argument.format).dimension != memory::traits(output_mem.argument.format).dimension)
+        {
+            throw std::runtime_error("Reorder input/output number of dimension does not match.");
+        }
 
         if (me->have_subtraction)
         {
@@ -256,7 +292,7 @@ struct reorder_gpu : is_an_implementation {
     namespace {
         struct attach {
             attach() {
-				implementation_map<reorder>::add({
+                implementation_map<reorder>::add({
                     { engine::type::gpu, reorder_gpu::create }
                 });
             }
