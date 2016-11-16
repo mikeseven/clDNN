@@ -52,21 +52,34 @@ struct gpu_info_helper : gpu::context_holder
 
 struct convolution_gpu : is_an_implementation {
     convolution &outer;
+    struct kernel_data
+    {
+        size_t gws0;
+        size_t lws0;
+        std::string kernel_name;
+    } _kernel_data;
+
     bool in_feature_multiple_of_8; // if input feature maps are multiple of 8
     bool out_feature_multiple_of_8; // if output feature maps are multiple of 8
     gpu::kernel _kernel;
 
     convolution_gpu(convolution &arg): is_an_implementation(neural::type_id<convolution_gpu>())
         , outer(arg)
+        , _kernel_data(set_kernel_data())
         , in_feature_multiple_of_8(outer.input_memory(0).argument.size.feature[0] % 8 == 0)
         , out_feature_multiple_of_8(outer.output_memory(0).argument.size.feature[0] % 8 == 0)
-        , _kernel(select_kernel_name(), get_jit_constants())
+        , _kernel(_kernel_data.kernel_name, get_jit_constants())
     {}
 
-    const std::string& select_kernel_name() const {
-        // input
+    const kernel_data set_kernel_data() const
+    {
+        kernel_data kd;
+
         auto& input_mem = outer.input_memory(0);
         auto& filter_mem = outer.input_memory(1);
+        auto& output_mem = outer.output_memory(0);
+
+        auto split = outer.argument.split;
         auto batch_size = input_mem.argument.size.batch[0];
 
         if (padding::zero != outer.argument.padding)
@@ -75,66 +88,131 @@ struct convolution_gpu : is_an_implementation {
         switch (input_mem.argument.format) {
         // FP32 (float)
         case memory::format::yxfb_f32:
+        {
             switch (filter_mem.argument.format) {
+            case memory::format::oyxi_f32:
             case memory::format::oiyx_f32:
-                return kernelName_YXFB_memory;
+            {
+                kd.gws0 = (output_mem.argument.size.feature[0] * batch_size) / split;
+                kd.lws0 = std::min(kd.gws0, static_cast<size_t>(32));
+                while (kd.gws0 % kd.lws0)
+                {
+                    kd.lws0--;
+                }
+                if (filter_mem.argument.format == memory::format::oiyx_f32)
+                {
+                    kd.kernel_name = kernelName_YXFB_memory;
+                }
+                else
+                {
+                    kd.kernel_name = kernelName_YXFB_OYXI_memory;
+                }
+                break;
+            }
             case memory::format::yxoi_f32:
                 if (batch_size == 8 &&
                     out_feature_multiple_of_8)
                 {
                     if (in_feature_multiple_of_8)
-                        return kernelName_YXFB_YXOI_B8_F8_memory;
+                    {
+                        kd.gws0 = (output_mem.argument.size.feature[0] * 8) / split;
+                        kd.kernel_name = kernelName_YXFB_YXOI_B8_F8_memory;
+                    }
                     else
-                        return kernelName_YXFB_YXOI_B8_memory;
+                    {
+                        uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
+                        kd.gws0 = (output_mem.argument.size.feature[0] / (ofm_per_workitem / batch_size)) / split;
+                        kd.kernel_name = kernelName_YXFB_YXOI_B8_memory;
+                    }
                 }
                 else
-                    return kernelName_YXFB_YXOI_memory;
+                {
+                    kd.gws0 = output_mem.count() / split;
+                    kd.kernel_name = kernelName_YXFB_YXOI_memory;
+                }
+                kd.lws0 = 8;
+                break;
             case memory::format::yxio_f32:
                 if (filter_mem.argument.size.feature[0] * batch_size % get_local_work_group_size(batch_size, filter_mem) != 0)
                 {
-                    return kernelName_YXFB_YXIO;
+                    kd.gws0 = (output_mem.argument.size.feature[0] * output_mem.argument.size.batch[0]) / split;
+                    kd.lws0 = 32;
+                    while (kd.gws0 % kd.lws0)
+                    {
+                        kd.lws0--;
+                    }
+                    kd.kernel_name = kernelName_YXFB_YXIO;
                 }
-                if (batch_size == 1)
-                {
-                    int ofm_per_work_item = get_ofm_per_work_item(batch_size, filter_mem);
-                    if (ofm_per_work_item == 8 ||
-                        ofm_per_work_item == 4 ||
-                        ofm_per_work_item == 2)
-                        return kernelName_YXFB_YXIO_B1_block_memory;
-                    else
-                        return kernelName_YXFB_YXIO_B1_memory;
-                }
-                if (input_mem.argument.size.batch[0] > 16)
-                    return kernelName_YXFB_YXIO_B16_memory;
                 else
-                    return kernelName_YXFB_YXIO_B8_memory;
-            case memory::format::oyxi_f32:
-                return kernelName_YXFB_OYXI_memory;
-
+                {
+                    uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
+                    uint32_t batches_per_workitem = get_batches_per_work_item(batch_size, filter_mem);
+                    kd.gws0 = (output_mem.argument.size.feature[0] * batch_size / (ofm_per_workitem * batches_per_workitem)) / split;
+                    kd.lws0 = static_cast<size_t>(get_local_work_group_size(batch_size, filter_mem));
+                    if (batch_size == 1)
+                    {
+                        int ofm_per_work_item = get_ofm_per_work_item(batch_size, filter_mem);
+                        if (ofm_per_work_item == 8 ||
+                            ofm_per_work_item == 4 ||
+                            ofm_per_work_item == 2)
+                            kd.kernel_name = kernelName_YXFB_YXIO_B1_block_memory;
+                        else
+                            kd.kernel_name = kernelName_YXFB_YXIO_B1_memory;
+                    }
+                    else if (input_mem.argument.size.batch[0] > 16)
+                    {
+                        kd.kernel_name = kernelName_YXFB_YXIO_B16_memory;
+                    }
+                    else
+                    {
+                        kd.kernel_name = kernelName_YXFB_YXIO_B8_memory;
+                    }
+                }
+                break;
             default:
                 throw std::invalid_argument("Filter memory is not supported");
             }
+            break;
+        }
 
         // FP16 (half)
         case memory::format::yxfb_f16:
+        {
             switch (filter_mem.argument.format) {
             case memory::format::yxio_f16:
                 // Number of output features is positive and dividable by 16.
-                if ((filter_mem.argument.size.feature[0] & ~0xFU) != 0)
-                {
+                if ((filter_mem.argument.size.feature[0] & ~0xFU) != 0 &&
                     // Batch size is positive and dividable by 16.
-                    if ((input_mem.argument.size.batch[0] & ~0xFU) != 0)
-                        return kernel_name_yxfb_yxio_b16_fp16_memory;
+                    (input_mem.argument.size.batch[0] & ~0xFU) != 0)
+                {
+                    uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
+                    uint32_t batches_per_workitem = get_batches_per_work_item(batch_size, filter_mem);
+                    kd.gws0 = (output_mem.argument.size.feature[0] * batch_size / (ofm_per_workitem * batches_per_workitem)) / split;
+                    kd.lws0 = static_cast<size_t>(get_local_work_group_size(batch_size, filter_mem));
+                    kd.kernel_name = kernel_name_yxfb_yxio_b16_fp16_memory;
                 }
-                return kernel_name_yxfb_yxio_fp16;
-
+                else
+                {
+                    kd.gws0 = (output_mem.argument.size.feature[0] * output_mem.argument.size.batch[0]) / split;
+                    kd.lws0 = 32;
+                    while (kd.gws0 % kd.lws0)
+                    {
+                        kd.lws0--;
+                    }
+                    kd.kernel_name = kernel_name_yxfb_yxio_fp16;
+                }
+                break;
             default:
                 throw std::invalid_argument("Filter memory is not supported");
             }
+            break;
+        }
 
         default:
             throw std::invalid_argument("Input memory format is not supported");
         }
+
+        return kd;
     }
 
     // how many output feature maps for a single batch will a single work item produce 
@@ -314,116 +392,13 @@ struct convolution_gpu : is_an_implementation {
         if (memory::traits(input_mem.argument.format).type->id != memory::traits(filter_mem.argument.format).type->id)
             throw std::invalid_argument("Memory format of input is incompatible with memory format of filter.");
 
-        auto dstSize = output_mem.count();
-
-        size_t gws0;
-        size_t lws0;
-
-        uint32_t batch_size = output_mem.argument.size.batch[0];
-
-        // compute global and local work sizes for kernels
-        switch (input_mem.argument.format) {
-        case memory::format::yxfb_f32:
-            switch (filter_mem.argument.format)
-            {
-            case memory::format::yxoi_f32:
-            {
-                if (batch_size == 8 &&
-                    me->out_feature_multiple_of_8)
-                {
-                    if (me->in_feature_multiple_of_8)
-                    {
-                        gws0 = (output_mem.argument.size.feature[0] * 8) / split;
-                    }
-                    else
-                    {
-                        uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
-                        gws0 = (output_mem.argument.size.feature[0] / (ofm_per_workitem / batch_size)) / split;
-                    }
-                }
-                else
-                {
-                    gws0 = dstSize / split;
-                }
-                lws0 = 8;
-                break;
-            }
-            case memory::format::yxio_f32:
-            {
-                if (filter_mem.argument.size.feature[0] * batch_size % get_local_work_group_size(batch_size, filter_mem) != 0)
-                {
-                    gws0 = (output_mem.argument.size.feature[0] * output_mem.argument.size.batch[0]) / split;
-                    lws0 = 32;
-                    while (gws0 % lws0)
-                    {
-                        lws0--;
-                    }
-                }
-                else
-                {
-                    uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
-                    uint32_t batches_per_workitem = get_batches_per_work_item(batch_size, filter_mem);
-                    gws0 = (output_mem.argument.size.feature[0] * batch_size / (ofm_per_workitem * batches_per_workitem)) / split;
-                    lws0 = static_cast<size_t>(get_local_work_group_size(batch_size, filter_mem));
-                }
-                break;
-            }
-            case memory::format::oiyx_f32:
-            case memory::format::oyxi_f32:
-            {
-                gws0 = (output_mem.argument.size.feature[0] * batch_size) / split;
-                lws0 = std::min(gws0, static_cast<size_t>(32));
-                while (gws0%lws0)
-                {
-                    lws0 /= 2;
-                }
-                break;
-            }
-            default:
-                throw std::invalid_argument("Filter memory format is not supported");
-            }
-            break;
-
-        case memory::format::yxfb_f16:
-            switch (filter_mem.argument.format)
-            {
-            case memory::format::yxio_f16:
-            {
-                // Number of output features is positive and dividable by 16.
-                if ((filter_mem.argument.size.feature[0] & ~0xFU) != 0)
-                {
-                    // Batch size is positive and dividable by 16.
-                    if ((input_mem.argument.size.batch[0] & ~0xFU) != 0)
-                    {
-                        uint32_t ofm_per_workitem = get_ofm_per_work_item(batch_size, filter_mem);
-                        uint32_t batches_per_workitem = get_batches_per_work_item(batch_size, filter_mem);
-                        gws0 = (output_mem.argument.size.feature[0] * batch_size / (ofm_per_workitem * batches_per_workitem)) / split;
-                        lws0 = static_cast<size_t>(get_local_work_group_size(batch_size, filter_mem));
-                        break;
-                    }
-                }
-
-                gws0 = (output_mem.argument.size.feature[0] * output_mem.argument.size.batch[0]) / split;
-                lws0 = 32;
-                while (gws0 % lws0)
-                {
-                    lws0--;
-                }
-                break;
-            }
-            default:
-                throw std::invalid_argument("Filter memory format is not supported");
-            }
-            break;
-        default:
-            throw std::invalid_argument("Input memory format is not supported");
-        }
+        auto& kd = me->_kernel_data;
 
         // execute kernels
         for (uint32_t i = 0; i < split; i++) {
-            assert(gws0 % lws0 == 0);
+            assert(kd.gws0 % kd.lws0 == 0);
             me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                ({ { gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] },{ lws0, 1, 1 } },
+                ({ { kd.gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] },{ kd.lws0, 1, 1 } },
                     input_mem,
                     output_mem,
                     outer.input_memory(i * 2 + 1), //filters
