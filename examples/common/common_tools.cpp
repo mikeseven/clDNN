@@ -408,8 +408,9 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
         std::cout << "Start execution";
         if (ep.loop > 1)
         {
-            std::cout << " in a loop " << ep.loop << " times:" << std::endl;
+            std::cout << " in a loop " << ep.loop << " times:";
         }
+        std::cout << std::endl;
     }
 
     instrumentation::timer<> timer_execution;
@@ -529,7 +530,7 @@ void run_topology(const execution_params &ep)
 
     if (ep.print_type == Verbose)
     {
-        std::cout << "Building " << ep.topology_name << "  finished in " << instrumentation::to_string(build_time) << std::endl;
+        std::cout << "Building " << ep.topology_name << " finished in " << instrumentation::to_string(build_time) << std::endl;
     }
 
     // create worker
