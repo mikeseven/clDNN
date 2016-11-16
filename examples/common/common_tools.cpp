@@ -399,22 +399,12 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
     
     if (log_energy)
     {
-        if (energyLib.IsGTAvailable())
-        {
-            int freqGT = 0;
-            energyLib.GetGTFrequency(&freqGT);
-            std::cout << "Power logging: GT Frq = " << freqGT << std::endl;
-        }
         energyLib.StartLog(L"power_log.csv");
     }
 
     for (auto& p : primitives)
     {
         worker.execute(p.first.work());
-        //std::wstring file(L"power_log");
-        //file.append(std::to_wstring(i)).append(L".csv");
-        //energyLib.StartLog((wchar_t*)(file.c_str()));
-        //energyLib.StopLog();
         if (log_energy)
             energyLib.ReadSample();
     }
