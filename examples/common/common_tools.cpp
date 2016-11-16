@@ -499,7 +499,7 @@ void run_topology(const execution_params &ep)
     {
         if (energyLib.IntelEnergyLibInitialize() == false)
         {
-            std::cout << "Intel Power Gadget isn't initialized. Error: " << energyLib.GetLastError();
+            std::cout << "WARNING: Intel Power Gadget isn't initialized. msg: " << energyLib.GetLastError();
         }
     }
 
