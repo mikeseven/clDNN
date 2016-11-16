@@ -350,7 +350,7 @@ struct convolution_gpu : is_an_implementation {
             }
             case memory::format::yxio_f32:
             {
-                if (filter_mem.argument.size.feature[0] * batch_size % get_local_work_group_size(batch_size) != 0)
+                if (filter_mem.argument.size.feature[0] * batch_size % get_local_work_group_size(batch_size, filter_mem) != 0)
                 {
                     gws0 = (output_mem.argument.size.feature[0] * output_mem.argument.size.batch[0]) / split;
                     lws0 = 32;
