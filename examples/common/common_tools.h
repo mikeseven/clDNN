@@ -19,7 +19,7 @@
 
 #include "api/neural.h"
 #include "weights_optimizer.h"
-
+#include "power_intrumentation.h"
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -123,6 +123,8 @@ struct execution_params {
     uint32_t    dump_batch_id;
     bool        dump_single_feature;
     uint32_t    dump_feature_id;
+
+    bool perf_per_watt; // power instrumentation
 };
 
 std::vector<std::string> get_directory_images(const std::string& images_path);
@@ -140,7 +142,8 @@ uint32_t get_gpu_batch_size(int number);
 std::chrono::nanoseconds execute_topology(const neural::worker& worker,
                                           const std::vector<std::pair<neural::primitive, std::string>>& primitives,
                                           const neural::primitive& output,
-                                          const execution_params &ep);
+                                          const execution_params &ep,
+                                          CIntelPowerGadgetLib& energyLib);
 
 void run_topology(const execution_params &ep);
 

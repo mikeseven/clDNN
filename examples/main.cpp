@@ -195,9 +195,11 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Uses half precision floating point numbers (FP16, halfs) instead of single precision ones (float) in "
             "computations of selected model.")
         ("profiling", bpo::bool_switch(),
-            "Enable profiling and create profiling report.")
+            "Enables profiling and create profiling report.")
         ("optimize_weights", bpo::bool_switch(),
-            "Perform weights convertion to most desirable format for each network layer while building network.")
+            "Performs weights convertion to most desirable format for each network layer while building network.")
+        ("perf_per_watt", bpo::bool_switch(),
+            "Triggers power consumption measuring and outputing frames per second per watt.")
         ("version", "Show version of the application.")
         ("help", "Show help message and available command-line options.");
 
@@ -367,6 +369,7 @@ int main(int argc, char* argv[])
             ep.dump_batch_id = ep.dump_single_batch ? parsed_args["dump_batch"].as<uint32_t>() : 0;
             ep.dump_single_feature = parsed_args.count("dump_feature") != 0;
             ep.dump_feature_id = ep.dump_single_feature ? parsed_args["dump_feature"].as<uint32_t>() : 0;
+            ep.perf_per_watt = parsed_args["perf_per_watt"].as<bool>();
 
             if (ep.topology_name == "alexnet" ||
                 ep.topology_name == "vgg16" ||

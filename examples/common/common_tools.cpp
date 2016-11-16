@@ -60,7 +60,6 @@ void set_executable_info(int argc, const char* const argv[])
 
     auto exec_abs_path = system_complete(exec_name_arg);
 
-
     // Safe (guarded call-once) creation of information object.
     static auto info = std::make_shared<executable_info>(
         exec_abs_path.string(), exec_abs_path.stem().string(), exec_abs_path.parent_path().string());
@@ -95,7 +94,6 @@ std::string join_path(const std::string& parent, const std::string& child)
 {
     return (path(parent) / child).string();
 }
-
 
 // returns list of files (path+filename) from specified directory
 static inline std::vector<std::string> get_directory_files(const std::string& images_path, const std::regex& extension)
@@ -289,7 +287,6 @@ void load_images_from_file_list(
 template void load_images_from_file_list<float>(const std::vector<std::string>&, neural::primitive&);
 template void load_images_from_file_list<neural::half_t>(const std::vector<std::string>&, neural::primitive&);
 
-
 using namespace neural;
 
 void print_profiling_table(std::ostream& os, const std::vector<instrumentation::profiling_info>& profiling_info) {
@@ -392,14 +389,34 @@ uint32_t get_gpu_batch_size(int number)
 std::chrono::nanoseconds execute_topology(const worker& worker,
                                           const std::vector<std::pair<primitive, std::string>>& primitives,
                                           const primitive& output,
-                                          const execution_params &ep)
+                                          const execution_params &ep,
+                                          CIntelPowerGadgetLib& energyLib)
 {
+    bool log_energy = ep.perf_per_watt && energyLib.IntelEnergyLibInitialize();
+
     std::cout << "Start execution" << std::endl;
     instrumentation::timer<> timer_execution;
+    
+    if (log_energy)
+    {
+        if (energyLib.IsGTAvailable())
+        {
+            int freqGT = 0;
+            energyLib.GetGTFrequency(&freqGT);
+            std::cout << "Power logging: GT Frq = " << freqGT << std::endl;
+        }
+        energyLib.StartLog(L"power_log.csv");
+    }
 
     for (auto& p : primitives)
     {
         worker.execute(p.first.work());
+        //std::wstring file(L"power_log");
+        //file.append(std::to_wstring(i)).append(L".csv");
+        //energyLib.StartLog((wchar_t*)(file.c_str()));
+        //energyLib.StopLog();
+        if (log_energy)
+            energyLib.ReadSample();
     }
 
     //GPU primitives scheduled in unblocked manner
@@ -407,6 +424,10 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
 
     //OCL buffers mapping blocks until all primitives are completed
     output.as<const neural::memory&>().pointer<char>();
+    if (log_energy)
+    {
+        energyLib.StopLog();
+    }
 
     auto execution_time(timer_execution.uptime());
     std::cout << ep.topology_name << " scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
@@ -457,6 +478,15 @@ void run_topology(const execution_params &ep)
             << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;
     }
     gpu::configuration::get().enable_profiling = ep.profiling;
+
+    CIntelPowerGadgetLib energyLib;
+    if (ep.perf_per_watt)
+    {
+        if (energyLib.IntelEnergyLibInitialize() == false)
+        {
+            std::cout << "Intel Power Gadget isn't initialized. Error: " << energyLib.GetLastError();
+        }
+    }
 
     auto img_list = get_directory_images(ep.input_dir);
     if (img_list.empty())
@@ -512,7 +542,7 @@ void run_topology(const execution_params &ep)
         }
 
         // execute alexnet
-        auto time = execute_topology(worker, primitives, output, ep);
+        auto time = execute_topology(worker, primitives, output, ep, energyLib);
 
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
         output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch);
