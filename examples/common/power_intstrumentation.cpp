@@ -48,7 +48,7 @@ static bool GetLibraryLocation(string& strLocation)
 #if _M_X64
 		strLocation = string((const char*) dir_path).append("\\EnergyLib64.dll");
 #else
-		strLocation = wstring(dir_path) + L"\\EnergyLib32.dll";
+		strLocation = string((const char*) dir_path).append("\\EnergyLib32.dll");
 #endif
 		return true;
 	}
@@ -234,7 +234,7 @@ CIntelPowerGadgetLib::~CIntelPowerGadgetLib(void)
 
 std::string CIntelPowerGadgetLib::GetLastError()
 {
-    return false;
+    return "Not implemented on current OS";
 }
 
 bool CIntelPowerGadgetLib::IntelEnergyLibInitialize(void)
