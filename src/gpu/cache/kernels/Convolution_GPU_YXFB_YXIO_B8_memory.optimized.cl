@@ -24,7 +24,7 @@ KERNEL(Convolution_GPU_YXFB_YXIO_B8_memory)(
 
 	const uint out_id = (global_id / batch_num) * OFM_PER_WORK_ITEM * batch_num + out_batch_id;
 
-	const uint ofm_offset = (global_id * (OFM_PER_WORK_ITEM / batch_num)) % FILTER_OUTPUT_FEATURE_NUM;
+	const uint ofm_offset = (global_id * OFM_PER_WORK_ITEM) / batch_num % FILTER_OUTPUT_FEATURE_NUM;
 
 	bool finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_OFFSET_SIZE_X 
 			   || out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_OFFSET_SIZE_Y;
@@ -32,7 +32,9 @@ KERNEL(Convolution_GPU_YXFB_YXIO_B8_memory)(
 	const uint sub_group_id = get_local_id(0);
 
 	float8 _data0 = 0.f;
+#if OFM_PER_WORK_ITEM == 16
 	float8 _data1 = 0.f;
+#endif
 
 	if(!finish)
 	{
@@ -60,44 +62,55 @@ KERNEL(Convolution_GPU_YXFB_YXIO_B8_memory)(
 
 						//sub_group_id used as offset to make each workitem load different filter, and then shuffle it
 						uint filter_idx = ofm_offset + sub_group_id + FILTER_INPUT_FEATURE_NUM * (FILTER_OUTPUT_FEATURE_NUM * (i * FILTER_SIZE_X + j));
+#if OFM_PER_WORK_ITEM == 16
 						uint filter_idx2 = filter_idx + 8;
-
+#endif
 						for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM / 8; h++)
 						{
 							float8 _input = as_float8(intel_sub_group_block_read8((const __global uint*)input + input_idx));
 
 							DOT_PRODUCT_8(_data0, _input.s0, filter[filter_idx]) filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+#if OFM_PER_WORK_ITEM == 16
 							DOT_PRODUCT_8(_data1, _input.s0, filter[filter_idx2]) filter_idx2 += FILTER_OUTPUT_FEATURE_NUM;
-							
+#endif
 							DOT_PRODUCT_8(_data0, _input.s1, filter[filter_idx]) filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+#if OFM_PER_WORK_ITEM == 16
 							DOT_PRODUCT_8(_data1, _input.s1, filter[filter_idx2]) filter_idx2 += FILTER_OUTPUT_FEATURE_NUM;
-
+#endif
 							DOT_PRODUCT_8(_data0, _input.s2, filter[filter_idx]) filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+#if OFM_PER_WORK_ITEM == 16
 							DOT_PRODUCT_8(_data1, _input.s2, filter[filter_idx2]) filter_idx2 += FILTER_OUTPUT_FEATURE_NUM;
-
+#endif
 							DOT_PRODUCT_8(_data0, _input.s3, filter[filter_idx]) filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+#if OFM_PER_WORK_ITEM == 16
 							DOT_PRODUCT_8(_data1, _input.s3, filter[filter_idx2]) filter_idx2 += FILTER_OUTPUT_FEATURE_NUM;
-
+#endif
 							DOT_PRODUCT_8(_data0, _input.s4, filter[filter_idx]) filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+#if OFM_PER_WORK_ITEM == 16
 							DOT_PRODUCT_8(_data1, _input.s4, filter[filter_idx2]) filter_idx2 += FILTER_OUTPUT_FEATURE_NUM;
-
+#endif
 							DOT_PRODUCT_8(_data0, _input.s5, filter[filter_idx]) filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+#if OFM_PER_WORK_ITEM == 16
 							DOT_PRODUCT_8(_data1, _input.s5, filter[filter_idx2]) filter_idx2 += FILTER_OUTPUT_FEATURE_NUM;
-
+#endif
 							DOT_PRODUCT_8(_data0, _input.s6, filter[filter_idx]) filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+#if OFM_PER_WORK_ITEM == 16
 							DOT_PRODUCT_8(_data1, _input.s6, filter[filter_idx2]) filter_idx2 += FILTER_OUTPUT_FEATURE_NUM;
-
+#endif
 							DOT_PRODUCT_8(_data0, _input.s7, filter[filter_idx]) filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+#if OFM_PER_WORK_ITEM == 16
 							DOT_PRODUCT_8(_data1, _input.s7, filter[filter_idx2]) filter_idx2 += FILTER_OUTPUT_FEATURE_NUM;
-
+#endif
 							input_idx += 8 * INPUT_BATCH_NUM;
 						}
 						for (uint h = FILTER_INPUT_FEATURE_NUM - (FILTER_INPUT_FEATURE_NUM % 8); h < FILTER_INPUT_FEATURE_NUM; h++)
 						{
 							float8 _filter = TRANSPOSE_BLOCK_8(filter[filter_idx]); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
 							_data0 = mad(input[input_idx], _filter, _data0);
+#if OFM_PER_WORK_ITEM == 16
 							float8 _filter2 = TRANSPOSE_BLOCK_8(filter[filter_idx2]); filter_idx2 += FILTER_OUTPUT_FEATURE_NUM;
 							_data1 = mad(input[input_idx], _filter2, _data1);
+#endif
 							input_idx += INPUT_BATCH_NUM;
 						}
 					}
@@ -107,13 +120,19 @@ KERNEL(Convolution_GPU_YXFB_YXIO_B8_memory)(
 	}
 
 	ADD_BIAS_8(_data0, bias[ofm_offset + sub_group_id]);
+#if OFM_PER_WORK_ITEM == 16
 	ADD_BIAS_8(_data1, bias[ofm_offset + sub_group_id + 8]);
+#endif
 
 	ACTIVATION_8(_data0);
+#if OFM_PER_WORK_ITEM == 16
 	ACTIVATION_8(_data1);
+#endif
 
 	intel_sub_group_block_write8((__global uint*)output + out_id, as_uint8(_data0));
+#if OFM_PER_WORK_ITEM == 16
 	intel_sub_group_block_write8((__global uint*)output + out_id + 8 * batch_num, as_uint8(_data1));
+#endif
 }
 
 #undef ACTIVATION
