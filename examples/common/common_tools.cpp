@@ -416,7 +416,13 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
     
     if (log_energy)
     {
-        energyLib.StartLog(L"power_log.csv");
+        try {
+            energyLib.StartLog(L"power_log.csv");
+        }
+        catch (...)
+        {
+            throw std::runtime_error("ERROR: can't open power_log.csv file");
+        }
     }
 
     for (int i = 0; i < ep.loop; i++)
@@ -593,6 +599,11 @@ void run_topology(const execution_params &ep)
             if (ep.print_type != ExtendedTesting)
             {
                 std::cout << "Frames per second:" << (double)(ep.loop * batch_size) / time_in_sec << std::endl;
+            }
+            if (ep.perf_per_watt == true)
+            {
+                if (!energyLib.print_power_results((double)(ep.loop * batch_size) / time_in_sec))
+                    std::cout << "WARNING: power file parsing failed." << std::endl;
             }
         }
     }

@@ -60,6 +60,7 @@ public:
 	bool IsGTAvailable();
 	std::string GetLastError();
     bool isInitialized;
+    bool print_power_results(double);
 
 private:
 	IPGInitialize pInitialize;
@@ -80,4 +81,5 @@ private:
 	IPGStopLog pStopLog;
 	IPGIsGTAvailable pIsGTAvailable;
 };
+
 
