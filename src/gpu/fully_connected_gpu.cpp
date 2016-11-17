@@ -29,7 +29,21 @@ const std::string kernelName_xb_xb_b16_memory = "Fully_Connected_GPU_xb_xb_b16_m
 const std::string KernelName_xb_xb_b8_x8_memory_vload = "Fully_Connected_GPU_xb_xb_b8_x8_memory_vload";
 const std::string kernelName_yxfn_memory = "Fully_Connected_GPU_yxfn_memory";
 
-namespace neural {
+
+namespace neural
+{
+
+// GPU engine information helpers.
+namespace
+{
+struct gpu_info_helper : gpu::context_holder
+{
+    gpu::engine_info get_engine_info() const
+    {
+        return context()->get_engine_info();
+    }
+};
+}
 
     struct fully_connected_gpu : is_an_implementation {
         fully_connected &outer;
@@ -38,6 +52,7 @@ namespace neural {
             size_t gws0, gws1;
             size_t lws0, lws1;
             std::string kernel_name;
+            bool fp16_unit_used;
         } _kernel_data;
         gpu::kernel _kernel;
        
@@ -48,13 +63,14 @@ namespace neural {
             , _kernel(_kernel_data.kernel_name, get_jit_constants())
         {}
 
-        const kernel_data set_kernel_data() const
+        kernel_data set_kernel_data() const
         {
             kernel_data kd;
             kd.gws0 = outer.output_memory(0).count();
             kd.gws1 = 1;
             kd.lws0 = 32;
             kd.lws1 = 1;
+            kd.fp16_unit_used = false;
 
             auto& input_mem = outer.input_memory(0);
             auto& weight_mem = outer.input_memory(1);
@@ -123,6 +139,27 @@ namespace neural {
                 }
                 break;
             }
+
+            case memory::format::yxfb_f16:
+            case memory::format::xb_f16:
+            case memory::format::x_f16:
+            {
+                switch (weight_mem.argument.format)
+                {
+                case memory::format::yxfb_f16:
+                case memory::format::xb_f16:
+                {
+                    kd.kernel_name = kernelName_xb_xb_memory;
+                    kd.fp16_unit_used = true;
+                    break;
+                }
+
+                default:
+                    throw std::invalid_argument("Weight memory format is not supported");
+                }
+                break;
+            }
+
             default:
                 throw std::invalid_argument("Input memory format is not supported");
             }
@@ -166,15 +203,25 @@ namespace neural {
         }
 
         gpu::jit_constants get_jit_constants() const {
+            gpu_info_helper gpu_info;
+            auto engine_info = gpu_info.get_engine_info();
+
             auto& input_mem = outer.input_memory(0);
             auto& output_mem = outer.output_memory(0);
             auto& weight_mem = outer.input_memory(1);
+
+            if (!engine_info.supports_fp16 && _kernel_data.fp16_unit_used)
+                throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
             gpu::jit_constants mem_consts{
                 gpu::make_jit_constant("INPUT", input_mem.argument.size),
                 gpu::make_jit_constant("OUTPUT", output_mem.argument.size),
                 gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", input_mem.count() / input_mem.argument.size.batch[0]),
-                gpu::make_jit_constant("WEIGHTS", weight_mem.argument.size)
+                gpu::make_jit_constant("WEIGHTS", weight_mem.argument.size),
+                gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16)),
+                gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(_kernel_data.fp16_unit_used)),
+                gpu::make_jit_constant("UNIT_TYPE", _kernel_data.fp16_unit_used ? "half" : "float"),
+                gpu::make_jit_constant("UNIT_SUFFIX", _kernel_data.fp16_unit_used ? "h" : "f")
             };
 
             if (outer.argument.use_relu)
