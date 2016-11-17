@@ -9,9 +9,7 @@ float FUNC(find_max_value)(const int idx, __global float* input)
     value = max(value, idx < LEFTOVERS? input[LWS * ITEMS_NUM + idx] : -FLT_MAX);
     partial_max[idx] = value;
 
-#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE);
-#endif
     if(idx == 0)
     {
         for(int i = 1; i < LWS; i++)
@@ -19,9 +17,7 @@ float FUNC(find_max_value)(const int idx, __global float* input)
             partial_max[0] = max(partial_max[0], partial_max[i]);
         };
     }
-#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE);
-#endif
     return partial_max[0];
 }
 
@@ -46,9 +42,7 @@ KERNEL (softmax_gpu)(__global float* input, __global float* pDst)
         partial_acc[idx] += tmp_vals[i];
     }
 
-#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE); // we must be sure that all threads calculated max of elements(we can remove it if simd32 and GWS <= 32
-#endif
     if(idx == 0)
     {
         for(int i = 1; i < LWS; i++)
@@ -56,9 +50,7 @@ KERNEL (softmax_gpu)(__global float* input, __global float* pDst)
             partial_acc[0] += partial_acc[i];
         }
     }
-#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE);
-#endif
     for(int i = 0; i < ITEMS_NUM; i++)
     {
         pDst[LWS * i + idx] = tmp_vals[i] / partial_acc[0];
