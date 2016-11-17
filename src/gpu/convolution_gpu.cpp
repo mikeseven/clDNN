@@ -31,6 +31,7 @@ const std::string kernelName_YXFB_YXIO = "Convolution_GPU_YXFB_YXIO";
 const std::string kernelName_YXFB_YXIO_B1_memory = "Convolution_GPU_YXFB_YXIO_B1_memory";
 const std::string kernelName_YXFB_YXIO_B1_vload_memory = "Convolution_GPU_YXFB_YXIO_B1_vload_memory";
 const std::string kernelName_YXFB_YXIO_B1_block_memory = "Convolution_GPU_YXFB_YXIO_B1_block_memory";
+const std::string kernelName_YXFB_YXIO_B1_block_x2_memory = "Convolution_GPU_YXFB_YXIO_B1_block_x2_memory";
 const std::string kernelName_YXFB_YXIO_B8_memory = "Convolution_GPU_YXFB_YXIO_B8_memory";
 const std::string kernelName_YXFB_YXIO_B16_memory = "Convolution_GPU_YXFB_YXIO_B16_memory";
 const std::string kernelName_YXFB_YXOI_B8_F8_memory = "Convolution_GPU_YXFB_YXOI_B8_F8_memory";
@@ -54,7 +55,7 @@ struct convolution_gpu : is_an_implementation {
     convolution &outer;
     struct kernel_data
     {
-        size_t gws0;
+        size_t gws0, gws1, gws2;
         size_t lws0;
         std::string kernel_name;
     } _kernel_data;
@@ -73,11 +74,13 @@ struct convolution_gpu : is_an_implementation {
 
     const kernel_data set_kernel_data() const
     {
-        kernel_data kd;
-
         auto& input_mem = outer.input_memory(0);
         auto& filter_mem = outer.input_memory(1);
         auto& output_mem = outer.output_memory(0);
+
+        kernel_data kd;
+        kd.gws1 = output_mem.argument.size.spatial[0];
+        kd.gws2 = output_mem.argument.size.spatial[1];
 
         auto split = outer.argument.split;
         auto batch_size = input_mem.argument.size.batch[0];
@@ -155,7 +158,11 @@ struct convolution_gpu : is_an_implementation {
                         if (ofm_per_work_item == 8 ||
                             ofm_per_work_item == 4 ||
                             ofm_per_work_item == 2)
-                            kd.kernel_name = kernelName_YXFB_YXIO_B1_block_memory;
+                        {
+                            // We compute 2 spatial coordinates "x" in a single workitem that's why we divide it by 2
+                            kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(kd.gws1) / 2.0f));
+                            kd.kernel_name = kernelName_YXFB_YXIO_B1_block_x2_memory;
+                        }
                         else
                             kd.kernel_name = kernelName_YXFB_YXIO_B1_memory;
                     }
@@ -362,6 +369,10 @@ struct convolution_gpu : is_an_implementation {
                 }
             }
         }
+        if (_kernel_data.kernel_name == kernelName_YXFB_YXIO_B1_block_x2_memory)
+        {
+            mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 2));
+        }
         return mem_consts;
     }
 
@@ -398,7 +409,7 @@ struct convolution_gpu : is_an_implementation {
         for (uint32_t i = 0; i < split; i++) {
             assert(kd.gws0 % kd.lws0 == 0);
             me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                ({ { kd.gws0, output_mem.argument.size.spatial[0], output_mem.argument.size.spatial[1] },{ kd.lws0, 1, 1 } },
+                ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, 1, 1 } },
                     input_mem,
                     output_mem,
                     outer.input_memory(i * 2 + 1), //filters
