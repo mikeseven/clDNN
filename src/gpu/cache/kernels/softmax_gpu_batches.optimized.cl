@@ -9,9 +9,7 @@ float FUNC(find_max_value)(const int global_id, const int idx, const int batch_o
     value = max(value, global_id < LEFTOVERS? input[LWS * ITEMS_NUM + global_id] : -FLT_MAX);
     partial_max[global_id] = value;
 
-#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE);
-#endif
     if(global_id < batch_num)
     {
         for(int i = 1; i < LWS / batch_num; i++)
@@ -19,9 +17,7 @@ float FUNC(find_max_value)(const int global_id, const int idx, const int batch_o
             partial_max[batch_offset] = max(partial_max[0], partial_max[i*batch_num + batch_offset]);
         };
     }
-#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE);
-#endif
     return partial_max[batch_offset];
 }
 
@@ -53,9 +49,7 @@ KERNEL (softmax_gpu_batches)(__global neural_memory* input_mem, __global neural_
         partial_acc[global_id] += tmp_vals[i];
     }
 
-#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE); // we must be sure that all threads calculated max of elements(we can remove it if simd32 and GWS <= 32
-#endif
     if(global_id < batch_num)
     {
         for(int i = 1; i < LWS/batch_num; i++)
@@ -63,9 +57,7 @@ KERNEL (softmax_gpu_batches)(__global neural_memory* input_mem, __global neural_
             partial_acc[batch_offset] += partial_acc[i*batch_num + batch_offset];
         }
     }
-#if (GWS != LWS) || (LWS > 32) 
     barrier(CLK_LOCAL_MEM_FENCE);
-#endif
     for(int i = 0; i < ITEMS_NUM; i++)
     {
         pDst[LWS * i + global_id] = tmp_vals[i] / partial_acc[batch_offset];
