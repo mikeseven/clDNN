@@ -600,11 +600,12 @@ void run_topology(const execution_params &ep)
             if (ep.print_type != ExtendedTesting)
             {
                 std::cout << "Frames per second:" << (double)(ep.loop * batch_size) / time_in_sec << std::endl;
-            }
-            if (ep.perf_per_watt)
-            {
-                if (!energyLib.print_power_results((double)(ep.loop * batch_size) / time_in_sec))
-                    std::cout << "WARNING: power file parsing failed." << std::endl;
+
+                if (ep.perf_per_watt)
+                {
+                    if (!energyLib.print_power_results((double)(ep.loop * batch_size) / time_in_sec))
+                        std::cout << "WARNING: power file parsing failed." << std::endl;
+                }
             }
         }
     }
