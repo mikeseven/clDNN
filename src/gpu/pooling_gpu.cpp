@@ -26,10 +26,10 @@
 namespace neural
 {
 // Kernel names.
-const std::string kernel_name_max            = "pooling_gpu_max";
-const std::string kernel_name_max_offset     = "pooling_gpu_max_offset";
-const std::string kernel_name_average        = "pooling_gpu_average";
-const std::string kernel_name_average_offset = "pooling_gpu_average_offset";
+static const std::string kernel_name_max            = "pooling_gpu_max";
+static const std::string kernel_name_max_offset     = "pooling_gpu_max_offset";
+static const std::string kernel_name_average        = "pooling_gpu_average";
+static const std::string kernel_name_average_offset = "pooling_gpu_average_offset";
 
 // GPU engine information helpers.
 namespace
