@@ -313,7 +313,12 @@ struct convolution_gpu : is_an_implementation {
         if (_kernel_data.kernel_name == kernel_name_yxfb_yxio_b1_block_multiple_x)
         {
             mem_consts.add_constant(gpu::make_jit_constant("USE_VECTOR", _kernel_data.ofm_per_work_item));
-            mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", _kernel_data.ofm_per_work_item));
+            if (_kernel_data.ofm_per_work_item == 8)
+                mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 2));
+            else if (_kernel_data.ofm_per_work_item == 4)
+                mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 4));
+            else
+                mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 8));
         }
         return mem_consts;
     }
