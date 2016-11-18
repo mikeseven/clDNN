@@ -31,7 +31,7 @@ const std::string kernelName_YXFB_YXIO = "Convolution_GPU_YXFB_YXIO";
 const std::string kernelName_YXFB_YXIO_B1_memory = "Convolution_GPU_YXFB_YXIO_B1_memory";
 const std::string kernelName_YXFB_YXIO_B1_vload_memory = "Convolution_GPU_YXFB_YXIO_B1_vload_memory";
 const std::string kernelName_YXFB_YXIO_B1_block_memory = "Convolution_GPU_YXFB_YXIO_B1_block_memory";
-const std::string kernelName_YXFB_YXIO_B1_block_x2_memory = "Convolution_GPU_YXFB_YXIO_B1_block_x2_memory";
+const std::string kernelName_YXFB_YXIO_B1_block_multiple_x_memory = "Convolution_GPU_YXFB_YXIO_B1_block_multiple_x_memory";
 const std::string kernelName_YXFB_YXIO_B8_memory = "Convolution_GPU_YXFB_YXIO_B8_memory";
 const std::string kernelName_YXFB_YXIO_B16_memory = "Convolution_GPU_YXFB_YXIO_B16_memory";
 const std::string kernelName_YXFB_YXOI_B8_F8_memory = "Convolution_GPU_YXFB_YXOI_B8_F8_memory";
@@ -159,9 +159,15 @@ struct convolution_gpu : is_an_implementation {
                             ofm_per_work_item == 4 ||
                             ofm_per_work_item == 2)
                         {
-                            // We compute 2 spatial coordinates "x" in a single workitem that's why we divide it by 2
-                            kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(kd.gws1) / 2.0f));
-                            kd.kernel_name = kernelName_YXFB_YXIO_B1_block_x2_memory;
+                            // We compute multiple spatial coordinates "x" in a single workitem that's why we must divide
+                            if(ofm_per_workitem == 8)
+                                kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(kd.gws1) / 2.0f));
+                            else if(ofm_per_workitem == 4)
+                                kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(kd.gws1) / 4.0f));
+                            else
+                                kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(kd.gws1) / 8.0f));
+
+                            kd.kernel_name = kernelName_YXFB_YXIO_B1_block_multiple_x_memory;
                         }
                         else
                             kd.kernel_name = kernelName_YXFB_YXIO_B1_memory;
@@ -229,11 +235,15 @@ struct convolution_gpu : is_an_implementation {
         {
             int output_feature_count = filter_mem.argument.size.feature[0];
             int lws = get_local_work_group_size(batch_size, filter_mem);
-            if (output_feature_count % (lws * 8) == 0)
+            // We cannot return 8 because we are processing 4 spatial coordinates for batch1,
+            // and if we use more than 4 ofm_per_work_item we downgrade simd16 to simd8 which would break this algorithm.
+            // NOTE: We could return 8 but then we must process only 2 coordinates, which is slower than processing 4 coordinates using blockread4
+            // TODO: experiment with SIMD8 version of algorithm and check if it could be faster
+            /*if (output_feature_count % (lws * 8) == 0)
             {
                 return 8;
             }
-            else if (output_feature_count % (lws * 4) == 0)
+            else*/ if (output_feature_count % (lws * 4) == 0)
             {
                 return 4;
             }
@@ -293,6 +303,8 @@ struct convolution_gpu : is_an_implementation {
         auto split = outer.argument.split;
         auto negative_slope = outer.argument.negative_slope;
 
+        const int batch_size = output_mem.argument.size.batch[0];
+
         neural::vector<uint32_t> stride(outer.argument.stride);
         stride.spatial[0] = std::min(stride.spatial[0], input_mem.argument.size.spatial[0]);
         stride.spatial[1] = std::min(stride.spatial[1], input_mem.argument.size.spatial[1]);
@@ -331,7 +343,6 @@ struct convolution_gpu : is_an_implementation {
             filter_mem.argument.format == memory::format::yxoi_f32 ||
             filter_mem.argument.format == memory::format::yxio_f16)
         {
-            const int batch_size = output_mem.argument.size.batch[0];
             const int batches_per_work_item = get_batches_per_work_item(batch_size, filter_mem);
             const int local_work_group_size = get_local_work_group_size(batch_size, filter_mem);
             mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size));
@@ -369,9 +380,15 @@ struct convolution_gpu : is_an_implementation {
                 }
             }
         }
-        if (_kernel_data.kernel_name == kernelName_YXFB_YXIO_B1_block_x2_memory)
+        if (_kernel_data.kernel_name == kernelName_YXFB_YXIO_B1_block_multiple_x_memory)
         {
-            mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 2));
+            const int ofm_per_work_item = get_ofm_per_work_item(batch_size, filter_mem);
+            if(ofm_per_work_item == 8)
+                mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 2));
+            else if(ofm_per_work_item == 4)
+                mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 4));
+            else
+                mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 8));
         }
         return mem_consts;
     }
