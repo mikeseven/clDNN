@@ -224,29 +224,24 @@ bool CIntelPowerGadgetLib::IsGTAvailable()
 }
 
 bool CIntelPowerGadgetLib::print_power_results(double fps)
-{  
-    try {
-        string line;
-        std::ifstream power_file("power_log.csv", std::ios::in);
-        while(std::getline(power_file,line))
+{
+    string line;
+    std::ifstream power_file("power_log.csv");
+    while (std::getline(power_file, line))
+    {
+        if (line.find("Average Processor Power") == 0)
         {
-            if (line.find("Average Processor Power") == 0)
-            {
-                auto val = line.substr(line.find_first_of('=') + 2); // + 2 = 1 for space + 1 for '='
-                std::cout << "FPS/W (total power)=\t" << fps / std::atof(val.c_str()) << std::endl;
-            }
-            else if (line.find("Average GT Power") == 0)
-            {
-                auto val = line.substr(line.find_first_of('=') + 2); // + 2 = 1 for space + 1 for '='
-                std::cout << "FPS/W (GPU power)=\t" << fps / std::atof(val.c_str()) << std::endl;
-                return true; // we get what we wanted. nothing else to do.
-            }
+            auto val = line.substr(line.find_first_of('=') + 2); // + 2 = 1 for space + 1 for '='
+            std::cout << "FPS/W (total power)=\t" << fps / std::atof(val.c_str()) << std::endl;
+        }
+        else if (line.find("Average GT Power") == 0)
+        {
+            auto val = line.substr(line.find_first_of('=') + 2); // + 2 = 1 for space + 1 for '='
+            std::cout << "FPS/W (GPU power)=\t" << fps / std::stof(val) << std::endl;
+            return true; // we get what we wanted. nothing else to do.
         }
     }
-    catch (...) {
-        throw std::runtime_error("ERROR: can't open power_log file");
-    }
- 
+
     return false;
 }
 
