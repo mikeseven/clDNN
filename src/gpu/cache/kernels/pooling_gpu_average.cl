@@ -3,7 +3,7 @@
 #endif
 
 
-KERNEL(pooling_gpu_average)(__global UNIT_TYPE* input, __global UNIT_TYPE* output)
+KERNEL(pooling_gpu_average)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
     const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
 
