@@ -1,11 +1,16 @@
-KERNEL(Pooling_GPU_max)(__global float* input, __global float* output)
+#if FP16_SUPPORTED
+    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
+
+KERNEL(pooling_gpu_max)(__global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
     const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
 
     const int offset_x = get_global_id(1) * STRIDE_SIZE_X;
     const int offset_y = get_global_id(2) * STRIDE_SIZE_Y;
 
-    float result = -FLT_MAX;
+    UNIT_TYPE result = UNIT_INIT_VAL_MAX;
 
     const int batch_and_feature_offset = get_global_id(0);
     int input_idx = batch_and_feature_offset + OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (offset_x + offset_y * INPUT_SIZE_X);
