@@ -4,7 +4,7 @@
 #define ACTIVATION(output, input) output = input;
 #endif
 
-KERNEL(Convolution_GPU_YXFB_memory)(
+KERNEL(convolution_gpu_yxfb_oiyx)(
     const __global float* input,
     __global float* output,
     const __global float* filter,
@@ -17,7 +17,7 @@ KERNEL(Convolution_GPU_YXFB_memory)(
     const int bifn_num = batch_num * FILTER_OUTPUT_FEATURE_NUM;
     int global_id = linear_id % bifn_num + (linear_id / bifn_num) * bifn_num * FILTER_ARRAY_NUM + split_idx * bifn_num;
 
-    const int ofm_offset = (global_id / batch_num) % (OUTPUT_FEATURE_NUM / FILTER_ARRAY_NUM);
+    const int ofm_offset = (global_id / batch_num) % FILTER_OUTPUT_FEATURE_NUM;
 
     float result = bias[ofm_offset];
     

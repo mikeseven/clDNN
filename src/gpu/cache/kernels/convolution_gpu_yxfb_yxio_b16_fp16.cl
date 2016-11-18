@@ -9,7 +9,7 @@
 
 __attribute__((reqd_sub_group_size(16))) 
 __attribute__((reqd_work_group_size(16, 1, 1))) 
-KERNEL(convolution_gpu_yxfb_yxio_b16_fp16_memory)(
+KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
     const __global half* input,
     __global half* output,
     const __global half* filter,

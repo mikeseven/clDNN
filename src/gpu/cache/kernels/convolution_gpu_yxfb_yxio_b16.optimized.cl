@@ -4,7 +4,7 @@
 #define ACTIVATION(output, input) output = input;
 #endif
 
-KERNEL(Convolution_GPU_YXFB_YXIO_B16_memory)(
+KERNEL(convolution_gpu_yxfb_yxio_b16)(
     const __global float* input,
     __global float* output,
     const __global float* filter,

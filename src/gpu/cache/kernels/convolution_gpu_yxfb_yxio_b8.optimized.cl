@@ -5,7 +5,7 @@
 #endif
 
 __attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
-KERNEL(Convolution_GPU_YXFB_YXIO_B8_memory)(
+KERNEL(convolution_gpu_yxfb_yxio_b8)(
 	const __global float* input,
 	__global float* output,
 	const __global float* filter,

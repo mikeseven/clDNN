@@ -5,27 +5,32 @@
 #endif
 
 __attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
-KERNEL(Convolution_GPU_YXFB_YXIO_B1_block_multiple_x_memory)(
+KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
 	const __global float* input,
 	__global float* output,
 	const __global float* filter,
 	const __global float* bias,
 	uint split_idx)
 {
-#ifdef USE_VECTOR_8
+#if USE_VECTOR == 8
         #define VECTOR_FLOAT float8
         #define BLOCK_READ(IN) as_float8(intel_sub_group_block_read8((const __global uint*)IN))
         #define BLOCK_WRITE(OUT, DATA) intel_sub_group_block_write8((__global uint*)OUT, as_uint8(DATA));
 #endif
-#ifdef USE_VECTOR_4
+#if USE_VECTOR == 4
         #define VECTOR_FLOAT float4
         #define BLOCK_READ(IN) as_float4(intel_sub_group_block_read4((const __global uint*)IN))
         #define BLOCK_WRITE(OUT, DATA) intel_sub_group_block_write4((__global uint*)OUT, as_uint4(DATA));
 #endif
-#ifdef USE_VECTOR_2
+#if USE_VECTOR == 2
         #define VECTOR_FLOAT float2
         #define BLOCK_READ(IN) as_float2(intel_sub_group_block_read2((const __global uint*)IN))
         #define BLOCK_WRITE(OUT, DATA) intel_sub_group_block_write2((__global uint*)OUT, as_uint2(DATA));
+#endif
+#if USE_VECTOR == 1
+        #define VECTOR_FLOAT float
+        #define BLOCK_READ(IN) as_float(intel_sub_group_block_read((const __global uint*)IN))
+        #define BLOCK_WRITE(OUT, DATA) intel_sub_group_block_write((__global uint*)OUT, as_uint(DATA));
 #endif
 
         const uint batch_num = INPUT_BATCH_NUM;
@@ -72,8 +77,8 @@ KERNEL(Convolution_GPU_YXFB_YXIO_B1_block_multiple_x_memory)(
                         int input_offset_x = x + j;
                     
                         bool zero_x[X_PER_WORK_ITEM];
-                        for(uint z = 0; z < X_PER_WORK_ITEM; z++)
-                        {   // TODO: compiler throws warning here - investigate why!
+                        for(int z = 0; z < X_PER_WORK_ITEM; z++)
+                        {
                             zero_x[z] = (input_offset_x + z * STRIDE_SIZE_X) >= INPUT_SIZE_X || (input_offset_x + z * STRIDE_SIZE_X) < 0;
                         }
 
@@ -194,7 +199,7 @@ KERNEL(Convolution_GPU_YXFB_YXIO_B1_block_multiple_x_memory)(
                 BLOCK_WRITE(output + out_id[a], _data[a]);
         }
 
-#if defined(USE_VECTOR_8) || defined(USE_VECTOR_4) || defined(USE_VECTOR_2)
+#if defined(USE_VECTOR)
     #undef VECTOR_FLOAT
     #undef BLOCK_READ
     #undef BLOCK_WRITE
