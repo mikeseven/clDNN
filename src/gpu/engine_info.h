@@ -46,6 +46,9 @@ struct engine_info
     uint32_t cores_count;
     uint32_t core_frequency;
 
+    uint64_t max_work_group_size;
+    uint64_t max_local_mem_size;
+
     // Flags (for layout compatibility fixed size types are used).
     uint8_t supports_fp16;
     uint8_t supports_fp16_denorms;
