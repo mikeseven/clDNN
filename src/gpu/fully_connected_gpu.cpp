@@ -297,7 +297,11 @@ namespace {
             implementation_map<fully_connected>::add({
                 { std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::xb_f32), val_fw },
                 { std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32), val_fw },
-                { std::make_tuple(engine::gpu, memory::format::x_f32,  memory::format::x_f32), val_fw }
+                { std::make_tuple(engine::gpu, memory::format::x_f32,  memory::format::x_f32), val_fw },
+
+                { std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::xb_f16), val_fw },
+                { std::make_tuple(engine::gpu, memory::format::xb_f16, memory::format::xb_f16), val_fw },
+                { std::make_tuple(engine::gpu, memory::format::x_f16,  memory::format::x_f16), val_fw }
             });
         }
         ~attach() {}

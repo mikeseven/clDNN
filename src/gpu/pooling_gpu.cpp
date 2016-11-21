@@ -82,21 +82,6 @@ struct pooling_gpu : is_an_implementation {
         kd.lws1 = 1;
         kd.lws2 = 1;
 
-        kd.fp16_unit_used = false;
-
-        // Check for supported input formats.
-        switch (input_mem.argument.format)
-        {
-        case memory::format::yxfb_f32:
-            break;
-        case memory::format::yxfb_f16:
-            kd.fp16_unit_used = true;
-            break;
-
-        default:
-            throw std::invalid_argument("Input memory format is not supported.");
-        }
-
         // Select kernel name.
         auto needs_boundary = needs_boundary_check(outer);
         switch (outer.argument.mode)
@@ -111,6 +96,9 @@ struct pooling_gpu : is_an_implementation {
         default:
             throw std::runtime_error("Unknown pooling mode.");
         }
+
+        // Helpers for JIT constnats.
+        kd.fp16_unit_used = memory::traits(input_mem.argument.format).type->name == type_id<half_t>()->name;
 
         return kd;
     }
@@ -209,9 +197,11 @@ namespace
     {
         attach()
         {
-            auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = pooling_gpu::create;
 
+            auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
+            implementation_map<pooling>::add(key_fw, val_fw);
+            key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16);
             implementation_map<pooling>::add(key_fw, val_fw);
         }
 

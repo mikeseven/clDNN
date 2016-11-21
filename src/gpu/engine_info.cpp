@@ -159,6 +159,9 @@ engine_info::engine_info(gpu_toolkit& context)
     cores_count = static_cast<uint32_t>(context.device().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
     core_frequency = static_cast<uint32_t>(context.device().getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>());
 
+    max_work_group_size = static_cast<uint64_t>(context.device().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
+    max_local_mem_size = static_cast<uint64_t>(context.device().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>());
+
     // Check for supported features.
     auto extensions = context.device().getInfo<CL_DEVICE_EXTENSIONS>();
     extensions.push_back(' '); // Add trailing space to ease searching (search with keyword with trailing space).
