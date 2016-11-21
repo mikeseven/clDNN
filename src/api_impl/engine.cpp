@@ -16,10 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/topology.hpp"
-#include "api/reorder.hpp"
-#include "api/convolution.hpp"
 #include "api/cldnn.hpp"
-#include <map>
 #include "refcounted_obj.h"
 #include "topology_impl.h"
 
@@ -38,7 +35,11 @@ private:
     engine _engine;
     void build_network()
     {
-        _topology._impl
+        auto primitives_desc = _topology._impl->get_primitives();
+        for(auto p: primitives_desc)
+        {
+            
+        }
     }
 };
 

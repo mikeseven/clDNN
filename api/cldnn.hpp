@@ -91,6 +91,7 @@ private:
 class context_impl;
 struct context
 {
+    context_impl* _impl;
     DLL_SYM context(const context& other);
     DLL_SYM context& operator=(const context& other);
     DLL_SYM static context create();
@@ -100,7 +101,6 @@ struct context
     DLL_SYM uint32_t engine_count();
 private:
     context(context_impl* impl):_impl(impl){}
-    context_impl* _impl;
 };
 
 
