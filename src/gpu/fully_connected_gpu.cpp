@@ -96,7 +96,7 @@ struct gpu_info_helper : gpu::context_holder
                 case memory::format::byxf_f32:
                 case memory::format::bx_f32:
                 {
-                    if (batch_multiple_of_8)
+                    if (input_mem.argument.size.batch[0] == 8)
                     {
                         kd.gws0 = output_mem.argument.size.batch[0];
                         kd.gws1 = output_mem.argument.size.spatial[0];
