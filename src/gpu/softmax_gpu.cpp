@@ -54,9 +54,9 @@ struct softmax_gpu : is_an_implementation {
     } _kernel_data;
     gpu::kernel _kernel;
 
-    softmax_gpu(softmax &arg)
+    softmax_gpu(const softmax& outer)
         : is_an_implementation(neural::type_id<softmax_gpu>()),
-        _outer(arg),
+        _outer(outer),
         _kernel_data(set_kernel_data(_outer))
         , _kernel(_kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
     {}

@@ -3,7 +3,7 @@
 #endif
 
 
-UNIT_TYPE FUNC(find_max_value)(__local UNIT_TYPE* partial_max, const int idx, __global UNIT_TYPE* input)
+UNIT_TYPE FUNC(find_max_value)(__local UNIT_TYPE* partial_max, const int idx, const __global UNIT_TYPE* input)
 {
     UNIT_TYPE value = -UNIT_VAL_MAX;
     for(int i = 0; i < ITEMS_NUM; i++)
@@ -25,7 +25,7 @@ UNIT_TYPE FUNC(find_max_value)(__local UNIT_TYPE* partial_max, const int idx, __
     return partial_max[0];
 }
 
-KERNEL (softmax_gpu)(__global UNIT_TYPE* input, __global UNIT_TYPE* pDst)
+KERNEL (softmax_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
     const int idx = get_local_id(0);
 
@@ -58,8 +58,8 @@ KERNEL (softmax_gpu)(__global UNIT_TYPE* input, __global UNIT_TYPE* pDst)
     barrier(CLK_LOCAL_MEM_FENCE);
     for(int i = 0; i < ITEMS_NUM; i++)
     {
-        pDst[LWS * i + idx] = tmp_vals[i] / partial_acc[0];
+        output[LWS * i + idx] = tmp_vals[i] / partial_acc[0];
     }
     if(idx < LEFTOVERS)
-        pDst[LWS * ITEMS_NUM + idx] = tmp_vals[ITEMS_NUM] / partial_acc[0];
+        output[LWS * ITEMS_NUM + idx] = tmp_vals[ITEMS_NUM] / partial_acc[0];
 }

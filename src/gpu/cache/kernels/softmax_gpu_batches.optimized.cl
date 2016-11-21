@@ -26,7 +26,7 @@ UNIT_TYPE FUNC(find_max_value)(__local UNIT_TYPE* partial_max, const int global_
     return partial_max[batch_offset];
 }
 
-KERNEL (softmax_gpu_batches)(const __global UNIT_TYPE* input, const __global UNIT_TYPE* output)
+KERNEL (softmax_gpu_batches)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
     const int batch_num = INPUT_BATCH_NUM;
     const int global_id = get_global_id(0);
