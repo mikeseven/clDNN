@@ -14,6 +14,8 @@
 // limitations under the License.
 */
 
+#include <cmath>
+
 #include "multidimensional_counter.h"
 #include "implementation_map.h"
 
