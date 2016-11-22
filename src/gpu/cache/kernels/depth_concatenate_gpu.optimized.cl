@@ -1,4 +1,9 @@
-KERNEL (depth_concatenate_gpu)(__global float* input, __global float* output, uint depth_offset)
+#if FP16_SUPPORTED
+    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
+
+KERNEL (depth_concatenate_gpu)(__global UNIT_TYPE* input, __global UNIT_TYPE* output, uint depth_offset)
 {
     uint global_id = get_global_id(0);
 

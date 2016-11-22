@@ -15,10 +15,10 @@
 */
 
 #include "api/neural.h"
-#include "multidimensional_counter.h"
+#include "cache/primitive_db.h"
 #include "implementation_map.h"
 #include "kernel.h"
-#include "cache/primitive_db.h"
+#include "multidimensional_counter.h"
 
 
 namespace neural
@@ -41,7 +41,8 @@ struct gpu_info_helper : gpu::context_holder
 
 namespace normalization
 {
-struct softmax_gpu : is_an_implementation {
+struct softmax_gpu : is_an_implementation
+{
     const softmax& _outer;
     struct kernel_data
     {
@@ -54,11 +55,12 @@ struct softmax_gpu : is_an_implementation {
     } _kernel_data;
     gpu::kernel _kernel;
 
+
     softmax_gpu(const softmax& outer)
         : is_an_implementation(neural::type_id<softmax_gpu>()),
         _outer(outer),
-        _kernel_data(set_kernel_data(_outer))
-        , _kernel(_kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+        _kernel_data(set_kernel_data(_outer)),
+        _kernel(_kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
     {}
 
     static kernel_data set_kernel_data(const softmax& outer)
@@ -70,8 +72,6 @@ struct softmax_gpu : is_an_implementation {
         const auto& output_mem = outer.output_memory(0); // output
 
         kernel_data kd;
-        kd.gws0 = 0;
-        kd.lws0 = 0;
 
         kd.fp16_unit_used = memory::traits(input_mem.argument.format).type->name == type_id<half_t>()->name;
         kd.fp16_supported = engine_info.supports_fp16 != 0;

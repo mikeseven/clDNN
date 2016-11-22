@@ -15,69 +15,131 @@
 */
 
 #include "api/neural.h"
-#include "implementation_map.h"
-#include "gpu/kernel.h"
 #include "gpu/cache/primitive_db.h"
+#include "gpu/kernel.h"
+#include "implementation_map.h"
 
-const std::string kernelName = "depth_concatenate_gpu";
+#include <utility>
 
-namespace neural {
 
-    struct depth_concatenate_gpu : is_an_implementation {
-        depth_concatenate &outer;
-        std::vector<gpu::kernel> _kernel;
+namespace neural
+{
+// Kernel names.
+static const std::string kernel_name = "depth_concatenate_gpu";
 
-        depth_concatenate_gpu(depth_concatenate &arg) : is_an_implementation(neural::type_id<depth_concatenate_gpu>())
-            , outer(arg)
-        {
-            for (size_t i = 0; i < outer.argument.input.size(); i++)
-            {
-                _kernel.emplace_back(select_kernel_name(), get_jit_constants(i));
-            }
-        }
+// GPU engine information helpers.
+namespace
+{
+struct gpu_info_helper : gpu::context_holder
+{
+    gpu::engine_info get_engine_info() const
+    {
+        return context()->get_engine_info();
+    }
+};
+}
 
-        const std::string& select_kernel_name() const {
-            return kernelName;
-        }
-
-        gpu::jit_constants get_jit_constants(size_t input_id) {
-            return gpu::jit_constants{
-                gpu::make_jit_constant("INPUT", outer.input_memory(input_id).argument.size),
-                gpu::make_jit_constant("OUTPUT", outer.output_memory(0).argument.size)
-            };
-        }
-
-        static void implementation(const void *ptr) {
-            auto me = static_cast<const depth_concatenate_gpu*>(ptr);
-            auto& outer = me->outer;
-
-            size_t input_count = outer.argument.input.size();
-
-            auto& input_mem = outer.input_memory(0);
-            auto& output_mem = outer.output_memory(0);
-
-            size_t gws0 = input_mem.argument.size.spatial[0] * input_mem.argument.size.spatial[1];
-            size_t lws0 = 32;
-            while (gws0 % lws0)
-            {
-                lws0--;
-            }
-
-            uint32_t depth_offset = 0;
-            for (size_t i = 0; i < input_count; i++)
-            {
-                uint32_t input_depth_count = outer.input_memory(i).argument.size.feature[0];
-                me->_kernel[i].run<gpu::input_mem, gpu::output_mem, cl_uint>
-                    ({ { gws0 },{ lws0 } }, outer.input_memory(i), output_mem, depth_offset);
-                depth_offset += input_depth_count;
-            }
-
-        }
-
-        static is_an_implementation *create(depth_concatenate &arg) { return new depth_concatenate_gpu(arg); };
-        task_group work() override { return{ { task{ implementation, this } }, schedule::single }; };
-
+struct depth_concatenate_gpu : is_an_implementation
+{
+    struct kernel_data
+    {
+        size_t input_idx;
+        size_t gws0;
+        size_t lws0;
+        std::string kernel_name;
+        bool fp16_unit_used;
+        bool fp16_supported;
     };
+
+    const depth_concatenate& _outer;
+    std::vector<std::pair<gpu::kernel, kernel_data>> _kernels_with_data;
+
+
+    depth_concatenate_gpu(const depth_concatenate& outer)
+        : is_an_implementation(neural::type_id<depth_concatenate_gpu>()),
+        _outer(outer)
+    {
+        gpu_info_helper gpu_info;
+        auto engine_info = gpu_info.get_engine_info();
+
+        auto inputs_count = _outer.argument.input.size();
+
+        _kernels_with_data.reserve(inputs_count);
+        for (size_t input_idx = 0; input_idx < inputs_count; ++input_idx)
+        {
+            auto data = set_kernel_data(input_idx, _outer, engine_info);
+            gpu::kernel kernel(data.kernel_name, get_jit_constants(_outer, data));
+
+            _kernels_with_data.emplace_back(std::move(kernel), std::move(data));
+        }
+    }
+
+    static kernel_data set_kernel_data(size_t input_idx, const depth_concatenate& outer, const gpu::engine_info& info)
+    {
+        const auto& input_mem  = outer.input_memory(input_idx);  // current input
+
+        kernel_data kd;
+
+        kd.input_idx = input_idx;
+        kd.fp16_unit_used = memory::traits(input_mem.argument.format).type->name == type_id<half_t>()->name;
+        kd.fp16_supported = info.supports_fp16 != 0;
+
+        // Determine global work sizes.
+        kd.gws0 = input_mem.argument.size.spatial[0] * input_mem.argument.size.spatial[1];
+        // Find largest positive local work size that is divider for global work size.
+        kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
+        while (kd.gws0 % kd.lws0 != 0)
+        {
+            --kd.lws0;
+        }
+
+        // Select kernel name.
+        kd.kernel_name = kernel_name;
+
+        return kd;
+    }
+
+    static gpu::jit_constants get_jit_constants(const depth_concatenate& outer, const kernel_data& data)
+    {
+        if (!data.fp16_supported && data.fp16_unit_used)
+            throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
+
+        return gpu::jit_constants {
+            gpu::make_jit_constant("INPUT",          outer.input_memory(data.input_idx).argument.size),
+            gpu::make_jit_constant("OUTPUT",         outer.output_memory(0).argument.size),
+            gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(data.fp16_supported)),
+            gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
+            gpu::make_jit_constant("UNIT_TYPE",      data.fp16_unit_used ? "half" : "float")
+        };
+    }
+
+    static void implementation(const void *ptr) {
+        auto me = static_cast<const depth_concatenate_gpu*>(ptr);
+        const auto& outer = me->_outer;
+
+        size_t inputs_count = outer.argument.input.size();
+
+        const auto& output_mem = outer.output_memory(0);  // output
+
+        uint32_t depth_offset = 0;
+        for (size_t input_idx = 0; input_idx < inputs_count; ++input_idx)
+        {
+            const auto& kd = me->_kernels_with_data[input_idx].second;
+
+            const auto& input_mem = outer.input_memory(input_idx);  // current input
+
+            uint32_t input_depth_count = input_mem.argument.size.feature[0];
+            me->_kernels_with_data[input_idx].first.run<gpu::input_mem, gpu::output_mem, cl_uint>
+                ({{kd.gws0}, {kd.lws0}}, input_mem, output_mem, depth_offset);
+            depth_offset += input_depth_count;
+        }
+
+    }
+
+    static is_an_implementation *create(depth_concatenate &arg) { return new depth_concatenate_gpu(arg); };
+    task_group work() override { return{ { task{ implementation, this } }, schedule::single }; };
+
+};
 
     depth_concatenate::arguments::arguments(std::vector<primitive_at> in, primitive out)
     : output({out})
@@ -130,9 +192,11 @@ primitive depth_concatenate::create(depth_concatenate::arguments arg) {
 namespace {
     struct attach {
         attach() {
-            auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = depth_concatenate_gpu::create;
 
+            auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
+            implementation_map<depth_concatenate>::add(key_fw, val_fw);
+            key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16);
             implementation_map<depth_concatenate>::add(key_fw, val_fw);
         }
         ~attach() {}
