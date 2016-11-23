@@ -19,6 +19,9 @@
 #include "implementation_map.h"
 #include "kernel.h"
 #include "cache/primitive_db.h"
+#include "boost/functional/hash.hpp"
+#include <unordered_map>
+#include <initializer_list>
 
 namespace neural 
 {
@@ -44,8 +47,49 @@ struct gpu_info_helper : gpu::context_holder
 };
 }
 
+template<typename T, typename U>
+class kernel_selector
+{
+    using key_type = std::tuple<neural::memory::format::type, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations>;
+    using kernel_map_hash = boost::hash<key_type>;
+    using kernel_map = std::unordered_map<key_type, T(*)(const U&), kernel_map_hash>;
+    using kernel_element = typename kernel_map::value_type;
+private:
+    kernel_map _kernel_map;
+public:
+    kernel_selector(const std::initializer_list<kernel_element>& l) :
+        _kernel_map(l)
+    {
+    }
+    T get_kernel(const U& arg, neural::memory::format::type format, int batch_size, neural::gpu::engine_info::architectures architecture, neural::gpu::engine_info::configurations configuration)
+    {
+        auto value = _kernel_map.find(std::make_tuple(format, batch_size, architecture, configuration));
+        if (value == _kernel_map.end())
+        {
+            value = _kernel_map.find(std::make_tuple(format, batch_size, architecture, gpu::engine_info::configurations::GT_UNKNOWN));
+            if (value == _kernel_map.end())
+            {
+                value = _kernel_map.find(std::make_tuple(format, batch_size, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN));
+                if (value == _kernel_map.end())
+                {
+                    value = _kernel_map.find(std::make_tuple(format, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN));
+                    if (value == _kernel_map.end())
+                    {
+                        throw std::runtime_error("ERROR: no default element in map for convolution kernels!");
+                    }
+                }
+            }
+        }
+
+        T kd = value->second(arg);
+        return kd;
+    }
+};
+
 struct convolution_gpu : is_an_implementation {
     convolution &outer;
+    gpu::engine_info _engine_info;
+
     struct kernel_data
     {
         size_t gws0, gws1, gws2;
@@ -55,186 +99,36 @@ struct convolution_gpu : is_an_implementation {
         std::string kernel_name;
     } _kernel_data;
 
-    bool in_feature_multiple_of_8; // if input feature maps are multiple of 8
-    bool out_feature_multiple_of_8; // if output feature maps are multiple of 8
     gpu::kernel _kernel;
 
-    convolution_gpu(convolution &arg): is_an_implementation(neural::type_id<convolution_gpu>())
-        , outer(arg)
-        , _kernel_data(set_kernel_data())
-        , in_feature_multiple_of_8(outer.input_memory(0).argument.size.feature[0] % 8 == 0)
-        , out_feature_multiple_of_8(outer.output_memory(0).argument.size.feature[0] % 8 == 0)
-        , _kernel(_kernel_data.kernel_name, get_jit_constants())
-    {}
-
-    const kernel_data set_kernel_data() const
+    static kernel_data set_default(const convolution& arg)
     {
-        auto& input_mem = outer.input_memory(0);
-        auto& filter_mem = outer.input_memory(1);
-        auto& output_mem = outer.output_memory(0);
+        auto& output_mem = arg.output_memory(0);
+        auto split = arg.argument.split;
+        auto batch_size = output_mem.argument.size.batch[0];
 
         kernel_data kd;
+        kd.gws0 = (output_mem.argument.size.feature[0] * batch_size) / split;
+        kd.lws0 = std::min(kd.gws0, static_cast<size_t>(32));
+        while (kd.gws0 % kd.lws0)
+        {
+            kd.lws0--;
+        }
         kd.gws1 = output_mem.argument.size.spatial[0];
         kd.gws2 = output_mem.argument.size.spatial[1];
         kd.ofm_per_work_item = 1;
         kd.batches_per_work_item = 1;
-
-        auto split = outer.argument.split;
-        auto batch_size = input_mem.argument.size.batch[0];
-
-        if (padding::zero != outer.argument.padding)
-            throw std::invalid_argument("Unknown padding mode in convolution.");
-
-        switch (input_mem.argument.format) {
-        // FP32 (float)
-        case memory::format::yxfb_f32:
-        {
-            switch (filter_mem.argument.format) {
-            case memory::format::oiyx_f32:
-            {
-                kd.gws0 = (output_mem.argument.size.feature[0] * batch_size) / split;
-                kd.lws0 = std::min(kd.gws0, static_cast<size_t>(32));
-                while (kd.gws0 % kd.lws0)
-                {
-                    kd.lws0--;
-                }
-                kd.kernel_name = kernel_name_yxfb_oiyx;
-                break;
-            }
-            case memory::format::yxio_f32:
-                if (filter_mem.argument.size.feature[0] * batch_size % get_local_work_group_size(batch_size, filter_mem) != 0)
-                {
-                    kd.gws0 = (output_mem.argument.size.feature[0] * batch_size) / split;
-                    kd.lws0 = 32;
-                    while (kd.gws0 % kd.lws0)
-                    {
-                        kd.lws0--;
-                    }
-                    kd.kernel_name = kernel_name_yxfb_yxio;
-                }
-                else
-                {
-                    kd.lws0 = static_cast<size_t>(get_local_work_group_size(batch_size, filter_mem));
-                    if (batch_size == 1)
-                    {
-                        int output_feature_count = filter_mem.argument.size.feature[0];
-                        int lws = get_local_work_group_size(batch_size, filter_mem);
-                        // We cannot return 8 because we are processing 4 spatial coordinates for batch1,
-                        // and if we use more than 4 ofm_per_work_item we downgrade simd16 to simd8 which would break this algorithm.
-                        // NOTE: We could return 8 but then we must process only 2 coordinates, which is slower than processing 4 coordinates using blockread4
-                        // TODO: experiment with SIMD8 version of algorithm and check if it could be faster
-                        /*if (output_feature_count % (lws * 8) == 0)
-                        {
-                            kd.ofm_per_work_item = 8;
-                            kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(kd.gws1) / 2.0f));
-                        }
-                        else*/ if (output_feature_count % (lws * 4) == 0)
-                        {
-                            kd.ofm_per_work_item = 4;
-                            // We compute multiple spatial coordinates "x" in a single workitem that's why we must divide
-                            kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(kd.gws1) / 4.0f));
-                        }
-                        else if (output_feature_count % (lws * 2) == 0)
-                        {
-                            kd.ofm_per_work_item = 2;
-                            kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(kd.gws1) / 8.0f));
-                        }
-                        else
-                        {
-                            kd.ofm_per_work_item = 1;
-                            kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(kd.gws1) / 8.0f));
-                        }
-                        kd.kernel_name = kernel_name_yxfb_yxio_b1_block_multiple_x;
-                    }
-                    else if (batch_size > 16)
-                    {
-                        kd.ofm_per_work_item = 8;
-                        kd.batches_per_work_item = 2;
-                        kd.kernel_name = kernel_name_yxfb_yxio_b16;
-                    }
-                    else
-                    {
-                        int lws = get_local_work_group_size(batch_size, filter_mem);
-                        if (((filter_mem.argument.size.feature[0] * batch_size) / 16) % lws)
-                        {
-                            kd.ofm_per_work_item = 8;
-                        }
-                        else
-                        {
-                            kd.ofm_per_work_item = 16;
-                        }
-                        kd.kernel_name = kernel_name_yxfb_yxio_b8;
-                    }
-                    kd.gws0 = (output_mem.argument.size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
-                }
-                break;
-            default:
-                throw std::invalid_argument("Filter memory is not supported");
-            }
-            break;
-        }
-
-        // FP16 (half)
-        case memory::format::yxfb_f16:
-        {
-            switch (filter_mem.argument.format) {
-            case memory::format::yxio_f16:
-                // Number of output features is positive and dividable by 16.
-                if ((filter_mem.argument.size.feature[0] & ~0xFU) != 0 &&
-                    // Batch size is positive and dividable by 16.
-                    (batch_size & ~0xFU) != 0)
-                {
-                    kd.ofm_per_work_item = 16;
-                    if (batch_size >= 64)
-                    {
-                        kd.batches_per_work_item = 4; // USE_BLOCK_READ_2 + as_half4
-                    }
-                    else if (batch_size >= 32)
-                    {
-                        kd.batches_per_work_item = 2; // USE_BLOCK_READ_1 + as_half2
-                    }
-                    else
-                    {
-                        kd.batches_per_work_item = 1;
-                    }
-                    kd.gws0 = (output_mem.argument.size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
-                    kd.lws0 = static_cast<size_t>(get_local_work_group_size(batch_size, filter_mem));
-                    kd.kernel_name = kernel_name_yxfb_yxio_b16_fp16;
-                }
-                else
-                {
-                    kd.gws0 = (output_mem.argument.size.feature[0] * batch_size) / split;
-                    kd.lws0 = 32;
-                    while (kd.gws0 % kd.lws0)
-                    {
-                        kd.lws0--;
-                    }
-                    kd.kernel_name = kernel_name_yxfb_yxio_fp16;
-                }
-                break;
-            default:
-                throw std::invalid_argument("Filter memory is not supported");
-            }
-            break;
-        }
-
-        default:
-            throw std::invalid_argument("Input memory format is not supported");
-        }
-
         return kd;
     }
 
-    static int get_local_work_group_size(const int batch_size, const neural::memory& filter_mem)
-    {
-        if (memory::traits(filter_mem.argument.format).type->id == type_id<half_t>()->id)
-            return 16;
-        if (batch_size == 1)
-        {
-            return 16;
-        }
-        return batch_size > 8 ? 16 : 8;
-    }
+    static kernel_selector<kernel_data, convolution> ks;
+
+    convolution_gpu(convolution &arg): is_an_implementation(neural::type_id<convolution_gpu>())
+        , outer(arg)
+        , _engine_info(gpu_info_helper().get_engine_info())
+        , _kernel_data(ks.get_kernel(outer, outer.input_memory(1).argument.format, outer.input_memory(0).argument.size.batch[0], _engine_info.architecture, _engine_info.configuration))
+        , _kernel(gpu::kernel(_kernel_data.kernel_name, get_jit_constants()))
+    {}
 
     gpu::jit_constants get_jit_constants() const {
         gpu_info_helper gpu_info;
@@ -254,14 +148,6 @@ struct convolution_gpu : is_an_implementation {
         neural::vector<uint32_t> stride(outer.argument.stride);
         stride.spatial[0] = std::min(stride.spatial[0], input_mem.argument.size.spatial[0]);
         stride.spatial[1] = std::min(stride.spatial[1], input_mem.argument.size.spatial[1]);
-
-        // weights neural::vector is: {b}, {ofm, ifm} {spatials}
-        // ofm - output feature maps
-        // ifm - input feature maps
-        // b = 1 always
-        // (weights can't have batch so it is equal to 1)
-        // Ofm and batch is cropped, ofm will be hold manually
-        // Batch is included in output size
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT", input_mem.argument.size),
@@ -289,7 +175,7 @@ struct convolution_gpu : is_an_implementation {
             filter_mem.argument.format == memory::format::yxoi_f32 ||
             filter_mem.argument.format == memory::format::yxio_f16)
         {
-            const int local_work_group_size = get_local_work_group_size(batch_size, filter_mem);
+            const int local_work_group_size = static_cast<int>(_kernel_data.lws0);
             mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size));
             mem_consts.add_constant(gpu::make_jit_constant("OFM_PER_WORK_ITEM", _kernel_data.ofm_per_work_item)); // how many output feature maps for a single batch will a single work item produce
             mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", _kernel_data.batches_per_work_item)); // how many batches will a single work item compute
@@ -333,13 +219,6 @@ struct convolution_gpu : is_an_implementation {
         auto& input_mem = outer.input_memory(0);
         auto& output_mem = outer.output_memory(0);
         auto& filter_mem = outer.input_memory(1);
-        // weights neural::vector is: {b}, {ofm, ifm} {spatials}
-        // ofm - output feature maps
-        // ifm - input feature maps
-        // b = 1 always
-        // (weights can't have batch so it is equal to 1)
-        // Ofm and batch is cropped, ofm will be hold manually
-        // Batch is included in output size
 
         if (outer.argument.padding != padding::zero)
             throw std::invalid_argument("Unknown padding mode in convolution.");
@@ -391,6 +270,182 @@ struct convolution_gpu : is_an_implementation {
     }
 };
 
+convolution_gpu::kernel_data default_oiyx_f32(const convolution& arg)
+{
+    convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
+    kd.kernel_name = kernel_name_yxfb_oiyx;
+    return kd;
+}
+
+convolution_gpu::kernel_data default_yxio_f32(const convolution& arg)
+{
+    convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
+    kd.kernel_name = kernel_name_yxfb_yxio;
+    return kd;
+}
+
+convolution_gpu::kernel_data default_yxio_f32_b1(const convolution& arg)
+{
+    auto& filter_mem = arg.input_memory(1);
+    auto& output_mem = arg.output_memory(0);
+    auto split = arg.argument.split;
+    auto batch_size = output_mem.argument.size.batch[0];
+
+    convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
+    kd.lws0 = 16;
+    if (filter_mem.argument.size.feature[0] * batch_size % kd.lws0 != 0)
+    {
+        kd = default_yxio_f32(arg);
+    }
+    else
+    {
+        int output_feature_count = filter_mem.argument.size.feature[0];
+        // We cannot return 8 because we are processing 4 spatial coordinates for batch1,
+        // and if we use more than 4 ofm_per_work_item we downgrade simd16 to simd8 which would break this algorithm.
+        // NOTE: We could return 8 but then we must process only 2 coordinates, which is slower than processing 4 coordinates using blockread4
+        // TODO: experiment with SIMD8 version of algorithm and check if it could be faster
+        /*if (output_feature_count % (lws * 8) == 0)
+        {
+        kd.ofm_per_work_item = 8;
+        kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(kd.gws1) / 2.0f));
+        }
+        else*/ if (output_feature_count % (kd.lws0 * 4) == 0)
+        {
+            kd.ofm_per_work_item = 4;
+            // We compute multiple spatial coordinates "x" in a single workitem that's why we must divide
+            kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(kd.gws1) / 4.0f));
+        }
+        else if (output_feature_count % (kd.lws0 * 2) == 0)
+        {
+            kd.ofm_per_work_item = 2;
+            kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(kd.gws1) / 8.0f));
+        }
+        else
+        {
+            kd.ofm_per_work_item = 1;
+            kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(kd.gws1) / 8.0f));
+        }
+        kd.kernel_name = kernel_name_yxfb_yxio_b1_block_multiple_x;
+
+        kd.gws0 = (output_mem.argument.size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
+    }
+    return kd;
+}
+
+convolution_gpu::kernel_data default_yxio_f32_b8(const convolution& arg)
+{
+    auto& filter_mem = arg.input_memory(1);
+    auto& output_mem = arg.output_memory(0);
+    auto split = arg.argument.split;
+    auto batch_size = output_mem.argument.size.batch[0];
+
+    convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
+    kd.lws0 = batch_size == 8 ? 8 : 16;
+    if (filter_mem.argument.size.feature[0] * batch_size % kd.lws0 != 0)
+    {
+        kd = default_yxio_f32(arg);
+    }
+    else
+    {
+        if (((filter_mem.argument.size.feature[0] * batch_size) / 16) % kd.lws0)
+        {
+            kd.ofm_per_work_item = 8;
+        }
+        else
+        {
+            kd.ofm_per_work_item = 16;
+        }
+        kd.kernel_name = kernel_name_yxfb_yxio_b8;
+    
+        kd.gws0 = (output_mem.argument.size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
+    }
+    return kd;
+}
+
+convolution_gpu::kernel_data default_yxio_f32_b32(const convolution& arg)
+{
+    auto& filter_mem = arg.input_memory(1);
+    auto& output_mem = arg.output_memory(0);
+    auto split = arg.argument.split;
+    auto batch_size = output_mem.argument.size.batch[0];
+
+    convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
+    kd.lws0 = 16;
+    if (filter_mem.argument.size.feature[0] * batch_size % kd.lws0 != 0)
+    {
+        kd = default_yxio_f32(arg);
+    }
+    else
+    {
+        kd.ofm_per_work_item = 8;
+        kd.batches_per_work_item = 2;
+        kd.kernel_name = kernel_name_yxfb_yxio_b16;
+
+        kd.gws0 = (output_mem.argument.size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
+    }
+    return kd;
+}
+
+convolution_gpu::kernel_data default_yxio_f16(const convolution& arg)
+{
+    convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
+    kd.kernel_name = kernel_name_yxfb_yxio_fp16;
+    return kd;
+}
+
+convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
+{
+    auto& filter_mem = arg.input_memory(1);
+    auto& output_mem = arg.output_memory(0);
+    auto split = arg.argument.split;
+    auto batch_size = output_mem.argument.size.batch[0];
+
+    convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
+    // Number of output features is positive and dividable by 16.
+    if ((filter_mem.argument.size.feature[0] & ~0xFU) != 0 &&
+        // Batch size is positive and dividable by 16.
+        (batch_size & ~0xFU) != 0)
+    {
+        kd.ofm_per_work_item = 16;
+        if (batch_size >= 64)
+        {
+            kd.batches_per_work_item = 4; // USE_BLOCK_READ_2 + as_half4
+        }
+        else if (batch_size >= 32)
+        {
+            kd.batches_per_work_item = 2; // USE_BLOCK_READ_1 + as_half2
+        }
+        else
+        {
+            kd.batches_per_work_item = 1;
+        }
+        kd.gws0 = (output_mem.argument.size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
+        kd.lws0 = 16;
+        kd.kernel_name = kernel_name_yxfb_yxio_b16_fp16;
+    }
+    else
+    {
+        kd = default_yxio_f16(arg);
+    }
+    return kd;
+}
+
+kernel_selector<convolution_gpu::kernel_data, convolution> convolution_gpu::ks = { 
+    { std::make_tuple(memory::format::oiyx_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_oiyx_f32 },
+    { std::make_tuple(memory::format::yxio_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32 },
+    { std::make_tuple(memory::format::yxio_f32, 1, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b1 },
+    { std::make_tuple(memory::format::yxio_f32, 8, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
+    { std::make_tuple(memory::format::yxio_f32, 16, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
+    { std::make_tuple(memory::format::yxio_f32, 32, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+    { std::make_tuple(memory::format::yxio_f32, 64, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+    { std::make_tuple(memory::format::yxio_f32, 128, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+
+    { std::make_tuple(memory::format::yxio_f16, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16 },
+    { std::make_tuple(memory::format::yxio_f16, 16, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(memory::format::yxio_f16, 32, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(memory::format::yxio_f16, 64, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(memory::format::yxio_f16, 128, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+};
 
 namespace{
     struct attach {
