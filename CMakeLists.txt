@@ -754,6 +754,7 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
         ExtensionsEnabled
         TreatWarnAsErrorEnabled
         WarnLevel4
+        FastMath
     )
   intel_config_flag_apply_settings(
       CompilerOptions
@@ -817,7 +818,6 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
           -msse4
           -msse4.1
           -msse4.2
-          -ffast-math
           -fvisibility=hidden
           -finline
           -finline-functions

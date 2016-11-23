@@ -71,6 +71,8 @@ if(MSVC)
       ALIAS StandardCxx11
       ALIAS StandardCxx14
       ALIAS StandardNone
+      ALIAS FastMath
+      ALIAS NoFastMath
 
       ALIAS DeadCodeEliminate
       ALIAS DeadCodePreserve
@@ -96,6 +98,7 @@ elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
       GROUP NAME TreatWarnAsError   "-Werror|-pedantic-errors"
       GROUP NAME Standard           "-std=[^ ]+"
       GROUP NAME WarnLevels         "-W(all|extra|pedantic)|-w|-pedantic"
+      GROUP NAME FastMathOpts       "-f(no-)?fast-math"
 
       ALIAS CallingConvCdecl
       ALIAS CallingConvFastcall
@@ -133,6 +136,8 @@ elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
       ALIAS StandardCxx11              "-std=c++11"
       ALIAS StandardCxx14              "-std=c++14"
       ALIAS StandardNone               Standard REMOVE_GROUP
+      ALIAS FastMath                   "-ffast-math"
+      ALIAS NoFastMath                 FastMathOpts REMOVE_GROUP
 
       ALIAS DeadCodeEliminate
       ALIAS DeadCodePreserve
@@ -170,6 +175,7 @@ elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES
       GROUP NAME TreatWarnAsError   "-Werror"
       GROUP NAME Standard           "-std=[^ ]+"
       GROUP NAME WarnLevels         "-W(all|extra|pedantic)|-w|-pedantic"
+      GROUP NAME FastMathOpts       "-f(no-)?fast-math"
 
       ALIAS CallingConvCdecl
       ALIAS CallingConvFastcall
@@ -207,6 +213,8 @@ elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES
       ALIAS StandardCxx11              "-std=c++11"
       ALIAS StandardCxx14              "-std=c++14"
       ALIAS StandardNone               Standard REMOVE_GROUP
+      ALIAS FastMath                   "-ffast-math"
+      ALIAS NoFastMath                 FastMathOpts REMOVE_GROUP
 
       ALIAS DeadCodeEliminate
       ALIAS DeadCodePreserve
