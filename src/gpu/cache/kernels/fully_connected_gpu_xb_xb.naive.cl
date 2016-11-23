@@ -36,7 +36,7 @@
 //  - RELU           - Indicates that ReLU activation function should be used on output.
 //  - NEGATIVE_SLOPE - [float] Factor for negative output values (required when RELU is specified).
 
-KERNEL (Fully_Connected_GPU_xb_xb_memory)(
+KERNEL (fully_connected_gpu_xb_xb)(
     const __global UNIT_TYPE* input, 
     __global UNIT_TYPE* output, 
     const __global UNIT_TYPE* weight,

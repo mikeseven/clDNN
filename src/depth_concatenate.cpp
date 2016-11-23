@@ -19,7 +19,11 @@
 #include "gpu/kernel.h"
 #include "implementation_map.h"
 
+#include <algorithm>
+#include <stdexcept>
+#include <string>
 #include <utility>
+#include <vector>
 
 
 namespace neural
@@ -76,7 +80,7 @@ struct depth_concatenate_gpu : is_an_implementation
 
     static kernel_data set_kernel_data(size_t input_idx, const depth_concatenate& outer, const gpu::engine_info& info)
     {
-        const auto& input_mem  = outer.input_memory(input_idx);  // current input
+        const auto& input_mem = outer.input_memory(input_idx);  // current input
 
         kernel_data kd;
 
@@ -113,7 +117,8 @@ struct depth_concatenate_gpu : is_an_implementation
         };
     }
 
-    static void implementation(const void *ptr) {
+    static void implementation(const void *ptr)
+    {
         auto me = static_cast<const depth_concatenate_gpu*>(ptr);
         const auto& outer = me->_outer;
 

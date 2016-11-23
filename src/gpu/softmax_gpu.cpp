@@ -18,7 +18,10 @@
 #include "cache/primitive_db.h"
 #include "implementation_map.h"
 #include "kernel.h"
-#include "multidimensional_counter.h"
+
+#include <algorithm>
+#include <stdexcept>
+#include <string>
 
 
 namespace neural
@@ -133,7 +136,8 @@ struct softmax_gpu : is_an_implementation
         };
     }
 
-    static void implementation(const void *ptr) {
+    static void implementation(const void *ptr)
+    {
         auto me = static_cast<const softmax_gpu*>(ptr);
         const auto& outer = me->_outer;
         const auto& kd    = me->_kernel_data;

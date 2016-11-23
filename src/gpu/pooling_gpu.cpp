@@ -15,12 +15,13 @@
 */
 
 #include "api/neural.h"
-#include "multidimensional_counter.h"
+#include "cache/primitive_db.h"
 #include "implementation_map.h"
 #include "kernel.h"
-#include "cache/primitive_db.h"
 
 #include <algorithm>
+#include <stdexcept>
+#include <string>
 
 
 namespace neural
@@ -68,6 +69,8 @@ struct pooling_gpu : is_an_implementation {
 
         kernel_data kd;
 
+        kd.fp16_unit_used = memory::traits(input_mem.argument.format).type->name == type_id<half_t>()->name;
+
         // Determine global work sizes.
         kd.gws0 = output_mem.argument.size.batch[0] * output_mem.argument.size.feature[0];
         kd.gws1 = output_mem.argument.size.spatial[0];
@@ -97,9 +100,6 @@ struct pooling_gpu : is_an_implementation {
             throw std::runtime_error("Unknown pooling mode.");
         }
 
-        // Helpers for JIT constnats.
-        kd.fp16_unit_used = memory::traits(input_mem.argument.format).type->name == type_id<half_t>()->name;
-
         return kd;
     }
 
@@ -122,7 +122,8 @@ struct pooling_gpu : is_an_implementation {
         return mod_x || mod_y;
     }
 
-    static gpu::jit_constants get_jit_constants(const pooling& outer, const kernel_data& data) {
+    static gpu::jit_constants get_jit_constants(const pooling& outer, const kernel_data& data)
+    {
         gpu_info_helper gpu_info;
         auto engine_info = gpu_info.get_engine_info();
 
@@ -144,7 +145,8 @@ struct pooling_gpu : is_an_implementation {
         return mem_consts;
     }
 
-    static void implementation(const void *ptr) {
+    static void implementation(const void *ptr)
+    {
         auto me = static_cast<const pooling_gpu*>(ptr);
         const auto& outer = me->_outer;
         const auto& kd    = me->_kernel_data;
@@ -153,7 +155,7 @@ struct pooling_gpu : is_an_implementation {
         const auto& output_mem = outer.output_memory(0); // output
 
         me->_kernel.run<gpu::input_mem, gpu::output_mem>
-            ({ { kd.gws0, kd.gws1, kd.gws2}, { kd.lws0, kd.lws1, kd.lws2 } }, input_mem, output_mem);
+          ({{kd.gws0, kd.gws1, kd.gws2}, {kd.lws0, kd.lws1, kd.lws2}}, input_mem, output_mem);
     }
 
     static is_an_implementation *create(pooling &arg) {
