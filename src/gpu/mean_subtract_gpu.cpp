@@ -15,14 +15,30 @@
 */
 
 #include "api/neural.h"
-#include "implementation_map.h"
-#include "multidimensional_counter.h"
-#include "kernel.h"
 #include "cache/primitive_db.h"
+#include "implementation_map.h"
+#include "kernel.h"
 
-namespace neural {
+#include <stdexcept>
+#include <string>
 
-    const std::string kernelName = "Mean_subtract_GPU";
+
+namespace neural
+{
+// Kernel names.
+static const std::string kernel_name = "Mean_subtract_GPU";
+
+// GPU engine information helpers.
+namespace
+{
+struct gpu_info_helper : gpu::context_holder
+{
+    gpu::engine_info get_engine_info() const
+    {
+        return context()->get_engine_info();
+    }
+};
+}
 
 struct mean_subtract_gpu : is_an_implementation {
     mean_subtract &outer;
@@ -31,7 +47,7 @@ struct mean_subtract_gpu : is_an_implementation {
     mean_subtract_gpu(mean_subtract &arg)
         : is_an_implementation(neural::type_id<mean_subtract_gpu>())
         , outer(arg)
-        , _kernel(kernelName, get_jit_constants())
+        , _kernel(kernel_name, get_jit_constants())
     {}
 
     gpu::jit_constants get_jit_constants() const {
@@ -75,9 +91,11 @@ struct mean_subtract_gpu : is_an_implementation {
 namespace {
     struct attach {
         attach() {
-            auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
             auto val_fw = mean_subtract_gpu::create;
 
+            auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
+            implementation_map<mean_subtract>::add(key_fw, val_fw);
+            key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16);
             implementation_map<mean_subtract>::add(key_fw, val_fw);
         }
         ~attach() {}
