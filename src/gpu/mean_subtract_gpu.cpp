@@ -19,6 +19,7 @@
 #include "implementation_map.h"
 #include "kernel.h"
 
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 
