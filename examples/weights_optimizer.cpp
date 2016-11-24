@@ -45,6 +45,12 @@ bool weights_optimizer::_needs_optimization(const primitive & prim, file::weight
     }
     else if (type == file::weights_type::mean)
     {
+        // TODO!!! put better logic here.
+        // NOTE: For reorder there is no need to reorder mean again. For mean_subtract the reorder is needed
+        //       when data is not in yxfb_f32 or bfyx_f32 formats (yxfb_f16 or bfyx_f16 if use_half is true).
+        //
+        //       The problem is that we are unable to detect for which primitive these weights are optimized.
+        //       Currently mean will not be optimized in any way (mean_subtract is not used in any topology).
         return false;
     }
     else if (type == file::weights_type::convolution)
@@ -125,6 +131,6 @@ void weights_optimizer::optimize(const neural::worker& worker)
         }
 
         //OCL buffers mapping blocks until all primitives are completed
-        _primitives.back().output[0].as<const neural::memory&>().pointer<float>();
+        _primitives.back().output[0].as<const neural::memory&>().pointer<char>();
     }
 }
