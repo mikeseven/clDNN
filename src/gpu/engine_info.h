@@ -28,16 +28,19 @@ struct engine_info
 
     enum architectures
     {
-        GEN7, GEN7_5, GEN8, GEN9, GEN10, GEN11, GEN12
+        GEN7 = 0, GEN7_5, GEN8, GEN9, GEN10, GEN11, GEN12, GEN_UNKNOWN, GEN_COUNT
     };
 
     enum configurations
     {
         GT0 = 0,
         GT1,
+        GT1_5,
         GT2,
         GT3,
-        GT4
+        GT4,
+        GT_UNKNOWN,
+        GT_COUNT
     };
 
     models model;
