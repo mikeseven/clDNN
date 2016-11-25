@@ -33,7 +33,6 @@ std::vector<std::pair<primitive, std::string>> build_gender(const primitive& inp
         mem_format,
         input.as<const memory&>().argument.size,
         input,
-       // { 104, 117, 123 },
         { (float)104.0069879317889, (float)116.66876761696767, (float)122.6789143406786 },
         true
     });
