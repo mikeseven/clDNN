@@ -16,6 +16,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include <functional>
+#include <string>
 
 // exporting symbols form dynamic library
 #ifdef EXPORT_NEURAL_SYMBOLS
@@ -43,19 +45,25 @@
 #endif
 
 namespace {
-    // There is no portable half precision floating point support.
-    // Using wrapped integral type with the same size and alignment restrictions.
-    class half_impl
-    {
-    public:
-        half_impl() = default;
-        explicit half_impl(uint16_t data) : _data(data) {}
-        operator uint16_t() const { return _data; }
+// There is no portable half precision floating point support.
+// Using wrapped integral type with the same size and alignment restrictions.
+class half_impl
+{
+public:
+    half_impl() = default;
+    explicit half_impl(uint16_t data) : _data(data) {}
+    operator uint16_t() const { return _data; }
 
-    private:
-        uint16_t _data;
-    };
+private:
+    uint16_t _data;
+};
 }
+
+#define CLDNN_SUCCESS  0
+#define CLDNN_ERROR   -1
+#define CLDNN_UNSUPPORTED -2
+
+namespace cldnn {
 // Use complete implementation if necessary.
 #if defined HALF_HALF_HPP
 typedef half half_t;
@@ -63,7 +71,20 @@ typedef half half_t;
 typedef half_impl half_t;
 #endif
 
-#define CLDNN_SUCCESS  0
-#define CLDNN_ERROR   -1
-
 typedef int32_t status_t;
+
+#define CLDNN_THROW(msg, status) throw std::runtime_error(msg);
+
+template<class T>
+T create_obj(std::string err_msg, std::function<typename T::impl_type*(status_t*)> func)
+{
+    status_t status;
+    auto impl = func(&status);
+    if (!impl)
+        CLDNN_THROW(err_msg, status);
+    return T(impl);
+}
+
+
+}
+

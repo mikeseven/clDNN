@@ -19,19 +19,32 @@
 #include <map>
 #include "api/cldnn.hpp"
 #include "refcounted_obj.h"
+#include "api/reorder.hpp"
+#include "api/convolution.hpp"
 
 namespace cldnn
 {
+class primitive_arg;
+struct primitive_type_impl
+{
+    virtual std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const = 0;
+    virtual std::shared_ptr<const primitive_arg> create_arg(network_impl* net, std::shared_ptr<const primitive> desc) const = 0;
+    virtual ~primitive_type_impl() = default;
+};
+
+typedef std::map<primitive_id, std::shared_ptr<const primitive>> descriptions_map;
+
 class topology_impl : public refcounted_obj<topology_impl>
 {
 public:
-    typedef std::map<primitive_id, std::shared_ptr<primitive_desc>> primitives_map;
+    
     topology_impl(const context& ctx)
         : _context(ctx)
     {}
 
-    void add(primitive_id id, std::shared_ptr<primitive_desc> desc)
+    void add(std::shared_ptr<const primitive> desc)
     {
+        auto id = desc->id();
         if (_primitives.count(id) != 0)
             throw std::runtime_error("primitive '" + id + "' exists already");
         _primitives.insert({ id, desc });
@@ -39,10 +52,10 @@ public:
 
     context get_context() const { return _context; }
 
-    const primitives_map& get_primitives() const { return _primitives; }
+    const descriptions_map& get_primitives() const { return _primitives; }
 
 private:
-    primitives_map _primitives;
+    descriptions_map _primitives;
     context _context;
 };
 }

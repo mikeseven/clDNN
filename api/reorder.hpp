@@ -16,28 +16,48 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "tensor.hpp"
 #include "primitive.hpp"
 
 namespace cldnn
 {
+
 BEGIN_DTO(reorder)
     format::type output_format;
     primitive_id_ref mean_substract;
 END_DTO(reorder)
 
-BEGIN_DESC(reorder)
+
+class reorder : public primitive_base<reorder, DTO(reorder)>
+{
 public:
-    explicit reorder_desc(const primitive_dto* dto)
-        :primitive_desc_base(dto)
+    typedef DTO(reorder) dto;
+    DLL_SYM static primitive_type type_id();
+
+    explicit reorder(
+        const primitive_id& id,
+        const primitive_id& input,
+        format ofm,
+        primitive_id mean = "",
+        const tensor& input_offset = { format::x,0,{ 0 } },
+        const tensor& output_offset = { format::x,0,{ 0 } },
+        const padding_types padding_type = padding_types::zero
+    )
+        : primitive_base(id, { input }, input_offset, output_offset, padding_type, ofm)
     {
+        // use the same storage for input and mean_substract
+        _input.push_back(mean);
+        _dto.mean_substract = _input.store().back();
     }
 
-    explicit reorder_desc(const primitive_id& input, format ofm, primitive_id mean = "")
-        : primitive_desc_base({input})
+    explicit reorder(const dto* dto)
+        :primitive_base(dto)
     {
-        _dto.output_format = ofm;
-        _dto.mean_substract = mean;
+        // use the same storage for input and mean_substract
+        _input.push_back(dto->mean_substract);
+        _dto.mean_substract = _input.store().back();
     }
-END_DESC(reorder)
+
+    format output_format() const { return _dto.output_format; }
+    primitive_id mean_substract() const { return _dto.mean_substract; }
+};
 }

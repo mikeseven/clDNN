@@ -23,46 +23,74 @@ namespace cldnn
 {
 
 BEGIN_DTO(convolution)
-    array_ref<primitive_id_ref> weigths;
-    array_ref<primitive_id_ref> bias;
     tensor stride;
     uint32_t with_activation;
     float activation_negative_slope;
+    array_ref<primitive_id_ref> weights;
+    array_ref<primitive_id_ref> bias;
 END_DTO(convolution)
 
-BEGIN_DESC(convolution)
-public:
-    convolution_desc(const primitive_dto* dto)
-        :primitive_desc_base(dto)
-        , _weights(reinterpret_cast<const convolution_dto*>(dto)->weigths)
-        , _bias(reinterpret_cast<const convolution_dto*>(dto)->bias)
-    {
-        _dto.weigths = _weights;
-        _dto.bias = _bias;
-    }
 
-    convolution_desc(
+class convolution : public primitive_base<convolution, DTO(convolution)>
+{
+public:
+    DLL_SYM static primitive_type type_id();
+    typedef DTO(convolution) dto;
+
+    convolution(
+        const primitive_id& id,
         const primitive_id& input,
         const std::vector<primitive_id>& weights,
         const std::vector<primitive_id>& bias,
-        tensor input_offset = { format::xy,{ 0, 0 } },
-        tensor stride = { format::xy,{ 1, 1 } },
+        tensor input_offset = { format::yx,{ 0, 0 } },
+        const tensor& output_offset = { format::yx,{ 0, 0 } },
+        const padding_types padding_type = padding_types::zero,
+        tensor stride = { format::yx,{ 1, 1 } },
         bool with_activation = false,
         float activation_slp = 0.0f
     )
-        :primitive_desc_base({ input }), _weights(weights), _bias(bias)
+        :primitive_base(id, { input }, input_offset, output_offset, padding_type, stride, with_activation, activation_slp)
     {
-        _dto.input = _inputs;
-        _dto.input_offset = input_offset;
-        _dto.weigths = _weights;
-        _dto.bias = _bias;
-        _dto.stride = stride;
-        _dto.with_activation = with_activation;
-        _dto.activation_negative_slope = activation_slp;
+        init_weights<primitive_id>(weights, bias);
     }
 
+    convolution(const dto* dto)
+        :primitive_base(dto)
+    {
+        init_weights(dto->weights, dto->bias);
+    }
+
+    std::vector<primitive_id> weights() const
+    {
+        assert(_input.array_ref().size() > _split * 2);
+        return{ _input.store().end() - _split * 2, _input.store().end() - _split };
+    }
+
+    std::vector<primitive_id> bias() const
+    {
+        assert(_input.array_ref().size() > _split * 2);
+        return{ _input.store().end() - _split, _input.store().end() };
+    }
+
+    size_t split() const { return _split; }
+    tensor stride() const { return _dto.stride; };
+    bool with_activation() const { return _dto.with_activation; }
+    float negative_slope() const { return _dto.activation_negative_slope; };
+
 private:
-    primitive_id_arr _weights;
-    primitive_id_arr _bias;
-END_DESC(convolution)
+    size_t _split;
+
+    template<typename T>
+    void init_weights(array_ref<T> weights, array_ref<T> bias)
+    {
+        if (weights.size() != bias.size()) throw std::invalid_argument("numbers of weights and biases do not match");
+        _split = weights.size();
+        auto input_size = _input.size();
+        std::copy(weights.begin(), weights.end(), std::back_inserter(_input));
+        std::copy(bias.begin(), bias.end(), std::back_inserter(_input));
+        assert(_input.array_ref().size() == _split * 2 + 1);
+        _dto.weights = array_ref<primitive_id_ref>{ _input.ref().data() + input_size, _split };
+        _dto.bias = array_ref<primitive_id_ref>{ _input.ref().data() + input_size + _split, _split };
+    }
+};
 }

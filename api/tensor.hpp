@@ -97,11 +97,26 @@ struct format
  */
 struct tensor
 {
-    tensor(format fmt, int32_t default_size, const std::vector<int32_t>& sizes)
-        : _format(fmt)
-        ,_batch  (_sizes, fmt.batch_num())
-        ,_feature(_sizes+ _batch.size(), fmt.feature_num())
-        ,_spatial(_sizes+ _batch.size()+ _feature.size(), fmt.spatial_num())
+    //TODO find the way to prevent direct change of following fields.
+    format format;
+    array_ref<int32_t> raw;
+    array_ref<int32_t> batch;
+    array_ref<int32_t> feature;
+    array_ref<int32_t> spatial;
+
+    /**
+     * \brief Internal storage for tensor's data.
+     * had to keep it public to support "Standard Layout"
+     * please do not access this field directly
+     */
+    int32_t _sizes[TENSOR_DIM_MAX];
+
+    tensor(cldnn::format fmt, int32_t default_size, const std::vector<int32_t>& sizes)
+        : format(fmt)
+        , raw(_sizes, fmt.batch_num() + fmt.feature_num() + fmt.spatial_num())
+        , batch  (_sizes, fmt.batch_num())
+        , feature(_sizes+ fmt.batch_num(), fmt.feature_num())
+        , spatial(_sizes+ fmt.batch_num() + fmt.feature_num(), fmt.spatial_num())
     {
         auto order = fmt.order();
         std::fill_n(_sizes, TENSOR_DIM_MAX, default_size);
@@ -124,13 +139,13 @@ struct tensor
             case 'i':
             case 'o':
 
-                _sizes[_batch.size() + (feature_idx++)] = sizes[i];
+                _sizes[batch.size() + (feature_idx++)] = sizes[i];
                 break;
             case 's':
             case 'x':
             case 'y':
             case 'z':
-                _sizes[_batch.size() + _feature.size() + (spatial_idx++)] = sizes[i];
+                _sizes[batch.size() + feature.size() + (spatial_idx++)] = sizes[i];
                 break;
             default:
                 throw std::domain_error(std::string("unknown coord type: ") + order[i]);
@@ -138,21 +153,37 @@ struct tensor
         }
     }
 
-    tensor(format fmt, const std::vector<int32_t>& sizes)
+    tensor(cldnn::format fmt, const std::vector<int32_t>& sizes)
         :tensor(fmt, 1, sizes)
     {}
 
     tensor() :tensor(format::x, 0, { 0 }) {}
 
-    format get_format() const { return _format; }
+    tensor(const tensor& other)
+        : format(other.format)
+        ,     raw(_sizes, format.batch_num() + format.feature_num() + format.spatial_num())
+        ,   batch(_sizes, format.batch_num())
+        , feature(_sizes + format.batch_num(), format.feature_num())
+        , spatial(_sizes + format.batch_num() + format.feature_num(), format.spatial_num())
+    {
+        std::copy_n(other._sizes, TENSOR_DIM_MAX, _sizes);
+    }
 
-    array_ref<int32_t> raw()     const { return{ _sizes, _batch.size() + _feature.size() + _spatial.size() }; }
-    array_ref<int32_t> batch()   const { return _batch; }
-    array_ref<int32_t> feature() const { return _feature; }
-    array_ref<int32_t> spatial() const { return _spatial; }
+    tensor& operator=(const tensor& other)
+    {
+        if (this == &other)
+            return *this;
+        format = other.format;
+        raw     = { _sizes, format.batch_num() + format.feature_num() + format.spatial_num() };
+        batch   = { _sizes, format.batch_num() };
+        feature = { _sizes + format.batch_num(), format.feature_num() };
+        spatial = { _sizes + format.batch_num() + format.feature_num(), format.spatial_num() };
+        std::copy_n(other._sizes, TENSOR_DIM_MAX, _sizes);
+        return *this;
+    }
 
     std::vector<int32_t> sizes() const {
-        auto order = _format.order();
+        auto order = format.order();
         std::vector<int32_t> sizes(order.size());
         size_t batch_idx = 0;
         size_t feature_idx = 0;
@@ -163,18 +194,18 @@ struct tensor
             {
             case 'b':
             case 'n':
-                sizes[i] = batch()[batch_idx++];
+                sizes[i] = batch[batch_idx++];
                 break;
             case 'f':
             case 'i':
             case 'o':
-                sizes[i] = feature()[feature_idx++];
+                sizes[i] = feature[feature_idx++];
                 break;
             case 's':
             case 'x':
             case 'y':
             case 'z':
-                sizes[i] = spatial()[spatial_idx++];
+                sizes[i] = spatial[spatial_idx++];
                 break;
             default:
                 throw std::domain_error(std::string("unknown coord type: ") + order[i]);
@@ -193,12 +224,12 @@ struct tensor
         );
     }
 
-    static tensor transform(const tensor& val, format new_fmt, int32_t default_size)
+    tensor transform(cldnn::format new_fmt, int32_t default_size) const
     {
-        if (val.get_format() == new_fmt) return val;
-        auto val_order = val.get_format().order();
+        if (format == new_fmt) return *this;
+        auto val_order = format.order();
         auto new_order = new_fmt.order();
-        std::vector<int32_t> old_sizes = val.sizes();
+        std::vector<int32_t> old_sizes = sizes();
         std::vector<int32_t> new_sizes(new_order.size(), default_size);
         for(size_t i = 0; i < old_sizes.size(); i++)
         {
@@ -214,7 +245,7 @@ struct tensor
     size_t get_linear_offset(const tensor& coord) const
     {
         auto my_sizes = sizes();
-        auto adjusted_coords = transform(coord, _format, 0).sizes();
+        auto adjusted_coords = coord.transform(format, 0).sizes();
         assert(my_sizes.size() == adjusted_coords.size());
 
         assert(adjusted_coords.size() > 0);
@@ -225,13 +256,6 @@ struct tensor
         }
         return offset;
     }
-
-private:
-    int32_t _sizes[TENSOR_DIM_MAX];
-    format _format;
-    array_ref<int32_t> _batch;
-    array_ref<int32_t> _feature;
-    array_ref<int32_t> _spatial;
 };
 
 static_assert(std::is_standard_layout<tensor>::value, "tensor class has to be 'standart layout'");

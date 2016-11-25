@@ -16,37 +16,30 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/topology.hpp"
-#include "topology_impl.h"
-#include "api/reorder.hpp"
-#include "api/convolution.hpp"
 #include "api/cldnn.hpp"
+#include "network_impl.h"
+#include "engine_impl.h"
+#include <algorithm>
 
 namespace cldnn
 {
-status_t topology::add_primitive_dto(const primitive_dto* dto)
+
+std::shared_ptr<const primitive_arg> network_impl::get_primitive(primitive_id id)
 {
-    try
-    {
-        _impl->add(dto->type->from_dto(dto));
-        return CLDNN_SUCCESS;
-    }
-    catch(...)
-    {
-        return CLDNN_ERROR;
-    }
+    auto it = _primitives.find(id);
+    if (it != _primitives.end())
+        return it->second;
+
+    auto& desc = _topology.implementation()->get_primitives().at(id);
+    return _primitives.insert({ id, desc->get_dto()->type->create_arg(this, desc) }).first->second;
 }
 
-context topology::get_context() const
-{
-    return _impl->get_context();
-}
-
-topology::topology(const topology& other):_impl(other._impl)
+network::network(const network& other):_impl(other._impl)
 {
     _impl->add_ref();
 }
 
-topology& topology::operator=(const topology& other)
+network& network::operator=(const network& other)
 {
     if (_impl == other._impl) return *this;
     _impl->release();
@@ -55,8 +48,29 @@ topology& topology::operator=(const topology& other)
     return *this;
 }
 
-topology::~topology()
+network::~network()
 {
     _impl->release();
+}
+
+const memory& network::get_output(primitive_id_ref id)
+{
+}
+
+engine network::get_engine()
+{
+    return _impl->get_engine();
+}
+
+status_t network::set_input_data_impl(primitive_id_ref id, memory mem)
+{
+}
+
+array_ref<primitive_id_ref> network::get_primitive_keys_impl(status_t* status)
+{
+}
+
+event_impl* network::execute_impl(array_ref<event> dependencies, status_t* status)
+{
 }
 }

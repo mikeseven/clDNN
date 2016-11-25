@@ -15,48 +15,41 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "api/topology.hpp"
+#pragma once
+#include <map>
+#include "api/cldnn.hpp"
+#include "refcounted_obj.h"
 #include "topology_impl.h"
 #include "api/reorder.hpp"
 #include "api/convolution.hpp"
-#include "api/cldnn.hpp"
 
 namespace cldnn
 {
-status_t topology::add_primitive_dto(const primitive_dto* dto)
+class network_impl : public refcounted_obj<network_impl>
 {
-    try
+public:
+
+    network_impl(const engine& engine, const topology& topology):_topology(topology), _engine(engine)
     {
-        _impl->add(dto->type->from_dto(dto));
-        return CLDNN_SUCCESS;
+        build_network();
     }
-    catch(...)
+
+    std::shared_ptr<const primitive_arg> get_primitive(primitive_id id);
+
+    engine get_engine() const { return _engine; }
+
+private:
+    topology _topology;
+    std::map<primitive_id, std::shared_ptr<const primitive_arg>> _primitives;
+    engine _engine;
+    void build_network()
     {
-        return CLDNN_ERROR;
+        for(auto p: _topology.implementation()->get_primitives())
+        {
+            
+        }
     }
-}
+};
 
-context topology::get_context() const
-{
-    return _impl->get_context();
-}
 
-topology::topology(const topology& other):_impl(other._impl)
-{
-    _impl->add_ref();
-}
-
-topology& topology::operator=(const topology& other)
-{
-    if (_impl == other._impl) return *this;
-    _impl->release();
-    _impl = other._impl;
-    _impl->add_ref();
-    return *this;
-}
-
-topology::~topology()
-{
-    _impl->release();
-}
 }

@@ -15,48 +15,29 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "api/topology.hpp"
-#include "topology_impl.h"
-#include "api/reorder.hpp"
-#include "api/convolution.hpp"
+#pragma once
+#include <map>
 #include "api/cldnn.hpp"
+#include "refcounted_obj.h"
 
 namespace cldnn
 {
-status_t topology::add_primitive_dto(const primitive_dto* dto)
+class primitive;
+class engine_impl : public refcounted_obj<engine_impl>
 {
-    try
+public:
+    engine_impl(const context& ctx, const engine_configuration& conf):_context(ctx), _configuration(conf)
     {
-        _impl->add(dto->type->from_dto(dto));
-        return CLDNN_SUCCESS;
+        
     }
-    catch(...)
-    {
-        return CLDNN_ERROR;
-    }
-}
 
-context topology::get_context() const
-{
-    return _impl->get_context();
-}
+    const context& get_context() const { return _context; }
 
-topology::topology(const topology& other):_impl(other._impl)
-{
-    _impl->add_ref();
-}
+    std::shared_ptr<primitive> create_primitive(std::shared_ptr<const primitive_desc> arg);
+    buffer* allocate_buffer(layout layout);
 
-topology& topology::operator=(const topology& other)
-{
-    if (_impl == other._impl) return *this;
-    _impl->release();
-    _impl = other._impl;
-    _impl->add_ref();
-    return *this;
-}
-
-topology::~topology()
-{
-    _impl->release();
-}
+private:
+    context _context;
+    engine_configuration _configuration;
+};
 }

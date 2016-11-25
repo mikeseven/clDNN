@@ -20,123 +20,168 @@
 #include "cldnn_defs.h"
 #include "compounds.h"
 #include "memory.hpp"
+#include <string>
 #include <memory>
+#include <iterator>
 
 namespace cldnn
 {
 enum class padding_types { zero, one, two };
 
-enum primitive_types
-{
-    reorder,
-    mean_substract,
-    convolution,
-    fully_connected,
-    activation,
-    pooling,
-    normalization,
-    softmax,
-    depth_concat,
-    data,
-    input
-};
+//enum primitive_types
+//{
+//    reorder,
+//    mean_substract,
+//    convolution,
+//    fully_connected,
+//    activation,
+//    pooling,
+//    normalization,
+//    softmax,
+//    depth_concat,
+//    data,
+//    input
+//};
+
+//template<primitive_types Ptype> struct primitive_type_traits{};
 
 typedef std::string primitive_id;
+typedef const struct primitive_type_impl* primitive_type;
 typedef string_ref primitive_id_ref;
 
-#define BEGIN_DTO(p_type) struct p_type##_dto {\
-    primitive_types type;\
-    array_ref<primitive_id_ref> input;\
-    tensor input_offset;\
-    tensor output_offset;\
-    padding_types padding_type;\
-
-#define END_DTO(p_type) };\
-static_assert(std::is_standard_layout<p_type##_dto>::value, "class has to be 'standart layout'");
-
-BEGIN_DTO(primitive)
-END_DTO(primitive)
-
-template<primitive_types Ptype> struct primitive_type_traits;
-
+/**
+ * \brief Template class to store data to be referenced by array_ref<RefElemTy>
+ * \tparam RefElemTy Reference type. e.g. string_ref
+ * \tparam StorElemTy Storage type. e.g. std::string
+ * \tparam Dummy RefElemTy and StorElemTy should be implicitly convertible
+ */
 template<typename RefElemTy, typename StorElemTy,
     typename Dummy=std::enable_if<std::is_convertible<RefElemTy, StorElemTy>::value && std::is_convertible<StorElemTy, RefElemTy>::value> >
 class array_ref_store
 {
 public:
     array_ref_store(const std::vector<StorElemTy>& arr)
-        :_data_store(arr)
+        :_data_store(arr) //Not sure if it will work correctly: , _arr_store(_data_store)
     {
-        for (auto& s : _data_store)
-        {
-            _arr_store.push_back(s);
-        }
+        //fill _arr_store by references to strings in _data_store
+        std::copy(_data_store.begin(), _data_store.end(), std::back_inserter(_arr_store));
     }
 
     array_ref_store(array_ref<RefElemTy> arr)
     {
-        for(auto& ref:arr)
-        {
-            _data_store.push_back(ref);
-        }
-        for (auto& s : _data_store)
-        {
-            _arr_store.push_back(s);
-        }
+        //Fill _data_store by copies of strings referenced in arr
+        std::copy(arr.begin(), arr.end(), std::back_inserter(_data_store));
+        //fill _arr_store by references to strings in _data_store
+        std::copy(_data_store.begin(), _data_store.end(), std::back_inserter(_arr_store));
     }
 
+    void push_back(const StorElemTy& Val)
+    {
+        _data_store.push_back(Val);
+        _arr_store.push_back(_data_store.back());
+    }
+
+    size_t size() const
+    {
+        assert(_data_store.size() == _arr_store.size());
+        return _data_store.size();
+    }
+
+    // explicit conversion
+    const std::vector<RefElemTy>& ref() const { return _arr_store; }
+    const std::vector<StorElemTy>& store() const { return _data_store; }
+
+    // implicit conversion
     operator array_ref<RefElemTy>() const { return _arr_store; }
+    operator const std::vector<StorElemTy>&() const { return _data_store; }
 private:
     std::vector<StorElemTy> _data_store;
     std::vector<RefElemTy> _arr_store;
 };
 
+#define BEGIN_DTO(PType) struct PType##_dto {\
+    primitive_type type;\
+    primitive_id_ref id;\
+    array_ref<primitive_id_ref> input;\
+    tensor input_offset;\
+    tensor output_offset;\
+    padding_types padding_type;\
+    primitive_dto* as_base() { return reinterpret_cast<primitive_dto*>(this); }\
+    const primitive_dto* as_base() const { return reinterpret_cast<const primitive_dto*>(this); }\
+
+#define END_DTO(PType) };\
+static_assert(std::is_standard_layout<PType##_dto>::value, "class has to be 'standart layout'");
+
+#define DTO(PType) PType##_dto
+
+BEGIN_DTO(primitive)
+template<class PType>
+typename PType::dto* as()
+{
+    if (type != PType::type_id()) throw std::invalid_argument("type");
+    return reinterpret_cast<typename PType::dto*>(this);
+}
+template<class PType>
+const typename PType::dto* as() const
+{
+    if (type != PType::type_id()) throw std::invalid_argument("type");
+    return reinterpret_cast<const typename PType::dto*>(this);
+}
+END_DTO(primitive)
+
+struct primitive
+{
+
+    virtual const primitive_dto* get_dto() const = 0;
+    virtual primitive_type type() const = 0;
+    virtual primitive_id id() const = 0;
+    virtual std::vector<primitive_id> input() const = 0;
+    virtual tensor input_offset() const = 0;
+    virtual tensor output_offset() const = 0;
+    virtual padding_types padding_type() const = 0;
+    virtual ~primitive() = default;
+};
+
 typedef array_ref_store<primitive_id_ref, primitive_id> primitive_id_arr;
 
-struct primitive_desc
-{
-    virtual const primitive_dto* get_dto() const = 0;
-    virtual ~primitive_desc() = default;
-};
-
-template<primitive_types PType>
-class primitive_desc_base : public primitive_desc
+template<class PType, class DTO>
+class primitive_base : public primitive
 {
 public:
-    typedef typename primitive_type_traits<PType>::dto_type dto_type;
-    typedef typename primitive_type_traits<PType>::desc_type desc_type;
-
-    primitive_desc_base(const primitive_dto* dto)
-        :_inputs(dto->input)
-    {
-        if (dto->type != PType) throw std::runtime_error("primitive type does not match");
-        std::memcpy(dto, &_dto, sizeof(_dto));
-        _dto.input = _inputs;
-    }
-
     const primitive_dto* get_dto() const override { return reinterpret_cast<primitive_dto*>(&_dto); }
 
+    primitive_id id() const override { return _id; }
+    std::vector<primitive_id> input() const override { return _input; }
+    primitive_type type() const override { return _dto.type; }
+    tensor input_offset() const override { return _dto.input_offset; }
+    tensor output_offset() const override { return _dto.output_offset; }
+    padding_types padding_type() const override { return _dto.padding_type; }
+
 protected:
-    explicit primitive_desc_base(const std::vector<primitive_id>& inputs)
-        :_inputs(inputs)
+    template<typename ...Args>
+    explicit primitive_base(
+        const primitive_id& id,
+        const std::vector<primitive_id>& input,
+        const tensor& input_offset = { format::x,{ 0 } },
+        const tensor& output_offset = { format::x,{ 0 } },
+        const padding_types padding_type = padding_types::zero,
+        Args... args)
+        : _id(id), _input(input)
+        , _dto{ PType::type_id(), _id, _input, input_offset, output_offset, padding_type, args }
+    {}
+
+    primitive_base(const DTO* dto)
+        : _id(dto->id), _input(dto->input)
+        , _dto{ *dto }
     {
-        _dto.type = PType;
-        _dto.input = _inputs;
+        if (dto->type != PType::type_id()) throw std::invalid_argument("DTO type mismatch");
+        dto->id = _id;
+        dto->input = _input;
     }
 
-    primitive_id_arr _inputs;
-    typename primitive_type_traits<PType>::dto_type _dto;
+    primitive_id _id;
+    primitive_id_arr _input;
+    DTO _dto;
 };
-
-#define BEGIN_DESC(p_type) class p_type##_desc;\
-template<> struct primitive_type_traits<p_type>\
-{\
-    typedef p_type##_dto dto_type;\
-    typedef p_type##_desc desc_type;\
-};\
-class p_type##_desc : public primitive_desc_base<p_type> {
-
-#define END_DESC(p_type) };
-
 
 }

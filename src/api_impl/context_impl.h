@@ -15,48 +15,14 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "api/topology.hpp"
-#include "topology_impl.h"
-#include "api/reorder.hpp"
-#include "api/convolution.hpp"
+#pragma once
 #include "api/cldnn.hpp"
+#include "refcounted_obj.h"
 
 namespace cldnn
 {
-status_t topology::add_primitive_dto(const primitive_dto* dto)
+class context_impl: public refcounted_obj<context_impl>
 {
-    try
-    {
-        _impl->add(dto->type->from_dto(dto));
-        return CLDNN_SUCCESS;
-    }
-    catch(...)
-    {
-        return CLDNN_ERROR;
-    }
-}
-
-context topology::get_context() const
-{
-    return _impl->get_context();
-}
-
-topology::topology(const topology& other):_impl(other._impl)
-{
-    _impl->add_ref();
-}
-
-topology& topology::operator=(const topology& other)
-{
-    if (_impl == other._impl) return *this;
-    _impl->release();
-    _impl = other._impl;
-    _impl->add_ref();
-    return *this;
-}
-
-topology::~topology()
-{
-    _impl->release();
-}
+    
+};
 }
