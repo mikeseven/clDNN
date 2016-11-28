@@ -97,8 +97,10 @@ pooling::arguments::arguments( pooling::mode::type      p_mode,
     //gender_age leszczyn change
     auto spatial_x = (output_memory.size.spatial[0] - siz.spatial[0]) / strd.spatial[0] + 1;
     auto  spatial_y = (output_memory.size.spatial[1] - siz.spatial[1]) / strd.spatial[1] + 1;
-    if (strd.spatial[0] > 1) spatial_x = static_cast<uint32_t>(ceil((static_cast<float>(output_memory.size.spatial[0] - siz.spatial[0]) / static_cast<float>(strd.spatial[0])))) + 1;
-    if (strd.spatial[1] > 1) spatial_y = static_cast<uint32_t>(ceil((static_cast<float>(output_memory.size.spatial[1] - siz.spatial[1]) / static_cast<float>(strd.spatial[1])))) + 1;
+    if (strd.spatial[0] > 1 && strd.spatial[1] > 1) {
+        spatial_x = static_cast<uint32_t>(ceil((static_cast<float>(output_memory.size.spatial[0] - siz.spatial[0]) / static_cast<float>(strd.spatial[0])))) + 1;
+        spatial_y = static_cast<uint32_t>(ceil((static_cast<float>(output_memory.size.spatial[1] - siz.spatial[1]) / static_cast<float>(strd.spatial[1])))) + 1;
+    }
 
     output_size = { 
         output_memory.size.batch[0],
