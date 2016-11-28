@@ -19,13 +19,12 @@
 
 using namespace neural;
 
-// Building vgg16 network with loading weights & biases from file
+// Building age_gender network with loading weights & biases from file
+// !!! commented layers will be used in the future !!!
 std::vector<std::pair<primitive, std::string>> build_gender(const primitive& input, const primitive& output, const std::string& weights_dir, weights_optimizer& wo, bool use_half)
 {
     auto mem_format = use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
     auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
-
-    // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
 
     // create conversion to yxfb format and subtract mean values
     auto reordered_input = reorder::create(
@@ -61,13 +60,7 @@ std::vector<std::pair<primitive, std::string>> build_gender(const primitive& inp
         { 1,{ 3,3 },1 }, // kernel
         padding::zero
     });
-/*
-    auto relu1 = relu::create(
-    {
-        memory::format::yxfb_f32,
-        pool1
-    });
-    */
+
     auto conv2 = convolution::create(
     {
         mem_format,
@@ -92,13 +85,7 @@ std::vector<std::pair<primitive, std::string>> build_gender(const primitive& inp
         { 1,{ 3,3 },1 }, // kernel
         padding::zero
     });
-    /*
-    auto relu2 = relu::create(
-    {
-        memory::format::yxfb_f32,
-        pool2
-    });
-    */
+
     auto conv3 = convolution::create(
     {
         mem_format,
@@ -123,13 +110,8 @@ std::vector<std::pair<primitive, std::string>> build_gender(const primitive& inp
         { 1,{ 3,3 },1 }, // kernel
         padding::zero
     });
+
     /*
-    auto relu3 = relu::create(
-    {
-        memory::format::yxfb_f32,
-        pool3
-    });
-    
     auto fc1_a = fully_connected::create(
     {
         fc_mem_format,
@@ -149,6 +131,7 @@ std::vector<std::pair<primitive, std::string>> build_gender(const primitive& inp
         true,
         0
     });
+
   /*
     auto fc2_a = fully_connected::create(
     {
@@ -190,17 +173,14 @@ std::vector<std::pair<primitive, std::string>> build_gender(const primitive& inp
         { reordered_input, "reorder"},
         { conv1, "conv1" },
         { pool1, "pool1" },
-     //   { relu1, "relu1" },
         { conv2, "conv2" },
         { pool2, "pool2" },
-     //   { relu2, "relu2" },
         { conv3, "conv3" },
         { pool3, "pool3" },
-     //   { relu3, "relu3" },
-     //   { fc1_a, "fc1_a" },
+     // { fc1_a, "fc1_a" },
         { fc1_g, "fc1_g" },
-     //   { fc2_a, "fc2_a" },
-     //   { fc3_a, "fc3_a" },
+     // { fc2_a, "fc2_a" },
+     // { fc3_a, "fc3_a" },
         { fc3_g, "fc3_g" },
         { softmax, "softmax" }
    };

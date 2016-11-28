@@ -91,13 +91,16 @@ pooling::arguments::arguments( pooling::mode::type      p_mode,
     // verify if primitive has one output.
     if (in.output.size() != 1) throw std::runtime_error("more than one output in primitive isn't supported yet");
     auto output_memory = in.output[0].as<const memory&>().argument;
-    
+
 	// compute size of output after pooling (downsampling)
-    auto spatial_x = (output_memory.size.spatial[0] - siz.spatial[0]) / strd.spatial[0] + 1;
-    auto  spatial_y = (output_memory.size.spatial[1] - siz.spatial[1]) / strd.spatial[1] + 1;
+    uint32_t spatial_x, spatial_y;
     if (strd.spatial[0] > 1 && strd.spatial[1] > 1) {
         spatial_x = static_cast<uint32_t>(ceil((static_cast<float>(output_memory.size.spatial[0] - siz.spatial[0]) / static_cast<float>(strd.spatial[0])))) + 1;
         spatial_y = static_cast<uint32_t>(ceil((static_cast<float>(output_memory.size.spatial[1] - siz.spatial[1]) / static_cast<float>(strd.spatial[1])))) + 1;
+    }
+    else {
+        spatial_x = (output_memory.size.spatial[0] - siz.spatial[0]) / strd.spatial[0] + 1;
+        spatial_y = (output_memory.size.spatial[1] - siz.spatial[1]) / strd.spatial[1] + 1;
     }
 
     output_size = { 
