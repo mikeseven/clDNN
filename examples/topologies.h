@@ -25,3 +25,6 @@ std::vector<std::pair<neural::primitive, std::string>> build_vgg16(
 
 std::vector<std::pair<neural::primitive, std::string>> build_googlenetv1(
     const neural::primitive& input, const neural::primitive& output, const std::string& weights_dir, weights_optimizer& wo, bool use_half);
+
+std::vector<std::pair<neural::primitive, std::string>> build_gender(
+    const neural::primitive& input, const neural::primitive& output, const std::string& weights_dir, weights_optimizer& wo, bool use_half);
