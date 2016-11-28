@@ -48,15 +48,16 @@ KERNEL (Fully_Connected_GPU_xb_xb_memory)(
     const uint outXIdx = x / INPUT_BATCH_NUM;
     UNIT_TYPE result = MAKE_FP_LITERAL(0.0);
 
-    uint input_idx = batch_id;
-    uint weight_idx = outXIdx;
+    uint input_idx = MULTIPLY_OFFSET(UNIT_TYPE, batch_id);
+    uint weight_idx = MULTIPLY_OFFSET(UNIT_TYPE, outXIdx);
     for (uint i = 0; i < INPUT_ELEMENTS_COUNT; i++)
     {
-        result += input[input_idx] * weight[weight_idx];
-        input_idx += INPUT_BATCH_NUM;
-        weight_idx += WEIGHTS_BATCH_NUM;
+        UNIT_TYPE _in = *OFFSET_GLOBAL_PTR(UNIT_TYPE, input, input_idx);
+        UNIT_TYPE _w =  *OFFSET_GLOBAL_PTR(UNIT_TYPE, weight, weight_idx);
+        result += _in * _w;
+        input_idx  += MULTIPLY_OFFSET(UNIT_TYPE, INPUT_BATCH_NUM);
+        weight_idx += MULTIPLY_OFFSET(UNIT_TYPE, WEIGHTS_BATCH_NUM);
     }
-
     result += bias[outXIdx];
     ACTIVATION(output[x], result);
 }

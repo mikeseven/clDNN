@@ -146,6 +146,8 @@ __attribute__((overloadable)) const __global void* get_data(const __global neura
         ACTIVATION(_result.s7, _result.s7); \
 }
 
+#define OFFSET_GLOBAL_PTR(elem_type, ptr, elem_offset) ((__global elem_type*)((__global char*)(ptr) + elem_offset))
+#define MULTIPLY_OFFSET(elem_type, elem_offset) (elem_offset * sizeof(elem_type))
 )__krnl";
 
 std::vector<std::string> kernels_cache::get_program_source() const {
