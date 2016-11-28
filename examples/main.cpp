@@ -296,12 +296,12 @@ int main(int argc, char* argv[])
         {
             std::cerr << options.version_message() << "\n\n";
             std::cerr << options.help_message() << std::endl;
-            return 1;
+            return 0;
         }
         if (parsed_args.count("version"))
         {
             std::cerr << options.version_message() << std::endl;
-            return 1;
+            return 0;
         }
         if (!parsed_args.count("input") && !parsed_args.count("convert"))
         {
@@ -386,6 +386,7 @@ int main(int argc, char* argv[])
                 ep.topology_name == "googlenet")
             {
                 run_topology(ep);
+                return 0;
             }
             else
             {
