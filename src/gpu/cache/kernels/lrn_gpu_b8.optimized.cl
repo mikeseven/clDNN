@@ -1,5 +1,5 @@
 __attribute__((reqd_work_group_size(8, 1, 1)))
-KERNEL (lrn_b8_GPU)(__global float* input, __global float* output)
+KERNEL (lrn_gpu_b8)(const __global float* input, __global float* output)
 {
     const uint global_id = get_global_id(0);
     const uint element_offset = get_global_id(1) * (INPUT_BATCH_NUM/8) * INPUT_FEATURE_NUM;
