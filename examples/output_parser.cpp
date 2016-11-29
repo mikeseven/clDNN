@@ -1,5 +1,6 @@
 #include "output_parser.h"
 #include <algorithm>
+#include <memory>
 #include <sstream>
 #include <iostream>
 #include <iomanip>
@@ -13,12 +14,40 @@ namespace neural
 
 // returns a vector with size equal to number of images in batch and each subvector contains sorted pairs of 
 // values specifying match percentage and category number
-std::vector<std::vector<std::pair<float, size_t>>> read_output(const neural::memory & mem)
+std::vector<std::vector<std::pair<float, size_t>>> read_output(const neural::primitive& mem_primitive)
 {
+    // Check format for types that need to be converted to float.
+    const auto& input_mem = get_memory_primitive(mem_primitive);
+    auto mem_fmt = input_mem.argument.format;
+    bool needs_conversion = true;
+    switch (mem_fmt)
+    {
+    case neural::memory::format::xb_f16:
+        mem_fmt = neural::memory::format::xb_f32;
+        break;
+    default:
+        needs_conversion = false;
+        break;
+    }
+
+    // Convert format if necessary.
+    neural::primitive converted_primitive = mem_primitive;
+    if (needs_conversion)
+    {
+        converted_primitive = neural::reorder::create(
+        {
+            mem_fmt,
+            input_mem.argument.size,
+            mem_primitive
+        });
+        execute({converted_primitive}).wait();
+    }
+
+    const auto& mem = get_memory_primitive(converted_primitive);
 	auto ptr = mem.pointer<float>();
 	size_t image_count = mem.argument.size.batch[0];
 	size_t category_count = 0;
-	auto format = mem.argument.format; 
+	auto format = mem.argument.format;
 	std::vector<std::vector<std::pair<float, size_t>>> ret;
 	size_t offset = 0;
 	switch (format)
@@ -97,9 +126,9 @@ html::html(const std::string & file_name, const std::string & title)
 	}
 }
 
-void html::batch(const neural::memory & mem, const std::string& categories_file, const std::vector<std::string>& image_names, PrintType printType)
+void html::batch(const neural::primitive& mem_primitive, const std::string& categories_file, const std::vector<std::string>& image_names, PrintType printType)
 {
-	auto batch = read_output(mem);
+	auto batch = read_output(mem_primitive);
 	auto categories = load_category_names(categories_file);
 	html_file << "<table class=\"recognitions\" width=\"" << 301 * batch.size( ) << "px\"><tr>" << std::endl;
 	// Per image

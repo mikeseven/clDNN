@@ -631,7 +631,7 @@ void run_topology(const execution_params &ep)
         auto time = execute_topology(worker, primitives, output, ep, energyLib);
 
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-        output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch, ep.print_type);
+        output_file.batch(output, join_path(get_executable_info()->dir(), "names.txt"), images_in_batch, ep.print_type);
         if (time_in_sec != 0.0)
         {
             if (ep.print_type != ExtendedTesting)
