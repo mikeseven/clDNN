@@ -20,7 +20,6 @@
 #include "cache/primitive_db.h"
 #include "implementation_map.h"
 #include "kernel.h"
-#include "relu_gpu.h"
 
 #include <algorithm>
 #include <stdexcept>

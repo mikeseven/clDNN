@@ -15,54 +15,104 @@
 */
 
 #include "api/neural.h"
-#include "multidimensional_counter.h"
+#include "cache/primitive_db.h"
 #include "implementation_map.h"
 #include "kernel.h"
-#include "relu_gpu.h"
-#include "cache/primitive_db.h"
+
+#include <algorithm>
+#include <stdexcept>
+#include <string>
+
 
 namespace neural 
 {
+// Kernel names.
+static const std::string kernel_name = "relu_gpu";
 
-const std::string kernelName = "Relu_GPU";
+// GPU engine information helpers.
+namespace
+{
+struct gpu_info_helper : gpu::context_holder
+{
+    gpu::engine_info get_engine_info() const
+    {
+        return context()->get_engine_info();
+    }
+};
+}
 
-struct relu_gpu : is_an_implementation {
-    relu &outer;
+struct relu_gpu : is_an_implementation
+{
+    const relu& _outer;
+    struct kernel_data
+    {
+        size_t gws0;
+        size_t lws0;
+        std::string kernel_name;
+        bool fp16_unit_used;
+    } _kernel_data;
     gpu::kernel _kernel;
 
-    relu_gpu(relu &arg) : is_an_implementation(neural::type_id<relu_gpu>())
-        , outer(arg)
-        , _kernel(kernelName, get_jit_constants()) {}
+    relu_gpu(const relu& outer)
+        : is_an_implementation(neural::type_id<relu_gpu>()),
+        _outer(outer),
+        _kernel_data(set_kernel_data(_outer)),
+        _kernel(_kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+    {}
 
-	gpu::jit_constants get_jit_constants() const
-	{
-		gpu::jit_constants mem_consts
-		{
-			gpu::make_jit_constant("RELU", ""),
-			gpu::make_jit_constant("NEGATIVE_SLOPE", outer.argument.negative_slope),
-		};
+    static kernel_data set_kernel_data(const relu& outer)
+    {
+        const auto& input_mem  = outer.input_memory(0);  // input
+        const auto& output_mem = outer.output_memory(0); // output
 
-		return mem_consts;
-	}
+        kernel_data kd;
 
-    static void implementation(const void *ptr) 
-	{
-        auto me = static_cast<const relu_gpu *>(ptr);
-        auto& outer = me->outer;
+        kd.fp16_unit_used = memory::traits(input_mem.argument.format).type->name == type_id<half_t>()->name;
 
-        auto& input_mem = outer.input_memory(0);
-        auto& output_mem = outer.output_memory(0);
-
-        size_t dstSize = output_mem.count();
-
-        int lws = 16;
-        while (dstSize % lws)
+        // Determine global work sizes.
+        kd.gws0 = output_mem.count();
+        // Find largest positive local work size that is divider for global work size.
+        kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
+        while (kd.gws0 % kd.lws0 != 0)
         {
-            lws--;
+            --kd.lws0;
         }
 
-        me->_kernel.run<gpu::input_mem, gpu::output_mem>
-            ({ dstSize, std::min(dstSize, static_cast<size_t>(lws)) }, input_mem, output_mem);
+        kd.kernel_name = kernel_name;
+
+        return kd;
+    }
+
+    static gpu::jit_constants get_jit_constants(const relu& outer, const kernel_data& data)
+    {
+        gpu_info_helper gpu_info;
+        auto engine_info = gpu_info.get_engine_info();
+
+        if (!engine_info.supports_fp16 && data.fp16_unit_used)
+            throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
+
+        gpu::jit_constants mem_consts
+        {
+            gpu::make_jit_constant("RELU",           1),
+            gpu::make_jit_constant("NEGATIVE_SLOPE", outer.argument.negative_slope),
+            gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16)),
+            gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
+            gpu::make_jit_constant("UNIT_TYPE",      data.fp16_unit_used ? "half" : "float")
+        };
+
+        return mem_consts;
+    }
+
+    static void implementation(const void *ptr) 
+    {
+        auto me = static_cast<const relu_gpu *>(ptr);
+        const auto& outer = me->_outer;
+        const auto& kd    = me->_kernel_data;
+
+        const auto& input_mem  = outer.input_memory(0);  // input
+        const auto& output_mem = outer.output_memory(0); // output
+
+        me->_kernel.run<gpu::input_mem, gpu::output_mem>({kd.gws0, kd.lws0}, input_mem, output_mem);
     }
 
     static is_an_implementation *create(relu &arg) { return new relu_gpu(arg); };
@@ -73,12 +123,14 @@ struct relu_gpu : is_an_implementation {
 namespace {
 struct attach {
     attach() {
-		auto val_fw = relu_gpu::create;
+        auto val_fw = relu_gpu::create;
 
-		implementation_map<relu>::add({
-			{ std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32), val_fw },
-			{ std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32), val_fw },
-		});
+        implementation_map<relu>::add({
+            {std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32), val_fw},
+            {std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32), val_fw},
+            {std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16), val_fw},
+            {std::make_tuple(engine::gpu, memory::format::xb_f16, memory::format::xb_f16), val_fw},
+        });
     }
     ~attach() {}
 };
