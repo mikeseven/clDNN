@@ -2,6 +2,12 @@
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
+#if FP16_UNIT_USED
+    #define UNIT_CVT_FUNC(val) convert_half(val)
+#else
+    #define UNIT_CVT_FUNC(val) (val)
+#endif
+
 
 KERNEL (lrn_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
@@ -23,8 +29,11 @@ KERNEL (lrn_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
         input_offset_f += INPUT_BATCH_NUM;
         input_idx += INPUT_BATCH_NUM;
     }
-    acc = mad(acc, ALPHA, K);
-    acc = native_powr(acc, -BETA);
+    acc = mad(acc, UNIT_CVT_FUNC(ALPHA), UNIT_CVT_FUNC(K));
+    acc = native_powr(acc, -UNIT_CVT_FUNC(BETA));
 
     output[linear_id] = acc * input[linear_id];
 }
+
+
+#undef UNIT_CVT_FUNC

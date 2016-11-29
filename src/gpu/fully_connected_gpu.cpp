@@ -278,7 +278,9 @@ struct fully_connected_gpu : is_an_implementation
         auto& input_size = input_mem.argument.size;
 
         // validate arguments
-        if (input_mem.argument.format == memory::format::yxfb_f32) {
+        if (input_mem.argument.format == memory::format::yxfb_f32 ||
+            input_mem.argument.format == memory::format::yxfb_f16)
+        {
             // weights
             auto& weight_size = arg.input_memory(1).argument.size;
             if (   input_size.feature.size() != weight_size.feature.size()

@@ -44,7 +44,7 @@ fully_connected::arguments::arguments(
     , negative_slope(negative_slope)
 {
     // if input is previouse layer, not memory primitive need to set input to output memory of this primitive
-    auto input_mem = in.id() == type_id<const memory>()->id ? in : in.output[0];
+    const auto& input_mem = get_memory_primitive(in);
     if (in.id() != type_id<const memory>()->id) {
         input = { in.output[0], weights, bias };
     }
@@ -53,8 +53,8 @@ fully_connected::arguments::arguments(
     }
 
     neural::vector<uint32_t> output_size = {
-        input_mem.as<const memory&>().argument.size.batch[0],
-        { { bias.as<const memory&>().argument.size.spatial[0] } },
+        input_mem.argument.size.batch[0],
+        { { get_memory_primitive(bias).argument.size.spatial[0] } },
         1
     };
 
@@ -65,21 +65,16 @@ fully_connected::arguments::arguments(
 primitive fully_connected::create(fully_connected::arguments arg) {
     auto& input_arg = arg.input[0].primitive().as<const memory&>().argument;
     auto& output_arg = arg.output[0].as<const memory&>().argument;
-    auto& weight_arg = get_memory_primitive(arg.input[1].primitive()).argument;
     
-    if (input_arg.format == memory::format::yxfb_f32)
+    if (input_arg.format == memory::format::yxfb_f32 ||
+        input_arg.format == memory::format::yxfb_f16)
     {
-        if(weight_arg.format != memory::format::bfyx_f32 &&
-           weight_arg.format != memory::format::byxf_f32 &&
-            weight_arg.format != memory::format::yxfb_f32)
-            throw std::runtime_error("Fully connected input is yxfb, so weights must be in format yxfn or byxf or yxfb!");
+        // NOTE: Testing for supported weights format is now inside each device implementation of the primitve (e.g. fully_connected_gpu).
     }
     else
     {
-        if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("Fully connected input/output number of dimension does not match.");
-        if (weight_arg.format != memory::format::xb_f32 &&
-            weight_arg.format != memory::format::bx_f32 &&
-            weight_arg.format != memory::format::x_f32)                 throw std::runtime_error("Fully connected weight format is not xb_f32 or bx_f32 or x_f32 or nb_f32.");
+        if (input_arg.size.raw.size() != output_arg.size.raw.size())
+            throw std::runtime_error("Fully connected input/output number of dimension does not match.");
     }
 
     return is_a_primitive::create<fully_connected>(arg);
