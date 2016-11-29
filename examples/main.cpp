@@ -178,7 +178,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Number of iterations to run each execution. Can be used for robust benchmarking. (default 1)")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
-            "It can be one of:\n  \talexnet, vgg16, googlenet.")
+            "It can be one of:\n  \talexnet, vgg16, googlenet, gender.")
         ("engine", bpo::value<neural::engine::type>()->value_name("<eng-type>")->default_value(neural::engine::reference, "reference"),
             "Type of an engine used for classification.\nIt can be one of:\n  \treference, gpu.")
         ("dump_hidden_layers", bpo::bool_switch(),
@@ -296,12 +296,12 @@ int main(int argc, char* argv[])
         {
             std::cerr << options.version_message() << "\n\n";
             std::cerr << options.help_message() << std::endl;
-            return 1;
+            return 0;
         }
         if (parsed_args.count("version"))
         {
             std::cerr << options.version_message() << std::endl;
-            return 1;
+            return 0;
         }
         if (!parsed_args.count("input") && !parsed_args.count("convert"))
         {
@@ -383,9 +383,11 @@ int main(int argc, char* argv[])
 
             if (ep.topology_name == "alexnet" ||
                 ep.topology_name == "vgg16" ||
-                ep.topology_name == "googlenet")
+                ep.topology_name == "googlenet" ||
+                ep.topology_name == "gender")
             {
                 run_topology(ep);
+                return 0;
             }
             else
             {

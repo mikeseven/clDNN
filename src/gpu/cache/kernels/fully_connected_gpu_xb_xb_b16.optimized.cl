@@ -4,7 +4,7 @@
 #define ACTIVATION(output, input) output = input;
 #endif
 
-KERNEL (Fully_Connected_GPU_xb_xb_b16_memory)(
+KERNEL (fully_connected_gpu_xb_xb_b16)(
     const __global float* input, 
     __global float* output, 
     const __global float* weights,

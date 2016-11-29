@@ -523,6 +523,7 @@ void run_topology(const execution_params &ep)
 
     uint32_t input_size_x = 227;
     uint32_t input_size_y = 227;
+    uint32_t output_size = 1000;
     if (ep.topology_name == "alexnet")
     {
         input_size_x = input_size_y = 227;
@@ -532,9 +533,15 @@ void run_topology(const execution_params &ep)
     {
         input_size_x = input_size_y = 224;
     }
+    else if (ep.topology_name == "gender")
+    {
+        input_size_x = input_size_y = 86;
+        output_size = 2;
+    }
+
 
     auto input = memory::allocate({ ep.use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ gpu_batch_size,{ input_size_x, input_size_y }, 3 } });
-    auto output = memory::allocate({ ep.use_half ? memory::format::xb_f16 : memory::format::xb_f32,{ gpu_batch_size,{ 1000 } } });
+    auto output = memory::allocate({ ep.use_half ? memory::format::xb_f16 : memory::format::xb_f32,{ gpu_batch_size,{ output_size } } });
 
     std::vector<std::pair<primitive, std::string>> primitives;
 
@@ -550,6 +557,8 @@ void run_topology(const execution_params &ep)
         primitives = build_vgg16(input, output, ep.weights_dir, weights_optimizer, ep.use_half);
     else if (ep.topology_name == "googlenet")
         primitives = build_googlenetv1(input, output, ep.weights_dir, weights_optimizer, ep.use_half);
+    else if (ep.topology_name == "gender")
+        primitives = build_gender(input, output, ep.weights_dir, weights_optimizer, ep.use_half);
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
 

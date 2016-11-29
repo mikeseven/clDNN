@@ -5,7 +5,7 @@
 #endif
 
 __attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
-KERNEL (Fully_Connected_GPU_xb_xb_b8_x8_memory_vload)(
+KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
     const __global float* input, 
     __global float* output, 
     const __global float* weight,

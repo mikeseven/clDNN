@@ -47,9 +47,9 @@ struct profiling_period_event : instrumentation::profiling_period {
         {}
 
     std::chrono::nanoseconds value() const override {
-        size_t start_nanoseconds;
+        cl_ulong start_nanoseconds;
         _event.getProfilingInfo(_start, &start_nanoseconds);
-        size_t end_nanoseconds;
+        cl_ulong end_nanoseconds;
         _event.getProfilingInfo(_end, &end_nanoseconds);
         return std::chrono::nanoseconds(static_cast<long long>(end_nanoseconds - start_nanoseconds));
     }
