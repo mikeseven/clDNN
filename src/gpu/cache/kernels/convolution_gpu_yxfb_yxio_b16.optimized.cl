@@ -95,7 +95,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
 
 	for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
 	{
-		ACTIVATION_8(_data[s]);
+		ACTIVATION(_data[s], _data[s]);
 	}
 
 	for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)

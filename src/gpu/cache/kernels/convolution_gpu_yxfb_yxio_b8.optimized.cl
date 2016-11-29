@@ -124,9 +124,9 @@ KERNEL(convolution_gpu_yxfb_yxio_b8)(
 	ADD_BIAS_8(_data1, bias[ofm_offset + sub_group_id + 8]);
 #endif
 
-	ACTIVATION_8(_data0);
+	ACTIVATION(_data0, _data0);
 #if OFM_PER_WORK_ITEM == 16
-	ACTIVATION_8(_data1);
+	ACTIVATION(_data1, _data1);
 #endif
 
 	intel_sub_group_block_write8((__global uint*)output + out_id, as_uint8(_data0));

@@ -134,20 +134,10 @@ __attribute__((overloadable)) const __global void* get_data(const __global neura
     _result.sef += as_half2(intel_sub_group_shuffle(_biasVal, 7)); \
 }
 
-#define ACTIVATION_8(_result) \
-{ \
-        ACTIVATION(_result.s0, _result.s0); \
-        ACTIVATION(_result.s1, _result.s1); \
-        ACTIVATION(_result.s2, _result.s2); \
-        ACTIVATION(_result.s3, _result.s3); \
-        ACTIVATION(_result.s4, _result.s4); \
-        ACTIVATION(_result.s5, _result.s5); \
-        ACTIVATION(_result.s6, _result.s6); \
-        ACTIVATION(_result.s7, _result.s7); \
-}
+#define OFFSET_GLOBAL_PTR(elem_type, ptr, byte_offset) ((__global elem_type*)((__global char*)(ptr) + byte_offset))
 
-#define OFFSET_GLOBAL_PTR(elem_type, ptr, elem_offset) ((__global elem_type*)((__global char*)(ptr) + elem_offset))
-#define MULTIPLY_OFFSET(elem_type, elem_offset) (elem_offset * sizeof(elem_type))
+#define MULTIPLY_OFFSET(elem_type, byte_offset) (byte_offset * sizeof(elem_type))
+
 )__krnl";
 
 std::vector<std::string> kernels_cache::get_program_source() const {
