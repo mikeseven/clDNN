@@ -123,24 +123,24 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
 
 #endif // #if NEURONS_PER_WORK_ITEM > 1
 
-    ACTIVATION_8(blockC00);
+    ACTIVATION(blockC00, blockC00);
 #if BATCHES_PER_WORK_ITEM >= 16
-    ACTIVATION_8(blockC01);
+    ACTIVATION(blockC01, blockC01);
 #endif
 #if BATCHES_PER_WORK_ITEM >= 32
-    ACTIVATION_8(blockC02);
-    ACTIVATION_8(blockC03);
+    ACTIVATION(blockC02, blockC02);
+    ACTIVATION(blockC03, blockC03);
 #endif
 
 #if NEURONS_PER_WORK_ITEM > 1
 
-    ACTIVATION_8(blockC10);
+    ACTIVATION(blockC10, blockC10);
 #if BATCHES_PER_WORK_ITEM >= 16
-    ACTIVATION_8(blockC11);
+    ACTIVATION(blockC11, blockC11);
 #endif
 #if BATCHES_PER_WORK_ITEM >= 32
-    ACTIVATION_8(blockC12);
-    ACTIVATION_8(blockC13);
+    ACTIVATION(blockC12, blockC12);
+    ACTIVATION(blockC13, blockC13);
 #endif
 
 #endif // #if NEURONS_PER_WORK_ITEM > 1

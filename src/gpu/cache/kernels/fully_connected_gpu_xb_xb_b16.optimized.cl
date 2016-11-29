@@ -54,7 +54,7 @@ KERNEL (fully_connected_gpu_xb_xb_b16)(
 
 	for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
 	{
-		ACTIVATION_8(_data[s]);
+		ACTIVATION(_data[s], _data[s]);
 	}
 
 	for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
