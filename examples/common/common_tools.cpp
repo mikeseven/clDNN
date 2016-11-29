@@ -426,16 +426,44 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
         }
     }
 
-    for (int i = 0; i < ep.loop; i++)
+    if (ep.run_single_layer.empty())
     {
+        for (int i = 0; i < ep.loop; i++)
+        {
+            for (auto& p : primitives)
+            {
+                worker.execute(p.first.work());
+            }
+            if (log_energy)
+                energyLib.ReadSample();
+        }
+    }
+    else
+    {
+        std::unique_ptr<primitive> prim;
         for (auto& p : primitives)
         {
-            worker.execute(p.first.work());
+            if (p.second == ep.run_single_layer)
+            {
+                prim = std::make_unique<primitive>(p.first);
+                break;
+            }
         }
-        if (log_energy)
-            energyLib.ReadSample();
-    }
+        if (!prim.get())
+        {
+            throw std::runtime_error("ERROR: layer " + ep.run_single_layer + " not found!");
+        }
+        else
+        {
+            for (int i = 0; i < ep.loop; i++)
+            {
+                worker.execute(prim.get()->work());
+                if (log_energy)
+                    energyLib.ReadSample();
 
+            }
+        }
+    }
     //GPU primitives scheduled in unblocked manner
     auto scheduling_time(timer_execution.uptime());
 

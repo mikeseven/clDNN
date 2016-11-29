@@ -125,6 +125,8 @@ struct execution_params {
     bool optimize_weights;
     bool use_half;
 
+    std::string run_single_layer;
+
     // for dumping
     bool        dump_hidden_layers; // dump all
     std::string dump_layer_name;    // dump only this specific layer

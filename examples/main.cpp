@@ -179,6 +179,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
             "It can be one of:\n  \talexnet, vgg16, googlenet, gender.")
+        ("run_single_layer", bpo::value<std::string>()->value_name("<layer_name>"),
+            "Runs only a specified layer from topology")
         ("engine", bpo::value<neural::engine::type>()->value_name("<eng-type>")->default_value(neural::engine::reference, "reference"),
             "Type of an engine used for classification.\nIt can be one of:\n  \treference, gpu.")
         ("dump_hidden_layers", bpo::bool_switch(),
@@ -360,6 +362,12 @@ int main(int argc, char* argv[])
             {
                 dump_layer = parsed_args["dump_layer"].as<std::string>();
             }
+            
+            std::string run_single_layer = "";
+            if (parsed_args.count("run_single_layer"))
+            {
+                run_single_layer = parsed_args["run_single_layer"].as<std::string>();
+            }
 
             execution_params ep;
             ep.input_dir = input_dir;
@@ -369,6 +377,7 @@ int main(int argc, char* argv[])
             ep.profiling = parsed_args["profiling"].as<bool>();
             ep.optimize_weights = parsed_args["optimize_weights"].as<bool>();
             ep.use_half = parsed_args["use_half"].as<bool>();
+            ep.run_single_layer = run_single_layer;
             ep.dump_hidden_layers = parsed_args["dump_hidden_layers"].as<bool>();
             ep.dump_layer_name = dump_layer;
             ep.dump_single_batch = parsed_args.count("dump_batch") != 0;
