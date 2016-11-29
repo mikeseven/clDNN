@@ -33,8 +33,8 @@ public:
 
     const context& get_context() const { return _context; }
 
-    std::shared_ptr<primitive> create_primitive(std::shared_ptr<const primitive_desc> arg);
     buffer* allocate_buffer(layout layout);
+    const engine_configuration& configuration() const { return _configuration; }
 
 private:
     context _context;

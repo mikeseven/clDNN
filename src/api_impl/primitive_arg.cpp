@@ -15,13 +15,19 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma once
-#include "api/cldnn.hpp"
-#include "refcounted_obj.h"
+#include "primitive_arg.h"
+#include "network_builder.h"
 
 namespace cldnn
 {
-class context_impl: public refcounted_obj<context_impl>
+primitive_arg::primitive_arg(network_builder& builder, std::shared_ptr<const primitive> desc, const memory& output)
+    :_desc(desc)
+    ,_output(output)
 {
-};
+    for(auto& i : _desc->input())
+    {
+        _inputs.push_back(builder.get_primitive(i));
+    }
+}
+
 }

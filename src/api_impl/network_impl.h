@@ -16,40 +16,53 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include <map>
 #include "api/cldnn.hpp"
 #include "refcounted_obj.h"
-#include "topology_impl.h"
-#include "api/reorder.hpp"
-#include "api/convolution.hpp"
+#include "primitive_arg.h"
+#include <map>
 
 namespace cldnn
 {
 class network_impl : public refcounted_obj<network_impl>
 {
 public:
-
-    network_impl(const engine& engine, const topology& topology):_topology(topology), _engine(engine)
+    network_impl(const engine& engine, const std::map<primitive_id, std::shared_ptr<const primitive_arg>>& primitives)
+        : _completed(false)
+        , _engine(engine)
+        , _primitives(primitives)
+        , _primitive_names(get_primitive_names())
     {
-        build_network();
+        for(auto& p : _primitives)
+        {
+            if(p.second->type() == input_layout::type_id())
+            {
+                _inputs.insert({ p.second->id(), false });
+            }
+        }
     }
-
-    std::shared_ptr<const primitive_arg> get_primitive(primitive_id id);
 
     engine get_engine() const { return _engine; }
 
+    const memory& get_output_of(const primitive_id& id) const;
+    array_ref<primitive_id_ref> get_primitive_keys() const { return _primitive_names; }
+    void set_input_data(const primitive_id& id, const memory& data);
+
 private:
-    topology _topology;
-    std::map<primitive_id, std::shared_ptr<const primitive_arg>> _primitives;
-    engine _engine;
-    void build_network()
+    bool _completed;
+    const engine _engine;
+    const std::map<primitive_id, std::shared_ptr<const primitive_arg>> _primitives;
+    const std::vector<primitive_id_ref> _primitive_names;
+    std::map<primitive_id, bool> _inputs;
+
+    std::vector<primitive_id_ref> get_primitive_names() const
     {
-        for(auto p: _topology.implementation()->get_primitives())
+        std::vector<primitive_id_ref> result;
+        for(auto& pair:_primitives)
         {
-            
+            // it should be reference to the constant primitive_id store.
+            result.push_back(pair.second->id());
         }
+        return result;
     }
 };
-
-
 }

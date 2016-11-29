@@ -16,12 +16,30 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/cldnn.hpp"
-#include "refcounted_obj.h"
+#include "cldnn_defs.h"
 
 namespace cldnn
 {
-class context_impl: public refcounted_obj<context_impl>
+class event_impl;
+struct event
 {
+    typedef event_impl impl_type;
+    DLL_SYM event(const event& other);
+    DLL_SYM event& operator=(const event& other);
+    DLL_SYM ~event();
+    friend bool operator==(const event& lhs, const event& rhs) { return lhs._impl == rhs._impl; }
+    friend bool operator!=(const event& lhs, const event& rhs) { return !(lhs == rhs); }
+
+    DLL_SYM void wait();
+    DLL_SYM void reset();
+    DLL_SYM void set();
+    typedef void(*event_handler)(void*);
+    DLL_SYM void on_event(event_handler handler, void* param);
+
+    event_impl* implementation() const { return _impl; }
+private:
+    friend struct network;
+    event(event_impl* impl) : _impl(impl) {}
+    event_impl* _impl;
 };
 }

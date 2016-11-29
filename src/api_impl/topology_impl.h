@@ -24,14 +24,6 @@
 
 namespace cldnn
 {
-class primitive_arg;
-struct primitive_type_impl
-{
-    virtual std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const = 0;
-    virtual std::shared_ptr<const primitive_arg> create_arg(network_impl* net, std::shared_ptr<const primitive> desc) const = 0;
-    virtual ~primitive_type_impl() = default;
-};
-
 typedef std::map<primitive_id, std::shared_ptr<const primitive>> descriptions_map;
 
 class topology_impl : public refcounted_obj<topology_impl>

@@ -182,6 +182,18 @@ struct tensor
         return *this;
     }
 
+    friend bool operator==(const tensor& lhs, const tensor& rhs)
+    {
+        return lhs.format == rhs.format
+            && lhs.raw.size() == rhs.raw.size()
+            && std::equal(lhs.raw.begin(), lhs.raw.end(), rhs.raw.begin());
+    }
+
+    friend bool operator!=(const tensor& lhs, const tensor& rhs)
+    {
+        return !(lhs == rhs);
+    }
+
     std::vector<int32_t> sizes() const {
         auto order = format.order();
         std::vector<int32_t> sizes(order.size());

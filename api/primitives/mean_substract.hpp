@@ -20,44 +20,37 @@
 
 namespace cldnn
 {
+BEGIN_DTO(mean_substract)
+        primitive_id_ref mean;
+END_DTO(mean_substract)
 
-BEGIN_DTO(reorder)
-    format::type output_format;
-    primitive_id_ref mean_substract;
-END_DTO(reorder)
-
-
-class reorder : public primitive_base<reorder, DTO(reorder)>
+struct mean_substract : public primitive_base<mean_substract, DTO(mean_substract)>
 {
-public:
-    typedef DTO(reorder) dto;
-    DLL_SYM static primitive_type type_id();
+    DLL_SYM static primitive_type_id type_id();
+    typedef DTO(mean_substract) dto;
 
-    explicit reorder(
+    mean_substract(
         const primitive_id& id,
         const primitive_id& input,
-        format ofm,
-        primitive_id mean = "",
-        const tensor& input_offset = { format::x,0,{ 0 } },
-        const tensor& output_offset = { format::x,0,{ 0 } },
+        const primitive_id& mean,
+        const tensor& input_offset = { format::yx,{ 0, 0 } },
+        const tensor& output_offset = { format::yx,{ 0, 0 } },
         const padding_types padding_type = padding_types::zero
-    )
-        : primitive_base(id, { input }, input_offset, output_offset, padding_type, ofm)
+        )
+        :primitive_base(id, {input}, input_offset, output_offset, padding_type)
     {
-        // use the same storage for input and mean_substract
+        // use the same storage for input and mean
         _input.push_back(mean);
-        _dto.mean_substract = _input.store().back();
+        _dto.mean = _input.store().back();
     }
 
-    explicit reorder(const dto* dto)
+    mean_substract(const dto* dto)
         :primitive_base(dto)
     {
-        // use the same storage for input and mean_substract
-        _input.push_back(dto->mean_substract);
-        _dto.mean_substract = _input.store().back();
+        _input.push_back(dto->mean);
+        _dto.mean = _input.store().back();
     }
 
-    format output_format() const { return _dto.output_format; }
-    primitive_id mean_substract() const { return _dto.mean_substract; }
+    primitive_id mean() const { return _dto.mean; }
 };
 }

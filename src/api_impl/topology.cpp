@@ -20,6 +20,7 @@
 #include "api/reorder.hpp"
 #include "api/convolution.hpp"
 #include "api/cldnn.hpp"
+#include "primitive_type.h"
 
 namespace cldnn
 {

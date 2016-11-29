@@ -16,12 +16,31 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+
 #include "api/cldnn.hpp"
-#include "refcounted_obj.h"
+#include "topology_impl.h"
 
 namespace cldnn
 {
-class context_impl: public refcounted_obj<context_impl>
+class network_builder;
+class primitive_arg
 {
+public:
+    virtual ~primitive_arg() = default;
+    const memory& input_memory(size_t index) const { return _inputs.at(index)->output_memory(); }
+    const memory& output_memory() const { return _output; }
+
+    std::shared_ptr<const primitive> argument() const { return _desc; }
+    primitive_type_id type() const { return _desc->type(); }
+    primitive_id_ref id() const { return _desc->get_dto()->id; }
+
+protected:
+    primitive_arg(network_builder& builer, std::shared_ptr<const primitive> desc, const memory& output);
+
+private:
+    std::shared_ptr<const primitive> _desc;
+    std::vector<std::shared_ptr<const primitive_arg>> _inputs;
+    memory _output;
 };
+
 }

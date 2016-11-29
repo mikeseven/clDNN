@@ -16,12 +16,25 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/cldnn.hpp"
-#include "refcounted_obj.h"
+#include "api/memory.hpp"
+#include "primitive_arg.h"
+#include "network_builder.h"
 
 namespace cldnn
 {
-class context_impl: public refcounted_obj<context_impl>
+class data_arg : public primitive_arg
 {
+public:
+    data_arg(network_builder& builder, std::shared_ptr<const data> desc)
+        :primitive_arg(builder, desc, desc->mem())
+    {}
+};
+
+class input_arg : public primitive_arg
+{
+public:
+    input_arg(network_builder& builder, std::shared_ptr<const input_layout> desc)
+        :primitive_arg(builder, desc, builder.get_engine().allocate_memory(desc->layout()))
+    {}
 };
 }

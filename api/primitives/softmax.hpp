@@ -16,12 +16,30 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/cldnn.hpp"
-#include "refcounted_obj.h"
+#include "primitive.hpp"
 
 namespace cldnn
 {
-class context_impl: public refcounted_obj<context_impl>
+BEGIN_DTO(softmax)
+END_DTO(softmax)
+
+struct softmax : public primitive_base<softmax, DTO(softmax)>
 {
+    DLL_SYM static primitive_type_id type_id();
+    typedef DTO(softmax) dto;
+
+    softmax(
+        const primitive_id& id,
+        const primitive_id& input,
+        const tensor& input_offset = { format::x,0,{ 0 } },
+        const tensor& output_offset = { format::x,0,{ 0 } },
+        const padding_types padding_type = padding_types::zero
+    )
+        :primitive_base(id, {input}, input_offset, output_offset, padding_type)
+    {}
+
+    softmax(const dto* dto)
+        :primitive_base(dto)
+    {}
 };
 }

@@ -20,6 +20,7 @@
 #include "cldnn_defs.h"
 #include "compounds.h"
 #include "tensor.hpp"
+#include "primitive.hpp"
 
 namespace cldnn
 {
@@ -75,6 +76,32 @@ struct layout
         , size(size)
     {}
 
+    layout(const layout& other)
+        : data_type(other.data_type)
+        , size(other.size)
+    {
+    }
+
+    layout& operator=(const layout& other)
+    {
+        if (this == &other)
+            return *this;
+        data_type = other.data_type;
+        size = other.size;
+        return *this;
+    }
+
+    friend bool operator==(const layout& lhs, const layout& rhs)
+    {
+        return lhs.data_type == rhs.data_type
+                && lhs.size == rhs.size;
+    }
+
+    friend bool operator!=(const layout& lhs, const layout& rhs)
+    {
+        return !(lhs == rhs);
+    }
+
     size_t data_size() const { return data_type_traits::size_of(data_type) * size.get_linear_size(); }
     size_t count() const { return size.get_linear_size(); }
 
@@ -86,13 +113,25 @@ struct buffer;
 
 struct memory
 {
+    DLL_SYM memory(const memory& other);
+    DLL_SYM memory& operator=(const memory& other);
+    DLL_SYM ~memory();
+
+    friend bool operator==(const memory& lhs, const memory& rhs)
+    {
+        return lhs._layout == rhs._layout
+                && lhs._data == rhs._data;
+    }
+
+    friend bool operator!=(const memory& lhs, const memory& rhs)
+    {
+        return !(lhs == rhs);
+    }
+
     size_t count() const { return _layout.count(); }
     size_t size() const { return _layout.data_size(); }
     layout get_layout() const { return _layout; }
-    DLL_SYM ~memory();
 
-    DLL_SYM memory(const memory& other);
-    DLL_SYM memory& operator=(const memory& other);
 private:
     friend struct engine;
     memory(cldnn::layout l, buffer* d);
@@ -164,4 +203,46 @@ private:
     memory _mem;
     T* _ptr;
 };
+
+BEGIN_DTO(data)
+memory mem;
+END_DTO(data)
+
+class data : public primitive_base<data, DTO(data)>
+{
+public:
+    typedef DTO(data) dto;
+    DLL_SYM static primitive_type_id type_id();
+
+    data(const primitive_id& id, const memory& mem)
+        :primitive_base(id, {}, { format::x, 0,{ 0 } }, { format::x, 0,{ 0 } }, padding_types::zero, mem)
+    {}
+
+    explicit data(const dto* dto)
+        :primitive_base(dto)
+    {}
+    const memory& mem() const { return _dto.mem; }
+};
+
+BEGIN_DTO(input_layout)
+layout layout;
+END_DTO(input_layout)
+
+class input_layout : public primitive_base<input_layout, DTO(input_layout)>
+{
+public:
+    typedef DTO(input_layout) dto;
+    DLL_SYM static primitive_type_id type_id();
+
+    input_layout(const primitive_id& id, const layout& layout)
+        :primitive_base(id, {}, { format::x, 0,{ 0 } }, { format::x, 0,{ 0 } }, padding_types::zero, layout)
+    {}
+
+    explicit input_layout(const dto* dto)
+        :primitive_base(dto)
+    {}
+
+    layout layout() const { return _dto.layout; }
+};
+
 }

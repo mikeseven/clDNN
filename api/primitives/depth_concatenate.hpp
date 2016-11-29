@@ -16,12 +16,30 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/cldnn.hpp"
-#include "refcounted_obj.h"
+#include "primitive.hpp"
 
 namespace cldnn
 {
-class context_impl: public refcounted_obj<context_impl>
+BEGIN_DTO(depth_concatenate)
+END_DTO(depth_concatenate)
+
+struct depth_concatenate : public primitive_base<depth_concatenate, DTO(depth_concatenate)>
 {
+    DLL_SYM static primitive_type_id type_id();
+    typedef DTO(depth_concatenate) dto;
+
+    depth_concatenate(
+        const primitive_id& id,
+        const std::vector<primitive_id>& input,
+        const tensor& input_offset = { format::x,{ 0 } },
+        const tensor& output_offset = { format::x,{ 0 } },
+        const padding_types padding_type = padding_types::zero
+    )
+        :primitive_base(id, input, input_offset, output_offset, padding_type)
+    {}
+
+    depth_concatenate(const dto* dto)
+        :primitive_base(dto)
+    {}
 };
 }

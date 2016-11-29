@@ -19,7 +19,7 @@
 #include <cstdint>
 #include "cldnn_defs.h"
 #include "compounds.h"
-#include "memory.hpp"
+#include "tensor.hpp"
 #include <string>
 #include <memory>
 #include <iterator>
@@ -28,25 +28,8 @@ namespace cldnn
 {
 enum class padding_types { zero, one, two };
 
-//enum primitive_types
-//{
-//    reorder,
-//    mean_substract,
-//    convolution,
-//    fully_connected,
-//    activation,
-//    pooling,
-//    normalization,
-//    softmax,
-//    depth_concat,
-//    data,
-//    input
-//};
-
-//template<primitive_types Ptype> struct primitive_type_traits{};
-
 typedef std::string primitive_id;
-typedef const struct primitive_type_impl* primitive_type;
+typedef const struct primitive_type* primitive_type_id;
 typedef string_ref primitive_id_ref;
 
 /**
@@ -100,7 +83,7 @@ private:
 };
 
 #define BEGIN_DTO(PType) struct PType##_dto {\
-    primitive_type type;\
+    primitive_type_id type;\
     primitive_id_ref id;\
     array_ref<primitive_id_ref> input;\
     tensor input_offset;\
@@ -131,15 +114,15 @@ END_DTO(primitive)
 
 struct primitive
 {
-
     virtual const primitive_dto* get_dto() const = 0;
-    virtual primitive_type type() const = 0;
+    virtual primitive_type_id type() const = 0;
     virtual primitive_id id() const = 0;
     virtual std::vector<primitive_id> input() const = 0;
     virtual tensor input_offset() const = 0;
     virtual tensor output_offset() const = 0;
     virtual padding_types padding_type() const = 0;
     virtual ~primitive() = default;
+    operator primitive_id() const { return id(); }
 };
 
 typedef array_ref_store<primitive_id_ref, primitive_id> primitive_id_arr;
@@ -152,7 +135,7 @@ public:
 
     primitive_id id() const override { return _id; }
     std::vector<primitive_id> input() const override { return _input; }
-    primitive_type type() const override { return _dto.type; }
+    primitive_type_id type() const override { return _dto.type; }
     tensor input_offset() const override { return _dto.input_offset; }
     tensor output_offset() const override { return _dto.output_offset; }
     padding_types padding_type() const override { return _dto.padding_type; }

@@ -58,18 +58,18 @@ private:
     uint16_t _data;
 };
 }
-
-#define CLDNN_SUCCESS  0
-#define CLDNN_ERROR   -1
-#define CLDNN_UNSUPPORTED -2
-
-namespace cldnn {
 // Use complete implementation if necessary.
 #if defined HALF_HALF_HPP
 typedef half half_t;
 #else
 typedef half_impl half_t;
 #endif
+
+#define CLDNN_SUCCESS  0
+#define CLDNN_ERROR   -1
+#define CLDNN_UNSUPPORTED -2
+
+namespace cldnn {
 
 typedef int32_t status_t;
 

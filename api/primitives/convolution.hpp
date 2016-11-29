@@ -16,7 +16,6 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "tensor.hpp"
 #include "primitive.hpp"
 
 namespace cldnn
@@ -31,10 +30,9 @@ BEGIN_DTO(convolution)
 END_DTO(convolution)
 
 
-class convolution : public primitive_base<convolution, DTO(convolution)>
+struct convolution : public primitive_base<convolution, DTO(convolution)>
 {
-public:
-    DLL_SYM static primitive_type type_id();
+    DLL_SYM static primitive_type_id type_id();
     typedef DTO(convolution) dto;
 
     convolution(
@@ -42,14 +40,14 @@ public:
         const primitive_id& input,
         const std::vector<primitive_id>& weights,
         const std::vector<primitive_id>& bias,
-        tensor input_offset = { format::yx,{ 0, 0 } },
-        const tensor& output_offset = { format::yx,{ 0, 0 } },
-        const padding_types padding_type = padding_types::zero,
+        const tensor& input_offset = { format::yx,{ 0, 0 } },
         tensor stride = { format::yx,{ 1, 1 } },
         bool with_activation = false,
-        float activation_slp = 0.0f
-    )
-        :primitive_base(id, { input }, input_offset, output_offset, padding_type, stride, with_activation, activation_slp)
+        float activation_slp = 0.0f,
+        const tensor& output_offset = { format::yx,{ 0, 0 } },
+        const padding_types padding_type = padding_types::zero
+        )
+        :primitive_base(id, { input }, input_offset, output_offset, padding_type, stride, static_cast<uint32_t>(with_activation), activation_slp)
     {
         init_weights<primitive_id>(weights, bias);
     }

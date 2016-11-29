@@ -24,45 +24,6 @@
 
 namespace cldnn {
 
-BEGIN_DTO(data)
-    memory mem;
-END_DTO(data)
-
-class data : public primitive_base<data, DTO(data)>
-{
-public:
-    typedef DTO(data) dto;
-    DLL_SYM static primitive_type type_id();
-
-    data(const primitive_id& id, const memory& mem)
-        :primitive_base(id, { id }, {format::x, 0, {0}}, { format::x, 0,{ 0 } }, padding_types::zero, mem)
-    {}
-
-    explicit data(const dto* dto)
-        :primitive_base(dto)
-    {}
-};
-
-BEGIN_DTO(input_layout)
-    layout layout;
-END_DTO(input_layout)
-
-class input_layout : public primitive_base<input_layout, DTO(input_layout)>
-{
-public:
-    typedef DTO(input_layout) dto;
-    DLL_SYM static primitive_type type_id();
-
-    input_layout(const primitive_id& id, const layout& layout)
-        :primitive_base(id, { id }, { format::x, 0,{ 0 } }, { format::x, 0,{ 0 } }, padding_types::zero, layout)
-    {}
-
-    explicit input_layout(const dto* dto)
-        :primitive_base(dto)
-    {}
-};
-
-
 struct context;
 class topology_impl;
 
@@ -85,17 +46,12 @@ struct topology
         add_primitive(input_layout(id, layout));
     }
 
-    void add_primitive(const primitive& desc)
+    template<class PType>
+    void add_primitive(PType&& desc)
     {
         status_t status = add_primitive_dto(desc.get_dto());
         if (status != CLDNN_SUCCESS)
             CLDNN_THROW("primitive add failed", status);
-    }
-
-    template<class PType>
-    void add_primitive(PType&& desc)
-    {
-        add_primitive(desc);
     }
 
     DLL_SYM context get_context() const;
