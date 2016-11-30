@@ -20,6 +20,28 @@
 namespace neural {
 namespace normalization {
 
+softmax::arguments::arguments(memory::format::type out_fmt, primitive in)
+{
+    if (in.id() != type_id<const memory>()->id)
+    {
+        input = { in.output[0] };
+        input_offset = (in.output[0].as<const memory&>().argument.size.batch.size(), in.output[0].as<const memory&>().argument.size.spatial.size(), in.output[0].as<const memory&>().argument.size.feature.size());
+    }
+    else
+    {
+        input = { in };
+        input_offset = (in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size());
+    }
+    output_size = input[0].primitive().as<const memory&>().argument.size;
+    output = { memory::allocate({ out_fmt, output_size }) };
+    output_offset =
+    {
+        output_size.batch.size(),
+        output_size.spatial.size(),
+        output_size.feature.size(),
+    };
+}
+
 softmax::arguments::arguments(primitive out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off)
     : output({out})
     , output_offset(out_off)

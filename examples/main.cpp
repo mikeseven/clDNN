@@ -393,7 +393,8 @@ int main(int argc, char* argv[])
             if (ep.topology_name == "alexnet" ||
                 ep.topology_name == "vgg16" ||
                 ep.topology_name == "googlenet" ||
-                ep.topology_name == "gender")
+                ep.topology_name == "gender" ||
+                ep.topology_name == "microbench")
             {
                 run_topology(ep);
                 return 0;

@@ -269,7 +269,6 @@ void load_images_from_file_list(
     auto batches = std::min(memory_primitive.size.batch[0], (uint32_t)images_list.size());
     auto dim = memory_primitive.size.spatial;
 
-    if (dim[0] != dim[1]) throw std::runtime_error("w and h aren't equal");
     if (memory_primitive.format != neural::memory::format::byxf_f32 &&
         memory_primitive.format != neural::memory::format::byxf_f16) throw std::runtime_error("Only bfyx format is supported as input to images from files");
     if (neural::memory::traits(memory_primitive.format).type->id != neural::template type_id<MemElemTy>()->id)
@@ -397,7 +396,6 @@ uint32_t get_gpu_batch_size(int number)
 
 std::chrono::nanoseconds execute_topology(const worker& worker,
                                           const std::vector<std::pair<primitive, std::string>>& primitives,
-                                          const primitive& output,
                                           const execution_params &ep,
                                           CIntelPowerGadgetLib& energyLib)
 {
@@ -467,6 +465,7 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
     //GPU primitives scheduled in unblocked manner
     auto scheduling_time(timer_execution.uptime());
 
+    auto output = primitives.back().first.output[0];
     //OCL buffers mapping blocks until all primitives are completed
     output.as<const neural::memory&>().pointer<char>();
     if (log_energy)
@@ -509,7 +508,11 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
     }
     else
     {
-        instrumentation::logger::log_memory_to_file(output, "final_result");
+        // We do not log results for microbench
+        if (ep.topology_name != "microbench")
+        {
+            instrumentation::logger::log_memory_to_file(output, "final_result");
+        }
     }
 
     print_profiling_table(std::cout, worker.as<worker_gpu&>().get_profiling_info());
@@ -549,28 +552,6 @@ void run_topology(const execution_params &ep)
 
     weights_optimizer weights_optimizer(ep.optimize_weights, ep.use_half);
 
-    uint32_t input_size_x = 227;
-    uint32_t input_size_y = 227;
-    uint32_t output_size = 1000;
-    if (ep.topology_name == "alexnet")
-    {
-        input_size_x = input_size_y = 227;
-    }
-    else if (ep.topology_name == "vgg16" ||
-             ep.topology_name == "googlenet")
-    {
-        input_size_x = input_size_y = 224;
-    }
-    else if (ep.topology_name == "gender")
-    {
-        input_size_x = input_size_y = 86;
-        output_size = 2;
-    }
-
-
-    auto input = memory::allocate({ ep.use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ gpu_batch_size,{ input_size_x, input_size_y }, 3 } });
-    auto output = memory::allocate({ ep.use_half ? memory::format::xb_f16 : memory::format::xb_f32,{ gpu_batch_size,{ output_size } } });
-
     std::vector<std::pair<primitive, std::string>> primitives;
 
     if (ep.print_type == Verbose)
@@ -580,13 +561,15 @@ void run_topology(const execution_params &ep)
     instrumentation::timer<> timer_build;
 
     if (ep.topology_name == "alexnet")
-        primitives = build_alexnet(input, output, ep.weights_dir, weights_optimizer, ep.use_half);
+        primitives = build_alexnet(ep.weights_dir, weights_optimizer, gpu_batch_size, ep.use_half);
     else if (ep.topology_name == "vgg16")
-        primitives = build_vgg16(input, output, ep.weights_dir, weights_optimizer, ep.use_half);
+        primitives = build_vgg16(ep.weights_dir, weights_optimizer, gpu_batch_size, ep.use_half);
     else if (ep.topology_name == "googlenet")
-        primitives = build_googlenetv1(input, output, ep.weights_dir, weights_optimizer, ep.use_half);
+        primitives = build_googlenetv1(ep.weights_dir, weights_optimizer, gpu_batch_size, ep.use_half);
     else if (ep.topology_name == "gender")
-        primitives = build_gender(input, output, ep.weights_dir, weights_optimizer, ep.use_half);
+        primitives = build_gender(ep.weights_dir, weights_optimizer, gpu_batch_size, ep.use_half);
+    else if(ep.topology_name == "microbench")
+        primitives = build_microbench(ep.weights_dir, weights_optimizer, gpu_batch_size, ep.use_half);
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
 
@@ -606,32 +589,43 @@ void run_topology(const execution_params &ep)
         weight_optimization(weights_optimizer, worker);
     }
 
+    auto output = primitives.back().first.output[0];
+    auto input = primitives.front().first.input[0].primitive();
+
     std::vector<std::string> images_in_batch;
     auto images_list_iterator = img_list.begin();
     auto images_list_end = img_list.end();
     for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
     {
-        images_in_batch.clear();
-        for (uint32_t i = 0; i < batch_size && images_list_iterator != images_list_end; ++i, ++images_list_iterator)
+        // We do not load anything for microbench
+        if (ep.topology_name != "microbench")
         {
-            images_in_batch.push_back(*images_list_iterator);
-        }
+            images_in_batch.clear();
+            for (uint32_t i = 0; i < batch_size && images_list_iterator != images_list_end; ++i, ++images_list_iterator)
+            {
+                images_in_batch.push_back(*images_list_iterator);
+            }
 
-        // load croped and resized images into input
-        if (ep.use_half)
-        {
-            load_images_from_file_list<half_t>(images_in_batch, input);
-        }
-        else
-        {
-            load_images_from_file_list(images_in_batch, input);
+            // load croped and resized images into input
+            if (ep.use_half)
+            {
+                load_images_from_file_list<half_t>(images_in_batch, input);
+            }
+            else
+            {
+                load_images_from_file_list(images_in_batch, input);
+            }
         }
 
         // execute alexnet
-        auto time = execute_topology(worker, primitives, output, ep, energyLib);
+        auto time = execute_topology(worker, primitives, ep, energyLib);
 
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-        output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch, ep.print_type);
+        // We do not save results for microbench
+        if (ep.topology_name != "microbench")
+        {
+            output_file.batch(output.as<const neural::memory&>(), join_path(get_executable_info()->dir(), "names.txt"), images_in_batch, ep.print_type);
+        }
         if (time_in_sec != 0.0)
         {
             if (ep.print_type != ExtendedTesting)

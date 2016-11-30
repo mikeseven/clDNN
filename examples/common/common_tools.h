@@ -155,7 +155,6 @@ uint32_t get_gpu_batch_size(int number);
 
 std::chrono::nanoseconds execute_topology(const neural::worker& worker,
                                           const std::vector<std::pair<neural::primitive, std::string>>& primitives,
-                                          const neural::primitive& output,
                                           const execution_params &ep,
                                           CIntelPowerGadgetLib& energyLib);
 
