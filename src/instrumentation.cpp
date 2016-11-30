@@ -70,7 +70,7 @@ namespace neural {
             else
             {
                 // Handling +/-infinity, NaN and normal numbers.
-                exp = (exp_val_f16 == 0x1FU ? 0xFFU : exp_val_f16) << 23;
+                exp = (exp_val_f16 == 0x1FU ? 0xFFU : exp_val_f16 + 127 - 15) << 23;
             }
 
             float ret;

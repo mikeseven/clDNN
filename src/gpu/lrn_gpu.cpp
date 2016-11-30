@@ -20,6 +20,7 @@
 #include "kernel.h"
 
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 #include <string>
 
@@ -118,10 +119,15 @@ struct lrn_gpu : is_an_implementation
 
         auto size = outer.argument.size;
 
+        // When used FP16 the value cannot be scaled afterwards by alpha (it must be scaled before computing sum of squares).
+        auto alpha_sign = std::signbit(outer.argument.alpha) ? -1.0f : 1.0f;
+        auto alpha_abs_sqrt = std::sqrt(std::abs(outer.argument.alpha));
+
         gpu::jit_constants mem_consts {
             gpu::make_jit_constant("INPUT",             outer.input_memory(0).argument.size),
             gpu::make_jit_constant("P_SIZE",            size),
-            gpu::make_jit_constant("ALPHA",             outer.argument.alpha),
+            gpu::make_jit_constant("ALPHA",             data.fp16_unit_used ? alpha_sign : outer.argument.alpha),
+            gpu::make_jit_constant("ALPHA_VAL_FACTOR",  data.fp16_unit_used ? alpha_abs_sqrt : 1.0f),
             gpu::make_jit_constant("BETA",              outer.argument.beta),
             gpu::make_jit_constant("K",                 outer.argument.k),
             gpu::make_jit_constant("HELP_INPUT_OFFSET", outer.argument.input_offset.feature[0] - static_cast<uint32_t>(size / 2)),
