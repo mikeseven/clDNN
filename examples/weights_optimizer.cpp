@@ -30,13 +30,13 @@ bool weights_optimizer::_needs_optimization(const primitive & prim, file::weight
     {
         // TODO!!! put better logic here.
         auto expected_mem_format = use_half ? memory::format::x_f16 : memory::format::x_f32;
+        auto out_mem = memory::allocate({ expected_mem_format, mem.argument.size, mem.argument.padding });
         if (mem.argument.format != expected_mem_format)
         {
             auto reordered_prim = neural::reorder::create(
             {
-                expected_mem_format,
-                mem.argument.size,
                 prim,
+                out_mem
             });
             _primitives.push_back(reordered_prim);
             return true;
@@ -57,13 +57,13 @@ bool weights_optimizer::_needs_optimization(const primitive & prim, file::weight
     {
         // TODO!!! put better logic here.
         auto expected_mem_format = use_half ? memory::format::yxio_f16 : memory::format::yxio_f32;
+        auto out_mem = memory::allocate({ expected_mem_format, mem.argument.size, mem.argument.padding });
         if (mem.argument.format != expected_mem_format)
         {
             auto reordered_prim = neural::reorder::create(
             {
-                expected_mem_format,
-                mem.argument.size,
                 prim,
+                out_mem
             });
             _primitives.push_back(reordered_prim);
             return true;
@@ -76,13 +76,13 @@ bool weights_optimizer::_needs_optimization(const primitive & prim, file::weight
         if (memory::traits(mem.argument.format).dimension == 4)
         {
             auto expected_mem_format = use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
+            auto out_mem = memory::allocate({ expected_mem_format, mem.argument.size, mem.argument.padding });
             if (mem.argument.format != expected_mem_format)
             {
                 auto reordered_prim = neural::reorder::create(
                 {
-                    expected_mem_format,
-                    mem.argument.size,
                     prim,
+                    out_mem
                 });
                 _primitives.push_back(reordered_prim);
                 return true;
@@ -91,13 +91,13 @@ bool weights_optimizer::_needs_optimization(const primitive & prim, file::weight
         else if (memory::traits(mem.argument.format).dimension == 2)
         {
             auto expected_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
+            auto out_mem = memory::allocate({ expected_mem_format, mem.argument.size, mem.argument.padding });
             if (mem.argument.format != expected_mem_format)
             {
                 auto reordered_prim = neural::reorder::create(
                 {
-                    expected_mem_format,
-                    mem.argument.size,
                     prim,
+                    out_mem
                 });
                 _primitives.push_back(reordered_prim);
                 return true;

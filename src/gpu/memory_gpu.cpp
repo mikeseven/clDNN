@@ -23,7 +23,12 @@ namespace neural { namespace gpu {
         _ref_count(0),
         _data_size(memory::size_of(arg)),
         _buffer(context()->context(), CL_MEM_READ_WRITE, _data_size),
-        _mapped_ptr(nullptr) {}
+        _mapped_ptr(nullptr) 
+    {
+        void* ptr = lock();
+        memset(ptr, 0, _data_size);
+        release();
+    }
 
     void* gpu_buffer::lock() {
         std::lock_guard<std::mutex> locker(_mutex);

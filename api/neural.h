@@ -142,8 +142,9 @@ struct memory : is_a_primitive
 	{
         neural::memory::format::type    format;
         neural::vector<uint32_t>        size;
+        neural::vector<uint32_t>        padding;
 
-        DLL_SYM arguments(memory::format::type aformat, neural::vector<uint32_t> asize);
+        DLL_SYM arguments(memory::format::type aformat, const neural::vector<uint32_t>& asize, const neural::vector<uint32_t>& apadding = /* IMPORTANT: This set default padding */ { 0, { 0, 0 }, { 0, 0 } });
     };
 
     struct buffer
@@ -235,8 +236,16 @@ struct memory : is_a_primitive
     DLL_SYM size_t count() const;
 
 private:
+    uint64_t _elements_count;
     std::shared_ptr<buffer> _buffer;
-    memory(arguments arg, std::shared_ptr<buffer> buffer) : is_a_primitive(type_id<const memory>()), argument(arg), _buffer(buffer) {};
+    memory(arguments arg, std::shared_ptr<buffer> buffer) : is_a_primitive(type_id<const memory>()), argument(arg), _buffer(buffer) 
+    {
+        _elements_count = 1;
+        for (uint32_t i = 0; i < arg.size.raw.size(); i++)
+        {
+            _elements_count *= arg.size.raw[i];
+        }
+    };
     friend class is_a_primitive;
 };
 

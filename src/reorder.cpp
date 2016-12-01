@@ -128,6 +128,13 @@ namespace neural {
             if (input_mem.argument.size.feature[0] != arg.subtract_per_feature.size())
                 throw std::runtime_error("Number of features/channels in input does not match the number of features/channels in values to subtract");
         }
+        for (uint32_t i = 0; i < input_mem.argument.padding.raw.size(); i++)
+        {
+            if (input_mem.argument.padding.raw[i] != 0)
+            {
+                throw std::runtime_error("Reorder with input which contains padding is NOT IMPLEMENTED yet!");
+            }
+        }
         return is_a_primitive::create<reorder>(arg);
     }
 

@@ -26,7 +26,7 @@ std::vector<std::pair<primitive, std::string>> build_gender(const std::string& w
     auto mem_format = use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
     auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
 
-    auto input = memory::allocate({ use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ batch_size,{ 86, 86 }, 3 } });
+    auto input = memory::allocate({ use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ batch_size,{ 86, 86 }, 3 }, 2 });
 
     // create conversion to yxfb format and subtract mean values
     auto reordered_input = reorder::create(
