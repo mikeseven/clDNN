@@ -17,14 +17,12 @@
 #include "api/neural_base.h"
 #include "weights_optimizer.h"
 
-std::vector<std::pair<neural::primitive, std::string>> build_alexnet(
-    const neural::primitive& input, const neural::primitive& output, const std::string& weights_dir, weights_optimizer& wo, bool use_half);
+std::vector<std::pair<neural::primitive, std::string>> build_alexnet(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
 
-std::vector<std::pair<neural::primitive, std::string>> build_vgg16(
-    const neural::primitive& input, const neural::primitive& output, const std::string& weights_dir, weights_optimizer& wo, bool use_half);
+std::vector<std::pair<neural::primitive, std::string>> build_vgg16(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
 
-std::vector<std::pair<neural::primitive, std::string>> build_googlenetv1(
-    const neural::primitive& input, const neural::primitive& output, const std::string& weights_dir, weights_optimizer& wo, bool use_half);
+std::vector<std::pair<neural::primitive, std::string>> build_googlenetv1(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
 
-std::vector<std::pair<neural::primitive, std::string>> build_gender(
-    const neural::primitive& input, const neural::primitive& output, const std::string& weights_dir, weights_optimizer& wo, bool use_half);
+std::vector<std::pair<neural::primitive, std::string>> build_gender(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
+
+std::vector<std::pair<neural::primitive, std::string>> build_microbench(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);

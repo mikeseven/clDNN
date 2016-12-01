@@ -20,12 +20,14 @@
 using namespace neural;
 
 // Building AlexNet network with loading weights & biases from file
-std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& input, const primitive& output, const std::string& weights_dir, weights_optimizer& wo, bool use_half)
+std::vector<std::pair<primitive, std::string>> build_alexnet(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half)
 {
-    // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
 
     auto mem_format = use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
     auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
+
+    // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
+    auto input = memory::allocate({ use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3 } });
 
     // create conversion to yxfb format and subtract mean values
     auto reordered_input = reorder::create(
@@ -203,7 +205,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const primitive& in
 
     auto softmax = normalization::softmax::create(
     {
-        output,
+        fc_mem_format,
         fc8
     });
 

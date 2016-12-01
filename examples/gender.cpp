@@ -21,10 +21,12 @@ using namespace neural;
 
 // Building age_gender network with loading weights & biases from file
 // !!! commented layers will be used in the future !!!
-std::vector<std::pair<primitive, std::string>> build_gender(const primitive& input, const primitive& output, const std::string& weights_dir, weights_optimizer& wo, bool use_half)
+std::vector<std::pair<primitive, std::string>> build_gender(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half)
 {
     auto mem_format = use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
     auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
+
+    auto input = memory::allocate({ use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ batch_size,{ 86, 86 }, 3 } });
 
     // create conversion to yxfb format and subtract mean values
     auto reordered_input = reorder::create(
@@ -165,7 +167,7 @@ std::vector<std::pair<primitive, std::string>> build_gender(const primitive& inp
 
     auto softmax = normalization::softmax::create(
     {
-        output,
+        fc_mem_format,
         fc3_g
     });
 
