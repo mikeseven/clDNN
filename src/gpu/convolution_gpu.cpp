@@ -397,7 +397,6 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
 {
     auto& filter_mem = arg.input_memory(1);
     auto& output_mem = arg.output_memory(0);
-    auto split = arg.argument.split;
     auto batch_size = output_mem.argument.size.batch[0];
     auto filter_ofm_num = filter_mem.argument.size.feature[0];
 
@@ -425,7 +424,7 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
             kd.batches_per_work_item = min_batches_per_wi;
         }
         // Assume that number of features in output correctly based on split and on number of output features in filter.
-        assert(output_mem.argument.size.feature[0] == filter_ofm_num * split);
+        assert(output_mem.argument.size.feature[0] == filter_ofm_num * arg.argument.split);
         kd.gws0 = filter_ofm_num * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item);
         kd.lws0 = min_lws;
         kd.kernel_name = kernel_name_yxfb_yxio_b16_fp16;
