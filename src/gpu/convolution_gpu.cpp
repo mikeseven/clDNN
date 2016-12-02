@@ -412,11 +412,11 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
         batch_size > 0 && batch_size % (min_batches_per_wi * min_lws) == 0)
     {
         kd.ofm_per_work_item = min_ofm_per_wi;
-        if (batch_size % (4 * min_batches_per_wi * min_lws * split) == 0)
+        if (batch_size % (4 * min_batches_per_wi * min_lws) == 0)
         {
             kd.batches_per_work_item = 4 * min_batches_per_wi; // USE_BLOCK_READ_2 + as_half4
         }
-        else if (batch_size % (2 * min_batches_per_wi * min_lws * split) == 0)
+        else if (batch_size % (2 * min_batches_per_wi * min_lws) == 0)
         {
             kd.batches_per_work_item = 2 * min_batches_per_wi; // USE_BLOCK_READ_1 + as_half2
         }
