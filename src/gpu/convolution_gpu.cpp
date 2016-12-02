@@ -399,7 +399,7 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
     auto& output_mem = arg.output_memory(0);
     auto split = arg.argument.split;
     auto batch_size = output_mem.argument.size.batch[0];
-    auto output_feature_num = filter_mem.argument.size.feature[0];
+    auto filter_ofm_num = filter_mem.argument.size.feature[0];
 
     const uint32_t min_ofm_per_wi = 16;
     const uint32_t min_batches_per_wi = 1;
@@ -407,11 +407,9 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     // Number of output features is positive and dividable by minimum number of output features processed inside work item.
-    if (output_feature_num > 0 && output_feature_num % min_ofm_per_wi == 0 &&
+    if (filter_ofm_num > 0 && filter_ofm_num % min_ofm_per_wi == 0 &&
         // Batch size is positive and dividable by minimum number of batches processed when smallest local work size is used.
-        batch_size > 0 && batch_size % (min_batches_per_wi * min_lws) == 0 &&
-        // Minimum number of spawned work groups (for processing of single spatial point) must be dividable by split number.
-        batch_size * output_feature_num / (min_batches_per_wi * min_lws * min_ofm_per_wi) % split == 0)
+        batch_size > 0 && batch_size % (min_batches_per_wi * min_lws) == 0)
     {
         kd.ofm_per_work_item = min_ofm_per_wi;
         if (batch_size % (4 * min_batches_per_wi * min_lws * split) == 0)
@@ -426,7 +424,9 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
         {
             kd.batches_per_work_item = min_batches_per_wi;
         }
-        kd.gws0 = (output_mem.argument.size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
+        // Assume that number of features in output correctly based on split and on number of output features in filter.
+        assert(output_mem.argument.size.feature[0] == filter_ofm_num * split);
+        kd.gws0 = filter_ofm_num * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item);
         kd.lws0 = min_lws;
         kd.kernel_name = kernel_name_yxfb_yxio_b16_fp16;
     }
