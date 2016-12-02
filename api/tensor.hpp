@@ -61,19 +61,19 @@ struct format
         const std::unordered_map<type, format_traits> traits
         {
             { x,   { 1, 1, 1, "x" } },
-            { yx,  { 1, 1, 2, "xy" } },
-            { xy,  { 1, 1, 2, "yx" } },
-            { xb,  { 1, 1, 1, "bx" } },
-            { bx,  { 1, 1, 1, "xb" } },
-            { yxfn,{ 1, 1, 2, "nfxy" } },
-            { yxfb,{ 1, 1, 2, "bfxy" } },
-            { byxf,{ 1, 1, 2, "fxyb" } },
-            { bfyx,{ 1, 1, 2, "xyfb" } },
-            { fyxb,{ 1, 1, 2, "bxyf" } },
-            { oiyx,{ 1, 2, 2, "xyio" } },
-            { yxoi,{ 1, 2, 2, "ioxy" } },
-            { oyxi,{ 1, 2, 2, "ixyo" } },
-            { yxio,{ 1, 2, 2, "oixy" } },
+            { yx,  { 1, 1, 2, "yx" } },
+            { xy,  { 1, 1, 2, "xy" } },
+            { xb,  { 1, 1, 1, "xb" } },
+            { bx,  { 1, 1, 1, "bx" } },
+            { yxfn,{ 1, 1, 2, "yxfn" } },
+            { yxfb,{ 1, 1, 2, "yxfb" } },
+            { byxf,{ 1, 1, 2, "byxf" } },
+            { bfyx,{ 1, 1, 2, "bfyx" } },
+            { fyxb,{ 1, 1, 2, "fyxb" } },
+            { oiyx,{ 1, 2, 2, "oiyx" } },
+            { yxoi,{ 1, 2, 2, "yxoi" } },
+            { oyxi,{ 1, 2, 2, "oyxi" } },
+            { yxio,{ 1, 2, 2, "yxio" } },
         };
         return traits.at(fmt);
     }
@@ -270,5 +270,5 @@ struct tensor
     }
 };
 
-static_assert(std::is_standard_layout<tensor>::value, "tensor class has to be 'standart layout'");
+API_CLASS(tensor)
 }

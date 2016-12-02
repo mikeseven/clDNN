@@ -17,23 +17,35 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include <map>
-#include "api/cldnn.hpp"
+#include "api/topology.hpp"
 #include "refcounted_obj.h"
-#include "api/reorder.hpp"
-#include "api/convolution.hpp"
+#include "api/primitive.hpp"
+#include "primitive_arg.h"
+#include "network_builder.h"
 
 namespace cldnn
 {
-typedef std::map<primitive_id, std::shared_ptr<const primitive>> descriptions_map;
+class data_arg : public primitive_arg
+{
+public:
+    data_arg(network_builder& builder, std::shared_ptr<const data> desc)
+        :primitive_arg(builder, desc, desc->mem())
+    {}
+};
+
+class input_arg : public primitive_arg
+{
+public:
+    input_arg(network_builder& builder, std::shared_ptr<const input_layout> desc)
+        :primitive_arg(builder, desc, builder.get_engine().allocate_memory(desc->layout()))
+    {}
+};
+
+typedef std::map<primitive_id, std::shared_ptr<const primitive>> topology_map;
 
 class topology_impl : public refcounted_obj<topology_impl>
 {
 public:
-    
-    topology_impl(const context& ctx)
-        : _context(ctx)
-    {}
-
     void add(std::shared_ptr<const primitive> desc)
     {
         auto id = desc->id();
@@ -42,12 +54,9 @@ public:
         _primitives.insert({ id, desc });
     }
 
-    context get_context() const { return _context; }
-
-    const descriptions_map& get_primitives() const { return _primitives; }
+    const topology_map& get_primitives() const { return _primitives; }
 
 private:
-    descriptions_map _primitives;
-    context _context;
+    topology_map _primitives;
 };
 }

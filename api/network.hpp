@@ -63,7 +63,7 @@ struct network
 
     event execute(const std::vector<event>& dependencies)
     {
-        return create_obj<event>("network execute failed", [&](status_t* status) { return execute_impl(dependencies, status); });
+        return create_obj<event, event_impl>("network execute failed", [&](status_t* status) { return execute_impl(dependencies, status); });
     }
 
     DLL_SYM engine get_engine();
@@ -73,9 +73,10 @@ private:
     friend struct engine;
     network(network_impl* impl) :_impl(impl) {}
     network_impl* _impl;
-    DLL_SYM status_t set_input_data_impl(primitive_id_ref id, memory mem);
-    DLL_SYM array_ref<primitive_id_ref> get_primitive_keys_impl(status_t* status);
-    DLL_SYM event_impl* execute_impl(array_ref<event> dependencies, status_t* status);
-    DLL_SYM const memory& get_output(primitive_id_ref id, status_t* status);
+    DLL_SYM status_t set_input_data_impl(primitive_id_ref id, memory mem) noexcept;
+    DLL_SYM array_ref<primitive_id_ref> get_primitive_keys_impl(status_t* status) noexcept;
+    DLL_SYM event_impl* execute_impl(array_ref<event> dependencies, status_t* status) noexcept;
+    DLL_SYM const memory& get_output(primitive_id_ref id, status_t* status) noexcept;
 };
+API_CLASS(network)
 }

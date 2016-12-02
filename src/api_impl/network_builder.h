@@ -16,11 +16,11 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/topology.hpp"
-#include "api/cldnn.hpp"
 #include "primitive_type.h"
 #include "primitive_arg.h"
 #include "network_impl.h"
+#include "engine_impl.h"
+#include "topology_impl.h"
 #include <map>
 
 namespace cldnn
@@ -37,7 +37,7 @@ public:
     {
     }
 
-    network_impl* build_network(const topology& tpl)
+    network_impl* build_network(topology_impl* tpl)
     {
         optimize_topology(tpl);
         _network.clear();
@@ -63,12 +63,12 @@ private:
     engine _engine;
 
     build_settings _configuration;
-    std::map<primitive_id, std::shared_ptr<const primitive>> _topology;
+    topology_map _topology;
     std::map<primitive_id, std::shared_ptr<const primitive_arg>> _network;
 
-    void optimize_topology(const topology& tpl)
+    void optimize_topology(topology_impl* tpl)
     {
-        auto& original_primitives = tpl.implementation()->get_primitives();
+        auto& original_primitives = tpl->get_primitives();
         // TODO instead of copy, do some optimizations aka weights reordering, fusing, etc.
         _topology = original_primitives;
     }

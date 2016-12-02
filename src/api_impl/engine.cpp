@@ -16,9 +16,6 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/topology.hpp"
-#include "api/cldnn.hpp"
-#include "refcounted_obj.h"
-#include "topology_impl.h"
 #include "engine_impl.h"
 #include "network_impl.h"
 #include <algorithm>
@@ -26,10 +23,18 @@
 
 namespace cldnn
 {
-
-context engine::get_context()
+uint32_t engine::engine_count_impl(engine_types type, status_t* status) noexcept
 {
-    return _impl->get_context();
+    if (type == engine_types::ocl)
+    {
+        if (status) *status = CLDNN_SUCCESS;
+        return 1;
+    }
+    else
+    {
+        if (status) *status = CLDNN_UNSUPPORTED;
+        return 0;
+    }
 }
 
 engine::engine(const engine& other):_impl(other._impl)
@@ -51,7 +56,30 @@ engine::~engine()
     _impl->release();
 }
 
-buffer* engine::allocate_buffer(layout layout, status_t* status) noexcept
+engine_impl* engine::create_engine_impl(engine_types engine_type, uint32_t engine_num, const engine_configuration* configuration, status_t* status) noexcept
+{
+    if (engine_num > 0 || (configuration && configuration->engine_type != engine_types::ocl))
+    {
+        if (status)
+            *status = CLDNN_UNSUPPORTED;
+        return nullptr;
+    }
+
+    try
+    {
+        if (status)
+            *status = CLDNN_SUCCESS;
+        return new engine_impl(configuration ? *configuration : engine_configuration());
+    }
+    catch (...)
+    {
+        if (status)
+            *status = CLDNN_ERROR;
+        return nullptr;
+    }
+}
+
+memory_impl* engine::allocate_buffer(layout layout, status_t* status) noexcept
 {
     try
     {
@@ -69,19 +97,12 @@ buffer* engine::allocate_buffer(layout layout, status_t* status) noexcept
 
 network_impl* engine::build_network_impl(topology topology, status_t* status) noexcept
 {
-    if (topology.get_context() != get_context())
-    {
-        if (status)
-            *status = CLDNN_ERROR;
-        return nullptr;
-    }
-
     try
     {
         if (status)
             *status = CLDNN_SUCCESS;
         network_builder builder(*this, _impl->configuration());
-        return builder.build_network(topology);
+        return builder.build_network(topology._impl);
     }
     catch (...)
     {

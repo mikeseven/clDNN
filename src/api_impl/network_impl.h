@@ -16,7 +16,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/cldnn.hpp"
+#include "api/engine.hpp"
+#include "api/network.hpp"
 #include "refcounted_obj.h"
 #include "primitive_arg.h"
 #include <map>

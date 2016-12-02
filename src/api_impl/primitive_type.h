@@ -20,12 +20,12 @@
 
 namespace cldnn
 {
-    class primitive_arg;
-    class network_builder;
-    struct primitive_type
-    {
-        virtual std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const = 0;
-        virtual std::shared_ptr<const primitive_arg> create_arg(network_builder& builder, std::shared_ptr<const primitive> desc) const = 0;
-        virtual ~primitive_type() = default;
-    };
+class primitive_arg;
+class network_builder;
+struct primitive_type
+{
+    virtual std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const = 0;
+    virtual std::shared_ptr<const primitive_arg> create_arg(network_builder& builder, std::shared_ptr<const primitive> desc) const = 0;
+    virtual ~primitive_type() = default;
+};
 }

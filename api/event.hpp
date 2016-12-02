@@ -23,23 +23,33 @@ namespace cldnn
 class event_impl;
 struct event
 {
-    typedef event_impl impl_type;
+    static event create_user_event()
+    {
+        return create_obj<event, event_impl>("create user event failed", create_user_event_impl);
+    }
     DLL_SYM event(const event& other);
     DLL_SYM event& operator=(const event& other);
     DLL_SYM ~event();
     friend bool operator==(const event& lhs, const event& rhs) { return lhs._impl == rhs._impl; }
     friend bool operator!=(const event& lhs, const event& rhs) { return !(lhs == rhs); }
 
-    DLL_SYM void wait();
-    DLL_SYM void reset();
-    DLL_SYM void set();
-    typedef void(*event_handler)(void*);
-    DLL_SYM void on_event(event_handler handler, void* param);
+    void wait() { check_status("wait event failed", wait_impl()); }
+    void set() { check_status("set event failed", set_impl()); }
 
-    event_impl* implementation() const { return _impl; }
+    typedef void(*event_handler)(void*);
+    void set_event_handler(event_handler handler, void* param)
+    {
+        check_status("set event handler failed", add_event_handler_impl(handler, param));
+    }
+
 private:
     friend struct network;
     event(event_impl* impl) : _impl(impl) {}
     event_impl* _impl;
+    DLL_SYM static event_impl* create_user_event_impl(status_t* status) noexcept;
+    DLL_SYM status_t wait_impl() noexcept;
+    DLL_SYM status_t set_impl() noexcept;
+    DLL_SYM status_t add_event_handler_impl(event_handler handler, void* param) noexcept;
 };
+API_CLASS(event)
 }

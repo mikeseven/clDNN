@@ -17,27 +17,22 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include <map>
-#include "api/cldnn.hpp"
+#include "api/engine.hpp"
 #include "refcounted_obj.h"
+#include "memory_impl.h"
 
 namespace cldnn
 {
-class primitive;
 class engine_impl : public refcounted_obj<engine_impl>
 {
 public:
-    engine_impl(const context& ctx, const engine_configuration& conf):_context(ctx), _configuration(conf)
-    {
-        
-    }
+    engine_impl(const engine_configuration& conf):  _configuration(conf)
+    {}
 
-    const context& get_context() const { return _context; }
-
-    buffer* allocate_buffer(layout layout);
+    memory_impl* allocate_buffer(layout layout);
     const engine_configuration& configuration() const { return _configuration; }
 
 private:
-    context _context;
     engine_configuration _configuration;
 };
 }

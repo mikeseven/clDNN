@@ -19,6 +19,7 @@
 #include "primitive_type.h"
 #include "primitive_arg.h"
 #include "network_builder.h"
+#include "api/engine.hpp"
 
 namespace cldnn
 {

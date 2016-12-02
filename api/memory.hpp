@@ -20,7 +20,6 @@
 #include "cldnn_defs.h"
 #include "compounds.h"
 #include "tensor.hpp"
-#include "primitive.hpp"
 
 namespace cldnn
 {
@@ -102,19 +101,65 @@ struct layout
         return !(lhs == rhs);
     }
 
+    /**
+     * \brief 
+     * \return number of bytes needed to store this layout
+     */
     size_t data_size() const { return data_type_traits::size_of(data_type) * size.get_linear_size(); }
+
+    /**
+     * \brief 
+     * \return number of elements to be stored in this layout
+     */
     size_t count() const { return size.get_linear_size(); }
 
     data_types data_type;
     tensor size;
 };
 
-struct buffer;
-
+struct memory_impl;
 struct memory
 {
+    static memory allocate(const cldnn::layout& layout)
+    {
+        size_t size = layout.data_size();
+        if (size == 0) throw std::invalid_argument("size should be more than 0");
+        status_t status;
+        auto buf = allocate_buffer(size, &status);
+        if (buf == nullptr || status != CLDNN_SUCCESS)
+            CLDNN_THROW("memory allocation failed", status);
+        return memory(layout, buf);
+    }
+
+    template<typename T>
+    static memory attach(const cldnn::layout& layout, array_ref<T> array)
+    {
+        if (array.empty()) throw std::invalid_argument("array should not be empty");
+        size_t size = array.size() * sizeof(T);
+        if ( size != layout.data_size()) throw std::invalid_argument("buffer size mismatch");
+        status_t status;
+        auto buf = attach_buffer(array.data(), size, &status);
+        if (buf == nullptr || status != CLDNN_SUCCESS)
+            CLDNN_THROW("memory attach failed", status);
+        return memory(layout, buf);
+    }
+
+    static memory attach(const cldnn::layout& layout, void* pointer, size_t size)
+    {
+        if (pointer == nullptr) throw std::invalid_argument("pointer should not be NULL");
+        if (size == 0) throw std::invalid_argument("size should be more than 0");
+        if (size < layout.data_size()) throw std::invalid_argument("buffer size mismatch");
+        status_t status;
+        auto buf = attach_buffer(pointer, size, &status);
+        if (buf == nullptr || status != CLDNN_SUCCESS)
+            CLDNN_THROW("memory attach failed", status);
+        return memory(layout, buf);
+    }
+
     DLL_SYM memory(const memory& other);
+
     DLL_SYM memory& operator=(const memory& other);
+
     DLL_SYM ~memory();
 
     friend bool operator==(const memory& lhs, const memory& rhs)
@@ -128,26 +173,61 @@ struct memory
         return !(lhs == rhs);
     }
 
+    /**
+     * \brief 
+     * \return number of elements of _layout.data_type stored in memory
+     */
     size_t count() const { return _layout.count(); }
+
+    /**
+     * \brief 
+     * \return number of bytes used by memory
+     */
     size_t size() const { return _layout.data_size(); }
     layout get_layout() const { return _layout; }
 
 private:
+    memory(const cldnn::layout& layout, memory_impl* data)
+        :_layout(layout), _data(data)
+    {
+        if (!_data) throw std::invalid_argument("data");
+    }
     friend struct engine;
-    memory(cldnn::layout l, buffer* d);
     layout _layout;
-    buffer* _data;
+    memory_impl* _data;
+    DLL_SYM static memory_impl* allocate_buffer(size_t size, status_t* status) noexcept;
+    DLL_SYM static memory_impl* attach_buffer(void* pointer, size_t size, status_t* status) noexcept;
+    DLL_SYM void* lock_buffer(status_t* status) const noexcept;
+    DLL_SYM status_t unlock_buffer() const noexcept;
+
+    void* lock() const
+    {
+        status_t status;
+        auto ptr = lock_buffer(&status);
+        if (status != CLDNN_SUCCESS)
+            CLDNN_THROW("memory lock failed", status);
+        return ptr;
+    }
+
+    void unlock() const
+    {
+        status_t status = unlock_buffer();
+        if (status != CLDNN_SUCCESS)
+            CLDNN_THROW("memory unlock failed", status);
+    }
     template<typename T> friend struct pointer;
-    DLL_SYM void* lock();
-    DLL_SYM void unlock();
 };
 
-static_assert(std::is_standard_layout<memory>::value, "class has to be 'standart layout'");
+API_CLASS(memory)
 
 template<typename T>
 struct pointer
 {
-    pointer(const memory& mem): _mem(mem), _ptr(lock_ptr(mem)){}
+    pointer(const memory& mem): _mem(mem)
+    {
+        if (!data_type_match<T>(_mem._layout.data_type)) throw std::logic_error("memory data type do not match");
+        _ptr = static_cast<T*>(_mem.lock());
+    }
     ~pointer() { _mem.unlock(); }
 
     T* data() { return _ptr; }
@@ -194,55 +274,7 @@ struct pointer
     // ReSharper restore CppMemberFunctionMayBeConst, CppMemberFunctionMayBeStatic
 
 private:
-    static T* lock_ptr(memory& mem)
-    {
-        if (!data_type_match<T>(mem.layout.data_type)) throw std::logic_error("memory data type do not match");
-        return static_cast<T*>(mem.lock());
-    }
-
     memory _mem;
     T* _ptr;
 };
-
-BEGIN_DTO(data)
-memory mem;
-END_DTO(data)
-
-class data : public primitive_base<data, DTO(data)>
-{
-public:
-    typedef DTO(data) dto;
-    DLL_SYM static primitive_type_id type_id();
-
-    data(const primitive_id& id, const memory& mem)
-        :primitive_base(id, {}, { format::x, 0,{ 0 } }, { format::x, 0,{ 0 } }, padding_types::zero, mem)
-    {}
-
-    explicit data(const dto* dto)
-        :primitive_base(dto)
-    {}
-    const memory& mem() const { return _dto.mem; }
-};
-
-BEGIN_DTO(input_layout)
-layout layout;
-END_DTO(input_layout)
-
-class input_layout : public primitive_base<input_layout, DTO(input_layout)>
-{
-public:
-    typedef DTO(input_layout) dto;
-    DLL_SYM static primitive_type_id type_id();
-
-    input_layout(const primitive_id& id, const layout& layout)
-        :primitive_base(id, {}, { format::x, 0,{ 0 } }, { format::x, 0,{ 0 } }, padding_types::zero, layout)
-    {}
-
-    explicit input_layout(const dto* dto)
-        :primitive_base(dto)
-    {}
-
-    layout layout() const { return _dto.layout; }
-};
-
 }

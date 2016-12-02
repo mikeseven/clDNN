@@ -17,8 +17,9 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "api/cldnn.hpp"
-#include "topology_impl.h"
+#include "api/memory.hpp"
+#include "api/primitive.hpp"
+#include <memory>
 
 namespace cldnn
 {

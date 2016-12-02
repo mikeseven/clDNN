@@ -16,12 +16,16 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/cldnn.hpp"
+#include "api/event.hpp"
 #include "refcounted_obj.h"
 
 namespace cldnn
 {
-class context_impl: public refcounted_obj<context_impl>
+class event_impl: public refcounted_obj<event_impl>
 {
+public:
+    virtual void wait() = 0;
+    virtual void set() = 0;
+    virtual void add_event_handler(event::event_handler, void*) = 0;
 };
 }

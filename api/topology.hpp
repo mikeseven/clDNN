@@ -19,17 +19,60 @@
 #include <cstdint>
 #include "cldnn_defs.h"
 #include "compounds.h"
-#include "memory.hpp"
 #include "primitive.hpp"
+#include "memory.hpp"
 
 namespace cldnn {
 
-struct context;
-class topology_impl;
+BEGIN_DTO(data)
+    memory mem;
+END_DTO(data)
 
+    class data : public primitive_base<data, DTO(data)>
+{
+public:
+    typedef DTO(data) dto;
+    DLL_SYM static primitive_type_id type_id();
+
+    data(const primitive_id& id, const memory& mem)
+        :primitive_base(id, {}, { format::x, 0,{ 0 } }, { format::x, 0,{ 0 } }, padding_types::zero, mem)
+    {}
+
+    explicit data(const dto* dto)
+        :primitive_base(dto)
+    {}
+    const memory& mem() const { return _dto.mem; }
+};
+
+BEGIN_DTO(input_layout)
+    layout layout;
+END_DTO(input_layout)
+
+    class input_layout : public primitive_base<input_layout, DTO(input_layout)>
+{
+public:
+    typedef DTO(input_layout) dto;
+    DLL_SYM static primitive_type_id type_id();
+
+    input_layout(const primitive_id& id, const layout& layout)
+        :primitive_base(id, {}, { format::x, 0,{ 0 } }, { format::x, 0,{ 0 } }, padding_types::zero, layout)
+    {}
+
+    explicit input_layout(const dto* dto)
+        :primitive_base(dto)
+    {}
+
+    layout layout() const { return _dto.layout; }
+};
+
+class topology_impl;
 struct topology
 {
-    typedef topology_impl impl_type;
+    static topology create()
+    {
+        return create_obj<topology, topology_impl>("failed to create topology", create_topology_impl);
+    }
+
     DLL_SYM topology(const topology& other);
     DLL_SYM topology& operator=(const topology& other);
     DLL_SYM ~topology();
@@ -54,17 +97,15 @@ struct topology
             CLDNN_THROW("primitive add failed", status);
     }
 
-    DLL_SYM context get_context() const;
-    topology_impl* implementation() const { return _impl; }
 private:
-    friend struct context;
     friend struct engine;
     topology_impl* _impl;
     topology(topology_impl* impl) :_impl(impl) {}
 
-    DLL_SYM status_t add_primitive_dto(const primitive_dto* dto);
+    DLL_SYM static topology_impl* create_topology_impl(status_t* status) noexcept;
+    DLL_SYM status_t add_primitive_dto(const primitive_dto* dto) noexcept;
 };
 
-static_assert(std::is_standard_layout<topology>::value, "class has to be 'standart layout'");
+API_CLASS(topology)
 
 }

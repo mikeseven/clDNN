@@ -75,8 +75,8 @@ typedef int32_t status_t;
 
 #define CLDNN_THROW(msg, status) throw std::runtime_error(msg);
 
-template<class T>
-T create_obj(std::string err_msg, std::function<typename T::impl_type*(status_t*)> func)
+template<class T, class TImpl>
+T create_obj(std::string err_msg, std::function<TImpl*(status_t*)> func)
 {
     status_t status;
     auto impl = func(&status);
@@ -85,6 +85,13 @@ T create_obj(std::string err_msg, std::function<typename T::impl_type*(status_t*
     return T(impl);
 }
 
+void check_status(std::string err_msg, status_t status)
+{
+    if (status != CLDNN_SUCCESS)
+        CLDNN_THROW(err_msg, status);
+}
+
+#define API_CLASS(the_class) static_assert(std::is_standard_layout<the_class>::value, #the_class " has to be 'standart layout' class");
 
 }
 

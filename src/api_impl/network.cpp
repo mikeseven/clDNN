@@ -16,10 +16,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/topology.hpp"
-#include "api/cldnn.hpp"
 #include "network_impl.h"
 #include "engine_impl.h"
-#include <algorithm>
 
 namespace cldnn
 {
@@ -62,7 +60,7 @@ network::~network()
     _impl->release();
 }
 
-const memory& network::get_output(primitive_id_ref id, status_t* status)
+const memory& network::get_output(primitive_id_ref id, status_t* status) noexcept
 {
     try
     {
@@ -83,7 +81,7 @@ engine network::get_engine()
     return _impl->get_engine();
 }
 
-status_t network::set_input_data_impl(primitive_id_ref id, memory mem)
+status_t network::set_input_data_impl(primitive_id_ref id, memory mem) noexcept
 {
     try
     {
@@ -96,7 +94,7 @@ status_t network::set_input_data_impl(primitive_id_ref id, memory mem)
     }
 }
 
-array_ref<primitive_id_ref> network::get_primitive_keys_impl(status_t* status)
+array_ref<primitive_id_ref> network::get_primitive_keys_impl(status_t* status) noexcept
 {
     try
     {
@@ -112,7 +110,7 @@ array_ref<primitive_id_ref> network::get_primitive_keys_impl(status_t* status)
     }
 }
 
-event_impl* network::execute_impl(array_ref<event> dependencies, status_t* status)
+event_impl* network::execute_impl(array_ref<event> dependencies, status_t* status) noexcept
 {
 }
 }

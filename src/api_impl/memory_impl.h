@@ -16,25 +16,15 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "refcounted_obj.h"
 #include "api/memory.hpp"
-#include "primitive_arg.h"
-#include "network_builder.h"
 
 namespace cldnn
 {
-class data_arg : public primitive_arg
+struct memory_impl : refcounted_obj<memory_impl>
 {
-public:
-    data_arg(network_builder& builder, std::shared_ptr<const data> desc)
-        :primitive_arg(builder, desc, desc->mem())
-    {}
-};
-
-class input_arg : public primitive_arg
-{
-public:
-    input_arg(network_builder& builder, std::shared_ptr<const input_layout> desc)
-        :primitive_arg(builder, desc, builder.get_engine().allocate_memory(desc->layout()))
-    {}
+    virtual void* lock() = 0;
+    virtual void unlock() = 0;
+    virtual size_t size() const = 0;
 };
 }

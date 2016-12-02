@@ -23,44 +23,112 @@
 
 namespace cldnn
 {
-class network_builder;
-struct data_type : public primitive_type
+struct simple_alloc_memory : memory_impl
 {
-    std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const override
-    {
-        if (dto->type != this) throw std::invalid_argument("dto: primitive type mismatch");
-        return std::make_shared<data>(dto->as<data>());
-    }
-    std::shared_ptr<const primitive_arg> create_arg(network_builder& builder, std::shared_ptr<const primitive> desc) const override
-    {
-        if (desc->type() != this) throw std::invalid_argument("desc: primitive type mismatch");
-        return std::make_shared<data_arg>(builder, std::static_pointer_cast<const data>(desc));
-    }
+    simple_alloc_memory(size_t size): _data(size)
+    {}
+
+    void* lock() override { return _data.data(); }
+    void unlock() override {};
+    size_t size() const override { return _data.size(); }
+private:
+    std::vector<uint8_t> _data;
 };
 
-primitive_type_id data::type_id()
+struct simple_attached_memory : memory_impl
 {
-    static data_type instance;
-    return &instance;
+    simple_attached_memory(void* pointer, size_t size)
+    : _pointer(pointer), _size(size)
+    {}
+
+    void* lock() override { return _pointer; }
+    void unlock() override {}
+    size_t size() const override { return _size; }
+private:
+    void* _pointer;
+    size_t _size;
+};
+
+memory::memory(const memory& other): _layout(other._layout)
+                                   , _data(other._data)
+{
+    _data->add_ref();
 }
 
-struct input_layout_type : public primitive_type
+memory& memory::operator=(const memory& other)
 {
-    std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const override
-    {
-        if (dto->type != this) throw std::invalid_argument("dto: primitive type mismatch");
-        return std::make_shared<input_layout>(dto->as<input_layout>());
-    }
-    std::shared_ptr<const primitive_arg> create_arg(network_builder& builder, std::shared_ptr<const primitive> desc) const override
-    {
-        if (desc->type() != this) throw std::invalid_argument("desc: primitive type mismatch");
-        return std::make_shared<input_arg>(builder, std::static_pointer_cast<const input_layout>(desc));
-    }
-};
+    if (this == &other)
+        return *this;
+    _data->release();
+    _layout = other._layout;
+    _data = other._data;
+    _data->add_ref();
+    return *this;
+}
 
-primitive_type_id input_layout::type_id()
+memory::~memory()
 {
-    static input_layout_type instance;
-    return &instance;
+    _data->release();
+}
+
+memory_impl* memory::allocate_buffer(size_t size, status_t* status) noexcept
+{
+    try
+    {
+        if (status)
+            *status = CLDNN_SUCCESS;
+        return new simple_alloc_memory(size);
+    }
+    catch (...)
+    {
+        if (status)
+            *status = CLDNN_ERROR;
+        return nullptr;
+    }
+}
+
+memory_impl* memory::attach_buffer(void* pointer, size_t size, status_t* status) noexcept
+{
+    try
+    {
+        if (status)
+            *status = CLDNN_SUCCESS;
+        return new simple_attached_memory(pointer, size);
+    }
+    catch (...)
+    {
+        if (status)
+            *status = CLDNN_ERROR;
+        return nullptr;
+    }
+}
+
+void* memory::lock_buffer(status_t* status) const noexcept
+{
+    try
+    {
+        if (status)
+            *status = CLDNN_SUCCESS;
+        return _data->lock();
+    }
+    catch (...)
+    {
+        if (status)
+            *status = CLDNN_ERROR;
+        return nullptr;
+    }
+}
+
+status_t memory::unlock_buffer() const noexcept
+{
+    try
+    {
+        _data->unlock();
+        return CLDNN_SUCCESS;
+    }
+    catch (...)
+    {
+        return CLDNN_ERROR;
+    }
 }
 }

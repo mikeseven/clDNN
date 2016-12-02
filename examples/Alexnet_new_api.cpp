@@ -17,7 +17,7 @@
 #include <string>
 #include <memory>
 #include <chrono>
-#include <api/cldnn.hpp>
+#include <api/engine.hpp>
 #include <api/primitives/reorder.hpp>
 #include <api/primitives/convolution.hpp>
 #include <api/primitives/pooling.hpp>
@@ -81,7 +81,7 @@ namespace helpers {
 
 
 // Building AlexNet network with loading weights & biases from file
-void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn::layout& input_layout, cldnn::format initial_format, const std::string& weights_dir)
+void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn::layout& input_layout, const std::string& weights_dir)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     std::cout << "Building Alexnet topology started" << std::endl;
@@ -101,11 +101,12 @@ void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn
     cldnn::data imagenet_mean("imagenet_mean", imagenet_mean_mem);
     alexnet.add_primitive(imagenet_mean);
 
-    cldnn::reorder reordered_input1("reordered_input", "input", initial_format, "imagenet_mean");
+    cldnn::reorder reordered_input1("reordered_input", "input", cldnn::format::yxfb, "imagenet_mean");
     //OR
-    cldnn::reorder reordered_input2("reordered_input", input, initial_format, imagenet_mean);
+    cldnn::reorder reordered_input2("reordered_input", input, cldnn::format::yxfb, imagenet_mean);
     //OR
-    alexnet.add_primitive<cldnn::reorder>({"reordered_input", input, initial_format, "imagenet_mean" });
+    alexnet.add_primitive<cldnn::reorder>({ "reordered_input", input, cldnn::format::yxfb, "imagenet_mean" });
+    alexnet.add_primitive(cldnn::reorder("reordered_input", input, cldnn::format::yxfb, imagenet_mean));
 
     // create convolution
     cldnn::memory conv1_weights = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv1_weights.nnd"), helpers::file::convolution);
@@ -155,7 +156,7 @@ void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn
         { "conv2_g1_weights", "conv2_g2_weights" },
         { "conv2_g1_biases", "conv2_g2_biases" },
         cldnn::tensor{ cldnn::format::xy, {-2, -2}},
-        cldnn::tensor{ cldnn::format::yx, {1,1}},
+        cldnn::tensor{ cldnn::format::xy, {1,1}},
         true,
         0.0f
     );
@@ -358,15 +359,13 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
 
     cldnn::layout input_layout{
         use_half ? cldnn::data_types::f16 : cldnn::data_types::f32,
-        { cldnn::format::byxf, {3, 227, 227, gpu_batch_size}}
+        { cldnn::format::byxf, { gpu_batch_size, 227, 227, 3}}
     };
 
-    cldnn::context context = cldnn::context::create();
-
     // build alexnet
-    cldnn::topology alexnet_topology = context.create_topology();
-    cldnn::engine engine = context.create_engine(0, { profiling });
-    define_alexnet(alexnet_topology, engine, input_layout, cldnn::format::yxfb, weights_dir);
+    cldnn::topology alexnet_topology = cldnn::topology::create();
+    cldnn::engine engine = cldnn::engine::create({ profiling });
+    define_alexnet(alexnet_topology, engine, input_layout, weights_dir);
     cldnn::network alexnet = engine.build_network(alexnet_topology);
 
     cldnn::memory input = engine.allocate_memory(input_layout);

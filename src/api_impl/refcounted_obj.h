@@ -16,6 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include <atomic>
 
 namespace cldnn
 {
@@ -23,8 +24,8 @@ namespace cldnn
 /**
  * \brief Base class for all reference counted pointers aka PIMPL implementations
  */
-// TODO make it better
-template<class O>
+// TODO refine this code for multithreading support
+template<class T>
 class refcounted_obj
 {
 public:
@@ -36,16 +37,15 @@ public:
 
     void add_ref()
     {
-        _ref_count++;
+        ++_ref_count;
     }
 
     void release()
     {
-        _ref_count--;
-        if (_ref_count <= 0) delete reinterpret_cast<O*>(this);
+        if ((--_ref_count) == 0) delete static_cast<T*>(this);
     }
 
 private:
-    volatile int _ref_count;
+    std::atomic_int _ref_count;
 };
 }
