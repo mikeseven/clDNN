@@ -43,11 +43,32 @@ struct gpu_info_helper : gpu::context_holder
 };
 }
 
+#define USE_RANDOM_SEED 0
+#if USE_RANDOM_SEED
+std::random_device rnd_device;
+unsigned int const random_seed = rnd_device();
+#else
+unsigned int const random_seed = 1337;
+#endif
 
 using VF = std::vector<float>;		// vector
 using VVF = std::vector<VF>;		// feature map
 using VVVF = std::vector<VVF>;		// 3d feature map
 using VVVVF = std::vector<VVVF>;	// batch of 3d feature maps
+
+template<typename T>
+T kahan_summation(std::vector<T> &input) {
+	std::sort(input.begin(), input.end(), [](T lhs, T rhs) { return std::abs(lhs) < std::abs(rhs); });
+	T sum = 0;
+	T c = 0;
+	for (T x : input) {
+		T y = x - c;
+		T t = sum + y;
+		c = (t - sum) - y;
+		sum = t;
+	}
+	return sum;
+}
 
 VVF convolve(VVVF &input, VVVF &filter, size_t stride, float bias, size_t f_begin = 0) {
 	VVF output;
@@ -57,13 +78,15 @@ VVF convolve(VVVF &input, VVVF &filter, size_t stride, float bias, size_t f_begi
 	for (size_t f = 0; f < filter.size(); ++f) {
 		for (size_t y = 0; y < output_y; ++y) {
 			for (size_t x = 0; x < output_x; ++x) {
-				float val = 0;
+				VF values;
+				values.reserve(filter[0].size() * filter[0][0].size() + 1);
 				for (size_t yf = 0; yf < filter[0].size(); ++yf) {
 					for (size_t xf = 0; xf < filter[0][0].size(); ++xf) {
-						val += input[f_begin + f][yf + stride * y][xf + stride * x] * filter[f][yf][xf];
+						values.push_back(input[f_begin + f][yf + stride * y][xf + stride * x] * filter[f][yf][xf]);
 					}
 				}
-				output[y][x] += val;
+				values.push_back(bias);
+				output[y][x] = kahan_summation<float>(values);
 			}
 		}
 	}
@@ -96,7 +119,7 @@ VF flatten_4d(neural::memory::format::type format, VVVVF &data) {
 
 template<typename T>
 std::vector<T> generate_random_1d(size_t a, T min, T max) {
-	static std::default_random_engine generator((unsigned int)std::time(nullptr));
+	static std::default_random_engine generator(random_seed);
 	std::uniform_real_distribution<T> distribution(min, max);
 	std::vector<T> v(a);
 	for (size_t i = 0; i < a; ++i)
@@ -163,14 +186,14 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_random) {
 	//  rnd  rnd
 	//  rnd  rnd
 
-	size_t batches = 1, input_f = 1, input_y = 4, input_x = 4;
+	size_t batch = 1, input_f = 1, input_y = 4, input_x = 4;
 
-	VVVVF input_rnd = generate_random_4d<float>(batches, input_f, input_y, input_x, -10.0f, 10.0f);
+	VVVVF input_rnd = generate_random_4d<float>(batch, input_f, input_y, input_x, -10.0f, 10.0f);
 	VF input_rnd_vec = flatten_4d(memory::format::yxfb_f32, input_rnd);
 	VVVVF filter_rnd = generate_random_4d<float>(1, 1, 2, 2, -10.0f, 10.0f);
 	VF filter_rnd_vec = flatten_4d(memory::format::oiyx_f32, filter_rnd);
 	VF bias_rnd = generate_random_1d<float>(1, -10.0f, 10.0f);
-	VVVVF output_rnd(batches, VVVF(filter_rnd.size()));
+	VVVVF output_rnd(batch, VVVF(filter_rnd.size()));
 	for (size_t b = 0; b < output_rnd.size(); ++b) {
 		for (size_t of = 0; of < filter_rnd.size(); ++of) {
 			output_rnd[b][of] = convolve(input_rnd[b], filter_rnd[of], 2, bias_rnd[of]);
@@ -191,7 +214,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_random) {
 
 	for (size_t i = 0; i < output_rnd.size(); ++i) {
 		float x = float_round(output_rnd_vec[i]), y = float_round(output_ptr[i]);
-		EXPECT_FLOAT_EQ(x, y);
+		EXPECT_FLOAT_EQ(x, y) << "random seed = " << random_seed << std::endl;
 	}
 }
 
@@ -215,14 +238,14 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad_random) {
 	//  Output:
 	//  rnd  rnd
 
-	size_t batches = 2, input_f = 1, input_y = 2, input_x = 2;
+	size_t batch = 2, input_f = 1, input_y = 2, input_x = 2;
 
-	VVVVF input_rnd = generate_random_4d<float>(batches, input_f, input_y, input_x, -10.0f, 10.0f);
+	VVVVF input_rnd = generate_random_4d<float>(batch, input_f, input_y, input_x, -10.0f, 10.0f);
 	VF input_rnd_vec = flatten_4d(memory::format::yxfb_f32, input_rnd);
 	VVVVF filter_rnd = generate_random_4d<float>(1, 1, 2, 2, -10.0f, 10.0f);
 	VF filter_rnd_vec = flatten_4d(memory::format::oiyx_f32, filter_rnd);
 	VF bias_rnd = generate_random_1d<float>(1, -10.0f, 10.0f);
-	VVVVF output_rnd(batches, VVVF(filter_rnd.size()));
+	VVVVF output_rnd(batch, VVVF(filter_rnd.size()));
 	for (size_t b = 0; b < output_rnd.size(); ++b) {
 		for (size_t of = 0; of < filter_rnd.size(); ++of) {
 			output_rnd[b][of] = convolve(input_rnd[b], filter_rnd[of], 2, bias_rnd[of]);
@@ -243,7 +266,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad_random) {
 
 	for (size_t i = 0; i < output_rnd.size(); ++i) {
 		float x = float_round(output_rnd_vec[i]), y = float_round(output_ptr[i]);
-		EXPECT_FLOAT_EQ(x, y);
+		EXPECT_FLOAT_EQ(x, y) << "random seed = " << random_seed << std::endl;
 	}
 }
 
@@ -961,6 +984,7 @@ TEST(convolution_gpu, relu_with_negative_slope) {
 	//  Stride : 2x2
 	//  Input  : 4x4
 	//  Output : 2x2
+	//  Negative Slope : 0.1
 
 	//  Input:
 	//  -0.5   1     0.5  2

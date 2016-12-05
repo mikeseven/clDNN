@@ -340,3 +340,47 @@ TEST(fully_connected_gpu, x_f32_relu) {
     EXPECT_EQ(0.75f, output_ptr[2]);
     EXPECT_EQ(0.00f, output_ptr[3]);
 }
+
+TEST(fully_connected_gpu, x_f32_relu_with_negative_slope) {
+	//  Input  : 3x1
+	//  Output : 4x1
+	//  Weights: 4x3
+	//  Negative Slope: 0.1
+	//
+	//  Input:
+	//  -0.5     2    0.5
+	//
+	//  Weights:
+	//   1.5     1    0.5
+	//  -1       0    0.5
+	//   0.5    -0.5 -2
+	//  -0.5     1    1.5
+	//
+	//  Biases:
+	//   1.0, -2.0, 3.0, -4.0
+	//  Output:
+	//   2.5   -0.125    0.75  -0.1
+
+	const uint32_t output_x = 4,                 // size of whole output buffer
+		input_x = 3,                 // size of whole input buffer
+		weight_x = 4, weight_y = 3;  // size of whole weights buffer
+
+	auto input_prim = memory::allocate({ memory::format::x_f32,{ 1       ,{ { input_x } }, 1 } });
+	auto output_prim = memory::allocate({ memory::format::x_f32,{ 1       ,{ { output_x } }, 1 } });
+	auto weights_prim = memory::allocate({ memory::format::bx_f32,{ weight_y,{ { weight_x } }, 1 } });
+	auto bias_prim = memory::allocate({ memory::format::x_f32,{ 1,{ { output_x } }, 1 } });
+
+	set_values(input_prim, { -0.5f, 2.0f, 0.5f });
+	set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
+	set_values(bias_prim, { 1.0f, -2.0f, 3.0f, -4.0f });
+
+	auto full_con_relu_prim = fully_connected::create({ output_prim, input_prim, weights_prim, bias_prim, true, 0.1f });
+
+	execute({ full_con_relu_prim }).wait();
+
+	auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+	EXPECT_EQ(2.50f, output_ptr[0]);
+	EXPECT_EQ(-0.125f, output_ptr[1]);
+	EXPECT_EQ(0.75f, output_ptr[2]);
+	EXPECT_EQ(-0.1f, output_ptr[3]);
+}
