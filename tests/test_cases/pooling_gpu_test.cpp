@@ -165,7 +165,7 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
     EXPECT_EQ(1.5f, get_value<float>(output_ptr, 13)); EXPECT_EQ(0.0f, get_value<float>(output_ptr, 15));
 }
 
-TEST(DISABLED_pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad) {
+TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad) {
 	//  Brief test description.
 	//
 	//  Pool window: 2x2
