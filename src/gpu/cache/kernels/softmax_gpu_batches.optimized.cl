@@ -19,7 +19,7 @@ UNIT_TYPE FUNC(find_max_value)(__local UNIT_TYPE* partial_max, const int global_
     {
         for(int i = 1; i < LWS / batch_num; i++)
         {
-            partial_max[batch_offset] = max(partial_max[0], partial_max[i*batch_num + batch_offset]);
+            partial_max[batch_offset] = max(partial_max[batch_offset], partial_max[i*batch_num + batch_offset]);
         };
     }
     barrier(CLK_LOCAL_MEM_FENCE);
