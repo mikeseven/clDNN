@@ -236,7 +236,7 @@ struct memory : is_a_primitive
     DLL_SYM size_t count() const;
 
 private:
-    uint64_t _elements_count;
+    size_t _elements_count;
     std::shared_ptr<buffer> _buffer;
     memory(arguments arg, std::shared_ptr<buffer> buffer) : is_a_primitive(type_id<const memory>()), argument(arg), _buffer(buffer) 
     {
