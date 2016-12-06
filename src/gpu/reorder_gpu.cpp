@@ -65,29 +65,29 @@ struct reorder_gpu : is_an_implementation {
         // 0 - batch (b), 1, 2 - feature (o -> 1, i -> 2), 3, 4 - spatial (x -> 3, y -> 4)
         case memory::format::type::byxf_f32:
         case memory::format::type::byxf_f16:
-            return "return pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + size[3] * pos[0]));";
+            return "return pad[1] + pos[1] + (2 * pad[1] + size[1]) * (pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3] + (2 * pad[3] + size[3]) * (pad[0] + pos[0])));";
         case memory::format::type::yxfb_f32:
         case memory::format::type::yxfb_f16:
-            return "return pos[0] + size[0] * (pos[1] + size[1] * (pos[2] + size[2] * pos[3]));";
+            return "return pad[0] + pos[0] + (2 * pad[0] + size[0]) * (pad[1] + pos[1] + (2 * pad[1] + size[1]) * (pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3])));";
         case memory::format::type::bfyx_f32:
         case memory::format::type::bfyx_f16:
-            return "return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));";
+            return "return pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3] + (2 * pad[3] + size[3]) * (pad[1] + pos[1] + (2 * pad[1] + size[1]) * (pad[0] + pos[0])));";
         case memory::format::type::oiyx_f32:
         case memory::format::type::oiyx_f16:
-            return "return pos[3] + size[3] * (pos[4] + size[4] * (pos[2] + size[2] * pos[1]));";
+            return "return pad[3] + pos[3] + (2 * pad[3] + size[3]) * (pad[4] + pos[4] + (2 * pad[4] + size[4]) * (pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[1] + pos[1])));";
         case memory::format::type::yxio_f32:
         case memory::format::type::yxio_f16:
-            return "return pos[1] + size[1] * (pos[2] + size[2] * (pos[3] + size[3] * pos[4]));";
+            return "return pad[1] + pos[1] + (2 * pad[1] + size[1]) * (pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3] + (2 * pad[3] + size[3]) * (pad[4] + pos[4])));";
         case memory::format::type::bx_f32:
         case memory::format::type::bx_f16:
-            return "return pos[2] + size[2] * pos[0];";
+            return "return pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[0] + pos[0]);";
         case memory::format::type::xb_f32:
         case memory::format::type::xb_f16:
-            return "return pos[0] + size[0] * pos[2];";
+            return "return pad[0] + pos[0] + (2 * pad[0] + size[0]) * (pad[2] + pos[2]);";
         // No reorder, only conversion (use simpler 1D kernels for that).
         case memory::format::type::x_f32:
         case memory::format::type::x_f16:
-            return "return pos[2];";
+            return "return pad[2] + pos[2];";
 
         default:
             throw std::invalid_argument("This format is not supported in GPU reorder");
@@ -199,6 +199,17 @@ struct reorder_gpu : is_an_implementation {
             s << " }";
             mem_consts.add_constant(gpu::make_jit_constant("SIZE", s.str()));
         }
+        {
+            std::stringstream s;
+            s << "(uint[]){ ";
+            for (uint32_t i = 0; i < output_mem.argument.size.raw.size(); i++)
+            {
+                s << static_cast<float>(output_mem.argument.padding.raw[i]) << ", ";
+            }
+            s << " }";
+            mem_consts.add_constant(gpu::make_jit_constant("PADDING", s.str()));
+        }
+
         if (have_subtraction)
         {
             auto& subtract_mem = outer.input_memory(1);
@@ -212,6 +223,17 @@ struct reorder_gpu : is_an_implementation {
             mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_FORMAT_IMPLEMENTATION", get_idx_calculation(subtract_mem.argument.format)));
             mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_TYPE", subtract_use_half ? std::string("half") : std::string("float")));
             mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_SRC_TYPE_CVT", subtract_input_type_cvt));
+            {
+                std::stringstream s;
+                s << "(uint[]){ ";
+                for (uint32_t i = 0; i < subtract_mem.argument.size.raw.size(); i++)
+                {
+                    s << static_cast<float>(subtract_mem.argument.padding.raw[i]) << ", ";
+                }
+                s << " }";
+                mem_consts.add_constant(gpu::make_jit_constant("SUBTRTACT_PADDING", s.str()));
+            }
+
         }
         else if (!outer.argument.subtract_per_feature.empty())
         {

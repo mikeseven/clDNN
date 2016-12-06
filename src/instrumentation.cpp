@@ -104,12 +104,22 @@ namespace neural {
                 {
                     auto mem_ptr = mem_prim.pointer<float>();
 
+                    input_it += mem_arg.padding.batch[0]
+                        * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0])
+                        * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
+                        * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
                     for (uint32_t b = 0; b < mem_arg.size.batch[0]; b++)
                     {
+                        input_it += mem_arg.padding.spatial[0]
+                            * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1]) 
+                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
                         for (uint32_t y = 0; y < mem_arg.size.spatial[1]; y++)
                         {
+                            input_it += mem_arg.padding.spatial[1]
+                                * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
                             for (uint32_t x = 0; x < mem_arg.size.spatial[0]; x++)
                             {
+                                input_it += mem_arg.padding.feature[0];
                                 for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
                                 {
                                     if ( (!single_batch || b == batch_id) && (!single_feature || f == feature_id) )
@@ -121,8 +131,14 @@ namespace neural {
                                     else
                                         input_it++;
                                 }
+                                input_it += mem_arg.padding.feature[0];
                             }
+                            input_it += mem_arg.padding.spatial[1]
+                                * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
                         }
+                        input_it += mem_arg.padding.spatial[0] 
+                            * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
+                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
                     }
                 }
                 break;
@@ -130,10 +146,22 @@ namespace neural {
                 {
                     auto mem_ptr = mem_prim.pointer<float>();
 
+                    input_it += mem_arg.padding.spatial[1]
+                        * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0])
+                        * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
+                        * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
                     for (uint32_t y = 0; y < mem_arg.size.spatial[1];y++)
                     {
-                        for (uint32_t x = 0; x < sizex;x++)
+                        input_it += mem_arg.padding.spatial[0] 
+                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
+                            * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
+                        for (uint32_t x = 0; x < sizex; x++)
+                        {
+                            input_it += mem_arg.padding.feature[0]
+                                * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
                             for (uint32_t f = 0; f < feature; f++)
+                            {
+                                input_it += mem_arg.padding.batch[0];
                                 for (uint32_t b = 0; b < batch; b++)
                                 {
                                     if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
@@ -145,14 +173,24 @@ namespace neural {
                                     else
                                         input_it++;
                                 }
+                                input_it += mem_arg.padding.batch[0];
+                            }
+                            input_it += mem_arg.padding.feature[0]
+                                * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
+                        }
+                        input_it += mem_arg.padding.spatial[0]
+                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
+                            * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
                     }
                 }
                 break;
             case memory::format::xb_f32:
                 {
                     auto mem_ptr = mem_prim.pointer<float>();
-
-                    for (uint32_t x = 0; x < sizex;x++)
+                    input_it += mem_arg.padding.spatial[0] * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
+                    for (uint32_t x = 0; x < sizex; x++)
+                    {
+                        input_it += mem_arg.padding.batch[0];
                         for (uint32_t b = 0; b < batch; b++)
                         {
                             if (!single_batch || b == batch_id)
@@ -162,6 +200,8 @@ namespace neural {
                             else
                                 input_it++;
                         }
+                        input_it += mem_arg.padding.batch[0];
+                    }
                 }
                 break;
 
@@ -169,13 +209,22 @@ namespace neural {
             case memory::format::byxf_f16:
                 {
                     auto mem_ptr = mem_prim.pointer<half_t>();
-
+                    input_it += mem_arg.padding.batch[0]
+                        * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0])
+                        * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
+                        * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
                     for (uint32_t b = 0; b < mem_arg.size.batch[0]; b++)
                     {
+                        input_it += mem_arg.padding.spatial[0]
+                            * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
+                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
                         for (uint32_t y = 0; y < mem_arg.size.spatial[1]; y++)
                         {
+                            input_it += mem_arg.padding.spatial[1]
+                                * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
                             for (uint32_t x = 0; x < mem_arg.size.spatial[0]; x++)
                             {
+                                input_it += mem_arg.padding.feature[0];
                                 for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
                                 {
                                     if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
@@ -187,8 +236,14 @@ namespace neural {
                                     else
                                         input_it++;
                                 }
+                                input_it += mem_arg.padding.feature[0];
                             }
+                            input_it += mem_arg.padding.spatial[1]
+                                * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
                         }
+                        input_it += mem_arg.padding.spatial[0]
+                            * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
+                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
                     }
                 }
                 break;
@@ -196,10 +251,22 @@ namespace neural {
                 {
                     auto mem_ptr = mem_prim.pointer<half_t>();
 
-                    for (uint32_t y = 0; y < mem_arg.size.spatial[1];y++)
+                    input_it += mem_arg.padding.spatial[1]
+                        * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0])
+                        * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
+                        * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
+                    for (uint32_t y = 0; y < mem_arg.size.spatial[1]; y++)
                     {
-                        for (uint32_t x = 0; x < sizex;x++)
+                        input_it += mem_arg.padding.spatial[0]
+                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
+                            * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
+                        for (uint32_t x = 0; x < sizex; x++)
+                        {
+                            input_it += mem_arg.padding.feature[0]
+                                * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
                             for (uint32_t f = 0; f < feature; f++)
+                            {
+                                input_it += mem_arg.padding.batch[0];
                                 for (uint32_t b = 0; b < batch; b++)
                                 {
                                     if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
@@ -211,21 +278,35 @@ namespace neural {
                                     else
                                         input_it++;
                                 }
+                                input_it += mem_arg.padding.batch[0];
+                            }
+                            input_it += mem_arg.padding.feature[0]
+                                * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
+                        }
+                        input_it += mem_arg.padding.spatial[0]
+                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
+                            * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
                     }
                 }
                 break;
             case memory::format::xb_f16:
                 {
                     auto mem_ptr = mem_prim.pointer<half_t>();
-
+                    input_it += mem_arg.padding.spatial[0] * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
                     for (uint32_t x = 0; x < sizex; x++)
+                    {
+                        input_it += mem_arg.padding.batch[0];
                         for (uint32_t b = 0; b < batch; b++)
+                        {
                             if (!single_batch || b == batch_id)
                             {
                                 streams[b][0] << convert_half_to_float(mem_ptr[input_it++]) << std::endl;
                             }
                             else
                                 input_it++;
+                        }
+                        input_it += mem_arg.padding.batch[0];
+                    }
                 }
                 break;
             default:

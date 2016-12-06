@@ -16,10 +16,10 @@
     #define SUBTRACT_SRC_TYPE_CVT_FUNC(val) val
 #endif
 
-uint FUNC(OUT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS]) {
+uint FUNC(OUT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS], uint pad[DIMENSIONS]) {
     OUT_FORMAT_IMPLEMENTATION
 }
-uint FUNC(SUBTRACT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS]) {
+uint FUNC(SUBTRACT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS], uint pad[DIMENSIONS]) {
 
     SUBTRACT_FORMAT_IMPLEMENTATION
 }
@@ -42,10 +42,10 @@ KERNEL (reorder_subtract_GPU)(const __global SRC_TYPE* input, __global DEST_TYPE
         pos1D /= SIZE[order_idx];
     }
 
-    uint output_pos = FUNC_CALL(OUT_FORMAT)(SIZE, pos);
+    uint output_pos = FUNC_CALL(OUT_FORMAT)(SIZE, pos, PADDING);
     // We set it to 0 because we subtract the same values from every input batch
     pos[0] = 0;
-    uint subtract_pos = FUNC_CALL(SUBTRACT_FORMAT)(SIZE, pos);
+    uint subtract_pos = FUNC_CALL(SUBTRACT_FORMAT)(SIZE, pos, SUBTRTACT_PADDING);
     uint input_idx = (global_id_2 * global_size_1 + global_id_1) * global_size_0 + global_id_0;
     output[output_pos] = SRC_DEST_TYPE_CVT_FUNC(input[input_idx] - SUBTRACT_SRC_TYPE_CVT_FUNC(subtract[subtract_pos]));
 }
