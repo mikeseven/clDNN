@@ -80,239 +80,237 @@ namespace neural {
 #endif
         }
 
+        float convert_element(float f)
+        {
+            return f;
+        }
+
+        float convert_element(half_t h)
+        {
+            return convert_half_to_float(h);
+        }
+
+        template<typename elemType>
+        void dump_byxf(const memory& mem, bool single_batch, uint32_t batch_id, bool single_feature, uint32_t feature_id, std::vector<std::vector<std::stringstream>> & streams)
+        {
+            auto mem_arg = mem.argument;
+            auto mem_ptr = mem.pointer<elemType>();
+
+            unsigned int input_it = mem_arg.padding.batch[0]
+                * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0])
+                * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
+                * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
+            for (uint32_t b = 0; b < mem_arg.size.batch[0]; b++)
+            {
+                input_it += mem_arg.padding.spatial[0]
+                    * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
+                    * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
+                for (uint32_t y = 0; y < mem_arg.size.spatial[1]; y++)
+                {
+                    input_it += mem_arg.padding.spatial[1]
+                        * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
+                    for (uint32_t x = 0; x < mem_arg.size.spatial[0]; x++)
+                    {
+                        input_it += mem_arg.padding.feature[0];
+                        for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
+                        {
+                            if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
+                            {
+                                streams[b][f] << convert_element(mem_ptr[input_it]) << " ";
+                                if (x == mem_arg.size.spatial[0] - 1)
+                                {
+                                    streams[b][f] << std::endl;
+                                }
+                            }
+                            input_it++;
+                        }
+                        input_it += mem_arg.padding.feature[0];
+                    }
+                    input_it += mem_arg.padding.spatial[1]
+                        * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
+                }
+                input_it += mem_arg.padding.spatial[0]
+                    * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
+                    * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
+            }
+        }
+
+        template<typename elemType>
+        void dump_bfyx(const memory& mem, bool single_batch, uint32_t batch_id, bool single_feature, uint32_t feature_id, std::vector<std::vector<std::stringstream>> & streams)
+        {
+            auto mem_arg = mem.argument;
+            auto mem_ptr = mem.pointer<elemType>();
+
+            unsigned int input_it = mem_arg.padding.batch[0]
+                * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
+                * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
+                * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0]);
+            for (uint32_t b = 0; b < mem_arg.size.batch[0]; b++)
+            {
+                input_it += mem_arg.padding.feature[0]
+                    * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
+                    * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0]);
+                for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
+                {
+                    input_it += mem_arg.padding.spatial[1]
+                        * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0]);
+                    for (uint32_t y = 0; y < mem_arg.size.spatial[1]; y++)
+                    {
+                        input_it += mem_arg.padding.spatial[0];
+                        for (uint32_t x = 0; x < mem_arg.size.spatial[0]; x++)
+                        {
+                            if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
+                            {
+                                streams[b][f] << convert_element(mem_ptr[input_it]) << " ";
+                                if (x == mem_arg.size.spatial[0] - 1)
+                                {
+                                    streams[b][f] << std::endl;
+                                }
+                            }
+                            input_it++;
+                        }
+                        input_it += mem_arg.padding.spatial[0];
+                    }
+                    input_it += mem_arg.padding.spatial[1]
+                        * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0]);
+                }
+                input_it += mem_arg.padding.feature[0]
+                    * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
+                    * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0]);
+            }
+        }
+
+        template<typename elemType>
+        void dump_yxfb(const memory& mem, bool single_batch, uint32_t batch_id, bool single_feature, uint32_t feature_id, std::vector<std::vector<std::stringstream>> & streams)
+        {
+            auto mem_arg = mem.argument;
+            auto mem_ptr = mem.pointer<elemType>();
+
+            unsigned int input_it = mem_arg.padding.spatial[1]
+                * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0])
+                * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
+                * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
+            for (uint32_t y = 0; y < mem_arg.size.spatial[1]; y++)
+            {
+                input_it += mem_arg.padding.spatial[0]
+                    * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
+                    * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
+                for (uint32_t x = 0; x < mem_arg.size.spatial[0]; x++)
+                {
+                    input_it += mem_arg.padding.feature[0]
+                        * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
+                    for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
+                    {
+                        input_it += mem_arg.padding.batch[0];
+                        for (uint32_t b = 0; b < mem_arg.size.batch[0]; b++)
+                        {
+                            if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
+                            {
+                                streams[b][f] << convert_element(mem_ptr[input_it]) << " ";
+                                if (x == mem_arg.size.spatial[0] - 1)
+                                {
+                                    streams[b][f] << std::endl;
+                                }
+                            }
+                            input_it++;
+                        }
+                        input_it += mem_arg.padding.batch[0];
+                    }
+                    input_it += mem_arg.padding.feature[0]
+                        * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
+                }
+                input_it += mem_arg.padding.spatial[0]
+                    * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
+                    * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
+            }
+        }
+
+        template<typename elemType>
+        void dump_xb(const memory& mem, bool single_batch, uint32_t batch_id, std::vector<std::vector<std::stringstream>> & streams)
+        {
+            auto mem_arg = mem.argument;
+            auto mem_ptr = mem.pointer<elemType>();
+
+            unsigned int input_it = mem_arg.padding.spatial[0] * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
+            for (uint32_t x = 0; x < mem_arg.size.spatial[0]; x++)
+            {
+                input_it += mem_arg.padding.batch[0];
+                for (uint32_t b = 0; b < mem_arg.size.batch[0]; b++)
+                {
+                    if (!single_batch || b == batch_id)
+                    {
+                        streams[b][0] << convert_element(mem_ptr[input_it]) << std::endl;
+                    }
+                    input_it++;
+                }
+                input_it += mem_arg.padding.batch[0];
+            }
+        }
+
         void logger::log_memory_to_file(const primitive& mem, std::string prefix, bool single_batch, uint32_t batch_id, bool single_feature, uint32_t feature_id)
         {
-            const auto& mem_prim = mem.id() == type_id<const memory>()->id ? mem.as<const memory&>() : mem.output[0].as<const memory&>();
+            const auto& mem_prim = get_memory_primitive(mem);
             auto mem_arg = mem_prim.argument;
 
             boost::filesystem::create_directories(dump_dir);
             auto batch = mem_arg.size.batch[0];
             auto feature = mem_arg.size.feature[0];
-            auto sizex = mem_arg.size.spatial[0];
             auto eng_type =  "gpu" ;
-            std::vector<std::vector<std::ofstream>> files_handels(batch);
             std::vector<std::vector<std::stringstream>> streams(batch);
             for(uint32_t b = 0; b < batch; b++)
             {
                 streams[b].resize(feature);
             }
-            int input_it = 0;
+
             switch (mem_arg.format)
             {
             // FP32 (float)
             case memory::format::byxf_f32:
                 {
-                    auto mem_ptr = mem_prim.pointer<float>();
-
-                    input_it += mem_arg.padding.batch[0]
-                        * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0])
-                        * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
-                        * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
-                    for (uint32_t b = 0; b < mem_arg.size.batch[0]; b++)
-                    {
-                        input_it += mem_arg.padding.spatial[0]
-                            * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1]) 
-                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
-                        for (uint32_t y = 0; y < mem_arg.size.spatial[1]; y++)
-                        {
-                            input_it += mem_arg.padding.spatial[1]
-                                * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
-                            for (uint32_t x = 0; x < mem_arg.size.spatial[0]; x++)
-                            {
-                                input_it += mem_arg.padding.feature[0];
-                                for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
-                                {
-                                    if ( (!single_batch || b == batch_id) && (!single_feature || f == feature_id) )
-                                    {
-                                        streams[b][f] << mem_ptr[input_it++] << " ";
-                                        if (x == sizex - 1)
-                                            streams[b][f] << std::endl;
-                                    }
-                                    else
-                                        input_it++;
-                                }
-                                input_it += mem_arg.padding.feature[0];
-                            }
-                            input_it += mem_arg.padding.spatial[1]
-                                * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
-                        }
-                        input_it += mem_arg.padding.spatial[0] 
-                            * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
-                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
-                    }
+                    dump_byxf<float>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
+                }
+                break;
+            case memory::format::bfyx_f32:
+                {
+                    dump_bfyx<float>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
                 }
                 break;
             case memory::format::yxfb_f32:
                 {
-                    auto mem_ptr = mem_prim.pointer<float>();
-
-                    input_it += mem_arg.padding.spatial[1]
-                        * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0])
-                        * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
-                        * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
-                    for (uint32_t y = 0; y < mem_arg.size.spatial[1];y++)
-                    {
-                        input_it += mem_arg.padding.spatial[0] 
-                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
-                            * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
-                        for (uint32_t x = 0; x < sizex; x++)
-                        {
-                            input_it += mem_arg.padding.feature[0]
-                                * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
-                            for (uint32_t f = 0; f < feature; f++)
-                            {
-                                input_it += mem_arg.padding.batch[0];
-                                for (uint32_t b = 0; b < batch; b++)
-                                {
-                                    if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
-                                    {
-                                        streams[b][f] << mem_ptr[input_it++] << " ";
-                                        if (x == sizex - 1)
-                                            streams[b][f] << std::endl;
-                                    }
-                                    else
-                                        input_it++;
-                                }
-                                input_it += mem_arg.padding.batch[0];
-                            }
-                            input_it += mem_arg.padding.feature[0]
-                                * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
-                        }
-                        input_it += mem_arg.padding.spatial[0]
-                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
-                            * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
-                    }
+                    dump_yxfb<float>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
                 }
                 break;
             case memory::format::xb_f32:
                 {
-                    auto mem_ptr = mem_prim.pointer<float>();
-                    input_it += mem_arg.padding.spatial[0] * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
-                    for (uint32_t x = 0; x < sizex; x++)
-                    {
-                        input_it += mem_arg.padding.batch[0];
-                        for (uint32_t b = 0; b < batch; b++)
-                        {
-                            if (!single_batch || b == batch_id)
-                            {
-                                streams[b][0] << mem_ptr[input_it++] << std::endl;
-                            }
-                            else
-                                input_it++;
-                        }
-                        input_it += mem_arg.padding.batch[0];
-                    }
+                    dump_xb<float>(mem_prim, single_batch, batch_id, streams);
                 }
                 break;
 
             // FP16 (half)
             case memory::format::byxf_f16:
                 {
-                    auto mem_ptr = mem_prim.pointer<half_t>();
-                    input_it += mem_arg.padding.batch[0]
-                        * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0])
-                        * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
-                        * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
-                    for (uint32_t b = 0; b < mem_arg.size.batch[0]; b++)
-                    {
-                        input_it += mem_arg.padding.spatial[0]
-                            * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
-                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
-                        for (uint32_t y = 0; y < mem_arg.size.spatial[1]; y++)
-                        {
-                            input_it += mem_arg.padding.spatial[1]
-                                * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
-                            for (uint32_t x = 0; x < mem_arg.size.spatial[0]; x++)
-                            {
-                                input_it += mem_arg.padding.feature[0];
-                                for (uint32_t f = 0; f < mem_arg.size.feature[0]; f++)
-                                {
-                                    if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
-                                    {
-                                        streams[b][f] << convert_half_to_float(mem_ptr[input_it++]) << " ";
-                                        if (x == sizex - 1)
-                                            streams[b][f] << std::endl;
-                                    }
-                                    else
-                                        input_it++;
-                                }
-                                input_it += mem_arg.padding.feature[0];
-                            }
-                            input_it += mem_arg.padding.spatial[1]
-                                * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
-                        }
-                        input_it += mem_arg.padding.spatial[0]
-                            * (2 * mem_arg.padding.spatial[1] + mem_arg.size.spatial[1])
-                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0]);
-                    }
+                    dump_byxf<half_t>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
+                }
+                break;
+            case memory::format::bfyx_f16:
+                {
+                    dump_bfyx<half_t>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
                 }
                 break;
             case memory::format::yxfb_f16:
                 {
-                    auto mem_ptr = mem_prim.pointer<half_t>();
-
-                    input_it += mem_arg.padding.spatial[1]
-                        * (2 * mem_arg.padding.spatial[0] + mem_arg.size.spatial[0])
-                        * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
-                        * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
-                    for (uint32_t y = 0; y < mem_arg.size.spatial[1]; y++)
-                    {
-                        input_it += mem_arg.padding.spatial[0]
-                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
-                            * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
-                        for (uint32_t x = 0; x < sizex; x++)
-                        {
-                            input_it += mem_arg.padding.feature[0]
-                                * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
-                            for (uint32_t f = 0; f < feature; f++)
-                            {
-                                input_it += mem_arg.padding.batch[0];
-                                for (uint32_t b = 0; b < batch; b++)
-                                {
-                                    if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
-                                    {
-                                        streams[b][f] << convert_half_to_float(mem_ptr[input_it++]) << " ";
-                                        if (x == sizex - 1)
-                                            streams[b][f] << std::endl;
-                                    }
-                                    else
-                                        input_it++;
-                                }
-                                input_it += mem_arg.padding.batch[0];
-                            }
-                            input_it += mem_arg.padding.feature[0]
-                                * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
-                        }
-                        input_it += mem_arg.padding.spatial[0]
-                            * (2 * mem_arg.padding.feature[0] + mem_arg.size.feature[0])
-                            * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
-                    }
+                    dump_yxfb<half_t>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
                 }
                 break;
             case memory::format::xb_f16:
                 {
-                    auto mem_ptr = mem_prim.pointer<half_t>();
-                    input_it += mem_arg.padding.spatial[0] * (2 * mem_arg.padding.batch[0] + mem_arg.size.batch[0]);
-                    for (uint32_t x = 0; x < sizex; x++)
-                    {
-                        input_it += mem_arg.padding.batch[0];
-                        for (uint32_t b = 0; b < batch; b++)
-                        {
-                            if (!single_batch || b == batch_id)
-                            {
-                                streams[b][0] << convert_half_to_float(mem_ptr[input_it++]) << std::endl;
-                            }
-                            else
-                                input_it++;
-                        }
-                        input_it += mem_arg.padding.batch[0];
-                    }
+                    dump_xb<half_t>(mem_prim, single_batch, batch_id, streams);
                 }
-                break;
+            break;
+
             default:
                 throw std::runtime_error("format not implemented yet");
             }
-
 
             for (uint32_t b = 0; b < batch; b++)
                 for (uint32_t f = 0; f < feature; f++)
