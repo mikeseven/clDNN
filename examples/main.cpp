@@ -307,7 +307,7 @@ int main(int argc, char* argv[])
         }
         if (!parsed_args.count("input") && !parsed_args.count("convert") && !microbench)
         {
-            std::cerr << "ERROR: none of required options was specified (either --input or\n";
+            std::cerr << "ERROR: none of required options was specified (either --input or microbench\n";
             std::cerr << "       --convert is needed)!!!\n\n";
             std::cerr << options.help_message() << std::endl;
             return 1;
@@ -332,87 +332,86 @@ int main(int argc, char* argv[])
             convert_weights(parsed_args["convert"].as<neural::memory::format::type>(), convert_filter);
             return 0;
         }
-        else {
-            // Execute network otherwise.
-            execution_params ep;
-            if (parsed_args.count("input"))
-            {
-                // Validate input directory.
-                auto input_dir = parsed_args["input"].as<std::string>();
-                if (!bfs::exists(input_dir) || !bfs::is_directory(input_dir))
-                {
-                    std::cerr << "ERROR: specified input images path (\"" << input_dir
-                        << "\") does not exist or does not point to directory (--input option invalid)!!!" << std::endl;
-                    return 1;
-                }
 
-                // Determine weights directory (either based on executable directory - if not specified, or
-                // relative to current working directory or absolute - if specified).
-                auto weights_dir = parsed_args.count("weights")
-                    ? bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string()
-                    : join_path(exec_info->dir(), "weights");
-                // Validate weights directory.
-                if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
-                {
-                    std::cerr << "ERROR: specified network weights path (\"" << weights_dir
-                        << "\") does not exist or does not point to directory (--weights option invald)!!!" << std::endl;
-                    return 1;
-                }
-
-                ep.input_dir = input_dir;
-                ep.weights_dir = weights_dir;
-            }
-            else if (microbench)
+        // Execute network otherwise.
+        execution_params ep;
+        if (parsed_args.count("input"))
+        {
+            // Validate input directory.
+            auto input_dir = parsed_args["input"].as<std::string>();
+            if (!bfs::exists(input_dir) || !bfs::is_directory(input_dir))
             {
-                ep.input_dir = "NA";
-                ep.weights_dir = "NA";
+                std::cerr << "ERROR: specified input images path (\"" << input_dir
+                    << "\") does not exist or does not point to directory (--input option invalid)!!!" << std::endl;
+                return 1;
             }
 
-            std::string dump_layer = "";
-            if (parsed_args.count("dump_layer"))
+            // Determine weights directory (either based on executable directory - if not specified, or
+            // relative to current working directory or absolute - if specified).
+            auto weights_dir = parsed_args.count("weights")
+                ? bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string()
+                : join_path(exec_info->dir(), "weights");
+            // Validate weights directory.
+            if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
             {
-                dump_layer = parsed_args["dump_layer"].as<std::string>();
+                std::cerr << "ERROR: specified network weights path (\"" << weights_dir
+                    << "\") does not exist or does not point to directory (--weights option invald)!!!" << std::endl;
+                return 1;
             }
 
-            std::string run_single_layer = "";
-            if (parsed_args.count("run_single_layer"))
-            {
-                run_single_layer = parsed_args["run_single_layer"].as<std::string>();
-            }
-            ep.topology_name = parsed_args["model"].as<std::string>();
-            ep.batch = parsed_args["batch"].as<std::uint32_t>();
-            ep.profiling = parsed_args["profiling"].as<bool>();
-            ep.optimize_weights = parsed_args["optimize_weights"].as<bool>();
-            ep.use_half = parsed_args["use_half"].as<bool>();
-            ep.run_single_layer = run_single_layer;
-            ep.dump_hidden_layers = parsed_args["dump_hidden_layers"].as<bool>();
-            ep.dump_layer_name = dump_layer;
-            ep.dump_single_batch = parsed_args.count("dump_batch") != 0;
-            ep.dump_batch_id = ep.dump_single_batch ? parsed_args["dump_batch"].as<uint32_t>() : 0;
-            ep.dump_single_feature = parsed_args.count("dump_feature") != 0;
-            ep.dump_feature_id = ep.dump_single_feature ? parsed_args["dump_feature"].as<uint32_t>() : 0;
-            ep.perf_per_watt = parsed_args["perf_per_watt"].as<bool>();
-            ep.loop = parsed_args["loop"].as<std::uint32_t>();
-
-            std::uint32_t print = parsed_args["print_type"].as<std::uint32_t>();
-            ep.print_type = (PrintType)((print >= (std::uint32_t)PrintType::PrintType_count) ? 0 : print);
-
-            if (ep.topology_name == "alexnet" ||
-                ep.topology_name == "vgg16" ||
-                ep.topology_name == "googlenet" ||
-                ep.topology_name == "gender" ||
-                ep.topology_name == "microbench")
-            {
-                run_topology(ep);
-                return 0;
-            }
-            else
-            {
-                std::cerr << "ERROR: model/topology (\"" << ep.topology_name << "\") is not implemented!!!" << std::endl;
-            }
+            ep.input_dir = input_dir;
+            ep.weights_dir = weights_dir;
         }
-        // No need for "else": We already handled when neither --input nor --convert is specified.
+        else if (microbench)
+        {
+            ep.input_dir = "NA";
+            ep.weights_dir = "NA";
+        }
+
+        std::string dump_layer = "";
+        if (parsed_args.count("dump_layer"))
+        {
+            dump_layer = parsed_args["dump_layer"].as<std::string>();
+        }
+
+        std::string run_single_layer = "";
+        if (parsed_args.count("run_single_layer"))
+        {
+            run_single_layer = parsed_args["run_single_layer"].as<std::string>();
+        }
+        ep.topology_name = parsed_args["model"].as<std::string>();
+        ep.batch = parsed_args["batch"].as<std::uint32_t>();
+        ep.profiling = parsed_args["profiling"].as<bool>();
+        ep.optimize_weights = parsed_args["optimize_weights"].as<bool>();
+        ep.use_half = parsed_args["use_half"].as<bool>();
+        ep.run_single_layer = run_single_layer;
+        ep.dump_hidden_layers = parsed_args["dump_hidden_layers"].as<bool>();
+        ep.dump_layer_name = dump_layer;
+        ep.dump_single_batch = parsed_args.count("dump_batch") != 0;
+        ep.dump_batch_id = ep.dump_single_batch ? parsed_args["dump_batch"].as<uint32_t>() : 0;
+        ep.dump_single_feature = parsed_args.count("dump_feature") != 0;
+        ep.dump_feature_id = ep.dump_single_feature ? parsed_args["dump_feature"].as<uint32_t>() : 0;
+        ep.perf_per_watt = parsed_args["perf_per_watt"].as<bool>();
+        ep.loop = parsed_args["loop"].as<std::uint32_t>();
+
+        std::uint32_t print = parsed_args["print_type"].as<std::uint32_t>();
+        ep.print_type = (PrintType)((print >= (std::uint32_t)PrintType::PrintType_count) ? 0 : print);
+
+        if (ep.topology_name == "alexnet" ||
+            ep.topology_name == "vgg16" ||
+            ep.topology_name == "googlenet" ||
+            ep.topology_name == "gender" ||
+            ep.topology_name == "microbench")
+        {
+            run_topology(ep);
+            return 0;
+        }
+        else
+        {
+            std::cerr << "ERROR: model/topology (\"" << ep.topology_name << "\") is not implemented!!!" << std::endl;
+        }
     }
+
     catch (const std::exception& ex)
     {
         std::cerr << "ERROR: " << ex.what() << "!!!" << std::endl;
