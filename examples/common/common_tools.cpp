@@ -541,13 +541,6 @@ void run_topology(const execution_params &ep)
         }
     }
 
-    auto img_list = get_directory_images(ep.input_dir);
-    if (img_list.empty())
-        throw std::runtime_error("specified input images directory is empty (does not contain image data)");
-
-    auto number_of_batches = (img_list.size() % batch_size == 0)
-        ? img_list.size() / batch_size : img_list.size() / batch_size + 1;
-
     html output_file(ep.topology_name, ep.topology_name + " run");
 
     weights_optimizer weights_optimizer(ep.optimize_weights, ep.use_half);
@@ -592,13 +585,18 @@ void run_topology(const execution_params &ep)
     auto output = primitives.back().first.output[0];
     auto input = primitives.front().first.input[0].primitive();
 
-    std::vector<std::string> images_in_batch;
-    auto images_list_iterator = img_list.begin();
-    auto images_list_end = img_list.end();
-    for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
+    if (ep.topology_name != "microbench")
     {
-        // We do not load anything for microbench
-        if (ep.topology_name != "microbench")
+        auto img_list = get_directory_images(ep.input_dir);
+        if (img_list.empty())
+            throw std::runtime_error("specified input images directory is empty (does not contain image data)");
+
+        auto number_of_batches = (img_list.size() % batch_size == 0)
+            ? img_list.size() / batch_size : img_list.size() / batch_size + 1;
+        std::vector<std::string> images_in_batch;
+        auto images_list_iterator = img_list.begin();
+        auto images_list_end = img_list.end();
+        for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
         {
             images_in_batch.clear();
             for (uint32_t i = 0; i < batch_size && images_list_iterator != images_list_end; ++i, ++images_list_iterator)
@@ -615,17 +613,31 @@ void run_topology(const execution_params &ep)
             {
                 load_images_from_file_list(images_in_batch, input);
             }
-        }
 
-        // execute alexnet
-        auto time = execute_topology(worker, primitives, ep, energyLib);
+            auto time = execute_topology(worker, primitives, ep, energyLib);
 
-        auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-        // We do not save results for microbench
-        if (ep.topology_name != "microbench")
-        {
+            auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
+
             output_file.batch(output, join_path(get_executable_info()->dir(), "names.txt"), images_in_batch, ep.print_type);
+
+            if (time_in_sec != 0.0)
+            {
+                if (ep.print_type != ExtendedTesting)
+                {
+                    std::cout << "Frames per second:" << (double)(ep.loop * batch_size) / time_in_sec << std::endl;
+
+                    if (ep.perf_per_watt)
+                    {
+                        if (!energyLib.print_power_results((double)(ep.loop * batch_size) / time_in_sec))
+                            std::cout << "WARNING: power file parsing failed." << std::endl;
+                    }
+                }
+            }
         }
+    }
+    else {
+        auto time = execute_topology(worker, primitives, ep, energyLib);
+        auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
         if (time_in_sec != 0.0)
         {
             if (ep.print_type != ExtendedTesting)
@@ -640,6 +652,7 @@ void run_topology(const execution_params &ep)
             }
         }
     }
+
 }
 
 // Optimizing weights

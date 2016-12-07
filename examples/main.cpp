@@ -178,7 +178,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Number of iterations to run each execution. Can be used for robust benchmarking. (default 1)")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
-            "It can be one of:\n  \talexnet, vgg16, googlenet, gender.")
+            "It can be one of:\n  \talexnet, vgg16, googlenet, gender, microbench.")
         ("run_single_layer", bpo::value<std::string>()->value_name("<layer_name>"),
             "Runs only a specified layer from topology")
         ("engine", bpo::value<neural::engine::type>()->value_name("<eng-type>")->default_value(neural::engine::reference, "reference"),
@@ -276,7 +276,7 @@ int main(int argc, char* argv[])
 {
     namespace bpo = boost::program_options;
     namespace bfs = boost::filesystem;
-
+    bool microbench = false;
     // TODO: create header file for all examples
     extern void alexnet(const execution_params &ep);
     extern void vgg16(const execution_params &ep);
@@ -293,7 +293,7 @@ int main(int argc, char* argv[])
     try
     {
         parsed_args = parse_cmdline_options(options, argc, argv);
-
+        microbench = parsed_args["model"].as<std::string>() == "microbench";
         if (parsed_args.count("help"))
         {
             std::cerr << options.version_message() << "\n\n";
@@ -305,7 +305,7 @@ int main(int argc, char* argv[])
             std::cerr << options.version_message() << std::endl;
             return 0;
         }
-        if (!parsed_args.count("input") && !parsed_args.count("convert"))
+        if (!parsed_args.count("input") && !parsed_args.count("convert") && !microbench)
         {
             std::cerr << "ERROR: none of required options was specified (either --input or\n";
             std::cerr << "       --convert is needed)!!!\n\n";
@@ -332,29 +332,40 @@ int main(int argc, char* argv[])
             convert_weights(parsed_args["convert"].as<neural::memory::format::type>(), convert_filter);
             return 0;
         }
-        // Execute network otherwise.
-        if (parsed_args.count("input"))
-        {
-            // Validate input directory.
-            auto input_dir = parsed_args["input"].as<std::string>();
-            if (!bfs::exists(input_dir) || !bfs::is_directory(input_dir))
+        else {
+            // Execute network otherwise.
+            execution_params ep;
+            if (parsed_args.count("input"))
             {
-                std::cerr << "ERROR: specified input images path (\"" << input_dir
-                    << "\") does not exist or does not point to directory (--input option invalid)!!!" << std::endl;
-                return 1;
-            }
+                // Validate input directory.
+                auto input_dir = parsed_args["input"].as<std::string>();
+                if (!bfs::exists(input_dir) || !bfs::is_directory(input_dir))
+                {
+                    std::cerr << "ERROR: specified input images path (\"" << input_dir
+                        << "\") does not exist or does not point to directory (--input option invalid)!!!" << std::endl;
+                    return 1;
+                }
 
-            // Determine weights directory (either based on executable directory - if not specified, or
-            // relative to current working directory or absolute - if specified).
-            auto weights_dir = parsed_args.count("weights")
-                ? bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string()
-                : join_path(exec_info->dir(), "weights");
-            // Validate weights directory.
-            if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
+                // Determine weights directory (either based on executable directory - if not specified, or
+                // relative to current working directory or absolute - if specified).
+                auto weights_dir = parsed_args.count("weights")
+                    ? bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string()
+                    : join_path(exec_info->dir(), "weights");
+                // Validate weights directory.
+                if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
+                {
+                    std::cerr << "ERROR: specified network weights path (\"" << weights_dir
+                        << "\") does not exist or does not point to directory (--weights option invald)!!!" << std::endl;
+                    return 1;
+                }
+
+                ep.input_dir = input_dir;
+                ep.weights_dir = weights_dir;
+            }
+            else if (microbench)
             {
-                std::cerr << "ERROR: specified network weights path (\"" << weights_dir
-                    << "\") does not exist or does not point to directory (--weights option invald)!!!" << std::endl;
-                return 1;
+                ep.input_dir = "NA";
+                ep.weights_dir = "NA";
             }
 
             std::string dump_layer = "";
@@ -362,16 +373,12 @@ int main(int argc, char* argv[])
             {
                 dump_layer = parsed_args["dump_layer"].as<std::string>();
             }
-            
+
             std::string run_single_layer = "";
             if (parsed_args.count("run_single_layer"))
             {
                 run_single_layer = parsed_args["run_single_layer"].as<std::string>();
             }
-
-            execution_params ep;
-            ep.input_dir = input_dir;
-            ep.weights_dir = weights_dir;
             ep.topology_name = parsed_args["model"].as<std::string>();
             ep.batch = parsed_args["batch"].as<std::uint32_t>();
             ep.profiling = parsed_args["profiling"].as<bool>();
@@ -404,7 +411,6 @@ int main(int argc, char* argv[])
                 std::cerr << "ERROR: model/topology (\"" << ep.topology_name << "\") is not implemented!!!" << std::endl;
             }
         }
-
         // No need for "else": We already handled when neither --input nor --convert is specified.
     }
     catch (const std::exception& ex)

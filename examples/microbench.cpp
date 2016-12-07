@@ -53,50 +53,172 @@ primitive test_conv(
 
 std::vector<std::pair<primitive, std::string>> build_microbench(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half)
 {
-    auto conv1 = test_conv(
+    auto conv1_7x7_s2 = test_conv(
         batch_size,
-        424, 712, 3,
-        { 0, { -1, -1 }, 0 },
-        { 1, { 2, 2 }, 1 },
-        32,
-        3, 3,
+        224, 224, 3, // input: x,y,f
+        { 0,{ -3, -3 }, 0 }, // padding
+        { 1,{ 2, 2 }, 1 }, // stride
+        64, // output feature maps num
+        7, 7, // kernel size
         use_half
     );
 
-    auto conv2 = test_conv(
+    auto conv2_3x3_reduce = test_conv(
         batch_size,
-        212, 356, 32,
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        32,
-        3, 3,
+        56, 56, 64, // input: x,y,f
+        { 0,{ 0, 0 }, 0 }, // padding
+        { 1,{ 2, 2 }, 1 }, // stride
+        64, // output feature maps num
+        1, 1, // kernel size
         use_half
     );
 
-    auto conv3 = test_conv(
+    auto conv2_3x3 = test_conv(
         batch_size,
-        212, 356, 32,
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        64,
-        3, 3,
+        56, 56, 64, // input: x,y,f
+        { 0,{ -1, -1 }, 0 }, // padding
+        { 1,{ 1, 1 }, 1 }, // stride
+        192, // output feature maps num
+        3, 3, // kernel size
         use_half
     );
 
-    auto conv4 = test_conv(
+    auto inception_3a_1x1 = test_conv(
         batch_size,
-        106, 178, 64,
-        { 0,{ 0, 0 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        48,
-        1, 1,
+        28, 28, 192, // input: x,y,f
+        { 0,{ 0, 0 }, 0 }, // padding
+        { 1,{ 1, 1 }, 1 }, // stride
+        64, // output feature maps num
+        1, 1, // kernel size
+        use_half
+    );
+
+    auto inception_3a_3x3_reduce = test_conv(
+        batch_size,
+        28, 28, 64, // input: x,y,f
+        { 0,{ 0, 0 }, 0 }, // padding
+        { 1,{ 1, 1 }, 1 }, // stride
+        64, // output feature maps num
+        1, 1, // kernel size
+        use_half
+    );
+
+    auto inception_3a_3x3 = test_conv(
+        batch_size,
+        28, 28, 192, // input: x,y,f
+        { 0,{ -1, -1 }, 0 }, // padding
+        { 1,{ 1, 1 }, 1 }, // stride
+        64, // output feature maps num
+        3, 3, // kernel size
+        use_half
+    );
+
+    auto inception_3a_double3x3_reduce = test_conv(
+        batch_size,
+        28, 28, 192, // input: x,y,f
+        { 0,{ 0, 0 }, 0 }, // padding
+        { 1,{ 1, 1 }, 1 }, // stride
+        64, // output feature maps num
+        1, 1, // kernel size
+        use_half
+    );
+    
+    auto inception_3a_double3x3a = test_conv(
+        batch_size,
+        28, 28, 64, // input: x,y,f
+        { 0,{ -1, -1 }, 0 }, // padding
+        { 1,{ 1, 1 }, 1 }, // stride
+        96, // output feature maps num
+        3, 3, // kernel size
+        use_half
+    );
+
+    auto inception_3a_double3x3b = test_conv(
+        batch_size,
+        28, 28, 96, // input: x,y,f
+        { 0,{ -1, -1 }, 0 }, // padding
+        { 1,{ 1, 1 }, 1 }, // stride
+        96, // output feature maps num
+        3, 3, // kernel size
+        use_half
+    );
+
+    auto inception_3b_1x1 = test_conv(
+        batch_size,
+        28, 28, 256, // input: x,y,f
+        { 0,{ 0, 0 }, 0 }, // padding
+        { 1,{ 1, 1 }, 1 }, // stride
+        64, // output feature maps num
+        1, 1, // kernel size
+        use_half
+    );
+
+    auto inception_3b_3x3_reduce = test_conv(
+        batch_size,
+        28, 28, 64, // input: x,y,f
+        { 0,{ 0, 0 }, 0 }, // padding
+        { 1,{ 1, 1 }, 1 }, // stride
+        64, // output feature maps num
+        1, 1, // kernel size
+        use_half
+    );
+
+    auto inception_3b_3x3 = test_conv(
+        batch_size,
+        28, 28, 192, // input: x,y,f
+        { 0,{ -1, -1 }, 0 }, // padding
+        { 1,{ 1, 1 }, 1 }, // stride
+        64, // output feature maps num
+        3, 3, // kernel size
+        use_half
+    );
+
+
+    auto inception_3b_double3x3_reduce = test_conv(
+        batch_size,
+        28, 28, 192, // input: x,y,f
+        { 0,{ 0, 0 }, 0 }, // padding
+        { 1,{ 1, 1 }, 1 }, // stride
+        64, // output feature maps num
+        1, 1, // kernel size
+        use_half
+    );
+
+    auto inception_3b_double3x3a = test_conv(
+        batch_size,
+        28, 28, 64, // input: x,y,f
+        { 0,{ -1, -1 }, 0 }, // padding
+        { 1,{ 1, 1 }, 1 }, // stride
+        96, // output feature maps num
+        3, 3, // kernel size
+        use_half
+    );
+
+    auto inception_3b_double3x3b = test_conv(
+        batch_size,
+        28, 28, 96, // input: x,y,f
+        { 0,{ -1, -1 }, 0 }, // padding
+        { 1,{ 1, 1 }, 1 }, // stride
+        96, // output feature maps num
+        3, 3, // kernel size
         use_half
     );
 
     return std::vector<std::pair<primitive, std::string>> {
-        { conv1, "conv1"},
-        { conv2, "conv2"},
-        { conv3, "conv3"},
-        { conv4, "conv4"}
+        {conv1_7x7_s2, "conv1_7x7_s2"},
+        { conv2_3x3_reduce,"conv2_3x3_reduce" },
+        { conv2_3x3,"conv2_3x3" },
+        { inception_3a_1x1,"inception_3a_1x1" },
+        { inception_3a_3x3_reduce,"inception_3a_3x3_reduce" },
+        { inception_3a_3x3,"inception_3a_3x3" },
+        { inception_3a_double3x3_reduce,"inception_3a_double3x3_reduce" },
+        { inception_3a_double3x3a,"inception_3a_double3x3a" },
+        { inception_3a_double3x3b,"inception_3a_double3x3b" },
+        { inception_3b_1x1,"inception_3b_1x1" },
+        { inception_3b_3x3_reduce,"inception_3b_3x3_reduce" },
+        { inception_3b_3x3,"inception_3b_3x3" },
+        { inception_3b_double3x3_reduce,"inception_3b_double3x3_reduce" },
+        { inception_3b_double3x3a,"inception_3b_double3x3a" },
+        { inception_3b_double3x3b,"inception_3b_double3x3b" },
     };
 }
