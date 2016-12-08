@@ -27,26 +27,21 @@ namespace neural { namespace gpu {
 const char program_dump_file_name[] = "clDNN_program.cl";
 
 static const char* kernels_header = R"__krnl(
-enum neural_memory_format {
-    x_f32,
-    xb_f32,     // 1D+batch, float32
-    bx_f32,     // 1D+batch, float32
-    yxfb_f32,   // 3D+batch, float32
-    byxf_f32,   // for convolution_cpu_jit_batch1
-    bfyx_f32,   // used in Caffe
-    fyxb_f32,   // used in Caffe
-    oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
-    byxf_b24_f32,        // for convolution_cpu_generic
-    yxoi_o4_f32,       // for convolution_cpu_generic
-    os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
-    bs_yxf_bv24_f32,
-    any=-1
-};
-
-#define neural_memory float
-
-__attribute__((overloadable)) __global void* get_data(__global neural_memory* mem) { return mem; }
-__attribute__((overloadable)) const __global void* get_data(const __global neural_memory* mem) { return mem; }
+#define CAT(x, y) x##y
+#define LOOP1(VAR, STMT) (STMT); (VAR)++;
+#define LOOP2(VAR, STMT) LOOP1(VAR, STMT); (STMT); (VAR)++;
+#define LOOP3(VAR, STMT) LOOP2(VAR, STMT); (STMT); (VAR)++;
+#define LOOP4(VAR, STMT) LOOP3(VAR, STMT); (STMT); (VAR)++;
+#define LOOP5(VAR, STMT) LOOP4(VAR, STMT); (STMT); (VAR)++;
+#define LOOP6(VAR, STMT) LOOP5(VAR, STMT); (STMT); (VAR)++;
+#define LOOP7(VAR, STMT) LOOP6(VAR, STMT); (STMT); (VAR)++;
+#define LOOP8(VAR, STMT) LOOP7(VAR, STMT); (STMT); (VAR)++;
+#define LOOP9(VAR, STMT) LOOP8(VAR, STMT); (STMT); (VAR)++;
+#define LOOP10(VAR, STMT) LOOP9(VAR, STMT); (STMT); (VAR)++;
+#define LOOP11(VAR, STMT) LOOP10(VAR, STMT); (STMT); (VAR)++;
+#define LOOP12(VAR, STMT) LOOP11(VAR, STMT); (STMT); (VAR)++;
+#define LOOP13(VAR, STMT) LOOP12(VAR, STMT); (STMT); (VAR)++;
+#define LOOP(N, VAR, STMT) CAT(LOOP, N)((VAR), (STMT))
 
 #define TRANSPOSE_BLOCK_8( _block )   \
         (float8)( intel_sub_group_shuffle( _block, 0 ), \

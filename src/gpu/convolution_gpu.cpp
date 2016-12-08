@@ -34,6 +34,7 @@ static const std::string kernel_name_yxfb_yxio_b8 = "convolution_gpu_yxfb_yxio_b
 static const std::string kernel_name_yxfb_yxio_b16 = "convolution_gpu_yxfb_yxio_b16";
 static const std::string kernel_name_yxfb_yxio_b16_fp16 = "convolution_gpu_yxfb_yxio_b16_fp16";
 static const std::string kernel_name_yxfb_yxio_fp16 = "convolution_gpu_yxfb_yxio_fp16";
+static const std::string kernel_name_bfyx_yxio_b1 = "convolution_gpu_bfyx_yxio_b1";
 
 // GPU engine information helpers.
 namespace
@@ -50,7 +51,7 @@ struct gpu_info_helper : gpu::context_holder
 template<typename T, typename U>
 class kernel_selector
 {
-    using key_type = std::tuple<neural::memory::format::type, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations>;
+    using key_type = std::tuple<neural::memory::format::type, neural::memory::format::type, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations>;
     using kernel_map_hash = boost::hash<key_type>;
     using kernel_map = std::unordered_map<key_type, T(*)(const U&), kernel_map_hash>;
     using kernel_element = typename kernel_map::value_type;
@@ -61,18 +62,18 @@ public:
         _kernel_map(l)
     {
     }
-    T get_kernel(const U& arg, neural::memory::format::type format, int batch_size, neural::gpu::engine_info::architectures architecture, neural::gpu::engine_info::configurations configuration)
+    T get_kernel(const U& arg, neural::memory::format::type input_format, neural::memory::format::type format, int batch_size, neural::gpu::engine_info::architectures architecture, neural::gpu::engine_info::configurations configuration)
     {
-        auto value = _kernel_map.find(std::make_tuple(format, batch_size, architecture, configuration));
+        auto value = _kernel_map.find(std::make_tuple(input_format, format, batch_size, architecture, configuration));
         if (value == _kernel_map.end())
         {
-            value = _kernel_map.find(std::make_tuple(format, batch_size, architecture, gpu::engine_info::configurations::GT_UNKNOWN));
+            value = _kernel_map.find(std::make_tuple(input_format, format, batch_size, architecture, gpu::engine_info::configurations::GT_UNKNOWN));
             if (value == _kernel_map.end())
             {
-                value = _kernel_map.find(std::make_tuple(format, batch_size, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN));
+                value = _kernel_map.find(std::make_tuple(input_format, format, batch_size, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN));
                 if (value == _kernel_map.end())
                 {
-                    value = _kernel_map.find(std::make_tuple(format, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN));
+                    value = _kernel_map.find(std::make_tuple(input_format, format, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN));
                     if (value == _kernel_map.end())
                     {
                         throw std::runtime_error("ERROR: no default element in map for convolution kernels!");
@@ -93,7 +94,7 @@ struct convolution_gpu : is_an_implementation {
     struct kernel_data
     {
         size_t gws0, gws1, gws2;
-        size_t lws0;
+        size_t lws0, lws1, lws2;
         size_t ofm_per_work_item; // how many output feature maps a single work item compute
         size_t batches_per_work_item; // how many batches will a single work item compute
         std::string kernel_name;
@@ -116,6 +117,8 @@ struct convolution_gpu : is_an_implementation {
         }
         kd.gws1 = output_mem.argument.size.spatial[0];
         kd.gws2 = output_mem.argument.size.spatial[1];
+        kd.lws1 = 1;
+        kd.lws2 = 1;
         kd.ofm_per_work_item = 1;
         kd.batches_per_work_item = 1;
         return kd;
@@ -126,7 +129,7 @@ struct convolution_gpu : is_an_implementation {
     convolution_gpu(convolution &arg): is_an_implementation(neural::type_id<convolution_gpu>())
         , outer(arg)
         , _engine_info(gpu_info_helper().get_engine_info())
-        , _kernel_data(ks.get_kernel(outer, outer.input_memory(1).argument.format, outer.input_memory(0).argument.size.batch[0], _engine_info.architecture, _engine_info.configuration))
+        , _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument.format, outer.input_memory(1).argument.format, outer.input_memory(0).argument.size.batch[0], _engine_info.architecture, _engine_info.configuration))
         , _kernel(gpu::kernel(_kernel_data.kernel_name, get_jit_constants()))
     {}
 
@@ -235,9 +238,9 @@ struct convolution_gpu : is_an_implementation {
 
         // execute kernels
         for (uint32_t i = 0; i < split; i++) {
-            assert(kd.gws0 % kd.lws0 == 0);
+            //assert(kd.gws0 % kd.lws0 == 0);
             me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, 1, 1 } },
+                ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
                     input_mem,
                     output_mem,
                     outer.input_memory(i * 2 + 1), //filters
@@ -438,32 +441,49 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
     return kd;
 }
 
-kernel_selector<convolution_gpu::kernel_data, convolution> convolution_gpu::ks = { 
-    { std::make_tuple(memory::format::oiyx_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_oiyx_f32 },
-    { std::make_tuple(memory::format::yxio_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32 },
-    { std::make_tuple(memory::format::yxio_f32, 1, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b1 },
-    { std::make_tuple(memory::format::yxio_f32, 8, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
-    { std::make_tuple(memory::format::yxio_f32, 16, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
-    { std::make_tuple(memory::format::yxio_f32, 32, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
-    { std::make_tuple(memory::format::yxio_f32, 64, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
-    { std::make_tuple(memory::format::yxio_f32, 128, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+convolution_gpu::kernel_data defauly_bfyx_yxio_b1_f32(const convolution& arg)
+{
+    auto& output_mem = arg.output_memory(0);
 
-    { std::make_tuple(memory::format::yxio_f16, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16 },
-    { std::make_tuple(memory::format::yxio_f16, 16, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
-    { std::make_tuple(memory::format::yxio_f16, 32, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
-    { std::make_tuple(memory::format::yxio_f16, 64, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
-    { std::make_tuple(memory::format::yxio_f16, 128, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    int block_width = 4;
+    int block_height = 3;
+
+    convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
+    kd.kernel_name = kernel_name_bfyx_yxio_b1;
+    kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument.size.spatial[0]) / block_width));
+    kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument.size.spatial[1]) / block_height));
+    kd.gws2 = output_mem.argument.size.feature[0];
+    kd.lws0 = 1;
+    kd.lws1 = 1;
+    kd.lws2 = 16;
+    return kd;
+}
+
+kernel_selector<convolution_gpu::kernel_data, convolution> convolution_gpu::ks = { 
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::oiyx_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_oiyx_f32 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 1, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b1 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 8, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 16, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 32, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 64, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 128, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+
+    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16 },
+    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 16, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 32, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 64, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 128, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::yxio_f32, 1, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), defauly_bfyx_yxio_b1_f32 },
 };
 
 namespace{
     struct attach {
         attach() {
-            auto val_fw = convolution_gpu::create;
-
-            auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
-            implementation_map<convolution>::add(key_fw, val_fw);
-            key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16);
-            implementation_map<convolution>::add(key_fw, val_fw);
+            implementation_map<convolution>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32), convolution_gpu::create);
+            implementation_map<convolution>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16), convolution_gpu::create);
+            implementation_map<convolution>::add(std::make_tuple(engine::gpu, memory::format::bfyx_f32, memory::format::bfyx_f32), convolution_gpu::create);
         }
         ~attach() {}
     };

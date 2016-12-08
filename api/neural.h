@@ -144,7 +144,7 @@ struct memory : is_a_primitive
         neural::vector<uint32_t>        size;
         neural::vector<uint32_t>        padding;
 
-        DLL_SYM arguments(memory::format::type aformat, const neural::vector<uint32_t>& asize, const neural::vector<uint32_t>& apadding = /* IMPORTANT: This set default padding */ { 0, { 0, 0 }, { 0, 0 } });
+        DLL_SYM arguments(memory::format::type aformat, const neural::vector<uint32_t>& asize, const neural::vector<uint32_t>& apadding = /* IMPORTANT: This set default padding */ { 0, { 11, 11 }, { 0, 0 } });
     };
 
     struct buffer
