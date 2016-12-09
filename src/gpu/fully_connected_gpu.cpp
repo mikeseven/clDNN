@@ -228,14 +228,10 @@ struct fully_connected_gpu : is_an_implementation
             gpu::make_jit_constant("FP16_SUPPORTED",       static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",       static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",            data.fp16_unit_used ? "half" : "float"),
-            gpu::make_jit_constant("UNIT_SUFFIX",          data.fp16_unit_used ? "h" : "f")
+            gpu::make_jit_constant("UNIT_VAL_ZERO",        data.fp16_unit_used ? "0.0h" : "0.0f"),
+            gpu::make_jit_constant("RELU",                 static_cast<int>(outer.argument.use_relu)),
+            gpu::make_jit_constant("NEGATIVE_SLOPE",       outer.argument.negative_slope),
         };
-
-        if (outer.argument.use_relu)
-        {
-            mem_consts.add_constant(gpu::make_jit_constant("RELU",           ""));
-            mem_consts.add_constant(gpu::make_jit_constant("NEGATIVE_SLOPE", outer.argument.negative_slope));
-        }
 
         if (data.kernel_name == kernel_name_xb_xb_b8_x8_vload ||
             data.kernel_name == kernel_name_xb_xb_b16)
