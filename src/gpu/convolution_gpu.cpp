@@ -34,7 +34,7 @@ static const std::string kernel_name_yxfb_yxio_b8 = "convolution_gpu_yxfb_yxio_b
 static const std::string kernel_name_yxfb_yxio_b16 = "convolution_gpu_yxfb_yxio_b16";
 static const std::string kernel_name_yxfb_yxio_b16_fp16 = "convolution_gpu_yxfb_yxio_b16_fp16";
 static const std::string kernel_name_yxfb_yxio_fp16 = "convolution_gpu_yxfb_yxio_fp16";
-static const std::string kernel_name_bfyx_yxio_b1 = "convolution_gpu_bfyx_yxio_b1";
+static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32";
 
 // GPU engine information helpers.
 namespace
@@ -259,6 +259,7 @@ struct convolution_gpu : is_an_implementation {
         // FP32 (float)
         case memory::format::oiyx_f32:
         case memory::format::yxio_f32:
+        case memory::format::os_iyx_osv16_f32:
         // FP16 (half)
         case memory::format::oiyx_f16:
         case memory::format::yxio_f16:
@@ -449,7 +450,7 @@ convolution_gpu::kernel_data defauly_bfyx_yxio_b1_f32(const convolution& arg)
     int block_height = 3;
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
-    kd.kernel_name = kernel_name_bfyx_yxio_b1;
+    kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32;
     kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument.size.spatial[0]) / block_width));
     kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument.size.spatial[1]) / block_height));
     kd.gws2 = output_mem.argument.size.feature[0];
@@ -475,7 +476,7 @@ kernel_selector<convolution_gpu::kernel_data, convolution> convolution_gpu::ks =
     { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 64, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
     { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 128, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
 
-    { std::make_tuple(memory::format::bfyx_f32, memory::format::yxio_f32, 1, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), defauly_bfyx_yxio_b1_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 1, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), defauly_bfyx_yxio_b1_f32 },
 };
 
 namespace{

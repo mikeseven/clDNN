@@ -19,8 +19,8 @@
 
 using namespace neural;
 
-weights_optimizer::weights_optimizer(bool enabled, bool use_half) :
-    _enabled(enabled), _use_half(use_half)
+weights_optimizer::weights_optimizer(int batch_size, bool enabled, bool use_half) :
+    _enabled(enabled), _use_half(use_half), _batch_size(batch_size)
 {}
 
 bool weights_optimizer::_needs_optimization(const primitive & prim, file::weights_type type, bool use_half)
@@ -56,7 +56,7 @@ bool weights_optimizer::_needs_optimization(const primitive & prim, file::weight
     else if (type == file::weights_type::convolution)
     {
         // TODO!!! put better logic here.
-        auto expected_mem_format = use_half ? memory::format::yxio_f16 : memory::format::yxio_f32;
+        auto expected_mem_format = _batch_size == 1 ? ( use_half ? memory::format::yxio_f16 : memory::format::os_iyx_osv16_f32 ) : ( use_half ? memory::format::yxio_f16 : memory::format::yxio_f32);
         auto out_mem = memory::allocate({ expected_mem_format, mem.argument.size, mem.argument.padding });
         if (mem.argument.format != expected_mem_format)
         {
