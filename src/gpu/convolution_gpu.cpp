@@ -22,6 +22,7 @@
 #include "boost/functional/hash.hpp"
 #include <unordered_map>
 #include <initializer_list>
+#include "kd_selector.h"
 
 namespace neural 
 {
@@ -48,43 +49,16 @@ struct gpu_info_helper : gpu::context_holder
 };
 }
 
-template<typename T, typename U>
-class kernel_selector
+template <>
+struct kd_default_value_selector<neural::gpu::engine_info::architectures>
 {
-    using key_type = std::tuple<neural::memory::format::type, neural::memory::format::type, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations>;
-    using kernel_map_hash = boost::hash<key_type>;
-    using kernel_map = std::unordered_map<key_type, T(*)(const U&), kernel_map_hash>;
-    using kernel_element = typename kernel_map::value_type;
-private:
-    kernel_map _kernel_map;
-public:
-    kernel_selector(const std::initializer_list<kernel_element>& l) :
-        _kernel_map(l)
-    {
-    }
-    T get_kernel(const U& arg, neural::memory::format::type input_format, neural::memory::format::type format, int batch_size, neural::gpu::engine_info::architectures architecture, neural::gpu::engine_info::configurations configuration)
-    {
-        auto value = _kernel_map.find(std::make_tuple(input_format, format, batch_size, architecture, configuration));
-        if (value == _kernel_map.end())
-        {
-            value = _kernel_map.find(std::make_tuple(input_format, format, batch_size, architecture, gpu::engine_info::configurations::GT_UNKNOWN));
-            if (value == _kernel_map.end())
-            {
-                value = _kernel_map.find(std::make_tuple(input_format, format, batch_size, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN));
-                if (value == _kernel_map.end())
-                {
-                    value = _kernel_map.find(std::make_tuple(input_format, format, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN));
-                    if (value == _kernel_map.end())
-                    {
-                        throw std::runtime_error("ERROR: no default element in map for convolution kernels!");
-                    }
-                }
-            }
-        }
+    static constexpr neural::gpu::engine_info::architectures value = neural::gpu::engine_info::architectures::GEN_UNKNOWN;
+};
 
-        T kd = value->second(arg);
-        return kd;
-    }
+template <>
+struct kd_default_value_selector<neural::gpu::engine_info::configurations>
+{
+    static constexpr neural::gpu::engine_info::configurations value = neural::gpu::engine_info::configurations::GT_UNKNOWN;
 };
 
 struct convolution_gpu : is_an_implementation {
@@ -124,7 +98,7 @@ struct convolution_gpu : is_an_implementation {
         return kd;
     }
 
-    static kernel_selector<kernel_data, convolution> ks;
+    static kd_selector_t<kernel_data, convolution, neural::memory::format::type, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> ks;
 
     convolution_gpu(convolution &arg): is_an_implementation(neural::type_id<convolution_gpu>())
         , outer(arg)
@@ -460,7 +434,7 @@ convolution_gpu::kernel_data defauly_bfyx_yxio_b1_f32(const convolution& arg)
     return kd;
 }
 
-kernel_selector<convolution_gpu::kernel_data, convolution> convolution_gpu::ks = { 
+kd_selector_t<convolution_gpu::kernel_data, convolution, neural::memory::format::type, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> convolution_gpu::ks = {
     { std::make_tuple(memory::format::yxfb_f32, memory::format::oiyx_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_oiyx_f32 },
     { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32 },
     { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 1, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b1 },
