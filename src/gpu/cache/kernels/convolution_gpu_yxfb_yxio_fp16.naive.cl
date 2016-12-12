@@ -22,7 +22,7 @@ KERNEL(convolution_gpu_yxfb_yxio_fp16)(
 
     const int ofm_offset = (global_id / batch_num) % FILTER_OUTPUT_FEATURE_NUM;
 
-    half result = bias[ofm_offset];
+    half result = 0.0h;
 
     bool finish = false;
     const uint out_x = get_global_id(1);
@@ -71,6 +71,7 @@ KERNEL(convolution_gpu_yxfb_yxio_fp16)(
         }
     }
 
+    result += bias[ofm_offset];
     ACTIVATION(output[global_id], result);
 }
 
