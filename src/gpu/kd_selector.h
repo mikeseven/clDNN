@@ -242,9 +242,11 @@ struct kd_default_value_selector
     static constexpr Ty value = static_cast<Ty>(0);
 };
 
+template<typename KernelDataTy, typename OuterTy, std::size_t ReqSelectorCount, typename ... SelectorsTupleTy>
+class kd_selector;
 
 template<typename KernelDataTy, typename OuterTy, std::size_t ReqSelectorCount, typename ... SelectorTys>
-class kd_selector
+class kd_selector<KernelDataTy, OuterTy, ReqSelectorCount, mputils::type_tuple<SelectorTys ...>>
 {
     using _selector_types = mputils::type_tuple<SelectorTys ...>;
     static_assert(mputils::count_tt<_selector_types, kd_optional_selector_t>::value == 0,
@@ -296,7 +298,7 @@ public:
     }
 };
 
-template<typename KernelDataTy, typename OuterTy, std::size_t ReqSelectorCount, typename ... SelectorTys>
+template<typename KernelDataTy, typename OuterTy, typename ... SelectorTys>
 using kd_selector_t = kd_selector<KernelDataTy,
                                   OuterTy,
                                   mputils::index_of_tt<mputils::type_tuple<SelectorTys ...>, kd_optional_selector_t>::value != mputils::npos
