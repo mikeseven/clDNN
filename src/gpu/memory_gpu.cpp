@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "memory_gpu.h"
-#include "api_impl/engine_impl.h"
+#include "engine_impl.h"
 
 namespace neural { namespace gpu {
     gpu_buffer::gpu_buffer(const cldnn::refcounted_obj_ptr<cldnn::engine_impl>& engine, const cldnn::layout& layout)

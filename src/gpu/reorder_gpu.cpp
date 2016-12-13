@@ -20,9 +20,9 @@
 #include "ocl_toolkit.h"
 #include "api/memory.hpp"
 #include "api/event.hpp"
-#include "api_impl/reorder_arg.h"
-#include "api_impl/engine_impl.h"
-#include "api_impl/network_impl.h"
+#include "reorder_arg.h"
+#include "engine_impl.h"
+#include "network_impl.h"
 #include <string>
 
 const std::string kernelName = "reorder_GPU";
@@ -194,6 +194,7 @@ struct reorder_gpu : is_an_implementation {
         auto input_use_half = input_mem.get_layout().data_type == cldnn::data_types::f16;
         auto output_use_half = output_mem.get_layout().data_type == cldnn::data_types::f16;
         int input_output_type_cvt = input_use_half != output_use_half;
+        auto padding = outer.argument.output_offset.transform(output_mem.get_layout().size.format, 0);
 
         if (!engine_info.supports_fp16 && (input_use_half || output_use_half))
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
@@ -220,9 +221,9 @@ struct reorder_gpu : is_an_implementation {
         {
             std::stringstream s;
             s << "(uint[]){ ";
-            for (uint32_t i = 0; i < outer.argument.padding.raw.size(); i++)
+            for (uint32_t i = 0; i < output_mem.argument().size.raw.size(); i++)
             {
-                s << static_cast<uint32_t>(outer.argument.padding.raw[i]) << ", ";
+                s << static_cast<uint32_t>(padding.raw[i]) << ", ";
             }
             s << " }";
             mem_consts.add_constant(gpu::make_jit_constant("PADDING", s.str()));
@@ -251,9 +252,9 @@ struct reorder_gpu : is_an_implementation {
             {
                 std::stringstream s;
                 s << "(uint[]){ ";
-                for (uint32_t i = 0; i < subtract_mem.argument.size.raw.size(); i++)
+                for (uint32_t i = 0; i < subtract_mem.argument().size.raw.size(); i++)
                 {
-                    s << static_cast<uint32_t>(0) << ", ";
+                    s << static_cast<uint32_t>(padding.raw[i]) << ", ";
                 }
                 s << " }";
                 mem_consts.add_constant(gpu::make_jit_constant("SUBTRTACT_PADDING", s.str()));

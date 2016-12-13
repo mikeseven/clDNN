@@ -19,7 +19,7 @@
 #include <new>
 #include <iostream>
 
-#include "api/neural.h"
+#include "api/cldnn_defs.h"
 
 using void_fun_ptr = void (__cdecl *)();
 

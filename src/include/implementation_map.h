@@ -14,8 +14,8 @@
 // limitations under the License.
 */
 #pragma once
-#include "api_impl/primitive_arg.h"
-#include "neural.h"
+#include "primitive_arg.h"
+#include "reorder_arg.h"
 #include <map>
 #include <functional>
 

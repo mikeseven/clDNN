@@ -21,7 +21,7 @@
 #include <iterator>
 #include <numeric>
 #include "ocl_toolkit.h"
-#include "api_impl/memory_impl.h"
+#include "memory_impl.h"
 
 #define BUFFER_ALIGNMENT 4096
 #define CACHE_ALIGNMENT 64

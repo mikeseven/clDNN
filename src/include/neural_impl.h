@@ -18,8 +18,8 @@
 #pragma once
 #include "api/engine.hpp"
 #include "api/memory.hpp"
-#include "api_impl/primitive_arg.h"
-#include "api_impl/reorder_arg.h"
+#include "primitive_arg.h"
+#include "reorder_arg.h"
 #include "implementation_map.h"
 
 namespace neural

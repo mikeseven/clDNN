@@ -15,8 +15,6 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "api/topology.hpp"
-#include "topology_impl.h"
 #include "primitive_type.h"
 #include "api/primitives/data.hpp"
 #include "data_arg.h"

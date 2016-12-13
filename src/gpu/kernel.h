@@ -21,7 +21,7 @@
 #include "api/profiling.hpp"
 #include <iostream>
 #include <sstream>
-#include "api_impl/event_impl.h"
+#include "event_impl.h"
 
 namespace neural { namespace gpu {
 

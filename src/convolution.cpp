@@ -14,182 +14,68 @@
 // limitations under the License.
 */
 
-#include "multidimensional_counter.h"
-#include "implementation_map.h"
-#include <sstream>
+///////////////////////////////////////////////////////////////////////////////////////////////////
+#include "convolution_arg.h"
+#include "primitive_type.h"
+#include "network_impl.h"
+#include "primitive_type_base.h"
+#include <memory>
 
-namespace neural {
-
-convolution::arguments::arguments(
-    primitive                out,
-    neural::vector<uint32_t> out_off,
-    neural::vector<uint32_t> out_siz,
-    std::vector<primitive_at>in,
-    neural::vector<int32_t>  in_off,
-    neural::vector<uint32_t> strd,
-    neural::padding::type    padd,
-    size_t                   splt,
-    bool                     use_relu,
-    float                    negative_slope)
-    : output({ out })
-    , output_offset(out_off)
-    , output_size(out_siz)
-    , input(in)
-    , input_offset(in_off)
-    , stride(strd)
-    , padding(padd)
-    , split(splt)
-    , use_relu(use_relu)
-    , negative_slope(negative_slope){}
-
-convolution::arguments::arguments(
-    primitive                out,
-    std::vector<primitive_at>in,
-    neural::vector<uint32_t> strd,
-    neural::padding::type    padd,
-    size_t                   splt,
-    bool                     use_relu,
-    float                    negative_slope)
-    : output({ out })
-    , output_offset(out.as<const memory&>().argument.size.batch.size(),
-        out.as<const memory&>().argument.size.spatial.size(),
-        out.as<const memory&>().argument.size.feature.size())
-    , output_size(out.as<const memory&>().argument.size)
-    , input(in)
-    , input_offset(in[0].primitive().as<const memory&>().argument.size.batch.size(),
-        in[0].primitive().as<const memory&>().argument.size.spatial.size(),
-        in[0].primitive().as<const memory&>().argument.size.feature.size())
-    , stride(strd)
-    , padding(padd)
-    , split(splt)
-    , use_relu(use_relu)
-    , negative_slope(negative_slope){}
-
-convolution::arguments::arguments(
-    memory::format::type     out_fmt,
-    std::vector<primitive_at>in,
-    neural::vector<int32_t>  in_off,
-    neural::vector<uint32_t> strd,
-    neural::padding::type    padd,
-    size_t                   splt,
-    bool                     use_relu,
-    float                    negative_slope)
-    : input_offset(in_off)
-    , stride(strd)
-    , padding(padd)
-    , split(splt)
-    , use_relu(use_relu)
-    , negative_slope(negative_slope)
+namespace cldnn
 {
-    const size_t input_expected_size = split * 2 + 1;
-
-    // if input is previouse layer, not memory primitive need to set input to output memory of this primitive
-    if (in.size() != input_expected_size) throw std::runtime_error("input size mismatch");
-    input.reserve(input_expected_size);
-    input.push_back(
-        in[0].primitive().id() != type_id<const memory>()->id ? in[0].primitive().output[0] : in[0]
-    );
-    for (size_t i = 1; i < in.size(); i++)
-        input.push_back(in[i]);
-
-    auto &input_mem = input[0].primitive().as<const memory&>();
-
-    auto &filter_mem = get_memory_primitive(in[1].primitive());
+layout convolution_arg::calc_output_layout(network_impl& network, std::shared_ptr<const convolution> desc)
+{
+    auto input = network.get_primitive(desc->input()[0]);
+    auto input_layout = input->output_memory().get_layout();
+    auto weight0 = network.get_primitive(desc->weights()[0]);
+    auto weights_layout = weight0->output_memory().get_layout();
+    auto input_offset = desc->input_offset().transform(format::yx, 0);
+    auto strd = desc->stride().transform(format::yx, 0);
+    auto split = desc->weights().size();
 
     // compute how many outputs in rows and columns will be generate by filter. 
     // outp <= (input_size - (2*input_offset) - kernel_size)/ stride 
-    auto kernel_xy = filter_mem.argument.size.spatial;
-    auto output_spatial_x = (input_mem.argument.size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_xy[0]) / strd.spatial[0] + 1;
-    auto output_spatial_y = (input_mem.argument.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_xy[1]) / strd.spatial[1] + 1;
-    auto input_x = input_mem.argument;
+    auto kernel_xy = weights_layout.size.spatial;
+    assert(kernel_xy.size() == 2);
+    auto output_spatial_x = (input_layout.size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_xy[0]) / strd.spatial[0] + 1;
+    auto output_spatial_y = (input_layout.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_xy[1]) / strd.spatial[1] + 1;
     // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
-    auto ofm = filter_mem.argument;
-    auto number_of_batches = ofm.size.raw[1] * static_cast<uint32_t>(split);
-    output_size = {
-        input_mem.argument.size.batch[0],
-        { output_spatial_x, output_spatial_y },
-        number_of_batches
-    };
-    output = { memory::allocate({ out_fmt,output_size }) };
-    output_offset = {
-        output[0].as<const memory&>().argument.size.batch.size(),
-        output[0].as<const memory&>().argument.size.spatial.size(),
-        output[0].as<const memory&>().argument.size.feature.size()
-    };
+    auto number_of_features = weights_layout.size.feature[0] * static_cast<int32_t>(split);
+
+    tensor output_size(format::yxfb, {
+                           input_layout.size.batch[0], number_of_features, output_spatial_x, output_spatial_y }
+                      );
+
+    return { input_layout.data_type, output_size.transform(input_layout.size.format, 1) };
 }
 
-convolution::arguments::arguments(
-    memory::format::type     out_fmt,
-    std::vector<primitive_at>in,
-    neural::vector<uint32_t> strd,
-    neural::padding::type    padd,
-    size_t                   splt,
-    bool                     use_relu,
-    float                    negative_slope)
-    : arguments(
-        out_fmt,
-        in,
-        {
-            in[0].primitive().as<const memory&>().argument.size.batch.size(),
-            in[0].primitive().as<const memory&>().argument.size.spatial.size(),
-            in[0].primitive().as<const memory&>().argument.size.feature.size()
-        },
-        strd,
-        padd,
-        splt,
-        use_relu,
-        negative_slope) {}
+convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const convolution> desc): primitive_arg_base(network, desc, calc_output_layout(network, desc))
+{
+    auto& stride = desc->stride();
+    auto& output_size = output_memory().argument().size;
 
-convolution::arguments::arguments(
-    primitive                out,
-    std::vector<primitive_at>in,
-    neural::padding::type    padd,
-    size_t                   splt,
-    bool                     use_relu,
-    float                    negative_slope)
-    : output({ out })
-    , output_offset(out.as<const memory&>().argument.size.batch.size(),
-        out.as<const memory&>().argument.size.spatial.size(),
-        out.as<const memory&>().argument.size.feature.size())
-    , output_size(out.as<const memory&>().argument.size)
-    , input(in)
-    , input_offset(in[0].primitive().as<const memory&>().argument.size.batch.size(),
-        in[0].primitive().as<const memory&>().argument.size.spatial.size(),
-        in[0].primitive().as<const memory&>().argument.size.feature.size())
-    , stride(1u, std::vector<uint32_t>(in[0].primitive().as<const memory&>().argument.size.spatial.size(), 1u), 1u)
-    , padding(padd)
-    , split(splt)
-    , use_relu(use_relu)
-    , negative_slope(negative_slope) {}
+    auto& input_arg = input_memory(0).get_layout();
+    auto& output_arg = output_memory().get_layout();
 
+    if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("input/output number of dimension does not match.");
+    if (stride.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("stride/output number of dimension does not match.");
 
-// creates primitive with convolution implementation that supports provided arguments
-primitive convolution::create(convolution::arguments arg) {
-    auto& output_size = arg.output_size;
-    auto& stride = arg.stride;
-
-    auto& input_arg = arg.input[0].primitive().as<const memory&>().argument;
-    auto& output_arg = arg.output[0].as<const memory&>().argument;
-
-    if (input_arg.size.raw.size() != output_arg.size.raw.size())  throw std::runtime_error("input/output number of dimension does not match.");
-    if (stride.raw.size() != output_arg.size.raw.size())          throw std::runtime_error("stride/output number of dimension does not match.");
-
-    const size_t split = arg.split;
+    const size_t split = desc->split();
     for (size_t j = 0; j < split; j++)
     {
-        auto& filter_mem = get_memory_primitive(arg.input[j * 2 + 1].primitive());
-        auto& filter_arg = filter_mem.argument; //convolution filter
-        auto& bias_arg = get_memory_primitive(arg.input[j * 2 + 2].primitive()).argument;
+        auto& filter_mem = weights_memory(j);
+        auto& filter_arg = filter_mem.get_layout(); //convolution filter
+        auto& bias_arg = bias_memory(j).get_layout();
 
-        auto& input_offset = arg.input_offset;
-        auto& output_offset = arg.output_offset;
+        auto& input_offset = desc->input_offset();
+        auto& output_offset = desc->output_offset();
 
-        if (filter_arg.size.raw.size() != output_arg.size.raw.size() + 1)   throw std::runtime_error("window_size != 5");
-        if (bias_arg.size.raw.size() != 3)                                  throw std::runtime_error("biases isn't 1D vector."); // b=1, f=1
-        if (bias_arg.size.spatial[0] != output_size.feature[0] / split)     throw std::runtime_error("biases/output feature maps number does not match.");
-        if (arg.padding != padding::zero)                                   throw std::runtime_error("unknown padding mode.");
-        if (input_offset.raw.size() != input_arg.size.raw.size())           throw std::runtime_error("input offset/input number of dimension does not match.");
-        if (output_offset.raw.size() != input_arg.size.raw.size())          throw std::runtime_error("output offset/input number of dimension does not match.");
+        if (filter_arg.size.raw.size() != output_arg.size.raw.size() + 1) throw std::runtime_error("window_size != 5");
+        if (bias_arg.size.raw.size() != 3) throw std::runtime_error("biases isn't 1D vector."); // b=1, f=1
+        if (bias_arg.size.spatial[0] != output_size.feature[0] / split) throw std::runtime_error("biases/output feature maps number does not match.");
+        if (desc->padding_type() != padding_types::zero) throw std::runtime_error("unknown padding mode.");
+        if (input_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("input offset/input number of dimension does not match.");
+        if (output_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("output offset/input number of dimension does not match.");
 
         for (uint32_t i = 0; i < output_arg.size.raw.size(); i++)
             if (output_arg.size.raw.at(i) < output_size.raw.at(i) + output_offset.raw.at(i))
@@ -207,8 +93,21 @@ primitive convolution::create(convolution::arguments arg) {
         if ((input_arg.size.feature[0] - input_offset.feature[0]) / split < filter_arg.size.feature[1])
             throw std::runtime_error("weights/input feature maps number does not match.");
     }
-
-    return is_a_primitive::create<convolution>(arg);
 }
 
+const memory& convolution_arg::weights_memory(size_t index) const
+{
+    return _network.get_primitive(argument.weights.at(index))->output_memory();
+}
+
+const memory& convolution_arg::bias_memory(size_t index) const
+{
+    return _network.get_primitive(argument.bias.at(index))->output_memory();
+}
+
+primitive_type_id convolution::type_id()
+{
+    static primitive_type_base<convolution, convolution_arg> instance;
+    return &instance;
+}
 }

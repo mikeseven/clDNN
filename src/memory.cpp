@@ -14,51 +14,105 @@
 // limitations under the License.
 */
 
-#include <functional>
-#include <numeric>
-#include <atomic>
+///////////////////////////////////////////////////////////////////////////////////////////////////
+#include "primitive_type.h"
+#include "primitive_arg.h"
+#include "memory_impl.h"
+#include "engine_impl.h"
+#include <memory>
 
-//todo(usarel) : collapse memory/memory_gpu
-#include "gpu/memory_gpu.h"
 
-namespace neural {
-
-memory::arguments::arguments(memory::format::type aformat, const vector<uint32_t>& asize)
-    : format(aformat)
-    , size(asize)
-    
-{}
-
-size_t memory::count() const 
+namespace cldnn
 {
-    return _buffer->size() / traits(argument.format).type->size;
+memory::memory(const memory& other): _data(other._data)
+{
+    _data->add_ref();
 }
 
-size_t memory::size_of(arguments arg) 
+memory& memory::operator=(const memory& other)
 {
-    return std::accumulate(
-        arg.size.raw.begin(),
-        arg.size.raw.end(),
-        memory::traits(arg.format).type->size,
-        std::multiplies<size_t>()
-    );
+    if (this == &other || this->_data == other._data )
+        return *this;
+    _data->release();
+    _data = other._data;
+    _data->add_ref();
+    return *this;
 }
 
-std::shared_ptr<memory::buffer> create_buffer(memory::arguments arg)
+memory::~memory()
 {
-	return std::make_shared<gpu::gpu_buffer>(arg);
+    _data->release();
 }
 
-primitive memory::describe(memory::arguments arg)
+const layout& memory::get_layout() const noexcept
 {
-    auto buffer = create_buffer(arg);
-    return new memory(arg, buffer);
+    return _data->get_layout();
 }
 
-primitive memory::allocate(memory::arguments arg)
+bool memory::is_allocated_by(const engine& engine) const noexcept
 {
-    auto buffer = create_buffer(arg);
-    return new memory(arg, buffer);
+    return _data->is_allocated_by(engine.get());
 }
 
-} // namespace neural
+memory_impl* memory::allocate_buffer(engine engine, layout layout, status_t* status) noexcept
+{
+    try
+    {
+        if (status)
+            *status = CLDNN_SUCCESS;
+        return engine.get()->allocate_buffer(layout);
+    }
+    catch (...)
+    {
+        if (status)
+            *status = CLDNN_ERROR;
+        return nullptr;
+    }
+}
+
+memory_impl* memory::attach_buffer(layout layout, void* pointer, size_t size, status_t* status) noexcept
+{
+    try
+    {
+        if (status)
+            *status = CLDNN_SUCCESS;
+        assert(layout.data_size() == size);
+        return new simple_attached_memory(layout, pointer);
+    }
+    catch (...)
+    {
+        if (status)
+            *status = CLDNN_ERROR;
+        return nullptr;
+    }
+}
+
+void* memory::lock_buffer(status_t* status) const noexcept
+{
+    try
+    {
+        if (status)
+            *status = CLDNN_SUCCESS;
+        return _data->lock();
+    }
+    catch (...)
+    {
+        if (status)
+            *status = CLDNN_ERROR;
+        return nullptr;
+    }
+}
+
+status_t memory::unlock_buffer() const noexcept
+{
+    try
+    {
+        _data->unlock();
+        return CLDNN_SUCCESS;
+    }
+    catch (...)
+    {
+        return CLDNN_ERROR;
+    }
+}
+}
