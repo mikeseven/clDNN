@@ -36,6 +36,7 @@ static const std::string kernel_name_xb_xb_b8_x8 = "fully_connected_gpu_xb_xb_b8
 static const std::string kernel_name_xb_xb_b16 = "fully_connected_gpu_xb_xb_b16";
 static const std::string kernel_name_xb_xb_b8_x8_vload = "fully_connected_gpu_xb_xb_b8_x8_vload";
 static const std::string kernel_name_yxfn = "fully_connected_gpu_yxfn";
+static const std::string kernel_name_xb_xb_block_fp16 = "fully_connected_gpu_xb_xb_block_fp16";
 
 // GPU engine information helpers.
 namespace
@@ -58,6 +59,18 @@ struct fully_connected_gpu : is_an_implementation
         size_t lws0, lws1;
         std::string kernel_name;
         bool fp16_unit_used;
+        union
+        {
+            struct
+            {
+                uint32_t unit_byte_size;
+                const char* chunk_type;
+                uint32_t chunk_byte_size;
+                uint32_t units_per_chunk;
+                uint32_t bytes_per_sg_read;
+                uint32_t units_per_sg_read;
+            } data_xb_xb_fp16;
+        };
     } _kernel_data;
     gpu::kernel _kernel;
        
@@ -156,6 +169,35 @@ struct fully_connected_gpu : is_an_implementation
             case memory::format::yxfb_f16:
             case memory::format::xb_f16:
             {
+                auto batch_size = output_mem.argument.size.batch[0];
+                bool batch_size_pow_2 = batch_size > 0 && (batch_size & (batch_size - 1)) == 0;
+
+                constexpr uint32_t unit_byte_size = sizeof(cl_half);
+                const char* chunk_type = "uint";
+                constexpr uint32_t chunk_byte_size = sizeof(cl_uint);
+                constexpr uint32_t sub_group_size = 16;
+                constexpr uint32_t units_per_chunk = chunk_byte_size / unit_byte_size;
+                constexpr uint32_t units_per_sg_read = sub_group_size * units_per_chunk;
+
+                if (batch_size_pow_2 || (batch_size > 0 && batch_size % units_per_sg_read == 0))
+                {
+                    kd.lws0 = sub_group_size;
+                    // Rounding up to nearest non-lower multiply of units_per_sg_read.
+                    kd.gws0 = (output_mem.argument.size.spatial[0] + units_per_sg_read - 1) / units_per_sg_read * units_per_sg_read;
+                    kd.lws1 = 1;
+                    kd.gws1 = batch_size / units_per_sg_read;
+
+                    kd.kernel_name = kernel_name_xb_xb_block_fp16;
+
+                    kd.data_xb_xb_fp16.unit_byte_size    = unit_byte_size;
+                    kd.data_xb_xb_fp16.chunk_type        = chunk_type;
+                    kd.data_xb_xb_fp16.chunk_byte_size   = chunk_byte_size;
+                    kd.data_xb_xb_fp16.units_per_chunk   = units_per_chunk;
+                    kd.data_xb_xb_fp16.bytes_per_sg_read = sub_group_size * chunk_byte_size;
+                    kd.data_xb_xb_fp16.units_per_sg_read = units_per_sg_read;
+                    break;
+                }
+
                 kd.kernel_name = kernel_name_xb_xb;
                 break;
             }
@@ -232,6 +274,19 @@ struct fully_connected_gpu : is_an_implementation
             gpu::make_jit_constant("RELU",                 static_cast<int>(outer.argument.use_relu)),
             gpu::make_jit_constant("NEGATIVE_SLOPE",       outer.argument.negative_slope),
         };
+
+        if (data.kernel_name == kernel_name_xb_xb_block_fp16)
+        {
+            mem_consts.add_constant(gpu::make_jit_constant("SUB_GROUP_SIZE",       data.lws0));
+            mem_consts.add_constant(gpu::make_jit_constant("WORK_ITEMS_PER_BATCH", data.gws1));
+
+            mem_consts.add_constant(gpu::make_jit_constant("UNIT_BYTE_SIZE",    data.data_xb_xb_fp16.unit_byte_size));
+            mem_consts.add_constant(gpu::make_jit_constant("CHUNK_TYPE",        data.data_xb_xb_fp16.chunk_type));
+            mem_consts.add_constant(gpu::make_jit_constant("CHUNK_BYTE_SIZE",   data.data_xb_xb_fp16.chunk_byte_size));
+            mem_consts.add_constant(gpu::make_jit_constant("UNITS_PER_CHUNK",   data.data_xb_xb_fp16.units_per_chunk));
+            mem_consts.add_constant(gpu::make_jit_constant("BYTES_PER_SG_READ", data.data_xb_xb_fp16.bytes_per_sg_read));
+            mem_consts.add_constant(gpu::make_jit_constant("UNITS_PER_SG_READ", data.data_xb_xb_fp16.units_per_sg_read));
+        }
 
         if (data.kernel_name == kernel_name_xb_xb_b8_x8_vload ||
             data.kernel_name == kernel_name_xb_xb_b16)

@@ -7,8 +7,8 @@
         #define ACTIVATION(output, input) output = input;
     #endif
 
-__attribute__((intel_reqd_sub_group_size(16))) 
-__attribute__((reqd_work_group_size(16, 1, 1))) 
+__attribute__((intel_reqd_sub_group_size(16)))
+__attribute__((reqd_work_group_size(16, 1, 1)))
 KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
     const __global half* input,
     __global half* output,
