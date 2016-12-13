@@ -200,11 +200,11 @@ template <template <typename> class DefaultValSelectorTTy,
           std::size_t DefaultedStartPos,
           std::size_t Idx,
           typename ArgTy>
-constexpr auto select_arg_or_default(ArgTy&& arg) -> typename std::decay<ArgTy>::type
+constexpr auto select_arg_or_default(ArgTy&& arg) -> std::decay_t<ArgTy>
 {
     return (Idx < DefaultedStartPos)
         ? std::forward<ArgTy>(arg)
-        : DefaultValSelectorTTy<typename std::decay<ArgTy>::type>::value;
+        : DefaultValSelectorTTy<std::decay_t<ArgTy>>::value;
 }
 
 template <template <typename> class DefaultValSelectorTTy,
@@ -212,7 +212,7 @@ template <template <typename> class DefaultValSelectorTTy,
           std::size_t ... Idxs,
           typename ... ArgTys>
 constexpr auto make_partially_defaulted_std_tuple(index_tuple<Idxs ...>&&, ArgTys&& ... args)
-    -> std::tuple<typename std::decay<ArgTys>::type ...>
+    -> std::tuple<std::decay_t<ArgTys> ...>
 {
     return std::make_tuple(
         select_arg_or_default<DefaultValSelectorTTy, DefaultedStartPos, Idxs>(std::forward<ArgTys>(args)) ...);
@@ -222,7 +222,7 @@ constexpr auto make_partially_defaulted_std_tuple(index_tuple<Idxs ...>&&, ArgTy
 template <template <typename> class DefaultValSelectorTTy,
           std::size_t DefaultedStartPos,
           typename ... ArgTys>
-constexpr auto make_partially_defaulted_std_tuple(ArgTys&& ... args) -> std::tuple<typename std::decay<ArgTys>::type ...>
+constexpr auto make_partially_defaulted_std_tuple(ArgTys&& ... args) -> std::tuple<std::decay_t<ArgTys> ...>
 {
     return detail::make_partially_defaulted_std_tuple<DefaultValSelectorTTy, DefaultedStartPos>(
         make_indexer_tt_t<type_tuple<ArgTys ...>>(),
@@ -279,7 +279,7 @@ private:
         if (value == _kernel_map.end())
             return _get_kernel(mputils::index_tuple<Idx - 1>(), outer, selectors ...);
 
-        return value->second(outer);;
+        return value->second(outer);
     }
 
     static KernelDataTy _get_kernel(mputils::index_tuple<ReqSelectorCount>&&, const OuterTy&, const SelectorTys& ...)
