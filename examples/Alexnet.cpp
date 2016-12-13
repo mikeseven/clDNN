@@ -27,7 +27,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const std::string& 
     auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
 
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
-    auto input = memory::allocate({ use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3 }, 2 });
+    auto input = memory::allocate({ use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ batch_size,{ 227, 227 }, 3 } });
 
     // create conversion to yxfb format and subtract mean values
     auto reordered_input = reorder::create(

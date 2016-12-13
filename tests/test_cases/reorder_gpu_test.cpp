@@ -73,9 +73,9 @@ TEST(reorder_gpu_f32, basic_subtract) {
     //  b1 f1: 10    7
     //
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 }, 2 });
-    auto output = memory::allocate({ memory::format::bfyx_f32,{ 2,{ 2, 2 }, 2 }, 2 });
-    auto subtract = memory::allocate({ memory::format::byxf_f32,{ 1,{ 2, 2 }, 2 }, 2 });
+    auto input = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
+    auto output = memory::allocate({ memory::format::bfyx_f32,{ 2,{ 2, 2 }, 2 } });
+    auto subtract = memory::allocate({ memory::format::byxf_f32,{ 1,{ 2, 2 }, 2 } });
 
     set_values(input, {
         1.f, 0.f,
@@ -149,8 +149,8 @@ TEST(reorder_gpu_f32, basic_subtract_value) {
     //  b1 f1:  9.5  5.5
     //
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 }, 2 });
-    auto output = memory::allocate({ memory::format::bfyx_f32,{ 2,{ 2, 2 }, 2 }, 2 });
+    auto input = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
+    auto output = memory::allocate({ memory::format::bfyx_f32,{ 2,{ 2, 2 }, 2 } });
     std::vector<float> subtract_val = { 0.5, 2.5 };
 
     set_values(input, {
@@ -231,9 +231,9 @@ TEST(reorder_gpu_f16, basic_subtract_f32_output_f32) {
         return;
     }
 
-    auto input = memory::allocate({  memory::format::yxfb_f16,{ 2,{ 2, 2 }, 2 }, 2 });
-    auto output = memory::allocate({  memory::format::bfyx_f32,{ 2,{ 2, 2 }, 2 }, 2 });
-    auto subtract = memory::allocate({  memory::format::byxf_f32,{ 1,{ 2, 2 }, 2 }, 2 });
+    auto input = memory::allocate({  memory::format::yxfb_f16,{ 2,{ 2, 2 }, 2 } });
+    auto output = memory::allocate({  memory::format::bfyx_f32,{ 2,{ 2, 2 }, 2 } });
+    auto subtract = memory::allocate({  memory::format::byxf_f32,{ 1,{ 2, 2 }, 2 } });
 
     set_values(input, {
         half_t(0x3C00), half_t(0x0000), // 1.f, 0.f,
@@ -315,8 +315,8 @@ TEST(reorder_gpu_f16, basic_subtract_value) {
         return;
     }
 
-    auto input = memory::allocate({  memory::format::yxfb_f16,{ 2,{ 2, 2 }, 2 }, 2 });
-    auto output = memory::allocate({  memory::format::bfyx_f16,{ 2,{ 2, 2 }, 2 }, 2 });
+    auto input = memory::allocate({  memory::format::yxfb_f16,{ 2,{ 2, 2 }, 2 } });
+    auto output = memory::allocate({  memory::format::bfyx_f16,{ 2,{ 2, 2 }, 2 } });
     std::vector<float> subtract_val = { 0.5, 2.5 };
 
     set_values(input, {
@@ -389,9 +389,9 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
     expected_values[0xF802] = half_t(0x8000);    // -0
     expected_values[0xF803] = half_t(0xFC12);    // A NaN (sample: -NaN.0x12).
 
-    auto input = memory::allocate({memory::format::yxfb_f16,{1,{2, 2}, static_cast<uint32_t>(expected_values.size()) / 4}, 2});
-    auto interm = memory::allocate({memory::format::byxf_f32,{1,{2, 2}, static_cast<uint32_t>(expected_values.size()) / 4}, 2});
-    auto output = memory::allocate({memory::format::yxfb_f16,{1,{2, 2}, static_cast<uint32_t>(expected_values.size()) / 4}, 2});
+    auto input = memory::allocate({memory::format::yxfb_f16,{1,{2, 2}, static_cast<uint32_t>(expected_values.size()) / 4} });
+    auto interm = memory::allocate({memory::format::byxf_f32,{1,{2, 2}, static_cast<uint32_t>(expected_values.size()) / 4} });
+    auto output = memory::allocate({memory::format::yxfb_f16,{1,{2, 2}, static_cast<uint32_t>(expected_values.size()) / 4} });
 
     set_values(input, expected_values);
 

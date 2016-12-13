@@ -137,7 +137,7 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
     case 1: // biases 1D
     {
         auto fmt = use_fp16_data ? memory::format::x_f16 : memory::format::x_f32;
-        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ fmt,{ 1,{ { static_cast<uint32_t>(array[0]) } }, 1 }, { 0, { 0, 0}, 0 } }));
+        p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ fmt,{ 1,{ { static_cast<uint32_t>(array[0]) } }, 1 } }));
         break;
     }
     case 2: // 2D i.e. fully connected
@@ -149,8 +149,7 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
             static_cast<uint32_t>(array[1]),
             { { static_cast<uint32_t>(array[0]) } },
             1
-        },
-        { 0, { 0, 0 }, 0 }
+        }
         }));
         break;
     }
@@ -165,8 +164,7 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
                 { 1 },
                 { static_cast<uint32_t>(a), static_cast<uint32_t>(b) },
                 { static_cast<uint32_t>(c) }
-            },
-            { 0, { 0, 0 }, 0 }
+            }
         }));
         break;
     }
@@ -177,8 +175,7 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
             auto fmt = use_fp16_data ? memory::format::oiyx_f16 : memory::format::oiyx_f32;
             p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ fmt, { 1,
             { static_cast<uint32_t>(array[0]), static_cast<uint32_t>(array[1]) }, // kernel spatials x, y
-            { static_cast<uint32_t>(array[3]), static_cast<uint32_t>(array[2]) } }, // ofm, ifm
-            { 0, { 0, 0 }, { 0, 0 } }
+            { static_cast<uint32_t>(array[3]), static_cast<uint32_t>(array[2]) } } // ofm, ifm
             }));
         }
         else if (type == file::weights_type::fully_connected)
@@ -190,8 +187,7 @@ primitive read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::we
                 { static_cast<uint32_t>(array[3]) }, // batches
                 { static_cast<uint32_t>(array[1]), static_cast<uint32_t>(array[0]) },
                 { static_cast<uint32_t>(array[2]) }, // feature maps
-            },
-            { 0, { 0, 0 }, 0 }
+            }
             }));
         }
         else
@@ -255,8 +251,7 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
     {
         p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({ format,{ 1,
         { static_cast<uint32_t>(array[2]), static_cast<uint32_t>(array[3]) }, // kernel spatials x, y
-        { static_cast<uint32_t>(array[0]), static_cast<uint32_t>(array[1]) }}, // ofm, ifm
-        { 0, { 0, 0 }, { 0, 0 } } }));
+        { static_cast<uint32_t>(array[0]), static_cast<uint32_t>(array[1]) }} })); // ofm, ifm
         break;
     }
 
@@ -269,8 +264,7 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
     {
         p_arg = std::unique_ptr<memory::arguments>(new memory::arguments({  format,{ static_cast<uint32_t>(array[0]), // batch
         { static_cast<uint32_t>(array[2]), static_cast<uint32_t>(array[3]) }, // kernel spatials x, y
-        { static_cast<uint32_t>(array[1]) } }, // fm
-        { 0, { 0, 0 }, 0 } }));
+        { static_cast<uint32_t>(array[1]) } } })); // fm
         break;
     }
 
@@ -285,9 +279,7 @@ primitive read_file_v3(std::ifstream &rfile, file_header &file_head)
             static_cast<uint32_t>(array[0]),
             { { static_cast<uint32_t>(array[1]) } },
             1
-        },
-        { 0,{ 0, 0 }, 0 }
-        }));
+        }}));
         break;
     }
 

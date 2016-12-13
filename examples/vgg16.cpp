@@ -26,7 +26,7 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const std::string& we
     auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
 
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
-    auto input = memory::allocate({ use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ batch_size,{ 224, 224 }, 3 }, 2 });
+    auto input = memory::allocate({ use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ batch_size,{ 224, 224 }, 3 } });
 
     // create conversion to yxfb format and subtract mean values
     auto reordered_input = reorder::create(

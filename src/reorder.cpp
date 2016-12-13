@@ -82,35 +82,71 @@ namespace neural {
     reorder::arguments::arguments(primitive_at _in, primitive _out) //todo Artur fix arguments order
         : output({_out})
         , input({_in})
-        , subtract_per_feature(){}
+        , subtract_per_feature()
+        , padding(get_memory_primitive(_out).argument.size.batch.size(),
+            get_memory_primitive(_out).argument.size.feature.size(),
+            get_memory_primitive(_out).argument.size.spatial.size()){}
 
 	reorder::arguments::arguments(primitive _out, primitive _in, primitive subtract_values)
         : output({ _out })
         , input({ _in, subtract_values })
-        , subtract_per_feature(){}
+        , subtract_per_feature()
+        , padding(get_memory_primitive(_out).argument.size.batch.size(),
+            get_memory_primitive(_out).argument.size.feature.size(),
+            get_memory_primitive(_out).argument.size.spatial.size()) {}
+
 
     reorder::arguments::arguments(primitive _out, primitive _in, const std::vector<float>& value_to_subtract, bool dummy)
         : output({ _out })
         , input({ _in })
         , subtract_per_feature(value_to_subtract)
-        , dummy(dummy) {}
+        , dummy(dummy)
+        , padding(get_memory_primitive(_out).argument.size.batch.size(),
+            get_memory_primitive(_out).argument.size.feature.size(),
+            get_memory_primitive(_out).argument.size.spatial.size()) {}
+
 
     reorder::arguments::arguments(neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in)
         : output( {memory::allocate({_out_layout, _out_sizes})} )
         , input({_in})
-        , subtract_per_feature(){}
+        , subtract_per_feature()
+        , padding(get_memory_primitive(output[0]).argument.size.batch.size(),
+            get_memory_primitive(output[0]).argument.size.feature.size(),
+            get_memory_primitive(output[0]).argument.size.spatial.size()) {}
+
 
     reorder::arguments::arguments(neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in, primitive_at _subtract)
         : output({ memory::allocate({ _out_layout, _out_sizes }) })
         , input({ _in, _subtract })
-        , subtract_per_feature(){}
+        , subtract_per_feature()
+        , padding(get_memory_primitive(output[0]).argument.size.batch.size(),
+            get_memory_primitive(output[0]).argument.size.feature.size(),
+            get_memory_primitive(output[0]).argument.size.spatial.size()) {}
+
 
 #pragma message ("TODO!!! Remove dummy parameter from reorder class - this is due to bad design, need to change it!")
     reorder::arguments::arguments(neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in, const std::vector<float>& value_to_subtract, bool dummy)
         : output({ memory::allocate({ _out_layout, _out_sizes }) })
         , input({ _in })
         , subtract_per_feature(value_to_subtract)
-        ,dummy(dummy){}
+        , dummy(dummy)
+        , padding(get_memory_primitive(output[0]).argument.size.batch.size(),
+            get_memory_primitive(output[0]).argument.size.feature.size(),
+            get_memory_primitive(output[0]).argument.size.spatial.size()) {}
+
+
+    reorder::arguments::arguments(uint32_t padX, uint32_t padY, neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in)
+        : output({ memory::allocate({ _out_layout, _out_sizes }) })
+        , input({ _in })
+        , subtract_per_feature()
+        , padding(get_memory_primitive(output[0]).argument.size.batch.size(),
+            get_memory_primitive(output[0]).argument.size.feature.size(),
+            get_memory_primitive(output[0]).argument.size.spatial.size()) {
+        if (padding.spatial.size() > 0)
+            padding.spatial[0] = padX;
+        if (padding.spatial.size() > 1)
+            padding.spatial[1] = padY;
+    }
 
     // creates primitive with reorder implementation that supports provided arguments
     primitive reorder::create(reorder::arguments arg) 
@@ -127,13 +163,6 @@ namespace neural {
             }
             if (input_mem.argument.size.feature[0] != arg.subtract_per_feature.size())
                 throw std::runtime_error("Number of features/channels in input does not match the number of features/channels in values to subtract");
-        }
-        for (uint32_t i = 0; i < input_mem.argument.padding.raw.size(); i++)
-        {
-            if (input_mem.argument.padding.raw[i] != 0)
-            {
-                throw std::runtime_error("Reorder with input which contains padding is NOT IMPLEMENTED yet!");
-            }
         }
         return is_a_primitive::create<reorder>(arg);
     }
