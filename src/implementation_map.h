@@ -14,7 +14,8 @@
 // limitations under the License.
 */
 #pragma once
-#include "api/neural.h"
+#include "api_impl/primitive_arg.h"
+#include "neural.h"
 #include <map>
 #include <functional>
 
@@ -31,26 +32,25 @@ class singleton_map : public std::map<T, U> {
     }
 };
 
-namespace neural {
+namespace cldnn {
 
 template<typename primitive_kind>
 struct implementation_key 
 {
-    typedef std::tuple<neural::engine::type, neural::memory::format::type, neural::memory::format::type> type;
-    type operator()(primitive_kind& primitive) 
+    typedef std::tuple<engine_types, neural_memory::format::type> type;
+    type operator()(engine_types engine_type, primitive_kind& primitive)
 	{
-        return std::make_tuple(neural::engine::gpu, primitive.input_memory(0).argument.format, primitive.output_memory(0).argument.format);
+        return std::make_tuple(engine_type, primitive.input_memory(0).argument.format);
     }
 };
 
 template<>
-struct implementation_key<reorder>
+struct implementation_key<reorder_arg>
 {
-	typedef neural::engine::type type;
-	type operator()(reorder& primitive)
+	typedef cldnn::engine_types type;
+	type operator()(engine_types engine_type, reorder&)
 	{
-		(void)primitive;
-		return neural::engine::gpu;
+		return engine_type;
 	}
 };
 
@@ -59,12 +59,12 @@ class implementation_map {
 public:
     using key_builder = implementation_key<primitive_kind>;
     using key_type = typename key_builder::type;
-    using factory_type = std::function<is_an_implementation *(primitive_kind &)>;
+    using factory_type = std::function<primitive_impl*(primitive_kind &)>;
     using map_type = singleton_map<key_type, factory_type>;
 
-    static factory_type get(primitive_kind& primitive) {
+    static factory_type get(engine_types engine_type, primitive_kind& primitive) {
         // lookup in database; throw if not found 
-        auto key = key_builder()(primitive);
+        auto key = key_builder()(engine_type, primitive);
         auto it = map_type::instance().find(key);
         if (it == std::end(map_type::instance())) throw std::runtime_error("not yet implemented");
 
@@ -80,18 +80,4 @@ public:
         map_type::instance().insert(il);
     }
 };
-
-template <class primitive_kind>
-is_a_primitive* is_a_primitive::create(typename primitive_kind::arguments arg) 
-{
-    std::unique_ptr<primitive_kind> result(new primitive_kind(arg));
-
-     auto factory = implementation_map<primitive_kind>::get(*result);
-     auto implementation = factory(*result);
-     result->_impl.reset(implementation);
-     result->_work = implementation->work();
-
-    return result.release();
-}
-
 }

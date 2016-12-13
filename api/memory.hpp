@@ -20,6 +20,7 @@
 #include "cldnn_defs.h"
 #include "compounds.h"
 #include "tensor.hpp"
+#include "engine.hpp"
 
 namespace cldnn
 {
@@ -117,18 +118,135 @@ struct layout
     tensor size;
 };
 
+// TODO remove this backward compatibility class
+struct neural_memory
+{
+    struct format
+    {
+        enum type : uint8_t
+        {
+            // FP32 (single precision float)
+            x_f32,
+            xb_f32,     // 1D+batch, float32
+            bx_f32,     // 1D+batch, float32
+            yxfn_f32,   // 3D + number of neurons - used in fully connected weights
+            yxfb_f32,   // 3D+batch, float32
+            byxf_f32,   // for convolution_cpu_jit_batch1
+            bfyx_f32,   // used in Caffe
+            fyxb_f32,   // used in Caffe
+            oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
+            yxoi_f32,   // format used only for weights: o - output feature maps, i - input feature maps
+            oyxi_f32,   // format used only for weights: o - output feature maps, i - input feature maps
+            yxio_f32,   // format used only for weights: o - output feature maps, i - input feature maps
+
+            // FP16 (half precision float)
+            x_f16,
+            xb_f16,            // 1D+batch, FP16 (half precision float)
+            bx_f16,            // 1D+batch, FP16 (half precision float)
+            yxfn_f16,          // 3D + number of neurons - used in fully connected weights
+            yxfb_f16,          // 3D+batch, FP16 (half precision float)
+            byxf_f16,          // for convolution_cpu_jit_batch1
+            bfyx_f16,          // used in Caffe
+            fyxb_f16,          // used in Caffe
+            oiyx_f16,          // format used only for weights: o - output feature maps, i - input feature maps
+            yxoi_f16,          // format used only for weights: o - output feature maps, i - input feature maps
+            oyxi_f16,          // format used only for weights: o - output feature maps, i - input feature maps
+            yxio_f16,          // format used only for weights: o - output feature maps, i - input feature maps
+
+            format_num,
+            any = static_cast<uint8_t>(-1),
+            half_base = x_f16
+        };
+    };
+
+    struct type_traits {
+        type_traits(cldnn::data_types data_type)
+            : size(cldnn::data_type_traits::size_of(data_type))
+            , is_floating_point(cldnn::data_type_traits::is_floating_point(data_type))
+        {}
+        const size_t          size;
+        const bool            is_floating_point;
+    };
+
+    struct format_traits
+    {
+        format_traits(uint8_t dimension, cldnn::data_types data_type)
+            : dimension(dimension)
+            , type(new type_traits(data_type))
+        {
+        }
+        const uint8_t       dimension;
+        std::unique_ptr<type_traits>  type;
+    };
+
+    static format_traits traits(const cldnn::layout& layout)
+    {
+        return format_traits(layout.size.format.order().length(), layout.data_type);
+    }
+
+    static uint8_t get_format_base(cldnn::format format)
+    {
+        switch (format.value)
+        {
+        case cldnn::format::x:    return format::type::x_f32;
+        case cldnn::format::xb:   return format::type::xb_f32;
+        case cldnn::format::bx:   return format::type::bx_f32;
+        case cldnn::format::yxfn: return format::type::yxfn_f32;
+        case cldnn::format::yxfb: return format::type::yxfb_f32;
+        case cldnn::format::byxf: return format::type::byxf_f32;
+        case cldnn::format::bfyx: return format::type::bfyx_f32;
+        case cldnn::format::fyxb: return format::type::fyxb_f32;
+        case cldnn::format::oiyx: return format::type::oiyx_f32;
+        case cldnn::format::yxoi: return format::type::yxoi_f32;
+        case cldnn::format::oyxi: return format::type::oyxi_f32;
+        case cldnn::format::yxio: return format::type::yxio_f32;
+        default: throw std::invalid_argument("unsupported format");
+        }
+    }
+
+    static format::type convert_format(const cldnn::layout& layout)
+    {
+        switch (layout.size.format.value)
+        {
+        case cldnn::format::format_num: return format::type::format_num;
+        case cldnn::format::any: return format::type::any;
+        default: break;
+        }
+
+        uint8_t format_shift;
+        switch (layout.data_type)
+        {
+        case cldnn::data_types::f32:
+            format_shift = 0;
+            break;
+        case cldnn::data_types::f16:
+            format_shift = format::type::half_base;
+            break;
+        default: throw std::invalid_argument("unsupported data type");
+        }
+        return static_cast<format::type>(get_format_base(layout.size.format) + format_shift);
+    }
+
+    struct arguments {
+        format::type    format;
+        const tensor&   size;
+        arguments(const cldnn::layout& layout): format(convert_format(layout)), size(layout.size){}
+    };
+};
+
 struct memory_impl;
+template<typename T> struct pointer;
 struct memory
 {
-    static memory allocate(const cldnn::layout& layout)
+    static memory allocate(const engine& engine, const layout& layout)
     {
         size_t size = layout.data_size();
         if (size == 0) throw std::invalid_argument("size should be more than 0");
         status_t status;
-        auto buf = allocate_buffer(size, &status);
+        auto buf = allocate_buffer(engine, layout, &status);
         if (buf == nullptr || status != CLDNN_SUCCESS)
             CLDNN_THROW("memory allocation failed", status);
-        return memory(layout, buf);
+        return memory(buf);
     }
 
     template<typename T>
@@ -138,22 +256,16 @@ struct memory
         size_t size = array.size() * sizeof(T);
         if ( size != layout.data_size()) throw std::invalid_argument("buffer size mismatch");
         status_t status;
-        auto buf = attach_buffer(array.data(), size, &status);
+        auto buf = attach_buffer(layout, array.data(), size, &status);
         if (buf == nullptr || status != CLDNN_SUCCESS)
             CLDNN_THROW("memory attach failed", status);
-        return memory(layout, buf);
+        return memory(buf);
     }
 
-    static memory attach(const cldnn::layout& layout, void* pointer, size_t size)
+    memory(memory_impl* data)
+        :_data(data)
     {
-        if (pointer == nullptr) throw std::invalid_argument("pointer should not be NULL");
-        if (size == 0) throw std::invalid_argument("size should be more than 0");
-        if (size < layout.data_size()) throw std::invalid_argument("buffer size mismatch");
-        status_t status;
-        auto buf = attach_buffer(pointer, size, &status);
-        if (buf == nullptr || status != CLDNN_SUCCESS)
-            CLDNN_THROW("memory attach failed", status);
-        return memory(layout, buf);
+        if (!_data) throw std::invalid_argument("data");
     }
 
     DLL_SYM memory(const memory& other);
@@ -164,8 +276,7 @@ struct memory
 
     friend bool operator==(const memory& lhs, const memory& rhs)
     {
-        return lhs._layout == rhs._layout
-                && lhs._data == rhs._data;
+        return lhs._data == rhs._data;
     }
 
     friend bool operator!=(const memory& lhs, const memory& rhs)
@@ -177,26 +288,27 @@ struct memory
      * \brief 
      * \return number of elements of _layout.data_type stored in memory
      */
-    size_t count() const { return _layout.count(); }
+    size_t count() const { return get_layout().count(); }
 
     /**
      * \brief 
      * \return number of bytes used by memory
      */
-    size_t size() const { return _layout.data_size(); }
-    layout get_layout() const { return _layout; }
+    size_t size() const { return get_layout().data_size(); }
+    DLL_SYM const layout& get_layout() const noexcept;
+    DLL_SYM bool is_allocated_by(const engine& engine) const noexcept;
+
+    // TODO remove this backward compatibility call
+    neural_memory::arguments argument() const { return neural_memory::arguments(get_layout()); };
+    template<typename T> pointer<T> pointer() const;
+
+    const memory_impl* get() const { return _data; }
 
 private:
-    memory(const cldnn::layout& layout, memory_impl* data)
-        :_layout(layout), _data(data)
-    {
-        if (!_data) throw std::invalid_argument("data");
-    }
     friend struct engine;
-    layout _layout;
     memory_impl* _data;
-    DLL_SYM static memory_impl* allocate_buffer(size_t size, status_t* status) noexcept;
-    DLL_SYM static memory_impl* attach_buffer(void* pointer, size_t size, status_t* status) noexcept;
+    DLL_SYM static memory_impl* allocate_buffer(engine engine, layout layout, status_t* status) noexcept;
+    DLL_SYM static memory_impl* attach_buffer(layout layout, void* pointer, size_t size, status_t* status) noexcept;
     DLL_SYM void* lock_buffer(status_t* status) const noexcept;
     DLL_SYM status_t unlock_buffer() const noexcept;
 
@@ -225,7 +337,7 @@ struct pointer
 {
     pointer(const memory& mem): _mem(mem)
     {
-        if (!data_type_match<T>(_mem._layout.data_type)) throw std::logic_error("memory data type do not match");
+        if (!data_type_match<T>(_mem.get_layout().data_type)) throw std::logic_error("memory data type do not match");
         _ptr = static_cast<T*>(_mem.lock());
     }
     ~pointer() { _mem.unlock(); }
@@ -277,4 +389,8 @@ private:
     memory _mem;
     T* _ptr;
 };
+
+template <typename T>
+pointer<T> memory::pointer() const { return cldnn::pointer<T>(*this); }
+
 }

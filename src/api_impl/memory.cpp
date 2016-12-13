@@ -18,49 +18,22 @@
 #include "primitive_type.h"
 #include "primitive_arg.h"
 #include "memory_impl.h"
+#include "engine_impl.h"
 #include <memory>
 
 
 namespace cldnn
 {
-struct simple_alloc_memory : memory_impl
-{
-    simple_alloc_memory(size_t size): _data(size)
-    {}
-
-    void* lock() override { return _data.data(); }
-    void unlock() override {};
-    size_t size() const override { return _data.size(); }
-private:
-    std::vector<uint8_t> _data;
-};
-
-struct simple_attached_memory : memory_impl
-{
-    simple_attached_memory(void* pointer, size_t size)
-    : _pointer(pointer), _size(size)
-    {}
-
-    void* lock() override { return _pointer; }
-    void unlock() override {}
-    size_t size() const override { return _size; }
-private:
-    void* _pointer;
-    size_t _size;
-};
-
-memory::memory(const memory& other): _layout(other._layout)
-                                   , _data(other._data)
+memory::memory(const memory& other): _data(other._data)
 {
     _data->add_ref();
 }
 
 memory& memory::operator=(const memory& other)
 {
-    if (this == &other)
+    if (this == &other || this->_data == other._data )
         return *this;
     _data->release();
-    _layout = other._layout;
     _data = other._data;
     _data->add_ref();
     return *this;
@@ -71,13 +44,23 @@ memory::~memory()
     _data->release();
 }
 
-memory_impl* memory::allocate_buffer(size_t size, status_t* status) noexcept
+const layout& memory::get_layout() const noexcept
+{
+    return _data->get_layout();
+}
+
+bool memory::is_allocated_by(const engine& engine) const noexcept
+{
+    return _data->is_allocated_by(engine.get());
+}
+
+memory_impl* memory::allocate_buffer(engine engine, layout layout, status_t* status) noexcept
 {
     try
     {
         if (status)
             *status = CLDNN_SUCCESS;
-        return new simple_alloc_memory(size);
+        return engine.get()->allocate_buffer(layout);
     }
     catch (...)
     {
@@ -87,13 +70,14 @@ memory_impl* memory::allocate_buffer(size_t size, status_t* status) noexcept
     }
 }
 
-memory_impl* memory::attach_buffer(void* pointer, size_t size, status_t* status) noexcept
+memory_impl* memory::attach_buffer(layout layout, void* pointer, size_t size, status_t* status) noexcept
 {
     try
     {
         if (status)
             *status = CLDNN_SUCCESS;
-        return new simple_attached_memory(pointer, size);
+        assert(layout.data_size() == size);
+        return new simple_attached_memory(layout, pointer);
     }
     catch (...)
     {

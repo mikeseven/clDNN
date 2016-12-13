@@ -68,6 +68,12 @@ public:
         return _data[idx];
     }
 
+    const T& at(size_t idx) const
+    {
+        if (idx >= _size) throw std::out_of_range("idx");
+        return _data[idx];
+    }
+
     std::vector<T> vector() const { return std::vector<T>(_data, _data + _size); }
 };
 

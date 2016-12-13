@@ -16,51 +16,50 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "event_impl.h"
-#include <vector>
-#include <mutex>
-#include <condition_variable>
+#include "engine_impl.h"
 
 namespace cldnn
 {
-class simple_user_event : public event_impl
-{
-public:
-    simple_user_event() :
-        _is_set(false)
-    {}
 
-    void wait() override
-    {
-        std::unique_lock<std::mutex> lock(_mutex);
-        if (_is_set) return;
-        _cv.wait(lock, [&] {return _is_set; });
-    }
-
-    void set() override
-    {
-        {
-            std::lock_guard<std::mutex> lock(_mutex);
-            _is_set = true;
-        }
-        _cv.notify_all();
-        for (auto& pair : _handlers)
-        {
-            pair.first(pair.second);
-        }
-    }
-
-    void add_event_handler(event::event_handler handler, void* data) override
-    {
-        if (handler == nullptr) throw std::invalid_argument("event handler");
-        _handlers.push_back({ handler, data });
-    }
-
-private:
-    bool _is_set;
-    std::mutex _mutex;
-    std::condition_variable _cv;
-    std::vector<std::pair<event::event_handler, void*>> _handlers;
-};
+//class simple_user_event : public event_impl
+//{
+//public:
+//    simple_user_event() :
+//        _is_set(false)
+//    {}
+//
+//    void wait() override
+//    {
+//        std::unique_lock<std::mutex> lock(_mutex);
+//        if (_is_set) return;
+//        _cv.wait(lock, [&] {return _is_set; });
+//    }
+//
+//    void set() override
+//    {
+//        {
+//            std::lock_guard<std::mutex> lock(_mutex);
+//            _is_set = true;
+//        }
+//        _cv.notify_all();
+//        for (auto& pair : _handlers)
+//        {
+//            pair.first(pair.second);
+//        }
+//    }
+//
+//    void add_event_handler(event::event_handler handler, void* data) override
+//    {
+//        if (handler == nullptr) throw std::invalid_argument("event handler");
+//        _handlers.push_back({ handler, data });
+//    }
+//
+//private:
+//    bool _is_set;
+//    std::mutex _mutex;
+//    std::condition_variable _cv;
+//    std::vector<std::pair<event::event_handler, void*>> _handlers;
+//};
 
 
 event::event(const event& other):_impl(other._impl)
@@ -82,13 +81,13 @@ event::~event()
 }
 
 
-event_impl* event::create_user_event_impl(status_t* status) noexcept
+event_impl* event::create_user_event_impl(const engine& engine, status_t* status) noexcept
 {
     try
     {
         if (status)
             *status = CLDNN_SUCCESS;
-        return new simple_user_event;
+        return engine.get()->create_user_event();
     }
     catch (...)
     {

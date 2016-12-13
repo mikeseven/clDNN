@@ -15,38 +15,13 @@
 */
 
 #pragma once
-#include "neural.h"
+#include "cldnn_defs.h"
 #include <chrono>
 #include <sstream>
 #include <iomanip>
 
 namespace neural {
-namespace gpu {
-    struct configuration {
-        enum device_types { default_device = 0, cpu, gpu, accelerator };
-
-        DLL_SYM static configuration& get();
-
-        bool enable_profiling;
-        device_types device_type;
-        uint32_t device_vendor;
-        std::string compiler_options;
-    private:
-        configuration();
-    };
-}
-
 namespace instrumentation {
-
-    template<class ClockTy = std::chrono::steady_clock>
-    class timer {
-        typename ClockTy::time_point start_point;
-    public:
-        typedef typename ClockTy::duration val_type;
-
-        timer() :start_point(ClockTy::now()) {}
-        val_type uptime() const { return ClockTy::now() - start_point; }
-    };
 
     template<class Rep, class Period>
     std::string to_string(const std::chrono::duration<Rep, Period> val) {
@@ -70,32 +45,5 @@ namespace instrumentation {
         DLL_SYM static void log_memory_to_file(const primitive&, std::string prefix = "", bool single_batch = false, uint32_t batch_id = 0, bool single_feature = false, uint32_t feature_id = 0);
     private:
         static const std::string dump_dir;
-    };
-
-    struct profiling_period
-    {
-        virtual std::chrono::nanoseconds value() const = 0;
-        virtual ~profiling_period() = default;
-    };
-
-    struct profiling_period_basic : profiling_period
-    {
-        template<class _Rep, class _Period>
-        profiling_period_basic(const std::chrono::duration<_Rep, _Period>& val) :
-            _value(std::chrono::duration_cast<std::chrono::nanoseconds>(val)){}
-
-        std::chrono::nanoseconds value() const override { return _value; }
-    private:
-        std::chrono::nanoseconds _value;
-    };
-
-    struct profiling_interval {
-        std::string name;
-        std::shared_ptr<profiling_period> value;
-    };
-
-    struct profiling_info {
-        std::string name;
-        std::vector<profiling_interval> intervals;
     };
 } }

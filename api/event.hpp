@@ -17,15 +17,16 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "cldnn_defs.h"
+#include "engine.hpp"
 
 namespace cldnn
 {
 class event_impl;
 struct event
 {
-    static event create_user_event()
+    static event create_user_event(const engine& engine)
     {
-        return create_obj<event, event_impl>("create user event failed", create_user_event_impl);
+        return create_obj<event, event_impl>("create user event failed", [&](status_t* status) { return create_user_event_impl(engine, status); });
     }
     DLL_SYM event(const event& other);
     DLL_SYM event& operator=(const event& other);
@@ -42,11 +43,12 @@ struct event
         check_status("set event handler failed", add_event_handler_impl(handler, param));
     }
 
+    event_impl* get() const { return _impl; }
 private:
     friend struct network;
     event(event_impl* impl) : _impl(impl) {}
     event_impl* _impl;
-    DLL_SYM static event_impl* create_user_event_impl(status_t* status) noexcept;
+    DLL_SYM static event_impl* create_user_event_impl(const engine& engine, status_t* status) noexcept;
     DLL_SYM status_t wait_impl() noexcept;
     DLL_SYM status_t set_impl() noexcept;
     DLL_SYM status_t add_event_handler_impl(event_handler handler, void* param) noexcept;

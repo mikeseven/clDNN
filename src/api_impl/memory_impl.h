@@ -21,10 +21,32 @@
 
 namespace cldnn
 {
+class engine_impl;
 struct memory_impl : refcounted_obj<memory_impl>
 {
+    memory_impl(const refcounted_obj_ptr<engine_impl>& engine, layout layout): _engine(engine), _layout(layout){}
+    virtual ~memory_impl() = default;
     virtual void* lock() = 0;
     virtual void unlock() = 0;
-    virtual size_t size() const = 0;
+    size_t size() const { return _layout.data_size(); }
+    virtual bool is_allocated_by(const refcounted_obj_ptr<engine_impl>& engine) const { return engine == _engine; };
+    const layout& get_layout() const { return _layout; }
+protected:
+    const refcounted_obj_ptr<engine_impl> _engine;
+    const layout _layout;
 };
+
+struct simple_attached_memory : memory_impl
+{
+    simple_attached_memory(layout layout, void* pointer)
+        : memory_impl(nullptr, layout), _pointer(pointer)
+    {
+    }
+
+    void* lock() override { return _pointer; }
+    void unlock() override {}
+private:
+    void* _pointer;
+};
+
 }

@@ -48,4 +48,51 @@ public:
 private:
     std::atomic_int _ref_count;
 };
+
+template<class T, typename Dummy = std::enable_if<std::is_base_of<refcounted_obj<T>, T>::value>>
+struct refcounted_obj_ptr
+{
+    refcounted_obj_ptr(T* ptr, bool add_ref = true) : _ptr(ptr)
+    {
+        if(add_ref) ptr_add_ref();
+    }
+
+    refcounted_obj_ptr(const refcounted_obj_ptr& other)
+        : _ptr(other._ptr)
+    {
+        ptr_release();
+    }
+
+    refcounted_obj_ptr& operator=(const refcounted_obj_ptr& other)
+    {
+        if (this == &other)
+            return *this;
+        ptr_release();
+        _ptr = other._ptr;
+        ptr_release();
+        return *this;
+    }
+
+    ~refcounted_obj_ptr() { _ptr->release(); }
+
+    operator bool() const { return _ptr != nullptr; }
+    T* get() const { return _ptr; }
+    T& operator*() const { return *get(); }
+    T* operator->() const { return get(); }
+
+    friend bool operator==(const refcounted_obj_ptr& lhs, const refcounted_obj_ptr& rhs)
+    {
+        return lhs._ptr == rhs._ptr;
+    }
+
+    friend bool operator!=(const refcounted_obj_ptr& lhs, const refcounted_obj_ptr& rhs)
+    {
+        return !(lhs == rhs);
+    }
+
+private:
+    T* _ptr;
+    void ptr_add_ref() { if (_ptr) _ptr->add_ref(); }
+    void ptr_release() { if (_ptr) _ptr->release(); }
+};
 }

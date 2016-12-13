@@ -16,16 +16,24 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitive.hpp"
+#include "api/engine.hpp"
+#include "api/memory.hpp"
+#include "api_impl/primitive_arg.h"
+#include "api_impl/reorder_arg.h"
+#include "implementation_map.h"
 
-namespace cldnn
+namespace neural
 {
-class network_impl;
-class primitive_arg;
-struct primitive_type
-{
-    virtual std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const = 0;
-    virtual std::shared_ptr<const primitive_arg> create_arg(network_impl& network, std::shared_ptr<const primitive> desc) const = 0;
-    virtual ~primitive_type() = default;
-};
+    using is_an_implementation = cldnn::primitive_impl;
+    using reorder = cldnn::reorder_arg;
+    using memory = cldnn::neural_memory;
+    template<typename primitive_kind> using implementation_map = cldnn::implementation_map<primitive_kind>;
+    struct engine
+    {
+        struct type
+        {
+            static const cldnn::engine_types gpu = cldnn::engine_types::ocl;
+        };
+    };
+
 }

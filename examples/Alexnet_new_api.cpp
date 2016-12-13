@@ -24,6 +24,10 @@
 #include <api/primitives/normalization.hpp>
 #include <api/primitives/fully_connected.hpp>
 #include <api/primitives/softmax.hpp>
+#include <primitives/data.hpp>
+#include <primitives/input_layout.hpp>
+#include <topology.hpp>
+#include <network.hpp>
 
 // Commented out next line just to show proper types in example
 //using namespace cldnn;
@@ -87,8 +91,6 @@ void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn
     std::cout << "Building Alexnet topology started" << std::endl;
     helpers::instrumentation::timer<> timer_build;
 
-    alexnet.add_input("input", input_layout);
-    //OR
     cldnn::input_layout input("input", input_layout);
     alexnet.add_primitive(input);
     //OR
@@ -96,7 +98,6 @@ void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn
 
     // create conversion to yxfb format and subtract mean values
     cldnn::memory imagenet_mean_mem = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "imagenet_mean.nnd"), helpers::file::mean);
-    alexnet.add_data("imagenet_mean", imagenet_mean_mem);
     //OR
     cldnn::data imagenet_mean("imagenet_mean", imagenet_mean_mem);
     alexnet.add_primitive(imagenet_mean);
@@ -110,9 +111,9 @@ void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn
 
     // create convolution
     cldnn::memory conv1_weights = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv1_weights.nnd"), helpers::file::convolution);
-    alexnet.add_data("conv1_weights", conv1_weights);
+    alexnet.add(cldnn::data("conv1_weights", conv1_weights));
     cldnn::memory conv1_biases = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv1_biases.nnd"), helpers::file::bias);
-    alexnet.add_data("conv1_biases", conv1_biases);
+    alexnet.add(cldnn::data("conv1_biases", conv1_biases));
 
     cldnn::convolution conv1(
         "conv1",
@@ -142,13 +143,13 @@ void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn
 
     //convolution with split
     cldnn::memory conv2_g1_weights = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv2_g1_weights.nnd"), helpers::file::convolution);
-    alexnet.add_data("conv2_g1_weights", conv2_g1_weights);
+    alexnet.add(cldnn::data("conv2_g1_weights", conv2_g1_weights));
     cldnn::memory conv2_g1_biases = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv2_g1_biases.nnd"), helpers::file::bias);
-    alexnet.add_data("conv2_g1_biases", conv2_g1_biases);
+    alexnet.add(cldnn::data("conv2_g1_biases", conv2_g1_biases));
     cldnn::memory conv2_g2_weights = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv2_g2_weights.nnd"), helpers::file::convolution);
-    alexnet.add_data("conv2_g2_weights", conv2_g2_weights);
+    alexnet.add(cldnn::data("conv2_g2_weights", conv2_g2_weights));
     cldnn::memory conv2_g2_biases = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv2_g2_biases.nnd"), helpers::file::bias);
-    alexnet.add_data("conv2_g2_biases", conv2_g2_biases);
+    alexnet.add(cldnn::data("conv2_g2_biases", conv2_g2_biases));
 
     cldnn::convolution conv2_group2(
         "conv2_group2",
@@ -185,9 +186,9 @@ void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn
 
     // convolution #3
     cldnn::memory conv3_weights = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv3_weights.nnd"), helpers::file::convolution);
-    alexnet.add_data("conv3_weights", conv3_weights);
+    alexnet.add(cldnn::data("conv3_weights", conv3_weights));
     cldnn::memory conv3_biases = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv3_biases.nnd"), helpers::file::bias);
-    alexnet.add_data("conv3_biases", conv3_biases);
+    alexnet.add(cldnn::data("conv3_biases", conv3_biases));
 
     cldnn::convolution conv3{
         "conv3",
@@ -202,13 +203,13 @@ void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn
 
     // convolution #4
     cldnn::memory conv4_g1_weights = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv4_g1_weights.nnd"), helpers::file::convolution);
-    alexnet.add_data("conv4_g1_weights", conv4_g1_weights);
+    alexnet.add(cldnn::data("conv4_g1_weights", conv4_g1_weights));
     cldnn::memory conv4_g1_biases = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv4_g1_biases.nnd"), helpers::file::bias);
-    alexnet.add_data("conv4_g1_biases", conv4_g1_biases);
+    alexnet.add(cldnn::data("conv4_g1_biases", conv4_g1_biases));
     cldnn::memory conv4_g2_weights = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv4_g2_weights.nnd"), helpers::file::convolution);
-    alexnet.add_data("conv4_g2_weights", conv4_g2_weights);
+    alexnet.add(cldnn::data("conv4_g2_weights", conv4_g2_weights));
     cldnn::memory conv4_g2_biases = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv4_g2_biases.nnd"), helpers::file::bias);
-    alexnet.add_data("conv4_g2_biases", conv4_g2_biases);
+    alexnet.add(cldnn::data("conv4_g2_biases", conv4_g2_biases));
 
     cldnn::convolution conv4_group2{
         "conv4_group2",
@@ -223,13 +224,13 @@ void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn
 
     // convolution #5
     cldnn::memory conv5_g1_weights = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv5_g1_weights.nnd"), helpers::file::convolution);
-    alexnet.add_data("conv5_g1_weights", conv5_g1_weights);
+    alexnet.add(cldnn::data("conv5_g1_weights", conv5_g1_weights));
     cldnn::memory conv5_g1_biases = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv5_g1_biases.nnd"), helpers::file::bias);
-    alexnet.add_data("conv5_g1_biases", conv5_g1_biases);
+    alexnet.add(cldnn::data("conv5_g1_biases", conv5_g1_biases));
     cldnn::memory conv5_g2_weights = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv5_g2_weights.nnd"), helpers::file::convolution);
-    alexnet.add_data("conv5_g2_weights", conv5_g2_weights);
+    alexnet.add(cldnn::data("conv5_g2_weights", conv5_g2_weights));
     cldnn::memory conv5_g2_biases = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "conv5_g2_biases.nnd"), helpers::file::bias);
-    alexnet.add_data("conv5_g2_biases", conv5_g2_biases);
+    alexnet.add(cldnn::data("conv5_g2_biases", conv5_g2_biases));
 
     alexnet.add_primitive<cldnn::convolution>({
         "conv5_group2",
@@ -254,9 +255,9 @@ void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn
 
     // fully connected #6
     cldnn::memory fc6_weights = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "fc6_weights.nnd"), helpers::file::fully_connected);
-    alexnet.add_data("fc6_weights", fc6_weights);
+    alexnet.add(cldnn::data("fc6_weights", fc6_weights));
     cldnn::memory fc6_biases = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "fc6_biases.nnd"), helpers::file::bias);
-    alexnet.add_data("fc6_biases", fc6_biases);
+    alexnet.add(cldnn::data("fc6_biases", fc6_biases));
 
     alexnet.add_primitive<cldnn::fully_connected>({
         "fc6",
@@ -268,9 +269,9 @@ void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn
 
     // fully connected #7
     cldnn::memory fc7_weights = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "fc7_weights.nnd"), helpers::file::fully_connected);
-    alexnet.add_data("fc7_weights", fc7_weights);
+    alexnet.add(cldnn::data("fc7_weights", fc7_weights));
     cldnn::memory fc7_biases = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "fc7_biases.nnd"), helpers::file::bias);
-    alexnet.add_data("fc7_biases", fc7_biases);
+    alexnet.add(cldnn::data("fc7_biases", fc7_biases));
 
     cldnn::fully_connected fc7{
         "fc7",
@@ -283,9 +284,9 @@ void define_alexnet(cldnn::topology& alexnet, cldnn::engine& engine, const cldnn
 
     // fully connected #7
     cldnn::memory fc8_weights = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "fc8_weights.nnd"), helpers::file::fully_connected);
-    alexnet.add_data("fc8_weights", fc8_weights);
+    alexnet.add(cldnn::data("fc8_weights", fc8_weights));
     cldnn::memory fc8_biases = helpers::create_memory_from_file(engine, helpers::join_path(weights_dir, "fc8_biases.nnd"), helpers::file::bias);
-    alexnet.add_data("fc8_biases", fc8_biases);
+    alexnet.add(cldnn::data("fc8_biases", fc8_biases));
 
     cldnn::fully_connected fc8{
         "fc8",
@@ -366,9 +367,9 @@ void alexnet(uint32_t batch_size, std::string img_dir, const std::string& weight
     cldnn::topology alexnet_topology = cldnn::topology::create();
     cldnn::engine engine = cldnn::engine::create({ profiling });
     define_alexnet(alexnet_topology, engine, input_layout, weights_dir);
-    cldnn::network alexnet = engine.build_network(alexnet_topology);
+    cldnn::network alexnet = cldnn::network::build(engine, alexnet_topology);
 
-    cldnn::memory input = engine.allocate_memory(input_layout);
+    cldnn::memory input = cldnn::memory::allocate(engine, input_layout);
 
     std::vector<std::string> images_in_batch;
     auto images_list_iterator = img_list.begin();

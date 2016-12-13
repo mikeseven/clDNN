@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "primitive.hpp"
+#include "../primitive.hpp"
 
 namespace cldnn
 {
@@ -60,18 +60,18 @@ struct convolution : public primitive_base<convolution, DTO(convolution)>
 
     std::vector<primitive_id> weights() const
     {
-        assert(_input.array_ref().size() > _split * 2);
+        assert(_input.size() > _split * 2);
         return{ _input.store().end() - _split * 2, _input.store().end() - _split };
     }
 
     std::vector<primitive_id> bias() const
     {
-        assert(_input.array_ref().size() > _split * 2);
+        assert(_input.size() > _split * 2);
         return{ _input.store().end() - _split, _input.store().end() };
     }
 
     size_t split() const { return _split; }
-    tensor stride() const { return _dto.stride; };
+    const tensor& stride() const { return _dto.stride; };
     bool with_activation() const { return _dto.with_activation; }
     float negative_slope() const { return _dto.activation_negative_slope; };
 
@@ -86,7 +86,7 @@ private:
         auto input_size = _input.size();
         std::copy(weights.begin(), weights.end(), std::back_inserter(_input));
         std::copy(bias.begin(), bias.end(), std::back_inserter(_input));
-        assert(_input.array_ref().size() == _split * 2 + 1);
+        assert(_input.size() == _split * 2 + 1);
         _dto.weights = array_ref<primitive_id_ref>{ _input.ref().data() + input_size, _split };
         _dto.bias = array_ref<primitive_id_ref>{ _input.ref().data() + input_size + _split, _split };
     }

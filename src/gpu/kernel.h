@@ -18,34 +18,31 @@
 #pragma once
 #include "memory_gpu.h"
 #include "kernels_cache.h"
-#include "api/instrumentation.h"
+#include "api/profiling.hpp"
 #include <iostream>
 #include <sstream>
+#include "api_impl/event_impl.h"
 
 namespace neural { namespace gpu {
 
-class memory_arg : public context_holder {
-    const neural::memory& _mem;
-    std::shared_ptr<gpu_buffer> _gpu_buffer;
-    bool _copy_input;
-    bool _copy_output;
+class memory_arg {
+    cldnn::memory _mem;
 
 protected:
-    memory_arg(const neural::memory& mem, bool copy_input, bool copy_output);
+    memory_arg(const cldnn::memory& mem) : _mem(mem){}
 
 public:
-    const cl::Buffer& get_buffer() const { return _gpu_buffer->get_buffer(); }
-    ~memory_arg();
+    const cl::Buffer& get_buffer() const { return static_cast<const gpu_buffer*>(_mem.get())->get_buffer(); }
 };
 
 class input_mem : public memory_arg {
 public:
-    input_mem(const neural::memory& mem) :memory_arg(mem, true, false) {}
+    input_mem(const cldnn::memory& mem) :memory_arg(mem) {}
 };
 
 class output_mem : public memory_arg {
 public:
-    output_mem(const neural::memory& mem) :memory_arg(mem, false, true) {}
+    output_mem(const cldnn::memory& mem) :memory_arg(mem) {}
 };
 
 // TODO improve to_code_string specializations
@@ -105,12 +102,11 @@ std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, T value
     return std::static_pointer_cast<jit_constant>(std::make_shared<simple_jit_constant>(name, to_code_string(value)));
 }
 
-template<typename T>
 class vector_jit_constant : public jit_constant {
-    const neural::vector<T> _vec;
+    const cldnn::tensor _vec;
 
 public:
-    vector_jit_constant(const std::string& name, const neural::vector<T>& vec)
+    vector_jit_constant(const std::string& name, const cldnn::tensor& vec)
         : jit_constant(name), _vec(vec) {}
 
     kernels_cache::jit_definitions get_definitions() const override {
@@ -144,17 +140,16 @@ public:
     }
 };
 
-template<typename T>
-inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const neural::vector<T>& value) {
-    return std::static_pointer_cast<jit_constant>(std::make_shared<vector_jit_constant<T>>(name, value));
+inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const cldnn::tensor& value) {
+    return std::static_pointer_cast<jit_constant>(std::make_shared<vector_jit_constant>(name, value));
 }
 
-class memory_jit_constant : public vector_jit_constant<uint32_t> {
-    const neural::memory& _mem;
+class memory_jit_constant : public vector_jit_constant {
+    const cldnn::memory _mem;
 
 public:
-    memory_jit_constant(const std::string& name, const neural::memory& mem)
-        : vector_jit_constant(name, mem.argument.size), _mem(mem){}
+    memory_jit_constant(const std::string& name, const cldnn::memory& mem)
+        : vector_jit_constant(name, mem.get_layout().size), _mem(mem){}
 
     kernels_cache::jit_definitions get_definitions() const override {
         auto result = vector_jit_constant::get_definitions();
@@ -169,33 +164,32 @@ public:
     }
 };
 
-inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const neural::memory& value) {
+inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const cldnn::memory& value) {
     return std::static_pointer_cast<jit_constant>(std::make_shared<memory_jit_constant>(name, value));
 }
 
-class memories_jit_constant : public vector_jit_constant<uint32_t> {
-    const std::vector<std::reference_wrapper<const neural::memory>> _mem;
+class memories_jit_constant : public vector_jit_constant {
+    const std::vector<const cldnn::memory> _mem;
 
 public:
-    memories_jit_constant(const std::string& name, const std::vector<std::reference_wrapper<const neural::memory>> mem)
-        :vector_jit_constant(name, mem[0].get().argument.size), _mem(mem) {}
+    memories_jit_constant(const std::string& name, const std::vector<const cldnn::memory> mem)
+        :vector_jit_constant(name, mem[0].get_layout().size), _mem(mem) {}
 
     kernels_cache::jit_definitions get_definitions() const override {
         for (size_t i = 1; i < _mem.size(); i++)
         {
-            if (_mem[0].get().count() != _mem[i].get().count())
+            if (_mem[0].count() != _mem[i].count())
                 throw std::invalid_argument("All memories must contain the same number of elements!");
         }
         auto result = vector_jit_constant::get_definitions();
         result.push_back({ _name + "_ARRAY_NUM", std::to_string(_mem.size()) });
         std::stringstream ss;
-        ss << "(float[][" + std::to_string(_mem[0].get().count()) + "]) {";
+        ss << "(float[][" + std::to_string(_mem[0].count()) + "]) {";
         for (auto& m : _mem)
         {
-            auto & _m = m.get();
-            auto data = _m.pointer<float>();
+            auto data = m.pointer<float>();
             ss << "{ ";
-            for (size_t i = 0; i < _m.count(); i++)
+            for (size_t i = 0; i < m.count(); i++)
                 ss << to_code_string(data[i]) << ",";
             ss << " } ,";
         }
@@ -205,7 +199,7 @@ public:
     }
 };
 
-inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const std::vector<std::reference_wrapper<const neural::memory>> value) {
+inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const std::vector<const cldnn::memory> value) {
     return std::static_pointer_cast<jit_constant>(std::make_shared<memories_jit_constant>(name, value));
 }
 
@@ -324,12 +318,12 @@ class kernel : public context_holder {
     void setArgs(cl::Kernel&) const {}
 
 public:
-    explicit kernel(const std::string& name, kernels_cache::jit_definitions definitions = kernels_cache::jit_definitions())
-        : _kernel_id(context()->get_kernels_cache().create_kernel_from_template(name, definitions)) {}
-    explicit kernel(const std::string& name, const jit_constants& constants) 
-        : _kernel_id(context()->get_kernels_cache().create_kernel_from_template(name, constants.get_definitions())) {}
+    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& name, kernels_cache::jit_definitions definitions = kernels_cache::jit_definitions())
+        : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(name, definitions)) {}
+    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& name, const jit_constants& constants)
+        : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(name, constants.get_definitions())) {}
 
-    kernel(const kernel& other) : _kernel_id(other._kernel_id) {}
+    kernel(const kernel& other) : context_holder(other.context()), _kernel_id(other._kernel_id) {}
 
     kernel& operator=(const kernel& other) {
         if (this == &other)
@@ -339,14 +333,17 @@ public:
     }
 
     template<typename... Args>
-    void run(const kernel_execution_options& options, Args... args) const {
-        if (configuration::get().enable_profiling) {
+    cldnn::event run(const kernel_execution_options& options, const std::vector<cldnn::event>& dependencies, Args... args) const {
+        cl::Event end_event;
+        std::vector<cl::Event> events(dependencies.size());
+        std::transform(std::begin(dependencies), std::end(dependencies), std::begin(events), [](const cldnn::event& evt) { return evt.get()->get(); });
+
+        if (context()->get_configuration().enable_profiling) {
             instrumentation::timer<> pre_enqueue_timer;
             auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
             setArgs<0>(clkernel, std::forward<Args>(args)...);
             auto pre_enqueue_time = pre_enqueue_timer.uptime();
-            cl::Event end_event;
-            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), 0, &end_event);
+            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
             end_event.wait();
             context()->report_profiling({ _kernel_id,
                 {
@@ -359,8 +356,9 @@ public:
         else {
             auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
             setArgs<0>(clkernel, std::forward<Args>(args)...);
-            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range());
+            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
         }
+        return new cldnn::event_impl(end_event);
     }
 };
 

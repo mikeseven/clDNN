@@ -16,18 +16,20 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "primitive_arg.h"
-#include "network_builder.h"
+#include "network_impl.h"
+#include "engine_impl.h"
 
 namespace cldnn
 {
-primitive_arg::primitive_arg(network_builder& builder, std::shared_ptr<const primitive> desc, const memory& output)
-    :_desc(desc)
-    ,_output(output)
-{
-    for(auto& i : _desc->input())
-    {
-        _inputs.push_back(builder.get_primitive(i));
-    }
-}
+primitive_arg::primitive_arg(network_impl& network, std::shared_ptr<const primitive> desc, const memory& output_memory)
+    : _network(network)
+    , _desc(desc)
+    , _inputs(network.get_primitives(desc->input()))
+    , _output(output_memory)
+{}
+
+primitive_arg::primitive_arg(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout)
+    : primitive_arg(network, desc, network.get_engine()->allocate_buffer(output_layout))
+{}
 
 }

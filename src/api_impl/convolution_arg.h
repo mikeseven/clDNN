@@ -16,16 +16,21 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitive.hpp"
+#include "api/primitives/convolution.hpp"
+#include "primitive_arg.h"
+#include <memory>
 
 namespace cldnn
 {
-class network_impl;
-class primitive_arg;
-struct primitive_type
+class convolution_arg : public primitive_arg_base<convolution>
 {
-    virtual std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const = 0;
-    virtual std::shared_ptr<const primitive_arg> create_arg(network_impl& network, std::shared_ptr<const primitive> desc) const = 0;
-    virtual ~primitive_type() = default;
+public:
+    static layout calc_output_layout(network_impl& network, std::shared_ptr<const convolution> desc);
+
+    convolution_arg(network_impl& network, std::shared_ptr<const convolution> desc);
+
+    const memory& weights_memory(size_t index) const;
+
+    const memory& bias_memory(size_t index) const;
 };
 }

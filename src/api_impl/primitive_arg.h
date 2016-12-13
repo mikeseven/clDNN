@@ -19,29 +19,58 @@
 
 #include "api/memory.hpp"
 #include "api/primitive.hpp"
+#include "api/network.hpp"
 #include <memory>
 
+namespace neural { namespace gpu { class gpu_toolkit; } }
 namespace cldnn
 {
-class network_builder;
+struct primitive_impl {
+    virtual event execute(const std::vector<event>& events) = 0;
+    virtual ~primitive_impl() = default;
+};
+
 class primitive_arg
 {
 public:
     virtual ~primitive_arg() = default;
     const memory& input_memory(size_t index) const { return _inputs.at(index)->output_memory(); }
-    const memory& output_memory() const { return _output; }
+    const memory& output_memory() const { return _output; };
+    // TODO remove backward compatibility code:
+    const memory& output_memory(size_t idx) const
+    {
+        assert(idx == 0);
+        return output_memory();
+    }
 
-    std::shared_ptr<const primitive> argument() const { return _desc; }
     primitive_type_id type() const { return _desc->type(); }
-    primitive_id_ref id() const { return _desc->get_dto()->id; }
+    primitive_id id() const { return _desc->get_dto()->id; }
+    network_impl& get_network() const { return _network; }
+    std::unique_ptr<primitive_impl> _impl;
 
 protected:
-    primitive_arg(network_builder& builer, std::shared_ptr<const primitive> desc, const memory& output);
-
-private:
+    primitive_arg(network_impl& network, std::shared_ptr<const primitive> desc, const memory& output_memory);
+    primitive_arg(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout);
+    network_impl& _network;
     std::shared_ptr<const primitive> _desc;
     std::vector<std::shared_ptr<const primitive_arg>> _inputs;
     memory _output;
 };
 
+template<class PType>
+class primitive_arg_base : public primitive_arg
+{
+public:
+    const typename PType::dto& argument;
+protected:
+    primitive_arg_base(network_impl& network, std::shared_ptr<const PType> desc, const memory& output_memory)
+        : primitive_arg(network, desc, output_memory)
+        , argument(*(_desc->get_dto()->as<PType>()))
+    {}
+
+    primitive_arg_base(network_impl& network, std::shared_ptr<const PType> desc, const layout& output_layout)
+        : primitive_arg(network, desc, output_layout)
+        , argument(*(_desc->get_dto()->as<PType>()))
+    {}
+};
 }

@@ -24,7 +24,7 @@
 #include <cl2_wrapper.h>
 #include <memory>
 #include <chrono>
-#include "api/instrumentation.h"
+#include "api/profiling.hpp"
 #include "kernels_cache.h"
 #include "engine_info.h"
 
@@ -32,9 +32,9 @@ namespace neural { namespace gpu {
 class gpu_toolkit;
 
 class context_holder {
-    std::shared_ptr<gpu_toolkit> _context;
 protected:
-    context_holder();
+    std::shared_ptr<gpu_toolkit> _context;
+    context_holder(std::shared_ptr<gpu_toolkit> context) : _context(context) {}
     virtual ~context_holder() = default;
     const std::shared_ptr<gpu_toolkit>& context() const { return _context; }
 };
@@ -61,6 +61,7 @@ private:
 };
 
 class gpu_toolkit {
+    configuration _configuration;
     cl::Device _device;
     cl::Context _context;
     cl::CommandQueue _command_queue;
@@ -68,12 +69,13 @@ class gpu_toolkit {
 //    cl::Program _program;
     std::vector<instrumentation::profiling_info> _profiling_info;
 
-    gpu_toolkit();
-
     static std::shared_ptr<gpu_toolkit>get();
     friend class context_holder;
 public:
+    gpu_toolkit(const configuration& configuration);
+    gpu_toolkit() : gpu_toolkit(configuration::get()){}
 
+    const configuration& get_configuration() const { return _configuration; }
     cl::Device& device() { return _device; }
     cl::Context& context() { return _context; }
     cl::CommandQueue& queue() { return _command_queue; }
@@ -90,6 +92,4 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline context_holder::context_holder() : _context(gpu_toolkit::get()) {}
-
 }}

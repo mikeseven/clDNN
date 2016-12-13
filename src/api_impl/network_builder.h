@@ -31,7 +31,7 @@ typedef engine_configuration build_settings;
 class network_builder
 {
 public:
-    network_builder(const engine& eng, const build_settings& configuration)
+    network_builder(refcounted_obj_ptr<engine_impl> eng, const build_settings& configuration)
         : _engine(eng)
         , _configuration(configuration)
     {
@@ -39,45 +39,23 @@ public:
 
     network_impl* build_network(topology_impl* tpl)
     {
-        optimize_topology(tpl);
-        _network.clear();
-        for (auto& pair:_topology)
-        {
-            auto p = get_primitive(pair.first);
-            assert(p);
-        }
-        return new network_impl(get_engine(), _network);
+        assert(tpl);
+        return new network_impl(get_engine(), optimize_topology(tpl));
     }
 
-    engine get_engine() const { return _engine; }
-
-    std::shared_ptr<const primitive_arg> get_primitive(const primitive_id& id)
-    {
-        auto it = _network.find(id);
-        return (it != _network.end())
-            ? it->second
-            : new_primitive(id);
-    }
+    const refcounted_obj_ptr<engine_impl>& get_engine() const { return _engine; }
 
 private:
-    engine _engine;
+    const refcounted_obj_ptr<engine_impl> _engine;
 
     build_settings _configuration;
-    topology_map _topology;
     std::map<primitive_id, std::shared_ptr<const primitive_arg>> _network;
 
-    void optimize_topology(topology_impl* tpl)
+    topology_map optimize_topology(topology_impl* tpl)
     {
         auto& original_primitives = tpl->get_primitives();
-        // TODO instead of copy, do some optimizations aka weights reordering, fusing, etc.
-        _topology = original_primitives;
-    }
-
-    std::shared_ptr<const primitive_arg> new_primitive(const primitive_id& id)
-    {
-        auto& desc = _topology.at(id);
-        auto primitive = desc->type()->create_arg(*this, desc);
-        return _network.insert({ id, primitive }).first->second;
+        // TODO do some optimizations aka weights reordering, fusing, etc.
+        return original_primitives;
     }
 };
 }

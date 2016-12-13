@@ -21,7 +21,7 @@
 #include <iterator>
 #include <numeric>
 #include "ocl_toolkit.h"
-#include "api/neural.h"
+#include "api_impl/memory_impl.h"
 
 #define BUFFER_ALIGNMENT 4096
 #define CACHE_ALIGNMENT 64
@@ -67,23 +67,19 @@ template<typename T>
 T* arr_end(T* buf, size_t count) { return buf + count; }
 #endif
 
-struct gpu_buffer : public memory::buffer, public context_holder {
-    gpu_buffer(memory::arguments arg);
+struct gpu_buffer : public cldnn::memory_impl, public context_holder {
+    gpu_buffer(const cldnn::refcounted_obj_ptr<cldnn::engine_impl>& engine, const cldnn::layout& layout);
     void* lock() override;
-    void release() override;
-    void reset(void* ptr) override;
-    size_t size() override { return _data_size; }
+    void unlock() override;
     const cl::Buffer& get_buffer() const {
         assert(0 == _ref_count);
         return _buffer;
     }
+
 private:
     std::mutex _mutex;
-    memory::arguments _argument;
     unsigned _ref_count;
-    size_t _data_size;
     cl::Buffer _buffer;
     void* _mapped_ptr;
 };
-
 } }

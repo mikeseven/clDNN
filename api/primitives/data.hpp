@@ -17,42 +17,27 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "../primitive.hpp"
+#include "../memory.hpp"
 
 namespace cldnn
 {
-enum class pooling_mode {max, average};
+BEGIN_DTO(data)
+    memory mem;
+END_DTO(data)
 
-BEGIN_DTO(pooling)
-    pooling_mode mode;
-    tensor stride;
-    tensor size;
-END_DTO(pooling)
-
-struct pooling : public primitive_base<pooling, DTO(pooling)>
+    class data : public primitive_base<data, DTO(data)>
 {
+public:
+    typedef DTO(data) dto;
     DLL_SYM static primitive_type_id type_id();
-    typedef DTO(pooling) dto;
 
-    pooling(
-        const primitive_id& id,
-        const primitive_id& input,
-        pooling_mode mode,
-        const tensor& stride,
-        const tensor& size,
-        const tensor& input_offset = { format::x,0,{ 0 } },
-        const tensor& output_offset = { format::x,0,{ 0 } },
-        const padding_types padding_type = padding_types::zero
-        )
-        :primitive_base(id, {input}, input_offset, output_offset, padding_type, mode, stride, size)
+    data(const primitive_id& id, const memory& mem)
+        :primitive_base(id, {}, { format::x, 0,{ 0 } }, { format::x, 0,{ 0 } }, padding_types::zero, mem)
     {}
 
-    pooling(const dto* dto)
+    explicit data(const dto* dto)
         :primitive_base(dto)
     {}
-
-    pooling_mode mode() const { return _dto.mode; }
-    tensor stride() const { return _dto.stride; }
-    tensor size() const { return _dto.size; }
+    const memory& mem() const { return _dto.mem; }
 };
-
 }

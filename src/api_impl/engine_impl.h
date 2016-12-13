@@ -16,23 +16,42 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include <map>
 #include "api/engine.hpp"
+#include "api/memory.hpp"
+#include "api/event.hpp"
 #include "refcounted_obj.h"
-#include "memory_impl.h"
+#include <memory>
+#include "primitive_arg.h"
+#include "implementation_map.h"
 
+namespace neural { namespace gpu { class gpu_toolkit; } }
 namespace cldnn
 {
+using gpu_toolkit = neural::gpu::gpu_toolkit;
 class engine_impl : public refcounted_obj<engine_impl>
 {
 public:
-    engine_impl(const engine_configuration& conf):  _configuration(conf)
-    {}
+    engine_impl(const engine_configuration& conf);
+
+    engine_types type() const { return engine_types::ocl; }
 
     memory_impl* allocate_buffer(layout layout);
+    event_impl* create_user_event();
+    network_impl* build_network(const topology& topology);
     const engine_configuration& configuration() const { return _configuration; }
+
+    std::shared_ptr<gpu_toolkit> get_context() const { return _context; }
+
+    // TODO the following function should be refactored. Psbl use one map instance for all primitives
+    template<class primitive_kind>
+    std::unique_ptr<primitive_impl> create_primitive_impl(primitive_kind& arg)
+    {
+        auto factory = implementation_map<primitive_kind>::get(arg);
+        return factory(arg);
+    }
 
 private:
     engine_configuration _configuration;
+    std::shared_ptr<gpu_toolkit> _context;
 };
 }

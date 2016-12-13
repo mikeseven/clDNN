@@ -18,6 +18,8 @@
 #include "api/topology.hpp"
 #include "network_impl.h"
 #include "engine_impl.h"
+#include "network_builder.h"
+#include "primitives/input_layout.hpp"
 
 namespace cldnn
 {
@@ -72,13 +74,29 @@ const memory& network::get_output(primitive_id_ref id, status_t* status) noexcep
     {
         if (status)
             *status = CLDNN_ERROR;
-        return get_engine().allocate_memory({data_types::f32, {format::x, {0}}});
+        return memory::allocate(get_engine(), {data_types::f32, {format::x, {0}}});
     }
 }
 
-engine network::get_engine()
+engine network::get_engine() const
 {
-    return _impl->get_engine();
+    return engine(_impl->get_engine().get(), true);
+}
+
+network_impl* network::build_impl(const engine& engine, const topology& topology, status_t* status) noexcept
+{
+    try
+    {
+        if (status)
+            *status = CLDNN_SUCCESS;
+        return engine.get()->build_network(topology);
+    }
+    catch (...)
+    {
+        if (status)
+            *status = CLDNN_ERROR;
+        return nullptr;
+    }
 }
 
 status_t network::set_input_data_impl(primitive_id_ref id, memory mem) noexcept

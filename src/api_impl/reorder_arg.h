@@ -16,16 +16,16 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitive.hpp"
+#include "api/primitives/reorder.hpp"
+#include "primitive_arg.h"
+#include <memory>
 
 namespace cldnn
 {
-class network_impl;
-class primitive_arg;
-struct primitive_type
+class reorder_arg : public primitive_arg_base<reorder>
 {
-    virtual std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const = 0;
-    virtual std::shared_ptr<const primitive_arg> create_arg(network_impl& network, std::shared_ptr<const primitive> desc) const = 0;
-    virtual ~primitive_type() = default;
+public:
+    reorder_arg(network_impl& network, std::shared_ptr<const reorder> desc);
 };
+
 }

@@ -28,7 +28,7 @@ cl_device_type convert_configuration_device_type(configuration::device_types dev
     return device_types[device_type];
 }
 
-cl::Device get_gpu_device() {
+cl::Device get_gpu_device(const configuration& config) {
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
     cl::Device default_device;
@@ -36,10 +36,10 @@ cl::Device get_gpu_device() {
         std::vector<cl::Device> devices;
         p.getDevices(CL_DEVICE_TYPE_ALL, &devices);
         for (auto& d : devices) {
-            if (d.getInfo<CL_DEVICE_TYPE>() == convert_configuration_device_type(configuration::get().device_type)) {
+            if (d.getInfo<CL_DEVICE_TYPE>() == convert_configuration_device_type(config.device_type)) {
                 auto vendor_id = d.getInfo<CL_DEVICE_VENDOR_ID>();
                 //set Intel GPU device default
-                if (vendor_id == configuration::get().device_vendor) {
+                if (vendor_id == config.device_vendor) {
                     return d;
                 }
             }
@@ -48,12 +48,13 @@ cl::Device get_gpu_device() {
     throw std::runtime_error("No OpenCL GPU device found.");
 }
 
-gpu_toolkit::gpu_toolkit() 
-    : _device(get_gpu_device())
+gpu_toolkit::gpu_toolkit(const configuration& config) 
+    : _configuration(config)
+    , _device(get_gpu_device(config))
     , _context(_device)
     , _command_queue(_context,
                      _device,
-                     configuration::get().enable_profiling
+                     config.enable_profiling
                         ? cl::QueueProperties::Profiling
                         : cl::QueueProperties::None)
     , _kernels_cache(*this)
@@ -64,7 +65,7 @@ std::shared_ptr<gpu_toolkit> gpu_toolkit::get() {
     static std::weak_ptr<gpu_toolkit> toolkit;
     std::lock_guard<std::recursive_mutex> create_lock{ mutex };
     if(toolkit.expired()) {
-        std::shared_ptr<gpu_toolkit> result{ new gpu_toolkit(), [&](gpu_toolkit* ptr) {
+        std::shared_ptr<gpu_toolkit> result{ new gpu_toolkit(configuration::get()), [&](gpu_toolkit* ptr) {
             std::lock_guard<std::recursive_mutex> delete_lock{ mutex };
             delete ptr;
         } };

@@ -20,19 +20,29 @@
 #include "api/network.hpp"
 #include "refcounted_obj.h"
 #include "primitive_arg.h"
+#include "primitive_type.h"
+#include "primitives/input_layout.hpp"
 #include <map>
+#include <algorithm>
 
 namespace cldnn
 {
 class network_impl : public refcounted_obj<network_impl>
 {
 public:
-    network_impl(const engine& engine, const std::map<primitive_id, std::shared_ptr<const primitive_arg>>& primitives)
+    typedef std::map<primitive_id, std::shared_ptr<const primitive>> topology_map;
+
+    network_impl(refcounted_obj_ptr<engine_impl> engine, const topology_map& topology)
         : _completed(false)
         , _engine(engine)
-        , _primitives(primitives)
-        , _primitive_names(get_primitive_names())
+        , _topology(topology)
     {
+        for (auto& pair : _topology)
+        {
+            auto p = get_primitive(pair.first);
+            assert(p);
+        }
+
         for(auto& p : _primitives)
         {
             if(p.second->type() == input_layout::type_id())
@@ -42,28 +52,51 @@ public:
         }
     }
 
-    engine get_engine() const { return _engine; }
+    const refcounted_obj_ptr<engine_impl>& get_engine() const noexcept { return _engine; }
 
     const memory& get_output_of(const primitive_id& id) const;
     array_ref<primitive_id_ref> get_primitive_keys() const { return _primitive_names; }
     void set_input_data(const primitive_id& id, const memory& data);
 
+    std::shared_ptr<const primitive_arg> get_primitive(const primitive_id& id)
+    {
+        auto it = _primitives.find(id);
+        return (it != _primitives.end())
+            ? it->second
+            : new_primitive(id);
+    }
+
+    std::vector<std::shared_ptr<const primitive_arg>> get_primitives(const std::vector<primitive_id>& ids)
+    {
+        std::vector<std::shared_ptr<const primitive_arg>> result(ids.size());
+        std::transform(std::begin(ids), std::end(ids), std::begin(result), [&](const primitive_id& id) { return get_primitive(id); });
+        return result;
+    }
+
 private:
     bool _completed;
-    const engine _engine;
-    const std::map<primitive_id, std::shared_ptr<const primitive_arg>> _primitives;
-    const std::vector<primitive_id_ref> _primitive_names;
+    const refcounted_obj_ptr<engine_impl> _engine;
+    const topology_map _topology;
+    std::map<primitive_id, std::shared_ptr<const primitive_arg>> _primitives;
+    std::vector<primitive_id_ref> _primitive_names;
     std::map<primitive_id, bool> _inputs;
 
-    std::vector<primitive_id_ref> get_primitive_names() const
+    static std::vector<primitive_id_ref> get_primitive_names(const std::map<primitive_id, std::shared_ptr<const primitive_arg>>& primitives)
     {
         std::vector<primitive_id_ref> result;
-        for(auto& pair:_primitives)
+        for(auto& pair: primitives)
         {
             // it should be reference to the constant primitive_id store.
             result.push_back(pair.second->id());
         }
         return result;
+    }
+
+    std::shared_ptr<const primitive_arg> new_primitive(const primitive_id& id)
+    {
+        auto& desc = _topology.at(id);
+        auto primitive = desc->type()->create_arg(*this, desc);
+        return _primitives.insert({ id, primitive }).first->second;
     }
 };
 }

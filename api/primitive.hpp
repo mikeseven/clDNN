@@ -117,9 +117,9 @@ struct primitive
     virtual const primitive_dto* get_dto() const = 0;
     virtual primitive_type_id type() const = 0;
     virtual primitive_id id() const = 0;
-    virtual std::vector<primitive_id> input() const = 0;
-    virtual tensor input_offset() const = 0;
-    virtual tensor output_offset() const = 0;
+    virtual const std::vector<primitive_id>& input() const = 0;
+    virtual const tensor& input_offset() const = 0;
+    virtual const tensor& output_offset() const = 0;
     virtual padding_types padding_type() const = 0;
     virtual ~primitive() = default;
     operator primitive_id() const { return id(); }
@@ -134,10 +134,10 @@ public:
     const primitive_dto* get_dto() const override { return reinterpret_cast<primitive_dto*>(&_dto); }
 
     primitive_id id() const override { return _id; }
-    std::vector<primitive_id> input() const override { return _input; }
+    const std::vector<primitive_id>& input() const override { return _input; }
     primitive_type_id type() const override { return _dto.type; }
-    tensor input_offset() const override { return _dto.input_offset; }
-    tensor output_offset() const override { return _dto.output_offset; }
+    const tensor& input_offset() const override { return _dto.input_offset; }
+    const tensor& output_offset() const override { return _dto.output_offset; }
     padding_types padding_type() const override { return _dto.padding_type; }
 
 protected:

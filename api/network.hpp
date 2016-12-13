@@ -29,6 +29,11 @@ namespace cldnn
 class network_impl;
 struct network
 {
+    static network build(const engine& engine, const topology& topology)
+    {
+        return create_obj<network, network_impl>("network build failed", [&](status_t* status) { return build_impl(engine, topology, status); });
+    }
+
     typedef network_impl impl_type;
     DLL_SYM network(const network& other);
     DLL_SYM network& operator=(const network& other);
@@ -66,13 +71,15 @@ struct network
         return create_obj<event, event_impl>("network execute failed", [&](status_t* status) { return execute_impl(dependencies, status); });
     }
 
-    DLL_SYM engine get_engine();
+    DLL_SYM engine get_engine() const noexcept;
 
-    network_impl* implementation() const { return _impl; }
+    network_impl* get() const { return _impl; }
+
 private:
     friend struct engine;
     network(network_impl* impl) :_impl(impl) {}
     network_impl* _impl;
+    DLL_SYM static network_impl* build_impl(const engine& engine, const topology& topology, status_t* status) noexcept;
     DLL_SYM status_t set_input_data_impl(primitive_id_ref id, memory mem) noexcept;
     DLL_SYM array_ref<primitive_id_ref> get_primitive_keys_impl(status_t* status) noexcept;
     DLL_SYM event_impl* execute_impl(array_ref<event> dependencies, status_t* status) noexcept;

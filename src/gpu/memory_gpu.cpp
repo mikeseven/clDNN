@@ -16,14 +16,15 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "memory_gpu.h"
-#include "memory.h"
+#include "api_impl/engine_impl.h"
 
 namespace neural { namespace gpu {
-    gpu_buffer::gpu_buffer(memory::arguments arg) : _argument(arg),
-        _ref_count(0),
-        _data_size(memory::size_of(arg)),
-        _buffer(context()->context(), CL_MEM_READ_WRITE, _data_size),
-        _mapped_ptr(nullptr) 
+    gpu_buffer::gpu_buffer(const cldnn::refcounted_obj_ptr<cldnn::engine_impl>& engine, const cldnn::layout& layout)
+        : memory_impl(engine, _layout)
+        , context_holder(engine->get_context())
+        , _ref_count(0)
+        , _buffer(_context->context(), CL_MEM_READ_WRITE, size())
+        , _mapped_ptr(nullptr)
     {
         void* ptr = lock();
         memset(ptr, 0, _data_size);
@@ -33,13 +34,13 @@ namespace neural { namespace gpu {
     void* gpu_buffer::lock() {
         std::lock_guard<std::mutex> locker(_mutex);
         if (0 == _ref_count) {
-            _mapped_ptr = context()->queue().enqueueMapBuffer(_buffer, CL_TRUE, CL_MAP_WRITE, 0, _data_size);
+            _mapped_ptr = context()->queue().enqueueMapBuffer(_buffer, CL_TRUE, CL_MAP_WRITE, 0, size());
         }
         _ref_count++;
         return _mapped_ptr;
     }
 
-    void gpu_buffer::release() {
+    void gpu_buffer::unlock() {
         std::lock_guard<std::mutex> locker(_mutex);
         _ref_count--;
         if (0 == _ref_count) {
@@ -47,11 +48,4 @@ namespace neural { namespace gpu {
             _mapped_ptr = nullptr;
         }
     }
-
-    void gpu_buffer::reset(void* ptr) {
-        auto me = lock();
-        ::memcpy(me, ptr, _data_size);
-        release();
-    }
-
 }}

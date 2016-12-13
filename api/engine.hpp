@@ -19,9 +19,6 @@
 #include <cstdint>
 #include "cldnn_defs.h"
 #include "compounds.h"
-#include "memory.hpp"
-#include "topology.hpp"
-#include "network.hpp"
 
 namespace cldnn
 {
@@ -68,28 +65,18 @@ struct engine
         return result;
     }
 
-    memory allocate_memory(layout layout)
-    {
-        status_t status;
-        auto buf = allocate_buffer(layout, &status);
-        if (status != CLDNN_SUCCESS)
-            CLDNN_THROW("memory allocation failed", status);
-        return memory(layout, buf);
-    }
+    DLL_SYM engine_types engine_type() noexcept;
 
-    network build_network(topology topology)
-    {
-        return create_obj<network, network_impl>("network build failed", [&](status_t* status) { return build_network_impl(topology, status); });
-    }
+    engine_impl* get() const { return _impl; }
 
-    engine_impl* implementation() const { return _impl; }
 private:
-    explicit engine(engine_impl* impl) :_impl(impl) {}
+    friend class network;
+    friend class memory;
+    friend class event;
+    DLL_SYM engine(engine_impl* impl, bool add_ref = false);
     engine_impl* _impl;
     DLL_SYM static uint32_t engine_count_impl(engine_types type, status_t* status) noexcept;
     DLL_SYM static engine_impl* create_engine_impl(engine_types type, uint32_t engine_num, const engine_configuration* configuration, status_t* status) noexcept;
-    DLL_SYM memory_impl* allocate_buffer(layout layout, status_t* status) noexcept;
-    DLL_SYM network_impl* build_network_impl(topology topology, status_t* status) noexcept;
 };
 API_CLASS(engine)
 }
