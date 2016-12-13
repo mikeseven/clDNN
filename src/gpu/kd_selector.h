@@ -29,7 +29,7 @@ namespace mputils
 {
 template <typename ... Tys> struct type_tuple;
 
-template <std::size_t ... Idxs> struct index_tuple;
+template <std::size_t ... Idxs> struct index_tuple {};
 
 // -----------------------------------------------------------------------------------------------------------------------
 
@@ -202,9 +202,9 @@ template <template <typename> class DefaultValSelectorTTy,
           typename ArgTy>
 constexpr auto select_arg_or_default(ArgTy&& arg) -> typename std::decay<ArgTy>::type
 {
-    if (Idx < DefaultedStartPos)
-        return std::forward<ArgTy>(arg);
-    return DefaultValSelectorTTy<typename std::decay<ArgTy>::type>::value;
+    return (Idx < DefaultedStartPos)
+        ? std::forward<ArgTy>(arg)
+        : DefaultValSelectorTTy<typename std::decay<ArgTy>::type>::value;
 }
 
 template <template <typename> class DefaultValSelectorTTy,
@@ -225,7 +225,7 @@ template <template <typename> class DefaultValSelectorTTy,
 constexpr auto make_partially_defaulted_std_tuple(ArgTys&& ... args) -> std::tuple<typename std::decay<ArgTys>::type ...>
 {
     return detail::make_partially_defaulted_std_tuple<DefaultValSelectorTTy, DefaultedStartPos>(
-        std::declval<make_indexer_tt_t<type_tuple<ArgTys ...>>>(),
+        make_indexer_tt_t<type_tuple<ArgTys ...>>(),
         std::forward<ArgTys>(args) ...);
 }
 
@@ -277,7 +277,7 @@ private:
         auto value = _kernel_map.find(
             mputils::make_partially_defaulted_std_tuple<kd_default_value_selector, Idx - 1>(selectors ...));
         if (value == _kernel_map.end())
-            return _get_kernel<Idx - 1>(outer, selectors);
+            return _get_kernel(mputils::index_tuple<Idx - 1>(), outer, selectors ...);
 
         return value->second(outer);;
     }
@@ -294,7 +294,7 @@ public:
 
     KernelDataTy get_kernel(const OuterTy& outer, const SelectorTys& ... selectors)
     {
-        return _get_kernel<sizeof...(SelectorTys) + 1>(outer, selectors ...);
+        return _get_kernel(mputils::index_tuple<sizeof...(SelectorTys) + 1>(), outer, selectors ...);
     }
 };
 
