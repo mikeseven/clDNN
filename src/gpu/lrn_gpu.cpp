@@ -18,6 +18,7 @@
 #include "cache/primitive_db.h"
 #include "implementation_map.h"
 #include "kernel.h"
+#include "kd_selector.h"
 
 #include <algorithm>
 #include <cmath>
@@ -30,7 +31,7 @@ namespace neural
 // Kernel names.
 static const std::string kernel_name = "lrn_gpu";
 static const std::string kernel_name_b8 = "lrn_gpu_b8";
-
+static const std::string kernel_name_bfyx = "lrn_gpu_bfyx";
 // GPU engine information helpers.
 namespace
 {
@@ -43,28 +44,46 @@ struct gpu_info_helper : gpu::context_holder
 };
 }
 
+template <>
+struct kd_default_value_selector<neural::gpu::engine_info::architectures>
+{
+    static constexpr neural::gpu::engine_info::architectures value = neural::gpu::engine_info::architectures::GEN_UNKNOWN;
+};
+
+template <>
+struct kd_default_value_selector<neural::gpu::engine_info::configurations>
+{
+    static constexpr neural::gpu::engine_info::configurations value = neural::gpu::engine_info::configurations::GT_UNKNOWN;
+};
+
+
 struct lrn_gpu : is_an_implementation
 {
     const normalization::response& _outer;
+    gpu::engine_info _engine_info;
+
     struct kernel_data
     {
-        size_t gws0, gws1;
-        size_t lws0, lws1;
+        size_t gws0, gws1, gws2;
+        size_t lws0, lws1, lws2;
         std::string kernel_name;
         bool fp16_unit_used;
     } _kernel_data;
     gpu::kernel _kernel;
 
+    static kd_selector_t<kernel_data, normalization::response, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> ks;
+
     lrn_gpu(const normalization::response& outer)
         : is_an_implementation(neural::type_id<lrn_gpu>()),
         _outer(outer),
-        _kernel_data(set_kernel_data(_outer)),
+        _engine_info(gpu_info_helper().get_engine_info()),
+        _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument.format, outer.input_memory(0).argument.size.batch[0], _engine_info.architecture, _engine_info.configuration)),
         _kernel(_kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
     {}
 
-    static kernel_data set_kernel_data(const normalization::response& outer)
+    static kernel_data set_default(const normalization::response& arg)
     {
-        const auto& input_mem  = outer.input_memory(0);  // input
+        const auto& input_mem = arg.input_memory(0);  // input
 
         kernel_data kd;
 
@@ -73,6 +92,7 @@ struct lrn_gpu : is_an_implementation
         // Determine global work sizes.
         kd.gws0 = input_mem.argument.size.batch[0] * input_mem.argument.size.feature[0];   // B, F
         kd.gws1 = input_mem.argument.size.spatial[0] * input_mem.argument.size.spatial[1]; // X, Y
+        kd.gws2 = 1;
         // Find largest positive local work size that is divider for global work size.
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
         while (kd.gws0 % kd.lws0 != 0)
@@ -80,6 +100,7 @@ struct lrn_gpu : is_an_implementation
             --kd.lws0;
         }
         kd.lws1 = 1;
+        kd.lws2 = 1;
 
         // TODO: add half case: b16 (b*f dividable by 128).
         if (!kd.fp16_unit_used &&                        // halfs are not used
@@ -97,7 +118,7 @@ struct lrn_gpu : is_an_implementation
         }
 
         // Checking for supported paddings.
-        switch (outer.argument.padding)
+        switch (arg.argument.padding)
         {
         case padding::zero:
             break;
@@ -150,7 +171,7 @@ struct lrn_gpu : is_an_implementation
         const auto& output_mem = outer.output_memory(0); // output
 
         me->_kernel.run<gpu::input_mem, gpu::output_mem>
-            ({{kd.gws0, kd.gws1}, {kd.lws0, kd.lws1}}, input_mem, output_mem);
+            ({{kd.gws0, kd.gws1, kd.gws2}, {kd.lws0, kd.lws1, kd.lws2}}, input_mem, output_mem);
     }
 
 
@@ -160,15 +181,44 @@ struct lrn_gpu : is_an_implementation
 
 };
 
+lrn_gpu::kernel_data default_yxfb_f32(const normalization::response& arg)
+{
+    lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
+    return kd;
+}
+
+lrn_gpu::kernel_data default_bfyx_f32(const normalization::response& arg)
+{
+    auto& input_mem = arg.input_memory(0);
+    lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
+
+    kd.kernel_name = kernel_name_bfyx;
+    kd.gws0 = input_mem.argument.size.spatial[0];
+    kd.gws1 = input_mem.argument.size.spatial[1];
+    kd.gws2 = input_mem.argument.size.feature[0] * input_mem.argument.size.batch[0];
+
+    if (kd.gws0 > 256)
+        throw std::runtime_error("Not implemented yet lrn for X greater than 256!");
+
+    kd.lws0 = kd.gws0;
+    kd.lws1 = 1;
+    kd.lws2 = 1;
+    return kd;
+}
+
+kd_selector_t<lrn_gpu::kernel_data, normalization::response, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> lrn_gpu::ks = {
+    { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxfb_f32 },
+    { std::make_tuple(memory::format::yxfb_f16, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxfb_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_bfyx_f32 },
+};
+
+
     namespace {
         struct attach {
             attach() {
-                auto val_fw = lrn_gpu::create;
-
-                auto key = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
-                implementation_map<normalization::response>::add(key, val_fw);
-                key = std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16);
-                implementation_map<normalization::response>::add(key, val_fw);
+                implementation_map<normalization::response>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32), lrn_gpu::create);
+                implementation_map<normalization::response>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16), lrn_gpu::create);
+                implementation_map<normalization::response>::add(std::make_tuple(engine::gpu, memory::format::bfyx_f32, memory::format::bfyx_f32), lrn_gpu::create);
             }
             ~attach() {}
         };
