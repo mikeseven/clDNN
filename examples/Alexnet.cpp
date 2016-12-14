@@ -23,7 +23,7 @@ using namespace neural;
 std::vector<std::pair<primitive, std::string>> build_alexnet(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half)
 {
 
-    auto mem_format = use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
+    auto mem_format = batch_size == 1 ? (use_half ? memory::format::yxfb_f16 : memory::format::bfyx_f32) : (use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32);
     auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
 
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
@@ -62,7 +62,7 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const std::string& 
         padding::zero
     });
 
-    auto lrn1 = normalization::response::create(
+    /*auto lrn1 = normalization::response::create(
     {
         mem_format,
         pool1,
@@ -207,13 +207,13 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const std::string& 
     {
         fc_mem_format,
         fc8
-    });
+    });*/
 
     return std::vector<std::pair<primitive, std::string>> {
         { reordered_input, "reorder"},
         { conv1, "conv1" },
         { pool1, "pool1" },
-        { lrn1, "lrn1" },
+        /*{ lrn1, "lrn1" },
         { conv2_group2, "conv2_group2" },
         { pool2, "pool2" },
         { lrn2, "lrn2" },
@@ -224,6 +224,6 @@ std::vector<std::pair<primitive, std::string>> build_alexnet(const std::string& 
         { fc6, "fc6" },
         { fc7, "fc7" },
         { fc8, "fc8" },
-        { softmax, "softmax" }
+        { softmax, "softmax" }*/
     };
 }

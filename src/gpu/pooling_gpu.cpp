@@ -32,6 +32,7 @@ static const std::string kernel_name_max            = "pooling_gpu_max";
 static const std::string kernel_name_max_offset     = "pooling_gpu_max_offset";
 static const std::string kernel_name_average        = "pooling_gpu_average";
 static const std::string kernel_name_average_offset = "pooling_gpu_average_offset";
+static const std::string kernel_name_bfyx_max       = "pooling_gpu_bfyx_max";
 
 // GPU engine information helpers.
 namespace
@@ -230,8 +231,24 @@ pooling_gpu::kernel_data defauly_yxfb_f32(const pooling& arg)
     return kd;
 }
 
+pooling_gpu::kernel_data defauly_bfyx_f32(const pooling& arg)
+{
+    pooling_gpu::kernel_data kd = pooling_gpu::set_default(arg);
+
+    // Select kernel name.
+    auto needs_boundary = pooling_gpu::needs_boundary_check(arg);
+    if (needs_boundary)
+        throw std::runtime_error("Not implemented boundary in pooling bfyx!");
+    if (arg.argument.mode != pooling::mode::max)
+        throw std::runtime_error("Not implemented average pooling in bfyx!");
+
+    kd.kernel_name = kernel_name_bfyx_max;
+    return kd;
+}
+
 kd_selector_t<pooling_gpu::kernel_data, pooling, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> pooling_gpu::ks = {
     { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), defauly_yxfb_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), defauly_bfyx_f32 },
 };
 
 namespace
