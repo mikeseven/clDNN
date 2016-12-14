@@ -1,8 +1,8 @@
-KERNEL (reorder_GPU_padding_bfyx_f32)(const __global float* input, __global float* output)
+KERNEL (reorder_gpu_padding_bfyx_f32)(const __global float* input, __global float* output)
 {
-    const uint pos_y = get_global_id(0);
+    const uint pos_b = get_global_id(0);
     const uint pos_f = get_global_id(1);
-    const uint pos_b = get_global_id(2);
+    const uint pos_y = get_global_id(2);
 
     uint input_pos = pos_b * INPUT_SIZE_X * INPUT_SIZE_Y * INPUT_FEATURE_NUM;
     input_pos += pos_f * INPUT_SIZE_X * INPUT_SIZE_Y;

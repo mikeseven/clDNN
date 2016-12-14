@@ -44,14 +44,14 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32)(
         // This is ugly, we really need to fix the programming model.
         for(uint reg = 0; reg < 30; reg+=3) {
             in[reg] = input[in_addr];// read 16 elements
-            // might be better to adjust the addrs, then do single load.		
+            // might be better to adjust the addrs, then do single load.
             if(lid < 8) in[reg + 1] = input[in_addr + 16];// read 8 elements in lower portion, for total of 24 from input row.
             in_addr += (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X);  // move to next row down 
             if(lid >= 8) in[reg + 1] = input[in_addr - 8];  // read 8 elements into upper portion
             in[reg + 2] = input[in_addr + 8]; // read 16 elements
             in_addr += (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X);  // move to next row down 
         }
-        
+
         for(int pf=0; pf<PREFETCH; pf++) {
             w[pf] = weights[weight_addr]; weight_addr += SIMD_SIZE;
         }
@@ -96,9 +96,13 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32)(
     }
 
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
-        for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
-            // this does a scattered write to 16 different feature maps, so that data within one map is contiguous, thus ready for input to next layer.
-            output[out_addr + r * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) + c] = out[r * OUT_BLOCK_WIDTH + c];
+        if(!(or + r >= OUTPUT_SIZE_Y))
+        {
+            for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
+                // this does a scattered write to 16 different feature maps, so that data within one map is contiguous, thus ready for input to next layer.
+                if(!(oc + c >= OUTPUT_SIZE_X))
+                    output[out_addr + r * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) + c] = out[r * OUT_BLOCK_WIDTH + c];
+            }
         }
     }
 }

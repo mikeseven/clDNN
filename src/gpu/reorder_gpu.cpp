@@ -230,7 +230,14 @@ struct reorder_gpu : is_an_implementation {
             mem_consts.add_constant(gpu::make_jit_constant("PADDING", s.str()));
         }
 
-        if (have_subtraction)
+        bool _padding_only = (!have_subtraction) && (input_mem.argument.format == output_mem.argument.format) && input_mem.argument.format == memory::format::type::bfyx_f32;
+
+        if (_padding_only)
+        {
+            mem_consts.add_constant(gpu::make_jit_constant("INPUT", input_mem.argument.size));
+            mem_consts.add_constant(gpu::make_jit_constant("OUTPUT", output_mem.argument.size));
+        }
+        else if (have_subtraction)
         {
             auto& subtract_mem = outer.input_memory(1);
 
@@ -268,6 +275,7 @@ struct reorder_gpu : is_an_implementation {
             mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_TYPE", "float"));
             mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_SRC_TYPE_CVT", input_use_half));
         }
+
         return mem_consts;
     }
 

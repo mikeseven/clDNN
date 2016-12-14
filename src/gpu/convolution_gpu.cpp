@@ -78,6 +78,7 @@ struct convolution_gpu : is_an_implementation {
     } _kernel_data;
 
     gpu::kernel _kernel;
+    neural::worker _worker;
 
     static kernel_data set_default(const convolution& arg)
     {
@@ -108,12 +109,13 @@ struct convolution_gpu : is_an_implementation {
         , _engine_info(gpu_info_helper().get_engine_info())
         , _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument.format, outer.input_memory(1).argument.format, outer.input_memory(0).argument.size.batch[0], _engine_info.architecture, _engine_info.configuration))
         , _kernel(gpu::kernel(_kernel_data.kernel_name, get_jit_constants()))
+        , _worker(worker_gpu::create())
     {
         if (_kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32)
         {
             reorder.push_back(reorder::create({
-                5,
-                5,
+                outer.input_memory(1).argument.size.spatial[0],
+                outer.input_memory(1).argument.size.spatial[1],
                 arg.argument.input[0] }
             ));
         }
@@ -153,7 +155,8 @@ struct convolution_gpu : is_an_implementation {
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
             gpu::make_jit_constant("OUTPUT_LIMIT", output_size),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16)),
-            gpu::make_jit_constant("INPUT_PADDING", input_padding),
+            gpu::make_jit_constant("INPUT_PADDING", filter_mem.argument.size),
+            gpu::make_jit_constant("OUTPUT_PADDING", output_padding)
         };
 
         if (outer.argument.use_relu)
@@ -230,11 +233,10 @@ struct convolution_gpu : is_an_implementation {
 
         if (kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32)
         {
-            me->reorder[0].work();
+            me->_worker.execute(me->reorder[0].work());
 
             // execute kernels
             for (uint32_t i = 0; i < split; i++) {
-                //assert(kd.gws0 % kd.lws0 == 0);
                 me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
                     ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
                         get_memory_primitive(me->reorder[0].output[0]),
@@ -248,7 +250,7 @@ struct convolution_gpu : is_an_implementation {
         {
             // execute kernels
             for (uint32_t i = 0; i < split; i++) {
-                //assert(kd.gws0 % kd.lws0 == 0);
+                assert(kd.gws0 % kd.lws0 == 0);
                 me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
                     ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
                         input_mem,
