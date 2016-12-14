@@ -18,6 +18,7 @@
 #include "cache/primitive_db.h"
 #include "implementation_map.h"
 #include "kernel.h"
+#include "kd_selector.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -44,8 +45,22 @@ struct gpu_info_helper : gpu::context_holder
 };
 }
 
+template <>
+struct kd_default_value_selector<neural::gpu::engine_info::architectures>
+{
+    static constexpr neural::gpu::engine_info::architectures value = neural::gpu::engine_info::architectures::GEN_UNKNOWN;
+};
+
+template <>
+struct kd_default_value_selector<neural::gpu::engine_info::configurations>
+{
+    static constexpr neural::gpu::engine_info::configurations value = neural::gpu::engine_info::configurations::GT_UNKNOWN;
+};
+
 struct pooling_gpu : is_an_implementation {
     const pooling& _outer;
+    gpu::engine_info _engine_info;
+
     struct kernel_data 
     {
         size_t gws0, gws1, gws2; ///< Local work sizes (3D).
@@ -55,17 +70,20 @@ struct pooling_gpu : is_an_implementation {
     } _kernel_data;
     gpu::kernel _kernel;
 
+    static kd_selector_t<kernel_data, pooling, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> ks;
+
     pooling_gpu(const pooling& outer)
         : is_an_implementation(neural::type_id<pooling_gpu>()),
         _outer(outer),
-        _kernel_data(set_kernel_data(_outer)),
+        _engine_info(gpu_info_helper().get_engine_info()),
+        _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument.format, outer.input_memory(0).argument.size.batch[0], _engine_info.architecture, _engine_info.configuration)),
         _kernel(_kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
     {}
 
-    static kernel_data set_kernel_data(const pooling& outer)
+    static kernel_data set_default(const pooling& arg)
     {
-        const auto& input_mem  = outer.input_memory(0);  // input
-        const auto& output_mem = outer.output_memory(0); // output
+        const auto& input_mem = arg.input_memory(0);  // input
+        const auto& output_mem = arg.output_memory(0); // output
 
         kernel_data kd;
 
@@ -86,8 +104,8 @@ struct pooling_gpu : is_an_implementation {
         kd.lws2 = 1;
 
         // Select kernel name.
-        auto needs_boundary = needs_boundary_check(outer);
-        switch (outer.argument.mode)
+        auto needs_boundary = needs_boundary_check(arg);
+        switch (arg.argument.mode)
         {
         case pooling::mode::max:
             kd.kernel_name = needs_boundary ? kernel_name_max_offset : kernel_name_max;
@@ -190,7 +208,31 @@ struct pooling_gpu : is_an_implementation {
 
 };
 
+pooling_gpu::kernel_data defauly_yxfb_f32(const pooling& arg)
+{
+    pooling_gpu::kernel_data kd = pooling_gpu::set_default(arg);
 
+    // Select kernel name.
+    auto needs_boundary = pooling_gpu::needs_boundary_check(arg);
+    switch (arg.argument.mode)
+    {
+    case pooling::mode::max:
+        kd.kernel_name = needs_boundary ? kernel_name_max_offset : kernel_name_max;
+        break;
+    case pooling::mode::average:
+        kd.kernel_name = needs_boundary ? kernel_name_average_offset : kernel_name_average;
+        break;
+
+    default:
+        throw std::runtime_error("Unknown pooling mode.");
+    }
+
+    return kd;
+}
+
+kd_selector_t<pooling_gpu::kernel_data, pooling, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> pooling_gpu::ks = {
+    { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), defauly_yxfb_f32 },
+};
 
 namespace
 {
@@ -199,12 +241,9 @@ namespace
     {
         attach()
         {
-            auto val_fw = pooling_gpu::create;
-
-            auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32);
-            implementation_map<pooling>::add(key_fw, val_fw);
-            key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16);
-            implementation_map<pooling>::add(key_fw, val_fw);
+            implementation_map<pooling>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(engine::gpu, memory::format::bfyx_f32, memory::format::bfyx_f32), pooling_gpu::create);
         }
 
         ~attach()

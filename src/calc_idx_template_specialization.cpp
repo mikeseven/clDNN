@@ -63,6 +63,12 @@ template<> size_t index<neural::memory::format::oyxi_f32>(std::vector<uint32_t> 
     return pos[2] + size[2] * (pos[3] + size[3] * (pos[4] + size[4] * pos[1]));
 }
 
+template<> size_t index<neural::memory::format::os_iyx_osv16_f32>(std::vector <uint32_t> size, std::vector<uint32_t> pos) {
+    uint32_t slice_id = pos[1] / 16;
+    uint32_t id_in_slice = pos[1] % 16;
+    return id_in_slice + 16 * (pos[3] + size[3] * (pos[4] + size[4] * (pos[2] + slice_id * size[2])));
+}
+
 template<> size_t index<neural::memory::format::os_yxi_sv16_f32>(std::vector<uint32_t> size, std::vector<uint32_t> pos){
     assert(is_in_range(size, pos));
     assert(1 == size[0]); // batch

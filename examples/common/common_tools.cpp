@@ -543,7 +543,7 @@ void run_topology(const execution_params &ep)
 
     html output_file(ep.topology_name, ep.topology_name + " run");
 
-    weights_optimizer weights_optimizer(ep.optimize_weights, ep.use_half);
+    weights_optimizer weights_optimizer(gpu_batch_size, ep.optimize_weights, ep.use_half);
 
     std::vector<std::pair<primitive, std::string>> primitives;
 
