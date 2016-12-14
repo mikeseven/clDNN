@@ -135,17 +135,27 @@ namespace neural {
             get_memory_primitive(output[0]).argument.size.spatial.size()) {}
 
 
-    reorder::arguments::arguments(uint32_t padX, uint32_t padY, neural::memory::format::type _out_layout, neural::vector<uint32_t> _out_sizes, primitive_at _in)
-        : output({ memory::allocate({ _out_layout, _out_sizes }) })
-        , input({ _in })
+    reorder::arguments::arguments(uint32_t padX, uint32_t padY, primitive_at _in)
+        : input({ _in })
         , subtract_per_feature()
-        , padding(get_memory_primitive(output[0]).argument.size.batch.size(),
-            get_memory_primitive(output[0]).argument.size.feature.size(),
-            get_memory_primitive(output[0]).argument.size.spatial.size()) {
+        {
+        auto& input_mem = get_memory_primitive(_in.primitive());
+        padding = (input_mem.argument.size.batch.size(),
+            input_mem.argument.size.feature.size(),
+            input_mem.argument.size.spatial.size());
+
+        auto out_sizes = input_mem.argument.size;
         if (padding.spatial.size() > 0)
+        {
             padding.spatial[0] = padX;
+            out_sizes.spatial[0] += 2 * padX;
+        }
         if (padding.spatial.size() > 1)
+        {
             padding.spatial[1] = padY;
+            out_sizes.spatial[1] += 2 * padY;
+        }
+        output = { memory::allocate({ input_mem.argument.format, out_sizes }) };
     }
 
     // creates primitive with reorder implementation that supports provided arguments

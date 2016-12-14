@@ -315,7 +315,7 @@ struct reorder : is_a_primitive
         DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input, primitive_at values_to_subtract);
         DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input, const std::vector<float>& value_to_subtract, bool dummy);
         // to get rid of ambiguous constructor we create another one - need to be changed in new design!!!
-        DLL_SYM arguments(uint32_t padX, uint32_t pad, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input);
+        DLL_SYM arguments(uint32_t padX, uint32_t padY, primitive_at input);
 
 	};
     const arguments argument;
