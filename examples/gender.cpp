@@ -44,7 +44,7 @@ std::vector<std::pair<primitive, std::string>> build_gender(const std::string& w
         {
             reordered_input,
             wo.create_weights_from_file(join_path(weights_dir, "conv1_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv1_biases.nnd"),  file::bias),
+            wo.create_weights_from_file(join_path(weights_dir, "conv1_bias.nnd"),  file::bias),
         },
         { 0,{ 0, 0 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -69,7 +69,7 @@ std::vector<std::pair<primitive, std::string>> build_gender(const std::string& w
         {
             pool1,
             wo.create_weights_from_file(join_path(weights_dir, "conv2_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv2_biases.nnd"),  file::bias),
+            wo.create_weights_from_file(join_path(weights_dir, "conv2_bias.nnd"),  file::bias),
         },
         { 0,{ 0, 0 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -94,7 +94,7 @@ std::vector<std::pair<primitive, std::string>> build_gender(const std::string& w
         {
             pool2,
             wo.create_weights_from_file(join_path(weights_dir, "conv3_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv3_biases.nnd"),  file::bias),
+            wo.create_weights_from_file(join_path(weights_dir, "conv3_bias.nnd"),  file::bias),
         },
         { 0,{ 0, 0 }, 0 },
         { 1,{ 1, 1 }, 1 },
@@ -119,7 +119,7 @@ std::vector<std::pair<primitive, std::string>> build_gender(const std::string& w
         fc_mem_format,
         pool3,
         wo.create_weights_from_file(join_path(weights_dir, "fc1_a_weights.nnd"), file::fully_connected),
-        wo.create_weights_from_file(join_path(weights_dir, "fc1_a_biases.nnd"),  file::bias),
+        wo.create_weights_from_file(join_path(weights_dir, "fc1_a_bias.nnd"),  file::bias),
         true,
         0
     });
@@ -129,7 +129,7 @@ std::vector<std::pair<primitive, std::string>> build_gender(const std::string& w
         fc_mem_format,
         pool3,
         wo.create_weights_from_file(join_path(weights_dir, "fc1_g_weights.nnd"), file::fully_connected),
-        wo.create_weights_from_file(join_path(weights_dir, "fc1_g_biases.nnd"),  file::bias),
+        wo.create_weights_from_file(join_path(weights_dir, "fc1_g_bias.nnd"),  file::bias),
         true,
         0
     });
@@ -140,7 +140,7 @@ std::vector<std::pair<primitive, std::string>> build_gender(const std::string& w
         fc_mem_format,
         fc1_a,
         wo.create_weights_from_file(join_path(weights_dir, "fc2_a_weights.nnd"), file::fully_connected),
-        wo.create_weights_from_file(join_path(weights_dir, "fc2_a_biases.nnd"),  file::bias),
+        wo.create_weights_from_file(join_path(weights_dir, "fc2_a_bias.nnd"),  file::bias),
         true,
         0
     });
@@ -150,7 +150,7 @@ std::vector<std::pair<primitive, std::string>> build_gender(const std::string& w
         fc_mem_format,
         fc2_a,
         wo.create_weights_from_file(join_path(weights_dir, "fc3_a_weights.nnd"), file::fully_connected),
-        wo.create_weights_from_file(join_path(weights_dir, "fc3_a_biases.nnd"),  file::bias),
+        wo.create_weights_from_file(join_path(weights_dir, "fc3_a_bias.nnd"),  file::bias),
         true,
         0
     });
@@ -160,7 +160,7 @@ std::vector<std::pair<primitive, std::string>> build_gender(const std::string& w
         fc_mem_format,
         fc1_g,
         wo.create_weights_from_file(join_path(weights_dir, "fc3_g_weights.nnd"), file::fully_connected),
-        wo.create_weights_from_file(join_path(weights_dir, "fc3_g_biases.nnd"),  file::bias),
+        wo.create_weights_from_file(join_path(weights_dir, "fc3_g_bias.nnd"),  file::bias),
         false,
         0
     });
