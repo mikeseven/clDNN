@@ -5,15 +5,17 @@
 #endif
 
 // each work-item iterates this many times in the width dimension
-#define OUT_BLOCK_WIDTH 4  
+#define OUT_BLOCK_WIDTH 6  
 // each work-itme iterates this many times in the height dimension
-#define OUT_BLOCK_HEIGHT 3
+#define OUT_BLOCK_HEIGHT 4
 
 #define SIMD_SIZE 16
-#define PREFETCH 5
+
+#define RADIUS (FILTER_SIZE_X-1)/2
+#define PREFETCH 4
 
 __attribute__((intel_reqd_sub_group_size(SIMD_SIZE))) // Why driver gives us warning here?
-KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32)(
+KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride1)(
     const __global float* input,
     __global float* output,
     const __global float* weights,
@@ -26,36 +28,31 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32)(
     uint fmg = get_group_id(2);
     uint lid = get_local_id(2); 
 
-    float w[PREFETCH], i;
-    // 19 x 24 = 456; 456 / 16 = 29 floats per lane for SIMD16, but padding out to 30 to simplify the load loop.
-    float in[30];   // this holds a 19x24 block of the input data, enough to compute 4x3 outputs, simd_shuffle is used so that all work-items have access to all 19x24 locations. 
-    float out[12]; // 4x3 block of outputs that is SIMD_SIZE deep (along the Feature Map dimension).
-    for(int i=0;i<12;i++) { out[i]=0.0f;}  // todo: init these with the neural net biases.
-
-    uint in_addr, addr;
+    float in[8]; // need 8x10 block of input data for 4x6 outputs with 5x5 kernel stride 1.
+    float out[OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT]; // 4x9 block of outputs that is SIMD_SIZE deep (along the Feature Map dimension).
+    float w[PREFETCH];
+    uint in_addr;
     uint weight_addr = fmg * FILTER_INPUT_FEATURE_NUM * FILTER_SIZE_X * FILTER_SIZE_Y * SIMD_SIZE + lid;
 
+    for(int i=0;i<(OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT);i++) {  // todo: init these with the neural net biases. 	
+        out[i]=0.0f;
+    }
+
     uint in_split_offset = split_idx * (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) * FILTER_INPUT_FEATURE_NUM;
-    for(int kd = 0; kd < FILTER_INPUT_FEATURE_NUM; kd++)  // _ID = 3, RGB
+    for(int kd = 0; kd < FILTER_INPUT_FEATURE_NUM; kd++)
     {
 
         in_addr = in_split_offset + kd * (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) + (INPUT_PADDING_SIZE_Y + INPUT_OFFSET_SIZE_Y + or * STRIDE_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) + (INPUT_PADDING_SIZE_X + INPUT_OFFSET_SIZE_X + oc * STRIDE_SIZE_X) + lid;
 
-        // read 24x19 block into registers.
-        // This is ugly, we really need to fix the programming model.
-        for(uint reg = 0; reg < 30; reg+=3) {
+        for(uint reg = 0; reg < ((OUT_BLOCK_HEIGHT * STRIDE_SIZE_X) + RADIUS + RADIUS); reg++) {
             in[reg] = input[in_addr];// read 16 elements
-            // might be better to adjust the addrs, then do single load.
-            if(lid < 8) in[reg + 1] = input[in_addr + 16];// read 8 elements in lower portion, for total of 24 from input row.
-            in_addr += (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X);  // move to next row down 
-            if(lid >= 8) in[reg + 1] = input[in_addr - 8];  // read 8 elements into upper portion
-            in[reg + 2] = input[in_addr + 8]; // read 16 elements
-            in_addr += (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X);  // move to next row down 
+            in_addr += (INPUT_SIZE_X +  2 * INPUT_PADDING_SIZE_X);  // move to next row down 
         }
 
         for(int pf=0; pf<PREFETCH; pf++) {
             w[pf] = weights[weight_addr]; weight_addr += SIMD_SIZE;
         }
+
         int wi=0;
         int kr = 0; // kr = Kernel Row
         LOOP(FILTER_SIZE_Y, kr,  // LOOP is a macro that unrolls the loop.
@@ -66,8 +63,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32)(
                 //w = weights[weight_addr];	
                 for(int br=0; br<OUT_BLOCK_HEIGHT; br++) {
                     for(int bc=0; bc<OUT_BLOCK_WIDTH; bc++) {
-                        //if we fix the programming model, then we could use a nice simple 2d array: val = in[br * STRIDE_SIZE_Y + kr][bc * STRIDE_SIZE_X + kc]; 
-                        float val = intel_sub_group_shuffle( in[(((br*STRIDE_SIZE_Y+kr)*24)+(bc * STRIDE_SIZE_X + kc)) / SIMD_SIZE], (((br*STRIDE_SIZE_Y+kr)*24)+(bc * STRIDE_SIZE_X + kc)) & (SIMD_SIZE - 1));
+                        float val = intel_sub_group_shuffle( in[br * STRIDE_SIZE_X + kr], bc * STRIDE_SIZE_X + kc);	
                         out[br * OUT_BLOCK_WIDTH + bc] = mad(w[wi % PREFETCH], val, out[br * OUT_BLOCK_WIDTH + bc]);
                     }
                 }
@@ -112,5 +108,4 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32)(
 #undef PREFETCH
 #undef OUT_BLOCK_WIDTH
 #undef OUT_BLOCK_HEIGHT
-
 #undef ACTIVATION

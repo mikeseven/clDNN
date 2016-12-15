@@ -38,6 +38,7 @@ static const std::string kernel_name_yxfb_yxio_b16 = "convolution_gpu_yxfb_yxio_
 static const std::string kernel_name_yxfb_yxio_b16_fp16 = "convolution_gpu_yxfb_yxio_b16_fp16";
 static const std::string kernel_name_yxfb_yxio_fp16 = "convolution_gpu_yxfb_yxio_fp16";
 static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32";
+static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride1";
 
 // GPU engine information helpers.
 namespace
@@ -111,7 +112,8 @@ struct convolution_gpu : is_an_implementation {
         , _kernel(gpu::kernel(_kernel_data.kernel_name, get_jit_constants()))
         , _worker(worker_gpu::create())
     {
-        if (_kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32)
+        if (_kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
+            _kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1)
         {
             reorder.push_back(reorder::create({
                 outer.input_memory(1).argument.size.spatial[0],
@@ -231,7 +233,8 @@ struct convolution_gpu : is_an_implementation {
 
         auto& kd = me->_kernel_data;
 
-        if (kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32)
+        if (kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
+            kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1)
         {
             me->_worker.execute(me->reorder[0].work());
 
@@ -464,7 +467,16 @@ convolution_gpu::kernel_data defauly_bfyx_yxio_b1_f32(const convolution& arg)
     int block_height = 3;
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
-    kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32;
+    if (arg.argument.stride.spatial[0] == 1 && arg.argument.stride.spatial[1] == 1)
+    {
+        kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1;
+        block_width = 6;
+        block_height = 4;
+    }
+    else
+    {
+        kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32;
+    }
     kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument.size.spatial[0]) / block_width));
     kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument.size.spatial[1]) / block_height));
     kd.gws2 = filter_mem.argument.size.feature[0];
