@@ -241,8 +241,23 @@ pooling_gpu::kernel_data defauly_bfyx_f32(const pooling& arg)
         throw std::runtime_error("Not implemented boundary in pooling bfyx!");
     if (arg.argument.mode != pooling::mode::max)
         throw std::runtime_error("Not implemented average pooling in bfyx!");
+    if (kd.gws0 > 256)
+        throw std::runtime_error("Not implemented max pooling in bfyx with x greater than 256!");
 
     kd.kernel_name = kernel_name_bfyx_max;
+
+    const auto& output_mem = arg.output_memory(0); // output
+
+    // Determine global work sizes.
+    kd.gws2 = output_mem.argument.size.batch[0] * output_mem.argument.size.feature[0];
+    kd.gws0 = output_mem.argument.size.spatial[0];
+    kd.gws1 = output_mem.argument.size.spatial[1];
+
+    // Find largest positive local work size that is divider for global work size.
+    kd.lws0 = kd.gws0;
+    kd.lws1 = 1;
+    kd.lws2 = 1;
+
     return kd;
 }
 
