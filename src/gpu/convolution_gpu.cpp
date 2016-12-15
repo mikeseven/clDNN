@@ -20,6 +20,8 @@
 #include "kernel.h"
 #include "cache/primitive_db.h"
 #include "boost/functional/hash.hpp"
+#include "kd_selector.h"
+
 #include <unordered_map>
 #include <initializer_list>
 
@@ -47,43 +49,16 @@ struct gpu_info_helper : gpu::context_holder
 };
 }
 
-template<typename T, typename U>
-class kernel_selector
+template <>
+struct kd_default_value_selector<neural::gpu::engine_info::architectures>
 {
-    using key_type = std::tuple<neural::memory::format::type, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations>;
-    using kernel_map_hash = boost::hash<key_type>;
-    using kernel_map = std::unordered_map<key_type, T(*)(const U&), kernel_map_hash>;
-    using kernel_element = typename kernel_map::value_type;
-private:
-    kernel_map _kernel_map;
-public:
-    kernel_selector(const std::initializer_list<kernel_element>& l) :
-        _kernel_map(l)
-    {
-    }
-    T get_kernel(const U& arg, neural::memory::format::type format, int batch_size, neural::gpu::engine_info::architectures architecture, neural::gpu::engine_info::configurations configuration)
-    {
-        auto value = _kernel_map.find(std::make_tuple(format, batch_size, architecture, configuration));
-        if (value == _kernel_map.end())
-        {
-            value = _kernel_map.find(std::make_tuple(format, batch_size, architecture, gpu::engine_info::configurations::GT_UNKNOWN));
-            if (value == _kernel_map.end())
-            {
-                value = _kernel_map.find(std::make_tuple(format, batch_size, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN));
-                if (value == _kernel_map.end())
-                {
-                    value = _kernel_map.find(std::make_tuple(format, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN));
-                    if (value == _kernel_map.end())
-                    {
-                        throw std::runtime_error("ERROR: no default element in map for convolution kernels!");
-                    }
-                }
-            }
-        }
+    static constexpr neural::gpu::engine_info::architectures value = neural::gpu::engine_info::architectures::GEN_UNKNOWN;
+};
 
-        T kd = value->second(arg);
-        return kd;
-    }
+template <>
+struct kd_default_value_selector<neural::gpu::engine_info::configurations>
+{
+    static constexpr neural::gpu::engine_info::configurations value = neural::gpu::engine_info::configurations::GT_UNKNOWN;
 };
 
 struct convolution_gpu : is_an_implementation {
@@ -121,12 +96,12 @@ struct convolution_gpu : is_an_implementation {
         return kd;
     }
 
-    static kernel_selector<kernel_data, convolution> ks;
+    static kd_selector_t<kernel_data, convolution, neural::memory::format::type, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> ks;
 
     convolution_gpu(convolution &arg): is_an_implementation(neural::type_id<convolution_gpu>())
         , outer(arg)
         , _engine_info(gpu_info_helper().get_engine_info())
-        , _kernel_data(ks.get_kernel(outer, outer.input_memory(1).argument.format, outer.input_memory(0).argument.size.batch[0], _engine_info.architecture, _engine_info.configuration))
+        , _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument.format, outer.input_memory(1).argument.format, outer.input_memory(0).argument.size.batch[0], _engine_info.architecture, _engine_info.configuration))
         , _kernel(gpu::kernel(_kernel_data.kernel_name, get_jit_constants()))
     {}
 
@@ -149,6 +124,13 @@ struct convolution_gpu : is_an_implementation {
         stride.spatial[0] = std::min(stride.spatial[0], input_mem.argument.size.spatial[0]);
         stride.spatial[1] = std::min(stride.spatial[1], input_mem.argument.size.spatial[1]);
 
+        neural::vector<int32_t> input_padding = input_offset;
+        for (uint32_t i = 0; i < input_padding.raw.size(); i++)
+        {
+            input_padding.raw[i] = -input_padding.raw[i];
+        }
+        neural::vector<uint32_t> output_padding = output_offset;
+
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT", input_mem.argument.size),
             gpu::make_jit_constant("OUTPUT", output_mem.argument.size),
@@ -157,8 +139,7 @@ struct convolution_gpu : is_an_implementation {
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
             gpu::make_jit_constant("OUTPUT_LIMIT", output_size),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16)),
-            gpu::make_jit_constant("INPUT_PADDING", input_mem.argument.padding),
-            gpu::make_jit_constant("OUTPUT_PADDING", output_mem.argument.padding)
+            gpu::make_jit_constant("INPUT_PADDING", input_padding),
         };
 
         if (outer.argument.use_relu)
@@ -438,21 +419,21 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
     return kd;
 }
 
-kernel_selector<convolution_gpu::kernel_data, convolution> convolution_gpu::ks = { 
-    { std::make_tuple(memory::format::oiyx_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_oiyx_f32 },
-    { std::make_tuple(memory::format::yxio_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32 },
-    { std::make_tuple(memory::format::yxio_f32, 1, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b1 },
-    { std::make_tuple(memory::format::yxio_f32, 8, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
-    { std::make_tuple(memory::format::yxio_f32, 16, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
-    { std::make_tuple(memory::format::yxio_f32, 32, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
-    { std::make_tuple(memory::format::yxio_f32, 64, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
-    { std::make_tuple(memory::format::yxio_f32, 128, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+kd_selector_t<convolution_gpu::kernel_data, convolution, neural::memory::format::type, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> convolution_gpu::ks = {
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::oiyx_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_oiyx_f32 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 1, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b1 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 8, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 16, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 32, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 64, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 128, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
 
-    { std::make_tuple(memory::format::yxio_f16, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16 },
-    { std::make_tuple(memory::format::yxio_f16, 16, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
-    { std::make_tuple(memory::format::yxio_f16, 32, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
-    { std::make_tuple(memory::format::yxio_f16, 64, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
-    { std::make_tuple(memory::format::yxio_f16, 128, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16 },
+    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 16, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 32, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 64, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 128, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
 };
 
 namespace{

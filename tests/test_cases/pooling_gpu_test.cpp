@@ -199,6 +199,45 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad)
 	EXPECT_EQ(0.5f, get_value<float>(output_ptr, 3));
 }
 
+TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad) {
+    //  Brief test description.
+    //
+    //  Pool window: 2x2
+    //  Pool stride: 2x2
+    //  Pool mode: max
+    //  Padding: zero
+    //
+    //  Input offset : -1x-1
+    //  Input data:
+    //  [ padd, padd, padd, padd, padd]
+    //  [ padd,  1.5, -1.0, -0.5, padd]
+    //  [ padd,  1.0, -1.0, -1.0, padd]
+    //  [ padd, -1.0, -1.0, -0.5, padd]
+    //  [ padd, padd, padd, padd, padd]
+    //
+    //  Expected output:
+    //  [ 1.5,   0]
+    //  [   1,  -0.5]
+
+    auto input_prim = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 3, 3 }, 1 } });
+    auto output_prim = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
+    auto pool_prim = pooling::create({ pooling::mode::max, output_prim, input_prim,{ 1,{ -1, -1 }, 1 },{ 1,{ 2, 2 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
+
+    set_values(input_prim, { 
+        1.50f, -1.00f, -0.50f,
+        1.00f, -1.00f, -1.00f,
+       -1.00f, -1.00f, -0.50f
+    });
+
+    execute({ pool_prim }).wait();
+
+    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    EXPECT_EQ(1.5f, get_value<float>(output_ptr, 0));
+    EXPECT_EQ(0.0f, get_value<float>(output_ptr, 1));
+    EXPECT_EQ(1.0f, get_value<float>(output_ptr, 2));
+    EXPECT_EQ(-0.5f, get_value<float>(output_ptr, 3));
+}
+
 TEST(pooling_forward_gpu, basic_avg_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
 	//  Brief test description.
 	//

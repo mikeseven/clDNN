@@ -194,7 +194,7 @@ struct reorder_gpu : is_an_implementation {
             s << "(uint[]){ ";
             for (uint32_t i = 0; i < input_mem.argument.size.raw.size(); i++)
             {
-                s << static_cast<float>(input_mem.argument.size.raw[i]) << ", ";
+                s << static_cast<uint32_t>(input_mem.argument.size.raw[i]) << ", ";
             }
             s << " }";
             mem_consts.add_constant(gpu::make_jit_constant("SIZE", s.str()));
@@ -202,9 +202,9 @@ struct reorder_gpu : is_an_implementation {
         {
             std::stringstream s;
             s << "(uint[]){ ";
-            for (uint32_t i = 0; i < output_mem.argument.size.raw.size(); i++)
+            for (uint32_t i = 0; i < outer.argument.padding.raw.size(); i++)
             {
-                s << static_cast<float>(output_mem.argument.padding.raw[i]) << ", ";
+                s << static_cast<uint32_t>(outer.argument.padding.raw[i]) << ", ";
             }
             s << " }";
             mem_consts.add_constant(gpu::make_jit_constant("PADDING", s.str()));
@@ -228,7 +228,7 @@ struct reorder_gpu : is_an_implementation {
                 s << "(uint[]){ ";
                 for (uint32_t i = 0; i < subtract_mem.argument.size.raw.size(); i++)
                 {
-                    s << static_cast<float>(subtract_mem.argument.padding.raw[i]) << ", ";
+                    s << static_cast<uint32_t>(0) << ", ";
                 }
                 s << " }";
                 mem_consts.add_constant(gpu::make_jit_constant("SUBTRTACT_PADDING", s.str()));

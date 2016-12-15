@@ -142,9 +142,8 @@ struct memory : is_a_primitive
 	{
         neural::memory::format::type    format;
         neural::vector<uint32_t>        size;
-        neural::vector<uint32_t>        padding;
 
-        DLL_SYM arguments(memory::format::type aformat, const neural::vector<uint32_t>& asize, const neural::vector<uint32_t>& apadding = /* IMPORTANT: This set default padding */ { 0, { 0, 0 }, { 0, 0 } });
+        DLL_SYM arguments(memory::format::type aformat, const neural::vector<uint32_t>& asize);
     };
 
     struct buffer
@@ -236,16 +235,8 @@ struct memory : is_a_primitive
     DLL_SYM size_t count() const;
 
 private:
-    size_t _elements_count;
     std::shared_ptr<buffer> _buffer;
-    memory(arguments arg, std::shared_ptr<buffer> buffer) : is_a_primitive(type_id<const memory>()), argument(arg), _buffer(buffer) 
-    {
-        _elements_count = 1;
-        for (uint32_t i = 0; i < arg.size.raw.size(); i++)
-        {
-            _elements_count *= arg.size.raw[i];
-        }
-    };
+    memory(arguments arg, std::shared_ptr<buffer> buffer) : is_a_primitive(type_id<const memory>()), argument(arg), _buffer(buffer) {};
     friend class is_a_primitive;
 };
 
@@ -315,6 +306,7 @@ struct reorder : is_a_primitive
         std::vector<primitive_at>   input;  // 1/2: {input} / {input, subtract_values}
         std::vector<float>          subtract_per_feature; // values to subtract from feature/channel, only one value per feature/channel.
         bool dummy; // TODO!!! - dummy parameter needed because of primitive conversion to anything, so primitive can convert to primitive_at or std::vector<float>... this is because of bad design, need to change it in future!!!!!!
+        neural::vector<uint32_t> padding;
 
         DLL_SYM arguments(primitive_at input, primitive output);
         DLL_SYM arguments(primitive output, primitive input, primitive values_to_subtract);
@@ -322,6 +314,8 @@ struct reorder : is_a_primitive
         DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input);
         DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input, primitive_at values_to_subtract);
         DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input, const std::vector<float>& value_to_subtract, bool dummy);
+        // to get rid of ambiguous constructor we create another one - need to be changed in new design!!!
+        DLL_SYM arguments(uint32_t padX, uint32_t pad, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input);
 
 	};
     const arguments argument;
