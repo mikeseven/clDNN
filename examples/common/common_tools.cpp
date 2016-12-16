@@ -560,7 +560,7 @@ void run_topology(const execution_params &ep)
 
     if (ep.topology_name == "alexnet")
         primitives = build_alexnet(ep.weights_dir, weights_optimizer, gpu_batch_size, ep.use_half);
-    else if (ep.topology_name == "vgg16")
+    else if (ep.topology_name == "vgg16" || ep.topology_name == "vgg16_face")
         primitives = build_vgg16(ep.weights_dir, weights_optimizer, gpu_batch_size, ep.use_half);
     else if (ep.topology_name == "googlenet")
         primitives = build_googlenetv1(ep.weights_dir, weights_optimizer, gpu_batch_size, ep.use_half);
@@ -592,6 +592,9 @@ void run_topology(const execution_params &ep)
 
     if (ep.topology_name != "microbench")
     {
+        auto neurons_list_filename = "names.txt";
+        if (ep.topology_name == "vgg16_face")
+            neurons_list_filename = "vgg16_face.txt";
         auto img_list = get_directory_images(ep.input_dir);
         if (img_list.empty())
             throw std::runtime_error("specified input images directory is empty (does not contain image data)");
@@ -623,7 +626,7 @@ void run_topology(const execution_params &ep)
 
             auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
 
-            output_file.batch(output, join_path(get_executable_info()->dir(), "names.txt"), images_in_batch, ep.print_type);
+            output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), images_in_batch, ep.print_type);
 
             if (time_in_sec != 0.0)
             {
