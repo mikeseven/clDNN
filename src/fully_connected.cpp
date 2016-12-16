@@ -68,7 +68,7 @@ primitive fully_connected::create(fully_connected::arguments arg) {
     
     if (input_arg.format == memory::format::yxfb_f32 ||
         input_arg.format == memory::format::yxfb_f16 ||
-        input_arg.format == memory::format::bfyx_f32)
+        (input_arg.format == memory::format::bfyx_f32 && input_arg.size.batch[0] == 1))
     {
         // NOTE: Testing for supported weights format is now inside each device implementation of the primitve (e.g. fully_connected_gpu).
     }

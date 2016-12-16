@@ -79,7 +79,7 @@ struct convolution_gpu : is_an_implementation {
     } _kernel_data;
 
     gpu::kernel _kernel;
-    neural::worker _worker;
+    std::unique_ptr<neural::worker> _worker;
 
     static kernel_data set_default(const convolution& arg)
     {
@@ -110,11 +110,12 @@ struct convolution_gpu : is_an_implementation {
         , _engine_info(gpu_info_helper().get_engine_info())
         , _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument.format, outer.input_memory(1).argument.format, outer.input_memory(0).argument.size.batch[0], _engine_info.architecture, _engine_info.configuration))
         , _kernel(gpu::kernel(_kernel_data.kernel_name, get_jit_constants()))
-        , _worker(worker_gpu::create())
     {
         if (_kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
             _kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1)
         {
+            _worker = std::make_unique<worker>(worker_gpu::create());
+
             reorder.push_back(reorder::create({
                 outer.input_memory(1).argument.size.spatial[0],
                 outer.input_memory(1).argument.size.spatial[1],
@@ -236,7 +237,7 @@ struct convolution_gpu : is_an_implementation {
         if (kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
             kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1)
         {
-            me->_worker.execute(me->reorder[0].work());
+            me->_worker.get()->execute(me->reorder[0].work());
 
             // execute kernels
             for (uint32_t i = 0; i < split; i++) {
