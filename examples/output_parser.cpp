@@ -22,6 +22,7 @@ std::vector<std::vector<std::pair<float, size_t>>> read_output(const neural::pri
     bool needs_conversion = true;
     switch (mem_fmt)
     {
+    case neural::memory::format::bx_f32:
     case neural::memory::format::xb_f16:
         mem_fmt = neural::memory::format::xb_f32;
         break;
