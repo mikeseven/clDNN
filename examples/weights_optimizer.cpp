@@ -56,7 +56,7 @@ bool weights_optimizer::_needs_optimization(const primitive & prim, file::weight
     else if (type == file::weights_type::convolution)
     {
         // TODO!!! put better logic here.
-        auto expected_mem_format = _batch_size == 1 ? ( use_half ? memory::format::yxio_f16 : memory::format::os_iyx_osv16_f32 ) : ( use_half ? memory::format::yxio_f16 : memory::format::yxio_f32);
+        auto expected_mem_format = _batch_size == 1 ? ( use_half ? memory::format::yxio_f16 : memory::format::os_iyx_osv16_f32 ) : ( use_half ? memory::format::yxio_f16 : memory::format::yxio_f32 );
         if (mem.argument.format != expected_mem_format)
         {
             auto reordered_prim = neural::reorder::create(
@@ -75,7 +75,7 @@ bool weights_optimizer::_needs_optimization(const primitive & prim, file::weight
         // TODO!!! put better logic here.
         if (memory::traits(mem.argument.format).dimension == 4)
         {
-            auto expected_mem_format = use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
+            auto expected_mem_format = _batch_size == 1 ? ( use_half ? memory::format::yxfb_f16 : memory::format::fyxb_f32 ) : ( use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32 );
             if (mem.argument.format != expected_mem_format)
             {
                 auto reordered_prim = neural::reorder::create(
@@ -90,7 +90,7 @@ bool weights_optimizer::_needs_optimization(const primitive & prim, file::weight
         }
         else if (memory::traits(mem.argument.format).dimension == 2)
         {
-            auto expected_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
+            auto expected_mem_format = _batch_size == 1 ? ( use_half ? memory::format::xb_f16 : memory::format::xb_f32 ) : ( use_half ? memory::format::xb_f16 : memory::format::xb_f32 );
             if (mem.argument.format != expected_mem_format)
             {
                 auto reordered_prim = neural::reorder::create(
