@@ -69,6 +69,8 @@ struct fully_connected_gpu : is_an_implementation
                 uint32_t units_per_chunk;
                 uint32_t bytes_per_sg_read;
                 uint32_t units_per_sg_read;
+                uint32_t rg_count;
+                uint32_t last_rg_size;
             } data_xb_xb_fp16;
         };
     } _kernel_data;
@@ -170,7 +172,8 @@ struct fully_connected_gpu : is_an_implementation
             case memory::format::xb_f16:
             {
                 auto batch_size = output_mem.argument.size.batch[0];
-                bool batch_size_pow_2 = batch_size > 0 && (batch_size & (batch_size - 1)) == 0;
+                auto response_size = weight_mem.argument.size.batch[0];
+                //bool batch_size_pow_2 = batch_size > 0 && (batch_size & (batch_size - 1)) == 0;
 
                 constexpr uint32_t unit_byte_size = sizeof(cl_half);
                 const char* chunk_type = "uint";
@@ -179,11 +182,16 @@ struct fully_connected_gpu : is_an_implementation
                 constexpr uint32_t units_per_chunk = chunk_byte_size / unit_byte_size;
                 constexpr uint32_t units_per_sg_read = sub_group_size * units_per_chunk;
 
-                if (batch_size_pow_2 || (batch_size > 0 && batch_size % units_per_sg_read == 0))
+                if (/*batch_size_pow_2 ||*/ (batch_size > 0 && batch_size % units_per_sg_read == 0) &&
+                    response_size > 0 && response_size * unit_byte_size % 4 == 0) // Temporary: response size must be compatible with block read.
                 {
+                    // Number of response groups. Each group (except last) writes units_per_sg_read responses
+                    // for at least one input data set from batch.
+                    auto rg_count = (response_size + units_per_sg_read - 1) / units_per_sg_read;
+
                     kd.lws0 = sub_group_size;
                     // Rounding up to nearest non-lower multiply of units_per_sg_read.
-                    kd.gws0 = (output_mem.argument.size.spatial[0] + units_per_sg_read - 1) / units_per_sg_read * units_per_sg_read;
+                    kd.gws0 = rg_count * sub_group_size;
                     kd.lws1 = 1;
                     kd.gws1 = batch_size / units_per_sg_read;
 
@@ -195,6 +203,8 @@ struct fully_connected_gpu : is_an_implementation
                     kd.data_xb_xb_fp16.units_per_chunk   = units_per_chunk;
                     kd.data_xb_xb_fp16.bytes_per_sg_read = sub_group_size * chunk_byte_size;
                     kd.data_xb_xb_fp16.units_per_sg_read = units_per_sg_read;
+                    kd.data_xb_xb_fp16.rg_count          = rg_count;
+                    kd.data_xb_xb_fp16.last_rg_size      = rg_count * units_per_sg_read - response_size;
                     break;
                 }
 
@@ -286,6 +296,8 @@ struct fully_connected_gpu : is_an_implementation
             mem_consts.add_constant(gpu::make_jit_constant("UNITS_PER_CHUNK",   data.data_xb_xb_fp16.units_per_chunk));
             mem_consts.add_constant(gpu::make_jit_constant("BYTES_PER_SG_READ", data.data_xb_xb_fp16.bytes_per_sg_read));
             mem_consts.add_constant(gpu::make_jit_constant("UNITS_PER_SG_READ", data.data_xb_xb_fp16.units_per_sg_read));
+            mem_consts.add_constant(gpu::make_jit_constant("RG_COUNT",          data.data_xb_xb_fp16.rg_count));
+            mem_consts.add_constant(gpu::make_jit_constant("LAST_RG_SIZE",      data.data_xb_xb_fp16.last_rg_size));
         }
 
         if (data.kernel_name == kernel_name_xb_xb_b8_x8_vload ||
