@@ -295,9 +295,9 @@ struct reorder_gpu : is_an_implementation {
         return { {gws_0, gws_1, gws_2} };
     }
 
-    cldnn::event execute(const std::vector<cldnn::event>& events) override {
+    cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
+    {
         auto me = this;
-        auto& outer = me->outer;
 
         auto& input_mem = outer.input_memory(0);
         auto& output_mem = outer.output_memory(0);

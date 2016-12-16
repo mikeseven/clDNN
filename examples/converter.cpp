@@ -16,7 +16,6 @@
 
 #include "api/neural.h"
 #include "common/common_tools.h"
-#include "memory_utils.h"
 
 // memory->memory convolution
 void convert_weights(neural::memory::format::type format, std::string convertion_path)

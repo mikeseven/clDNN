@@ -39,11 +39,13 @@ struct fully_connected : public primitive_base<fully_connected, DTO(fully_connec
         const primitive_id& bias,
         bool with_activation = false,
         float activation_slp = 0.0f,
-        const tensor& input_offset = { format::x,0,{ 0 } },
-        const tensor& output_offset = { format::x,0,{ 0 } },
+        const tensor& input_offset =  { format::yx, 0,{ 0, 0 } },
+        const tensor& output_offset = { format::yx, 0,{ 0, 0 } },
         const padding_types padding_type = padding_types::zero
         )
         : primitive_base(id, {input}, input_offset, output_offset, padding_type, static_cast<uint32_t>(with_activation), activation_slp)
+        , with_activation(_dto.with_activation)
+        , negative_slope(_dto.activation_negative_slope)
     {
         _input.push_back(weights);
         _dto.weights = _input.store().back();
@@ -53,6 +55,8 @@ struct fully_connected : public primitive_base<fully_connected, DTO(fully_connec
 
     fully_connected(const dto* dto)
         :primitive_base(dto)
+        , with_activation(_dto.with_activation)
+        , negative_slope(_dto.activation_negative_slope)
     {
         _input.push_back(dto->weights);
         _dto.weights = _input.store().back();
@@ -62,7 +66,7 @@ struct fully_connected : public primitive_base<fully_connected, DTO(fully_connec
 
     primitive_id weights() const { return _dto.weights; }
     primitive_id bias() const { return _dto.bias; }
-    bool with_activation() const { return _dto.with_activation; }
-    float negative_slope() const { return _dto.activation_negative_slope; }
+    const uint32_t& with_activation;
+    const float& negative_slope;
 };
 }

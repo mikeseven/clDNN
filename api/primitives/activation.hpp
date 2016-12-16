@@ -33,17 +33,19 @@ struct activation : public primitive_base<activation, DTO(activation)>
         const primitive_id& id,
         const primitive_id& input,
         float slope,
-        const tensor& input_offset = { format::x,0,{ 0 } },
-        const tensor& output_offset = { format::x,0,{ 0 } },
+        const tensor& input_offset =  { format::yx, 0, { 0, 0 } },
+        const tensor& output_offset = { format::yx, 0,{ 0, 0 } },
         const padding_types padding_type = padding_types::zero
         )
-        :primitive_base(id, {input}, input_offset, output_offset, padding_type, slope)
+        : primitive_base(id, {input}, input_offset, output_offset, padding_type, slope)
+        , negative_slope(_dto.negative_slope)
     {}
 
     activation(const dto* dto)
-        :primitive_base(dto)
+        : primitive_base(dto)
+        , negative_slope(_dto.negative_slope)
     {}
 
-    float negative_slope() const { return _dto.negative_slope; }
+    const float& negative_slope;
 };
 }

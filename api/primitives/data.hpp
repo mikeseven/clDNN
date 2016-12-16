@@ -25,7 +25,7 @@ BEGIN_DTO(data)
     memory mem;
 END_DTO(data)
 
-    class data : public primitive_base<data, DTO(data)>
+class data : public primitive_base<data, DTO(data)>
 {
 public:
     typedef DTO(data) dto;
@@ -33,11 +33,13 @@ public:
 
     data(const primitive_id& id, const memory& mem)
         :primitive_base(id, {}, { format::x, 0,{ 0 } }, { format::x, 0,{ 0 } }, padding_types::zero, mem)
+        , mem(_dto.mem)
     {}
 
     explicit data(const dto* dto)
         :primitive_base(dto)
+        , mem(_dto.mem)
     {}
-    const memory& mem() const { return _dto.mem; }
+    const memory& mem;
 };
 }

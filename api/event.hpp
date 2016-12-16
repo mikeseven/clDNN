@@ -26,7 +26,7 @@ struct event
 {
     static event create_user_event(const engine& engine)
     {
-        return create_obj<event, event_impl>("create user event failed", [&](status_t* status) { return create_user_event_impl(engine, status); });
+        return check_status<event_impl*>("create user event failed", [&](status_t* status) { return create_user_event_impl(engine, status); });
     }
     DLL_SYM event(const event& other);
     DLL_SYM event& operator=(const event& other);

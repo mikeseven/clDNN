@@ -28,10 +28,9 @@ struct engine_configuration
 {
     uint32_t enable_profiling;
     uint32_t enable_debugging;
-    engine_types engine_type;
     string_ref compiler_options;
-    engine_configuration(bool profiling = false, bool debug = false, string_ref options = "", engine_types type = engine_types::ocl)
-        :enable_profiling(profiling), enable_debugging(debug), engine_type(type), compiler_options(options) {}
+    engine_configuration(bool profiling = false, bool debug = false, string_ref options = "")
+        :enable_profiling(profiling), enable_debugging(debug), compiler_options(options) {}
 };
 
 class engine_impl;
@@ -44,7 +43,7 @@ struct engine
 
     static engine create(engine_types type, uint32_t engine_num, const engine_configuration& configuration)
     {
-        return create_obj<engine, engine_impl>("failed to create engine", [&](status_t* status)
+        return check_status<engine_impl*>("failed to create engine", [&](status_t* status)
         {
             return create_engine_impl(type, engine_num, &configuration, status);
         });
@@ -70,10 +69,13 @@ struct engine
     engine_impl* get() const { return _impl; }
 
 private:
-    friend class network;
-    friend class memory;
-    friend class event;
-    DLL_SYM engine(engine_impl* impl, bool add_ref = false);
+    friend struct network;
+    friend struct memory;
+    friend struct event;
+    DLL_SYM engine(engine_impl* impl) : _impl(impl)
+    {
+        if (_impl == nullptr) throw std::invalid_argument("implementation pointer should not be null");
+    }
     engine_impl* _impl;
     DLL_SYM static uint32_t engine_count_impl(engine_types type, status_t* status) noexcept;
     DLL_SYM static engine_impl* create_engine_impl(engine_types type, uint32_t engine_num, const engine_configuration* configuration, status_t* status) noexcept;

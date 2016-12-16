@@ -16,12 +16,11 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include <memory>
-#include <cassert>
-#include <iterator>
-#include <numeric>
 #include "ocl_toolkit.h"
 #include "memory_impl.h"
+#include <cassert>
+#include <iterator>
+#include <mutex>
 
 #define BUFFER_ALIGNMENT 4096
 #define CACHE_ALIGNMENT 64
@@ -67,18 +66,19 @@ template<typename T>
 T* arr_end(T* buf, size_t count) { return buf + count; }
 #endif
 
-struct gpu_buffer : public cldnn::memory_impl, public context_holder {
+struct gpu_buffer : public cldnn::memory_impl {
     gpu_buffer(const cldnn::refcounted_obj_ptr<cldnn::engine_impl>& engine, const cldnn::layout& layout);
     void* lock() override;
     void unlock() override;
     const cl::Buffer& get_buffer() const {
-        assert(0 == _ref_count);
+        assert(0 == _lock_count);
         return _buffer;
     }
 
 private:
+    std::shared_ptr<gpu_toolkit> _context;
     std::mutex _mutex;
-    unsigned _ref_count;
+    unsigned _lock_count;
     cl::Buffer _buffer;
     void* _mapped_ptr;
 };

@@ -28,8 +28,8 @@ namespace cldnn
 {
 enum class padding_types { zero, one, two };
 
-typedef std::string primitive_id;
 typedef const struct primitive_type* primitive_type_id;
+typedef std::string primitive_id;
 typedef string_ref primitive_id_ref;
 
 /**
@@ -43,6 +43,7 @@ template<typename RefElemTy, typename StorElemTy,
 class array_ref_store
 {
 public:
+    typedef StorElemTy value_type;
     array_ref_store(const std::vector<StorElemTy>& arr)
         :_data_store(arr) //Not sure if it will work correctly: , _arr_store(_data_store)
     {
@@ -131,7 +132,7 @@ template<class PType, class DTO>
 class primitive_base : public primitive
 {
 public:
-    const primitive_dto* get_dto() const override { return reinterpret_cast<primitive_dto*>(&_dto); }
+    const primitive_dto* get_dto() const override { return reinterpret_cast<const primitive_dto*>(&_dto); }
 
     primitive_id id() const override { return _id; }
     const std::vector<primitive_id>& input() const override { return _input; }
@@ -145,21 +146,21 @@ protected:
     explicit primitive_base(
         const primitive_id& id,
         const std::vector<primitive_id>& input,
-        const tensor& input_offset = { format::x,{ 0 } },
-        const tensor& output_offset = { format::x,{ 0 } },
+        const tensor& input_offset =  { format::yx, 0, { 0, 0 } },
+        const tensor& output_offset = { format::yx, 0, { 0, 0 } },
         const padding_types padding_type = padding_types::zero,
         Args... args)
         : _id(id), _input(input)
-        , _dto{ PType::type_id(), _id, _input, input_offset, output_offset, padding_type, args }
+        , _dto{ PType::type_id(), _id, _input, input_offset, output_offset, padding_type, args... }
     {}
 
     primitive_base(const DTO* dto)
         : _id(dto->id), _input(dto->input)
         , _dto{ *dto }
     {
-        if (dto->type != PType::type_id()) throw std::invalid_argument("DTO type mismatch");
-        dto->id = _id;
-        dto->input = _input;
+        if (_dto.type != PType::type_id()) throw std::invalid_argument("DTO type mismatch");
+        _dto.id = _id;
+        _dto.input = _input;
     }
 
     primitive_id _id;

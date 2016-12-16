@@ -15,14 +15,20 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "primitive_type_base.h"
-#include "input_layout_arg.h"
+#pragma once
+#include "api/primitives/mean_substract.hpp"
+#include "primitive_arg.h"
+#include <memory>
 
 namespace cldnn
 {
-primitive_type_id input_layout::type_id()
-{
-    static primitive_type_base<input_layout, input_layout_arg> instance;
-    return &instance;
-}
+    class mean_substract_arg : public primitive_arg_base<mean_substract>
+    {
+    public:
+        mean_substract_arg(network_impl& network, std::shared_ptr<const mean_substract> desc);
+
+        static layout calc_output_layout(network_impl& network, std::shared_ptr<const mean_substract> desc);
+
+        const memory& mean_memory() const;
+    };
 }

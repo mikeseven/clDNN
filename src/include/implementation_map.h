@@ -40,7 +40,7 @@ struct implementation_key
     typedef std::tuple<engine_types, neural_memory::format::type> type;
     type operator()(engine_types engine_type, primitive_kind& primitive)
 	{
-        return std::make_tuple(engine_type, primitive.input_memory(0).argument.format);
+        return std::make_tuple(engine_type, primitive.input_memory(0).argument().format);
     }
 };
 
@@ -48,7 +48,7 @@ template<>
 struct implementation_key<reorder_arg>
 {
 	typedef cldnn::engine_types type;
-	type operator()(engine_types engine_type, reorder&)
+	type operator()(engine_types engine_type, reorder_arg&)
 	{
 		return engine_type;
 	}

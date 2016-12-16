@@ -33,12 +33,14 @@ public:
 
     input_layout(const primitive_id& id, const layout& layout)
         :primitive_base(id, {}, { format::x, 0,{ 0 } }, { format::x, 0,{ 0 } }, padding_types::zero, layout)
+        , layout(_dto.layout)
     {}
 
     explicit input_layout(const dto* dto)
         :primitive_base(dto)
+        , layout(_dto.layout)
     {}
 
-    layout layout() const { return _dto.layout; }
+    const layout& layout;
 };
 }

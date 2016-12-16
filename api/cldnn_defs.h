@@ -75,17 +75,17 @@ typedef int32_t status_t;
 
 #define CLDNN_THROW(msg, status) throw std::runtime_error(msg);
 
-template<class T, class TImpl>
-T create_obj(std::string err_msg, std::function<TImpl*(status_t*)> func)
+template<class T>
+T check_status(std::string err_msg, std::function<T(status_t*)> func)
 {
     status_t status;
-    auto impl = func(&status);
-    if (!impl)
+    auto result = func(&status);
+    if (!result)
         CLDNN_THROW(err_msg, status);
-    return T(impl);
+    return result;
 }
 
-void check_status(std::string err_msg, status_t status)
+inline void check_status(std::string err_msg, status_t status)
 {
     if (status != CLDNN_SUCCESS)
         CLDNN_THROW(err_msg, status);

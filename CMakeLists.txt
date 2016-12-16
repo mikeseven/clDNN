@@ -1003,7 +1003,7 @@ include_directories(
     ${CLDNN__IOCL_ICD_INCDIRS}
     ${CLDNN__FREEIMAGE_INCDIRS}
     "${CLDNN__KHR_CLHPP_DIR}"
-    "${CLDNN__API_DIR}"
+#    "${CLDNN__API_DIR}"
     ${Boost_INCLUDE_DIRS}
     "${CLDNN__CODEGEN_INCDIR}"
   )

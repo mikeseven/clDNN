@@ -169,10 +169,10 @@ inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name,
 }
 
 class memories_jit_constant : public vector_jit_constant {
-    const std::vector<const cldnn::memory> _mem;
+    const std::vector<cldnn::memory> _mem;
 
 public:
-    memories_jit_constant(const std::string& name, const std::vector<const cldnn::memory> mem)
+    memories_jit_constant(const std::string& name, const std::vector<cldnn::memory> mem)
         :vector_jit_constant(name, mem[0].get_layout().size), _mem(mem) {}
 
     kernels_cache::jit_definitions get_definitions() const override {
@@ -199,7 +199,7 @@ public:
     }
 };
 
-inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const std::vector<const cldnn::memory> value) {
+inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const std::vector<cldnn::memory> value) {
     return std::static_pointer_cast<jit_constant>(std::make_shared<memories_jit_constant>(name, value));
 }
 
@@ -333,10 +333,14 @@ public:
     }
 
     template<typename... Args>
-    cldnn::event run(const kernel_execution_options& options, const std::vector<cldnn::event>& dependencies, Args... args) const {
+    cldnn::refcounted_obj_ptr<cldnn::event_impl> run(
+        const kernel_execution_options& options,
+        const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& dependencies,
+        Args... args) const
+    {
         cl::Event end_event;
         std::vector<cl::Event> events(dependencies.size());
-        std::transform(std::begin(dependencies), std::end(dependencies), std::begin(events), [](const cldnn::event& evt) { return evt.get()->get(); });
+        std::transform(std::begin(dependencies), std::end(dependencies), std::begin(events), [](const cldnn::refcounted_obj_ptr<cldnn::event_impl>& evt) { return evt.get()->get(); });
 
         if (context()->get_configuration().enable_profiling) {
             instrumentation::timer<> pre_enqueue_timer;

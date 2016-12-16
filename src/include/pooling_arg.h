@@ -15,14 +15,18 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "primitive_type_base.h"
-#include "input_layout_arg.h"
+#pragma once
+#include "api/primitives/pooling.hpp"
+#include "primitive_arg.h"
+#include <memory>
 
 namespace cldnn
 {
-primitive_type_id input_layout::type_id()
-{
-    static primitive_type_base<input_layout, input_layout_arg> instance;
-    return &instance;
-}
+    class pooling_arg : public primitive_arg_base<pooling>
+    {
+    public:
+        pooling_arg(network_impl& network, std::shared_ptr<const pooling> desc);
+
+        static layout calc_output_layout(network_impl& network, std::shared_ptr<const pooling> desc);
+    };
 }

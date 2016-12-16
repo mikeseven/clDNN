@@ -15,14 +15,22 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "primitive_type_base.h"
-#include "input_layout_arg.h"
+#pragma once
+#include "api/primitives/fully_connected.hpp"
+#include "primitive_arg.h"
+#include <memory>
 
 namespace cldnn
 {
-primitive_type_id input_layout::type_id()
-{
-    static primitive_type_base<input_layout, input_layout_arg> instance;
-    return &instance;
-}
+    class fully_connected_arg : public primitive_arg_base<fully_connected>
+    {
+    public:
+        static layout calc_output_layout(network_impl& network, std::shared_ptr<const fully_connected> desc);
+
+        fully_connected_arg(network_impl& network, std::shared_ptr<const fully_connected> desc);
+
+        const memory& weights_memory() const;
+
+        const memory& bias_memory() const;
+    };
 }

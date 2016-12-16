@@ -20,13 +20,14 @@
 #include "api/memory.hpp"
 #include "api/primitive.hpp"
 #include "api/network.hpp"
+#include "event_impl.h"
 #include <memory>
 
 namespace neural { namespace gpu { class gpu_toolkit; } }
 namespace cldnn
 {
 struct primitive_impl {
-    virtual event execute(const std::vector<event>& events) = 0;
+    virtual refcounted_obj_ptr<event_impl> execute(const std::vector<refcounted_obj_ptr<event_impl>>& events) = 0;
     virtual ~primitive_impl() = default;
 };
 

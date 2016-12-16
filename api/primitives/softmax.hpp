@@ -31,8 +31,8 @@ struct softmax : public primitive_base<softmax, DTO(softmax)>
     softmax(
         const primitive_id& id,
         const primitive_id& input,
-        const tensor& input_offset = { format::x,0,{ 0 } },
-        const tensor& output_offset = { format::x,0,{ 0 } },
+        const tensor& input_offset =  { format::yx, 0, { 0, 0 } },
+        const tensor& output_offset = { format::yx, 0, { 0, 0 } },
         const padding_types padding_type = padding_types::zero
     )
         :primitive_base(id, {input}, input_offset, output_offset, padding_type)

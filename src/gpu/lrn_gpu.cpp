@@ -14,8 +14,9 @@
 // limitations under the License.
 */
 
-#include "api/neural.h"
-#include "cache/primitive_db.h"
+#include "neural_impl.h"
+#include "engine_impl.h"
+#include "network_impl.h"
 #include "implementation_map.h"
 #include "kernel.h"
 #include "kd_selector.h"
@@ -24,7 +25,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <string>
-
+#include "api/primitives/data.hpp"
 
 namespace neural
 {
@@ -32,18 +33,6 @@ namespace neural
 static const std::string kernel_name = "lrn_gpu";
 static const std::string kernel_name_b8 = "lrn_gpu_b8";
 static const std::string kernel_name_bfyx = "lrn_gpu_bfyx";
-// GPU engine information helpers.
-namespace
-{
-struct gpu_info_helper : gpu::context_holder
-{
-    gpu::engine_info get_engine_info() const
-    {
-        return context()->get_engine_info();
-    }
-};
-}
-
 template <>
 struct kd_default_value_selector<neural::gpu::engine_info::architectures>
 {
@@ -74,11 +63,10 @@ struct lrn_gpu : is_an_implementation
     static kd_selector_t<kernel_data, normalization::response, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> ks;
 
     lrn_gpu(const normalization::response& outer)
-        : is_an_implementation(neural::type_id<lrn_gpu>()),
-        _outer(outer),
+        : _outer(outer),
         _engine_info(gpu_info_helper().get_engine_info()),
         _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument.format, outer.input_memory(0).argument.size.batch[0], _engine_info.architecture, _engine_info.configuration)),
-        _kernel(_kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
     {}
 
     static kernel_data set_default(const normalization::response& arg)
@@ -87,11 +75,11 @@ struct lrn_gpu : is_an_implementation
 
         kernel_data kd;
 
-        kd.fp16_unit_used = memory::traits(input_mem.argument.format).type->name == type_id<half_t>()->name;
+        kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
 
         // Determine global work sizes.
-        kd.gws0 = input_mem.argument.size.batch[0] * input_mem.argument.size.feature[0];   // B, F
-        kd.gws1 = input_mem.argument.size.spatial[0] * input_mem.argument.size.spatial[1]; // X, Y
+        kd.gws0 = input_mem.argument().size.batch[0] * input_mem.argument().size.feature[0];   // B, F
+        kd.gws1 = input_mem.argument().size.spatial[0] * input_mem.argument().size.spatial[1]; // X, Y
         kd.gws2 = 1;
         // Find largest positive local work size that is divider for global work size.
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
@@ -104,7 +92,7 @@ struct lrn_gpu : is_an_implementation
 
         // TODO: add half case: b16 (b*f dividable by 128).
         if (!kd.fp16_unit_used &&                        // halfs are not used
-            input_mem.argument.size.batch[0] % 8 == 0 && // batch_num is multiple of 8
+            input_mem.argument().size.batch[0] % 8 == 0 && // batch_num is multiple of 8
             kd.gws0 % 64 == 0)                           // batch_num * feature_num is multiple of 64
         {
             kd.gws0 /= 8;
@@ -118,7 +106,7 @@ struct lrn_gpu : is_an_implementation
         }
 
         // Checking for supported paddings.
-        switch (arg.argument.padding)
+        switch (outer.argument.padding_type)
         {
         case padding::zero:
             break;
@@ -132,8 +120,7 @@ struct lrn_gpu : is_an_implementation
 
     static gpu::jit_constants get_jit_constants(const normalization::response& outer, const kernel_data& data)
     {
-        gpu_info_helper gpu_info;
-        auto engine_info = gpu_info.get_engine_info();
+        auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
 
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
@@ -145,7 +132,7 @@ struct lrn_gpu : is_an_implementation
         auto alpha_abs_sqrt = std::sqrt(std::abs(outer.argument.alpha));
 
         gpu::jit_constants mem_consts {
-            gpu::make_jit_constant("INPUT",             outer.input_memory(0).argument.size),
+            gpu::make_jit_constant("INPUT",             outer.input_memory(0).argument().size),
             gpu::make_jit_constant("P_SIZE",            size),
             gpu::make_jit_constant("ALPHA",             data.fp16_unit_used ? alpha_sign : outer.argument.alpha),
             gpu::make_jit_constant("ALPHA_VAL_FACTOR",  data.fp16_unit_used ? alpha_abs_sqrt : 1.0f),
@@ -161,23 +148,20 @@ struct lrn_gpu : is_an_implementation
         return mem_consts;
     }
 
-    static void implementation(const void *ptr)
+    cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
     {
-        auto me = static_cast<const lrn_gpu*>(ptr);
-        const auto& outer = me->_outer;
-        const auto& kd    = me->_kernel_data;
+        const auto& outer = _outer;
+        const auto& kd    = _kernel_data;
 
         const auto& input_mem  = outer.input_memory(0);  // input
         const auto& output_mem = outer.output_memory(0); // output
 
-        me->_kernel.run<gpu::input_mem, gpu::output_mem>
-            ({{kd.gws0, kd.gws1, kd.gws2}, {kd.lws0, kd.lws1, kd.lws2}}, input_mem, output_mem);
+        return _kernel.run<gpu::input_mem, gpu::output_mem>
+            ({{kd.gws0, kd.gws1, kd.gws2}, {kd.lws0, kd.lws1, kd.lws2}}, events, input_mem, output_mem);
     }
 
 
     static is_an_implementation *create(normalization::response &arg) { return new lrn_gpu(arg); }
-
-    task_group work() override { return{ { task{ implementation, this } }, schedule::single }; }
 
 };
 
@@ -216,9 +200,9 @@ kd_selector_t<lrn_gpu::kernel_data, normalization::response, neural::memory::for
     namespace {
         struct attach {
             attach() {
-                implementation_map<normalization::response>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32), lrn_gpu::create);
-                implementation_map<normalization::response>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16), lrn_gpu::create);
-                implementation_map<normalization::response>::add(std::make_tuple(engine::gpu, memory::format::bfyx_f32, memory::format::bfyx_f32), lrn_gpu::create);
+                implementation_map<normalization::response>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f32), lrn_gpu::create);
+                implementation_map<normalization::response>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f16), lrn_gpu::create);
+                implementation_map<normalization::response>::add(std::make_tuple(engine::gpu, memory::format::bfyx_f32), lrn_gpu::create);
             }
             ~attach() {}
         };

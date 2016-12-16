@@ -17,36 +17,35 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "primitive_arg.h"
-#include "primitives/input_layout.hpp"
+#include "api/primitives/input_layout.hpp"
 #include "memory_impl.h"
-#include "engine_impl.h"
 #include "network_impl.h"
 
 namespace cldnn
 {
-    class input_arg : public primitive_arg_base<input_layout>
-    {
-    public:
-        input_arg(network_impl& network, std::shared_ptr<const input_layout> desc)
-            :primitive_arg_base(network, desc, desc->layout())
-        {}
+class input_layout_arg : public primitive_arg_base<input_layout>
+{
+public:
+    input_layout_arg(network_impl& network, std::shared_ptr<const input_layout> desc)
+        :primitive_arg_base(network, desc, desc->layout)
+    {}
 
-        void set_data(const memory& mem)
+    void set_data(const memory& mem)
+    {
+        if (mem.get_layout() != _output.get_layout())
+            throw std::invalid_argument("data layout does not match");
+        auto engine = get_network().get_engine();
+        if (mem.get()->is_allocated_by(engine))
         {
-            if (mem.get_layout() != _output.get_layout())
-                throw std::invalid_argument("data layout does not match");
-            auto engine = get_network().get_engine();
-            if (mem.get()->is_allocated_by(engine))
-            {
-                _output = mem;
-            }
-            else
-            {
-                pointer<char> src(mem);
-                pointer<char> dst(_output);
-                assert(src.size() == dst.size());
-                std::copy(src.begin(), src.end(), dst.begin());
-            }
+            _output = mem;
         }
-    };
+        else
+        {
+            pointer<char> src(mem);
+            pointer<char> dst(_output);
+            assert(src.size() == dst.size());
+            std::copy(src.begin(), src.end(), dst.begin());
+        }
+    }
+};
 }

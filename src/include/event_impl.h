@@ -18,7 +18,7 @@
 #pragma once
 #include "api/event.hpp"
 #include "refcounted_obj.h"
-#include <cl2_wrapper.h>
+#include "gpu/ocl_toolkit.h"
 
 namespace cldnn
 {

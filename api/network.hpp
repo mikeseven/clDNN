@@ -31,7 +31,7 @@ struct network
 {
     static network build(const engine& engine, const topology& topology)
     {
-        return create_obj<network, network_impl>("network build failed", [&](status_t* status) { return build_impl(engine, topology, status); });
+        return check_status<network_impl*>("network build failed", [&](status_t* status) { return build_impl(engine, topology, status); });
     }
 
     typedef network_impl impl_type;
@@ -68,10 +68,13 @@ struct network
 
     event execute(const std::vector<event>& dependencies)
     {
-        return create_obj<event, event_impl>("network execute failed", [&](status_t* status) { return execute_impl(dependencies, status); });
+        return check_status<event_impl*>("network execute failed", [&](status_t* status) { return execute_impl(dependencies, status); });
     }
 
-    DLL_SYM engine get_engine() const noexcept;
+    engine get_engine() const
+    {
+        return check_status<engine_impl*>("get network engine failed", [&](status_t* status) { return get_engine_impl(status); });
+    }
 
     network_impl* get() const { return _impl; }
 
@@ -83,7 +86,8 @@ private:
     DLL_SYM status_t set_input_data_impl(primitive_id_ref id, memory mem) noexcept;
     DLL_SYM array_ref<primitive_id_ref> get_primitive_keys_impl(status_t* status) noexcept;
     DLL_SYM event_impl* execute_impl(array_ref<event> dependencies, status_t* status) noexcept;
-    DLL_SYM const memory& get_output(primitive_id_ref id, status_t* status) noexcept;
+    DLL_SYM memory_impl* get_output(primitive_id_ref id, status_t* status) noexcept;
+    DLL_SYM engine_impl* get_engine_impl(status_t* status) const noexcept;
 };
 API_CLASS(network)
 }

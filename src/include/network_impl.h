@@ -18,10 +18,11 @@
 #pragma once
 #include "api/engine.hpp"
 #include "api/network.hpp"
+#include "engine_impl.h"
 #include "refcounted_obj.h"
 #include "primitive_arg.h"
 #include "primitive_type.h"
-#include "primitives/input_layout.hpp"
+#include "api/primitives/input_layout.hpp"
 #include <map>
 #include <algorithm>
 
@@ -54,7 +55,7 @@ public:
 
     const refcounted_obj_ptr<engine_impl>& get_engine() const noexcept { return _engine; }
 
-    const memory& get_output_of(const primitive_id& id) const;
+    memory_impl* get_output_of(const primitive_id& id) const;
     array_ref<primitive_id_ref> get_primitive_keys() const { return _primitive_names; }
     void set_input_data(const primitive_id& id, const memory& data);
 
@@ -73,6 +74,7 @@ public:
         return result;
     }
 
+    event_impl* execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events);
 private:
     bool _completed;
     const refcounted_obj_ptr<engine_impl> _engine;

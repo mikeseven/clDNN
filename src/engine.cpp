@@ -30,7 +30,7 @@ gpu_toolkit_config convert_configuration(const engine_configuration conf)
 {
     gpu_toolkit_config result = gpu_toolkit_config::get();
     result.compiler_options = conf.compiler_options;
-    result.enable_profiling = conf.enable_profiling;
+    result.enable_profiling = conf.enable_profiling != 0;
     return result;
 }
 
@@ -70,11 +70,6 @@ uint32_t engine::engine_count_impl(engine_types type, status_t* status) noexcept
     }
 }
 
-engine::engine(engine_impl* impl, bool add_ref) : _impl(impl)
-{
-    if (add_ref) _impl->add_ref();
-}
-
 engine::engine(const engine& other):_impl(other._impl)
 {
     _impl->add_ref();
@@ -101,7 +96,7 @@ engine_types engine::engine_type() noexcept
 
 engine_impl* engine::create_engine_impl(engine_types engine_type, uint32_t engine_num, const engine_configuration* configuration, status_t* status) noexcept
 {
-    if (engine_num > 0 || (configuration && configuration->engine_type != engine_types::ocl))
+    if (engine_num > 0 || (engine_type != engine_types::ocl))
     {
         if (status)
             *status = CLDNN_UNSUPPORTED;

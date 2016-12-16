@@ -97,21 +97,22 @@ struct format
  */
 struct tensor
 {
+    typedef int32_t value_type;
     //TODO find the way to prevent direct change of following fields.
     format format;
-    array_ref<int32_t> raw;
-    array_ref<int32_t> batch;
-    array_ref<int32_t> feature;
-    array_ref<int32_t> spatial;
+    mutable_array_ref<value_type> raw;
+    mutable_array_ref<value_type> batch;
+    mutable_array_ref<value_type> feature;
+    mutable_array_ref<value_type> spatial;
 
     /**
      * \brief Internal storage for tensor's data.
      * had to keep it public to support "Standard Layout"
      * please do not access this field directly
      */
-    int32_t _sizes[TENSOR_DIM_MAX];
+    value_type _sizes[TENSOR_DIM_MAX];
 
-    tensor(cldnn::format fmt, int32_t default_size, const std::vector<int32_t>& sizes)
+    tensor(cldnn::format fmt, value_type default_size, const std::vector<value_type>& sizes)
         : format(fmt)
         , raw(_sizes, fmt.batch_num() + fmt.feature_num() + fmt.spatial_num())
         , batch  (_sizes, fmt.batch_num())
@@ -153,7 +154,7 @@ struct tensor
         }
     }
 
-    tensor(cldnn::format fmt, const std::vector<int32_t>& sizes)
+    tensor(cldnn::format fmt, const std::vector<value_type>& sizes)
         :tensor(fmt, 1, sizes)
     {}
 
@@ -194,9 +195,9 @@ struct tensor
         return !(lhs == rhs);
     }
 
-    std::vector<int32_t> sizes() const {
+    std::vector<value_type> sizes() const {
         auto order = format.order();
-        std::vector<int32_t> sizes(order.size());
+        std::vector<value_type> sizes(order.size());
         size_t batch_idx = 0;
         size_t feature_idx = 0;
         size_t spatial_idx = 0;
@@ -236,13 +237,13 @@ struct tensor
         );
     }
 
-    tensor transform(cldnn::format new_fmt, int32_t default_size) const
+    tensor transform(cldnn::format new_fmt, value_type default_size) const
     {
         if (format == new_fmt) return *this;
         auto val_order = format.order();
         auto new_order = new_fmt.order();
-        std::vector<int32_t> old_sizes = sizes();
-        std::vector<int32_t> new_sizes(new_order.size(), default_size);
+        std::vector<value_type> old_sizes = sizes();
+        std::vector<value_type> new_sizes(new_order.size(), default_size);
         for(size_t i = 0; i < old_sizes.size(); i++)
         {
             auto c = val_order[i];

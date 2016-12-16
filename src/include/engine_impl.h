@@ -46,8 +46,8 @@ public:
     template<class primitive_kind>
     std::unique_ptr<primitive_impl> create_primitive_impl(primitive_kind& arg)
     {
-        auto factory = implementation_map<primitive_kind>::get(arg);
-        return factory(arg);
+        auto factory = implementation_map<primitive_kind>::get(type(), arg);
+        return std::move(std::unique_ptr<primitive_impl>(factory(arg)));
     }
 
 private:

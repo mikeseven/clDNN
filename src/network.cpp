@@ -19,13 +19,14 @@
 #include "network_impl.h"
 #include "engine_impl.h"
 #include "network_builder.h"
-#include "primitives/input_layout.hpp"
+#include "api/primitives/input_layout.hpp"
+#include "event_impl.h"
 
 namespace cldnn
 {
-const memory& network_impl::get_output_of(const primitive_id& id) const
+memory_impl* network_impl::get_output_of(const primitive_id& id) const
 {
-    return _primitives.at(id)->output_memory();
+    return _primitives.at(id)->output_memory().get();
 }
 
 void network_impl::set_input_data(const primitive_id& id, const memory& data)
@@ -42,6 +43,19 @@ void network_impl::set_input_data(const primitive_id& id, const memory& data)
     _completed = false;
     _inputs[id] = true;
 }
+
+event_impl* network_impl::execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events)
+{
+    //TODO implement network execution
+    for(auto& evt : events)
+    {
+        evt->wait();
+    }
+    auto result = get_engine()->create_user_event();
+    result->set();
+    return result;
+}
+
 
 network::network(const network& other):_impl(other._impl)
 {
@@ -62,7 +76,7 @@ network::~network()
     _impl->release();
 }
 
-const memory& network::get_output(primitive_id_ref id, status_t* status) noexcept
+memory_impl* network::get_output(primitive_id_ref id, status_t* status) noexcept
 {
     try
     {
@@ -74,13 +88,25 @@ const memory& network::get_output(primitive_id_ref id, status_t* status) noexcep
     {
         if (status)
             *status = CLDNN_ERROR;
-        return memory::allocate(get_engine(), {data_types::f32, {format::x, {0}}});
+        return nullptr;
     }
 }
 
-engine network::get_engine() const
+engine_impl* network::get_engine_impl(status_t* status) const noexcept
 {
-    return engine(_impl->get_engine().get(), true);
+    try
+    {
+        if (status)
+            *status = CLDNN_SUCCESS;
+        auto result = _impl->get_engine();
+        return result.detach();
+    }
+    catch (...)
+    {
+        if (status)
+            *status = CLDNN_ERROR;
+        return nullptr;
+    }
 }
 
 network_impl* network::build_impl(const engine& engine, const topology& topology, status_t* status) noexcept
@@ -130,5 +156,19 @@ array_ref<primitive_id_ref> network::get_primitive_keys_impl(status_t* status) n
 
 event_impl* network::execute_impl(array_ref<event> dependencies, status_t* status) noexcept
 {
+    try
+    {
+        if (status)
+            *status = CLDNN_SUCCESS;
+        std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>> events(dependencies.size());
+        std::transform(dependencies.begin(), dependencies.end(), events.begin(), [](const event& evt) { return refcounted_obj_ptr<event_impl>(evt.get()); });
+        return _impl->execute(events);
+    }
+    catch (...)
+    {
+        if (status)
+            *status = CLDNN_ERROR;
+        return nullptr;
+    }
 }
 }

@@ -33,11 +33,12 @@ struct mean_substract : public primitive_base<mean_substract, DTO(mean_substract
         const primitive_id& id,
         const primitive_id& input,
         const primitive_id& mean,
-        const tensor& input_offset = { format::yx,{ 0, 0 } },
+        const tensor& input_offset =  { format::yx,{ 0, 0 } },
         const tensor& output_offset = { format::yx,{ 0, 0 } },
         const padding_types padding_type = padding_types::zero
         )
         :primitive_base(id, {input}, input_offset, output_offset, padding_type)
+        , mean(mean)
     {
         // use the same storage for input and mean
         _input.push_back(mean);
@@ -46,11 +47,12 @@ struct mean_substract : public primitive_base<mean_substract, DTO(mean_substract
 
     mean_substract(const dto* dto)
         :primitive_base(dto)
+        , mean(dto->mean)
     {
         _input.push_back(dto->mean);
         _dto.mean = _input.store().back();
     }
 
-    primitive_id mean() const { return _dto.mean; }
+    const primitive_id mean;
 };
 }

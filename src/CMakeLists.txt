@@ -41,6 +41,13 @@ file(GLOB __CLDNN_Sources__main
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
   )
 
+set(__CLDNN_Directory__include         "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(__CLDNN_Label__include             "include")
+file(GLOB __CLDNN_Headers__include
+    "${__CLDNN_Directory__include}/*.h"
+    "${__CLDNN_Directory__include}/*.hpp"
+  )
+
 set(__CLDNN_Directory__gpu             "${CMAKE_CURRENT_SOURCE_DIR}/gpu")
 set(__CLDNN_Label__gpu                 "gpu")
 file(GLOB __CLDNN_Sources__gpu
@@ -75,6 +82,7 @@ set(__CLDNN_Sources__cg_cache
 
 set(__CLDNN_AllSources
     ${__CLDNN_Headers__api}
+    ${__CLDNN_Headers__include}
     ${__CLDNN_Sources__main}
     ${__CLDNN_Sources__gpu}
     ${__CLDNN_Sources__cache}
@@ -87,6 +95,7 @@ set_property(SOURCE ${__CLDNN_Sources__cg_cache} PROPERTY GENERATED TRUE)
 # =============================================== Filters ==============================================
 
 source_group("${__CLDNN_Label__api}"        FILES ${__CLDNN_Headers__api})
+source_group("${__CLDNN_Label__include}"    FILES ${__CLDNN_Headers__include})
 source_group("${__CLDNN_Label__main}"       FILES ${__CLDNN_Sources__main})
 source_group("${__CLDNN_Label__gpu}"        FILES ${__CLDNN_Sources__gpu})
 source_group("${__CLDNN_Label__cache}"      FILES ${__CLDNN_Sources__cache})
@@ -98,6 +107,7 @@ source_group("${__CLDNN_Label__cg_cache}"   FILES ${__CLDNN_Sources__cg_cache})
 include_directories(
     "${CLDNN__MAIN_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${__CLDNN_Directory__include}"
   )
 
 # =================================== Link targets and dependencies ====================================

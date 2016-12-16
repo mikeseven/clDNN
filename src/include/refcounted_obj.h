@@ -57,10 +57,12 @@ struct refcounted_obj_ptr
         if(add_ref) ptr_add_ref();
     }
 
+    refcounted_obj_ptr() : _ptr(nullptr){}
+
     refcounted_obj_ptr(const refcounted_obj_ptr& other)
         : _ptr(other._ptr)
     {
-        ptr_release();
+        ptr_add_ref();
     }
 
     refcounted_obj_ptr& operator=(const refcounted_obj_ptr& other)
@@ -69,11 +71,18 @@ struct refcounted_obj_ptr
             return *this;
         ptr_release();
         _ptr = other._ptr;
-        ptr_release();
+        ptr_add_ref();
         return *this;
     }
 
-    ~refcounted_obj_ptr() { _ptr->release(); }
+    ~refcounted_obj_ptr() { ptr_release(); }
+
+    T* detach()
+    {
+        T* result = _ptr;
+        _ptr = nullptr;
+        return result;
+    }
 
     operator bool() const { return _ptr != nullptr; }
     T* get() const { return _ptr; }

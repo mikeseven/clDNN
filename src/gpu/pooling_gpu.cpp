@@ -14,8 +14,9 @@
 // limitations under the License.
 */
 
-#include "api/neural.h"
-#include "cache/primitive_db.h"
+#include "neural_impl.h"
+#include "engine_impl.h"
+#include "network_impl.h"
 #include "implementation_map.h"
 #include "kernel.h"
 #include "kd_selector.h"
@@ -33,18 +34,6 @@ static const std::string kernel_name_max_offset     = "pooling_gpu_max_offset";
 static const std::string kernel_name_average        = "pooling_gpu_average";
 static const std::string kernel_name_average_offset = "pooling_gpu_average_offset";
 static const std::string kernel_name_bfyx_max       = "pooling_gpu_bfyx_max";
-
-// GPU engine information helpers.
-namespace
-{
-struct gpu_info_helper : gpu::context_holder
-{
-    gpu::engine_info get_engine_info() const
-    {
-        return context()->get_engine_info();
-    }
-};
-}
 
 template <>
 struct kd_default_value_selector<neural::gpu::engine_info::architectures>
@@ -74,11 +63,10 @@ struct pooling_gpu : is_an_implementation {
     static kd_selector_t<kernel_data, pooling, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> ks;
 
     pooling_gpu(const pooling& outer)
-        : is_an_implementation(neural::type_id<pooling_gpu>()),
-        _outer(outer),
+        : _outer(outer),
         _engine_info(gpu_info_helper().get_engine_info()),
         _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument.format, outer.input_memory(0).argument.size.batch[0], _engine_info.architecture, _engine_info.configuration)),
-        _kernel(_kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
     {}
 
     static kernel_data set_default(const pooling& arg)
@@ -88,12 +76,12 @@ struct pooling_gpu : is_an_implementation {
 
         kernel_data kd;
 
-        kd.fp16_unit_used = memory::traits(input_mem.argument.format).type->name == type_id<half_t>()->name;
+        kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
 
         // Determine global work sizes.
-        kd.gws0 = output_mem.argument.size.batch[0] * output_mem.argument.size.feature[0];
-        kd.gws1 = output_mem.argument.size.spatial[0];
-        kd.gws2 = output_mem.argument.size.spatial[1];
+        kd.gws0 = output_mem.argument().size.batch[0] * output_mem.argument().size.feature[0];
+        kd.gws1 = output_mem.argument().size.spatial[0];
+        kd.gws2 = output_mem.argument().size.spatial[1];
 
         // Find largest positive local work size that is divider for global work size.
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
@@ -108,10 +96,10 @@ struct pooling_gpu : is_an_implementation {
         auto needs_boundary = needs_boundary_check(arg);
         switch (arg.argument.mode)
         {
-        case pooling::mode::max:
+        case cldnn::pooling_mode::max:
             kd.kernel_name = needs_boundary ? kernel_name_max_offset : kernel_name_max;
             break;
-        case pooling::mode::average:
+        case cldnn::pooling_mode::average:
             kd.kernel_name = needs_boundary ? kernel_name_average_offset : kernel_name_average;
             break;
 
@@ -135,23 +123,22 @@ struct pooling_gpu : is_an_implementation {
         auto& stride = outer.argument.stride;
 
         // If modulo is not 0 that means it is not dividable by stride, so we would go out of boundary.
-        auto mod_x = (input_mem.argument.size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_size.spatial[0]) % stride.spatial[0];
-        auto mod_y = (input_mem.argument.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_size.spatial[1]) % stride.spatial[1];
+        auto mod_x = (input_mem.argument().size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_size.spatial[0]) % stride.spatial[0];
+        auto mod_y = (input_mem.argument().size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_size.spatial[1]) % stride.spatial[1];
 
         return mod_x || mod_y;
     }
 
     static gpu::jit_constants get_jit_constants(const pooling& outer, const kernel_data& data)
     {
-        gpu_info_helper gpu_info;
-        auto engine_info = gpu_info.get_engine_info();
+        auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
 
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
         gpu::jit_constants mem_consts{
-            gpu::make_jit_constant("INPUT",             outer.input_memory(0).argument.size),
-            gpu::make_jit_constant("OUTPUT",            outer.output_memory(0).argument.size),
+            gpu::make_jit_constant("INPUT",             outer.input_memory(0).argument().size),
+            gpu::make_jit_constant("OUTPUT",            outer.output_memory(0).argument().size),
             gpu::make_jit_constant("WINDOW",            outer.argument.size),
             gpu::make_jit_constant("STRIDE",            outer.argument.stride),
             gpu::make_jit_constant("INPUT_OFFSET",      outer.argument.input_offset),
@@ -164,31 +151,27 @@ struct pooling_gpu : is_an_implementation {
         return mem_consts;
     }
 
-    static void implementation(const void *ptr)
+    cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
     {
-        auto me = static_cast<const pooling_gpu*>(ptr);
-        const auto& outer = me->_outer;
-        const auto& kd    = me->_kernel_data;
+        const auto& outer = _outer;
+        const auto& kd    = _kernel_data;
 
         const auto& input_mem  = outer.input_memory(0);  // input
         const auto& output_mem = outer.output_memory(0); // output
 
-        me->_kernel.run<gpu::input_mem, gpu::output_mem>
-          ({{kd.gws0, kd.gws1, kd.gws2}, {kd.lws0, kd.lws1, kd.lws2}}, input_mem, output_mem);
+        return _kernel.run<gpu::input_mem, gpu::output_mem>
+          ({{kd.gws0, kd.gws1, kd.gws2}, {kd.lws0, kd.lws1, kd.lws2}}, events, input_mem, output_mem);
     }
 
     static is_an_implementation *create(pooling &arg) {
-        auto& input_arg = arg.input_memory(0).argument;
-        auto& input_offset = arg.argument.input_offset;
+        auto input_arg = arg.input_memory(0).argument();
+        auto output_arg = arg.output_memory().argument();
 
         auto& input_buffer_size = input_arg.size;
-        auto& output_arg = arg.output_memory(0).argument;
         auto& output_buffer_size = output_arg.size;
-        auto& output_size = arg.argument.output_size;
-        auto& output_offset = arg.argument.output_offset;
         auto& stride = arg.argument.stride;
         auto& window = arg.argument.size;
-        auto& padding = arg.argument.padding;
+        auto& padding = arg.argument.padding_type;
 
         if (padding::zero != padding)                                      throw std::logic_error("Pooling supports only zero padding.");
         if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::invalid_argument("Pooling input/output number of dimension does not match.");
@@ -196,17 +179,8 @@ struct pooling_gpu : is_an_implementation {
         if (window.raw.size() != output_buffer_size.raw.size())            throw std::invalid_argument("Pooling window_size/output number of dimension does not match.");
         if (input_arg.format != output_arg.format)                         throw std::invalid_argument("Pooling input/output data format does not match.");
         
-        // general formula: output size = (input size - window size) / step + 1
-        for (size_t i = 0; i < input_offset.raw.size(); ++i) {
-            if (output_buffer_size.raw[i] < output_size.raw[i] + output_offset.raw[i])
-                throw std::runtime_error("Pooling output buffer size is to small.");
-        }
-
         return new pooling_gpu(arg);
     }
-
-    task_group work() override { return{ { task{ implementation, this } }, schedule::single }; };
-
 };
 
 pooling_gpu::kernel_data defauly_yxfb_f32(const pooling& arg)
@@ -274,9 +248,9 @@ namespace
     {
         attach()
         {
-            implementation_map<pooling>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32), pooling_gpu::create);
-            implementation_map<pooling>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16), pooling_gpu::create);
-            implementation_map<pooling>::add(std::make_tuple(engine::gpu, memory::format::bfyx_f32, memory::format::bfyx_f32), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f32), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f16), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(engine::gpu, memory::format::bfyx_f32), pooling_gpu::create);
         }
 
         ~attach()

@@ -31,8 +31,8 @@ struct depth_concatenate : public primitive_base<depth_concatenate, DTO(depth_co
     depth_concatenate(
         const primitive_id& id,
         const std::vector<primitive_id>& input,
-        const tensor& input_offset = { format::x,{ 0 } },
-        const tensor& output_offset = { format::x,{ 0 } },
+        const tensor& input_offset =  { format::yx, 0, { 0, 0 } },
+        const tensor& output_offset = { format::yx, 0, { 0, 0 } },
         const padding_types padding_type = padding_types::zero
     )
         :primitive_base(id, input, input_offset, output_offset, padding_type)

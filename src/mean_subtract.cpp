@@ -15,62 +15,48 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "api/neural.h"
-#include "multidimensional_counter.h"
-#include "implementation_map.h"
+#include "mean_substract_arg.h"
+#include "primitive_type_base.h"
+#include "network_impl.h"
 
-namespace neural {
-
-mean_subtract::arguments::arguments( primitive            out,
-                                     primitive            in,
-                                     primitive            mean)
-: output({out})
-, input({in, mean}) {}
-
-mean_subtract::arguments::arguments( neural::memory::format::type out_fmt,
-                                     primitive                    in,
-                                     primitive                    mean)
+namespace cldnn
 {
-    // if input is previouse layer, not memory primitive need to set input to output memory of this primitive
-    auto input_mem = in.id() == type_id<const memory>()->id ? in : in.output[0];
-    if (in.id() != type_id<const memory>()->id) {
-        input = { in.output[0], mean };
-    }
-    else {
-        input = { in, mean };
-    }
-
-    auto input_arg = input_mem.as<const memory&>().argument;
-    neural::vector<uint32_t> output_size = {
-        input_arg.size.batch[0],
-        { { input_arg.size.spatial[0], input_arg.size.spatial[1] } },
-        input_arg.size.feature[0]
-    };
-
-    output = { memory::allocate({ out_fmt, output_size }) };
+primitive_type_id mean_substract::type_id()
+{
+    static primitive_type_base<mean_substract, mean_substract_arg> instance;
+    return &instance;
 }
 
-// creates primitive with fully_connected implementation that supports provided arguments
-primitive mean_subtract::create(mean_subtract::arguments arg) {
-    auto& input_arg = arg.input[0].primitive().as<const memory&>().argument;
-    auto& output_arg = arg.output[0].as<const memory&>().argument;
-    auto& mean_arg = arg.input[1].primitive().as<const memory&>().argument;
+layout mean_substract_arg::calc_output_layout(network_impl& network, std::shared_ptr<const mean_substract> desc)
+{
+    auto& input_mem = network.get_primitive(desc->input()[0])->output_memory();
+    return input_mem.get_layout();
+}
 
-    if (input_arg.format != memory::format::yxfb_f32)
+mean_substract_arg::mean_substract_arg(network_impl& network, std::shared_ptr<const mean_substract> desc)
+    :primitive_arg_base(network, desc, calc_output_layout(network, desc))
+{
+    auto input_format = input_memory(0).get_layout().size.format;
+    auto output_format = output_memory().get_layout().size.format;
+    auto mean_format = mean_memory().get_layout().size.format;
+
+    if (input_format != format::yxfb)
     {
         throw std::runtime_error("Mean subtract input is not in yxfb format!");
     }
-    if (output_arg.format != memory::format::yxfb_f32)
+    if (output_format != format::yxfb)
     {
         throw std::runtime_error("Mean subtract output is not in yxfb format!");
     }
-    if (mean_arg.format != memory::format::yxfb_f32 && 
-        mean_arg.format != memory::format::bfyx_f32)
+    if (mean_format != format::yxfb && 
+        mean_format != format::bfyx)
     {
         throw std::runtime_error("Mean subtract mean is not in yxfb or bfyx format!");
     }
-    
-    return is_a_primitive::create<mean_subtract>(arg);
 }
 
+const memory& mean_substract_arg::mean_memory() const
+{
+    return _network.get_primitive(argument.mean)->output_memory();
+}
 }

@@ -15,29 +15,14 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "primitive_type.h"
-#include "api/primitives/data.hpp"
+#include "primitive_type_base.h"
 #include "data_arg.h"
 
 namespace cldnn
 {
-    struct data_type : public primitive_type
-    {
-        std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const override
-        {
-            if (dto->type != this) throw std::invalid_argument("dto: primitive type mismatch");
-            return std::make_shared<data>(dto->as<data>());
-        }
-        std::shared_ptr<const primitive_arg> create_arg(network_impl& network, std::shared_ptr<const primitive> desc) const override
-        {
-            if (desc->type() != this) throw std::invalid_argument("desc: primitive type mismatch");
-            return std::make_shared<data_arg>(network, std::static_pointer_cast<const data>(desc));
-        }
-    };
-
-    primitive_type_id data::type_id()
-    {
-        static data_type instance;
-        return &instance;
-    }
+primitive_type_id data::type_id()
+{
+    static primitive_type_base<data, data_arg> instance;
+    return &instance;
+}
 }

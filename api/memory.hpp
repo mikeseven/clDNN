@@ -21,6 +21,8 @@
 #include "compounds.h"
 #include "tensor.hpp"
 #include "engine.hpp"
+#include <memory>
+#include <iterator>
 
 namespace cldnn
 {
@@ -37,6 +39,28 @@ enum class data_types : uint32_t
     f64 = sizeof(double)  | FLOAT_TYPE_MASK,
 };
 
+template <typename T> struct type_to_data_type;
+template<> struct type_to_data_type  <int8_t> { static const data_types value = data_types::i8; };
+template<> struct type_to_data_type <uint8_t> { static const data_types value = data_types::i8; };
+template<> struct type_to_data_type <int16_t> { static const data_types value = data_types::i16; };
+template<> struct type_to_data_type<uint16_t> { static const data_types value = data_types::i16; };
+template<> struct type_to_data_type <int32_t> { static const data_types value = data_types::i32; };
+template<> struct type_to_data_type<uint32_t> { static const data_types value = data_types::i32; };
+template<> struct type_to_data_type <int64_t> { static const data_types value = data_types::i64; };
+template<> struct type_to_data_type<uint64_t> { static const data_types value = data_types::i64; };
+template<> struct type_to_data_type  <half_t> { static const data_types value = data_types::f16; };
+template<> struct type_to_data_type   <float> { static const data_types value = data_types::f32; };
+template<> struct type_to_data_type  <double> { static const data_types value = data_types::f64; };
+
+template<data_types Data_Type> struct data_type_to_type;
+template<> struct data_type_to_type <data_types::i8> { typedef int8_t type; };
+template<> struct data_type_to_type<data_types::i16> { typedef int16_t type; };
+template<> struct data_type_to_type<data_types::i32> { typedef int32_t type; };
+template<> struct data_type_to_type<data_types::i64> { typedef int64_t type; };
+template<> struct data_type_to_type<data_types::f16> { typedef half_t type; };
+template<> struct data_type_to_type<data_types::f32> { typedef float type; };
+template<> struct data_type_to_type<data_types::f64> { typedef double type; };
+
 struct data_type_traits
 {
     static size_t size_of(data_types data_type)
@@ -48,26 +72,35 @@ struct data_type_traits
     {
         return (static_cast<uint32_t>(data_type) & FLOAT_TYPE_MASK) != 0;
     }
+
+    static size_t align_of(data_types data_type)
+    {
+        switch (data_type)
+        {
+        case data_types::i8:
+            return alignof(data_type_to_type<data_types::i8>::type);
+        case data_types::i16:
+            return alignof(data_type_to_type<data_types::i16>::type);
+        case data_types::i32:
+            return alignof(data_type_to_type<data_types::i32>::type);
+        case data_types::i64:
+            return alignof(data_type_to_type<data_types::i64>::type);
+        case data_types::f16:
+            return alignof(data_type_to_type<data_types::f16>::type);
+        case data_types::f32:
+            return alignof(data_type_to_type<data_types::f32>::type);
+        case data_types::f64:
+            return alignof(data_type_to_type<data_types::f64>::type);
+        default: return size_t(1);
+        }
+    }
 };
 
 template <typename T>
 bool data_type_match(data_types data_type)
 {
-    return (sizeof(T) == 1) || (sizeof(T) == data_type_traits::size_of(data_type));
+    return data_type == type_to_data_type<T>::value;
 }
-
-template <typename T> struct data_type_selector;
-template<> struct data_type_selector  <int8_t> { const data_types value = data_types::i8;  };
-template<> struct data_type_selector <uint8_t> { const data_types value = data_types::i8;  };
-template<> struct data_type_selector <int16_t> { const data_types value = data_types::i16; };
-template<> struct data_type_selector<uint16_t> { const data_types value = data_types::i16; };
-template<> struct data_type_selector <int32_t> { const data_types value = data_types::i32; };
-template<> struct data_type_selector<uint32_t> { const data_types value = data_types::i32; };
-template<> struct data_type_selector <int64_t> { const data_types value = data_types::i64; };
-template<> struct data_type_selector<uint64_t> { const data_types value = data_types::i64; };
-template<> struct data_type_selector  <half_t> { const data_types value = data_types::f16; };
-template<> struct data_type_selector   <float> { const data_types value = data_types::f32; };
-template<> struct data_type_selector  <double> { const data_types value = data_types::f64; };
 
 struct layout
 {
@@ -170,12 +203,12 @@ struct neural_memory
 
     struct format_traits
     {
-        format_traits(uint8_t dimension, cldnn::data_types data_type)
+        format_traits(size_t dimension, cldnn::data_types data_type)
             : dimension(dimension)
             , type(new type_traits(data_type))
         {
         }
-        const uint8_t       dimension;
+        const size_t       dimension;
         std::unique_ptr<type_traits>  type;
     };
 
@@ -302,7 +335,7 @@ struct memory
     neural_memory::arguments argument() const { return neural_memory::arguments(get_layout()); };
     template<typename T> pointer<T> pointer() const;
 
-    const memory_impl* get() const { return _data; }
+    memory_impl* get() const { return _data; }
 
 private:
     friend struct engine;
@@ -337,7 +370,11 @@ struct pointer
 {
     pointer(const memory& mem): _mem(mem)
     {
-        if (!data_type_match<T>(_mem.get_layout().data_type)) throw std::logic_error("memory data type do not match");
+        auto data_type = _mem.get_layout().data_type;
+        if (data_type_traits::align_of(data_type) % alignof(T) != 0)
+        {
+            throw std::logic_error("memory data type alignment do not match");
+        }
         _ptr = static_cast<T*>(_mem.lock());
     }
     ~pointer() { _mem.unlock(); }

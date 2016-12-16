@@ -17,11 +17,11 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "refcounted_obj.h"
+#include "engine_impl.h"
 #include "api/memory.hpp"
 
 namespace cldnn
 {
-class engine_impl;
 struct memory_impl : refcounted_obj<memory_impl>
 {
     memory_impl(const refcounted_obj_ptr<engine_impl>& engine, layout layout): _engine(engine), _layout(layout){}

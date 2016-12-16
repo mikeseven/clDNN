@@ -16,13 +16,18 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "convolution_arg.h"
-#include "primitive_type.h"
 #include "network_impl.h"
 #include "primitive_type_base.h"
 #include <memory>
 
 namespace cldnn
 {
+primitive_type_id convolution::type_id()
+{
+    static primitive_type_base<convolution, convolution_arg> instance;
+    return &instance;
+}
+
 layout convolution_arg::calc_output_layout(network_impl& network, std::shared_ptr<const convolution> desc)
 {
     auto input = network.get_primitive(desc->input()[0]);
@@ -30,7 +35,7 @@ layout convolution_arg::calc_output_layout(network_impl& network, std::shared_pt
     auto weight0 = network.get_primitive(desc->weights()[0]);
     auto weights_layout = weight0->output_memory().get_layout();
     auto input_offset = desc->input_offset().transform(format::yx, 0);
-    auto strd = desc->stride().transform(format::yx, 0);
+    auto strd = desc->stride.transform(format::yx, 0);
     auto split = desc->weights().size();
 
     // compute how many outputs in rows and columns will be generate by filter. 
@@ -51,7 +56,7 @@ layout convolution_arg::calc_output_layout(network_impl& network, std::shared_pt
 
 convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const convolution> desc): primitive_arg_base(network, desc, calc_output_layout(network, desc))
 {
-    auto& stride = desc->stride();
+    auto& stride = desc->stride;
     auto& output_size = output_memory().argument().size;
 
     auto& input_arg = input_memory(0).get_layout();
@@ -60,7 +65,7 @@ convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const co
     if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("input/output number of dimension does not match.");
     if (stride.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("stride/output number of dimension does not match.");
 
-    const size_t split = desc->split();
+    const size_t split = desc->split;
     for (size_t j = 0; j < split; j++)
     {
         auto& filter_mem = weights_memory(j);
@@ -103,11 +108,5 @@ const memory& convolution_arg::weights_memory(size_t index) const
 const memory& convolution_arg::bias_memory(size_t index) const
 {
     return _network.get_primitive(argument.bias.at(index))->output_memory();
-}
-
-primitive_type_id convolution::type_id()
-{
-    static primitive_type_base<convolution, convolution_arg> instance;
-    return &instance;
 }
 }

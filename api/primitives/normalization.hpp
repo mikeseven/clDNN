@@ -39,20 +39,28 @@ struct normalization :public primitive_base<normalization, DTO(normalization)>
         float k,
         float alpha,
         float beta,
-        const tensor& input_offset = { format::x,0,{ 0 } },
-        const tensor& output_offset = { format::x,0,{ 0 } },
+        const tensor& input_offset =  { format::yx, 0, { 0, 0 } },
+        const tensor& output_offset = { format::yx, 0, { 0, 0 } },
         const padding_types padding_type = padding_types::zero
         )
-        :primitive_base(id, {input}, input_offset, output_offset, padding_type, size, k, alpha, beta)
+        : primitive_base(id, {input}, input_offset, output_offset, padding_type, size, k, alpha, beta)
+        , size(_dto.size)
+        , k(_dto.k)
+        , alpha(_dto.alpha)
+        , beta(_dto.beta)
     {}
 
     normalization(const dto* dto)
-        :primitive_base(dto)
+        : primitive_base(dto)
+        , size(_dto.size)
+        , k(_dto.k)
+        , alpha(_dto.alpha)
+        , beta(_dto.beta)
     {}
 
-    uint32_t size() const { return _dto.size; }
-    float k() const { return _dto.k; }
-    float alpha() const { return _dto.alpha; }
-    float beta() const { return _dto.beta; }
+    const uint32_t& size;
+    const float& k;
+    const float& alpha;
+    const float& beta;
 };
 }

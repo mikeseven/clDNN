@@ -17,34 +17,35 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "primitive_arg.h"
-#include "primitives/data.hpp"
+#include "api/memory.hpp"
+#include "api/primitives/data.hpp"
 #include "memory_impl.h"
 #include "engine_impl.h"
 #include "network_impl.h"
 
 namespace cldnn
 {
-    class data_arg : public primitive_arg_base<data>
+class data_arg : public primitive_arg_base<data>
+{
+public:
+    data_arg(network_impl& network, std::shared_ptr<const data> desc)
+        : primitive_arg_base(network, desc, attach_or_copy_data(network, desc->mem))
+    {}
+
+private:
+    static memory attach_or_copy_data(network_impl& network, memory mem)
     {
-    public:
-        data_arg(network_impl& network, std::shared_ptr<const data> desc)
-            : primitive_arg_base(network, desc, attach_or_copy_data(network, desc->mem()))
-        {}
-
-    private:
-        static memory attach_or_copy_data(network_impl& network, const memory& mem)
+        auto engine = network.get_engine();
+        if (mem.get()->is_allocated_by(engine))
         {
-            auto engine = network.get_engine();
-            if (mem.get()->is_allocated_by(engine))
-            {
-                return mem;
-            }
-
-            memory result(engine->allocate_buffer(mem.get_layout()));
-            pointer<char> src(mem);
-            pointer<char> dst(result);
-            std::copy(src.begin(), src.end(), dst.begin());
-            return result;
+            return mem;
         }
-    };
+
+        memory result(engine->allocate_buffer(mem.get_layout()));
+        pointer<char> src(mem);
+        pointer<char> dst(result);
+        std::copy(src.begin(), src.end(), dst.begin());
+        return result;
+    }
+};
 }

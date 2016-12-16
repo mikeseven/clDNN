@@ -29,6 +29,20 @@
 #include "engine_info.h"
 
 namespace neural { namespace gpu {
+
+struct configuration {
+    enum device_types { default_device = 0, cpu, gpu, accelerator };
+
+    DLL_SYM static configuration& get();
+
+    bool enable_profiling;
+    device_types device_type;
+    uint32_t device_vendor;
+    std::string compiler_options;
+private:
+    configuration();
+};
+
 class gpu_toolkit;
 
 class context_holder {
@@ -38,6 +52,8 @@ protected:
     virtual ~context_holder() = default;
     const std::shared_ptr<gpu_toolkit>& context() const { return _context; }
 };
+
+namespace instrumentation = cldnn::instrumentation;
 
 struct profiling_period_event : instrumentation::profiling_period {
     profiling_period_event(const cl::Event& event, cl_profiling_info start, cl_profiling_info end )

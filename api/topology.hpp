@@ -27,7 +27,7 @@ struct topology
 {
     static topology create()
     {
-        return create_obj<topology, topology_impl>("failed to create topology", create_topology_impl);
+        return check_status<topology_impl*>("failed to create topology", create_topology_impl);
     }
 
     DLL_SYM topology(const topology& other);

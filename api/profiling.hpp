@@ -20,22 +20,7 @@
 #include <memory>
 #include <vector>
 
-namespace neural {
-namespace gpu {
-struct configuration {
-    enum device_types { default_device = 0, cpu, gpu, accelerator };
-
-    DLL_SYM static configuration& get();
-
-    bool enable_profiling;
-    device_types device_type;
-    uint32_t device_vendor;
-    std::string compiler_options;
-private:
-    configuration();
-};
-}
-
+namespace cldnn {
 namespace instrumentation
 {
 template<class ClockTy = std::chrono::steady_clock>

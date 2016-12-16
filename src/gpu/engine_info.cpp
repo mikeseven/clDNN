@@ -17,6 +17,7 @@
 #include "ocl_toolkit.h"
 #include <unordered_map>
 #include <string>
+#include <cassert>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN

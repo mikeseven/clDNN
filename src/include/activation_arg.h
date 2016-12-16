@@ -15,14 +15,18 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "primitive_type_base.h"
-#include "input_layout_arg.h"
+#pragma once
+#include "api/primitives/activation.hpp"
+#include "primitive_arg.h"
+#include <memory>
 
 namespace cldnn
 {
-primitive_type_id input_layout::type_id()
+class activation_arg : public primitive_arg_base<activation>
 {
-    static primitive_type_base<input_layout, input_layout_arg> instance;
-    return &instance;
-}
+public:
+    activation_arg(network_impl& network, std::shared_ptr<const activation> desc);
+
+    static layout calc_output_layout(network_impl& network, std::shared_ptr<const activation> desc);
+};
 }

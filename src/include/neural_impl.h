@@ -18,22 +18,56 @@
 #pragma once
 #include "api/engine.hpp"
 #include "api/memory.hpp"
+#include "implementation_map.h"
 #include "primitive_arg.h"
 #include "reorder_arg.h"
-#include "implementation_map.h"
+#include "convolution_arg.h"
+#include "fully_connected_arg.h"
+#include "activation_arg.h"
+#include "depth_concatenate_arg.h"
+#include "mean_substract_arg.h"
+#include "normalization_arg.h"
+#include "pooling_arg.h"
+#include "softmax_arg.h"
 
 namespace neural
 {
-    using is_an_implementation = cldnn::primitive_impl;
-    using reorder = cldnn::reorder_arg;
-    using memory = cldnn::neural_memory;
-    template<typename primitive_kind> using implementation_map = cldnn::implementation_map<primitive_kind>;
     struct engine
     {
         struct type
         {
             static const cldnn::engine_types gpu = cldnn::engine_types::ocl;
         };
+        static const cldnn::engine_types gpu = cldnn::engine_types::ocl;
+    };
+    struct padding
+    {
+        struct type
+        {
+            static const cldnn::padding_types zero = cldnn::padding_types::zero;
+            static const cldnn::padding_types one = cldnn::padding_types::one;
+            static const cldnn::padding_types two = cldnn::padding_types::two;
+        };
+        static const cldnn::padding_types zero = cldnn::padding_types::zero;
+        static const cldnn::padding_types one = cldnn::padding_types::one;
+        static const cldnn::padding_types two = cldnn::padding_types::two;
     };
 
+    using memory = cldnn::neural_memory;
+    template<typename primitive_kind> using implementation_map = cldnn::implementation_map<primitive_kind>;
+    using is_an_implementation = cldnn::primitive_impl;
+    using reorder = cldnn::reorder_arg;
+    using convolution = cldnn::convolution_arg;
+    using fully_connected = cldnn::fully_connected_arg;
+    using relu = cldnn::activation_arg;
+    using depth_concatenate = cldnn::depth_concatenate_arg;
+    using mean_substract = cldnn::mean_substract_arg;
+    namespace normalization
+    {
+        using response = cldnn::normalization_arg;
+        using softmax = cldnn::softmax_arg;
+    }
+    using pooling = cldnn::pooling_arg;
+
+    template<typename T> using vector = cldnn::tensor;
 }

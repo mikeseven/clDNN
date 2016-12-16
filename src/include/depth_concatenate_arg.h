@@ -15,14 +15,18 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "primitive_type_base.h"
-#include "input_layout_arg.h"
+#pragma once
+#include "api/primitives/depth_concatenate.hpp"
+#include "primitive_arg.h"
+#include <memory>
 
 namespace cldnn
 {
-primitive_type_id input_layout::type_id()
+class depth_concatenate_arg : public primitive_arg_base<depth_concatenate>
 {
-    static primitive_type_base<input_layout, input_layout_arg> instance;
-    return &instance;
-}
+public:
+    depth_concatenate_arg(network_impl& network, std::shared_ptr<const depth_concatenate> desc);
+
+    static layout calc_output_layout(network_impl& network, std::shared_ptr<const depth_concatenate> desc);
+};
 }

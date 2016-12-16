@@ -15,20 +15,14 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "api/primitives/reorder.hpp"
-#include "primitive_type.h"
-#include "primitive_arg.h"
 #include "reorder_arg.h"
-#include "network_impl.h"
-#include "engine_impl.h"
-#include "implementation_map.h"
 #include "primitive_type_base.h"
 #include <memory>
 
 namespace cldnn
 {
 reorder_arg::reorder_arg(network_impl& network, std::shared_ptr<const reorder> desc)
-    : primitive_arg_base(network, desc, desc->output_layout())
+    : primitive_arg_base(network, desc, desc->output_layout)
 {
     auto& input_mem = input_memory(0);
     auto& arg = *(desc->get_dto()->as<reorder>());
@@ -59,6 +53,5 @@ primitive_type_id reorder::type_id()
     static primitive_type_base<reorder, reorder_arg> instance;
     return &instance;
 }
-
 
 }
