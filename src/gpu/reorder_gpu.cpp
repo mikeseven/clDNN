@@ -27,7 +27,7 @@ const std::string kernelName_subtract_values = "reorder_subtract_values_GPU";
 const std::string kernel_name_1d_convert = "reorder_gpu_1d_convert";
 const std::string kernel_name_1d_convert_subtract = "reorder_gpu_1d_convert_subtract";
 const std::string kernel_name_1d_convert_subtract_values = "reorder_gpu_1d_convert_subtract_values";
-
+const std::string kernel_name_reorder_padding_bfyx_f32 = "reorder_gpu_padding_bfyx_f32";
 namespace neural {
 // GPU engine information helpers.
 namespace
@@ -44,16 +44,22 @@ struct gpu_info_helper : gpu::context_holder
 struct reorder_gpu : is_an_implementation {
     const reorder& outer;
     bool have_subtraction;
+    bool padding_only;
     gpu::kernel _kernel;
     gpu::kernel_execution_options _exec_options;
 
     reorder_gpu(reorder &arg): is_an_implementation(neural::type_id<reorder_gpu>())
     , outer(arg)
-
     , have_subtraction(arg.argument.input.size() > 1)
     , _kernel(select_kernel_name(), get_jit_constants())
     , _exec_options(get_execution_options())
-    {}
+    {
+        auto& input_mem = outer.input_memory(0);
+        auto& output_mem = outer.output_memory(0);
+
+        padding_only = (!have_subtraction) && (input_mem.argument.format == output_mem.argument.format) && input_mem.argument.format == memory::format::type::bfyx_f32;
+    }
+
     // We need to specify the output idx based on input position
     static std::string get_idx_calculation(memory::format::type type) {
         switch (type)
@@ -69,6 +75,9 @@ struct reorder_gpu : is_an_implementation {
         case memory::format::type::yxfb_f32:
         case memory::format::type::yxfb_f16:
             return "return pad[0] + pos[0] + (2 * pad[0] + size[0]) * (pad[1] + pos[1] + (2 * pad[1] + size[1]) * (pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3])));";
+        case memory::format::type::fyxb_f32:
+        case memory::format::type::fyxb_f16:
+            return "return pad[0] + pos[0] + (2 * pad[0] + size[0]) * (pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3] + (2 * pad[3] + size[3]) * (pad[1] + pos[1])));";
         case memory::format::type::bfyx_f32:
         case memory::format::type::bfyx_f16:
             return "return pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3] + (2 * pad[3] + size[3]) * (pad[1] + pos[1] + (2 * pad[1] + size[1]) * (pad[0] + pos[0])));";
@@ -78,6 +87,10 @@ struct reorder_gpu : is_an_implementation {
         case memory::format::type::yxio_f32:
         case memory::format::type::yxio_f16:
             return "return pad[1] + pos[1] + (2 * pad[1] + size[1]) * (pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3] + (2 * pad[3] + size[3]) * (pad[4] + pos[4])));";
+        case memory::format::type::os_iyx_osv16_f32:
+            return R"__C(uint _slice_id = pos[1] / 16; \
+                        uint _id_in_slice = pos[1] % 16; \
+                        return _id_in_slice + 16 * (pos[3] + size[3] * (pos[4] + size[4] * (pos[2] + _slice_id * size[2])));)__C";
         case memory::format::type::bx_f32:
         case memory::format::type::bx_f16:
             return "return pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[0] + pos[0]);";
@@ -119,6 +132,11 @@ struct reorder_gpu : is_an_implementation {
         case memory::format::type::yxio_f32:
         case memory::format::type::yxio_f16:
             return { 0, 1, 2, 3, 4 };
+        case memory::format::type::fyxb_f32:
+        case memory::format::type::fyxb_f16:
+            return { 0, 2, 3, 1 };
+        case memory::format::type::os_iyx_osv16_f32:
+            return { 0, 1, 3, 4, 2 };
         case memory::format::type::bx_f32:
         case memory::format::type::bx_f16:
             return { 1, 2, 0 };
@@ -148,6 +166,14 @@ struct reorder_gpu : is_an_implementation {
 
     const std::string& select_kernel_name() const {
         auto& input_mem = outer.input_memory(0);
+
+        auto& output_mem = outer.output_memory(0);
+
+        bool _padding_only = (!have_subtraction) && (input_mem.argument.format == output_mem.argument.format) && input_mem.argument.format == memory::format::type::bfyx_f32;
+        if (_padding_only)
+        {
+            return kernel_name_reorder_padding_bfyx_f32;
+        }
 
         // 1d conversions (no reorder)
         if (memory::traits(input_mem.argument.format).dimension == 1)
@@ -210,7 +236,14 @@ struct reorder_gpu : is_an_implementation {
             mem_consts.add_constant(gpu::make_jit_constant("PADDING", s.str()));
         }
 
-        if (have_subtraction)
+        bool _padding_only = (!have_subtraction) && (input_mem.argument.format == output_mem.argument.format) && input_mem.argument.format == memory::format::type::bfyx_f32;
+
+        if (_padding_only)
+        {
+            mem_consts.add_constant(gpu::make_jit_constant("INPUT", input_mem.argument.size));
+            mem_consts.add_constant(gpu::make_jit_constant("OUTPUT", output_mem.argument.size));
+        }
+        else if (have_subtraction)
         {
             auto& subtract_mem = outer.input_memory(1);
 
@@ -248,6 +281,7 @@ struct reorder_gpu : is_an_implementation {
             mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_TYPE", "float"));
             mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_SRC_TYPE_CVT", input_use_half));
         }
+
         return mem_consts;
     }
 
@@ -288,6 +322,16 @@ struct reorder_gpu : is_an_implementation {
                     input_mem,
                     output_mem,
                     outer.input_memory(1));
+        }
+        else if (me->padding_only)
+        {
+            if (input_mem.argument.size.spatial[1] > 255)
+                throw std::runtime_error("We don't support padding reorder with Y > 256");
+
+            me->_kernel.run<gpu::input_mem, gpu::output_mem>
+                ({ {input_mem.argument.size.batch[0], input_mem.argument.size.feature[0], input_mem.argument.size.spatial[1] }, {1, 1, input_mem.argument.size.spatial[1] } } ,
+                    input_mem,
+                    output_mem);
         }
         else
         {

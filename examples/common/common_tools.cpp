@@ -543,7 +543,12 @@ void run_topology(const execution_params &ep)
 
     html output_file(ep.topology_name, ep.topology_name + " run");
 
-    weights_optimizer weights_optimizer(ep.optimize_weights, ep.use_half);
+#pragma message ("TODO!!! remove it - this is a little hack to get other topologies than Alexnet working, because right now batch_size for convolution generate different weights format than other topologies expect")
+    int hacked_batch_size_for_weights_optimizer = gpu_batch_size;
+    if (ep.topology_name != "alexnet" && gpu_batch_size == 1)
+        hacked_batch_size_for_weights_optimizer = 8;
+
+    weights_optimizer weights_optimizer(hacked_batch_size_for_weights_optimizer, ep.optimize_weights, ep.use_half);
 
     std::vector<std::pair<primitive, std::string>> primitives;
 

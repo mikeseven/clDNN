@@ -82,6 +82,11 @@ struct softmax_gpu : is_an_implementation
         auto batch_num         = outer.argument.output_size.batch[0];
         size_t out_buffer_size = output_mem.count();
 
+        if (batch_num != 1 && input_mem.argument.format == memory::format::bx_f32)
+        {
+            throw std::runtime_error("Softmax not implemented for bx input when batch > 1!");
+        }
+
         if (batch_num <= 1)
         {
             kd.lws0 = std::min(std::max(out_buffer_size, static_cast<size_t>(1)), static_cast<size_t>(32));
@@ -160,11 +165,9 @@ namespace {
 struct attach {
     attach() {
         auto val_fw = softmax_gpu::create;
-
-        auto key_fw = std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32);
-        implementation_map<softmax>::add(key_fw, val_fw);
-        key_fw = std::make_tuple(engine::gpu, memory::format::xb_f16, memory::format::xb_f16);
-        implementation_map<softmax>::add(key_fw, val_fw);
+        implementation_map<softmax>::add(std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32), val_fw);
+        implementation_map<softmax>::add(std::make_tuple(engine::gpu, memory::format::xb_f16, memory::format::xb_f16), val_fw);
+        implementation_map<softmax>::add(std::make_tuple(engine::gpu, memory::format::bx_f32, memory::format::bx_f32), val_fw);
     }
     ~attach() {}
 };

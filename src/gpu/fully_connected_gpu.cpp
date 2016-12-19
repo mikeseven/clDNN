@@ -36,7 +36,11 @@ static const std::string kernel_name_xb_xb_b8_x8 = "fully_connected_gpu_xb_xb_b8
 static const std::string kernel_name_xb_xb_b16 = "fully_connected_gpu_xb_xb_b16";
 static const std::string kernel_name_xb_xb_b8_x8_vload = "fully_connected_gpu_xb_xb_b8_x8_vload";
 static const std::string kernel_name_yxfn = "fully_connected_gpu_yxfn";
+<<<<<<< HEAD
 static const std::string kernel_name_xb_xb_block_fp16 = "fully_connected_gpu_xb_xb_block_fp16";
+=======
+static const std::string kernel_name_bx_bx_from_fyx = "fully_connected_gpu_bx_xb_from_fyx";
+>>>>>>> remotes/origin/private/mkulikow/bfyx_format_support
 
 // GPU engine information helpers.
 namespace
@@ -109,6 +113,29 @@ struct fully_connected_gpu : is_an_implementation
 
         switch (input_mem.argument.format)
         {
+        case memory::format::bfyx_f32:
+        case memory::format::bx_f32:
+        {
+            switch (weight_mem.argument.format)
+            {
+            case memory::format::fyxb_f32:
+            case memory::format::xb_f32:
+            {
+                if (input_mem.argument.size.batch[0] != 1)
+                {
+                    throw std::runtime_error("Not supported batch != 1 in FC bfyx/bx format");
+                }
+                else
+                {
+                    kd.kernel_name = kernel_name_bx_bx_from_fyx;
+                }
+                break;
+            }
+            default:
+                throw std::invalid_argument("Weight memory format is not supported");
+            }
+            break;
+        }
         case memory::format::yxfb_f32:
         case memory::format::xb_f32:
         case memory::format::x_f32:
@@ -342,7 +369,8 @@ struct fully_connected_gpu : is_an_implementation
 
         // validate arguments
         if (input_mem.argument.format == memory::format::yxfb_f32 ||
-            input_mem.argument.format == memory::format::yxfb_f16)
+            input_mem.argument.format == memory::format::yxfb_f16 ||
+            input_mem.argument.format == memory::format::bfyx_f32)
         {
             // weights
             auto& weight_size = arg.input_memory(1).argument.size;
@@ -373,7 +401,11 @@ namespace {
 
                 { std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::xb_f16), val_fw },
                 { std::make_tuple(engine::gpu, memory::format::xb_f16, memory::format::xb_f16), val_fw },
-                { std::make_tuple(engine::gpu, memory::format::x_f16,  memory::format::x_f16), val_fw }
+                { std::make_tuple(engine::gpu, memory::format::x_f16,  memory::format::x_f16), val_fw },
+
+                { std::make_tuple(engine::gpu, memory::format::bfyx_f32, memory::format::bx_f32), val_fw },
+                { std::make_tuple(engine::gpu, memory::format::bx_f32, memory::format::bx_f32), val_fw },
+
             });
         }
         ~attach() {}

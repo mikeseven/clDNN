@@ -69,6 +69,7 @@ struct memory : is_a_primitive
             yxoi_f32,   // format used only for weights: o - output feature maps, i - input feature maps
             oyxi_f32,   // format used only for weights: o - output feature maps, i - input feature maps
             yxio_f32,   // format used only for weights: o - output feature maps, i - input feature maps
+            os_iyx_osv16_f32, // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
             byxf_b24_f32,        // for convolution_cpu_generic
             yxoi_o4_f32,       // for convolution_cpu_generic
             os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
@@ -113,6 +114,7 @@ struct memory : is_a_primitive
         case format::oyxi_f32:
         case format::yxio_f32:
         case format::fyxb_f32:
+        case format::os_iyx_osv16_f32:
         case format::bs_yxf_bv24_f32:
         case format::byxf_b24_f32:
         case format::yxoi_o4_f32:
@@ -315,7 +317,7 @@ struct reorder : is_a_primitive
         DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input, primitive_at values_to_subtract);
         DLL_SYM arguments(neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input, const std::vector<float>& value_to_subtract, bool dummy);
         // to get rid of ambiguous constructor we create another one - need to be changed in new design!!!
-        DLL_SYM arguments(uint32_t padX, uint32_t pad, neural::memory::format::type out_fmt, neural::vector<uint32_t> out_sizes, primitive_at input);
+        DLL_SYM arguments(uint32_t padX, uint32_t padY, primitive_at input);
 
 	};
     const arguments argument;

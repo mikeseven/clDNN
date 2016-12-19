@@ -200,6 +200,26 @@ namespace neural {
             }
         }
 
+        template<typename elemType>
+        void dump_bx(const memory& mem, bool single_batch, uint32_t batch_id, std::vector<std::vector<std::stringstream>> & streams)
+        {
+            auto mem_arg = mem.argument;
+            auto mem_ptr = mem.pointer<elemType>();
+
+            unsigned int input_it = 0;
+            for (uint32_t b = 0; b < mem_arg.size.batch[0]; b++)
+            {
+                for (uint32_t x = 0; x < mem_arg.size.spatial[0]; x++)
+                {
+                    if (!single_batch || b == batch_id)
+                    {
+                        streams[b][0] << convert_element(mem_ptr[input_it]) << std::endl;
+                    }
+                    input_it++;
+                }
+            }
+        }
+
         void logger::log_memory_to_file(const primitive& mem, std::string prefix, bool single_batch, uint32_t batch_id, bool single_feature, uint32_t feature_id)
         {
             const auto& mem_prim = get_memory_primitive(mem);
@@ -238,6 +258,11 @@ namespace neural {
                     dump_xb<float>(mem_prim, single_batch, batch_id, streams);
                 }
                 break;
+            case memory::format::bx_f32:
+                {
+                    dump_bx<float>(mem_prim, single_batch, batch_id, streams);
+                }
+                break;
 
             // FP16 (half)
             case memory::format::byxf_f16:
@@ -259,7 +284,12 @@ namespace neural {
                 {
                     dump_xb<half_t>(mem_prim, single_batch, batch_id, streams);
                 }
-            break;
+                break;
+            case memory::format::bx_f16:
+                {
+                    dump_bx<float>(mem_prim, single_batch, batch_id, streams);
+                }
+                break;
 
             default:
                 throw std::runtime_error("format not implemented yet");

@@ -27,6 +27,7 @@ class weights_optimizer
 {
     bool _enabled;
     bool _use_half;
+    int _batch_size;
     std::vector<neural::primitive> _primitives;
 
 
@@ -35,7 +36,7 @@ class weights_optimizer
                              bool use_half);
 
 public:
-    explicit weights_optimizer(bool enabled = true,
+    explicit weights_optimizer(int batch_size, bool enabled = true,
                                bool use_half = false);
 
     neural::primitive create_weights_from_file(const std::string& path,
