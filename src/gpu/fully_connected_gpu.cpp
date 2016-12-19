@@ -36,11 +36,9 @@ static const std::string kernel_name_xb_xb_b8_x8 = "fully_connected_gpu_xb_xb_b8
 static const std::string kernel_name_xb_xb_b16 = "fully_connected_gpu_xb_xb_b16";
 static const std::string kernel_name_xb_xb_b8_x8_vload = "fully_connected_gpu_xb_xb_b8_x8_vload";
 static const std::string kernel_name_yxfn = "fully_connected_gpu_yxfn";
-<<<<<<< HEAD
 static const std::string kernel_name_xb_xb_block_fp16 = "fully_connected_gpu_xb_xb_block_fp16";
-=======
 static const std::string kernel_name_bx_bx_from_fyx = "fully_connected_gpu_bx_xb_from_fyx";
->>>>>>> remotes/origin/private/mkulikow/bfyx_format_support
+
 
 // GPU engine information helpers.
 namespace
