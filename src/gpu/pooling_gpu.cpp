@@ -264,6 +264,7 @@ pooling_gpu::kernel_data defauly_bfyx_f32(const pooling& arg)
 kd_selector_t<pooling_gpu::kernel_data, pooling, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> pooling_gpu::ks = {
     { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), defauly_yxfb_f32 },
     { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), defauly_bfyx_f32 },
+    { std::make_tuple(memory::format::yxfb_f16, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), set_default },
 };
 
 namespace
