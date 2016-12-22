@@ -16,47 +16,109 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "api/topology.hpp"
+#include "api/primitives/input_layout.hpp"
 #include "network_impl.h"
 #include "engine_impl.h"
-#include "network_builder.h"
-#include "api/primitives/input_layout.hpp"
 #include "event_impl.h"
+#include "network_builder.h"
+#include "primitive_type.h"
+#include "input_layout_arg.h"
+#include <algorithm>
 
 namespace cldnn
 {
-memory_impl* network_impl::get_output_of(const primitive_id& id) const
+network_impl::network_impl(refcounted_obj_ptr<engine_impl> engine, refcounted_obj_ptr<topology_impl> topology, const std::vector<primitive_id>& outputs)
+    : _engine(engine)
+    , _topology(topology)
+    , _output_ids(outputs)
 {
-    return _primitives.at(id)->output_memory().get();
+    for (auto& output : _output_ids)
+    {
+        auto p = get_primitive(output);
+        assert(p);
+    }
+
+    for (auto& p : _primitives)
+    {
+        if (p.second->type() == input_layout::type_id())
+        {
+            _input_names.insert({ p.second->id(), false });
+        }
+    }
+}
+
+void network_impl::reset_execution(bool wait)
+{
+    if (wait)
+    {
+        for (auto& p : _events)
+        {
+            p.second->wait();
+        }
+    }
+    _outputs.clear();
+    _events.clear();
 }
 
 void network_impl::set_input_data(const primitive_id& id, const memory& data)
 {
     auto& primitive = _primitives.at(id);
     if (primitive->type() != input_layout::type_id()) throw std::invalid_argument("primitive " + id + " is not an input");
-    auto& dest_mem = primitive->output_memory();
-    if (dest_mem.get_layout() != data.get_layout()) throw std::invalid_argument("memory layout do not match");
 
-    // TODO find the way to avoid data copy
-    pointer<char> src(data);
-    pointer<char> dst(primitive->output_memory());
-    std::copy(src.begin(), src.end(), dst.begin());
-    _completed = false;
-    _inputs[id] = true;
+    auto input_c = std::static_pointer_cast<const input_layout_arg>(primitive);
+    auto input = std::const_pointer_cast<input_layout_arg>(input_c);
+
+    reset_execution(true);
+    input->set_data(data);
+    _input_names[input->id()] = true;
 }
 
-event_impl* network_impl::execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events)
+array_ref<network::network_output_ref> network_impl::execute(const std::vector<refcounted_obj_ptr<event_impl>>& events)
 {
-    //TODO implement network execution
-    for(auto& evt : events)
+    //Wait for pervious execution completion
+    reset_execution(true);
+
+    for(auto& output_id : _output_ids)
     {
-        evt->wait();
+        auto primitive = get_primitive(output_id);
+        auto output_event = execute_primitive(primitive, events);
+        auto output_memory = primitive->output_memory();
+        _outputs.push_back({ output_id, output_event.get(), output_memory.get() });
     }
-    auto result = get_engine()->create_user_event();
-    result->set();
+    return _outputs;
+}
+
+std::shared_ptr<const primitive_arg> network_impl::get_primitive(const primitive_id& id)
+{
+    auto it = _primitives.find(id);
+    if (it != _primitives.end())
+    {
+        return it->second;
+    }
+
+    auto& desc = _topology->at(id);
+    auto primitive = desc->type()->create_arg(*this, desc);
+    return _primitives.insert({ id, primitive }).first->second;
+}
+
+std::vector<std::shared_ptr<const primitive_arg>> network_impl::get_primitives(const std::vector<primitive_id>& ids)
+{
+    std::vector<std::shared_ptr<const primitive_arg>> result(ids.size());
+    std::transform(std::begin(ids), std::end(ids), std::begin(result), [&](const primitive_id& id) { return get_primitive(id); });
     return result;
 }
 
+refcounted_obj_ptr<event_impl> network_impl::execute_primitive(const std::shared_ptr<const primitive_arg>& primitive, const std::vector<refcounted_obj_ptr<event_impl>>& events)
+{
+    auto it = _events.find(primitive->id());
+    if(it != _events.end())
+    {
+        return it->second;
+    }
+    return _events.insert({ primitive->id(), primitive->execute(events) }).first->second;
+}
 
+// cldnn::network
 network::network(const network& other):_impl(other._impl)
 {
     _impl->add_ref();
@@ -76,22 +138,6 @@ network::~network()
     _impl->release();
 }
 
-memory_impl* network::get_output(primitive_id_ref id, status_t* status) noexcept
-{
-    try
-    {
-        if (status)
-            *status = CLDNN_SUCCESS;
-        return _impl->get_output_of(id);;
-    }
-    catch (...)
-    {
-        if (status)
-            *status = CLDNN_ERROR;
-        return nullptr;
-    }
-}
-
 engine_impl* network::get_engine_impl(status_t* status) const noexcept
 {
     try
@@ -109,13 +155,31 @@ engine_impl* network::get_engine_impl(status_t* status) const noexcept
     }
 }
 
-network_impl* network::build_impl(const engine& engine, const topology& topology, status_t* status) noexcept
+topology_impl* network::get_topology_impl(status_t* status) const noexcept
 {
     try
     {
         if (status)
             *status = CLDNN_SUCCESS;
-        return engine.get()->build_network(topology);
+        auto topology = _impl->get_topology();
+        return topology.detach();
+    }
+    catch (...)
+    {
+        if (status)
+            *status = CLDNN_ERROR;
+        return nullptr;
+    }
+}
+
+network_impl* network::build_impl(const engine& engine, const topology& topology, array_ref<build_option_ref> options, status_t* status) noexcept
+{
+    try
+    {
+        if (status)
+            *status = CLDNN_SUCCESS;
+        build_options opts(options);
+        return engine.get()->build_network(topology, options);
     }
     catch (...)
     {
@@ -138,23 +202,7 @@ status_t network::set_input_data_impl(primitive_id_ref id, memory mem) noexcept
     }
 }
 
-array_ref<primitive_id_ref> network::get_primitive_keys_impl(status_t* status) noexcept
-{
-    try
-    {
-        if (status)
-            *status = CLDNN_SUCCESS;
-        return _impl->get_primitive_keys();
-    }
-    catch (...)
-    {
-        if (status)
-            *status = CLDNN_ERROR;
-        return array_ref<primitive_id_ref>();
-    }
-}
-
-event_impl* network::execute_impl(array_ref<event> dependencies, status_t* status) noexcept
+array_ref<network::network_output_ref> network::execute_impl(array_ref<event> dependencies, status_t* status) noexcept
 {
     try
     {
@@ -168,7 +216,7 @@ event_impl* network::execute_impl(array_ref<event> dependencies, status_t* statu
     {
         if (status)
             *status = CLDNN_ERROR;
-        return nullptr;
+        return array_ref<network::network_output_ref>();
     }
 }
 }

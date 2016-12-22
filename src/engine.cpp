@@ -50,9 +50,9 @@ event_impl* engine_impl::create_user_event()
     return new user_event_gpu(cl::UserEvent(get_context()->context()));
 }
 
-network_impl* engine_impl::build_network(const topology& topology)
+network_impl* engine_impl::build_network(const topology& topology, const build_options& options)
 {
-    network_builder builder(this, configuration());
+    network_builder builder(this, options);
     return builder.build_network(topology.get());
 }
 

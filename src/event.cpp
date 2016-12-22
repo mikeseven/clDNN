@@ -121,7 +121,7 @@ status_t event::set_impl() noexcept
         return CLDNN_ERROR;
     }
 }
-status_t event::wait_impl() noexcept
+status_t event::wait_impl() const noexcept
 {
     try
     {

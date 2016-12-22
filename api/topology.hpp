@@ -48,6 +48,7 @@ struct topology
 
 private:
     friend struct engine;
+    friend struct network;
     topology_impl* _impl;
     topology(topology_impl* impl) :_impl(impl) {}
 

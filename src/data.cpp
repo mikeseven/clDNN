@@ -17,6 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "primitive_type_base.h"
 #include "data_arg.h"
+#include "memory_impl.h"
 
 namespace cldnn
 {
@@ -25,4 +26,27 @@ primitive_type_id data::type_id()
     static primitive_type_base<data, data_arg> instance;
     return &instance;
 }
+
+namespace {
+    memory attach_or_copy_data(network_impl& network, memory mem)
+    {
+        auto engine = network.get_engine();
+        if (mem.get()->is_allocated_by(engine))
+        {
+            return mem;
+        }
+
+        memory result(engine->allocate_buffer(mem.get_layout()));
+        pointer<char> src(mem);
+        pointer<char> dst(result);
+        std::copy(src.begin(), src.end(), dst.begin());
+        return result;
+    }
+}
+
+data_arg::data_arg(network_impl& network, std::shared_ptr<const data> desc)
+    : primitive_arg_base(network, desc, attach_or_copy_data(network, desc->mem))
+{
+}
+
 }

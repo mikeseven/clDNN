@@ -22,40 +22,78 @@
 #include "engine_impl.h"
 #include "topology_impl.h"
 #include <map>
+#include <set>
 
 namespace cldnn
 {
 
-typedef engine_configuration build_settings;
-
 class network_builder
 {
 public:
-    network_builder(refcounted_obj_ptr<engine_impl> eng, const build_settings& configuration)
+    network_builder(refcounted_obj_ptr<engine_impl> eng, const build_options& options)
         : _engine(eng)
-        , _configuration(configuration)
+        , _options(options)
     {
     }
 
-    network_impl* build_network(topology_impl* tpl)
+    network_impl* build_network(refcounted_obj_ptr<topology_impl> tpl)
     {
         assert(tpl);
-        return new network_impl(get_engine(), optimize_topology(tpl));
+        _topology_map = tpl->get_primitives();
+        
+        optimize_topology();
+        auto network_topology = refcounted_obj_ptr<topology_impl>(new topology_impl(_topology_map), false);
+
+        auto outputs_option = _options.get<build_option_type::outputs>();
+        assert(outputs_option && !outputs_option->outputs.empty());
+        
+        return new network_impl(get_engine(), network_topology, outputs_option->outputs);
     }
 
     const refcounted_obj_ptr<engine_impl>& get_engine() const { return _engine; }
 
 private:
     const refcounted_obj_ptr<engine_impl> _engine;
+    build_options _options;
 
-    build_settings _configuration;
-    std::map<primitive_id, std::shared_ptr<const primitive_arg>> _network;
+    topology_map _topology_map;
 
-    topology_map optimize_topology(topology_impl* tpl)
+    void optimize_topology()
     {
-        auto& original_primitives = tpl->get_primitives();
-        // TODO do some optimizations aka weights reordering, fusing, etc.
-        return original_primitives;
+        // in debug mode select all primitives as output
+        if(_options.get<build_option::debug>())
+        {
+            std::vector<primitive_id> outputs;
+            for(auto& p : _topology_map)
+            {
+                outputs.push_back(p.second->id());
+            }
+            _options.set_option(build_option::outputs(outputs));
+            return;
+        }
+
+        // TODO some optimizations aka weights reordering, fusing, etc.
+
+        auto outputs_option = _options.get<build_option_type::outputs>();
+        if( outputs_option == nullptr || outputs_option->outputs.empty() )
+        {
+            std::vector<primitive_id> outputs;
+            // by default, outputs are primitives which are not inputs for others
+            std::set<primitive_id> unreferenced_ids;
+            for (auto& pair : _topology_map)
+            {
+                unreferenced_ids.insert(pair.second->id());
+            }
+            for (auto& pair : _topology_map)
+            {
+                for (auto& in : pair.second->input())
+                {
+                    unreferenced_ids.erase(in);
+                }
+            }
+            std::copy(std::begin(unreferenced_ids), std::end(unreferenced_ids), std::back_inserter(outputs));
+            _options.set_option(build_option::outputs(outputs));
+        }
     }
 };
 }

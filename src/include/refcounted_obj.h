@@ -57,7 +57,7 @@ struct refcounted_obj_ptr
         if(add_ref) ptr_add_ref();
     }
 
-    refcounted_obj_ptr() : _ptr(nullptr){}
+    constexpr refcounted_obj_ptr() : _ptr(nullptr){}
 
     refcounted_obj_ptr(const refcounted_obj_ptr& other)
         : _ptr(other._ptr)
@@ -82,6 +82,13 @@ struct refcounted_obj_ptr
         T* result = _ptr;
         _ptr = nullptr;
         return result;
+    }
+
+    void reset(T* ptr, bool add_ref = true)
+    {
+        ptr_release();
+        _ptr = ptr;
+        if (add_ref) ptr_add_ref();
     }
 
     operator bool() const { return _ptr != nullptr; }

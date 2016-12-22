@@ -17,6 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "primitive_type_base.h"
 #include "input_layout_arg.h"
+#include "memory_impl.h"
 
 namespace cldnn
 {
@@ -25,4 +26,34 @@ primitive_type_id input_layout::type_id()
     static primitive_type_base<input_layout, input_layout_arg> instance;
     return &instance;
 }
+
+input_layout_arg::input_layout_arg(network_impl& network, std::shared_ptr<const input_layout> desc)
+    : primitive_arg_base(network, desc, desc->layout)
+{
+}
+
+namespace {
+    memory attach_or_copy_data(network_impl& network, memory mem)
+    {
+        auto engine = network.get_engine();
+        if (mem.get()->is_allocated_by(engine))
+        {
+            return mem;
+        }
+
+        memory result(engine->allocate_buffer(mem.get_layout()));
+        pointer<char> src(mem);
+        pointer<char> dst(result);
+        std::copy(src.begin(), src.end(), dst.begin());
+        return result;
+    }
+}
+
+void input_layout_arg::set_data(const memory& mem)
+{
+    if (mem.get_layout() != _output.get_layout())
+        throw std::invalid_argument("data layout does not match");
+    _output = attach_or_copy_data(get_network(), mem);
+}
+
 }

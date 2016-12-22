@@ -21,6 +21,22 @@
 
 namespace cldnn
 {
+refcounted_obj_ptr<event_impl> primitive_arg::execute(const std::vector<refcounted_obj_ptr<event_impl>>& events) const
+{
+    std::vector<refcounted_obj_ptr<event_impl>> dependencies(_inputs.size());
+
+    std::transform(
+        std::begin(_inputs),
+        std::end(_inputs),
+        std::begin(dependencies),
+        [&](decltype(_inputs.front()) input)
+        {
+            return get_network().execute_primitive(input, events);
+        });
+
+    return _impl->execute(dependencies.size() > 0 ? dependencies : events);
+}
+
 primitive_arg::primitive_arg(network_impl& network, std::shared_ptr<const primitive> desc, const memory& output_memory)
     : _network(network)
     , _desc(desc)

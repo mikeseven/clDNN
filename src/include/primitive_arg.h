@@ -35,8 +35,9 @@ class primitive_arg
 {
 public:
     virtual ~primitive_arg() = default;
-    const memory& input_memory(size_t index) const { return _inputs.at(index)->output_memory(); }
-    const memory& output_memory() const { return _output; };
+    const std::vector<std::shared_ptr<const primitive_arg>>& input() const { return _inputs; }
+    const memory& input_memory(size_t index) const { return input().at(index)->output_memory(); }
+    const memory& output_memory() const { return _output; }
     // TODO remove backward compatibility code:
     const memory& output_memory(size_t idx) const
     {
@@ -46,8 +47,11 @@ public:
 
     primitive_type_id type() const { return _desc->type(); }
     primitive_id id() const { return _desc->get_dto()->id; }
+    const std::shared_ptr<const primitive>& desc() const { return _desc; }
     network_impl& get_network() const { return _network; }
     std::unique_ptr<primitive_impl> _impl;
+
+    refcounted_obj_ptr<event_impl> execute(const std::vector<refcounted_obj_ptr<event_impl>>& events) const;
 
 protected:
     primitive_arg(network_impl& network, std::shared_ptr<const primitive> desc, const memory& output_memory);

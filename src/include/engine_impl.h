@@ -37,7 +37,7 @@ public:
 
     memory_impl* allocate_buffer(layout layout);
     event_impl* create_user_event();
-    network_impl* build_network(const topology& topology);
+    network_impl* build_network(const topology& topology, const build_options& options);
     const engine_configuration& configuration() const { return _configuration; }
 
     std::shared_ptr<gpu_toolkit> get_context() const { return _context; }

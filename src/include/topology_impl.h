@@ -28,6 +28,8 @@ typedef std::map<primitive_id, std::shared_ptr<const primitive>> topology_map;
 class topology_impl : public refcounted_obj<topology_impl>
 {
 public:
+    topology_impl(const topology_map& map = topology_map()) : _primitives(map) {}
+
     void add(std::shared_ptr<const primitive> desc)
     {
         auto id = desc->id();
@@ -35,6 +37,8 @@ public:
             throw std::runtime_error("primitive '" + id + "' exists already");
         _primitives.insert({ id, desc });
     }
+
+    const std::shared_ptr<const primitive>& at(primitive_id id) const { return _primitives.at(id); }
 
     const topology_map& get_primitives() const { return _primitives; }
 

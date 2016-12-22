@@ -80,7 +80,7 @@ T check_status(std::string err_msg, std::function<T(status_t*)> func)
 {
     status_t status;
     auto result = func(&status);
-    if (!result)
+    if (status != CLDNN_SUCCESS)
         CLDNN_THROW(err_msg, status);
     return result;
 }

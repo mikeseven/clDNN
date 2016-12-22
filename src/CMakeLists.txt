@@ -34,6 +34,13 @@ file(GLOB __CLDNN_Headers__api
     "${CLDNN__API_DIR}/*.hpp"
   )
 
+set(__CLDNN_Directory__api__primitives "${CLDNN__API_DIR}/primitives")
+set(__CLDNN_Label__api__primitives     "${__CLDNN_Label__api}\\primitives")
+file(GLOB __CLDNN_Headers__api__primitives
+    "${__CLDNN_Directory__api__primitives}/*.h"
+    "${__CLDNN_Directory__api__primitives}/*.hpp"
+  )
+
 set(__CLDNN_Label__main                "")
 file(GLOB __CLDNN_Sources__main
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
@@ -83,6 +90,7 @@ set(__CLDNN_Sources__cg_cache
 set(__CLDNN_AllSources
     ${__CLDNN_Headers__api}
     ${__CLDNN_Headers__include}
+    ${__CLDNN_Headers__api__primitives}
     ${__CLDNN_Sources__main}
     ${__CLDNN_Sources__gpu}
     ${__CLDNN_Sources__cache}
@@ -95,6 +103,7 @@ set_property(SOURCE ${__CLDNN_Sources__cg_cache} PROPERTY GENERATED TRUE)
 # =============================================== Filters ==============================================
 
 source_group("${__CLDNN_Label__api}"        FILES ${__CLDNN_Headers__api})
+source_group("${__CLDNN_Label__api__primitives}" FILES ${__CLDNN_Headers__api__primitives})
 source_group("${__CLDNN_Label__include}"    FILES ${__CLDNN_Headers__include})
 source_group("${__CLDNN_Label__main}"       FILES ${__CLDNN_Sources__main})
 source_group("${__CLDNN_Label__gpu}"        FILES ${__CLDNN_Sources__gpu})
