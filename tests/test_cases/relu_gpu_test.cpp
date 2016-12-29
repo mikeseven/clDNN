@@ -16,10 +16,14 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "api/neural.h"
 #include <gtest/gtest.h>
+#include <api/memory.hpp>
+#include <api/primitives/input_layout.hpp>
+#include "api/primitives/activation.hpp"
+#include <api/topology.hpp>
+#include <api/network.hpp>
+#include <api/engine.hpp>
 #include "test_utils/test_utils.h"
-#include "memory_utils.h"
 
 namespace{
     auto calc_idx = [](std::vector<uint32_t> yxfb_pos, std::vector<uint32_t>& buf_size_bfyx) -> uint32_t{
@@ -30,7 +34,7 @@ namespace{
     };
 }
 
-using namespace neural;
+using namespace cldnn;
 #if 0 // no support yet
 TEST(relu_f32_fw_gpu, basic) {
     // FAIL now, because we don't support using the same buffer as input and output

@@ -14,20 +14,23 @@
 // limitations under the License.
 */
 
-#include "api/neural.h"
 #include <gtest/gtest.h>
+#include <api/memory.hpp>
+#include <api/primitives/input_layout.hpp>
+#include "api/primitives/softmax.hpp"
+#include <api/topology.hpp>
+#include <api/network.hpp>
+#include <api/engine.hpp>
 #include "test_utils/test_utils.h"
-#include "memory_utils.h"
-#include <numeric>
 
-using namespace neural;
+using namespace cldnn;
 using namespace std;
 using namespace tests;
 
 
 class softmax_gpu_xb_f32_test_fixture: public ::testing::Test {
 public:
-    static const uint32_t
+    static const int32_t
         output_x  = 10, output_b  = 2,  // size of whole output buffer
         input_x   = 10, input_b   = 2,  // size of whole input buffer
         in_size   = input_x*input_b,
@@ -38,8 +41,14 @@ public:
     float out_buffer[out_size];
     float expected_buffer[out_size];
 
-    neural::primitive input  = memory::allocate({ memory::format::xb_f32, {input_b, {{input_x}}, 1}});
-    neural::primitive output = memory::allocate({ memory::format::xb_f32, {output_b, {{output_x}}, 1}});
+    engine engine;
+    memory input;
+    //neural::primitive output = memory::allocate({ memory::format::xb_f32, {output_b, {{output_x}}, 1}});
+
+    softmax_gpu_xb_f32_test_fixture()
+        :engine(engine::create())
+        ,input(memory::allocate(engine, { data_types::f32, { format::xb, { input_x, input_b}}}))
+    {}
 
     void compare_out_buffer_with_expected() {
         for(size_t i = 0; i < out_size; ++i) {
@@ -76,11 +85,16 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, input_same_values) {
 
     set_values(input, in_b);
 
-    neural::primitive act = normalization::softmax::create({  output, input });
+    auto network = network::build(engine, topology::create(input_layout("input", input.get_layout()), softmax("softmax", "input")));
+    network.set_input_data("input", input);
 
-    execute({input, output, act}).wait();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "softmax");
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
     for (uint32_t i = 0; i < out_size; i++)
     {
         out_buffer[i] = get_value<float>(output_ptr, i);
@@ -101,11 +115,16 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, input_same_values_batch_wise) {
     for(size_t i = 0; i < out_size; ++i)
         expected_buffer[i] = 0.1f;
 
-    neural::primitive act = normalization::softmax::create({  output, input });
+    auto network = network::build(engine, topology::create(input_layout("input", input.get_layout()), softmax("softmax", "input")));
+    network.set_input_data("input", input);
 
-    execute({input, output, act}).wait();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "softmax");
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
     for (uint32_t i = 0; i < out_size; i++)
     {
         out_buffer[i] = get_value<float>(output_ptr, i);
@@ -151,10 +170,16 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, values_batch_wise) {
     for(size_t i = 0; i < out_size; ++i)
         out_buffer[i] = NAN;
 
-    neural::primitive act = normalization::softmax::create({  output, input });
+    auto network = network::build(engine, topology::create(input_layout("input", input.get_layout()), softmax("softmax", "input")));
+    network.set_input_data("input", input);
 
-    execute({input, output, act}).wait();
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "softmax");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
     for (uint32_t i = 0; i < out_size; i++)
     {
         out_buffer[i] = get_value<float>(output_ptr, i);

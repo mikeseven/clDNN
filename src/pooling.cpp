@@ -32,13 +32,13 @@ layout pooling_arg::calc_output_layout(network_impl& network, std::shared_ptr<co
 {
     auto& input_mem = network.get_primitive(desc->input()[0])->output_memory();
     auto output_layout = input_mem.get_layout();
-    auto input_offset = desc->input_offset();
+    auto input_offset = desc->input_offset().transform(output_layout.size.format, 0);
     auto siz = desc->size.transform(output_layout.size.format, 0);
     auto strd = desc->stride.transform(output_layout.size.format, 1);
     for(size_t i = 0; i < output_layout.size.spatial.size(); i++ )
     {
         if (strd.spatial[i] < 1) throw std::invalid_argument("stride should be >= 1");
-        output_layout.size.spatial[i] = static_cast<uint32_t>(ceil(static_cast<float>(output_layout.size.spatial[i] - (2 * input_offset.spatial[i]) - siz.spatial[i]) / static_cast<float>(strd.spatial[i]))) + 1;
+        output_layout.size.spatial[i] = static_cast<uint32_t>(ceil(static_cast<float>(output_layout.size.spatial[i] - (input_offset.spatial[i]) - siz.spatial[i]) / static_cast<float>(strd.spatial[i]))) + 1;
     }
     return output_layout;
 }

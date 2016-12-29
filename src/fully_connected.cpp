@@ -60,7 +60,7 @@ layout fully_connected_arg::calc_output_layout(network_impl& network, std::share
     auto input = network.get_primitive(desc->input()[0]);
     auto input_layout = input->output_memory().get_layout();
 
-    auto bias = network.get_primitive(desc->bias());
+    auto bias = network.get_primitive(desc->bias);
     auto bias_layout = bias->output_memory().get_layout();
 
     if(is_batch_after_spatial(input_layout.size.format.order()))

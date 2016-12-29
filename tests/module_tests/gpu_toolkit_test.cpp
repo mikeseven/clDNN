@@ -27,18 +27,10 @@
 
 using namespace neural::gpu;
 
-struct gpu_toolkit_test_helper: context_holder
-{
-    engine_info test_engine_info() const
-    {
-        return context()->get_engine_info();
-    }
-};
-
 TEST(gpu_engine, engine_info)
 {
-    gpu_toolkit_test_helper helper;
-    auto info = helper.test_engine_info();
+    gpu_toolkit toolkit;
+    auto info = toolkit.get_engine_info();
     EXPECT_GE(info.model, engine_info::models::HSW);
     EXPECT_GE(info.architecture, engine_info::architectures::GEN7);
     EXPECT_GE(info.configuration, engine_info::configurations::GT0);

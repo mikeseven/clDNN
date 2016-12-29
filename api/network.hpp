@@ -60,7 +60,7 @@ struct build_option
     static const build_option_type optimize_data = build_option_type::optimize_data;
     static const build_option_type debug = build_option_type::debug;
     static const build_option* outputs(const std::vector<primitive_id>& outs);
-    static const build_option* outputs(array_ref<primitive_id_ref> outs);
+//    static const build_option* outputs(array_ref<primitive_id_ref> outs);
     virtual ~build_option() = default;
 
 protected:
@@ -122,16 +122,18 @@ inline const build_option* build_option::outputs(const std::vector<primitive_id>
     return new build_option_outputs(outs);
 }
 
-inline const build_option* build_option::outputs(array_ref<primitive_id_ref> outs)
-{
-    auto data = static_cast<build_option_outputs::data_pointer_type>(&outs);
-    return new build_option_outputs({ build_option_type::outputs, data });
-}
+//inline const build_option* build_option::outputs(array_ref<primitive_id_ref> outs)
+//{
+//    auto data = static_cast<build_option_outputs::data_pointer_type>(&outs);
+//    return new build_option_outputs({ build_option_type::outputs, data });
+//}
 
 
 class build_options
 {
 public:
+    void set_option(void){}
+
     void set_option(const build_option* opt)
     {
         add_or_replace_option(opt);
@@ -273,7 +275,7 @@ struct network
         memory_impl* memory_impl;
     };
 
-    static network build(const engine& engine, const topology& topology, const build_options& options )
+    static network build(const engine& engine, const topology& topology, const build_options& options = build_options() )
     {
         return check_status<network_impl*>("network build failed", [&](status_t* status) { return build_impl(engine, topology, options.get_refs(), status); });
     }
@@ -302,7 +304,7 @@ struct network
             CLDNN_THROW("set data input failed", status);
     }
 
-    std::vector<network_output> execute(const std::vector<event>& dependencies)
+    std::vector<network_output> execute(const std::vector<event>& dependencies = {})
     {
         array_ref<network_output_ref> result_ref = check_status<array_ref<network_output_ref>>("network execute failed", [&](status_t* status) { return execute_impl(dependencies, status); });
         std::vector<network_output> result;

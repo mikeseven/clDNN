@@ -86,7 +86,7 @@ private:
             }
             for (auto& pair : _topology_map)
             {
-                for (auto& in : pair.second->input())
+                for (auto& in : pair.second->dependecies())
                 {
                     unreferenced_ids.erase(in);
                 }

@@ -39,11 +39,10 @@ struct normalization :public primitive_base<normalization, DTO(normalization)>
         float k,
         float alpha,
         float beta,
-        const tensor& input_offset =  { format::yx, 0, { 0, 0 } },
-        const tensor& output_offset = { format::yx, 0, { 0, 0 } },
-        const padding_types padding_type = padding_types::zero
+        const padding& input_padding = padding(),
+        const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_offset, output_offset, padding_type, size, k, alpha, beta)
+        : primitive_base(id, {input}, input_padding, output_padding, size, k, alpha, beta)
         , size(_dto.size)
         , k(_dto.k)
         , alpha(_dto.alpha)

@@ -33,26 +33,30 @@ struct mean_substract : public primitive_base<mean_substract, DTO(mean_substract
         const primitive_id& id,
         const primitive_id& input,
         const primitive_id& mean,
-        const tensor& input_offset =  { format::yx,{ 0, 0 } },
-        const tensor& output_offset = { format::yx,{ 0, 0 } },
-        const padding_types padding_type = padding_types::zero
-        )
-        :primitive_base(id, {input}, input_offset, output_offset, padding_type)
+        const padding& input_padding = padding(),
+        const padding& output_padding = padding()
+    )
+        :primitive_base(id, {input}, input_padding, output_padding)
         , mean(mean)
     {
-        // use the same storage for input and mean
-        _input.push_back(mean);
-        _dto.mean = _input.store().back();
+        init_dto();
     }
 
     mean_substract(const dto* dto)
         :primitive_base(dto)
         , mean(dto->mean)
     {
-        _input.push_back(dto->mean);
-        _dto.mean = _input.store().back();
+        init_dto();
     }
 
     const primitive_id mean;
+
+protected:
+    std::vector<primitive_id> get_dependencies() const override { return{ mean }; }
+
+    void init_dto()
+    {
+        _dto.mean = mean;
+    }
 };
 }

@@ -34,8 +34,8 @@ layout activation_arg::calc_output_layout(network_impl& network, std::shared_ptr
 activation_arg::activation_arg(network_impl& network, std::shared_ptr<const activation> desc)
     :primitive_arg_base(network, desc, calc_output_layout(network, desc))
 {
-    auto& input_offset = desc->input_offset();
-    auto& output_offset = desc->output_offset();
+    auto input_offset = desc->input_offset().transform(input_memory(0).get_layout().size.format, 0);
+    auto output_offset = desc->output_offset().transform(output_memory().get_layout().size.format, 0);
     auto& output_size = output_memory().get_layout().size;
     
     auto input_arg  = input_memory(0).argument();

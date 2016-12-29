@@ -30,6 +30,14 @@ struct topology
         return check_status<topology_impl*>("failed to create topology", create_topology_impl);
     }
 
+    template<class ...Args>
+    static topology create(const Args&... args)
+    {
+        auto result = create();
+        result.add<Args...>(args...);
+        return result;
+    }
+
     DLL_SYM topology(const topology& other);
     DLL_SYM topology& operator=(const topology& other);
     DLL_SYM ~topology();
@@ -37,11 +45,20 @@ struct topology
     friend bool operator!=(const topology& lhs, const topology& rhs) { return !(lhs == rhs); }
 
     template<class PType>
-    void add(PType&& desc)
+    void add(const PType& desc)
     {
         status_t status = add_primitive_dto(desc.get_dto());
         if (status != CLDNN_SUCCESS)
             CLDNN_THROW("primitive add failed", status);
+    }
+
+    template<class PType, class ...Args>
+    void add(const PType& desc, Args... args)
+    {
+        status_t status = add_primitive_dto(desc.get_dto());
+        if (status != CLDNN_SUCCESS)
+            CLDNN_THROW("primitive add failed", status);
+        add<Args...>(args...);
     }
 
     topology_impl* get() const { return _impl; }

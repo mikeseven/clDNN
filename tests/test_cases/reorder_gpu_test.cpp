@@ -15,30 +15,102 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "api/neural.h"
 #include "gpu/ocl_toolkit.h"
-#include "multidimensional_counter.h"
+#include <gtest/gtest.h>
+#include <api/memory.hpp>
+#include <api/primitives/input_layout.hpp>
+#include "api/primitives/reorder.hpp"
+#include <api/topology.hpp>
+#include <api/network.hpp>
+#include <api/engine.hpp>
 #include "test_utils/test_utils.h"
-#include "memory_utils.h"
+#include <api/primitives/data.hpp>
 
 #include <cmath>
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <limits>
 
-using namespace neural;
+using namespace cldnn;
 using namespace tests;
 using namespace testing;
 
-namespace
+TEST(reorder_gpu_f32, basic)
 {
-struct gpu_info_helper : gpu::context_holder
-{
-    gpu::engine_info get_engine_info() const
+    //  Input               : yxfb:2x2x2x2
+    //  Output              : bfyx:2x2x2x2
+    //
+    //  Input:
+    //  f0: b0:  1    2  b1:   0    0
+    //  f0: b0:  3    4  b1:   0.5 -0.5
+    //  f1: b0:  5    6  b1:   1.5  5.2
+    //  f1: b0:  7    8  b1:   12   8
+    //
+    //  Output:
+    //  b0 f0:  1    2
+    //  b0 f0:  3    4
+    //
+    //  b0 f1:  5    6
+    //  b0 f1:  7    8
+    //
+    //  b1 f0:  0    0
+    //  b1 f0: 0.5 -0.5
+    //
+    //  b1 f1: 1.5  5.2
+    //  b1 f1: 12    8
+    //
+
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb, { 2, 2, 2, 2 } } });
+    layout output_layout(data_types::f32, { format::bfyx,{ 2,2,2,2 } });
+
+    set_values(input, {
+        1.f, 0.f,
+        5.f, 1.5f,
+
+        2.f, 0.f,
+        6.f, 5.2f,
+
+        3.f, 0.5f,
+        7.f, 12.f,
+
+        4.f, -0.5f,
+        8.f, 8.f
+    });
+
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        reorder("reorder", "input", output_layout));
+
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "reorder");
+
+    auto output = outputs[0].get_memory();
+
+    float answers[16] = {
+        1.0f,  2.0f,
+        3.0f,  4.0f,
+
+        5.0f,  6.0f,
+        7.0f,  8.0f,
+
+        0.0f,  0.0f,
+        0.5f, -0.5f,
+
+        1.5f,  5.2f,
+        12.0f, 8.0f
+    };
+
+    auto output_ptr = output.pointer<float>();
+    for (int i = 0; i < 16; i++)
     {
-        return context()->get_engine_info();
+        EXPECT_FLOAT_EQ(answers[i], output_ptr[i]);
     }
-};
+
 }
 
 TEST(reorder_gpu_f32, basic_subtract) {
@@ -73,9 +145,11 @@ TEST(reorder_gpu_f32, basic_subtract) {
     //  b1 f1: 10    7
     //
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
-    auto output = memory::allocate({ memory::format::bfyx_f32,{ 2,{ 2, 2 }, 2 } });
-    auto subtract = memory::allocate({ memory::format::byxf_f32,{ 1,{ 2, 2 }, 2 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32, { format::yxfb, { 2, 2, 2, 2 }} });
+    layout output_layout( data_types::f32, {format::bfyx, {2,2,2,2}} );
+    auto subtract = memory::allocate(engine, { data_types::f32, { format::byxf, { 1, 2, 2, 2 } } });
 
     set_values(input, {
         1.f, 0.f,
@@ -96,9 +170,20 @@ TEST(reorder_gpu_f32, basic_subtract) {
         2.0f,  2.0f,      2.5f,  1.0f,
     });
 
-    auto reorder = reorder::create({  output, input, subtract });
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        input_layout("substract", subtract.get_layout()),
+        reorder("reorder", "input", output_layout, "substract"));
 
-    execute({ reorder }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
+    network.set_input_data("substract", subtract);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "reorder");
+
+    auto output = outputs[0].get_memory();
 
     float answers[16] = { 0.0f,  0.5f,
                           1.0f,  1.5f,
@@ -113,10 +198,10 @@ TEST(reorder_gpu_f32, basic_subtract) {
                          10.0f,  7.0f
     };
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto output_ptr = output.pointer<float>();
     for (int i = 0; i < 16; i++)
     {
-        EXPECT_TRUE(are_equal(answers[i], output_ptr[i]));
+        EXPECT_FLOAT_EQ(answers[i], output_ptr[i]);
     }
 }
 
@@ -149,8 +234,10 @@ TEST(reorder_gpu_f32, basic_subtract_value) {
     //  b1 f1:  9.5  5.5
     //
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
-    auto output = memory::allocate({ memory::format::bfyx_f32,{ 2,{ 2, 2 }, 2 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 2, 2 } } });
+    layout output_layout(data_types::f32, { format::bfyx,{ 2,2,2,2 } });
     std::vector<float> subtract_val = { 0.5, 2.5 };
 
     set_values(input, {
@@ -167,9 +254,17 @@ TEST(reorder_gpu_f32, basic_subtract_value) {
         8.f, 8.f
     });
 
-    auto reorder = reorder::create({  output, input, subtract_val, true });
+    auto topology = topology::create();
+    topology.add(input_layout("input", input.get_layout()), reorder("reorder", "input", output_layout, subtract_val));
 
-    execute({ reorder }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "reorder");
+
+    auto output = outputs[0].get_memory();
 
     float answers[16] = { 0.5f, 1.5f,
                           2.5f, 3.5f,
@@ -184,7 +279,7 @@ TEST(reorder_gpu_f32, basic_subtract_value) {
                           9.5f,  5.5f
     };
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto output_ptr = output.pointer<float>();
     for (int i = 0; i < 16; i++)
     {
         EXPECT_TRUE(are_equal(answers[i], output_ptr[i]));
@@ -223,7 +318,7 @@ TEST(reorder_gpu_f16, basic_subtract_f32_output_f32) {
     //  b1 f1: 10    7
     //
 
-    gpu_info_helper gpu_info;
+    neural::gpu::gpu_toolkit gpu_info;
     if (!gpu_info.get_engine_info().supports_fp16)
     {
         std::cout << "[ SKIPPED ] The test is skipped (cl_khr_fp16 is not supported)." << std::endl;
@@ -231,9 +326,11 @@ TEST(reorder_gpu_f16, basic_subtract_f32_output_f32) {
         return;
     }
 
-    auto input = memory::allocate({  memory::format::yxfb_f16,{ 2,{ 2, 2 }, 2 } });
-    auto output = memory::allocate({  memory::format::bfyx_f32,{ 2,{ 2, 2 }, 2 } });
-    auto subtract = memory::allocate({  memory::format::byxf_f32,{ 1,{ 2, 2 }, 2 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f16,{ format::yxfb,{ 2, 2, 2, 2 } } });
+    layout output_layout(data_types::f32, { format::bfyx,{ 2,2,2,2 } });
+    auto subtract = memory::allocate(engine, { data_types::f32, { format::byxf, { 1, 2, 2, 2 } } });
 
     set_values(input, {
         half_t(0x3C00), half_t(0x0000), // 1.f, 0.f,
@@ -254,9 +351,19 @@ TEST(reorder_gpu_f16, basic_subtract_f32_output_f32) {
         2.0f,  2.0f,      2.5f,  1.0f,
     });
 
-    auto reorder = reorder::create({  output, input, subtract });
+    auto topology = topology::create();
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(data("substract", subtract));
+    topology.add(reorder("reorder", "input", output_layout, "substract"));
 
-    execute({ reorder }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "reorder");
+
+    auto output = outputs[0].get_memory();
 
     float answers[16] = { 0.0f,  0.5f,
                           1.0f,  1.5f,
@@ -271,7 +378,7 @@ TEST(reorder_gpu_f16, basic_subtract_f32_output_f32) {
                          10.0f,  7.0f
     };
     
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto output_ptr = output.pointer<float>();
     for (int i = 0; i < 16; i++)
     {
         EXPECT_TRUE(are_equal(answers[i], output_ptr[i]));
@@ -307,7 +414,7 @@ TEST(reorder_gpu_f16, basic_subtract_value) {
     //  b1 f1:  9.5  5.5
     //
 
-    gpu_info_helper gpu_info;
+    neural::gpu::gpu_toolkit gpu_info;
     if (!gpu_info.get_engine_info().supports_fp16)
     {
         std::cout << "[ SKIPPED ] The test is skipped (cl_khr_fp16 is not supported)." << std::endl;
@@ -315,8 +422,10 @@ TEST(reorder_gpu_f16, basic_subtract_value) {
         return;
     }
 
-    auto input = memory::allocate({  memory::format::yxfb_f16,{ 2,{ 2, 2 }, 2 } });
-    auto output = memory::allocate({  memory::format::bfyx_f16,{ 2,{ 2, 2 }, 2 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f16,{ format::yxfb,{ 2, 2, 2, 2 } } });
+    layout output_layout(data_types::f16, { format::bfyx,{ 2,2,2,2 } });
     std::vector<float> subtract_val = { 0.5, 2.5 };
 
     set_values(input, {
@@ -333,9 +442,18 @@ TEST(reorder_gpu_f16, basic_subtract_value) {
         half_t(0x4800), half_t(0x4800)  // 8.f, 8.f
     });
 
-    auto reorder = reorder::create({  output, input, subtract_val, true });
+    auto topology = topology::create();
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(reorder("reorder", "input", output_layout, subtract_val));
 
-    execute({ reorder }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "reorder");
+
+    auto output = outputs[0].get_memory();
 
     half_t answers[16] = { half_t(0x3800), half_t(0x3E00), //  0.5f, 1.5f,
                            half_t(0x4100), half_t(0x4300), //  2.5f, 3.5f,
@@ -350,7 +468,7 @@ TEST(reorder_gpu_f16, basic_subtract_value) {
                            half_t(0x48C0), half_t(0x4580)  //  9.5f,  5.5f
     };
 
-    auto output_ptr = output.as<const memory&>().pointer<half_t>();
+    auto output_ptr = output.pointer<half_t>();
     for (int i = 0; i < 16; i++)
     {
         EXPECT_TRUE(are_equal(static_cast<uint16_t>(answers[i]), static_cast<uint16_t>(output_ptr[i])));
@@ -367,7 +485,7 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
     //  Output is expected to contain the same value as input in range of indices from 0x0000 to 0xF801.
     //
 
-    gpu_info_helper gpu_info;
+    neural::gpu::gpu_toolkit gpu_info;
     if (!gpu_info.get_engine_info().supports_fp16)
     {
         std::cout << "[ SKIPPED ] The test is skipped (cl_khr_fp16 is not supported)." << std::endl;
@@ -389,18 +507,36 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
     expected_values[0xF802] = half_t(0x8000);    // -0
     expected_values[0xF803] = half_t(0xFC12);    // A NaN (sample: -NaN.0x12).
 
-    auto input = memory::allocate({memory::format::yxfb_f16,{1,{2, 2}, static_cast<uint32_t>(expected_values.size()) / 4} });
-    auto interm = memory::allocate({memory::format::byxf_f32,{1,{2, 2}, static_cast<uint32_t>(expected_values.size()) / 4} });
-    auto output = memory::allocate({memory::format::yxfb_f16,{1,{2, 2}, static_cast<uint32_t>(expected_values.size()) / 4} });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f16,{ format::yxfb,{ 2, 2, static_cast<int32_t>(expected_values.size()) / 4, 1 } } });
+    layout interm_layout( data_types::f32, { format::byxf, { 1, 2, 2, static_cast<int32_t>(expected_values.size()) / 4 } });
+    auto output_layout = input.get_layout();
 
     set_values(input, expected_values);
 
-    auto reorder_f16_f32 = reorder::create({ input, interm });
-    auto reorder_f32_f16 = reorder::create({ interm, output });
+    auto topology = topology::create();
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(reorder("reorder_f16_f32", "input", interm_layout));
+    topology.add(reorder("reorder_f32_f16", "reorder_f16_f32", output_layout));
 
-    execute({ reorder_f16_f32, reorder_f32_f16 }).wait();
+    auto network = network::build(
+                                engine,
+                                topology,
+                                {
+                                    build_option::outputs({"reorder_f16_f32", "reorder_f32_f16"})
+                                });
 
-    auto interm_ptr = interm.as<const memory&>().pointer<float>();
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 2);
+    EXPECT_EQ(outputs[0].id(), "reorder_f16_f32");
+    EXPECT_EQ(outputs[1].id(), "reorder_f32_f16");
+
+    auto interm = outputs[0].get_memory();
+    auto interm_ptr = interm.pointer<float>();
+
     // Sample positive.
     EXPECT_TRUE(are_equal(interm_ptr[0x3400], 0.25f));
     EXPECT_TRUE(are_equal(interm_ptr[0x3800], 0.5f));
@@ -419,8 +555,8 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
     EXPECT_TRUE(are_equal(interm_ptr[0xF802], -0.0f));
     EXPECT_TRUE(std::isnan(interm_ptr[0xF803]));
 
-
-    auto output_ptr = output.as<const memory&>().pointer<half_t>();
+    auto output = outputs[1].get_memory();
+    auto output_ptr = output.pointer<half_t>();
     for (int i = 0; i < 0xF802; ++i) // NOTE: do not test for possibly ambiguous values of floating point (-0, NaNs).
     {
         EXPECT_TRUE(are_equal(static_cast<uint16_t>(expected_values[i]), static_cast<uint16_t>(output_ptr[i])));

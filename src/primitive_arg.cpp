@@ -40,12 +40,21 @@ refcounted_obj_ptr<event_impl> primitive_arg::execute(const std::vector<refcount
 primitive_arg::primitive_arg(network_impl& network, std::shared_ptr<const primitive> desc, const memory& output_memory)
     : _network(network)
     , _desc(desc)
-    , _inputs(network.get_primitives(desc->input()))
+    , _inputs(network.get_primitives(desc->dependecies()))
     , _output(output_memory)
 {}
 
 primitive_arg::primitive_arg(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout)
-    : primitive_arg(network, desc, network.get_engine()->allocate_buffer(output_layout))
+    : primitive_arg(network, desc, allocate_output(network, desc, output_layout))
 {}
 
+memory primitive_arg::allocate_output(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout)
+{
+    auto output_size = output_layout.size;
+    auto padding_size = desc->output_padding().size();
+    auto padding_size2 = padding_size.mul(2);
+    auto allocation_size = output_size.add(padding_size2);
+    //auto allocation_size = output_layout.size.add(desc()->output_padding().size().mul(2));
+    return network.get_engine()->allocate_buffer({ output_layout.data_type, allocation_size });
+}
 }

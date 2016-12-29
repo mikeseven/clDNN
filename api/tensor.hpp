@@ -58,7 +58,7 @@ struct format
 
     static const format_traits& traits(type fmt)
     {
-        const std::unordered_map<type, format_traits> traits
+        static const std::unordered_map<type, format_traits> traits
         {
             { x,   { 1, 1, 1, "x" } },
             { yx,  { 1, 1, 2, "yx" } },
@@ -137,10 +137,17 @@ struct tensor
                 _sizes[batch_idx++] = sizes[i];
                 break;
             case 'f':
-            case 'i':
-            case 'o':
-
                 _sizes[batch.size() + (feature_idx++)] = sizes[i];
+                break;
+            case 'i':
+                //NOTE special case: input feature map is always second
+                _sizes[batch.size() + 1] = sizes[i];
+                feature_idx++;
+                break;
+            case 'o':
+                //NOTE special case: output_feature map is always first
+                _sizes[batch.size()] = sizes[i];
+                feature_idx++;
                 break;
             case 's':
             case 'x':
@@ -195,6 +202,52 @@ struct tensor
         return !(lhs == rhs);
     }
 
+    tensor negate() const
+    {
+        auto result = *this;
+        for (size_t i = 0; i < TENSOR_DIM_MAX; i++)
+        {
+            result._sizes[i] = -_sizes[i];
+        }
+        return result;
+    }
+
+    tensor mul(value_type multiplier) const
+    {
+        auto result = *this;
+        for(size_t i = 0; i < result.raw.size(); i++ )
+        {
+            result._sizes[i] *= multiplier;
+        }
+        return result;
+    }
+
+    tensor div(value_type divider) const
+    {
+        auto result = *this;
+        for (size_t i = 0; i < result.raw.size(); i++)
+        {
+            result._sizes[i] /= divider;
+        }
+        return result;
+    }
+
+    tensor add(const tensor& rhs) const
+    {
+        auto transformed_rhs = rhs.transform(format, 0);
+        auto result = *this;
+        for(size_t i = 0; i < result.raw.size(); i++)
+        {
+            result._sizes[i] += transformed_rhs._sizes[i];
+        }
+        return result;
+    }
+
+    tensor sub(const tensor& rhs) const
+    {
+        return add(rhs.negate());
+    }
+
     std::vector<value_type> sizes() const {
         auto order = format.order();
         std::vector<value_type> sizes(order.size());
@@ -210,9 +263,15 @@ struct tensor
                 sizes[i] = batch[batch_idx++];
                 break;
             case 'f':
-            case 'i':
-            case 'o':
                 sizes[i] = feature[feature_idx++];
+                break;
+            case 'i':
+                //NOTE special case: input feature map is always second
+                sizes[i] = feature[1];
+                break;
+            case 'o':
+                //NOTE special case: output_feature map is always first
+                sizes[i] = feature[0];
                 break;
             case 's':
             case 'x':
@@ -229,9 +288,10 @@ struct tensor
 
     size_t get_linear_size() const
     {
+        auto sizes = this->sizes();
         return std::accumulate(
-            sizes().begin(),
-            sizes().end(),
+            sizes.begin(),
+            sizes.end(),
             static_cast<size_t>(1),
             std::multiplies<size_t>()
         );
@@ -272,4 +332,9 @@ struct tensor
 };
 
 API_CLASS(tensor)
+
+inline tensor operator+(const tensor& lhs, const tensor& rhs) { return lhs.add(rhs); }
+inline tensor operator-(const tensor& lhs, const tensor& rhs) { return lhs.sub(rhs); }
+inline tensor operator*(const tensor& lhs, tensor::value_type rhs) { return lhs.mul(rhs); }
+inline tensor operator/(const tensor& lhs, tensor::value_type rhs) { return lhs.div(rhs); }
 }

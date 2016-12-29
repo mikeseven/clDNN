@@ -26,6 +26,7 @@ class reorder_arg : public primitive_arg_base<reorder>
 {
 public:
     reorder_arg(network_impl& network, std::shared_ptr<const reorder> desc);
+    bool have_substract() const { return _inputs.size() > 1; }
 };
 
 }

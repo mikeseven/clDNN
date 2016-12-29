@@ -15,7 +15,6 @@
 */
 
 #include "gtest/gtest.h"
-#include "api/neural.h"
 
 int main( int argc, char* argv[ ] )
 {

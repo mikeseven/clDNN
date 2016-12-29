@@ -36,12 +36,12 @@ struct engine_configuration
 class engine_impl;
 struct engine
 {
-    static engine create(const engine_configuration& configuration)
+    static engine create(const engine_configuration& configuration = engine_configuration())
     {
         return create(engine_types::ocl, 0, configuration);
     }
 
-    static engine create(engine_types type, uint32_t engine_num, const engine_configuration& configuration)
+    static engine create(engine_types type, uint32_t engine_num, const engine_configuration& configuration = engine_configuration())
     {
         return check_status<engine_impl*>("failed to create engine", [&](status_t* status)
         {

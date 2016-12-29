@@ -39,34 +39,40 @@ struct fully_connected : public primitive_base<fully_connected, DTO(fully_connec
         const primitive_id& bias,
         bool with_activation = false,
         float activation_slp = 0.0f,
-        const tensor& input_offset =  { format::yx, 0,{ 0, 0 } },
-        const tensor& output_offset = { format::yx, 0,{ 0, 0 } },
-        const padding_types padding_type = padding_types::zero
+        const padding& input_padding = padding(),
+        const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_offset, output_offset, padding_type, static_cast<uint32_t>(with_activation), activation_slp)
+        : primitive_base(id, {input}, input_padding, output_padding, static_cast<uint32_t>(with_activation), activation_slp)
+        , weights(weights)
+        , bias(bias)
         , with_activation(_dto.with_activation)
         , negative_slope(_dto.activation_negative_slope)
     {
-        _input.push_back(weights);
-        _dto.weights = _input.store().back();
-        _input.push_back(bias);
-        _dto.bias = _input.store().back();
+        init_dto();
     }
 
     fully_connected(const dto* dto)
         :primitive_base(dto)
+        , weights(dto->weights)
+        , bias(dto->bias)
         , with_activation(_dto.with_activation)
         , negative_slope(_dto.activation_negative_slope)
     {
-        _input.push_back(dto->weights);
-        _dto.weights = _input.store().back();
-        _input.push_back(dto->bias);
-        _dto.weights = _input.store().back();
+        init_dto();
     }
 
-    primitive_id weights() const { return _dto.weights; }
-    primitive_id bias() const { return _dto.bias; }
+    const primitive_id weights;
+    const primitive_id bias;
     const uint32_t& with_activation;
     const float& negative_slope;
+protected:
+    std::vector<primitive_id> get_dependencies() const override { return{ weights, bias }; }
+
+private:
+    void init_dto()
+    {
+        _dto.weights = weights;
+        _dto.bias = bias;
+    }
 };
 }

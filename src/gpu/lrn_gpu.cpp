@@ -106,7 +106,7 @@ struct lrn_gpu : is_an_implementation
         }
 
         // Checking for supported paddings.
-        switch (outer.argument.padding_type)
+        switch (outer.desc()->padding_type())
         {
         case padding::zero:
             break;
@@ -138,7 +138,7 @@ struct lrn_gpu : is_an_implementation
             gpu::make_jit_constant("ALPHA_VAL_FACTOR",  data.fp16_unit_used ? alpha_abs_sqrt : 1.0f),
             gpu::make_jit_constant("BETA",              outer.argument.beta),
             gpu::make_jit_constant("K",                 outer.argument.k),
-            gpu::make_jit_constant("HELP_INPUT_OFFSET", outer.argument.input_offset.feature[0] - static_cast<uint32_t>(size / 2)),
+            gpu::make_jit_constant("HELP_INPUT_OFFSET", outer.desc()->input_offset().feature[0] - static_cast<int32_t>(size / 2)),
             gpu::make_jit_constant("FP16_SUPPORTED",    static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",    static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),

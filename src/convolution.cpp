@@ -32,11 +32,11 @@ layout convolution_arg::calc_output_layout(network_impl& network, std::shared_pt
 {
     auto input = network.get_primitive(desc->input()[0]);
     auto input_layout = input->output_memory().get_layout();
-    auto weight0 = network.get_primitive(desc->weights()[0]);
+    auto weight0 = network.get_primitive(desc->weights[0]);
     auto weights_layout = weight0->output_memory().get_layout();
-    auto input_offset = desc->input_offset().transform(format::yx, 0);
+    auto input_offset = desc->input_offset().transform(input_layout.size.format, 0);
     auto strd = desc->stride.transform(format::yx, 0);
-    auto split = desc->weights().size();
+    auto split = desc->weights.size();
 
     // compute how many outputs in rows and columns will be generate by filter. 
     // outp <= (input_size - (2*input_offset) - kernel_size)/ stride 
@@ -48,7 +48,7 @@ layout convolution_arg::calc_output_layout(network_impl& network, std::shared_pt
     auto number_of_features = weights_layout.size.feature[0] * static_cast<int32_t>(split);
 
     tensor output_size(format::yxfb, {
-                           input_layout.size.batch[0], number_of_features, output_spatial_x, output_spatial_y }
+                           output_spatial_y, output_spatial_x, number_of_features, input_layout.size.batch[0] }
                       );
 
     return { input_layout.data_type, output_size.transform(input_layout.size.format, 1) };
@@ -56,11 +56,11 @@ layout convolution_arg::calc_output_layout(network_impl& network, std::shared_pt
 
 convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const convolution> desc): primitive_arg_base(network, desc, calc_output_layout(network, desc))
 {
-    auto& stride = desc->stride;
-    auto& output_size = output_memory().argument().size;
+    auto stride = desc->stride;
+    auto output_size = output_memory().argument().size;
 
-    auto& input_arg = input_memory(0).get_layout();
-    auto& output_arg = output_memory().get_layout();
+    auto input_arg = input_memory(0).get_layout();
+    auto output_arg = output_memory().get_layout();
 
     if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("input/output number of dimension does not match.");
     if (stride.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("stride/output number of dimension does not match.");
@@ -72,19 +72,21 @@ convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const co
         auto& filter_arg = filter_mem.get_layout(); //convolution filter
         auto& bias_arg = bias_memory(j).get_layout();
 
-        auto& input_offset = desc->input_offset();
-        auto& output_offset = desc->output_offset();
+        auto input_offset = desc->input_offset().transform(input_arg.size.format, 0);
+        auto output_offset = desc->output_offset().transform(output_arg.size.format, 0);
 
         if (filter_arg.size.raw.size() != output_arg.size.raw.size() + 1) throw std::runtime_error("window_size != 5");
         if (bias_arg.size.raw.size() != 3) throw std::runtime_error("biases isn't 1D vector."); // b=1, f=1
         if (bias_arg.size.spatial[0] != output_size.feature[0] / split) throw std::runtime_error("biases/output feature maps number does not match.");
-        if (desc->padding_type() != padding_types::zero) throw std::runtime_error("unknown padding mode.");
+        if (desc->padding_type() != padding::types::zero) throw std::runtime_error("unknown padding mode.");
         if (input_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("input offset/input number of dimension does not match.");
-        if (output_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("output offset/input number of dimension does not match.");
+        //not relevant anymore
+        //if (output_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("output offset/input number of dimension does not match.");
 
-        for (uint32_t i = 0; i < output_arg.size.raw.size(); i++)
-            if (output_arg.size.raw.at(i) < output_size.raw.at(i) + output_offset.raw.at(i))
-                throw std::runtime_error("output buffer size is too small.");
+        //Is not relevant anymore
+        //for (uint32_t i = 0; i < output_arg.size.raw.size(); i++)
+        //    if (output_arg.size.raw.at(i) < output_size.raw.at(i) + output_offset.raw.at(i))
+        //        throw std::runtime_error("output buffer size is too small.");
 
         assert(1 == output_size.feature.size());
         assert(1 == output_size.batch.size());

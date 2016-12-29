@@ -181,6 +181,13 @@ network_impl* network::build_impl(const engine& engine, const topology& topology
         build_options opts(options);
         return engine.get()->build_network(topology, options);
     }
+    catch(const std::exception& e)
+    {
+        e.what();
+        if (status)
+            *status = CLDNN_ERROR;
+        return nullptr;
+    }
     catch (...)
     {
         if (status)

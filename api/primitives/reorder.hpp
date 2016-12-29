@@ -39,17 +39,15 @@ struct reorder : public primitive_base<reorder, DTO(reorder)>
         const primitive_id& input,
         const layout& output_layout,
         const std::vector<float>& values_to_substract = {},
-        const tensor& input_offset =  { format::yx, 0, { 0, 0 } },
-        const tensor& output_offset = { format::yx, 0, { 0, 0 } },
-        const padding_types padding_type = padding_types::zero
+        const padding& input_padding = padding(),
+        const padding& output_padding = padding()
     )
-        : primitive_base(id, { input }, input_offset, output_offset, padding_type, output_layout, "")
+        : primitive_base(id, { input }, input_padding, output_padding, output_layout, "")
         , output_layout(_dto.output_layout)
-        , _substract_per_feature(values_to_substract)
+        , mean("")
+        , substract_per_feature(values_to_substract)
     {
-        // use the same storage for input and mean_substract
-        _dto.mean_substract = "";
-        _dto.substract_per_feature = _substract_per_feature;
+        init_dto();
     }
 
     reorder(
@@ -57,42 +55,42 @@ struct reorder : public primitive_base<reorder, DTO(reorder)>
         const primitive_id& input,
         const layout& output_layout,
         primitive_id mean,
-        const tensor& input_offset = { format::x,0,{ 0 } },
-        const tensor& output_offset = { format::x,0,{ 0 } },
-        const padding_types padding_type = padding_types::zero
+        const padding& input_padding = { format::yx,{ 0, 0 } },
+        const padding& output_padding = { format::yx,{ 0, 0 } }
     )
-        : primitive_base(id, { input }, input_offset, output_offset, padding_type, output_layout)
+        : primitive_base(id, { input }, input_padding, output_padding, output_layout)
         , output_layout(_dto.output_layout)
-        , _substract_per_feature(0)
+        , mean(mean)
+        , substract_per_feature(0)
     {
-        // use the same storage for input and mean_substract
-        _input.push_back(mean);
-        _dto.mean_substract = _input.store().back();
-        _dto.substract_per_feature = _substract_per_feature;
+        init_dto();
     }
 
     reorder(const dto* dto)
         : primitive_base(dto)
         , output_layout(_dto.output_layout)
-        , _substract_per_feature(_dto.substract_per_feature.vector())
+        , mean(dto->mean_substract)
+        , substract_per_feature(_dto.substract_per_feature.vector())
     {
-        // use the same storage for input and mean_substract
-        if (_substract_per_feature.empty() && !_dto.mean_substract.empty())
-        {
-            _input.push_back(dto->mean_substract);
-            _dto.mean_substract = _input.store().back();
-        }
-        else
-        {
-            _dto.mean_substract = "";
-        }
-        _dto.substract_per_feature = _substract_per_feature;
+        init_dto();
     }
 
     const layout& output_layout;
-    primitive_id_ref mean_substract() const { return _dto.mean_substract; }
-    std::vector<float> substract_per_feature() const { return _substract_per_feature; }
+    const primitive_id mean;
+    const std::vector<float> substract_per_feature;
+
+protected:
+    std::vector<primitive_id> get_dependencies() const override 
+    {
+        if (mean.empty())
+            return{};
+        return{ mean };
+    }
 private:
-    std::vector<float> _substract_per_feature;
+    void init_dto()
+    {
+        _dto.mean_substract = mean;
+        _dto.substract_per_feature = substract_per_feature;
+    }
 };
 }

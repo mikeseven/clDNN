@@ -23,10 +23,53 @@
 #include <string>
 #include <memory>
 #include <iterator>
+#include <cmath>
 
 namespace cldnn
 {
-enum class padding_types { zero, one, two };
+struct padding
+{
+    enum types : uint32_t
+    {
+        zero, one, two
+    };
+    types type() const { return _type; };
+    tensor size() const { return _size; };
+    padding(format format, const std::vector<tensor::value_type>& sizes, types type = zero )
+        : _size(format, 0, to_abs(sizes)), _type(type)
+    {}
+
+    padding(): padding(format::x, {0}, zero){}
+
+    padding(const padding& other)
+        : _size(other._size), _type(other._type)
+    {}
+
+    padding& operator=(const padding& other)
+    {
+        if (this == &other)
+            return *this;
+        _size = other._size;
+        _type = other._type;
+        return *this;
+    }
+
+private:
+    tensor _size;
+    types _type;
+
+    static std::vector<tensor::value_type> to_abs(const std::vector<tensor::value_type>& sizes)
+    {
+        std::vector<tensor::value_type> result(sizes.size());
+        for(size_t i = 0; i < result.size(); i++)
+        {
+            result[i] = abs(sizes[i]);
+        }
+        return std::move(result);
+    }
+};
+
+API_CLASS(padding)
 
 typedef const struct primitive_type* primitive_type_id;
 typedef std::string primitive_id;
@@ -45,51 +88,54 @@ class array_ref_store
 public:
     typedef StorElemTy value_type;
     array_ref_store(const std::vector<StorElemTy>& arr)
-        :_data_store(arr) //Not sure if it will work correctly: , _arr_store(_data_store)
+        :_data_store(arr)
     {
-        //fill _arr_store by references to strings in _data_store
-        std::copy(_data_store.begin(), _data_store.end(), std::back_inserter(_arr_store));
+        update_ref();
     }
 
     array_ref_store(array_ref<RefElemTy> arr)
     {
         //Fill _data_store by copies of strings referenced in arr
         std::copy(arr.begin(), arr.end(), std::back_inserter(_data_store));
-        //fill _arr_store by references to strings in _data_store
-        std::copy(_data_store.begin(), _data_store.end(), std::back_inserter(_arr_store));
+        update_ref();
     }
 
     void push_back(const StorElemTy& Val)
     {
         _data_store.push_back(Val);
-        _arr_store.push_back(_data_store.back());
+        update_ref();
     }
 
     size_t size() const
     {
-        assert(_data_store.size() == _arr_store.size());
+        assert(_data_store.size() == _ref_store.size());
         return _data_store.size();
     }
 
     // explicit conversion
-    const std::vector<RefElemTy>& ref() const { return _arr_store; }
+    const std::vector<RefElemTy>& ref() const { return _ref_store; }
     const std::vector<StorElemTy>& store() const { return _data_store; }
 
     // implicit conversion
-    operator array_ref<RefElemTy>() const { return _arr_store; }
+    operator array_ref<RefElemTy>() const { return ref(); }
     operator const std::vector<StorElemTy>&() const { return _data_store; }
 private:
     std::vector<StorElemTy> _data_store;
-    std::vector<RefElemTy> _arr_store;
+    std::vector<RefElemTy> _ref_store;
+
+    void update_ref()
+    {
+        //fill _ref_store by references to strings in _data_store
+        std::copy(_data_store.begin(), _data_store.end(), std::back_inserter(_ref_store));
+    }
 };
 
 #define BEGIN_DTO(PType) struct PType##_dto {\
     primitive_type_id type;\
     primitive_id_ref id;\
     array_ref<primitive_id_ref> input;\
-    tensor input_offset;\
-    tensor output_offset;\
-    padding_types padding_type;\
+    padding input_padding;\
+    padding output_padding;\
     primitive_dto* as_base() { return reinterpret_cast<primitive_dto*>(this); }\
     const primitive_dto* as_base() const { return reinterpret_cast<const primitive_dto*>(this); }\
 
@@ -118,12 +164,16 @@ struct primitive
     virtual const primitive_dto* get_dto() const = 0;
     virtual primitive_type_id type() const = 0;
     virtual primitive_id id() const = 0;
-    virtual const std::vector<primitive_id>& input() const = 0;
-    virtual const tensor& input_offset() const = 0;
-    virtual const tensor& output_offset() const = 0;
-    virtual padding_types padding_type() const = 0;
+    virtual std::vector<primitive_id> dependecies() const = 0;
+    virtual padding input_padding() const = 0;
+    virtual padding output_padding() const = 0;
     virtual ~primitive() = default;
     operator primitive_id() const { return id(); }
+
+    //TODO remove backward compatibility
+    tensor input_offset() const { return input_padding().size().negate(); }
+    tensor output_offset() const { return output_padding().size(); }
+    padding::types padding_type() const { return input_padding().type(); }
 };
 
 typedef array_ref_store<primitive_id_ref, primitive_id> primitive_id_arr;
@@ -135,23 +185,33 @@ public:
     const primitive_dto* get_dto() const override { return reinterpret_cast<const primitive_dto*>(&_dto); }
 
     primitive_id id() const override { return _id; }
-    const std::vector<primitive_id>& input() const override { return _input; }
+    const std::vector<primitive_id>& input() const
+    {
+        return _input;
+    }
+
+    std::vector<primitive_id> dependecies() const override
+    {
+        auto result = input();
+        auto deps = get_dependencies();
+        result.insert(result.end(), deps.begin(), deps.end());
+        return result;
+    }
+
     primitive_type_id type() const override { return _dto.type; }
-    const tensor& input_offset() const override { return _dto.input_offset; }
-    const tensor& output_offset() const override { return _dto.output_offset; }
-    padding_types padding_type() const override { return _dto.padding_type; }
+    padding input_padding() const override { return _dto.input_padding; }
+    padding output_padding() const override { return _dto.output_padding; }
 
 protected:
     template<typename ...Args>
     explicit primitive_base(
         const primitive_id& id,
         const std::vector<primitive_id>& input,
-        const tensor& input_offset =  { format::yx, 0, { 0, 0 } },
-        const tensor& output_offset = { format::yx, 0, { 0, 0 } },
-        const padding_types padding_type = padding_types::zero,
+        const padding& input_padding =  padding(),
+        const padding& output_padding = padding(),
         Args... args)
         : _id(id), _input(input)
-        , _dto{ PType::type_id(), _id, _input, input_offset, output_offset, padding_type, args... }
+        , _dto{ PType::type_id(), _id, _input, input_padding, output_padding, args... }
     {}
 
     primitive_base(const DTO* dto)
@@ -163,8 +223,10 @@ protected:
         _dto.input = _input;
     }
 
-    primitive_id _id;
-    primitive_id_arr _input;
+    virtual std::vector<primitive_id> get_dependencies() const { return{}; }
+
+    const primitive_id _id;
+    const primitive_id_arr _input;
     DTO _dto;
 };
 

@@ -39,9 +39,10 @@ reorder_arg::reorder_arg(network_impl& network, std::shared_ptr<const reorder> d
         if (input_mem.argument().size.feature[0] != arg.substract_per_feature.size())
             throw std::runtime_error("Number of features/channels in input does not match the number of features/channels in values to subtract");
     }
+    auto input_padding_size = desc->input_padding().size();
     if(std::any_of(
-        std::begin(arg.input_offset.raw),
-        std::end(arg.input_offset.raw),
+        std::begin(input_padding_size.raw),
+        std::end(input_padding_size.raw),
         [](int32_t p) { return p != 0; }))
     {
         throw std::runtime_error("Reorder with input which contains padding is NOT IMPLEMENTED yet!");

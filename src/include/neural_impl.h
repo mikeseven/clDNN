@@ -44,13 +44,13 @@ namespace neural
     {
         struct type
         {
-            static const cldnn::padding_types zero = cldnn::padding_types::zero;
-            static const cldnn::padding_types one = cldnn::padding_types::one;
-            static const cldnn::padding_types two = cldnn::padding_types::two;
+            static const cldnn::padding::types zero = cldnn::padding::types::zero;
+            static const cldnn::padding::types one = cldnn::padding::types::one;
+            static const cldnn::padding::types two = cldnn::padding::types::two;
         };
-        static const cldnn::padding_types zero = cldnn::padding_types::zero;
-        static const cldnn::padding_types one = cldnn::padding_types::one;
-        static const cldnn::padding_types two = cldnn::padding_types::two;
+        static const cldnn::padding::types zero = cldnn::padding::types::zero;
+        static const cldnn::padding::types one = cldnn::padding::types::one;
+        static const cldnn::padding::types two = cldnn::padding::types::two;
     };
 
     using memory = cldnn::neural_memory;

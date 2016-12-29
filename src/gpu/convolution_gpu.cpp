@@ -96,7 +96,7 @@ struct convolution_gpu : is_an_implementation {
     convolution_gpu(convolution &arg)
         : outer(arg)
         , _engine_info(arg.get_network().get_engine()->get_context()->get_engine_info())
-        , _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.input_memory(1).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration))
+        , _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.weights_memory(0).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration))
         , _kernel(arg.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants())
     {
         if (_kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
@@ -115,9 +115,9 @@ struct convolution_gpu : is_an_implementation {
     gpu::jit_constants get_jit_constants() const {
 
         auto& input_mem = outer.input_memory(0);
-        auto& input_offset = outer.argument.input_offset;
+        auto input_offset = outer.desc()->input_offset().transform(input_mem.get_layout().size.format, 0);
         auto& output_mem = outer.output_memory(0);
-        auto& output_offset = outer.argument.output_offset;
+        auto output_offset = outer.desc()->output_offset().transform(output_mem.get_layout().size.format, 0);
         auto& output_size = outer.output_memory().argument().size;
         auto& filter_mem = outer.weights_memory(0);
         auto split = outer.argument.split;
@@ -144,8 +144,8 @@ struct convolution_gpu : is_an_implementation {
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
             gpu::make_jit_constant("OUTPUT_LIMIT", output_size),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(_engine_info.supports_fp16)),
-            gpu::make_jit_constant("INPUT_PADDING", outer.argument.input_offset),
-            gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_offset)
+            gpu::make_jit_constant("INPUT_PADDING", outer.desc()->input_offset()),
+            gpu::make_jit_constant("OUTPUT_PADDING", outer.desc()->output_offset())
         };
 
         if (outer.argument.with_activation)
@@ -206,9 +206,9 @@ struct convolution_gpu : is_an_implementation {
 
         auto& input_mem = outer.input_memory(0);
         auto& output_mem = outer.output_memory(0);
-        auto& filter_mem = outer.input_memory(1);
+        auto& filter_mem = outer.weights_memory(0);
 
-        if (outer.argument.padding_type != padding::zero)
+        if (outer.desc()->padding_type() != padding::zero)
             throw std::invalid_argument("Unknown padding mode in convolution.");
 
         // Check whether all memory elements use the same unit type (FP16 or FP32).
@@ -231,8 +231,8 @@ struct convolution_gpu : is_an_implementation {
                     ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
                         get_memory_primitive(me->reorder[0].output[0]),
                         output_mem,
-                        outer.input_memory(i * 2 + 1), //filters
-                        outer.input_memory(i * 2 + 2), //biases
+                        outer.weights_memory(i), //filters
+                        outer.bias_memory(i), //biases
                         i);
                 tmp_events.clear();
                 tmp_events.push_back(event);
@@ -249,8 +249,8 @@ struct convolution_gpu : is_an_implementation {
                     ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
                         input_mem,
                         output_mem,
-                        outer.input_memory(i * 2 + 1), //filters
-                        outer.input_memory(i * 2 + 2), //biases
+                        outer.weights_memory(i), //filters
+                        outer.bias_memory(i), //biases
                         i);
                 tmp_events.clear();
                 tmp_events.push_back(event);
@@ -376,7 +376,7 @@ convolution_gpu::kernel_data default_yxio_f32_b8(const convolution& arg)
 
 convolution_gpu::kernel_data default_yxio_f32_b32(const convolution& arg)
 {
-    auto& filter_mem = arg.input_memory(1);
+    auto& filter_mem = arg.weights_memory(0);
     auto& output_mem = arg.output_memory(0);
     auto split = arg.argument.split;
     auto batch_size = output_mem.argument().size.batch[0];
@@ -407,7 +407,7 @@ convolution_gpu::kernel_data default_yxio_f16(const convolution& arg)
 
 convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
 {
-    auto& filter_mem = arg.input_memory(1);
+    auto& filter_mem = arg.weights_memory(0);
     auto& output_mem = arg.output_memory(0);
     auto batch_size = output_mem.argument().size.batch[0];
     auto filter_ofm_num = filter_mem.argument().size.feature[0];

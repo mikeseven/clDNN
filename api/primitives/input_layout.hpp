@@ -32,7 +32,7 @@ public:
     DLL_SYM static primitive_type_id type_id();
 
     input_layout(const primitive_id& id, const layout& layout)
-        :primitive_base(id, {}, { format::x, 0,{ 0 } }, { format::x, 0,{ 0 } }, padding_types::zero, layout)
+        :primitive_base(id, {}, padding(), padding(), layout)
         , layout(_dto.layout)
     {}
 

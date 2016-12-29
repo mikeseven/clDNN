@@ -39,11 +39,10 @@ struct pooling : public primitive_base<pooling, DTO(pooling)>
         pooling_mode mode,
         const tensor& stride,
         const tensor& size,
-        const tensor& input_offset =  { format::yx, 0, { 0, 0 } },
-        const tensor& output_offset = { format::yx, 0, { 0, 0 } },
-        const padding_types padding_type = padding_types::zero
+        const padding& input_padding = padding(),
+        const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_offset, output_offset, padding_type, mode, stride, size)
+        : primitive_base(id, {input}, input_padding, output_padding, mode, stride, size)
         , mode(_dto.mode)
         , stride(_dto.stride)
         , size(_dto.size)

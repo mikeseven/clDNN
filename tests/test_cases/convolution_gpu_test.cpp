@@ -16,32 +16,25 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "api/neural.h"
-#include "gpu/ocl_toolkit.h"
 #include <gtest/gtest.h>
+#include <api/memory.hpp>
+#include <api/primitives/input_layout.hpp>
+#include "api/primitives/convolution.hpp"
+#include <api/topology.hpp>
+#include <api/network.hpp>
+#include <api/engine.hpp>
 #include "test_utils/test_utils.h"
-#include "memory_utils.h"
+#include <api/primitives/data.hpp>
+
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
 #include <thread>
+#include <gpu/ocl_toolkit.h>
+#include <api/primitives/reorder.hpp>
 
-#include "multidimensional_counter.h"//todo remove
-
-
-using namespace neural;
+using namespace cldnn;
 using namespace tests;
-
-namespace
-{
-struct gpu_info_helper : gpu::context_holder
-{
-    gpu::engine_info get_engine_info() const
-    {
-        return context()->get_engine_info();
-    }
-};
-}
 
 #define USE_RANDOM_SEED 0
 #if USE_RANDOM_SEED
@@ -93,21 +86,21 @@ VVF convolve(VVVF &input, VVVF &filter, size_t stride, float bias, size_t f_begi
 	return output;
 }
 
-VF flatten_4d(neural::memory::format::type format, VVVVF &data) {
+VF flatten_4d(format format, VVVVF &data) {
 	size_t a = data.size();
 	size_t b = data[0].size();
 	size_t c = data[0][0].size();
 	size_t d = data[0][0][0].size();
 	VF vec(a * b * c * d, 0.0f);
 	size_t idx = 0;
-	if (format == memory::format::yxfb_f32) {
+	if (format == format::yxfb) {
 		for (size_t yi = 0; yi < c; ++yi)
 			for (size_t xi = 0; xi < d; ++xi)
 				for (size_t fi = 0; fi < b; ++fi)
 					for (size_t bi = 0; bi < a; ++bi)
 						vec[idx++] = data[bi][fi][yi][xi];
 	}
-	else if (format == memory::format::oiyx_f32) {
+	else if (format == format::oiyx) {
 		for (size_t oi = 0; oi < a; ++oi)
 			for (size_t ii = 0; ii < b; ++ii)
 				for (size_t yi = 0; yi < c; ++yi)
@@ -189,9 +182,9 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_random) {
 	size_t batch = 1, input_f = 1, input_y = 4, input_x = 4;
 
 	VVVVF input_rnd = generate_random_4d<float>(batch, input_f, input_y, input_x, -10.0f, 10.0f);
-	VF input_rnd_vec = flatten_4d(memory::format::yxfb_f32, input_rnd);
+	VF input_rnd_vec = flatten_4d(format::yxfb, input_rnd);
 	VVVVF filter_rnd = generate_random_4d<float>(1, 1, 2, 2, -10.0f, 10.0f);
-	VF filter_rnd_vec = flatten_4d(memory::format::oiyx_f32, filter_rnd);
+	VF filter_rnd_vec = flatten_4d(format::oiyx, filter_rnd);
 	VF bias_rnd = generate_random_1d<float>(1, -10.0f, 10.0f);
 	VVVVF output_rnd(batch, VVVF(filter_rnd.size()));
 	for (size_t b = 0; b < output_rnd.size(); ++b) {
@@ -199,18 +192,36 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_random) {
 			output_rnd[b][of] = convolve(input_rnd[b], filter_rnd[of], 2, bias_rnd[of]);
 		}
 	}
-	VF output_rnd_vec = flatten_4d(memory::format::yxfb_f32, output_rnd);
+	VF output_rnd_vec = flatten_4d(format::yxfb, output_rnd);
 
-	auto input = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 4, 4 }, 1 } });
-	auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
-	auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
-	auto biases = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32, { format::yxfb, { 4, 4, 1, 1 } } });
+	//auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
+    auto weights = memory::allocate(engine, { data_types::f32, { format::oiyx,{ 1, 1, 2, 2 } } });
+    auto biases = memory::allocate(engine, { data_types::f32, { format::x, { 1 } } });
+
 	set_values(input, input_rnd_vec);
 	set_values(weights, filter_rnd_vec);
 	set_values(biases, bias_rnd);
-	auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero });
-	execute({ conv }).wait();
-	auto output_ptr = output.as<const memory&>().pointer<float>();
+
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        convolution("conv", "input", {"weights"}, {"biases"}, {format::yx, {0,0}}, {format::yx, {2,2}})
+    );
+
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
 
 	for (size_t i = 0; i < output_rnd.size(); ++i) {
 		float x = float_round(output_rnd_vec[i]), y = float_round(output_ptr[i]);
@@ -241,9 +252,9 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad_random) {
 	size_t batch = 2, input_f = 1, input_y = 2, input_x = 2;
 
 	VVVVF input_rnd = generate_random_4d<float>(batch, input_f, input_y, input_x, -10.0f, 10.0f);
-	VF input_rnd_vec = flatten_4d(memory::format::yxfb_f32, input_rnd);
+	VF input_rnd_vec = flatten_4d(format::yxfb, input_rnd);
 	VVVVF filter_rnd = generate_random_4d<float>(1, 1, 2, 2, -10.0f, 10.0f);
-	VF filter_rnd_vec = flatten_4d(memory::format::oiyx_f32, filter_rnd);
+	VF filter_rnd_vec = flatten_4d(format::oiyx, filter_rnd);
 	VF bias_rnd = generate_random_1d<float>(1, -10.0f, 10.0f);
 	VVVVF output_rnd(batch, VVVF(filter_rnd.size()));
 	for (size_t b = 0; b < output_rnd.size(); ++b) {
@@ -251,18 +262,36 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad_random) {
 			output_rnd[b][of] = convolve(input_rnd[b], filter_rnd[of], 2, bias_rnd[of]);
 		}
 	}
-	VF output_rnd_vec = flatten_4d(memory::format::yxfb_f32, output_rnd);
+	VF output_rnd_vec = flatten_4d(format::yxfb, output_rnd);
 
-	auto input = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 1 } });
-	auto output = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 1, 1 }, 1 } });
-	auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
-	auto biases = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 2 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 1, 1 }, 1 } });
+    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+
 	set_values(input, input_rnd_vec);
 	set_values(weights, filter_rnd_vec);
 	set_values(biases, bias_rnd);
-	auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero });
-	execute({ conv }).wait();
-	auto output_ptr = output.as<const memory&>().pointer<float>();
+
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 2,2 } })
+    );
+
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
 
 	for (size_t i = 0; i < output_rnd.size(); ++i) {
 		float x = float_round(output_rnd_vec[i]), y = float_round(output_ptr[i]);
@@ -293,20 +322,35 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     //  8  0.5
     //  6  9
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 4, 4 }, 1 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
-    auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
-    auto biases = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 4, 1, 1 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
+    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
 
     set_values(input, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f, 0.5f, -1.0f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f });
     set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f });
     set_values(biases, { 2.0f });
 
-    auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero });
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 2,2 } })
+    );
 
-    execute({ conv }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
     EXPECT_FLOAT_EQ(8.0f, output_ptr[0]);
     EXPECT_FLOAT_EQ(0.5f, output_ptr[1]);
     EXPECT_FLOAT_EQ(6.0f, output_ptr[2]);
@@ -332,20 +376,35 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
     //
     //  Output:
     //  3.65 -5.36
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 1 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 1, 1 }, 1 } });
-    auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
-    auto biases = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 2 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 1, 1 }, 1 } });
+    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
 
     set_values(input, { 0.5f, 2.3f, 1.5f, -0.4f, 2.0f, 1.0f, -4.0f, 3.0f });
     set_values(weights, { -1.2f, 1.5f, 0.5f, -0.5f });
     set_values(biases, { -1.0f });
 
-    auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero });
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 2,2 } })
+    );
 
-    execute({ conv }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
     EXPECT_FLOAT_EQ(3.65f, output_ptr[0]);
     EXPECT_FLOAT_EQ(-5.36f, output_ptr[1]);
 }
@@ -369,20 +428,35 @@ TEST(convolution_f32_fw_gpu, basic_ofm_wsiz2x1x2x1_in1x2x1_nopad) {
     //   5.1  f=0
     //  -5.2  f=1
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 2, 1 }, 1 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 1, 1 }, 2 } });
-    auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1 ,{ 2, 1 },{ 2, 1 } } });
-    auto biases = memory::allocate({ memory::format::x_f32,{ 1 ,{ { 2 } }, 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 1, 1, 1 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 1, 1 }, 2 } });
+    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 2, 1, 2, 1 } } });
+    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 2 } } });
 
     set_values(input, { 1.0f, 2.0f });
     set_values(weights, { 1.0f, 2.0f, -1.0f, -2.0f });
     set_values(biases, { 0.1f, -0.2f });
 
-    auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 5, 5 }, 1 }, padding::zero });
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 5,5 } })
+    );
 
-    execute({ conv }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
     EXPECT_FLOAT_EQ(5.1f, output_ptr[0]);
     EXPECT_FLOAT_EQ(-5.2f, output_ptr[1]);
 }
@@ -413,20 +487,35 @@ TEST(convolution_f32_fw_gpu, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad) {
     //   64,0  f=1
     //  103.0  f=2
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 2, 1 }, 2 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 1, 1 }, 3 } });
-    auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1 ,{ 2, 1 },{ 3, 2 } } });
-    auto biases = memory::allocate({ memory::format::x_f32,{ 1 ,{ { 3 } }, 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 1, 2, 1 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 1, 1 }, 3 } });
+    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 3, 2, 2, 1 } } });
+    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 3 } } });
 
     set_values(input, { 1.0f, 3.0f, 2.0f, 4.0f });
     set_values(weights, { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f });
     set_values(biases, { -5.0f, -6.0f, -7.0f });
 
-    auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 5, 5 }, 1 }, padding::zero });
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 5,5 } })
+    );
 
-    execute({ conv }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
     EXPECT_FLOAT_EQ(25.0f, output_ptr[0]);
     EXPECT_FLOAT_EQ(64.0f, output_ptr[1]);
     EXPECT_FLOAT_EQ(103.0f, output_ptr[2]);
@@ -454,20 +543,35 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
     //   2.12
     //   3.08
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 2, 2 }, 1 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 1, 1 }, 3 } });
-    auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1 ,{ 2, 2 },{ 3, 1 } } });
-    auto biases = memory::allocate({ memory::format::x_f32,{ 1 ,{ { 3 } }, 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 1, 1 }, 3 } });
+    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 3, 1, 2, 2 } } });
+    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 3 } } });
 
     set_values(input, { -2.3f, -0.1f, 3.1f, 1.9f });
     set_values(weights, { -1.1f, 1.5f, 0.5f, -0.5f, 0.1f, 0.2f, 0.4f, 0.7f, 2.0f, -1.0f, 2.5f, -1.5f });
     set_values(biases, { 0.1f, -0.2f, 0.3f });
 
-    auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero });
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 2,2 } })
+    );
 
-    execute({ conv }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
     EXPECT_TRUE(are_equal(3.08f, output_ptr[0]));
     EXPECT_TRUE(are_equal(2.12f, output_ptr[1]));
     EXPECT_TRUE(are_equal(0.7f,  output_ptr[2]));
@@ -495,19 +599,35 @@ TEST(convolution_f32_fw_gpu, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     //
     //  Output:
     //  12.25
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 1 } });
-    auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 3, 3 },{ 1, 1 } } });
-    auto biases = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 1 } });
+    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 3, 3 } } });
+    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
 
     set_values(input, { -0.5f, 1.0f, 0.5f, 2.0f });
     set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f });
     set_values(biases, { 2.0f });
 
-    auto conv = convolution::create({ output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero });
-    execute({ conv }).wait();
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 2,2 } })
+    );
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
     EXPECT_FLOAT_EQ(12.25f, output_ptr[0]);
 }
 
@@ -536,26 +656,44 @@ TEST(convolution_f32_fw_gpu, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     //   Output:
     //   rnd   rnd
     //   rnd   2.0
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 2, 2 }, 1 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 2, 2 }, 1 } });
-    auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1 ,{ 3, 3 },{ 1, 1 } } });
-    auto biases = memory::allocate({ memory::format::x_f32,{ 1 ,{ { 1 } } , 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 2, 2 }, 1 } });
+    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 3, 3 } } });
+    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
 
     set_values(input, { -0.5f, 1.0f, 0.5f, 2.0f });
     set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f });
     set_values(biases, { 2.0f });
 
-    auto conv = convolution::create({ 
-        output,
-        { 0,{ 1, 1 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        { input, weights, biases },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 2,  2 }, 1 },
-        padding::zero });
-    execute({ conv }).wait();
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        convolution(
+            "conv",
+            "input",
+            { "weights" },
+            { "biases" },
+            { format::yx, { -1,-1 } },
+            { format::yx,{ 2,2 } },
+            false,
+            0,
+            { format::yx,{ 1,1 } })
+    );
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
     EXPECT_FLOAT_EQ(2.0f, output_ptr[3]);
 }
 
@@ -594,12 +732,14 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x1_nopad_split2) {
     //   8  3.65 0.5 -5.36
     //   6  3.65 9   -5.36
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 4, 4 }, 2 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 2 } });
-    auto weights1 = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
-    auto biases1 = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
-    auto weights2 = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
-    auto biases2 = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 4, 2, 1 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 2 } });
+    auto weights1 = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+    auto biases1 = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+    auto weights2 = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+    auto biases2 = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
 
     set_values(input, {
         -0.5f,  0.5f,  1.0f,  1.5f,  0.5f,  2.3f,  2.0f, -0.4f,
@@ -612,17 +752,32 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x1_nopad_split2) {
     set_values(weights2, { -1.2f, 1.5f, 0.5f, -0.5f });
     set_values(biases2, { -1.0f });
 
-    auto conv = convolution::create({
-        output,
-        { input, weights1, biases1, weights2, biases2 },
-        { 1,{ 2, 2 }, 1 },
-        padding::zero,
-        2
-    });
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights1", weights1),
+        data("biases1", biases1),
+        data("weights2", weights2),
+        data("biases2", biases2),
+        convolution(
+            "conv",
+            "input",
+            { "weights1", "weights2" },
+            { "biases1", "biases2" },
+            { format::yx, { 0,0 } },
+            { format::yx,{ 2,2 } })
+    );
 
-    execute({ conv }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
     EXPECT_FLOAT_EQ(8.0f,   get_value<float>(output_ptr, 0));
     EXPECT_FLOAT_EQ(3.65f,  get_value<float>(output_ptr, 1));
     EXPECT_FLOAT_EQ(0.5f,   get_value<float>(output_ptr, 2));
@@ -679,12 +834,14 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2) {
     //   8  8 3.65 3.65 0.5  0.5 -5.36 -5.36
     //   6  6 3.65 3.65 9    9   -5.36 -5.36
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 4, 4 }, 2 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
-    auto weights1 = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
-    auto biases1 = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
-    auto weights2 = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
-    auto biases2 = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } } , 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 4, 2, 2 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
+    auto weights1 = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+    auto biases1 = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+    auto weights2 = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+    auto biases2 = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
 
     set_values(input, {
        -0.5f, -0.5f,  0.5f,  0.5f,  1.0f,  1.0f,  1.5f,  1.5f,  0.5f,  0.5f,  2.3f,  2.3f,  2.0f,  2.0f, -0.4f, -0.4f,
@@ -697,17 +854,32 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2) {
     set_values(weights2, { -1.2f, 1.5f, 0.5f, -0.5f });
     set_values(biases2, { -1.0f });
 
-    auto conv = convolution::create({
-        output,
-        { input, weights1, biases1, weights2, biases2 },
-        { 1,{ 2, 2 }, 1 },
-        padding::zero,
-        2
-    });
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights1", weights1),
+        data("biases1", biases1),
+        data("weights2", weights2),
+        data("biases2", biases2),
+        convolution(
+            "conv",
+            "input",
+            { "weights1", "weights2" },
+            { "biases1", "biases2" },
+            { format::yx, { 0,0 } },
+            { format::yx,{ 2,2 } })
+    );
 
-    execute({ conv }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
     EXPECT_FLOAT_EQ(8.0f,   get_value<float>(output_ptr, 0));
     EXPECT_FLOAT_EQ(8.0f,   get_value<float>(output_ptr, 1));
     EXPECT_FLOAT_EQ(3.65f,  get_value<float>(output_ptr, 2));
@@ -759,14 +931,15 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x4x1_nopad_split2) {
     //
     //  -1.75
     //   2.25
-    
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 4 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 4 } });
-    auto weights1 = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 1, 1 },{ 2, 2 } } });
-    auto biases1 = memory::allocate({ memory::format::x_f32,{ 1,{ { 2 } } , 1 } });
-    auto weights2 = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 1, 1 },{ 2, 2 } } });
-    auto biases2 = memory::allocate({ memory::format::x_f32,{ 1,{ { 2 } } , 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 4, 1 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 4 } });
+    auto weights1 = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 2, 2, 1, 1 } } });
+    auto biases1 = memory::allocate(engine, { data_types::f32,{ format::x,{ 2 } } });
+    auto weights2 = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 2, 2, 1, 1 } } });
+    auto biases2 = memory::allocate(engine, { data_types::f32,{ format::x,{ 2 } } });
 
     set_values(input, {
        1.5f, 0.5f, 0.0f, -0.5f
@@ -776,17 +949,32 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x4x1_nopad_split2) {
     set_values(weights2, { 4.0f, 1.5f, 2.0f, 0.5f });
     set_values(biases2, { -1.0f, 2.5f });
 
-    auto conv = convolution::create({
-        output,
-        { input, weights1, biases1, weights2, biases2 },
-        { 1,{ 2, 2 }, 1 },
-        padding::zero,
-        2
-    });
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights1", weights1),
+        data("biases1", biases1),
+        data("weights2", weights2),
+        data("biases2", biases2),
+        convolution(
+            "conv",
+            "input",
+            { "weights1", "weights2" },
+            { "biases1", "biases2" },
+            { format::yx, { 0,0 } },
+            { format::yx,{ 2,2 } })
+    );
 
-    execute({ conv }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
     EXPECT_FLOAT_EQ(-2.25f, get_value<float>(output_ptr, 0));
     EXPECT_FLOAT_EQ(7.5f, get_value<float>(output_ptr, 1));
     EXPECT_FLOAT_EQ(-1.75f, get_value<float>(output_ptr, 2));
@@ -825,12 +1013,14 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x2x1_nopad_split2) {
     //   3.5
 
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 2 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 4 } });
-    auto weights1 = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 1, 1 },{ 2, 1 } } });
-    auto biases1 = memory::allocate({ memory::format::x_f32,{ 1,{ { 2 } } , 1 } });
-    auto weights2 = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 1, 1 },{ 2, 1 } } });
-    auto biases2 = memory::allocate({ memory::format::x_f32,{ 1,{ { 2 } } , 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 2, 1 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 4 } });
+    auto weights1 = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 2, 1, 1, 1 } } });
+    auto biases1 = memory::allocate(engine, { data_types::f32,{ format::x,{ 2 } } });
+    auto weights2 = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 2, 1, 1, 1 } } });
+    auto biases2 = memory::allocate(engine, { data_types::f32,{ format::x,{ 2 } } });
 
     set_values(input, {
         1.5f, 0.5f
@@ -840,17 +1030,32 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x2x1_nopad_split2) {
     set_values(weights2, { 4.0f, 2.0f });
     set_values(biases2, { -1.0f, 2.5f });
 
-    auto conv = convolution::create({
-        output,
-        { input, weights1, biases1, weights2, biases2 },
-        { 1,{ 2, 2 }, 1 },
-        padding::zero,
-        2
-    });
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights1", weights1),
+        data("biases1", biases1),
+        data("weights2", weights2),
+        data("biases2", biases2),
+        convolution(
+            "conv",
+            "input",
+            { "weights1", "weights2" },
+            { "biases1", "biases2" },
+            { format::yx, { 0,0 } },
+            { format::yx,{ 2,2 } })
+    );
 
-    execute({ conv }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
     EXPECT_FLOAT_EQ(-2.0f, get_value<float>(output_ptr, 0));
     EXPECT_FLOAT_EQ(6.5f, get_value<float>(output_ptr, 1));
     EXPECT_FLOAT_EQ(1.0f, get_value<float>(output_ptr, 2));
@@ -895,12 +1100,14 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x4x1_filter_1x3x2x1x1_no
     //  -2
 
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 4 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 6 } });
-    auto weights1 = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 1, 1 },{ 3, 2 } } });
-    auto biases1 = memory::allocate({ memory::format::x_f32,{ 1,{ { 3 } } , 1 } });
-    auto weights2 = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 1, 1 },{ 3, 2 } } });
-    auto biases2 = memory::allocate({ memory::format::x_f32,{ 1,{ { 3 } } , 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 4, 1 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 6 } });
+    auto weights1 = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 3, 2, 1, 1 } } });
+    auto biases1 = memory::allocate(engine, { data_types::f32,{ format::x,{ 3 } } });
+    auto weights2 = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 3, 2, 1, 1 } } });
+    auto biases2 = memory::allocate(engine, { data_types::f32,{ format::x,{ 3 } } });
 
     set_values(input, {
         1.5f, 0.5f, 2.0f, -1.0f
@@ -910,17 +1117,32 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x4x1_filter_1x3x2x1x1_no
     set_values(weights2, { 4.0f, -4.0f, 2.0f, 0.5f, -0.5f, 3.0f });
     set_values(biases2, { -1.0f, 2.5f, 2.0f });
 
-    auto conv = convolution::create({
-        output,
-        { input, weights1, biases1, weights2, biases2 },
-        { 1,{ 2, 2 }, 1 },
-        padding::zero,
-        2
-    });
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights1", weights1),
+        data("biases1", biases1),
+        data("weights2", weights2),
+        data("biases2", biases2),
+        convolution(
+            "conv",
+            "input",
+            { "weights1", "weights2" },
+            { "biases1", "biases2" },
+            { format::yx, { 0,0 } },
+            { format::yx,{ 2,2 } })
+    );
 
-    execute({ conv }).wait();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
     EXPECT_FLOAT_EQ(-1.5f, get_value<float>(output_ptr, 0));
     EXPECT_FLOAT_EQ(8.0f, get_value<float>(output_ptr, 1));
     EXPECT_FLOAT_EQ(7.75f, get_value<float>(output_ptr, 2));
@@ -954,10 +1176,12 @@ TEST(convolution_gpu, trivial_convolution_relu) {
     //  4  0.0
     //  2  5
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 4, 4 }, 1 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
-    auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
-    auto biases = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } }, 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 4, 1, 1 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 2, 2 }, 1 } });
+    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
 
     set_values(input, {
         -0.5f,  1.0f,  0.5f,  2.0f,
@@ -968,10 +1192,32 @@ TEST(convolution_gpu, trivial_convolution_relu) {
     set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f });
     set_values(biases, { -2.0f });
 
-    auto conv_relu = convolution::create({ output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero, 1, true, 0 });
-    execute({ conv_relu }).wait();
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        convolution(
+            "conv",
+            "input",
+            { "weights" },
+            { "biases" },
+            { format::yx, { 0,0 } },
+            { format::yx,{ 2,2 } },
+            true,
+            0)
+    );
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
     EXPECT_FLOAT_EQ(4.0f, get_value<float>(output_ptr, 0));
     EXPECT_FLOAT_EQ(0.0f, get_value<float>(output_ptr, 1));
     EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_ptr, 2));
@@ -1003,10 +1249,12 @@ TEST(convolution_gpu, relu_with_negative_slope) {
 	//  4  -0.35
 	//  2  5
 
-	auto input = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 4, 4 }, 1 } });
-	auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
-	auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1,{ 2, 2 },{ 1, 1 } } });
-	auto biases = memory::allocate({ memory::format::x_f32,{ 1,{ { 1 } }, 1 } });
+    auto engine = engine::create();
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 4, 1, 1 } } });
+    //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 2, 2 }, 1 } });
+    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
 
 	set_values(input, {
 		-0.5f,  1.0f,  0.5f,  2.0f,
@@ -1017,10 +1265,32 @@ TEST(convolution_gpu, relu_with_negative_slope) {
 	set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f });
 	set_values(biases, { -2.0f });
 
-	auto conv_relu = convolution::create({ output,{ input, weights, biases },{ 1,{ 2, 2 }, 1 }, padding::zero, 1, true, 0.1f });
-	execute({ conv_relu }).wait();
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        convolution(
+            "conv",
+            "input",
+            { "weights" },
+            { "biases" },
+            { format::yx, { 0,0 } },
+            { format::yx,{ 2,2 } },
+            true,
+            0.1f)
+    );
 
-	auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
 	EXPECT_FLOAT_EQ(4.0f, get_value<float>(output_ptr, 0));
 	EXPECT_FLOAT_EQ(-0.35f, get_value<float>(output_ptr, 1));
 	EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_ptr, 2));
@@ -1031,34 +1301,38 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
 {
 #define USE_OLD_WEIGHTS_FORMAT 0
 
-    const auto input_format   = memory::format::yxfb_f32;
+    const auto input_format   = format::yxfb;
 #if USE_OLD_WEIGHTS_FORMAT
-    const auto weights_format = memory::format::oiyx_f32;
+    const auto weights_format = format::oiyx;
 #else
-    const auto weights_format = memory::format::yxio_f32;
+    const auto weights_format = format::yxio;
 #endif
-    const auto biases_format = memory::format::x_f32;
+    const auto biases_format = format::x;
     const auto output_format  = input_format;
 
-    const uint32_t batch_size = 16;
-    const uint32_t input_feature_count = 2;
-    const uint32_t output_feature_count = 16;
+    const int32_t batch_size = 16;
+    const int32_t input_feature_count = 2;
+    const int32_t output_feature_count = 16;
 
-    const uint32_t stride_x = 2;
-    const uint32_t stride_y = 2;
+    const int32_t stride_x = 2;
+    const int32_t stride_y = 2;
 
-    const uint32_t input_x = 4;
-    const uint32_t input_y = 4;
-    const uint32_t weights_x = 2;
-    const uint32_t weights_y = 2;
-    const uint32_t output_x = (input_x - weights_x) / stride_x + 1;
-    const uint32_t output_y = (input_y - weights_y) / stride_y + 1;
+    const int32_t input_x = 4;
+    const int32_t input_y = 4;
+    const int32_t weights_x = 2;
+    const int32_t weights_y = 2;
+    const int32_t output_x = (input_x - weights_x) / stride_x + 1;
+    const int32_t output_y = (input_y - weights_y) / stride_y + 1;
 
+    auto engine = engine::create();
 
-    auto input = memory::allocate({input_format, {batch_size, {input_x, input_y}, input_feature_count}});
-    auto weights = memory::allocate({weights_format, {1, {weights_x, weights_y}, {output_feature_count, input_feature_count}}});
-    auto biases = memory::allocate({biases_format, {1, {{output_feature_count}}, 1}});
-    auto output = memory::allocate({output_format, {batch_size, {output_x, output_y}, output_feature_count}});
+    auto input_size = tensor(format::yxfb, { input_x, input_y, input_feature_count, batch_size }).transform(input_format, 1);
+    auto input = memory::allocate(engine, { data_types::f32, input_size });
+    auto weights_size = tensor(format::yxio, { weights_y, weights_x, input_feature_count, output_feature_count }).transform(weights_format, 1);
+    auto weights = memory::allocate(engine, { data_types::f32, weights_size });
+    auto biases = memory::allocate(engine, { data_types::f32, {biases_format, {output_feature_count}} });
+
+    //auto output = memory::allocate({output_format, {batch_size, {output_x, output_y}, output_feature_count}});
 
 
     // input:
@@ -1155,13 +1429,32 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
         }
     }
 
-
     // Computing convolution.
-    auto conv = convolution::create({output, {input, weights, biases}, {1, {stride_x, stride_y}, 1}, padding::zero});
-    execute({conv}).wait();
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        convolution(
+            "conv",
+            "input",
+            { "weights" },
+            { "biases" },
+            { format::yx, { 0,0 } },
+            { format::yx,{ stride_y,stride_x } },
+            true,
+            0.1f)
+    );
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
 
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "conv");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
 
     // Checking result.
     uint32_t i = 0;
@@ -1190,7 +1483,7 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
 {
 #define USE_OLD_WEIGHTS_FORMAT 0
 
-    gpu_info_helper gpu_info;
+    neural::gpu::gpu_toolkit gpu_info;
     if (!gpu_info.get_engine_info().supports_fp16)
     {
         std::cout << "[ SKIPPED ] The test is skipped (cl_khr_fp16 is not supported)." << std::endl;
@@ -1199,48 +1492,45 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
     }
 
 
-    const auto input_format   = memory::format::yxfb_f32;
+    const auto input_format   = format::yxfb;
 #if USE_OLD_WEIGHTS_FORMAT
-    const auto weights_format = memory::format::oiyx_f32;
+    const auto weights_format = format::oiyx;
 #else
-    const auto weights_format = memory::format::yxio_f32;
+    const auto weights_format = format::yxio;
 #endif
-    const auto biases_format  = memory::format::x_f32;
+    const auto biases_format  = format::x;
     const auto output_format  = input_format;
 
-    const auto input_cvt_format   = memory::format::yxfb_f16;
-#if USE_OLD_WEIGHTS_FORMAT
-    const auto weights_cvt_format = memory::format::oiyx_f16;
-#else
-    const auto weights_cvt_format = memory::format::yxio_f16;
-#endif
-    const auto biases_cvt_format  = memory::format::x_f16;
-    const auto output_cvt_format  = input_cvt_format;
+    const int32_t batch_size = 16;
+    const int32_t input_feature_count = 2;
+    const int32_t output_feature_count = 16;
 
-    const uint32_t batch_size = 16;
-    const uint32_t input_feature_count = 2;
-    const uint32_t output_feature_count = 16;
+    const int32_t stride_x = 2;
+    const int32_t stride_y = 2;
 
-    const uint32_t stride_x = 2;
-    const uint32_t stride_y = 2;
-
-    const uint32_t input_x = 4;
-    const uint32_t input_y = 4;
-    const uint32_t weights_x = 2;
-    const uint32_t weights_y = 2;
-    const uint32_t output_x = (input_x - weights_x) / stride_x + 1;
-    const uint32_t output_y = (input_y - weights_y) / stride_y + 1;
+    const int32_t input_x = 4;
+    const int32_t input_y = 4;
+    const int32_t weights_x = 2;
+    const int32_t weights_y = 2;
+    const int32_t output_x = (input_x - weights_x) / stride_x + 1;
+    const int32_t output_y = (input_y - weights_y) / stride_y + 1;
 
 
-    auto input   = memory::allocate({input_format, {batch_size, {input_x, input_y}, input_feature_count}});
-    auto weights = memory::allocate({weights_format, {1, {weights_x, weights_y}, {output_feature_count, input_feature_count}}});
-    auto biases  = memory::allocate({biases_format, {1, {{output_feature_count}}, 1}});
-    auto output  = memory::allocate({output_format, {batch_size, {output_x, output_y}, output_feature_count}});
+    auto engine = engine::create();
 
-    auto input_cvtd   = memory::allocate({input_cvt_format, {batch_size, {input_x, input_y}, input_feature_count}});
-    auto weights_cvtd = memory::allocate({weights_cvt_format, {1, {weights_x, weights_y}, {output_feature_count, input_feature_count}}});
-    auto biases_cvtd  = memory::allocate({biases_cvt_format, {1, {{output_feature_count}}, 1}});
-    auto output_cvtd  = memory::allocate({output_cvt_format, {batch_size, {output_x, output_y}, output_feature_count}});
+    auto input_size = tensor(format::yxfb, { input_x, input_y, input_feature_count, batch_size }).transform(input_format, 1);
+    auto input = memory::allocate(engine, { data_types::f32, input_size });
+    auto weights_size = tensor(format::yxio, { weights_y, weights_x, input_feature_count, output_feature_count }).transform(weights_format, 1);
+    auto weights = memory::allocate(engine, { data_types::f32, weights_size });
+    auto biases_size = tensor(format::x, { output_feature_count }).transform(biases_format, 1);
+    auto biases = memory::allocate(engine, { data_types::f32, biases_size });
+    auto output_size = tensor(format::yxfb, { output_y, output_x, output_feature_count, batch_size }).transform(output_format, 1);
+    //auto output = memory::allocate({output_format, {batch_size, {output_x, output_y}, output_feature_count}});
+
+    //auto input_cvtd = memory::allocate(engine, { data_types::f16, input_size });
+    //auto weights_cvtd = memory::allocate(engine, { data_types::f16, weights_size });
+    //auto biases_cvtd = memory::allocate(engine, { data_types::f16, biases_size });
+    //auto output_cvtd  = memory::allocate({output_cvt_format, {batch_size, {output_x, output_y}, output_feature_count}});
 
 
     // input:
@@ -1337,9 +1627,9 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
         }
     }
 
-    auto expected_float = memory::allocate({memory::format::x_f32, {1, {{static_cast<uint32_t>(output_vals.size())}}, 1}});
-    auto expected_half  = memory::allocate({memory::format::x_f16, {1, {{static_cast<uint32_t>(output_vals.size())}}, 1}});
-    auto expected       = memory::allocate({memory::format::x_f32, {1, {{static_cast<uint32_t>(output_vals.size())}}, 1}});
+    auto expected_float = memory::allocate(engine, { data_types::f32,{ format::x,{ static_cast<int32_t>(output_vals.size()) } } });
+    auto expected_half  = memory::allocate(engine, { data_types::f16,{ format::x,{ static_cast<int32_t>(output_vals.size()) } } });
+    auto expected       = memory::allocate(engine, { data_types::f32,{ format::x,{ static_cast<int32_t>(output_vals.size()) } } });
 
 //    set_values(expected_float, output_vals);
 //    auto cvt_expected_f32_f16 = reorder::create({expected_float, expected_half});
@@ -1350,14 +1640,33 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
 
 
     // Computing convolution.
-    auto cvt_input   = reorder::create({input, input_cvtd});
-    auto cvt_weights = reorder::create({weights, weights_cvtd});
-    auto cvt_biases  = reorder::create({biases, biases_cvtd});
-    auto conv        = convolution::create({output_cvtd, {input_cvtd, weights_cvtd, biases_cvtd}, {1, {stride_x, stride_y}, 1}, padding::zero});
-    auto cvt_output  = reorder::create({output_cvtd, output});
-    execute({cvt_input, cvt_weights, cvt_biases, conv, cvt_output}).wait();
+    auto topology = topology::create(
+        input_layout("input", input.get_layout()),
+        reorder("cvt_input", "input", {data_types::f16, input_size}),
+        data("weights", weights),
+        reorder("cvt_weights", "weights", {data_types::f16, weights_size}),
+        data("biases", biases),
+        reorder("cvt_biases", "biases", {data_types::f16, biases_size}),
+        convolution(
+            "conv",
+            "cvt_input",
+            { "cvt_weights" },
+            { "cvt_biases" },
+            { format::yx, { 0,0 } },
+            { format::yx,{ stride_y,stride_x } }),
+        reorder("output", "conv", {data_types::f16, output_size})
+    );
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto network = network::build(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "output");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
 
 #if 0
     for (uint32_t bi = 0; bi < /*batch_size*/ 4; ++bi)

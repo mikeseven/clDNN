@@ -56,6 +56,7 @@ public:
 protected:
     primitive_arg(network_impl& network, std::shared_ptr<const primitive> desc, const memory& output_memory);
     primitive_arg(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout);
+    static memory allocate_output(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout);
     network_impl& _network;
     std::shared_ptr<const primitive> _desc;
     std::vector<std::shared_ptr<const primitive_arg>> _inputs;

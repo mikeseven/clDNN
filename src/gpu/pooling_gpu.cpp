@@ -114,7 +114,7 @@ struct pooling_gpu : is_an_implementation {
     static bool needs_boundary_check(const pooling& outer)
     {
         auto& input_mem = outer.input_memory(0);
-        auto& input_offset = outer.argument.input_offset;
+        auto input_offset = outer.desc()->input_offset().transform(input_mem.get_layout().size.format, 0);
         
         if (input_offset.spatial[0] || input_offset.spatial[1])
             return true;
@@ -141,7 +141,7 @@ struct pooling_gpu : is_an_implementation {
             gpu::make_jit_constant("OUTPUT",            outer.output_memory(0).argument().size),
             gpu::make_jit_constant("WINDOW",            outer.argument.size),
             gpu::make_jit_constant("STRIDE",            outer.argument.stride),
-            gpu::make_jit_constant("INPUT_OFFSET",      outer.argument.input_offset),
+            gpu::make_jit_constant("INPUT_OFFSET",      outer.desc()->input_offset()),
             gpu::make_jit_constant("FP16_SUPPORTED",    static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",    static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),
@@ -171,7 +171,7 @@ struct pooling_gpu : is_an_implementation {
         auto& output_buffer_size = output_arg.size;
         auto& stride = arg.argument.stride;
         auto& window = arg.argument.size;
-        auto& padding = arg.argument.padding_type;
+        auto padding = arg.desc()->padding_type();
 
         if (padding::zero != padding)                                      throw std::logic_error("Pooling supports only zero padding.");
         if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::invalid_argument("Pooling input/output number of dimension does not match.");

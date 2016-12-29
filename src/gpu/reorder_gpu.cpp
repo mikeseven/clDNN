@@ -43,7 +43,7 @@ struct reorder_gpu : is_an_implementation {
 
     reorder_gpu(reorder &arg)
     : outer(arg)
-    , have_subtraction(arg.argument.input.size() > 1)
+    , have_subtraction(arg.have_substract())
     , _kernel(arg.get_network().get_engine()->get_context(), select_kernel_name(), get_jit_constants())
     , _exec_options(get_execution_options())
     {
@@ -194,7 +194,7 @@ struct reorder_gpu : is_an_implementation {
         auto input_use_half = input_mem.get_layout().data_type == cldnn::data_types::f16;
         auto output_use_half = output_mem.get_layout().data_type == cldnn::data_types::f16;
         int input_output_type_cvt = input_use_half != output_use_half;
-        auto padding = outer.argument.output_offset.transform(output_mem.get_layout().size.format, 0);
+        auto padding = outer.desc()->output_offset().transform(output_mem.get_layout().size.format, 0);
 
         if (!engine_info.supports_fp16 && (input_use_half || output_use_half))
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
@@ -202,7 +202,7 @@ struct reorder_gpu : is_an_implementation {
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("DIMENSIONS", std::to_string(input_mem.argument().size.raw.size())),
             gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", get_idx_calculation(output_mem.argument().format)),
-            gpu::make_jit_constant("CALCULATION_ORDER", get_calculation_order_string(output_mem.argument().format)),
+            gpu::make_jit_constant("CALCULATION_ORDER", get_calculation_order_string(input_mem.argument().format)),
             gpu::make_jit_constant("SRC_TYPE", input_use_half ? std::string("half") : std::string("float")),
             gpu::make_jit_constant("DEST_TYPE", output_use_half ? std::string("half") : std::string("float")),
             gpu::make_jit_constant("SRC_DEST_TYPE_CVT", input_output_type_cvt),
