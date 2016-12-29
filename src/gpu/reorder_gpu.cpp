@@ -50,7 +50,7 @@ struct reorder_gpu : is_an_implementation {
         auto& input_mem = outer.input_memory(0);
         auto& output_mem = outer.output_memory(0);
 
-        padding_only = (!have_subtraction) && (input_mem.argument.format == output_mem.argument.format) && input_mem.argument.format == memory::format::type::bfyx_f32;
+        padding_only = (!have_subtraction) && (input_mem.argument().format == output_mem.argument().format) && input_mem.argument().format == memory::format::type::bfyx_f32;
     }
 
     // We need to specify the output idx based on input position
@@ -162,7 +162,7 @@ struct reorder_gpu : is_an_implementation {
 
         auto& output_mem = outer.output_memory(0);
 
-        bool _padding_only = (!have_subtraction) && (input_mem.argument.format == output_mem.argument.format) && input_mem.argument.format == memory::format::type::bfyx_f32;
+        bool _padding_only = (!have_subtraction) && (input_mem.argument().format == output_mem.argument().format) && input_mem.argument().format == memory::format::type::bfyx_f32;
         if (_padding_only)
         {
             return kernel_name_reorder_padding_bfyx_f32;
@@ -229,12 +229,12 @@ struct reorder_gpu : is_an_implementation {
             mem_consts.add_constant(gpu::make_jit_constant("PADDING", s.str()));
         }
 
-        bool _padding_only = (!have_subtraction) && (input_mem.argument.format == output_mem.argument.format) && input_mem.argument.format == memory::format::type::bfyx_f32;
+        bool _padding_only = (!have_subtraction) && (input_mem.argument().format == output_mem.argument().format) && input_mem.argument().format == memory::format::type::bfyx_f32;
 
         if (_padding_only)
         {
-            mem_consts.add_constant(gpu::make_jit_constant("INPUT", input_mem.argument.size));
-            mem_consts.add_constant(gpu::make_jit_constant("OUTPUT", output_mem.argument.size));
+            mem_consts.add_constant(gpu::make_jit_constant("INPUT", input_mem.argument().size));
+            mem_consts.add_constant(gpu::make_jit_constant("OUTPUT", output_mem.argument().size));
         }
         else if (have_subtraction)
         {
@@ -319,11 +319,21 @@ struct reorder_gpu : is_an_implementation {
         }
         else if (me->padding_only)
         {
-            if (input_mem.argument.size.spatial[1] > 255)
+            if (input_mem.argument().size.spatial[1] > 255)
                 throw std::runtime_error("We don't support padding reorder with Y > 256");
-
-            me->_kernel.run<gpu::input_mem, gpu::output_mem>
-                ({ {input_mem.argument.size.batch[0], input_mem.argument.size.feature[0], input_mem.argument.size.spatial[1] }, {1, 1, input_mem.argument.size.spatial[1] } } ,
+            gpu::kernel_execution_options exec_options{
+                {
+                    static_cast<size_t>(input_mem.argument().size.batch[0]),
+                    static_cast<size_t>(input_mem.argument().size.feature[0]),
+                    static_cast<size_t>(input_mem.argument().size.spatial[1])
+                },
+                {
+                    1, 1, static_cast<size_t>(input_mem.argument().size.spatial[1])
+                }
+            };
+            return me->_kernel.run<gpu::input_mem, gpu::output_mem>
+                (exec_options ,
+                    events,
                     input_mem,
                     output_mem);
         }

@@ -276,9 +276,15 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad)
     //  [ 1.5,   0]
     //  [   1,  -0.5]
 
-    auto input_prim = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 3, 3 }, 1 } });
-    auto output_prim = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
-    auto pool_prim = pooling::create({ pooling::mode::max, output_prim, input_prim,{ 1,{ -1, -1 }, 1 },{ 1,{ 2, 2 }, 1 },{ 1,{ 2, 2 }, 1 }, padding::type::zero });
+    auto engine = engine::create();
+
+    auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 3, 3, 1, 1 } } });
+
+    auto topology = topology::create();
+    topology.add(input_layout("input_prim", input_prim.get_layout()));
+    topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }));
+
+    auto network = network::build(engine, topology);
 
     set_values(input_prim, { 
         1.50f, -1.00f, -0.50f,
@@ -286,9 +292,15 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad)
        -1.00f, -1.00f, -0.50f
     });
 
-    execute({ pool_prim }).wait();
+    network.set_input_data("input_prim", input_prim);
 
-    auto output_ptr = output_prim.as<const memory&>().pointer<float>();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].id(), "pool_prim");
+
+    auto output_prim = outputs[0].get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
     EXPECT_EQ(1.5f, get_value<float>(output_ptr, 0));
     EXPECT_EQ(0.0f, get_value<float>(output_ptr, 1));
     EXPECT_EQ(1.0f, get_value<float>(output_ptr, 2));

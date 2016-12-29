@@ -44,6 +44,7 @@ struct format
         yxoi,          // format used only for weights: o - output feature maps, i - input feature maps
         oyxi,          // format used only for weights: o - output feature maps, i - input feature maps
         yxio,          // format used only for weights: o - output feature maps, i - input feature maps
+        os_iyx_osv16,  // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
         format_num,
         any = static_cast<int8_t>(-1)
     };
@@ -74,6 +75,7 @@ struct format
             { yxoi,{ 1, 2, 2, "yxoi" } },
             { oyxi,{ 1, 2, 2, "oyxi" } },
             { yxio,{ 1, 2, 2, "yxio" } },
+            { os_iyx_osv16, { 1, 2, 2, "oiyx"}}
         };
         return traits.at(fmt);
     }

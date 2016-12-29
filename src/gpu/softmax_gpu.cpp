@@ -69,7 +69,7 @@ struct softmax_gpu : is_an_implementation
         auto batch_num         = outer.output_memory().get_layout().size.batch[0];
         size_t out_buffer_size = output_mem.count();
 
-        if (batch_num != 1 && input_mem.argument.format == memory::format::bx_f32)
+        if (batch_num != 1 && input_mem.argument().format == memory::format::bx_f32)
         {
             throw std::runtime_error("Softmax not implemented for bx input when batch > 1!");
         }

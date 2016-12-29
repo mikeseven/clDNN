@@ -64,8 +64,8 @@ struct pooling_gpu : is_an_implementation {
 
     pooling_gpu(const pooling& outer)
         : _outer(outer),
-        _engine_info(gpu_info_helper().get_engine_info()),
-        _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument.format, outer.input_memory(0).argument.size.batch[0], _engine_info.architecture, _engine_info.configuration)),
+        _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info()),
+        _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration)),
         _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
     {}
 
@@ -191,10 +191,10 @@ pooling_gpu::kernel_data defauly_yxfb_f32(const pooling& arg)
     auto needs_boundary = pooling_gpu::needs_boundary_check(arg);
     switch (arg.argument.mode)
     {
-    case pooling::mode::max:
+    case cldnn::pooling_mode::max:
         kd.kernel_name = needs_boundary ? kernel_name_max_offset : kernel_name_max;
         break;
-    case pooling::mode::average:
+    case cldnn::pooling_mode::average:
         kd.kernel_name = needs_boundary ? kernel_name_average_offset : kernel_name_average;
         break;
 
@@ -213,7 +213,7 @@ pooling_gpu::kernel_data defauly_bfyx_f32(const pooling& arg)
     auto needs_boundary = pooling_gpu::needs_boundary_check(arg);
     if (needs_boundary)
         throw std::runtime_error("Not implemented boundary in pooling bfyx!");
-    if (arg.argument.mode != pooling::mode::max)
+    if (arg.argument.mode != cldnn::pooling_mode::max)
         throw std::runtime_error("Not implemented average pooling in bfyx!");
     if (kd.gws0 > 256)
         throw std::runtime_error("Not implemented max pooling in bfyx with x greater than 256!");
@@ -223,9 +223,9 @@ pooling_gpu::kernel_data defauly_bfyx_f32(const pooling& arg)
     const auto& output_mem = arg.output_memory(0); // output
 
     // Determine global work sizes.
-    kd.gws2 = output_mem.argument.size.batch[0] * output_mem.argument.size.feature[0];
-    kd.gws0 = output_mem.argument.size.spatial[0];
-    kd.gws1 = output_mem.argument.size.spatial[1];
+    kd.gws2 = output_mem.argument().size.batch[0] * output_mem.argument().size.feature[0];
+    kd.gws0 = output_mem.argument().size.spatial[0];
+    kd.gws1 = output_mem.argument().size.spatial[1];
 
     // Find largest positive local work size that is divider for global work size.
     kd.lws0 = kd.gws0;

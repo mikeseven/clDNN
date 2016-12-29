@@ -171,6 +171,7 @@ struct neural_memory
             yxoi_f32,   // format used only for weights: o - output feature maps, i - input feature maps
             oyxi_f32,   // format used only for weights: o - output feature maps, i - input feature maps
             yxio_f32,   // format used only for weights: o - output feature maps, i - input feature maps
+            os_iyx_osv16_f32, // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
 
             // FP16 (half precision float)
             x_f16,
@@ -185,6 +186,7 @@ struct neural_memory
             yxoi_f16,          // format used only for weights: o - output feature maps, i - input feature maps
             oyxi_f16,          // format used only for weights: o - output feature maps, i - input feature maps
             yxio_f16,          // format used only for weights: o - output feature maps, i - input feature maps
+            os_iyx_osv16_f16,  // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
 
             format_num,
             any = static_cast<uint8_t>(-1),
@@ -233,6 +235,7 @@ struct neural_memory
         case cldnn::format::yxoi: return format::type::yxoi_f32;
         case cldnn::format::oyxi: return format::type::oyxi_f32;
         case cldnn::format::yxio: return format::type::yxio_f32;
+        case cldnn::format::os_iyx_osv16: return format::type::os_iyx_osv16_f32;
         default: throw std::invalid_argument("unsupported format");
         }
     }

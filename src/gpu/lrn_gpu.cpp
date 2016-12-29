@@ -64,8 +64,8 @@ struct lrn_gpu : is_an_implementation
 
     lrn_gpu(const normalization::response& outer)
         : _outer(outer),
-        _engine_info(gpu_info_helper().get_engine_info()),
-        _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument.format, outer.input_memory(0).argument.size.batch[0], _engine_info.architecture, _engine_info.configuration)),
+        _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info()),
+        _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration)),
         _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
     {}
 
@@ -106,7 +106,7 @@ struct lrn_gpu : is_an_implementation
         }
 
         // Checking for supported paddings.
-        switch (outer.desc()->padding_type())
+        switch (arg.desc()->padding_type())
         {
         case padding::zero:
             break;
@@ -177,9 +177,9 @@ lrn_gpu::kernel_data default_bfyx_f32(const normalization::response& arg)
     lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
 
     kd.kernel_name = kernel_name_bfyx;
-    kd.gws0 = input_mem.argument.size.spatial[0];
-    kd.gws1 = input_mem.argument.size.spatial[1];
-    kd.gws2 = input_mem.argument.size.feature[0] * input_mem.argument.size.batch[0];
+    kd.gws0 = input_mem.argument().size.spatial[0];
+    kd.gws1 = input_mem.argument().size.spatial[1];
+    kd.gws2 = input_mem.argument().size.feature[0] * input_mem.argument().size.batch[0];
 
     if (kd.gws0 > 256)
         throw std::runtime_error("Not implemented yet lrn for X greater than 256!");

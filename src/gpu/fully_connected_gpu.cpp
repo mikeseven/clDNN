@@ -100,12 +100,12 @@ struct fully_connected_gpu : is_an_implementation
         case memory::format::bfyx_f32:
         case memory::format::bx_f32:
         {
-            switch (weight_mem.argument.format)
+            switch (weight_mem.argument().format)
             {
             case memory::format::fyxb_f32:
             case memory::format::xb_f32:
             {
-                if (input_mem.argument.size.batch[0] != 1)
+                if (input_mem.argument().size.batch[0] != 1)
                 {
                     throw std::runtime_error("Not supported batch != 1 in FC bfyx/bx format");
                 }
@@ -182,8 +182,8 @@ struct fully_connected_gpu : is_an_implementation
             case memory::format::yxfb_f16:
             case memory::format::xb_f16:
             {
-                auto batch_size = output_mem.argument.size.batch[0];
-                auto response_size = weight_mem.argument.size.batch[0];
+                auto batch_size = output_mem.argument().size.batch[0];
+                auto response_size = weight_mem.argument().size.batch[0];
                 //bool batch_size_pow_2 = batch_size > 0 && (batch_size & (batch_size - 1)) == 0;
 
                 constexpr uint32_t unit_byte_size = sizeof(cl_half);
@@ -377,7 +377,7 @@ namespace {
 
                 { std::make_tuple(engine::type::gpu, memory::format::yxfb_f16), val_fw },
                 { std::make_tuple(engine::type::gpu, memory::format::xb_f16), val_fw },
-                { std::make_tuple(engine::type::gpu, memory::format::x_f16), val_fw }
+                { std::make_tuple(engine::type::gpu, memory::format::x_f16), val_fw },
 
                 { std::make_tuple(engine::gpu, memory::format::bfyx_f32), val_fw },
                 { std::make_tuple(engine::gpu, memory::format::bx_f32), val_fw },

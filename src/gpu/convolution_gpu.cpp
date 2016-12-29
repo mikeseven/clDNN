@@ -55,7 +55,7 @@ struct kd_default_value_selector<neural::gpu::engine_info::configurations>
 struct convolution_gpu : is_an_implementation {
     convolution &outer;
     gpu::engine_info _engine_info;
-    std::vector<primitive> reorder;
+    std::vector<cldnn::refcounted_obj_ptr<cldnn::network_impl>> reorder;
 
     struct kernel_data
     {
@@ -67,7 +67,6 @@ struct convolution_gpu : is_an_implementation {
     } _kernel_data;
 
     gpu::kernel _kernel;
-    std::unique_ptr<neural::worker> _worker;
 
     static kernel_data set_default(const convolution& arg)
     {
@@ -102,13 +101,14 @@ struct convolution_gpu : is_an_implementation {
         if (_kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
             _kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1)
         {
-            _worker = std::make_unique<worker>(worker_gpu::create());
-
-            reorder.push_back(reorder::create({
-                outer.input_memory(1).argument.size.spatial[0],
-                outer.input_memory(1).argument.size.spatial[1],
-                arg.argument.input[0] }
-            ));
+            auto input_layout = outer.input_memory(0).get_layout();
+            auto weights_layout = outer.weights_memory(0).get_layout();
+            cldnn::padding reorder_output_pad(cldnn::format::yx, { weights_layout.size.spatial[0], weights_layout.size.spatial[1] });
+            auto topology = cldnn::topology::create(
+                cldnn::input_layout("input", input_layout),
+                cldnn::reorder("reorder", "input", input_layout, "", { cldnn::format::yx, {0,0}}, reorder_output_pad )
+            );
+            reorder.push_back({ outer.get_network().get_engine()->build_network(topology, cldnn::build_options()), false });
         }
     }
 
@@ -223,13 +223,18 @@ struct convolution_gpu : is_an_implementation {
         if (kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
             kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1)
         {
-            me->_worker.get()->execute(me->reorder[0].work());
+            auto network = reorder[0];
+            network->set_input_data("input", input_mem);
+            auto reorder_outputs = network->execute(events);
+            reorder_outputs[0].event_impl->wait();
+            cldnn::memory reorder_output(reorder_outputs[0].memory_impl);
 
             // execute kernels
             for (uint32_t i = 0; i < split; i++) {
-                me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
+                auto event = me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
                     ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
-                        get_memory_primitive(me->reorder[0].output[0]),
+                        tmp_events,
+                        reorder_output,
                         output_mem,
                         outer.weights_memory(i), //filters
                         outer.bias_memory(i), //biases
@@ -237,16 +242,15 @@ struct convolution_gpu : is_an_implementation {
                 tmp_events.clear();
                 tmp_events.push_back(event);
             }
-            auto event = me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                    events,
         }
         else
         {
             // execute kernels
             for (uint32_t i = 0; i < split; i++) {
                 assert(kd.gws0 % kd.lws0 == 0);
-                me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
+                auto event = me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
                     ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
+                        tmp_events,
                         input_mem,
                         output_mem,
                         outer.weights_memory(i), //filters
@@ -467,9 +471,9 @@ convolution_gpu::kernel_data defauly_bfyx_yxio_b1_f32(const convolution& arg)
     {
         kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32;
     }
-    kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument.size.spatial[0]) / block_width));
-    kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument.size.spatial[1]) / block_height));
-    kd.gws2 = filter_mem.argument.size.feature[0];
+    kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument().size.spatial[0]) / block_width));
+    kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument().size.spatial[1]) / block_height));
+    kd.gws2 = filter_mem.argument().size.feature[0];
     kd.lws0 = 1;
     kd.lws1 = 1;
     kd.lws2 = 16;
