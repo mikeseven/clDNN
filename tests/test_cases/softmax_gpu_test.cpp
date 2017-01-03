@@ -46,7 +46,7 @@ public:
     //neural::primitive output = memory::allocate({ memory::format::xb_f32, {output_b, {{output_x}}, 1}});
 
     softmax_gpu_xb_f32_test_fixture()
-        :engine(engine::create())
+        :engine()
         ,input(memory::allocate(engine, { data_types::f32, { format::xb, { input_x, input_b}}}))
     {}
 
@@ -85,7 +85,7 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, input_same_values) {
 
     set_values(input, in_b);
 
-    auto network = network::build(engine, topology::create(input_layout("input", input.get_layout()), softmax("softmax", "input")));
+    network network(engine, topology(input_layout("input", input.get_layout()), softmax("softmax", "input")));
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -115,7 +115,7 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, input_same_values_batch_wise) {
     for(size_t i = 0; i < out_size; ++i)
         expected_buffer[i] = 0.1f;
 
-    auto network = network::build(engine, topology::create(input_layout("input", input.get_layout()), softmax("softmax", "input")));
+    network network(engine, topology(input_layout("input", input.get_layout()), softmax("softmax", "input")));
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -170,7 +170,7 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, values_batch_wise) {
     for(size_t i = 0; i < out_size; ++i)
         out_buffer[i] = NAN;
 
-    auto network = network::build(engine, topology::create(input_layout("input", input.get_layout()), softmax("softmax", "input")));
+    network network(engine, topology(input_layout("input", input.get_layout()), softmax("softmax", "input")));
     network.set_input_data("input", input);
 
     auto outputs = network.execute();

@@ -25,17 +25,15 @@ namespace cldnn {
 class topology_impl;
 struct topology
 {
-    static topology create()
-    {
-        return check_status<topology_impl*>("failed to create topology", create_topology_impl);
-    }
+    topology()
+        : _impl(check_status<topology_impl*>("failed to create topology", create_topology_impl))
+    {}
 
     template<class ...Args>
-    static topology create(const Args&... args)
+    topology(const Args&... args)
+        : topology()
     {
-        auto result = create();
-        result.add<Args...>(args...);
-        return result;
+        add<Args...>(args...);
     }
 
     DLL_SYM topology(const topology& other);

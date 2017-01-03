@@ -59,7 +59,7 @@ TEST(reorder_gpu_f32, basic)
     //  b1 f1: 12    8
     //
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb, { 2, 2, 2, 2 } } });
     layout output_layout(data_types::f32, { format::bfyx,{ 2,2,2,2 } });
@@ -78,11 +78,11 @@ TEST(reorder_gpu_f32, basic)
         8.f, 8.f
     });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         reorder("reorder", "input", output_layout));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -145,7 +145,7 @@ TEST(reorder_gpu_f32, basic_subtract) {
     //  b1 f1: 10    7
     //
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32, { format::yxfb, { 2, 2, 2, 2 }} });
     layout output_layout( data_types::f32, {format::bfyx, {2,2,2,2}} );
@@ -170,12 +170,12 @@ TEST(reorder_gpu_f32, basic_subtract) {
         2.0f,  2.0f,      2.5f,  1.0f,
     });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         input_layout("substract", subtract.get_layout()),
         reorder("reorder", "input", output_layout, "substract"));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
     network.set_input_data("substract", subtract);
 
@@ -234,7 +234,7 @@ TEST(reorder_gpu_f32, basic_subtract_value) {
     //  b1 f1:  9.5  5.5
     //
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 2, 2 } } });
     layout output_layout(data_types::f32, { format::bfyx,{ 2,2,2,2 } });
@@ -254,10 +254,10 @@ TEST(reorder_gpu_f32, basic_subtract_value) {
         8.f, 8.f
     });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input", input.get_layout()), reorder("reorder", "input", output_layout, subtract_val));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -326,7 +326,7 @@ TEST(reorder_gpu_f16, basic_subtract_f32_output_f32) {
         return;
     }
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f16,{ format::yxfb,{ 2, 2, 2, 2 } } });
     layout output_layout(data_types::f32, { format::bfyx,{ 2,2,2,2 } });
@@ -351,12 +351,12 @@ TEST(reorder_gpu_f16, basic_subtract_f32_output_f32) {
         2.0f,  2.0f,      2.5f,  1.0f,
     });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(data("substract", subtract));
     topology.add(reorder("reorder", "input", output_layout, "substract"));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -422,7 +422,7 @@ TEST(reorder_gpu_f16, basic_subtract_value) {
         return;
     }
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f16,{ format::yxfb,{ 2, 2, 2, 2 } } });
     layout output_layout(data_types::f16, { format::bfyx,{ 2,2,2,2 } });
@@ -442,11 +442,11 @@ TEST(reorder_gpu_f16, basic_subtract_value) {
         half_t(0x4800), half_t(0x4800)  // 8.f, 8.f
     });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(reorder("reorder", "input", output_layout, subtract_val));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -507,7 +507,7 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
     expected_values[0xF802] = half_t(0x8000);    // -0
     expected_values[0xF803] = half_t(0xFC12);    // A NaN (sample: -NaN.0x12).
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f16,{ format::yxfb,{ 2, 2, static_cast<int32_t>(expected_values.size()) / 4, 1 } } });
     layout interm_layout( data_types::f32, { format::byxf, { 1, 2, 2, static_cast<int32_t>(expected_values.size()) / 4 } });
@@ -515,12 +515,12 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
 
     set_values(input, expected_values);
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(reorder("reorder_f16_f32", "input", interm_layout));
     topology.add(reorder("reorder_f32_f16", "reorder_f16_f32", output_layout));
 
-    auto network = network::build(
+    network network(
                                 engine,
                                 topology,
                                 {

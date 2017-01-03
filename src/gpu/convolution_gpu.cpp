@@ -104,7 +104,7 @@ struct convolution_gpu : is_an_implementation {
             auto input_layout = outer.input_memory(0).get_layout();
             auto weights_layout = outer.weights_memory(0).get_layout();
             cldnn::padding reorder_output_pad(cldnn::format::yx, { weights_layout.size.spatial[0], weights_layout.size.spatial[1] });
-            auto topology = cldnn::topology::create(
+            cldnn::topology topology(
                 cldnn::input_layout("input", input_layout),
                 cldnn::reorder("reorder", "input", input_layout, "", { cldnn::format::yx, {0,0}}, reorder_output_pad )
             );

@@ -51,12 +51,12 @@ TEST(mean_subtract_gpu_f32, basic_in4x4x2x2) {
     //  f1: b0:  -1    8.5  b1:   4    8.5     
     //
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input  = memory::allocate(engine, { data_types::f32, { format::yxfb, { 2, 2, 2, 2 } } });
     auto mean = memory::allocate(engine, { data_types::f32, { format::bfyx, { 1, 2, 2 , 2 } } });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("mean", mean.get_layout()));
     topology.add(mean_substract("mean_substract", "input", "mean"));
@@ -70,7 +70,7 @@ TEST(mean_subtract_gpu_f32, basic_in4x4x2x2) {
 
     set_values(mean, { 0.5f, 5.f, 15.f, 6.f, 0.5f, 2.f, 8.f, -0.5f });
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     
     network.set_input_data("input", input);
     network.set_input_data("mean", mean);

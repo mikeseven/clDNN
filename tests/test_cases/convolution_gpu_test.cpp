@@ -194,7 +194,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_random) {
 	}
 	VF output_rnd_vec = flatten_4d(format::yxfb, output_rnd);
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32, { format::yxfb, { 4, 4, 1, 1 } } });
 	//auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
@@ -205,14 +205,14 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_random) {
 	set_values(weights, filter_rnd_vec);
 	set_values(biases, bias_rnd);
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
         convolution("conv", "input", {"weights"}, {"biases"}, {format::yx, {0,0}}, {format::yx, {2,2}})
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -264,7 +264,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad_random) {
 	}
 	VF output_rnd_vec = flatten_4d(format::yxfb, output_rnd);
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 2 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 1, 1 }, 1 } });
@@ -275,14 +275,14 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad_random) {
 	set_values(weights, filter_rnd_vec);
 	set_values(biases, bias_rnd);
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
         convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 2,2 } })
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -322,7 +322,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     //  8  0.5
     //  6  9
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 4, 1, 1 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 1 } });
@@ -333,14 +333,14 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
     set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f });
     set_values(biases, { 2.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
         convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 2,2 } })
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -376,7 +376,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
     //
     //  Output:
     //  3.65 -5.36
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 2 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 1, 1 }, 1 } });
@@ -387,14 +387,14 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
     set_values(weights, { -1.2f, 1.5f, 0.5f, -0.5f });
     set_values(biases, { -1.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
         convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 2,2 } })
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -428,7 +428,7 @@ TEST(convolution_f32_fw_gpu, basic_ofm_wsiz2x1x2x1_in1x2x1_nopad) {
     //   5.1  f=0
     //  -5.2  f=1
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 1, 1, 1 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 1, 1 }, 2 } });
@@ -439,14 +439,14 @@ TEST(convolution_f32_fw_gpu, basic_ofm_wsiz2x1x2x1_in1x2x1_nopad) {
     set_values(weights, { 1.0f, 2.0f, -1.0f, -2.0f });
     set_values(biases, { 0.1f, -0.2f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
         convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 5,5 } })
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -487,7 +487,7 @@ TEST(convolution_f32_fw_gpu, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad) {
     //   64,0  f=1
     //  103.0  f=2
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 1, 2, 1 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 1, 1 }, 3 } });
@@ -498,14 +498,14 @@ TEST(convolution_f32_fw_gpu, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad) {
     set_values(weights, { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f });
     set_values(biases, { -5.0f, -6.0f, -7.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
         convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 5,5 } })
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -543,7 +543,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
     //   2.12
     //   3.08
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 1, 1 }, 3 } });
@@ -554,14 +554,14 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
     set_values(weights, { -1.1f, 1.5f, 0.5f, -0.5f, 0.1f, 0.2f, 0.4f, 0.7f, 2.0f, -1.0f, 2.5f, -1.5f });
     set_values(biases, { 0.1f, -0.2f, 0.3f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
         convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 2,2 } })
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -599,7 +599,7 @@ TEST(convolution_f32_fw_gpu, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     //
     //  Output:
     //  12.25
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 1 } });
@@ -610,14 +610,14 @@ TEST(convolution_f32_fw_gpu, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f });
     set_values(biases, { 2.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
         convolution("conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx,{ 2,2 } })
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -656,7 +656,7 @@ TEST(convolution_f32_fw_gpu, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     //   Output:
     //   rnd   rnd
     //   rnd   2.0
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 2, 2 }, 1 } });
@@ -667,7 +667,7 @@ TEST(convolution_f32_fw_gpu, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
     set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f, 4.0f, -5.0f, 0.5f, 1.5f, -1.5f });
     set_values(biases, { 2.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
@@ -683,7 +683,7 @@ TEST(convolution_f32_fw_gpu, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
             { format::yx,{ 1,1 } })
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -732,7 +732,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x1_nopad_split2) {
     //   8  3.65 0.5 -5.36
     //   6  3.65 9   -5.36
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 4, 2, 1 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 2, 2 }, 2 } });
@@ -752,7 +752,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x1_nopad_split2) {
     set_values(weights2, { -1.2f, 1.5f, 0.5f, -0.5f });
     set_values(biases2, { -1.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights1", weights1),
         data("biases1", biases1),
@@ -767,7 +767,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x1_nopad_split2) {
             { format::yx,{ 2,2 } })
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -834,7 +834,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2) {
     //   8  8 3.65 3.65 0.5  0.5 -5.36 -5.36
     //   6  6 3.65 3.65 9    9   -5.36 -5.36
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 4, 2, 2 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
@@ -854,7 +854,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2) {
     set_values(weights2, { -1.2f, 1.5f, 0.5f, -0.5f });
     set_values(biases2, { -1.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights1", weights1),
         data("biases1", biases1),
@@ -869,7 +869,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2) {
             { format::yx,{ 2,2 } })
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -932,7 +932,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x4x1_nopad_split2) {
     //  -1.75
     //   2.25
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 4, 1 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 4 } });
@@ -949,7 +949,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x4x1_nopad_split2) {
     set_values(weights2, { 4.0f, 1.5f, 2.0f, 0.5f });
     set_values(biases2, { -1.0f, 2.5f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights1", weights1),
         data("biases1", biases1),
@@ -964,7 +964,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x4x1_nopad_split2) {
             { format::yx,{ 2,2 } })
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -1013,7 +1013,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x2x1_nopad_split2) {
     //   3.5
 
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 2, 1 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 4 } });
@@ -1030,7 +1030,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x2x1_nopad_split2) {
     set_values(weights2, { 4.0f, 2.0f });
     set_values(biases2, { -1.0f, 2.5f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights1", weights1),
         data("biases1", biases1),
@@ -1045,7 +1045,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x2x1_nopad_split2) {
             { format::yx,{ 2,2 } })
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -1100,7 +1100,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x4x1_filter_1x3x2x1x1_no
     //  -2
 
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 4, 1 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1,{ 1, 1 }, 6 } });
@@ -1117,7 +1117,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x4x1_filter_1x3x2x1x1_no
     set_values(weights2, { 4.0f, -4.0f, 2.0f, 0.5f, -0.5f, 3.0f });
     set_values(biases2, { -1.0f, 2.5f, 2.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights1", weights1),
         data("biases1", biases1),
@@ -1132,7 +1132,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x4x1_filter_1x3x2x1x1_no
             { format::yx,{ 2,2 } })
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -1176,7 +1176,7 @@ TEST(convolution_gpu, trivial_convolution_relu) {
     //  4  0.0
     //  2  5
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 4, 1, 1 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 2, 2 }, 1 } });
@@ -1192,7 +1192,7 @@ TEST(convolution_gpu, trivial_convolution_relu) {
     set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f });
     set_values(biases, { -2.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
@@ -1207,7 +1207,7 @@ TEST(convolution_gpu, trivial_convolution_relu) {
             0)
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -1249,7 +1249,7 @@ TEST(convolution_gpu, relu_with_negative_slope) {
 	//  4  -0.35
 	//  2  5
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 4, 1, 1 } } });
     //auto output = memory::allocate({ memory::format::yxfb_f32,{ 1 ,{ 2, 2 }, 1 } });
@@ -1265,7 +1265,7 @@ TEST(convolution_gpu, relu_with_negative_slope) {
 	set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f });
 	set_values(biases, { -2.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
@@ -1280,7 +1280,7 @@ TEST(convolution_gpu, relu_with_negative_slope) {
             0.1f)
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -1324,7 +1324,7 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
     const int32_t output_x = (input_x - weights_x) / stride_x + 1;
     const int32_t output_y = (input_y - weights_y) / stride_y + 1;
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_size = tensor(format::yxfb, { input_x, input_y, input_feature_count, batch_size }).transform(input_format, 1);
     auto input = memory::allocate(engine, { data_types::f32, input_size });
@@ -1430,7 +1430,7 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
     }
 
     // Computing convolution.
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
@@ -1445,7 +1445,7 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
             0.1f)
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
@@ -1516,7 +1516,7 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
     const int32_t output_y = (input_y - weights_y) / stride_y + 1;
 
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_size = tensor(format::yxfb, { input_x, input_y, input_feature_count, batch_size }).transform(input_format, 1);
     auto input = memory::allocate(engine, { data_types::f32, input_size });
@@ -1640,7 +1640,7 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
 
 
     // Computing convolution.
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input.get_layout()),
         reorder("cvt_input", "input", {data_types::f16, input_size}),
         data("weights", weights),
@@ -1657,7 +1657,7 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
         reorder("output", "conv", {data_types::f16, output_size})
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input);
 
     auto outputs = network.execute();

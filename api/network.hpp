@@ -275,10 +275,9 @@ struct network
         memory_impl* memory_impl;
     };
 
-    static network build(const engine& engine, const topology& topology, const build_options& options = build_options() )
-    {
-        return check_status<network_impl*>("network build failed", [&](status_t* status) { return build_impl(engine, topology, options.get_refs(), status); });
-    }
+    network(const engine& engine, const topology& topology, const build_options& options = build_options())
+        :_impl(check_status<network_impl*>("network build failed", [&](status_t* status) { return build_impl(engine, topology, options.get_refs(), status); }))
+    {}
 
     typedef network_impl impl_type;
     DLL_SYM network(const network& other);

@@ -50,19 +50,19 @@ TEST(depth_concatenate_f32_gpu, test01) {
     //  0   -0.2  :f4
     //
 
-    auto engine = engine::create();
+    engine engine;
     auto input1 = memory::allocate(engine, {data_types::f32, tensor(format::yxfb, { 1,1,2,2 })});
     auto input2 = memory::allocate(engine, { data_types::f32, tensor(format::yxfb,{ 1,1,3,2 })});
 
     set_values(input1, { 0.5f, 0.7f, 0.2f, 0.4f });
     set_values(input2, { 1.0f, 0.1f, 0.3f, -0.5f, 0.0f, -0.2f });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input1", input1.get_layout()));
     topology.add(input_layout("input2", input2.get_layout()));
     topology.add(depth_concatenate("depth1", { "input1", "input2" }));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
 
     network.set_input_data("input1", input1);
     network.set_input_data("input2", input2);

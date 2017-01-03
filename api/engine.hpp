@@ -36,18 +36,16 @@ struct engine_configuration
 class engine_impl;
 struct engine
 {
-    static engine create(const engine_configuration& configuration = engine_configuration())
-    {
-        return create(engine_types::ocl, 0, configuration);
-    }
+    engine(const engine_configuration& configuration = engine_configuration())
+        :engine(engine_types::ocl, 0, configuration)
+    {}
 
-    static engine create(engine_types type, uint32_t engine_num, const engine_configuration& configuration = engine_configuration())
-    {
-        return check_status<engine_impl*>("failed to create engine", [&](status_t* status)
-        {
-            return create_engine_impl(type, engine_num, &configuration, status);
-        });
-    }
+    engine(engine_types type, uint32_t engine_num, const engine_configuration& configuration = engine_configuration())
+        :_impl(check_status<engine_impl*>("failed to create engine", [&](status_t* status)
+              {
+                  return create_engine_impl(type, engine_num, &configuration, status);
+              }))
+    {}
 
     DLL_SYM engine(const engine& other);
     DLL_SYM engine& operator=(const engine& other);

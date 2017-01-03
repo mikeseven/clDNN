@@ -52,7 +52,7 @@ TEST(local_response_normalization_gpu, lrn_test) {
                                                                                         // lrn parameters:
     const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32, { format::yxfb, { py, px, pf, pb }} });
     auto output_oracle = memory::allocate(engine, input.get_layout());
@@ -60,11 +60,11 @@ TEST(local_response_normalization_gpu, lrn_test) {
     set_values(input, input_oracle_init);
     set_values(output_oracle, output_oracle_init);
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(normalization("lrn", "input", psize, pk, palpha, pbeta));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
 
     network.set_input_data("input", input);
 
@@ -145,7 +145,7 @@ TEST(local_response_normalization_gpu, lrn_test_batches) {
                                                                                         // lrn parameters:
     const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32, { format::yxfb, { py, px, pf, pb } } });
     auto output_oracle = memory::allocate(engine, input.get_layout());
@@ -153,11 +153,11 @@ TEST(local_response_normalization_gpu, lrn_test_batches) {
     set_values(input, input_oracle_init);
     set_values(output_oracle, output_oracle_init);
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(normalization("lrn", "input", psize, pk, palpha, pbeta));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
 
     network.set_input_data("input", input);
 

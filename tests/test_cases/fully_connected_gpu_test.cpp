@@ -53,7 +53,7 @@ TEST(fully_connected_gpu, xb_f32_batch_1) {
         input_x = 3, input_b = 1,  // size of whole input buffer
         weight_x = 4, weight_y = 3;  // size of whole weights buffer
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate( engine, { data_types::f32, { format::xb, { input_x, input_b } } });
     //auto output_prim = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } },{ 1 } } });
@@ -64,14 +64,14 @@ TEST(fully_connected_gpu, xb_f32_batch_1) {
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
     set_values(bias_prim, { 1.0f, 2.0f, 3.0f, 4.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input_prim.get_layout()),
         data("weights", weights_prim),
         data("bias", bias_prim),
         fully_connected("full_con_prim", "input", "weights", "bias")
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
@@ -114,7 +114,7 @@ TEST(fully_connected_gpu, xb_f32_batch_2) {
         input_x = 3, input_b = 2,  // size of whole input buffer
         weight_x = 4, weight_y = 3;  // size of whole weights buffer
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::xb,{ input_x, input_b } } });
     //auto output_prim = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } },{ 1 } } });
@@ -125,14 +125,14 @@ TEST(fully_connected_gpu, xb_f32_batch_2) {
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
     set_values(bias_prim, { 1.0f, 2.0f, 3.0f, 4.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input_prim.get_layout()),
         data("weights", weights_prim),
         data("bias", bias_prim),
         fully_connected("full_con_prim", "input", "weights", "bias")
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
@@ -176,7 +176,7 @@ TEST(fully_connected_gpu, x_f32) {
         input_x = 3,                 // size of whole input buffer
         weight_x = 4, weight_y = 3;  // size of whole weights buffer
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::x, { input_x } } });
     //auto output_prim = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } },{ 1 } } });
@@ -187,14 +187,14 @@ TEST(fully_connected_gpu, x_f32) {
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
     set_values(bias_prim, { 1.0f, 2.0f, 3.0f, 4.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input_prim.get_layout()),
         data("weights", weights_prim),
         data("bias", bias_prim),
         fully_connected("full_con_prim", "input", "weights", "bias")
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
@@ -233,7 +233,7 @@ TEST(fully_connected_gpu, yxfn_f32) {
     //  Output:
     //   10  -28.5
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb, { 1, 2, 2, 1 } } });
     //auto output_prim = memory::allocate({ memory::format::xb_f32,{ 2 ,{ { 1 } }, 1 } });
@@ -244,14 +244,14 @@ TEST(fully_connected_gpu, yxfn_f32) {
     set_values(weights_prim, { 1.f, -1.f, 2.0f, 0.f, 3.0f, 4.0f, 0.5f, 5.0f });
     set_values(bias_prim, { 1.0f, -5.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input_prim.get_layout()),
         data("weights", weights_prim),
         data("bias", bias_prim),
         fully_connected("full_con_prim", "input", "weights", "bias")
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
@@ -291,7 +291,7 @@ TEST(fully_connected_gpu, xb_f32_batch_1_relu) {
         input_x = 3, input_b = 1,  // size of whole input buffer
         weight_x = 4, weight_y = 3;  // size of whole weights buffer
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::xb,{ input_x, input_b } } });
     //auto output_prim = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } },{ 1 } } });
@@ -302,14 +302,14 @@ TEST(fully_connected_gpu, xb_f32_batch_1_relu) {
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
     set_values(bias_prim, { 1.0f, -2.0f, 3.0f, -4.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input_prim.get_layout()),
         data("weights", weights_prim),
         data("bias", bias_prim),
         fully_connected("full_con_prim", "input", "weights", "bias", true, 0)
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
@@ -352,7 +352,7 @@ TEST(fully_connected_gpu, xb_f32_batch_2_relu) {
         input_x = 3, input_b = 2,  // size of whole input buffer
         weight_x = 4, weight_y = 3;  // size of whole weights buffer
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::xb,{ input_x, input_b } } });
     //auto output_prim = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } },{ 1 } } });
@@ -363,14 +363,14 @@ TEST(fully_connected_gpu, xb_f32_batch_2_relu) {
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
     set_values(bias_prim, { 1.0f, -2.0f, 3.0f, -4.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input_prim.get_layout()),
         data("weights", weights_prim),
         data("bias", bias_prim),
         fully_connected("full_con_prim", "input", "weights", "bias", true, 0)
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
@@ -414,7 +414,7 @@ TEST(fully_connected_gpu, x_f32_relu) {
         input_x = 3,                 // size of whole input buffer
         weight_x = 4, weight_y = 3;  // size of whole weights buffer
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::x,{ input_x } } });
     //auto output_prim = memory::allocate({ memory::format::x_f32,{ 1       ,{ { output_x } }, 1 } });
@@ -425,14 +425,14 @@ TEST(fully_connected_gpu, x_f32_relu) {
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
     set_values(bias_prim, { 1.0f, -2.0f, 3.0f, -4.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input_prim.get_layout()),
         data("weights", weights_prim),
         data("bias", bias_prim),
         fully_connected("full_con_prim", "input", "weights", "bias", true, 0)
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
@@ -473,7 +473,7 @@ TEST(fully_connected_gpu, x_f32_relu_with_negative_slope) {
 		input_x = 3,                 // size of whole input buffer
 		weight_x = 4, weight_y = 3;  // size of whole weights buffer
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::x,{ input_x } } });
     //auto output_prim = memory::allocate({ memory::format::x_f32,{ 1       ,{ { output_x } }, 1 } });
@@ -484,14 +484,14 @@ TEST(fully_connected_gpu, x_f32_relu_with_negative_slope) {
 	set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
 	set_values(bias_prim, { 1.0f, -2.0f, 3.0f, -4.0f });
 
-    auto topology = topology::create(
+    topology topology(
         input_layout("input", input_prim.get_layout()),
         data("weights", weights_prim),
         data("bias", bias_prim),
         fully_connected("full_con_prim", "input", "weights", "bias", true, 0.1f)
     );
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();

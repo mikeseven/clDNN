@@ -43,15 +43,15 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
     //  Expected output:
     //  [ 2.0]
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32, { format::yxfb, { 3, 3, 1, 1} } });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
     topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx, {1,1} }, { format::yx, {3,3} }));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     set_values(input_prim, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f });
     network.set_input_data("input_prim", input_prim);
 
@@ -83,15 +83,15 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
     //  [ 2.0,  1.5]
     //  [ 2.0,  1.5]
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 3, 3, 1, 1 } } });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
     topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx, { 1,1 } }, { format::yx, { 2,2 } }));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     set_values(input_prim, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f });
     network.set_input_data("input_prim", input_prim);
 
@@ -127,15 +127,15 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
     //  [ 2.0,  0.5]
     //  [ 0.5,  0.5]
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 4, 1, 1 } } });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
     topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     set_values(input_prim, { -0.25f, 1.00f, 0.50f, 0.25f, 2.00f, 1.50f, -0.50f, -0.75f, 0.00f, -1.00f, 0.50f, 0.25f, 0.50f, -2.00f, -1.50f, -2.50f });
     network.set_input_data("input_prim", input_prim);
 
@@ -181,15 +181,15 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
     //  [ 0.5,  1.0]         [ 1.0,  0.5]
     //  [-0.5,  1.5]         [ 1.0,  0.0]
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 3, 3, 2, 2 } } });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
     topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx,{ 1,1 } }, { format::yx,{ 2,2 } }));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     set_values(input_prim, { -0.5f, 0.5f, -1.5f, 0.0f, 0.5f, 0.0f, -0.5f, 0.5f, 0.0f, -0.5f, 0.0f, -0.5f, 1.0f, -2.0f, 0.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -2.0f, 1.0f, 1.5f, 0.0f, -1.0f, -0.5f, -2.0f, 0.5f, -0.5f, -1.0f, 1.0f, -0.5f, -0.5f, 1.5f, -0.5f, 0.0f });
     network.set_input_data("input_prim", input_prim);
 
@@ -231,15 +231,15 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad)
 	//  [ 1.5,   0]
 	//  [   0, 0.5]
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
     topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx, { -1,-1 } }));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     set_values(input_prim, { 1.50f, -0.50f, -1.00f, 0.50f });
     network.set_input_data("input_prim", input_prim);
 
@@ -276,15 +276,15 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad)
     //  [ 1.5,   0]
     //  [   1,  -0.5]
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 3, 3, 1, 1 } } });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
     topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
 
     set_values(input_prim, { 
         1.50f, -1.00f, -0.50f,
@@ -324,15 +324,15 @@ TEST(pooling_forward_gpu, basic_avg_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
 	//  [ 1.0,   0.625]
 	//  [ 1.625, 0.875]
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 3, 3, 1, 1 } } });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
     topology.add(pooling("pool_prim", "input_prim", pooling_mode::average, { format::yx,{ 1,1 } }, { format::yx,{ 2,2 } }));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     set_values(input_prim, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 4.0f, -1.0f, 3.5f });
     network.set_input_data("input_prim", input_prim);
 
@@ -369,15 +369,15 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad)
 	//  [ 0.375, -0.125]
 	//  [ -0.25,  0.125]
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
     topology.add(pooling("pool_prim", "input_prim", pooling_mode::average, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     set_values(input_prim, { 1.5f, -0.5f, -1.0f, 0.5f });
     network.set_input_data("input_prim", input_prim);
 
@@ -413,15 +413,15 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad)
 	//  [  0.375,    0.5]
 	//  [ -0.125, -1.125]
 
-    auto engine = engine::create();
+    engine engine;
 
     auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 3, 3, 1, 1 } } });
 
-    auto topology = topology::create();
+    topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
     topology.add(pooling("pool_prim", "input_prim", pooling_mode::average, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }));
 
-    auto network = network::build(engine, topology);
+    network network(engine, topology);
     set_values(input_prim, { 1.5f, -0.5f, 2.5f, -1.0f, 0.5f, 3.0f, 0.5f, 0.0f, -8.0f });
     network.set_input_data("input_prim", input_prim);
 
