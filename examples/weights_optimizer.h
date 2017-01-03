@@ -17,8 +17,9 @@
 #pragma once
 
 
-#include "neural.h"
-
+#include "api/network.hpp"
+#include "api/memory.hpp"
+#include "file.h"
 #include <boost/optional.hpp>
 
 
@@ -28,20 +29,20 @@ class weights_optimizer
     bool _enabled;
     bool _use_half;
     int _batch_size;
-    std::vector<neural::primitive> _primitives;
+    cldnn::topology _topology;
+    cldnn::engine _engine;
 
-
-    bool _needs_optimization(const neural::primitive& prim,
-                             neural::file::weights_type type,
+    cldnn::primitive_id _needs_optimization(const cldnn::memory& mem, const cldnn::primitive_id& mem_id,
+                             file::weights_type type,
                              bool use_half);
 
 public:
-    explicit weights_optimizer(int batch_size, bool enabled = true,
+    explicit weights_optimizer(const cldnn::engine& eng, int batch_size, bool enabled = true,
                                bool use_half = false);
 
-    neural::primitive create_weights_from_file(const std::string& path,
-                                               neural::file::weights_type type,
+    cldnn::primitive_id create_weights_from_file(const std::string& path,
+                                               file::weights_type type,
                                                const boost::optional<bool>& use_half = boost::none);
 
-    void optimize(const neural::worker& worker);
+    std::vector<cldnn::network_output> optimize() const;
 };

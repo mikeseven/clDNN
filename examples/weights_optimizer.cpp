@@ -15,33 +15,24 @@
 */
 
 #include "weights_optimizer.h"
+#include <api/primitives/data.hpp>
+#include <api/primitives/reorder.hpp>
 
-
-using namespace neural;
-
-weights_optimizer::weights_optimizer(int batch_size, bool enabled, bool use_half) :
-    _enabled(enabled), _use_half(use_half), _batch_size(batch_size)
+weights_optimizer::weights_optimizer(const cldnn::engine& eng, int batch_size, bool enabled, bool use_half) :
+    _enabled(enabled), _use_half(use_half), _batch_size(batch_size), _engine(eng)
 {}
 
-bool weights_optimizer::_needs_optimization(const primitive & prim, file::weights_type type, bool use_half)
+cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, file::weights_type type, bool use_half)
 {
-    const memory& mem = get_memory_primitive(prim);
+    auto reorder_id = std::string("reorder_") + mem_id;
+    auto data_type = use_half ? cldnn::data_types::f16 : cldnn::data_types::f32;
+    auto input_size = mem.get_layout().size;
+    auto expected_mem_size = input_size;
+
     if (type == file::weights_type::bias)
     {
         // TODO!!! put better logic here.
-        auto expected_mem_format = use_half ? memory::format::x_f16 : memory::format::x_f32;
-        if (mem.argument.format != expected_mem_format)
-        {
-            auto reordered_prim = neural::reorder::create(
-            {
-                expected_mem_format,
-                mem.argument.size,
-                prim
-            });
-            _primitives.push_back(reordered_prim);
-            return true;
-        }
-        return false;
+        expected_mem_size = cldnn::tensor(cldnn::format::x, { static_cast<cldnn::tensor::value_type>(mem.get_layout().count()) });
     }
     else if (type == file::weights_type::mean)
     {
@@ -51,86 +42,66 @@ bool weights_optimizer::_needs_optimization(const primitive & prim, file::weight
         //
         //       The problem is that we are unable to detect for which primitive these weights are optimized.
         //       Currently mean will not be optimized in any way (mean_subtract is not used in any topology).
-        return false;
+        return mem_id;
     }
     else if (type == file::weights_type::convolution)
     {
         // TODO!!! put better logic here.
-        auto expected_mem_format = _batch_size == 1 ? ( use_half ? memory::format::yxio_f16 : memory::format::os_iyx_osv16_f32 ) : ( use_half ? memory::format::yxio_f16 : memory::format::yxio_f32 );
-        if (mem.argument.format != expected_mem_format)
-        {
-            auto reordered_prim = neural::reorder::create(
-            {
-                expected_mem_format,
-                mem.argument.size,
-                prim
-            });
-            _primitives.push_back(reordered_prim);
-            return true;
-        }
-        return false;
+        expected_mem_size = _batch_size == 1 && !use_half
+            ? cldnn::tensor(cldnn::format::os_iyx_osv16, 
+                {
+                    input_size.feature[0], input_size.feature[1], input_size.spatial[0], input_size.spatial[1] // order: "oiyx"
+                })
+            : cldnn::tensor(cldnn::format::yxio,
+                {
+                    input_size.spatial[0], input_size.spatial[1], input_size.feature[1], input_size.feature[0]  // order: "yxio"
+                });
     }
     else if (type == file::weights_type::fully_connected)
     {
         // TODO!!! put better logic here.
-        if (memory::traits(mem.argument.format).dimension == 4)
+        if (cldnn::neural_memory::traits(mem.get_layout()).dimension == 4)
         {
-            auto expected_mem_format = _batch_size == 1 ? ( use_half ? memory::format::yxfb_f16 : memory::format::fyxb_f32 ) : ( use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32 );
-            if (mem.argument.format != expected_mem_format)
-            {
-                auto reordered_prim = neural::reorder::create(
-                {
-                    expected_mem_format,
-                    mem.argument.size,
-                    prim
-                });
-                _primitives.push_back(reordered_prim);
-                return true;
-            }
+            expected_mem_size = _batch_size == 1 && !use_half 
+                ? cldnn::tensor(cldnn::format::fyxb,
+                    {
+                        input_size.feature[0], input_size.spatial[0], input_size.spatial[1], input_size.batch[0] // order: "fyxb"
+                    })
+                : cldnn::tensor(cldnn::format::yxfb,
+                    {
+                        input_size.spatial[0], input_size.spatial[1], input_size.feature[0], input_size.batch[0]  // order: "yxfb"
+                    });
         }
-        else if (memory::traits(mem.argument.format).dimension == 2)
+        else if (cldnn::neural_memory::traits(mem.get_layout()).dimension == 2)
         {
-            auto expected_mem_format = _batch_size == 1 ? ( use_half ? memory::format::xb_f16 : memory::format::xb_f32 ) : ( use_half ? memory::format::xb_f16 : memory::format::xb_f32 );
-            if (mem.argument.format != expected_mem_format)
+            expected_mem_size = cldnn::tensor(cldnn::format::xb,
             {
-                auto reordered_prim = neural::reorder::create(
-                {
-                    expected_mem_format,
-                    mem.argument.size,
-                    prim
-                });
-                _primitives.push_back(reordered_prim);
-                return true;
-            }
+                input_size.spatial[0], input_size.batch[0]  // order: "xb"
+            });
         }
     }
-    return false;
+    cldnn::layout expected_mem_layout(data_type, expected_mem_size);
+
+    if (mem.get_layout() != expected_mem_layout)
+    {
+        _topology.add(cldnn::reorder(reorder_id, mem_id, expected_mem_layout));
+        return reorder_id;
+    }
+    return mem_id;
 }
 
-neural::primitive weights_optimizer::create_weights_from_file(
-    const std::string& path, neural::file::weights_type type, const boost::optional<bool>& use_half)
+cldnn::primitive_id weights_optimizer::create_weights_from_file(
+    const std::string& path, file::weights_type type, const boost::optional<bool>& use_half)
 {
-    neural::primitive prim = file::create({ path, type });
-    if (_enabled)
-    {
-        if (_needs_optimization(prim, type, use_half.value_or(_use_half)))
-        {
-            return _primitives.back();
-        }
-    }
-    return prim;
+    auto mem = file::create({ _engine, path, type });
+    _topology.add(cldnn::data(path, mem));
+    return _enabled
+        ? _needs_optimization(mem, path, type, use_half.value_or(_use_half))
+        : path;
 }
 
-void weights_optimizer::optimize(const neural::worker& worker)
+std::vector<cldnn::network_output> weights_optimizer::optimize() const
 {
-    if (_enabled && !_primitives.empty())
-    {
-        for (auto& p : _primitives)
-        {
-            worker.execute(p.work());
-        }
-
-        //OCL buffers mapping blocks until all primitives are completed
-        _primitives.back().output[0].as<const neural::memory&>().pointer<char>();
-    }
+    cldnn::network worker(_engine, _topology);
+    return worker.execute();
 }

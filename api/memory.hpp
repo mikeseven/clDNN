@@ -172,6 +172,10 @@ struct neural_memory
             oyxi_f32,   // format used only for weights: o - output feature maps, i - input feature maps
             yxio_f32,   // format used only for weights: o - output feature maps, i - input feature maps
             os_iyx_osv16_f32, // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
+            byxf_b24_f32,        // for convolution_cpu_generic
+            yxoi_o4_f32,       // for convolution_cpu_generic
+            os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
+            bs_yxf_bv24_f32,
 
             // FP16 (half precision float)
             x_f16,
@@ -187,6 +191,10 @@ struct neural_memory
             oyxi_f16,          // format used only for weights: o - output feature maps, i - input feature maps
             yxio_f16,          // format used only for weights: o - output feature maps, i - input feature maps
             os_iyx_osv16_f16,  // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
+            byxf_b24_f16,      // for convolution_cpu_generic
+            yxoi_o4_f16,       // for convolution_cpu_generic
+            os_yxi_sv16_f16,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
+            bs_yxf_bv24_f16,
 
             format_num,
             any = static_cast<uint8_t>(-1),
@@ -261,6 +269,32 @@ struct neural_memory
         default: throw std::invalid_argument("unsupported data type");
         }
         return static_cast<format::type>(get_format_base(layout.size.format) + format_shift);
+    }
+
+    static cldnn::format to_tensor_format(format::type value)
+    {
+        switch (value % format::type::half_base)
+        {
+        case format::type::x_f32   : return cldnn::format::x;
+        case format::type::xb_f32  : return cldnn::format::xb;
+        case format::type::bx_f32  : return cldnn::format::bx;
+        case format::type::yxfn_f32: return cldnn::format::yxfn;
+        case format::type::yxfb_f32: return cldnn::format::yxfb;
+        case format::type::byxf_f32: return cldnn::format::byxf;
+        case format::type::bfyx_f32: return cldnn::format::bfyx;
+        case format::type::fyxb_f32: return cldnn::format::fyxb;
+        case format::type::oiyx_f32: return cldnn::format::oiyx;
+        case format::type::yxoi_f32: return cldnn::format::yxoi;
+        case format::type::oyxi_f32: return cldnn::format::oyxi;
+        case format::type::yxio_f32: return cldnn::format::yxio;
+        case format::type::os_iyx_osv16_f32: return cldnn::format::os_iyx_osv16;
+        default: throw std::invalid_argument("unsupported format");
+        }
+    }
+
+    static cldnn::data_types to_data_type(format::type value)
+    {
+        return value < format::type::half_base ? data_types::f32 : data_types::f16;
     }
 
     struct arguments {

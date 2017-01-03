@@ -13,16 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
+#pragma once
 
-#include "api/neural_base.h"
+#include "api/topology.hpp"
 #include "weights_optimizer.h"
 
-std::vector<std::pair<neural::primitive, std::string>> build_alexnet(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
+cldnn::topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, int32_t batch_size, bool use_half);
 
-std::vector<std::pair<neural::primitive, std::string>> build_vgg16(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
+cldnn::topology build_vgg16(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
 
-std::vector<std::pair<neural::primitive, std::string>> build_googlenetv1(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
+cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
 
-std::vector<std::pair<neural::primitive, std::string>> build_gender(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
+cldnn::topology build_gender(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
 
-std::vector<std::pair<neural::primitive, std::string>> build_microbench(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
+cldnn::topology build_microbench(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);

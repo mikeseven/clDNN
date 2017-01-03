@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include "api/neural.h"
 #include "weights_optimizer.h"
 #include "power_intrumentation.h"
 #include <memory>
