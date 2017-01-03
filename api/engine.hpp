@@ -33,6 +33,32 @@ struct engine_configuration
         :enable_profiling(profiling), enable_debugging(debug), compiler_options(options) {}
 };
 
+struct engine_info
+{
+    enum configurations : uint32_t
+    {
+        GT0 = 0,
+        GT1,
+        GT1_5,
+        GT2,
+        GT3,
+        GT4,
+        GT_UNKNOWN,
+        GT_COUNT
+    };
+
+    configurations configuration;
+    uint32_t cores_count;
+    uint32_t core_frequency;
+
+    uint64_t max_work_group_size;
+    uint64_t max_local_mem_size;
+
+    // Flags (for layout compatibility fixed size types are used).
+    uint8_t supports_fp16;
+    uint8_t supports_fp16_denorms;
+};
+
 class engine_impl;
 struct engine
 {
@@ -62,6 +88,13 @@ struct engine
         return result;
     }
 
+    engine_info get_info() const
+    {
+        engine_info result;
+        check_status("get engine info failed", get_info_impl(&result));
+        return result;
+    }
+
     DLL_SYM engine_types engine_type() noexcept;
 
     engine_impl* get() const { return _impl; }
@@ -77,6 +110,7 @@ private:
     engine_impl* _impl;
     DLL_SYM static uint32_t engine_count_impl(engine_types type, status_t* status) noexcept;
     DLL_SYM static engine_impl* create_engine_impl(engine_types type, uint32_t engine_num, const engine_configuration* configuration, status_t* status) noexcept;
+    DLL_SYM status_t get_info_impl(engine_info* info) const noexcept;
 };
 API_CLASS(engine)
 }

@@ -116,4 +116,22 @@ engine_impl* engine::create_engine_impl(engine_types engine_type, uint32_t engin
         return nullptr;
     }
 }
+
+status_t engine::get_info_impl(engine_info * info) const noexcept
+{
+    if (!info)
+        return CLDNN_ERROR;
+
+    try
+    {
+        auto internal_info = _impl->get_engine_info();
+        *info = static_cast<engine_info>(internal_info);
+        return CLDNN_SUCCESS;
+    }
+    catch (...)
+    {
+        return CLDNN_ERROR;
+    }
+
+}
 }

@@ -15,11 +15,12 @@
 */
 #pragma once
 #include <cstdint>
+#include "api/engine.hpp"
 
 namespace neural { namespace gpu {
 
 class gpu_toolkit;
-struct engine_info
+struct engine_info_internal : cldnn::engine_info
 {
     enum models
     {
@@ -31,33 +32,11 @@ struct engine_info
         GEN7 = 0, GEN7_5, GEN8, GEN9, GEN10, GEN11, GEN12, GEN_UNKNOWN, GEN_COUNT
     };
 
-    enum configurations
-    {
-        GT0 = 0,
-        GT1,
-        GT1_5,
-        GT2,
-        GT3,
-        GT4,
-        GT_UNKNOWN,
-        GT_COUNT
-    };
-
     models model;
     architectures architecture;
-    configurations configuration;
-    uint32_t cores_count;
-    uint32_t core_frequency;
-
-    uint64_t max_work_group_size;
-    uint64_t max_local_mem_size;
-
-    // Flags (for layout compatibility fixed size types are used).
-    uint8_t supports_fp16;
-    uint8_t supports_fp16_denorms;
 private:
     friend class gpu_toolkit;
-    explicit engine_info(gpu_toolkit& context);
+    explicit engine_info_internal(const gpu_toolkit& context);
 };
 
 }}

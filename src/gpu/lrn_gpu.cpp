@@ -34,22 +34,22 @@ static const std::string kernel_name = "lrn_gpu";
 static const std::string kernel_name_b8 = "lrn_gpu_b8";
 static const std::string kernel_name_bfyx = "lrn_gpu_bfyx";
 template <>
-struct kd_default_value_selector<neural::gpu::engine_info::architectures>
+struct kd_default_value_selector<neural::gpu::engine_info_internal::architectures>
 {
-    static constexpr neural::gpu::engine_info::architectures value = neural::gpu::engine_info::architectures::GEN_UNKNOWN;
+    static constexpr neural::gpu::engine_info_internal::architectures value = neural::gpu::engine_info_internal::architectures::GEN_UNKNOWN;
 };
 
 template <>
-struct kd_default_value_selector<neural::gpu::engine_info::configurations>
+struct kd_default_value_selector<neural::gpu::engine_info_internal::configurations>
 {
-    static constexpr neural::gpu::engine_info::configurations value = neural::gpu::engine_info::configurations::GT_UNKNOWN;
+    static constexpr neural::gpu::engine_info_internal::configurations value = neural::gpu::engine_info_internal::configurations::GT_UNKNOWN;
 };
 
 
 struct lrn_gpu : is_an_implementation
 {
     const normalization::response& _outer;
-    gpu::engine_info _engine_info;
+    gpu::engine_info_internal _engine_info;
 
     struct kernel_data
     {
@@ -60,7 +60,7 @@ struct lrn_gpu : is_an_implementation
     } _kernel_data;
     gpu::kernel _kernel;
 
-    static kd_selector_t<kernel_data, normalization::response, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> ks;
+    static kd_selector_t<kernel_data, normalization::response, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
 
     lrn_gpu(const normalization::response& outer)
         : _outer(outer),
@@ -190,10 +190,10 @@ lrn_gpu::kernel_data default_bfyx_f32(const normalization::response& arg)
     return kd;
 }
 
-kd_selector_t<lrn_gpu::kernel_data, normalization::response, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info::architectures, neural::gpu::engine_info::configurations> lrn_gpu::ks = {
-    { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxfb_f32 },
-    { std::make_tuple(memory::format::yxfb_f16, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_yxfb_f32 },
-    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info::architectures::GEN_UNKNOWN, gpu::engine_info::configurations::GT_UNKNOWN), default_bfyx_f32 },
+kd_selector_t<lrn_gpu::kernel_data, normalization::response, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> lrn_gpu::ks = {
+    { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
+    { std::make_tuple(memory::format::yxfb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32 },
 };
 
 

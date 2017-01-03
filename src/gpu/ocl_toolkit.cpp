@@ -57,6 +57,7 @@ gpu_toolkit::gpu_toolkit(const configuration& config)
                      config.enable_profiling
                         ? cl::QueueProperties::Profiling
                         : cl::QueueProperties::None)
+    , _engine_info(*this)
     , _kernels_cache(*this)
     {}
 

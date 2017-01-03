@@ -29,11 +29,12 @@ public:
         cl::Event end_event;
         std::vector<cl::Event> events(dependencies.size());
         std::transform(std::begin(dependencies), std::end(dependencies), std::begin(events), [](const cldnn::refcounted_obj_ptr<cldnn::event_impl>& evt) { return evt.get()->get(); });
+        auto queue = context()->queue();
 
         if (context()->get_configuration().enable_profiling) {
             instrumentation::timer<> pre_enqueue_timer;
             auto pre_enqueue_time = pre_enqueue_timer.uptime();
-            context()->queue().enqueueMarkerWithWaitList(&events, &end_event);
+            queue.enqueueMarkerWithWaitList(&events, &end_event);
             end_event.wait();
             context()->report_profiling({ "events_waiter",
             {
@@ -44,7 +45,7 @@ public:
             } });
         }
         else {
-            context()->queue().enqueueMarkerWithWaitList(&events, &end_event);
+            queue.enqueueMarkerWithWaitList(&events, &end_event);
         }
         return new cldnn::event_impl(end_event);
     }

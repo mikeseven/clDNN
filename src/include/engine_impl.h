@@ -23,6 +23,7 @@
 #include <memory>
 #include "primitive_arg.h"
 #include "implementation_map.h"
+#include "gpu/engine_info.h"
 
 namespace neural { namespace gpu { class gpu_toolkit; } }
 namespace cldnn
@@ -48,6 +49,11 @@ public:
     {
         auto factory = implementation_map<primitive_kind>::get(type(), arg);
         return std::move(std::unique_ptr<primitive_impl>(factory(arg)));
+    }
+
+    neural::gpu::engine_info_internal get_engine_info() const
+    {
+        return _context->get_engine_info();
     }
 
 private:

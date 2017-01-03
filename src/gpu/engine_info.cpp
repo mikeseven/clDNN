@@ -124,16 +124,16 @@ std::string to_string_hex(int val)
 
 struct device_info
 {
-    engine_info::models model;
-    engine_info::architectures arch;
-    engine_info::configurations config;
+    engine_info_internal::models model;
+    engine_info_internal::architectures arch;
+    cldnn::engine_info::configurations config;
     std::string code;
 };
 
 
 const device_info& get_device_info(int device_id)
 {
-#define GEN_DEVICE(code, dev_id, model, arch, conf) { dev_id, {engine_info::model, engine_info::arch, engine_info::conf, #code} },
+#define GEN_DEVICE(code, dev_id, model, arch, conf) { dev_id, {engine_info_internal::model, engine_info_internal::arch, cldnn::engine_info::conf, #code} },
     static const std::unordered_map<int, device_info> device_map{
 #include "devices.inc"
     };
@@ -148,7 +148,7 @@ const device_info& get_device_info(int device_id)
 
 } // namespace <anonymous>
 
-engine_info::engine_info(gpu_toolkit& context)
+engine_info_internal::engine_info_internal(const gpu_toolkit& context)
 {
     auto device_id = get_gpu_device_id();
     if (0 == device_id) throw std::runtime_error(device_info_failed_msg);

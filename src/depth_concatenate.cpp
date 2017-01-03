@@ -116,7 +116,7 @@ struct depth_concatenate_gpu : is_an_implementation
         }
     }
 
-    static kernel_data set_kernel_data(size_t input_idx, const depth_concatenate& outer, const gpu::engine_info& info)
+    static kernel_data set_kernel_data(size_t input_idx, const depth_concatenate& outer, const gpu::engine_info_internal& info)
     {
         const auto& input_mem = outer.input_memory(input_idx);  // current input
 

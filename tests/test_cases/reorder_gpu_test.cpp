@@ -15,7 +15,6 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "gpu/ocl_toolkit.h"
 #include <gtest/gtest.h>
 #include <api/memory.hpp>
 #include <api/primitives/input_layout.hpp>
@@ -318,15 +317,14 @@ TEST(reorder_gpu_f16, basic_subtract_f32_output_f32) {
     //  b1 f1: 10    7
     //
 
-    neural::gpu::gpu_toolkit gpu_info;
-    if (!gpu_info.get_engine_info().supports_fp16)
+    engine engine;
+
+    if (!engine.get_info().supports_fp16)
     {
         std::cout << "[ SKIPPED ] The test is skipped (cl_khr_fp16 is not supported)." << std::endl;
         EXPECT_EQ(1, 1);
         return;
     }
-
-    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f16,{ format::yxfb,{ 2, 2, 2, 2 } } });
     layout output_layout(data_types::f32, { format::bfyx,{ 2,2,2,2 } });
@@ -414,15 +412,13 @@ TEST(reorder_gpu_f16, basic_subtract_value) {
     //  b1 f1:  9.5  5.5
     //
 
-    neural::gpu::gpu_toolkit gpu_info;
-    if (!gpu_info.get_engine_info().supports_fp16)
+    engine engine;
+    if (!engine.get_info().supports_fp16)
     {
         std::cout << "[ SKIPPED ] The test is skipped (cl_khr_fp16 is not supported)." << std::endl;
         EXPECT_EQ(1, 1);
         return;
     }
-
-    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f16,{ format::yxfb,{ 2, 2, 2, 2 } } });
     layout output_layout(data_types::f16, { format::bfyx,{ 2,2,2,2 } });
@@ -485,8 +481,9 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
     //  Output is expected to contain the same value as input in range of indices from 0x0000 to 0xF801.
     //
 
-    neural::gpu::gpu_toolkit gpu_info;
-    if (!gpu_info.get_engine_info().supports_fp16)
+    engine engine;
+
+    if (!engine.get_info().supports_fp16)
     {
         std::cout << "[ SKIPPED ] The test is skipped (cl_khr_fp16 is not supported)." << std::endl;
         EXPECT_EQ(1, 1);
@@ -506,8 +503,6 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
     // Special values (ambiguous ones).
     expected_values[0xF802] = half_t(0x8000);    // -0
     expected_values[0xF803] = half_t(0xFC12);    // A NaN (sample: -NaN.0x12).
-
-    engine engine;
 
     auto input = memory::allocate(engine, { data_types::f16,{ format::yxfb,{ 2, 2, static_cast<int32_t>(expected_values.size()) / 4, 1 } } });
     layout interm_layout( data_types::f32, { format::byxf, { 1, 2, 2, static_cast<int32_t>(expected_values.size()) / 4 } });

@@ -30,7 +30,6 @@
 #include <iostream>
 #include <iomanip>
 #include <thread>
-#include <gpu/ocl_toolkit.h>
 #include <api/primitives/reorder.hpp>
 
 using namespace cldnn;
@@ -1483,8 +1482,9 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
 {
 #define USE_OLD_WEIGHTS_FORMAT 0
 
-    neural::gpu::gpu_toolkit gpu_info;
-    if (!gpu_info.get_engine_info().supports_fp16)
+    engine engine;
+
+    if (!engine.get_info().supports_fp16)
     {
         std::cout << "[ SKIPPED ] The test is skipped (cl_khr_fp16 is not supported)." << std::endl;
         EXPECT_EQ(1, 1);
@@ -1515,8 +1515,6 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
     const int32_t output_x = (input_x - weights_x) / stride_x + 1;
     const int32_t output_y = (input_y - weights_y) / stride_y + 1;
 
-
-    engine engine;
 
     auto input_size = tensor(format::yxfb, { input_x, input_y, input_feature_count, batch_size }).transform(input_format, 1);
     auto input = memory::allocate(engine, { data_types::f32, input_size });
