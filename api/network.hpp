@@ -274,6 +274,7 @@ struct network
         event_impl* event_impl;
         memory_impl* memory_impl;
     };
+    API_CLASS(network_output_ref)
 
     network(const engine& engine, const topology& topology, const build_options& options = build_options())
         :_impl(check_status<network_impl*>("network build failed", [&](status_t* status) { return build_impl(engine, topology, options.get_refs(), status); }))

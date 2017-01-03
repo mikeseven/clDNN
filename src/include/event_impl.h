@@ -45,6 +45,7 @@ public:
         }
     }
     cl::Event get() const { return _event; }
+    array_ref<event::profiling_interval_ref> get_profiling_info();
 protected:
     //TODO prevent long handler execution problem
     static void CL_CALLBACK callBack(cl_event, cl_int, void* me)
@@ -69,6 +70,7 @@ protected:
     std::mutex _handlers_mutex;
     cl::Event _event;
     std::vector<std::pair<event::event_handler, void*>> _handlers;
+    std::vector<event::profiling_interval_ref> _profiling_info;
 };
 
 class user_event_gpu : public event_impl

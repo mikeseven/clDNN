@@ -80,7 +80,6 @@ event::~event()
     _impl->release();
 }
 
-
 event_impl* event::create_user_event_impl(const engine& engine, status_t* status) noexcept
 {
     try
@@ -133,4 +132,46 @@ status_t event::wait_impl() const noexcept
         return CLDNN_ERROR;
     }
 }
+
+array_ref<event::profiling_interval_ref> event::get_profiling_impl(status_t * status) const noexcept
+{
+    try
+    {
+        if (status)
+            *status = CLDNN_SUCCESS;
+        return _impl->get_profiling_info();
+    }
+    catch (...)
+    {
+        if (status)
+            *status = CLDNN_ERROR;
+        return array_ref<profiling_interval_ref>();
+    }
+}
+
+array_ref<event::profiling_interval_ref> event_impl::get_profiling_info()
+{
+    static const std::vector<std::tuple<std::string, cl_profiling_info, cl_profiling_info>> profiling_periods
+    {
+        { "submission", CL_PROFILING_COMMAND_QUEUED, CL_PROFILING_COMMAND_SUBMIT },
+        { "starting",   CL_PROFILING_COMMAND_SUBMIT, CL_PROFILING_COMMAND_START },
+        { "executing",  CL_PROFILING_COMMAND_START,  CL_PROFILING_COMMAND_END },
+    };
+
+    if (_profiling_info.empty() && (_event.getInfo<CL_EVENT_COMMAND_QUEUE>().getInfo<CL_QUEUE_PROPERTIES>() & CL_QUEUE_PROFILING_ENABLE))
+    {
+        for (auto& t : profiling_periods)
+        {
+            cl_ulong start;
+            _event.getProfilingInfo(std::get<1>(t), &start);
+            cl_ulong end;
+            _event.getProfilingInfo(std::get<2>(t), &end);
+            auto value = end - start;
+            _profiling_info.push_back({ std::get<0>(t), value });
+        }
+    }
+    return _profiling_info;
+}
+
+
 }

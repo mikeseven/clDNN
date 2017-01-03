@@ -27,10 +27,9 @@ enum class engine_types { ocl };
 struct engine_configuration
 {
     uint32_t enable_profiling;
-    uint32_t enable_debugging;
     string_ref compiler_options;
-    engine_configuration(bool profiling = false, bool debug = false, string_ref options = "")
-        :enable_profiling(profiling), enable_debugging(debug), compiler_options(options) {}
+    engine_configuration(bool profiling = false, string_ref options = "")
+        :enable_profiling(profiling), compiler_options(options) {}
 };
 
 struct engine_info

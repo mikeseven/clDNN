@@ -18,12 +18,20 @@
 #pragma once
 #include "cldnn_defs.h"
 #include "engine.hpp"
+#include "profiling.hpp"
+#include <algorithm>
 
 namespace cldnn
 {
 class event_impl;
 struct event
 {
+    struct profiling_interval_ref
+    {
+        string_ref name;
+        uint64_t nanoseconds;
+    };
+
     static event create_user_event(const engine& engine)
     {
         return check_status<event_impl*>("create user event failed", [&](status_t* status) { return create_user_event_impl(engine, status); });
@@ -43,6 +51,27 @@ struct event
         check_status("set event handler failed", add_event_handler_impl(handler, param));
     }
 
+    std::vector<instrumentation::profiling_interval> get_profiling_info() const
+    {
+        using namespace instrumentation;
+        wait();
+        array_ref<profiling_interval_ref> profiling_info_ref = check_status<array_ref<profiling_interval_ref>>("network execute failed", [&](status_t* status) { return get_profiling_impl(status); });
+        std::vector<profiling_interval> result(profiling_info_ref.size());
+        std::transform(
+            std::begin(profiling_info_ref),
+            std::end(profiling_info_ref),
+            std::begin(result),
+            [](const profiling_interval_ref& ref) -> profiling_interval
+            {
+                return{
+                    ref.name,
+                    std::make_shared<profiling_period_basic>(std::chrono::nanoseconds(ref.nanoseconds))
+                };
+            }
+        );
+        return result;
+    }
+
     event_impl* get() const { return _impl; }
 private:
     friend struct network;
@@ -52,6 +81,7 @@ private:
     DLL_SYM status_t wait_impl() const noexcept;
     DLL_SYM status_t set_impl() noexcept;
     DLL_SYM status_t add_event_handler_impl(event_handler handler, void* param) noexcept;
+    DLL_SYM array_ref<profiling_interval_ref> get_profiling_impl(status_t* status) const noexcept;
 };
 API_CLASS(event)
 }
