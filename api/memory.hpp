@@ -365,8 +365,8 @@ struct memory
      * \return number of bytes used by memory
      */
     size_t size() const { return get_layout().data_size(); }
-    DLL_SYM const layout& get_layout() const noexcept;
-    DLL_SYM bool is_allocated_by(const engine& engine) const noexcept;
+    DLL_SYM const layout& get_layout() const;
+    DLL_SYM bool is_allocated_by(const engine& engine) const;
 
     // TODO remove this backward compatibility call
     neural_memory::arguments argument() const { return neural_memory::arguments(get_layout()); };
@@ -377,10 +377,10 @@ struct memory
 private:
     friend struct engine;
     memory_impl* _data;
-    DLL_SYM static memory_impl* allocate_buffer(engine engine, layout layout, status_t* status) noexcept;
-    DLL_SYM static memory_impl* attach_buffer(layout layout, void* pointer, size_t size, status_t* status) noexcept;
-    DLL_SYM void* lock_buffer(status_t* status) const noexcept;
-    DLL_SYM status_t unlock_buffer() const noexcept;
+    DLL_SYM static memory_impl* allocate_buffer(engine engine, layout layout, status_t* status);
+    DLL_SYM static memory_impl* attach_buffer(layout layout, void* pointer, size_t size, status_t* status);
+    DLL_SYM void* lock_buffer(status_t* status) const;
+    DLL_SYM status_t unlock_buffer() const;
 
     void* lock() const
     {

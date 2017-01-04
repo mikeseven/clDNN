@@ -18,6 +18,8 @@
 #include <vector>
 #include <cassert>
 #include <iterator>
+#include <cstring>
+#include <string>
 
 namespace cldnn {
 
@@ -62,7 +64,7 @@ public:
     iterator begin() const { return _data; }
     iterator end() const { return _data + _size; }
     const_iterator cbegin() const { return _data; }
-    const_iterator cend() const { return _data + _size }
+    const_iterator cend() const { return _data + _size; }
 #endif
 
 

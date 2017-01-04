@@ -56,7 +56,7 @@ network_impl* engine_impl::build_network(const topology& topology, const build_o
     return builder.build_network(topology.get());
 }
 
-uint32_t engine::engine_count_impl(engine_types type, status_t* status) noexcept
+uint32_t engine::engine_count_impl(engine_types type, status_t* status)
 {
     if (type == engine_types::ocl)
     {
@@ -89,12 +89,12 @@ engine::~engine()
     _impl->release();
 }
 
-engine_types engine::engine_type() noexcept
+engine_types engine::engine_type()
 {
     return engine_types::ocl;
 }
 
-engine_impl* engine::create_engine_impl(engine_types engine_type, uint32_t engine_num, const engine_configuration* configuration, status_t* status) noexcept
+engine_impl* engine::create_engine_impl(engine_types engine_type, uint32_t engine_num, const engine_configuration* configuration, status_t* status)
 {
     if (engine_num > 0 || (engine_type != engine_types::ocl))
     {
@@ -117,7 +117,7 @@ engine_impl* engine::create_engine_impl(engine_types engine_type, uint32_t engin
     }
 }
 
-status_t engine::get_info_impl(engine_info * info) const noexcept
+status_t engine::get_info_impl(engine_info * info) const
 {
     if (!info)
         return CLDNN_ERROR;

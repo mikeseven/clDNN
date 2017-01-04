@@ -67,8 +67,8 @@ private:
     topology_impl* _impl;
     topology(topology_impl* impl) :_impl(impl) {}
 
-    DLL_SYM static topology_impl* create_topology_impl(status_t* status) noexcept;
-    DLL_SYM status_t add_primitive_dto(const primitive_dto* dto) noexcept;
+    DLL_SYM static topology_impl* create_topology_impl(status_t* status);
+    DLL_SYM status_t add_primitive_dto(const primitive_dto* dto);
 };
 
 API_CLASS(topology)

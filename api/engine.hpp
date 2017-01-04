@@ -94,7 +94,7 @@ struct engine
         return result;
     }
 
-    DLL_SYM engine_types engine_type() noexcept;
+    DLL_SYM engine_types engine_type();
 
     engine_impl* get() const { return _impl; }
 
@@ -107,9 +107,9 @@ private:
         if (_impl == nullptr) throw std::invalid_argument("implementation pointer should not be null");
     }
     engine_impl* _impl;
-    DLL_SYM static uint32_t engine_count_impl(engine_types type, status_t* status) noexcept;
-    DLL_SYM static engine_impl* create_engine_impl(engine_types type, uint32_t engine_num, const engine_configuration* configuration, status_t* status) noexcept;
-    DLL_SYM status_t get_info_impl(engine_info* info) const noexcept;
+    DLL_SYM static uint32_t engine_count_impl(engine_types type, status_t* status);
+    DLL_SYM static engine_impl* create_engine_impl(engine_types type, uint32_t engine_num, const engine_configuration* configuration, status_t* status);
+    DLL_SYM status_t get_info_impl(engine_info* info) const;
 };
 API_CLASS(engine)
 }

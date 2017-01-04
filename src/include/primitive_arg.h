@@ -41,6 +41,7 @@ public:
     // TODO remove backward compatibility code:
     const memory& output_memory(size_t idx) const
     {
+        idx;
         assert(idx == 0);
         return output_memory();
     }

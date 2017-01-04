@@ -158,14 +158,15 @@ network::~network()
     _impl->release();
 }
 
-engine_impl* network::get_engine_impl(status_t* status) const noexcept
+engine_impl* network::get_engine_impl(status_t* status) const
 {
     try
     {
         if (status)
             *status = CLDNN_SUCCESS;
-        auto result = _impl->get_engine();
-        return result.detach();
+        auto engine = _impl->get_engine();
+        if (!engine) throw std::logic_error("no assigned engine");
+        return engine.detach();
     }
     catch (...)
     {
@@ -175,13 +176,14 @@ engine_impl* network::get_engine_impl(status_t* status) const noexcept
     }
 }
 
-topology_impl* network::get_topology_impl(status_t* status) const noexcept
+topology_impl* network::get_topology_impl(status_t* status) const
 {
     try
     {
         if (status)
             *status = CLDNN_SUCCESS;
         auto topology = _impl->get_topology();
+        if (!topology) throw std::logic_error("no assigned topology");
         return topology.detach();
     }
     catch (...)
@@ -192,7 +194,7 @@ topology_impl* network::get_topology_impl(status_t* status) const noexcept
     }
 }
 
-network_impl* network::build_impl(const engine& engine, const topology& topology, array_ref<build_option_ref> options, status_t* status) noexcept
+network_impl* network::build_impl(const engine& engine, const topology& topology, array_ref<build_option_ref> options, status_t* status)
 {
     try
     {
@@ -216,7 +218,7 @@ network_impl* network::build_impl(const engine& engine, const topology& topology
     }
 }
 
-status_t network::set_input_data_impl(primitive_id_ref id, memory mem) noexcept
+status_t network::set_input_data_impl(primitive_id_ref id, memory mem)
 {
     try
     {
@@ -229,7 +231,7 @@ status_t network::set_input_data_impl(primitive_id_ref id, memory mem) noexcept
     }
 }
 
-array_ref<network::network_output_ref> network::execute_impl(array_ref<event> dependencies, status_t* status) noexcept
+array_ref<network::network_output_ref> network::execute_impl(array_ref<event> dependencies, status_t* status)
 {
     try
     {

@@ -21,7 +21,7 @@
 
 namespace cldnn
 {
-topology_impl* topology::create_topology_impl(status_t* status) noexcept
+topology_impl* topology::create_topology_impl(status_t* status)
 {
     try
     {
@@ -37,7 +37,7 @@ topology_impl* topology::create_topology_impl(status_t* status) noexcept
     }
 }
 
-status_t topology::add_primitive_dto(const primitive_dto* dto) noexcept
+status_t topology::add_primitive_dto(const primitive_dto* dto)
 {
     try
     {

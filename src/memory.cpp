@@ -44,17 +44,17 @@ memory::~memory()
     _data->release();
 }
 
-const layout& memory::get_layout() const noexcept
+const layout& memory::get_layout() const
 {
     return _data->get_layout();
 }
 
-bool memory::is_allocated_by(const engine& engine) const noexcept
+bool memory::is_allocated_by(const engine& engine) const
 {
     return _data->is_allocated_by(engine.get());
 }
 
-memory_impl* memory::allocate_buffer(engine engine, layout layout, status_t* status) noexcept
+memory_impl* memory::allocate_buffer(engine engine, layout layout, status_t* status)
 {
     try
     {
@@ -70,13 +70,13 @@ memory_impl* memory::allocate_buffer(engine engine, layout layout, status_t* sta
     }
 }
 
-memory_impl* memory::attach_buffer(layout layout, void* pointer, size_t size, status_t* status) noexcept
+memory_impl* memory::attach_buffer(layout layout, void* pointer, size_t size, status_t* status)
 {
     try
     {
         if (status)
             *status = CLDNN_SUCCESS;
-        assert(layout.data_size() == size);
+        if (layout.data_size() > size) std::invalid_argument("buffer size does not match layout size");
         return new simple_attached_memory(layout, pointer);
     }
     catch (...)
@@ -87,7 +87,7 @@ memory_impl* memory::attach_buffer(layout layout, void* pointer, size_t size, st
     }
 }
 
-void* memory::lock_buffer(status_t* status) const noexcept
+void* memory::lock_buffer(status_t* status) const
 {
     try
     {
@@ -103,7 +103,7 @@ void* memory::lock_buffer(status_t* status) const noexcept
     }
 }
 
-status_t memory::unlock_buffer() const noexcept
+status_t memory::unlock_buffer() const
 {
     try
     {

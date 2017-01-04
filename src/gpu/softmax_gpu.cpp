@@ -135,10 +135,9 @@ struct softmax_gpu : is_an_implementation
 
         const auto& input_mem  = outer.input_memory(0);  // input
         const auto& output_mem = outer.output_memory(0); // output
-        auto& output_size = output_mem.get_layout().size;
 
-        assert(1 == output_size.feature.size());
-        assert(1 == output_size.batch.size());
+        assert(1 == output_mem.get_layout().size.feature.size());
+        assert(1 == output_mem.get_layout().size.batch.size());
 
         return _kernel.run<gpu::input_mem, gpu::output_mem>({kd.gws0, kd.lws0}, events, input_mem, output_mem);
     }

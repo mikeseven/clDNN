@@ -80,7 +80,7 @@ event::~event()
     _impl->release();
 }
 
-event_impl* event::create_user_event_impl(const engine& engine, status_t* status) noexcept
+event_impl* event::create_user_event_impl(const engine& engine, status_t* status)
 {
     try
     {
@@ -96,7 +96,7 @@ event_impl* event::create_user_event_impl(const engine& engine, status_t* status
     }
 }
 
-status_t event::add_event_handler_impl(event_handler handler, void* param) noexcept
+status_t event::add_event_handler_impl(event_handler handler, void* param)
 {
     try
     {
@@ -108,7 +108,7 @@ status_t event::add_event_handler_impl(event_handler handler, void* param) noexc
         return CLDNN_ERROR;
     }
 }
-status_t event::set_impl() noexcept
+status_t event::set_impl()
 {
     try
     {
@@ -120,7 +120,7 @@ status_t event::set_impl() noexcept
         return CLDNN_ERROR;
     }
 }
-status_t event::wait_impl() const noexcept
+status_t event::wait_impl() const
 {
     try
     {
@@ -133,7 +133,7 @@ status_t event::wait_impl() const noexcept
     }
 }
 
-array_ref<event::profiling_interval_ref> event::get_profiling_impl(status_t * status) const noexcept
+array_ref<event::profiling_interval_ref> event::get_profiling_impl(status_t * status) const
 {
     try
     {

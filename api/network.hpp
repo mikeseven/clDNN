@@ -319,11 +319,11 @@ private:
     friend struct engine;
     network(network_impl* impl) :_impl(impl) {}
     network_impl* _impl;
-    DLL_SYM static network_impl* build_impl(const engine& engine, const topology& topology, array_ref<build_option_ref> options, status_t* status) noexcept;
-    DLL_SYM status_t set_input_data_impl(primitive_id_ref id, memory mem) noexcept;
-    DLL_SYM array_ref<network_output_ref> execute_impl(array_ref<event> dependencies, status_t* status) noexcept;
-    DLL_SYM engine_impl* get_engine_impl(status_t* status) const noexcept;
-    DLL_SYM topology_impl* get_topology_impl(status_t* status) const noexcept;
+    DLL_SYM static network_impl* build_impl(const engine& engine, const topology& topology, array_ref<build_option_ref> options, status_t* status);
+    DLL_SYM status_t set_input_data_impl(primitive_id_ref id, memory mem);
+    DLL_SYM array_ref<network_output_ref> execute_impl(array_ref<event> dependencies, status_t* status);
+    DLL_SYM engine_impl* get_engine_impl(status_t* status) const;
+    DLL_SYM topology_impl* get_topology_impl(status_t* status) const;
 };
 API_CLASS(network)
 }

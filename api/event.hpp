@@ -77,11 +77,11 @@ private:
     friend struct network;
     event(event_impl* impl) : _impl(impl) {}
     event_impl* _impl;
-    DLL_SYM static event_impl* create_user_event_impl(const engine& engine, status_t* status) noexcept;
-    DLL_SYM status_t wait_impl() const noexcept;
-    DLL_SYM status_t set_impl() noexcept;
-    DLL_SYM status_t add_event_handler_impl(event_handler handler, void* param) noexcept;
-    DLL_SYM array_ref<profiling_interval_ref> get_profiling_impl(status_t* status) const noexcept;
+    DLL_SYM static event_impl* create_user_event_impl(const engine& engine, status_t* status);
+    DLL_SYM status_t wait_impl() const;
+    DLL_SYM status_t set_impl();
+    DLL_SYM status_t add_event_handler_impl(event_handler handler, void* param);
+    DLL_SYM array_ref<profiling_interval_ref> get_profiling_impl(status_t* status) const;
 };
 API_CLASS(event)
 }

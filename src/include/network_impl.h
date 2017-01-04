@@ -33,7 +33,7 @@ public:
 
     network_impl(refcounted_obj_ptr<engine_impl> engine, refcounted_obj_ptr<topology_impl> topology, const std::vector<primitive_id>& outputs);
 
-    const refcounted_obj_ptr<engine_impl>& get_engine() const noexcept { return _engine; }
+    const refcounted_obj_ptr<engine_impl>& get_engine() const { return _engine; }
     const refcounted_obj_ptr<topology_impl>& get_topology() const { return _topology; }
 
     void reset_execution(bool wait = true);
