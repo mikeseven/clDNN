@@ -247,7 +247,6 @@ private:
 
 struct network_output
 {
-    primitive_id id() const { return _id; }
     event get_event() const
     {
         return _event;
@@ -258,10 +257,9 @@ struct network_output
         return _result;
     }
 private:
-    primitive_id _id;
     event _event;
     memory _result;
-    network_output(primitive_id id, event evt, memory mem): _id(id), _event(evt), _result(mem){}
+    network_output(event evt, memory mem): _event(evt), _result(mem){}
     friend struct network;
 };
 
@@ -304,13 +302,13 @@ struct network
             CLDNN_THROW("set data input failed", status);
     }
 
-    std::vector<network_output> execute(const std::vector<event>& dependencies = {})
+    std::map<primitive_id, network_output> execute(const std::vector<event>& dependencies = {})
     {
         array_ref<network_output_ref> result_ref = check_status<array_ref<network_output_ref>>("network execute failed", [&](status_t* status) { return execute_impl(dependencies, status); });
-        std::vector<network_output> result;
+        std::map<primitive_id, network_output> result;
         for(auto& ref : result_ref)
         {
-            result.push_back({ ref.id_ref, event(ref.event_impl), memory(ref.memory_impl) });
+            result.emplace(ref.id_ref, network_output(event(ref.event_impl), memory(ref.memory_impl)));
         }
         return result;
     }

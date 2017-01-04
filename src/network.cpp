@@ -24,9 +24,12 @@
 #include "primitive_type.h"
 #include "input_layout_arg.h"
 #include <algorithm>
+#include "gpu/kernel.h"
 
 namespace cldnn
 {
+const char warmup_kernel_name[] = "warm_up_gpu";
+
 network_impl::network_impl(refcounted_obj_ptr<engine_impl> engine, refcounted_obj_ptr<topology_impl> topology, const std::vector<primitive_id>& outputs)
     : _engine(engine)
     , _topology(topology)
@@ -45,6 +48,13 @@ network_impl::network_impl(refcounted_obj_ptr<engine_impl> engine, refcounted_ob
             _input_names.insert({ p.second->id(), false });
         }
     }
+
+    //pre-compile program and warm-up
+    auto context = _engine->get_context();
+    neural::gpu::kernel warmup_kernel(context, warmup_kernel_name);
+    cl::Buffer out(context->context(), CL_MEM_WRITE_ONLY, 1);
+    warmup_kernel.run<cl_int, cl_int, cl_int, cl::Buffer>({ 1024, 8 }, {}, 0, 111, 7, out);
+    context->queue().finish();
 }
 
 void network_impl::reset_execution(bool wait)
@@ -68,6 +78,7 @@ void network_impl::set_input_data(const primitive_id& id, const memory& data)
     auto input_c = std::static_pointer_cast<const input_layout_arg>(primitive);
     auto input = std::const_pointer_cast<input_layout_arg>(input_c);
 
+    //Wait for previous execution completion
     reset_execution(true);
     input->set_data(data);
     _input_names[input->id()] = true;
@@ -75,7 +86,16 @@ void network_impl::set_input_data(const primitive_id& id, const memory& data)
 
 array_ref<network::network_output_ref> network_impl::execute(const std::vector<refcounted_obj_ptr<event_impl>>& events)
 {
-    //Wait for pervious execution completion
+    auto all_inputs_are_set = std::all_of(
+                                    std::begin(_input_names),
+                                    std::end(_input_names),
+                                    [](decltype(*std::begin(_input_names)) p)
+                                    {
+                                        return p.second;
+                                    });
+    if (!all_inputs_are_set) throw std::runtime_error("not all inputs are set");
+
+    //Wait for previous execution completion
     reset_execution(true);
 
     for(auto& output_id : _output_ids)

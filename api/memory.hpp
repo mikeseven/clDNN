@@ -320,13 +320,13 @@ struct memory
     }
 
     template<typename T>
-    static memory attach(const cldnn::layout& layout, array_ref<T> array)
+    static memory attach(const cldnn::layout& layout, T* ptr, size_t size)
     {
-        if (array.empty()) throw std::invalid_argument("array should not be empty");
-        size_t size = array.size() * sizeof(T);
-        if ( size != layout.data_size()) throw std::invalid_argument("buffer size mismatch");
+        if (!ptr) throw std::invalid_argument("pointer should not be null");
+        size_t data_size = size * sizeof(T);
+        if (data_size != layout.data_size()) throw std::invalid_argument("buffer size mismatch");
         status_t status;
-        auto buf = attach_buffer(layout, array.data(), size, &status);
+        auto buf = attach_buffer(layout, ptr, data_size, &status);
         if (buf == nullptr || status != CLDNN_SUCCESS)
             CLDNN_THROW("memory attach failed", status);
         return memory(buf);

@@ -16,28 +16,34 @@
 
 #include "common/common_tools.h"
 #include <string>
+#include <api/primitives/input_layout.hpp>
+#include <api/primitives/reorder.hpp>
+#include <api/primitives/convolution.hpp>
+#include <api/primitives/pooling.hpp>
+#include <api/primitives/normalization.hpp>
+#include <api/primitives/fully_connected.hpp>
+#include <api/primitives/softmax.hpp>
 
-using namespace neural;
+using namespace cldnn;
 
 // Building GoogLeNet v1 network with loading weights & biases from file
-std::vector<std::pair<primitive, std::string>> build_googlenetv1(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half)
+cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half)
 {
-    auto mem_format = use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
-    auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
-
+    input_layout.data_type = use_half ? data_types::f16 : data_types::f32;
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
-    auto input = memory::allocate({ use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ batch_size,{ 224, 224 }, 3 } });
+    input_layout.size = { format::byxf,{ batch_size, 224, 224, 3 } };
+    auto input = cldnn::input_layout("input", input_layout);
 
     // create conversion to yxfb format and subtract mean values
-    auto reordered_input = reorder::create(
-    {
-        mem_format,
-        input.as<const memory&>().argument.size,
+    tensor reorder_size = input_layout.size.transform(format::yxfb, 1);
+    auto reordered_input = reorder(
+        "reorder",
         input,
-        {104,117,123},
-        true
-    });
+        { input_layout.data_type, reorder_size },
+        std::vector<float>{ 104.0f, 117.0f, 123.0f });
 
+    wo.create_weights_from_file(join_path(weights_dir, "conv1_7x7_s2_weights.nnd"), file::convolution),
+    wo.create_weights_from_file(join_path(weights_dir, "conv1_7x7_s2_bias.nnd"),  file::bias),
     auto conv1_7x7_s2 = convolution::create(
     {
         mem_format,
@@ -1256,97 +1262,96 @@ std::vector<std::pair<primitive, std::string>> build_googlenetv1(const std::stri
         0
     });
 
-    auto softmax = normalization::softmax::create(
-    {
-        fc_mem_format,
-        loss3_classifier
-    });
+    auto softmax = softmax(
+        "output",
+        loss3_classifier);
 
-    return std::vector<std::pair<primitive, std::string>> {
-        { reordered_input,"reordered_input" },
-        { conv1_7x7_s2,"conv1_7x7_s2" },
-        { pool1_3x3_s2,"pool1_3x3_s2" },
-        { pool1_norm1,"pool1_norm1" },
-        { conv2_3x3_reduce,"conv2_3x3_reduce" },
-        { conv2_3x3,"conv2_3x3" },
-        { conv2_norm2,"conv2_norm2" },
-        { pool2_3x3_s2,"pool2_3x3_s2" },
-        { inception_3a_1x1,"inception_3a_1x1" },
-        { inception_3a_3x3_reduce,"inception_3a_3x3_reduce" },
-        { inception_3a_3x3,"inception_3a_3x3" },
-        { inception_3a_5x5_reduce,"inception_3a_5x5_reduce" },
-        { inception_3a_5x5,"inception_3a_5x5" },
-        { inception_3a_pool,"inception_3a_pool" },
-        { inception_3a_pool_proj,"inception_3a_pool_proj" },
-        { inception_3a_output,"inception_3a_output" },
-        { inception_3b_1x1,"inception_3b_1x1" },
-        { inception_3b_3x3_reduce,"inception_3b_3x3_reduce" },
-        { inception_3b_3x3,"inception_3b_3x3" },
-        { inception_3b_5x5_reduce,"inception_3b_5x5_reduce" },
-        { inception_3b_5x5,"inception_3b_5x5" },
-        { inception_3b_pool,"inception_3b_pool" },
-        { inception_3b_pool_proj,"inception_3b_pool_proj" },
-        { inception_3b_output,"inception_3b_output" },
-        { pool3_3x3_s2,"pool3_3x3_s2" },
-        { inception_4a_1x1,"inception_4a_1x1" },
-        { inception_4a_3x3_reduce,"inception_4a_3x3_reduce" },
-        { inception_4a_3x3,"inception_4a_3x3" },
-        { inception_4a_5x5_reduce,"inception_4a_5x5_reduce" },
-        { inception_4a_5x5,"inception_4a_5x5" },
-        { inception_4a_pool,"inception_4a_pool" },
-        { inception_4a_pool_proj,"inception_4a_pool_proj" },
-        { inception_4a_output,"inception_4a_output" },
-        { inception_4b_1x1,"inception_4b_1x1" },
-        { inception_4b_3x3_reduce,"inception_4b_3x3_reduce" },
-        { inception_4b_3x3,"inception_4b_3x3" },
-        { inception_4b_5x5_reduce,"inception_4b_5x5_reduce" },
-        { inception_4b_5x5,"inception_4b_5x5" },
-        { inception_4b_pool,"inception_4b_pool" },
-        { inception_4b_pool_proj,"inception_4b_pool_proj" },
-        { inception_4b_output,"inception_4b_output" },
-        { inception_4c_1x1,"inception_4c_1x1" },
-        { inception_4c_3x3_reduce,"inception_4c_3x3_reduce" },
-        { inception_4c_3x3,"inception_4c_3x3" },
-        { inception_4c_5x5_reduce,"inception_4c_5x5_reduce" },
-        { inception_4c_5x5,"inception_4c_5x5" },
-        { inception_4c_pool,"inception_4c_pool" },
-        { inception_4c_pool_proj,"inception_4c_pool_proj" },
-        { inception_4c_output,"inception_4c_output" },
-        { inception_4d_1x1,"inception_4d_1x1" },
-        { inception_4d_3x3_reduce,"inception_4d_3x3_reduce" },
-        { inception_4d_3x3,"inception_4d_3x3" },
-        { inception_4d_5x5_reduce,"inception_4d_5x5_reduce" },
-        { inception_4d_5x5,"inception_4d_5x5" },
-        { inception_4d_pool,"inception_4d_pool" },
-        { inception_4d_pool_proj,"inception_4d_pool_proj" },
-        { inception_4d_output,"inception_4d_output" },
-        { inception_4e_1x1,"inception_4e_1x1" },
-        { inception_4e_3x3_reduce,"inception_4e_3x3_reduce" },
-        { inception_4e_3x3,"inception_4e_3x3" },
-        { inception_4e_5x5_reduce,"inception_4e_5x5_reduce" },
-        { inception_4e_5x5,"inception_4e_5x5" },
-        { inception_4e_pool,"inception_4e_pool" },
-        { inception_4e_pool_proj,"inception_4e_pool_proj" },
-        { inception_4e_output,"inception_4e_output" },
-        { pool4_3x3_s2,"pool4_3x3_s2" },
-        { inception_5a_1x1,"inception_5a_1x1" },
-        { inception_5a_3x3_reduce,"inception_5a_3x3_reduce" },
-        { inception_5a_3x3,"inception_5a_3x3" },
-        { inception_5a_5x5_reduce,"inception_5a_5x5_reduce" },
-        { inception_5a_5x5,"inception_5a_5x5" },
-        { inception_5a_pool,"inception_5a_pool" },
-        { inception_5a_pool_proj,"inception_5a_pool_proj" },
-        { inception_5a_output,"inception_5a_output" },
-        { inception_5b_1x1,"inception_5b_1x1" },
-        { inception_5b_3x3_reduce,"inception_5b_3x3_reduce" },
-        { inception_5b_3x3,"inception_5b_3x3" },
-        { inception_5b_5x5_reduce,"inception_5b_5x5_reduce" },
-        { inception_5b_5x5,"inception_5b_5x5" },
-        { inception_5b_pool,"inception_5b_pool" },
-        { inception_5b_pool_proj,"inception_5b_pool_proj" },
-        { inception_5b_output,"inception_5b_output" },
-        { pool5_7x7_s1,"pool5_7x7_s1" },
-        { loss3_classifier,"loss3_classifier" },
-        { softmax,"softmax" }
+    return topology {
+        input,
+        reordered_input,
+        conv1_7x7_s2,
+        pool1_3x3_s2,
+        pool1_norm1,
+        conv2_3x3_reduce,
+        conv2_3x3,
+        conv2_norm2,
+        pool2_3x3_s2,
+        inception_3a_1x1,
+        inception_3a_3x3_reduce,
+        inception_3a_3x3,
+        inception_3a_5x5_reduce,
+        inception_3a_5x5,
+        inception_3a_pool,
+        inception_3a_pool_proj,
+        inception_3a_output,
+        inception_3b_1x1,
+        inception_3b_3x3_reduce,
+        inception_3b_3x3,
+        inception_3b_5x5_reduce,
+        inception_3b_5x5,
+        inception_3b_pool,
+        inception_3b_pool_proj,
+        inception_3b_output,
+        pool3_3x3_s2,
+        inception_4a_1x1,
+        inception_4a_3x3_reduce,
+        inception_4a_3x3,
+        inception_4a_5x5_reduce,
+        inception_4a_5x5,
+        inception_4a_pool,
+        inception_4a_pool_proj,
+        inception_4a_output,
+        inception_4b_1x1,
+        inception_4b_3x3_reduce,
+        inception_4b_3x3,
+        inception_4b_5x5_reduce,
+        inception_4b_5x5,
+        inception_4b_pool,
+        inception_4b_pool_proj,
+        inception_4b_output,
+        inception_4c_1x1,
+        inception_4c_3x3_reduce,
+        inception_4c_3x3,
+        inception_4c_5x5_reduce,
+        inception_4c_5x5,
+        inception_4c_pool,
+        inception_4c_pool_proj,
+        inception_4c_output,
+        inception_4d_1x1,
+        inception_4d_3x3_reduce,
+        inception_4d_3x3,
+        inception_4d_5x5_reduce,
+        inception_4d_5x5,
+        inception_4d_pool,
+        inception_4d_pool_proj,
+        inception_4d_output,
+        inception_4e_1x1,
+        inception_4e_3x3_reduce,
+        inception_4e_3x3,
+        inception_4e_5x5_reduce,
+        inception_4e_5x5,
+        inception_4e_pool,
+        inception_4e_pool_proj,
+        inception_4e_output,
+        pool4_3x3_s2,
+        inception_5a_1x1,
+        inception_5a_3x3_reduce,
+        inception_5a_3x3,
+        inception_5a_5x5_reduce,
+        inception_5a_5x5,
+        inception_5a_pool,
+        inception_5a_pool_proj,
+        inception_5a_output,
+        inception_5b_1x1,
+        inception_5b_3x3_reduce,
+        inception_5b_3x3,
+        inception_5b_5x5_reduce,
+        inception_5b_5x5,
+        inception_5b_pool,
+        inception_5b_pool_proj,
+        inception_5b_output,
+        pool5_7x7_s1,
+        loss3_classifier,
+        softmax
     };
 }

@@ -16,26 +16,32 @@
 
 #include "common/common_tools.h"
 #include <string>
+#include <api/primitives/input_layout.hpp>
+#include <api/primitives/reorder.hpp>
+#include <api/primitives/convolution.hpp>
+#include <api/primitives/pooling.hpp>
+#include <api/primitives/normalization.hpp>
+#include <api/primitives/fully_connected.hpp>
+#include <api/primitives/softmax.hpp>
 
-using namespace neural;
+using namespace cldnn;
 
 // Building vgg16 network with loading weights & biases from file
-std::vector<std::pair<primitive, std::string>> build_vgg16(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half)
+cldnn::topology build_vgg16(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half)
 {
-    auto mem_format = use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
-    auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
-
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
-    auto input = memory::allocate({ use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ batch_size,{ 224, 224 }, 3 } });
+    input_layout.data_type = use_half ? data_types::f16 : data_types::f32;
+    input_layout.size = { format::byxf,{ batch_size, 224, 224, 3 } };
+    auto input = cldnn::input_layout("input", input_layout);
 
     // create conversion to yxfb format and subtract mean values
-    auto reordered_input = reorder::create(
-    {
-        mem_format,
-        input.as<const memory&>().argument.size,
+    tensor reorder_size = input_layout.size.transform(format::yxfb, 1);
+    auto reorder_mean = wo.create_weights_from_file(join_path(weights_dir, "imagenet_mean.nnd"), file::mean);
+    auto reordered_input = reorder(
+        "reorder",
         input,
-        wo.create_weights_from_file(join_path(weights_dir, "imagenet_mean.nnd"), file::mean)
-    });
+        { input_layout.data_type, reorder_size },
+        reorder_mean);
 
     auto conv1_1 = convolution::create(
     {
@@ -311,35 +317,34 @@ std::vector<std::pair<primitive, std::string>> build_vgg16(const std::string& we
         0
     });
 
-    auto softmax = normalization::softmax::create(
-    {
-        fc_mem_format,
-        fc8
-    });
+    auto softmax = cldnn::softmax(
+        "output",
+        fc8);
 
-    return std::vector<std::pair<primitive, std::string>> {
-        { reordered_input, "reorder"},
-        { conv1_1, "conv1_1" },
-        { conv1_2, "conv1_2" },
-        { pool1, "pool1" },
-        { conv2_1, "conv2_1" },
-        { conv2_2, "conv2_2" },
-        { pool2, "pool2" },
-        { conv3_1, "conv3_1" },
-        { conv3_2, "conv3_2" },
-        { conv3_3, "conv3_3" },
-        { pool3, "pool3" },
-        { conv4_1, "conv4_1" },
-        { conv4_2, "conv4_2" },
-        { conv4_3, "conv4_3" },
-        { pool4, "pool4" },
-        { conv5_1, "conv5_1" },
-        { conv5_2, "conv5_2" },
-        { conv5_3, "conv5_3" },
-        { pool5, "pool5" },
-        { fc6, "fc6" },
-        { fc7, "fc7" },
-        { fc8, "fc8" },
-        { softmax, "softmax" }
+    return topology {
+        input,
+        reordered_input,
+        conv1_1,
+        conv1_2,
+        pool1,
+        conv2_1,
+        conv2_2,
+        pool2,
+        conv3_1,
+        conv3_2,
+        conv3_3,
+        pool3,
+        conv4_1,
+        conv4_2,
+        conv4_3,
+        pool4,
+        conv5_1,
+        conv5_2,
+        conv5_3,
+        pool5,
+        fc6,
+        fc7,
+        fc8,
+        softmax
     };
 }

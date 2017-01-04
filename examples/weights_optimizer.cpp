@@ -100,8 +100,7 @@ cldnn::primitive_id weights_optimizer::create_weights_from_file(
         : path;
 }
 
-std::vector<cldnn::network_output> weights_optimizer::optimize() const
+auto weights_optimizer::optimize() const -> decltype(cldnn::network(_engine, _topology).execute())
 {
-    cldnn::network worker(_engine, _topology);
-    return worker.execute();
+    return cldnn::network(_engine, _topology).execute();
 }

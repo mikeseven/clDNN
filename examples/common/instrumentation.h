@@ -15,12 +15,11 @@
 */
 
 #pragma once
-#include "cldnn_defs.h"
 #include <chrono>
 #include <sstream>
 #include <iomanip>
+#include <api/memory.hpp>
 
-namespace neural {
 namespace instrumentation {
 
     template<class Rep, class Period>
@@ -42,8 +41,8 @@ namespace instrumentation {
 
     struct logger
     {
-        DLL_SYM static void log_memory_to_file(const primitive&, std::string prefix = "", bool single_batch = false, uint32_t batch_id = 0, bool single_feature = false, uint32_t feature_id = 0);
+        static void log_memory_to_file(const cldnn::memory&, std::string prefix = "", bool single_batch = false, cldnn::tensor::value_type batch_id = 0, bool single_feature = false, cldnn::tensor::value_type feature_id = 0);
     private:
         static const std::string dump_dir;
     };
-} }
+}

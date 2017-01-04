@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "api/instrumentation.h"
+#include "instrumentation.h"
 #include "common_tools.h"
 #include "FreeImage_wraps.h"
 #include "output_parser.h"
@@ -27,6 +27,7 @@
 
 #include <regex>
 #include <string>
+#include <api/primitives/data.hpp>
 
 using namespace boost::filesystem;
 
@@ -128,7 +129,7 @@ std::vector<std::string> get_directory_weights(const std::string& images_path)
 
 void nn_data_load_from_image(
     std::string  filename,                       // Load of all data from a image filename
-    neural::memory::ptr<float>::iterator dst_buffer,
+    cldnn::pointer<float>::iterator dst_buffer,
     uint32_t                   std_size,         // size of image both: height and width
     bool                       RGB_order)        // if true - image have RGB order, otherwise BGR
                                                  // supported formats: JPEG, J2K, JP2, PNG, BMP, WEBP, GIF, TIFF
@@ -169,27 +170,27 @@ void nn_data_load_from_image(
     }
 };
 
-static neural::half_t convert_pixel_channel_to_half(uint8_t val)
+static half_t convert_pixel_channel_to_half(uint8_t val)
 {
 #if defined HALF_HALF_HPP
     return val;
 #else
     if (!val)
-        return neural::half_t(0x0000U);
+        return half_t(0x0000U);
 
     if (val >> 4) // 4..7
     {
         if (val >> 6) // 6..7
         {
             return (val & 0x80)
-                ? neural::half_t(0x5800U | ((val & 0x7FU) << 3))
-                : neural::half_t(0x5400U | ((val & 0x3FU) << 4));
+                ? half_t(0x5800U | ((val & 0x7FU) << 3))
+                : half_t(0x5400U | ((val & 0x3FU) << 4));
         }
         else //  4..5
         {
             return (val & 0x20)
-                ? neural::half_t(0x5000U | ((val & 0x1FU) << 5))
-                : neural::half_t(0x4C00U | ((val & 0x0FU) << 6));
+                ? half_t(0x5000U | ((val & 0x1FU) << 5))
+                : half_t(0x4C00U | ((val & 0x0FU) << 6));
         }
     }
     else // 0..3
@@ -197,14 +198,14 @@ static neural::half_t convert_pixel_channel_to_half(uint8_t val)
         if (val >> 2) // 2..3
         {
             return (val & 0x08)
-                ? neural::half_t(0x4800U | ((val & 0x07U) << 7))
-                : neural::half_t(0x4400U | ((val & 0x03U) << 8));
+                ? half_t(0x4800U | ((val & 0x07U) << 7))
+                : half_t(0x4400U | ((val & 0x03U) << 8));
         }
         else // 0..1
         {
             return (val & 0x02)
-                ? neural::half_t(0x4000U | ((val & 0x01U) << 9))
-                : neural::half_t(0x3C00U);
+                ? half_t(0x4000U | ((val & 0x01U) << 9))
+                : half_t(0x3C00U);
         }
     }
 #endif
@@ -212,7 +213,7 @@ static neural::half_t convert_pixel_channel_to_half(uint8_t val)
 
 void nn_data_load_from_image(
     std::string  filename,                       // Load of all data from a image filename
-    neural::memory::ptr<neural::half_t>::iterator dst_buffer,
+    cldnn::pointer<half_t>::iterator dst_buffer,
     uint32_t                   std_size,         // size of image both: height and width
     bool                       RGB_order)        // if true - image have RGB order, otherwise BGR
                                                  // supported formats: JPEG, J2K, JP2, PNG, BMP, WEBP, GIF, TIFF
@@ -258,22 +259,20 @@ void nn_data_load_from_image(
 template <typename MemElemTy>
 void load_images_from_file_list(
     const std::vector<std::string>& images_list,
-    neural::primitive& memory)
+    cldnn::memory& memory)
 {
-    auto memory_primitive = memory.as<const neural::memory&>().argument;
-    auto dst_ptr = memory.as<const neural::memory&>().pointer<MemElemTy>();
+    auto memory_layout = memory.get_layout();
+    auto dst_ptr = memory.pointer<MemElemTy>();
     auto it = dst_ptr.begin();
-    // validate if primitvie is memory type
-    if (!memory.is<const neural::memory&>()) throw std::runtime_error("Given primitive is not a memory");
 
-    auto batches = std::min(memory_primitive.size.batch[0], (uint32_t)images_list.size());
-    auto dim = memory_primitive.size.spatial;
+    auto batches = std::min(memory_layout.size.batch[0], static_cast<cldnn::tensor::value_type>(images_list.size()));
+    auto dim = memory_layout.size.spatial;
 
-    if (memory_primitive.format != neural::memory::format::byxf_f32 &&
-        memory_primitive.format != neural::memory::format::byxf_f16) throw std::runtime_error("Only bfyx format is supported as input to images from files");
-    if (neural::memory::traits(memory_primitive.format).type->id != neural::template type_id<MemElemTy>()->id)
+    if(memory_layout.size.format != cldnn::format::byxf) throw std::runtime_error("Only bfyx format is supported as input to images from files");
+
+    if(!cldnn::data_type_match<MemElemTy>(memory_layout.data_type))
         throw std::runtime_error("Memory format expects different type of elements than specified");
-    auto single_image_size = dim[0] * dim[0] * 3;
+    auto single_image_size = dim[0] * dim[1] * 3;
     for (auto img : images_list)
     {
         // "false" because we want to load images in BGR format because weights are in BGR format and we don't want any conversions between them.
@@ -283,12 +282,10 @@ void load_images_from_file_list(
 }
 
 // Explicit instantiation of all used template function instances used in examples.
-template void load_images_from_file_list<float>(const std::vector<std::string>&, neural::primitive&);
-template void load_images_from_file_list<neural::half_t>(const std::vector<std::string>&, neural::primitive&);
+template void load_images_from_file_list<float>(const std::vector<std::string>&, cldnn::memory&);
+template void load_images_from_file_list<half_t>(const std::vector<std::string>&, cldnn::memory&);
 
-using namespace neural;
-
-void print_profiling_table(std::ostream& os, const std::vector<instrumentation::profiling_info>& profiling_info) {
+void print_profiling_table(std::ostream& os, const std::vector<cldnn::instrumentation::profiling_info>& profiling_info) {
     if (profiling_info.size() == 0)
         return;
 
@@ -356,23 +353,36 @@ void print_profiling_table(std::ostream& os, const std::vector<instrumentation::
 }
 
 // Create worker
-worker create_worker(PrintType printType)
+cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology& topology, const execution_params &ep)
 {
-    if (printType == Verbose)
+    if (ep.print_type == Verbose)
     {
         std::cout << "GPU Program compilation started" << std::endl;
     }
 
-    instrumentation::timer<> timer_compilation;
-    auto worker = worker_gpu::create();
+    cldnn::instrumentation::timer<> timer_compilation;
+
+    cldnn::build_options options;
+
+    //TODO set proper network build options
+    if (ep.optimize_weights)    options.set_option(cldnn::build_option::optimize_data);
+    if (ep.profiling)           options.set_option(cldnn::build_option::profiling);
+    if (ep.dump_hidden_layers)  options.set_option(cldnn::build_option::debug);
+
+    std::vector<cldnn::primitive_id> outputs{"output"};
+    if (!ep.dump_layer_name.empty())  outputs.push_back(ep.dump_layer_name);
+    if (!ep.run_single_layer.empty()) outputs.push_back(ep.run_single_layer);
+    options.set_option(cldnn::build_option::outputs(outputs));
+
+    cldnn::network network(engine, topology, options);
     auto compile_time = timer_compilation.uptime();
     
-    if (printType == Verbose)
+    if (ep.print_type == Verbose)
     {
         std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
     }
 
-    return worker;
+    return network;
 }
 
 uint32_t get_next_nearest_power_of_two(int number)
@@ -394,10 +404,10 @@ uint32_t get_gpu_batch_size(int number)
     return nearest_power_of_two;
 }
 
-std::chrono::nanoseconds execute_topology(const worker& worker,
-                                          const std::vector<std::pair<primitive, std::string>>& primitives,
+std::chrono::nanoseconds execute_topology(cldnn::network network,
                                           const execution_params &ep,
-                                          CIntelPowerGadgetLib& energyLib)
+                                          CIntelPowerGadgetLib& energyLib,
+                                          cldnn::memory& output)
 {
     bool log_energy = ep.perf_per_watt && energyLib.IntelEnergyLibInitialize();
 
@@ -411,7 +421,7 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
         std::cout << std::endl;
     }
 
-    instrumentation::timer<> timer_execution;
+    cldnn::instrumentation::timer<> timer_execution;
     
     if (log_energy)
     {
@@ -424,50 +434,21 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
         }
     }
 
-    if (ep.run_single_layer.empty())
-    {
-        for (int i = 0; i < ep.loop; i++)
-        {
-            for (auto& p : primitives)
-            {
-                worker.execute(p.first.work());
-            }
-            if (log_energy)
-                energyLib.ReadSample();
-        }
-    }
-    else
-    {
-        std::unique_ptr<primitive> prim;
-        for (auto& p : primitives)
-        {
-            if (p.second == ep.run_single_layer)
-            {
-                prim = std::make_unique<primitive>(p.first);
-                break;
-            }
-        }
-        if (!prim.get())
-        {
-            throw std::runtime_error("ERROR: layer " + ep.run_single_layer + " not found!");
-        }
-        else
-        {
-            for (int i = 0; i < ep.loop; i++)
-            {
-                worker.execute(prim.get()->work());
-                if (log_energy)
-                    energyLib.ReadSample();
+    decltype(network.execute()) outputs;
 
-            }
-        }
+    for (decltype(ep.loop) i = 0; i < ep.loop; i++)
+    {
+        outputs = network.execute();
+        if (log_energy)
+            energyLib.ReadSample();
     }
+
     //GPU primitives scheduled in unblocked manner
     auto scheduling_time(timer_execution.uptime());
 
-    auto output = primitives.back().first.output[0];
     //OCL buffers mapping blocks until all primitives are completed
-    output.as<const neural::memory&>().pointer<char>();
+    output = outputs.at("output").get_memory();
+
     if (log_energy)
     {
         energyLib.ReadSample();
@@ -483,25 +464,22 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
 
     if (ep.dump_hidden_layers)
     {
-        instrumentation::logger::log_memory_to_file(primitives[0].first.input[0].primitive(), "input0");
-        for (auto& p : primitives)
+        auto input = outputs.at("input").get_memory();
+        instrumentation::logger::log_memory_to_file(input, "input0");
+        for (auto& p : outputs)
         {
-            instrumentation::logger::log_memory_to_file(p.first, p.second, ep.dump_single_batch, ep.dump_batch_id, ep.dump_single_feature, ep.dump_feature_id);
+            instrumentation::logger::log_memory_to_file(p.second.get_memory(), p.first, ep.dump_single_batch, ep.dump_batch_id, ep.dump_single_feature, ep.dump_feature_id);
         }
         // for now its enough. rest will be done when we have equals those values
     }
     else if (!ep.dump_layer_name.empty())
     {
-        bool found = false;
-        for (auto &p : primitives)
+        auto it = outputs.find(ep.dump_layer_name);
+        if(it != std::end(outputs))
         {
-            if (p.second == ep.dump_layer_name)
-            {
-                found = true;
-                instrumentation::logger::log_memory_to_file(p.first, p.second, ep.dump_single_batch, ep.dump_batch_id, ep.dump_single_feature, ep.dump_feature_id);
-            }
+            instrumentation::logger::log_memory_to_file(it->second.get_memory(), it->first, ep.dump_single_batch, ep.dump_batch_id, ep.dump_single_feature, ep.dump_feature_id);
         }
-        if (!found)
+        else
         {
             std::cout << "WARNING: " << ep.topology_name << " does not contain " << ep.dump_layer_name << " layer!" << std::endl;
         }
@@ -515,7 +493,15 @@ std::chrono::nanoseconds execute_topology(const worker& worker,
         }
     }
 
-    print_profiling_table(std::cout, worker.as<worker_gpu&>().get_profiling_info());
+    if (ep.profiling)
+    {
+        std::vector<cldnn::instrumentation::profiling_info> profiling_table;
+        for (auto& p : outputs)
+        {
+            profiling_table.push_back({ p.first, p.second.get_event().get_profiling_info() });
+        }
+        print_profiling_table(std::cout, profiling_table);
+    }
 
     return std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time);
 }
@@ -530,7 +516,10 @@ void run_topology(const execution_params &ep)
         std::cout << "WARNING: This is not the optimal batch size. You have " << (gpu_batch_size - batch_size)
             << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;
     }
-    gpu::configuration::get().enable_profiling = ep.profiling;
+
+    cldnn::engine_configuration configuration;
+    configuration.enable_profiling = ep.profiling;
+    cldnn::engine engine(configuration);
 
     CIntelPowerGadgetLib energyLib;
     if (ep.perf_per_watt)
@@ -548,26 +537,26 @@ void run_topology(const execution_params &ep)
     if (ep.topology_name != "alexnet" && gpu_batch_size == 1)
         hacked_batch_size_for_weights_optimizer = 8;
 
-    weights_optimizer weights_optimizer(hacked_batch_size_for_weights_optimizer, ep.optimize_weights, ep.use_half);
+    weights_optimizer weights_optimizer(engine, hacked_batch_size_for_weights_optimizer, ep.optimize_weights, ep.use_half);
 
-    std::vector<std::pair<primitive, std::string>> primitives;
+    cldnn::topology primitives;
 
     if (ep.print_type == Verbose)
     {
         std::cout << "Building " << ep.topology_name << " started" << std::endl;
     }
-    instrumentation::timer<> timer_build;
-
+    cldnn::instrumentation::timer<> timer_build;
+    cldnn::layout input_layout = { ep.use_half ? cldnn::data_types::f16 : cldnn::data_types::f32, {} };
     if (ep.topology_name == "alexnet")
-        primitives = build_alexnet(ep.weights_dir, weights_optimizer, gpu_batch_size, ep.use_half);
+        primitives = build_alexnet(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
     else if (ep.topology_name == "vgg16" || ep.topology_name == "vgg16_face")
-        primitives = build_vgg16(ep.weights_dir, weights_optimizer, gpu_batch_size, ep.use_half);
+        primitives = build_vgg16(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
     else if (ep.topology_name == "googlenet")
-        primitives = build_googlenetv1(ep.weights_dir, weights_optimizer, gpu_batch_size, ep.use_half);
+        primitives = build_googlenetv1(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
     else if (ep.topology_name == "gender")
-        primitives = build_gender(ep.weights_dir, weights_optimizer, gpu_batch_size, ep.use_half);
+        primitives = build_gender(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
     else if(ep.topology_name == "microbench")
-        primitives = build_microbench(ep.weights_dir, weights_optimizer, gpu_batch_size, ep.use_half);
+        primitives = build_microbench(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
 
@@ -578,17 +567,19 @@ void run_topology(const execution_params &ep)
         std::cout << "Building " << ep.topology_name << " finished in " << instrumentation::to_string(build_time) << std::endl;
     }
 
-    // create worker
-    worker worker = create_worker(ep.print_type);
-
     // optimize weights if needed
     if (ep.optimize_weights)
     {
-        weight_optimization(weights_optimizer, worker);
+        weight_optimization(weights_optimizer, primitives);
     }
 
-    auto output = primitives.back().first.output[0];
-    auto input = primitives.front().first.input[0].primitive();
+    auto network = build_network(engine, primitives, ep);
+    auto input = cldnn::memory::allocate(engine, input_layout);
+
+    //TODO check if we can define the 'empty' memory
+    float zero = 0;
+    cldnn::layout zero_layout( cldnn::data_types::f32, {cldnn::format::x, {1}} );
+    auto output = cldnn::memory::attach(zero_layout, &zero, 1);
 
     if (ep.topology_name != "microbench")
     {
@@ -622,7 +613,7 @@ void run_topology(const execution_params &ep)
                 load_images_from_file_list(images_in_batch, input);
             }
 
-            auto time = execute_topology(worker, primitives, ep, energyLib);
+            auto time = execute_topology(network, ep, energyLib, output);
 
             auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
 
@@ -644,7 +635,7 @@ void run_topology(const execution_params &ep)
         }
     }
     else {
-        auto time = execute_topology(worker, primitives, ep, energyLib);
+        auto time = execute_topology(network, ep, energyLib, output);
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
         if (time_in_sec != 0.0)
         {
@@ -664,11 +655,15 @@ void run_topology(const execution_params &ep)
 }
 
 // Optimizing weights
-void weight_optimization(weights_optimizer &wo, const worker& worker)
+void weight_optimization(weights_optimizer &wo, cldnn::topology& topology)
 {
     std::cout << "Weights optimization started" << std::endl;
-    instrumentation::timer<> timer_execution;
-    wo.optimize(worker);
+    cldnn::instrumentation::timer<> timer_execution;
+    auto outputs = wo.optimize();
+    for(auto& p : outputs)
+    {
+        topology.add(cldnn::data(p.first, p.second.get_memory()));
+    }
     auto optimizing_time(timer_execution.uptime());
     std::cout << "Weights optimization finished in " << instrumentation::to_string(optimizing_time) << std::endl;
 }

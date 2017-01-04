@@ -18,12 +18,18 @@
 #include "api/topology.hpp"
 #include "weights_optimizer.h"
 
-cldnn::topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, int32_t batch_size, bool use_half);
 
-cldnn::topology build_vgg16(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
+/**
+ * \brief Builds ALEXNET topology
+ * \param input_layout - will be set to the layout of the "input" primitive
+ * \return topology for Alexnet network where final primitive has id "output"
+ */
+cldnn::topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half);
 
-cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
+cldnn::topology build_vgg16(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half);
 
-cldnn::topology build_gender(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
+cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half);
 
-cldnn::topology build_microbench(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half);
+cldnn::topology build_gender(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half);
+
+cldnn::topology build_microbench(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half);

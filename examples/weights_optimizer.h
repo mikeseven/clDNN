@@ -44,5 +44,6 @@ public:
                                                file::weights_type type,
                                                const boost::optional<bool>& use_half = boost::none);
 
-    std::vector<cldnn::network_output> optimize() const;
+    auto optimize() const -> decltype(cldnn::network(_engine, _topology).execute());
+    cldnn::engine get_engine() { return _engine; }
 };

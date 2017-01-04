@@ -15,7 +15,6 @@
 */
 
 #include "common/common_tools.h"
-#include "file.h"
 #include <string>
 #include <api/primitives/input_layout.hpp>
 #include <api/primitives/reorder.hpp>
@@ -28,22 +27,21 @@
 using namespace cldnn;
 
 // Building AlexNet network with loading weights & biases from file
-topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, int32_t batch_size, bool use_half)
+topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half)
 {
-    // TODO: remove after enabling bfyx for all
-    auto data_type = use_half ? data_types::f16 : data_types::f32;
-    auto mem_format = batch_size == 1 ? (use_half ? format::yxfb : format::bfyx) : format::yxfb;
-    auto fc_mem_format = batch_size == 1 ? ( use_half ? format::xb : format::bx ) : format::xb;
-
-
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
-    cldnn::layout input_layout( data_type,{ format::byxf,{ batch_size, 227, 227, 3 } } );
+    input_layout.data_type = use_half ? data_types::f16 : data_types::f32;
+    input_layout.size = { format::byxf, { batch_size, 227, 227, 3 } };
     auto input = cldnn::input_layout("input", input_layout);
 
     // create conversion to yxfb format and subtract mean values
-    tensor reorder_size(format::yxfb, { 227, 227, 3, batch_size });
+    tensor reorder_size = input_layout.size.transform(format::yxfb, 1);
     auto reorder_mean = wo.create_weights_from_file(join_path(weights_dir, "imagenet_mean.nnd"), file::mean);
-    auto reordered_input = reorder(input, "reorder", { data_type, reorder_size }, reorder_mean);
+    auto reordered_input = reorder(
+        "reorder",
+        input,
+        { input_layout.data_type, reorder_size },
+        reorder_mean);
 
     auto conv1_weights = wo.create_weights_from_file(join_path(weights_dir, "conv1_weights.nnd"), file::convolution);
     auto conv1_biases = wo.create_weights_from_file(join_path(weights_dir, "conv1_biases.nnd"), file::bias);
@@ -171,7 +169,7 @@ topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, in
         true);
 
     auto softmax = cldnn::softmax(
-        "softmax",
+        "output",
         fc8);
 
     return topology(

@@ -8,70 +8,82 @@
 #include <stdexcept>
 #include <system_error>
 #include <chrono>
-
-namespace neural
-{
+#include <api/primitives/data.hpp>
+#include <api/primitives/reorder.hpp>
 
 // returns a vector with size equal to number of images in batch and each subvector contains sorted pairs of 
 // values specifying match percentage and category number
-std::vector<std::vector<std::pair<float, size_t>>> read_output(const neural::primitive& mem_primitive)
+std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memory& input_mem)
 {
     // Check format for types that need to be converted to float.
-    const auto& input_mem = get_memory_primitive(mem_primitive);
-    auto mem_fmt = input_mem.argument.format;
-    bool needs_conversion = true;
-    switch (mem_fmt)
+    auto mem_layout = input_mem.get_layout();
+    bool needs_data_type_conversion = mem_layout.data_type != cldnn::data_types::f32;
+
+    bool needs_format_conversion = true;
+    switch (mem_layout.size.format)
     {
-    case neural::memory::format::bx_f32:
-    case neural::memory::format::xb_f16:
-        mem_fmt = neural::memory::format::xb_f32;
+    case cldnn::format::x:
+    case cldnn::format::bx:
+        needs_format_conversion = true;
+        break;
+    case cldnn::format::xb:
+        needs_format_conversion = false;
         break;
     default:
-        needs_conversion = false;
-        break;
+        throw std::invalid_argument("Unsupported format for result parser");
     }
 
+    auto mem = input_mem;
     // Convert format if necessary.
-    neural::primitive converted_primitive = mem_primitive;
-    if (needs_conversion)
+    if(needs_format_conversion || needs_data_type_conversion)
     {
-        converted_primitive = neural::reorder::create(
+        cldnn::topology topology;
+        cldnn::data input_data("input_mem", input_mem);
+        topology.add(input_data);
+        cldnn::primitive_id curr_id = input_data.id();
+
+        if(needs_data_type_conversion)
         {
-            mem_fmt,
-            input_mem.argument.size,
-            mem_primitive
-        });
-        execute({converted_primitive}).wait();
+            mem_layout.data_type = cldnn::data_types::f32;
+            cldnn::reorder data_type_reorder("data_type_reorder", curr_id, mem_layout);
+            topology.add(data_type_reorder);
+            curr_id = data_type_reorder.id();
+        }
+
+        if(needs_format_conversion)
+        {
+            mem_layout.size = mem_layout.size.transform(cldnn::format::xb, 1);
+            cldnn::reorder format_reorder("format_reorder", curr_id, mem_layout);
+            topology.add(format_reorder);
+            curr_id = format_reorder.id();
+        }
+
+        mem = cldnn::network(cldnn::engine(), topology, {cldnn::build_option::outputs({curr_id})}).execute().begin()->second.get_memory();
     }
 
-    const auto& mem = get_memory_primitive(converted_primitive);
-	auto ptr = mem.pointer<float>();
-	size_t image_count = mem.argument.size.batch[0];
-	size_t category_count = 0;
-	auto format = mem.argument.format;
-	std::vector<std::vector<std::pair<float, size_t>>> ret;
-	size_t offset = 0;
-	switch (format)
-	{
-	case neural::memory::format::type::xb_f32:
-		category_count = mem.argument.size.spatial[0];
-		ret.resize(image_count);
-		for (auto& v : ret) { v.reserve(category_count); }
-		for (size_t c = 0; c < category_count; ++c)
-		{
-			for (size_t i = 0; i < image_count; ++i)
-			{
-				ret[i].push_back(std::make_pair(ptr[offset++], c));
-			}
-		}
-		for (auto& v : ret) { std::sort(v.begin( ), v.end( ), 
-										[](const std::pair<float, size_t>& l, const std::pair<float, size_t>& r)
-											{ return l.first > r.first; }); }
-		break;
-	default:
-		throw std::invalid_argument("Unsupported format for result parser");
-	}
-	return ret;
+    auto ptr = mem.pointer<float>();
+    size_t image_count = mem.get_layout().size.batch[0];
+    size_t category_count = mem.get_layout().size.spatial[0];
+    std::vector<std::vector<std::pair<float, size_t>>> ret;
+    size_t offset = 0;
+    ret.resize(image_count);
+    for (auto& v : ret) { v.reserve(category_count); }
+    for (size_t c = 0; c < category_count; ++c)
+    {
+        for (size_t i = 0; i < image_count; ++i)
+        {
+            ret[i].push_back(std::make_pair(ptr[offset++], c));
+        }
+    }
+    for (auto& v : ret)
+    {
+        std::sort(
+            v.begin(),
+            v.end(),
+            [](const std::pair<float, size_t>& l, const std::pair<float, size_t>& r)
+                { return l.first > r.first; });
+    }
+    return ret;
 }
 
 std::vector<std::string> load_category_names(const std::string & file_name)
@@ -127,7 +139,7 @@ html::html(const std::string & file_name, const std::string & title)
 	}
 }
 
-void html::batch(const neural::primitive& mem_primitive, const std::string& categories_file, const std::vector<std::string>& image_names, PrintType printType)
+void html::batch(const cldnn::memory& mem_primitive, const std::string& categories_file, const std::vector<std::string>& image_names, PrintType printType)
 {
 	auto batch = read_output(mem_primitive);
 	auto categories = load_category_names(categories_file);
@@ -205,6 +217,4 @@ html::~html()
 {
 	html_file << std::endl << " </body>" << std::endl << "</html>" << std::endl;
 	html_file.close();
-}
-
 }
