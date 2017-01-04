@@ -76,9 +76,9 @@ TEST(mean_subtract_gpu_f32, basic_in4x4x2x2) {
     network.set_input_data("mean", mean);
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "mean_substract");
+    EXPECT_EQ(outputs.begin()->first, "mean_substract");
 
-    auto output = outputs[0].get_memory();
+    auto output = outputs.at("mean_substract").get_memory();
 
     float answers[16] = { 0.5f, -0.5f, 4.5f, 1.0f,
                             -3.0f, -5.0f, 4.0f, 3.2f,

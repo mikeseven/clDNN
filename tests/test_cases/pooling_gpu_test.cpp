@@ -57,9 +57,9 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "pool_prim");
+    EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -97,9 +97,9 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "pool_prim");
+    EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -141,9 +141,9 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "pool_prim");
+    EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -195,9 +195,9 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "pool_prim");
+    EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -245,9 +245,9 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad)
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "pool_prim");
+    EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 	EXPECT_EQ(1.5f, output_ptr[0]);
@@ -296,9 +296,9 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad)
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "pool_prim");
+    EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
     EXPECT_EQ(1.5f, get_value<float>(output_ptr, 0));
@@ -338,9 +338,9 @@ TEST(pooling_forward_gpu, basic_avg_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "pool_prim");
+    EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
     
@@ -383,9 +383,9 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad)
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "pool_prim");
+    EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 	EXPECT_EQ(0.375f,  output_ptr[0]);
@@ -427,9 +427,9 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad)
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "pool_prim");
+    EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
     auto output_layout = output_prim.get_layout();
 
     auto output_ptr = output_prim.pointer<float>();

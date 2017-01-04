@@ -216,9 +216,9 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_random) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -286,9 +286,9 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad_random) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -344,9 +344,9 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -398,9 +398,9 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -450,9 +450,9 @@ TEST(convolution_f32_fw_gpu, basic_ofm_wsiz2x1x2x1_in1x2x1_nopad) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -509,9 +509,9 @@ TEST(convolution_f32_fw_gpu, basic_ofm_wsiz3x2x2x1_in2x2x1_nopad) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -565,9 +565,9 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2x1x3_wstr2x2_in2x2x1x1_nopad) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -621,9 +621,9 @@ TEST(convolution_f32_fw_gpu, wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -687,9 +687,9 @@ TEST(convolution_f32_fw_gpu, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -771,9 +771,9 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x1_nopad_split2) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -873,9 +873,9 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -968,9 +968,9 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x4x1_nopad_split2) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -1049,9 +1049,9 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x2x1_nopad_split2) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -1136,9 +1136,9 @@ TEST(convolution_f32_fw_gpu, basic_wsiz1x1_wstr2x2_in1x1x4x1_filter_1x3x2x1x1_no
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -1211,9 +1211,9 @@ TEST(convolution_gpu, trivial_convolution_relu) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -1284,9 +1284,9 @@ TEST(convolution_gpu, relu_with_negative_slope) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -1449,9 +1449,9 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "conv");
+    EXPECT_EQ(outputs.begin()->first, "conv");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -1660,9 +1660,9 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "output");
+    EXPECT_EQ(outputs.begin()->first, "output");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -1724,12 +1724,12 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
         {
             for (uint32_t bi = 0; bi < batch_size; ++bi, ++i)
             {
-                auto equal = are_equal(output_vals[i] /*get_value(expected_ptr, i)*/, get_value(output_ptr, i), 0.002f);
+                auto equal = are_equal(output_vals[i] /*get_value(expected_ptr, i)*/, output_ptr[i], 0.002f);
                 EXPECT_TRUE(equal);
                 if (!equal)
                 {
                     std::cout << "Failed at position (" << yxi << ", output feature = " << ofi << ", batch = " << bi << "): "
-                        << output_vals[i] /*get_value(expected_ptr, i)*/ << " != " << get_value(output_ptr, i) << std::endl;
+                        << output_vals[i] /*get_value(expected_ptr, i)*/ << " != " << output_ptr[i] << std::endl;
                     return;
                 }
             }

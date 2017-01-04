@@ -76,9 +76,9 @@ TEST(fully_connected_gpu, xb_f32_batch_1) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "full_con_prim");
+    EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -137,9 +137,9 @@ TEST(fully_connected_gpu, xb_f32_batch_2) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "full_con_prim");
+    EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -199,9 +199,9 @@ TEST(fully_connected_gpu, x_f32) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "full_con_prim");
+    EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -256,9 +256,9 @@ TEST(fully_connected_gpu, yxfn_f32) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "full_con_prim");
+    EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -314,9 +314,9 @@ TEST(fully_connected_gpu, xb_f32_batch_1_relu) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "full_con_prim");
+    EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -375,9 +375,9 @@ TEST(fully_connected_gpu, xb_f32_batch_2_relu) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "full_con_prim");
+    EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -437,9 +437,9 @@ TEST(fully_connected_gpu, x_f32_relu) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "full_con_prim");
+    EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 
@@ -496,9 +496,9 @@ TEST(fully_connected_gpu, x_f32_relu_with_negative_slope) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "full_con_prim");
+    EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
-    auto output_prim = outputs[0].get_memory();
+    auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
 

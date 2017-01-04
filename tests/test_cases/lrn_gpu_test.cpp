@@ -72,9 +72,9 @@ TEST(local_response_normalization_gpu, lrn_test) {
     // test run
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "lrn");
+    EXPECT_EQ(outputs.begin()->first, "lrn");
 
-    auto output = outputs[0].get_memory();
+    auto output = outputs.begin()->second.get_memory();
 
     // analysis of results
     bool   result = true;
@@ -165,9 +165,9 @@ TEST(local_response_normalization_gpu, lrn_test_batches) {
     // test run
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "lrn");
+    EXPECT_EQ(outputs.begin()->first, "lrn");
 
-    auto output = outputs[0].get_memory();
+    auto output = outputs.begin()->second.get_memory();
 
     // analysis of results
     bool   result = true;

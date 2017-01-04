@@ -86,9 +86,9 @@ TEST(reorder_gpu_f32, basic)
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "reorder");
+    EXPECT_EQ(outputs.begin()->first, "reorder");
 
-    auto output = outputs[0].get_memory();
+    auto output = outputs.begin()->second.get_memory();
 
     float answers[16] = {
         1.0f,  2.0f,
@@ -180,9 +180,9 @@ TEST(reorder_gpu_f32, basic_subtract) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "reorder");
+    EXPECT_EQ(outputs.begin()->first, "reorder");
 
-    auto output = outputs[0].get_memory();
+    auto output = outputs.begin()->second.get_memory();
 
     float answers[16] = { 0.0f,  0.5f,
                           1.0f,  1.5f,
@@ -261,9 +261,9 @@ TEST(reorder_gpu_f32, basic_subtract_value) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "reorder");
+    EXPECT_EQ(outputs.begin()->first, "reorder");
 
-    auto output = outputs[0].get_memory();
+    auto output = outputs.begin()->second.get_memory();
 
     float answers[16] = { 0.5f, 1.5f,
                           2.5f, 3.5f,
@@ -359,9 +359,9 @@ TEST(reorder_gpu_f16, basic_subtract_f32_output_f32) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "reorder");
+    EXPECT_EQ(outputs.begin()->first, "reorder");
 
-    auto output = outputs[0].get_memory();
+    auto output = outputs.begin()->second.get_memory();
 
     float answers[16] = { 0.0f,  0.5f,
                           1.0f,  1.5f,
@@ -447,9 +447,9 @@ TEST(reorder_gpu_f16, basic_subtract_value) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(outputs[0].id(), "reorder");
+    EXPECT_EQ(outputs.begin()->first, "reorder");
 
-    auto output = outputs[0].get_memory();
+    auto output = outputs.begin()->second.get_memory();
 
     half_t answers[16] = { half_t(0x3800), half_t(0x3E00), //  0.5f, 1.5f,
                            half_t(0x4100), half_t(0x4300), //  2.5f, 3.5f,
@@ -526,10 +526,10 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), 2);
-    EXPECT_EQ(outputs[0].id(), "reorder_f16_f32");
-    EXPECT_EQ(outputs[1].id(), "reorder_f32_f16");
+    EXPECT_TRUE(outputs.find("reorder_f16_f32") != outputs.end());
+    EXPECT_TRUE(outputs.find("reorder_f32_f16") != outputs.end());
 
-    auto interm = outputs[0].get_memory();
+    auto interm = outputs.at("reorder_f16_f32").get_memory();
     auto interm_ptr = interm.pointer<float>();
 
     // Sample positive.
@@ -550,7 +550,7 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
     EXPECT_TRUE(are_equal(interm_ptr[0xF802], -0.0f));
     EXPECT_TRUE(std::isnan(interm_ptr[0xF803]));
 
-    auto output = outputs[1].get_memory();
+    auto output = outputs.at("reorder_f32_f16").get_memory();
     auto output_ptr = output.pointer<half_t>();
     for (int i = 0; i < 0xF802; ++i) // NOTE: do not test for possibly ambiguous values of floating point (-0, NaNs).
     {
