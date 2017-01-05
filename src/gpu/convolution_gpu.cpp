@@ -134,7 +134,6 @@ struct convolution_gpu : is_an_implementation {
         {
             input_padding.raw[i] = -input_padding.raw[i];
         }
-        neural::vector<uint32_t> output_padding = output_offset;
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT", input_mem.argument().size),
