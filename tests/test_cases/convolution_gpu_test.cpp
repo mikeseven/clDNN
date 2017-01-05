@@ -1624,9 +1624,9 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
         }
     }
 
-    auto expected_float = memory::allocate(engine, { data_types::f32,{ format::x,{ static_cast<int32_t>(output_vals.size()) } } });
-    auto expected_half  = memory::allocate(engine, { data_types::f16,{ format::x,{ static_cast<int32_t>(output_vals.size()) } } });
-    auto expected       = memory::allocate(engine, { data_types::f32,{ format::x,{ static_cast<int32_t>(output_vals.size()) } } });
+    //auto expected_float = memory::allocate(engine, { data_types::f32,{ format::x,{ static_cast<int32_t>(output_vals.size()) } } });
+    //auto expected_half  = memory::allocate(engine, { data_types::f16,{ format::x,{ static_cast<int32_t>(output_vals.size()) } } });
+    //auto expected       = memory::allocate(engine, { data_types::f32,{ format::x,{ static_cast<int32_t>(output_vals.size()) } } });
 
 //    set_values(expected_float, output_vals);
 //    auto cvt_expected_f32_f16 = reorder::create({expected_float, expected_half});
@@ -1651,7 +1651,7 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
             { "cvt_biases" },
             { format::yx, { 0,0 } },
             { format::yx,{ stride_y,stride_x } }),
-        reorder("output", "conv", {data_types::f16, output_size})
+        reorder("output", "conv", {data_types::f32, output_size})
     );
 
     network network(engine, topology);
