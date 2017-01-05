@@ -256,7 +256,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad)
 	EXPECT_EQ(0.5f, output_ptr[3]);
 }
 
-TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad) {
+TEST(DISABLED_pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad) {
     //  Brief test description.
     //
     //  Pool window: 2x2
@@ -394,7 +394,7 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad)
 	EXPECT_EQ(0.125f,  output_ptr[3]);
 }
 
-TEST(pooling_forward_gpu, offsets_avg_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad) {
+TEST(DISABLED_pooling_forward_gpu, offsets_avg_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad) {
 	//  Brief test description.
 	//
 	//  Pool window: 2x2

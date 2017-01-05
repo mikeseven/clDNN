@@ -263,7 +263,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimi
 
     // 2nd branch
 
-    auto inception_4a_3x3_reduce = convolution("inception_4a_3x3_reduce",        pool3_3x3_s2,
+    auto inception_4a_3x3_reduce = convolution("inception_4a_3x3_reduce",
+        pool3_3x3_s2,
         { wo.create_weights_from_file(join_path(weights_dir, "inception_4a_3x3_reduce_weights.nnd"), file::convolution) },
         { wo.create_weights_from_file(join_path(weights_dir, "inception_4a_3x3_reduce_bias.nnd"),  file::bias) },
         { format::yx, { 0, 0 } },
@@ -784,7 +785,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimi
         "output",
         loss3_classifier);
 
-    return topology {
+    cldnn::topology topology{
         input,
         reordered_input,
         conv1_7x7_s2,
@@ -793,7 +794,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimi
         conv2_3x3_reduce,
         conv2_3x3,
         conv2_norm2,
-        pool2_3x3_s2,
+        pool2_3x3_s2 };
+    topology.add(
         inception_3a_1x1,
         inception_3a_3x3_reduce,
         inception_3a_3x3,
@@ -810,7 +812,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimi
         inception_3b_pool,
         inception_3b_pool_proj,
         inception_3b_output,
-        pool3_3x3_s2,
+        pool3_3x3_s2);
+    topology.add(
         inception_4a_1x1,
         inception_4a_3x3_reduce,
         inception_4a_3x3,
@@ -851,7 +854,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimi
         inception_4e_pool,
         inception_4e_pool_proj,
         inception_4e_output,
-        pool4_3x3_s2,
+        pool4_3x3_s2);
+    topology.add(
         inception_5a_1x1,
         inception_5a_3x3_reduce,
         inception_5a_3x3,
@@ -870,6 +874,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimi
         inception_5b_output,
         pool5_7x7_s1,
         loss3_classifier,
-        softmax
-    };
+        softmax);
+    return topology;
 }

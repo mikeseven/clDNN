@@ -38,7 +38,7 @@ layout pooling_arg::calc_output_layout(network_impl& network, std::shared_ptr<co
     for(size_t i = 0; i < output_layout.size.spatial.size(); i++ )
     {
         if (strd.spatial[i] < 1) throw std::invalid_argument("stride should be >= 1");
-        output_layout.size.spatial[i] = static_cast<uint32_t>(ceil(static_cast<float>(output_layout.size.spatial[i] - (input_offset.spatial[i]) - siz.spatial[i]) / static_cast<float>(strd.spatial[i]))) + 1;
+        output_layout.size.spatial[i] = static_cast<int32_t>(ceil(static_cast<float>(output_layout.size.spatial[i] - (2*input_offset.spatial[i]) - siz.spatial[i]) / static_cast<float>(strd.spatial[i]))) + 1;
     }
     return output_layout;
 }
