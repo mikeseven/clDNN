@@ -132,7 +132,7 @@ public:
     iterator begin() const { return _data; }
     iterator end() const { return _data + _size; }
     const_iterator cbegin() const { return _data; }
-    const_iterator cend() const { return _data + _size }
+    const_iterator cend() const { return _data + _size; }
 #endif
 
     const T& operator[](size_t idx) const

@@ -20,7 +20,8 @@
 #include <numeric>
 #include "cldnn_defs.h"
 #include "compounds.h"
-#include <unordered_map>
+#include <map>
+#include <algorithm>
 
 #define TENSOR_DIM_MAX 8
 
@@ -59,7 +60,7 @@ struct format
 
     static const format_traits& traits(type fmt)
     {
-        static const std::unordered_map<type, format_traits> traits
+        static const std::map<type, format_traits> traits
         {
             { x,   { 1, 1, 1, "x" } },
             { yx,  { 1, 1, 2, "yx" } },
@@ -101,7 +102,7 @@ struct tensor
 {
     typedef int32_t value_type;
     //TODO find the way to prevent direct change of following fields.
-    format format;
+    struct cldnn::format format;
     mutable_array_ref<value_type> raw;
     mutable_array_ref<value_type> batch;
     mutable_array_ref<value_type> feature;

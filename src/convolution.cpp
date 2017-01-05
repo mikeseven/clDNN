@@ -65,8 +65,8 @@ convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const co
     if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("input/output number of dimension does not match.");
     if (stride.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("stride/output number of dimension does not match.");
 
-    const size_t split = desc->split;
-    for (size_t j = 0; j < split; j++)
+    auto split = desc->split;
+    for (decltype(split) j = 0; j < split; j++)
     {
         auto& filter_mem = weights_memory(j);
         auto& filter_arg = filter_mem.get_layout(); //convolution filter

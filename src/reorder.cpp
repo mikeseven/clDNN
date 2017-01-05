@@ -36,7 +36,7 @@ reorder_arg::reorder_arg(network_impl& network, std::shared_ptr<const reorder> d
         {
             throw std::runtime_error("Subtracting values work only for formats that have feature dimension == 1");
         }
-        if (input_mem.argument().size.feature[0] != arg.substract_per_feature.size())
+        if (static_cast<size_t>(input_mem.argument().size.feature[0]) != arg.substract_per_feature.size())
             throw std::runtime_error("Number of features/channels in input does not match the number of features/channels in values to subtract");
     }
     auto input_padding_size = desc->input_padding().size();

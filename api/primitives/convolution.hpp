@@ -25,7 +25,7 @@ BEGIN_DTO(convolution)
     tensor stride;
     uint32_t with_activation;
     float activation_negative_slope;
-    size_t split;
+    int32_t split;
     array_ref<primitive_id_ref> weights;
     array_ref<primitive_id_ref> bias;
 END_DTO(convolution)
@@ -47,7 +47,7 @@ struct convolution : public primitive_base<convolution, DTO(convolution)>
         float activation_slp = 0.0f,
         const padding& output_padding = { format::yx,{ 0,0 } }
     )
-        :primitive_base(id, { input }, input_padding, output_padding, stride, static_cast<uint32_t>(with_activation), activation_slp, weights.size())
+        :primitive_base(id, { input }, input_padding, output_padding, stride, static_cast<uint32_t>(with_activation), activation_slp, static_cast<int32_t>(weights.size()))
         , _weights(weights)
         , _bias(bias)
         , weights(_weights)
@@ -81,7 +81,7 @@ protected:
 public:
     const std::vector<primitive_id>& weights;
     const std::vector<primitive_id>& bias;
-    const size_t& split;
+    const int32_t& split;
     const tensor& stride;
     const uint32_t& with_activation;
     const float& negative_slope;

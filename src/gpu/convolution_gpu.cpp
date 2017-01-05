@@ -230,7 +230,7 @@ struct convolution_gpu : is_an_implementation {
             cldnn::memory reorder_output(reorder_outputs[0].memory_impl);
 
             // execute kernels
-            for (uint32_t i = 0; i < split; i++) {
+            for (decltype(split) i = 0; i < split; i++) {
                 auto event = me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
                     ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
                         tmp_events,
@@ -246,7 +246,7 @@ struct convolution_gpu : is_an_implementation {
         else
         {
             // execute kernels
-            for (uint32_t i = 0; i < split; i++) {
+            for (decltype(split) i = 0; i < split; i++) {
                 assert(kd.gws0 % kd.lws0 == 0);
                 auto event = me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
                     ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
