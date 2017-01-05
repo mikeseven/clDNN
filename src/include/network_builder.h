@@ -60,21 +60,35 @@ private:
 
     void optimize_topology()
     {
+        // TODO some optimizations aka weights reordering, fusing, etc.
+        auto outputs_option = _options.get<build_option_type::outputs>();
+
         // in debug mode select all primitives as output
         if(_options.get<build_option::debug>())
         {
             std::vector<primitive_id> outputs;
+            if(outputs_option != nullptr)
+            {
+                outputs = outputs_option->outputs;
+            }
             for(auto& p : _topology_map)
             {
-                outputs.push_back(p.second->id());
+                primitive_id id = p.second->id();
+                //do not add 'data' primitives to the outputs list
+                if (p.second->type() != data::type_id())
+                {
+                    auto it = std::find(std::begin(outputs), std::end(outputs), id);
+                    if (it == std::end(outputs))
+                    {
+                        outputs.push_back(id);
+                    }
+                }
             }
+
             _options.set_option(build_option::outputs(outputs));
             return;
         }
 
-        // TODO some optimizations aka weights reordering, fusing, etc.
-
-        auto outputs_option = _options.get<build_option_type::outputs>();
         if( outputs_option == nullptr || outputs_option->outputs.empty() )
         {
             std::vector<primitive_id> outputs;

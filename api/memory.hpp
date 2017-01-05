@@ -417,7 +417,7 @@ struct pointer
     ~pointer() { _mem.unlock(); }
 
     T* data() { return _ptr; }
-    size_t size() const { return _mem.count(); }
+    size_t size() const { return _mem.size() / sizeof(T); }
 
 #if defined(_SECURE_SCL) && (_SECURE_SCL > 0)
     typedef stdext::checked_array_iterator<T*> iterator;

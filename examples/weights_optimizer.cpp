@@ -17,6 +17,7 @@
 #include "weights_optimizer.h"
 #include <api/primitives/data.hpp>
 #include <api/primitives/reorder.hpp>
+#include <boost/filesystem.hpp>
 
 weights_optimizer::weights_optimizer(const cldnn::engine& eng, int batch_size, bool enabled, bool use_half) :
     _enabled(enabled), _use_half(use_half), _batch_size(batch_size), _engine(eng)
@@ -94,10 +95,11 @@ cldnn::primitive_id weights_optimizer::create_weights_from_file(
     const std::string& path, file::weights_type type, const boost::optional<bool>& use_half)
 {
     auto mem = file::create({ _engine, path, type });
-    _topology.add(cldnn::data(path, mem));
+    auto data_id = boost::filesystem::path(path).filename().string();
+    _topology.add(cldnn::data(data_id, mem));
     return _enabled
-        ? _needs_optimization(mem, path, type, use_half.value_or(_use_half))
-        : path;
+        ? _needs_optimization(mem, data_id, type, use_half.value_or(_use_half))
+        : data_id;
 }
 
 auto weights_optimizer::optimize() const -> decltype(cldnn::network(_engine, _topology).execute())
