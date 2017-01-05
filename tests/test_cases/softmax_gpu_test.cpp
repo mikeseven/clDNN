@@ -41,8 +41,8 @@ public:
     float out_buffer[out_size];
     float expected_buffer[out_size];
 
-    engine engine;
-    memory input;
+    cldnn::engine engine;
+    cldnn::memory input;
     //neural::primitive output = memory::allocate({ memory::format::xb_f32, {output_b, {{output_x}}, 1}});
 
     softmax_gpu_xb_f32_test_fixture()
