@@ -143,7 +143,7 @@ struct convolution_gpu : is_an_implementation {
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
             gpu::make_jit_constant("OUTPUT_LIMIT", output_size),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(_engine_info.supports_fp16)),
-            gpu::make_jit_constant("INPUT_PADDING", outer.desc()->input_offset()),
+            gpu::make_jit_constant("INPUT_PADDING", filter_mem.argument().size),
             gpu::make_jit_constant("OUTPUT_PADDING", outer.desc()->output_offset())
         };
 
