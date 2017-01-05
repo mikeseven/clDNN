@@ -173,7 +173,7 @@ struct pooling_gpu : is_an_implementation {
         auto& window = arg.argument.size;
         auto padding = arg.desc()->padding_type();
 
-        if (padding::zero != padding)                                      throw std::logic_error("Pooling supports only zero padding.");
+        if (cldnn::padding::types::zero != padding)                                      throw std::logic_error("Pooling supports only zero padding.");
         if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::invalid_argument("Pooling input/output number of dimension does not match.");
         if (stride.raw.size() != output_buffer_size.raw.size())            throw std::invalid_argument("Pooling stride/output number of dimension does not match.");
         if (window.raw.size() != output_buffer_size.raw.size())            throw std::invalid_argument("Pooling window_size/output number of dimension does not match.");
@@ -248,9 +248,9 @@ namespace
     {
         attach()
         {
-            implementation_map<pooling>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f32), pooling_gpu::create);
-            implementation_map<pooling>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f16), pooling_gpu::create);
-            implementation_map<pooling>::add(std::make_tuple(engine::gpu, memory::format::bfyx_f32), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), pooling_gpu::create);
         }
 
         ~attach()

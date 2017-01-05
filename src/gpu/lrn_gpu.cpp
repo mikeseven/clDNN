@@ -106,9 +106,9 @@ struct lrn_gpu : is_an_implementation
         }
 
         // Checking for supported paddings.
-        switch (arg.desc()->padding_type())
+        switch (arg.desc()->input_padding().type())
         {
-        case padding::zero:
+        case cldnn::padding::types::zero:
             break;
 
         default:
@@ -200,9 +200,9 @@ kd_selector_t<lrn_gpu::kernel_data, normalization::response, neural::memory::for
     namespace {
         struct attach {
             attach() {
-                implementation_map<normalization::response>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f32), lrn_gpu::create);
-                implementation_map<normalization::response>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f16), lrn_gpu::create);
-                implementation_map<normalization::response>::add(std::make_tuple(engine::gpu, memory::format::bfyx_f32), lrn_gpu::create);
+                implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), lrn_gpu::create);
+                implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), lrn_gpu::create);
+                implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), lrn_gpu::create);
             }
             ~attach() {}
         };

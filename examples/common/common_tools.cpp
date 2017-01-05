@@ -568,10 +568,7 @@ void run_topology(const execution_params &ep)
     }
 
     // optimize weights if needed
-    if (ep.optimize_weights)
-    {
-        weight_optimization(weights_optimizer, primitives);
-    }
+    weight_optimization(weights_optimizer, primitives);
 
     auto network = build_network(engine, primitives, ep);
     auto input = cldnn::memory::allocate(engine, input_layout);
@@ -613,6 +610,7 @@ void run_topology(const execution_params &ep)
                 load_images_from_file_list(images_in_batch, input);
             }
 
+            network.set_input_data("input", input);
             auto time = execute_topology(network, ep, energyLib, output);
 
             auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();

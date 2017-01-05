@@ -188,9 +188,9 @@ namespace {
         attach() {
             auto val_fw = depth_concatenate_gpu::create;
 
-            auto key_fw = std::make_tuple(engine::type::gpu, memory::format::yxfb_f32);
+            auto key_fw = std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32);
             implementation_map<depth_concatenate>::add(key_fw, val_fw);
-            key_fw = std::make_tuple(engine::type::gpu, memory::format::yxfb_f16);
+            key_fw = std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16);
             implementation_map<depth_concatenate>::add(key_fw, val_fw);
         }
         ~attach() {}

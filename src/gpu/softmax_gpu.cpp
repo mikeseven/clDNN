@@ -149,9 +149,9 @@ namespace {
 struct attach {
     attach() {
         auto val_fw = softmax_gpu::create;
-        implementation_map<softmax>::add(std::make_tuple(engine::gpu, memory::format::xb_f32), val_fw);
-        implementation_map<softmax>::add(std::make_tuple(engine::gpu, memory::format::xb_f16), val_fw);
-        implementation_map<softmax>::add(std::make_tuple(engine::gpu, memory::format::bx_f32), val_fw);
+        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw);
+        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw);
+        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f32), val_fw);
     }
     ~attach() {}
 };

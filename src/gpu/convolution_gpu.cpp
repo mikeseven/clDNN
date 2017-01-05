@@ -207,7 +207,7 @@ struct convolution_gpu : is_an_implementation {
         auto& output_mem = outer.output_memory();
         auto& filter_mem = outer.weights_memory(0);
 
-        if (outer.desc()->padding_type() != padding::zero)
+        if (outer.desc()->padding_type() != cldnn::padding::zero)
             throw std::invalid_argument("Unknown padding mode in convolution.");
 
         // Check whether all memory elements use the same unit type (FP16 or FP32).
@@ -501,9 +501,9 @@ kd_selector_t<convolution_gpu::kernel_data, convolution, neural::memory::format:
 namespace{
     struct attach {
         attach() {
-            implementation_map<convolution>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f32), convolution_gpu::create);
-            implementation_map<convolution>::add(std::make_tuple(engine::gpu, memory::format::yxfb_f16), convolution_gpu::create);
-            implementation_map<convolution>::add(std::make_tuple(engine::gpu, memory::format::bfyx_f32), convolution_gpu::create);
+            implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), convolution_gpu::create);
+            implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), convolution_gpu::create);
+            implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), convolution_gpu::create);
         }
         ~attach() {}
     };

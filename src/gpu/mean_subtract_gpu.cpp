@@ -139,9 +139,9 @@ namespace {
         attach() {
             auto val_fw = mean_subtract_gpu::create;
 
-            auto key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f32);
+            auto key_fw = std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32);
             implementation_map<mean_substract>::add(key_fw, val_fw);
-            key_fw = std::make_tuple(engine::gpu, memory::format::yxfb_f16);
+            key_fw = std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16);
             implementation_map<mean_substract>::add(key_fw, val_fw);
         }
         ~attach() {}

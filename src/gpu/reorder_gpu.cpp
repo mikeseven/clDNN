@@ -356,7 +356,7 @@ struct reorder_gpu : is_an_implementation {
         struct attach {
             attach() {
                 implementation_map<reorder>::add({
-                    { engine::type::gpu, reorder_gpu::create }
+                    { cldnn::engine_types::ocl, reorder_gpu::create }
                 });
             }
             ~attach() {}

@@ -371,16 +371,16 @@ namespace {
             auto val_fw = fully_connected_gpu::create;
 
             implementation_map<fully_connected>::add({
-                { std::make_tuple(engine::type::gpu, memory::format::yxfb_f32), val_fw },
-                { std::make_tuple(engine::type::gpu, memory::format::xb_f32), val_fw },
-                { std::make_tuple(engine::type::gpu, memory::format::x_f32), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::x_f32), val_fw },
 
-                { std::make_tuple(engine::type::gpu, memory::format::yxfb_f16), val_fw },
-                { std::make_tuple(engine::type::gpu, memory::format::xb_f16), val_fw },
-                { std::make_tuple(engine::type::gpu, memory::format::x_f16), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::x_f16), val_fw },
 
-                { std::make_tuple(engine::gpu, memory::format::bfyx_f32), val_fw },
-                { std::make_tuple(engine::gpu, memory::format::bx_f32), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f32), val_fw },
             });
         }
         ~attach() {}

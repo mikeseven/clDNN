@@ -111,10 +111,10 @@ struct attach {
         auto val_fw = relu_gpu::create;
 
         implementation_map<relu>::add({
-            {std::make_tuple(engine::type::gpu, memory::format::yxfb_f32), val_fw},
-            {std::make_tuple(engine::type::gpu, memory::format::xb_f32), val_fw},
-            {std::make_tuple(engine::type::gpu, memory::format::yxfb_f16), val_fw},
-            {std::make_tuple(engine::type::gpu, memory::format::xb_f16), val_fw},
+            {std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw},
+            {std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw},
+            {std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw},
+            {std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw},
         });
     }
     ~attach() {}

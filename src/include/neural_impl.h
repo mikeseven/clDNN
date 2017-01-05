@@ -32,27 +32,6 @@
 
 namespace neural
 {
-    struct engine
-    {
-        struct type
-        {
-            static const cldnn::engine_types gpu = cldnn::engine_types::ocl;
-        };
-        static const cldnn::engine_types gpu = cldnn::engine_types::ocl;
-    };
-    struct padding
-    {
-        struct type
-        {
-            static const cldnn::padding::types zero = cldnn::padding::types::zero;
-            static const cldnn::padding::types one = cldnn::padding::types::one;
-            static const cldnn::padding::types two = cldnn::padding::types::two;
-        };
-        static const cldnn::padding::types zero = cldnn::padding::types::zero;
-        static const cldnn::padding::types one = cldnn::padding::types::one;
-        static const cldnn::padding::types two = cldnn::padding::types::two;
-    };
-
     using memory = cldnn::neural_memory;
     template<typename primitive_kind> using implementation_map = cldnn::implementation_map<primitive_kind>;
     using is_an_implementation = cldnn::primitive_impl;

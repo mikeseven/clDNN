@@ -102,8 +102,9 @@ array_ref<network::network_output_ref> network_impl::execute(const std::vector<r
     {
         auto primitive = get_primitive(output_id);
         auto output_event = execute_primitive(primitive, events);
-        auto output_memory = primitive->output_memory();
-        _outputs.push_back({ output_id, output_event.get(), output_memory.get() });
+        auto output_memory_impl = primitive->output_memory().get();
+        output_memory_impl->add_ref();
+        _outputs.push_back({ output_id, output_event.detach(), output_memory_impl });
     }
     return _outputs;
 }
