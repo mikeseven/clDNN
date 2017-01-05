@@ -47,7 +47,13 @@ struct convolution : public primitive_base<convolution, DTO(convolution)>
         float activation_slp = 0.0f,
         const padding& output_padding = { format::yx,{ 0,0 } }
     )
-        :primitive_base(id, { input }, input_padding, output_padding, stride, static_cast<uint32_t>(with_activation), activation_slp, static_cast<int32_t>(weights.size()))
+        :primitive_base(id, { input }, input_padding, output_padding,
+                        stride,
+                        static_cast<uint32_t>(with_activation),
+                        activation_slp,
+                        static_cast<int32_t>(weights.size()),
+                        array_ref<primitive_id_ref>(),
+                        array_ref<primitive_id_ref>())
         , _weights(weights)
         , _bias(bias)
         , weights(_weights)

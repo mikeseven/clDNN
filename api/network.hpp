@@ -268,9 +268,9 @@ struct network
 {
     struct network_output_ref
     {
-        primitive_id_ref id_ref;
-        event_impl* event_impl;
-        memory_impl* memory_impl;
+        cldnn::primitive_id_ref id_ref;
+        cldnn::event_impl* event_ref;
+        cldnn::memory_impl* memory_ref;
     };
     API_CLASS(network_output_ref)
 
@@ -308,7 +308,7 @@ struct network
         std::map<primitive_id, network_output> result;
         for(auto& ref : result_ref)
         {
-            result.emplace(ref.id_ref, network_output(event(ref.event_impl), memory(ref.memory_impl)));
+            result.emplace(ref.id_ref, network_output(event(ref.event_ref), memory(ref.memory_ref)));
         }
         return result;
     }

@@ -148,7 +148,7 @@ struct depth_concatenate_gpu : is_an_implementation
 
         return gpu::jit_constants {
             gpu::make_jit_constant("INPUT",          outer.input_memory(data.input_idx).argument().size),
-            gpu::make_jit_constant("OUTPUT",         outer.output_memory(0).argument().size),
+            gpu::make_jit_constant("OUTPUT",         outer.output_memory().argument().size),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(data.fp16_supported)),
             gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",      data.fp16_unit_used ? "half" : "float")
@@ -160,7 +160,7 @@ struct depth_concatenate_gpu : is_an_implementation
 
         size_t inputs_count = _outer.argument.input.size();
 
-        const auto& output_mem = _outer.output_memory(0);  // output
+        const auto& output_mem = _outer.output_memory();  // output
 
         uint32_t depth_offset = 0;
         auto tmp_events = events;

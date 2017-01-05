@@ -42,7 +42,7 @@ struct fully_connected : public primitive_base<fully_connected, DTO(fully_connec
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_padding, output_padding, static_cast<uint32_t>(with_activation), activation_slp)
+        : primitive_base(id, {input}, input_padding, output_padding, static_cast<uint32_t>(with_activation), activation_slp, "", "")
         , weights(weights)
         , bias(bias)
         , with_activation(_dto.with_activation)

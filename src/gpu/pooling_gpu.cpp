@@ -72,7 +72,7 @@ struct pooling_gpu : is_an_implementation {
     static kernel_data set_default(const pooling& arg)
     {
         const auto& input_mem = arg.input_memory(0);  // input
-        const auto& output_mem = arg.output_memory(0); // output
+        const auto& output_mem = arg.output_memory(); // output
 
         kernel_data kd;
 
@@ -138,7 +138,7 @@ struct pooling_gpu : is_an_implementation {
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT",             outer.input_memory(0).argument().size),
-            gpu::make_jit_constant("OUTPUT",            outer.output_memory(0).argument().size),
+            gpu::make_jit_constant("OUTPUT",            outer.output_memory().argument().size),
             gpu::make_jit_constant("WINDOW",            outer.argument.size),
             gpu::make_jit_constant("STRIDE",            outer.argument.stride),
             gpu::make_jit_constant("INPUT_OFFSET",      outer.desc()->input_offset()),
@@ -157,7 +157,7 @@ struct pooling_gpu : is_an_implementation {
         const auto& kd    = _kernel_data;
 
         const auto& input_mem  = outer.input_memory(0);  // input
-        const auto& output_mem = outer.output_memory(0); // output
+        const auto& output_mem = outer.output_memory(); // output
 
         return _kernel.run<gpu::input_mem, gpu::output_mem>
           ({{kd.gws0, kd.gws1, kd.gws2}, {kd.lws0, kd.lws1, kd.lws2}}, events, input_mem, output_mem);
@@ -220,7 +220,7 @@ pooling_gpu::kernel_data defauly_bfyx_f32(const pooling& arg)
 
     kd.kernel_name = kernel_name_bfyx_max;
 
-    const auto& output_mem = arg.output_memory(0); // output
+    const auto& output_mem = arg.output_memory(); // output
 
     // Determine global work sizes.
     kd.gws2 = output_mem.argument().size.batch[0] * output_mem.argument().size.feature[0];

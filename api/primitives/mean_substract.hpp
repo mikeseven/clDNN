@@ -36,7 +36,7 @@ struct mean_substract : public primitive_base<mean_substract, DTO(mean_substract
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :primitive_base(id, {input}, input_padding, output_padding)
+        :primitive_base(id, {input}, input_padding, output_padding, "")
         , mean(mean)
     {
         init_dto();

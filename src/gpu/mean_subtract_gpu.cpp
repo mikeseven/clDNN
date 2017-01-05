@@ -51,7 +51,7 @@ struct mean_subtract_gpu : is_an_implementation
     {
         const auto& input_mem  = outer.input_memory(0);  // input
         const auto& mean_mem   = outer.input_memory(1);  // mean
-        const auto& output_mem = outer.output_memory(0); // output
+        const auto& output_mem = outer.output_memory(); // output
 
         kernel_data kd;
 
@@ -124,7 +124,7 @@ struct mean_subtract_gpu : is_an_implementation
 
         const auto& input_mem  = _outer.input_memory(0);  // input
         const auto& mean_mem   = _outer.input_memory(1);  // mean
-        const auto& output_mem = _outer.output_memory(0); // output
+        const auto& output_mem = _outer.output_memory(); // output
 
         // mean_mem memory in bfyx or yxfb.
         return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>({kd.gws0, kd.lws0}, events, input_mem, output_mem, mean_mem);

@@ -48,7 +48,7 @@ struct reorder_gpu : is_an_implementation {
     , _exec_options(get_execution_options())
     {
         auto& input_mem = outer.input_memory(0);
-        auto& output_mem = outer.output_memory(0);
+        auto& output_mem = outer.output_memory();
 
         padding_only = (!have_subtraction) && (input_mem.argument().format == output_mem.argument().format) && input_mem.argument().format == memory::format::type::bfyx_f32;
     }
@@ -160,7 +160,7 @@ struct reorder_gpu : is_an_implementation {
     const std::string& select_kernel_name() const {
         auto& input_mem = outer.input_memory(0);
 
-        auto& output_mem = outer.output_memory(0);
+        auto& output_mem = outer.output_memory();
 
         bool _padding_only = (!have_subtraction) && (input_mem.argument().format == output_mem.argument().format) && input_mem.argument().format == memory::format::type::bfyx_f32;
         if (_padding_only)
@@ -189,7 +189,7 @@ struct reorder_gpu : is_an_implementation {
         auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
 
         auto& input_mem = outer.input_memory(0);
-        auto& output_mem = outer.output_memory(0);
+        auto& output_mem = outer.output_memory();
 
         auto input_use_half = input_mem.get_layout().data_type == cldnn::data_types::f16;
         auto output_use_half = output_mem.get_layout().data_type == cldnn::data_types::f16;
@@ -300,7 +300,7 @@ struct reorder_gpu : is_an_implementation {
         auto me = this;
 
         auto& input_mem = outer.input_memory(0);
-        auto& output_mem = outer.output_memory(0);
+        auto& output_mem = outer.output_memory();
 
         if (input_mem.argument().size.raw.size() != output_mem.argument().size.raw.size() ||
             memory::traits(input_mem.get_layout()).dimension != memory::traits(output_mem.get_layout()).dimension)

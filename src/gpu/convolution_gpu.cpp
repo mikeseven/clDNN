@@ -70,7 +70,7 @@ struct convolution_gpu : is_an_implementation {
 
     static kernel_data set_default(const convolution& arg)
     {
-        auto& output_mem = arg.output_memory(0);
+        auto& output_mem = arg.output_memory();
         auto split = arg.argument.split;
         auto batch_size = output_mem.argument().size.batch[0];
 
@@ -116,7 +116,7 @@ struct convolution_gpu : is_an_implementation {
 
         auto& input_mem = outer.input_memory(0);
         auto input_offset = outer.desc()->input_offset().transform(input_mem.get_layout().size.format, 0);
-        auto& output_mem = outer.output_memory(0);
+        auto& output_mem = outer.output_memory();
         auto output_offset = outer.desc()->output_offset().transform(output_mem.get_layout().size.format, 0);
         auto& output_size = outer.output_memory().argument().size;
         auto& filter_mem = outer.weights_memory(0);
@@ -205,7 +205,7 @@ struct convolution_gpu : is_an_implementation {
         auto split = outer.argument.split;
 
         auto& input_mem = outer.input_memory(0);
-        auto& output_mem = outer.output_memory(0);
+        auto& output_mem = outer.output_memory();
         auto& filter_mem = outer.weights_memory(0);
 
         if (outer.desc()->padding_type() != padding::zero)
@@ -226,8 +226,8 @@ struct convolution_gpu : is_an_implementation {
             auto network = reorder[0];
             network->set_input_data("input", input_mem);
             auto reorder_outputs = network->execute(events);
-            reorder_outputs[0].event_impl->wait();
-            cldnn::memory reorder_output(reorder_outputs[0].memory_impl);
+            reorder_outputs[0].event_ref->wait();
+            cldnn::memory reorder_output(reorder_outputs[0].memory_ref);
 
             // execute kernels
             for (decltype(split) i = 0; i < split; i++) {
@@ -303,7 +303,7 @@ convolution_gpu::kernel_data default_yxio_f32(const convolution& arg)
 convolution_gpu::kernel_data default_yxio_f32_b1(const convolution& arg)
 {
     auto& filter_mem = arg.weights_memory(0);
-    auto& output_mem = arg.output_memory(0);
+    auto& output_mem = arg.output_memory();
     auto split = arg.argument.split;
     auto batch_size = output_mem.argument().size.batch[0];
 
@@ -351,7 +351,7 @@ convolution_gpu::kernel_data default_yxio_f32_b1(const convolution& arg)
 convolution_gpu::kernel_data default_yxio_f32_b8(const convolution& arg)
 {
     auto& filter_mem = arg.weights_memory(0);
-    auto& output_mem = arg.output_memory(0);
+    auto& output_mem = arg.output_memory();
     auto split = arg.argument.split;
     auto batch_size = output_mem.argument().size.batch[0];
 
@@ -381,7 +381,7 @@ convolution_gpu::kernel_data default_yxio_f32_b8(const convolution& arg)
 convolution_gpu::kernel_data default_yxio_f32_b32(const convolution& arg)
 {
     auto& filter_mem = arg.weights_memory(0);
-    auto& output_mem = arg.output_memory(0);
+    auto& output_mem = arg.output_memory();
     auto split = arg.argument.split;
     auto batch_size = output_mem.argument().size.batch[0];
 
@@ -412,7 +412,7 @@ convolution_gpu::kernel_data default_yxio_f16(const convolution& arg)
 convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
 {
     auto& filter_mem = arg.weights_memory(0);
-    auto& output_mem = arg.output_memory(0);
+    auto& output_mem = arg.output_memory();
     auto batch_size = output_mem.argument().size.batch[0];
     auto filter_ofm_num = filter_mem.argument().size.feature[0];
 
@@ -454,7 +454,7 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
 
 convolution_gpu::kernel_data defauly_bfyx_yxio_b1_f32(const convolution& arg)
 {
-    auto& output_mem = arg.output_memory(0);
+    auto& output_mem = arg.output_memory();
     auto& filter_mem = arg.input_memory(1);
 
     int block_width = 4;

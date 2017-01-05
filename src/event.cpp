@@ -149,9 +149,19 @@ array_ref<event::profiling_interval_ref> event::get_profiling_impl(status_t * st
     }
 }
 
+namespace
+{
+struct profiling_period_ocl_start_stop
+{
+    std::string name;
+    cl_profiling_info start;
+    cl_profiling_info stop;
+};
+}
+
 array_ref<event::profiling_interval_ref> event_impl::get_profiling_info()
 {
-    static const std::vector<std::tuple<std::string, cl_profiling_info, cl_profiling_info>> profiling_periods
+    static const std::vector<profiling_period_ocl_start_stop> profiling_periods
     {
         { "submission", CL_PROFILING_COMMAND_QUEUED, CL_PROFILING_COMMAND_SUBMIT },
         { "starting",   CL_PROFILING_COMMAND_SUBMIT, CL_PROFILING_COMMAND_START },
@@ -160,14 +170,14 @@ array_ref<event::profiling_interval_ref> event_impl::get_profiling_info()
 
     if (_profiling_info.empty() && (_event.getInfo<CL_EVENT_COMMAND_QUEUE>().getInfo<CL_QUEUE_PROPERTIES>() & CL_QUEUE_PROFILING_ENABLE))
     {
-        for (auto& t : profiling_periods)
+        for (auto& pp : profiling_periods)
         {
             cl_ulong start;
-            _event.getProfilingInfo(std::get<1>(t), &start);
+            _event.getProfilingInfo(pp.start, &start);
             cl_ulong end;
-            _event.getProfilingInfo(std::get<2>(t), &end);
+            _event.getProfilingInfo(pp.stop, &end);
             auto value = end - start;
-            _profiling_info.push_back({ std::get<0>(t), value });
+            _profiling_info.push_back({ pp.name, value });
         }
     }
     return _profiling_info;

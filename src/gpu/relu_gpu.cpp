@@ -51,7 +51,7 @@ struct relu_gpu : is_an_implementation
     static kernel_data set_kernel_data(const relu& outer)
     {
         const auto& input_mem  = outer.input_memory(0);  // input
-        const auto& output_mem = outer.output_memory(0); // output
+        const auto& output_mem = outer.output_memory(); // output
 
         kernel_data kd;
 
@@ -96,7 +96,7 @@ struct relu_gpu : is_an_implementation
         const auto& kd    = _kernel_data;
 
         const auto& input_mem  = outer.input_memory(0);  // input
-        const auto& output_mem = outer.output_memory(0); // output
+        const auto& output_mem = outer.output_memory(); // output
 
         return _kernel.run<gpu::input_mem, gpu::output_mem>({kd.gws0, kd.lws0}, events, input_mem, output_mem);
     }

@@ -38,13 +38,6 @@ public:
     const std::vector<std::shared_ptr<const primitive_arg>>& input() const { return _inputs; }
     const memory& input_memory(size_t index) const { return input().at(index)->output_memory(); }
     const memory& output_memory() const { return _output; }
-    // TODO remove backward compatibility code:
-    const memory& output_memory(size_t idx) const
-    {
-        idx;
-        assert(idx == 0);
-        return output_memory();
-    }
 
     primitive_type_id type() const { return _desc->type(); }
     primitive_id id() const { return _desc->get_dto()->id; }

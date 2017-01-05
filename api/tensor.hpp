@@ -102,7 +102,7 @@ struct tensor
 {
     typedef int32_t value_type;
     //TODO find the way to prevent direct change of following fields.
-    struct cldnn::format format;
+    cldnn::format format;
     mutable_array_ref<value_type> raw;
     mutable_array_ref<value_type> batch;
     mutable_array_ref<value_type> feature;

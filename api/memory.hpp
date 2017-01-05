@@ -298,7 +298,7 @@ struct neural_memory
     }
 
     struct arguments {
-        format::type    format;
+        cldnn::neural_memory::format::type    format;
         const tensor&   size;
         arguments(const cldnn::layout& layout): format(convert_format(layout)), size(layout.size){}
     };

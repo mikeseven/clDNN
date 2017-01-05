@@ -154,7 +154,7 @@ struct lrn_gpu : is_an_implementation
         const auto& kd    = _kernel_data;
 
         const auto& input_mem  = outer.input_memory(0);  // input
-        const auto& output_mem = outer.output_memory(0); // output
+        const auto& output_mem = outer.output_memory(); // output
 
         return _kernel.run<gpu::input_mem, gpu::output_mem>
             ({{kd.gws0, kd.gws1, kd.gws2}, {kd.lws0, kd.lws1, kd.lws2}}, events, input_mem, output_mem);

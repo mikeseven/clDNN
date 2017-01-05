@@ -42,7 +42,7 @@ struct reorder : public primitive_base<reorder, DTO(reorder)>
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        : primitive_base(id, { input }, input_padding, output_padding, output_layout, "")
+        : primitive_base(id, { input }, input_padding, output_padding, output_layout, "", array_ref<float>())
         , output_layout(_dto.output_layout)
         , mean("")
         , substract_per_feature(values_to_substract)
@@ -58,7 +58,7 @@ struct reorder : public primitive_base<reorder, DTO(reorder)>
         const padding& input_padding = { format::yx,{ 0, 0 } },
         const padding& output_padding = { format::yx,{ 0, 0 } }
     )
-        : primitive_base(id, { input }, input_padding, output_padding, output_layout)
+        : primitive_base(id, { input }, input_padding, output_padding, output_layout, "", array_ref<float>())
         , output_layout(_dto.output_layout)
         , mean(mean)
         , substract_per_feature(0)

@@ -59,7 +59,7 @@ struct softmax_gpu : is_an_implementation
         auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
 
         const auto& input_mem  = outer.input_memory(0);  // input
-        const auto& output_mem = outer.output_memory(0); // output
+        const auto& output_mem = outer.output_memory(); // output
 
         kernel_data kd;
 
@@ -134,7 +134,7 @@ struct softmax_gpu : is_an_implementation
         const auto& kd    = _kernel_data;
 
         const auto& input_mem  = outer.input_memory(0);  // input
-        const auto& output_mem = outer.output_memory(0); // output
+        const auto& output_mem = outer.output_memory(); // output
 
         assert(1 == output_mem.get_layout().size.feature.size());
         assert(1 == output_mem.get_layout().size.batch.size());

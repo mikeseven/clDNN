@@ -22,7 +22,7 @@
 namespace cldnn
 {
 BEGIN_DTO(input_layout)
-    layout layout;
+    cldnn::layout layout;
 END_DTO(input_layout)
 
 class input_layout : public primitive_base<input_layout, DTO(input_layout)>
@@ -41,6 +41,6 @@ public:
         , layout(_dto.layout)
     {}
 
-    const layout& layout;
+    const cldnn::layout& layout;
 };
 }

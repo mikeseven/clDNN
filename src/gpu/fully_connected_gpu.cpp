@@ -75,7 +75,7 @@ struct fully_connected_gpu : is_an_implementation
     {
         const auto& input_mem  = outer.input_memory(0);   // input
         const auto& weight_mem = outer.weights_memory();  // weights
-        const auto& output_mem = outer.output_memory(0);  // output
+        const auto& output_mem = outer.output_memory();  // output
 
         kernel_data kd;
 
@@ -277,7 +277,7 @@ struct fully_connected_gpu : is_an_implementation
 
         const auto& input_mem  = outer.input_memory(0);   // input
         const auto& weight_mem = outer.input_memory(1);   // weights
-        const auto& output_mem = outer.output_memory(0);  // output
+        const auto& output_mem = outer.output_memory();  // output
 
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
@@ -333,7 +333,7 @@ struct fully_connected_gpu : is_an_implementation
         const auto& input_mem  = _outer.input_memory(0);   // input
         const auto& weight_mem = _outer.input_memory(1);   // weights
         const auto& bias_mem   = _outer.input_memory(2);   // biases
-        const auto& output_mem = _outer.output_memory(0);  // output
+        const auto& output_mem = _outer.output_memory();  // output
 
         return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
             ({{kd.gws0, kd.gws1}, {kd.lws0, kd.lws1}}, events, input_mem, output_mem, weight_mem, bias_mem);
