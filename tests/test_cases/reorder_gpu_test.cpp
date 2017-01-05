@@ -85,7 +85,7 @@ TEST(reorder_gpu_f32, basic)
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "reorder");
 
     auto output = outputs.begin()->second.get_memory();
@@ -179,7 +179,7 @@ TEST(reorder_gpu_f32, basic_subtract) {
     network.set_input_data("substract", subtract);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "reorder");
 
     auto output = outputs.begin()->second.get_memory();
@@ -260,7 +260,7 @@ TEST(reorder_gpu_f32, basic_subtract_value) {
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "reorder");
 
     auto output = outputs.begin()->second.get_memory();
@@ -358,7 +358,7 @@ TEST(reorder_gpu_f16, basic_subtract_f32_output_f32) {
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "reorder");
 
     auto output = outputs.begin()->second.get_memory();
@@ -446,7 +446,7 @@ TEST(reorder_gpu_f16, basic_subtract_value) {
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "reorder");
 
     auto output = outputs.begin()->second.get_memory();
@@ -525,7 +525,7 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 2);
+    EXPECT_EQ(outputs.size(), size_t(2));
     EXPECT_TRUE(outputs.find("reorder_f16_f32") != outputs.end());
     EXPECT_TRUE(outputs.find("reorder_f32_f16") != outputs.end());
 

@@ -75,7 +75,7 @@ TEST(mean_subtract_gpu_f32, basic_in4x4x2x2) {
     network.set_input_data("input", input);
     network.set_input_data("mean", mean);
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "mean_substract");
 
     auto output = outputs.at("mean_substract").get_memory();

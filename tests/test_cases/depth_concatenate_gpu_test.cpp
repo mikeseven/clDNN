@@ -68,7 +68,7 @@ TEST(depth_concatenate_f32_gpu, test01) {
     network.set_input_data("input2", input2);
 
     auto outputs = network.execute({});
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "depth1");
 
     auto output = outputs.at("depth1").get_memory();

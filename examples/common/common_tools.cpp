@@ -168,7 +168,7 @@ void nn_data_load_from_image(
         }
         FreeImage_Unload(bitmap);
     }
-};
+}
 
 static half_t convert_pixel_channel_to_half(uint8_t val)
 {
@@ -252,7 +252,7 @@ void nn_data_load_from_image(
         }
         FreeImage_Unload(bitmap);
     }
-};
+}
 
 // i am not sure what is better: pass memory as primitive where layout, ptr and size are included
 // or pass as separate parameters to avoid including neural.h in common tools?

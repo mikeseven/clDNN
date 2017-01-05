@@ -49,7 +49,7 @@ TEST(fully_connected_gpu, xb_f32_batch_1) {
     //  Output:
     //   2.5    2.75    0.75   7
 
-    const int32_t output_x = 4, output_b = 1,  // size of whole output buffer
+    const int32_t output_x = 4,  // size of whole output buffer
         input_x = 3, input_b = 1,  // size of whole input buffer
         weight_x = 4, weight_y = 3;  // size of whole weights buffer
 
@@ -75,7 +75,7 @@ TEST(fully_connected_gpu, xb_f32_batch_1) {
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -110,7 +110,7 @@ TEST(fully_connected_gpu, xb_f32_batch_2) {
     //   2.5    2.75     0.75   7
     //   4      1        2.75   5
 
-    const int32_t output_x = 4, output_b = 2,  // size of whole output buffer
+    const int32_t output_x = 4,  // size of whole output buffer
         input_x = 3, input_b = 2,  // size of whole input buffer
         weight_x = 4, weight_y = 3;  // size of whole weights buffer
 
@@ -136,7 +136,7 @@ TEST(fully_connected_gpu, xb_f32_batch_2) {
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -198,7 +198,7 @@ TEST(fully_connected_gpu, x_f32) {
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -255,7 +255,7 @@ TEST(fully_connected_gpu, yxfn_f32) {
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -287,7 +287,7 @@ TEST(fully_connected_gpu, xb_f32_batch_1_relu) {
     //  Output:
     //   2.5   0      0.75  0
 
-    const int32_t output_x = 4, output_b = 1,  // size of whole output buffer
+    const int32_t output_x = 4,  // size of whole output buffer
         input_x = 3, input_b = 1,  // size of whole input buffer
         weight_x = 4, weight_y = 3;  // size of whole weights buffer
 
@@ -313,7 +313,7 @@ TEST(fully_connected_gpu, xb_f32_batch_1_relu) {
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -348,7 +348,7 @@ TEST(fully_connected_gpu, xb_f32_batch_2_relu) {
     //   2.5    0   0.75   0
     //   4      0   2.75   0
 
-    const int32_t output_x = 4, output_b = 2,  // size of whole output buffer
+    const int32_t output_x = 4,  // size of whole output buffer
         input_x = 3, input_b = 2,  // size of whole input buffer
         weight_x = 4, weight_y = 3;  // size of whole weights buffer
 
@@ -374,7 +374,7 @@ TEST(fully_connected_gpu, xb_f32_batch_2_relu) {
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -436,7 +436,7 @@ TEST(fully_connected_gpu, x_f32_relu) {
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -495,7 +495,7 @@ TEST(fully_connected_gpu, x_f32_relu_with_negative_slope) {
     network.set_input_data("input", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "full_con_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();

@@ -89,7 +89,7 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, input_same_values) {
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "softmax");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -119,7 +119,7 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, input_same_values_batch_wise) {
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "softmax");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -174,7 +174,7 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, values_batch_wise) {
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "softmax");
 
     auto output_prim = outputs.begin()->second.get_memory();

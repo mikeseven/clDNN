@@ -56,7 +56,7 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
     network.set_input_data("input_prim", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -96,7 +96,7 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
     network.set_input_data("input_prim", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -140,7 +140,7 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
     network.set_input_data("input_prim", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -194,7 +194,7 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
     network.set_input_data("input_prim", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -244,7 +244,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad)
     network.set_input_data("input_prim", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -295,7 +295,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad)
     network.set_input_data("input_prim", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -337,7 +337,7 @@ TEST(pooling_forward_gpu, basic_avg_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
     network.set_input_data("input_prim", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -382,7 +382,7 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad)
     network.set_input_data("input_prim", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -426,11 +426,10 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad)
     network.set_input_data("input_prim", input_prim);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "pool_prim");
 
     auto output_prim = outputs.begin()->second.get_memory();
-    auto output_layout = output_prim.get_layout();
 
     auto output_ptr = output_prim.pointer<float>();
 	EXPECT_EQ(0.375f,  output_ptr[0]);
