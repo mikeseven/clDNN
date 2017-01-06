@@ -42,10 +42,11 @@ layout convolution_arg::calc_output_layout(network_impl& network, std::shared_pt
     // outp <= (input_size - (2*input_offset) - kernel_size)/ stride 
     auto kernel_xy = weights_layout.size.spatial;
     assert(kernel_xy.size() == 2);
-    //auto output_spatial_x = (input_layout.size.spatial[0] - (input_offset.spatial[0]) - kernel_xy[0]) / strd.spatial[0] + 1;
-    //auto output_spatial_y = (input_layout.size.spatial[1] - (input_offset.spatial[1]) - kernel_xy[1]) / strd.spatial[1] + 1;
-    auto output_spatial_x = static_cast<int32_t>(ceil(static_cast<float>(input_layout.size.spatial[0] - (2*input_offset.spatial[0]) - kernel_xy[0]) / static_cast<float>(strd.spatial[0]))) + 1;
-    auto output_spatial_y = static_cast<int32_t>(ceil(static_cast<float>(input_layout.size.spatial[1] - (2*input_offset.spatial[1]) - kernel_xy[1]) / static_cast<float>(strd.spatial[1]))) + 1;
+    //TODO !!!implement correct output size calculation!!!
+    auto output_spatial_x = (input_layout.size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_xy[0]) / strd.spatial[0] + 1;
+    auto output_spatial_y = (input_layout.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_xy[1]) / strd.spatial[1] + 1;
+    //auto output_spatial_x = static_cast<int32_t>(ceil(static_cast<float>(input_layout.size.spatial[0] - (2*input_offset.spatial[0]) - kernel_xy[0]) / static_cast<float>(strd.spatial[0]))) + 1;
+    //auto output_spatial_y = static_cast<int32_t>(ceil(static_cast<float>(input_layout.size.spatial[1] - (2*input_offset.spatial[1]) - kernel_xy[1]) / static_cast<float>(strd.spatial[1]))) + 1;
     // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
     auto number_of_features = weights_layout.size.feature[0] * static_cast<int32_t>(split);
 
