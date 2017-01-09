@@ -2069,10 +2069,12 @@ TEST(convolution_gpu, bfyx_b8_f32)
     //  8.01    b1
     //  -10.01  b2
 
-    auto input = memory::allocate({ memory::format::bfyx_f32,{ 2, { 2, 2 }, 2 } });
-    auto output = memory::allocate({ memory::format::bfyx_f32,{ 2, { 1, 1 }, 1 } });
-    auto weights = memory::allocate({ memory::format::oiyx_f32,{ 1, { 2, 2 },{ 1, 2 } } });
-    auto biases = memory::allocate({ memory::format::x_f32,{ 1, { { 1 } } , 1 } });
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32, tensor(format::bfyx, { 2, 2, 2, 2 }) });
+    auto output = memory::allocate(engine, { data_types::f32, tensor(format::bfyx, { 2, 1, 1, 1 }) });
+    auto weights = memory::allocate(engine, { data_types::f32, tensor(format::oiyx, { 1, 2, 2, 1, 2 }) });
+    auto biases = memory::allocate(engine, { data_types::f32, tensor(format::x, { 1 }) });
 
     set_values(input, {
         0.5f, 1.5f,     //b1,f1
@@ -2099,11 +2101,21 @@ TEST(convolution_gpu, bfyx_b8_f32)
 
     set_values(biases, { -1.0f });
 
-    auto conv = convolution::create({ output, { input, weights, biases }, { 1, { 2, 2 }, 1 }, padding::zero });
+    topology topology{
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        convolution("conv", "input", { "weigths" }, { "biases" }, {format::yx, {0,0}}, {format::yx, {2,2}})
+    };
 
-    execute({ conv }).wait();
+    network network{ engine, topology };
+    auto outputs = network.execute();
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    EXPECT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs.begin()->first, "conv");
+    
+    auto output_ptr = outputs.begin()->second.get_memory().pointer<float>();
+
     EXPECT_FLOAT_EQ(8.01f, output_ptr[0]);
     EXPECT_FLOAT_EQ(-10.01f, output_ptr[1]);
 }

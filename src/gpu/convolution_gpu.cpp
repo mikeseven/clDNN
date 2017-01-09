@@ -468,7 +468,7 @@ convolution_gpu::kernel_data defauly_bfyx_yxio_b1_f32(const convolution& arg)
 
 convolution_gpu::kernel_data defauly_bfyx_yxio_b8_f32(const convolution& arg)
 {
-    auto& output_mem = arg.output_memory(0);
+    auto& output_mem = arg.output_memory();
     auto& filter_mem = arg.input_memory(1);
 
     int block_width = 4;
@@ -485,9 +485,9 @@ convolution_gpu::kernel_data defauly_bfyx_yxio_b8_f32(const convolution& arg)
     {
         kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b8_f32;
     }
-    kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument.size.spatial[0]) / block_width));
-    kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument.size.spatial[1]) / block_height));
-    kd.gws2 = filter_mem.argument.size.feature[0] * arg.input_memory(1).argument.size.batch[0];
+    kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument().size.spatial[0]) / block_width));
+    kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument().size.spatial[1]) / block_height));
+    kd.gws2 = filter_mem.argument().size.feature[0] * filter_mem.argument().size.batch[0];
     kd.lws0 = 1;
     kd.lws1 = 1;
     kd.lws2 = 16;
