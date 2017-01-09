@@ -50,7 +50,6 @@ using VVVVF = std::vector<VVVF>;	// batch of 3d feature maps
 
 template<typename T>
 T kahan_summation(std::vector<T> &input) {
-	std::sort(input.begin(), input.end(), [](T lhs, T rhs) { return std::abs(lhs) < std::abs(rhs); });
 	T sum = 0;
 	T c = 0;
 	for (T x : input) {
@@ -110,37 +109,40 @@ VF flatten_4d(format format, VVVVF &data) {
 }
 
 template<typename T>
-std::vector<T> generate_random_1d(size_t a, T min, T max) {
+std::vector<T> generate_random_1d(size_t a, int min, int max) {
 	static std::default_random_engine generator(random_seed);
-	std::uniform_real_distribution<T> distribution(min, max);
+	int k = 8; // 1/k is the resolution of the floating point numbers
+	std::uniform_int_distribution<int> distribution(k * min, k * max);
 	std::vector<T> v(a);
-	for (size_t i = 0; i < a; ++i)
-		v[i] = distribution(generator);
+	for (size_t i = 0; i < a; ++i) {
+		v[i] = (T)distribution(generator);
+		v[i] /= k;
+	}
 	return v;
 }
 
 template<typename T>
-std::vector<std::vector<T>> generate_random_2d(size_t a, size_t b, T min, T max) {
+std::vector<std::vector<T>> generate_random_2d(size_t a, size_t b, int min, int max) {
 	std::vector<std::vector<T>> v(a);
 	for (size_t i = 0; i < a; ++i)
-		v[i] = generate_random_1d(b, min, max);
+		v[i] = generate_random_1d<T>(b, min, max);
 	return v;
 }
 
 template<typename T>
-std::vector<std::vector<std::vector<T>>> generate_random_3d(size_t a, size_t b, size_t c, T min, T max) {
+std::vector<std::vector<std::vector<T>>> generate_random_3d(size_t a, size_t b, size_t c, int min, int max) {
 	std::vector<std::vector<std::vector<T>>> v(a);
 	for (size_t i = 0; i < a; ++i)
-		v[i] = generate_random_2d(b, c, min, max);
+		v[i] = generate_random_2d<T>(b, c, min, max);
 	return v;
 }
 
 // parameters order is assumed to be bfyx or oiyx
 template<typename T>
-std::vector<std::vector<std::vector<std::vector<T>>>> generate_random_4d(size_t a, size_t b, size_t c, size_t d, T min, T max) {
+std::vector<std::vector<std::vector<std::vector<T>>>> generate_random_4d(size_t a, size_t b, size_t c, size_t d, int min, int max) {
 	std::vector<std::vector<std::vector<std::vector<T>>>> v(a);
 	for (size_t i = 0; i < a; ++i)
-		v[i] = generate_random_3d(b, c, d, min, max);
+		v[i] = generate_random_3d<T>(b, c, d, min, max);
 	return v;
 }
 
@@ -153,6 +155,185 @@ float float_round(float x, size_t fraction_precision = 15) {
 	uint32_t mask = ~((1 << (23 - fraction_precision)) - 1);
 	reinterpret_cast<uint32_t&>(x) &= mask;
 	return x;
+}
+
+void print_2d(VVF &data) {
+	std::cout << "\nprinting data:\n";
+	for (VF &v : data) {
+		for (float f : v) {
+			std::cout << std::setw(4) << std::right << f;
+		}
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+}
+
+TEST(convolution_f32_fw_gpu, basic_convolution) {
+	//  Filter : 2x2
+	//  Stride : 1x1
+	//  Input  : 3x4
+	//  Output : 3x4
+	//  Padding: Zero
+	//
+	//  Input:
+	//  1  2  3  4
+	//  2  2  3  4
+	//  3  3  3  5
+	//
+	//  Filter:
+	//  1  1
+	//  1  1
+	//
+	//  Output:
+	//  8 11 15  9
+	// 11 12 16 10
+	//  7  7  9  6
+	//
+	//  Bias:
+	//  1
+
+	engine engine;
+
+	auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 3, 4, 1, 1 } } });
+	auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+	auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+
+	set_values(input, { 1.0f, 2.0f, 3.0f, 4.0f, 2.0f, 2.0f, 3.0f, 4.0f, 3.0f, 3.0f, 3.0f, 5.0f });
+	set_values(weights, { 1.0f, 1.0f, 1.0f, 1.0f });
+	set_values(biases, { 1.0f });
+	VVF output_vec = {
+		{ 8.0f, 11.0f, 15.0f, 9.0f },
+		{ 11.0f, 12.0f, 16.0f, 10.0f },
+		{ 7.0f, 7.0f, 9.0f, 6.0f } };
+
+	topology topology(
+		input_layout("input", input.get_layout()),
+		data("weights", weights),
+		data("biases", biases),
+		convolution( "conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx, 0, { 1,1 } }));
+
+	network network(engine, topology);
+	network.set_input_data("input", input);
+
+	auto outputs = network.execute();
+	EXPECT_EQ(outputs.size(), size_t(1));
+	EXPECT_EQ(outputs.begin()->first, "conv");
+
+	auto output_memory = outputs.at("conv").get_memory();
+	auto output_layout = output_memory.get_layout();
+	auto output_ptr = output_memory.pointer<float>();
+
+	int y_size = output_layout.size.sizes()[0];
+	int x_size = output_layout.size.sizes()[1];
+	int f_size = output_layout.size.sizes()[2];
+	int b_size = output_layout.size.sizes()[3];
+	EXPECT_EQ(output_layout.size.format, format::yxfb);
+	EXPECT_EQ(y_size, 3);
+	EXPECT_EQ(x_size, 4);
+	EXPECT_EQ(f_size, 1);
+	EXPECT_EQ(b_size, 1);
+	for (int y = 0; y < y_size; ++y) {
+		for (int x = 0; x < x_size; ++x) {
+			EXPECT_EQ(output_vec[y][x], output_ptr[y * x_size + x]);
+		}
+	}
+
+	//VVF temp_vec(y_size, VF(x_size, 0.0f));
+	//for (int y = 0; y < y_size; ++y) {
+	//	for (int x = 0; x < x_size; ++x) {
+	//		temp_vec[y][x] = output_ptr[y * x_size + x];
+	//	}
+	//}
+	//print_2d(temp_vec);
+}
+
+TEST(convolution_f32_fw_gpu, basic_convolution_input_padding) {
+	//  Filter : 2x2
+	//  Stride : 1x1
+	//  Input  : 3x4
+	//  Input padding : 2x1
+	//  Output : 5x5
+	//  Padding: Zero
+	//
+	//  Input:
+	//  z  z  z  z  z
+	//  z  z  z  z  z
+	//  z  1  2  3  4
+	//  z  2  2  3  4
+	//  z  3  3  3  5
+	//
+	//  Filter:
+	//  1  1
+	//  1  1
+	//
+	//  Output:
+	//  1  1  1  1  1
+	//  2  4  6  8  5
+	//  4  8 11 15  9
+	//  6 11 12 16 10
+	//  4  7  7  9  6
+	//
+	//  Bias:
+	//  1
+
+	engine engine;
+
+	auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 3, 4, 1, 1 } } });
+	auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+	auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+
+	set_values(input, { 1.0f, 2.0f, 3.0f, 4.0f, 2.0f, 2.0f, 3.0f, 4.0f, 3.0f, 3.0f, 3.0f, 5.0f });
+	set_values(weights, { 1.0f, 1.0f, 1.0f, 1.0f });
+	set_values(biases, { 1.0f });
+	VVF output_vec = {
+		{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f },
+		{ 2.0f, 4.0f, 6.0f, 8.0f, 5.0f },
+		{ 4.0f, 8.0f, 11.0f, 15.0f, 9.0f },
+		{ 6.0f, 11.0f, 12.0f, 16.0f, 10.0f },
+		{ 4.0f, 7.0f, 7.0f, 9.0f, 6.0f } };
+
+	topology topology(
+		input_layout("input", input.get_layout()),
+		data("weights", weights),
+		data("biases", biases),
+		convolution(
+			"conv",
+			"input",
+			{ "weights" },
+			{ "biases" },
+			{ format::yx,{ 2,1 } },
+			{ format::yx, 0,{ 1,1 } },
+			false,
+			0,
+			{ format::yx,{ 0,0 } })
+	);
+
+	network network(engine, topology);
+	network.set_input_data("input", input);
+
+	auto outputs = network.execute();
+	EXPECT_EQ(outputs.size(), size_t(1));
+	EXPECT_EQ(outputs.begin()->first, "conv");
+
+	auto output_memory = outputs.at("conv").get_memory();
+	auto output_layout = output_memory.get_layout();
+	auto output_ptr = output_memory.pointer<float>();
+
+	int y_size = output_layout.size.sizes()[0];
+	int x_size = output_layout.size.sizes()[1];
+	int f_size = output_layout.size.sizes()[2];
+	int b_size = output_layout.size.sizes()[3];
+	EXPECT_EQ(output_layout.size.format, format::yxfb);
+	EXPECT_EQ(y_size, 5);
+	EXPECT_EQ(x_size, 5);
+	EXPECT_EQ(f_size, 1);
+	EXPECT_EQ(b_size, 1);
+
+	for (int y = 0; y < y_size; ++y) {
+		for (int x = 0; x < x_size; ++x) {
+			EXPECT_EQ(output_vec[y][x], output_ptr[y * x_size + x]);
+		}
+	}
 }
 
 TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_random) {
@@ -180,11 +361,11 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_random) {
 
 	size_t batch = 1, input_f = 1, input_y = 4, input_x = 4;
 
-	VVVVF input_rnd = generate_random_4d<float>(batch, input_f, input_y, input_x, -10.0f, 10.0f);
+	VVVVF input_rnd = generate_random_4d<float>(batch, input_f, input_y, input_x, -10, 10);
 	VF input_rnd_vec = flatten_4d(format::yxfb, input_rnd);
-	VVVVF filter_rnd = generate_random_4d<float>(1, 1, 2, 2, -10.0f, 10.0f);
+	VVVVF filter_rnd = generate_random_4d<float>(1, 1, 2, 2, -10, 10);
 	VF filter_rnd_vec = flatten_4d(format::oiyx, filter_rnd);
-	VF bias_rnd = generate_random_1d<float>(1, -10.0f, 10.0f);
+	VF bias_rnd = generate_random_1d<float>(1, -10, 10);
 	VVVVF output_rnd(batch, VVVF(filter_rnd.size()));
 	for (size_t b = 0; b < output_rnd.size(); ++b) {
 		for (size_t of = 0; of < filter_rnd.size(); ++of) {
@@ -250,11 +431,11 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad_random) {
 
 	size_t batch = 2, input_f = 1, input_y = 2, input_x = 2;
 
-	VVVVF input_rnd = generate_random_4d<float>(batch, input_f, input_y, input_x, -10.0f, 10.0f);
+	VVVVF input_rnd = generate_random_4d<float>(batch, input_f, input_y, input_x, -10, 10);
 	VF input_rnd_vec = flatten_4d(format::yxfb, input_rnd);
-	VVVVF filter_rnd = generate_random_4d<float>(1, 1, 2, 2, -10.0f, 10.0f);
+	VVVVF filter_rnd = generate_random_4d<float>(1, 1, 2, 2, -10, 10);
 	VF filter_rnd_vec = flatten_4d(format::oiyx, filter_rnd);
-	VF bias_rnd = generate_random_1d<float>(1, -10.0f, 10.0f);
+	VF bias_rnd = generate_random_1d<float>(1, -10, 10);
 	VVVVF output_rnd(batch, VVVF(filter_rnd.size()));
 	for (size_t b = 0; b < output_rnd.size(); ++b) {
 		for (size_t of = 0; of < filter_rnd.size(); ++of) {
