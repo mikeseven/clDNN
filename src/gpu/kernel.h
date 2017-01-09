@@ -119,9 +119,14 @@ public:
         if (_vec.spatial.size() > (sizeof(spatial_names)/sizeof(spatial_names[0])))
             throw std::runtime_error("max 4D images are supported");
 
+        // set default spatial value to "1"
+        cldnn::tensor::value_type spatial_value = 1;
         for (size_t i = 0; i < std::max(_vec.spatial.size(), static_cast<size_t>(2)); ++i) {
-            definitions.emplace_back( _name + "_SIZE_" + spatial_names[i],
-                                      _vec.spatial.size() > i ? std::to_string(_vec.spatial[i]) : "1" );
+            // tensor's spatials num is less than 2
+            //      then use the value of the last spatial (or default "1")
+            if (_vec.spatial.size() > i)
+                spatial_value = _vec.spatial[i];
+            definitions.emplace_back( _name + "_SIZE_" + spatial_names[i], std::to_string(spatial_value));
         }
 
         assert(_vec.feature.size() > 0);

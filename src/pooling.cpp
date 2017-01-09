@@ -33,7 +33,7 @@ layout pooling_arg::calc_output_layout(network_impl& network, std::shared_ptr<co
     auto& input_mem = network.get_primitive(desc->input()[0])->output_memory();
     auto output_layout = input_mem.get_layout();
     auto input_offset = desc->input_offset().transform(output_layout.size.format, 0);
-    auto siz = desc->size.transform(output_layout.size.format, 0);
+    auto siz = desc->size.transform(output_layout.size.format, 1);
     auto strd = desc->stride.transform(output_layout.size.format, 1);
     //TODO !!!implement correct output size calculation!!!
     for (size_t i = 0; i < output_layout.size.spatial.size(); i++)
