@@ -41,6 +41,8 @@ static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32 = "convolution_gpu
 static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride1";
 static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride2";
 static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_kernel_size_1 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_kernel_size_1";
+static const std::string kernel_name_bfyx_os_iyx_osv16_b8_f32 = "convolution_gpu_bfyx_os_iyx_osv16_b8_f32";
+static const std::string kernel_name_bfyx_os_iyx_osv16_b8_f32_stride1 = "convolution_gpu_bfyx_os_iyx_osv16_b8_f32_stride1";
 
 template <>
 struct kd_default_value_selector<neural::gpu::engine_info_internal::architectures>
@@ -458,6 +460,34 @@ convolution_gpu::kernel_data defauly_bfyx_yxio_b1_f32(const convolution& arg)
     kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[0]) / block_width));
     kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[1]) / block_height));
     kd.gws2 = filter_mem.argument().size.feature[0];
+    kd.lws0 = 1;
+    kd.lws1 = 1;
+    kd.lws2 = 16;
+    return kd;
+}
+
+convolution_gpu::kernel_data defauly_bfyx_yxio_b8_f32(const convolution& arg)
+{
+    auto& output_mem = arg.output_memory(0);
+    auto& filter_mem = arg.input_memory(1);
+
+    int block_width = 4;
+    int block_height = 3;
+
+    convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
+    if (arg.argument.stride.spatial[0] == 1 && arg.argument.stride.spatial[1] == 1)
+    {
+        kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b8_f32_stride1;
+        block_width = 6;
+        block_height = 4;
+    }
+    else
+    {
+        kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b8_f32;
+    }
+    kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument.size.spatial[0]) / block_width));
+    kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument.size.spatial[1]) / block_height));
+    kd.gws2 = filter_mem.argument.size.feature[0] * arg.input_memory(1).argument.size.batch[0];
     kd.lws0 = 1;
     kd.lws1 = 1;
     kd.lws2 = 16;
