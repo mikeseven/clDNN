@@ -49,7 +49,7 @@ cldnn::topology build_gender(const std::string& weights_dir, weights_optimizer& 
         { conv1_weights },
         { conv1_bias },
         { format::yx, {0,0} },
-        { format::yx, {0,0} },
+        { format::yx, {1,1} },
         true);
 
     auto pool1 = pooling(

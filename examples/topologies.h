@@ -33,3 +33,5 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimi
 cldnn::topology build_gender(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half);
 
 cldnn::topology build_microbench(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half);
+
+cldnn::topology build_squeezenet(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half);

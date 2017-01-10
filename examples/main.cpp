@@ -173,7 +173,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Number of iterations to run each execution. Can be used for robust benchmarking. (default 1)")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
-            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, microbench.")
+            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, microbench.")
         ("run_single_layer", bpo::value<std::string>()->value_name("<layer_name>"),
             "Runs only a specified layer from topology")
         ("engine", bpo::value<cldnn::engine_types>()->value_name("<eng-type>")->default_value(cldnn::engine_types::ocl, "gpu"),
@@ -397,6 +397,7 @@ int main(int argc, char* argv[])
             ep.topology_name == "vgg16_face" ||
             ep.topology_name == "googlenet" ||
             ep.topology_name == "gender" ||
+            ep.topology_name == "squeezenet" ||
             ep.topology_name == "microbench")
         {
             run_topology(ep);

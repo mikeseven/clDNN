@@ -26,10 +26,48 @@ primitive_type_id softmax::type_id()
     return &instance;
 }
 
+namespace
+{
+    bool is_batch_after_spatial(const std::string order)
+    {
+        bool spatial_found = false;
+        bool batch_found = false;
+        for (auto c : order)
+        {
+            switch (c)
+            {
+            case 'b':
+            case 'n':
+                batch_found = true;
+                if (spatial_found)
+                    return true;
+            case 'x':
+            case 'y':
+            case 'z':
+            case 'w':
+            case 's':
+                spatial_found = true;
+                if (batch_found)
+                    return false;
+            default: break;
+            }
+        }
+        return false;
+    }
+}
+
 layout softmax_arg::calc_output_layout(network_impl& network, std::shared_ptr<const softmax> desc)
 {
     auto& input_mem = network.get_primitive(desc->input()[0])->output_memory();
-    return input_mem.get_layout();
+    auto input_layout = input_mem.get_layout();
+
+
+    cldnn::layout layoutTemp = (is_batch_after_spatial(input_layout.size.format.order())) ?
+        cldnn::layout(input_layout.data_type, tensor(format::xb, { input_layout.size.spatial[0], input_layout.size.batch[0] })) :
+        cldnn::layout(input_layout.data_type, tensor(format::bx, { input_layout.size.batch[0], input_layout.size.spatial[0] }));
+    if (input_layout.size.raw.size() == 4) layoutTemp = cldnn::layout(input_layout.data_type, tensor(format::xb, { input_layout.size.feature[0], input_layout.size.batch[0] }));
+    return layoutTemp;
+    //return input_mem.get_layout();
 }
 
 softmax_arg::softmax_arg(network_impl& network, std::shared_ptr<const softmax> desc)
