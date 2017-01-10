@@ -75,6 +75,22 @@ struct refcounted_obj_ptr
         return *this;
     }
 
+    refcounted_obj_ptr(refcounted_obj_ptr&& other) noexcept
+    {
+        _ptr = other._ptr;
+        other._ptr = nullptr;
+    }
+
+    refcounted_obj_ptr& operator=(refcounted_obj_ptr&& other)
+    {
+        if (this == &other)
+            return *this;
+        ptr_release();
+        _ptr = other._ptr;
+        other._ptr = nullptr;
+        return *this;
+    }
+
     ~refcounted_obj_ptr() { ptr_release(); }
 
     T* detach()

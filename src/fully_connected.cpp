@@ -75,6 +75,8 @@ layout fully_connected_arg::calc_output_layout(network_impl& network, std::share
 
 fully_connected_arg::fully_connected_arg(network_impl& network, std::shared_ptr<const fully_connected> desc)
     :primitive_arg_base(network, desc, calc_output_layout(network, desc))
+    , _weights(network.get_primitive(desc->weights))
+    , _bias(network.get_primitive(desc->bias))
 {
     auto data_type = input_memory(0).get_layout().data_type;
     auto input_size = input_memory(0).get_layout().size;
@@ -90,12 +92,12 @@ fully_connected_arg::fully_connected_arg(network_impl& network, std::shared_ptr<
 
 const memory& fully_connected_arg::weights_memory() const
 {
-    return _network.get_primitive(argument.weights)->output_memory();
+    return _weights->output_memory();
 }
 
 const memory& fully_connected_arg::bias_memory() const
 {
-    return _network.get_primitive(argument.bias)->output_memory();
+    return _bias->output_memory();
 }
 
 }

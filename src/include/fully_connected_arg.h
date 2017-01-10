@@ -32,5 +32,8 @@ namespace cldnn
         const memory& weights_memory() const;
 
         const memory& bias_memory() const;
+    private:
+        std::shared_ptr<const primitive_arg> _weights;
+        std::shared_ptr<const primitive_arg> _bias;
     };
 }

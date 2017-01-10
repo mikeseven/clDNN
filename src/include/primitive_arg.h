@@ -40,7 +40,7 @@ public:
     const memory& output_memory() const { return _output; }
 
     primitive_type_id type() const { return _desc->type(); }
-    primitive_id id() const { return _desc->get_dto()->id; }
+    primitive_id id() const { return _desc->id(); }
     const std::shared_ptr<const primitive>& desc() const { return _desc; }
     network_impl& get_network() const { return _network; }
     std::unique_ptr<primitive_impl> _impl;
