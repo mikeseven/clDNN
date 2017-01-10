@@ -43,7 +43,8 @@ public:
         if (context()->get_configuration().enable_profiling) {
             instrumentation::timer<> pre_enqueue_timer;
             auto pre_enqueue_time = pre_enqueue_timer.uptime();
-            context()->queue().enqueueMarkerWithWaitList(&events, &end_event);
+            //TODO cl::CommandQueue::enqueueMarkerWithWaitList() should be const
+            const_cast<cl::CommandQueue&>(context()->queue()).enqueueMarkerWithWaitList(&events, &end_event);
             end_event.wait();
             context()->report_profiling({ "events_waiter",
             {
@@ -54,7 +55,7 @@ public:
             } });
         }
         else {
-            context()->queue().enqueueMarkerWithWaitList(&events, &end_event);
+            const_cast<cl::CommandQueue&>(context()->queue()).enqueueMarkerWithWaitList(&events, &end_event);
         }
         return new cldnn::event_impl(end_event);
     }
