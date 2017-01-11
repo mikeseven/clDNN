@@ -59,11 +59,22 @@ network_impl::network_impl(refcounted_obj_ptr<engine_impl> engine, refcounted_ob
 
 void network_impl::reset_execution(bool wait)
 {
-    if (wait)
+    if (wait && _events.size() > 0)
     {
-        for (auto& p : _events)
+        std::vector<cl::Event> events;
+        events.reserve(_events.size());
+        for (auto& pair : _events)
         {
-            p.second->wait();
+            auto clevent = pair.second->get();
+            auto event_status = clevent.getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>();
+            if (event_status != CL_COMPLETE)
+            {
+                events.emplace_back(clevent);
+            }
+        }
+        if (events.size() > 0)
+        {
+            cl::WaitForEvents(events);
         }
     }
     _outputs.clear();
@@ -96,7 +107,7 @@ array_ref<network::network_output_ref> network_impl::execute(const std::vector<r
     if (!all_inputs_are_set) throw std::runtime_error("not all inputs are set");
 
     //Wait for previous execution completion
-    reset_execution(true);
+    reset_execution(false);
 
     for(auto& output_id : _output_ids)
     {
@@ -131,12 +142,13 @@ std::vector<std::shared_ptr<const primitive_arg>> network_impl::get_primitives(c
 
 refcounted_obj_ptr<event_impl> network_impl::execute_primitive(const std::shared_ptr<const primitive_arg>& primitive, const std::vector<refcounted_obj_ptr<event_impl>>& events)
 {
-    auto it = _events.find(primitive->id());
+    auto id = primitive->id();
+    auto it = _events.find(id);
     if(it != _events.end())
     {
         return it->second;
     }
-    return _events.insert({ primitive->id(), primitive->execute(events) }).first->second;
+    return _events.insert({ id, primitive->execute(events) }).first->second;
 }
 
 // cldnn::network
