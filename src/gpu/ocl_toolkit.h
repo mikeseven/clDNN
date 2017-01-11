@@ -33,13 +33,10 @@ namespace neural { namespace gpu {
 struct configuration {
     enum device_types { default_device = 0, cpu, gpu, accelerator };
 
-    DLL_SYM static configuration& get();
-
     bool enable_profiling;
     device_types device_type;
     uint32_t device_vendor;
     std::string compiler_options;
-private:
     configuration();
 };
 
@@ -86,11 +83,9 @@ class gpu_toolkit {
 //    cl::Program _program;
     std::vector<instrumentation::profiling_info> _profiling_info;
 
-    static std::shared_ptr<gpu_toolkit>get();
     friend class context_holder;
 public:
-    gpu_toolkit(const configuration& configuration);
-    gpu_toolkit() : gpu_toolkit(configuration::get()){}
+    gpu_toolkit(const configuration& configuration = neural::gpu::configuration());
 
     const configuration& get_configuration() const { return _configuration; }
     const cl::Device& device() const { return _device; }

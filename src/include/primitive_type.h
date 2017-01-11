@@ -23,7 +23,7 @@
 
 namespace cldnn
 {
-class network_impl;
+struct network_impl;
 class primitive_arg;
 struct primitive_type
 {

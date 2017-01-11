@@ -28,7 +28,7 @@ using gpu_toolkit_config = neural::gpu::configuration;
 
 gpu_toolkit_config convert_configuration(const engine_configuration conf)
 {
-    gpu_toolkit_config result = gpu_toolkit_config::get();
+    gpu_toolkit_config result;
     result.compiler_options = conf.compiler_options;
     result.enable_profiling = conf.enable_profiling != 0;
     return result;
@@ -70,26 +70,7 @@ uint32_t engine::engine_count_impl(engine_types type, status_t* status)
     }
 }
 
-engine::engine(const engine& other):_impl(other._impl)
-{
-    _impl->add_ref();
-}
-
-engine& engine::operator=(const engine& other)
-{
-    if (_impl == other._impl) return *this;
-    _impl->release();
-    _impl = other._impl;
-    _impl->add_ref();
-    return *this;
-}
-
-engine::~engine()
-{
-    _impl->release();
-}
-
-engine_types engine::engine_type()
+engine_types engine::get_engine_type(cldnn_engine_t)
 {
     return engine_types::ocl;
 }
@@ -117,14 +98,24 @@ engine_impl* engine::create_engine_impl(engine_types engine_type, uint32_t engin
     }
 }
 
-status_t engine::get_info_impl(engine_info * info) const
+void engine::retain_engine(cldnn_engine_t engine)
+{
+    engine->add_ref();
+}
+
+void engine::release_engine(cldnn_engine_t engine)
+{
+    engine->release();
+}
+
+status_t engine::get_info_impl(cldnn_engine_t engine, engine_info * info)
 {
     if (!info)
         return CLDNN_ERROR;
 
     try
     {
-        auto internal_info = _impl->get_engine_info();
+        auto internal_info = engine->get_engine_info();
         *info = static_cast<engine_info>(internal_info);
         return CLDNN_SUCCESS;
     }

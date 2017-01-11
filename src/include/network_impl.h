@@ -27,7 +27,7 @@
 
 namespace cldnn
 {
-class network_impl : public refcounted_obj<network_impl>
+struct network_impl : public refcounted_obj<network_impl>
 {
 public:
     typedef std::map<primitive_id, std::shared_ptr<const primitive>> topology_map;
@@ -38,7 +38,7 @@ public:
     const refcounted_obj_ptr<topology_impl>& get_topology() const { return _topology; }
 
     void reset_execution(bool wait = true);
-    void set_input_data(const primitive_id& id, const memory& data);
+    void set_input_data(const primitive_id& id, memory_impl* data);
     array_ref<network::network_output_ref> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events);
 
     // Implementation specific calls

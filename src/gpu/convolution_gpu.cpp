@@ -239,7 +239,7 @@ struct convolution_gpu : is_an_implementation {
             kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2)*/
         {
             auto network = reorder[0];
-            network->set_input_data("input", input_mem);
+            network->set_input_data("input", input_mem.get());
             auto reorder_outputs = network->execute(events);
             //reorder_outputs[0].event_ref->wait();
             tmp_events.emplace_back(reorder_outputs[0].event_ref, false);

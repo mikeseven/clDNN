@@ -61,32 +61,13 @@ namespace cldnn
 //    std::vector<std::pair<event::event_handler, void*>> _handlers;
 //};
 
-
-event::event(const event& other):_impl(other._impl)
-{
-    _impl->add_ref();
-}
-
-event& event::operator=(const event& other)
-{
-    if (_impl == other._impl) return *this;
-    _impl->release();
-    _impl = other._impl;
-    _impl->add_ref();
-    return *this;
-}
-event::~event()
-{
-    _impl->release();
-}
-
-event_impl* event::create_user_event_impl(const engine& engine, status_t* status)
+event_impl* event::create_user_event_impl(cldnn_engine_t engine, status_t* status)
 {
     try
     {
         if (status)
             *status = CLDNN_SUCCESS;
-        return engine.get()->create_user_event();
+        return engine->create_user_event();
     }
     catch (...)
     {
@@ -96,11 +77,21 @@ event_impl* event::create_user_event_impl(const engine& engine, status_t* status
     }
 }
 
-status_t event::add_event_handler_impl(event_handler handler, void* param)
+void event::retain_event(cldnn_event_t event)
+{
+    event->add_ref();
+}
+
+void event::release_event(cldnn_event_t event)
+{
+    event->release();
+}
+
+status_t event::add_event_handler_impl(cldnn_event_t event, event_handler handler, void* param)
 {
     try
     {
-        _impl->add_event_handler(handler, param);
+        event->add_event_handler(handler, param);
         return CLDNN_SUCCESS;
     }
     catch(...)
@@ -108,11 +99,11 @@ status_t event::add_event_handler_impl(event_handler handler, void* param)
         return CLDNN_ERROR;
     }
 }
-status_t event::set_impl()
+status_t event::set_impl(cldnn_event_t event)
 {
     try
     {
-        _impl->set();
+        event->set();
         return CLDNN_SUCCESS;
     }
     catch (...)
@@ -120,11 +111,11 @@ status_t event::set_impl()
         return CLDNN_ERROR;
     }
 }
-status_t event::wait_impl() const
+status_t event::wait_impl(cldnn_event_t event)
 {
     try
     {
-        _impl->wait();
+        event->wait();
         return CLDNN_SUCCESS;
     }
     catch (...)
@@ -133,13 +124,13 @@ status_t event::wait_impl() const
     }
 }
 
-array_ref<event::profiling_interval_ref> event::get_profiling_impl(status_t * status) const
+array_ref<event::profiling_interval_ref> event::get_profiling_impl(cldnn_event_t event, status_t * status)
 {
     try
     {
         if (status)
             *status = CLDNN_SUCCESS;
-        return _impl->get_profiling_info();
+        return event->get_profiling_info();
     }
     catch (...)
     {

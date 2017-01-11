@@ -248,12 +248,12 @@ struct neural_memory
         }
     }
 
-    static format::type convert_format(const cldnn::layout& layout)
+    static cldnn::neural_memory::format::type convert_format(const cldnn::layout& layout)
     {
         switch (layout.size.format.value)
         {
-        case cldnn::format::format_num: return format::type::format_num;
-        case cldnn::format::any: return format::type::any;
+        case cldnn::format::format_num: return cldnn::neural_memory::format::type::format_num;
+        case cldnn::format::any: return cldnn::neural_memory::format::type::any;
         default: break;
         }
 
@@ -264,11 +264,11 @@ struct neural_memory
             format_shift = 0;
             break;
         case cldnn::data_types::f16:
-            format_shift = format::type::half_base;
+            format_shift = cldnn::neural_memory::format::type::half_base;
             break;
         default: throw std::invalid_argument("unsupported data type");
         }
-        return static_cast<format::type>(get_format_base(layout.size.format) + format_shift);
+        return static_cast<cldnn::neural_memory::format::type>(get_format_base(layout.size.format) + format_shift);
     }
 
     static cldnn::format to_tensor_format(format::type value)
@@ -304,7 +304,7 @@ struct neural_memory
     };
 };
 
-struct memory_impl;
+typedef struct memory_impl* cldnn_memory_t;
 template<typename T> struct pointer;
 struct memory
 {
@@ -313,7 +313,7 @@ struct memory
         size_t size = layout.data_size();
         if (size == 0) throw std::invalid_argument("size should be more than 0");
         status_t status;
-        auto buf = allocate_buffer(engine, layout, &status);
+        auto buf = allocate_buffer(engine.get(), layout, &status);
         if (buf == nullptr || status != CLDNN_SUCCESS)
             CLDNN_THROW("memory allocation failed", status);
         return memory(buf);
@@ -332,27 +332,33 @@ struct memory
         return memory(buf);
     }
 
-    memory(memory_impl* data)
-        :_data(data)
+    memory(cldnn_memory_t data)
+        :_impl(data)
     {
-        if (!_data) throw std::invalid_argument("data");
+        if (!_impl) throw std::invalid_argument("data");
     }
 
-    DLL_SYM memory(const memory& other);
-
-    DLL_SYM memory& operator=(const memory& other);
-
-    DLL_SYM ~memory();
-
-    friend bool operator==(const memory& lhs, const memory& rhs)
+    memory(const memory& other) : _impl(other._impl)
     {
-        return lhs._data == rhs._data;
+        retain_memory(_impl);
     }
 
-    friend bool operator!=(const memory& lhs, const memory& rhs)
+    memory& operator=(const memory& other)
     {
-        return !(lhs == rhs);
+        if (_impl == other._impl) return *this;
+        release_memory(_impl);
+        _impl = other._impl;
+        retain_memory(_impl);
+        return *this;
     }
+
+    ~memory()
+    {
+        release_memory(_impl);
+    }
+
+    friend bool operator==(const memory& lhs, const memory& rhs) { return lhs._impl == rhs._impl; }
+    friend bool operator!=(const memory& lhs, const memory& rhs) { return !(lhs == rhs); }
 
     /**
      * \brief 
@@ -365,27 +371,33 @@ struct memory
      * \return number of bytes used by memory
      */
     size_t size() const { return get_layout().data_size(); }
-    DLL_SYM const layout& get_layout() const;
-    DLL_SYM bool is_allocated_by(const engine& engine) const;
+    const layout& get_layout() const { return get_memory_layout(_impl); }
+    bool is_allocated_by(const engine& engine) const { return is_memory_allocated_by(_impl, engine.get()); }
+
 
     // TODO remove this backward compatibility call
     neural_memory::arguments argument() const { return neural_memory::arguments(get_layout()); };
     template<typename T> pointer<T> pointer() const;
 
-    memory_impl* get() const { return _data; }
+    cldnn_memory_t get() const { return _impl; }
 
 private:
     friend struct engine;
-    memory_impl* _data;
-    DLL_SYM static memory_impl* allocate_buffer(engine engine, layout layout, status_t* status);
-    DLL_SYM static memory_impl* attach_buffer(layout layout, void* pointer, size_t size, status_t* status);
-    DLL_SYM void* lock_buffer(status_t* status) const;
-    DLL_SYM status_t unlock_buffer() const;
+    cldnn_memory_t _impl;
+    DLL_SYM static cldnn_memory_t allocate_buffer(cldnn_engine_t engine, layout layout, status_t* status);
+    DLL_SYM static cldnn_memory_t attach_buffer(layout layout, void* pointer, size_t size, status_t* status);
+    DLL_SYM static void retain_memory(cldnn_memory_t memory);
+    DLL_SYM static void release_memory(cldnn_memory_t memory);
+    DLL_SYM static void* lock_buffer(cldnn_memory_t memory, status_t* status);
+    DLL_SYM static status_t unlock_buffer(cldnn_memory_t memory);
+    DLL_SYM static const layout& get_memory_layout(cldnn_memory_t memory);
+    DLL_SYM static bool is_memory_allocated_by(cldnn_memory_t memory, cldnn_engine_t engine);
+
 
     void* lock() const
     {
         status_t status;
-        auto ptr = lock_buffer(&status);
+        auto ptr = lock_buffer(_impl, &status);
         if (status != CLDNN_SUCCESS)
             CLDNN_THROW("memory lock failed", status);
         return ptr;
@@ -393,7 +405,7 @@ private:
 
     void unlock() const
     {
-        status_t status = unlock_buffer();
+        status_t status = unlock_buffer(_impl);
         if (status != CLDNN_SUCCESS)
             CLDNN_THROW("memory unlock failed", status);
     }

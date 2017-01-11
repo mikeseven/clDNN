@@ -32,6 +32,6 @@ public:
     }
 
     input_layout_arg(network_impl& network, std::shared_ptr<const input_layout> desc);
-    void set_data(const memory& mem);
+    void set_data(memory_impl* mem);
 };
 }

@@ -24,43 +24,24 @@
 
 namespace cldnn
 {
-memory::memory(const memory& other): _data(other._data)
+
+const layout& memory::get_memory_layout(cldnn_memory_t memory)
 {
-    _data->add_ref();
+    return memory->get_layout();
 }
 
-memory& memory::operator=(const memory& other)
+bool memory::is_memory_allocated_by(cldnn_memory_t memory, cldnn_engine_t engine)
 {
-    if (this == &other || this->_data == other._data )
-        return *this;
-    _data->release();
-    _data = other._data;
-    _data->add_ref();
-    return *this;
+    return memory->is_allocated_by(engine);
 }
 
-memory::~memory()
-{
-    _data->release();
-}
-
-const layout& memory::get_layout() const
-{
-    return _data->get_layout();
-}
-
-bool memory::is_allocated_by(const engine& engine) const
-{
-    return _data->is_allocated_by(engine.get());
-}
-
-memory_impl* memory::allocate_buffer(engine engine, layout layout, status_t* status)
+memory_impl* memory::allocate_buffer(cldnn_engine_t engine, layout layout, status_t* status)
 {
     try
     {
         if (status)
             *status = CLDNN_SUCCESS;
-        return engine.get()->allocate_buffer(layout);
+        return engine->allocate_buffer(layout);
     }
     catch (...)
     {
@@ -87,13 +68,23 @@ memory_impl* memory::attach_buffer(layout layout, void* pointer, size_t size, st
     }
 }
 
-void* memory::lock_buffer(status_t* status) const
+void memory::retain_memory(cldnn_memory_t memory)
+{
+    memory->add_ref();
+}
+
+void memory::release_memory(cldnn_memory_t memory)
+{
+    memory->release();
+}
+
+void* memory::lock_buffer(cldnn_memory_t memory, status_t* status)
 {
     try
     {
         if (status)
             *status = CLDNN_SUCCESS;
-        return _data->lock();
+        return memory->lock();
     }
     catch (...)
     {
@@ -103,11 +94,11 @@ void* memory::lock_buffer(status_t* status) const
     }
 }
 
-status_t memory::unlock_buffer() const
+status_t memory::unlock_buffer(cldnn_memory_t memory)
 {
     try
     {
-        _data->unlock();
+        memory->unlock();
         return CLDNN_SUCCESS;
     }
     catch (...)

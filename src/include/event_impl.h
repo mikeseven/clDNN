@@ -22,7 +22,7 @@
 
 namespace cldnn
 {
-class event_impl: public refcounted_obj<event_impl>
+struct event_impl: public refcounted_obj<event_impl>
 {
 public:
     event_impl(const cl::Event& event) : _event(event)

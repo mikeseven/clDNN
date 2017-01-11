@@ -29,7 +29,7 @@ namespace neural { namespace gpu { class gpu_toolkit; } }
 namespace cldnn
 {
 using gpu_toolkit = neural::gpu::gpu_toolkit;
-class engine_impl : public refcounted_obj<engine_impl>
+struct engine_impl : public refcounted_obj<engine_impl>
 {
 public:
     engine_impl(const engine_configuration& conf);

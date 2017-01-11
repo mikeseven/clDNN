@@ -263,7 +263,7 @@ private:
     friend struct network;
 };
 
-class network_impl;
+typedef struct network_impl* cldnn_network_t;
 struct network
 {
     struct network_output_ref
@@ -275,36 +275,49 @@ struct network
     API_CLASS(network_output_ref)
 
     network(const engine& engine, const topology& topology, const build_options& options = build_options())
-        :_impl(check_status<network_impl*>("network build failed", [&](status_t* status) { return build_impl(engine, topology, options.get_refs(), status); }))
+        :_impl(check_status<cldnn_network_t>("network build failed", [&](status_t* status) { return build_impl(engine.get(), topology.get(), options.get_refs(), status); }))
     {}
 
-    typedef network_impl impl_type;
-    DLL_SYM network(const network& other);
-    DLL_SYM network& operator=(const network& other);
-    DLL_SYM ~network();
+    network(const network& other) :_impl(other._impl)
+    {
+        retain_network(_impl);
+    }
+    network& operator=(const network& other)
+    {
+        if (_impl == other._impl) return *this;
+        release_network(_impl);
+        _impl = other._impl;
+        retain_network(_impl);
+        return *this;
+    }
+    ~network()
+    {
+        release_network(_impl);
+    }
+
     friend bool operator==(const network& lhs, const network& rhs) { return lhs._impl == rhs._impl; }
     friend bool operator!=(const network& lhs, const network& rhs) { return !(lhs == rhs); }
 
     engine get_engine() const
     {
-        return check_status<engine_impl*>("get network engine failed", [&](status_t* status) { return get_engine_impl(status); });
+        return check_status<cldnn_engine_t>("get network engine failed", [&](status_t* status) { return get_engine_impl(_impl, status); });
     }
 
     topology get_topology() const
     {
-        return check_status<topology_impl*>("get network topology failed", [&](status_t* status) { return get_topology_impl(status); });
+        return check_status<cldnn_topology_t>("get network topology failed", [&](status_t* status) { return get_topology_impl(_impl, status); });
     }
 
-    DLL_SYM void set_input_data(primitive_id id, memory mem)
+    void set_input_data(primitive_id id, memory mem) const
     {
-        status_t status = set_input_data_impl(id, mem);
+        status_t status = set_input_data_impl(_impl, id, mem.get());
         if (status != CLDNN_SUCCESS)
             CLDNN_THROW("set data input failed", status);
     }
 
-    std::map<primitive_id, network_output> execute(const std::vector<event>& dependencies = {})
+    std::map<primitive_id, network_output> execute(const std::vector<event>& dependencies = {}) const
     {
-        array_ref<network_output_ref> result_ref = check_status<array_ref<network_output_ref>>("network execute failed", [&](status_t* status) { return execute_impl(dependencies, status); });
+        array_ref<network_output_ref> result_ref = check_status<array_ref<network_output_ref>>("network execute failed", [&](status_t* status) { return execute_impl(_impl, dependencies, status); });
         std::map<primitive_id, network_output> result;
         for(auto& ref : result_ref)
         {
@@ -313,17 +326,23 @@ struct network
         return result;
     }
 
-    network_impl* get() const { return _impl; }
+    cldnn_network_t get() const { return _impl; }
 
 private:
     friend struct engine;
-    network(network_impl* impl) :_impl(impl) {}
-    network_impl* _impl;
-    DLL_SYM static network_impl* build_impl(const engine& engine, const topology& topology, array_ref<build_option_ref> options, status_t* status);
-    DLL_SYM status_t set_input_data_impl(primitive_id_ref id, memory mem);
-    DLL_SYM array_ref<network_output_ref> execute_impl(array_ref<event> dependencies, status_t* status);
-    DLL_SYM engine_impl* get_engine_impl(status_t* status) const;
-    DLL_SYM topology_impl* get_topology_impl(status_t* status) const;
+    network(cldnn_network_t impl) :_impl(impl)
+    {
+        if (_impl == nullptr) throw std::invalid_argument("implementation pointer should not be null");
+    }
+
+    cldnn_network_t _impl;
+    DLL_SYM static cldnn_network_t build_impl(cldnn_engine_t engine, cldnn_topology_t topology, array_ref<build_option_ref> options, status_t* status);
+    DLL_SYM static void retain_network(cldnn_network_t network);
+    DLL_SYM static void release_network(cldnn_network_t network);
+    DLL_SYM static status_t set_input_data_impl(cldnn_network_t network, primitive_id_ref id, cldnn_memory_t mem);
+    DLL_SYM static array_ref<network_output_ref> execute_impl(cldnn_network_t network, array_ref<event> dependencies, status_t* status);
+    DLL_SYM static cldnn_engine_t get_engine_impl(cldnn_network_t network, status_t* status);
+    DLL_SYM static cldnn_topology_t get_topology_impl(cldnn_network_t network, status_t* status);
 };
 API_CLASS(network)
 }

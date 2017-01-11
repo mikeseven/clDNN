@@ -37,11 +37,11 @@ topology_impl* topology::create_topology_impl(status_t* status)
     }
 }
 
-status_t topology::add_primitive_dto(const primitive_dto* dto)
+status_t topology::add_primitive_dto(cldnn_topology_t topology, const primitive_dto* dto)
 {
     try
     {
-        _impl->add(dto->type->from_dto(dto));
+        topology->add(dto->type->from_dto(dto));
         return CLDNN_SUCCESS;
     }
     catch(...)
@@ -50,22 +50,13 @@ status_t topology::add_primitive_dto(const primitive_dto* dto)
     }
 }
 
-topology::topology(const topology& other):_impl(other._impl)
+void topology::retain_topology(cldnn_topology_t topology)
 {
-    _impl->add_ref();
+    topology->add_ref();
 }
 
-topology& topology::operator=(const topology& other)
+void topology::release_topology(cldnn_topology_t topology)
 {
-    if (_impl == other._impl) return *this;
-    _impl->release();
-    _impl = other._impl;
-    _impl->add_ref();
-    return *this;
-}
-
-topology::~topology()
-{
-    _impl->release();
+    topology->release();
 }
 }
