@@ -29,7 +29,12 @@ primitive_type_id softmax::type_id()
 layout softmax_arg::calc_output_layout(network_impl& network, std::shared_ptr<const softmax> desc)
 {
     auto& input_mem = network.get_primitive(desc->input()[0])->output_memory();
-    return input_mem.get_layout();
+    auto input_layout = input_mem.get_layout();
+
+    cldnn::layout layoutTemp = input_layout;
+    if (input_layout.size.raw.size() == 4) layoutTemp = cldnn::layout(input_layout.data_type, tensor(format::xb, { input_layout.size.feature[0], input_layout.size.batch[0] }));
+
+    return layoutTemp;
 }
 
 softmax_arg::softmax_arg(network_impl& network, std::shared_ptr<const softmax> desc)

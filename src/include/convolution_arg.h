@@ -32,5 +32,8 @@ public:
     const memory& weights_memory(size_t index) const;
 
     const memory& bias_memory(size_t index) const;
+private:
+    std::vector<std::shared_ptr<const primitive_arg>> _weights;
+    std::vector<std::shared_ptr<const primitive_arg>> _biases;
 };
 }

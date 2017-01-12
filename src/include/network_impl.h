@@ -23,6 +23,7 @@
 #include "primitive_arg.h"
 #include <map>
 #include <vector>
+#include <unordered_map>
 
 namespace cldnn
 {
@@ -51,7 +52,7 @@ private:
     std::vector<primitive_id> _output_ids;
     std::map<primitive_id, std::shared_ptr<const primitive_arg>> _primitives;
     std::map<primitive_id, bool> _input_names;
-    std::map<primitive_id, refcounted_obj_ptr<event_impl>> _events;
+    std::unordered_map<primitive_id, refcounted_obj_ptr<event_impl>> _events;
     std::vector<network::network_output_ref> _outputs;
 };
 }
