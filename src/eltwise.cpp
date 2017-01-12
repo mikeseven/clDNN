@@ -37,7 +37,6 @@ eltwise_arg::eltwise_arg(network_impl& network, std::shared_ptr<const eltwise> d
     :primitive_arg_base(network, desc, calc_output_layout(network, desc))
 {
     auto input_format = input_memory(0).get_layout().size.format;
-    auto output_format = output_memory().get_layout().size.format;
     auto input2_format = input2_memory().get_layout().size.format;
 
     if (input_format != input2_format)
