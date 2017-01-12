@@ -87,7 +87,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32)(
 
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
-            out[r * OUT_BLOCK_WIDTH + c] += bias[fmg * 16 + get_local_id(0)];
+            out[r * OUT_BLOCK_WIDTH + c] += bias[fm];
         }
     }
 

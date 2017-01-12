@@ -39,6 +39,8 @@ static const std::string kernel_name_yxfb_yxio_b16_fp16 = "convolution_gpu_yxfb_
 static const std::string kernel_name_yxfb_yxio_fp16 = "convolution_gpu_yxfb_yxio_fp16";
 static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32";
 static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride1";
+static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride2";
+static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_kernel_size_1 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_kernel_size_1";
 
 template <>
 struct kd_default_value_selector<neural::gpu::engine_info_internal::architectures>
@@ -63,6 +65,7 @@ struct convolution_gpu : is_an_implementation {
         size_t lws0, lws1, lws2;
         size_t ofm_per_work_item; // how many output feature maps a single work item compute
         size_t batches_per_work_item; // how many batches will a single work item compute
+        size_t block_width, block_height; // used for kernels processing blocks
         std::string kernel_name;
     } _kernel_data;
 
@@ -87,6 +90,8 @@ struct convolution_gpu : is_an_implementation {
         kd.lws2 = 1;
         kd.ofm_per_work_item = 1;
         kd.batches_per_work_item = 1;
+        kd.block_width = 1;
+        kd.block_height = 1;
         return kd;
     }
 
@@ -99,11 +104,12 @@ struct convolution_gpu : is_an_implementation {
         , _kernel(arg.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants())
     {
         if (_kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
-            _kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1)
+            _kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1 ||
+            _kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2)
         {
             auto input_layout = outer.input_memory(0).get_layout();
             auto weights_layout = outer.weights_memory(0).get_layout();
-            cldnn::padding reorder_output_pad(cldnn::format::yx, { weights_layout.size.spatial[0], weights_layout.size.spatial[1] });
+            cldnn::padding reorder_output_pad(cldnn::format::yx, { weights_layout.size.spatial[0] - 1, weights_layout.size.spatial[1] - 1 });
             cldnn::topology topology(
                 cldnn::input_layout("input", input_layout),
                 cldnn::reorder("reorder", "input", input_layout, "", { cldnn::format::yx, {0,0}}, reorder_output_pad )
@@ -125,15 +131,9 @@ struct convolution_gpu : is_an_implementation {
 
         const int batch_size = output_mem.argument().size.batch[0];
 
-        neural::vector<uint32_t> stride = outer.argument.stride;
-        stride.spatial[0] = std::min(stride.spatial[0], input_mem.argument().size.spatial[0]);
-        stride.spatial[1] = std::min(stride.spatial[1], input_mem.argument().size.spatial[1]);
-
-        neural::vector<int32_t> input_padding = input_offset;
-        for (uint32_t i = 0; i < input_padding.raw.size(); i++)
-        {
-            input_padding.raw[i] = -input_padding.raw[i];
-        }
+        cldnn::tensor stride(cldnn::format::yx, { std::min(outer.argument.stride.spatial[0], input_mem.argument().size.spatial[0]),
+            std::min(outer.argument.stride.spatial[1], input_mem.argument().size.spatial[1]) });
+        cldnn::padding input_padding(cldnn::format::yx, { filter_mem.argument().size.spatial[0] - 1, filter_mem.argument().size.spatial[1] - 1 });
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT", input_mem.argument().size),
@@ -143,7 +143,7 @@ struct convolution_gpu : is_an_implementation {
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
             gpu::make_jit_constant("OUTPUT_LIMIT", output_size),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(_engine_info.supports_fp16)),
-            gpu::make_jit_constant("INPUT_PADDING", filter_mem.argument().size),
+            gpu::make_jit_constant("INPUT_PADDING", input_padding.size()),
             gpu::make_jit_constant("OUTPUT_PADDING", outer.desc()->output_offset())
         };
 
@@ -194,6 +194,13 @@ struct convolution_gpu : is_an_implementation {
             else
                 mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 8));
         }
+
+        if (_kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1)
+        {
+            mem_consts.add_constant(gpu::make_jit_constant("OUT_BLOCK_WIDTH", _kernel_data.block_width));
+            mem_consts.add_constant(gpu::make_jit_constant("OUT_BLOCK_HEIGHT", _kernel_data.block_height));
+        }
+
         return mem_consts;
     }
 
@@ -220,7 +227,8 @@ struct convolution_gpu : is_an_implementation {
 
         std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>> tmp_events;
         if (kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
-            kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1)
+            kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1 ||
+            kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2)
         {
             auto network = reorder[0];
             network->set_input_data("input", input_mem);
@@ -463,20 +471,43 @@ convolution_gpu::kernel_data defauly_bfyx_yxio_b1_f32(const convolution& arg)
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     if (arg.argument.stride.spatial[0] == 1 && arg.argument.stride.spatial[1] == 1)
     {
-        kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1;
-        block_width = 6;
+        if (filter_mem.argument().size.spatial[0] == 1 && filter_mem.argument().size.spatial[1] == 1)
+        {
+            kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32_kernel_size_1;
+            block_width = 16;
+            block_height = 1;
+        }
+        else
+        {
+            kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1;
+            block_width = 6;
+            block_height = 4;
+        }
+    }
+    else if (arg.argument.stride.spatial[0] == 2 && arg.argument.stride.spatial[1] == 2)
+    {
+        kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2;
+        block_width = 5;
         block_height = 4;
     }
     else
     {
         kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32;
     }
+
     kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument().size.spatial[0]) / block_width));
     kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument().size.spatial[1]) / block_height));
     kd.gws2 = filter_mem.argument().size.feature[0];
     kd.lws0 = 1;
     kd.lws1 = 1;
     kd.lws2 = 16;
+    if (kd.gws2 % 16)
+    {
+        kd.gws2 += 16;
+        kd.gws2 -= kd.gws2 % 16;
+    }
+    kd.block_width = block_width;
+    kd.block_height = block_height;
     return kd;
 }
 

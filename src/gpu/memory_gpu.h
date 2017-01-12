@@ -27,14 +27,6 @@
 
 namespace neural { namespace gpu {
 
-inline size_t align_to(size_t size, size_t align) {
-    return (size % align == 0) ? size : size - size % align + align;
-}
-
-inline size_t pad_to(size_t size, size_t align) {
-    return (size % align == 0) ? 0 : align - size % align;
-}
-
 template<typename T>
 T* allocate_aligned(size_t size, size_t align) {
     assert(sizeof(T) <= size);

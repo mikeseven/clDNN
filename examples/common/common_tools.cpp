@@ -534,7 +534,7 @@ void run_topology(const execution_params &ep)
 
 #pragma message ("TODO!!! remove it - this is a little hack to get other topologies than Alexnet working, because right now batch_size for convolution generate different weights format than other topologies expect")
     int hacked_batch_size_for_weights_optimizer = gpu_batch_size;
-    if (ep.topology_name != "alexnet" && gpu_batch_size == 1)
+    if (ep.topology_name != "alexnet" && ep.topology_name != "googlenet" && gpu_batch_size == 1)
         hacked_batch_size_for_weights_optimizer = 8;
 
     weights_optimizer weights_optimizer(engine, hacked_batch_size_for_weights_optimizer, ep.optimize_weights, ep.use_half);

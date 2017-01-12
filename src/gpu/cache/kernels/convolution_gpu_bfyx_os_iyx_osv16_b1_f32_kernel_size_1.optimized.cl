@@ -4,13 +4,17 @@
 #define ACTIVATION(output, input) output = input;
 #endif
 
+// each work-item iterates this many times in the width dimension
+#define OUT_BLOCK_WIDTH 16  
+// each work-itme iterates this many times in the height dimension
+#define OUT_BLOCK_HEIGHT 1
+
 #define SIMD_SIZE 16
 
-#define RADIUS (FILTER_SIZE_X-1)/2
 #define PREFETCH 4
 
 __attribute__((intel_reqd_sub_group_size(SIMD_SIZE))) // Why driver gives us warning here?
-KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride1)(
+KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32_kernel_size_1)(
     const __global float* input,
     __global float* output,
     const __global float* weights,
@@ -23,7 +27,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride1)(
     uint fmg = get_group_id(2);
     uint lid = get_local_id(2); 
 
-    float in[8]; // need 8x10 block of input data for 4x6 outputs with 5x5 kernel stride 1.
+    float in[13]; // need 13x15 block of input data for 4x5 outputs with 7x7 kernel stride 2.
     float out[OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT]; // 4x9 block of outputs that is SIMD_SIZE deep (along the Feature Map dimension).
     float w[PREFETCH];
     uint in_addr;
@@ -39,7 +43,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride1)(
 
         in_addr = in_split_offset + kd * (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) + (INPUT_PADDING_SIZE_Y + INPUT_OFFSET_SIZE_Y + or * STRIDE_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) + (INPUT_PADDING_SIZE_X + INPUT_OFFSET_SIZE_X + oc * STRIDE_SIZE_X) + lid;
 
-        for(uint reg = 0; reg < ((OUT_BLOCK_HEIGHT * STRIDE_SIZE_X) + RADIUS + RADIUS); reg++) {
+        for(uint reg = 0; reg < 1; reg++) {
             in[reg] = input[in_addr];// read 16 elements
             in_addr += (INPUT_SIZE_X +  2 * INPUT_PADDING_SIZE_X);  // move to next row down 
         }
@@ -88,6 +92,10 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride1)(
         }
     }
 
+    // if output feature does not divide by 16 then we need to check if we didn''t go out of bounds for output feature num
+    #if FILTER_OUTPUT_FEATURE_NUM  % 16 
+    if(fm < FILTER_OUTPUT_FEATURE_NUM)
+    #endif
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         if(!(or + r >= OUTPUT_SIZE_Y))
         {
@@ -101,4 +109,6 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride1)(
 }
 
 #undef PREFETCH
+#undef OUT_BLOCK_WIDTH
+#undef OUT_BLOCK_HEIGHT
 #undef ACTIVATION

@@ -292,6 +292,10 @@ struct tensor
     size_t get_linear_size() const
     {
         auto sizes = this->sizes();
+        if(this->format == cldnn::format::os_iyx_osv16 && !is_aligned_to(sizes[0], 16))
+        {
+            sizes[0] = align_to(sizes[0], 16);
+        }
         return std::accumulate(
             sizes.begin(),
             sizes.end(),
@@ -322,6 +326,12 @@ struct tensor
     {
         auto my_sizes = sizes();
         auto adjusted_coords = coord.transform(format, 0).sizes();
+        if (this->format == cldnn::format::os_iyx_osv16 && !is_aligned_to(my_sizes[0], 16))
+        {
+            my_sizes[0] = align_to(my_sizes[0], 16);
+            adjusted_coords[0] = align_to(adjusted_coords[0], 16);
+        }
+
         assert(my_sizes.size() == adjusted_coords.size());
 
         assert(adjusted_coords.size() > 0);

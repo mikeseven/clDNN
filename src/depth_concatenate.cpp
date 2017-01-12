@@ -81,6 +81,7 @@ namespace neural
 {
 // Kernel names.
 static const std::string kernel_name = "depth_concatenate_gpu";
+static const std::string kernel_name_bfyx = "depth_concatenate_gpu_bfyx";
 
 struct depth_concatenate_gpu : is_an_implementation
 {
@@ -136,8 +137,17 @@ struct depth_concatenate_gpu : is_an_implementation
         }
 
         // Select kernel name.
-        kd.kernel_name = kernel_name;
+        if (input_mem.argument().format == memory::format::bfyx_f32)
+        {
+            if (input_mem.argument().size.batch[0] != 1)
+                throw std::runtime_error("Depth concatenate for bfyx_f32 for batch != 1 not implemented yet!");
 
+            kd.kernel_name = kernel_name_bfyx;
+        }
+        else
+        {
+            kd.kernel_name = kernel_name;
+        }
         return kd;
     }
 
@@ -186,12 +196,11 @@ struct depth_concatenate_gpu : is_an_implementation
 namespace {
     struct attach {
         attach() {
-            auto val_fw = depth_concatenate_gpu::create;
-
-            auto key_fw = std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32);
-            implementation_map<depth_concatenate>::add(key_fw, val_fw);
-            key_fw = std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16);
-            implementation_map<depth_concatenate>::add(key_fw, val_fw);
+            implementation_map<depth_concatenate>::add({
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), depth_concatenate_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), depth_concatenate_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), depth_concatenate_gpu::create }
+            });
         }
         ~attach() {}
     };

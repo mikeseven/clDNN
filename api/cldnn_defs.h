@@ -95,3 +95,18 @@ inline void check_status(std::string err_msg, status_t status)
 
 }
 
+template<typename T>
+typename std::enable_if<std::is_integral<T>::value, T>::type align_to(T size, size_t align) {
+    return static_cast<T>((size % align == 0) ? size : size - size % align + align);
+}
+
+template<typename T>
+typename std::enable_if<std::is_integral<T>::value, T>::type pad_to(T size, size_t align) {
+    return static_cast<T>((size % align == 0) ? 0 : align - size % align);
+}
+
+template<typename T>
+typename std::enable_if<std::is_integral<T>::value, bool>::type is_aligned_to(T size, size_t align)
+{
+    return !(size % align);
+}
