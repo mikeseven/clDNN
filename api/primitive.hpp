@@ -165,8 +165,8 @@ struct primitive
     virtual primitive_type_id type() const = 0;
     virtual primitive_id id() const = 0;
     virtual std::vector<primitive_id> dependecies() const = 0;
-    virtual padding input_padding() const = 0;
-    virtual padding output_padding() const = 0;
+    virtual const padding& input_padding() const = 0;
+    virtual const padding& output_padding() const = 0;
     virtual ~primitive() = default;
     operator primitive_id() const { return id(); }
 
@@ -199,8 +199,8 @@ public:
     }
 
     primitive_type_id type() const override { return _dto.type; }
-    padding input_padding() const override { return _dto.input_padding; }
-    padding output_padding() const override { return _dto.output_padding; }
+    const padding& input_padding() const override { return _dto.input_padding; }
+    const padding& output_padding() const override { return _dto.output_padding; }
 
 protected:
     template<typename ...Args>

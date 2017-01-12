@@ -57,7 +57,10 @@ layout convolution_arg::calc_output_layout(network_impl& network, std::shared_pt
     return { input_layout.data_type, output_size.transform(input_layout.size.format, 1) };
 }
 
-convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const convolution> desc): primitive_arg_base(network, desc, calc_output_layout(network, desc))
+convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const convolution> desc)
+    : primitive_arg_base(network, desc, calc_output_layout(network, desc))
+    , _weights(network.get_primitives(desc->weights))
+    , _biases(network.get_primitives(desc->bias))
 {
     auto stride = desc->stride;
     auto output_size = output_memory().argument().size;
@@ -107,11 +110,11 @@ convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const co
 
 const memory& convolution_arg::weights_memory(size_t index) const
 {
-    return _network.get_primitive(argument.weights.at(index))->output_memory();
+    return _weights[index]->output_memory();
 }
 
 const memory& convolution_arg::bias_memory(size_t index) const
 {
-    return _network.get_primitive(argument.bias.at(index))->output_memory();
+    return _biases[index]->output_memory();
 }
 }

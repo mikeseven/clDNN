@@ -25,10 +25,8 @@ namespace cldnn
 class event_impl: public refcounted_obj<event_impl>
 {
 public:
-    event_impl(cl::Event event) : _event(event)
-    {
-        _event.setCallback(CL_COMPLETE, callBack, this);
-    }
+    event_impl(const cl::Event& event) : _event(event)
+    {}
 
     void wait() const { _event.wait(); }
     virtual void set() { throw std::logic_error("cannot set OCL event"); }
@@ -41,6 +39,10 @@ public:
         }
         else
         {
+            if (_handlers.size() == 0)
+            {
+                _event.setCallback(CL_COMPLETE, callBack, this);
+            }
             _handlers.push_back({ handler, data });
         }
     }
@@ -76,7 +78,7 @@ protected:
 class user_event_gpu : public event_impl
 {
 public:
-    user_event_gpu(cl::UserEvent event) : event_impl(event), _user_event(event) {}
+    user_event_gpu(const cl::UserEvent& event) : event_impl(event), _user_event(event) {}
     void set() override { _user_event.setStatus(CL_COMPLETE); }
 private:
     cl::UserEvent _user_event;

@@ -421,8 +421,6 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
         std::cout << std::endl;
     }
 
-    cldnn::instrumentation::timer<> timer_execution;
-    
     if (log_energy)
     {
         try {
@@ -436,6 +434,8 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
 
     decltype(network.execute()) outputs;
 
+    cldnn::instrumentation::timer<> timer_execution;
+
     for (decltype(ep.loop) i = 0; i < ep.loop; i++)
     {
         outputs = network.execute();
@@ -448,6 +448,7 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
 
     //OCL buffers mapping blocks until all primitives are completed
     output = outputs.at("output").get_memory();
+    auto execution_time(timer_execution.uptime());
 
     if (log_energy)
     {
@@ -455,7 +456,6 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
         energyLib.StopLog();
     }
 
-    auto execution_time(timer_execution.uptime());
     if (ep.print_type == Verbose)
     {
         std::cout << ep.topology_name << " scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;

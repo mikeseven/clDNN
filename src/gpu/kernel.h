@@ -344,8 +344,12 @@ public:
         Args... args) const
     {
         cl::Event end_event;
-        std::vector<cl::Event> events(dependencies.size());
-        std::transform(std::begin(dependencies), std::end(dependencies), std::begin(events), [](const cldnn::refcounted_obj_ptr<cldnn::event_impl>& evt) { return evt.get()->get(); });
+        std::vector<cl::Event> events;
+        events.reserve(dependencies.size());
+        for(auto& dependency : dependencies)
+        {
+            events.emplace_back(dependency->get());
+        }
 
         if (context()->get_configuration().enable_profiling) {
             instrumentation::timer<> pre_enqueue_timer;
