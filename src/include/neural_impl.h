@@ -26,6 +26,7 @@
 #include "activation_arg.h"
 #include "depth_concatenate_arg.h"
 #include "mean_substract_arg.h"
+#include "eltwise_arg.h"
 #include "normalization_arg.h"
 #include "pooling_arg.h"
 #include "softmax_arg.h"
@@ -41,6 +42,7 @@ namespace neural
     using relu = cldnn::activation_arg;
     using depth_concatenate = cldnn::depth_concatenate_arg;
     using mean_substract = cldnn::mean_substract_arg;
+    using eltwise = cldnn::eltwise_arg;
     namespace normalization
     {
         using response = cldnn::normalization_arg;
