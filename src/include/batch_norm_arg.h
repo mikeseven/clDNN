@@ -31,5 +31,6 @@ namespace cldnn
 
         const memory& mean_memory() const;
         const memory& variance_memory() const;
+        const bool& use_global_stats() const;
     };
 }

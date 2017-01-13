@@ -75,13 +75,6 @@ TEST(batch_normalization_gpu, basic_in2x3x2x2_no_global_stats) {
 
     auto output = outputs.at("batch_norm").get_memory();
     auto output_ptr = output.pointer<float>();
-    auto output_ptr2 = variance.pointer<float>();
-
-    std::vector<float> answers_f(12);
-    for (int i = 0; i < 12; i++)
-    {
-        answers_f[i] = output_ptr2[i];
-    }
 
     for (int j = 0; j < 2; ++j) { //F
         float sum = 0, var = 0;

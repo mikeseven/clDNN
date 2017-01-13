@@ -70,4 +70,8 @@ namespace cldnn
         return _network.get_primitive(argument.variance)->output_memory();
     }
 
+    const bool& batch_norm_arg::use_global_stats() const
+    {
+        return argument.use_global_stats;
+    }
 }
