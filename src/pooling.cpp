@@ -31,24 +31,32 @@ primitive_type_id pooling::type_id()
 layout pooling_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const pooling> desc)
 {
     auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto output_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
-    auto input_offset = desc->input_offset().transform(output_layout.size.format, 0);
-    auto siz = desc->size.transform(output_layout.size.format, 1);
-    auto strd = desc->stride.transform(output_layout.size.format, 1);
+    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    assert(input_layout.size.spatial.size() == 2);
+    auto input_offset = desc->input_offset().transform(input_layout.size.format, 0).sizes();
+    auto siz = desc->size.transform(input_layout.size.format, 1).sizes();
+    auto strd = desc->stride.transform(input_layout.size.format, 1).sizes();
     //TODO !!!implement correct output size calculation!!!
-    for (size_t i = 0; i < output_layout.size.spatial.size(); i++)
+    auto output_sizes = input_layout.size.sizes();
+    auto format_order = input_layout.size.format.order();
+    assert(output_sizes.size() == format_order.size());
+    for (decltype(output_sizes.size()) i = 0; i < output_sizes.size(); i++)
     {
-        if (strd.spatial[i] < 1) throw std::invalid_argument("stride should be >= 1");
-        if (strd.spatial[i] > 1 || 0 != input_offset.spatial[0])
+        if (format_traits::is_spatial_char(format_order[i]))
         {
-            output_layout.size.spatial[i] = static_cast<int32_t>(ceil(static_cast<float>(output_layout.size.spatial[i] - (2 * input_offset.spatial[i]) - siz.spatial[i]) / static_cast<float>(strd.spatial[i]))) + 1;
-        }
-        else
-        {
-            output_layout.size.spatial[i] = (output_layout.size.spatial[i] - (2 * input_offset.spatial[i]) - siz.spatial[i]) / strd.spatial[i] + 1;
+            if (strd[i] < 1) throw std::invalid_argument("stride should be >= 1");
+            if (strd[i] > 1 || 0 != input_offset[i])
+            {
+                output_sizes[i] = static_cast<int32_t>(ceil(static_cast<float>(output_sizes[i] - (2 * input_offset[i]) - siz[i]) / static_cast<float>(strd[i]))) + 1;
+            }
+            else
+            {
+                output_sizes[i] = (output_sizes[i] - (2 * input_offset[i]) - siz[i]) / strd[i] + 1;
+            }
         }
     }
-    return output_layout;
+
+    return{ input_layout.data_type, {input_layout.size.format, output_sizes} };
 }
 
 pooling_arg::pooling_arg(network_impl& network, std::shared_ptr<const pooling> desc)

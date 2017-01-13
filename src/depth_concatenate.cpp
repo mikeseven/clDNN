@@ -40,14 +40,34 @@ layout depth_concatenate_arg::calc_output_layout(const topology_map& topology_ma
 {
     auto& input_ids = desc->input();
     auto input0_desc = topology_map.at(input_ids.at(0))->primitive_desc;
+    auto input_layout = input0_desc->type()->calc_output_layout(topology_map, input0_desc);
+    auto result_sizes = input_layout.size.sizes();
+    auto input_format = input_layout.size.format;
 
-    auto result = input0_desc->type()->calc_output_layout(topology_map, input0_desc);
-    for(size_t i = 1; i < input_ids.size(); i++)
+    // get indicies of feature coordinates and initialize particular result coordinate to 0
+    auto& format_order = input_format.order();
+    assert(result_sizes.size() == format_order.size());
+    std::vector<size_t> feature_indicies;
+    for (decltype(format_order.size()) i = 0; i < format_order.size(); i++)
     {
-        auto input_desc = topology_map.at(input_ids[i])->primitive_desc;
-        result.size.feature[0] += input_desc->type()->calc_output_layout(topology_map, input_desc).size.feature[0];
+        if (format_traits::is_feature_char(format_order[i]))
+        {
+            feature_indicies.push_back(i);
+            result_sizes[i] = 0;
+        }
     }
-    return result;
+
+    // calculate sum of features from all inputs
+    for(auto& id : input_ids)
+    {
+        auto input_desc = topology_map.at(id)->primitive_desc;
+        auto input_sizes = input_desc->type()->calc_output_layout(topology_map, input_desc).size.sizes();
+        for(auto i : feature_indicies)
+        {
+            result_sizes[i] += input_sizes[i];
+        }
+    }
+    return layout{input_layout.data_type, {input_format, result_sizes}};
 }
 
 depth_concatenate_arg::depth_concatenate_arg(network_impl& network, std::shared_ptr<const depth_concatenate> desc)

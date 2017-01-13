@@ -27,6 +27,20 @@
 
 namespace cldnn
 {
+struct format_traits
+{
+    size_t batch_num;
+    size_t feature_num;
+    size_t spatial_num;
+    std::string order;
+    static const char* batch_chars() { return "bn"; }
+    static const char* feature_chars() { return "fioc"; }
+    static const char* spatial_chars() { return "xyzhsw"; }
+    static bool is_batch_char(char c) { return std::string(batch_chars()).find_first_of(c) != std::string::npos; }
+    static bool is_feature_char(char c) { return std::string(feature_chars()).find_first_of(c) != std::string::npos; }
+    static bool is_spatial_char(char c) { return std::string(spatial_chars()).find_first_of(c) != std::string::npos; }
+};
+
 struct format
 {
     // FP32 (single precision float)
@@ -48,14 +62,6 @@ struct format
         os_iyx_osv16,  // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
         format_num,
         any = static_cast<int8_t>(-1)
-    };
-
-    struct format_traits
-    {
-        size_t batch_num;
-        size_t feature_num;
-        size_t spatial_num;
-        std::string order;
     };
 
     static const format_traits& traits(type fmt)
@@ -103,10 +109,10 @@ struct tensor
     typedef int32_t value_type;
     //TODO find the way to prevent direct change of following fields.
     cldnn::format format;
-    mutable_array_ref<value_type> raw;
-    mutable_array_ref<value_type> batch;
-    mutable_array_ref<value_type> feature;
-    mutable_array_ref<value_type> spatial;
+    array_ref<value_type> raw;
+    array_ref<value_type> batch;
+    array_ref<value_type> feature;
+    array_ref<value_type> spatial;
 
     /**
      * \brief Internal storage for tensor's data.
@@ -129,37 +135,37 @@ struct tensor
             throw std::invalid_argument("number of sizes does not match format");
 
         size_t batch_idx = 0;
-        size_t feature_idx = 0;
+        // if format has 'input' or 'output' feature then store other features starting from third position
+        size_t feature_idx = (order.find_first_of("io") == order.npos) ? 0 : 2;
         size_t spatial_idx = 0;
         for (size_t i = 0; i < sizes.size(); i++)
         {
-            switch (order[i])
+            auto c = order[i];
+            if ('o' == c)
             {
-            case 'b':
-            case 'n':
-                _sizes[batch_idx++] = sizes[i];
-                break;
-            case 'f':
-                _sizes[batch.size() + (feature_idx++)] = sizes[i];
-                break;
-            case 'i':
-                //NOTE special case: input feature map is always second
-                _sizes[batch.size() + 1] = sizes[i];
-                feature_idx++;
-                break;
-            case 'o':
                 //NOTE special case: output_feature map is always first
                 _sizes[batch.size()] = sizes[i];
-                feature_idx++;
-                break;
-            case 's':
-            case 'x':
-            case 'y':
-            case 'z':
+            }
+            else if ('i' == c)
+            {
+                //NOTE special case: input feature map is always second
+                _sizes[batch.size() + 1] = sizes[i];
+            }
+            else if (format_traits::is_batch_char(c))
+            {
+                _sizes[batch_idx++] = sizes[i];
+            }
+            else if (format_traits::is_feature_char(c))
+            {
+                _sizes[batch.size() + (feature_idx++)] = sizes[i];
+            }
+            else if (format_traits::is_spatial_char(c))
+            {
                 _sizes[batch.size() + feature.size() + (spatial_idx++)] = sizes[i];
-                break;
-            default:
-                throw std::domain_error(std::string("unknown coord type: ") + order[i]);
+            }
+            else
+            {
+                throw std::domain_error(std::string("unknown coord type: ") + c);
             }
         }
     }
@@ -253,37 +259,39 @@ struct tensor
 
     std::vector<value_type> sizes() const {
         auto order = format.order();
-        std::vector<value_type> sizes(order.size());
+        std::vector<value_type> sizes(order.size(), 0);
         size_t batch_idx = 0;
-        size_t feature_idx = 0;
+        // if format has 'input' or 'output' feature then read other features starting from third position
+        size_t feature_idx = (order.find_first_of("io") == order.npos) ? 0 : 2;
         size_t spatial_idx = 0;
         for (size_t i = 0; i < sizes.size(); i++)
         {
-            switch (order[i])
+            auto c = order[i];
+            if ('o' == c)
             {
-            case 'b':
-            case 'n':
-                sizes[i] = batch[batch_idx++];
-                break;
-            case 'f':
-                sizes[i] = feature[feature_idx++];
-                break;
-            case 'i':
-                //NOTE special case: input feature map is always second
-                sizes[i] = feature[1];
-                break;
-            case 'o':
                 //NOTE special case: output_feature map is always first
                 sizes[i] = feature[0];
-                break;
-            case 's':
-            case 'x':
-            case 'y':
-            case 'z':
+            }
+            else if ('i' == c)
+            {
+                //NOTE special case: input feature map is always second
+                sizes[i] = feature[1];
+            }
+            else if (format_traits::is_batch_char(c))
+            {
+                sizes[i] = batch[batch_idx++];
+            }
+            else if (format_traits::is_feature_char(c))
+            {
+                sizes[i] = feature[feature_idx++];
+            }
+            else if (format_traits::is_spatial_char(c))
+            {
                 sizes[i] = spatial[spatial_idx++];
-                break;
-            default:
-                throw std::domain_error(std::string("unknown coord type: ") + order[i]);
+            }
+            else
+            {
+                throw std::domain_error(std::string("unknown coord type: ") + c);
             }
         }
         return sizes;
