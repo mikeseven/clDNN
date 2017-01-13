@@ -555,8 +555,10 @@ void run_topology(const execution_params &ep)
         primitives = build_googlenetv1(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
     else if (ep.topology_name == "gender")
         primitives = build_gender(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
-    else if(ep.topology_name == "microbench")
+    else if (ep.topology_name == "microbench")
         primitives = build_microbench(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
+    else if(ep.topology_name == "squeezenet")
+        primitives = build_squeezenet(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
 
@@ -583,6 +585,8 @@ void run_topology(const execution_params &ep)
         auto neurons_list_filename = "names.txt";
         if (ep.topology_name == "vgg16_face")
             neurons_list_filename = "vgg16_face.txt";
+        else if (ep.topology_name == "gender")
+            neurons_list_filename = "gender.txt";
         auto img_list = get_directory_images(ep.input_dir);
         if (img_list.empty())
             throw std::runtime_error("specified input images directory is empty (does not contain image data)");

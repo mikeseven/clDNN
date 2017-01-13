@@ -152,6 +152,8 @@ struct attach {
         implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw);
         implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw);
         implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f32), val_fw);
+        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw);
+        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw);
     }
     ~attach() {}
 };

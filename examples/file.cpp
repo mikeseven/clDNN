@@ -228,6 +228,50 @@ cldnn::memory read_file_v3(std::ifstream &rfile, file_header &file_head, const c
 
     switch (format)
     {
+    case cldnn::format::oiyx: //CONV 
+    {
+        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
+        { cldnn::format::oiyx,
+        {
+            static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2]), // ofm, ifm
+            static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
+        }
+        }));
+        break;
+    }
+
+    case cldnn::format::bfyx: //FC
+    {
+        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
+        { cldnn::format::bfyx,
+        {
+            static_cast<cldnn::tensor::value_type>(array[3]), // batches
+            static_cast<cldnn::tensor::value_type>(array[2]), // feature maps
+            static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
+        }
+        }));
+        break;
+    }
+
+    case cldnn::format::bx: // 2D
+    {
+        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
+        { cldnn::format::bx,
+        {
+            static_cast<cldnn::tensor::value_type>(array[1]),
+            static_cast<cldnn::tensor::value_type>(array[0])
+        }
+        }));
+        break;
+    }
+
+    case cldnn::format::x: // 1D
+    {
+        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, { cldnn::format::x,{ static_cast<cldnn::tensor::value_type>(array[0]) } }));
+        break;
+
+    }
+
     // FP32
     case cldnn::format::oyxi:
     case cldnn::format::yxoi:
