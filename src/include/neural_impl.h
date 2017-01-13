@@ -30,6 +30,7 @@
 #include "normalization_arg.h"
 #include "pooling_arg.h"
 #include "softmax_arg.h"
+#include "batch_norm_arg.h"
 
 namespace neural
 {
@@ -43,6 +44,7 @@ namespace neural
     using depth_concatenate = cldnn::depth_concatenate_arg;
     using mean_substract = cldnn::mean_substract_arg;
     using eltwise = cldnn::eltwise_arg;
+    using batch_norm = cldnn::batch_norm_arg;
     namespace normalization
     {
         using response = cldnn::normalization_arg;
