@@ -27,14 +27,20 @@ using namespace cldnn;
 
 // Building age_gender network with loading weights & biases from file
 // !!! commented layers will be used in the future !!!
-cldnn::topology build_gender(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half)
+cldnn::topology build_gender(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size)
 {
-    input_layout.data_type = use_half ? data_types::f16 : data_types::f32;
     input_layout.size = { format::byxf,{ batch_size, 86, 86, 3 } };
     auto input = cldnn::input_layout("input", input_layout);
 
+    // TODO: remove after enabling bfyx for all
+    auto mem_format = format::yxfb;
+    if (batch_size == 1 && input_layout.data_type == data_types::f32)
+    {
+        mem_format = format::bfyx;
+    }
+
     // create conversion to yxfb format and subtract mean values
-    tensor reorder_size = input_layout.size.transform(format::yxfb, 1);
+    tensor reorder_size = input_layout.size.transform(mem_format, 1);
     auto reordered_input = reorder(
         "reorder",
         input,

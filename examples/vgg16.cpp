@@ -27,15 +27,21 @@
 using namespace cldnn;
 
 // Building vgg16 network with loading weights & biases from file
-cldnn::topology build_vgg16(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half)
+cldnn::topology build_vgg16(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size)
 {
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
-    input_layout.data_type = use_half ? data_types::f16 : data_types::f32;
     input_layout.size = { format::byxf,{ batch_size, 224, 224, 3 } };
     auto input = cldnn::input_layout("input", input_layout);
 
+    // TODO: remove after enabling bfyx for all
+    auto mem_format = format::yxfb;
+    if (batch_size == 1 && input_layout.data_type == data_types::f32)
+    {
+        mem_format = format::bfyx;
+    }
+
     // create conversion to yxfb format and subtract mean values
-    tensor reorder_size = input_layout.size.transform(format::yxfb, 1);
+    tensor reorder_size = input_layout.size.transform(mem_format, 1);
     auto reorder_mean = wo.create_weights_from_file(join_path(weights_dir, "imagenet_mean.nnd"), file::mean);
     auto reordered_input = reorder(
         "reorder",

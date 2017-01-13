@@ -26,17 +26,21 @@
 
 using namespace cldnn;
 
-topology build_squeezenet(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half)
+topology build_squeezenet(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size)
 {
-
-
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
-    input_layout.data_type = use_half ? data_types::f16 : data_types::f32;
     input_layout.size = { format::byxf,{ batch_size, 227, 227, 3 } };
     auto input = cldnn::input_layout("input", input_layout);
 
+    // TODO: remove after enabling bfyx for all
+    auto mem_format = format::yxfb;
+    if (batch_size == 1 && input_layout.data_type == data_types::f32)
+    {
+        mem_format = format::bfyx;
+    }
+
     // create conversion to yxfb format and subtract mean values
-    tensor reorder_size(format::yxfb, { 227, 227, 3, batch_size });
+    tensor reorder_size(mem_format, { 227, 227, 3, batch_size });
     //auto reorder_mean = { (float)104.0069879317889, (float)116.66876761696767, (float)122.6789143406786 };
     auto reordered_input = reorder(
         "reorder",

@@ -532,12 +532,7 @@ void run_topology(const execution_params &ep)
 
     html output_file(ep.topology_name, ep.topology_name + " run");
 
-#pragma message ("TODO!!! remove it - this is a little hack to get other topologies than Alexnet working, because right now batch_size for convolution generate different weights format than other topologies expect")
-    int hacked_batch_size_for_weights_optimizer = gpu_batch_size;
-    if (ep.topology_name != "alexnet" && ep.topology_name != "googlenet" && gpu_batch_size == 1)
-        hacked_batch_size_for_weights_optimizer = 8;
-
-    weights_optimizer weights_optimizer(engine, hacked_batch_size_for_weights_optimizer, ep.optimize_weights, ep.use_half);
+    weights_optimizer weights_optimizer(engine, gpu_batch_size, ep.optimize_weights, ep.use_half);
 
     cldnn::topology primitives;
 
@@ -548,17 +543,17 @@ void run_topology(const execution_params &ep)
     cldnn::instrumentation::timer<> timer_build;
     cldnn::layout input_layout = { ep.use_half ? cldnn::data_types::f16 : cldnn::data_types::f32, {} };
     if (ep.topology_name == "alexnet")
-        primitives = build_alexnet(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
+        primitives = build_alexnet(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size);
     else if (ep.topology_name == "vgg16" || ep.topology_name == "vgg16_face")
-        primitives = build_vgg16(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
+        primitives = build_vgg16(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size);
     else if (ep.topology_name == "googlenet")
-        primitives = build_googlenetv1(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
+        primitives = build_googlenetv1(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size);
     else if (ep.topology_name == "gender")
-        primitives = build_gender(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
+        primitives = build_gender(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size);
     else if (ep.topology_name == "microbench")
-        primitives = build_microbench(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
+        primitives = build_microbench(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size);
     else if(ep.topology_name == "squeezenet")
-        primitives = build_squeezenet(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_half);
+        primitives = build_squeezenet(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size);
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
 

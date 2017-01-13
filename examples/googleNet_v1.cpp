@@ -28,10 +28,9 @@
 using namespace cldnn;
 
 // Building GoogLeNet v1 network with loading weights & biases from file
-cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half)
+cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size)
 {
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
-    input_layout.data_type = use_half ? data_types::f16 : data_types::f32;
     input_layout.size = { format::byxf,{ batch_size, 224, 224, 3 } };
     auto input = cldnn::input_layout("input", input_layout);
 

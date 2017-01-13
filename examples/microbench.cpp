@@ -58,10 +58,11 @@ void test_conv(
     topology.add(input, weights, bias, conv);
 }
 
-cldnn::topology build_microbench(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_half)
+cldnn::topology build_microbench(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size)
 {
     topology topology;
     auto engine = wo.get_engine();
+    bool use_half = input_layout.data_type == data_types::f16 ? true : false;
 
     test_conv(
         engine,
