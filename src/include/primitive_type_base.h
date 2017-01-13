@@ -28,7 +28,7 @@ namespace cldnn
         std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const override
         {
             if (dto->type != this) throw std::invalid_argument("dto: primitive type mismatch");
-            return std::make_shared<PType>(dto->as<PType>());
+            return std::make_shared<PType>(as_dto<PType>(dto));
         }
 
         std::shared_ptr<const primitive_arg> create_arg(network_impl& network, std::shared_ptr<const primitive> desc) const override

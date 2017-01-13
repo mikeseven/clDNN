@@ -136,8 +136,6 @@ private:
     array_ref<primitive_id_ref> input;\
     padding input_padding;\
     padding output_padding;\
-    primitive_dto* as_base() { return reinterpret_cast<primitive_dto*>(this); }\
-    const primitive_dto* as_base() const { return reinterpret_cast<const primitive_dto*>(this); }\
 
 #define END_DTO(PType) };\
 static_assert(std::is_standard_layout<PType##_dto>::value, "class has to be 'standart layout'");
@@ -145,19 +143,19 @@ static_assert(std::is_standard_layout<PType##_dto>::value, "class has to be 'sta
 #define DTO(PType) PType##_dto
 
 BEGIN_DTO(primitive)
-template<class PType>
-typename PType::dto* as()
-{
-    if (type != PType::type_id()) throw std::invalid_argument("type");
-    return reinterpret_cast<typename PType::dto*>(this);
-}
-template<class PType>
-const typename PType::dto* as() const
-{
-    if (type != PType::type_id()) throw std::invalid_argument("type");
-    return reinterpret_cast<const typename PType::dto*>(this);
-}
 END_DTO(primitive)
+template<class PType>
+typename PType::dto* as_dto(primitive_dto* dto)
+{
+    if (dto->type != PType::type_id()) throw std::invalid_argument("type");
+    return reinterpret_cast<typename PType::dto*>(dto);
+}
+template<class PType>
+const typename PType::dto* as_dto(const primitive_dto* dto)
+{
+    if (dto->type != PType::type_id()) throw std::invalid_argument("type");
+    return reinterpret_cast<const typename PType::dto*>(dto);
+}
 
 struct primitive
 {

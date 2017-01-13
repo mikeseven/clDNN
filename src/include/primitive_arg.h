@@ -70,12 +70,12 @@ public:
 protected:
     primitive_arg_base(network_impl& network, std::shared_ptr<const PType> desc, const memory& output_memory)
         : primitive_arg(network, desc, output_memory)
-        , argument(*(_desc->get_dto()->as<PType>()))
+        , argument(*(as_dto<PType>(_desc->get_dto())))
     {}
 
     primitive_arg_base(network_impl& network, std::shared_ptr<const PType> desc, const layout& output_layout)
         : primitive_arg(network, desc, output_layout)
-        , argument(*(_desc->get_dto()->as<PType>()))
+        , argument(*(as_dto<PType>(_desc->get_dto())))
     {}
 };
 }
