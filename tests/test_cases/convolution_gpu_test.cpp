@@ -169,48 +169,46 @@ void print_2d(VVF &data) {
 }
 
 TEST(convolution_f32_fw_gpu, basic_convolution) {
-	//  Filter : 2x2
-	//  Stride : 1x1
-	//  Input  : 3x4
-	//  Output : 3x4
-	//  Padding: Zero
+	//  Filter : 2x3
+	//  Stride : 2x1
+	//  Input  : 4x5
+	//  Output : 2x3
 	//
 	//  Input:
-	//  1  2  3  4
-	//  2  2  3  4
-	//  3  3  3  5
+	//  1  2  3  4  5
+	//  2  2  3  4  6
+	//  3  3  3  5  1
+	//  1  1  1  1  1
 	//
 	//  Filter:
-	//  1  1
-	//  1  1
+	//  1  2  1
+	//  2  1  2
 	//
 	//  Output:
-	//  8 11 15  9
-	// 11 12 16 10
-	//  7  7  9  6
+	// 21  28  39
+	// 18  20  20
 	//
 	//  Bias:
 	//  1
 
 	engine engine;
 
-	auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 3, 4, 1, 1 } } });
-	auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+	auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 5, 1, 1 } } });
+	auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 3 } } });
 	auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
 
-	set_values(input, { 1.0f, 2.0f, 3.0f, 4.0f, 2.0f, 2.0f, 3.0f, 4.0f, 3.0f, 3.0f, 3.0f, 5.0f });
-	set_values(weights, { 1.0f, 1.0f, 1.0f, 1.0f });
+	set_values(input, { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 2.0f, 2.0f, 3.0f, 4.0f, 6.0f, 3.0f, 3.0f, 3.0f, 5.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f });
+	set_values(weights, { 1.0f, 2.0f, 1.0f, 2.0f, 1.0f, 2.0f });
 	set_values(biases, { 1.0f });
 	VVF output_vec = {
-		{ 8.0f, 11.0f, 15.0f, 9.0f },
-		{ 11.0f, 12.0f, 16.0f, 10.0f },
-		{ 7.0f, 7.0f, 9.0f, 6.0f } };
+		{ 21.0f, 28.0f, 39.0f },
+		{ 18.0f, 20.0f, 20.0f } };
 
 	topology topology(
 		input_layout("input", input.get_layout()),
 		data("weights", weights),
 		data("biases", biases),
-		convolution( "conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx, 0, { 1,1 } }));
+		convolution( "conv", "input", { "weights" }, { "biases" }, { format::yx, { 0,0 } }, { format::yx, 0, { 2,1 } }));
 
 	network network(engine, topology);
 	network.set_input_data("input", input);
@@ -228,8 +226,8 @@ TEST(convolution_f32_fw_gpu, basic_convolution) {
 	int f_size = output_layout.size.sizes()[2];
 	int b_size = output_layout.size.sizes()[3];
 	EXPECT_EQ(output_layout.size.format, format::yxfb);
-	EXPECT_EQ(y_size, 3);
-	EXPECT_EQ(x_size, 4);
+	EXPECT_EQ(y_size, 2);
+	EXPECT_EQ(x_size, 3);
 	EXPECT_EQ(f_size, 1);
 	EXPECT_EQ(b_size, 1);
 	for (int y = 0; y < y_size; ++y) {
@@ -252,15 +250,17 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_padding) {
 	//  Stride : 1x1
 	//  Input  : 3x4
 	//  Input padding : 2x1
-	//  Output : 5x5
+	//  Output : 6x5
 	//  Padding: Zero
 	//
 	//  Input:
-	//  z  z  z  z  z
-	//  z  z  z  z  z
-	//  z  1  2  3  4
-	//  z  2  2  3  4
-	//  z  3  3  3  5
+	//  z  z  z  z  z  z
+	//  z  z  z  z  z  z
+	//  z  1  2  3  4  z
+	//  z  2  2  3  4  z
+	//  z  3  3  3  5  z
+	//  z  z  z  z  z  z
+	//  z  z  z  z  z  z
 	//
 	//  Filter:
 	//  1  1
@@ -272,6 +272,7 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_padding) {
 	//  4  8 11 15  9
 	//  6 11 12 16 10
 	//  4  7  7  9  6
+	//  1  1  1  1  1
 	//
 	//  Bias:
 	//  1
@@ -290,7 +291,8 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_padding) {
 		{ 2.0f, 4.0f, 6.0f, 8.0f, 5.0f },
 		{ 4.0f, 8.0f, 11.0f, 15.0f, 9.0f },
 		{ 6.0f, 11.0f, 12.0f, 16.0f, 10.0f },
-		{ 4.0f, 7.0f, 7.0f, 9.0f, 6.0f } };
+		{ 4.0f, 7.0f, 7.0f, 9.0f, 6.0f },
+		{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f } };
 
 	topology topology(
 		input_layout("input", input.get_layout()),
@@ -324,7 +326,7 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_padding) {
 	int f_size = output_layout.size.sizes()[2];
 	int b_size = output_layout.size.sizes()[3];
 	EXPECT_EQ(output_layout.size.format, format::yxfb);
-	EXPECT_EQ(y_size, 5);
+	EXPECT_EQ(y_size, 6);
 	EXPECT_EQ(x_size, 5);
 	EXPECT_EQ(f_size, 1);
 	EXPECT_EQ(b_size, 1);
@@ -334,6 +336,119 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_padding) {
 			EXPECT_EQ(output_vec[y][x], output_ptr[y * x_size + x]);
 		}
 	}
+
+	//VVF temp_vec(y_size, VF(x_size, 0.0f));
+	//for (int y = 0; y < y_size; ++y) {
+	//	for (int x = 0; x < x_size; ++x) {
+	//		temp_vec[y][x] = output_ptr[y * x_size + x];
+	//	}
+	//}
+	//print_2d(temp_vec);
+}
+
+TEST(convolution_f32_fw_gpu, basic_convolution_input_and_output_padding) {
+	//  Filter : 2x2
+	//  Stride : 1x1
+	//  Input  : 3x4
+	//  Input padding : 2x1
+	//  Output : 8x9
+	//  Padding: Zero
+	//
+	//  Input:
+	//  z  z  z  z  z  z
+	//  z  z  z  z  z  z
+	//  z  1  2  3  4  z
+	//  z  2  2  3  4  z
+	//  z  3  3  3  5  z
+	//  z  z  z  z  z  z
+	//  z  z  z  z  z  z
+	//
+	//  Filter:
+	//  1  1
+	//  1  1
+	//
+	//  Output:
+	//  1  1  1  1  1  1  1  1  1
+	//  1  1  1  1  1  1  1  1  1
+	//  1  1  2  4  6  8  5  1  1
+	//  1  1  4  8 11 15  9  1  1
+	//  1  1  6 11 12 16 10  1  1
+	//  1  1  4  7  7  9  6  1  1
+	//  1  1  1  1  1  1  1  1  1
+	//  1  1  1  1  1  1  1  1  1
+	//
+	//  Bias:
+	//  1
+
+	engine engine;
+
+	auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 3, 4, 1, 1 } } });
+	auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+	auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+
+	set_values(input, { 1.0f, 2.0f, 3.0f, 4.0f, 2.0f, 2.0f, 3.0f, 4.0f, 3.0f, 3.0f, 3.0f, 5.0f });
+	set_values(weights, { 1.0f, 1.0f, 1.0f, 1.0f });
+	set_values(biases, { 1.0f });
+	VVF output_vec = {
+		{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f },
+		{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f },
+		{ 1.0f, 1.0f, 2.0f, 4.0f, 6.0f, 8.0f, 5.0f, 1.0f, 1.0f },
+		{ 1.0f, 1.0f, 4.0f, 8.0f, 11.0f, 15.0f, 9.0f, 1.0f, 1.0f },
+		{ 1.0f, 1.0f, 6.0f, 11.0f, 12.0f, 16.0f, 10.0f, 1.0f, 1.0f },
+		{ 1.0f, 1.0f, 4.0f, 7.0f, 7.0f, 9.0f, 6.0f, 1.0f, 1.0f },
+		{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f },
+		{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f } };
+
+	topology topology(
+		input_layout("input", input.get_layout()),
+		data("weights", weights),
+		data("biases", biases),
+		convolution(
+			"conv",
+			"input",
+			{ "weights" },
+			{ "biases" },
+			{ format::yx,{ 2,1 } },
+			{ format::yx, 0,{ 1,1 } },
+			false,
+			0,
+			{ format::yx,{ 1,2 } })
+	);
+
+	network network(engine, topology);
+	network.set_input_data("input", input);
+
+	auto outputs = network.execute();
+	EXPECT_EQ(outputs.size(), size_t(1));
+	EXPECT_EQ(outputs.begin()->first, "conv");
+
+	auto output_memory = outputs.at("conv").get_memory();
+	auto output_layout = output_memory.get_layout();
+	auto output_ptr = output_memory.pointer<float>();
+
+	int y_size = output_layout.size.sizes()[0];
+	int x_size = output_layout.size.sizes()[1];
+	int f_size = output_layout.size.sizes()[2];
+	int b_size = output_layout.size.sizes()[3];
+	EXPECT_EQ(output_layout.size.format, format::yxfb);
+	EXPECT_EQ(y_size, 8);
+	EXPECT_EQ(x_size, 9);
+	EXPECT_EQ(f_size, 1);
+	EXPECT_EQ(b_size, 1);
+
+	for (int y = 0; y < y_size; ++y) {
+		for (int x = 0; x < x_size; ++x) {
+			EXPECT_EQ(output_vec[y][x], output_ptr[y * x_size + x]);
+		}
+	}
+
+	//VVF temp_vec(y_size, VF(x_size, 0.0f));
+	//for (int y = 0; y < y_size; ++y) {
+	//	for (int x = 0; x < x_size; ++x) {
+	//		temp_vec[y][x] = output_ptr[y * x_size + x];
+	//	}
+	//}
+	//print_2d(temp_vec);
 }
 
 TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_random) {
