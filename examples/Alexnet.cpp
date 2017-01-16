@@ -35,7 +35,7 @@ topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, cl
 
     // TODO: remove after enabling bfyx for all
     auto mem_format = format::yxfb;
-    if (batch_size == 1 && input_layout.data_type == data_types::f32)
+    if ((batch_size == 1 || batch_size == 8) && input_layout.data_type == data_types::f32)
     {
         mem_format = format::bfyx;
     }

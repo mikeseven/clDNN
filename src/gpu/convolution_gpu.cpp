@@ -487,7 +487,7 @@ convolution_gpu::kernel_data defauly_bfyx_yxio_b8_f32(const convolution& arg)
     }
     kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument().size.spatial[0]) / block_width));
     kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument().size.spatial[1]) / block_height));
-    kd.gws2 = filter_mem.argument().size.feature[0] * filter_mem.argument().size.batch[0];
+    kd.gws2 = filter_mem.argument().size.feature[0] * output_mem.argument().size.batch[0];
     kd.lws0 = 1;
     kd.lws1 = 1;
     kd.lws2 = 16;
@@ -518,6 +518,7 @@ convolution_gpu::ks_type convolution_gpu::ks = {
     { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 128, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
 
     { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), defauly_bfyx_yxio_b1_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 8, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), defauly_bfyx_yxio_b8_f32 }
 };
 
 namespace{

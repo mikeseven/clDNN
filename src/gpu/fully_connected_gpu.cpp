@@ -38,6 +38,7 @@ static const std::string kernel_name_xb_xb_b8_x8_vload = "fully_connected_gpu_xb
 static const std::string kernel_name_yxfn = "fully_connected_gpu_yxfn";
 static const std::string kernel_name_xb_xb_block_fp16 = "fully_connected_gpu_xb_xb_block_fp16";
 static const std::string kernel_name_bx_bx_from_fyx = "fully_connected_gpu_bx_xb_from_fyx";
+static const std::string kernel_name_bx_bx_from_fyxb = "fully_connected_gpu_bx_xb_from_fyxb";
 
 struct fully_connected_gpu : is_an_implementation
 {
@@ -107,7 +108,7 @@ struct fully_connected_gpu : is_an_implementation
             {
                 if (input_mem.argument().size.batch[0] != 1)
                 {
-                    throw std::runtime_error("Not supported batch != 1 in FC bfyx/bx format");
+                    kd.kernel_name = kernel_name_bx_bx_from_fyxb;
                 }
                 else
                 {

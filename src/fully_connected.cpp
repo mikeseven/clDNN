@@ -85,7 +85,7 @@ fully_connected_arg::fully_connected_arg(network_impl& network, std::shared_ptr<
     auto output_size = output_memory().get_layout().size;
 
     if(input_size.format != format::yxfb
-        && !(input_size.format == format::bfyx && data_type == data_types::f32 && input_size.batch[0] == 1) //special batch1 case
+        && !(input_size.format == format::bfyx && data_type == data_types::f32 && (input_size.batch[0] == 1 || input_size.batch[0] == 8)) //special batch1 case
         && (input_size.raw.size() != output_size.raw.size()) )
     {
         throw std::invalid_argument("Fully connected input/output number of dimension does not match.");
