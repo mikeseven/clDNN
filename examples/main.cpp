@@ -193,6 +193,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("use_half", bpo::bool_switch(),
             "Uses half precision floating point numbers (FP16, halfs) instead of single precision ones (float) in "
             "computations of selected model.")
+        ("use_bfyx", bpo::bool_switch(),
+            "Force use bfyx format for batch > 1 (only weights optimizer and alexnet are currently affected by this parameter).")
         ("profiling", bpo::bool_switch(),
             "Enables profiling and create profiling report.")
         ("print_type", bpo::value<std::uint32_t>()->value_name("<print_type>")->default_value(0),
@@ -379,6 +381,7 @@ int main(int argc, char* argv[])
         ep.profiling = parsed_args["profiling"].as<bool>();
         ep.optimize_weights = parsed_args["optimize_weights"].as<bool>();
         ep.use_half = parsed_args["use_half"].as<bool>();
+        ep.use_bfyx = ep.batch == 1 ? true : parsed_args["use_bfyx"].as<bool>();
         ep.run_single_layer = run_single_layer;
         ep.dump_hidden_layers = parsed_args["dump_hidden_layers"].as<bool>();
         ep.dump_layer_name = dump_layer;

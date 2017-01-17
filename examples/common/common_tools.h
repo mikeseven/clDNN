@@ -126,6 +126,7 @@ struct execution_params {
     bool profiling;
     bool optimize_weights;
     bool use_half;
+    bool use_bfyx;
 
     std::string run_single_layer;
 

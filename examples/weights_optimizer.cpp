@@ -19,8 +19,8 @@
 #include <api/primitives/reorder.hpp>
 #include <boost/filesystem.hpp>
 
-weights_optimizer::weights_optimizer(const cldnn::engine& eng, int batch_size, bool enabled, bool use_half) :
-    _enabled(enabled), _use_half(use_half), _batch_size(batch_size), _engine(eng)
+weights_optimizer::weights_optimizer(const cldnn::engine& eng, int batch_size, bool enabled, bool use_half, bool use_bfyx) :
+    _enabled(enabled), _use_half(use_half), _use_bfyx(use_bfyx), _batch_size(batch_size), _engine(eng)
 {}
 
 cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, file::weights_type type, bool use_half)
@@ -48,7 +48,7 @@ cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& 
     else if (type == file::weights_type::convolution)
     {
         // TODO!!! put better logic here.
-        expected_mem_size = (_batch_size == 1 || _batch_size == 8) && !use_half
+        expected_mem_size = _use_bfyx && !use_half
             ? cldnn::tensor(cldnn::format::os_iyx_osv16, 
                 {
                     input_size.feature[0], input_size.feature[1], input_size.spatial[0], input_size.spatial[1] // order: "oiyx"
@@ -63,7 +63,7 @@ cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& 
         // TODO!!! put better logic here.
         if (cldnn::neural_memory::traits(mem.get_layout()).dimension == 4)
         {
-            expected_mem_size = (_batch_size == 1 || _batch_size == 8) && !use_half 
+            expected_mem_size = _use_bfyx && !use_half 
                 ? cldnn::tensor(cldnn::format::fyxb,
                     {
                         input_size.feature[0], input_size.spatial[0], input_size.spatial[1], input_size.batch[0] // order: "fyxb"

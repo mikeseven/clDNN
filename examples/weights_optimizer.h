@@ -28,6 +28,7 @@ class weights_optimizer
 {
     bool _enabled;
     bool _use_half;
+    bool _use_bfyx;
     int _batch_size;
     cldnn::topology _topology;
     cldnn::engine _engine;
@@ -38,7 +39,7 @@ class weights_optimizer
 
 public:
     explicit weights_optimizer(const cldnn::engine& eng, int batch_size, bool enabled = true,
-                               bool use_half = false);
+                               bool use_half = false, bool use_bfyx = false);
 
     cldnn::primitive_id create_weights_from_file(const std::string& path,
                                                file::weights_type type,
