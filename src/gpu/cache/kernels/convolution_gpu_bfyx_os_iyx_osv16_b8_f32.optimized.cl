@@ -39,7 +39,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b8_f32)(
     uint weight_addr = fmg * FILTER_INPUT_FEATURE_NUM * FILTER_SIZE_X * FILTER_SIZE_Y * SIMD_SIZE + lid;
 
     uint in_split_offset = split_idx * (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) * FILTER_INPUT_FEATURE_NUM;
-    in_addr = batch_idx * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) * (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y) * FILTER_INPUT_FEATURE_NUM;
+    in_addr = batch_idx * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) * (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y) * INPUT_FEATURE_NUM;
     in_addr += in_split_offset + (INPUT_PADDING_SIZE_Y + INPUT_OFFSET_SIZE_Y + or * STRIDE_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) + (INPUT_PADDING_SIZE_X + INPUT_OFFSET_SIZE_X + oc * STRIDE_SIZE_X) + lid;
 
     for(int kd = 0; kd < FILTER_INPUT_FEATURE_NUM; kd++)  // _ID = 3, RGB
@@ -90,13 +90,13 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b8_f32)(
 
     // write the 4x3 (and 16 feature maps deep) output tile to memory
     uint out_split_offset = split_idx * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) * FILTER_OUTPUT_FEATURE_NUM;
-    uint out_addr = batch_idx * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * FILTER_OUTPUT_FEATURE_NUM;
+    uint out_addr = batch_idx * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * OUTPUT_FEATURE_NUM;
     out_addr += out_split_offset + feature_idx * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y); // out_addr indexes into start of 16 feature maps.
     out_addr += (OUTPUT_PADDING_SIZE_Y + or) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) + OUTPUT_PADDING_SIZE_X + oc;  // offset for the 4x3 block that this workitem is working on;
 
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
-            out[r * OUT_BLOCK_WIDTH + c] += bias[fmg * 16 + lid];
+            out[r * OUT_BLOCK_WIDTH + c] += bias[feature_idx];
         }
     }
 

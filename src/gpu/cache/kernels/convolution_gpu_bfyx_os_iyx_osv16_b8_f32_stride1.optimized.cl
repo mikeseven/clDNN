@@ -4,11 +4,6 @@
 #define ACTIVATION(output, input) output = input;
 #endif
 
-// each work-item iterates this many times in the width dimension
-#define OUT_BLOCK_WIDTH 6  
-// each work-itme iterates this many times in the height dimension
-#define OUT_BLOCK_HEIGHT 4
-
 #define SIMD_SIZE 16
 
 #define RADIUS (FILTER_SIZE_X-1)/2
@@ -91,7 +86,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b8_f32_stride1)(
 
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
-            out[r * OUT_BLOCK_WIDTH + c] += bias[fmg * 16 + lid];
+            out[r * OUT_BLOCK_WIDTH + c] += bias[feature_idx];
         }
     }
 
