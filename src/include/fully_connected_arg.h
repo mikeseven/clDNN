@@ -19,13 +19,14 @@
 #include "api/primitives/fully_connected.hpp"
 #include "primitive_arg.h"
 #include <memory>
+#include "topology_impl.h"
 
 namespace cldnn
 {
     class fully_connected_arg : public primitive_arg_base<fully_connected>
     {
     public:
-        static layout calc_output_layout(network_impl& network, std::shared_ptr<const fully_connected> desc);
+        static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const fully_connected> desc);
 
         fully_connected_arg(network_impl& network, std::shared_ptr<const fully_connected> desc);
 

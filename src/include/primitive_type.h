@@ -16,7 +16,10 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "api/memory.hpp"
 #include "api/primitive.hpp"
+#include "api/topology.hpp"
+#include "topology_impl.h"
 
 namespace cldnn
 {
@@ -27,5 +30,6 @@ struct primitive_type
     virtual std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const = 0;
     virtual std::shared_ptr<const primitive_arg> create_arg(network_impl& network, std::shared_ptr<const primitive> desc) const = 0;
     virtual ~primitive_type() = default;
+    virtual layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const primitive> desc) const = 0;
 };
 }

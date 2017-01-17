@@ -15,8 +15,8 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "primitive_type_base.h"
 #include "data_arg.h"
+#include "primitive_type_base.h"
 #include "memory_impl.h"
 
 namespace cldnn

@@ -19,12 +19,18 @@
 #include "api/primitives/reorder.hpp"
 #include "primitive_arg.h"
 #include <memory>
+#include "topology_impl.h"
 
 namespace cldnn
 {
 class reorder_arg : public primitive_arg_base<reorder>
 {
 public:
+    static layout calc_output_layout(const topology_map&, std::shared_ptr<const reorder> desc)
+    {
+        return desc->output_layout;
+    }
+
     reorder_arg(network_impl& network, std::shared_ptr<const reorder> desc);
     bool have_substract() const { return _inputs.size() > 1; }
 };

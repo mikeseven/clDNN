@@ -19,12 +19,18 @@
 #include "api/primitives/data.hpp"
 #include "primitive_arg.h"
 #include <memory>
+#include "topology_impl.h"
 
 namespace cldnn
 {
 class data_arg : public primitive_arg_base<data>
 {
 public:
+    static layout calc_output_layout(const topology_map&, std::shared_ptr<const data> desc)
+    {
+        return desc->mem.get_layout();
+    }
+
     data_arg(network_impl& network, std::shared_ptr<const data> desc);
 };
 }

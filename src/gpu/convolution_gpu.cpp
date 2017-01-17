@@ -114,7 +114,12 @@ struct convolution_gpu : is_an_implementation {
                 cldnn::input_layout("input", input_layout),
                 cldnn::reorder("reorder", "input", input_layout, "", { cldnn::format::yx, {0,0}}, reorder_output_pad )
             );
-            reorder.push_back({ outer.get_network().get_engine()->build_network(topology, cldnn::build_options()), false });
+
+            // TODO: add support for reorder to do reorder + padding in single step to remove this from convolution.
+            if(outer.input()[0]->type() == cldnn::reorder::type_id())
+            {
+                reorder.push_back({ outer.get_network().get_engine()->build_network(topology, cldnn::build_options()), false });
+            }
         }
     }
 
@@ -131,20 +136,21 @@ struct convolution_gpu : is_an_implementation {
 
         const int batch_size = output_mem.argument().size.batch[0];
 
-        cldnn::tensor stride(cldnn::format::yx, { std::min(outer.argument.stride.spatial[0], input_mem.argument().size.spatial[0]),
-            std::min(outer.argument.stride.spatial[1], input_mem.argument().size.spatial[1]) });
+        auto input_size = outer.input().at(0)->non_padded_output_layout().size;
+        cldnn::tensor stride(cldnn::format::yx, { std::min(outer.argument.stride.spatial[0], input_size.spatial[0]),
+            std::min(outer.argument.stride.spatial[1], input_size.spatial[1]) });
         cldnn::padding input_padding(cldnn::format::yx, { filter_mem.argument().size.spatial[0] - 1, filter_mem.argument().size.spatial[1] - 1 });
 
         gpu::jit_constants mem_consts{
-            gpu::make_jit_constant("INPUT", input_mem.argument().size),
-            gpu::make_jit_constant("OUTPUT", output_mem.argument().size),
+            gpu::make_jit_constant("INPUT", input_size),
+            gpu::make_jit_constant("OUTPUT", outer.non_padded_output_layout().size),
             gpu::make_jit_constant("STRIDE", stride),
             gpu::make_jit_constant("INPUT_OFFSET", input_offset),
             gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
             gpu::make_jit_constant("OUTPUT_LIMIT", output_size),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(_engine_info.supports_fp16)),
             gpu::make_jit_constant("INPUT_PADDING", input_padding.size()),
-            gpu::make_jit_constant("OUTPUT_PADDING", outer.desc()->output_offset())
+            gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding.size())
         };
 
         if (outer.argument.with_activation)
@@ -226,9 +232,11 @@ struct convolution_gpu : is_an_implementation {
         auto& kd = me->_kernel_data;
 
         std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>> tmp_events;
-        if (kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
+
+        if(!reorder.empty())
+        /*if (kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
             kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1 ||
-            kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2)
+            kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2)*/
         {
             auto network = reorder[0];
             network->set_input_data("input", input_mem);
@@ -462,7 +470,6 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
 
 convolution_gpu::kernel_data defauly_bfyx_yxio_b1_f32(const convolution& arg)
 {
-    auto& output_mem = arg.output_memory();
     auto& filter_mem = arg.input_memory(1);
 
     int block_width = 4;
@@ -495,8 +502,9 @@ convolution_gpu::kernel_data defauly_bfyx_yxio_b1_f32(const convolution& arg)
         kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32;
     }
 
-    kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument().size.spatial[0]) / block_width));
-    kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument().size.spatial[1]) / block_height));
+    auto output_size = arg.non_padded_output_layout().size;
+    kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[0]) / block_width));
+    kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[1]) / block_height));
     kd.gws2 = filter_mem.argument().size.feature[0];
     kd.lws0 = 1;
     kd.lws1 = 1;

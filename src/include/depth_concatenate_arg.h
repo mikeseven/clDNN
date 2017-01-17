@@ -19,6 +19,7 @@
 #include "api/primitives/depth_concatenate.hpp"
 #include "primitive_arg.h"
 #include <memory>
+#include "topology_impl.h"
 
 namespace cldnn
 {
@@ -27,6 +28,6 @@ class depth_concatenate_arg : public primitive_arg_base<depth_concatenate>
 public:
     depth_concatenate_arg(network_impl& network, std::shared_ptr<const depth_concatenate> desc);
 
-    static layout calc_output_layout(network_impl& network, std::shared_ptr<const depth_concatenate> desc);
+    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const depth_concatenate> desc);
 };
 }

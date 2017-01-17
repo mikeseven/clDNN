@@ -19,6 +19,7 @@
 #include "api/primitives/normalization.hpp"
 #include "primitive_arg.h"
 #include <memory>
+#include "topology_impl.h"
 
 namespace cldnn
 {
@@ -27,6 +28,6 @@ namespace cldnn
     public:
         normalization_arg(network_impl& network, std::shared_ptr<const normalization> desc);
 
-        static layout calc_output_layout(network_impl& network, std::shared_ptr<const normalization> desc);
+        static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const normalization> desc);
     };
 }

@@ -28,10 +28,10 @@ primitive_type_id pooling::type_id()
     return &instance;
 }
 
-layout pooling_arg::calc_output_layout(network_impl& network, std::shared_ptr<const pooling> desc)
+layout pooling_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const pooling> desc)
 {
-    auto& input_mem = network.get_primitive(desc->input()[0])->output_memory();
-    auto output_layout = input_mem.get_layout();
+    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
+    auto output_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
     auto input_offset = desc->input_offset().transform(output_layout.size.format, 0);
     auto siz = desc->size.transform(output_layout.size.format, 1);
     auto strd = desc->stride.transform(output_layout.size.format, 1);
@@ -52,6 +52,6 @@ layout pooling_arg::calc_output_layout(network_impl& network, std::shared_ptr<co
 }
 
 pooling_arg::pooling_arg(network_impl& network, std::shared_ptr<const pooling> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network, desc))
+    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {}
 }

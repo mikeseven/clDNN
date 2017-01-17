@@ -38,6 +38,22 @@ namespace cldnn
             result->_impl = network.get_engine().get()->create_primitive_impl(*result);
             return result;
         }
+
+        layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const primitive> desc) const override
+        {
+            if (desc->type() != this) throw std::invalid_argument("desc: primitive type mismatch");
+
+            auto it = topology_map.find(desc->id());
+            if (it->second->output_layout)
+            {
+                return *it->second->output_layout;
+            }
+
+            auto result = PType_Arg::calc_output_layout(topology_map, std::static_pointer_cast<const PType>(desc));
+            it->second->output_layout = std::make_unique<layout>(result);
+            return result;
+        };
+
     };
 
 }
