@@ -486,8 +486,20 @@ convolution_gpu::kernel_data default_bfyx_yxio_b8_f32(const convolution& arg)
     if (arg.argument.stride.spatial[0] == 1 && arg.argument.stride.spatial[1] == 1)
     {
         kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b8_f32_stride1;
-        block_width = 6;
-        block_height = 4;
+        
+        //if less than 16 values is required to compute one single row of output
+        // note: (computing n outputs in row requires n + kernel_width values - 1 values in input, for kernel stride == 1)
+        //then each WI shall compute one sinle row to maximise reuse within SIMD subgroup (this gives very nice performance results)
+        if (output_mem.argument().size.spatial[0] + filter_mem.argument().size.spatial[0] - 1 < 16)
+        {
+            block_width = output_mem.argument().size.spatial[0];
+            block_height = 1;
+        }
+        else //fallback to fixed output size
+        {
+            block_width = 4; //note: original 6x4 has been changed to 4x3 since, on GT2, this gives better results
+            block_height = 3;
+        }
     }
     else
     {
