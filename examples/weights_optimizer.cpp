@@ -63,7 +63,7 @@ cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& 
         // TODO!!! put better logic here.
         if (cldnn::neural_memory::traits(mem.get_layout()).dimension == 4)
         {
-            expected_mem_size = _use_bfyx && !use_half 
+            expected_mem_size = _use_bfyx && _batch_size == 1 && !use_half 
                 ? cldnn::tensor(cldnn::format::fyxb,
                     {
                         input_size.feature[0], input_size.spatial[0], input_size.spatial[1], input_size.batch[0] // order: "fyxb"

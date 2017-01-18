@@ -63,7 +63,9 @@ layout fully_connected_arg::calc_output_layout(const topology_map& topology_map,
     auto bias_desc = topology_map.at(desc->bias)->primitive_desc;
     auto bias_layout = bias_desc->type()->calc_output_layout(topology_map, bias_desc);
 
-    if(is_batch_after_spatial(input_layout.size.format.order()))
+    if(is_batch_after_spatial(input_layout.size.format.order()) || 
+        (input->output_memory().argument().format == neural_memory::format::bfyx_f32 &&
+         input->output_memory().argument().size.batch[0] > 1))
     {
         auto result = layout(input_layout.data_type, tensor(format::xb, { bias_layout.size.spatial[0], input_layout.size.batch[0] }));
         return result;

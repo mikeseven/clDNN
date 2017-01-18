@@ -43,6 +43,8 @@ static const std::string kernel_name_bx_bx_from_fyxb = "fully_connected_gpu_bx_x
 struct fully_connected_gpu : is_an_implementation
 {
     fully_connected& _outer;
+    std::vector<cldnn::refcounted_obj_ptr<cldnn::network_impl>> reorder;
+
     struct kernel_data 
     {
         size_t gws0, gws1;
@@ -70,7 +72,19 @@ struct fully_connected_gpu : is_an_implementation
       : _outer(arg),
         _kernel_data(set_kernel_data(_outer)),
         _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
-    {}
+    {
+        auto const& input_mem = _outer.input_memory(0);
+
+        if (input_mem.argument().format == memory::format::bfyx_f32 &&
+            input_mem.argument().size.batch[0] > 1)
+        {
+            cldnn::topology topology(
+                cldnn::input_layout("input", input_mem.get_layout()),
+                cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_mem.argument().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
+            );
+            reorder.push_back({ _outer.get_network().get_engine()->build_network(topology, cldnn::build_options()), false });
+        }
+    }
 
     static kernel_data set_kernel_data(const fully_connected& outer)
     {
@@ -96,7 +110,13 @@ struct fully_connected_gpu : is_an_implementation
 
         bool batch_multiple_of_8 = input_mem.argument().size.batch[0] % 8 == 0;
 
-        switch (input_mem.argument().format)
+        auto input_mem_format = input_mem.argument().format;
+
+        //for bfyx,b>1 there will be reorder from bfyx to yxfb before this fc (created later in ctor), so do calculations for this format rather than original bfyx
+        if (input_mem_format == memory::format::bfyx_f32 && input_mem.argument().size.batch[0] > 1)
+            input_mem_format = memory::format::yxfb_f32;
+
+        switch (input_mem_format)
         {
         case memory::format::bfyx_f32:
         case memory::format::bx_f32:
@@ -336,8 +356,18 @@ struct fully_connected_gpu : is_an_implementation
         const auto& bias_mem   = _outer.input_memory(2);   // biases
         const auto& output_mem = _outer.output_memory();  // output
 
+        if (reorder.empty())
+            return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, events, input_mem, output_mem, weight_mem, bias_mem);
+
+
+        auto network = reorder[0];
+        network->set_input_data("input", input_mem);
+        auto reorder_outputs = network->execute(events);
+
+        cldnn::memory reorder_output(reorder_outputs[0].memory_ref);
         return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-            ({{kd.gws0, kd.gws1}, {kd.lws0, kd.lws1}}, events, input_mem, output_mem, weight_mem, bias_mem);
+            ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, { reorder_outputs[0].event_ref }, reorder_output, output_mem, weight_mem, bias_mem);
     }
 
     static is_an_implementation *create(fully_connected &arg) {
