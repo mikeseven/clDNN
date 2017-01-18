@@ -197,6 +197,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Force use bfyx format for batch > 1 (only weights optimizer and alexnet are currently affected by this parameter).")
         ("profiling", bpo::bool_switch(),
             "Enables profiling and create profiling report.")
+        ("profiling_queue", bpo::bool_switch(),
+            "Only enables profiling, doesn't create a report")
         ("print_type", bpo::value<std::uint32_t>()->value_name("<print_type>")->default_value(0),
             "0 = Verbose (default)\n"
             "1 = only print performance results\n"
@@ -379,6 +381,7 @@ int main(int argc, char* argv[])
         ep.topology_name = parsed_args["model"].as<std::string>();
         ep.batch = parsed_args["batch"].as<std::uint32_t>();
         ep.profiling = parsed_args["profiling"].as<bool>();
+        ep.profiling_queue = parsed_args["profiling_queue"].as<bool>() || parsed_args["profiling"].as<bool>();
         ep.optimize_weights = parsed_args["optimize_weights"].as<bool>();
         ep.use_half = parsed_args["use_half"].as<bool>();
         ep.use_bfyx = ep.batch == 1 ? true : parsed_args["use_bfyx"].as<bool>();
