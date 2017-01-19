@@ -37,12 +37,13 @@ static const std::string kernel_name_yxfb_yxio_b8 = "convolution_gpu_yxfb_yxio_b
 static const std::string kernel_name_yxfb_yxio_b16 = "convolution_gpu_yxfb_yxio_b16";
 static const std::string kernel_name_yxfb_yxio_b16_fp16 = "convolution_gpu_yxfb_yxio_b16_fp16";
 static const std::string kernel_name_yxfb_yxio_fp16 = "convolution_gpu_yxfb_yxio_fp16";
-static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32";
-static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride1";
-static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride2";
-static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_kernel_size_1 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_kernel_size_1";
-static const std::string kernel_name_bfyx_os_iyx_osv16_b8_f32 = "convolution_gpu_bfyx_os_iyx_osv16_b8_f32";
-static const std::string kernel_name_bfyx_os_iyx_osv16_b8_f32_stride1 = "convolution_gpu_bfyx_os_iyx_osv16_b8_f32_stride1";
+//static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32";
+//static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride1";
+//static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride2";
+//static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_kernel_size_1 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_kernel_size_1";
+//static const std::string kernel_name_bfyx_os_iyx_osv16_b8_f32 = "convolution_gpu_bfyx_os_iyx_osv16_b8_f32";
+//static const std::string kernel_name_bfyx_os_iyx_osv16_b8_f32_stride1 = "convolution_gpu_bfyx_os_iyx_osv16_b8_f32_stride1";
+static const std::string kernel_name_bfyx_os_iyx_osv16_f32 = "convolution_gpu_bfyx_os_iyx_osv16_f32";
 
 template <>
 struct kd_default_value_selector<neural::gpu::engine_info_internal::architectures>
@@ -67,6 +68,8 @@ struct convolution_gpu : is_an_implementation {
         size_t ofm_per_work_item; // how many output feature maps a single work item compute
         size_t batches_per_work_item; // how many batches will a single work item compute
         size_t block_width, block_height; // used for kernels processing blocks
+        size_t prefetch;
+        size_t input_block_len;
         std::string kernel_name;
     } _kernel_data;
 
@@ -93,6 +96,8 @@ struct convolution_gpu : is_an_implementation {
         kd.batches_per_work_item = 1;
         kd.block_width = 1;
         kd.block_height = 1;
+        kd.prefetch = 0;
+        kd.input_block_len = 0;
         return kd;
     }
 
@@ -184,8 +189,7 @@ struct convolution_gpu : is_an_implementation {
                 mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 8));
         }
 
-        if (_kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1 ||
-            _kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b8_f32_stride1)
+        if (input_mem.argument().format == memory::format::bfyx_f32)
         {
             mem_consts.add_constant(gpu::make_jit_constant("OUT_BLOCK_WIDTH", _kernel_data.block_width));
             mem_consts.add_constant(gpu::make_jit_constant("OUT_BLOCK_HEIGHT", _kernel_data.block_height));
@@ -423,90 +427,60 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
     return kd;
 }
 
-convolution_gpu::kernel_data default_bfyx_yxio_b1_f32(const convolution& arg)
+convolution_gpu::kernel_data default_bfyx_yxio_f32(const convolution& arg)
 {
     auto& filter_mem = arg.input_memory(1);
 
-    int block_width = 4;
-    int block_height = 3;
-
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
+    kd.needs_reorder = true; //by default, assume we do need reorder (padding)
+    kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_f32;
+
     if (arg.argument.stride.spatial[0] == 1 && arg.argument.stride.spatial[1] == 1)
     {
         if (filter_mem.argument().size.spatial[0] == 1 && filter_mem.argument().size.spatial[1] == 1)
         {
-            kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32_kernel_size_1;
-            block_width = 16;
-            block_height = 1;
-        }
-        else
+            kd.block_width = 16;
+            kd.block_height = 1;
+            kd.input_block_len = 1;
+            kd.prefetch = 4;
+            kd.needs_reorder = false; //the only one case when we don't need padding in bfyx kernel
+        }        
+        //if less than 16 values is required to compute one single row of output
+        // note: (computing n outputs in row requires n + kernel_width values - 1 values in input, for kernel stride == 1)
+        //then each WI shall compute one sinle row to maximise reuse within SIMD subgroup (this gives very nice performance results)
+        else if (output_mem.argument().size.spatial[0] + filter_mem.argument().size.spatial[0] - 1 < 16)
         {
-            kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1;
-            block_width = 6;
-            block_height = 4;
+            kd.block_width = output_mem.argument().size.spatial[0];
+            kd.block_height = 1;
+            kd.input_block_len = filter_mem.argument().size.spatial[1];
+            kd.prefetch = 4;
+        }
+        else //fallback to fixed output size
+        {
+            kd.block_width = 4; //note: original 6x4 has been changed to 4x3 since, on GT2, this gives better results
+            kd.block_height = 3;
+            kd.input_block_len = kd.block_height + (filter_mem.argument().size.spatial[1] - 1);
+            kd.prefetch = 4;
         }
     }
     else if (arg.argument.stride.spatial[0] == 2 && arg.argument.stride.spatial[1] == 2)
     {
-        kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2;
-        block_width = 5;
-        block_height = 4;
+        kd.block_width = 5;
+        kd.block_height = 4;
+        kd.input_block_len = 13;
+        kd.prefetch = 4;
     }
     else
     {
-        kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b1_f32;
+        kd.block_width = 4;
+        kd.block_height = 3;
+        kd.input_block_len = 30;
+        kd.prefetch = 5;
     }
-
+    
     auto output_size = arg.non_padded_output_layout().size;
     kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[0]) / block_width));
     kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[1]) / block_height));
-    kd.gws2 = filter_mem.argument().size.feature[0];
-    kd.lws0 = 1;
-    kd.lws1 = 1;
-    kd.lws2 = 16;
-    if (kd.gws2 % 16)
-    {
-        kd.gws2 += 16;
-        kd.gws2 -= kd.gws2 % 16;
-    }
-    kd.block_width = block_width;
-    kd.block_height = block_height;
-    return kd;
-}
-
-convolution_gpu::kernel_data default_bfyx_yxio_b8_f32(const convolution& arg)
-{
-    auto& output_mem = arg.output_memory();
-    auto& filter_mem = arg.input_memory(1);
-
-    int block_width = 4;
-    int block_height = 3;
-
-    convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
-    if (arg.argument.stride.spatial[0] == 1 && arg.argument.stride.spatial[1] == 1)
-    {
-        kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b8_f32_stride1;
-        
-        //if less than 16 values is required to compute one single row of output
-        // note: (computing n outputs in row requires n + kernel_width values - 1 values in input, for kernel stride == 1)
-        //then each WI shall compute one sinle row to maximise reuse within SIMD subgroup (this gives very nice performance results)
-        if (output_mem.argument().size.spatial[0] + filter_mem.argument().size.spatial[0] - 1 < 16)
-        {
-            block_width = output_mem.argument().size.spatial[0];
-            block_height = 1;
-        }
-        else //fallback to fixed output size
-        {
-            block_width = 4; //note: original 6x4 has been changed to 4x3 since, on GT2, this gives better results
-            block_height = 3;
-        }
-    }
-    else
-    {
-        kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_b8_f32;
-    }
-    kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument().size.spatial[0]) / block_width));
-    kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_mem.argument().size.spatial[1]) / block_height));
     kd.gws2 = filter_mem.argument().size.feature[0] * output_mem.argument().size.batch[0];
     kd.lws0 = 1;
     kd.lws1 = 1;
@@ -516,8 +490,6 @@ convolution_gpu::kernel_data default_bfyx_yxio_b8_f32(const convolution& arg)
         kd.gws2 += 16;
         kd.gws2 -= kd.gws2 % 16;
     }
-    kd.block_width = block_width;
-    kd.block_height = block_height;
     return kd;
 }
 
@@ -538,7 +510,7 @@ convolution_gpu::ks_type convolution_gpu::ks = {
     { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 128, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
 
     { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_yxio_b1_f32 },
-    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 8, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_yxio_b8_f32 }
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 8, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_yxio_f32 }
 };
 
 namespace{

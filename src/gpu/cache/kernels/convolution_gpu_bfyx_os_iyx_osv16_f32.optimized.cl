@@ -4,17 +4,10 @@
 #define ACTIVATION(output, input) output = input;
 #endif
 
-// each work-item iterates this many times in the width dimension
-#define OUT_BLOCK_WIDTH 16  
-// each work-itme iterates this many times in the height dimension
-#define OUT_BLOCK_HEIGHT 1
-
 #define SIMD_SIZE 16
 
-#define PREFETCH 4
-
 __attribute__((intel_reqd_sub_group_size(SIMD_SIZE))) // Why driver gives us warning here?
-KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32_kernel_size_1)(
+KERNEL(convolution_gpu_bfyx_os_iyx_osv16_f32)(
     const __global float* input,
     __global float* output,
     const __global float* weights,
@@ -24,29 +17,51 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32_kernel_size_1)(
     uint oc  = get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column 
     uint or  = get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
     uint fm  = get_global_id(2);                    // fm = Feature Map = od = Output Depth 
-    uint fmg = get_group_id(2);
     uint lid = get_local_id(2); 
+    
+    uint batch_idx = fm / FILTER_OUTPUT_FEATURE_NUM;
+    uint feature_idx = fm % FILTER_OUTPUT_FEATURE_NUM;
+    uint fmg = feature_idx / SIMD_SIZE;
 
-    float in[13]; // need 13x15 block of input data for 4x5 outputs with 7x7 kernel stride 2.
-    float out[OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT]; // 4x9 block of outputs that is SIMD_SIZE deep (along the Feature Map dimension).
+    float in[INPUT_BLOCK_LEN];
+    float out[OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT];
     float w[PREFETCH];
     uint in_addr;
     uint weight_addr = fmg * FILTER_INPUT_FEATURE_NUM * FILTER_SIZE_X * FILTER_SIZE_Y * SIMD_SIZE + lid;
-
-    for(int i=0;i<(OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT);i++) {  // todo: init these with the neural net biases. 	
-        out[i]=0.0f;
+    
+    for(int i = 0; i < (OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT); i++) { 
+        out[i] = 0.0f;
     }
 
     uint in_split_offset = split_idx * (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) * FILTER_INPUT_FEATURE_NUM;
-    for(int kd = 0; kd < FILTER_INPUT_FEATURE_NUM; kd++)
+    in_addr = batch_idx * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) * (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y) * INPUT_FEATURE_NUM;
+    in_addr += in_split_offset + (INPUT_PADDING_SIZE_Y + INPUT_OFFSET_SIZE_Y + or * STRIDE_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) + (INPUT_PADDING_SIZE_X + INPUT_OFFSET_SIZE_X + oc * STRIDE_SIZE_X) + lid;
+
+    for(int kd = 0; kd < FILTER_INPUT_FEATURE_NUM; kd++)  // _ID = 3, RGB
     {
+        uint tmp_in_addr = in_addr;
 
-        in_addr = in_split_offset + kd * (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) + (INPUT_PADDING_SIZE_Y + INPUT_OFFSET_SIZE_Y + or * STRIDE_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) + (INPUT_PADDING_SIZE_X + INPUT_OFFSET_SIZE_X + oc * STRIDE_SIZE_X) + lid;
-
-        for(uint reg = 0; reg < 1; reg++) {
-            in[reg] = input[in_addr];// read 16 elements
-            in_addr += (INPUT_SIZE_X +  2 * INPUT_PADDING_SIZE_X);  // move to next row down 
+#if STRIDE_SIZE_X > 2   //for stride 4, INPUT_BLOCK_LEN should have value 30, we are reading 3 inputs per loop
+        // read 24x19 block into registers.
+        // This is ugly, we really need to fix the programming model.
+        for(uint reg = 0; reg < INPUT_BLOCK_LEN; reg+=3) {
+            in[reg] = input[tmp_in_addr];// read 16 elements
+            // might be better to adjust the addrs, then do single load.
+            if(lid < 8) in[reg + 1] = input[tmp_in_addr + 16];// read 8 elements in lower portion, for total of 24 from input row.
+            tmp_in_addr += (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X);  // move to next row down 
+            if(lid >= 8) in[reg + 1] = input[tmp_in_addr - 8];  // read 8 elements into upper portion
+            in[reg + 2] = input[tmp_in_addr + 8]; // read 16 elements
+            tmp_in_addr += (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X);  // move to next row down 
         }
+#else
+        for(uint reg = 0; reg < INPUT_BLOCK_LEN; ++reg) {
+            in[reg] = input[tmp_in_addr];// read 16 elements
+            tmp_in_addr += (INPUT_SIZE_X +  2 * INPUT_PADDING_SIZE_X);  // move to next row down 
+        }
+#endif
+
+        //move to next filter
+        in_addr += (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X);
 
         for(int pf=0; pf<PREFETCH; pf++) {
             w[pf] = weights[weight_addr]; weight_addr += SIMD_SIZE;
@@ -62,7 +77,14 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32_kernel_size_1)(
                 //w = weights[weight_addr];	
                 for(int br=0; br<OUT_BLOCK_HEIGHT; br++) {
                     for(int bc=0; bc<OUT_BLOCK_WIDTH; bc++) {
+
+#if STRIDE_SIZE_X > 2   //for stride 4 there's slighty different shuffling method
+                        //if we fix the programming model, then we could use a nice simple 2d array: val = in[br * STRIDE_SIZE_Y + kr][bc * STRIDE_SIZE_X + kc]; 
+                        float val = intel_sub_group_shuffle( in[(((br*STRIDE_SIZE_Y+kr)*24)+(bc * STRIDE_SIZE_X + kc)) / SIMD_SIZE], (((br*STRIDE_SIZE_Y+kr)*24)+(bc * STRIDE_SIZE_X + kc)) & (SIMD_SIZE - 1));
+#else
                         float val = intel_sub_group_shuffle( in[br * STRIDE_SIZE_X + kr], bc * STRIDE_SIZE_X + kc);	
+#endif
+
                         out[br * OUT_BLOCK_WIDTH + bc] = mad(w[wi % PREFETCH], val, out[br * OUT_BLOCK_WIDTH + bc]);
                     }
                 }
@@ -75,14 +97,14 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32_kernel_size_1)(
         weight_addr -= PREFETCH * SIMD_SIZE;
     }
 
-    // write the 4x3 (and 16 feature maps deep) output tile to memory
     uint out_split_offset = split_idx * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) * FILTER_OUTPUT_FEATURE_NUM;
-    uint out_addr = out_split_offset + fm * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y); // out_addr indexes into start of 16 feature maps.
+    uint out_addr = batch_idx * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * OUTPUT_FEATURE_NUM;
+    out_addr += out_split_offset + feature_idx * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y); // out_addr indexes into start of 16 feature maps.
     out_addr += (OUTPUT_PADDING_SIZE_Y + or) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) + OUTPUT_PADDING_SIZE_X + oc;  // offset for the 4x3 block that this workitem is working on;
 
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
-            out[r * OUT_BLOCK_WIDTH + c] += bias[fm];
+            out[r * OUT_BLOCK_WIDTH + c] += bias[feature_idx];
         }
     }
 
@@ -92,10 +114,6 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32_kernel_size_1)(
         }
     }
 
-    // if output feature does not divide by 16 then we need to check if we didn''t go out of bounds for output feature num
-    #if FILTER_OUTPUT_FEATURE_NUM  % 16 
-    if(fm < FILTER_OUTPUT_FEATURE_NUM)
-    #endif
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         if(!(or + r >= OUTPUT_SIZE_Y))
         {
@@ -111,4 +129,5 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_b1_f32_kernel_size_1)(
 #undef PREFETCH
 #undef OUT_BLOCK_WIDTH
 #undef OUT_BLOCK_HEIGHT
+
 #undef ACTIVATION
