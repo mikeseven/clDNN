@@ -31,6 +31,7 @@
 #include "pooling_arg.h"
 #include "softmax_arg.h"
 #include "batch_norm_arg.h"
+#include "scale_arg.h"
 
 namespace neural
 {
@@ -51,6 +52,7 @@ namespace neural
         using batch_norm = cldnn::batch_norm_arg;
     }
     using pooling = cldnn::pooling_arg;
+    using scale = cldnn::scale_arg;
 
     template<typename T> using vector = cldnn::tensor;
 }
