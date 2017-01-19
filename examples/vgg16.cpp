@@ -27,15 +27,17 @@
 using namespace cldnn;
 
 // Building vgg16 network with loading weights & biases from file
-cldnn::topology build_vgg16(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size)
+cldnn::topology build_vgg16(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx)
 {
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
     input_layout.size = { format::byxf,{ batch_size, 224, 224, 3 } };
     auto input = cldnn::input_layout("input", input_layout);
 
+    use_bfyx = true;
+
     // TODO: remove after enabling bfyx for all
     auto mem_format = format::yxfb;
-    if (batch_size == 1 && input_layout.data_type == data_types::f32)
+    if (use_bfyx)
     {
         mem_format = format::bfyx;
     }

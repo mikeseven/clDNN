@@ -33,6 +33,8 @@ topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, cl
     input_layout.size = { format::byxf, { batch_size, 227, 227, 3 } };
     auto input = cldnn::input_layout("input", input_layout);
 
+    use_bfyx = true;
+
     // TODO: remove after enabling bfyx for all
     auto mem_format = format::yxfb;
     if (use_bfyx)
