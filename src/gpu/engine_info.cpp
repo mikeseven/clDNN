@@ -126,14 +126,14 @@ struct device_info
 {
     engine_info_internal::models model;
     engine_info_internal::architectures arch;
-    cldnn::engine_info::configurations config;
+    engine_info_internal::configurations config;
     std::string code;
 };
 
 
 const device_info& get_device_info(int device_id)
 {
-#define GEN_DEVICE(code, dev_id, model, arch, conf) { dev_id, {engine_info_internal::model, engine_info_internal::arch, cldnn::engine_info::conf, #code} },
+#define GEN_DEVICE(code, dev_id, model, arch, conf) { dev_id, {engine_info_internal::model, engine_info_internal::arch, engine_info_internal::conf, #code} },
     static const std::unordered_map<int, device_info> device_map{
 #include "devices.inc"
     };

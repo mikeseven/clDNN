@@ -15,8 +15,27 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifndef NORMALIZATION_H
+#define NORMALIZATION_H
 
-namespace cldnn
-{
+#include "api/cldnn.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+CLDNN_BEGIN_PRIMITIVE_DESC(normalization)
+uint32_t size;
+float k;
+float alpha;
+float beta;
+CLDNN_END_PRIMITIVE_DESC(normalization)
+
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(normalization);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* NORMALIZATION_H */
+

@@ -15,8 +15,33 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifndef ELTWISE_H
+#define ELTWISE_H
 
-namespace cldnn
+#include "api/cldnn.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef enum /*:int32_t*/
 {
+    cldnn_eltwise_sum,
+    cldnn_eltwise_sub,
+    cldnn_eltwise_max,
+    cldnn_eltwise_prod
+} cldnn_eltwise_mode;
 
+CLDNN_BEGIN_PRIMITIVE_DESC(eltwise)
+cldnn_primitive_id input2;
+int32_t mode; /*cldnn_eltwise_mode*/
+CLDNN_END_PRIMITIVE_DESC(eltwise)
+
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(eltwise);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* ELTWISE_H */
+

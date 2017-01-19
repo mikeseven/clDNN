@@ -16,77 +16,72 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include <cstdint>
 #include "cldnn_defs.h"
 #include "compounds.h"
 #include "memory.hpp"
 #include "topology.hpp"
 #include "event.hpp"
+
+#include <cstdint>
 #include <algorithm>
 #include <map>
 
 namespace cldnn
 {
-
-enum class build_option_type
+enum class build_option_type : int32_t
 {
-    fusing, profiling, optimize_data, debug, outputs
+    fusing        = cldnn_build_option_fusing,
+    profiling     = cldnn_build_option_profiling,
+    optimize_data = cldnn_build_option_optimize_data,
+    debug         = cldnn_build_option_debug,
+    outputs       = cldnn_build_option_outputs
 };
-
-struct build_option_ref
-{
-    build_option_type type;
-    const void* data;
-};
-
-inline bool test_option_bool(build_option_type type)
-{
-    switch (type)
-    {
-    case build_option_type::fusing:
-    case build_option_type::profiling:
-    case build_option_type::optimize_data:
-    case build_option_type::debug:
-        return true;
-    default:
-        return false;
-    }
-}
 
 struct build_option
 {
-    static const build_option_type fusing = build_option_type::fusing;
-    static const build_option_type profiling = build_option_type::profiling;
+    static const build_option_type fusing        = build_option_type::fusing;
+    static const build_option_type profiling     = build_option_type::profiling;
     static const build_option_type optimize_data = build_option_type::optimize_data;
-    static const build_option_type debug = build_option_type::debug;
+    static const build_option_type debug         = build_option_type::debug;
     static const build_option* outputs(const std::vector<primitive_id>& outs);
-//    static const build_option* outputs(array_ref<primitive_id_ref> outs);
     virtual ~build_option() = default;
 
 protected:
-    build_option(const build_option_ref& value) : _value(value) {}
+    build_option(const cldnn_build_option& value) : _value(value) {}
 private:
     build_option(const build_option& other) = delete;
     build_option& operator=(const build_option& other) = delete;
-    const build_option_ref _value;
+    const cldnn_build_option _value;
     friend class build_options;
+
+    static bool is_option_bool(build_option_type type)
+    {
+        switch (type)
+        {
+        case fusing:
+        case profiling:
+        case optimize_data:
+        case debug:
+            return true;
+        default:
+            return false;
+        }
+    }
 };
 
 struct build_option_outputs : build_option
 {
-    typedef const array_ref<primitive_id_ref>* data_pointer_type;
+    typedef const cldnn_primitive_id_arr* data_pointer_type;
     const std::vector<primitive_id> outputs;
 
     explicit build_option_outputs(const std::vector<primitive_id>& outs)
-        : build_option({ build_option_type::outputs, &_outputs_ref })
+        : build_option({ cldnn_build_option_outputs, &_outputs_ref })
         , outputs(outs)
-        , _outputs_ref_store(outputs.size())
-        , _outputs_ref(_outputs_ref_store)
-    {
-        std::copy(std::begin(outputs), std::end(outputs), std::begin(_outputs_ref_store));
-    }
+        , _ref_store(to_refs(outputs))
+        , _outputs_ref({ _ref_store.data(), _ref_store.size()})
+    {}
 
-    explicit build_option_outputs(const build_option_ref& value)
+    explicit build_option_outputs(const cldnn_build_option& value)
         : build_option_outputs(make_outputs_from_ref(value))
     {}
 
@@ -94,16 +89,30 @@ struct build_option_outputs : build_option
     build_option_outputs& operator=(const build_option_outputs& other) = delete;
 
 private:
-    std::vector<primitive_id_ref> _outputs_ref_store;
-    array_ref<primitive_id_ref> _outputs_ref;
+    const std::vector<cldnn_primitive_id> _ref_store;
+    const cldnn_primitive_id_arr _outputs_ref;
 
-    static std::vector<primitive_id> make_outputs_from_ref(const build_option_ref& value)
+    static std::vector<cldnn_primitive_id> to_refs(const std::vector<primitive_id>& stor)
     {
-        if (value.type != build_option_type::outputs) throw std::invalid_argument("option type does not match: should be 'output'");
+        std::vector<cldnn_primitive_id> result(stor.size());
+        for (size_t i = 0; i < stor.size(); i++)
+        {
+            result[i] = stor[i].c_str();
+        }
+        return std::move(result);
+    }
+
+    static std::vector<primitive_id> make_outputs_from_ref(const cldnn_build_option& value)
+    {
+        if (value.type != cldnn_build_option_outputs) throw std::invalid_argument("option type does not match: should be 'output'");
         if (value.data == nullptr) throw std::invalid_argument("output data is empty");
         auto refs = reinterpret_cast<data_pointer_type>(value.data);
-        std::vector<primitive_id> result(refs->size());
-        std::copy(std::begin(*refs), std::end(*refs), std::begin(result));
+        std::vector<primitive_id> result;
+        result.reserve(refs->size);
+        for(decltype(refs->size) i = 0; i < refs->size; i++)
+        {
+            result.push_back(refs->data[i]);
+        }
         return result;
     }
 };
@@ -122,13 +131,6 @@ inline const build_option* build_option::outputs(const std::vector<primitive_id>
     return new build_option_outputs(outs);
 }
 
-//inline const build_option* build_option::outputs(array_ref<primitive_id_ref> outs)
-//{
-//    auto data = static_cast<build_option_outputs::data_pointer_type>(&outs);
-//    return new build_option_outputs({ build_option_type::outputs, data });
-//}
-
-
 class build_options
 {
 public:
@@ -141,8 +143,8 @@ public:
 
     void set_option(build_option_type type)
     {
-        assert(test_option_bool(type));
-        add_or_replace_option(new build_option({ type, nullptr }));
+        assert(build_option::is_option_bool(type));
+        add_or_replace_option(new build_option({ static_cast<cldnn_build_option_type>(type), nullptr }));
     }
 
     template<typename ...Args>
@@ -155,8 +157,8 @@ public:
     template<typename ...Args>
     void set_option(build_option_type type, Args... args)
     {
-        assert(test_option_bool(type));
-        add_or_replace_option(new build_option({ type, nullptr }));
+        assert(build_option::is_option_bool(type));
+        add_or_replace_option(new build_option({ static_cast<cldnn_build_option_type>(type), nullptr }));
         set_option(args...);
     }
 
@@ -166,7 +168,7 @@ public:
         set_option(args...);
     }
 
-    build_options(array_ref<build_option_ref> options)
+    build_options(array_ref<cldnn_build_option> options)
     {
         for(auto& o: options)
         {
@@ -187,9 +189,9 @@ public:
         return *this;
     }
 
-    std::vector<build_option_ref> get_refs() const
+    std::vector<cldnn_build_option> get_refs() const
     {
-        std::vector<build_option_ref> result;
+        std::vector<cldnn_build_option> result;
         for (auto& o : _options)
         {
             result.push_back(o->_value);
@@ -201,7 +203,7 @@ public:
     {
         for(auto& option: _options)
         {
-            if (option->_value.type == type)
+            if (option->_value.type == static_cast<cldnn_build_option_type>(type))
                 return option.get();
         }
         return nullptr;
@@ -229,16 +231,16 @@ private:
         _options.emplace_back(opt);
     }
 
-    static const build_option* make_option(const build_option_ref& option)
+    static const build_option* make_option(const cldnn_build_option& option)
     {
         switch (option.type)
         {
-        case build_option_type::fusing:
-        case build_option_type::profiling:
-        case build_option_type::optimize_data:
-        case build_option_type::debug:
+        case cldnn_build_option_fusing:
+        case cldnn_build_option_profiling:
+        case cldnn_build_option_optimize_data:
+        case cldnn_build_option_debug:
             return new build_option(option);
-        case build_option_type::outputs:
+        case cldnn_build_option_outputs:
             return new build_option_outputs(option);
         default: throw std::out_of_range("unsupported build option type");
         }
@@ -260,39 +262,40 @@ private:
     event _event;
     memory _result;
     network_output(event evt, memory mem): _event(evt), _result(mem){}
+    network_output(cldnn_event evt, cldnn_memory mem): _event(evt), _result(mem){}
     friend struct network;
 };
 
-typedef struct network_impl* cldnn_network_t;
 struct network
 {
-    struct network_output_ref
-    {
-        cldnn::primitive_id_ref id_ref;
-        cldnn::event_impl* event_ref;
-        cldnn::memory_impl* memory_ref;
-    };
-    API_CLASS(network_output_ref)
-
     network(const engine& engine, const topology& topology, const build_options& options = build_options())
-        :_impl(check_status<cldnn_network_t>("network build failed", [&](status_t* status) { return build_impl(engine.get(), topology.get(), options.get_refs(), status); }))
+        :_impl(check_status<cldnn_network>("network build failed", [&](status_t* status)
+                {
+                    auto options_refs = options.get_refs();
+                    return cldnn_build_network(engine.get(), topology.get(), options_refs.data(), options_refs.size(), status);
+                }))
     {}
+
+    network(cldnn_network impl) :_impl(impl)
+    {
+        if (_impl == nullptr) throw std::invalid_argument("implementation pointer should not be null");
+    }
 
     network(const network& other) :_impl(other._impl)
     {
-        retain_network(_impl);
+        retain();
     }
     network& operator=(const network& other)
     {
         if (_impl == other._impl) return *this;
-        release_network(_impl);
+        release();
         _impl = other._impl;
-        retain_network(_impl);
+        retain();
         return *this;
     }
     ~network()
     {
-        release_network(_impl);
+        release();
     }
 
     friend bool operator==(const network& lhs, const network& rhs) { return lhs._impl == rhs._impl; }
@@ -300,49 +303,87 @@ struct network
 
     engine get_engine() const
     {
-        return check_status<cldnn_engine_t>("get network engine failed", [&](status_t* status) { return get_engine_impl(_impl, status); });
+        return check_status<cldnn_engine>("get network engine failed", [&](status_t* status) { return cldnn_get_network_engine(_impl, status); });
     }
 
     topology get_topology() const
     {
-        return check_status<cldnn_topology_t>("get network topology failed", [&](status_t* status) { return get_topology_impl(_impl, status); });
+        return check_status<cldnn_topology>("get network topology failed", [&](status_t* status) { return cldnn_get_network_topology(_impl, status); });
     }
 
-    void set_input_data(primitive_id id, memory mem) const
+    void set_input_data(const primitive_id& id, const memory& mem) const
     {
-        status_t status = set_input_data_impl(_impl, id, mem.get());
-        if (status != CLDNN_SUCCESS)
-            CLDNN_THROW("set data input failed", status);
+        check_status<void>("set network input failed", [&](status_t* status) {cldnn_set_network_input(_impl, id.c_str(), mem.get(), status); });
     }
 
-    std::map<primitive_id, network_output> execute(const std::vector<event>& dependencies = {}) const
+    std::vector<primitive_id> get_output_ids() const
     {
-        array_ref<network_output_ref> result_ref = check_status<array_ref<network_output_ref>>("network execute failed", [&](status_t* status) { return execute_impl(_impl, dependencies, status); });
-        std::map<primitive_id, network_output> result;
-        for(auto& ref : result_ref)
+        size_t size_ret = 0;
+        status_t err_invalid_arg = CLDNN_SUCCESS;
+        cldnn_get_network_output_names(_impl, nullptr, 0, &size_ret, &err_invalid_arg);
+        assert(err_invalid_arg == CLDNN_INVALID_ARG);
+        assert(size_ret > 0);
+        std::vector<char> names_buf(size_ret);
+        
+        check_status<void>("get network output ids failed", [&](status_t* status)
         {
-            result.emplace(ref.id_ref, network_output(event(ref.event_ref), memory(ref.memory_ref)));
+            cldnn_get_network_output_names(_impl, names_buf.data(), names_buf.size(), &size_ret, status);
+        });
+        assert(names_buf.size() == size_ret);
+
+        std::vector<primitive_id> result;
+        for(auto buf_ptr = names_buf.data(); *buf_ptr != 0; buf_ptr += result.back().size() + 1)
+        {
+            result.emplace_back(buf_ptr);
         }
         return result;
     }
 
-    cldnn_network_t get() const { return _impl; }
-
-private:
-    friend struct engine;
-    network(cldnn_network_t impl) :_impl(impl)
+    network_output get_output(const primitive_id& output_id) const
     {
-        if (_impl == nullptr) throw std::invalid_argument("implementation pointer should not be null");
+        cldnn_network_output output =
+        check_status<cldnn_network_output>("get network output failed", [&](status_t* status)
+        {
+            return cldnn_get_network_output(_impl, output_id.c_str(), status);
+        });
+        return network_output( output.event, output.memory );
     }
 
-    cldnn_network_t _impl;
-    DLL_SYM static cldnn_network_t build_impl(cldnn_engine_t engine, cldnn_topology_t topology, array_ref<build_option_ref> options, status_t* status);
-    DLL_SYM static void retain_network(cldnn_network_t network);
-    DLL_SYM static void release_network(cldnn_network_t network);
-    DLL_SYM static status_t set_input_data_impl(cldnn_network_t network, primitive_id_ref id, cldnn_memory_t mem);
-    DLL_SYM static array_ref<network_output_ref> execute_impl(cldnn_network_t network, array_ref<event> dependencies, status_t* status);
-    DLL_SYM static cldnn_engine_t get_engine_impl(cldnn_network_t network, status_t* status);
-    DLL_SYM static cldnn_topology_t get_topology_impl(cldnn_network_t network, status_t* status);
+    std::map<primitive_id, network_output> execute(const std::vector<event>& dependencies = {}) const
+    {
+        std::vector<cldnn_event> dep_refs(dependencies.size());
+        for(decltype(dependencies.size()) i = 0; i < dependencies.size(); i++)
+        {
+            dep_refs[i] = dependencies[i].get();
+        }
+
+        check_status<void>("network execute failed", [&](status_t* status)
+        {
+            return cldnn_execute_network(_impl, dep_refs.data(), dep_refs.size(), status);
+        });
+
+        auto output_ids = get_output_ids();
+        std::map<primitive_id, network_output> result;
+        for(auto& id : output_ids)
+        {
+            result.emplace(id, get_output(id));
+        }
+        return result;
+    }
+
+    cldnn_network get() const { return _impl; }
+
+private:
+    cldnn_network _impl;
+
+    void retain()
+    {
+        check_status<void>("retain topology failed", [=](status_t* status) { cldnn_retain_network(_impl, status); });
+    }
+    void release()
+    {
+        check_status<void>("retain topology failed", [=](status_t* status) { cldnn_release_network(_impl, status); });
+    }
 };
-API_CLASS(network)
+CLDNN_API_CLASS(network)
 }

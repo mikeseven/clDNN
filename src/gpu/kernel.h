@@ -32,7 +32,7 @@ protected:
     memory_arg(const cldnn::memory& mem) : _mem(mem){}
 
 public:
-    const cl::Buffer& get_buffer() const { return static_cast<const gpu_buffer*>(_mem.get())->get_buffer(); }
+    const cl::Buffer& get_buffer() const { return static_cast<const gpu_buffer*>(api_cast(_mem.get()))->get_buffer(); }
 };
 
 class input_mem : public memory_arg {

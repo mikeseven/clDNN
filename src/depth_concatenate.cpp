@@ -30,7 +30,7 @@
 
 namespace cldnn
 {
-primitive_type_id depth_concatenate::type_id()
+primitive_type_id depth_concatenate_type_id()
 {
     static primitive_type_base<depth_concatenate, depth_concatenate_arg> instance;
     return &instance;
@@ -128,7 +128,7 @@ struct depth_concatenate_gpu : is_an_implementation
         auto context = outer.get_network().get_engine()->get_context();
         auto engine_info = context->get_engine_info();
 
-        auto inputs_count = _outer.argument.input.size();
+        auto inputs_count = _outer.argument.input().size();
 
         _kernels_with_data.reserve(inputs_count);
         for (size_t input_idx = 0; input_idx < inputs_count; ++input_idx)
@@ -198,7 +198,7 @@ struct depth_concatenate_gpu : is_an_implementation
     cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
     {
 
-        size_t inputs_count = _outer.argument.input.size();
+        size_t inputs_count = _outer.argument.input().size();
 
         const auto& output_mem = _outer.output_memory();  // output
 

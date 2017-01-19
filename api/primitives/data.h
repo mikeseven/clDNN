@@ -15,8 +15,24 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifndef DATA_H
+#define DATA_H
 
-namespace cldnn
-{
+#include "api/cldnn.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+CLDNN_BEGIN_PRIMITIVE_DESC(data)
+cldnn_memory mem;
+CLDNN_END_PRIMITIVE_DESC(data)
+
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(data);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* DATA_H */
+

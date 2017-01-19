@@ -15,8 +15,29 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifndef CONVOLUTION_H
+#define CONVOLUTION_H
 
-namespace cldnn
-{
+#include "api/cldnn.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+CLDNN_BEGIN_PRIMITIVE_DESC(convolution)
+cldnn_tensor stride;
+uint32_t with_activation;
+float activation_negative_slope;
+int32_t split;
+cldnn_primitive_id_arr weights;
+cldnn_primitive_id_arr bias;
+CLDNN_END_PRIMITIVE_DESC(convolution)
+
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(convolution);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* CONVOLUTION_H */
+

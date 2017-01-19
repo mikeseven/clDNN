@@ -21,7 +21,7 @@
 
 namespace cldnn
 {
-primitive_type_id mean_substract::type_id()
+primitive_type_id mean_substract_type_id()
 {
     static primitive_type_base<mean_substract, mean_substract_arg> instance;
     return &instance;

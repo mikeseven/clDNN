@@ -19,13 +19,14 @@
 #include "primitive_type.h"
 #include "network_impl.h"
 #include "engine_impl.h"
+#include <memory>
 
 namespace cldnn
 {
     template<class PType, class PType_Arg>
-    struct primitive_type_base : primitive_type
+    struct primitive_type_base : ::cldnn_primitive_type
     {
-        std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const override
+        std::shared_ptr<const primitive> from_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto) const override
         {
             if (dto->type != this) throw std::invalid_argument("dto: primitive type mismatch");
             return std::make_shared<PType>(as_dto<PType>(dto));

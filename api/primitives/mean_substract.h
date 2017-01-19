@@ -15,8 +15,24 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifndef MEAN_SUBSTRACT_H
+#define MEAN_SUBSTRACT_H
 
-namespace cldnn
-{
+#include "api/cldnn.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+CLDNN_BEGIN_PRIMITIVE_DESC(mean_substract)
+cldnn_primitive_id mean;
+CLDNN_END_PRIMITIVE_DESC(mean_substract)
+
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(mean_substract);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* MEAN_SUBSTRACT_H */
+

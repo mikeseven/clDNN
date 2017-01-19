@@ -22,7 +22,7 @@
 
 namespace cldnn
 {
-primitive_type_id pooling::type_id()
+primitive_type_id pooling_type_id()
 {
     static primitive_type_base<pooling, pooling_arg> instance;
     return &instance;

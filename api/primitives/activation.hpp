@@ -16,18 +16,14 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "activation.h"
 #include "../primitive.hpp"
 
 namespace cldnn
 {
-BEGIN_DTO(activation)
-    float negative_slope;
-END_DTO(activation)
-
-struct activation : public primitive_base<activation, DTO(activation)>
+struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activation)>
 {
-    DLL_SYM static primitive_type_id type_id();
-    typedef DTO(activation) dto;
+    CLDNN_DECLATE_PRIMITIVE(activation)
 
     activation(
         const primitive_id& id,
@@ -45,6 +41,6 @@ struct activation : public primitive_base<activation, DTO(activation)>
         , negative_slope(_dto.negative_slope)
     {}
 
-    const float& negative_slope;
+    const float negative_slope;
 };
 }

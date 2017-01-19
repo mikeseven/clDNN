@@ -15,8 +15,24 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifndef ACTIVATION_H
+#define ACTIVATION_H
 
-namespace cldnn
-{
+#include "api/cldnn.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+CLDNN_BEGIN_PRIMITIVE_DESC(activation)
+float negative_slope;
+CLDNN_END_PRIMITIVE_DESC(activation)
+
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(activation);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* ACTIVATION_H */
+

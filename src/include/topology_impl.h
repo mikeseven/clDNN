@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/topology.hpp"
+#include "api_impl.h"
 #include "refcounted_obj.h"
 #include "api/primitive.hpp"
 #include <map>
@@ -57,3 +57,5 @@ private:
     topology_map _primitives;
 };
 }
+
+API_CAST(::cldnn_topology, cldnn::topology_impl)

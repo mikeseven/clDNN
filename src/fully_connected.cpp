@@ -19,7 +19,7 @@
 #include "primitive_type_base.h"
 namespace cldnn
 {
-primitive_type_id fully_connected::type_id()
+primitive_type_id fully_connected_type_id()
 {
     static primitive_type_base<fully_connected, fully_connected_arg> instance;
     return &instance;

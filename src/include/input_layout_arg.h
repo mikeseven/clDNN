@@ -23,6 +23,7 @@
 
 namespace cldnn
 {
+struct memory_impl;
 class input_layout_arg : public primitive_arg_base<input_layout>
 {
 public:

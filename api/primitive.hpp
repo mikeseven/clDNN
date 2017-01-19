@@ -16,23 +16,22 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include <cstdint>
 #include "cldnn_defs.h"
 #include "compounds.h"
 #include "tensor.hpp"
 #include <string>
-#include <memory>
-#include <iterator>
-#include <cmath>
 
 namespace cldnn
 {
 struct padding
 {
-    enum types : uint32_t
+    enum types : int32_t
     {
-        zero, one, two
+        zero = cldnn_padding_zero,
+        one = cldnn_padding_one,
+        two = cldnn_padding_two,
     };
+
     types type() const { return _type; };
     tensor size() const { return _size; };
     padding(format format, const std::vector<tensor::value_type>& sizes, types type = zero )
@@ -44,6 +43,15 @@ struct padding
     padding(const padding& other)
         : _size(other._size), _type(other._type)
     {}
+
+    padding(const cldnn_padding& other)
+        : _size(other.size), _type(static_cast<types>(other.type))
+    {}
+
+    operator cldnn_padding() const
+    {
+        return{ static_cast<cldnn_tensor>(_size), static_cast<cldnn_padding_type>(_type) };
+    }
 
     padding& operator=(const padding& other)
     {
@@ -69,89 +77,82 @@ private:
     }
 };
 
-API_CLASS(padding)
+CLDNN_API_CLASS(padding)
 
-typedef const struct primitive_type* primitive_type_id;
-typedef std::string primitive_id;
-typedef string_ref primitive_id_ref;
+// TODO check this:
+using primitive_type_id = cldnn_primitive_type_id;
+using primitive_id_ref = cldnn_primitive_id;
+using primitive_id = std::string;
 
-/**
- * \brief Template class to store data to be referenced by array_ref<RefElemTy>
- * \tparam RefElemTy Reference type. e.g. string_ref
- * \tparam StorElemTy Storage type. e.g. std::string
- * \tparam Dummy RefElemTy and StorElemTy should be implicitly convertible
- */
-template<typename RefElemTy, typename StorElemTy,
-    typename Dummy=std::enable_if<std::is_convertible<RefElemTy, StorElemTy>::value && std::is_convertible<StorElemTy, RefElemTy>::value> >
-class array_ref_store
+namespace detail
+{
+class primitive_id_arr
 {
 public:
-    typedef StorElemTy value_type;
-    array_ref_store(const std::vector<StorElemTy>& arr)
-        :_data_store(arr)
-    {
-        update_ref();
-    }
+    typedef primitive_id value_type;
+    primitive_id_arr(const std::vector<primitive_id>& arr)
+        :_data_store(arr), _ref_store(create_ref(_data_store))
+    {}
 
-    array_ref_store(array_ref<RefElemTy> arr)
-    {
-        //Fill _data_store by copies of strings referenced in arr
-        std::copy(arr.begin(), arr.end(), std::back_inserter(_data_store));
-        update_ref();
-    }
+    primitive_id_arr(const cldnn_primitive_id_arr& arr)
+        : primitive_id_arr(create_store(arr))
+    {}
 
-    void push_back(const StorElemTy& Val)
-    {
-        _data_store.push_back(Val);
-        update_ref();
-    }
+    primitive_id_arr(const primitive_id_arr& other)
+        : _data_store(other._data_store), _ref_store(create_ref(_data_store))
+    {}
 
     size_t size() const
     {
-        assert(_data_store.size() == _ref_store.size());
         return _data_store.size();
     }
 
     // explicit conversion
-    const std::vector<RefElemTy>& ref() const { return _ref_store; }
-    const std::vector<StorElemTy>& store() const { return _data_store; }
+    cldnn_primitive_id_arr ref() const
+    {
+        return{ _ref_store.data(), _ref_store.size() };
+    }
+    const std::vector<primitive_id>& store() const { return _data_store; }
 
     // implicit conversion
-    operator array_ref<RefElemTy>() const { return ref(); }
-    operator const std::vector<StorElemTy>&() const { return _data_store; }
+    operator const std::vector<primitive_id>&() const { return _data_store; }
 private:
-    std::vector<StorElemTy> _data_store;
-    std::vector<RefElemTy> _ref_store;
+    const std::vector<primitive_id> _data_store;
+    const std::vector<cldnn_primitive_id> _ref_store;
 
-    void update_ref()
+    static std::vector<cldnn_primitive_id> create_ref(const std::vector<primitive_id>& store)
     {
         //fill _ref_store by references to strings in _data_store
-        std::copy(_data_store.begin(), _data_store.end(), std::back_inserter(_ref_store));
+        std::vector<cldnn_primitive_id> result(store.size());
+        for (size_t i = 0; i < store.size(); i++)
+        {
+            result[i] = store[i].c_str();
+        }
+        return std::move(result);
+    }
+
+    static std::vector<primitive_id> create_store(const cldnn_primitive_id_arr& arr)
+    {
+        //Fill _data_store by copies of strings referenced in arr
+        std::vector<primitive_id> result;
+        result.reserve(arr.size);
+        for (size_t i = 0; i < arr.size; i++)
+        {
+            result.push_back(arr.data[i]);
+        }
+        return std::move(result);
     }
 };
+} // namespace detail
 
-#define BEGIN_DTO(PType) struct PType##_dto {\
-    primitive_type_id type;\
-    primitive_id_ref id;\
-    array_ref<primitive_id_ref> input;\
-    padding input_padding;\
-    padding output_padding;\
-
-#define END_DTO(PType) };\
-static_assert(std::is_standard_layout<PType##_dto>::value, "class has to be 'standart layout'");
-
-#define DTO(PType) PType##_dto
-
-BEGIN_DTO(primitive)
-END_DTO(primitive)
 template<class PType>
-typename PType::dto* as_dto(primitive_dto* dto)
+typename PType::dto* as_dto(CLDNN_PRIMITIVE_DESC(primitive)* dto)
 {
     if (dto->type != PType::type_id()) throw std::invalid_argument("type");
     return reinterpret_cast<typename PType::dto*>(dto);
 }
 template<class PType>
-const typename PType::dto* as_dto(const primitive_dto* dto)
+const typename PType::dto* as_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto)
 {
     if (dto->type != PType::type_id()) throw std::invalid_argument("type");
     return reinterpret_cast<const typename PType::dto*>(dto);
@@ -159,36 +160,30 @@ const typename PType::dto* as_dto(const primitive_dto* dto)
 
 struct primitive
 {
-    virtual const primitive_dto* get_dto() const = 0;
-    virtual primitive_type_id type() const = 0;
-    virtual primitive_id id() const = 0;
-    virtual std::vector<primitive_id> dependecies() const = 0;
-    virtual const padding& input_padding() const = 0;
-    virtual const padding& output_padding() const = 0;
+    primitive(
+        const primitive_type_id& type,
+        const primitive_id& id,
+        const std::vector<primitive_id>& input,
+        const padding& input_padding = padding(),
+        const padding& output_padding = padding()
+    )
+        :_type(type), _id(id), _input(input), _input_padding(input_padding), _output_padding(output_padding)
+    {}
+
+    primitive(const CLDNN_PRIMITIVE_DESC(primitive)* dto)
+        :_type(dto->type), _id(dto->id), _input(dto->input), _input_padding(dto->input_padding), _output_padding(dto->output_padding)
+    {}
+
     virtual ~primitive() = default;
-    operator primitive_id() const { return id(); }
 
-    //TODO remove backward compatibility
-    tensor input_offset() const { return input_padding().size().negate(); }
-    tensor output_offset() const { return output_padding().size(); }
-    padding::types padding_type() const { return input_padding().type(); }
-};
+    const primitive_type_id& type() const { return _type; }
+    const primitive_id& id() const { return _id; }
+    const std::vector<primitive_id>& input() const { return _input; }
+    const padding& input_padding() const { return _input_padding; }
+    const padding& output_padding() const { return _output_padding; }
 
-typedef array_ref_store<primitive_id_ref, primitive_id> primitive_id_arr;
-
-template<class PType, class DTO>
-class primitive_base : public primitive
-{
-public:
-    const primitive_dto* get_dto() const override { return reinterpret_cast<const primitive_dto*>(&_dto); }
-
-    primitive_id id() const override { return _id; }
-    const std::vector<primitive_id>& input() const
-    {
-        return _input;
-    }
-
-    std::vector<primitive_id> dependecies() const override
+    virtual const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const = 0;
+    std::vector<primitive_id> dependecies() const
     {
         auto result = input();
         auto deps = get_dependencies();
@@ -196,9 +191,28 @@ public:
         return result;
     }
 
-    primitive_type_id type() const override { return _dto.type; }
-    const padding& input_padding() const override { return _dto.input_padding; }
-    const padding& output_padding() const override { return _dto.output_padding; }
+    operator primitive_id() const { return id(); }
+
+    //TODO remove backward compatibility
+    tensor input_offset() const { return input_padding().size().negate(); }
+    tensor output_offset() const { return output_padding().size(); }
+    padding::types padding_type() const { return input_padding().type(); }
+protected:
+    const primitive_type_id _type;
+    const primitive_id _id;
+    const detail::primitive_id_arr _input;
+    const padding _input_padding;
+    const padding _output_padding;
+
+    virtual std::vector<primitive_id> get_dependencies() const { return{}; }
+};
+
+template<class PType, class DTO>
+class primitive_base : public primitive
+{
+public:
+    const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const override { return reinterpret_cast<const CLDNN_PRIMITIVE_DESC(primitive)*>(&_dto); }
+
 
 protected:
     template<typename ...Args>
@@ -208,24 +222,31 @@ protected:
         const padding& input_padding =  padding(),
         const padding& output_padding = padding(),
         Args... args)
-        : _id(id), _input(input)
-        , _dto{ PType::type_id(), _id, _input, input_padding, output_padding, args... }
+        : primitive(PType::type_id(), id, input, input_padding, output_padding)
+        , _dto{ _type, _id.c_str(), _input.ref(), _input_padding, _output_padding, args... }
     {}
 
     primitive_base(const DTO* dto)
-        : _id(dto->id), _input(dto->input)
+        : primitive(reinterpret_cast<const CLDNN_PRIMITIVE_DESC(primitive)*>(dto))
         , _dto{ *dto }
     {
         if (_dto.type != PType::type_id()) throw std::invalid_argument("DTO type mismatch");
-        _dto.id = _id;
-        _dto.input = _input;
+        _dto.id = _id.c_str();
+        _dto.input = _input.ref();
     }
 
-    virtual std::vector<primitive_id> get_dependencies() const { return{}; }
-
-    const primitive_id _id;
-    const primitive_id_arr _input;
     DTO _dto;
 };
+
+#define CLDNN_DEFINE_TYPE_ID(PType) static primitive_type_id type_id()\
+    {\
+        return check_status<primitive_type_id>( #PType " type id failed", [](status_t* status)\
+        {\
+            return cldnn_##PType##_type_id(status);\
+        });\
+    }
+
+#define CLDNN_DECLATE_PRIMITIVE(PType) typedef CLDNN_PRIMITIVE_DESC(PType) dto;\
+    CLDNN_DEFINE_TYPE_ID(PType)
 
 }

@@ -16,23 +16,15 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "reorder.h"
 #include "../primitive.hpp"
 #include "../memory.hpp"
 
 namespace cldnn
 {
-
-BEGIN_DTO(reorder)
-    layout output_layout;
-    primitive_id_ref mean_substract;
-    array_ref<float> substract_per_feature;
-END_DTO(reorder)
-
-
-struct reorder : public primitive_base<reorder, DTO(reorder)>
+struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
 {
-    DLL_SYM static primitive_type_id type_id();
-    typedef DTO(reorder) dto;
+    CLDNN_DECLATE_PRIMITIVE(reorder)
 
     reorder(
         const primitive_id& id,
@@ -42,7 +34,7 @@ struct reorder : public primitive_base<reorder, DTO(reorder)>
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        : primitive_base(id, { input }, input_padding, output_padding, output_layout, "", array_ref<float>())
+        : primitive_base(id, { input }, input_padding, output_padding, static_cast<cldnn_layout>(output_layout), "", cldnn_float_arr{nullptr, 0})
         , output_layout(_dto.output_layout)
         , mean("")
         , substract_per_feature(values_to_substract)
@@ -58,7 +50,7 @@ struct reorder : public primitive_base<reorder, DTO(reorder)>
         const padding& input_padding = { format::yx,{ 0, 0 } },
         const padding& output_padding = { format::yx,{ 0, 0 } }
     )
-        : primitive_base(id, { input }, input_padding, output_padding, output_layout, "", array_ref<float>())
+        : primitive_base(id, { input }, input_padding, output_padding, static_cast<cldnn_layout>(output_layout), "", cldnn_float_arr{ nullptr, 0 })
         , output_layout(_dto.output_layout)
         , mean(mean)
         , substract_per_feature(0)
@@ -70,12 +62,12 @@ struct reorder : public primitive_base<reorder, DTO(reorder)>
         : primitive_base(dto)
         , output_layout(_dto.output_layout)
         , mean(dto->mean_substract)
-        , substract_per_feature(_dto.substract_per_feature.vector())
+        , substract_per_feature(float_arr_to_vector(_dto.substract_per_feature))
     {
         init_dto();
     }
 
-    const layout& output_layout;
+    const layout output_layout;
     const primitive_id mean;
     const std::vector<float> substract_per_feature;
 
@@ -89,8 +81,24 @@ protected:
 private:
     void init_dto()
     {
-        _dto.mean_substract = mean;
-        _dto.substract_per_feature = substract_per_feature;
+        _dto.mean_substract = mean.c_str();
+        _dto.substract_per_feature = float_vector_to_arr(substract_per_feature);
     }
+
+    static std::vector<float> float_arr_to_vector(const cldnn_float_arr& arr)
+    {
+        std::vector<float> result(arr.size);
+        for (size_t i = 0; i < arr.size; i++)
+        {
+            result[i] = arr.data[i];
+        }
+        return result;
+    }
+
+    static cldnn_float_arr float_vector_to_arr(const std::vector<float>& stor)
+    {
+        return { stor.data(), stor.size() };
+    }
+
 };
 }

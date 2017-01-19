@@ -15,8 +15,27 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifndef FULLY_CONNECTED_H
+#define FULLY_CONNECTED_H
 
-namespace cldnn
-{
+#include "api/cldnn.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+CLDNN_BEGIN_PRIMITIVE_DESC(fully_connected)
+uint32_t with_activation;
+float activation_negative_slope;
+cldnn_primitive_id weights;
+cldnn_primitive_id bias;
+CLDNN_END_PRIMITIVE_DESC(fully_connected)
+
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(fully_connected);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* FULLY_CONNECTED_H */
+

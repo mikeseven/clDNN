@@ -20,7 +20,7 @@
 
 namespace cldnn
 {
-primitive_type_id activation::type_id()
+primitive_type_id activation_type_id()
 {
     static primitive_type_base<activation, activation_arg> instance;
     return &instance;

@@ -15,8 +15,23 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifndef SOFTMAX_H
+#define SOFTMAX_H
 
-namespace cldnn
-{
+#include "api/cldnn.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+CLDNN_BEGIN_PRIMITIVE_DESC(softmax)
+CLDNN_END_PRIMITIVE_DESC(softmax)
+
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(softmax);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* SOFTMAX_H */
+

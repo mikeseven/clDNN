@@ -16,19 +16,20 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/engine.hpp"
-#include "api/memory.hpp"
-#include "api/event.hpp"
 #include "refcounted_obj.h"
-#include <memory>
 #include "primitive_arg.h"
 #include "implementation_map.h"
 #include "gpu/engine_info.h"
 
+#include <memory>
+
 namespace neural { namespace gpu { class gpu_toolkit; } }
 namespace cldnn
 {
+class build_options;
 using gpu_toolkit = neural::gpu::gpu_toolkit;
+struct topology_impl;
+struct memory_impl;
 struct engine_impl : public refcounted_obj<engine_impl>
 {
 public:
@@ -38,7 +39,7 @@ public:
 
     memory_impl* allocate_buffer(layout layout);
     event_impl* create_user_event();
-    network_impl* build_network(const topology& topology, const build_options& options);
+    network_impl* build_network(topology_impl* topology, const build_options& options);
     const engine_configuration& configuration() const { return _configuration; }
 
     std::shared_ptr<gpu_toolkit> get_context() const { return _context; }
@@ -61,3 +62,5 @@ private:
     std::shared_ptr<gpu_toolkit> _context;
 };
 }
+
+API_CAST(::cldnn_engine, cldnn::engine_impl)

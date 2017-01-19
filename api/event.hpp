@@ -23,62 +23,70 @@
 
 namespace cldnn
 {
-typedef struct event_impl* cldnn_event_t;
 struct event
 {
-    struct profiling_interval_ref
-    {
-        string_ref name;
-        uint64_t nanoseconds;
-    };
-
     static event create_user_event(const engine& engine)
     {
-        return check_status<cldnn_event_t>("create user event failed", [&](status_t* status) { return create_user_event_impl(engine.get(), status); });
+        return check_status<cldnn_event>("create user event failed", [&](status_t* status) { return cldnn_create_user_event(engine.get(), status); });
     }
     
+    event(cldnn_event impl) : _impl(impl)
+    {
+        if (_impl == nullptr) throw std::invalid_argument("implementation pointer should not be null");
+    }
+
     event(const event& other) : _impl(other._impl)
     {
-        retain_event(_impl);
+        retain();
     }
     
     event& operator=(const event& other)
     {
         if (_impl == other._impl) return *this;
-        release_event(_impl);
+        release();
         _impl = other._impl;
-        retain_event(_impl);
+        retain();
         return *this;
     }
 
     ~event()
     {
-        release_event(_impl);
+        release();
     }
 
     friend bool operator==(const event& lhs, const event& rhs) { return lhs._impl == rhs._impl; }
     friend bool operator!=(const event& lhs, const event& rhs) { return !(lhs == rhs); }
 
-    void wait() const { check_status("wait event failed", wait_impl(_impl)); }
-    void set() const { check_status("set event failed", set_impl(_impl)); }
+    void wait() const { check_status<void>("wait event failed", [=](status_t* status) { cldnn_wait_for_event(_impl, status); }); }
+    void set() const { check_status<void>("set event failed", [=](status_t* status) { cldnn_set_event(_impl, status); }); }
 
-    typedef void(*event_handler)(void*);
-    void set_event_handler(event_handler handler, void* param) const
+    void set_event_handler(cldnn_event_handler handler, void* param) const
     {
-        check_status("set event handler failed", add_event_handler_impl(_impl, handler, param));
+        check_status<void>("set event handler failed", [=](status_t* status) { cldnn_add_event_handler(_impl, handler, param, status); });
     }
 
     std::vector<instrumentation::profiling_interval> get_profiling_info() const
     {
         using namespace instrumentation;
         wait();
-        array_ref<profiling_interval_ref> profiling_info_ref = check_status<array_ref<profiling_interval_ref>>("network execute failed", [&](status_t* status) { return get_profiling_impl(_impl, status); });
+        size_t size_ret = 0;
+        status_t err_invalid_arg = CLDNN_SUCCESS;
+        cldnn_get_event_profiling_info(_impl, nullptr, 0, &size_ret, &err_invalid_arg);
+        assert(err_invalid_arg == CLDNN_INVALID_ARG);
+        std::vector<cldnn_profiling_interval> profiling_info_ref(size_ret);
+
+        check_status<void>("get event profiling info failed", [&](status_t* status)
+        {
+            cldnn_get_event_profiling_info(_impl, profiling_info_ref.data(), profiling_info_ref.size(), &size_ret, status);
+        });
+        assert(profiling_info_ref.size() == size_ret);
+
         std::vector<profiling_interval> result(profiling_info_ref.size());
         std::transform(
             std::begin(profiling_info_ref),
             std::end(profiling_info_ref),
             std::begin(result),
-            [](const profiling_interval_ref& ref) -> profiling_interval
+            [](const cldnn_profiling_interval& ref) -> profiling_interval
             {
                 return{
                     ref.name,
@@ -89,22 +97,17 @@ struct event
         return result;
     }
 
-    cldnn_event_t get() const { return _impl; }
+    cldnn_event get() const { return _impl; }
 private:
-    friend struct network;
-    event(cldnn_event_t impl) : _impl(impl)
+    cldnn_event _impl;
+    void retain()
     {
-        if (_impl == nullptr) throw std::invalid_argument("implementation pointer should not be null");
+        check_status<void>("retain event failed", [=](status_t* status) { cldnn_retain_event(_impl, status); });
     }
-
-    cldnn_event_t _impl;
-    DLL_SYM static cldnn_event_t create_user_event_impl(cldnn_engine_t engine, status_t* status);
-    DLL_SYM static void retain_event(cldnn_event_t event);
-    DLL_SYM static void release_event(cldnn_event_t event);
-    DLL_SYM static status_t wait_impl(cldnn_event_t event);
-    DLL_SYM static status_t set_impl(cldnn_event_t event);
-    DLL_SYM static status_t add_event_handler_impl(cldnn_event_t event, event_handler handler, void* param);
-    DLL_SYM static array_ref<profiling_interval_ref> get_profiling_impl(cldnn_event_t event, status_t* status);
+    void release()
+    {
+        check_status<void>("retain event failed", [=](status_t* status) { cldnn_release_event(_impl, status); });
+    }
 };
-API_CLASS(event)
+CLDNN_API_CLASS(event)
 }

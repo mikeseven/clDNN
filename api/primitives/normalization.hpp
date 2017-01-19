@@ -16,21 +16,14 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "normalization.h"
 #include "../primitive.hpp"
 
 namespace cldnn
 {
-BEGIN_DTO(normalization)
-    uint32_t size;
-    float k;
-    float alpha;
-    float beta;
-END_DTO(normalization)
-
-struct normalization :public primitive_base<normalization, DTO(normalization)>
+struct normalization :public primitive_base<normalization, CLDNN_PRIMITIVE_DESC(normalization)>
 {
-    DLL_SYM static primitive_type_id type_id();
-    typedef DTO(normalization) dto;
+    CLDNN_DECLATE_PRIMITIVE(normalization)
 
     normalization(
         const primitive_id& id,
@@ -57,9 +50,9 @@ struct normalization :public primitive_base<normalization, DTO(normalization)>
         , beta(_dto.beta)
     {}
 
-    const uint32_t& size;
-    const float& k;
-    const float& alpha;
-    const float& beta;
+    const uint32_t size;
+    const float k;
+    const float alpha;
+    const float beta;
 };
 }

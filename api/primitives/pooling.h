@@ -15,8 +15,32 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifndef POOLING_H
+#define POOLING_H
 
-namespace cldnn
+#include "api/cldnn.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef enum /*:int32_t*/
 {
+    cldnn_pooling_max,
+    cldnn_pooling_average
+} cldnn_pooling_mode;
 
+CLDNN_BEGIN_PRIMITIVE_DESC(pooling)
+int32_t mode; /*cldnn_pooling_mode*/
+cldnn_tensor stride;
+cldnn_tensor size;
+CLDNN_END_PRIMITIVE_DESC(pooling)
+
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(pooling);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* POOLING_H */
+

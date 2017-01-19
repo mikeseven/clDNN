@@ -16,10 +16,9 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "engine_impl.h"
-#include "network_impl.h"
 #include "network_builder.h"
-#include "gpu/ocl_toolkit.h"
 #include "event_impl.h"
+#include "gpu/ocl_toolkit.h"
 #include "gpu/memory_gpu.h"
 
 namespace cldnn
@@ -37,8 +36,7 @@ gpu_toolkit_config convert_configuration(const engine_configuration conf)
 engine_impl::engine_impl(const engine_configuration& conf)
     : _configuration(conf)
     , _context(std::make_shared<gpu_toolkit>(convert_configuration(conf)))
-{
-}
+{}
 
 memory_impl* engine_impl::allocate_buffer(layout layout)
 {
@@ -50,79 +48,9 @@ event_impl* engine_impl::create_user_event()
     return new user_event_gpu(cl::UserEvent(get_context()->context()));
 }
 
-network_impl* engine_impl::build_network(const topology& topology, const build_options& options)
+network_impl* engine_impl::build_network(topology_impl* topology, const build_options& options)
 {
     network_builder builder(this, options);
-    return builder.build_network(topology.get());
-}
-
-uint32_t engine::engine_count_impl(engine_types type, status_t* status)
-{
-    if (type == engine_types::ocl)
-    {
-        if (status) *status = CLDNN_SUCCESS;
-        return 1;
-    }
-    else
-    {
-        if (status) *status = CLDNN_UNSUPPORTED;
-        return 0;
-    }
-}
-
-engine_types engine::get_engine_type(cldnn_engine_t)
-{
-    return engine_types::ocl;
-}
-
-engine_impl* engine::create_engine_impl(engine_types engine_type, uint32_t engine_num, const engine_configuration* configuration, status_t* status)
-{
-    if (engine_num > 0 || (engine_type != engine_types::ocl))
-    {
-        if (status)
-            *status = CLDNN_UNSUPPORTED;
-        return nullptr;
-    }
-
-    try
-    {
-        if (status)
-            *status = CLDNN_SUCCESS;
-        return new engine_impl(configuration ? *configuration : engine_configuration());
-    }
-    catch (...)
-    {
-        if (status)
-            *status = CLDNN_ERROR;
-        return nullptr;
-    }
-}
-
-void engine::retain_engine(cldnn_engine_t engine)
-{
-    engine->add_ref();
-}
-
-void engine::release_engine(cldnn_engine_t engine)
-{
-    engine->release();
-}
-
-status_t engine::get_info_impl(cldnn_engine_t engine, engine_info * info)
-{
-    if (!info)
-        return CLDNN_ERROR;
-
-    try
-    {
-        auto internal_info = engine->get_engine_info();
-        *info = static_cast<engine_info>(internal_info);
-        return CLDNN_SUCCESS;
-    }
-    catch (...)
-    {
-        return CLDNN_ERROR;
-    }
-
+    return builder.build_network(topology);
 }
 }

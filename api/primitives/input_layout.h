@@ -15,8 +15,24 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifndef INPUT_LAYOUT_H
+#define INPUT_LAYOUT_H
 
-namespace cldnn
-{
+#include "api/cldnn.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+CLDNN_BEGIN_PRIMITIVE_DESC(input_layout)
+cldnn_layout layout;
+CLDNN_END_PRIMITIVE_DESC(input_layout)
+
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(input_layout);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* INPUT_LAYOUT_H */
+

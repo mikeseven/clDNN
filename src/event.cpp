@@ -61,96 +61,17 @@ namespace cldnn
 //    std::vector<std::pair<event::event_handler, void*>> _handlers;
 //};
 
-event_impl* event::create_user_event_impl(cldnn_engine_t engine, status_t* status)
-{
-    try
-    {
-        if (status)
-            *status = CLDNN_SUCCESS;
-        return engine->create_user_event();
-    }
-    catch (...)
-    {
-        if (status)
-            *status = CLDNN_ERROR;
-        return nullptr;
-    }
-}
-
-void event::retain_event(cldnn_event_t event)
-{
-    event->add_ref();
-}
-
-void event::release_event(cldnn_event_t event)
-{
-    event->release();
-}
-
-status_t event::add_event_handler_impl(cldnn_event_t event, event_handler handler, void* param)
-{
-    try
-    {
-        event->add_event_handler(handler, param);
-        return CLDNN_SUCCESS;
-    }
-    catch(...)
-    {
-        return CLDNN_ERROR;
-    }
-}
-status_t event::set_impl(cldnn_event_t event)
-{
-    try
-    {
-        event->set();
-        return CLDNN_SUCCESS;
-    }
-    catch (...)
-    {
-        return CLDNN_ERROR;
-    }
-}
-status_t event::wait_impl(cldnn_event_t event)
-{
-    try
-    {
-        event->wait();
-        return CLDNN_SUCCESS;
-    }
-    catch (...)
-    {
-        return CLDNN_ERROR;
-    }
-}
-
-array_ref<event::profiling_interval_ref> event::get_profiling_impl(cldnn_event_t event, status_t * status)
-{
-    try
-    {
-        if (status)
-            *status = CLDNN_SUCCESS;
-        return event->get_profiling_info();
-    }
-    catch (...)
-    {
-        if (status)
-            *status = CLDNN_ERROR;
-        return array_ref<profiling_interval_ref>();
-    }
-}
-
 namespace
 {
 struct profiling_period_ocl_start_stop
 {
-    std::string name;
+    const char* name;
     cl_profiling_info start;
     cl_profiling_info stop;
 };
 }
 
-array_ref<event::profiling_interval_ref> event_impl::get_profiling_info()
+const std::vector<cldnn_profiling_interval>& event_impl::get_profiling_info()
 {
     static const std::vector<profiling_period_ocl_start_stop> profiling_periods
     {

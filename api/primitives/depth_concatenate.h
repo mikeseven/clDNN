@@ -15,8 +15,23 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifndef DEPTH_CONCATENATE_H
+#define DEPTH_CONCATENATE_H
 
-namespace cldnn
-{
+#include "api/cldnn.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+CLDNN_BEGIN_PRIMITIVE_DESC(depth_concatenate)
+CLDNN_END_PRIMITIVE_DESC(depth_concatenate)
+
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(depth_concatenate);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* DEPTH_CONCATENATE_H */
+

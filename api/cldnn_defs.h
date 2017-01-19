@@ -18,31 +18,7 @@
 #pragma once
 #include <functional>
 #include <string>
-
-// exporting symbols form dynamic library
-#ifdef EXPORT_NEURAL_SYMBOLS
-#   if defined(_MSC_VER)
-//  Microsoft
-#      define DLL_SYM __declspec(dllexport)
-#   elif defined(__GNUC__)
-//  GCC
-#      define DLL_SYM __attribute__((visibility("default")))
-#   else
-#      define DLL_SYM
-#      pragma warning Unknown dynamic link import/export semantics.
-#   endif
-#else //import dll
-#   if defined(_MSC_VER)
-//  Microsoft
-#      define DLL_SYM __declspec(dllimport)
-#   elif defined(__GNUC__)
-//  GCC
-#      define DLL_SYM
-#   else
-#      define DLL_SYM
-#      pragma warning Unknown dynamic link import/export semantics.
-#   endif
-#endif
+#include "cldnn.h"
 
 namespace {
 // There is no portable half precision floating point support.
@@ -65,13 +41,9 @@ typedef half half_t;
 typedef half_impl half_t;
 #endif
 
-#define CLDNN_SUCCESS  0
-#define CLDNN_ERROR   -1
-#define CLDNN_UNSUPPORTED -2
-
 namespace cldnn {
 
-typedef int32_t status_t;
+using status_t = ::cldnn_status;
 
 #define CLDNN_THROW(msg, status) throw std::runtime_error(msg);
 
@@ -85,13 +57,16 @@ T check_status(std::string err_msg, std::function<T(status_t*)> func)
     return result;
 }
 
-inline void check_status(std::string err_msg, status_t status)
+template<>
+inline void check_status<void>(std::string err_msg, std::function<void(status_t*)> func)
 {
+    status_t status;
+    func(&status);
     if (status != CLDNN_SUCCESS)
         CLDNN_THROW(err_msg, status);
 }
 
-#define API_CLASS(the_class) static_assert(std::is_standard_layout<the_class>::value, #the_class " has to be 'standart layout' class");
+#define CLDNN_API_CLASS(the_class) static_assert(std::is_standard_layout<the_class>::value, #the_class " has to be 'standart layout' class");
 
 }
 

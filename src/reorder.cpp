@@ -48,7 +48,7 @@ reorder_arg::reorder_arg(network_impl& network, std::shared_ptr<const reorder> d
     }
 }
 
-primitive_type_id reorder::type_id()
+primitive_type_id reorder_type_id()
 {
     static primitive_type_base<reorder, reorder_arg> instance;
     return &instance;

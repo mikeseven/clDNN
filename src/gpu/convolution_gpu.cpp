@@ -95,7 +95,8 @@ struct convolution_gpu : is_an_implementation {
         return kd;
     }
 
-    static kd_selector_t<kernel_data, convolution, neural::memory::format::type, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, cldnn::engine_info::configurations> ks;
+    typedef kd_selector_t<kernel_data, convolution, neural::memory::format::type, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, gpu::engine_info_internal::configurations> ks_type;
+    static ks_type ks;
 
     convolution_gpu(convolution &arg)
         : outer(arg)
@@ -118,7 +119,7 @@ struct convolution_gpu : is_an_implementation {
             // TODO: add support for reorder to do reorder + padding in single step to remove this from convolution.
             if(outer.input()[0]->type() == cldnn::reorder::type_id())
             {
-                reorder.push_back({ outer.get_network().get_engine()->build_network(topology, cldnn::build_options()), false });
+                reorder.push_back({ outer.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
             }
         }
     }
@@ -239,11 +240,12 @@ struct convolution_gpu : is_an_implementation {
             kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2)*/
         {
             auto network = reorder[0];
-            network->set_input_data("input", input_mem.get());
-            auto reorder_outputs = network->execute(events);
+            network->set_input_data("input", api_cast(input_mem.get()));
+            network->execute(events);
+            
             //reorder_outputs[0].event_ref->wait();
-            tmp_events.emplace_back(reorder_outputs[0].event_ref, false);
-            cldnn::memory reorder_output(reorder_outputs[0].memory_ref);
+            tmp_events.push_back(network->get_primitive_event("reorder"));
+            cldnn::memory reorder_output(network->get_primitive("reorder")->output_memory());
 
             // execute kernels
             for (decltype(split) i = 0; i < split; i++) {
@@ -519,8 +521,8 @@ convolution_gpu::kernel_data defauly_bfyx_yxio_b1_f32(const convolution& arg)
     return kd;
 }
 
-kd_selector_t<convolution_gpu::kernel_data, convolution, neural::memory::format::type, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, gpu::engine_info_internal::configurations> convolution_gpu::ks = {
-    { std::make_tuple(memory::format::yxfb_f32, memory::format::oiyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, cldnn::engine_info::configurations::GT_UNKNOWN), default_oiyx_f32 },
+convolution_gpu::ks_type convolution_gpu::ks = {
+    { std::make_tuple(memory::format::yxfb_f32, memory::format::oiyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
     { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
     { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b1 },
     { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 8, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b8 },

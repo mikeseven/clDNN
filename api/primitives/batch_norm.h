@@ -15,8 +15,27 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifndef BATCH_NORM_H
+#define BATCH_NORM_H
 
-namespace cldnn
-{
+#include "api/cldnn.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+CLDNN_BEGIN_PRIMITIVE_DESC(batch_norm)
+cldnn_primitive_id mean;
+cldnn_primitive_id variance;
+bool use_global_stats;
+float epsilon;
+CLDNN_END_PRIMITIVE_DESC(batch_norm)
+
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(batch_norm);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* BATCH_NORM_H */
+

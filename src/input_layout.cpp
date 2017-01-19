@@ -21,7 +21,7 @@
 
 namespace cldnn
 {
-primitive_type_id input_layout::type_id()
+primitive_type_id input_layout_type_id()
 {
     static primitive_type_base<input_layout, input_layout_arg> instance;
     return &instance;
@@ -38,12 +38,11 @@ void input_layout_arg::set_data(memory_impl* mem)
         throw std::invalid_argument("data layout does not match");
     if (mem->is_allocated_by(get_network().get_engine()))
     {
-        mem->add_ref();
-        _output = mem;
+        _output = memory(api_cast(mem), true);
     }
     else
     {
-        pointer<char> src(mem);
+        pointer<char> src(api_cast(mem));
         pointer<char> dst(_output);
         std::copy(src.begin(), src.end(), dst.begin());
     }
