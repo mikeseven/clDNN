@@ -193,6 +193,8 @@ struct convolution_gpu : is_an_implementation {
         {
             mem_consts.add_constant(gpu::make_jit_constant("OUT_BLOCK_WIDTH", _kernel_data.block_width));
             mem_consts.add_constant(gpu::make_jit_constant("OUT_BLOCK_HEIGHT", _kernel_data.block_height));
+            mem_consts.add_constant(gpu::make_jit_constant("INPUT_BLOCK_LEN", _kernel_data.input_block_len));
+            mem_consts.add_constant(gpu::make_jit_constant("PREFETCH", _kernel_data.prefetch));
         }
 
         return mem_consts;
@@ -509,8 +511,12 @@ convolution_gpu::ks_type convolution_gpu::ks = {
     { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 64, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
     { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 128, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
 
-    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_yxio_b1_f32 },
-    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 8, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_yxio_f32 }
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_yxio_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 8, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_yxio_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_yxio_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_yxio_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 64, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_yxio_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 128, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_yxio_f32 }
 };
 
 namespace{
