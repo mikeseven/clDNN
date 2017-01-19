@@ -34,12 +34,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, weights_optimi
     input_layout.size = { format::byxf,{ batch_size, 224, 224, 3 } };
     auto input = cldnn::input_layout("input", input_layout);
 
-    // TODO: remove after enabling bfyx for all
-    auto mem_format = format::yxfb;
-    if (use_bfyx)
-    {
-        mem_format = format::bfyx;
-    }
+    auto mem_format = use_bfyx ? format::bfyx : format::yxfb;
 
     // create conversion to yxfb format and subtract mean values
     tensor reorder_size = input_layout.size.transform(mem_format, 1);

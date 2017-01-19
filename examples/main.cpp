@@ -384,7 +384,10 @@ int main(int argc, char* argv[])
         ep.profiling_queue = parsed_args["profiling_queue"].as<bool>() || parsed_args["profiling"].as<bool>();
         ep.optimize_weights = parsed_args["optimize_weights"].as<bool>();
         ep.use_half = parsed_args["use_half"].as<bool>();
-        ep.use_bfyx = ep.batch == 1 ? true : parsed_args["use_bfyx"].as<bool>();
+        ep.use_bfyx = parsed_args["use_bfyx"].as<bool>();
+        if (ep.topology_name == "alexnet" || ep.topology_name == "vgg16")
+            ep.use_bfyx = true;
+
         ep.run_single_layer = run_single_layer;
         ep.dump_hidden_layers = parsed_args["dump_hidden_layers"].as<bool>();
         ep.dump_layer_name = dump_layer;

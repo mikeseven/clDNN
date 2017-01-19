@@ -35,12 +35,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, weights_optimizer& w
 
     use_bfyx = true;
 
-    // TODO: remove after enabling bfyx for all
-    auto mem_format = format::yxfb;
-    if (use_bfyx)
-    {
-        mem_format = format::bfyx;
-    }
+    auto mem_format = use_bfyx ? format::bfyx : format::yxfb;
 
     // create conversion to yxfb format and subtract mean values
     tensor reorder_size = input_layout.size.transform(mem_format, 1);
