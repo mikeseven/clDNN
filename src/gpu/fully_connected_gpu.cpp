@@ -150,7 +150,7 @@ struct fully_connected_gpu : is_an_implementation
             case memory::format::byxf_f32:
             case memory::format::bx_f32:
             {
-                if (input_mem.argument().size.batch[0] > 1)
+                if (input_mem.argument().size.batch[0] >= 8)
                 {
                     kd.gws0 = output_mem.argument().size.batch[0];
                     kd.gws1 = output_mem.argument().size.spatial[0];
