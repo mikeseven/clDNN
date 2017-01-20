@@ -81,28 +81,6 @@ struct softmax_gpu : is_an_implementation
 
             kd.kernel_name = kernel_name;
         }
-        else if (input_mem.argument().format == memory::format::xb_f32)
-        {
-            // We have two units of data per work item in current implementation.
-            auto local_mem_per_wi = 2 * (kd.fp16_unit_used ? sizeof(half_t) : sizeof(float));
-            // Combining device execution and local memory restrictions to compute maximum possible LWS.
-            auto max_lws = std::min(engine_info.max_work_group_size, engine_info.max_local_mem_size / local_mem_per_wi);
-
-            kd.lws0 = batch_num;
-            kd.items_num = out_buffer_size / kd.lws0;
-            // Compute maximum possible LWS that does not exceed device capabilities and optimizes number of global memory reads.
-            while ((kd.items_num > 32 || kd.lws0 < kd.items_num) && (2 * kd.lws0 <= max_lws))
-            {
-                kd.lws0 *= 2;
-                kd.items_num /= 2;
-            }
-
-            kd.gws0 = kd.lws0;
-            kd.gws1 = 1;
-            kd.leftovers = out_buffer_size % kd.lws0;
-
-            kd.kernel_name = kernel_name_batches;
-        }
         else if (input_mem.argument().format == memory::format::bx_f32)
         {
             // We have two units of data per work item in current implementation.
@@ -127,7 +105,25 @@ struct softmax_gpu : is_an_implementation
         }
         else
         {
-            throw std::runtime_error("Unexpected input memory format in softmax");
+            // We have two units of data per work item in current implementation.
+            auto local_mem_per_wi = 2 * (kd.fp16_unit_used ? sizeof(half_t) : sizeof(float));
+            // Combining device execution and local memory restrictions to compute maximum possible LWS.
+            auto max_lws = std::min(engine_info.max_work_group_size, engine_info.max_local_mem_size / local_mem_per_wi);
+
+            kd.lws0 = batch_num;
+            kd.items_num = out_buffer_size / kd.lws0;
+            // Compute maximum possible LWS that does not exceed device capabilities and optimizes number of global memory reads.
+            while ((kd.items_num > 32 || kd.lws0 < kd.items_num) && (2 * kd.lws0 <= max_lws))
+            {
+                kd.lws0 *= 2;
+                kd.items_num /= 2;
+            }
+
+            kd.gws0 = kd.lws0;
+            kd.gws1 = 1;
+            kd.leftovers = out_buffer_size % kd.lws0;
+
+            kd.kernel_name = kernel_name_batches;
         }
 
         assert(kd.items_num > 0 && kd.lws0 && kd.gws0 > 0);
