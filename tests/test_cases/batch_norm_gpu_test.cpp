@@ -27,9 +27,6 @@
 using namespace cldnn;
 using namespace tests;
 
-uint32_t max_input_size = 16384; //2^14
-uint32_t possible_input_sizes[] = { 1, 2, 4, 8, 16, 32, 64 };
-
 TEST(batch_normalization_gpu, basic_in2x3x2x2_no_global_stats) {
     //  Mean   : 3x2x2
     //  Input  : 2x3x2x2
@@ -39,14 +36,14 @@ TEST(batch_normalization_gpu, basic_in2x3x2x2_no_global_stats) {
     //  f0: b0:  1    2  -10   b1:   0    0    -11
     //  f0: b0:  3    4  -14   b1:   0.5 -0.5  -15  
     //  f1: b0:  5    6  -12   b1:   1.5  5.2  -13     
-    //  f1: b0:  7    8  -16   b1:   12   8    -17
+    //  f1: b0:  7    8  -16   b1:   12   9    -17
     //
 
     engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 3, 2, 2 } } });
-    auto mean = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 3, 2, 1 } } });
-    auto variance = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 3, 2, 1 } } });
+    auto mean = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 2, 1 } } });
+    auto variance = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 2, 1 } } });
 
     float epsilon = 0.0001f;
 
@@ -61,7 +58,7 @@ TEST(batch_normalization_gpu, basic_in2x3x2x2_no_global_stats) {
         2.f, 0.f, 6.f, 5.2f,
         -10.f, -11.f, -12.f, -13.f,
         3.f, 0.5f, 7.f, 12.f,
-        4.f, -0.5f, 8.f, 8.f,
+        4.f, -0.5f, 8.f, 9.f,
         -14.f, -15.f, -16.f, -17.f
     });
 
@@ -81,7 +78,7 @@ TEST(batch_normalization_gpu, basic_in2x3x2x2_no_global_stats) {
         for (int i = 0; i < 2; ++i) { //B
             for (int k = 0; k < 2; ++k) { //Y
                 for (int l = 0; l < 3; ++l) { //X
-                    float data = output_ptr[j*2 + i*2 + l*3 + k];
+                    float data = output_ptr[i + 2*j + 2*2*l + 2*2*3*k];
                     sum += data;
                     var += data * data;
                 }
@@ -104,25 +101,22 @@ TEST(batch_normalization_gpu, basic_in2x3x2x2_use_global_stats) {
     //  f0: b0:  1    2  -10   b1:   0    0     -11
     //  f0: b0:  3    4  -14   b1:   0.5 -0.5   -15  
     //  f1: b0:  5    6  -12   b1:   1.5  5.2   -13     
-    //  f1: b0:  7    8  -16   b1:   12   8     -17
+    //  f1: b0:  7    8  -16   b1:   12   9     -17
     //
     //  Mean
-    //  f0: 0.5     1       -10.5 
-    //  f0: 1.75    2.25    -14.5
-    //  f1: 3.25    5.6     -12.5
-    //  f1: 9.5     8       -16.5
+    //  f0: -3.3333
+    //  f1: -0.3583
     //
     //  Variance
-    //  f0: 0.25     1       0.25 
-    //  f0: 1.56     5.06    0.25
-    //  f1: 3.06     0.16    0.25
-    //  f1: 6.25     0       0.25
+    //  f0: 44.9305
+    //  f1: 107.0624
+
 
     engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 3, 2, 2 } } });
-    auto mean = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 3, 2, 1 } } });
-    auto variance = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 3, 2, 1 } } });
+    auto mean = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 2, 1 } } });
+    auto variance = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 2, 1 } } });
 
     float epsilon = 0.0001f;
 
@@ -137,12 +131,12 @@ TEST(batch_normalization_gpu, basic_in2x3x2x2_use_global_stats) {
         2.f, 0.f, 6.f, 5.2f,
         -10.f, -11.f, -12.f, -13.f,
         3.f, 0.5f, 7.f, 12.f,
-        4.f, -0.5f, 8.f, 8.f,
+        4.f, -0.5f, 8.f, 9.f,
         -14.f, -15.f, -16.f, -17.f
     });
 
-    set_values(mean, { 0.5f, 3.25f, 1.f, 5.6f, -10.5f, -12.5f, 1.75f, 9.5f, 2.25f, 8.f, -14.5f, -16.5f });
-    set_values(variance, { 0.25f, 3.06f, 1.f, 0.16f, 0.25f, 0.25f, 1.56f, 6.25f, 5.06f, 0.f, 0.25f, 0.25f });
+    set_values(mean, { -3.3333f, -0.3583f });
+    set_values(variance, { 44.9305f, 107.0624f });
 
     network network(engine, topology);
 
@@ -160,7 +154,7 @@ TEST(batch_normalization_gpu, basic_in2x3x2x2_use_global_stats) {
         for (int i = 0; i < 2; ++i) { //B
             for (int k = 0; k < 2; ++k) { //Y
                 for (int l = 0; l < 3; ++l) { //X
-                    float data = output_ptr[j * 2 + i * 2 + l * 3 + k];
+                    float data = output_ptr[i + 2*j + 2*2*l + 2*2*3*k];
                     sum += data;
                     var += data * data;
                 }
