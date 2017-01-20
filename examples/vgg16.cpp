@@ -33,8 +33,6 @@ cldnn::topology build_vgg16(const std::string& weights_dir, weights_optimizer& w
     input_layout.size = { format::byxf,{ batch_size, 224, 224, 3 } };
     auto input = cldnn::input_layout("input", input_layout);
 
-    use_bfyx = true;
-
     auto mem_format = use_bfyx ? format::bfyx : format::yxfb;
 
     // create conversion to yxfb format and subtract mean values
