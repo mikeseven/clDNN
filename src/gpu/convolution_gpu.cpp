@@ -432,6 +432,7 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
 convolution_gpu::kernel_data default_bfyx_yxio_f32(const convolution& arg)
 {
     auto& filter_mem = arg.input_memory(1);
+    auto output_size = arg.non_padded_output_layout().size;
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.needs_reorder = true; //by default, assume we do need reorder (padding)
@@ -450,9 +451,9 @@ convolution_gpu::kernel_data default_bfyx_yxio_f32(const convolution& arg)
         //if less than 16 values is required to compute one single row of output
         // note: (computing n outputs in row requires n + kernel_width values - 1 values in input, for kernel stride == 1)
         //then each WI shall compute one sinle row to maximise reuse within SIMD subgroup (this gives very nice performance results)
-        else if (output_mem.argument().size.spatial[0] + filter_mem.argument().size.spatial[0] - 1 < 16)
+        else if (output_size.spatial[0] + filter_mem.argument().size.spatial[0] - 1 < 16)
         {
-            kd.block_width = output_mem.argument().size.spatial[0];
+            kd.block_width = output_size.spatial[0];
             kd.block_height = 1;
             kd.input_block_len = filter_mem.argument().size.spatial[1];
             kd.prefetch = 4;
@@ -480,10 +481,9 @@ convolution_gpu::kernel_data default_bfyx_yxio_f32(const convolution& arg)
         kd.prefetch = 5;
     }
     
-    auto output_size = arg.non_padded_output_layout().size;
-    kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[0]) / block_width));
-    kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[1]) / block_height));
-    kd.gws2 = filter_mem.argument().size.feature[0] * output_mem.argument().size.batch[0];
+    kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[0]) / kd.block_width));
+    kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[1]) / kd.block_height));
+    kd.gws2 = filter_mem.argument().size.feature[0] * output_size.batch[0];
     kd.lws0 = 1;
     kd.lws1 = 1;
     kd.lws2 = 16;
