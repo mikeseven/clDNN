@@ -19,6 +19,7 @@
 #include "api/primitives/batch_norm.hpp"
 #include "primitive_arg.h"
 #include <memory>
+#include "topology_impl.h"
 
 namespace cldnn
 {
@@ -27,7 +28,7 @@ namespace cldnn
     public:
         batch_norm_arg(network_impl& network, std::shared_ptr<const batch_norm> desc);
 
-        static layout calc_output_layout(network_impl& network, std::shared_ptr<const batch_norm> desc);
+        static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const batch_norm> desc);
 
         const memory& mean_memory() const;
         const memory& variance_memory() const;

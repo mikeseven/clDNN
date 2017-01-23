@@ -35,7 +35,11 @@ KERNEL (lrn_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* outpu
     acc = mad(acc, UNIT_CVT_FUNC(ALPHA), UNIT_CVT_FUNC(K));
     acc = native_powr(acc, -UNIT_CVT_FUNC(BETA));
 
-    output[linear_id] = acc * input[linear_id];
+    uint output_pos = b * OUTPUT_FEATURE_NUM * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
+    output_pos += f * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
+    output_pos += (y + OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
+    output_pos += x + OUTPUT_PADDING_SIZE_X;
+    output[output_pos] = acc * input[linear_id];
 }
 
 

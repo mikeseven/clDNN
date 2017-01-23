@@ -19,12 +19,18 @@
 #include "api/primitives/input_layout.hpp"
 #include "primitive_arg.h"
 #include <memory>
+#include "topology_impl.h"
 
 namespace cldnn
 {
 class input_layout_arg : public primitive_arg_base<input_layout>
 {
 public:
+    static layout calc_output_layout(const topology_map&, std::shared_ptr<const input_layout> desc)
+    {
+        return desc->layout;
+    }
+
     input_layout_arg(network_impl& network, std::shared_ptr<const input_layout> desc);
     void set_data(const memory& mem);
 };

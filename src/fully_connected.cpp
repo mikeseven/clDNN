@@ -55,26 +55,28 @@ bool is_batch_after_spatial(const std::string order)
 }
 }
 
-layout fully_connected_arg::calc_output_layout(network_impl& network, std::shared_ptr<const fully_connected> desc)
+layout fully_connected_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const fully_connected> desc)
 {
-    auto input = network.get_primitive(desc->input()[0]);
-    auto input_layout = input->output_memory().get_layout();
+    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
+    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
 
-    auto bias = network.get_primitive(desc->bias);
-    auto bias_layout = bias->output_memory().get_layout();
+    auto bias_desc = topology_map.at(desc->bias)->primitive_desc;
+    auto bias_layout = bias_desc->type()->calc_output_layout(topology_map, bias_desc);
 
     if(is_batch_after_spatial(input_layout.size.format.order()))
     {
-        return layout(input_layout.data_type, tensor(format::xb, { bias_layout.size.spatial[0], input_layout.size.batch[0] }));
+        auto result = layout(input_layout.data_type, tensor(format::xb, { bias_layout.size.spatial[0], input_layout.size.batch[0] }));
+        return result;
     }
     else
     {
-        return layout(input_layout.data_type, tensor(format::bx, { input_layout.size.batch[0], bias_layout.size.spatial[0] }));
+        auto result = layout(input_layout.data_type, tensor(format::bx, { input_layout.size.batch[0], bias_layout.size.spatial[0] }));
+        return result;
     }
 }
 
 fully_connected_arg::fully_connected_arg(network_impl& network, std::shared_ptr<const fully_connected> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network, desc))
+    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
     , _weights(network.get_primitive(desc->weights))
     , _bias(network.get_primitive(desc->bias))
 {

@@ -128,7 +128,7 @@ std::shared_ptr<const primitive_arg> network_impl::get_primitive(const primitive
         return it->second;
     }
 
-    auto& desc = _topology->at(id);
+    auto& desc = _topology->at(id)->primitive_desc;
     auto primitive = desc->type()->create_arg(*this, desc);
     return _primitives.insert({ id, primitive }).first->second;
 }

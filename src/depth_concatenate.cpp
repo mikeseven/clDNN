@@ -36,19 +36,22 @@ primitive_type_id depth_concatenate::type_id()
     return &instance;
 }
 
-layout depth_concatenate_arg::calc_output_layout(network_impl& network, std::shared_ptr<const depth_concatenate> desc)
+layout depth_concatenate_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const depth_concatenate> desc)
 {
     auto& input_ids = desc->input();
-    auto result = network.get_primitive(input_ids.at(0))->output_memory().get_layout();
+    auto input0_desc = topology_map.at(input_ids.at(0))->primitive_desc;
+
+    auto result = input0_desc->type()->calc_output_layout(topology_map, input0_desc);
     for(size_t i = 1; i < input_ids.size(); i++)
     {
-        result.size.feature[0] += network.get_primitive(input_ids[i])->output_memory().get_layout().size.feature[0];
+        auto input_desc = topology_map.at(input_ids[i])->primitive_desc;
+        result.size.feature[0] += input_desc->type()->calc_output_layout(topology_map, input_desc).size.feature[0];
     }
     return result;
 }
 
 depth_concatenate_arg::depth_concatenate_arg(network_impl& network, std::shared_ptr<const depth_concatenate> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network, desc))
+    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
     auto input_arg = input_memory(0).argument();
     auto output_arg = output_memory().argument();
@@ -156,12 +159,19 @@ struct depth_concatenate_gpu : is_an_implementation
         if (!data.fp16_supported && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
+        auto input_padding = outer.argument.input_padding.size().transform(cldnn::format::xy, 0);
+        if (input_padding.spatial[0] != 0 || input_padding.spatial[1] != 0)
+        {
+            throw std::runtime_error("input padding not implemented in depth concatenate yet!");
+        }
+
         return gpu::jit_constants {
             gpu::make_jit_constant("INPUT",          outer.input_memory(data.input_idx).argument().size),
             gpu::make_jit_constant("OUTPUT",         outer.output_memory().argument().size),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(data.fp16_supported)),
             gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
-            gpu::make_jit_constant("UNIT_TYPE",      data.fp16_unit_used ? "half" : "float")
+            gpu::make_jit_constant("UNIT_TYPE",      data.fp16_unit_used ? "half" : "float"),
+            gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding.size())
         };
     }
 

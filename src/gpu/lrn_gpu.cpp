@@ -131,8 +131,16 @@ struct lrn_gpu : is_an_implementation
         auto alpha_sign = std::signbit(outer.argument.alpha) ? -1.0f : 1.0f;
         auto alpha_abs_sqrt = std::sqrt(std::abs(outer.argument.alpha));
 
+        auto input_padding = outer.argument.input_padding.size().transform(cldnn::format::xy, 0);
+        if (input_padding.spatial[0] != 0 || input_padding.spatial[1] != 0)
+        {
+            throw std::runtime_error("input padding not implemented in LRN yet!");
+        }
+
+        auto input_size = outer.input().at(0)->non_padded_output_layout().size;
         gpu::jit_constants mem_consts {
-            gpu::make_jit_constant("INPUT",             outer.input_memory(0).argument().size),
+            gpu::make_jit_constant("INPUT",             input_size),
+            gpu::make_jit_constant("OUTPUT",            outer.non_padded_output_layout().size),
             gpu::make_jit_constant("P_SIZE",            size),
             gpu::make_jit_constant("ALPHA",             data.fp16_unit_used ? alpha_sign : outer.argument.alpha),
             gpu::make_jit_constant("ALPHA_VAL_FACTOR",  data.fp16_unit_used ? alpha_abs_sqrt : 1.0f),
@@ -142,7 +150,9 @@ struct lrn_gpu : is_an_implementation
             gpu::make_jit_constant("FP16_SUPPORTED",    static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",    static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),
-            gpu::make_jit_constant("UNIT_VAL_ZERO",     data.fp16_unit_used ? "0.0h" : "0.0f")
+            gpu::make_jit_constant("UNIT_VAL_ZERO",     data.fp16_unit_used ? "0.0h" : "0.0f"),
+            gpu::make_jit_constant("INPUT_PADDING",     outer.argument.input_padding.size()),
+            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding.size())
         };
 
         return mem_consts;

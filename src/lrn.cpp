@@ -26,14 +26,15 @@ primitive_type_id normalization::type_id()
     return &instance;
 }
 
-layout normalization_arg::calc_output_layout(network_impl& network, std::shared_ptr<const normalization> desc)
+layout normalization_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const normalization> desc)
 {
-    auto& input_mem = network.get_primitive(desc->input()[0])->output_memory();
-    return input_mem.get_layout();
+    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
+    auto result = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    return result;
 }
 
 normalization_arg::normalization_arg(network_impl& network, std::shared_ptr<const normalization> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network, desc))
+    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {}
 
 }
