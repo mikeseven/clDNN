@@ -16,25 +16,20 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "primitive_type.h"
-#include "network_impl.h"
 #include "engine_impl.h"
 #include "topology_impl.h"
-#include <map>
-#include <set>
 
 namespace cldnn
 {
 
+struct convolution;
+struct fully_connected;
+class weights_optimizer;
+
 class network_builder
 {
 public:
-    network_builder(refcounted_obj_ptr<engine_impl> eng, const build_options& options)
-        : _engine(eng)
-        , _options(options)
-    {
-    }
-
+    network_builder(refcounted_obj_ptr<engine_impl> eng, const build_options& options);
     network_impl* build_network(refcounted_obj_ptr<topology_impl> tpl);
     const refcounted_obj_ptr<engine_impl>& get_engine() const { return _engine; }
 
@@ -48,5 +43,8 @@ private:
     // Prepares output padding for primitives
     // TODO: case when input primitive is used by multiple primitives
     void prepare_padding();
+    void _optimize_weights();
+    void _prepare_for_optimization(weights_optimizer& wo, std::shared_ptr<const convolution> prim);
+    void _prepare_for_optimization(weights_optimizer& wo, std::shared_ptr<const fully_connected> prim);
 };
 }

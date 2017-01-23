@@ -16,81 +16,97 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "network_builder.h"
+#include "primitive_type.h"
+#include "primitive_arg.h"
+#include "network_impl.h"
+#include "convolution_arg.h"
+#include "fully_connected_arg.h"
+#include "weights_optimizer.h"
 #include "api/primitives/convolution.hpp"
 #include "api/primitives/pooling.hpp"
 #include "api/primitives/depth_concatenate.hpp"
 #include "api/primitives/normalization.hpp"
 
-namespace cldnn
+#include <set>
+
+using namespace cldnn;
+
+network_builder::network_builder(refcounted_obj_ptr<engine_impl> eng, const build_options& options)
+    : _engine(eng), _options(options)
 {
+}
 
-    network_impl* network_builder::build_network(refcounted_obj_ptr<topology_impl> tpl)
+
+network_impl* network_builder::build_network(refcounted_obj_ptr<topology_impl> tpl)
+{
+    assert(tpl);
+    _topology_map = tpl->get_primitives();
+
+    if (_options.get<build_option::optimize_data>())
+        _optimize_weights();
+        
+    prepare_padding();
+
+    optimize_topology();
+    auto network_topology = refcounted_obj_ptr<topology_impl>(new topology_impl(_topology_map), false);
+
+    auto outputs_option = _options.get<build_option_type::outputs>();
+    assert(outputs_option && !outputs_option->outputs.empty());
+
+    return new network_impl(get_engine(), network_topology, outputs_option->outputs);
+}
+
+void network_builder::optimize_topology()
+{
+    // TODO some optimizations aka weights reordering, fusing, etc.
+    auto outputs_option = _options.get<build_option_type::outputs>();
+
+    // in debug mode select all primitives as output
+    if (_options.get<build_option::debug>())
     {
-        assert(tpl);
-        _topology_map = tpl->get_primitives();
-
-        prepare_padding();
-
-        optimize_topology();
-        auto network_topology = refcounted_obj_ptr<topology_impl>(new topology_impl(_topology_map), false);
-
-        auto outputs_option = _options.get<build_option_type::outputs>();
-        assert(outputs_option && !outputs_option->outputs.empty());
-
-        return new network_impl(get_engine(), network_topology, outputs_option->outputs);
-    }
-
-    void network_builder::optimize_topology()
-    {
-        // TODO some optimizations aka weights reordering, fusing, etc.
-        auto outputs_option = _options.get<build_option_type::outputs>();
-
-        // in debug mode select all primitives as output
-        if (_options.get<build_option::debug>())
+        std::vector<primitive_id> outputs;
+        if (outputs_option != nullptr)
         {
-            std::vector<primitive_id> outputs;
-            if (outputs_option != nullptr)
+            outputs = outputs_option->outputs;
+        }
+        for (auto& p : _topology_map)
+        {
+            primitive_id id = p.second->primitive_desc->id();
+            //do not add 'data' primitives to the outputs list
+            if (p.second->primitive_desc->type() != data::type_id())
             {
-                outputs = outputs_option->outputs;
-            }
-            for (auto& p : _topology_map)
-            {
-                primitive_id id = p.second->primitive_desc->id();
-                //do not add 'data' primitives to the outputs list
-                if (p.second->primitive_desc->type() != data::type_id())
+                auto it = std::find(std::begin(outputs), std::end(outputs), id);
+                if (it == std::end(outputs))
                 {
-                    auto it = std::find(std::begin(outputs), std::end(outputs), id);
-                    if (it == std::end(outputs))
-                    {
-                        outputs.push_back(id);
-                    }
+                    outputs.push_back(id);
                 }
             }
-
-            _options.set_option(build_option::outputs(outputs));
-            return;
         }
 
-        if (outputs_option == nullptr || outputs_option->outputs.empty())
-        {
-            std::vector<primitive_id> outputs;
-            // by default, outputs are primitives which are not inputs for others
-            std::set<primitive_id> unreferenced_ids;
-            for (auto& pair : _topology_map)
-            {
-                unreferenced_ids.insert(pair.second->primitive_desc->id());
-            }
-            for (auto& pair : _topology_map)
-            {
-                for (auto& in : pair.second->primitive_desc->dependecies())
-                {
-                    unreferenced_ids.erase(in);
-                }
-            }
-            std::copy(std::begin(unreferenced_ids), std::end(unreferenced_ids), std::back_inserter(outputs));
-            _options.set_option(build_option::outputs(outputs));
-        }
+        _options.set_option(build_option::outputs(outputs));
+        return;
     }
+
+    if (outputs_option == nullptr || outputs_option->outputs.empty())
+    {
+        std::vector<primitive_id> outputs;
+        // by default, outputs are primitives which are not inputs for others
+        std::set<primitive_id> unreferenced_ids;
+        for (auto& pair : _topology_map)
+        {
+            unreferenced_ids.insert(pair.second->primitive_desc->id());
+        }
+        for (auto& pair : _topology_map)
+        {
+            for (auto& in : pair.second->primitive_desc->dependecies())
+            {
+                unreferenced_ids.erase(in);
+            }
+        }
+        std::copy(std::begin(unreferenced_ids), std::end(unreferenced_ids), std::back_inserter(outputs));
+        _options.set_option(build_option::outputs(outputs));
+    }
+}
 
     // Prepares output padding for primitives
     // TODO: case when input primitive is used by multiple primitives
@@ -204,4 +220,85 @@ namespace cldnn
             }
         }
     }
+}
+
+namespace {
+    /* Internal function which fills new vector with primitives, determining for each primitve in 'old' whether it needs optimization:
+       - if primive is already in optimal format. it's inserted into 'optimized' as is
+       - otherwise new primitive which optimize old's format is inserted
+    */
+    void replace_prim_to_opt(std::vector<primitive_id> const& old, std::vector<primitive_id>& optimized, weights_optimizer& wo,
+                                            weights_optimizer::weights_type type, unsigned int batch_size, topology_map const& topo)
+    {
+        for (auto const& prim_id : old)
+        {
+            auto prim = topo.find(prim_id)->second;
+            assert(prim->type() == data::type_id() && "Optimization of type different than cldnn::data");
+            optimized.push_back(wo.add_weights(std::static_pointer_cast<const data>(prim), type, batch_size));
+        }
+    }
+}
+
+void network_builder::_optimize_weights()
+{
+    weights_optimizer wo{ _engine, true };
+
+    for (auto& p : _topology_map)
+    {
+        auto& prim = p.second;
+
+        if (prim->type() == convolution::type_id())
+            _prepare_for_optimization(wo, std::static_pointer_cast<const convolution>(prim));
+        else if (prim->type() == fully_connected::type_id())
+            _prepare_for_optimization(wo, std::static_pointer_cast<const fully_connected>(prim));
+    }
+
+    //all optimizing primitives has beed added and inputs for all primitives has been updated.
+    //run reorders now
+    wo.optimize();
+}
+
+void cldnn::network_builder::_prepare_for_optimization(weights_optimizer& wo, std::shared_ptr<const convolution> prim)
+{
+    std::vector<primitive_id> new_weights;
+    std::vector<primitive_id> new_bias;
+
+    unsigned int batch_size = /*todo: call calc_output_layout for batch size*/1;
+
+    replace_prim_to_opt(prim->weights, new_weights, wo, weights_optimizer::weights_type::convolution, batch_size, _topology_map);
+    replace_prim_to_opt(prim->bias, new_bias, wo, weights_optimizer::weights_type::bias, batch_size, _topology_map);
+
+    _topology_map[prim->id()] = std::make_shared<cldnn::convolution>(
+        prim->id(),
+        prim->input().at(0),
+        new_weights,
+        new_bias,
+        prim->input_padding(),
+        prim->stride,
+        prim->with_activation != 0,
+        prim->negative_slope,
+        prim->output_padding()
+    );
+}
+
+void cldnn::network_builder::_prepare_for_optimization(weights_optimizer& wo, std::shared_ptr<const fully_connected> prim)
+{
+    std::vector<primitive_id> new_weights;
+    std::vector<primitive_id> new_bias;
+
+    unsigned int batch_size = /*todo: call calc_output_layout for batch size*/1;
+
+    replace_prim_to_opt({ prim->weights }, new_weights, wo, weights_optimizer::weights_type::fully_connected, batch_size, _topology_map);
+    replace_prim_to_opt({ prim->bias }, new_bias, wo, weights_optimizer::weights_type::bias, batch_size, _topology_map);
+
+    _topology_map[prim->id()] = std::make_shared<cldnn::fully_connected>(
+        prim->id(),
+        prim->input().at(0),
+        new_weights.at(0),
+        new_bias.at(0),
+        prim->with_activation != 0,
+        prim->negative_slope,
+        prim->input_padding(),
+        prim->output_padding()
+    );
 }

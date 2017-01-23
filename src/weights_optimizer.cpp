@@ -19,23 +19,26 @@
 #include <api/primitives/reorder.hpp>
 #include <boost/filesystem.hpp>
 
-weights_optimizer::weights_optimizer(const cldnn::engine& eng, int batch_size, bool enabled, bool use_half) :
-    _enabled(enabled), _use_half(use_half), _batch_size(batch_size), _engine(eng)
-{}
+using namespace cldnn;
 
-cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, file::weights_type type, bool use_half)
+weights_optimizer::weights_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled)
+    : _enabled(enabled), _topology(new topology_impl(), false), _engine(eng), _outputs()
+{
+}
+
+cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, weights_type type, unsigned int batch_size)
 {
     auto reorder_id = std::string("reorder_") + mem_id;
-    auto data_type = use_half ? cldnn::data_types::f16 : cldnn::data_types::f32;
+    auto data_type = mem.get_layout().data_type; //currently weights optimizer shouldn't change data type
     auto input_size = mem.get_layout().size;
     auto expected_mem_size = input_size;
 
-    if (type == file::weights_type::bias)
+    if (type == weights_type::bias)
     {
         // TODO!!! put better logic here.
         expected_mem_size = cldnn::tensor(cldnn::format::x, { static_cast<cldnn::tensor::value_type>(mem.get_layout().count()) });
     }
-    else if (type == file::weights_type::mean)
+    else if (type == weights_type::mean)
     {
         // TODO!!! put better logic here.
         // NOTE: For reorder there is no need to reorder mean again. For mean_subtract the reorder is needed
@@ -45,10 +48,10 @@ cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& 
         //       Currently mean will not be optimized in any way (mean_subtract is not used in any topology).
         return mem_id;
     }
-    else if (type == file::weights_type::convolution)
+    else if (type == weights_type::convolution)
     {
         // TODO!!! put better logic here.
-        expected_mem_size = _batch_size == 1 && !use_half
+        expected_mem_size = batch_size == 1 && data_type != data_types::f16
             ? cldnn::tensor(cldnn::format::os_iyx_osv16, 
                 {
                     input_size.feature[0], input_size.feature[1], input_size.spatial[0], input_size.spatial[1] // order: "oiyx"
@@ -58,12 +61,12 @@ cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& 
                     input_size.spatial[0], input_size.spatial[1], input_size.feature[1], input_size.feature[0]  // order: "yxio"
                 });
     }
-    else if (type == file::weights_type::fully_connected)
+    else if (type == weights_type::fully_connected)
     {
         // TODO!!! put better logic here.
         if (cldnn::neural_memory::traits(mem.get_layout()).dimension == 4)
         {
-            expected_mem_size = _batch_size == 1 && !use_half 
+            expected_mem_size = batch_size == 1 && data_type != data_types::f16
                 ? cldnn::tensor(cldnn::format::fyxb,
                     {
                         input_size.feature[0], input_size.spatial[0], input_size.spatial[1], input_size.batch[0] // order: "fyxb"
@@ -81,28 +84,27 @@ cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& 
             });
         }
     }
+
     cldnn::layout expected_mem_layout(data_type, expected_mem_size);
 
     if (mem.get_layout() != expected_mem_layout)
     {
-        _topology.add(cldnn::reorder(reorder_id, mem_id, expected_mem_layout));
+        _topology->add(std::make_shared<cldnn::reorder>(reorder_id, mem_id, expected_mem_layout));
+        _outputs.push_back(reorder_id);
         return reorder_id;
     }
     return mem_id;
 }
 
-cldnn::primitive_id weights_optimizer::create_weights_from_file(
-    const std::string& path, file::weights_type type, const boost::optional<bool>& use_half)
+cldnn::primitive_id cldnn::weights_optimizer::add_weights(const std::shared_ptr<const data> data_prim, weights_type type, unsigned int batch_size)
 {
-    auto mem = file::create({ _engine, path, type });
-    auto data_id = boost::filesystem::path(path).filename().string();
-    _topology.add(cldnn::data(data_id, mem));
+    _topology->add(data_prim);
     return _enabled
-        ? _needs_optimization(mem, data_id, type, use_half.value_or(_use_half))
-        : data_id;
+        ? _try_optimize(data_prim->mem, data_prim->id(), type, batch_size)
+        : data_prim->id();
 }
 
-auto weights_optimizer::optimize() const -> decltype(cldnn::network(_engine, _topology).execute())
+auto weights_optimizer::optimize() const -> decltype(network_impl(_engine, _topology, _outputs).execute(std::vector<refcounted_obj_ptr<event_impl>>()))
 {
-    return cldnn::network(_engine, _topology).execute();
+    return network_impl(_engine, _topology, _outputs).execute(std::vector<refcounted_obj_ptr<event_impl>>());
 }
