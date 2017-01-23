@@ -108,114 +108,113 @@ void network_builder::optimize_topology()
     }
 }
 
-    // Prepares output padding for primitives
-    // TODO: case when input primitive is used by multiple primitives
-    void network_builder::prepare_padding()
+// Prepares output padding for primitives
+// TODO: case when input primitive is used by multiple primitives
+void network_builder::prepare_padding()
+{
+    for (auto& pair : _topology_map)
     {
-        for (auto& pair : _topology_map)
+        // right now we optimize only for convolution
+        if (pair.second->primitive_desc->type() == cldnn::convolution::type_id())
         {
-            // right now we optimize only for convolution
-            if (pair.second->primitive_desc->type() == cldnn::convolution::type_id())
+            // if dependencies are not empty, that means this is not the leaf in the graph
+            if (!pair.second->primitive_desc->dependecies().empty())
             {
-                // if dependencies are not empty, that means this is not the leaf in the graph
-                if (!pair.second->primitive_desc->dependecies().empty())
+                auto conv = std::static_pointer_cast<const cldnn::convolution>(pair.second->primitive_desc);
+                auto conv_input_id = conv->input().at(0);
+                auto input_desc = _topology_map.at(conv_input_id)->primitive_desc;
+                auto conv_layout = conv->type()->calc_output_layout(_topology_map, conv);
+
+                // right now output padding optimization is only available for bfyx format and data type = float32
+                if (conv_layout.size.format != cldnn::format::bfyx || conv_layout.data_type != data_types::f32)
                 {
-                    auto conv = std::static_pointer_cast<const cldnn::convolution>(pair.second->primitive_desc);
-                    auto conv_input_id = conv->input().at(0);
-                    auto input_desc = _topology_map.at(conv_input_id)->primitive_desc;
-                    auto conv_layout = conv->type()->calc_output_layout(_topology_map, conv);
+                    continue;
+                }
+                if (input_desc->type() == cldnn::reorder::type_id())
+                {
+                    continue;
+                }
 
-                    // right now output padding optimization is only available for bfyx format and data type = float32
-                    if (conv_layout.size.format != cldnn::format::bfyx || conv_layout.data_type != data_types::f32)
-                    {
-                        continue;
-                    }
-                    if (input_desc->type() == cldnn::reorder::type_id())
-                    {
-                        continue;
-                    }
+                // Calculating input padding needed for convolution
+                auto filter_id = conv->weights.at(0);
+                auto filter_desc = _topology_map.at(filter_id)->primitive_desc;
+                layout filter_layout(data_types::f32, { format::x,{ 0 } });
+                if (filter_desc->type() == data::type_id())
+                {
+                    filter_layout = std::static_pointer_cast<const cldnn::data>(filter_desc)->mem.get_layout();
+                }
+                else if (filter_desc->type() == input_layout::type_id())
+                {
+                    filter_layout = std::static_pointer_cast<const cldnn::input_layout>(filter_desc)->layout;
+                }
+                else if (filter_desc->type() == reorder::type_id())
+                {
+                    filter_layout = std::static_pointer_cast<const cldnn::reorder>(filter_desc)->output_layout;
+                }
+                cldnn::padding input_padding(cldnn::format::yx, { filter_layout.size.spatial[0] - 1, filter_layout.size.spatial[1] - 1 });
 
-                    // Calculating input padding needed for convolution
-                    auto filter_id = conv->weights.at(0);
-                    auto filter_desc = _topology_map.at(filter_id)->primitive_desc;
-                    layout filter_layout(data_types::f32, { format::x,{ 0 } });
-                    if (filter_desc->type() == data::type_id())
-                    {
-                        filter_layout = std::static_pointer_cast<const cldnn::data>(filter_desc)->mem.get_layout();
-                    }
-                    else if (filter_desc->type() == input_layout::type_id())
-                    {
-                        filter_layout = std::static_pointer_cast<const cldnn::input_layout>(filter_desc)->layout;
-                    }
-                    else if (filter_desc->type() == reorder::type_id())
-                    {
-                        filter_layout = std::static_pointer_cast<const cldnn::reorder>(filter_desc)->output_layout;
-                    }
-                    cldnn::padding input_padding(cldnn::format::yx, { filter_layout.size.spatial[0] - 1, filter_layout.size.spatial[1] - 1 });
+                // convolution have only one input primitive
+                primitive_id prev_id = pair.second->primitive_desc->get_dto()->input.at(0);
+                auto prim = _topology_map.at(prev_id)->primitive_desc;
 
-                    // convolution have only one input primitive
-                    primitive_id prev_id = pair.second->primitive_desc->get_dto()->input.at(0);
-                    auto prim = _topology_map.at(prev_id)->primitive_desc;
-
-                    // set output padding for previous primitive
-                    if (prim->type() == cldnn::pooling::type_id())
-                    {
-                        const auto new_pool = std::static_pointer_cast<const cldnn::pooling>(prim);
-                        auto _pool = std::make_shared<pooling>(
-                            new_pool->id(),
-                            new_pool->input().at(0),
-                            new_pool->mode,
-                            new_pool->stride,
-                            new_pool->size,
-                            new_pool->input_padding(),
-                            input_padding
-                            );
-                        _topology_map[new_pool->id()]->primitive_desc = _pool;
-                    }
-                    else if (prim->type() == cldnn::normalization::type_id())
-                    {
-                        const auto new_lrn = std::static_pointer_cast<const cldnn::normalization>(prim);
-                        auto _lrn = std::make_shared<normalization>(
-                            new_lrn->id(),
-                            new_lrn->input().at(0),
-                            new_lrn->size,
-                            new_lrn->k,
-                            new_lrn->alpha,
-                            new_lrn->beta,
-                            new_lrn->input_padding(),
-                            input_padding
-                            );
-                        _topology_map[new_lrn->id()]->primitive_desc = _lrn;
-                    }
-                    else if (prim->type() == cldnn::convolution::type_id())
-                    {
-                        const auto new_conv = std::static_pointer_cast<const cldnn::convolution>(prim);
-                        auto _conv = std::make_shared<convolution>(
-                            new_conv->id(),
-                            new_conv->input().at(0),
-                            new_conv->weights,
-                            new_conv->bias,
-                            new_conv->input_padding(),
-                            new_conv->stride,
-                            new_conv->with_activation ? true : false,
-                            new_conv->negative_slope,
-                            input_padding
-                            );
-                        _topology_map[new_conv->id()]->primitive_desc = _conv;
-                    }
-                    else if (prim->type() == cldnn::depth_concatenate::type_id())
-                    {
-                        const auto new_depth_concat = std::static_pointer_cast<const cldnn::depth_concatenate>(prim);
-                        auto _depth_concat = std::make_shared<depth_concatenate>(
-                            new_depth_concat->id(),
-                            new_depth_concat->input()
-                            );
-                        _topology_map[new_depth_concat->id()]->primitive_desc = _depth_concat;
-                    }
-                    else
-                    {
-                        throw std::runtime_error("want to add output padding to primitive type that does not support it yet!");
-                    }
+                // set output padding for previous primitive
+                if (prim->type() == cldnn::pooling::type_id())
+                {
+                    const auto new_pool = std::static_pointer_cast<const cldnn::pooling>(prim);
+                    auto _pool = std::make_shared<pooling>(
+                        new_pool->id(),
+                        new_pool->input().at(0),
+                        new_pool->mode,
+                        new_pool->stride,
+                        new_pool->size,
+                        new_pool->input_padding(),
+                        input_padding
+                        );
+                    _topology_map[new_pool->id()]->primitive_desc = _pool;
+                }
+                else if (prim->type() == cldnn::normalization::type_id())
+                {
+                    const auto new_lrn = std::static_pointer_cast<const cldnn::normalization>(prim);
+                    auto _lrn = std::make_shared<normalization>(
+                        new_lrn->id(),
+                        new_lrn->input().at(0),
+                        new_lrn->size,
+                        new_lrn->k,
+                        new_lrn->alpha,
+                        new_lrn->beta,
+                        new_lrn->input_padding(),
+                        input_padding
+                        );
+                    _topology_map[new_lrn->id()]->primitive_desc = _lrn;
+                }
+                else if (prim->type() == cldnn::convolution::type_id())
+                {
+                    const auto new_conv = std::static_pointer_cast<const cldnn::convolution>(prim);
+                    auto _conv = std::make_shared<convolution>(
+                        new_conv->id(),
+                        new_conv->input().at(0),
+                        new_conv->weights,
+                        new_conv->bias,
+                        new_conv->input_padding(),
+                        new_conv->stride,
+                        new_conv->with_activation ? true : false,
+                        new_conv->negative_slope,
+                        input_padding
+                        );
+                    _topology_map[new_conv->id()]->primitive_desc = _conv;
+                }
+                else if (prim->type() == cldnn::depth_concatenate::type_id())
+                {
+                    const auto new_depth_concat = std::static_pointer_cast<const cldnn::depth_concatenate>(prim);
+                    auto _depth_concat = std::make_shared<depth_concatenate>(
+                        new_depth_concat->id(),
+                        new_depth_concat->input()
+                        );
+                    _topology_map[new_depth_concat->id()]->primitive_desc = _depth_concat;
+                }
+                else
+                {
+                    throw std::runtime_error("want to add output padding to primitive type that does not support it yet!");
                 }
             }
         }
@@ -247,9 +246,9 @@ void network_builder::_optimize_weights()
     {
         auto& prim = p.second;
 
-        if (prim->type() == convolution::type_id())
+        if (prim->primitive_desc->type() == convolution::type_id())
             _prepare_for_optimization(wo, std::static_pointer_cast<const convolution>(prim));
-        else if (prim->type() == fully_connected::type_id())
+        else if (prim->primitive_desc->type() == fully_connected::type_id())
             _prepare_for_optimization(wo, std::static_pointer_cast<const fully_connected>(prim));
     }
 
@@ -263,7 +262,7 @@ void cldnn::network_builder::_prepare_for_optimization(weights_optimizer& wo, st
     std::vector<primitive_id> new_weights;
     std::vector<primitive_id> new_bias;
 
-    unsigned int batch_size = /*todo: call calc_output_layout for batch size*/1;
+    unsigned int batch_size = prim->type()->calc_output_layout(_topology_map, prim).size.batch[0];
 
     replace_prim_to_opt(prim->weights, new_weights, wo, weights_optimizer::weights_type::convolution, batch_size, _topology_map);
     replace_prim_to_opt(prim->bias, new_bias, wo, weights_optimizer::weights_type::bias, batch_size, _topology_map);
@@ -286,7 +285,7 @@ void cldnn::network_builder::_prepare_for_optimization(weights_optimizer& wo, st
     std::vector<primitive_id> new_weights;
     std::vector<primitive_id> new_bias;
 
-    unsigned int batch_size = /*todo: call calc_output_layout for batch size*/1;
+    unsigned int batch_size = prim->type()->calc_output_layout(_topology_map, prim).size.batch[0];
 
     replace_prim_to_opt({ prim->weights }, new_weights, wo, weights_optimizer::weights_type::fully_connected, batch_size, _topology_map);
     replace_prim_to_opt({ prim->bias }, new_bias, wo, weights_optimizer::weights_type::bias, batch_size, _topology_map);
