@@ -15,6 +15,7 @@
 */
 
 #include "api/memory.hpp"
+#include "api/network.hpp"
 #include "file.h"
 #include "common/common_tools.h"
 #include <api/primitives/data.hpp>

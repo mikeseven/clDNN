@@ -27,7 +27,7 @@
 using namespace cldnn;
 
 // Building AlexNet network with loading weights & biases from file
-topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size)
+topology build_alexnet(const std::string& weights_dir, cldnn::layout& input_layout, int32_t batch_size)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     input_layout.size = { format::byxf, { batch_size, 227, 227, 3 } };

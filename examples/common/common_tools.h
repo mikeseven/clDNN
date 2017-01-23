@@ -17,9 +17,11 @@
 
 #pragma once
 
-#include "weights_optimizer.h"
 #include "power_intrumentation.h"
+#include "instrumentation.h"
 
+#include "api/topology.hpp"
+#include "api/profiling.hpp"
 #include "api/memory.hpp"
 
 #include <memory>
@@ -161,5 +163,3 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
                                           cldnn::memory& output);
 
 void run_topology(const execution_params &ep);
-
-void weight_optimization(weights_optimizer &wo, cldnn::topology& topology);
