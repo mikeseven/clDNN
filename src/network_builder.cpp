@@ -195,15 +195,30 @@ namespace cldnn
                     else if (prim->type() == cldnn::reorder::type_id())
                     {
                         const auto _reorder = std::static_pointer_cast<const cldnn::reorder>(prim);
-                        auto new_reorder = std::make_shared<reorder>(
-                            _reorder->id(),
-                            _reorder->input().at(0),
-                            _reorder->output_layout,
-                            _reorder->mean,
-                            _reorder->input_padding(),
-                            needed_padding
-                            );
-                        _topology_map[_reorder->id()]->primitive_desc = new_reorder;
+                        if (!_reorder->substract_per_feature.empty())
+                        {
+                            auto new_reorder = std::make_shared<reorder>(
+                                _reorder->id(),
+                                _reorder->input().at(0),
+                                _reorder->output_layout,
+                                _reorder->substract_per_feature,
+                                _reorder->input_padding(),
+                                needed_padding
+                                );
+                            _topology_map[_reorder->id()]->primitive_desc = new_reorder;
+                        }
+                        else
+                        {
+                            auto new_reorder = std::make_shared<reorder>(
+                                _reorder->id(),
+                                _reorder->input().at(0),
+                                _reorder->output_layout,
+                                _reorder->mean,
+                                _reorder->input_padding(),
+                                needed_padding
+                                );
+                            _topology_map[_reorder->id()]->primitive_desc = new_reorder;
+                        }
                     }
                     else
                     {
