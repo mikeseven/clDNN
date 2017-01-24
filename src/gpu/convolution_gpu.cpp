@@ -435,7 +435,6 @@ convolution_gpu::kernel_data default_bfyx_yxio_f32(const convolution& arg)
     auto output_size = arg.non_padded_output_layout().size;
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
-    kd.needs_reorder = true; //by default, assume we do need reorder (padding)
     kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_f32;
 
     if (arg.argument.stride.spatial[0] == 1 && arg.argument.stride.spatial[1] == 1)
@@ -446,7 +445,6 @@ convolution_gpu::kernel_data default_bfyx_yxio_f32(const convolution& arg)
             kd.block_height = 1;
             kd.input_block_len = 1;
             kd.prefetch = 4;
-            kd.needs_reorder = false; //the only one case when we don't need padding in bfyx kernel
         }        
         //if less than 16 values is required to compute one single row of output
         // note: (computing n outputs in row requires n + kernel_width values - 1 values in input, for kernel stride == 1)

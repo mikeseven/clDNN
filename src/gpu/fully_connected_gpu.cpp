@@ -82,7 +82,7 @@ struct fully_connected_gpu : is_an_implementation
                 cldnn::input_layout("input", input_mem.get_layout()),
                 cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_mem.argument().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
             );
-            reorder.push_back({ _outer.get_network().get_engine()->build_network(topology, cldnn::build_options()), false });
+            reorder.push_back({ _outer.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
         }
     }
 
@@ -362,12 +362,14 @@ struct fully_connected_gpu : is_an_implementation
 
 
         auto network = reorder[0];
-        network->set_input_data("input", input_mem);
-        auto reorder_outputs = network->execute(events);
+        network->set_input_data("input", api_cast(input_mem.get()));
+        network->execute(events);
+        auto output_id = network->get_output_ids()[0];
 
-        cldnn::memory reorder_output(reorder_outputs[0].memory_ref);
+        auto reorder_output = network->get_primitive(output_id)->output_memory();
+
         return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-            ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, { reorder_outputs[0].event_ref }, reorder_output, output_mem, weight_mem, bias_mem);
+            ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, { network->get_primitive_event(output_id) }, reorder_output, output_mem, weight_mem, bias_mem);
     }
 
     static is_an_implementation *create(fully_connected &arg) {
