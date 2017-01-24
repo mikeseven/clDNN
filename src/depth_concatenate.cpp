@@ -172,7 +172,7 @@ struct depth_concatenate_gpu : is_an_implementation
         if (!data.fp16_supported && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        auto input_padding = outer.argument.input_padding.size().transform(cldnn::format::xy, 0);
+        auto input_padding = outer.argument.input_padding().size().transform(cldnn::format::xy, 0);
         if (input_padding.spatial[0] != 0 || input_padding.spatial[1] != 0)
         {
             throw std::runtime_error("input padding not implemented in depth concatenate yet!");
@@ -184,7 +184,7 @@ struct depth_concatenate_gpu : is_an_implementation
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(data.fp16_supported)),
             gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",      data.fp16_unit_used ? "half" : "float"),
-            gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding.size())
+            gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding().size())
         };
     }
 

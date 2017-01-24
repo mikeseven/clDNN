@@ -138,7 +138,7 @@ namespace cldnn
                     cldnn::padding input_padding(cldnn::format::yx, { filter_layout.size.spatial[0] - 1, filter_layout.size.spatial[1] - 1 });
 
                     // convolution have only one input primitive
-                    primitive_id prev_id = pair.second->primitive_desc->get_dto()->input.at(0);
+                    primitive_id prev_id = pair.second->primitive_desc->input().at(0);
                     auto prim = _topology_map.at(prev_id)->primitive_desc;
 
                     // set output padding for previous primitive
@@ -182,7 +182,7 @@ namespace cldnn
                             new_conv->input_padding(),
                             new_conv->stride,
                             new_conv->with_activation ? true : false,
-                            new_conv->negative_slope,
+                            new_conv->activation_negative_slope,
                             input_padding
                             );
                         _topology_map[new_conv->id()]->primitive_desc = _conv;

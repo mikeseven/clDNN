@@ -150,7 +150,7 @@ struct pooling_gpu : is_an_implementation {
             gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_INIT_VAL_MAX", data.fp16_unit_used ? "-HALF_MAX" : "-FLT_MAX"),
             gpu::make_jit_constant("UNIT_INIT_VAL_AVG", data.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding.size())
+            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding().size())
         };
         return mem_consts;
     }
