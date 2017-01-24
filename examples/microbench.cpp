@@ -15,6 +15,8 @@
 */
 
 #include "common/common_tools.h"
+#include "file.h"
+
 #include <string>
 #include <api/primitives/input_layout.hpp>
 #include <api/primitives/convolution.hpp>
@@ -58,10 +60,9 @@ void test_conv(
     topology.add(input, weights, bias, conv);
 }
 
-cldnn::topology build_microbench(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size)
+cldnn::topology build_microbench(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
 {
     topology topology;
-    auto engine = wo.get_engine();
     bool use_half = input_layout.data_type == data_types::f16 ? true : false;
 
     test_conv(

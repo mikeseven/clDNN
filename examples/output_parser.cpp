@@ -1,4 +1,6 @@
 #include "output_parser.h"
+#include "api/network.hpp"
+
 #include <algorithm>
 #include <memory>
 #include <sstream>

@@ -32,7 +32,7 @@ void convert_weights(cldnn::neural_memory::format::type format, std::string conv
     {
         if (w.find(convertion_path) != std::string::npos)
         {
-            auto mem = file::create({ engine, w.c_str() });
+            auto mem = file::read({ engine, w.c_str() });
             layout output_layout{
                 neural_memory::to_data_type(format),
                 mem.get_layout().size.transform(neural_memory::to_tensor_format(format), 1)
