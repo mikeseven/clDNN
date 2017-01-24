@@ -387,7 +387,7 @@ int main(int argc, char* argv[])
         if (!ep.use_half)
         {
             ep.use_bfyx = parsed_args["use_bfyx"].as<bool>();
-            if (ep.topology_name == "alexnet" || ep.topology_name == "vgg16")
+            if (ep.topology_name == "alexnet" || ep.topology_name == "vgg16" || (ep.topology_name == "googlenet" && ep.batch == 1))
                 ep.use_bfyx = true;
         }
         else
