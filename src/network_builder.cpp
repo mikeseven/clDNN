@@ -223,7 +223,7 @@ void network_builder::prepare_padding()
 
 namespace {
     /* Internal function which fills new vector with primitives, determining for each primitve in 'old' whether it needs optimization:
-       - if primive is already in optimal format. it's inserted into 'optimized' as is
+       - if primitive is already in optimal format, it's inserted into 'optimized' as is
        - otherwise new primitive which optimize old's format is inserted
     */
     void replace_prim_to_opt(std::vector<primitive_id> const& old, std::vector<primitive_id>& optimized, weights_optimizer& wo,
@@ -233,7 +233,7 @@ namespace {
         {
             auto prim = topo.find(prim_id)->second;
             assert(prim->type() == data::type_id() && "Optimization of type different than cldnn::data");
-            optimized.push_back(wo.add_weights(std::static_pointer_cast<const data>(prim), type, batch_size));
+            optimized.push_back(wo.add_weights(std::static_pointer_cast<const data>(prim->primitive_desc), type, batch_size));
         }
     }
 }
@@ -247,9 +247,9 @@ void network_builder::_optimize_weights()
         auto& prim = p.second;
 
         if (prim->primitive_desc->type() == convolution::type_id())
-            _prepare_for_optimization(wo, std::static_pointer_cast<const convolution>(prim));
+            _prepare_for_optimization(wo, std::static_pointer_cast<const convolution>(prim->primitive_desc));
         else if (prim->primitive_desc->type() == fully_connected::type_id())
-            _prepare_for_optimization(wo, std::static_pointer_cast<const fully_connected>(prim));
+            _prepare_for_optimization(wo, std::static_pointer_cast<const fully_connected>(prim->primitive_desc));
     }
 
     //all optimizing primitives has beed added and inputs for all primitives has been updated.
@@ -267,7 +267,7 @@ void cldnn::network_builder::_prepare_for_optimization(weights_optimizer& wo, st
     replace_prim_to_opt(prim->weights, new_weights, wo, weights_optimizer::weights_type::convolution, batch_size, _topology_map);
     replace_prim_to_opt(prim->bias, new_bias, wo, weights_optimizer::weights_type::bias, batch_size, _topology_map);
 
-    _topology_map[prim->id()] = std::make_shared<cldnn::convolution>(
+    _topology_map[prim->id()]->primitive_desc = std::make_shared<cldnn::convolution>(
         prim->id(),
         prim->input().at(0),
         new_weights,
@@ -290,7 +290,7 @@ void cldnn::network_builder::_prepare_for_optimization(weights_optimizer& wo, st
     replace_prim_to_opt({ prim->weights }, new_weights, wo, weights_optimizer::weights_type::fully_connected, batch_size, _topology_map);
     replace_prim_to_opt({ prim->bias }, new_bias, wo, weights_optimizer::weights_type::bias, batch_size, _topology_map);
 
-    _topology_map[prim->id()] = std::make_shared<cldnn::fully_connected>(
+    _topology_map[prim->id()]->primitive_desc = std::make_shared<cldnn::fully_connected>(
         prim->id(),
         prim->input().at(0),
         new_weights.at(0),
