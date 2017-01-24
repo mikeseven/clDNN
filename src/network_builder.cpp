@@ -232,7 +232,7 @@ namespace {
         for (auto const& prim_id : old)
         {
             auto prim = topo.find(prim_id)->second;
-            assert(prim->type() == data::type_id() && "Optimization of type different than cldnn::data");
+            assert(prim->primitive_desc->type() == data::type_id() && "Optimization of type different than cldnn::data");
             optimized.push_back(wo.add_weights(std::static_pointer_cast<const data>(prim->primitive_desc), type, batch_size));
         }
     }
