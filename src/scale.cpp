@@ -35,10 +35,37 @@ namespace cldnn
     scale_arg::scale_arg(network_impl& network, std::shared_ptr<const scale> desc)
         :primitive_arg_base(network, desc, calc_output_layout(network, desc))
     {
+        auto input_format = input_memory(0).get_layout().size.format;
+        auto output_format = output_memory().get_layout().size.format;
+        auto scale_format = scale_memory().get_layout().size.format;
+
+        if (bias_term())
+        {
+            auto bias_format = bias_memory().get_layout().size.format;
+            if (scale_format != bias_format)
+            {
+                throw std::runtime_error("Scale input format do not match bias format!");
+            }
+        }
     }
 
     const memory& scale_arg::scale_memory() const
     {
         return _network.get_primitive(argument.scale_input)->output_memory();
+    }
+
+    const int& scale_arg::axis() const
+    {
+        return argument.axis;
+    }
+
+    const bool& scale_arg::bias_term() const
+    {
+        return argument.bias_term;
+    }
+
+    const memory& scale_arg::bias_memory() const
+    {
+        return _network.get_primitive(argument.bias)->output_memory();
     }
 }

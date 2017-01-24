@@ -22,6 +22,9 @@ namespace cldnn
 {
 BEGIN_DTO(scale)
         primitive_id_ref scale_input;
+        int axis;
+        bool bias_term;
+        primitive_id_ref bias;
 END_DTO(scale)
 
 struct scale : public primitive_base<scale, DTO(scale)>
@@ -33,11 +36,35 @@ struct scale : public primitive_base<scale, DTO(scale)>
         const primitive_id& id,
         const primitive_id& input,
         const primitive_id& scale_input,
+        int axis,
+        const bool bias_term,
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :primitive_base(id, {input}, input_padding, output_padding, scale_input)
+        :primitive_base(id, {input}, input_padding, output_padding, scale_input, axis, bias_term)
         , scale_input(scale_input)
+        , axis(axis)
+        , bias_term(bias_term)
+        , bias("")
+    {
+        init_dto();
+    }
+
+    scale(
+        const primitive_id& id,
+        const primitive_id& input,
+        const primitive_id& scale_input,
+        int axis,
+        const bool bias_term,
+        const primitive_id& bias,
+        const padding& input_padding = padding(),
+        const padding& output_padding = padding()
+    )
+        :primitive_base(id, { input }, input_padding, output_padding, scale_input, axis, bias_term, bias)
+        , scale_input(scale_input)
+        , axis(axis)
+        , bias_term(bias_term)
+        , bias(bias)
     {
         init_dto();
     }
@@ -45,18 +72,31 @@ struct scale : public primitive_base<scale, DTO(scale)>
     scale(const dto* dto)
         :primitive_base(dto)
         , scale_input(dto->scale_input)
+        , axis(dto->axis)
+        , bias_term(dto->bias_term)
+        , bias(dto->bias)
     {
         init_dto();
     }
 
     const primitive_id scale_input;
+    const int& axis;
+    const bool& bias_term;
+    const primitive_id bias;
 
 protected:
-    std::vector<primitive_id> get_dependencies() const override { return{ scale_input }; }
+    std::vector<primitive_id> get_dependencies() const override
+    { 
+        if (bias.empty())
+            return{ scale_input };
+        else
+            return{ scale_input, bias };
+    }
 
     void init_dto()
     {
         _dto.scale_input = scale_input;
+        _dto.bias = bias;
     }
 };
 }

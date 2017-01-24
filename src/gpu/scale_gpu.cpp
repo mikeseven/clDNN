@@ -100,9 +100,10 @@ namespace neural
 
             gpu::jit_constants mem_consts{
                 gpu::make_jit_constant("INPUT",                 outer.input_memory(0).argument().size),
+                gpu::make_jit_constant("SCALE",                 outer.input_memory(1).argument().size),
                 gpu::make_jit_constant("FP16_UNIT_USED",        static_cast<int>(data.fp16_unit_used)),
                 gpu::make_jit_constant("UNIT_TYPE",             data.fp16_unit_used ? "half" : "float"),
-                gpu::make_jit_constant("UNIT_VAL_ZERO",         data.fp16_unit_used ? "0.0h" : "0.0f"),
+                gpu::make_jit_constant("BIAS_TERM",             static_cast<int>(outer.bias_term())),
             };
 
             return mem_consts;
@@ -117,7 +118,13 @@ namespace neural
             const auto& scale_mem = outer.input_memory(1);  // scale_input
             const auto& output_mem = outer.output_memory(); // output
 
-            return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>({ {kd.gws0, kd.gws1, kd.gws2 }, {kd.lws0, kd.lws1, kd.lws2 } }, events, input_mem, output_mem, scale_mem);
+            if (outer.bias_term())
+            {
+                const auto& bias_mem = outer.input_memory(2);  // bias
+                return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } }, events, input_mem, output_mem, scale_mem, bias_mem);
+            }
+            else
+                return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>({ {kd.gws0, kd.gws1, kd.gws2 }, {kd.lws0, kd.lws1, kd.lws2 } }, events, input_mem, output_mem, scale_mem);
         }
 
         static is_an_implementation *create(scale &arg) { return new scale_gpu(arg); };

@@ -30,5 +30,8 @@ namespace cldnn
         static layout calc_output_layout(network_impl& network, std::shared_ptr<const scale> desc);
 
         const memory& scale_memory() const;
+        const int& axis() const;
+        const bool& bias_term() const;
+        const memory& bias_memory() const;
     };
 }
