@@ -57,7 +57,6 @@ struct kd_default_value_selector<gpu::engine_info_internal::configurations>
 struct convolution_gpu : is_an_implementation {
     convolution &outer;
     gpu::engine_info_internal _engine_info;
-    std::vector<cldnn::refcounted_obj_ptr<cldnn::network_impl>> reorder;
 
     struct kernel_data
     {
@@ -103,26 +102,7 @@ struct convolution_gpu : is_an_implementation {
         , _engine_info(arg.get_network().get_engine()->get_context()->get_engine_info())
         , _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.weights_memory(0).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration))
         , _kernel(arg.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants())
-    {
-        if (_kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
-            _kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1 ||
-            _kernel_data.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2)
-        {
-            auto input_layout = outer.input_memory(0).get_layout();
-            auto weights_layout = outer.weights_memory(0).get_layout();
-            cldnn::padding reorder_output_pad(cldnn::format::yx, { weights_layout.size.spatial[0] - 1, weights_layout.size.spatial[1] - 1 });
-            cldnn::topology topology(
-                cldnn::input_layout("input", input_layout),
-                cldnn::reorder("reorder", "input", input_layout, "", { cldnn::format::yx, {0,0}}, reorder_output_pad )
-            );
-
-            // TODO: add support for reorder to do reorder + padding in single step to remove this from convolution.
-            if(outer.input()[0]->type() == cldnn::reorder::type_id())
-            {
-                reorder.push_back({ outer.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
-            }
-        }
-    }
+    {}
 
     gpu::jit_constants get_jit_constants() const {
 
@@ -232,51 +212,21 @@ struct convolution_gpu : is_an_implementation {
 
         auto& kd = me->_kernel_data;
 
-        std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>> tmp_events;
+        std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>> tmp_events(events);
 
-        if(!reorder.empty())
-        /*if (kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32 ||
-            kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1 ||
-            kd.kernel_name == kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2)*/
-        {
-            auto network = reorder[0];
-            network->set_input_data("input", api_cast(input_mem.get()));
-            network->execute(events);
-            
-            //reorder_outputs[0].event_ref->wait();
-            tmp_events.push_back(network->get_primitive_event("reorder"));
-            cldnn::memory reorder_output(network->get_primitive("reorder")->output_memory());
-
-            // execute kernels
-            for (decltype(split) i = 0; i < split; i++) {
-                auto event = me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                    ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
-                        tmp_events,
-                        reorder_output,
-                        output_mem,
-                        outer.weights_memory(i), //filters
-                        outer.bias_memory(i), //biases
-                        i);
-                tmp_events.clear();
-                tmp_events.emplace_back(event);
-            }
-        }
-        else
-        {
-            // execute kernels
-            for (decltype(split) i = 0; i < split; i++) {
-                assert(kd.gws0 % kd.lws0 == 0);
-                auto event = me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                    ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
-                        tmp_events,
-                        input_mem,
-                        output_mem,
-                        outer.weights_memory(i), //filters
-                        outer.bias_memory(i), //biases
-                        i);
-                tmp_events.clear();
-                tmp_events.emplace_back(event);
-            }
+        // execute kernels
+        for (decltype(split) i = 0; i < split; i++) {
+            assert(kd.gws0 % kd.lws0 == 0);
+            auto event = me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
+                ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
+                    tmp_events,
+                    input_mem,
+                    output_mem,
+                    outer.weights_memory(i), //filters
+                    outer.bias_memory(i), //biases
+                    i);
+            tmp_events.clear();
+            tmp_events.emplace_back(event);
         }
         return tmp_events.at(0);
     }
