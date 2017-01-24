@@ -24,7 +24,6 @@ inline api_type api_cast(impl_type* value) { return reinterpret_cast<api_type>(v
 inline impl_type* api_cast(api_type value) { return reinterpret_cast<impl_type*>(value); }
 
 
-#ifdef NDEBUG
 template<typename T>
 T exception_handler(cldnn_status default_error, cldnn_status* status, const T& default_result, std::function<T()> func)
 {
@@ -39,7 +38,12 @@ T exception_handler(cldnn_status default_error, cldnn_status* status, const T& d
     {
         if (status)
             *status = default_error;
+#ifndef NDEBUG
+        static_cast<void>(default_result);
+        throw;
+#else
         return default_result;
+#endif
     }
 }
 
@@ -56,24 +60,8 @@ inline void exception_handler(cldnn_status default_error, cldnn_status* status, 
     {
         if (status)
             *status = default_error;
+#ifndef NDEBUG
+        throw;
+#endif
     }
 }
-#else
-template<typename T>
-T exception_handler(cldnn_status, cldnn_status* status, const T&, std::function<T()> func)
-{
-    //NOTE for implementer: status should not be modified after successful func() call
-    if (status)
-        *status = CLDNN_SUCCESS;
-    return func();
-}
-
-inline void exception_handler(cldnn_status, cldnn_status* status, std::function<void()> func)
-{
-    //NOTE for implementer: status should not be modified after successful func() call
-    if (status)
-        *status = CLDNN_SUCCESS;
-    func();
-}
-#endif
-

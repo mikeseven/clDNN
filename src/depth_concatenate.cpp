@@ -47,25 +47,18 @@ layout depth_concatenate_arg::calc_output_layout(const topology_map& topology_ma
     // get indicies of feature coordinates and initialize particular result coordinate to 0
     auto& format_order = input_format.order();
     assert(result_sizes.size() == format_order.size());
-    std::vector<size_t> feature_indicies;
-    for (decltype(format_order.size()) i = 0; i < format_order.size(); i++)
-    {
-        if (format_traits::is_feature_char(format_order[i]))
-        {
-            feature_indicies.push_back(i);
-            result_sizes[i] = 0;
-        }
-    }
+    if (input_layout.size.feature.size() != 1) throw std::domain_error("depth_concatenate supports only one feature dimension");
+
+    auto feature_index = format_order.find_first_of(format_traits::feature_chars());
+    assert(feature_index != std::string::npos);
 
     // calculate sum of features from all inputs
+    result_sizes[feature_index] = 0;
     for(auto& id : input_ids)
     {
         auto input_desc = topology_map.at(id)->primitive_desc;
         auto input_sizes = input_desc->type()->calc_output_layout(topology_map, input_desc).size.sizes();
-        for(auto i : feature_indicies)
-        {
-            result_sizes[i] += input_sizes[i];
-        }
+        result_sizes[feature_index] += input_sizes[feature_index];
     }
     return layout{input_layout.data_type, {input_format, result_sizes}};
 }
