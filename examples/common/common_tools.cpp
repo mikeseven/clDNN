@@ -548,11 +548,11 @@ void run_topology(const execution_params &ep)
     else if (ep.topology_name == "googlenet")
         primitives = build_googlenetv1(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_bfyx);
     else if (ep.topology_name == "gender")
-        primitives = build_gender(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size);
+        primitives = build_gender(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_bfyx);
     else if (ep.topology_name == "microbench")
         primitives = build_microbench(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size);
     else if(ep.topology_name == "squeezenet")
-        primitives = build_squeezenet(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size);
+        primitives = build_squeezenet(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_bfyx);
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
 

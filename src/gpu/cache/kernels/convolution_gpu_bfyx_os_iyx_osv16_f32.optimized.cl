@@ -114,6 +114,9 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_f32)(
         }
     }
 
+#if FILTER_OUTPUT_FEATURE_NUM % 16 && FILTER_SIZE_X == 1 && FILTER_SIZE_Y == 1
+    if (feature_idx < FILTER_OUTPUT_FEATURE_NUM)
+#endif
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         if(!(or + r >= OUTPUT_SIZE_Y))
         {
