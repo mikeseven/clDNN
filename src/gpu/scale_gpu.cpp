@@ -54,6 +54,7 @@ namespace neural
             std::string kernel_name;
             bool fp16_unit_used;
             bool fp16_supported;
+            bool scale_bfyx_used; ///< Indicates that bfyx format of scale is used.
         } _kernel_data;
         gpu::kernel _kernel;
 
@@ -76,6 +77,7 @@ namespace neural
 
             kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
             kd.fp16_supported = engine_info.supports_fp16 != 0;
+            kd.scale_bfyx_used = false;
 
             // Determine global work sizes.
             kd.gws0 = input_mem.argument().size.batch[0];   // B
@@ -104,6 +106,7 @@ namespace neural
                 gpu::make_jit_constant("FP16_UNIT_USED",        static_cast<int>(data.fp16_unit_used)),
                 gpu::make_jit_constant("UNIT_TYPE",             data.fp16_unit_used ? "half" : "float"),
                 gpu::make_jit_constant("BIAS_TERM",             static_cast<int>(outer.bias_term())),
+                gpu::make_jit_constant("SCALE_BFYX_USED",       static_cast<int>(data.scale_bfyx_used)),
             };
 
             return mem_consts;
@@ -138,9 +141,19 @@ namespace neural
         return kd;
     }
 
-    //TODO: add different mem formats for scale and modify kernels accordingly
+    scale_gpu::kernel_data set_scale_bfyx(const scale& arg)
+    {
+        scale_gpu::kernel_data kd = set_default(arg);
+        kd.scale_bfyx_used = true;
+
+        return kd;
+    }
+
     kd_selector_t<scale_gpu::kernel_data, scale, neural::memory::format::type, neural::memory::format::type, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> scale_gpu::ks = {
         { std::make_tuple(memory::format::yxfb_f32, memory::format::yxfb_f32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+        { std::make_tuple(memory::format::yxfb_f32, memory::format::bfyx_f32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_scale_bfyx },
+        { std::make_tuple(memory::format::yxfb_f16, memory::format::yxfb_f16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+        { std::make_tuple(memory::format::yxfb_f16, memory::format::bfyx_f16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_scale_bfyx },
     };
 
     namespace {
