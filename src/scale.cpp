@@ -20,23 +20,22 @@
 
 namespace cldnn
 {
-    primitive_type_id scale::type_id()
+    primitive_type_id scale_type_id()
     {
         static primitive_type_base<scale, scale_arg> instance;
         return &instance;
     }
 
-    layout scale_arg::calc_output_layout(network_impl& network, std::shared_ptr<const scale> desc)
+    layout scale_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const scale> desc)
     {
-        auto& input_mem = network.get_primitive(desc->input()[0])->output_memory();
-        return input_mem.get_layout();
+        auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
+        auto result = input_desc->type()->calc_output_layout(topology_map, input_desc);
+        return result;
     }
 
     scale_arg::scale_arg(network_impl& network, std::shared_ptr<const scale> desc)
-        :primitive_arg_base(network, desc, calc_output_layout(network, desc))
+        :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
     {
-        auto input_format = input_memory(0).get_layout().size.format;
-        auto output_format = output_memory().get_layout().size.format;
         auto scale_format = scale_memory().get_layout().size.format;
 
         auto scale_batch_size = scale_memory().get_layout().size.batch[0];
@@ -65,7 +64,7 @@ namespace cldnn
 
             if (scale_format != bias_format) throw std::runtime_error("Scale input format do not match bias format!");
 
-            for (int i = 0; i < bias_memory().get_layout().size.raw.size(); ++i)
+            for (size_t i = 0; i < bias_memory().get_layout().size.raw.size(); ++i)
             {
                 if (scale_memory().get_layout().size.raw[i] != bias_raw_sizes[i]) throw std::runtime_error("Scale input size do not match bias size!");
             }

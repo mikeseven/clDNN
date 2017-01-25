@@ -15,23 +15,26 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma once
-#include "api/primitives/scale.hpp"
-#include "primitive_arg.h"
-#include <memory>
-#include "topology_impl.h"
+#ifndef SCALE_H
+#define SCALE_H
 
-namespace cldnn
-{
-    class scale_arg : public primitive_arg_base<scale>
-    {
-    public:
-        scale_arg(network_impl& network, std::shared_ptr<const scale> desc);
+#include "api/cldnn.h"
 
-        static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const scale> desc);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-        const memory& scale_memory() const;
-        const bool& bias_term() const;
-        const memory& bias_memory() const;
-    };
+CLDNN_BEGIN_PRIMITIVE_DESC(scale)
+cldnn_primitive_id scale_input;
+bool bias_term;
+cldnn_primitive_id bias;
+CLDNN_END_PRIMITIVE_DESC(scale)
+
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(scale);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* SCALE_H */
+

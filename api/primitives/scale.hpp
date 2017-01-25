@@ -16,20 +16,15 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "scale.h"
 #include "../primitive.hpp"
 
 namespace cldnn
 {
-BEGIN_DTO(scale)
-        primitive_id_ref scale_input;
-        bool bias_term;
-        primitive_id_ref bias;
-END_DTO(scale)
 
-struct scale : public primitive_base<scale, DTO(scale)>
+struct scale : public primitive_base<scale, CLDNN_PRIMITIVE_DESC(scale)>
 {
-    DLL_SYM static primitive_type_id type_id();
-    typedef DTO(scale) dto;
+    CLDNN_DECLATE_PRIMITIVE(scale)
 
     scale(
         const primitive_id& id,
@@ -39,9 +34,9 @@ struct scale : public primitive_base<scale, DTO(scale)>
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :primitive_base(id, {input}, input_padding, output_padding, scale_input, bias_term)
+        :primitive_base(id, {input}, input_padding, output_padding, "", bias_term)
         , scale_input(scale_input)
-        , bias_term(bias_term)
+        , bias_term(_dto.bias_term)
         , bias("")
     {
         init_dto();
@@ -56,9 +51,9 @@ struct scale : public primitive_base<scale, DTO(scale)>
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :primitive_base(id, { input }, input_padding, output_padding, scale_input, bias_term, bias)
+        :primitive_base(id, { input }, input_padding, output_padding, "", bias_term, "")
         , scale_input(scale_input)
-        , bias_term(bias_term)
+        , bias_term(_dto.bias_term)
         , bias(bias)
     {
         init_dto();
@@ -67,14 +62,14 @@ struct scale : public primitive_base<scale, DTO(scale)>
     scale(const dto* dto)
         :primitive_base(dto)
         , scale_input(dto->scale_input)
-        , bias_term(dto->bias_term)
+        , bias_term(_dto.bias_term)
         , bias(dto->bias)
     {
         init_dto();
     }
 
     const primitive_id scale_input;
-    const bool& bias_term;
+    const bool bias_term;
     const primitive_id bias;
 
 protected:
@@ -88,8 +83,8 @@ protected:
 
     void init_dto()
     {
-        _dto.scale_input = scale_input;
-        _dto.bias = bias;
+        _dto.scale_input = scale_input.c_str();
+        _dto.bias = bias.c_str();
     }
 };
 }
