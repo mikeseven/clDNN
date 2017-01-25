@@ -18,7 +18,7 @@
 #ifndef ELTWISE_H
 #define ELTWISE_H
 
-#include "api/cldnn.h"
+#include "../cldnn.h"
 
 #ifdef __cplusplus
 extern "C" {

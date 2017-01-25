@@ -18,7 +18,7 @@
 #ifndef DATA_H
 #define DATA_H
 
-#include "api/cldnn.h"
+#include "../cldnn.h"
 
 #ifdef __cplusplus
 extern "C" {

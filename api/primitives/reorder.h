@@ -18,7 +18,7 @@
 #ifndef REORDER_H
 #define REORDER_H
 
-#include "api/cldnn.h"
+#include "../cldnn.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -18,7 +18,7 @@
 #ifndef CONVOLUTION_H
 #define CONVOLUTION_H
 
-#include "api/cldnn.h"
+#include "../cldnn.h"
 
 #ifdef __cplusplus
 extern "C" {

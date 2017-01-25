@@ -18,7 +18,7 @@
 #ifndef BATCH_NORM_H
 #define BATCH_NORM_H
 
-#include "api/cldnn.h"
+#include "../cldnn.h"
 
 #ifdef __cplusplus
 extern "C" {

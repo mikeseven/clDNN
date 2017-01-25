@@ -18,7 +18,7 @@
 #ifndef NORMALIZATION_H
 #define NORMALIZATION_H
 
-#include "api/cldnn.h"
+#include "../cldnn.h"
 
 #ifdef __cplusplus
 extern "C" {
