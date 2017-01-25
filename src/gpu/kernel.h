@@ -323,10 +323,10 @@ class kernel : public context_holder {
     void setArgs(cl::Kernel&) const {}
 
 public:
-    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& name, kernels_cache::jit_definitions definitions = kernels_cache::jit_definitions())
-        : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(name, definitions)) {}
-    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& name, const jit_constants& constants)
-        : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(name, constants.get_definitions())) {}
+    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& id, const std::string& name, kernels_cache::jit_definitions definitions = kernels_cache::jit_definitions())
+        : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(id, name, definitions)) {}
+    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& id, const std::string& name, const jit_constants& constants)
+        : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(id, name, constants.get_definitions())) {}
 
     kernel(const kernel& other) : context_holder(other.context()), _kernel_id(other._kernel_id) {}
 
