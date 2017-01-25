@@ -60,12 +60,12 @@ namespace neural
             } _kernel_data;
             gpu::kernel _kernel;
 
-            static kd_selector_t<kernel_data, batch_norm, neural::memory::format::type, neural::memory::format::type, neural::memory::format::type, bool, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
+            static kd_selector_t<kernel_data, batch_norm, neural::memory::format::type, bool, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
 
             batch_norm_gpu(const batch_norm& outer):
                 _outer(outer),
                 _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info()),
-                _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.mean_memory().argument().format, outer.variance_memory().argument().format, outer.use_global_stats(), _engine_info.architecture, _engine_info.configuration)),
+                _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.use_global_stats(), _engine_info.architecture, _engine_info.configuration)),
                 _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
             {}
 
@@ -144,17 +144,11 @@ namespace neural
             return kd;
         }
 
-        kd_selector_t<batch_norm_gpu::kernel_data, normalization::batch_norm, neural::memory::format::type, neural::memory::format::type, neural::memory::format::type, bool, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> batch_norm_gpu::ks = {
-            { std::make_tuple(memory::format::yxfb_f32, memory::format::yxfb_f32, memory::format::yxfb_f32, false, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
-            { std::make_tuple(memory::format::yxfb_f32, memory::format::yxfb_f32, memory::format::yxfb_f32, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
-            { std::make_tuple(memory::format::yxfb_f32, memory::format::bfyx_f32, memory::format::yxfb_f32, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
-            { std::make_tuple(memory::format::yxfb_f32, memory::format::yxfb_f32, memory::format::bfyx_f32, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
-            { std::make_tuple(memory::format::yxfb_f32, memory::format::bfyx_f32, memory::format::bfyx_f32, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
-            { std::make_tuple(memory::format::yxfb_f16, memory::format::yxfb_f16, memory::format::yxfb_f16, false, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
-            { std::make_tuple(memory::format::yxfb_f16, memory::format::yxfb_f16, memory::format::yxfb_f16, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
-            { std::make_tuple(memory::format::yxfb_f16, memory::format::bfyx_f16, memory::format::yxfb_f16, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
-            { std::make_tuple(memory::format::yxfb_f16, memory::format::yxfb_f16, memory::format::bfyx_f16, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
-            { std::make_tuple(memory::format::yxfb_f16, memory::format::bfyx_f16, memory::format::bfyx_f16, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
+        kd_selector_t<batch_norm_gpu::kernel_data, normalization::batch_norm, neural::memory::format::type, bool, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> batch_norm_gpu::ks = {
+            { std::make_tuple(memory::format::yxfb_f32, false, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+            { std::make_tuple(memory::format::yxfb_f32, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
+            { std::make_tuple(memory::format::yxfb_f16, false, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+            { std::make_tuple(memory::format::yxfb_f16, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
         };
 
         namespace {
