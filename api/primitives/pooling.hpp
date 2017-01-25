@@ -16,22 +16,20 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "pooling.h"
 #include "../primitive.hpp"
 
 namespace cldnn
 {
-enum class pooling_mode {max, average};
-
-BEGIN_DTO(pooling)
-    pooling_mode mode;
-    tensor stride;
-    tensor size;
-END_DTO(pooling)
-
-struct pooling : public primitive_base<pooling, DTO(pooling)>
+enum class pooling_mode : int32_t
 {
-    DLL_SYM static primitive_type_id type_id();
-    typedef DTO(pooling) dto;
+    max     = cldnn_pooling_max,
+    average = cldnn_pooling_average
+};
+
+struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
+{
+    CLDNN_DECLATE_PRIMITIVE(pooling)
 
     pooling(
         const primitive_id& id,
@@ -42,22 +40,22 @@ struct pooling : public primitive_base<pooling, DTO(pooling)>
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_padding, output_padding, mode, stride, size)
-        , mode(_dto.mode)
+        : primitive_base(id, {input}, input_padding, output_padding, static_cast<cldnn_pooling_mode>(mode), stride, size)
+        , mode(static_cast<pooling_mode>(_dto.mode))
         , stride(_dto.stride)
         , size(_dto.size)
     {}
 
     pooling(const dto* dto)
         : primitive_base(dto)
-        , mode(_dto.mode)
+        , mode(static_cast<pooling_mode>(_dto.mode))
         , stride(_dto.stride)
         , size(_dto.size)
     {}
 
-    const pooling_mode& mode;
-    const tensor& stride;
-    const tensor& size;
+    const pooling_mode mode;
+    const tensor stride;
+    const tensor size;
 };
 
 }

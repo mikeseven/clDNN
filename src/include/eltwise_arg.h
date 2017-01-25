@@ -19,6 +19,7 @@
 #include "api/primitives/eltwise.hpp"
 #include "primitive_arg.h"
 #include <memory>
+#include "topology_impl.h"
 
 namespace cldnn
 {
@@ -27,7 +28,7 @@ namespace cldnn
     public:
         eltwise_arg(network_impl& network, std::shared_ptr<const eltwise> desc);
 
-        static layout calc_output_layout(network_impl& network, std::shared_ptr<const eltwise> desc);
+        static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const eltwise> desc);
 
         const memory& input2_memory() const;
 

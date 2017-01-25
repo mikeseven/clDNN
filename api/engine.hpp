@@ -16,49 +16,34 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include <cstdint>
 #include "cldnn_defs.h"
-#include "compounds.h"
 
 namespace cldnn
 {
-enum class engine_types { ocl };
+
+enum class engine_types : int32_t
+{
+    ocl = cldnn_engine_ocl
+};
 
 struct engine_configuration
 {
-    uint32_t enable_profiling;
-    string_ref compiler_options;
-    engine_configuration(bool profiling = false, string_ref options = "")
+    const bool enable_profiling;
+    const std::string compiler_options;
+    engine_configuration(bool profiling = false, const std::string& options = std::string())
         :enable_profiling(profiling), compiler_options(options) {}
-};
 
-struct engine_info
-{
-    enum configurations : uint32_t
+    engine_configuration(const cldnn_engine_configuration& c_conf)
+        :enable_profiling(c_conf.enable_profiling != 0), compiler_options(c_conf.compiler_options){}
+
+    operator ::cldnn_engine_configuration() const
     {
-        GT0 = 0,
-        GT1,
-        GT1_5,
-        GT2,
-        GT3,
-        GT4,
-        GT_UNKNOWN,
-        GT_COUNT
-    };
-
-    configurations configuration;
-    uint32_t cores_count;
-    uint32_t core_frequency;
-
-    uint64_t max_work_group_size;
-    uint64_t max_local_mem_size;
-
-    // Flags (for layout compatibility fixed size types are used).
-    uint8_t supports_fp16;
-    uint8_t supports_fp16_denorms;
+        return{ enable_profiling, compiler_options.c_str() };
+    }
 };
 
-class engine_impl;
+using engine_info = ::cldnn_engine_info;
+
 struct engine
 {
     engine(const engine_configuration& configuration = engine_configuration())
@@ -66,50 +51,80 @@ struct engine
     {}
 
     engine(engine_types type, uint32_t engine_num, const engine_configuration& configuration = engine_configuration())
-        :_impl(check_status<engine_impl*>("failed to create engine", [&](status_t* status)
+        :_impl(check_status<::cldnn_engine>("failed to create engine", [&](status_t* status)
               {
-                  return create_engine_impl(type, engine_num, &configuration, status);
+                  cldnn_engine_configuration conf = configuration;
+                  return cldnn_create_engine(static_cast<int32_t>(type), engine_num, &conf, status);
               }))
     {}
 
-    DLL_SYM engine(const engine& other);
-    DLL_SYM engine& operator=(const engine& other);
-    DLL_SYM ~engine();
+    // TODO add move construction/assignment
+    engine(const engine& other) :_impl(other._impl)
+    {
+        retain();
+    }
+
+    engine& operator=(const engine& other)
+    {
+        if (_impl == other._impl) return *this;
+        release();
+        _impl = other._impl;
+        retain();
+        return *this;
+    }
+
+    ~engine()
+    {
+        release();
+    }
+
     friend bool operator==(const engine& lhs, const engine& rhs) { return lhs._impl == rhs._impl; }
     friend bool operator!=(const engine& lhs, const engine& rhs) { return !(lhs == rhs); }
 
     static uint32_t engine_count(engine_types type)
     {
-        status_t status;
-        auto result = engine_count_impl(type, &status);
-        if (status != CLDNN_SUCCESS)
-            CLDNN_THROW("engine_count failed", status);
-        return result;
+        return check_status<uint32_t>("engine_count failed", [=](status_t* status)
+        {
+            return cldnn_get_engine_count(static_cast<int32_t>(type), status);
+        });
     }
 
     engine_info get_info() const
     {
-        engine_info result;
-        check_status("get engine info failed", get_info_impl(&result));
-        return result;
+        return check_status<engine_info>("engine_count failed", [=](status_t* status)
+        {
+            return cldnn_get_engine_info(_impl, status);
+        });
     }
 
-    DLL_SYM engine_types engine_type();
+    engine_types get_type() const
+    {
+        return check_status<engine_types>("engine_count failed", [=](status_t* status)
+        {
+            return static_cast<engine_types>(cldnn_get_engine_type(_impl, status));
+        });
+    }
 
-    engine_impl* get() const { return _impl; }
+    ::cldnn_engine get() const { return _impl; }
 
 private:
     friend struct network;
     friend struct memory;
     friend struct event;
-    DLL_SYM engine(engine_impl* impl) : _impl(impl)
+    engine(::cldnn_engine impl) : _impl(impl)
     {
         if (_impl == nullptr) throw std::invalid_argument("implementation pointer should not be null");
     }
-    engine_impl* _impl;
-    DLL_SYM static uint32_t engine_count_impl(engine_types type, status_t* status);
-    DLL_SYM static engine_impl* create_engine_impl(engine_types type, uint32_t engine_num, const engine_configuration* configuration, status_t* status);
-    DLL_SYM status_t get_info_impl(engine_info* info) const;
+    ::cldnn_engine _impl;
+
+    void retain()
+    {
+        check_status<void>("retain engine failed", [=](status_t* status) { cldnn_retain_engine(_impl, status); });
+    }
+    void release()
+    {
+        check_status<void>("release engine failed", [=](status_t* status) { cldnn_release_engine(_impl, status); });
+    }
 };
-API_CLASS(engine)
+CLDNN_API_CLASS(engine)
 }

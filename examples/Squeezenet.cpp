@@ -40,7 +40,7 @@ topology build_squeezenet(const std::string& weights_dir, weights_optimizer& wo,
     }
 
     // create conversion to yxfb format and subtract mean values
-    tensor reorder_size(mem_format, { 227, 227, 3, batch_size });
+    tensor reorder_size = input_layout.size.transform(mem_format, 1);
     //auto reorder_mean = { (float)104.0069879317889, (float)116.66876761696767, (float)122.6789143406786 };
     auto reordered_input = reorder(
         "reorder",
@@ -440,7 +440,8 @@ topology build_squeezenet(const std::string& weights_dir, weights_optimizer& wo,
         reordered_input,
         conv1,
         pool1,
-        fire2_squeeze1x1);
+        fire2_squeeze1x1
+    );
     
     topology.add(fire2_expand1x1);
     topology.add(fire2_expand3x3);

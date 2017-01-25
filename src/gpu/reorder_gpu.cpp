@@ -254,7 +254,8 @@ struct reorder_gpu : is_an_implementation {
                 s << "(uint[]){ ";
                 for (uint32_t i = 0; i < subtract_mem.argument().size.raw.size(); i++)
                 {
-                    s << static_cast<uint32_t>(padding.raw[i]) << ", ";
+                    // TODO: get subtract padding from mean_subtract primitive.
+                    s << 0/*static_cast<uint32_t>(padding.raw[i])*/ << ", ";
                 }
                 s << " }";
                 mem_consts.add_constant(gpu::make_jit_constant("SUBTRTACT_PADDING", s.str()));

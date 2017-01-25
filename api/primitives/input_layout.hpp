@@ -16,20 +16,15 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "input_layout.h"
 #include "../primitive.hpp"
 #include "../memory.hpp"
 
 namespace cldnn
 {
-BEGIN_DTO(input_layout)
-    cldnn::layout layout;
-END_DTO(input_layout)
-
-class input_layout : public primitive_base<input_layout, DTO(input_layout)>
+struct input_layout : public primitive_base<input_layout, CLDNN_PRIMITIVE_DESC(input_layout)>
 {
-public:
-    typedef DTO(input_layout) dto;
-    DLL_SYM static primitive_type_id type_id();
+    CLDNN_DECLATE_PRIMITIVE(input_layout)
 
     input_layout(const primitive_id& id, const layout& layout)
         :primitive_base(id, {}, padding(), padding(), layout)
@@ -41,6 +36,6 @@ public:
         , layout(_dto.layout)
     {}
 
-    const cldnn::layout& layout;
+    const cldnn::layout layout;
 };
 }

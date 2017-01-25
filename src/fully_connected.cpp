@@ -19,7 +19,7 @@
 #include "primitive_type_base.h"
 namespace cldnn
 {
-primitive_type_id fully_connected::type_id()
+primitive_type_id fully_connected_type_id()
 {
     static primitive_type_base<fully_connected, fully_connected_arg> instance;
     return &instance;
@@ -55,26 +55,28 @@ bool is_batch_after_spatial(const std::string order)
 }
 }
 
-layout fully_connected_arg::calc_output_layout(network_impl& network, std::shared_ptr<const fully_connected> desc)
+layout fully_connected_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const fully_connected> desc)
 {
-    auto input = network.get_primitive(desc->input()[0]);
-    auto input_layout = input->output_memory().get_layout();
+    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
+    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
 
-    auto bias = network.get_primitive(desc->bias);
-    auto bias_layout = bias->output_memory().get_layout();
+    auto bias_desc = topology_map.at(desc->bias)->primitive_desc;
+    auto bias_layout = bias_desc->type()->calc_output_layout(topology_map, bias_desc);
 
     if(is_batch_after_spatial(input_layout.size.format.order()))
     {
-        return layout(input_layout.data_type, tensor(format::xb, { bias_layout.size.spatial[0], input_layout.size.batch[0] }));
+        auto result = layout(input_layout.data_type, tensor(format::xb, { bias_layout.size.spatial[0], input_layout.size.batch[0] }));
+        return result;
     }
     else
     {
-        return layout(input_layout.data_type, tensor(format::bx, { input_layout.size.batch[0], bias_layout.size.spatial[0] }));
+        auto result = layout(input_layout.data_type, tensor(format::bx, { input_layout.size.batch[0], bias_layout.size.spatial[0] }));
+        return result;
     }
 }
 
 fully_connected_arg::fully_connected_arg(network_impl& network, std::shared_ptr<const fully_connected> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network, desc))
+    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
     , _weights(network.get_primitive(desc->weights))
     , _bias(network.get_primitive(desc->bias))
 {
@@ -101,66 +103,3 @@ const memory& fully_connected_arg::bias_memory() const
 }
 
 }
-
-//namespace neural {
-//
-//fully_connected::arguments::arguments(
-//    primitive            out,
-//    primitive            in,
-//    primitive            weights,
-//    primitive            bias,
-//    bool                 use_relu,
-//    float                negative_slope)
-//    : output({ out })
-//    , input({ in, weights, bias })
-//    , use_relu(use_relu)
-//    , negative_slope(negative_slope) {}
-//
-//fully_connected::arguments::arguments(
-//    neural::memory::format::type out_fmt,
-//    primitive                    in,
-//    primitive                    weights,
-//    primitive                    bias,
-//    bool                         use_relu,
-//    float                        negative_slope)
-//    : use_relu(use_relu)
-//    , negative_slope(negative_slope)
-//{
-//    // if input is previouse layer, not memory primitive need to set input to output memory of this primitive
-//    const auto& input_mem = get_memory_primitive(in);
-//    if (in.id() != type_id<const memory>()->id) {
-//        input = { in.output[0], weights, bias };
-//    }
-//    else {
-//        input = { in, weights, bias };
-//    }
-//
-//    neural::vector<uint32_t> output_size = {
-//        input_mem.argument.size.batch[0],
-//        { { get_memory_primitive(bias).argument.size.spatial[0] } },
-//        1
-//    };
-//
-//    output = { memory::allocate({ out_fmt, output_size }) };
-//}
-//
-//// creates primitive with fully_connected implementation that supports provided arguments
-//primitive fully_connected::create(fully_connected::arguments arg) {
-//    auto& input_arg = arg.input[0].primitive().as<const memory&>().argument;
-//    auto& output_arg = arg.output[0].as<const memory&>().argument;
-//    
-//    if (input_arg.format == memory::format::yxfb_f32 ||
-//        input_arg.format == memory::format::yxfb_f16)
-//    {
-//        // NOTE: Testing for supported weights format is now inside each device implementation of the primitve (e.g. fully_connected_gpu).
-//    }
-//    else
-//    {
-//        if (input_arg.size.raw.size() != output_arg.size.raw.size())
-//            throw std::runtime_error("Fully connected input/output number of dimension does not match.");
-//    }
-//
-//    return is_a_primitive::create<fully_connected>(arg);
-//}
-//
-//}

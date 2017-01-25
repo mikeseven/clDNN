@@ -17,6 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include <atomic>
+#include <type_traits>
 
 namespace cldnn
 {
@@ -49,7 +50,7 @@ private:
     std::atomic_int _ref_count;
 };
 
-template<class T, typename Dummy = std::enable_if<std::is_base_of<refcounted_obj<T>, T>::value>>
+template<class T, typename Dummy = typename std::enable_if<std::is_base_of<refcounted_obj<T>, T>::value>::type>
 struct refcounted_obj_ptr
 {
     refcounted_obj_ptr(T* ptr, bool add_ref = true) : _ptr(ptr)

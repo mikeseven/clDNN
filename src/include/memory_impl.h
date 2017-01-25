@@ -16,6 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "api_impl.h"
 #include "refcounted_obj.h"
 #include "engine_impl.h"
 #include "api/memory.hpp"
@@ -29,7 +30,8 @@ struct memory_impl : refcounted_obj<memory_impl>
     virtual void* lock() = 0;
     virtual void unlock() = 0;
     size_t size() const { return _layout.data_size(); }
-    virtual bool is_allocated_by(const refcounted_obj_ptr<engine_impl>& engine) const { return engine == _engine; };
+    virtual bool is_allocated_by(const refcounted_obj_ptr<engine_impl>& engine) const { return engine == _engine; }
+    const refcounted_obj_ptr<engine_impl>& get_engine() const { return _engine; }
     const layout& get_layout() const { return _layout; }
 protected:
     const refcounted_obj_ptr<engine_impl> _engine;
@@ -50,3 +52,5 @@ private:
 };
 
 }
+
+API_CAST(::cldnn_memory, cldnn::memory_impl)

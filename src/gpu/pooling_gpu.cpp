@@ -138,9 +138,10 @@ struct pooling_gpu : is_an_implementation {
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
+        auto input_size = outer.input().at(0)->non_padded_output_layout().size;
         gpu::jit_constants mem_consts{
-            gpu::make_jit_constant("INPUT",             outer.input_memory(0).argument().size),
-            gpu::make_jit_constant("OUTPUT",            outer.output_memory().argument().size),
+            gpu::make_jit_constant("INPUT",             input_size),
+            gpu::make_jit_constant("OUTPUT",            outer.non_padded_output_layout().size),
             gpu::make_jit_constant("WINDOW",            outer.argument.size),
             gpu::make_jit_constant("STRIDE",            outer.argument.stride),
             gpu::make_jit_constant("INPUT_OFFSET",      outer.desc()->input_offset()),
@@ -148,7 +149,8 @@ struct pooling_gpu : is_an_implementation {
             gpu::make_jit_constant("FP16_UNIT_USED",    static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_INIT_VAL_MAX", data.fp16_unit_used ? "-HALF_MAX" : "-FLT_MAX"),
-            gpu::make_jit_constant("UNIT_INIT_VAL_AVG", data.fp16_unit_used ? "0.0h" : "0.0f")
+            gpu::make_jit_constant("UNIT_INIT_VAL_AVG", data.fp16_unit_used ? "0.0h" : "0.0f"),
+            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding().size())
         };
         return mem_consts;
     }
@@ -230,12 +232,11 @@ pooling_gpu::kernel_data defauly_bfyx_f32(const pooling& arg)
     else
         kd.kernel_name = kernel_name_bfyx_max;
 
-    const auto& output_mem = arg.output_memory(); // output
-
+    auto output_size = arg.non_padded_output_layout().size;
     // Determine global work sizes.
-    kd.gws2 = output_mem.argument().size.batch[0] * output_mem.argument().size.feature[0];
-    kd.gws0 = output_mem.argument().size.spatial[0];
-    kd.gws1 = output_mem.argument().size.spatial[1];
+    kd.gws2 = output_size.batch[0] * output_size.feature[0];
+    kd.gws0 = output_size.spatial[0];
+    kd.gws1 = output_size.spatial[1];
 
     // Find largest positive local work size that is divider for global work size.
     kd.lws0 = kd.gws0;

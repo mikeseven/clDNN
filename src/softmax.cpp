@@ -20,25 +20,24 @@
 
 namespace cldnn
 {
-primitive_type_id softmax::type_id()
+primitive_type_id softmax_type_id()
 {
     static primitive_type_base<softmax, softmax_arg> instance;
     return &instance;
 }
 
-layout softmax_arg::calc_output_layout(network_impl& network, std::shared_ptr<const softmax> desc)
+layout softmax_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const softmax> desc)
 {
-    auto& input_mem = network.get_primitive(desc->input()[0])->output_memory();
-    auto input_layout = input_mem.get_layout();
+    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
+    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
 
     cldnn::layout layoutTemp = input_layout;
     if (input_layout.size.raw.size() == 4) layoutTemp = cldnn::layout(input_layout.data_type, tensor(format::xb, { input_layout.size.feature[0], input_layout.size.batch[0] }));
-
     return layoutTemp;
 }
 
 softmax_arg::softmax_arg(network_impl& network, std::shared_ptr<const softmax> desc)
-    : primitive_arg_base(network, desc, calc_output_layout(network, desc))
+    : primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
     //    auto& input_offset  = arg.input_offset;
     //    auto& output_offset = arg.output_offset;

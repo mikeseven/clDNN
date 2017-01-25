@@ -17,6 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "api/network.hpp"
+#include "api_impl.h"
 #include "engine_impl.h"
 #include "topology_impl.h"
 #include "refcounted_obj.h"
@@ -27,7 +28,7 @@
 
 namespace cldnn
 {
-class network_impl : public refcounted_obj<network_impl>
+struct network_impl : public refcounted_obj<network_impl>
 {
 public:
     typedef std::map<primitive_id, std::shared_ptr<const primitive>> topology_map;
@@ -38,11 +39,13 @@ public:
     const refcounted_obj_ptr<topology_impl>& get_topology() const { return _topology; }
 
     void reset_execution(bool wait = true);
-    void set_input_data(const primitive_id& id, const memory& data);
-    array_ref<network::network_output_ref> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events);
+    void set_input_data(const primitive_id& id, memory_impl* data);
+    const std::vector<primitive_id>& get_output_ids() const { return _output_ids; }
+    void execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events);
 
     // Implementation specific calls
     std::shared_ptr<const primitive_arg> get_primitive(const primitive_id& id);
+    const refcounted_obj_ptr<event_impl>& get_primitive_event(const primitive_id& id) const { return _events.at(id); }
     std::vector<std::shared_ptr<const primitive_arg>> get_primitives(const std::vector<primitive_id>& ids);
     refcounted_obj_ptr<event_impl> execute_primitive(const std::shared_ptr<const primitive_arg>& primitive, const std::vector<refcounted_obj_ptr<event_impl>>& events);
 
@@ -53,6 +56,7 @@ private:
     std::map<primitive_id, std::shared_ptr<const primitive_arg>> _primitives;
     std::map<primitive_id, bool> _input_names;
     std::unordered_map<primitive_id, refcounted_obj_ptr<event_impl>> _events;
-    std::vector<network::network_output_ref> _outputs;
 };
 }
+
+API_CAST(::cldnn_network, cldnn::network_impl)

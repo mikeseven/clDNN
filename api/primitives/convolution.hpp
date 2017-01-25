@@ -16,25 +16,15 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "convolution.h"
 #include "../primitive.hpp"
 
 namespace cldnn
 {
 
-BEGIN_DTO(convolution)
-    tensor stride;
-    uint32_t with_activation;
-    float activation_negative_slope;
-    int32_t split;
-    array_ref<primitive_id_ref> weights;
-    array_ref<primitive_id_ref> bias;
-END_DTO(convolution)
-
-
-struct convolution : public primitive_base<convolution, DTO(convolution)>
+struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(convolution)>
 {
-    DLL_SYM static primitive_type_id type_id();
-    typedef DTO(convolution) dto;
+    CLDNN_DECLATE_PRIMITIVE(convolution)
 
     convolution(
         const primitive_id& id,
@@ -52,16 +42,16 @@ struct convolution : public primitive_base<convolution, DTO(convolution)>
                         static_cast<uint32_t>(with_activation),
                         activation_slp,
                         static_cast<int32_t>(weights.size()),
-                        array_ref<primitive_id_ref>(),
-                        array_ref<primitive_id_ref>())
+                        cldnn_primitive_id_arr{ nullptr, 0 },
+                        cldnn_primitive_id_arr{ nullptr, 0 } )
         , _weights(weights)
         , _bias(bias)
         , weights(_weights)
         , bias(_bias)
         , split(_dto.split)
         , stride(_dto.stride)
-        , with_activation(_dto.with_activation)
-        , negative_slope(_dto.activation_negative_slope)
+        , with_activation(with_activation)
+        , activation_negative_slope(_dto.activation_negative_slope)
     {
         init_dto();
     }
@@ -74,23 +64,23 @@ struct convolution : public primitive_base<convolution, DTO(convolution)>
         , bias(_bias)
         , split(_dto.split)
         , stride(_dto.stride)
-        , with_activation(_dto.with_activation)
-        , negative_slope(_dto.activation_negative_slope)
+        , with_activation(_dto.with_activation != 0)
+        , activation_negative_slope(_dto.activation_negative_slope)
     {
         init_dto();
     }
 
 protected:
-    const primitive_id_arr _weights;
-    const primitive_id_arr _bias;
+    const detail::primitive_id_arr _weights;
+    const detail::primitive_id_arr _bias;
 
 public:
     const std::vector<primitive_id>& weights;
     const std::vector<primitive_id>& bias;
-    const int32_t& split;
-    const tensor& stride;
-    const uint32_t& with_activation;
-    const float& negative_slope;
+    const int32_t split;
+    const tensor stride;
+    const bool with_activation;
+    const float activation_negative_slope;
 
 protected:
     std::vector<primitive_id> get_dependencies() const override

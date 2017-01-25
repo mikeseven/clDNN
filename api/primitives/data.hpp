@@ -16,30 +16,25 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "data.h"
 #include "../primitive.hpp"
 #include "../memory.hpp"
 
 namespace cldnn
 {
-BEGIN_DTO(data)
-    memory mem;
-END_DTO(data)
-
-class data : public primitive_base<data, DTO(data)>
+struct data : public primitive_base<data, CLDNN_PRIMITIVE_DESC(data)>
 {
-public:
-    typedef DTO(data) dto;
-    DLL_SYM static primitive_type_id type_id();
+    CLDNN_DECLATE_PRIMITIVE(data)
 
     data(const primitive_id& id, const memory& mem)
-        :primitive_base(id, {}, padding(), padding(), mem)
-        , mem(_dto.mem)
+        :primitive_base(id, {}, padding(), padding(), mem.get())
+        , mem(_dto.mem, true)
     {}
 
     explicit data(const dto* dto)
         :primitive_base(dto)
-        , mem(_dto.mem)
+        , mem(_dto.mem, true)
     {}
-    const memory& mem;
+    const memory mem;
 };
 }

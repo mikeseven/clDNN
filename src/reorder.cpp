@@ -25,18 +25,17 @@ reorder_arg::reorder_arg(network_impl& network, std::shared_ptr<const reorder> d
     : primitive_arg_base(network, desc, desc->output_layout)
 {
     auto& input_mem = input_memory(0);
-    auto& arg = *(desc->get_dto()->as<reorder>());
 
     if (input_mem.argument().size.raw.size() != _output.argument().size.raw.size())
         //            throw std::runtime_error("Number of dimensions in reorder does not match. Meybe you want to use reshape primitive?"); //todo reshape
         throw std::runtime_error("Number of dimensions in reorder does not match.");
-    if (!arg.substract_per_feature.empty())
+    if (!desc->substract_per_feature.empty())
     {
         if (input_mem.argument().size.feature.size() > 1)
         {
             throw std::runtime_error("Subtracting values work only for formats that have feature dimension == 1");
         }
-        if (static_cast<size_t>(input_mem.argument().size.feature[0]) != arg.substract_per_feature.size())
+        if (static_cast<size_t>(input_mem.argument().size.feature[0]) != desc->substract_per_feature.size())
             throw std::runtime_error("Number of features/channels in input does not match the number of features/channels in values to subtract");
     }
     auto input_padding_size = desc->input_padding().size();
@@ -49,7 +48,7 @@ reorder_arg::reorder_arg(network_impl& network, std::shared_ptr<const reorder> d
     }
 }
 
-primitive_type_id reorder::type_id()
+primitive_type_id reorder_type_id()
 {
     static primitive_type_base<reorder, reorder_arg> instance;
     return &instance;

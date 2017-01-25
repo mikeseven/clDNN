@@ -22,18 +22,18 @@
 
 namespace cldnn
 {
-primitive_type_id convolution::type_id()
+primitive_type_id convolution_type_id()
 {
     static primitive_type_base<convolution, convolution_arg> instance;
     return &instance;
 }
 
-layout convolution_arg::calc_output_layout(network_impl& network, std::shared_ptr<const convolution> desc)
+layout convolution_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const convolution> desc)
 {
-    auto input = network.get_primitive(desc->input()[0]);
-    auto input_layout = input->output_memory().get_layout();
-    auto weight0 = network.get_primitive(desc->weights[0]);
-    auto weights_layout = weight0->output_memory().get_layout();
+    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
+    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    auto weight0_desc = topology_map.at(desc->weights[0])->primitive_desc;
+    auto weights_layout = weight0_desc->type()->calc_output_layout(topology_map, weight0_desc);
     auto input_offset = desc->input_offset().transform(input_layout.size.format, 0);
     auto strd = desc->stride.transform(format::yx, 0);
     auto split = desc->weights.size();
@@ -54,11 +54,12 @@ layout convolution_arg::calc_output_layout(network_impl& network, std::shared_pt
                            output_spatial_y, output_spatial_x, number_of_features, input_layout.size.batch[0] }
                       );
 
-    return { input_layout.data_type, output_size.transform(input_layout.size.format, 1) };
+    auto result = layout({ input_layout.data_type, output_size.transform(input_layout.size.format, 1) });
+    return result;
 }
 
 convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const convolution> desc)
-    : primitive_arg_base(network, desc, calc_output_layout(network, desc))
+    : primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
     , _weights(network.get_primitives(desc->weights))
     , _biases(network.get_primitives(desc->bias))
 {

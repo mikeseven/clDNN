@@ -19,6 +19,7 @@
 #include "api/primitives/activation.hpp"
 #include "primitive_arg.h"
 #include <memory>
+#include "topology_impl.h"
 
 namespace cldnn
 {
@@ -27,6 +28,6 @@ class activation_arg : public primitive_arg_base<activation>
 public:
     activation_arg(network_impl& network, std::shared_ptr<const activation> desc);
 
-    static layout calc_output_layout(network_impl& network, std::shared_ptr<const activation> desc);
+    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const activation> desc);
 };
 }

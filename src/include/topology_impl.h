@@ -16,16 +16,27 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/topology.hpp"
+#include "api_impl.h"
 #include "refcounted_obj.h"
 #include "api/primitive.hpp"
 #include <map>
 
 namespace cldnn
 {
-typedef std::map<primitive_id, std::shared_ptr<const primitive>> topology_map;
+struct layout;
+struct topology_node
+{
+public:
+    topology_node(std::shared_ptr<const primitive> prim_desc)
+        : primitive_desc(prim_desc){}
 
-class topology_impl : public refcounted_obj<topology_impl>
+    std::shared_ptr<const primitive> primitive_desc;
+    std::unique_ptr<layout> output_layout;
+};
+
+typedef std::map<primitive_id, std::shared_ptr<topology_node>> topology_map;
+
+struct topology_impl : public refcounted_obj<topology_impl>
 {
 public:
     topology_impl(const topology_map& map = topology_map()) : _primitives(map) {}
@@ -35,10 +46,10 @@ public:
         auto id = desc->id();
         if (_primitives.count(id) != 0)
             throw std::runtime_error("primitive '" + id + "' exists already");
-        _primitives.insert({ id, desc });
+        _primitives.insert({ id, std::make_shared<topology_node>(desc)});
     }
 
-    const std::shared_ptr<const primitive>& at(primitive_id id) const { return _primitives.at(id); }
+    const std::shared_ptr<topology_node>& at(primitive_id id) const { return _primitives.at(id); }
 
     const topology_map& get_primitives() const { return _primitives; }
 
@@ -46,3 +57,5 @@ private:
     topology_map _primitives;
 };
 }
+
+API_CAST(::cldnn_topology, cldnn::topology_impl)

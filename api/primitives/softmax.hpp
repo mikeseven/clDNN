@@ -16,17 +16,14 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "softmax.h"
 #include "../primitive.hpp"
 
 namespace cldnn
 {
-BEGIN_DTO(softmax)
-END_DTO(softmax)
-
-struct softmax : public primitive_base<softmax, DTO(softmax)>
+struct softmax : public primitive_base<softmax, CLDNN_PRIMITIVE_DESC(softmax)>
 {
-    DLL_SYM static primitive_type_id type_id();
-    typedef DTO(softmax) dto;
+    CLDNN_DECLATE_PRIMITIVE(softmax)
 
     softmax(
         const primitive_id& id,

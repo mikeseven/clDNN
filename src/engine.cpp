@@ -16,10 +16,9 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "engine_impl.h"
-#include "network_impl.h"
 #include "network_builder.h"
-#include "gpu/ocl_toolkit.h"
 #include "event_impl.h"
+#include "gpu/ocl_toolkit.h"
 #include "gpu/memory_gpu.h"
 
 namespace cldnn
@@ -28,7 +27,7 @@ using gpu_toolkit_config = neural::gpu::configuration;
 
 gpu_toolkit_config convert_configuration(const engine_configuration conf)
 {
-    gpu_toolkit_config result = gpu_toolkit_config::get();
+    gpu_toolkit_config result;
     result.compiler_options = conf.compiler_options;
     result.enable_profiling = conf.enable_profiling != 0;
     return result;
@@ -37,8 +36,7 @@ gpu_toolkit_config convert_configuration(const engine_configuration conf)
 engine_impl::engine_impl(const engine_configuration& conf)
     : _configuration(conf)
     , _context(std::make_shared<gpu_toolkit>(convert_configuration(conf)))
-{
-}
+{}
 
 memory_impl* engine_impl::allocate_buffer(layout layout)
 {
@@ -50,88 +48,9 @@ event_impl* engine_impl::create_user_event()
     return new user_event_gpu(cl::UserEvent(get_context()->context()));
 }
 
-network_impl* engine_impl::build_network(const topology& topology, const build_options& options)
+network_impl* engine_impl::build_network(topology_impl* topology, const build_options& options)
 {
     network_builder builder(this, options);
-    return builder.build_network(topology.get());
-}
-
-uint32_t engine::engine_count_impl(engine_types type, status_t* status)
-{
-    if (type == engine_types::ocl)
-    {
-        if (status) *status = CLDNN_SUCCESS;
-        return 1;
-    }
-    else
-    {
-        if (status) *status = CLDNN_UNSUPPORTED;
-        return 0;
-    }
-}
-
-engine::engine(const engine& other):_impl(other._impl)
-{
-    _impl->add_ref();
-}
-
-engine& engine::operator=(const engine& other)
-{
-    if (_impl == other._impl) return *this;
-    _impl->release();
-    _impl = other._impl;
-    _impl->add_ref();
-    return *this;
-}
-
-engine::~engine()
-{
-    _impl->release();
-}
-
-engine_types engine::engine_type()
-{
-    return engine_types::ocl;
-}
-
-engine_impl* engine::create_engine_impl(engine_types engine_type, uint32_t engine_num, const engine_configuration* configuration, status_t* status)
-{
-    if (engine_num > 0 || (engine_type != engine_types::ocl))
-    {
-        if (status)
-            *status = CLDNN_UNSUPPORTED;
-        return nullptr;
-    }
-
-    try
-    {
-        if (status)
-            *status = CLDNN_SUCCESS;
-        return new engine_impl(configuration ? *configuration : engine_configuration());
-    }
-    catch (...)
-    {
-        if (status)
-            *status = CLDNN_ERROR;
-        return nullptr;
-    }
-}
-
-status_t engine::get_info_impl(engine_info * info) const
-{
-    if (!info)
-        return CLDNN_ERROR;
-
-    try
-    {
-        auto internal_info = _impl->get_engine_info();
-        *info = static_cast<engine_info>(internal_info);
-        return CLDNN_SUCCESS;
-    }
-    catch (...)
-    {
-        return CLDNN_ERROR;
-    }
-
+    return builder.build_network(topology);
 }
 }
