@@ -20,6 +20,9 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_f32)(
     uint lid = get_local_id(2); 
     
     uint batch_idx = fm / FILTER_OUTPUT_FEATURE_NUM;
+    //this check is required in case when FILTER_OUTPUT_FEATURE_NUM % 16 != 0
+    if (batch_idx >= OUTPUT_BATCH_NUM)
+        --batch_idx;
     uint feature_idx = fm % FILTER_OUTPUT_FEATURE_NUM;
     uint fmg = feature_idx / SIMD_SIZE;
 
@@ -114,8 +117,8 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_f32)(
         }
     }
 
-#if FILTER_OUTPUT_FEATURE_NUM % 16 && FILTER_SIZE_X == 1 && FILTER_SIZE_Y == 1
-    if (feature_idx < FILTER_OUTPUT_FEATURE_NUM)
+#if (FILTER_OUTPUT_FEATURE_NUM % 16 != 0) && (FILTER_SIZE_X == 1) && (FILTER_SIZE_Y == 1)
+    if (fm < FILTER_OUTPUT_FEATURE_NUM * OUTPUT_BATCH_NUM)
 #endif
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         if(!(or + r >= OUTPUT_SIZE_Y))
