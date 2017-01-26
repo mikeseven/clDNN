@@ -124,7 +124,6 @@ struct execution_params {
 
     uint32_t batch;
     bool profiling;
-    bool profiling_queue;
     bool optimize_weights;
     bool use_half;
     bool use_bfyx;
