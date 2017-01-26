@@ -28,8 +28,9 @@
 namespace neural
 {
 // Kernel names.
-static const std::string kernel_name         = "softmax_gpu";
-static const std::string kernel_name_batches = "softmax_gpu_batches";
+static const std::string kernel_name            = "softmax_gpu";
+static const std::string kernel_name_batches    = "softmax_gpu_batches";
+static const std::string kernel_name_batches_bx = "softmax_gpu_batches_bx";
 
 namespace normalization
 {
@@ -39,6 +40,7 @@ struct softmax_gpu : is_an_implementation
     struct kernel_data
     {
         size_t gws0;
+        size_t gws1;
         size_t lws0;
         std::string kernel_name;
         size_t items_num, leftovers;
@@ -69,19 +71,37 @@ struct softmax_gpu : is_an_implementation
         auto batch_num         = outer.output_memory().get_layout().size.batch[0];
         size_t out_buffer_size = output_mem.count();
 
-        if (batch_num != 1 && input_mem.argument().format == memory::format::bx_f32)
-        {
-            throw std::runtime_error("Softmax not implemented for bx input when batch > 1!");
-        }
-
         if (batch_num <= 1)
         {
             kd.lws0 = std::min(std::max(out_buffer_size, static_cast<size_t>(1)), static_cast<size_t>(32));
             kd.leftovers = out_buffer_size % kd.lws0;
             kd.gws0 = out_buffer_size - kd.leftovers;
+            kd.gws1 = 1;
             kd.items_num = kd.gws0 / kd.lws0;
 
             kd.kernel_name = kernel_name;
+        }
+        else if (input_mem.argument().format == memory::format::bx_f32)
+        {
+            // We have two units of data per work item in current implementation.
+            auto local_mem_per_wi = 2 * (kd.fp16_unit_used ? sizeof(half_t) : sizeof(float));
+            // Combining device execution and local memory restrictions to compute maximum possible LWS.
+            auto max_lws = std::min(engine_info.max_work_group_size, engine_info.max_local_mem_size / local_mem_per_wi);
+
+            kd.lws0 = 1;
+            kd.items_num = out_buffer_size / batch_num;
+            // Compute maximum possible LWS that does not exceed device capabilities and optimizes number of global memory reads.
+            while ((kd.items_num > 32 || kd.lws0 < kd.items_num) && (2 * kd.lws0 <= max_lws))
+            {
+                kd.lws0 *= 2;
+                kd.items_num /= 2;
+            }
+
+            kd.gws0 = kd.lws0;
+            kd.gws1 = batch_num;
+            kd.leftovers = out_buffer_size % kd.lws0;
+
+            kd.kernel_name = kernel_name_batches_bx;
         }
         else
         {
@@ -100,6 +120,7 @@ struct softmax_gpu : is_an_implementation
             }
 
             kd.gws0 = kd.lws0;
+            kd.gws1 = 1;
             kd.leftovers = out_buffer_size % kd.lws0;
 
             kd.kernel_name = kernel_name_batches;
@@ -139,7 +160,7 @@ struct softmax_gpu : is_an_implementation
         assert(1 == output_mem.get_layout().size.feature.size());
         assert(1 == output_mem.get_layout().size.batch.size());
 
-        return _kernel.run<gpu::input_mem, gpu::output_mem>({kd.gws0, kd.lws0}, events, input_mem, output_mem);
+        return _kernel.run<gpu::input_mem, gpu::output_mem>({ { kd.gws0, kd.gws1 }, { kd.lws0, 1 } }, events, input_mem, output_mem);
     }
 
     static is_an_implementation *create(softmax &arg) { return new softmax_gpu(arg); };

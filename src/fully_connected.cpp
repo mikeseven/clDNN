@@ -63,7 +63,10 @@ layout fully_connected_arg::calc_output_layout(const topology_map& topology_map,
     auto bias_desc = topology_map.at(desc->bias)->primitive_desc;
     auto bias_layout = bias_desc->type()->calc_output_layout(topology_map, bias_desc);
 
-    if(is_batch_after_spatial(input_layout.size.format.order()))
+    if(is_batch_after_spatial(input_layout.size.format.order()) || 
+        (input_layout.size.format == format::bfyx &&                //this condition tests whether our input is batch>1 in bfyx format, if yes there will be
+            input_layout.data_type == data_types::f32 &&            //extra reorder between input and this fc from bfyx to yxfb format (so "is_batch_after_spetial" should return true)
+        input_layout.size.batch[0] > 1))
     {
         auto result = layout(input_layout.data_type, tensor(format::xb, { bias_layout.size.spatial[0], input_layout.size.batch[0] }));
         return result;
@@ -85,7 +88,7 @@ fully_connected_arg::fully_connected_arg(network_impl& network, std::shared_ptr<
     auto output_size = output_memory().get_layout().size;
 
     if(input_size.format != format::yxfb
-        && !(input_size.format == format::bfyx && data_type == data_types::f32 && input_size.batch[0] == 1) //special batch1 case
+        && !(input_size.format == format::bfyx && data_type == data_types::f32) //special batch1 case
         && (input_size.raw.size() != output_size.raw.size()) )
     {
         throw std::invalid_argument("Fully connected input/output number of dimension does not match.");
