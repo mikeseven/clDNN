@@ -58,12 +58,12 @@ namespace neural
         } _kernel_data;
         gpu::kernel _kernel;
 
-        static kd_selector_t<kernel_data, scale, neural::memory::format::type, neural::memory::format::type, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
+        static kd_selector_t<kernel_data, scale, neural::memory::format::type, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
 
         scale_gpu(const scale& outer) :
             _outer(outer),
             _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info()),
-            _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.scale_memory().argument().format, _engine_info.architecture, _engine_info.configuration)),
+            _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, _engine_info.architecture, _engine_info.configuration)),
             _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
         {}
 
@@ -136,24 +136,15 @@ namespace neural
     scale_gpu::kernel_data set_default(const scale& arg)
     {
         scale_gpu::kernel_data kd = scale_gpu::set_kernel_data(arg);
+        kd.scale_bfyx_used = (memory::to_tensor_format(arg.scale_memory().argument().format) == cldnn::format::bfyx) ? true : false;
         kd.kernel_name = kernel_name;
 
         return kd;
     }
 
-    scale_gpu::kernel_data set_scale_bfyx(const scale& arg)
-    {
-        scale_gpu::kernel_data kd = set_default(arg);
-        kd.scale_bfyx_used = true;
-
-        return kd;
-    }
-
-    kd_selector_t<scale_gpu::kernel_data, scale, neural::memory::format::type, neural::memory::format::type, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> scale_gpu::ks = {
-        { std::make_tuple(memory::format::yxfb_f32, memory::format::yxfb_f32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
-        { std::make_tuple(memory::format::yxfb_f32, memory::format::bfyx_f32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_scale_bfyx },
-        { std::make_tuple(memory::format::yxfb_f16, memory::format::yxfb_f16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
-        { std::make_tuple(memory::format::yxfb_f16, memory::format::bfyx_f16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_scale_bfyx },
+    kd_selector_t<scale_gpu::kernel_data, scale, neural::memory::format::type, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> scale_gpu::ks = {
+        { std::make_tuple(memory::format::yxfb_f32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+        { std::make_tuple(memory::format::yxfb_f16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
     };
 
     namespace {

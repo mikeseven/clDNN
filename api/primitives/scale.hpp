@@ -29,7 +29,7 @@ struct scale : public primitive_base<scale, CLDNN_PRIMITIVE_DESC(scale)>
     scale(
         const primitive_id& id,
         const primitive_id& input,
-        const primitive_id& scale_input,
+        const primitive_id& scale_input, //should be bfyx or yxfb, where each dimension can be 1, if all dimensions are 1 then this is scalar
         const bool bias_term,
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
@@ -45,9 +45,9 @@ struct scale : public primitive_base<scale, CLDNN_PRIMITIVE_DESC(scale)>
     scale(
         const primitive_id& id,
         const primitive_id& input,
-        const primitive_id& scale_input,
+        const primitive_id& scale_input, //should be bfyx or yxfb, where each dimension can be 1, if all dimensions are 1 then this is scalar
         const bool bias_term,
-        const primitive_id& bias,
+        const primitive_id& bias, //should be same size as scale_input
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
