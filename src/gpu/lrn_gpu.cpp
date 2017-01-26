@@ -263,24 +263,16 @@ kd_selector_t<lrn_gpu::kernel_data, normalization::response, neural::memory::for
 };
 
 
-    namespace {
-        struct attach {
-            attach() {
-                implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), lrn_gpu::create);
-                implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), lrn_gpu::create);
-                implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), lrn_gpu::create);
-                implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), lrn_gpu::create);
-            }
-            ~attach() {}
-        };
-
-#ifdef __GNUC__
-        __attribute__((visibility("default"))) //todo maybe dll_sym?
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
-        attach attach_impl;
-
-    }
-
+namespace {
+    struct attach {
+        attach() {
+            implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), lrn_gpu::create);
+            implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), lrn_gpu::create);
+            implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), lrn_gpu::create);
+			implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), lrn_gpu::create);
+        }
+        ~attach() {}
+    };
+    attach attach_impl;
+}
 }

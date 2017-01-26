@@ -180,28 +180,21 @@ struct softmax_gpu : is_an_implementation
 };
 
 namespace {
-struct attach {
-    attach() {
-        auto val_fw = softmax_gpu::create;
-        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw);
-        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw);
-        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f32), val_fw);
-        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f16), val_fw);
-        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw);
-        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw);
-        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw);
-        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), val_fw);
-    }
-    ~attach() {}
-};
+    struct attach {
+        attach() {
+            auto val_fw = softmax_gpu::create;
+            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw);
+            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw);
+            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f32), val_fw);
+            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f16), val_fw);
+            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw);
+            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw);
+            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw);
+            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), val_fw);
+        }
+        ~attach() {}
+    };
 }
-
-#ifdef __GNUC__
-    __attribute__((visibility("default"))) //todo meybe dll_sym?
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
 attach attach_impl;
-
 } // namespace normalization
 } // namespace neural

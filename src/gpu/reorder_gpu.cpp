@@ -432,23 +432,15 @@ kd_selector_t<reorder_gpu::kernel_data, reorder, kd_optional_selector_t, size_t,
     { std::make_tuple(0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
 };
 
-    namespace {
-        struct attach {
-            attach() {
-                implementation_map<reorder>::add({
-                    { cldnn::engine_types::ocl, reorder_gpu::create }
-                });
-            }
-            ~attach() {}
-        };
-
-#ifdef __GNUC__
-        __attribute__((visibility("default"))) //todo meybe dll_sym?
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
-        attach attach_impl;
-
-    }
-
+namespace {
+    struct attach {
+        attach() {
+            implementation_map<reorder>::add({
+                { cldnn::engine_types::ocl, reorder_gpu::create }
+            });
+        }
+        ~attach() {}
+    };
+    attach attach_impl;
+}
 }

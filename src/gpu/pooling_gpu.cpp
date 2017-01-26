@@ -249,18 +249,8 @@ namespace
             implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), pooling_gpu::create);
             implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), pooling_gpu::create);
         }
-
-        ~attach()
-        {
-        }
+        ~attach() {}
     };
-
-#ifdef __GNUC__
-    __attribute__((visibility("default")))
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
     attach attach_impl;
-
 }
 }

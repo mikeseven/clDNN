@@ -106,26 +106,19 @@ struct relu_gpu : is_an_implementation
 
 
 namespace {
-struct attach {
-    attach() {
-        auto val_fw = relu_gpu::create;
-
-        implementation_map<relu>::add({
-            {std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw},
-            {std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw},
-            {std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw},
-            {std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw},
-        });
-    }
-    ~attach() {}
-};
-
-#ifdef __GNUC__
-    __attribute__((visibility("default"))) //todo meybe dll_sym?
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
-attach attach_impl;
-
+    struct attach {
+        attach() {
+            auto val_fw = relu_gpu::create;
+    
+            implementation_map<relu>::add({
+                {std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw},
+                {std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw},
+                {std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw},
+                {std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw},
+            });
+        }
+        ~attach() {}
+    };
+    attach attach_impl;
 }
 }

@@ -283,12 +283,5 @@ namespace {
         ~attach() {}
     };
 }
-
-#ifdef __GNUC__
-__attribute__((visibility("default"))) //todo meybe dll_sym?
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
 attach attach_impl;
-
 } // namespace neural
