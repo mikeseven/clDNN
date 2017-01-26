@@ -78,8 +78,8 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_f32)(
             LOOP(FILTER_SIZE_X, kc,
             {
                 //w = weights[weight_addr];	
-                for(int br=0; br<OUT_BLOCK_HEIGHT; br++) {
-                    for(int bc=0; bc<OUT_BLOCK_WIDTH; bc++) {
+                for(uint br=0; br<OUT_BLOCK_HEIGHT; br++) {
+                    for(uint bc=0; bc<OUT_BLOCK_WIDTH; bc++) {
 
 #if STRIDE_SIZE_X > 2   //for stride 4 there's slighty different shuffling method
                         //if we fix the programming model, then we could use a nice simple 2d array: val = in[br * STRIDE_SIZE_Y + kr][bc * STRIDE_SIZE_X + kc]; 
@@ -102,7 +102,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_f32)(
 
     uint out_split_offset = split_idx * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) * FILTER_OUTPUT_FEATURE_NUM;
     uint out_addr = batch_idx * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * OUTPUT_FEATURE_NUM;
-    out_addr += out_split_offset + feature_idx * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y); // out_addr indexes into start of 16 feature maps.
+    out_addr += out_split_offset + feature_idx * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y); // out_addr indices into start of 16 feature maps.
     out_addr += (OUTPUT_PADDING_SIZE_Y + or) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X) + OUTPUT_PADDING_SIZE_X + oc;  // offset for the 4x3 block that this workitem is working on;
 
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
