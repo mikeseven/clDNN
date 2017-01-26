@@ -20,6 +20,8 @@ KERNEL (batch_norm_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* out
 	mean[feature_id] = acc / (INPUT_BATCH_NUM * INPUT_SIZE_X * INPUT_SIZE_Y);
 	output[linear_id] = input[linear_id] - mean[feature_id];
 
+	barrier(CLK_GLOBAL_MEM_FENCE);
+
 	//compute variance using var(X) = E((X-EX)^2)
 	acc = UNIT_VAL_ZERO;	
 	for(int i = 0; i < INPUT_BATCH_NUM; i++)
