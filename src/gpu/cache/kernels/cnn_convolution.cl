@@ -33,11 +33,11 @@ __kernel void convolution(__global DATA_TYPE* input, __global DATA_TYPE* output,
 
     int xk_steps = xk_end - xk_start;
     int yk_steps = yk_end - yk_start;
-    for (unsigned int k = 0; k < INPUT_DEPTH; ++k) 
+    for (unsigned int k = 0; k < INPUT_DEPTH; ++k)
     {
-        for (unsigned int j = yk_start; j < yk_end ; ++j) 
+        for (unsigned int j = yk_start; j < yk_end ; ++j)
         {
-            for (unsigned int i = xk_start; i < xk_end ; ++i) 
+            for (unsigned int i = xk_start; i < xk_end ; ++i)
             {
                 dotProd += input[input_offset] * weights[filter_offset];
                 ++input_offset;
@@ -91,22 +91,22 @@ __kernel void convolution_f16(
      + ( ( global_y % OUT_WIDTH ) * STRIDE_X );                 // x offset
 #elif !defined(INPUT_BUFFER_WIDTH_PADDED) && !defined(INPUT_BUFFER_HEIGHT_PADDED)
     const int y_offset = ( global_y / OUT_WIDTH ) * STRIDE_Y - INPUT_PADDING_Y;
-    const int x_offset = ( global_y % OUT_WIDTH ) * STRIDE_X - INPUT_PADDING_X; 
+    const int x_offset = ( global_y % OUT_WIDTH ) * STRIDE_X - INPUT_PADDING_X;
     uint src0_read_offset = INPUT_OFFSET + INPUT_BATCH_PITCH * global_z
                             + y_offset * INPUT_ROW_PITCH;
 
     int partial_left = 0, partial_right = 0;
-    if (x_offset < 0) 
+    if (x_offset < 0)
     {
         partial_left = min((int) KERNEL_WIDTH, (int) abs(x_offset));
         src0_read_offset -= partial_left;
     }
-    else 
+    else
     {
         partial_left = 0;
         src0_read_offset +=  x_offset;
     }
-    if ((x_offset + KERNEL_WIDTH) >= INPUT_WIDTH) 
+    if ((x_offset + KERNEL_WIDTH) >= INPUT_WIDTH)
         partial_right = min(KERNEL_WIDTH, INPUT_WIDTH - x_offset);
     else
         partial_right = KERNEL_WIDTH;
@@ -125,7 +125,7 @@ __kernel void convolution_f16(
     // It starts at the top of src1 and walks down.
     // btile is K rows x N columns.
     const __global half *src1_read = src1 + ( global_x * TILE_N * 2 );
-    
+
 #define DOT_PRODUCT_16( _result, _rowA, colB )    \
     {   \
         _result.s0 = mad( _rowA, sub_group_broadcast( colB,  0 ), _result.s0 );  \
@@ -147,7 +147,7 @@ __kernel void convolution_f16(
     }
     typedef CAT( half, KERNEL_WIDTH ) half_t;
     // Walk DOWN src0 (patch 0, 1, 2, ...) and DOWN src1.
-    // Inner loop loads and FMADs one row (KERNEL_WIDTH) of each input patch 
+    // Inner loop loads and FMADs one row (KERNEL_WIDTH) of each input patch
     // and KERNEL_WIDTH/2 rows of interleaved filter.
     int patch_depth = 0;
     __attribute__((opencl_unroll_hint(1)))
@@ -159,7 +159,7 @@ __kernel void convolution_f16(
         {
             // Load atile and btile.
             // Kernel data is partially interleaved.  Every 2 rows are interleaved at half16 granularity.
-            // The exception is that if KERNEL_WIDTH is odd the last row is not interleaved.  The non 
+            // The exception is that if KERNEL_WIDTH is odd the last row is not interleaved.  The non
             // interleaved row is padded with zero to ensure same size as interleaved rows. This
             // interleaving is done to ensure 0% GDR bank conflicts.  For example, this is how the
             // kernel data would be arranged before/after interleaving for KERNEL_WIDTH=3.
@@ -169,7 +169,7 @@ __kernel void convolution_f16(
             // ...
             const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
             #if defined(INPUT_BUFFER_WIDTH_PADDED) && defined(INPUT_BUFFER_HEIGHT_PADDED)
-            half_t blockA00 = ( (const __global half_t*)(src0_read + src0_read_offset) )[  0  ]; 
+            half_t blockA00 = ( (const __global half_t*)(src0_read + src0_read_offset) )[  0  ];
             half*  pblockA00 = (half*)(&blockA00);
             #elif !defined(INPUT_BUFFER_WIDTH_PADDED) && !defined(INPUT_BUFFER_HEIGHT_PADDED)
             half_t blockA00;
@@ -217,20 +217,20 @@ __kernel void convolution_f16(
 
             interleaved_y = 0;
             LOOP(KERNEL_WIDTH_DIV2, interleaved_y,
-            { 
-                p4BlockB00[interleaved_y] = intel_sub_group_block_read_us4( (const __global ushort*)src1_read ); 
+            {
+                p4BlockB00[interleaved_y] = intel_sub_group_block_read_us4( (const __global ushort*)src1_read );
                 src1_read += WIDTH1 * 2;
             } )
             if ( kernel_width_is_odd )
             {
-                p2BlockB00[KERNEL_WIDTH - 1] = intel_sub_group_block_read_us2( (const __global ushort*)src1_read ); 
+                p2BlockB00[KERNEL_WIDTH - 1] = intel_sub_group_block_read_us2( (const __global ushort*)src1_read );
                 src1_read += WIDTH1 * 2;
             }
 
             // Perform MADs
             kernel_idx = 0;
             interleaved_y = 0;
-            LOOP(KERNEL_WIDTH_DIV2, interleaved_y, 
+            LOOP(KERNEL_WIDTH_DIV2, interleaved_y,
             {
                 kernel_y = interleaved_y * 2;
                 DOT_PRODUCT_16( blockC00, pblockA00[kernel_y    ], pBlockB00[kernel_idx] ); kernel_idx++;
@@ -248,12 +248,12 @@ __kernel void convolution_f16(
         while( ++patch_row < KERNEL_HEIGHT );
 
         src0_read_offset += INPUT_SLICE_PITCH - ( KERNEL_HEIGHT * INPUT_ROW_PITCH ); // reset to start of next slice of patch
-    } 
+    }
     while ( ++patch_depth < INPUT_DEPTH );
-    
+
     #undef DOT_PRODUCT_16
 
-    // Dst resembles a cube of width x height x (output channel * batches).  Each tile writes: 
+    // Dst resembles a cube of width x height x (output channel * batches).  Each tile writes:
     // (SIMD * TILE_M) x 1 x TILE_N.  Partial writes most likely generated if padding used.
     __global half *out = dst + OUT_OFFSET
      + global_z * OUT_BATCH_PITCH                                                   // batch offset
@@ -263,10 +263,10 @@ __kernel void convolution_f16(
 
     int m = NL_M;
     int n = NL_N;
-    
+
     const half in_m = *(half*)(&m);
     const half in_n = *(half*)(&n);
-    
+
     if (global_y * TILE_M < OUT_WIDTH * OUT_HEIGHT )
     {
          #ifdef OUTPUT_BIASED
@@ -278,7 +278,7 @@ __kernel void convolution_f16(
         #ifdef OUTPUT_BIASED
         blockC00 += *biasPtr;
         blockC10 += *(biasPtr + 1);
-        #endif 
+        #endif
 
         blockC00 = activation_function_half16(blockC00, in_m, in_n);
         blockC10 = activation_function_half16(blockC10, in_m, in_n);
@@ -295,7 +295,7 @@ __kernel void convolution_f16(
             #ifdef OUTPUT_BIASED
             blockC00 += *biasPtr;
             blockC10 += *(biasPtr + 1);
-            #endif 
+            #endif
 
             blockC00 = activation_function_half16(blockC00, in_m, in_n);
             blockC10 = activation_function_half16(blockC10, in_m, in_n);
@@ -306,7 +306,7 @@ __kernel void convolution_f16(
                 out[(16+i) * OUT_SLICE_PITCH] = blockC10[i];
             }
         }
-        else 
+        else
         {
             #ifdef OUTPUT_BIASED
             blockC00 += *biasPtr;
@@ -325,8 +325,8 @@ __kernel void convolution_f16(
             #ifdef OUTPUT_BIASED
             blockC00 += *biasPtr;
             blockC10 += *(biasPtr + 1);
-            #endif 
-            
+            #endif
+
             blockC00 = activation_function_half16(blockC00, in_m, in_n);
             blockC10 = activation_function_half16(blockC10, in_m, in_n);
 
@@ -336,18 +336,18 @@ __kernel void convolution_f16(
                 out[(16+i) * OUT_SLICE_PITCH] = blockC10[i];
             }
         }
-        else 
+        else
         {
 #if ( (OUT_DEPTH % TILE_N) > 16 )
 
             #ifdef OUTPUT_BIASED
             blockC00 += *biasPtr;
             blockC10 += *(biasPtr + 1);
-            #endif 
+            #endif
 
             blockC00 = activation_function_half16(blockC00, in_m, in_n);
             blockC10 = activation_function_half16(blockC10, in_m, in_n);
-            
+
             for (int i = 0; i < 16 ; i++)
             {
                 out[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
@@ -356,20 +356,20 @@ __kernel void convolution_f16(
             {
                 out[(16+i) * OUT_SLICE_PITCH] = blockC10[i];
             }
-#else 
+#else
             #ifdef OUTPUT_BIASED
             blockC00 += *biasPtr;
-            #endif 
-            
+            #endif
+
             blockC00 = activation_function_half16(blockC00, in_m, in_n);
-            
+
             for (int i = 0; i < OUT_DEPTH % 16 ; i++)
             {
                 out[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
             }
-#endif 
+#endif
         }
-#endif 
+#endif
     }
 
 }
@@ -396,7 +396,7 @@ __kernel void convolution_f32(
     int interleaved_y;
     int kernel_y;
     int kernel_idx;
-    
+
     // Result ctile (*dst) is M rows x N columns
     // LWG size is 1x8.  Thus each thread calculates 8*M rows x N cols of ctile.
     float8  blockC00 = 0.f;
@@ -437,7 +437,7 @@ __kernel void convolution_f32(
     typedef CAT( float, KERNEL_WIDTH ) float_t;
 
     // Walk DOWN src0 (patch 0, 1, 2, ...) and DOWN src1.
-    // Inner loop loads and FMADs one row (KERNEL_WIDTH) of each input patch 
+    // Inner loop loads and FMADs one row (KERNEL_WIDTH) of each input patch
     // and KERNEL_WIDTH/2 rows of interleaved filter.
     int patch_depth = 0;
     do
@@ -447,7 +447,7 @@ __kernel void convolution_f32(
         {
             // Load atile and btile.
             // Kernel data is partially interleaved.  Every 2 rows are interleaved at float8 granularity.
-            // The exception is that if KERNEL_WIDTH is odd the last row is not interleaved.  The non 
+            // The exception is that if KERNEL_WIDTH is odd the last row is not interleaved.  The non
             // interleaved row is padded with zero to ensure same size as interleaved rows. This
             // interleaving is done to ensure 0% GDR bank conflicts.  For example, this is how the
             // kernel data would be arranged before/after interleaving for KERNEL_WIDTH=3.
@@ -457,11 +457,11 @@ __kernel void convolution_f32(
             // ...
             const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
 
-            float_t blockA00 = ( (const __global float_t*)(src0 + src0_read_offset0))[  0  ]; 
-            float_t blockA01 = ( (const __global float_t*)(src0 + src0_read_offset1))[  0  ]; 
+            float_t blockA00 = ( (const __global float_t*)(src0 + src0_read_offset0))[  0  ];
+            float_t blockA01 = ( (const __global float_t*)(src0 + src0_read_offset1))[  0  ];
             float*  pblockA00 = (float*)(&blockA00);
             float*  pblockA01 = (float*)(&blockA01);
-            
+
             src0_read_offset0 += INPUT_ROW_PITCH;
             src0_read_offset1 += INPUT_ROW_PITCH;
 
@@ -472,21 +472,21 @@ __kernel void convolution_f32(
             float*  pBlockB00 =  (float* )blockB00;
 
             interleaved_y = 0;
-            LOOP(KERNEL_WIDTH_DIV2, interleaved_y, 
-            { 
-                p8BlockB00[interleaved_y] = as_float8( intel_sub_group_block_read8( (const __global uint*)src1_read ) ); 
+            LOOP(KERNEL_WIDTH_DIV2, interleaved_y,
+            {
+                p8BlockB00[interleaved_y] = as_float8( intel_sub_group_block_read8( (const __global uint*)src1_read ) );
                 src1_read += WIDTH1 * 2;
             } )
             if ( kernel_width_is_odd )
             {
-                p4BlockB00[KERNEL_WIDTH - 1] = as_float4( intel_sub_group_block_read4( (const __global uint*)src1_read ) ); 
+                p4BlockB00[KERNEL_WIDTH - 1] = as_float4( intel_sub_group_block_read4( (const __global uint*)src1_read ) );
                 src1_read += WIDTH1 * 2;
             }
 
             // Perform MADs
             kernel_idx = 0;
             interleaved_y = 0;
-            LOOP(KERNEL_WIDTH_DIV2, interleaved_y, 
+            LOOP(KERNEL_WIDTH_DIV2, interleaved_y,
             {
                 kernel_y = interleaved_y * 2;
                 DOT_PRODUCT_8( blockC00, pblockA00[kernel_y    ], pBlockB00[kernel_idx] );
@@ -525,18 +525,18 @@ __kernel void convolution_f32(
 
         src0_read_offset0 += INPUT_SLICE_PITCH - ( KERNEL_HEIGHT * INPUT_ROW_PITCH ); // reset to start of next slice of patch
         src0_read_offset1 += INPUT_SLICE_PITCH - ( KERNEL_HEIGHT * INPUT_ROW_PITCH ); // reset to start of next slice of patch
-    } 
+    }
     //while ( ++patch_depth < 1 );  //debug
     while ( ++patch_depth < INPUT_DEPTH );
 
-    // Dst resembles a cube of width x height x (output channel * batches).  Each tile writes: 
+    // Dst resembles a cube of width x height x (output channel * batches).  Each tile writes:
     // (SIMD * TILE_M) x 1 x TILE_N.  Partial writes most likely generated if padding used.
     __global float *out0 = dst + OUT_OFFSET
      + global_z * OUT_BATCH_PITCH                                                       // batch offset
      + ( group_x * TILE_N ) * OUT_SLICE_PITCH                                           // channel offset
      + ( ( global_y * TILE_M + 0 ) / OUT_WIDTH ) * OUT_ROW_PITCH // y offset
      + ( ( global_y * TILE_M + 0 ) % OUT_WIDTH );               // x offset
-    __global float *out1 = dst + OUT_OFFSET 
+    __global float *out1 = dst + OUT_OFFSET
      + global_z * OUT_BATCH_PITCH                                                       // batch offset
      + ( group_x * TILE_N ) * OUT_SLICE_PITCH                                           // channel offset
      + ( ( global_y * TILE_M + 1 ) / OUT_WIDTH ) * OUT_ROW_PITCH // y offset
@@ -547,7 +547,7 @@ __kernel void convolution_f32(
     #endif
     int m = NL_M;
     int n = NL_N;
-    
+
     float in_m = *(float*)(&m);
     float in_n = *(float*)(&n);
     if( global_y * TILE_M < OUT_WIDTH * OUT_HEIGHT )
@@ -560,7 +560,7 @@ __kernel void convolution_f32(
             blockC20 += *(biasPtr + 2);
             blockC30 += *(biasPtr + 3);
             #endif
-            
+
             blockC00 = activation_function_float8(blockC00, in_m, in_n);
             blockC10 = activation_function_float8(blockC10, in_m, in_n);
             blockC20 = activation_function_float8(blockC20, in_m, in_n);
@@ -574,7 +574,7 @@ __kernel void convolution_f32(
                 out0[(24+i) * OUT_SLICE_PITCH] = blockC30[i];
             }
         }
-        else 
+        else
         {
             if ( ( global_x + 1 ) < get_global_size(0) )
             {
@@ -598,21 +598,21 @@ __kernel void convolution_f32(
                     out0[(24+i) * OUT_SLICE_PITCH] = blockC30[i];
                 }
             }
-            else 
+            else
             {
                 if ( ( OUT_DEPTH % TILE_N ) >= 24 )
-                { 
+                {
                     #ifdef OUTPUT_BIASED
                     blockC00 += *biasPtr;
                     blockC10 += *(biasPtr + 1);
                     blockC20 += *(biasPtr + 2);
                     if (( OUT_DEPTH % TILE_N) > 24 ) blockC30 += *(biasPtr + 3);
                     #endif
-                
+
                     blockC00 = activation_function_float8(blockC00, in_m, in_n);
                     blockC10 = activation_function_float8(blockC10, in_m, in_n);
                     blockC20 = activation_function_float8(blockC20, in_m, in_n);
-                    
+
                     for (int i = 0; i < 8; i++)
                     {
                         out0[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
@@ -631,13 +631,13 @@ __kernel void convolution_f32(
                     #ifdef OUTPUT_BIASED
                     blockC00 += *biasPtr;
                     blockC10 += *(biasPtr + 1);
-                    if (( OUT_DEPTH % TILE_N) > 16 ) 
+                    if (( OUT_DEPTH % TILE_N) > 16 )
                         blockC20 += *(biasPtr + 2);
                     #endif
-                
+
                     blockC00 = activation_function_float8(blockC00, in_m, in_n);
                     blockC10 = activation_function_float8(blockC10, in_m, in_n);
-                    
+
                     for (int i = 0; i < 8; i++)
                     {
                         out0[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
@@ -654,12 +654,12 @@ __kernel void convolution_f32(
                 {
                     #ifdef OUTPUT_BIASED
                     blockC00 += *biasPtr;
-                    if (( OUT_DEPTH % TILE_N) > 8 ) 
+                    if (( OUT_DEPTH % TILE_N) > 8 )
                         blockC10 += *(biasPtr + 1);
                     #endif
-                
+
                     blockC00 = activation_function_float8(blockC00, in_m, in_n);
-                    
+
                     for (int i = 0; i < 8; i++)
                     {
                         out0[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
@@ -694,7 +694,7 @@ __kernel void convolution_f32(
             blockC21 += *(biasPtr + 2);
             blockC31 += *(biasPtr + 3);
             #endif
-            
+
             blockC01 = activation_function_float8(blockC01, in_m, in_n);
             blockC11 = activation_function_float8(blockC11, in_m, in_n);
             blockC21 = activation_function_float8(blockC21, in_m, in_n);
@@ -718,7 +718,7 @@ __kernel void convolution_f32(
                 blockC21 += *(biasPtr + 2);
                 blockC31 += *(biasPtr + 3);
                 #endif
-            
+
                 blockC01 = activation_function_float8(blockC01, in_m, in_n);
                 blockC11 = activation_function_float8(blockC11, in_m, in_n);
                 blockC21 = activation_function_float8(blockC21, in_m, in_n);
@@ -732,21 +732,21 @@ __kernel void convolution_f32(
                     out1[(24+i) * OUT_SLICE_PITCH] = blockC31[i];
                 }
             }
-            else 
+            else
             {
                 if ( ( OUT_DEPTH % TILE_N ) >= 24 )
-                { 
+                {
                     #ifdef OUTPUT_BIASED
                     blockC01 += *biasPtr;
                     blockC11 += *(biasPtr + 1);
                     blockC21 += *(biasPtr + 2);
                     if ( ( OUT_DEPTH % TILE_N ) > 24 ) blockC31 += *(biasPtr + 3);
                     #endif
-            
+
                     blockC01 = activation_function_float8(blockC01, in_m, in_n);
                     blockC11 = activation_function_float8(blockC11, in_m, in_n);
                     blockC21 = activation_function_float8(blockC21, in_m, in_n);
-                    
+
                     for (int i = 0; i < 8; i++)
                     {
                         out1[( 0+i) * OUT_SLICE_PITCH] = blockC01[i];
@@ -767,7 +767,7 @@ __kernel void convolution_f32(
                     blockC11 += *(biasPtr + 1);
                     if ( ( OUT_DEPTH % TILE_N ) > 16 ) blockC21 += *(biasPtr + 2);
                     #endif
-            
+
                     blockC01 = activation_function_float8(blockC01, in_m, in_n);
                     blockC11 = activation_function_float8(blockC11, in_m, in_n);
 
@@ -788,7 +788,7 @@ __kernel void convolution_f32(
                     blockC01 += *biasPtr;
                     if ( ( OUT_DEPTH % TILE_N ) > 8 ) blockC11 += *(biasPtr + 1);
                     #endif
-            
+
                     blockC01 = activation_function_float8(blockC01, in_m, in_n);
 
                     for (int i = 0; i < 8; i++)
@@ -816,4 +816,305 @@ __kernel void convolution_f32(
         }
     }
 }
-#endif 
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+// Direct Convolution
+#if defined(__convolution_f16_10x12x16) && defined(cl_intel_subgroups_short)
+
+#define TILE_M          DY      // Height of tile in input patches (src0)
+#define TILE_K          DX      // Width of tile in input patches (src0)
+#define TILE_N          16      // Num filter channels per tile (src1)
+
+#define TILE_X          12      // Width of tile loaded in input (src0)
+#define TILE_Y          10       // Height of tile loaded in input (src0)
+
+__attribute__((intel_reqd_sub_group_size(16)))
+__kernel void convolution_f16_10x12x16(
+    const __global half *src0,
+    __global half *dst,
+    const __global half *src1,
+    const __global half *biases)
+{
+    const int global_x = get_global_id(0);
+    const int global_y = get_global_id(1);
+    const int global_z = get_global_id(2);
+    const int group_x = get_group_id(0);
+    const int group_z = get_group_id(2);
+    const int max_group_x = get_num_groups(0);
+    const int local_z = get_local_id(2);
+
+    half blockC[TILE_M * TILE_K] = { 0 };
+
+    uint src0_offset_tile =
+       ( global_z / WIDTH1 ) * INPUT_BATCH_PITCH            // batch offset
+     + ( global_y * TILE_M * STRIDE_Y ) * INPUT_ROW_PITCH   // y offset
+     + ( global_x * TILE_K * STRIDE_X );                    // x offset
+    uint src0_offset = src0_offset_tile
+     + ( local_z / ( TILE_X / 4 ) ) * INPUT_ROW_PITCH       // y tile offset
+     + ( local_z % ( TILE_X / 4 ) ) * 4;                    // x tile offset
+
+    const __global half *src1_read = src1 + ( group_z * TILE_N % WIDTH1 ) * 2;
+
+    int patch_depth = 0;
+    __attribute__((opencl_unroll_hint(1)))
+    do
+    {
+        // Load atile (input) and btile (filters).
+        // Kernel data is partially interleaved.  Every 2 rows are interleaved at float16 granularity.
+        // The exception is that if KERNEL_WIDTH is odd the last row is not interleaved.  The non
+        // interleaved row is padded with zero to ensure same size as interleaved rows. This
+        // interleaving is done to increase consecutive data to fetch which reduces loads required.
+        // For example, this is how the kernel data would be arranged before/after interleaving for KERNEL_WIDTH=3.
+        // (0, 0) (8, 0) (16, 0) (24, 0) ...       (0, 0) (0, 1) (8, 0) (0, 1) (16, 0) (0, 1) (24, 0) ..
+        // (0, 1) (8, 1) (16, 1) (24, 1) ... =>    (0, 2) (8, 2) (16, 2) (24, 2) ...
+        // (0, 2) (8, 2) (16, 2) (24, 2) ...       ...
+        // ...
+        half4 blockA0 = *(const __global half4 *)( src0 + src0_offset );
+        half4 blockA1 = *(const __global half4 *)( src0 + src0_offset + INPUT_ROW_PITCH * 5 );
+        src0_offset += INPUT_SLICE_PITCH;
+
+        half blockB[KERNEL_WIDTH * KERNEL_HEIGHT];
+        ushort2* p2BlockB = (ushort2*)blockB;
+        ushort*  pBlockB =  (ushort* )blockB;
+
+        const bool kernel_slice_is_odd = ( KERNEL_WIDTH * KERNEL_HEIGHT ) % 2 == 1;
+        int interleaved_y = 0;
+        LOOP(KERNEL_SLICE_DIV2, interleaved_y,
+        {
+            p2BlockB[interleaved_y] = intel_sub_group_block_read_us2( (const __global ushort*)src1_read );
+            src1_read += WIDTH1 * 2;
+        } )
+        if ( kernel_slice_is_odd )
+        {
+            pBlockB[KERNEL_WIDTH * KERNEL_HEIGHT - 1] = intel_sub_group_block_read_us( (const __global ushort*)src1_read );
+            src1_read += WIDTH1 * 2;
+        }
+
+#define BLOCK_A(n) ( (n < 60) \
+    ? sub_group_broadcast( blockA0[(n)%4], (n)/4 ) \
+    : sub_group_broadcast( blockA1[(n-60)%4], (n-60)/4 ) )
+
+        // Perform MADs
+        // Loop through all patches in tile (patch_x/y)
+        // For each patch, sum values (x/y)
+        int patch_y=0;
+        LOOP(TILE_M, patch_y,
+        {
+            int patch_x=0;
+            LOOP(TILE_K, patch_x,
+            {
+                int tile_idx = patch_y * TILE_X * STRIDE_Y + patch_x * STRIDE_X;
+                int out_idx  = patch_y * TILE_K + patch_x;
+
+                int y=0;
+                LOOP(KERNEL_HEIGHT, y,
+                {
+                    int x=0;
+                    LOOP(KERNEL_WIDTH, x,
+                    {
+                        int offset_idx = y * TILE_X + x;
+                        int out_chan_idx = y * KERNEL_WIDTH + x;
+
+                        blockC[out_idx] = mad( BLOCK_A( tile_idx + offset_idx ), blockB[out_chan_idx], blockC[out_idx] );
+                    } )
+                } )
+            } )
+        } )
+    }
+    while ( ++patch_depth < INPUT_DEPTH );
+
+    // Dst resembles a cube of width x height x (output channel * batches).  Each tile writes:
+    // TILE_K x TILE_M x SIMD.  Partial writes most likely generated if output padding used.
+    // Group stores into vectors to expedite writeback.  One large write is faster than many
+    // small saves. Right-most column may be smaller if output width not divisible by tile width.
+    __global half *out = dst
+     + ( global_z / WIDTH1 ) * OUT_BATCH_PITCH              // batch offset
+     + ( global_z % WIDTH1 ) * OUT_SLICE_PITCH              // channel offset
+     + ( global_y * TILE_M ) * OUT_ROW_PITCH // y offset
+     + ( global_x * TILE_K );                // x offset
+
+    if ( global_z < WIDTH1 * NUM_BATCHES &&
+         global_z % WIDTH1 < OUT_DEPTH )
+    {
+        half bias = biases[global_z];
+        if ( OUT_WIDTH % TILE_K == 0 ||
+             group_x < max_group_x - 1 )
+        {
+            typedef CAT( half, TILE_K ) half_t;
+            half bias = biases[global_z];
+            for( int y = 0; y < TILE_M; y++ )
+            {
+                if ( global_y * TILE_M + y < OUT_HEIGHT )
+                {
+                    half_t vBlockC;
+                    half *pvBlockC = (half*)&vBlockC;
+                    for (int i = 0; i < TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                    *(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
+                }
+            }
+        }
+        else
+        {
+            typedef CAT( half, RIGHT_PARTIAL_TILE_K ) half_t;
+            for( int y = 0; y < TILE_M; y++ )
+            {
+                if ( global_y * TILE_M + y < OUT_HEIGHT )
+                {
+                    half_t vBlockC;
+                    half *pvBlockC = (half*)&vBlockC;
+                    for (int i = 0; i < RIGHT_PARTIAL_TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                    *(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
+                }
+            }
+        }
+    }
+}
+#endif // __convolution_f16_10x12x16
+
+#if defined(__convolution_f16_8x8x16) && defined(cl_intel_subgroups_short)
+#define TILE_M          DY      // Height of tile in input patches (src0)
+#define TILE_K          DX      // Width of tile in input patches (src0)
+#define TILE_N          16      // Num filter channels per tile (src1)
+
+#define TILE_X          8       // Width of tile loaded in input (src0)
+#define TILE_Y          8       // Height of tile loaded in input (src0)
+
+__attribute__((intel_reqd_sub_group_size(16)))
+__kernel void convolution_f16_8x8x16(
+    const __global half *src0,
+    __global half *dst
+    const __global half *src1,
+    const __global half *bias)
+{
+    const int global_x = get_global_id(0);
+    const int global_y = get_global_id(1);
+    const int global_z = get_global_id(2);
+    const int group_x = get_group_id(0);
+    const int group_z = get_group_id(2);
+    const int max_group_x = get_num_groups(0);
+    const int local_z = get_local_id(2);
+
+    half blockC[TILE_M * TILE_K] = { 0 };
+
+    uint src0_offset_tile =
+       ( global_z / WIDTH1 ) * INPUT_BATCH_PITCH            // batch offset
+     + ( global_y * TILE_M * STRIDE_Y ) * INPUT_ROW_PITCH   // y offset
+     + ( global_x * TILE_K * STRIDE_X );                    // x offset
+    uint src0_offset = src0_offset_tile
+     + ( local_z / ( TILE_X / 4 ) ) * INPUT_ROW_PITCH       // y tile offset
+     + ( local_z % ( TILE_X / 4 ) ) * 4;                    // x tile offset
+
+    const __global half *src1_read = src1 + ( group_z * TILE_N % WIDTH1 ) * 2;
+
+    int patch_depth = 0;
+    __attribute__((opencl_unroll_hint(1)))
+    do
+    {
+        // Load atile (input) and btile (filters).
+        // Kernel data is partially interleaved.  Every 2 rows are interleaved at float16 granularity.
+        // The exception is that if KERNEL_WIDTH is odd the last row is not interleaved.  The non
+        // interleaved row is padded with zero to ensure same size as interleaved rows. This
+        // interleaving is done to increase consecutive data to fetch which reduces loads required.
+        // For example, this is how the kernel data would be arranged before/after interleaving for KERNEL_WIDTH=3.
+        // (0, 0) (8, 0) (16, 0) (24, 0) ...       (0, 0) (0, 1) (8, 0) (0, 1) (16, 0) (0, 1) (24, 0) ..
+        // (0, 1) (8, 1) (16, 1) (24, 1) ... =>    (0, 2) (8, 2) (16, 2) (24, 2) ...
+        // (0, 2) (8, 2) (16, 2) (24, 2) ...       ...
+        // ...
+        half4 blockA = *(const __global half4 *)( src0 + src0_offset );
+        src0_offset += SLICE_PITCH;
+
+        half blockB[KERNEL_WIDTH * KERNEL_HEIGHT];
+        ushort2* p2BlockB = (ushort2*)blockB;
+        ushort*  pBlockB =  (ushort* )blockB;
+
+        const bool kernel_slice_is_odd = ( KERNEL_WIDTH * KERNEL_HEIGHT ) % 2 == 1;
+        int interleaved_y = 0;
+        LOOP(KERNEL_SLICE_DIV2, interleaved_y,
+        {
+            p2BlockB[interleaved_y] = intel_sub_group_block_read_us2( (const __global ushort*)src1_read );
+            src1_read += WIDTH1 * 2;
+        } )
+        if ( kernel_slice_is_odd )
+        {
+            pBlockB[KERNEL_WIDTH * KERNEL_HEIGHT - 1] = intel_sub_group_block_read_us( (const __global ushort*)src1_read );
+            src1_read += WIDTH1 * 2;
+        }
+
+#define BLOCK_A(n) sub_group_broadcast( blockA[(n)%4], (n)/4 )
+
+        // Perform MADs
+        // Loop through all patches in tile (patch_x/y)
+        // For each patch, sum values (x/y)
+        int patch_y=0;
+        LOOP(TILE_M, patch_y,
+        {
+            int patch_x=0;
+            LOOP(TILE_K, patch_x,
+            {
+                int tile_idx = patch_y * TILE_X * STRIDE_Y + patch_x * STRIDE_X;
+                int out_idx  = patch_y * TILE_K + patch_x;
+
+                int y=0;
+                LOOP(KERNEL_HEIGHT, y,
+                {
+                    int x=0;
+                    LOOP(KERNEL_WIDTH, x,
+                    {
+                        int offset_idx = y * TILE_X + x;
+                        int out_chan_idx = y * KERNEL_WIDTH + x;
+
+                        blockC[out_idx] = mad( BLOCK_A( tile_idx + offset_idx ), blockB[out_chan_idx], blockC[out_idx] );
+                    } )
+                } )
+            } )
+        } )
+    }
+    while ( ++patch_depth < INPUT_DEPTH );
+
+    // Dst resembles a cube of width x height x (output channel * batches).  Each tile writes:
+    // TILE_K x TILE_M x SIMD.  Partial writes most likely generated if output padding used.
+    // Group stores into vectors to expedite writeback.  One large write is faster than many
+    // small saves. Right-most column may be smaller if output width not divisible by tile width.
+    __global half *out = dst
+     + ( global_z / WIDTH1 ) * OUT_BATCH_PITCH                    // batch offset
+     + ( global_z % WIDTH1 ) * OUT_SLICE_PITCH                    // channel offset
+     + ( global_y * TILE_M ) * OUT_ROW_PITCH // y offset
+     + ( global_x * TILE_K );                      // x offset
+
+    if ( global_z < WIDTH1 * NUM_BATCHES &&
+         global_z % WIDTH1 < OUT_DEPTH )
+    {
+        half bias = biases[global_z];
+        if ( OUT_WIDTH % TILE_K == 0 ||
+             group_x < max_group_x - 1 )
+        {
+            typedef CAT( half, TILE_K ) half_t;
+            for( int y = 0; y < TILE_M; y++ )
+            {
+                if ( global_y * TILE_M + y < OUT_HEIGHT )
+                {
+                    half_t vBlockC;
+                    half *pvBlockC = (half*)&vBlockC;
+                    for (int i = 0; i < TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                    *(__global half_t*)(out + y * OUT_PITCH_X) = vBlockC;
+                }
+            }
+        }
+        else
+        {
+            typedef CAT( half, RIGHT_PARTIAL_TILE_K ) half_t;
+            for( int y = 0; y < TILE_M; y++ )
+            {
+                if ( global_y * TILE_M + y < OUT_HEIGHT )
+                {
+                    half_t vBlockC;
+                    half *pvBlockC = (half*)&vBlockC;
+                    for (int i = 0; i < RIGHT_PARTIAL_TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                    *(__global half_t*)(out + y * OUT_PITCH_X) = vBlockC;
+                }
+            }
+        }
+    }
+}
+#endif

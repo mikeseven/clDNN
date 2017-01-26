@@ -12,7 +12,7 @@
 #define UNUSED(a) (void)a
 #endif
 
-#define CL_PAD_TO_ALIGNMENT(size, alignment) (((size) + (alignment) - 1) & ~((alignment) - 1))
+#define CLDNN_ALIGN(size, alignment) (((size) + (alignment) - 1) / (alignment) * (alignment))
 
 inline bool isAligned(std::size_t val, std::size_t alignment)
 {

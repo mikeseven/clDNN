@@ -20,7 +20,7 @@ namespace clDNN
         if (m_bInputImageNeedReallocation)
         {
             const uint bpp = BytesPerElement(params->inputType);
-            const uint alignedInputWidth = CL_PAD_TO_ALIGNMENT(params->inDims.x, m_RowBaseAlignment / bpp);
+            const uint alignedInputWidth = CLDNN_ALIGN(params->inDims.x, m_RowBaseAlignment / bpp);
             td.pitches.x = alignedInputWidth;
             td.pitches.y = td.pitches.x * params->inDims.y;
             td.pitches.z = td.pitches.y * params->inDims.z;

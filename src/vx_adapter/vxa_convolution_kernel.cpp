@@ -30,6 +30,8 @@ namespace clDNN
         }
         else
         {
+            bool input_buffer_optimized = true;
+
             if (m_Params.bAllowChangeInputTensor)
             {
                 jit << "#define INPUT_BUFFER_WIDTH_PADDED" << "\n"
@@ -53,31 +55,80 @@ namespace clDNN
                 {
                     jit << "#define INPUT_BUFFER_HEIGHT_PADDED" << "\n";
                 }
-            }
 
-            m_algorithmID = GEMM_LIKE_CONVOLUTION;
+                input_buffer_optimized = 
+                    m_Params.convParams.padding.x == 0 &&
+                    m_Params.convParams.padding.y == 0;
+            }
 
             if (m_Params.inputType == Datatype::F16)
             {
-                jit << "#define __convolution_f16" << "\n";
-                m_EntryPoint = "convolution_f16";
-                // TODO: ctor per type instead of putting inline here
-                m_kernelInfo = KernelInfo(1, m_Params.convParams.filterSize.x, 32, 1, 16, 1, 32, 1, 1);
+                if (input_buffer_optimized)
+                {
+                    const auto& cp = m_Params.convParams;
+
+                    if (cp.stride.x == 1 && 
+                        cp.stride.y == 1)
+                    {
+                        if (cp.filterSize.x == 5 &&
+                            cp.filterSize.y == 5)
+                        {
+                            m_algorithmID = DIRECT_CONVOLUTION;
+                            jit << "#define __convolution_f16_10x12x16" << "\n";
+                            m_EntryPoint = "convolution_f16_10x12x16";
+                            m_kernelInfo = KernelInfo(1, 1, 16, 1, 1, 16, /*GWS DX*/ 4, /*GWS DY*/ 4, 1);
+                        }
+
+                        if (cp.filterSize.x == 3 &&
+                            cp.filterSize.y == 3)
+                        {
+                            m_algorithmID = DIRECT_CONVOLUTION;
+                            jit << "#define __convolution_f16_10x12x16" << "\n";
+                            m_EntryPoint = "convolution_f16_10x12x16";
+                            m_kernelInfo = KernelInfo(1, 1, 16, 1, 1, 16, /*GWS DX*/ 4, /*GWS DY*/ 3, 1);
+                        }
+
+                        if (m_algorithmID == DIRECT_CONVOLUTION)
+                        {
+                            jit << "#define RIGHT_PARTIAL_TILE_K " << m_Params.outDims.x % m_kernelInfo.globalWorkSizeDX << "\n"
+                                << "#define NUM_BATCHES " << m_Params.inDims.w << "\n";
+                        }
+                    }
+                }
+
+                if (m_algorithmID == REFERENCE_CONVOLUTION)
+                {
+                    m_algorithmID = GEMM_LIKE_CONVOLUTION;
+                    jit << "#define __convolution_f16" << "\n";
+                    m_EntryPoint = "convolution_f16";
+                    m_kernelInfo = KernelInfo(1, m_Params.convParams.filterSize.x, 32, 1, 16, 1, 32, 1, 1);
+                }
             }
             else
             {
+                m_algorithmID = GEMM_LIKE_CONVOLUTION;
                 jit << "#define __convolution_f32" << "\n";
                 m_EntryPoint = "convolution_f32";
                 m_kernelInfo = KernelInfo(2, m_Params.convParams.filterSize.x, 32, 1, 8, 1, 32, 2, 1);
             }
 
-            int sgemm_m = CL_PAD_TO_ALIGNMENT(m_Params.outDims.x * m_Params.outDims.y, m_kernelInfo.subBlockDimM);
-            int sgemm_n = CL_PAD_TO_ALIGNMENT(m_Params.outDims.z, m_kernelInfo.subBlockDimN);
+            int sgemm_m = CLDNN_ALIGN(m_Params.outDims.x * m_Params.outDims.y, m_kernelInfo.subBlockDimM);
+            int sgemm_n = CLDNN_ALIGN(m_Params.outDims.z, m_kernelInfo.subBlockDimN);
 
-            m_kernelInfo.SetGlobalWGS(
-                CL_PAD_TO_ALIGNMENT(int(std::ceil((float)sgemm_n / (float)m_kernelInfo.globalWorkSizeDX)), m_kernelInfo.localWorkSizeX),
-                CL_PAD_TO_ALIGNMENT(int(std::ceil((float)sgemm_m / (float)m_kernelInfo.globalWorkSizeDY)), m_kernelInfo.localWorkSizeY),
-                1); // TODO: batching
+            if (m_algorithmID == GEMM_LIKE_CONVOLUTION)
+            {
+                m_kernelInfo.SetGlobalWGS(
+                    CLDNN_ALIGN(int(std::ceil((float)sgemm_n / (float)m_kernelInfo.globalWorkSizeDX)), m_kernelInfo.localWorkSizeX),
+                    CLDNN_ALIGN(int(std::ceil((float)sgemm_m / (float)m_kernelInfo.globalWorkSizeDY)), m_kernelInfo.localWorkSizeY),
+                    m_Params.inDims.w);
+            }
+            else
+            {
+                m_kernelInfo.SetGlobalWGS(
+                    CLDNN_ALIGN(m_Params.outDims.x, m_kernelInfo.globalWorkSizeDX) / m_kernelInfo.globalWorkSizeDX,
+                    CLDNN_ALIGN(m_Params.outDims.y, m_kernelInfo.globalWorkSizeDY) / m_kernelInfo.globalWorkSizeDY,
+                    CLDNN_ALIGN(m_Params.outDims.z, 16) * m_Params.inDims.w);
+            }
         }
 
         UpdateInputTensorDesc();
@@ -85,16 +136,16 @@ namespace clDNN
         jit << GetBaseJit(m_Params);
 
         jit << "#define KERNEL_WIDTH " << m_Params.convParams.filterSize.x << "\n"
-            << "#define KERNEL_HEIGHT (" << m_Params.convParams.filterSize.y << ")\n"
+            << "#define KERNEL_HEIGHT " << m_Params.convParams.filterSize.y << "\n"
             << "#define STRIDE_X (" << m_Params.convParams.stride.x << ")\n"
             << "#define STRIDE_Y (" << m_Params.convParams.stride.y << ")\n"
             << "#define INPUT_PADDING_X (" << m_Params.convParams.padding.x << ")\n"
             << "#define INPUT_PADDING_Y (" << m_Params.convParams.padding.y << ")\n"
-            << "#define WIDTH1 (" << CL_PAD_TO_ALIGNMENT(m_Params.outDims.z, m_kernelInfo.subBlockDimN) << ")\n" // TODO: why
-            << "#define DY (" << m_kernelInfo.globalWorkSizeDY << ")\n"
-            << "#define DX (" << m_kernelInfo.globalWorkSizeDX << ")\n"
+            << "#define WIDTH1 (" << CLDNN_ALIGN(m_Params.outDims.z, m_kernelInfo.subBlockDimN) << ")\n" // TODO: why
+            << "#define DY " << m_kernelInfo.globalWorkSizeDY << "\n"
+            << "#define DX " << m_kernelInfo.globalWorkSizeDX << "\n"
             << "#define KERNEL_WIDTH_DIV2 " << m_Params.convParams.filterSize.x / 2 << "\n"
-            << "#define KERNEL_SLICE_DIV2 (" << (m_Params.convParams.filterSize.x * m_Params.convParams.filterSize.y) / 2 << ")\n";
+            << "#define KERNEL_SLICE_DIV2 " << (m_Params.convParams.filterSize.x * m_Params.convParams.filterSize.y) / 2 << "\n";
 
         jit << "#define OUTPUT_BIASED" << "\n";
 
@@ -113,7 +164,7 @@ namespace clDNN
             const uint bpp = BytesPerElement(m_Params.inputType);
             const uint paddedInputWidth = m_Params.inDims.x + (cp.padding.x * 2);
             const uint paddedInputHeight = m_Params.inDims.y + (cp.padding.y * 2);
-            const uint alignedPaddedInputWidth = CL_PAD_TO_ALIGNMENT(paddedInputWidth, m_RowBaseAlignment / bpp);
+            const uint alignedPaddedInputWidth = CLDNN_ALIGN(paddedInputWidth, m_RowBaseAlignment / bpp);
             const uint offest = alignedPaddedInputWidth*m_Params.convParams.padding.y + m_Params.convParams.padding.x;
             
             td.offset = offest;
@@ -141,13 +192,13 @@ namespace clDNN
 
             stDims orgSize(convSize.x * convSize.y * in.z, out.z);
             stDims newSize(
-                CL_PAD_TO_ALIGNMENT(orgSize.x, (std::size_t)convSize.x),
-                CL_PAD_TO_ALIGNMENT(orgSize.y, (std::size_t)m_kernelInfo.subBlockDimN));
+                CLDNN_ALIGN(orgSize.x, (std::size_t)convSize.x),
+                CLDNN_ALIGN(orgSize.y, (std::size_t)m_kernelInfo.subBlockDimN));
 
             std::size_t interleavedRows = convSize.x / 2 * 2;
             std::size_t nonInterleavedRows = convSize.x % 2;
                 
-            std::size_t weightsSizeInBytes = CL_PAD_TO_ALIGNMENT(
+            std::size_t weightsSizeInBytes = CLDNN_ALIGN(
                 newSize.x * newSize.y *
                 (interleavedRows + nonInterleavedRows * 2) / (interleavedRows + nonInterleavedRows) *
                 BytesPerElement(m_Params.inputType),
@@ -264,13 +315,23 @@ namespace clDNN
 
             stDims orgSize(convSize.x * convSize.y * in.z, out.z);
             stDims newSize(
-                CL_PAD_TO_ALIGNMENT(orgSize.y, (std::size_t)m_kernelInfo.subBlockDimN),
-                CL_PAD_TO_ALIGNMENT(orgSize.x, (std::size_t)convSize.x));
+                CLDNN_ALIGN(orgSize.y, (std::size_t)m_kernelInfo.subBlockDimN),
+                CLDNN_ALIGN(orgSize.x, (std::size_t)convSize.x));
 
             uint interleavedRows = convSize.x / 2 * 2;
             uint nonInterleavedRows = convSize.x % 2;
+            uint blockWidth = m_kernelInfo.localWorkSizeY;
+            uint rowAlignment = 32;
 
-            std::size_t weightsSizeInBytes = CL_PAD_TO_ALIGNMENT(
+            if (m_algorithmID == DIRECT_CONVOLUTION)
+            {
+                interleavedRows = (convSize.x * convSize.y) / 2 * 2;
+                nonInterleavedRows = (convSize.x * convSize.y) % 2;
+                blockWidth = 16;
+                rowAlignment = 16;
+            }
+
+            std::size_t weightsSizeInBytes = CLDNN_ALIGN(
                 newSize.x * newSize.y *
                 (interleavedRows + nonInterleavedRows * 2) / (interleavedRows + nonInterleavedRows) *
                 BytesPerElement(m_Params.inputType),
@@ -281,9 +342,6 @@ namespace clDNN
 
             if (weightsSizeInBytes <= newBufSize && orgSizeInBytes <= orgBufSize)
             {
-                const uint blockWidth = m_kernelInfo.localWorkSizeY;
-                const uint rowAlignment = 32;
-
                 memset(newBuf, 0, newBufSize);
                 switch (m_Params.inputType)
                 {
