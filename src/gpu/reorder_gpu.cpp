@@ -109,6 +109,7 @@ struct reorder_gpu : is_an_implementation {
         case memory::format::type::yxio_f16:
             return "return pad[1] + pos[1] + (2 * pad[1] + size[1]) * (pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3] + (2 * pad[3] + size[3]) * (pad[4] + pos[4])));";
         case memory::format::type::os_iyx_osv16_f32:
+        case memory::format::type::os_iyx_osv16_f16:
             return R"__C(uint _slice_id = pos[1] / 16; \
                         uint _id_in_slice = pos[1] % 16; \
                         return _id_in_slice + 16 * (pos[3] + size[3] * (pos[4] + size[4] * (pos[2] + _slice_id * size[2])));)__C";
@@ -157,6 +158,7 @@ struct reorder_gpu : is_an_implementation {
         case memory::format::type::fyxb_f16:
             return { 0, 2, 3, 1 };
         case memory::format::type::os_iyx_osv16_f32:
+        case memory::format::type::os_iyx_osv16_f16:
             return { 0, 1, 3, 4, 2 };
         case memory::format::type::bx_f32:
         case memory::format::type::bx_f16:

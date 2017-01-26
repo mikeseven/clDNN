@@ -381,14 +381,10 @@ int main(int argc, char* argv[])
         ep.profiling = parsed_args["profiling"].as<bool>();
         ep.optimize_weights = parsed_args["optimize_weights"].as<bool>();
         ep.use_half = parsed_args["use_half"].as<bool>();
-        if (!ep.use_half)
-        {
-            ep.use_bfyx = parsed_args["use_bfyx"].as<bool>();
-            if (ep.topology_name == "alexnet" || ep.topology_name == "vgg16" || ep.batch == 1)
-                ep.use_bfyx = true;
-        }
-        else
-            ep.use_bfyx = false;
+
+        ep.use_bfyx = parsed_args["use_bfyx"].as<bool>();
+        if (ep.topology_name == "alexnet" || ep.topology_name == "vgg16" || ep.batch == 1)
+            ep.use_bfyx = true;
 
         ep.run_single_layer = run_single_layer;
         ep.dump_hidden_layers = parsed_args["dump_hidden_layers"].as<bool>();

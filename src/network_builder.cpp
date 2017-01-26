@@ -110,7 +110,7 @@ namespace cldnn
                     auto conv_layout = conv->type()->calc_output_layout(_topology_map, conv);
 
                     // right now output padding optimization is only available for bfyx format and data type = float32
-                    if (conv_layout.size.format != cldnn::format::bfyx || conv_layout.data_type != data_types::f32)
+                    if (conv_layout.size.format != cldnn::format::bfyx)
                     {
                         continue;
                     }

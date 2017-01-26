@@ -175,13 +175,13 @@ struct lrn_gpu : is_an_implementation
 
 };
 
-lrn_gpu::kernel_data default_yxfb_f32(const normalization::response& arg)
+lrn_gpu::kernel_data default_yxfb(const normalization::response& arg)
 {
     lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
     return kd;
 }
 
-lrn_gpu::kernel_data default_bfyx_f32(const normalization::response& arg)
+lrn_gpu::kernel_data default_bfyx(const normalization::response& arg)
 {
     auto& input_mem = arg.input_memory(0);
     lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
@@ -201,9 +201,10 @@ lrn_gpu::kernel_data default_bfyx_f32(const normalization::response& arg)
 }
 
 kd_selector_t<lrn_gpu::kernel_data, normalization::response, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> lrn_gpu::ks = {
-    { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
-    { std::make_tuple(memory::format::yxfb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
-    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32 },
+    { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb },
+    { std::make_tuple(memory::format::yxfb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb },
+    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx },
+    { std::make_tuple(memory::format::bfyx_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx },
 };
 
 
@@ -213,6 +214,7 @@ kd_selector_t<lrn_gpu::kernel_data, normalization::response, neural::memory::for
                 implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), lrn_gpu::create);
                 implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), lrn_gpu::create);
                 implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), lrn_gpu::create);
+                implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), lrn_gpu::create);
             }
             ~attach() {}
         };

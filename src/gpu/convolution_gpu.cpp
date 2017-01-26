@@ -37,13 +37,7 @@ static const std::string kernel_name_yxfb_yxio_b8 = "convolution_gpu_yxfb_yxio_b
 static const std::string kernel_name_yxfb_yxio_b16 = "convolution_gpu_yxfb_yxio_b16";
 static const std::string kernel_name_yxfb_yxio_b16_fp16 = "convolution_gpu_yxfb_yxio_b16_fp16";
 static const std::string kernel_name_yxfb_yxio_fp16 = "convolution_gpu_yxfb_yxio_fp16";
-//static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32";
-//static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride1";
-//static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride2";
-//static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_kernel_size_1 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_kernel_size_1";
-//static const std::string kernel_name_bfyx_os_iyx_osv16_b8_f32 = "convolution_gpu_bfyx_os_iyx_osv16_b8_f32";
-//static const std::string kernel_name_bfyx_os_iyx_osv16_b8_f32_stride1 = "convolution_gpu_bfyx_os_iyx_osv16_b8_f32_stride1";
-static const std::string kernel_name_bfyx_os_iyx_osv16_f32 = "convolution_gpu_bfyx_os_iyx_osv16_f32";
+static const std::string kernel_name_bfyx_os_iyx_osv16 = "convolution_gpu_bfyx_os_iyx_osv16";
 
 template <>
 struct kd_default_value_selector<neural::gpu::engine_info_internal::architectures>
@@ -69,19 +63,26 @@ struct convolution_gpu : is_an_implementation {
         size_t batches_per_work_item; // how many batches will a single work item compute
         size_t block_width, block_height; // used for kernels processing blocks
         size_t prefetch;
-        size_t input_block_len;
-        std::string kernel_name;
+        size_t input_block_array_size; ///< Number of elements in array of UNIT_TYPE that must be specified in kernel to store/cache input block.
+        size_t input_block_width;      ///< Number of elements in X dimension stored/cached in input block.
+        std::string kernel_name;       ///< Name of a kernel/algorithm to execute.
+        bool fp16_unit_used;           ///< Value indicating that FP16 half precision floating point type will be used (instead of single precision).
     } _kernel_data;
 
     gpu::kernel _kernel;
 
     static kernel_data set_default(const convolution& arg)
     {
-        auto& output_mem = arg.output_memory();
+        const auto& input_mem = arg.input_memory(0);  // input
+        const auto& output_mem = arg.output_memory(); // output
+
         auto split = arg.argument.split;
         auto batch_size = output_mem.argument().size.batch[0];
 
         kernel_data kd;
+
+        kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
+
         kd.gws0 = (output_mem.argument().size.feature[0] * batch_size) / split;
         kd.lws0 = std::min(kd.gws0, static_cast<size_t>(32));
         while (kd.gws0 % kd.lws0)
@@ -97,7 +98,8 @@ struct convolution_gpu : is_an_implementation {
         kd.block_width = 1;
         kd.block_height = 1;
         kd.prefetch = 0;
-        kd.input_block_len = 0;
+        kd.input_block_array_size = 0;
+        kd.input_block_width = 0;
         return kd;
     }
 
@@ -120,7 +122,6 @@ struct convolution_gpu : is_an_implementation {
         auto& output_size = outer.output_memory().argument().size;
         auto& filter_mem = outer.weights_memory(0);
         auto split = outer.argument.split;
-        auto negative_slope = outer.argument.activation_negative_slope;
 
         const int batch_size = output_mem.argument().size.batch[0];
 
@@ -130,39 +131,37 @@ struct convolution_gpu : is_an_implementation {
         cldnn::padding input_padding(cldnn::format::yx, { filter_mem.argument().size.spatial[0] - 1, filter_mem.argument().size.spatial[1] - 1 });
 
         gpu::jit_constants mem_consts{
-            gpu::make_jit_constant("INPUT", input_size),
-            gpu::make_jit_constant("OUTPUT", outer.non_padded_output_layout().size),
-            gpu::make_jit_constant("STRIDE", stride),
-            gpu::make_jit_constant("INPUT_OFFSET", input_offset),
-            gpu::make_jit_constant("OUTPUT_OFFSET", output_offset),
-            gpu::make_jit_constant("OUTPUT_LIMIT", output_size),
-            gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(_engine_info.supports_fp16)),
-            gpu::make_jit_constant("INPUT_PADDING", input_padding.size()),
-            gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding().size())
+            gpu::make_jit_constant("INPUT",                     input_size),
+            gpu::make_jit_constant("OUTPUT",                    outer.non_padded_output_layout().size),
+            gpu::make_jit_constant("STRIDE",                    stride),
+            gpu::make_jit_constant("INPUT_OFFSET",              input_offset),
+            gpu::make_jit_constant("OUTPUT_OFFSET",             output_offset),
+            gpu::make_jit_constant("OUTPUT_LIMIT",              output_size),
+            gpu::make_jit_constant("INPUT_PADDING",             input_padding.size()),
+            gpu::make_jit_constant("OUTPUT_PADDING",            outer.argument.output_padding().size()),
+            gpu::make_jit_constant("FILTER",                    filter_mem.argument().size),
+            gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
+            gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"),
+            gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM_1"),
+            gpu::make_jit_constant("FP16_SUPPORTED",            static_cast<int>(_engine_info.supports_fp16)),
+            gpu::make_jit_constant("FP16_UNIT_USED",            static_cast<int>(_kernel_data.fp16_unit_used)),
+            gpu::make_jit_constant("UNIT_TYPE",                 _kernel_data.fp16_unit_used ? "half" : "float"),
+            gpu::make_jit_constant("UNIT_VAL_ZERO",             _kernel_data.fp16_unit_used ? "0.0h" : "0.0f"),
+            gpu::make_jit_constant("RELU",                      static_cast<int>(outer.argument.with_activation)),
+            gpu::make_jit_constant("NEGATIVE_SLOPE",            outer.argument.activation_negative_slope),
         };
-
-        if (outer.argument.with_activation)
-        {
-            mem_consts.add_constant(gpu::make_jit_constant("NEGATIVE_SLOPE", negative_slope));
-            mem_consts.add_constant(gpu::make_jit_constant("RELU", ""));
-        }
-
-        mem_consts.add_constant(gpu::make_jit_constant("FILTER", filter_mem.argument().size));
-        mem_consts.add_constant(gpu::make_jit_constant("FILTER_ARRAY_NUM", split));
-
-        mem_consts.add_constant(gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"));
-        mem_consts.add_constant(gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_1"));
 
         if (filter_mem.argument().format == memory::format::yxio_f32 ||
             filter_mem.argument().format == memory::format::yxoi_f32 ||
             filter_mem.argument().format == memory::format::yxio_f16)
         {
-            const int local_work_group_size = static_cast<int>(_kernel_data.lws0);
-            mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size));
-            mem_consts.add_constant(gpu::make_jit_constant("OFM_PER_WORK_ITEM", _kernel_data.ofm_per_work_item)); // how many output feature maps for a single batch will a single work item produce
-            mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", _kernel_data.batches_per_work_item)); // how many batches will a single work item compute
-            mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max((batch_size / static_cast<int>(_kernel_data.batches_per_work_item)) / local_work_group_size, 1))); // how many local work groups we need to compute single element for each batch
-            mem_consts.add_constant(gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / _kernel_data.batches_per_work_item)); // how many work items we need to compute single element for each batch
+            const auto local_work_group_size = _kernel_data.lws0;
+
+            mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE",                         local_work_group_size));
+            mem_consts.add_constant(gpu::make_jit_constant("OFM_PER_WORK_ITEM",                             _kernel_data.ofm_per_work_item)); // how many output feature maps for a single batch will a single work item produce
+            mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM",                         _kernel_data.batches_per_work_item)); // how many batches will a single work item compute
+            mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max(batch_size / _kernel_data.batches_per_work_item / local_work_group_size, static_cast<size_t>(1)))); // how many local work groups we need to compute single element for each batch
+            mem_consts.add_constant(gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS",        batch_size / _kernel_data.batches_per_work_item)); // how many work items we need to compute single element for each batch
 
             if (_kernel_data.kernel_name == kernel_name_yxfb_yxio_b16_fp16)
             {
@@ -189,12 +188,15 @@ struct convolution_gpu : is_an_implementation {
                 mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 8));
         }
 
-        if (input_mem.argument().format == memory::format::bfyx_f32)
+        if (input_mem.argument().format == memory::format::bfyx_f32 ||
+            input_mem.argument().format == memory::format::bfyx_f16)
         {
-            mem_consts.add_constant(gpu::make_jit_constant("OUT_BLOCK_WIDTH", _kernel_data.block_width));
-            mem_consts.add_constant(gpu::make_jit_constant("OUT_BLOCK_HEIGHT", _kernel_data.block_height));
-            mem_consts.add_constant(gpu::make_jit_constant("INPUT_BLOCK_LEN", _kernel_data.input_block_len));
-            mem_consts.add_constant(gpu::make_jit_constant("PREFETCH", _kernel_data.prefetch));
+            mem_consts.add_constant(gpu::make_jit_constant("SUB_GROUP_SIZE",      _kernel_data.lws2));
+            mem_consts.add_constant(gpu::make_jit_constant("OUT_BLOCK_WIDTH",     _kernel_data.block_width));
+            mem_consts.add_constant(gpu::make_jit_constant("OUT_BLOCK_HEIGHT",    _kernel_data.block_height));
+            mem_consts.add_constant(gpu::make_jit_constant("IN_BLOCK_ARRAY_SIZE", _kernel_data.input_block_array_size));
+            mem_consts.add_constant(gpu::make_jit_constant("IN_BLOCK_WIDTH",      _kernel_data.input_block_width));
+            mem_consts.add_constant(gpu::make_jit_constant("PREFETCH",            _kernel_data.prefetch));
         }
 
         return mem_consts;
@@ -254,6 +256,7 @@ struct convolution_gpu : is_an_implementation {
         // FP16 (half)
         case memory::format::oiyx_f16:
         case memory::format::yxio_f16:
+        case memory::format::os_iyx_osv16_f16:
             break;
         default:
             throw std::runtime_error("Convolution weights format unsupported");
@@ -429,13 +432,67 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
     return kd;
 }
 
-convolution_gpu::kernel_data default_bfyx_yxio_f32(const convolution& arg)
+/// Computes dimensions of input block required for "kernel_name_bfyx_os_iyx_osv16" algorithm.
+///
+/// @param output_block_width    Width of output block used in algorithm.
+/// @param output_block_height   Height of output block used in algorithm.
+/// @param filter_size           Tensor with spatial (X, Y) data containing filter size used in algorithm.
+/// @param stride                Tensor with spatial (X, Y) data containing stride used in algorithm.
+/// @param sub_group_size        Number of work items grouped in single sub-group (enforced SIMD size).
+/// @param read_chunk_size       Number of elements of input read as a smallest read done by sub-group.
+///
+/// @return   Pair containing:
+///            - [first] Number of sub-group-sized vectors of unit type needed to store/cache input block.
+///                      The number is equivalent to size of array of UNIT_TYPE in work item needed to store/cache
+///                      input block. It can be declared in kernel in form similar to:
+///                         UNIT_TYPE in_block[ret.first];
+///            - [second] Number of elements in X dimension needed to be read from input to compute output block
+///                       without re-reading input.
+static std::pair<size_t, size_t> get_bfyx_req_input_block_dims(
+    size_t output_block_width,
+    size_t output_block_height,
+    const cldnn::tensor& filter_size,
+    const cldnn::tensor& stride,
+    size_t sub_group_size = 16,
+    size_t read_chunk_size = 8)
+{
+    assert(output_block_width > 0 && output_block_height > 0);
+    assert(stride.spatial[0] > 0 && stride.spatial[1] > 0);
+    assert(filter_size.spatial[0] > 0 && filter_size.spatial[1] > 0);
+
+    // Number of elements in X dimension needed from input to compute output block without re-reading input.
+    std::size_t input_block_req_width = (output_block_width - 1) * stride.spatial[0] + filter_size.spatial[0];
+    // Number of elements in Y dimension needed from input to compute output block without re-reading input.
+    std::size_t input_block_req_height = (output_block_height - 1) * stride.spatial[1] + filter_size.spatial[1];
+
+    // Required number of elements in X dimension rounded to nearest >= read chunk size.
+    std::size_t input_block_read_width = round_up_to(input_block_req_width, read_chunk_size);
+    // Number of sub-group-sized vectors of unit type needed to store input block.
+    std::size_t input_block_array_size = ceil_div(input_block_req_height * input_block_read_width, sub_group_size);
+
+    return std::make_pair(input_block_array_size, input_block_read_width);
+}
+
+convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
 {
     auto& filter_mem = arg.input_memory(1);
     auto output_size = arg.non_padded_output_layout().size;
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
-    kd.kernel_name = kernel_name_bfyx_os_iyx_osv16_f32;
+    kd.kernel_name = kernel_name_bfyx_os_iyx_osv16;
+
+    // Maximum supported size (in any dimension) of filter by "kernel_name_bfyx_os_iyx_osv16" kernel.
+    constexpr size_t max_supported_filter_size = 11;
+    // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
+    constexpr uint32_t sub_group_size = 16;
+
+    if (filter_mem.argument().size.spatial[0] > max_supported_filter_size ||
+        filter_mem.argument().size.spatial[1] > max_supported_filter_size)
+    {
+        // TODO: Implement and use naive bfyx algorithm here.
+        // TODO: Implement naive bfyx algorithm here and add fall-back condition if abs(input_offset) >= filter_size.
+        throw std::runtime_error("Unsupported filter size (> 11) in bfyx convolution");
+    }
 
     if (arg.argument.stride.spatial[0] == 1 && arg.argument.stride.spatial[1] == 1)
     {
@@ -443,24 +500,20 @@ convolution_gpu::kernel_data default_bfyx_yxio_f32(const convolution& arg)
         {
             kd.block_width = 16;
             kd.block_height = 1;
-            kd.input_block_len = 1;
             kd.prefetch = 4;
         }        
         //if less than 16 values is required to compute one single row of output
-        // note: (computing n outputs in row requires n + kernel_width values - 1 values in input, for kernel stride == 1)
         //then each WI shall compute one sinle row to maximise reuse within SIMD subgroup (this gives very nice performance results)
         else if (output_size.spatial[0] + filter_mem.argument().size.spatial[0] - 1 < 16)
         {
             kd.block_width = output_size.spatial[0];
             kd.block_height = 1;
-            kd.input_block_len = filter_mem.argument().size.spatial[1];
             kd.prefetch = 4;
         }
         else //fallback to fixed output size
         {
             kd.block_width = 4; //note: original 6x4 has been changed to 4x3 since, on GT2, this gives better results
             kd.block_height = 3;
-            kd.input_block_len = kd.block_height + (filter_mem.argument().size.spatial[1] - 1);
             kd.prefetch = 4;
         }
     }
@@ -468,32 +521,41 @@ convolution_gpu::kernel_data default_bfyx_yxio_f32(const convolution& arg)
     {
         kd.block_width = 5;
         kd.block_height = 4;
-        kd.input_block_len = 13;
         kd.prefetch = 4;
     }
     else if (arg.argument.stride.spatial[0] == 4 && arg.argument.stride.spatial[1] == 4)
     {
         kd.block_width = 4;
         kd.block_height = 3;
-        kd.input_block_len = 30;
         kd.prefetch = 5;
     }
     else
     {
+        // TODO: Implement and use naive bfyx algorithm here.
         throw std::runtime_error("Unsupported stride (!= 1,2,4) in bfyx convolution");
     }
+
+
+    // Non-naive algorithm is used.
+    if (kd.kernel_name == kernel_name_bfyx_os_iyx_osv16)
+    {
+        auto input_block_dims = get_bfyx_req_input_block_dims(kd.block_width, kd.block_height,
+                                                                filter_mem.argument().size,
+                                                                arg.argument.stride,
+                                                                sub_group_size,
+                                                                kd.fp16_unit_used ? 16 : 8);
+        kd.input_block_array_size = input_block_dims.first;
+        kd.input_block_width      = input_block_dims.second;
+    }
     
-    kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[0]) / kd.block_width));
-    kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[1]) / kd.block_height));
-    kd.gws2 = filter_mem.argument().size.feature[0] * output_size.batch[0];
+    kd.gws0 = ceil_div(output_size.spatial[0], kd.block_width);
+    kd.gws1 = ceil_div(output_size.spatial[1], kd.block_height);
+    kd.gws2 = round_up_to(filter_mem.argument().size.feature[0] * output_size.batch[0], sub_group_size);
+
     kd.lws0 = 1;
     kd.lws1 = 1;
-    kd.lws2 = 16;
-    if (kd.gws2 % 16)
-    {
-        kd.gws2 += 16;
-        kd.gws2 -= kd.gws2 % 16;
-    }
+    kd.lws2 = sub_group_size;
+
     return kd;
 }
 
@@ -513,7 +575,9 @@ convolution_gpu::ks_type convolution_gpu::ks = {
     { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 64, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
     { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 128, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
 
-    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_yxio_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_os_iyx_osv16 },
+
+    { std::make_tuple(memory::format::bfyx_f16, memory::format::os_iyx_osv16_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_os_iyx_osv16 },
 };
 
 namespace{
@@ -522,6 +586,7 @@ namespace{
             implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), convolution_gpu::create);
             implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), convolution_gpu::create);
             implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), convolution_gpu::create);
+            implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), convolution_gpu::create);
         }
         ~attach() {}
     };

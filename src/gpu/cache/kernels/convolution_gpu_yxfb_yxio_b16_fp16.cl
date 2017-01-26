@@ -1,7 +1,7 @@
 #if FP16_SUPPORTED
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-    #ifdef RELU
+    #if RELU
         #define ACTIVATION(output, input) output = max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h);
     #else
         #define ACTIVATION(output, input) output = input;
