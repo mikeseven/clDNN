@@ -15,42 +15,69 @@
 */
 
 #include "neural_impl.h"
-#include "implementation_map.h"
-#include "kernel.h"
-#include "ocl_toolkit.h"
-#include "api/memory.hpp"
-#include "api/event.hpp"
-#include "reorder_arg.h"
 #include "engine_impl.h"
 #include "network_impl.h"
+#include "implementation_map.h"
+#include "kernel.h"
+#include "kd_selector.h"
+
+#include <algorithm>
+#include <stdexcept>
 #include <string>
 
-const std::string kernelName = "reorder_GPU";
-const std::string kernelName_subtract = "reorder_subtract_GPU";
-const std::string kernelName_subtract_values = "reorder_subtract_values_GPU";
-const std::string kernel_name_1d_convert = "reorder_gpu_1d_convert";
-const std::string kernel_name_1d_convert_subtract = "reorder_gpu_1d_convert_subtract";
-const std::string kernel_name_1d_convert_subtract_values = "reorder_gpu_1d_convert_subtract_values";
-const std::string kernel_name_reorder_padding_bfyx_f32 = "reorder_gpu_padding_bfyx_f32";
 namespace neural {
+    const std::string kernelName = "reorder_GPU";
+    const std::string kernelName_subtract = "reorder_subtract_GPU";
+    const std::string kernelName_subtract_values = "reorder_subtract_values_GPU";
+    const std::string kernel_name_1d_convert = "reorder_gpu_1d_convert";
+    const std::string kernel_name_1d_convert_subtract = "reorder_gpu_1d_convert_subtract";
+    const std::string kernel_name_1d_convert_subtract_values = "reorder_gpu_1d_convert_subtract_values";
+    const std::string kernel_name_reorder_padding_bfyx_f32 = "reorder_gpu_padding_bfyx_f32";
+
+    template <>
+    struct kd_default_value_selector<neural::gpu::engine_info_internal::architectures>
+    {
+        static constexpr neural::gpu::engine_info_internal::architectures value = neural::gpu::engine_info_internal::architectures::GEN_UNKNOWN;
+    };
+
+    template <>
+    struct kd_default_value_selector<neural::gpu::engine_info_internal::configurations>
+    {
+        static constexpr neural::gpu::engine_info_internal::configurations value = neural::gpu::engine_info_internal::configurations::GT_UNKNOWN;
+    };
 
 struct reorder_gpu : is_an_implementation {
-    const reorder& outer;
-    bool have_subtraction;
-    bool padding_only;
+    const reorder& _outer;
+    gpu::engine_info_internal _engine_info;
+
+    struct kernel_data
+    {
+        size_t gws0, gws1, gws2;
+        std::string kernel_name;
+        bool have_subtraction;
+        bool padding_only;
+    } _kernel_data;
     gpu::kernel _kernel;
     gpu::kernel_execution_options _exec_options;
 
-    reorder_gpu(reorder &arg)
-    : outer(arg)
-    , have_subtraction(arg.have_substract())
-    , _kernel(arg.get_network().get_engine()->get_context(), select_kernel_name(), get_jit_constants())
-    , _exec_options(get_execution_options())
-    {
-        auto& input_mem = outer.input_memory(0);
-        auto& output_mem = outer.output_memory();
+    static kd_selector_t<kernel_data, reorder, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
 
-        padding_only = (!have_subtraction) && (input_mem.argument().format == output_mem.argument().format) && input_mem.argument().format == memory::format::type::bfyx_f32;
+    reorder_gpu(reorder &outer)
+    : _outer(outer)
+    , _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info())
+    , _kernel_data(ks.get_kernel(outer, _engine_info.architecture, _engine_info.configuration))
+    , _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+    , _exec_options(get_execution_options())
+    {}
+
+    static kernel_data set_kernel_data(const reorder& outer)
+    {
+        kernel_data kd;
+
+        kd.have_subtraction = outer.have_substract();
+        kd.padding_only = (!kd.have_subtraction) && (outer.input_memory(0).argument().format == outer.output_memory().argument().format) && outer.input_memory(0).argument().format == memory::format::type::bfyx_f32;
+
+        return kd;
     }
 
     // We need to specify the output idx based on input position
@@ -157,35 +184,7 @@ struct reorder_gpu : is_an_implementation {
         return os.str();
     }
 
-    const std::string& select_kernel_name() const {
-        auto& input_mem = outer.input_memory(0);
-
-        auto& output_mem = outer.output_memory();
-
-        bool _padding_only = (!have_subtraction) && (input_mem.argument().format == output_mem.argument().format) && input_mem.argument().format == memory::format::type::bfyx_f32;
-        if (_padding_only)
-        {
-            return kernel_name_reorder_padding_bfyx_f32;
-        }
-
-        // 1d conversions (no reorder)
-        if (memory::traits(input_mem.get_layout()).dimension == 1)
-        {
-            if (have_subtraction)
-                return kernel_name_1d_convert_subtract;
-            if (!outer.argument.substract_per_feature.empty())
-                return kernel_name_1d_convert_subtract_values;
-            return kernel_name_1d_convert;
-        }
-        // if we got values to subtract, then choose apropriate kernel
-        if (have_subtraction)
-            return kernelName_subtract;
-        if (!outer.argument.substract_per_feature.empty())
-            return kernelName_subtract_values;
-        return kernelName;
-    }
-
-    gpu::jit_constants get_jit_constants() const {
+    static gpu::jit_constants get_jit_constants(const reorder& outer, const kernel_data& data) {
         auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
 
         auto& input_mem = outer.input_memory(0);
@@ -229,14 +228,12 @@ struct reorder_gpu : is_an_implementation {
             mem_consts.add_constant(gpu::make_jit_constant("PADDING", s.str()));
         }
 
-        bool _padding_only = (!have_subtraction) && (input_mem.argument().format == output_mem.argument().format) && input_mem.argument().format == memory::format::type::bfyx_f32;
-
-        if (_padding_only)
+        if (data.padding_only)
         {
             mem_consts.add_constant(gpu::make_jit_constant("INPUT", input_mem.argument().size));
             mem_consts.add_constant(gpu::make_jit_constant("OUTPUT", output_mem.argument().size));
         }
-        else if (have_subtraction)
+        else if (data.have_subtraction)
         {
             auto& subtract_mem = outer.input_memory(1);
 
@@ -280,7 +277,7 @@ struct reorder_gpu : is_an_implementation {
     }
 
     gpu::kernel_execution_options get_execution_options() const {
-        auto& input_mem = outer.input_memory(0);
+        auto& input_mem = _outer.input_memory(0);
         auto& input_size_raw = input_mem.argument().size.raw;
         auto dimensions = input_size_raw.size();
         auto order = get_calculation_order(input_mem.argument().format);
@@ -300,8 +297,8 @@ struct reorder_gpu : is_an_implementation {
     {
         auto me = this;
 
-        auto& input_mem = outer.input_memory(0);
-        auto& output_mem = outer.output_memory();
+        auto& input_mem = _outer.input_memory(0);
+        auto& output_mem = _outer.output_memory();
 
         if (input_mem.argument().size.raw.size() != output_mem.argument().size.raw.size() ||
             memory::traits(input_mem.get_layout()).dimension != memory::traits(output_mem.get_layout()).dimension)
@@ -309,16 +306,16 @@ struct reorder_gpu : is_an_implementation {
             throw std::runtime_error("Reorder input/output number of dimension does not match.");
         }
 
-        if (me->have_subtraction)
+        if (_kernel_data.have_subtraction)
         {
             return me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>
                 (me->_exec_options,
                     events,
                     input_mem,
                     output_mem,
-                    outer.input_memory(1));
+                    _outer.input_memory(1));
         }
-        else if (me->padding_only)
+        else if (_kernel_data.padding_only)
         {
             if (input_mem.argument().size.spatial[1] > 255)
                 throw std::runtime_error("We don't support padding reorder with Y > 256");
@@ -352,6 +349,41 @@ struct reorder_gpu : is_an_implementation {
     }
 };
 
+reorder_gpu::kernel_data set_default_reorder(const reorder& arg)
+{
+    reorder_gpu::kernel_data kd = reorder_gpu::set_kernel_data(arg);
+
+    if (kd.padding_only)
+    {
+        kd.kernel_name = kernel_name_reorder_padding_bfyx_f32;
+    }
+    // 1d conversions (no reorder)
+    else if (memory::traits(arg.input_memory(0).get_layout()).dimension == 1)
+    {
+        if (kd.have_subtraction)
+            kd.kernel_name = kernel_name_1d_convert_subtract;
+        else if (!arg.argument.substract_per_feature.empty())
+            kd.kernel_name = kernel_name_1d_convert_subtract_values;
+        else
+            kd.kernel_name = kernel_name_1d_convert;
+    }
+    else
+    {
+        //if we got values to subtract, then choose apropriate kernel
+        if (kd.have_subtraction)
+            kd.kernel_name = kernelName_subtract;
+        else if (!arg.argument.substract_per_feature.empty())
+            kd.kernel_name = kernelName_subtract_values;
+        else
+            kd.kernel_name = kernelName;
+    }
+
+    return kd;
+}
+
+kd_selector_t<reorder_gpu::kernel_data, reorder, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> reorder_gpu::ks = {
+    { std::make_tuple(gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_reorder },
+};
 
     namespace {
         struct attach {
