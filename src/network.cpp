@@ -51,7 +51,7 @@ network_impl::network_impl(refcounted_obj_ptr<engine_impl> engine, refcounted_ob
 
     //pre-compile program and warm-up
     auto context = _engine->get_context();
-    neural::gpu::kernel warmup_kernel(context, "", warmup_kernel_name);
+    neural::gpu::kernel warmup_kernel(context, warmup_kernel_name);
     cl::Buffer out(context->context(), CL_MEM_WRITE_ONLY, 1);
     warmup_kernel.run<cl_int, cl_int, cl_int, cl::Buffer>({ 1024, 8 }, {}, 0, 111, 7, out);
     context->queue().finish();

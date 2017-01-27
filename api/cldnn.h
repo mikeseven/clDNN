@@ -68,6 +68,7 @@ typedef enum /*:int32_t*/ { cldnn_engine_ocl } cldnn_engine_type;
 typedef struct
 {
     uint32_t enable_profiling;
+    uint32_t meaningful_kernels_names;
     const char* compiler_options;
 }  cldnn_engine_configuration;
 

@@ -198,13 +198,17 @@ namespace {
 
 kernels_cache::kernels_cache(gpu_toolkit& context): _context(context) {}
 
-kernels_cache::kernel_id kernels_cache::create_kernel_from_template(std::string kernel_id, const std::string& template_name, jit_definitions definitions) {
+kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_name) {
     // TODO: FIXIT: more than one kernel can be created for same template_name and definitions
-    std::replace(kernel_id.begin(), kernel_id.end(), '.', '_');
 
+    std::replace(kernel_name.begin(), kernel_name.end(), '.', '_');
     auto kernel_num = definitions.empty() ? "" : std::to_string(_kernel_codes.size());
-    auto kernel_name = (kernel_id.empty() ? template_name : kernel_id) + (kernel_num.empty() ? "" : "_") + kernel_num;
 
+    if (kernel_name.empty() || !_context.get_configuration().meaningful_kernels_names)
+        kernel_name = template_name;
+
+    kernel_name += (kernel_num.empty() ? "" : "_") + kernel_num;
+    
     class code_builder code;
     code.add_line("\n//====================================================")
         .add_line("// Kernel template: " + template_name + " ")

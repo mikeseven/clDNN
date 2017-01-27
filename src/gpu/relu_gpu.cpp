@@ -45,7 +45,7 @@ struct relu_gpu : is_an_implementation
     relu_gpu(relu& arg)
         : _outer(arg),
         _kernel_data(set_kernel_data(_outer)),
-        _kernel(arg.get_network().get_engine()->get_context(), _outer.id(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+        _kernel(arg.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
     {}
 
     static kernel_data set_kernel_data(const relu& outer)

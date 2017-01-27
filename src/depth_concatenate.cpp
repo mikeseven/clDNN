@@ -127,7 +127,7 @@ struct depth_concatenate_gpu : is_an_implementation
         for (size_t input_idx = 0; input_idx < inputs_count; ++input_idx)
         {
             auto data = set_kernel_data(input_idx, _outer, engine_info);
-            gpu::kernel kernel(context, _outer.id(), data.kernel_name, get_jit_constants(_outer, data));
+            gpu::kernel kernel(context, data.kernel_name, get_jit_constants(_outer, data), _outer.id());
 
             _kernels_with_data.emplace_back(std::move(kernel), std::move(data));
         }

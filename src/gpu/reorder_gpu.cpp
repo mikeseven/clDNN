@@ -44,7 +44,7 @@ struct reorder_gpu : is_an_implementation {
     reorder_gpu(reorder &arg)
     : outer(arg)
     , have_subtraction(arg.have_substract())
-    , _kernel(arg.get_network().get_engine()->get_context(), outer.id(), select_kernel_name(), get_jit_constants())
+    , _kernel(arg.get_network().get_engine()->get_context(), select_kernel_name(), get_jit_constants(), outer.id())
     , _exec_options(get_execution_options())
     {
         auto& input_mem = outer.input_memory(0);

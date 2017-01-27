@@ -29,16 +29,18 @@ enum class engine_types : int32_t
 struct engine_configuration
 {
     const bool enable_profiling;
+    const bool meaningful_kernels_names;
     const std::string compiler_options;
-    engine_configuration(bool profiling = false, const std::string& options = std::string())
-        :enable_profiling(profiling), compiler_options(options) {}
+
+    engine_configuration(bool profiling = false, bool decorate_kernel_names = false, const std::string& options = std::string())
+        :enable_profiling(profiling), meaningful_kernels_names(decorate_kernel_names), compiler_options(options) {}
 
     engine_configuration(const cldnn_engine_configuration& c_conf)
-        :enable_profiling(c_conf.enable_profiling != 0), compiler_options(c_conf.compiler_options){}
+        :enable_profiling(c_conf.enable_profiling != 0), meaningful_kernels_names(c_conf.meaningful_kernels_names != 0), compiler_options(c_conf.compiler_options){}
 
     operator ::cldnn_engine_configuration() const
     {
-        return{ enable_profiling, compiler_options.c_str() };
+        return{ enable_profiling, meaningful_kernels_names, compiler_options.c_str() };
     }
 };
 

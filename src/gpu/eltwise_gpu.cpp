@@ -44,7 +44,7 @@ struct eltwise_gpu : is_an_implementation
     eltwise_gpu(const eltwise& outer)
         : _outer(outer),
         _kernel_data(set_kernel_data(_outer)),
-        _kernel(_outer.get_network().get_engine()->get_context(), _outer.id(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
     {}
 
     static kernel_data set_kernel_data(const eltwise& outer)

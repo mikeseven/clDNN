@@ -37,12 +37,6 @@ static const std::string kernel_name_yxfb_yxio_b8 = "convolution_gpu_yxfb_yxio_b
 static const std::string kernel_name_yxfb_yxio_b16 = "convolution_gpu_yxfb_yxio_b16";
 static const std::string kernel_name_yxfb_yxio_b16_fp16 = "convolution_gpu_yxfb_yxio_b16_fp16";
 static const std::string kernel_name_yxfb_yxio_fp16 = "convolution_gpu_yxfb_yxio_fp16";
-//static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32";
-//static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_stride1 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride1";
-//static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_stride2 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_stride2";
-//static const std::string kernel_name_bfyx_os_iyx_osv16_b1_f32_kernel_size_1 = "convolution_gpu_bfyx_os_iyx_osv16_b1_f32_kernel_size_1";
-//static const std::string kernel_name_bfyx_os_iyx_osv16_b8_f32 = "convolution_gpu_bfyx_os_iyx_osv16_b8_f32";
-//static const std::string kernel_name_bfyx_os_iyx_osv16_b8_f32_stride1 = "convolution_gpu_bfyx_os_iyx_osv16_b8_f32_stride1";
 static const std::string kernel_name_bfyx_os_iyx_osv16_f32 = "convolution_gpu_bfyx_os_iyx_osv16_f32";
 
 template <>
@@ -108,7 +102,7 @@ struct convolution_gpu : is_an_implementation {
         : outer(arg)
         , _engine_info(arg.get_network().get_engine()->get_context()->get_engine_info())
         , _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.weights_memory(0).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration))
-        , _kernel(arg.get_network().get_engine()->get_context(), outer.id(), _kernel_data.kernel_name, get_jit_constants())
+        , _kernel(arg.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(), outer.id())
     {}
 
     gpu::jit_constants get_jit_constants() const {
