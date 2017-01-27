@@ -105,6 +105,7 @@ struct depth_concatenate_gpu : is_an_implementation
     {
         size_t input_idx;
         size_t gws0;
+        size_t gws1;
         size_t lws0;
         std::string kernel_name;
         bool fp16_unit_used;
@@ -145,6 +146,7 @@ struct depth_concatenate_gpu : is_an_implementation
 
         // Determine global work sizes.
         kd.gws0 = input_mem.argument().size.spatial[0] * input_mem.argument().size.spatial[1];
+        kd.gws1 = input_mem.argument().size.batch[0];
         // Find largest positive local work size that is divider for global work size.
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
         while (kd.gws0 % kd.lws0 != 0)
@@ -155,9 +157,6 @@ struct depth_concatenate_gpu : is_an_implementation
         // Select kernel name.
         if (input_mem.argument().format == memory::format::bfyx_f32)
         {
-            if (input_mem.argument().size.batch[0] != 1)
-                throw std::runtime_error("Depth concatenate for bfyx_f32 for batch != 1 not implemented yet!");
-
             kd.kernel_name = kernel_name_bfyx;
         }
         else
@@ -172,18 +171,13 @@ struct depth_concatenate_gpu : is_an_implementation
         if (!data.fp16_supported && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        auto input_padding = outer.argument.input_padding().size().transform(cldnn::format::xy, 0);
-        if (input_padding.spatial[0] != 0 || input_padding.spatial[1] != 0)
-        {
-            throw std::runtime_error("input padding not implemented in depth concatenate yet!");
-        }
-
         return gpu::jit_constants {
-            gpu::make_jit_constant("INPUT",          outer.input_memory(data.input_idx).argument().size),
+            gpu::make_jit_constant("INPUT",          outer.input().at(data.input_idx)->non_padded_output_layout().size),
             gpu::make_jit_constant("OUTPUT",         outer.output_memory().argument().size),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(data.fp16_supported)),
             gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",      data.fp16_unit_used ? "half" : "float"),
+            gpu::make_jit_constant("INPUT_PADDING",  outer.input().at(data.input_idx)->desc()->output_padding().size()),
             gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding().size())
         };
     }
@@ -205,7 +199,7 @@ struct depth_concatenate_gpu : is_an_implementation
 
             uint32_t input_depth_count = input_mem.argument().size.feature[0];
             auto event = _kernels_with_data[input_idx].first.run<gpu::input_mem, gpu::output_mem, cl_uint>
-                ({{kd.gws0}, {kd.lws0}}, tmp_events, input_mem, output_mem, depth_offset);
+                ({{kd.gws0, kd.gws1}, {kd.lws0}}, tmp_events, input_mem, output_mem, depth_offset);
             depth_offset += input_depth_count;
             tmp_events.clear();
             tmp_events.push_back(event);
