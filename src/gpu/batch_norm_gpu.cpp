@@ -57,17 +57,15 @@ namespace neural
                 std::string kernel_name;
                 bool fp16_unit_used;
                 bool fp16_supported;
-                bool bfyx_mean_format_used; ///< Indicates that old bfyx format of mean is used.
-                bool bfyx_variance_format_used; ///< Indicates that old bfyx format of variance is used.
             } _kernel_data;
             gpu::kernel _kernel;
 
-            static kd_selector_t<kernel_data, batch_norm, neural::memory::format::type, neural::memory::format::type, neural::memory::format::type, bool, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
+            static kd_selector_t<kernel_data, batch_norm, neural::memory::format::type, bool, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
 
             batch_norm_gpu(const batch_norm& outer):
                 _outer(outer),
                 _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info()),
-                _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.mean_memory().argument().format, outer.variance_memory().argument().format, outer.use_global_stats(), _engine_info.architecture, _engine_info.configuration)),
+                _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.use_global_stats(), _engine_info.architecture, _engine_info.configuration)),
                 _kernel(_outer.get_network().get_engine()->get_context(), _outer.id(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
             {}
 
@@ -81,8 +79,6 @@ namespace neural
 
                 kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
                 kd.fp16_supported = engine_info.supports_fp16 != 0;
-                kd.bfyx_mean_format_used = false;
-                kd.bfyx_variance_format_used = false;
 
                 // Determine global work sizes.
                 kd.gws0 = input_mem.argument().size.batch[0];   // B
@@ -112,14 +108,6 @@ namespace neural
                     gpu::make_jit_constant("UNIT_TYPE",             data.fp16_unit_used ? "half" : "float"),
                     gpu::make_jit_constant("UNIT_VAL_ZERO",         data.fp16_unit_used ? "0.0h" : "0.0f"),
                 };
-
-                if (outer.argument.use_global_stats)
-                {
-                    mem_consts.add_constant(gpu::make_jit_constant("MEAN", outer.input_memory(1).argument().size));
-                    mem_consts.add_constant(gpu::make_jit_constant("VARIANCE", outer.input_memory(2).argument().size));
-                    mem_consts.add_constant(gpu::make_jit_constant("BFYX_MEAN_FORMAT_USED", static_cast<int>(data.bfyx_mean_format_used)));
-                    mem_consts.add_constant(gpu::make_jit_constant("BFYX_VARIANCE_FORMAT_USED", static_cast<int>(data.bfyx_variance_format_used)));
-                }
 
                 return mem_consts;
             }
@@ -156,42 +144,11 @@ namespace neural
             return kd;
         }
 
-        batch_norm_gpu::kernel_data set_mean_bfyx(const normalization::batch_norm& arg)
-        {
-            batch_norm_gpu::kernel_data kd = set_default_use_global_stats(arg);
-            kd.bfyx_mean_format_used = true;
-
-            return kd;
-        }
-
-        batch_norm_gpu::kernel_data set_variance_bfyx(const normalization::batch_norm& arg)
-        {
-            batch_norm_gpu::kernel_data kd = set_default_use_global_stats(arg);
-            kd.bfyx_variance_format_used = true;
-
-            return kd;
-        }
-
-        batch_norm_gpu::kernel_data set_mean_variance_bfyx(const normalization::batch_norm& arg)
-        {
-            batch_norm_gpu::kernel_data kd = set_default_use_global_stats(arg);
-            kd.bfyx_mean_format_used = true;
-            kd.bfyx_variance_format_used = true;
-
-            return kd;
-        }
-
-        kd_selector_t<batch_norm_gpu::kernel_data, normalization::batch_norm, neural::memory::format::type, neural::memory::format::type, neural::memory::format::type, bool, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> batch_norm_gpu::ks = {
-            { std::make_tuple(memory::format::yxfb_f32, memory::format::yxfb_f32, memory::format::yxfb_f32, false, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
-            { std::make_tuple(memory::format::yxfb_f32, memory::format::yxfb_f32, memory::format::yxfb_f32, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
-            { std::make_tuple(memory::format::yxfb_f32, memory::format::bfyx_f32, memory::format::yxfb_f32, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_mean_bfyx },
-            { std::make_tuple(memory::format::yxfb_f32, memory::format::yxfb_f32, memory::format::bfyx_f32, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_variance_bfyx },
-            { std::make_tuple(memory::format::yxfb_f32, memory::format::bfyx_f32, memory::format::bfyx_f32, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_mean_variance_bfyx },
-            { std::make_tuple(memory::format::yxfb_f16, memory::format::yxfb_f16, memory::format::yxfb_f16, false, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
-            { std::make_tuple(memory::format::yxfb_f16, memory::format::yxfb_f16, memory::format::yxfb_f16, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
-            { std::make_tuple(memory::format::yxfb_f16, memory::format::bfyx_f16, memory::format::yxfb_f16, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_mean_bfyx },
-            { std::make_tuple(memory::format::yxfb_f16, memory::format::yxfb_f16, memory::format::bfyx_f16, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_variance_bfyx },
-            { std::make_tuple(memory::format::yxfb_f16, memory::format::bfyx_f16, memory::format::bfyx_f16, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_mean_variance_bfyx },
+        kd_selector_t<batch_norm_gpu::kernel_data, normalization::batch_norm, neural::memory::format::type, bool, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> batch_norm_gpu::ks = {
+            { std::make_tuple(memory::format::yxfb_f32, false, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+            { std::make_tuple(memory::format::yxfb_f32, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
+            { std::make_tuple(memory::format::yxfb_f16, false, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+            { std::make_tuple(memory::format::yxfb_f16, true, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_use_global_stats },
         };
 
         namespace {

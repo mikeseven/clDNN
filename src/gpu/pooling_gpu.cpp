@@ -217,7 +217,7 @@ pooling_gpu::kernel_data defauly_bfyx_f32(const pooling& arg)
     auto needs_boundary = pooling_gpu::needs_boundary_check(arg);
     if (needs_boundary && arg.argument.mode != cldnn::pooling_mode::max)
         throw std::runtime_error("Not implemented boundary in pooling bfyx!");
-    if (kd.gws0 > 256)
+    //if (kd.gws0 > 256)
     {
         while (kd.gws0 % kd.lws0 != 0)
         {

@@ -38,10 +38,13 @@ static const std::string kernel_name_xb_xb_b8_x8_vload = "fully_connected_gpu_xb
 static const std::string kernel_name_yxfn = "fully_connected_gpu_yxfn";
 static const std::string kernel_name_xb_xb_block_fp16 = "fully_connected_gpu_xb_xb_block_fp16";
 static const std::string kernel_name_bx_bx_from_fyx = "fully_connected_gpu_bx_xb_from_fyx";
+static const std::string kernel_name_bx_bx_from_fyxb = "fully_connected_gpu_bx_xb_from_fyxb";
 
 struct fully_connected_gpu : is_an_implementation
 {
     fully_connected& _outer;
+    std::vector<cldnn::refcounted_obj_ptr<cldnn::network_impl>> reorder;
+
     struct kernel_data 
     {
         size_t gws0, gws1;
@@ -69,7 +72,19 @@ struct fully_connected_gpu : is_an_implementation
       : _outer(arg),
         _kernel_data(set_kernel_data(_outer)),
         _kernel(_outer.get_network().get_engine()->get_context(), _outer.id(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
-    {}
+    {
+        auto const& input_mem = _outer.input_memory(0);
+
+        if (input_mem.argument().format == memory::format::bfyx_f32 &&
+            input_mem.argument().size.batch[0] > 1)
+        {
+            cldnn::topology topology(
+                cldnn::input_layout("input", input_mem.get_layout()),
+                cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_mem.argument().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
+            );
+            reorder.push_back({ _outer.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
+        }
+    }
 
     static kernel_data set_kernel_data(const fully_connected& outer)
     {
@@ -95,7 +110,13 @@ struct fully_connected_gpu : is_an_implementation
 
         bool batch_multiple_of_8 = input_mem.argument().size.batch[0] % 8 == 0;
 
-        switch (input_mem.argument().format)
+        auto input_mem_format = input_mem.argument().format;
+
+        //for bfyx,b>1 there will be reorder from bfyx to yxfb before this fc (created later in ctor), so do calculations for this format rather than original bfyx
+        if (input_mem_format == memory::format::bfyx_f32 && input_mem.argument().size.batch[0] > 1)
+            input_mem_format = memory::format::yxfb_f32;
+
+        switch (input_mem_format)
         {
         case memory::format::bfyx_f32:
         case memory::format::bx_f32:
@@ -107,7 +128,7 @@ struct fully_connected_gpu : is_an_implementation
             {
                 if (input_mem.argument().size.batch[0] != 1)
                 {
-                    throw std::runtime_error("Not supported batch != 1 in FC bfyx/bx format");
+                    kd.kernel_name = kernel_name_bx_bx_from_fyxb;
                 }
                 else
                 {
@@ -129,7 +150,7 @@ struct fully_connected_gpu : is_an_implementation
             case memory::format::byxf_f32:
             case memory::format::bx_f32:
             {
-                if (input_mem.argument().size.batch[0] == 8)
+                if (input_mem.argument().size.batch[0] >= 8)
                 {
                     kd.gws0 = output_mem.argument().size.batch[0];
                     kd.gws1 = output_mem.argument().size.spatial[0];
@@ -335,8 +356,20 @@ struct fully_connected_gpu : is_an_implementation
         const auto& bias_mem   = _outer.input_memory(2);   // biases
         const auto& output_mem = _outer.output_memory();  // output
 
+        if (reorder.empty())
+            return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, events, input_mem, output_mem, weight_mem, bias_mem);
+
+
+        auto network = reorder[0];
+        network->set_input_data("input", api_cast(input_mem.get()));
+        network->execute(events);
+        auto output_id = network->get_output_ids()[0];
+
+        auto reorder_output = network->get_primitive(output_id)->output_memory();
+
         return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-            ({{kd.gws0, kd.gws1}, {kd.lws0, kd.lws1}}, events, input_mem, output_mem, weight_mem, bias_mem);
+            ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, { network->get_primitive_event(output_id) }, reorder_output, output_mem, weight_mem, bias_mem);
     }
 
     static is_an_implementation *create(fully_connected &arg) {
