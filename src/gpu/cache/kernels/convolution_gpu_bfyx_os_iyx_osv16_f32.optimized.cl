@@ -6,6 +6,17 @@
 
 #define SIMD_SIZE 16
 
+// FEATURES_THREADS_PER_BATCH defines how many threads are processing single batch.
+// ideally, each thread should process one output feature, however since threads are
+// stack in groups of 16 (SIMD16) when number of output feature maps is not dividable by 16
+// there are dummy threads added in count of LEFTOVERS. We need to take them into consideration while
+// calculating batch id (see lines 33-34).
+#ifdef LEFTOVERS
+#define FEATURES_THREADS_PER_BATCH (FILTER_OUTPUT_FEATURE_NUM + LEFTOVERS)
+#else
+#define FEATURES_THREADS_PER_BATCH (FILTER_OUTPUT_FEATURE_NUM)
+#endif
+
 __attribute__((intel_reqd_sub_group_size(SIMD_SIZE))) // Why driver gives us warning here?
 KERNEL(convolution_gpu_bfyx_os_iyx_osv16_f32)(
     const __global float* input,
@@ -19,11 +30,8 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_f32)(
     uint fm  = get_global_id(2);                    // fm = Feature Map = od = Output Depth 
     uint lid = get_local_id(2); 
     
-    uint batch_idx = fm / FILTER_OUTPUT_FEATURE_NUM;
-    //this check is required in case when FILTER_OUTPUT_FEATURE_NUM % 16 != 0
-    if (batch_idx >= OUTPUT_BATCH_NUM)
-        --batch_idx;
-    uint feature_idx = fm % FILTER_OUTPUT_FEATURE_NUM;
+    uint batch_idx = fm / FEATURES_THREADS_PER_BATCH;
+    uint feature_idx = fm % FEATURES_THREADS_PER_BATCH;
     uint fmg = feature_idx / SIMD_SIZE;
 
     float in[INPUT_BLOCK_LEN];
@@ -117,8 +125,8 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_f32)(
         }
     }
 
-#if (FILTER_OUTPUT_FEATURE_NUM % 16 != 0) && (FILTER_SIZE_X == 1) && (FILTER_SIZE_Y == 1)
-    if (fm < FILTER_OUTPUT_FEATURE_NUM * OUTPUT_BATCH_NUM)
+#ifdef LEFTOVERS
+    if (feature_idx < OUTPUT_FEATURE_NUM)
 #endif
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         if(!(or + r >= OUTPUT_SIZE_Y))
@@ -132,8 +140,6 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16_f32)(
     }
 }
 
-#undef PREFETCH
-#undef OUT_BLOCK_WIDTH
-#undef OUT_BLOCK_HEIGHT
+#undef FEATURES_THREADS_PER_BATCH
 
 #undef ACTIVATION

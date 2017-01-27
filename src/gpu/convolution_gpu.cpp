@@ -59,6 +59,7 @@ struct convolution_gpu : is_an_implementation {
     {
         size_t gws0, gws1, gws2;
         size_t lws0, lws1, lws2;
+        size_t leftovers;
         size_t ofm_per_work_item; // how many output feature maps a single work item compute
         size_t batches_per_work_item; // how many batches will a single work item compute
         size_t block_width, block_height; // used for kernels processing blocks
@@ -86,6 +87,7 @@ struct convolution_gpu : is_an_implementation {
         kd.gws2 = output_mem.argument().size.spatial[1];
         kd.lws1 = 1;
         kd.lws2 = 1;
+        kd.leftovers = 0;
         kd.ofm_per_work_item = 1;
         kd.batches_per_work_item = 1;
         kd.block_width = 1;
@@ -189,6 +191,8 @@ struct convolution_gpu : is_an_implementation {
             mem_consts.add_constant(gpu::make_jit_constant("OUT_BLOCK_HEIGHT", _kernel_data.block_height));
             mem_consts.add_constant(gpu::make_jit_constant("INPUT_BLOCK_LEN", _kernel_data.input_block_len));
             mem_consts.add_constant(gpu::make_jit_constant("PREFETCH", _kernel_data.prefetch));
+            if (_kernel_data.leftovers)
+                mem_consts.add_constant(gpu::make_jit_constant("LEFTOVERS", _kernel_data.leftovers));
         }
 
         return mem_consts;
@@ -476,10 +480,16 @@ convolution_gpu::kernel_data default_bfyx_yxio_f32(const convolution& arg)
     {
         throw std::runtime_error("Unsupported stride (!= 1,2,4) in bfyx convolution");
     }
-    
+
+    unsigned int ofeatures_num = filter_mem.argument().size.feature[0];
+    if (ofeatures_num % 16)
+        kd.leftovers = 16 - (ofeatures_num % 16);
+    else
+        kd.leftovers = 0;
+
     kd.gws0 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[0]) / kd.block_width));
     kd.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(output_size.spatial[1]) / kd.block_height));
-    kd.gws2 = filter_mem.argument().size.feature[0] * output_size.batch[0];
+    kd.gws2 = (ofeatures_num + kd.leftovers) * output_size.batch[0];
     kd.lws0 = 1;
     kd.lws1 = 1;
     kd.lws2 = 16;
