@@ -104,7 +104,7 @@ elseif(CMAKE_COMPILER_IS_INTEL)
       CompilerOptions
 
       GROUP NAME DebugInfoFormat    "-g[0-3]?"
-      GROUP NAME Exceptions         "-f(no-)?exceptions"
+      GROUP NAME Exceptions         "-f(no-)?non-call-exceptions"
       GROUP NAME Optimization       "-O[0-3sg]?"
       GROUP NAME Rtti               "-f(no-)?rtti"
       GROUP NAME TreatWarnAsError   "-Werror|-pedantic-errors"
@@ -121,8 +121,8 @@ elseif(CMAKE_COMPILER_IS_INTEL)
       ALIAS CompileAsDefault
       ALIAS DebugInfoDisabled          "-g0"
       ALIAS DebugInfoProgramDatabase   "-g"
-      ALIAS ExceptionsDisabled         "-fno-exceptions"
-      ALIAS ExceptionsEnabled          "-fexceptions"
+      ALIAS ExceptionsDisabled         "-fno-non-call-exceptions"
+      ALIAS ExceptionsEnabled          "-fnon-call-exceptions"
       ALIAS FaviorSize                 "-Os"
       ALIAS FaviorSpeed                "-O3"
       ALIAS MultiProcessorCompilation

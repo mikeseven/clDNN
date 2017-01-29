@@ -27,7 +27,9 @@
 #include <string>
 #include <vector>
 
+#ifndef CLDNN_BUILT_FROM_OPENVX
 #include <boost/filesystem.hpp>
+#endif
 
 #ifdef CLDNN_BUILT_FROM_OPENVX
 #pragma warning pop

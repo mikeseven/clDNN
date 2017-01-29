@@ -599,7 +599,7 @@ set(Boost_USE_STATIC_LIBS    ON)
 set(Boost_USE_DEBUG_RUNTIME  ON)
 set(Boost_USE_STATIC_RUNTIME ${CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME})
 find_package(Boost "${CLDNN__BOOST_VERSION}" EXACT REQUIRED
-      COMPONENTS filesystem date_time program_options
+      COMPONENTS system date_time program_options
     )
 
 

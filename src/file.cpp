@@ -23,7 +23,9 @@
 #include <iostream>
 #include <nmmintrin.h>
 #include <array>
+#ifndef CLDNN_BUILT_FROM_OPENVX
 #include <boost/filesystem.hpp>
+#endif
 
 #ifdef CLDNN_BUILT_FROM_OPENVX
 #pragma warning pop
@@ -327,6 +329,7 @@ primitive file::create(file::arguments arg) {
 
 void file::serialize(const primitive& data, const std::string& name)
 {
+#ifndef CLDNN_BUILT_FROM_OPENVX
     // TODO: start using boost
     auto size = data.as<const memory&>().argument.size;
     auto format = data.as<const memory&>().argument.format;
@@ -371,6 +374,7 @@ void file::serialize(const primitive& data, const std::string& name)
     fstream.write(reinterpret_cast<const char*>(&array[0]), array.size()*sizeof(uint64_t));
     auto ptr = data.as<const memory&>().pointer<char>();
     fstream.write(&ptr[0], ptr.size());
+#endif
 }
 
 }
