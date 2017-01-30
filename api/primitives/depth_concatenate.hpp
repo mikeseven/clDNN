@@ -29,7 +29,7 @@ struct depth_concatenate : public primitive_base<depth_concatenate, CLDNN_PRIMIT
         const primitive_id& id,
         const std::vector<primitive_id>& input
     )
-        :primitive_base(id, input)
+        :primitive_base(id, input, padding(), padding())
     {}
 
     depth_concatenate(const dto* dto)

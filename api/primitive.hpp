@@ -219,8 +219,8 @@ protected:
     explicit primitive_base(
         const primitive_id& id,
         const std::vector<primitive_id>& input,
-        const padding& input_padding =  padding(),
-        const padding& output_padding = padding(),
+        const padding& input_padding,
+        const padding& output_padding,
         Args... args)
         : primitive(PType::type_id(), id, input, input_padding, output_padding)
         , _dto{ _type, _id.c_str(), _input.ref(), _input_padding, _output_padding, args... }

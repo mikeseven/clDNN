@@ -51,12 +51,7 @@ namespace cldnn
             }
 
             auto result = PType_Arg::calc_output_layout(topology_map, std::static_pointer_cast<const PType>(desc));
-#ifdef CLDNN_BUILT_FROM_OPENVX
-            it->second->output_layout = std::unique_ptr<layout>(new layout(std::forward<layout>(result)));
-#else
-            it->second->output_layout = std::make_unique<layout>(result);
-#endif
-            
+            it->second->output_layout = std::unique_ptr<layout>(new layout(std::forward<layout>(result)));       
             return result;
         };
 

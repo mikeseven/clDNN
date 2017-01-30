@@ -34,7 +34,7 @@ struct scale : public primitive_base<scale, CLDNN_PRIMITIVE_DESC(scale)>
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :primitive_base(id, {input}, input_padding, output_padding, "", bias_term)
+        :primitive_base(id, {input}, input_padding, output_padding, "", bias_term, "")
         , scale_input(scale_input)
         , bias_term(_dto.bias_term)
         , bias("")

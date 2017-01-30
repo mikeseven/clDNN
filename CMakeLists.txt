@@ -100,8 +100,9 @@ set(CLDNN_BUILD__PROJ_NAME_PREFIX "")
 
 # Minimum versions of compilers.
 set(CLDNN__MIN_COMPILER_VERSION__MSVC  "19.0")
-set(CLDNN__MIN_COMPILER_VERSION__GCC   "5.2")
+set(CLDNN__MIN_COMPILER_VERSION__GCC   "4.8")
 set(CLDNN__MIN_COMPILER_VERSION__CLANG "3.5")
+set(CLDNN__MIN_COMPILER_VERSION__ICC   "17.0")
 
 # Single/multi-configuration generator helpers.
 if(CMAKE_CFG_INTDIR STREQUAL ".")
@@ -742,8 +743,14 @@ cldnn_dmsg("    + version:        ${CMAKE_C_COMPILER_VERSION}")
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/CMakeCompilerLinkerOpts.txt" NO_POLICY_SCOPE)
 
-# ======================================= Generic compiler options =====================================
+# ======================================= Handle C++14 Stuffs ==========================================
 
+if(NOT CLDNN_CompilerSupportsCxx14)
+  set(CLDNN__INCLUDE_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(CLDNN__INCLUDE_TESTS OFF CACHE BOOL "" FORCE)
+endif()
+
+# ======================================= Generic compiler options =====================================
 # Selecting C++ Runtime.
 if(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME)
   set(__CLDNN_RtType      "RtMultiThreadedStatic")
@@ -850,7 +857,7 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
           -pipe
           -fmessage-length=0
           -fno-strict-aliasing
-          -fstack-protector-strong
+         #-fstack-protector-strong - it's supported on GCC 4.8.4
           -W
           -Wno-unknown-pragmas
           -Wwrite-strings
@@ -907,9 +914,27 @@ intel_config_flag_apply_settings(
     CMAKE_CXX_FLAGS
     ALL_PATTERN ""
     SET
-      StandardCxx14
       RttiDisabled
   )
+
+if(CLDNN_CompilerSupportsCxx14)
+  intel_config_flag_apply_settings(
+      CompilerOptions
+      CMAKE_CXX_FLAGS
+      ALL_PATTERN ""
+      SET
+        StandardCxx14
+    )
+else()
+  intel_config_flag_apply_settings(
+      CompilerOptions
+      CMAKE_CXX_FLAGS
+      ALL_PATTERN ""
+      SET
+        StandardCxx11
+    )
+endif()
+
 
 # NOTE: [WA] Workaround for possible crash problem (double destruction of static objects on bionic).
 #            This switch is not conformant with C++ standard (order of destruction of static elements is not met) but

@@ -46,12 +46,17 @@
     #pragma clang diagnostic ignored "-Wunused-function"
     #pragma clang diagnostic ignored "-Wignored-qualifiers"
 #elif defined __GNUC__
-    #pragma GCC diagnostic push
+    #if __GNUC__ >= 6
+        #pragma GCC diagnostic push
+    #endif
     #pragma GCC diagnostic ignored "-Wsign-compare"
     #pragma GCC diagnostic ignored "-Wunused-parameter"
     #pragma GCC diagnostic ignored "-Wunused-variable"
     #pragma GCC diagnostic ignored "-Wunused-function"
     #pragma GCC diagnostic ignored "-Wignored-qualifiers"
+    #if __GNUC__ >= 6
+    #pragma GCC diagnostic ignored "-Wignored-attributes"
+    #endif
 #else
     #pragma message("Unknown compiler. No changes in diagnostics will be done.")
 #endif
@@ -68,7 +73,9 @@
 #elif defined __clang__
     #pragma clang diagnostic pop
 #elif defined __GNUC__
-    #pragma GCC diagnostic pop
+    #if __GNUC__ >= 6
+        #pragma GCC diagnostic pop
+    #endif
 #endif
 
 #endif // CL2_WRAPPER_H_

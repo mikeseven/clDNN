@@ -14,7 +14,7 @@ namespace clDNN
 
         bool bUseRefKernel = UseReferenceKernel();
 
-        if (!m_Params.bAllowChangeInputTensor && !IsRowPitchAligned() ||
+        if ((!m_Params.bAllowChangeInputTensor && !IsRowPitchAligned()) ||
             !context()->extension_supported("cl_intel_subgroups_short"))
         {
             bUseRefKernel = true;
@@ -166,7 +166,6 @@ namespace clDNN
         uint blockWidth, uint rowAlignment)
     {
         const std::size_t r = alignedTransposedFilterHeight;
-        const std::size_t c = alignedTransposedFilterWidth;
         T* pSrc = mem;
         T* pDst = mem_dst;
 
