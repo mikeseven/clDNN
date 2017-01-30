@@ -47,8 +47,8 @@ struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
         const primitive_id& input,
         const layout& output_layout,
         primitive_id mean,
-        const padding& input_padding = { format::yx,{ 0, 0 } },
-        const padding& output_padding = { format::yx,{ 0, 0 } }
+        const padding& input_padding = padding(),
+        const padding& output_padding = padding()
     )
         : primitive_base(id, { input }, input_padding, output_padding, static_cast<cldnn_layout>(output_layout), "", cldnn_float_arr{ nullptr, 0 })
         , output_layout(_dto.output_layout)

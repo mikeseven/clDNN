@@ -113,6 +113,12 @@ struct reorder_gpu : is_an_implementation {
             return R"__C(uint _slice_id = pos[1] / 16; \
                         uint _id_in_slice = pos[1] % 16; \
                         return _id_in_slice + 16 * (pos[3] + size[3] * (pos[4] + size[4] * (pos[2] + _slice_id * size[2])));)__C";
+        case memory::format::type::bs_xs_xsv8_bsv8_f32:
+            return R"__C(uint _b_slice_id = pos[0] / 8; \
+                        uint _b_id_in_slice = pos[0] % 8; \
+                        uint _x_slice_id = pos[2] / 8; \
+                        uint _x_id_in_slice = pos[2] % 8; \
+                        return _b_id_in_slice + 8 * (_x_id_in_slice + 8 * _x_slice_id + _b_slice_id * size[2]);)__C";
         case memory::format::type::bx_f32:
         case memory::format::type::bx_f16:
             return "return pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[0] + pos[0]);";
@@ -184,6 +190,12 @@ struct reorder_gpu : is_an_implementation {
         // 0 - batch (b), 1 - feature (f), 2, 3 - spatial (x -> 2, y -> 3)
         switch (OutFormat)
         {
+        case cldnn::format::bs_xs_xsv8_bsv8:
+            return R"__C(uint _b_slice_id = pos[0] / 8; \
+                        uint _b_id_in_slice = pos[0] % 8; \
+                        uint _x_slice_id = (pos[2] + size[2] * (pos[3] + size[3] * pos[1])) / 8; \
+                        uint _x_id_in_slice = (pos[2] + size[2] * (pos[3] + size[3] * pos[1])) % 8; \
+                        return _b_id_in_slice + 8 * (_x_id_in_slice + 8 * _x_slice_id + _b_slice_id * (size[2] * size[3] * size[1]));)__C";
         //equivalent to axis = 1 (feature), end_axis = -1(x) in caffe
         case cldnn::format::bx:
             return "return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));";
