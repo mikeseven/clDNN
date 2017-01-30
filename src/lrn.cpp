@@ -14,94 +14,27 @@
 // limitations under the License.
 */
 
-#include "multidimensional_counter.h"
-#include "implementation_map.h"
+#include "normalization_arg.h"
+#include "primitive_type_base.h"
+#include "network_impl.h"
 
-namespace neural {
-
-normalization::response::arguments::arguments(
-                 primitive aoutput,
-                 primitive ainput,
-                 uint32_t  asize,
-                 neural::padding::type apadding,
-                 float ak,
-                 float aalpha,
-                 float abeta)
-    : output({ aoutput })
-    , output_offset(aoutput.as<const memory&>().argument.size.batch.size(), aoutput.as<const memory&>().argument.size.spatial.size(), aoutput.as<const memory&>().argument.size.feature.size())
-    , output_size(aoutput.as<const memory&>().argument.size)
-    , input({ ainput })
-    , input_offset(ainput.as<const memory&>().argument.size.batch.size(), ainput.as<const memory&>().argument.size.spatial.size(), ainput.as<const memory&>().argument.size.feature.size())
-    , size(asize)
-    , padding(apadding)
-    , k(ak)
-    , alpha(aalpha)
-    , beta(abeta) {}
-
-normalization::response::arguments::arguments(
-                 memory::format::type aoutput_fmt,
-                 primitive ainput,
-                 uint32_t  asize,
-                 neural::padding::type apadding,
-                 float ak,
-                 float aalpha,
-                 float abeta)
-    : input({ ainput })
-    , size(asize)
-    , padding(apadding)
-    , k(ak)
-    , alpha(aalpha)
-    , beta(abeta)
-{ 
-    if (ainput.output.size() != 1) throw std::runtime_error("should have one output");
-    auto input_mem = ainput.output[0].as<const memory&>().argument;
-    input_offset =
-    {
-        input_mem.size.batch.size(),
-        input_mem.size.spatial.size(),
-        input_mem.size.feature.size()
-    };
-    output_offset =
-    {
-        input_mem.size.batch.size(),
-        input_mem.size.spatial.size(),
-        input_mem.size.feature.size()
-    };
-    output_size = input_mem.size;
-    output = {
-        memory::allocate(
-        {
-            aoutput_fmt,
-            output_size
-        }) };
+namespace cldnn
+{
+primitive_type_id normalization_type_id()
+{
+    static primitive_type_base<normalization, normalization_arg> instance;
+    return &instance;
 }
 
-normalization::response::arguments::arguments(
-                 primitive aoutput,
-                 vector<uint32_t> aoutput_offset,
-                 vector<uint32_t> aoutput_size,
-                 primitive ainput,
-                 vector<int32_t> ainput_offset,
-                 uint32_t asize,
-                 neural::padding::type apadding,
-                 float ak,
-                 float aalpha,
-                 float abeta)
-    : output({ aoutput })
-    , output_offset (aoutput_offset)
-    , output_size (aoutput_size)
-    , input({ ainput })
-    , input_offset (ainput_offset)
-    , size (asize)
-    , padding (apadding)
-    , k (ak)
-    , alpha (aalpha)
-    , beta (abeta) {}
-
-
-// creates primitive with convolution implementation that supports provided arguments
-primitive normalization::response::create(response::arguments arg) {
-    return is_a_primitive::create<response>(arg);
+layout normalization_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const normalization> desc)
+{
+    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
+    auto result = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    return result;
 }
+
+normalization_arg::normalization_arg(network_impl& network, std::shared_ptr<const normalization> desc)
+    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+{}
 
 }

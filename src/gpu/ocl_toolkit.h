@@ -24,20 +24,34 @@
 #include <cl2_wrapper.h>
 #include <memory>
 #include <chrono>
-#include "api/instrumentation.h"
+#include "api/profiling.hpp"
 #include "kernels_cache.h"
 #include "engine_info.h"
 
 namespace neural { namespace gpu {
+
+struct configuration {
+    enum device_types { default_device = 0, cpu, gpu, accelerator };
+
+    bool enable_profiling;
+    device_types device_type;
+    uint32_t device_vendor;
+    std::string compiler_options;
+    configuration();
+};
+
 class gpu_toolkit;
 
 class context_holder {
-    std::shared_ptr<gpu_toolkit> _context;
 protected:
+    std::shared_ptr<gpu_toolkit> _context;
     context_holder();
+    context_holder(std::shared_ptr<gpu_toolkit> context) : _context(context) {}
     virtual ~context_holder() = default;
     const std::shared_ptr<gpu_toolkit>& context() const { return _context; }
 };
+
+namespace instrumentation = cldnn::instrumentation;
 
 struct profiling_period_event : instrumentation::profiling_period {
     profiling_period_event(const cl::Event& event, cl_profiling_info start, cl_profiling_info end )
@@ -61,28 +75,30 @@ private:
 };
 
 class gpu_toolkit {
+    configuration _configuration;
     cl::Device _device;
     cl::Context _context;
     cl::CommandQueue _command_queue;
+    engine_info_internal _engine_info;
     kernels_cache _kernels_cache;
 //    cl::Program _program;
     std::vector<instrumentation::profiling_info> _profiling_info;
     std::string extensions;
 
-    gpu_toolkit();
-
     static std::shared_ptr<gpu_toolkit>get();
     friend class context_holder;
 public:
+    gpu_toolkit(const configuration& configuration = neural::gpu::configuration());
 
-    cl::Device& device() { return _device; }
-    cl::Context& context() { return _context; }
-    cl::CommandQueue& queue() { return _command_queue; }
+    const configuration& get_configuration() const { return _configuration; }
+    const cl::Device& device() const { return _device; }
+    const cl::Context& context() const { return _context; }
+    const cl::CommandQueue& queue() const { return _command_queue; }
 //    cl::Program& program() { return _program; }
     kernels_cache& get_kernels_cache() { return _kernels_cache; }
     void report_profiling(const instrumentation::profiling_info& info) { _profiling_info.push_back(info); }
     const std::vector<instrumentation::profiling_info>& get_profiling_info() const { return _profiling_info; }
-    engine_info get_engine_info() { return engine_info(*this); }
+    engine_info_internal get_engine_info() const { return _engine_info; }
     inline bool extension_supported(const std::string ext) { return extensions.find(ext) != std::string::npos; }
 
     gpu_toolkit(const gpu_toolkit& other) = delete;

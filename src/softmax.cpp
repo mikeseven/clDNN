@@ -14,77 +14,43 @@
 // limitations under the License.
 */
 
-#include "api/neural.h"
-#include "implementation_map.h"
+#include "softmax_arg.h"
+#include "primitive_type_base.h"
+#include "network_impl.h"
 
-namespace neural {
-namespace normalization {
-
-softmax::arguments::arguments(memory::format::type out_fmt, primitive in)
+namespace cldnn
 {
-    if (in.id() != type_id<const memory>()->id)
-    {
-        input = { in.output[0] };
-        input_offset = (in.output[0].as<const memory&>().argument.size.batch.size(), in.output[0].as<const memory&>().argument.size.spatial.size(), in.output[0].as<const memory&>().argument.size.feature.size());
-    }
-    else
-    {
-        input = { in };
-        input_offset = (in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size());
-    }
-    output_size = input[0].primitive().as<const memory&>().argument.size;
-    output = { memory::allocate({ out_fmt, output_size }) };
-    output_offset =
-    {
-        output_size.batch.size(),
-        output_size.spatial.size(),
-        output_size.feature.size(),
-    };
+primitive_type_id softmax_type_id()
+{
+    static primitive_type_base<softmax, softmax_arg> instance;
+    return &instance;
 }
 
-softmax::arguments::arguments(primitive out, vector<uint32_t> out_off, vector<uint32_t> out_siz, primitive in, vector<int32_t> in_off)
-    : output({out})
-    , output_offset(out_off)
-    , output_size(out_siz)
-    , input({in})
-    , input_offset(in_off)
-    {}
+layout softmax_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const softmax> desc)
+{
+    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
+    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
 
-softmax::arguments::arguments(primitive out, primitive in)
-    : output({out})
-    , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
-    , output_size(out.as<const memory&>().argument.size)
- {
-        if (in.id() != type_id<const memory>()->id)
-        {
-            input = { in.output[0] };
-            input_offset = (in.output[0].as<const memory&>().argument.size.batch.size(), in.output[0].as<const memory&>().argument.size.spatial.size(), in.output[0].as<const memory&>().argument.size.feature.size());
-        }
-        else
-        {
-            input = { in };
-            input_offset = (in.as<const memory&>().argument.size.batch.size(), in.as<const memory&>().argument.size.spatial.size(), in.as<const memory&>().argument.size.feature.size());
-        }
-        //in[0].primitive.id() != type_id<const memory>()->id ? in[0].primitive.output[0] : in[0]
+    cldnn::layout layoutTemp = input_layout;
+    if (input_layout.size.raw.size() == 4) layoutTemp = cldnn::layout(input_layout.data_type, tensor(format::xb, { input_layout.size.feature[0], input_layout.size.batch[0] }));
+    return layoutTemp;
 }
 
-// creates primitive with softmax implementation that supports provided arguments
-primitive softmax::create(softmax::arguments arg) {
-    auto& input_offset  = arg.input_offset;
-    auto& output_offset = arg.output_offset;
-    auto& output_size   = arg.output_size;
-
-    auto& input_arg  = arg.input[0].primitive().as<const memory&>().argument;
-    auto& output_arg = arg.output[0].as<const memory&>().argument;
-    for (auto &x : input_offset.raw) if (x < 0) throw std::runtime_error("Softmax negative input offset.");
-
-    for(size_t i = 0; i < input_arg.size.raw.size(); ++i) {
-        if( input_arg.size.raw[i] < output_size.raw[i] +  input_offset.raw[i]) throw std::runtime_error("Softmax input/output size does not match.");
-        if(output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("Softmax sizes too small.");
-    }
-
-    return is_a_primitive::create<softmax>(arg);
+softmax_arg::softmax_arg(network_impl& network, std::shared_ptr<const softmax> desc)
+    : primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+{
+    //    auto& input_offset  = arg.input_offset;
+    //    auto& output_offset = arg.output_offset;
+    //    auto& output_size   = arg.output_size;
+    //
+    //    auto& input_arg  = arg.input[0].primitive().as<const memory&>().argument;
+    //    auto& output_arg = arg.output[0].as<const memory&>().argument;
+    //    for (auto &x : input_offset.raw) if (x < 0) throw std::runtime_error("Softmax negative input offset.");
+    //
+    //    for(size_t i = 0; i < input_arg.size.raw.size(); ++i) {
+    //        if( input_arg.size.raw[i] < output_size.raw[i] +  input_offset.raw[i]) throw std::runtime_error("Softmax input/output size does not match.");
+    //        if(output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("Softmax sizes too small.");
+    //    }
 }
 
-} // namespace normalization
-} // namespace neural
+}

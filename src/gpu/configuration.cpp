@@ -15,7 +15,7 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "api/instrumentation.h"
+#include "ocl_toolkit.h"
 
 namespace neural {
     namespace gpu {
@@ -26,10 +26,5 @@ namespace neural {
             , device_vendor(0x8086)
             , compiler_options("")
         {}
-
-        configuration& configuration::get() {
-            static configuration instance;
-            return instance;
-        }
     }
 }

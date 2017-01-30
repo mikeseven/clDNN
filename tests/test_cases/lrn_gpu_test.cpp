@@ -17,21 +17,25 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <gtest/gtest.h>
-#include "api/neural.h"
-#include "multidimensional_counter.h"
+#include <api/memory.hpp>
+#include <api/primitives/input_layout.hpp>
+#include "api/primitives/normalization.hpp"
+#include <api/topology.hpp>
+#include <api/network.hpp>
+#include <api/engine.hpp>
 #include "test_utils/test_utils.h"
 #include <iostream>
 
 TEST(local_response_normalization_gpu, lrn_test) {
 
-    using namespace neural;
+    using namespace cldnn;
     using namespace tests;
 
     // test initialization
 
     // input-output parameters:
 
-    const uint32_t px = 2, py = 2, pb = 1, pf = 7, psize = 3;
+    const int32_t px = 2, py = 2, pb = 1, pf = 7, psize = 3;
 
     std::initializer_list<float> input_oracle_init = {
         -1.0f, -0.5f,  0.0f,  0.5f,  1.0f,  1.5f,  2.0f,    // b=0, x=0, y=0
@@ -48,26 +52,37 @@ TEST(local_response_normalization_gpu, lrn_test) {
                                                                                         // lrn parameters:
     const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
-    auto output_oracle = memory::allocate({ memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32, { format::yxfb, { py, px, pf, pb }} });
+    auto output_oracle = memory::allocate(engine, input.get_layout());
 
     set_values(input, input_oracle_init);
     set_values(output_oracle, output_oracle_init);
 
-    auto lrn = normalization::response::create({ output, input, psize, padding::zero, pk, palpha, pbeta });
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(normalization("lrn", "input", psize, pk, palpha, pbeta));
+
+    network network(engine, topology);
+
+    network.set_input_data("input", input);
 
     // ------------------------------------------------------------------------------------------------
     // test run
-    execute({ lrn }).wait();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "lrn");
+
+    auto output = outputs.begin()->second.get_memory();
 
     // analysis of results
     bool   result = true;
 
     try {
 
-        auto buff = output.as<const memory&>().pointer<float>();
-        auto buff_oracle = output_oracle.as<const memory&>().pointer<float>();
+        auto buff = output.pointer<float>();
+        auto buff_oracle = output_oracle.pointer<float>();
 
         for (size_t i = 0; i < px*py*pb*pf; ++i) {
             EXPECT_NEAR(buff[i], buff_oracle[i], 1e-04F);
@@ -85,14 +100,14 @@ TEST(local_response_normalization_gpu, lrn_test) {
 
 TEST(local_response_normalization_gpu, lrn_test_batches) {
 
-    using namespace neural;
+    using namespace cldnn;
     using namespace tests;
 
     // test initialization
 
     // input-output parameters:
 
-    const uint32_t px = 2, py = 1, pb = 2, pf = 7, psize = 3;
+    const int32_t px = 2, py = 1, pb = 2, pf = 7, psize = 3;
 
     std::initializer_list<float> input_oracle_init = {
         -1.0f, -2.0f,
@@ -130,26 +145,37 @@ TEST(local_response_normalization_gpu, lrn_test_batches) {
                                                                                         // lrn parameters:
     const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
 
-    auto input = memory::allocate({ memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
-    auto output_oracle = memory::allocate({ memory::format::yxfb_f32,{ pb,{ px, py }, pf } });
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32, { format::yxfb, { py, px, pf, pb } } });
+    auto output_oracle = memory::allocate(engine, input.get_layout());
 
     set_values(input, input_oracle_init);
     set_values(output_oracle, output_oracle_init);
 
-    auto lrn = normalization::response::create({ output, input, psize, padding::zero, pk, palpha, pbeta });
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(normalization("lrn", "input", psize, pk, palpha, pbeta));
+
+    network network(engine, topology);
+
+    network.set_input_data("input", input);
 
     // ------------------------------------------------------------------------------------------------
     // test run
-    execute({ lrn }).wait();
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "lrn");
+
+    auto output = outputs.begin()->second.get_memory();
 
     // analysis of results
     bool   result = true;
 
     try {
 
-        auto buff = output.as<const memory&>().pointer<float>();
-        auto buff_oracle = output_oracle.as<const memory&>().pointer<float>();
+        auto buff = output.pointer<float>();
+        auto buff_oracle = output_oracle.pointer<float>();
 
         for (size_t i = 0; i < px*py*pb*pf; ++i) {
             EXPECT_NEAR(buff[i], buff_oracle[i], 1e-04F);

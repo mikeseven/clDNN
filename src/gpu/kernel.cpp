@@ -22,13 +22,6 @@
 
 namespace neural { namespace gpu {
 
-    memory_arg::memory_arg(const neural::memory& mem, bool copy_input, bool copy_output) : _mem(mem), _copy_input(copy_input), _copy_output(copy_output) 
-    {
-        _gpu_buffer = std::static_pointer_cast<gpu_buffer>(_mem.get_buffer());
-    }
-
-    memory_arg::~memory_arg() {}
-
 void kernel_execution_options::set_local_sizes()
 {
     const size_t optimal_lws_values[] = { 256, 224, 192, 160, 128, 96, 64, 32, 16, 8, 7, 6, 5, 4, 3, 2, 1 };

@@ -598,8 +598,12 @@ set(Boost_NO_SYSTEM_PATHS ON)
 set(Boost_USE_STATIC_LIBS    ON)
 set(Boost_USE_DEBUG_RUNTIME  ON)
 set(Boost_USE_STATIC_RUNTIME ${CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME})
+set(CLDNN_BOOST_USAGE system date_time program_options)
+if(NOT CLDNN_BUILT_FROM_OPENVX)
+  set(CLDNN_BOOST_USAGE ${CLDNN_BOOST_USAGE} filesystem)
+endif()
 find_package(Boost "${CLDNN__BOOST_VERSION}" EXACT REQUIRED
-      COMPONENTS system date_time program_options
+      COMPONENTS ${CLDNN_BOOST_USAGE}
     )
 
 
@@ -799,6 +803,8 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
             "/wd2415"
             "/wd3280"
             "/wd3346"
+            "/wd11074"
+            "/wd11076"
         )
     else()
       intel_config_flag_apply_settings(
@@ -820,6 +826,8 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
             -Wno-error=missing-field-initializers
             -Wno-error=unused-parameter
             -Wno-error=unused-function
+            -wd11074
+            -wd11076
             -fPIC
             -Wl,--no-undefined
         )
@@ -1052,7 +1060,7 @@ include_directories(
     ${CLDNN__IOCL_ICD_INCDIRS}
     ${CLDNN__FREEIMAGE_INCDIRS}
     "${CLDNN__KHR_CLHPP_DIR}"
-    "${CLDNN__API_DIR}"
+#    "${CLDNN__API_DIR}"
     ${Boost_INCLUDE_DIRS}
     "${CLDNN__CODEGEN_INCDIR}"
   )

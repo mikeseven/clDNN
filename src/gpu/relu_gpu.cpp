@@ -14,10 +14,11 @@
 // limitations under the License.
 */
 
-#include "api/neural.h"
-#include "cache/primitive_db.h"
+#include "neural_impl.h"
 #include "implementation_map.h"
 #include "kernel.h"
+#include "engine_impl.h"
+#include "network_impl.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -29,21 +30,9 @@ namespace neural
 // Kernel names.
 static const std::string kernel_name = "relu_gpu";
 
-// GPU engine information helpers.
-namespace
-{
-struct gpu_info_helper : gpu::context_holder
-{
-    gpu::engine_info get_engine_info() const
-    {
-        return context()->get_engine_info();
-    }
-};
-}
-
 struct relu_gpu : is_an_implementation
 {
-    const relu& _outer;
+    relu& _outer;
     struct kernel_data
     {
         size_t gws0;
@@ -53,21 +42,20 @@ struct relu_gpu : is_an_implementation
     } _kernel_data;
     gpu::kernel _kernel;
 
-    relu_gpu(const relu& outer)
-        : is_an_implementation(neural::type_id<relu_gpu>()),
-        _outer(outer),
+    relu_gpu(relu& arg)
+        : _outer(arg),
         _kernel_data(set_kernel_data(_outer)),
-        _kernel(_kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+        _kernel(arg.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
     {}
 
     static kernel_data set_kernel_data(const relu& outer)
     {
         const auto& input_mem  = outer.input_memory(0);  // input
-        const auto& output_mem = outer.output_memory(0); // output
+        const auto& output_mem = outer.output_memory(); // output
 
         kernel_data kd;
 
-        kd.fp16_unit_used = memory::traits(input_mem.argument.format).type->name == type_id<half_t>()->name;
+        kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
 
         // Determine global work sizes.
         kd.gws0 = output_mem.count();
@@ -85,8 +73,7 @@ struct relu_gpu : is_an_implementation
 
     static gpu::jit_constants get_jit_constants(const relu& outer, const kernel_data& data)
     {
-        gpu_info_helper gpu_info;
-        auto engine_info = gpu_info.get_engine_info();
+        auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
 
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
@@ -103,20 +90,18 @@ struct relu_gpu : is_an_implementation
         return mem_consts;
     }
 
-    static void implementation(const void *ptr) 
+    cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
     {
-        auto me = static_cast<const relu_gpu *>(ptr);
-        const auto& outer = me->_outer;
-        const auto& kd    = me->_kernel_data;
+        const auto& outer = _outer;
+        const auto& kd    = _kernel_data;
 
         const auto& input_mem  = outer.input_memory(0);  // input
-        const auto& output_mem = outer.output_memory(0); // output
+        const auto& output_mem = outer.output_memory(); // output
 
-        me->_kernel.run<gpu::input_mem, gpu::output_mem>({kd.gws0, kd.lws0}, input_mem, output_mem);
+        return _kernel.run<gpu::input_mem, gpu::output_mem>({kd.gws0, kd.lws0}, events, input_mem, output_mem);
     }
 
     static is_an_implementation *create(relu &arg) { return new relu_gpu(arg); };
-    task_group work() override { return{ { task{ implementation, this } }, schedule::unordered }; };
 };
 
 
@@ -126,10 +111,10 @@ struct attach {
         auto val_fw = relu_gpu::create;
 
         implementation_map<relu>::add({
-            {std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::yxfb_f32), val_fw},
-            {std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32), val_fw},
-            {std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::yxfb_f16), val_fw},
-            {std::make_tuple(engine::gpu, memory::format::xb_f16, memory::format::xb_f16), val_fw},
+            {std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw},
+            {std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw},
+            {std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw},
+            {std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw},
         });
     }
     ~attach() {}

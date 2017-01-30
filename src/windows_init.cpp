@@ -19,7 +19,7 @@
 #include <new>
 #include <iostream>
 
-#include "api/neural.h"
+#include "api/cldnn_defs.h"
 
 using void_fun_ptr = void (__cdecl *)();
 
@@ -42,10 +42,10 @@ int nn_init_seg_add(void_fun_ptr fp) {
 
 #pragma init_seg(".nn_init$m", nn_init_seg_add)
 
-extern "C" DLL_SYM void _cdecl nn_init() {
+extern "C" CLDNN_API void _cdecl nn_init() {
     for (auto fp=(&nn_cl_seg_start)+1; fp<&nn_cl_seg_end; ++fp) if (*fp) (*fp)();
 }
-extern "C" DLL_SYM void _cdecl nn_exit() {
+extern "C" CLDNN_API void _cdecl nn_exit() {
     for (auto fp=&nn_cl_seg_start; *fp; ++fp) (*fp)();
 }
 

@@ -17,9 +17,11 @@
 
 #pragma once
 
-#include "api/neural.h"
 #include "weights_optimizer.h"
 #include "power_intrumentation.h"
+
+#include "api/memory.hpp"
+
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -125,6 +127,16 @@ struct execution_params {
     bool optimize_weights;
     bool use_half;
 
+    //note: this parameter is required because since bfyx is enabled in alexnet
+    //and vgg for all batch sizes but only for b1 in other topologies we cannot
+    //tell whether bfyx format should be used only from batch size. this is an issue
+    //for weights optimizer which doesn't have any informations about used topology.
+    //it can be removed if:
+    // - bfyx is enabled for all topologies and batch sizes
+    // - weights optimizer is integrated in network builder and is provided with more specific informations
+    //until then it should probably be left here as a temporary solution
+    bool use_bfyx;
+
     std::string run_single_layer;
 
     // for dumping
@@ -145,19 +157,19 @@ std::vector<std::string> get_directory_images(const std::string& images_path);
 std::vector<std::string> get_directory_weights(const std::string& images_path);
 
 template <typename MemElemTy = float>
-void load_images_from_file_list(const std::vector<std::string>& images_list, neural::primitive& memory); 
+void load_images_from_file_list(const std::vector<std::string>& images_list, cldnn::memory& memory); 
 
 /// function moved from alexnet.cpp, they will be probably used by each topology
-void print_profiling_table(std::ostream& os, const std::vector<neural::instrumentation::profiling_info>& profiling_info);
-neural::worker create_worker(PrintType printType = PrintType::Verbose);
+void print_profiling_table(std::ostream& os, const std::vector<cldnn::instrumentation::profiling_info>& profiling_info);
+cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology& topology, const execution_params &ep);
 uint32_t get_next_nearest_power_of_two(int number);
 uint32_t get_gpu_batch_size(int number);
 
-std::chrono::nanoseconds execute_topology(const neural::worker& worker,
-                                          const std::vector<std::pair<neural::primitive, std::string>>& primitives,
+std::chrono::nanoseconds execute_topology(cldnn::network network,
                                           const execution_params &ep,
-                                          CIntelPowerGadgetLib& energyLib);
+                                          CIntelPowerGadgetLib& energyLib,
+                                          cldnn::memory& output);
 
 void run_topology(const execution_params &ep);
 
-void weight_optimization(weights_optimizer &wo, const neural::worker& worker);
+void weight_optimization(weights_optimizer &wo, cldnn::topology& topology);

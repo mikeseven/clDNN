@@ -162,7 +162,7 @@ process {
     }
     catch {
         Write-Verbose 'Terminating with error.';
-        Write-Error -Exception $_;
+        Write-Error -ErrorRecord $_;
         $PSCmdlet.ThrowTerminatingError($_);
     }
     finally {

@@ -41,11 +41,25 @@ file(GLOB __CLDNN_Headers__api
     "${CLDNN__API_DIR}/*.hpp"
   )
 
+set(__CLDNN_Directory__api__primitives "${CLDNN__API_DIR}/primitives")
+set(__CLDNN_Label__api__primitives     "${__CLDNN_Label__api}\\primitives")
+file(GLOB __CLDNN_Headers__api__primitives
+    "${__CLDNN_Directory__api__primitives}/*.h"
+    "${__CLDNN_Directory__api__primitives}/*.hpp"
+  )
+
 set(__CLDNN_Label__main                "")
 file(GLOB __CLDNN_Sources__main
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+  )
+
+set(__CLDNN_Directory__include         "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(__CLDNN_Label__include             "include")
+file(GLOB __CLDNN_Headers__include
+    "${__CLDNN_Directory__include}/*.h"
+    "${__CLDNN_Directory__include}/*.hpp"
   )
 
 set(__CLDNN_Directory__gpu             "${CMAKE_CURRENT_SOURCE_DIR}/gpu")
@@ -91,6 +105,8 @@ set(__CLDNN_Sources__cg_cache
 
 set(__CLDNN_AllSources
     ${__CLDNN_Headers__api}
+    ${__CLDNN_Headers__include}
+    ${__CLDNN_Headers__api__primitives}
     ${__CLDNN_Sources__main}
     ${__CLDNN_Sources__gpu}
     ${__CLDNN_Sources__cache}
@@ -103,19 +119,22 @@ set_property(SOURCE ${__CLDNN_Sources__cg_cache} PROPERTY GENERATED TRUE)
 
 # =============================================== Filters ==============================================
 
-source_group("${__CLDNN_Label__api}"           FILES ${__CLDNN_Headers__api})
-source_group("${__CLDNN_Label__main}"          FILES ${__CLDNN_Sources__main})
-source_group("${__CLDNN_Label__gpu}"           FILES ${__CLDNN_Sources__gpu})
-source_group("${__CLDNN_Label__cache}"         FILES ${__CLDNN_Sources__cache})
-source_group("${__CLDNN_Label__ch_kernels}"    FILES ${__CLDNN_Sources__ch_kernels})
-source_group("${__CLDNN_Label__cg_cache}"      FILES ${__CLDNN_Sources__cg_cache})
-source_group("${__CLDNN_Label__OpenVXAdapter}" FILES ${__CLDNN_Sources__OpenVXAdapter})
+source_group("${__CLDNN_Label__api}"             FILES ${__CLDNN_Headers__api})
+source_group("${__CLDNN_Label__api__primitives}" FILES ${__CLDNN_Headers__api__primitives})
+source_group("${__CLDNN_Label__include}"         FILES ${__CLDNN_Headers__include})
+source_group("${__CLDNN_Label__main}"            FILES ${__CLDNN_Sources__main})
+source_group("${__CLDNN_Label__gpu}"             FILES ${__CLDNN_Sources__gpu})
+source_group("${__CLDNN_Label__cache}"           FILES ${__CLDNN_Sources__cache})
+source_group("${__CLDNN_Label__ch_kernels}"      FILES ${__CLDNN_Sources__ch_kernels})
+source_group("${__CLDNN_Label__cg_cache}"        FILES ${__CLDNN_Sources__cg_cache})
+source_group("${__CLDNN_Label__OpenVXAdapter}"   FILES ${__CLDNN_Sources__OpenVXAdapter})
 
 # ===================================== Include/Link directories =======================================
 
 include_directories(
     "${CLDNN__MAIN_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${__CLDNN_Directory__include}"
   )
 
 # =================================== Link targets and dependencies ====================================
@@ -141,11 +160,12 @@ target_link_libraries("${CLDNN_BUILD__PROJ}"
 
 if(CLDNN_BUILT_FROM_OPENVX)
     target_link_libraries("${CLDNN_BUILD__PROJ}" 
-          ${OpenCL_LIBRARIES} 
+        ${OpenCL_LIBRARIES} 
       )
 else()
     target_link_libraries("${CLDNN_BUILD__PROJ}"
         OpenCL
+        Boost::filesystem
       )
 endif()
 
@@ -159,7 +179,7 @@ endif()
 
 add_custom_command(OUTPUT "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${__CLDNN_CGDirectory__cg_cache}"
-    COMMAND ${PYTHON_EXECUTABLE} "${__CLDNN_Directory__cache}/primitive_db_gen.py" -out_path "${__CLDNN_CGDirectory__cg_cache}" -kernels "${__CLDNN_Directory__ch_kernels}"
+    COMMAND "${__CLDNN_Directory__cache}/primitive_db_gen.py" -out_path "${__CLDNN_CGDirectory__cg_cache}" -kernels "${__CLDNN_Directory__ch_kernels}"
     DEPENDS ${__CLDNN_Sources__ch_kernels} "${__CLDNN_Directory__cache}/primitive_db_gen.py"
     COMMENT "Generating ${__CLDNN_File__cg_cache__prim_db} ..."
   )

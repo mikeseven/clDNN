@@ -18,16 +18,19 @@
 
 #pragma once
 
-#include "api/neural.h"
+#include "api/memory.hpp"
 #include <iostream>
 #include <limits>
 #include <random>
 
 namespace tests{
 
+template <class T> void set_value(const cldnn::pointer<T>& ptr, uint32_t index, T value) { ptr[index] = value; }
+template <class T> T    get_value(const cldnn::pointer<T>& ptr, uint32_t index) { return ptr[index]; }
+
 template<typename T>
-void set_values( neural::primitive& prim, std::initializer_list<T> args ){
-    auto ptr = prim.as<const neural::memory&>().pointer<T>();
+void set_values(const cldnn::memory& mem, std::initializer_list<T> args ){
+    auto ptr = mem.pointer<T>();
 
     auto it = ptr.begin();
     for(auto x : args)
@@ -35,8 +38,8 @@ void set_values( neural::primitive& prim, std::initializer_list<T> args ){
 }
 
 template<typename T>
-void set_values(neural::primitive& prim, std::vector<T> args) {
-    auto ptr = prim.as<const neural::memory&>().pointer<T>();
+void set_values(const cldnn::memory& mem, std::vector<T> args) {
+    auto ptr = mem.pointer<T>();
 
     auto it = ptr.begin();
     for (auto x : args)

@@ -16,15 +16,15 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "api/neural.h"
-#include "cache/primitive_db.h"
+#include "neural_impl.h"
+#include "network_impl.h"
+#include "engine_impl.h"
 #include "implementation_map.h"
 #include "kernel.h"
 
 #include <algorithm>
 #include <stdexcept>
 #include <string>
-
 
 namespace neural
 {
@@ -38,23 +38,13 @@ static const std::string kernel_name_xb_xb_b8_x8_vload = "fully_connected_gpu_xb
 static const std::string kernel_name_yxfn = "fully_connected_gpu_yxfn";
 static const std::string kernel_name_xb_xb_block_fp16 = "fully_connected_gpu_xb_xb_block_fp16";
 static const std::string kernel_name_bx_bx_from_fyx = "fully_connected_gpu_bx_xb_from_fyx";
-
-
-// GPU engine information helpers.
-namespace
-{
-struct gpu_info_helper : gpu::context_holder
-{
-    gpu::engine_info get_engine_info() const
-    {
-        return context()->get_engine_info();
-    }
-};
-}
+static const std::string kernel_name_bx_bx_from_fyxb = "fully_connected_gpu_bx_xb_from_fyxb";
 
 struct fully_connected_gpu : is_an_implementation
 {
-    const fully_connected& _outer;
+    fully_connected& _outer;
+    std::vector<cldnn::refcounted_obj_ptr<cldnn::network_impl>> reorder;
+
     struct kernel_data 
     {
         size_t gws0, gws1;
@@ -78,22 +68,33 @@ struct fully_connected_gpu : is_an_implementation
     } _kernel_data;
     gpu::kernel _kernel;
        
-    fully_connected_gpu(const fully_connected& outer)
-        : is_an_implementation(neural::type_id<fully_connected_gpu>()),
-        _outer(outer),
+    fully_connected_gpu(fully_connected& arg)
+      : _outer(arg),
         _kernel_data(set_kernel_data(_outer)),
-        _kernel(_kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
-    {}
+        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+    {
+        auto const& input_mem = _outer.input_memory(0);
+
+        if (input_mem.argument().format == memory::format::bfyx_f32 &&
+            input_mem.argument().size.batch[0] > 1)
+        {
+            cldnn::topology topology(
+                cldnn::input_layout("input", input_mem.get_layout()),
+                cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_mem.argument().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
+            );
+            reorder.push_back({ _outer.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
+        }
+    }
 
     static kernel_data set_kernel_data(const fully_connected& outer)
     {
         const auto& input_mem  = outer.input_memory(0);   // input
-        const auto& weight_mem = outer.input_memory(1);   // weights
-        const auto& output_mem = outer.output_memory(0);  // output
+        const auto& weight_mem = outer.weights_memory();  // weights
+        const auto& output_mem = outer.output_memory();  // output
 
         kernel_data kd;
 
-        kd.fp16_unit_used = memory::traits(input_mem.argument.format).type->name == type_id<half_t>()->name;
+        kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
 
         // Determine global work sizes.
         kd.gws0 = output_mem.count();
@@ -107,21 +108,27 @@ struct fully_connected_gpu : is_an_implementation
         }
         kd.lws1 = 1;
 
-        bool batch_multiple_of_8 = input_mem.argument.size.batch[0] % 8 == 0;
+        bool batch_multiple_of_8 = input_mem.argument().size.batch[0] % 8 == 0;
 
-        switch (input_mem.argument.format)
+        auto input_mem_format = input_mem.argument().format;
+
+        //for bfyx,b>1 there will be reorder from bfyx to yxfb before this fc (created later in ctor), so do calculations for this format rather than original bfyx
+        if (input_mem_format == memory::format::bfyx_f32 && input_mem.argument().size.batch[0] > 1)
+            input_mem_format = memory::format::yxfb_f32;
+
+        switch (input_mem_format)
         {
         case memory::format::bfyx_f32:
         case memory::format::bx_f32:
         {
-            switch (weight_mem.argument.format)
+            switch (weight_mem.argument().format)
             {
             case memory::format::fyxb_f32:
             case memory::format::xb_f32:
             {
-                if (input_mem.argument.size.batch[0] != 1)
+                if (input_mem.argument().size.batch[0] != 1)
                 {
-                    throw std::runtime_error("Not supported batch != 1 in FC bfyx/bx format");
+                    kd.kernel_name = kernel_name_bx_bx_from_fyxb;
                 }
                 else
                 {
@@ -138,15 +145,15 @@ struct fully_connected_gpu : is_an_implementation
         case memory::format::xb_f32:
         case memory::format::x_f32:
         {
-            switch (weight_mem.argument.format)
+            switch (weight_mem.argument().format)
             {
             case memory::format::byxf_f32:
             case memory::format::bx_f32:
             {
-                if (input_mem.argument.size.batch[0] == 8)
+                if (input_mem.argument().size.batch[0] >= 8)
                 {
-                    kd.gws0 = output_mem.argument.size.batch[0];
-                    kd.gws1 = output_mem.argument.size.spatial[0];
+                    kd.gws0 = output_mem.argument().size.batch[0];
+                    kd.gws1 = output_mem.argument().size.spatial[0];
                     kd.lws0 = 8;
                     kd.lws1 = 1;
                     kd.kernel_name = kernel_name_xb_bx_b8;
@@ -161,7 +168,7 @@ struct fully_connected_gpu : is_an_implementation
             case memory::format::xb_f32:
             {
                 if (batch_multiple_of_8 &&
-                    (output_mem.count() / output_mem.argument.size.batch[0]) % 8 == 0)
+                    (output_mem.count() / output_mem.argument().size.batch[0]) % 8 == 0)
                 {
                     size_t groups_per_batches = get_local_groups_size(output_mem);
                     kd.gws0 = output_mem.count() / (get_neurons_per_work_item(output_mem) * get_batches_per_work_item(output_mem) * groups_per_batches);
@@ -191,13 +198,13 @@ struct fully_connected_gpu : is_an_implementation
         case memory::format::xb_f16:
         case memory::format::x_f16:
         {
-            switch (weight_mem.argument.format)
+            switch (weight_mem.argument().format)
             {
             case memory::format::yxfb_f16:
             case memory::format::xb_f16:
             {
-                auto batch_size = output_mem.argument.size.batch[0];
-                auto response_size = weight_mem.argument.size.batch[0];
+                auto batch_size = output_mem.argument().size.batch[0];
+                auto response_size = weight_mem.argument().size.batch[0];
                 //bool batch_size_pow_2 = batch_size > 0 && (batch_size & (batch_size - 1)) == 0;
 
                 constexpr uint32_t unit_byte_size = sizeof(cl_half);
@@ -250,9 +257,9 @@ struct fully_connected_gpu : is_an_implementation
     }
 
     // how many neurons for a single batch will a single work item produce 
-    static int get_neurons_per_work_item(const neural::memory &output_mem)
+    static int get_neurons_per_work_item(const cldnn::memory &output_mem)
     {
-        int batch_size = output_mem.argument.size.batch[0];
+        int batch_size = output_mem.argument().size.batch[0];
         auto out_elements_count_per_batch = output_mem.count() / batch_size;
         if (out_elements_count_per_batch % 16 == 0)
             return 2;
@@ -261,15 +268,15 @@ struct fully_connected_gpu : is_an_implementation
     }
 
     // how many batches will a single work item compute
-    static int get_batches_per_work_item(const neural::memory &output_mem)
+    static int get_batches_per_work_item(const cldnn::memory &output_mem)
     {
-        int batch_size = output_mem.argument.size.batch[0];
+        int batch_size = output_mem.argument().size.batch[0];
         return std::min(batch_size, 32);
     }
 
-    static int get_local_work_group_size(const neural::memory &output_mem)
+    static int get_local_work_group_size(const cldnn::memory &output_mem)
     {
-        int batch_size = output_mem.argument.size.batch[0];
+        int batch_size = output_mem.argument().size.batch[0];
         if (batch_size >= 16)
             return 8;
         auto out_elements_count_per_batch = output_mem.count() / batch_size;
@@ -279,35 +286,34 @@ struct fully_connected_gpu : is_an_implementation
             return 8;
     }
 
-    static int get_local_groups_size(const neural::memory &output_mem)
+    static int get_local_groups_size(const cldnn::memory &output_mem)
     {
-        int batch_size = output_mem.argument.size.batch[0];
+        int batch_size = output_mem.argument().size.batch[0];
         return std::max(1, batch_size / get_batches_per_work_item(output_mem));
     }
 
     static gpu::jit_constants get_jit_constants(const fully_connected& outer, const kernel_data& data)
     {
-        gpu_info_helper gpu_info;
-        auto engine_info = gpu_info.get_engine_info();
+        auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
 
         const auto& input_mem  = outer.input_memory(0);   // input
         const auto& weight_mem = outer.input_memory(1);   // weights
-        const auto& output_mem = outer.output_memory(0);  // output
+        const auto& output_mem = outer.output_memory();  // output
 
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
         gpu::jit_constants mem_consts{
-            gpu::make_jit_constant("INPUT",                input_mem.argument.size),
-            gpu::make_jit_constant("OUTPUT",               output_mem.argument.size),
-            gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", input_mem.count() / input_mem.argument.size.batch[0]),
-            gpu::make_jit_constant("WEIGHTS",              weight_mem.argument.size),
+            gpu::make_jit_constant("INPUT",                input_mem.argument().size),
+            gpu::make_jit_constant("OUTPUT",               output_mem.argument().size),
+            gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", input_mem.count() / input_mem.argument().size.batch[0]),
+            gpu::make_jit_constant("WEIGHTS",              weight_mem.argument().size),
             gpu::make_jit_constant("FP16_SUPPORTED",       static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",       static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",            data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_VAL_ZERO",        data.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("RELU",                 static_cast<int>(outer.argument.use_relu)),
-            gpu::make_jit_constant("NEGATIVE_SLOPE",       outer.argument.negative_slope),
+            gpu::make_jit_constant("RELU",                 outer.argument.with_activation),
+            gpu::make_jit_constant("NEGATIVE_SLOPE",       outer.argument.activation_negative_slope),
         };
 
         if (data.kernel_name == kernel_name_xb_xb_block_fp16)
@@ -328,7 +334,7 @@ struct fully_connected_gpu : is_an_implementation
         if (data.kernel_name == kernel_name_xb_xb_b8_x8_vload ||
             data.kernel_name == kernel_name_xb_xb_b16)
         {
-            int batch_size = input_mem.argument.size.batch[0];
+            int batch_size = input_mem.argument().size.batch[0];
             const int batches_per_work_item = get_batches_per_work_item(output_mem);
             const int local_work_group_size = get_local_work_group_size(output_mem);
 
@@ -341,37 +347,42 @@ struct fully_connected_gpu : is_an_implementation
         return mem_consts;
     }
 
-    static void implementation(const void *ptr)
+    cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
     {
-        auto me = static_cast<const fully_connected_gpu *>(ptr);
-        const auto& outer = me->_outer;
-        const auto& kd    = me->_kernel_data;
+        const auto& kd    = _kernel_data;
 
-        const auto& input_mem  = outer.input_memory(0);   // input
-        const auto& weight_mem = outer.input_memory(1);   // weights
-        const auto& bias_mem   = outer.input_memory(2);   // biases
-        const auto& output_mem = outer.output_memory(0);  // output
+        const auto& input_mem  = _outer.input_memory(0);   // input
+        const auto& weight_mem = _outer.input_memory(1);   // weights
+        const auto& bias_mem   = _outer.input_memory(2);   // biases
+        const auto& output_mem = _outer.output_memory();  // output
 
-        me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-            ({{kd.gws0, kd.gws1}, {kd.lws0, kd.lws1}}, input_mem, output_mem, weight_mem, bias_mem);
-    }
+        if (reorder.empty())
+            return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, events, input_mem, output_mem, weight_mem, bias_mem);
 
-    task_group work() override {
-        return{ { task{ implementation, this } }, schedule::single };
+
+        auto network = reorder[0];
+        network->set_input_data("input", api_cast(input_mem.get()));
+        network->execute(events);
+        auto output_id = network->get_output_ids()[0];
+
+        auto reorder_output = network->get_primitive(output_id)->output_memory();
+
+        return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+            ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, { network->get_primitive_event(output_id) }, reorder_output, output_mem, weight_mem, bias_mem);
     }
 
     static is_an_implementation *create(fully_connected &arg) {
 
         auto& input_mem = arg.input_memory(0);
-        auto& input_size = input_mem.argument.size;
+        auto& input_size = input_mem.argument().size;
 
         // validate arguments
-        if (input_mem.argument.format == memory::format::yxfb_f32 ||
-            input_mem.argument.format == memory::format::yxfb_f16 ||
-            input_mem.argument.format == memory::format::bfyx_f32)
+        if (input_size.format == cldnn::format::yxfb ||
+			input_size.format == cldnn::format::bfyx)
         {
             // weights
-            auto& weight_size = arg.input_memory(1).argument.size;
+            auto& weight_size = arg.input_memory(1).argument().size;
             if (   input_size.feature.size() != weight_size.feature.size()
                 || input_size.batch.size()   != weight_size.batch.size()
                 || input_size.feature[0]     != weight_size.feature[0])
@@ -393,17 +404,16 @@ namespace {
             auto val_fw = fully_connected_gpu::create;
 
             implementation_map<fully_connected>::add({
-                { std::make_tuple(engine::gpu, memory::format::yxfb_f32, memory::format::xb_f32), val_fw },
-                { std::make_tuple(engine::gpu, memory::format::xb_f32, memory::format::xb_f32), val_fw },
-                { std::make_tuple(engine::gpu, memory::format::x_f32,  memory::format::x_f32), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::x_f32), val_fw },
 
-                { std::make_tuple(engine::gpu, memory::format::yxfb_f16, memory::format::xb_f16), val_fw },
-                { std::make_tuple(engine::gpu, memory::format::xb_f16, memory::format::xb_f16), val_fw },
-                { std::make_tuple(engine::gpu, memory::format::x_f16,  memory::format::x_f16), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::x_f16), val_fw },
 
-                { std::make_tuple(engine::gpu, memory::format::bfyx_f32, memory::format::bx_f32), val_fw },
-                { std::make_tuple(engine::gpu, memory::format::bx_f32, memory::format::bx_f32), val_fw },
-
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f32), val_fw },
             });
         }
         ~attach() {}

@@ -1,12 +1,15 @@
 ﻿#pragma once
 
 #include <cmath>
+#include <assert.h>
+#include <sstream>
 #include "api/vx_cldnn_adapter.h"
 #include "vxa_common.h"
 
 namespace clDNN
 {
-    class BaseKernelBinary : public KernelBinary, public neural::gpu::context_holder
+    using context_holder = neural::gpu::context_holder;
+    class BaseKernelBinary : public KernelBinary, public context_holder
     {
     public:
         BaseKernelBinary(KernelType kType, const char* id) : m_kType(kType), m_PrimitiveID(id), m_Selector(GetPrimitiveSelector()) 

@@ -16,12 +16,16 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "api/neural.h"
 #include <gtest/gtest.h>
+#include <api/memory.hpp>
+#include <api/primitives/input_layout.hpp>
+#include "api/primitives/depth_concatenate.hpp"
+#include <api/topology.hpp>
+#include <api/network.hpp>
+#include <api/engine.hpp>
 #include "test_utils/test_utils.h"
-#include "memory_utils.h"
 
-using namespace neural;
+using namespace cldnn;
 using namespace tests;
 
 TEST(depth_concatenate_f32_gpu, test01) {
@@ -46,18 +50,30 @@ TEST(depth_concatenate_f32_gpu, test01) {
     //  0   -0.2  :f4
     //
 
-    auto input1 = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 1, 1 }, 2 } });
-    auto input2 = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 1, 1 }, 3 } });
-    auto output = memory::allocate({ memory::format::yxfb_f32,{ 2,{ 1, 1 }, 5 } });
+    engine engine;
+    auto input1 = memory::allocate(engine, {data_types::f32, tensor(format::yxfb, { 1,1,2,2 })});
+    auto input2 = memory::allocate(engine, { data_types::f32, tensor(format::yxfb,{ 1,1,3,2 })});
 
     set_values(input1, { 0.5f, 0.7f, 0.2f, 0.4f });
     set_values(input2, { 1.0f, 0.1f, 0.3f, -0.5f, 0.0f, -0.2f });
 
-    auto depth_concat = depth_concatenate::create({ { input1, input2 }, output });
+    topology topology;
+    topology.add(input_layout("input1", input1.get_layout()));
+    topology.add(input_layout("input2", input2.get_layout()));
+    topology.add(depth_concatenate("depth1", { "input1", "input2" }));
 
-    execute({ depth_concat }).wait();
+    network network(engine, topology);
 
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    network.set_input_data("input1", input1);
+    network.set_input_data("input2", input2);
+
+    auto outputs = network.execute({});
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "depth1");
+
+    auto output = outputs.at("depth1").get_memory();
+
+    auto output_ptr = output.pointer<float>();
     EXPECT_FLOAT_EQ(0.5f, output_ptr[0]);
     EXPECT_FLOAT_EQ(0.7f, output_ptr[1]);
     EXPECT_FLOAT_EQ(0.2f, output_ptr[2]);

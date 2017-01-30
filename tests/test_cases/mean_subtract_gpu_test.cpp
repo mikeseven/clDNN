@@ -15,13 +15,16 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "api/neural.h"
-#include "multidimensional_counter.h"
 #include <gtest/gtest.h>
+#include <api/memory.hpp>
+#include <api/primitives/input_layout.hpp>
+#include "api/primitives/mean_substract.hpp"
+#include <api/topology.hpp>
+#include <api/network.hpp>
+#include <api/engine.hpp>
 #include "test_utils/test_utils.h"
-#include "memory_utils.h"
 
-using namespace neural;
+using namespace cldnn;
 using namespace tests;
 
 TEST(mean_subtract_gpu_f32, basic_in4x4x2x2) {
@@ -48,9 +51,15 @@ TEST(mean_subtract_gpu_f32, basic_in4x4x2x2) {
     //  f1: b0:  -1    8.5  b1:   4    8.5     
     //
 
-    auto input = memory::allocate({  memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
-    auto output = memory::allocate({  memory::format::yxfb_f32,{ 2,{ 2, 2 }, 2 } });
-    auto mean = memory::allocate({  memory::format::bfyx_f32,{ 1,{ 2, 2 }, 2  } });
+    engine engine;
+
+    auto input  = memory::allocate(engine, { data_types::f32, { format::yxfb, { 2, 2, 2, 2 } } });
+    auto mean = memory::allocate(engine, { data_types::f32, { format::bfyx, { 1, 2, 2 , 2 } } });
+
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(input_layout("mean", mean.get_layout()));
+    topology.add(mean_substract("mean_substract", "input", "mean"));
 
     set_values(input, {
         1.f, 0.f, 5.f, 1.5f,
@@ -61,15 +70,21 @@ TEST(mean_subtract_gpu_f32, basic_in4x4x2x2) {
 
     set_values(mean, { 0.5f, 5.f, 15.f, 6.f, 0.5f, 2.f, 8.f, -0.5f });
 
-    auto mean_sub = mean_subtract::create({  output, input, mean });
+    network network(engine, topology);
+    
+    network.set_input_data("input", input);
+    network.set_input_data("mean", mean);
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "mean_substract");
 
-    execute({ mean_sub }).wait();
+    auto output = outputs.at("mean_substract").get_memory();
 
     float answers[16] = { 0.5f, -0.5f, 4.5f, 1.0f,
                             -3.0f, -5.0f, 4.0f, 3.2f,
                             -12.0f, -14.5f, -1.0f, 4.0f,
                             -2.0f, -6.5f, 8.5f, 8.5f };
-    auto output_ptr = output.as<const memory&>().pointer<float>();
+    auto output_ptr = output.pointer<float>();
     for (int i = 0; i < 16; i++)
     {
         EXPECT_TRUE(are_equal(answers[i], output_ptr[i]));

@@ -16,330 +16,226 @@
 
 #include "common/common_tools.h"
 #include <string>
+#include <api/primitives/input_layout.hpp>
+#include <api/primitives/reorder.hpp>
+#include <api/primitives/convolution.hpp>
+#include <api/primitives/pooling.hpp>
+#include <api/primitives/normalization.hpp>
+#include <api/primitives/fully_connected.hpp>
+#include <api/primitives/softmax.hpp>
 
-using namespace neural;
+using namespace cldnn;
 
 // Building vgg16 network with loading weights & biases from file
-std::vector<std::pair<primitive, std::string>> build_vgg16(const std::string& weights_dir, weights_optimizer& wo, uint32_t batch_size, bool use_half)
+cldnn::topology build_vgg16(const std::string& weights_dir, weights_optimizer& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx)
 {
-    auto mem_format = use_half ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
-    auto fc_mem_format = use_half ? memory::format::xb_f16 : memory::format::xb_f32;
-
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
-    auto input = memory::allocate({ use_half ? memory::format::byxf_f16 : memory::format::byxf_f32,{ batch_size,{ 224, 224 }, 3 } });
+    input_layout.size = { format::byxf,{ batch_size, 224, 224, 3 } };
+    auto input = cldnn::input_layout("input", input_layout);
+
+    auto mem_format = use_bfyx ? format::bfyx : format::yxfb;
 
     // create conversion to yxfb format and subtract mean values
-    auto reordered_input = reorder::create(
-    {
-        mem_format,
-        input.as<const memory&>().argument.size,
+    tensor reorder_size = input_layout.size.transform(mem_format, 1);
+    auto reorder_mean = wo.create_weights_from_file(join_path(weights_dir, "imagenet_mean.nnd"), file::mean);
+    auto reordered_input = reorder(
+        "reorder",
         input,
-        wo.create_weights_from_file(join_path(weights_dir, "imagenet_mean.nnd"), file::mean)
-    });
+        { input_layout.data_type, reorder_size },
+        reorder_mean);
 
-    auto conv1_1 = convolution::create(
-    {
-        mem_format,
-        {
-            reordered_input,
-            wo.create_weights_from_file(join_path(weights_dir, "conv1_1_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv1_1_bias.nnd"),  file::bias),
-        },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        padding::zero,
-        1,
-        true } );
+    auto conv1_1 = convolution("conv1_1",
+        reordered_input,
+        { wo.create_weights_from_file(join_path(weights_dir, "conv1_1_weights.nnd"), file::convolution) },
+        { wo.create_weights_from_file(join_path(weights_dir, "conv1_1_bias.nnd"), file::bias) },
+        { format::yx, { -1, -1 } },
+        { format::yx, { 1, 1 } },
+        true); // negative slope for RELU
 
-    auto conv1_2 = convolution::create(
-    {
-        mem_format,
-        {
+    auto conv1_2 = convolution("conv1_2",
             conv1_1,
-            wo.create_weights_from_file(join_path(weights_dir, "conv1_2_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv1_2_bias.nnd"),  file::bias),
-        },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        padding::zero,
-        1,
-        true });
+        { wo.create_weights_from_file(join_path(weights_dir, "conv1_2_weights.nnd"), file::convolution) },
+        { wo.create_weights_from_file(join_path(weights_dir, "conv1_2_bias.nnd"),  file::bias) },
+        { format::yx, { -1, -1 } },
+        { format::yx, { 1, 1 } },
+        true); // negative slope for RELU
 
 
-    auto pool1 = pooling::create(
-    {
-        pooling::mode::max,
-        mem_format,
+    auto pool1 = pooling("pool1",
         conv1_2,
-        { 1,{ 2,2 },1 }, // strd
-        { 1,{ 2,2 },1 }, // kernel
-        padding::zero
-    });
+        pooling_mode::max,
+        { format::yx, { 2,2 } }, // strd
+        { format::yx, { 2,2 } } // kernel
+    );
 
-    auto conv2_1 = convolution::create(
-    {
-        mem_format,
-        {
-            pool1,
-            wo.create_weights_from_file(join_path(weights_dir, "conv2_1_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv2_1_bias.nnd"),  file::bias),
-        },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        padding::zero,
-        1,
-        true, // negative slope for RELU
-    });
+    auto conv2_1 = convolution("conv2_1",
+        pool1,
+        { wo.create_weights_from_file(join_path(weights_dir, "conv2_1_weights.nnd"), file::convolution) },
+        { wo.create_weights_from_file(join_path(weights_dir, "conv2_1_bias.nnd"),  file::bias) },
+        { format::yx, { -1, -1 } },
+        { format::yx, { 1, 1 } },
+        true); // negative slope for RELU
 
-    auto conv2_2 = convolution::create(
-    {
-        mem_format,
-        {
-            conv2_1,
-            wo.create_weights_from_file(join_path(weights_dir, "conv2_2_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv2_2_bias.nnd"),  file::bias),
-        },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        padding::zero,
-        1,
-        true, // negative slope for RELU
-    });
+    auto conv2_2 = convolution("conv2_2",
+        conv2_1,
+        { wo.create_weights_from_file(join_path(weights_dir, "conv2_2_weights.nnd"), file::convolution) },
+        { wo.create_weights_from_file(join_path(weights_dir, "conv2_2_bias.nnd"),  file::bias) },
+        { format::yx, { -1, -1 } },
+        { format::yx, { 1, 1 } },
+        true); // negative slope for RELU
 
-    auto pool2 = pooling::create(
-    {
-        pooling::mode::max,
-        mem_format,
+    auto pool2 = pooling("pool2",
         conv2_2,
-        { 1,{ 2,2 },1 }, // strd
-        { 1,{ 2,2 },1 }, // kernel
-        padding::zero
-    });
+        pooling_mode::max,
+        { format::yx, { 2,2 } }, // strd
+        { format::yx, { 2,2 } } // kernel
+    );
 
-    auto conv3_1 = convolution::create(
-    {
-        mem_format,
-        {
-            pool2,
-            wo.create_weights_from_file(join_path(weights_dir, "conv3_1_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv3_1_bias.nnd"),  file::bias),
-        },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        padding::zero,
-        1,
-        true,
-    });
+    auto conv3_1 = convolution("conv3_1",
+        pool2,
+        { wo.create_weights_from_file(join_path(weights_dir, "conv3_1_weights.nnd"), file::convolution) },
+        { wo.create_weights_from_file(join_path(weights_dir, "conv3_1_bias.nnd"),  file::bias) },
+        { format::yx, { -1, -1 } },
+        { format::yx, { 1, 1 } },
+        true); // negative slope for RELU
 
-    auto conv3_2 = convolution::create(
-    {
-        mem_format,
-        {
-            conv3_1,
-            wo.create_weights_from_file(join_path(weights_dir, "conv3_2_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv3_2_bias.nnd"),  file::bias),
-        },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        padding::zero,
-        1,
-        true,
-    });
+    auto conv3_2 = convolution("conv3_2",
+        conv3_1,
+        { wo.create_weights_from_file(join_path(weights_dir, "conv3_2_weights.nnd"), file::convolution) },
+        { wo.create_weights_from_file(join_path(weights_dir, "conv3_2_bias.nnd"),  file::bias) },
+        { format::yx, { -1, -1 } },
+        { format::yx, { 1, 1 } },
+        true); // negative slope for RELU
 
-    auto conv3_3 = convolution::create(
-    {
-        mem_format,
-        {
-            conv3_2,
-            wo.create_weights_from_file(join_path(weights_dir, "conv3_3_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv3_3_bias.nnd"),  file::bias),
-        },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        padding::zero,
-        1,
-        true,
-    });
+    auto conv3_3 = convolution("conv3_3",
+        conv3_2,
+        { wo.create_weights_from_file(join_path(weights_dir, "conv3_3_weights.nnd"), file::convolution) },
+        { wo.create_weights_from_file(join_path(weights_dir, "conv3_3_bias.nnd"),  file::bias) },
+        { format::yx, { -1, -1 } },
+        { format::yx, { 1, 1 } },
+        true); // negative slope for RELU
 
-    auto pool3 = pooling::create(
-    {
-        pooling::mode::max,
-        mem_format,
+    auto pool3 = pooling("pool3",
         conv3_3,
-        { 1,{ 2,2 },1 }, // strd
-        { 1,{ 2,2 },1 }, // kernel
-        padding::zero
-    });
+        pooling_mode::max,
+        { format::yx, { 2,2 } }, // strd
+        { format::yx, { 2,2 } } // kernel
+    );
 
-    auto conv4_1 = convolution::create(
-    {
-        mem_format,
-        {
-            pool3,
-            wo.create_weights_from_file(join_path(weights_dir, "conv4_1_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv4_1_bias.nnd"),  file::bias),
-        },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        padding::zero,
-        1,
-        true,
-    });
+    auto conv4_1 = convolution("conv4_1",
+        pool3,
+        { wo.create_weights_from_file(join_path(weights_dir, "conv4_1_weights.nnd"), file::convolution) },
+        { wo.create_weights_from_file(join_path(weights_dir, "conv4_1_bias.nnd"),  file::bias) },
+        { format::yx, { -1, -1 } },
+        { format::yx, { 1, 1 } },
+        true); // negative slope for RELU
 
-    auto conv4_2 = convolution::create(
-    {
-        mem_format,
-        {
-            conv4_1,
-            wo.create_weights_from_file(join_path(weights_dir, "conv4_2_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv4_2_bias.nnd"),  file::bias),
-        },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        padding::zero,
-        1,
-        true,
-    });
+    auto conv4_2 = convolution("conv4_2",
+        conv4_1,
+        { wo.create_weights_from_file(join_path(weights_dir, "conv4_2_weights.nnd"), file::convolution) },
+        { wo.create_weights_from_file(join_path(weights_dir, "conv4_2_bias.nnd"),  file::bias) },
+        { format::yx, { -1, -1 } },
+        { format::yx, { 1, 1 } },
+        true); // negative slope for RELU
 
-    auto conv4_3 = convolution::create(
-    {
-        mem_format,
-        {
-            conv4_2,
-            wo.create_weights_from_file(join_path(weights_dir, "conv4_3_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv4_3_bias.nnd"),  file::bias),
-        },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1, 1 }, 1 },
-        padding::zero,
-        1,
-        true,
-    });
+    auto conv4_3 = convolution("conv4_3",
+        conv4_2,
+        { wo.create_weights_from_file(join_path(weights_dir, "conv4_3_weights.nnd"), file::convolution) },
+        { wo.create_weights_from_file(join_path(weights_dir, "conv4_3_bias.nnd"),  file::bias) },
+        { format::yx, { -1, -1 } },
+        { format::yx, { 1, 1 } },
+        true); // negative slope for RELU
 
-    auto pool4 = pooling::create(
-    {
-        pooling::mode::max,
-        mem_format,
+    auto pool4 = pooling("pool4",
         conv4_3,
-        { 1,{ 2,2 },1 }, // strd
-        { 1,{ 2,2 },1 }, // kernel
-        padding::zero
-    });
+        pooling_mode::max,
+        { format::yx, { 2,2 } }, // strd
+        { format::yx, { 2,2 } } // kernel
+    );
 
-    auto conv5_1 = convolution::create(
-    {
-        mem_format,
-        {
-            pool4,
-            wo.create_weights_from_file(join_path(weights_dir, "conv5_1_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv5_1_bias.nnd"),  file::bias),
-        },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1,1 }, 1 },
-        padding::zero,
-        1,
-        true,
-    });
+    auto conv5_1 = convolution("conv5_1",
+        pool4,
+        { wo.create_weights_from_file(join_path(weights_dir, "conv5_1_weights.nnd"), file::convolution) },
+        { wo.create_weights_from_file(join_path(weights_dir, "conv5_1_bias.nnd"),  file::bias) },
+        { format::yx, { -1, -1 } },
+        { format::yx, { 1,1 } },
+        true); // negative slope for RELU
 
-    auto conv5_2 = convolution::create(
-    {
-        mem_format,
-        {
-            conv5_1,
-            wo.create_weights_from_file(join_path(weights_dir, "conv5_2_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv5_2_bias.nnd"),  file::bias),
-        },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1,1 }, 1 },
-        padding::zero,
-        1,
-        true,
-    });
+    auto conv5_2 = convolution("conv5_2",
+        conv5_1,
+        { wo.create_weights_from_file(join_path(weights_dir, "conv5_2_weights.nnd"), file::convolution) },
+        { wo.create_weights_from_file(join_path(weights_dir, "conv5_2_bias.nnd"),  file::bias) },
+        { format::yx, { -1, -1 } },
+        { format::yx, { 1,1 } },
+        true); // negative slope for RELU
 
-    auto conv5_3 = convolution::create(
-    {
-        mem_format,
-        {
-            conv5_2,
-            wo.create_weights_from_file(join_path(weights_dir, "conv5_3_weights.nnd"), file::convolution),
-            wo.create_weights_from_file(join_path(weights_dir, "conv5_3_bias.nnd"),  file::bias),
-        },
-        { 0,{ -1, -1 }, 0 },
-        { 1,{ 1,1 }, 1 },
-        padding::zero,
-        1,
-        true,
-    });
+    auto conv5_3 = convolution("conv5_3",
+        conv5_2,
+        { wo.create_weights_from_file(join_path(weights_dir, "conv5_3_weights.nnd"), file::convolution) },
+        { wo.create_weights_from_file(join_path(weights_dir, "conv5_3_bias.nnd"),  file::bias) },
+        { format::yx, { -1, -1 } },
+        { format::yx, { 1,1 } },
+        true); // negative slope for RELU
 
-    auto pool5 = pooling::create(
-    {
-        pooling::mode::max,
-        mem_format,
+    auto pool5 = pooling("pool5",
         conv5_3,
-        { 1,{ 2,2 },1 }, // strd
-        { 1,{ 2,2 },1 }, // kernel
-        padding::zero
-    });
+        pooling_mode::max,
+        { format::yx, { 2,2 } }, // strd
+        { format::yx, { 2,2 } } // kernel
+    );
 
-    auto fc6 = fully_connected::create(
-    {
-        fc_mem_format,
+    auto fc6 = fully_connected("fc6",
         pool5,
         wo.create_weights_from_file(join_path(weights_dir, "fc6_weights.nnd"), file::fully_connected),
         wo.create_weights_from_file(join_path(weights_dir, "fc6_bias.nnd"),  file::bias),
         true,
         0
-    });
+    );
 
-    auto fc7 = fully_connected::create(
-    {
-        fc_mem_format,
+    auto fc7 = fully_connected("fc7",
         fc6,
         wo.create_weights_from_file(join_path(weights_dir, "fc7_weights.nnd"), file::fully_connected),
         wo.create_weights_from_file(join_path(weights_dir, "fc7_bias.nnd"),  file::bias),
         true,
         0
-    });
+    );
 
-    auto fc8 = fully_connected::create(
-    {
-        fc_mem_format,
+    auto fc8 = fully_connected("fc8",
         fc7,
         wo.create_weights_from_file(join_path(weights_dir, "fc8_weights.nnd"), file::fully_connected),
         wo.create_weights_from_file(join_path(weights_dir, "fc8_bias.nnd"),  file::bias),
         true,
         0
-    });
+    );
 
-    auto softmax = normalization::softmax::create(
-    {
-        fc_mem_format,
-        fc8
-    });
+    auto softmax = cldnn::softmax(
+        "output",
+        fc8);
 
-    return std::vector<std::pair<primitive, std::string>> {
-        { reordered_input, "reorder"},
-        { conv1_1, "conv1_1" },
-        { conv1_2, "conv1_2" },
-        { pool1, "pool1" },
-        { conv2_1, "conv2_1" },
-        { conv2_2, "conv2_2" },
-        { pool2, "pool2" },
-        { conv3_1, "conv3_1" },
-        { conv3_2, "conv3_2" },
-        { conv3_3, "conv3_3" },
-        { pool3, "pool3" },
-        { conv4_1, "conv4_1" },
-        { conv4_2, "conv4_2" },
-        { conv4_3, "conv4_3" },
-        { pool4, "pool4" },
-        { conv5_1, "conv5_1" },
-        { conv5_2, "conv5_2" },
-        { conv5_3, "conv5_3" },
-        { pool5, "pool5" },
-        { fc6, "fc6" },
-        { fc7, "fc7" },
-        { fc8, "fc8" },
-        { softmax, "softmax" }
+    return topology {
+        input,
+        reordered_input,
+        conv1_1,
+        conv1_2,
+        pool1,
+        conv2_1,
+        conv2_2,
+        pool2,
+        conv3_1,
+        conv3_2,
+        conv3_3,
+        pool3,
+        conv4_1,
+        conv4_2,
+        conv4_3,
+        pool4,
+        conv5_1,
+        conv5_2,
+        conv5_3,
+        pool5,
+        fc6,
+        fc7,
+        fc8,
+        softmax
     };
 }

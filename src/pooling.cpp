@@ -14,181 +14,52 @@
 // limitations under the License.
 */
 
+#include "pooling_arg.h"
+#include "primitive_type_base.h"
+#include "network_impl.h"
+
 #include <cmath>
 
-#include "multidimensional_counter.h"
-#include "implementation_map.h"
-
-namespace neural {
-
-pooling::arguments::arguments( pooling::mode::type      p_mode,
-                               memory::format::type     o_frmt,
-                               neural::vector<uint32_t> out_off,
-                               neural::vector<uint32_t> out_siz,
-                               primitive                in,
-                               neural::vector<int32_t>  in_off,
-                               neural::vector<uint32_t> strd,
-                               neural::vector<uint32_t> siz,
-                               neural::padding::type    padd)
-    : mode(p_mode)
-    , output( {memory::allocate({ o_frmt, out_siz})} )
-    , output_offset(out_off)
-    , output_size(out_siz)
-    , input({in})
-    , input_offset(in_off)
-    , stride(strd)
-    , size(siz)
-    , padding(padd) {}
-
-pooling::arguments::arguments(pooling::mode::type      p_mode,
-    memory::format::type     o_frmt,
-    primitive                in,
-    neural::vector<int32_t>  in_off,
-    neural::vector<uint32_t> strd,
-    neural::vector<uint32_t> siz,
-    neural::padding::type    padd)
-    : mode(p_mode)
-    , input({ in })
-    , input_offset(in_off)
-    , stride(strd)
-    , size(siz)
-    , padding(padd) 
+namespace cldnn
 {
-    // verify if primitive has one output.
-    if (in.output.size() != 1) throw std::runtime_error("more than one output in primitive isn't supported yet");
-    auto output_memory = in.output[0].as<const memory&>().argument;
-    // compute size of output after pooling (downsampling)
-    auto spatial_x = static_cast<uint32_t>(ceil((static_cast<float>(output_memory.size.spatial[0] - (2 * input_offset.spatial[0]) - siz.spatial[0]) / static_cast<float>(strd.spatial[0])))) + 1;
-    auto spatial_y = static_cast<uint32_t>(ceil((static_cast<float>(output_memory.size.spatial[1] - (2 * input_offset.spatial[1]) - siz.spatial[1]) / static_cast<float>(strd.spatial[1])))) + 1;
-
-    output_size = {
-        output_memory.size.batch[0],
-        {
-            spatial_x,
-            spatial_y
-        },
-        output_memory.size.feature[0]
-    };
-    output = { memory::allocate({ o_frmt, output_size }) };
-    output_offset = vector<uint32_t>(
-        output[0].as<const memory&>().argument.size.batch.size(),
-        output[0].as<const memory&>().argument.size.spatial.size(),
-        output[0].as<const memory&>().argument.size.feature.size());
+primitive_type_id pooling_type_id()
+{
+    static primitive_type_base<pooling, pooling_arg> instance;
+    return &instance;
 }
 
-pooling::arguments::arguments( pooling::mode::type      p_mode,
-                               memory::format::type     o_frmt,
-                               primitive                in,
-                               neural::vector<uint32_t> strd,
-                               neural::vector<uint32_t> siz,
-                               neural::padding::type    padd)
-    : mode(p_mode)
-    , input({in})
-    , stride(strd)
-    , size(siz)
-    , padding(padd) 
+layout pooling_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const pooling> desc)
 {
-    // verify if primitive has one output.
-    if (in.output.size() != 1) throw std::runtime_error("more than one output in primitive isn't supported yet");
-    auto output_memory = in.output[0].as<const memory&>().argument;
-
-	// compute size of output after pooling (downsampling)
-    uint32_t spatial_x, spatial_y;
-    if (strd.spatial[0] > 1 && strd.spatial[1] > 1) {
-        spatial_x = static_cast<uint32_t>(ceil((static_cast<float>(output_memory.size.spatial[0] - siz.spatial[0]) / static_cast<float>(strd.spatial[0])))) + 1;
-        spatial_y = static_cast<uint32_t>(ceil((static_cast<float>(output_memory.size.spatial[1] - siz.spatial[1]) / static_cast<float>(strd.spatial[1])))) + 1;
-    }
-    else {
-        spatial_x = (output_memory.size.spatial[0] - siz.spatial[0]) / strd.spatial[0] + 1;
-        spatial_y = (output_memory.size.spatial[1] - siz.spatial[1]) / strd.spatial[1] + 1;
+    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
+    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    assert(input_layout.size.spatial.size() == 2);
+    auto input_offset = desc->input_offset().transform(input_layout.size.format, 0).sizes();
+    auto siz = desc->size.transform(input_layout.size.format, 1).sizes();
+    auto strd = desc->stride.transform(input_layout.size.format, 1).sizes();
+    //TODO !!!implement correct output size calculation!!!
+    auto output_sizes = input_layout.size.sizes();
+    auto format_order = input_layout.size.format.order();
+    assert(output_sizes.size() == format_order.size());
+    for (decltype(output_sizes.size()) i = 0; i < output_sizes.size(); i++)
+    {
+        if (format_traits::is_spatial_char(format_order[i]))
+        {
+            if (strd[i] < 1) throw std::invalid_argument("stride should be >= 1");
+            if (strd[i] > 1 || 0 != input_offset[i])
+            {
+                output_sizes[i] = static_cast<int32_t>(ceil(static_cast<float>(output_sizes[i] - (2 * input_offset[i]) - siz[i]) / static_cast<float>(strd[i]))) + 1;
+            }
+            else
+            {
+                output_sizes[i] = (output_sizes[i] - (2 * input_offset[i]) - siz[i]) / strd[i] + 1;
+            }
+        }
     }
 
-    output_size = { 
-        output_memory.size.batch[0],
-        {
-            spatial_x,
-            spatial_y
-        },
-        output_memory.size.feature[0]
-    };
-    output = { memory::allocate({ o_frmt, output_size }) };
-    output_offset = vector<uint32_t>(
-        output[0].as<const memory&>().argument.size.batch.size(),
-        output[0].as<const memory&>().argument.size.spatial.size(),
-        output[0].as<const memory&>().argument.size.feature.size());
-    input_offset =
-    {
-        in.output[0].as<const memory&>().argument.size.batch.size(),
-        in.output[0].as<const memory&>().argument.size.spatial.size(),
-        in.output[0].as<const memory&>().argument.size.feature.size(),
-    };
+    return{ input_layout.data_type, {input_layout.size.format, output_sizes} };
 }
 
-
-pooling::arguments::arguments( pooling::mode::type      p_mode,
-                               primitive                out,
-                               neural::vector<uint32_t> out_off,
-                               neural::vector<uint32_t> out_siz,
-                               primitive                in,
-                               neural::vector<int32_t>  in_off,
-                               neural::vector<uint32_t> strd,
-                               neural::vector<uint32_t> siz,
-                               neural::padding::type    padd)
-    : mode(p_mode)
-    , output({out})
-    , output_offset(out_off)
-    , output_size(out_siz)
-    , input({in})
-    , input_offset(in_off)
-    , stride(strd)
-    , size(siz)
-    , padding(padd) {}
-
-pooling::arguments::arguments( pooling::mode::type      p_mode,
-                               primitive                out,
-                               primitive                in,
-                               neural::vector<uint32_t> strd,
-                               neural::vector<uint32_t> siz,
-                               neural::padding::type    padd)
-    : mode(p_mode)
-    , output({out})
-    , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
-    , output_size(out.as<const memory&>().argument.size)
-    , input({in})
-    , stride(strd)
-    , size(siz)
-    , padding(padd) 
-{
-    const auto& input_size = get_memory_primitive(in).argument.size;
-
-    input_offset =
-    {
-        input_size.batch.size(),
-        input_size.spatial.size(),
-        input_size.feature.size(),
-    };
-}
-
-pooling::arguments::arguments( pooling::mode::type      p_mode,
-                               primitive                out,
-                               primitive                in,
-                               neural::vector<int32_t>  in_off,
-                               neural::vector<uint32_t> strd,
-                               neural::vector<uint32_t> siz,
-                               neural::padding::type    padd)
-    : mode(p_mode)
-    , output({out})
-    , output_offset(out.as<const memory&>().argument.size.batch.size(), out.as<const memory&>().argument.size.spatial.size(), out.as<const memory&>().argument.size.feature.size())
-    , output_size(out.as<const memory&>().argument.size)
-    , input({in})
-    , input_offset(in_off)
-    , stride(strd)
-    , size(siz)
-    , padding(padd) {}
-
-// creates primitive with pooling implementation that supports provided arguments
-primitive pooling::create(pooling::arguments arg) {
-    return is_a_primitive::create<pooling>(arg);
-}
-
+pooling_arg::pooling_arg(network_impl& network, std::shared_ptr<const pooling> desc)
+    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+{}
 }
