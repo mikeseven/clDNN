@@ -53,6 +53,7 @@ binary_data gpu_compiler::compile(context* context, const jit& compile_options, 
 
         if (CL_SUCCESS != status)
         {
+#ifndef NDEBUG
             if (CL_BUILD_PROGRAM_FAILURE == status)
             {
                 cl_int getLogStatus;
@@ -70,6 +71,7 @@ binary_data gpu_compiler::compile(context* context, const jit& compile_options, 
 
                 std::cout << buildLog + "\n";
             }
+#endif
         }
     }
 
