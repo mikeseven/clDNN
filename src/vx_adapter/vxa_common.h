@@ -137,6 +137,23 @@ namespace clDNN
         }
     }
 
+    inline std::string toString(ReorderMode mode)
+    {
+        switch (mode)
+        {
+        case ReorderMode::xyzw: return "XYZW";
+        case ReorderMode::xywz: return "XYWZ";
+        case ReorderMode::xwyz: return "XWYZ";
+        case ReorderMode::wxyz: return "WXYZ";
+        case ReorderMode::xzyw: return "XZYW";
+        case ReorderMode::zxyw: return "ZXYW";
+        case ReorderMode::yxzw: return "YXZW";
+        default:
+            return "XYZW";
+            break;
+        }
+    }
+
     inline std::shared_ptr<primitive_selector> GetPrimitiveSelector()
     {
         static std::recursive_mutex mutex;

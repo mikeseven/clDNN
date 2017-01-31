@@ -92,7 +92,13 @@ namespace clDNN
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     enum class ReorderMode
     {
-        TRANSPOSE,
+        xyzw, // Do nothing
+        xywz,
+        xwyz,
+        wxyz,
+        xzyw,
+        zxyw,
+        yxzw,
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -279,8 +285,7 @@ namespace clDNN
 
         struct DedicatedParams
         {
-            ReorderMode mode = ReorderMode::TRANSPOSE;
-            uSize replaceDims;
+            ReorderMode mode = ReorderMode::xyzw;
         };
 
         DedicatedParams reorderParams;

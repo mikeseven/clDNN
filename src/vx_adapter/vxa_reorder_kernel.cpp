@@ -10,11 +10,12 @@ namespace clDNN
         InitInputOutputArgsLocations(1);
 
         m_EntryPoint = "reorder";
-        const auto& out = m_Params.outDims;
-        m_kernelInfo.SetGlobalWGS(out.x, out.y, out.z);
+        const auto& inDims = m_Params.inDims;
+        m_kernelInfo.SetGlobalWGS(inDims.y, inDims.z, inDims.w);
 
         std::stringstream jit;
         jit << GetBaseJit(m_Params);
+        jit << "REORDER_MODE_" << toString(m_Params.reorderParams.mode);
 
         neural::gpu::manager::primitive_id id = GetPrimitiveID(m_Params.inputType);
 
