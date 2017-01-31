@@ -48,7 +48,7 @@ cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& 
     else if (type == file::weights_type::convolution)
     {
         // TODO!!! put better logic here.
-        expected_mem_size = _use_bfyx && (!use_half || _batch_size == 1)
+        expected_mem_size = _use_bfyx
             ? cldnn::tensor(cldnn::format::os_iyx_osv16,
                 {
                     input_size.feature[0], input_size.feature[1], input_size.spatial[0], input_size.spatial[1] // order: "oiyx"

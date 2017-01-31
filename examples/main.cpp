@@ -383,8 +383,16 @@ int main(int argc, char* argv[])
         ep.use_half = parsed_args["use_half"].as<bool>();
 
         ep.use_bfyx = parsed_args["use_bfyx"].as<bool>();
-        if (ep.topology_name == "alexnet" || ep.topology_name == "vgg16" || ep.batch == 1)
-            ep.use_bfyx = true;
+        if (!ep.use_half)
+        {
+            if (ep.topology_name == "alexnet" || ep.topology_name == "vgg16" || ep.batch == 1)
+                ep.use_bfyx = true;
+        }
+        else
+        {
+            if (ep.batch == 1)
+                ep.use_bfyx = true;
+        }
 
         ep.run_single_layer = run_single_layer;
         ep.dump_hidden_layers = parsed_args["dump_hidden_layers"].as<bool>();
