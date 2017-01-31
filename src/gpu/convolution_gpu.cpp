@@ -439,7 +439,12 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
 /// @param filter_size           Tensor with spatial (X, Y) data containing filter size used in algorithm.
 /// @param stride                Tensor with spatial (X, Y) data containing stride used in algorithm.
 /// @param sub_group_size        Number of work items grouped in single sub-group (enforced SIMD size).
-/// @param read_chunk_size       Number of elements of input read as a smallest read done by sub-group.
+/// @param read_chunk_size       Size of smallest chunk of data that can be read by sub-group in algorithm
+///                              (in number of elements).
+/// @param min_read_size         Minimal number of elements of input read by sub-group when reading single
+///                              row od data.
+///                              (Number of elements read by sub-group for single row will meet the formula:
+///                              max(@p min_read_size, n * @p read_chunk_size), where n is a positive integer value.)
 ///
 /// @return   Pair containing:
 ///            - [first] Number of sub-group-sized vectors of unit type needed to store/cache input block.
@@ -454,7 +459,8 @@ static std::pair<size_t, size_t> get_bfyx_req_input_block_dims(
     const cldnn::tensor& filter_size,
     const cldnn::tensor& stride,
     size_t sub_group_size = 16,
-    size_t read_chunk_size = 8)
+    size_t read_chunk_size = 8,
+    size_t min_read_size = 16)
 {
     assert(output_block_width > 0 && output_block_height > 0);
     assert(stride.spatial[0] > 0 && stride.spatial[1] > 0);
@@ -466,7 +472,7 @@ static std::pair<size_t, size_t> get_bfyx_req_input_block_dims(
     std::size_t input_block_req_height = (output_block_height - 1) * stride.spatial[1] + filter_size.spatial[1];
 
     // Required number of elements in X dimension rounded to nearest >= read chunk size.
-    std::size_t input_block_read_width = round_up_to(input_block_req_width, read_chunk_size);
+    std::size_t input_block_read_width = std::max(round_up_to(input_block_req_width, read_chunk_size), min_read_size);
     // Number of sub-group-sized vectors of unit type needed to store input block.
     std::size_t input_block_array_size = ceil_div(input_block_req_height * input_block_read_width, sub_group_size);
 
@@ -543,7 +549,8 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
                                                                 filter_mem.argument().size,
                                                                 arg.argument.stride,
                                                                 sub_group_size,
-                                                                kd.fp16_unit_used ? 16 : 8);
+                                                                kd.fp16_unit_used ? sub_group_size : sub_group_size / 2,
+                                                                sub_group_size);
         kd.input_block_array_size = input_block_dims.first;
         kd.input_block_width      = input_block_dims.second;
     }
