@@ -52,20 +52,20 @@ struct reorder_gpu : is_an_implementation {
 
     struct kernel_data
     {
-        size_t gws0, gws1, gws2;
         std::string kernel_name;
         bool have_subtraction;
         bool padding_only;
+        bool is_flatten;
     } _kernel_data;
     gpu::kernel _kernel;
     gpu::kernel_execution_options _exec_options;
 
-    static kd_selector_t<kernel_data, reorder, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
+    static kd_selector_t<kernel_data, reorder, kd_optional_selector_t, size_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
 
     reorder_gpu(reorder &outer)
     : _outer(outer)
     , _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info())
-    , _kernel_data(ks.get_kernel(outer, _engine_info.architecture, _engine_info.configuration))
+    , _kernel_data(ks.get_kernel(outer, memory::traits(outer.input_memory(0).get_layout()).dimension, _engine_info.architecture, _engine_info.configuration))
     , _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
     , _exec_options(get_execution_options())
     {}
@@ -76,6 +76,7 @@ struct reorder_gpu : is_an_implementation {
 
         kd.have_subtraction = outer.have_substract();
         kd.padding_only = (!kd.have_subtraction) && (outer.input_memory(0).argument().format == outer.output_memory().argument().format) && outer.input_memory(0).argument().format == memory::format::type::bfyx_f32;
+        kd.is_flatten = (outer.input_memory(0).argument().size.raw.size() != outer.output_memory().argument().size.raw.size());
 
         return kd;
     }
@@ -173,6 +174,33 @@ struct reorder_gpu : is_an_implementation {
         }
     }
 
+    // output idx for flatten
+    static std::string get_idx_calculation_flatten(memory::format::type OutType, memory::format::type InType) {
+        cldnn::format OutFormat = memory::to_tensor_format(OutType);
+
+        // Flatten cases
+        // 0 - batch (b), 1 - feature (f), 2, 3 - spatial (x -> 2, y -> 3)
+        switch (OutFormat)
+        {
+        //equivalent to axis = 1 (feature), end_axis = -1(x) in caffe
+        case cldnn::format::bx:
+            return "return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));";
+        //equivalent to axis = 0 (batch), end_axis = 2(y) in caffe
+        case cldnn::format::xb:
+            return "return pos[0] + size[0] * ((pos[1] * size[2] * size[3]) + size[1] * (pos[2] + size[2] * pos[3]) / size[2]);";
+        //flatten all into one dimension - equivalent to axis = 0 (batch), end_axis = 3(x) in caffe
+        case cldnn::format::x:
+        {
+            std::vector<uint32_t> calcOrder = get_calculation_order(InType);
+            return "return pos[" + std::to_string(calcOrder[0]) + "] + size[" + std::to_string(calcOrder[0]) + "] * (pos[" + std::to_string(calcOrder[1]) +
+                "] + size[" + std::to_string(calcOrder[1]) + "] * (pos[" + std::to_string(calcOrder[2]) + "] + size[" + std::to_string(calcOrder[2]) +
+                "] * pos[" + std::to_string(calcOrder[3]) + "]));";
+        }
+        default:
+            throw std::invalid_argument("This format is not supported in GPU reorder - flatten");
+        }
+    }
+
     static std::string get_calculation_order_string(memory::format::type type)
     {
         std::ostringstream os;
@@ -200,7 +228,7 @@ struct reorder_gpu : is_an_implementation {
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("DIMENSIONS", std::to_string(input_mem.argument().size.raw.size())),
-            gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", get_idx_calculation(output_mem.argument().format)),
+            gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", data.is_flatten ? get_idx_calculation_flatten(output_mem.argument().format, input_mem.argument().format) : get_idx_calculation(output_mem.argument().format)),
             gpu::make_jit_constant("CALCULATION_ORDER", get_calculation_order_string(input_mem.argument().format)),
             gpu::make_jit_constant("SRC_TYPE", input_use_half ? std::string("half") : std::string("float")),
             gpu::make_jit_constant("DEST_TYPE", output_use_half ? std::string("half") : std::string("float")),
@@ -300,12 +328,6 @@ struct reorder_gpu : is_an_implementation {
         auto& input_mem = _outer.input_memory(0);
         auto& output_mem = _outer.output_memory();
 
-        if (input_mem.argument().size.raw.size() != output_mem.argument().size.raw.size() ||
-            memory::traits(input_mem.get_layout()).dimension != memory::traits(output_mem.get_layout()).dimension)
-        {
-            throw std::runtime_error("Reorder input/output number of dimension does not match.");
-        }
-
         if (_kernel_data.have_subtraction)
         {
             return me->_kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>
@@ -349,23 +371,13 @@ struct reorder_gpu : is_an_implementation {
     }
 };
 
-reorder_gpu::kernel_data set_default_reorder(const reorder& arg)
+reorder_gpu::kernel_data set_default(const reorder& arg)
 {
     reorder_gpu::kernel_data kd = reorder_gpu::set_kernel_data(arg);
 
     if (kd.padding_only)
     {
         kd.kernel_name = kernel_name_reorder_padding_bfyx_f32;
-    }
-    // 1d conversions (no reorder)
-    else if (memory::traits(arg.input_memory(0).get_layout()).dimension == 1)
-    {
-        if (kd.have_subtraction)
-            kd.kernel_name = kernel_name_1d_convert_subtract;
-        else if (!arg.argument.substract_per_feature.empty())
-            kd.kernel_name = kernel_name_1d_convert_subtract_values;
-        else
-            kd.kernel_name = kernel_name_1d_convert;
     }
     else
     {
@@ -381,8 +393,23 @@ reorder_gpu::kernel_data set_default_reorder(const reorder& arg)
     return kd;
 }
 
-kd_selector_t<reorder_gpu::kernel_data, reorder, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> reorder_gpu::ks = {
-    { std::make_tuple(gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_reorder },
+reorder_gpu::kernel_data set_default_dim1(const reorder& arg)
+{
+    reorder_gpu::kernel_data kd = reorder_gpu::set_kernel_data(arg);
+
+    if (kd.have_subtraction)
+        kd.kernel_name = kernel_name_1d_convert_subtract;
+    else if (!arg.argument.substract_per_feature.empty())
+        kd.kernel_name = kernel_name_1d_convert_subtract_values;
+    else
+        kd.kernel_name = kernel_name_1d_convert;
+
+    return kd;
+}
+
+kd_selector_t<reorder_gpu::kernel_data, reorder, kd_optional_selector_t, size_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> reorder_gpu::ks = {
+    { std::make_tuple(1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_dim1 },
+    { std::make_tuple(0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
 };
 
     namespace {
