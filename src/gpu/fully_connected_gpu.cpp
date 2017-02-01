@@ -76,7 +76,16 @@ struct fully_connected_gpu : is_an_implementation
         auto const& input_mem = _outer.input_memory(0);
         auto const& weights_mem = _outer.weights_memory();
 
-        if (input_mem.argument().format == memory::format::bfyx_f32 &&
+        if (input_mem.argument().format == memory::format::bfyx_f16 &&
+            input_mem.argument().size.batch[0] > 1)
+        {
+            cldnn::topology topology(
+                cldnn::input_layout("input", input_mem.get_layout()),
+                cldnn::reorder("reorder", "input", cldnn::layout{ input_mem.get_layout().data_type, input_mem.argument().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
+            );
+            reorder.push_back({ _outer.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
+        }
+        else if (input_mem.argument().format == memory::format::bfyx_f32 &&
             input_mem.argument().size.batch[0] > 1)
         {
             auto input_size = input_mem.get_layout().size;

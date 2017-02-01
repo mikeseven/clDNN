@@ -72,7 +72,7 @@ cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& 
             }
             else
             {
-                expected_mem_size = _use_bfyx && _batch_size == 1 && !use_half
+                expected_mem_size = _use_bfyx && _batch_size == 1
                     ? cldnn::tensor(cldnn::format::fyxb,
                     {
                         input_size.feature[0], input_size.spatial[0], input_size.spatial[1], input_size.batch[0] // order: "fyxb"
