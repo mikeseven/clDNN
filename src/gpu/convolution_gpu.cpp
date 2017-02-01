@@ -67,6 +67,7 @@ struct convolution_gpu : is_an_implementation {
         size_t input_block_width;      ///< Number of elements in X dimension stored/cached in input block.
         std::string kernel_name;       ///< Name of a kernel/algorithm to execute.
         bool fp16_unit_used;           ///< Value indicating that FP16 half precision floating point type will be used (instead of single precision).
+        size_t leftovers;
     } _kernel_data;
 
     gpu::kernel _kernel;
@@ -100,6 +101,7 @@ struct convolution_gpu : is_an_implementation {
         kd.prefetch = 0;
         kd.input_block_array_size = 0;
         kd.input_block_width = 0;
+        kd.leftovers = 0;
         return kd;
     }
 
@@ -197,6 +199,8 @@ struct convolution_gpu : is_an_implementation {
             mem_consts.add_constant(gpu::make_jit_constant("IN_BLOCK_ARRAY_SIZE", _kernel_data.input_block_array_size));
             mem_consts.add_constant(gpu::make_jit_constant("IN_BLOCK_WIDTH",      _kernel_data.input_block_width));
             mem_consts.add_constant(gpu::make_jit_constant("PREFETCH",            _kernel_data.prefetch));
+            if (_kernel_data.leftovers)
+                mem_consts.add_constant(gpu::make_jit_constant("LEFTOVERS",       _kernel_data.leftovers));
         }
 
         return mem_consts;
@@ -492,6 +496,9 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
     // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
     constexpr uint32_t sub_group_size = 16;
 
+    const uint32_t of_threads_per_batch = round_up_to(filter_mem.argument().size.feature[0], sub_group_size);
+    kd.leftovers = of_threads_per_batch - filter_mem.argument().size.feature[0];
+
     if (filter_mem.argument().size.spatial[0] > max_supported_filter_size ||
         filter_mem.argument().size.spatial[1] > max_supported_filter_size)
     {
@@ -557,7 +564,7 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
     
     kd.gws0 = ceil_div(output_size.spatial[0], kd.block_width);
     kd.gws1 = ceil_div(output_size.spatial[1], kd.block_height);
-    kd.gws2 = round_up_to(filter_mem.argument().size.feature[0] * output_size.batch[0], sub_group_size);
+    kd.gws2 = of_threads_per_batch * output_size.batch[0];
 
     kd.lws0 = 1;
     kd.lws1 = 1;
