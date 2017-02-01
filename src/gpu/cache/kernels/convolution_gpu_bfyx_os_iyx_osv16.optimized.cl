@@ -25,6 +25,8 @@
 //  - NEGATIVE_SLOPE       - [float] Factor for negative output values (required when ReLU is specified).
 //
 //  - SUB_GROUP_SIZE       - [int] Size of used subgroup (SIMD).
+//  - LEFTOVERS            - [int] Optional parameter, required only when number of ofm is not dividable by SUB_GROUP_SIZE
+//                           see comment for FEATURES_THREADS_PER_BATCH for more informations
 
 /*
 gpu::make_jit_constant("OUTPUT_LIMIT",              output_size),
@@ -39,6 +41,8 @@ gpu::make_jit_constant("OUT_BLOCK_HEIGHT",          _kernel_data.block_height));
 gpu::make_jit_constant("IN_BLOCK_ARRAY_SIZE",       _kernel_data.input_block_array_size));
 gpu::make_jit_constant("IN_BLOCK_WIDTH",            _kernel_data.input_block_width));
 gpu::make_jit_constant("PREFETCH",                  _kernel_data.prefetch));
+if (_kernel_data.leftovers)
+    gpu::make_jit_constant("LEFTOVERS",             _kernel_data.leftovers));
 */
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -54,11 +58,11 @@ gpu::make_jit_constant("PREFETCH",                  _kernel_data.prefetch));
     #define ACTIVATION(output, input) output = input;
 #endif
 
-// FEATURES_THREADS_PER_BATCH defines how many threads are processing single batch.
-// ideally, each thread should process one output feature, however since threads are
-// stack in groups of 16 (SIMD16) when number of output feature maps is not dividable by 16
-// there are dummy threads added in count of LEFTOVERS. We need to take them into consideration while
-// calculating batch id (see lines 33-34).
+// FEATURES_THREADS_PER_BATCH defines how many threads in z-dimension are processing single batch.
+// ideally, z-dimension of value n should indicate processing of n-th output feature. however, since
+// threads are stack in groups of SUB_GROUP_SIZE, when number of ofm is not dividable by SUB_GROUP_SIZE
+// there are dummy threads added in z-dimension in count of LEFTOVERS. We need to take them into consideration
+// while calculating batch's id (see lines 86-87). Values calculated by dummy threads are discarded at line 210.
 #ifdef LEFTOVERS
 #define FEATURES_THREADS_PER_BATCH (FILTER_OUTPUT_FEATURE_NUM + LEFTOVERS)
 #else
