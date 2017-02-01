@@ -83,12 +83,11 @@ fully_connected_arg::fully_connected_arg(network_impl& network, std::shared_ptr<
     , _weights(network.get_primitive(desc->weights))
     , _bias(network.get_primitive(desc->bias))
 {
-    auto data_type = input_memory(0).get_layout().data_type;
     auto input_size = input_memory(0).get_layout().size;
     auto output_size = output_memory().get_layout().size;
 
     if(input_size.format != format::yxfb
-        && !(input_size.format == format::bfyx && data_type == data_types::f32) //special batch1 case
+        && input_size.format != format::bfyx //special batch1 case
         && (input_size.raw.size() != output_size.raw.size()) )
     {
         throw std::invalid_argument("Fully connected input/output number of dimension does not match.");

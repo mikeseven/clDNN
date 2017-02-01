@@ -107,6 +107,7 @@ namespace neural
                     gpu::make_jit_constant("FP16_UNIT_USED",        static_cast<int>(data.fp16_unit_used)),
                     gpu::make_jit_constant("UNIT_TYPE",             data.fp16_unit_used ? "half" : "float"),
                     gpu::make_jit_constant("UNIT_VAL_ZERO",         data.fp16_unit_used ? "0.0h" : "0.0f"),
+                    gpu::make_jit_constant("UNIT_VAL_SQUARE",       data.fp16_unit_used ? "2.0h" : "2.0f"),
                 };
 
                 return mem_consts;

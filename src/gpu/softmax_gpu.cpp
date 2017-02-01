@@ -81,7 +81,7 @@ struct softmax_gpu : is_an_implementation
 
             kd.kernel_name = kernel_name;
         }
-        else if (input_mem.argument().format == memory::format::bx_f32)
+        else if (input_mem.argument().format == memory::format::bx_f32 || input_mem.argument().format == memory::format::bx_f16)
         {
             // We have two units of data per work item in current implementation.
             auto local_mem_per_wi = 2 * (kd.fp16_unit_used ? sizeof(half_t) : sizeof(float));
@@ -173,6 +173,7 @@ struct attach {
         implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw);
         implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw);
         implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f32), val_fw);
+        implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f16), val_fw);
         implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw);
         implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw);
         implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw);

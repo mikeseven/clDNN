@@ -557,3 +557,263 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
         EXPECT_TRUE(are_equal(static_cast<uint16_t>(expected_values[i]), static_cast<uint16_t>(output_ptr[i])));
     }
 }
+
+TEST(reorder_gpu_f32, basic_flatten_yxfb_to_bx)
+{
+    //  Input               : yxfb:2x2x2x2
+    //  Output              : bx:2x8
+    //
+    //  Input:
+    //  f0: b0:  1    2  b1:   0    0
+    //  f0: b0:  3    4  b1:   0.5 -0.5
+    //  f1: b0:  5    6  b1:   1.5  5.2
+    //  f1: b0:  7    8  b1:   12   8
+    //
+    //  Output:
+    //  b0:  1    2   3    4    5    6    7    8
+    //  b1:  0    0   0.5  -0.5 1.5  5.2  12   8
+
+    engine engine;
+
+    auto batch_num = 2;
+    auto feature_num = 2;
+    auto x_size = 2;
+    auto y_size = 2;
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
+    layout output_layout(data_types::f32, { format::bx,{ batch_num, y_size * x_size * feature_num } });
+
+    std::vector<float> input_vec = {
+        1.f, 0.f,
+        5.f, 1.5f,
+
+        2.f, 0.f,
+        6.f, 5.2f,
+
+        3.f, 0.5f,
+        7.f, 12.f,
+
+        4.f, -0.5f,
+        8.f, 8.f
+    };
+    set_values(input, input_vec);
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        reorder("reorder", "input", output_layout));
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "reorder");
+
+    auto output = outputs.begin()->second.get_memory();
+    auto output_ptr = output.pointer<float>();
+
+
+
+    for (int i = 0; i < batch_num; ++i) { //B
+        for (int j = 0; j < feature_num * y_size * x_size; ++j) { //F * Y * X
+            int linear_id_output = j + i * feature_num * y_size * x_size;
+            int cpos = j / (x_size * y_size);
+            int ypos = (j / x_size) % y_size;
+            int xpos = j % x_size;
+            int linear_id = i + batch_num * (cpos + feature_num * (xpos + x_size * ypos));
+            EXPECT_EQ(output_ptr[linear_id_output], input_vec[linear_id]);
+        }
+    }
+}
+
+TEST(reorder_gpu_f32, basic_flatten_yxfb_to_xb)
+{
+    //  Input               : yxfb:2x2x2x2
+    //  Output              : bx:2x8
+    //
+    //  Input:
+    //  f0: b0:  1    2  b1:   0    0
+    //  f0: b0:  3    4  b1:   0.5 -0.5
+    //  f1: b0:  5    6  b1:   1.5  5.2
+    //  f1: b0:  7    8  b1:   12   8
+    //
+    //  Output:
+    //  b0:  1    2   3    4    5    6    7    8
+    //  b1:  0    0   0.5  -0.5 1.5  5.2  12   8
+
+    engine engine;
+
+    auto batch_num = 2;
+    auto feature_num = 2;
+    auto x_size = 2;
+    auto y_size = 2;
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
+    layout output_layout(data_types::f32, { format::xb,{ y_size * x_size * feature_num, batch_num } });
+
+    std::vector<float> input_vec = {
+        1.f, 0.f,
+        5.f, 1.5f,
+
+        2.f, 0.f,
+        6.f, 5.2f,
+
+        3.f, 0.5f,
+        7.f, 12.f,
+
+        4.f, -0.5f,
+        8.f, 8.f
+    };
+    set_values(input, input_vec);
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        reorder("reorder", "input", output_layout));
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "reorder");
+
+    auto output = outputs.begin()->second.get_memory();
+    auto output_ptr = output.pointer<float>();
+
+    std::vector<float> debug, debug2, debug3;
+    for (int j = 0; j < batch_num * feature_num * y_size * x_size; ++j) {
+        debug.push_back(output_ptr[j]);
+    }
+
+    for (int i = 0; i < batch_num; ++i) { //B
+        for (int j = 0; j < feature_num * y_size * x_size; ++j) { //F * Y * X
+            int linear_id_output = j * batch_num + i;
+            int cpos = j / (x_size * y_size);
+            int ypos = (j / x_size) % y_size;
+            int xpos = j % x_size;
+            int linear_id = i + batch_num * (cpos + feature_num * (xpos + x_size * ypos));
+            EXPECT_EQ(output_ptr[linear_id_output], input_vec[linear_id]);
+        }
+    }
+}
+
+TEST(reorder_gpu_f32, basic_flatten_bfyx_to_bx)
+{
+    //  Input               : yxfb:2x2x2x2
+    //  Output              : bx:2x8
+    //
+    //  Input:
+    //  f0: b0:  1    2  b1:   0    0
+    //  f0: b0:  3    4  b1:   0.5 -0.5
+    //  f1: b0:  5    6  b1:   1.5  5.2
+    //  f1: b0:  7    8  b1:   12   8
+    //
+    //  Output:
+    //  b0:  1    2    3    4    5    6    7    8
+    //  b1:  0    0    0.5  -0.5 1.5  5.2  12   8
+
+    engine engine;
+
+    auto batch_num = 2;
+    auto feature_num = 2;
+    auto x_size = 2;
+    auto y_size = 2;
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ batch_num, feature_num, y_size, x_size } } });
+    layout output_layout(data_types::f32, { format::bx,{ batch_num, y_size * x_size * feature_num } });
+
+    std::vector<float> input_vec = {
+        1.f, 2.f,
+        3.f, 4.f,
+
+        5.f, 6.f,
+        7.f, 8.f,
+
+        0.f, 0.f,
+        0.5f, -0.5f,
+
+        1.5f, 5.2f,
+        12.f, 8.f
+    };
+    set_values(input, input_vec);
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        reorder("reorder", "input", output_layout));
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "reorder");
+
+    auto output = outputs.begin()->second.get_memory();
+    auto output_ptr = output.pointer<float>();
+
+    for (int i = 0; i < batch_num; ++i) { //B
+        for (int j = 0; j < feature_num * y_size * x_size; ++j) { //F * Y * X
+            int linear_id = j + i * feature_num * y_size * x_size;
+            EXPECT_EQ(output_ptr[linear_id], input_vec[linear_id]);
+        }
+    }
+}
+
+TEST(reorder_gpu_f32, basic_flatten_yxfb_to_x)
+{
+    //  Input               : yxfb:2x2x2x2
+    //  Output              : bx:2x8
+    //
+    //  Input:
+    //  f0: b0:  1    2  b1:   0    0
+    //  f0: b0:  3    4  b1:   0.5 -0.5
+    //  f1: b0:  5    6  b1:   1.5  5.2
+    //  f1: b0:  7    8  b1:   12   8
+    //
+    //  Output:
+    //  1  0  5  1.5  2  0  6  5.2  3  0.5  7  12  4  -0.5  8  8
+
+    engine engine;
+
+    auto batch_num = 2;
+    auto feature_num = 2;
+    auto x_size = 2;
+    auto y_size = 2;
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
+    layout output_layout(data_types::f32, { format::x,{ y_size * x_size * feature_num * batch_num } });
+
+    std::vector<float> input_vec = {
+        1.f, 0.f,
+        5.f, 1.5f,
+
+        2.f, 0.f,
+        6.f, 5.2f,
+
+        3.f, 0.5f,
+        7.f, 12.f,
+
+        4.f, -0.5f,
+        8.f, 8.f
+    };
+    set_values(input, input_vec);
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        reorder("reorder", "input", output_layout));
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "reorder");
+
+    auto output = outputs.begin()->second.get_memory();
+    auto output_ptr = output.pointer<float>();
+
+    for (int j = 0; j < batch_num * feature_num * y_size * x_size; ++j) { //B * F * Y * X
+        int linear_id = j;
+        EXPECT_EQ(output_ptr[linear_id], input_vec[linear_id]);
+    }
+}

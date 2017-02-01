@@ -16,8 +16,12 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+
 #include <functional>
 #include <string>
+#include <type_traits>
+#include <utility>
+
 #include "cldnn.h"
 
 namespace {
@@ -84,4 +88,55 @@ template<typename T>
 typename std::enable_if<std::is_integral<T>::value, bool>::type is_aligned_to(T size, size_t align)
 {
     return !(size % align);
+}
+
+/// Computes ceil(@p val / @p divider) on unsigned integral numbers.
+///
+/// Computes division of unsigned integral numbers and rounds result up to full number (ceiling).
+/// The function works for unsigned integrals only. Signed integrals are converted to corresponding
+/// unsigned ones.
+///
+/// @tparam T1   Type of @p val. Type must be integral (SFINAE).
+/// @tparam T2   Type of @p divider. Type must be integral (SFINAE).
+///
+/// @param val       Divided value. If value is signed, it will be converted to corresponding unsigned type.
+/// @param divider   Divider value. If value is signed, it will be converted to corresponding unsigned type.
+///
+/// @return   Result of ceil(@p val / @p divider). The type of result is determined as if in normal integral
+///           division, except each operand is converted to unsigned type if necessary.
+template <typename T1, typename T2>
+constexpr auto ceil_div(T1 val, T2 divider)
+    -> typename std::enable_if<std::is_integral<T1>::value && std::is_integral<T2>::value,
+                               decltype(std::declval<typename std::make_unsigned<T1>::type>() / std::declval<typename std::make_unsigned<T2>::type>())>::type
+{
+    typedef typename std::make_unsigned<T1>::type UT1;
+    typedef typename std::make_unsigned<T2>::type UT2;
+    typedef decltype(std::declval<UT1>() / std::declval<UT2>()) RetT;
+
+    return static_cast<RetT>((static_cast<UT1>(val) + static_cast<UT2>(divider) - 1U) / static_cast<UT2>(divider));
+}
+
+/// Rounds @p val to nearest multiply of @p rounding that is greater or equal to @p val.
+///
+/// The function works for unsigned integrals only. Signed integrals are converted to corresponding
+/// unsigned ones.
+///
+/// @tparam T1       Type of @p val. Type must be integral (SFINAE).
+/// @tparam T2       Type of @p rounding. Type must be integral (SFINAE).
+///
+/// @param val        Value to round up. If value is signed, it will be converted to corresponding unsigned type.
+/// @param rounding   Rounding value. If value is signed, it will be converted to corresponding unsigned type.
+///
+/// @return   @p val rounded up to nearest multiply of @p rounding. The type of result is determined as if in normal integral
+///           division, except each operand is converted to unsigned type if necessary.
+template <typename T1, typename T2>
+constexpr auto round_up_to(T1 val, T2 rounding)
+    -> typename std::enable_if<std::is_integral<T1>::value && std::is_integral<T2>::value,
+                               decltype(std::declval<typename std::make_unsigned<T1>::type>() / std::declval<typename std::make_unsigned<T2>::type>())>::type
+{
+    typedef typename std::make_unsigned<T1>::type UT1;
+    typedef typename std::make_unsigned<T2>::type UT2;
+    typedef decltype(std::declval<UT1>() / std::declval<UT2>()) RetT;
+
+    return static_cast<RetT>(ceil_div(val, rounding) * static_cast<UT2>(rounding));
 }

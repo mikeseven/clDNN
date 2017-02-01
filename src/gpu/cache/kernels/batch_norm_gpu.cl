@@ -17,10 +17,7 @@ KERNEL (batch_norm_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* out
 		acc += input[feature_offset + i + j * INPUT_BATCH_NUM * INPUT_FEATURE_NUM];
 		}
 	}
-	mean[feature_id] = acc / (INPUT_BATCH_NUM * INPUT_SIZE_X * INPUT_SIZE_Y);
-	output[linear_id] = input[linear_id] - mean[feature_id];
-
-	barrier(CLK_GLOBAL_MEM_FENCE);
+	UNIT_TYPE mean_val = acc / (INPUT_BATCH_NUM * INPUT_SIZE_X * INPUT_SIZE_Y);
 
 	//compute variance using var(X) = E((X-EX)^2)
 	acc = UNIT_VAL_ZERO;	
@@ -28,10 +25,11 @@ KERNEL (batch_norm_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* out
 	{
 		for(int j = 0; j < INPUT_SIZE_X * INPUT_SIZE_Y; j++)
 		{
-		acc += native_powr(output[feature_offset + i + j * INPUT_BATCH_NUM * INPUT_FEATURE_NUM], 2);
+		acc += native_powr(input[feature_offset + i + j * INPUT_BATCH_NUM * INPUT_FEATURE_NUM] - mean_val, UNIT_VAL_SQUARE);
 		}
 	}
-	variance[feature_id] = acc / (INPUT_BATCH_NUM * INPUT_SIZE_X * INPUT_SIZE_Y);
+
+	UNIT_TYPE variance_val = acc / (INPUT_BATCH_NUM * INPUT_SIZE_X * INPUT_SIZE_Y);
 	
-	output[linear_id] = output[linear_id] / (sqrt(variance[feature_id]) + EPSILON);
+	output[linear_id] = (input[linear_id] - mean_val) / (sqrt(variance_val) + EPSILON);
 }

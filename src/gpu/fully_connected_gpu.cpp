@@ -113,8 +113,8 @@ struct fully_connected_gpu : is_an_implementation
         auto input_mem_format = input_mem.argument().format;
 
         //for bfyx,b>1 there will be reorder from bfyx to yxfb before this fc (created later in ctor), so do calculations for this format rather than original bfyx
-        if (input_mem_format == memory::format::bfyx_f32 && input_mem.argument().size.batch[0] > 1)
-            input_mem_format = memory::format::yxfb_f32;
+        if ((input_mem_format == memory::format::bfyx_f16 || input_mem_format == memory::format::bfyx_f32) && input_mem.argument().size.batch[0] > 1)
+            input_mem_format = kd.fp16_unit_used ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
 
         switch (input_mem_format)
         {
@@ -194,6 +194,29 @@ struct fully_connected_gpu : is_an_implementation
             break;
         }
 
+        case memory::format::bfyx_f16:
+        case memory::format::bx_f16:
+        {
+            switch (weight_mem.argument().format)
+            {
+            case memory::format::fyxb_f16:
+            case memory::format::xb_f16:
+            {
+                if (input_mem.argument().size.batch[0] != 1)
+                {
+                    kd.kernel_name = kernel_name_bx_bx_from_fyxb;
+                }
+                else
+                {
+                    kd.kernel_name = kernel_name_bx_bx_from_fyx;
+                }
+                break;
+            }
+            default:
+                throw std::invalid_argument("Weight memory format is not supported");
+            }
+            break;
+        }
         case memory::format::yxfb_f16:
         case memory::format::xb_f16:
         case memory::format::x_f16:
@@ -414,6 +437,9 @@ namespace {
 
                 { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw },
                 { std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f32), val_fw },
+
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f16), val_fw },
             });
         }
         ~attach() {}
