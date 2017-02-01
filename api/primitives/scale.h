@@ -18,7 +18,7 @@
 #ifndef SCALE_H
 #define SCALE_H
 
-#include "api/cldnn.h"
+#include "../cldnn.h"
 
 #ifdef __cplusplus
 extern "C" {
