@@ -18,7 +18,7 @@
 #ifndef POOLING_H
 #define POOLING_H
 
-#include "api/cldnn.h"
+#include "../cldnn.h"
 
 #ifdef __cplusplus
 extern "C" {

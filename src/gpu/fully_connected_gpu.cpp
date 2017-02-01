@@ -33,8 +33,8 @@ static const std::string kernel_name_xb_xb = "fully_connected_gpu_xb_xb";
 static const std::string kernel_name_xb_bx = "fully_connected_gpu_xb_bx";
 static const std::string kernel_name_xb_bx_b8 = "fully_connected_gpu_xb_bx_b8";
 static const std::string kernel_name_xb_xb_b8_x8 = "fully_connected_gpu_xb_xb_b8_x8";
-static const std::string kernel_name_xb_xb_b16 = "fully_connected_gpu_xb_xb_b16";
 static const std::string kernel_name_xb_xb_b8_x8_vload = "fully_connected_gpu_xb_xb_b8_x8_vload";
+static const std::string kernel_name_xb_bs_xs_xsv8_bsv8_vload = "fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload";
 static const std::string kernel_name_yxfn = "fully_connected_gpu_yxfn";
 static const std::string kernel_name_xb_xb_block_fp16 = "fully_connected_gpu_xb_xb_block_fp16";
 static const std::string kernel_name_bx_bx_from_fyx = "fully_connected_gpu_bx_xb_from_fyx";
@@ -74,13 +74,29 @@ struct fully_connected_gpu : is_an_implementation
         _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
     {
         auto const& input_mem = _outer.input_memory(0);
+        auto const& weights_mem = _outer.weights_memory();
 
         if (input_mem.argument().format == memory::format::bfyx_f32 &&
             input_mem.argument().size.batch[0] > 1)
         {
+            auto input_size = input_mem.get_layout().size;
+            auto expected_mem_size = cldnn::tensor(cldnn::format::bs_xs_xsv8_bsv8,
+            {
+                input_size.batch[0], input_size.feature[0] * input_size.spatial[0] * input_size.spatial[1]
+            });
+            cldnn::layout expected_mem_layout(cldnn::data_types::f32, expected_mem_size);
             cldnn::topology topology(
                 cldnn::input_layout("input", input_mem.get_layout()),
-                cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_mem.argument().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
+                cldnn::reorder("reorder", "input", expected_mem_layout)
+            );
+            reorder.push_back({ _outer.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
+        }
+        else if (input_mem.argument().format == memory::format::xb_f32 && weights_mem.argument().format == memory::format::bs_xs_xsv8_bsv8_f32 &&
+            input_mem.argument().size.batch[0] > 1)
+        {
+            cldnn::topology topology(
+                cldnn::input_layout("input", input_mem.get_layout()),
+                cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_mem.argument().size.transform(cldnn::format::bs_xs_xsv8_bsv8, 1) }, "")
             );
             reorder.push_back({ _outer.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
         }
@@ -113,8 +129,8 @@ struct fully_connected_gpu : is_an_implementation
         auto input_mem_format = input_mem.argument().format;
 
         //for bfyx,b>1 there will be reorder from bfyx to yxfb before this fc (created later in ctor), so do calculations for this format rather than original bfyx
-        if (input_mem_format == memory::format::bfyx_f32 && input_mem.argument().size.batch[0] > 1)
-            input_mem_format = memory::format::yxfb_f32;
+        if ((input_mem_format == memory::format::bfyx_f16 || input_mem_format == memory::format::bfyx_f32) && input_mem.argument().size.batch[0] > 1)
+            input_mem_format = kd.fp16_unit_used ? memory::format::yxfb_f16 : memory::format::yxfb_f32;
 
         switch (input_mem_format)
         {
@@ -144,6 +160,7 @@ struct fully_connected_gpu : is_an_implementation
         case memory::format::yxfb_f32:
         case memory::format::xb_f32:
         case memory::format::x_f32:
+        case memory::format::bs_xs_xsv8_bsv8_f32:
         {
             switch (weight_mem.argument().format)
             {
@@ -161,6 +178,24 @@ struct fully_connected_gpu : is_an_implementation
                 else
                 {
                     kd.kernel_name = kernel_name_xb_bx;
+                }
+                break;
+            }
+            case memory::format::bs_xs_xsv8_bsv8_f32:
+            {
+                if (batch_multiple_of_8 &&
+                    (output_mem.count() / output_mem.argument().size.batch[0]) % 8 == 0)
+                {
+                    size_t groups_per_batches = get_local_groups_size(output_mem);
+                    kd.gws0 = output_mem.count() / (get_neurons_per_work_item(output_mem) * get_batches_per_work_item(output_mem) * groups_per_batches);
+                    kd.gws1 = groups_per_batches;
+                    kd.lws0 = get_local_work_group_size(output_mem);
+                    kd.lws1 = 1;
+                    kd.kernel_name = kernel_name_xb_bs_xs_xsv8_bsv8_vload;
+                }
+                else
+                {
+                    throw std::runtime_error("Not implemented bs_xs_bsv8_xsv8_f32 for elements not dividable by 8");
                 }
                 break;
             }
@@ -194,6 +229,29 @@ struct fully_connected_gpu : is_an_implementation
             break;
         }
 
+        case memory::format::bfyx_f16:
+        case memory::format::bx_f16:
+        {
+            switch (weight_mem.argument().format)
+            {
+            case memory::format::fyxb_f16:
+            case memory::format::xb_f16:
+            {
+                if (input_mem.argument().size.batch[0] != 1)
+                {
+                    kd.kernel_name = kernel_name_bx_bx_from_fyxb;
+                }
+                else
+                {
+                    kd.kernel_name = kernel_name_bx_bx_from_fyx;
+                }
+                break;
+            }
+            default:
+                throw std::invalid_argument("Weight memory format is not supported");
+            }
+            break;
+        }
         case memory::format::yxfb_f16:
         case memory::format::xb_f16:
         case memory::format::x_f16:
@@ -281,7 +339,7 @@ struct fully_connected_gpu : is_an_implementation
             return 8;
         auto out_elements_count_per_batch = output_mem.count() / batch_size;
         if (out_elements_count_per_batch % 16 == 0)
-            return 16;
+            return 8;
         else
             return 8;
     }
@@ -332,7 +390,7 @@ struct fully_connected_gpu : is_an_implementation
         }
 
         if (data.kernel_name == kernel_name_xb_xb_b8_x8_vload ||
-            data.kernel_name == kernel_name_xb_xb_b16)
+            data.kernel_name == kernel_name_xb_bs_xs_xsv8_bsv8_vload)
         {
             int batch_size = input_mem.argument().size.batch[0];
             const int batches_per_work_item = get_batches_per_work_item(output_mem);
@@ -372,21 +430,25 @@ struct fully_connected_gpu : is_an_implementation
             ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, { network->get_primitive_event(output_id) }, reorder_output, output_mem, weight_mem, bias_mem);
     }
 
-    static is_an_implementation *create(fully_connected &arg) {
-
+    static is_an_implementation *create(fully_connected &arg) 
+    {
         auto& input_mem = arg.input_memory(0);
         auto& input_size = input_mem.argument().size;
+        auto& weights_mem = arg.weights_memory();
+        auto& weights_size = weights_mem.argument().size;
 
         // validate arguments
         if (input_size.format == cldnn::format::yxfb ||
 			input_size.format == cldnn::format::bfyx)
         {
-            // weights
-            auto& weight_size = arg.input_memory(1).argument().size;
-            if (   input_size.feature.size() != weight_size.feature.size()
-                || input_size.batch.size()   != weight_size.batch.size()
-                || input_size.feature[0]     != weight_size.feature[0])
-                throw std::invalid_argument("Input and weights sizes do not match");
+            if (weights_mem.argument().format != memory::format::bs_xs_xsv8_bsv8_f32)
+            {
+                // weights
+                if (input_size.feature.size() != weights_size.feature.size()
+                    || input_size.batch.size() != weights_size.batch.size()
+                    || input_size.feature[0] != weights_size.feature[0])
+                    throw std::invalid_argument("Input and weights sizes do not match");
+            }
         }
         else {
             // int a,b,c; a*b*c = 1  => a=b=c=1
@@ -414,6 +476,9 @@ namespace {
 
                 { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw },
                 { std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f32), val_fw },
+
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f16), val_fw },
             });
         }
         ~attach() {}

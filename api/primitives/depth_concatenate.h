@@ -18,7 +18,7 @@
 #ifndef DEPTH_CONCATENATE_H
 #define DEPTH_CONCATENATE_H
 
-#include "api/cldnn.h"
+#include "../cldnn.h"
 
 #ifdef __cplusplus
 extern "C" {

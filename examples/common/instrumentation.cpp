@@ -285,7 +285,7 @@ namespace instrumentation {
             break;
         case cldnn::neural_memory::format::bx_f16:
             {
-                dump_bx<float>(mem_prim, single_batch, batch_id, streams);
+                dump_bx<half_t>(mem_prim, single_batch, batch_id, streams);
             }
             break;
 

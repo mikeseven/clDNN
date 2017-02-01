@@ -18,7 +18,7 @@
 #ifndef FULLY_CONNECTED_H
 #define FULLY_CONNECTED_H
 
-#include "api/cldnn.h"
+#include "../cldnn.h"
 
 #ifdef __cplusplus
 extern "C" {

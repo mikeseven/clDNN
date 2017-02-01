@@ -153,7 +153,8 @@ struct depth_concatenate_gpu : is_an_implementation
         }
 
         // Select kernel name.
-        if (input_mem.argument().format == memory::format::bfyx_f32)
+        if (input_mem.argument().format == memory::format::bfyx_f32 ||
+            input_mem.argument().format == memory::format::bfyx_f16)
         {
             if (input_mem.argument().size.batch[0] != 1)
                 throw std::runtime_error("Depth concatenate for bfyx_f32 for batch != 1 not implemented yet!");
@@ -222,7 +223,8 @@ namespace {
             implementation_map<depth_concatenate>::add({
                 { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), depth_concatenate_gpu::create },
                 { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), depth_concatenate_gpu::create },
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), depth_concatenate_gpu::create }
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), depth_concatenate_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), depth_concatenate_gpu::create }
             });
         }
         ~attach() {}

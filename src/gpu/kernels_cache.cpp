@@ -74,26 +74,6 @@ static const char* kernels_header = R"__krnl(
                  as_half2(intel_sub_group_shuffle(_block, 6)),  \
                  as_half2(intel_sub_group_shuffle(_block, 7)));
 
-#define MULTIPLY_BLOCKS_8x8(_result, _blockA, _blockB)  \
-{   \
-    const float8 acol0 = TRANSPOSE_BLOCK_8_COL( _blockA, 0 ); \
-    const float8 acol1 = TRANSPOSE_BLOCK_8_COL( _blockA, 1 ); \
-    const float8 acol2 = TRANSPOSE_BLOCK_8_COL( _blockA, 2 ); \
-    const float8 acol3 = TRANSPOSE_BLOCK_8_COL( _blockA, 3 ); \
-    const float8 acol4 = TRANSPOSE_BLOCK_8_COL( _blockA, 4 ); \
-    const float8 acol5 = TRANSPOSE_BLOCK_8_COL( _blockA, 5 ); \
-    const float8 acol6 = TRANSPOSE_BLOCK_8_COL( _blockA, 6 ); \
-    const float8 acol7 = TRANSPOSE_BLOCK_8_COL( _blockA, 7 ); \
-    _result = mad( _blockB.s0, acol0, _result ); \
-    _result = mad( _blockB.s1, acol1, _result ); \
-    _result = mad( _blockB.s2, acol2, _result ); \
-    _result = mad( _blockB.s3, acol3, _result ); \
-    _result = mad( _blockB.s4, acol4, _result ); \
-    _result = mad( _blockB.s5, acol5, _result ); \
-    _result = mad( _blockB.s6, acol6, _result ); \
-    _result = mad( _blockB.s7, acol7, _result ); \
-}
-
 #define DOT_PRODUCT_8( _result, _rowA, colB )    \
 {   \
         _result.s0 = mad( _rowA, intel_sub_group_shuffle( colB, 0 ), _result.s0 );  \
