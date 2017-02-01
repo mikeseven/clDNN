@@ -123,6 +123,7 @@ struct execution_params {
     std::string topology_name;
 
     uint32_t batch;
+    bool meaningful_kernels_names;
     bool profiling;
     bool optimize_weights;
     bool use_half;

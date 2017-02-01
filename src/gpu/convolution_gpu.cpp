@@ -110,7 +110,7 @@ struct convolution_gpu : is_an_implementation {
         : outer(arg)
         , _engine_info(arg.get_network().get_engine()->get_context()->get_engine_info())
         , _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.weights_memory(0).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration))
-        , _kernel(arg.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants())
+        , _kernel(arg.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(), outer.id())
     {}
 
     gpu::jit_constants get_jit_constants() const {

@@ -66,7 +66,7 @@ struct reorder_gpu : is_an_implementation {
     : _outer(outer)
     , _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info())
     , _kernel_data(ks.get_kernel(outer, memory::traits(outer.input_memory(0).get_layout()).dimension, _engine_info.architecture, _engine_info.configuration))
-    , _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+    , _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), outer.id())
     , _exec_options(get_execution_options())
     {}
 

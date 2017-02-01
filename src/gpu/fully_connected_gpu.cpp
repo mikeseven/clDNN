@@ -71,7 +71,7 @@ struct fully_connected_gpu : is_an_implementation
     fully_connected_gpu(fully_connected& arg)
       : _outer(arg),
         _kernel_data(set_kernel_data(_outer)),
-        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
     {
         auto const& input_mem = _outer.input_memory(0);
         auto const& weights_mem = _outer.weights_memory();

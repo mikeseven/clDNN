@@ -48,7 +48,7 @@ private:
     void build_program();
 
 public:
-    kernel_id create_kernel_from_template(const std::string& template_name, jit_definitions definitions = jit_definitions());
+    kernel_id create_kernel_from_template(const std::string& template_name, jit_definitions definitions = jit_definitions(), std::string kernel_name = std::string());
     kernel_type get_kernel(kernel_id id);
 };
 

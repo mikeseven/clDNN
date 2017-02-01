@@ -34,6 +34,7 @@ struct configuration {
     enum device_types { default_device = 0, cpu, gpu, accelerator };
 
     bool enable_profiling;
+    bool meaningful_kernels_names;
     device_types device_type;
     uint32_t device_vendor;
     std::string compiler_options;

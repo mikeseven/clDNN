@@ -30,6 +30,7 @@ gpu_toolkit_config convert_configuration(const engine_configuration conf)
     gpu_toolkit_config result;
     result.compiler_options = conf.compiler_options;
     result.enable_profiling = conf.enable_profiling != 0;
+    result.meaningful_kernels_names = conf.meaningful_kernels_names != 0;
     return result;
 }
 
