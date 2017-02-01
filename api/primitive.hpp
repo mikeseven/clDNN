@@ -237,7 +237,7 @@ protected:
 
     primitive_base(const DTO* dto)
         : primitive(reinterpret_cast<const CLDNN_PRIMITIVE_DESC(primitive)*>(dto))
-        , _dto{ *dto }
+        , _dto( *dto )
     {
         if (_dto.type != PType::type_id()) throw std::invalid_argument("DTO type mismatch");
         _dto.id = _id.c_str();
