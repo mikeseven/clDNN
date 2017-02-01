@@ -18,7 +18,7 @@
 #ifndef INPUT_LAYOUT_H
 #define INPUT_LAYOUT_H
 
-#include "api/cldnn.h"
+#include "../cldnn.h"
 
 #ifdef __cplusplus
 extern "C" {

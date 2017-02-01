@@ -132,6 +132,7 @@ typedef enum /*:int32_t*/
     cldnn_format_oyxi,          // format used only for weights: o - output feature maps, i - input feature maps
     cldnn_format_yxio,          // format used only for weights: o - output feature maps, i - input feature maps
     cldnn_format_os_iyx_osv16,  // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
+    cldnn_format_bs_xs_xsv8_bsv8, // format used only for Fully connected: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice 
     cldnn_format_format_num,
     cldnn_format_any = -1
 } cldnn_format_type;

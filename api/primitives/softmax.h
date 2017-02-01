@@ -18,7 +18,7 @@
 #ifndef SOFTMAX_H
 #define SOFTMAX_H
 
-#include "api/cldnn.h"
+#include "../cldnn.h"
 
 #ifdef __cplusplus
 extern "C" {

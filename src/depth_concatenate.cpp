@@ -155,7 +155,8 @@ struct depth_concatenate_gpu : is_an_implementation
         }
 
         // Select kernel name.
-        if (input_mem.argument().format == memory::format::bfyx_f32)
+        if (input_mem.argument().format == memory::format::bfyx_f32 ||
+            input_mem.argument().format == memory::format::bfyx_f16)
         {
             kd.kernel_name = kernel_name_bfyx;
         }
@@ -216,7 +217,8 @@ namespace {
             implementation_map<depth_concatenate>::add({
                 { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), depth_concatenate_gpu::create },
                 { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), depth_concatenate_gpu::create },
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), depth_concatenate_gpu::create }
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), depth_concatenate_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), depth_concatenate_gpu::create }
             });
         }
         ~attach() {}

@@ -26,9 +26,8 @@ reorder_arg::reorder_arg(network_impl& network, std::shared_ptr<const reorder> d
 {
     auto& input_mem = input_memory(0);
 
-    if (input_mem.argument().size.raw.size() != _output.argument().size.raw.size())
-        //            throw std::runtime_error("Number of dimensions in reorder does not match. Meybe you want to use reshape primitive?"); //todo reshape
-        throw std::runtime_error("Number of dimensions in reorder does not match.");
+    if (input_mem.argument().size.raw.size() < _output.argument().size.raw.size())
+        throw std::runtime_error("Input dimension < output dimension. Reorder primitive woks only with same dimension sizes (reorder) or when input > output (flatten).");
     if (!desc->substract_per_feature.empty())
     {
         if (input_mem.argument().size.feature.size() > 1)
