@@ -523,10 +523,16 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
             kd.block_height = 1;
             kd.prefetch = 4;
         }
-        else //fallback to fixed output size
+        else if (filter_mem.argument().size.spatial[0] < 5 && filter_mem.argument().size.spatial[1] < 5)
         {
             kd.block_width = sub_group_size - filter_mem.argument().size.spatial[0] + 1;
             kd.block_height = 2;
+            kd.prefetch = 4;
+        }
+        else
+        {
+            kd.block_width = 4;
+            kd.block_height = 3;
             kd.prefetch = 4;
         }
     }
