@@ -387,7 +387,12 @@ int main(int argc, char* argv[])
         ep.use_half = parsed_args["use_half"].as<bool>();
 
         ep.use_bfyx = parsed_args["use_bfyx"].as<bool>();
-        if (!ep.use_half)
+
+        if (ep.topology_name == "squeezenet")
+        {
+            ep.use_bfyx = false;
+        }
+        else if (!ep.use_half)
         {
             if (ep.topology_name == "alexnet" || ep.topology_name == "vgg16" || ep.batch == 1)
                 ep.use_bfyx = true;
