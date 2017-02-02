@@ -162,6 +162,7 @@ struct depth_concatenate_gpu : is_an_implementation
         }
         else
         {
+            kd.gws1 = 1;
             kd.kernel_name = kernel_name;
         }
         return kd;

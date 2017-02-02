@@ -517,7 +517,7 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
         }        
         //if less than 16 values is required to compute one single row of output
         //then each WI shall compute one sinle row to maximise reuse within SIMD subgroup (this gives very nice performance results)
-        else if (output_size.spatial[0] + filter_mem.argument().size.spatial[0] - 1 < 16)
+        else if (output_size.spatial[0] + filter_mem.argument().size.spatial[0] - 1 < sub_group_size)
         {
             kd.block_width = output_size.spatial[0];
             kd.block_height = 1;
@@ -525,8 +525,8 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
         }
         else //fallback to fixed output size
         {
-            kd.block_width = 4; //note: original 6x4 has been changed to 4x3 since, on GT2, this gives better results
-            kd.block_height = 3;
+            kd.block_width = sub_group_size - filter_mem.argument().size.spatial[0] + 1;
+            kd.block_height = 2;
             kd.prefetch = 4;
         }
     }
