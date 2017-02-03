@@ -393,10 +393,7 @@ int main(int argc, char* argv[])
             ep.use_bfyx = false;
         }
         else if (!ep.use_half)
-        {
-            if (ep.topology_name == "alexnet" || ep.topology_name == "vgg16" || ep.batch == 1)
-                ep.use_bfyx = true;
-        }
+            ep.use_bfyx = true;
         else
         {
             if (ep.batch == 1)
