@@ -170,71 +170,71 @@ void network_builder::prepare_padding()
                 }
                 else if (prim->type() == cldnn::normalization::type_id())
                 {
-                        const auto _lrn = std::static_pointer_cast<const cldnn::normalization>(prim);
-                        auto new_lrn = std::make_shared<normalization>(
-                            _lrn->id(),
-                            _lrn->input().at(0),
-                            _lrn->size,
-                            _lrn->k,
-                            _lrn->alpha,
-                            _lrn->beta,
-                            _lrn->input_padding(),
-                            needed_padding
-                        );
-                        _topology_map[_lrn->id()]->primitive_desc = new_lrn;
+                    const auto _lrn = std::static_pointer_cast<const cldnn::normalization>(prim);
+                    auto new_lrn = std::make_shared<normalization>(
+                        _lrn->id(),
+                        _lrn->input().at(0),
+                        _lrn->size,
+                        _lrn->k,
+                        _lrn->alpha,
+                        _lrn->beta,
+                        _lrn->input_padding(),
+                        needed_padding
+                    );
+                    _topology_map[_lrn->id()]->primitive_desc = new_lrn;
                 }
                 else if (prim->type() == cldnn::convolution::type_id())
                 {
-                        const auto _conv = std::static_pointer_cast<const cldnn::convolution>(prim);
-                        auto new_conv = std::make_shared<convolution>(
-                            _conv->id(),
-                            _conv->input().at(0),
-                            _conv->weights,
-                            _conv->bias,
-                            _conv->input_padding(),
-                            _conv->stride,
-                            _conv->with_activation ? true : false,
-                            _conv->activation_negative_slope,
-                            needed_padding
-                        );
-                        _topology_map[_conv->id()]->primitive_desc = new_conv;
+                    const auto _conv = std::static_pointer_cast<const cldnn::convolution>(prim);
+                    auto new_conv = std::make_shared<convolution>(
+                        _conv->id(),
+                        _conv->input().at(0),
+                        _conv->weights,
+                        _conv->bias,
+                        _conv->input_padding(),
+                        _conv->stride,
+                        _conv->with_activation,
+                        _conv->activation_negative_slope,
+                        needed_padding
+                    );
+                    _topology_map[_conv->id()]->primitive_desc = new_conv;
                 }
                 else if (prim->type() == cldnn::depth_concatenate::type_id())
                 {
-                        const auto _depth_concat = std::static_pointer_cast<const cldnn::depth_concatenate>(prim);
-                        auto new_depth_concat = std::make_shared<depth_concatenate>(
-                            _depth_concat->id(),
-                            _depth_concat->input()
-                        );
-                        _topology_map[_depth_concat->id()]->primitive_desc = new_depth_concat;
-                    }
-                    else if (prim->type() == cldnn::reorder::type_id())
+                    const auto _depth_concat = std::static_pointer_cast<const cldnn::depth_concatenate>(prim);
+                    auto new_depth_concat = std::make_shared<depth_concatenate>(
+                        _depth_concat->id(),
+                        _depth_concat->input()
+                    );
+                    _topology_map[_depth_concat->id()]->primitive_desc = new_depth_concat;
+                }
+                else if (prim->type() == cldnn::reorder::type_id())
+                {
+                    const auto _reorder = std::static_pointer_cast<const cldnn::reorder>(prim);
+                    if (!_reorder->substract_per_feature.empty())
                     {
-                        const auto _reorder = std::static_pointer_cast<const cldnn::reorder>(prim);
-                        if (!_reorder->substract_per_feature.empty())
-                        {
-                            auto new_reorder = std::make_shared<reorder>(
-                                _reorder->id(),
-                                _reorder->input().at(0),
-                                _reorder->output_layout,
-                                _reorder->substract_per_feature,
-                                _reorder->input_padding(),
-                                needed_padding
-                                );
-                            _topology_map[_reorder->id()]->primitive_desc = new_reorder;
-                        }
-                        else
-                        {
-                            auto new_reorder = std::make_shared<reorder>(
-                                _reorder->id(),
-                                _reorder->input().at(0),
-                                _reorder->output_layout,
-                                _reorder->mean,
-                                _reorder->input_padding(),
-                                needed_padding
-                                );
-                            _topology_map[_reorder->id()]->primitive_desc = new_reorder;
-                        }
+                        auto new_reorder = std::make_shared<reorder>(
+                            _reorder->id(),
+                            _reorder->input().at(0),
+                            _reorder->output_layout,
+                            _reorder->substract_per_feature,
+                            _reorder->input_padding(),
+                            needed_padding
+                            );
+                        _topology_map[_reorder->id()]->primitive_desc = new_reorder;
+                    }
+                    else
+                    {
+                        auto new_reorder = std::make_shared<reorder>(
+                            _reorder->id(),
+                            _reorder->input().at(0),
+                            _reorder->output_layout,
+                            _reorder->mean,
+                            _reorder->input_padding(),
+                            needed_padding
+                            );
+                        _topology_map[_reorder->id()]->primitive_desc = new_reorder;
+                    }
                 }
                 else
                 {
@@ -298,8 +298,8 @@ void cldnn::network_builder::_prepare_for_optimization(weights_optimizer& wo, st
         new_bias,
         prim->input_padding(),
         prim->stride,
-        prim->with_activation != 0,
-        prim->negative_slope,
+        prim->with_activation,
+        prim->activation_negative_slope,
         prim->output_padding()
     );
 }
@@ -319,8 +319,8 @@ void cldnn::network_builder::_prepare_for_optimization(weights_optimizer& wo, st
         prim->input().at(0),
         new_weights.at(0),
         new_bias.at(0),
-        prim->with_activation != 0,
-        prim->negative_slope,
+        prim->with_activation,
+        prim->activation_negative_slope,
         prim->input_padding(),
         prim->output_padding()
     );
