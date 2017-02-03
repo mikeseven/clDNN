@@ -388,11 +388,7 @@ int main(int argc, char* argv[])
 
         ep.use_bfyx = parsed_args["use_bfyx"].as<bool>();
 
-        if (ep.topology_name == "squeezenet")
-        {
-            ep.use_bfyx = false;
-        }
-        else if (!ep.use_half)
+        if (!ep.use_half)
             ep.use_bfyx = true;
         else
         {
