@@ -34,7 +34,6 @@ class weights_optimizer
     cldnn::engine _engine;
 
     cldnn::primitive_id _needs_optimization(const cldnn::memory& mem, const cldnn::primitive_id& mem_id,
-                             file::weights_type type,
                              bool use_half);
 
 public:
@@ -42,7 +41,6 @@ public:
                                bool use_half = false, bool use_bfyx = false);
 
     cldnn::primitive_id create_weights_from_file(const std::string& path,
-                                               file::weights_type type,
                                                const boost::optional<bool>& use_half = boost::none);
 
     auto optimize() const -> decltype(cldnn::network(_engine, _topology).execute());

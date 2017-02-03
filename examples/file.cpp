@@ -97,7 +97,7 @@ file::arguments::arguments(const cldnn::engine& eng, const std::string& aname, w
     , weight_type(type)
 {}
 
-cldnn::memory read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::weights_type type, const cldnn::engine& engine)
+cldnn::memory read_file_v1_v2(std::ifstream &rfile, file_header &file_head, const cldnn::engine& engine)
 {
     auto read_crc = [&rfile]() -> uint32_t {
         uint32_t result;
@@ -123,25 +123,8 @@ cldnn::memory read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file
     std::unique_ptr<cldnn::layout> p_arg = nullptr;
     auto data_type = use_fp16_data ? cldnn::data_types::f16 : cldnn::data_types::f32;
 
-    switch (file_head.dimension)
-    {
-    case 1: // biases 1D
-    {
-        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, { cldnn::format::x, {static_cast<cldnn::tensor::value_type>(array[0])} }));
-        break;
-    }
-    case 2: // 2D i.e. fully connected
-    {
-        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, 
-        { cldnn::format::bx,
-        {
-            static_cast<cldnn::tensor::value_type>(array[1]),
-            static_cast<cldnn::tensor::value_type>(array[0])
-        }
-        }));
-        break;
-    }
-    case 3: // 3D mean
+    
+    if(file_head.dimension == 3) //lets be sure we load imagenet 
     {
         auto a = array[0], b = array[1], c = array[2];
         p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
@@ -153,41 +136,10 @@ cldnn::memory read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file
             static_cast<cldnn::tensor::value_type>(a)
         }
         }));
-        break;
     }
-    case 4: // 4D convolution or convolution to fc conversion
-    {
-        if (type == file::weights_type::convolution)
-        {
-            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
-            { cldnn::format::oiyx,
-            {
-                static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2]), // ofm, ifm
-                static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
-            }
-            }));
-        }
-        else if (type == file::weights_type::fully_connected)
-        {
-            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
-            { cldnn::format::bfyx,
-            {
-                static_cast<cldnn::tensor::value_type>(array[3]), // batches
-                static_cast<cldnn::tensor::value_type>(array[2]), // feature maps
-                static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
-            }
-            }));
-        }
-        else
-            throw std::runtime_error("Unsupported weights type");
-        break;
-    }
-    default:
-    {
+    else
         throw std::runtime_error("dimension mismatch");
-        break;
-    }
-    }
+
 
     auto mem = cldnn::memory::allocate(engine, *p_arg); // ofm, ifm
     auto buf = mem.pointer<char>();
@@ -339,7 +291,7 @@ cldnn::memory file::create(file::arguments arg) {
     {
     case 1:
     case 2:
-        return read_file_v1_v2(rfile, file_head, arg.weight_type, arg.engine);
+        return read_file_v1_v2(rfile, file_head, arg.engine);
     case 3:
         return read_file_v3(rfile, file_head, arg.engine);
     default:

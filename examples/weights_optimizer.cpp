@@ -23,19 +23,16 @@ weights_optimizer::weights_optimizer(const cldnn::engine& eng, int batch_size, b
     _enabled(enabled), _use_half(use_half), _use_bfyx(use_bfyx), _batch_size(batch_size), _engine(eng)
 {}
 
-cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, file::weights_type type, bool use_half)
+cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, bool use_half)
 {
     auto reorder_id = std::string("reorder_") + mem_id;
     auto data_type = use_half ? cldnn::data_types::f16 : cldnn::data_types::f32;
     auto input_size = mem.get_layout().size;
     auto expected_mem_size = input_size;
 
-    if (type == file::weights_type::bias)
-    {
-        // TODO!!! put better logic here.
-        expected_mem_size = cldnn::tensor(cldnn::format::x, { static_cast<cldnn::tensor::value_type>(mem.get_layout().count()) });
-    }
-    else if (type == file::weights_type::mean)
+    auto input_format = input_size.format;
+
+    if (mem_id == "imagenet_mean.nnd") //mean
     {
         // TODO!!! put better logic here.
         // NOTE: For reorder there is no need to reorder mean again. For mean_subtract the reorder is needed
@@ -45,7 +42,14 @@ cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& 
         //       Currently mean will not be optimized in any way (mean_subtract is not used in any topology).
         return mem_id;
     }
-    else if (type == file::weights_type::convolution)
+
+
+    if (input_format == cldnn::format::x) //bias
+    {
+        // TODO!!! put better logic here.
+        expected_mem_size = cldnn::tensor(cldnn::format::x, { static_cast<cldnn::tensor::value_type>(mem.get_layout().count()) });
+    }
+    else if (input_format == cldnn::format::oiyx || input_format == cldnn::format::yxio) //conv
     {
         // TODO!!! put better logic here.
         expected_mem_size = _use_bfyx
@@ -58,7 +62,7 @@ cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& 
                     input_size.spatial[0], input_size.spatial[1], input_size.feature[1], input_size.feature[0]  // order: "yxio"
                 });
     }
-    else if (type == file::weights_type::fully_connected)
+    else if (input_format == cldnn::format::bfyx || input_format == cldnn::format::yxfb || input_format == cldnn::format::bx || input_format == cldnn::format::xb) //fc
     {
         // TODO!!! put better logic here.
         if (cldnn::neural_memory::traits(mem.get_layout()).dimension == 4)
@@ -107,13 +111,13 @@ cldnn::primitive_id weights_optimizer::_needs_optimization(const cldnn::memory& 
 }
 
 cldnn::primitive_id weights_optimizer::create_weights_from_file(
-    const std::string& path, file::weights_type type, const boost::optional<bool>& use_half)
+    const std::string& path, const boost::optional<bool>& use_half)
 {
-    auto mem = file::create({ _engine, path, type });
+    auto mem = file::create({ _engine, path });
     auto data_id = boost::filesystem::path(path).filename().string();
     _topology.add(cldnn::data(data_id, mem));
     return _enabled
-        ? _needs_optimization(mem, data_id, type, use_half.value_or(_use_half))
+        ? _needs_optimization(mem, data_id, use_half.value_or(_use_half))
         : data_id;
 }
 
