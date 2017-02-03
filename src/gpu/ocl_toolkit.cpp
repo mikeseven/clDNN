@@ -61,20 +61,4 @@ gpu_toolkit::gpu_toolkit(const configuration& config)
     , _kernels_cache(*this)
     {}
 
-std::shared_ptr<gpu_toolkit> gpu_toolkit::get() {
-    static std::recursive_mutex mutex;
-    static std::weak_ptr<gpu_toolkit> toolkit;
-    std::lock_guard<std::recursive_mutex> create_lock{ mutex };
-    if(toolkit.expired()) {
-        std::shared_ptr<gpu_toolkit> result{ new gpu_toolkit(configuration::get()), [&](gpu_toolkit* ptr) {
-            std::lock_guard<std::recursive_mutex> delete_lock{ mutex };
-            delete ptr;
-        } };
-        toolkit = result;
-        return result;
-    }
-
-    return std::shared_ptr<gpu_toolkit>(toolkit);
-}
-
 }}

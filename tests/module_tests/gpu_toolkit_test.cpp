@@ -26,9 +26,6 @@ TEST(gpu_engine, engine_info)
 {
     engine engine;
     auto info = engine.get_info();
-    //EXPECT_GE(info.model, engine_info::models::HSW);
-    //EXPECT_GE(info.architecture, engine_info::architectures::GEN7);
-    EXPECT_GE(info.configuration, engine_info::configurations::GT0);
     EXPECT_GT(info.cores_count, 0u);
     EXPECT_GT(info.core_frequency, 0u);
 }

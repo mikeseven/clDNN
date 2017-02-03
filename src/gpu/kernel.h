@@ -32,7 +32,7 @@ protected:
     memory_arg(const cldnn::memory& mem) : _mem(mem){}
 
 public:
-    const cl::Buffer& get_buffer() const { return static_cast<const gpu_buffer*>(_mem.get())->get_buffer(); }
+    const cl::Buffer& get_buffer() const { return static_cast<const gpu_buffer*>(api_cast(_mem.get()))->get_buffer(); }
 };
 
 class input_mem : public memory_arg {
@@ -323,10 +323,10 @@ class kernel : public context_holder {
     void setArgs(cl::Kernel&) const {}
 
 public:
-    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& name, kernels_cache::jit_definitions definitions = kernels_cache::jit_definitions())
-        : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(name, definitions)) {}
-    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& name, const jit_constants& constants)
-        : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(name, constants.get_definitions())) {}
+    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& template_id, kernels_cache::jit_definitions definitions = kernels_cache::jit_definitions(), const std::string& kernel_name = std::string())
+        : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(template_id, definitions, kernel_name)) {}
+    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& template_id, const jit_constants& constants, const std::string& kernel_name = std::string())
+        : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(template_id, constants.get_definitions(), kernel_name)) {}
 
     kernel(const kernel& other) : context_holder(other.context()), _kernel_id(other._kernel_id) {}
 

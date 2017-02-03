@@ -518,8 +518,7 @@ void run_topology(const execution_params &ep)
             << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;
     }
 
-    cldnn::engine_configuration configuration;
-    configuration.enable_profiling = ep.profiling;
+    cldnn::engine_configuration configuration(ep.profiling, ep.meaningful_kernels_names);
     cldnn::engine engine(configuration);
 
     CIntelPowerGadgetLib energyLib;
@@ -542,17 +541,17 @@ void run_topology(const execution_params &ep)
     cldnn::instrumentation::timer<> timer_build;
     cldnn::layout input_layout = { ep.use_half ? cldnn::data_types::f16 : cldnn::data_types::f32, {} };
     if (ep.topology_name == "alexnet")
-        primitives = build_alexnet(ep.weights_dir, engine, input_layout, gpu_batch_size);
+        primitives = build_alexnet(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else if (ep.topology_name == "vgg16" || ep.topology_name == "vgg16_face")
-        primitives = build_vgg16(ep.weights_dir, engine, input_layout, gpu_batch_size);
+        primitives = build_vgg16(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else if (ep.topology_name == "googlenet")
-        primitives = build_googlenetv1(ep.weights_dir, engine, input_layout, gpu_batch_size);
+        primitives = build_googlenetv1(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else if (ep.topology_name == "gender")
-        primitives = build_gender(ep.weights_dir, engine, input_layout, gpu_batch_size);
+        primitives = build_gender(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else if (ep.topology_name == "microbench")
         primitives = build_microbench(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if(ep.topology_name == "squeezenet")
-        primitives = build_squeezenet(ep.weights_dir, engine, input_layout, gpu_batch_size);
+        primitives = build_squeezenet(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
 

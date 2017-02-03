@@ -125,9 +125,20 @@ struct execution_params {
     std::string topology_name;
 
     uint32_t batch;
+    bool meaningful_kernels_names;
     bool profiling;
     bool optimize_weights;
     bool use_half;
+
+    //note: this parameter is required because since bfyx is enabled in alexnet
+    //and vgg for all batch sizes but only for b1 in other topologies we cannot
+    //tell whether bfyx format should be used only from batch size. this is an issue
+    //for weights optimizer which doesn't have any informations about used topology.
+    //it can be removed if:
+    // - bfyx is enabled for all topologies and batch sizes
+    // - weights optimizer is integrated in network builder and is provided with more specific informations
+    //until then it should probably be left here as a temporary solution
+    bool use_bfyx;
 
     std::string run_single_layer;
 

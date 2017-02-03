@@ -20,7 +20,7 @@
 
 namespace cldnn
 {
-primitive_type_id softmax::type_id()
+primitive_type_id softmax_type_id()
 {
     static primitive_type_base<softmax, softmax_arg> instance;
     return &instance;

@@ -26,18 +26,13 @@
 
 using namespace cldnn;
 
-topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
+topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
     input_layout.size = { format::byxf,{ batch_size, 227, 227, 3 } };
     auto input = cldnn::input_layout("input", input_layout);
 
-    // TODO: remove after enabling bfyx for all
-    auto mem_format = format::yxfb;
-    if (batch_size == 1 && input_layout.data_type == data_types::f32)
-    {
-        mem_format = format::bfyx;
-    }
+    auto mem_format = use_bfyx ? format::bfyx : format::yxfb;
 
     // create conversion to yxfb format and subtract mean values
     tensor reorder_size = input_layout.size.transform(mem_format, 1);

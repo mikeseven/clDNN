@@ -20,16 +20,16 @@
 #include "api/primitive.hpp"
 #include "api/topology.hpp"
 #include "topology_impl.h"
+#include <memory>
 
-namespace cldnn
-{
-class network_impl;
-class primitive_arg;
-struct primitive_type
-{
-    virtual std::shared_ptr<const primitive> from_dto(const primitive_dto* dto) const = 0;
-    virtual std::shared_ptr<const primitive_arg> create_arg(network_impl& network, std::shared_ptr<const primitive> desc) const = 0;
-    virtual ~primitive_type() = default;
-    virtual layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const primitive> desc) const = 0;
-};
+namespace cldnn {
+    struct network_impl;
+    class primitive_arg;
 }
+struct cldnn_primitive_type
+{
+    virtual std::shared_ptr<const cldnn::primitive> from_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto) const = 0;
+    virtual std::shared_ptr<const cldnn::primitive_arg> create_arg(cldnn::network_impl& network, std::shared_ptr<const cldnn::primitive> desc) const = 0;
+    virtual ~cldnn_primitive_type() = default;
+    virtual cldnn::layout calc_output_layout(const cldnn::topology_map& topology_map, std::shared_ptr<const cldnn::primitive> desc) const = 0;
+};

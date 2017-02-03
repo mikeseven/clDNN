@@ -16,17 +16,14 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "depth_concatenate.h"
 #include "../primitive.hpp"
 
 namespace cldnn
 {
-BEGIN_DTO(depth_concatenate)
-END_DTO(depth_concatenate)
-
-struct depth_concatenate : public primitive_base<depth_concatenate, DTO(depth_concatenate)>
+struct depth_concatenate : public primitive_base<depth_concatenate, CLDNN_PRIMITIVE_DESC(depth_concatenate)>
 {
-    DLL_SYM static primitive_type_id type_id();
-    typedef DTO(depth_concatenate) dto;
+    CLDNN_DECLATE_PRIMITIVE(depth_concatenate)
 
     depth_concatenate(
         const primitive_id& id,

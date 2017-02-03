@@ -18,6 +18,7 @@
 #include "primitive_arg.h"
 #include "network_impl.h"
 #include "engine_impl.h"
+#include "memory_impl.h"
 
 namespace cldnn
 {
@@ -55,6 +56,6 @@ memory primitive_arg::allocate_output(network_impl& network, std::shared_ptr<con
     auto padding_size2 = padding_size.mul(2);
     auto allocation_size = output_size.add(padding_size2);
     //auto allocation_size = output_layout.size.add(desc()->output_padding().size().mul(2));
-    return network.get_engine()->allocate_buffer({ output_layout.data_type, allocation_size });
+    return api_cast(network.get_engine()->allocate_buffer({ output_layout.data_type, allocation_size }));
 }
 }

@@ -168,7 +168,7 @@ void print_2d(VVF &data) {
 	std::cout << std::endl;
 }
 
-TEST(convolution_f32_fw_gpu, basic_convolution) {
+TEST(DISABLED_convolution_f32_fw_gpu, basic_convolution) {
 	//  Filter : 2x3
 	//  Stride : 2x1
 	//  Input  : 4x5
@@ -245,7 +245,7 @@ TEST(convolution_f32_fw_gpu, basic_convolution) {
 	//print_2d(temp_vec);
 }
 
-TEST(convolution_f32_fw_gpu, basic_convolution_input_padding) {
+TEST(DISABLED_convolution_f32_fw_gpu, basic_convolution_input_padding) {
 	//  Filter : 2x2
 	//  Stride : 1x1
 	//  Input  : 3x4
@@ -346,7 +346,7 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_padding) {
 	//print_2d(temp_vec);
 }
 
-TEST(convolution_f32_fw_gpu, basic_convolution_input_and_output_padding) {
+TEST(DISABLED_convolution_f32_fw_gpu, basic_convolution_input_and_output_padding) {
 	//  Filter : 2x2
 	//  Stride : 1x1
 	//  Input  : 3x4

@@ -16,13 +16,13 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/event.hpp"
+#include "api_impl.h"
 #include "refcounted_obj.h"
 #include "gpu/ocl_toolkit.h"
 
 namespace cldnn
 {
-class event_impl: public refcounted_obj<event_impl>
+struct event_impl: public refcounted_obj<event_impl>
 {
 public:
     event_impl(const cl::Event& event) : _event(event)
@@ -30,7 +30,7 @@ public:
 
     void wait() const { _event.wait(); }
     virtual void set() { throw std::logic_error("cannot set OCL event"); }
-    void add_event_handler(event::event_handler handler, void* data)
+    void add_event_handler(cldnn_event_handler handler, void* data)
     {
         std::lock_guard<std::mutex> lock(_handlers_mutex);
         if (_event.getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>() == CL_COMPLETE)
@@ -47,7 +47,7 @@ public:
         }
     }
     cl::Event get() const { return _event; }
-    array_ref<event::profiling_interval_ref> get_profiling_info();
+    const std::vector<cldnn_profiling_interval>& get_profiling_info();
 protected:
     //TODO prevent long handler execution problem
     static void CL_CALLBACK callBack(cl_event, cl_int, void* me)
@@ -71,8 +71,8 @@ protected:
 
     std::mutex _handlers_mutex;
     cl::Event _event;
-    std::vector<std::pair<event::event_handler, void*>> _handlers;
-    std::vector<event::profiling_interval_ref> _profiling_info;
+    std::vector<std::pair<cldnn_event_handler, void*>> _handlers;
+    std::vector<cldnn_profiling_interval> _profiling_info;
 };
 
 class user_event_gpu : public event_impl
@@ -83,4 +83,7 @@ public:
 private:
     cl::UserEvent _user_event;
 };
+
 }
+
+API_CAST(::cldnn_event, cldnn::event_impl)

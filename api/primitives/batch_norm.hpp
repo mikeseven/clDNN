@@ -16,21 +16,15 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "batch_norm.h"
 #include "../primitive.hpp"
 
 namespace cldnn
 {
-BEGIN_DTO(batch_norm)
-        primitive_id_ref mean;
-        primitive_id_ref variance;
-        bool use_global_stats;
-        float epsilon;
-END_DTO(batch_norm)
 
-struct batch_norm : public primitive_base<batch_norm, DTO(batch_norm)>
+struct batch_norm : public primitive_base<batch_norm, CLDNN_PRIMITIVE_DESC(batch_norm)>
 {
-    DLL_SYM static primitive_type_id type_id();
-    typedef DTO(batch_norm) dto;
+    CLDNN_DECLATE_PRIMITIVE(batch_norm)
 
     batch_norm(
         const primitive_id& id,
@@ -63,16 +57,16 @@ struct batch_norm : public primitive_base<batch_norm, DTO(batch_norm)>
 
     const primitive_id mean;
     const primitive_id variance;
-    const bool& use_global_stats;
-    const float& epsilon;
+    const bool use_global_stats;
+    const float epsilon;
 
 protected:
     std::vector<primitive_id> get_dependencies() const override { return{ mean, variance }; }
 
     void init_dto()
     {
-        _dto.mean = mean;
-        _dto.variance = variance;
+        _dto.mean = mean.c_str();
+        _dto.variance = variance.c_str();
     }
 };
 }

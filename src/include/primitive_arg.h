@@ -19,13 +19,13 @@
 
 #include "api/memory.hpp"
 #include "api/primitive.hpp"
-#include "api/network.hpp"
 #include "event_impl.h"
 #include <memory>
 
 namespace neural { namespace gpu { class gpu_toolkit; } }
 namespace cldnn
 {
+struct network_impl;
 struct primitive_impl {
     virtual refcounted_obj_ptr<event_impl> execute(const std::vector<refcounted_obj_ptr<event_impl>>& events) = 0;
     virtual ~primitive_impl() = default;
@@ -66,16 +66,16 @@ template<class PType>
 class primitive_arg_base : public primitive_arg
 {
 public:
-    const typename PType::dto& argument;
+    const PType& argument;
 protected:
     primitive_arg_base(network_impl& network, std::shared_ptr<const PType> desc, const memory& output_memory)
         : primitive_arg(network, desc, output_memory)
-        , argument(*(_desc->get_dto()->as<PType>()))
+        , argument(*std::static_pointer_cast<const PType>(_desc))
     {}
 
     primitive_arg_base(network_impl& network, std::shared_ptr<const PType> desc, const layout& output_layout)
         : primitive_arg(network, desc, output_layout)
-        , argument(*(_desc->get_dto()->as<PType>()))
+        , argument(*std::static_pointer_cast<const PType>(_desc))
     {}
 };
 }

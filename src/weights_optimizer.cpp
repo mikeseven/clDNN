@@ -52,7 +52,7 @@ cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, c
     {
         // TODO!!! put better logic here.
         expected_mem_size = batch_size == 1 && data_type != data_types::f16
-            ? cldnn::tensor(cldnn::format::os_iyx_osv16, 
+            ? cldnn::tensor(cldnn::format::os_iyx_osv16,
                 {
                     input_size.feature[0], input_size.feature[1], input_size.spatial[0], input_size.spatial[1] // order: "oiyx"
                 })
@@ -67,18 +67,33 @@ cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, c
         if (cldnn::neural_memory::traits(mem.get_layout()).dimension == 4)
         {
             expected_mem_size = batch_size == 1 && data_type != data_types::f16
-                ? cldnn::tensor(cldnn::format::fyxb,
+            {
+                expected_mem_size = cldnn::tensor(cldnn::format::bs_xs_xsv8_bsv8,
+                {
+                    input_size.batch[0], input_size.feature[0] * input_size.spatial[0] * input_size.spatial[1]
+                });
+            }
+            else
+            {
+                expected_mem_size = _use_bfyx && _batch_size == 1
+                    ? cldnn::tensor(cldnn::format::fyxb,
                     {
                         input_size.feature[0], input_size.spatial[0], input_size.spatial[1], input_size.batch[0] // order: "fyxb"
                     })
-                : cldnn::tensor(cldnn::format::yxfb,
+                    : cldnn::tensor(cldnn::format::yxfb,
                     {
                         input_size.spatial[0], input_size.spatial[1], input_size.feature[0], input_size.batch[0]  // order: "yxfb"
                     });
+            }
         }
         else if (cldnn::neural_memory::traits(mem.get_layout()).dimension == 2)
         {
-            expected_mem_size = cldnn::tensor(cldnn::format::xb,
+            expected_mem_size = _use_bfyx && _batch_size >= 8 && !use_half 
+                ? cldnn::tensor(cldnn::format::bs_xs_xsv8_bsv8,
+                {
+                    input_size.batch[0], input_size.spatial[0]  // order: "bs_xs_bsv8_xsv8"
+                })
+                : cldnn::tensor(cldnn::format::xb,
             {
                 input_size.spatial[0], input_size.batch[0]  // order: "xb"
             });

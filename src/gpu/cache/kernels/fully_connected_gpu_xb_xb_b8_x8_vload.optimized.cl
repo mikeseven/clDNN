@@ -4,15 +4,36 @@
     #define ACTIVATION(output, input) output = input;
 #endif
 
+#define MULTIPLY_BLOCKS_8x8(_result, _blockA, _blockB)  \
+{   \
+    const float8 acol0 = TRANSPOSE_BLOCK_8_COL( _blockA, 0 ); \
+    const float8 acol1 = TRANSPOSE_BLOCK_8_COL( _blockA, 1 ); \
+    const float8 acol2 = TRANSPOSE_BLOCK_8_COL( _blockA, 2 ); \
+    const float8 acol3 = TRANSPOSE_BLOCK_8_COL( _blockA, 3 ); \
+    const float8 acol4 = TRANSPOSE_BLOCK_8_COL( _blockA, 4 ); \
+    const float8 acol5 = TRANSPOSE_BLOCK_8_COL( _blockA, 5 ); \
+    const float8 acol6 = TRANSPOSE_BLOCK_8_COL( _blockA, 6 ); \
+    const float8 acol7 = TRANSPOSE_BLOCK_8_COL( _blockA, 7 ); \
+    _result = mad( _blockB.s0, acol0, _result ); \
+    _result = mad( _blockB.s1, acol1, _result ); \
+    _result = mad( _blockB.s2, acol2, _result ); \
+    _result = mad( _blockB.s3, acol3, _result ); \
+    _result = mad( _blockB.s4, acol4, _result ); \
+    _result = mad( _blockB.s5, acol5, _result ); \
+    _result = mad( _blockB.s6, acol6, _result ); \
+    _result = mad( _blockB.s7, acol7, _result ); \
+}
 
-__attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
+#define SUB_GROUP_SIZE 8
+
+__attribute__((reqd_work_group_size(SUB_GROUP_SIZE, 1, 1)))
 KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
     const __global float* input, 
     __global float* output, 
     const __global float* weight,
     const __global float* bias)
 {
-	const uint global_id = get_global_id(0);
+    const uint global_id = get_global_id(0);
 	const uint group_id = get_global_id(1); // which part of batches we are computing, for example for batch 64 we compute batches 0..31 for group_id == 0 and batches 32..65 for group_id == 1
 	uint sub_group_idx = get_local_id(0) % 8;
 
@@ -171,4 +192,5 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
 #endif // #if NEURONS_PER_WORK_ITEM > 1
 }
 
+#undef MULTIPLY_BLOCKS_8x8
 #undef ACTIVATION

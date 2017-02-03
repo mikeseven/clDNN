@@ -73,26 +73,6 @@ static const char* kernels_header = R"__krnl(
                  as_half2(intel_sub_group_shuffle(_block, 6)),  \
                  as_half2(intel_sub_group_shuffle(_block, 7)));
 
-#define MULTIPLY_BLOCKS_8x8(_result, _blockA, _blockB)  \
-{   \
-    const float8 acol0 = TRANSPOSE_BLOCK_8_COL( _blockA, 0 ); \
-    const float8 acol1 = TRANSPOSE_BLOCK_8_COL( _blockA, 1 ); \
-    const float8 acol2 = TRANSPOSE_BLOCK_8_COL( _blockA, 2 ); \
-    const float8 acol3 = TRANSPOSE_BLOCK_8_COL( _blockA, 3 ); \
-    const float8 acol4 = TRANSPOSE_BLOCK_8_COL( _blockA, 4 ); \
-    const float8 acol5 = TRANSPOSE_BLOCK_8_COL( _blockA, 5 ); \
-    const float8 acol6 = TRANSPOSE_BLOCK_8_COL( _blockA, 6 ); \
-    const float8 acol7 = TRANSPOSE_BLOCK_8_COL( _blockA, 7 ); \
-    _result = mad( _blockB.s0, acol0, _result ); \
-    _result = mad( _blockB.s1, acol1, _result ); \
-    _result = mad( _blockB.s2, acol2, _result ); \
-    _result = mad( _blockB.s3, acol3, _result ); \
-    _result = mad( _blockB.s4, acol4, _result ); \
-    _result = mad( _blockB.s5, acol5, _result ); \
-    _result = mad( _blockB.s6, acol6, _result ); \
-    _result = mad( _blockB.s7, acol7, _result ); \
-}
-
 #define DOT_PRODUCT_8( _result, _rowA, colB )    \
 {   \
         _result.s0 = mad( _rowA, intel_sub_group_shuffle( colB, 0 ), _result.s0 );  \
@@ -171,16 +151,17 @@ namespace {
             return *this;
         }
 
-        code_builder& decoration_macro(const std::string& name, const std::string& prefix, const std::string& postfix)
+        code_builder& decoration_macro(const std::string& name, const std::string& prefix, const std::string& postfix, const std::string& name_prefix = std::string())
         {
-            oss << "#define " << name << "(name) " << prefix << " name" << (postfix.empty() ? "" : "##_") << postfix << std::endl;
+            oss << "#define " << name << "(name) " << prefix << " " + name_prefix + "_##" + "name" << (postfix.empty() ? "" : "##_") << postfix << std::endl;
             return register_macro(name);
         }
+
 
         code_builder& value_macro(const std::string& name, const std::string& value)
         {
             oss << "#define " << name << " " << value << std::endl;
-            return register_macro(name);
+            return register_macro(name.substr(0, name.find('(')));
         }
 
         std::string str()
@@ -197,16 +178,22 @@ namespace {
 
 kernels_cache::kernels_cache(gpu_toolkit& context): _context(context) {}
 
-kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, jit_definitions definitions) {
+kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_name) {
     // TODO: FIXIT: more than one kernel can be created for same template_name and definitions
-    auto kernel_num = definitions.empty() ? "" : std::to_string(_kernel_codes.size());
-    auto kernel_name = template_name + (kernel_num.empty() ? "" : "_") + kernel_num;
 
+    std::replace(kernel_name.begin(), kernel_name.end(), '.', '_');
+    auto kernel_num = definitions.empty() ? "" : std::to_string(_kernel_codes.size());
+
+    if (kernel_name.empty() || !_context.get_configuration().meaningful_kernels_names)
+        kernel_name = template_name;
+
+    kernel_name += (kernel_num.empty() ? "" : "_") + kernel_num;
+    
     class code_builder code;
     code.add_line("\n//====================================================")
         .add_line("// Kernel template: " + template_name + " ")
         .add_line("// Kernel name: " + kernel_name)
-        .decoration_macro("KERNEL", "__kernel void", kernel_num)
+        .value_macro("KERNEL(name)", "__kernel void " + kernel_name)
         .decoration_macro("FUNC", "", kernel_num)
         .decoration_macro("FUNC_CALL", "", kernel_num);
     for (auto& definition : definitions) {

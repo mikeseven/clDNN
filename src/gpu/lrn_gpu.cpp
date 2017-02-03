@@ -66,7 +66,7 @@ struct lrn_gpu : is_an_implementation
         : _outer(outer),
         _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info()),
         _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration)),
-        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
     {}
 
     static kernel_data set_default(const normalization::response& arg)
@@ -131,7 +131,7 @@ struct lrn_gpu : is_an_implementation
         auto alpha_sign = std::signbit(outer.argument.alpha) ? -1.0f : 1.0f;
         auto alpha_abs_sqrt = std::sqrt(std::abs(outer.argument.alpha));
 
-        auto input_padding = outer.argument.input_padding.size().transform(cldnn::format::xy, 0);
+        auto input_padding = outer.argument.input_padding().size().transform(cldnn::format::xy, 0);
         if (input_padding.spatial[0] != 0 || input_padding.spatial[1] != 0)
         {
             throw std::runtime_error("input padding not implemented in LRN yet!");
@@ -151,8 +151,8 @@ struct lrn_gpu : is_an_implementation
             gpu::make_jit_constant("FP16_UNIT_USED",    static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_VAL_ZERO",     data.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("INPUT_PADDING",     outer.argument.input_padding.size()),
-            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding.size())
+            gpu::make_jit_constant("INPUT_PADDING",     outer.argument.input_padding().size()),
+            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding().size())
         };
 
         return mem_consts;
@@ -175,13 +175,13 @@ struct lrn_gpu : is_an_implementation
 
 };
 
-lrn_gpu::kernel_data default_yxfb_f32(const normalization::response& arg)
+lrn_gpu::kernel_data default_yxfb(const normalization::response& arg)
 {
     lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
     return kd;
 }
 
-lrn_gpu::kernel_data default_bfyx_f32(const normalization::response& arg)
+lrn_gpu::kernel_data default_bfyx(const normalization::response& arg)
 {
     auto& input_mem = arg.input_memory(0);
     lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
@@ -201,9 +201,10 @@ lrn_gpu::kernel_data default_bfyx_f32(const normalization::response& arg)
 }
 
 kd_selector_t<lrn_gpu::kernel_data, normalization::response, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> lrn_gpu::ks = {
-    { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
-    { std::make_tuple(memory::format::yxfb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
-    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32 },
+    { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb },
+    { std::make_tuple(memory::format::yxfb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb },
+    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx },
+    { std::make_tuple(memory::format::bfyx_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx },
 };
 
 
@@ -213,6 +214,7 @@ kd_selector_t<lrn_gpu::kernel_data, normalization::response, neural::memory::for
                 implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), lrn_gpu::create);
                 implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), lrn_gpu::create);
                 implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), lrn_gpu::create);
+                implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), lrn_gpu::create);
             }
             ~attach() {}
         };

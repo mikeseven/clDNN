@@ -21,7 +21,7 @@
 
 namespace cldnn
 {
-primitive_type_id eltwise::type_id()
+primitive_type_id eltwise_type_id()
 {
     static primitive_type_base<eltwise, eltwise_arg> instance;
     return &instance;

@@ -16,33 +16,13 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+
 #include <functional>
 #include <string>
+#include <type_traits>
+#include <utility>
 
-// exporting symbols form dynamic library
-#ifdef EXPORT_NEURAL_SYMBOLS
-#   if defined(_MSC_VER)
-//  Microsoft
-#      define DLL_SYM __declspec(dllexport)
-#   elif defined(__GNUC__)
-//  GCC
-#      define DLL_SYM __attribute__((visibility("default")))
-#   else
-#      define DLL_SYM
-#      pragma warning Unknown dynamic link import/export semantics.
-#   endif
-#else //import dll
-#   if defined(_MSC_VER)
-//  Microsoft
-#      define DLL_SYM __declspec(dllimport)
-#   elif defined(__GNUC__)
-//  GCC
-#      define DLL_SYM
-#   else
-#      define DLL_SYM
-#      pragma warning Unknown dynamic link import/export semantics.
-#   endif
-#endif
+#include "cldnn.h"
 
 namespace {
 // There is no portable half precision floating point support.
@@ -65,13 +45,9 @@ typedef half half_t;
 typedef half_impl half_t;
 #endif
 
-#define CLDNN_SUCCESS  0
-#define CLDNN_ERROR   -1
-#define CLDNN_UNSUPPORTED -2
-
 namespace cldnn {
 
-typedef int32_t status_t;
+using status_t = ::cldnn_status;
 
 #define CLDNN_THROW(msg, status) throw std::runtime_error(msg);
 
@@ -85,13 +61,16 @@ T check_status(std::string err_msg, std::function<T(status_t*)> func)
     return result;
 }
 
-inline void check_status(std::string err_msg, status_t status)
+template<>
+inline void check_status<void>(std::string err_msg, std::function<void(status_t*)> func)
 {
+    status_t status;
+    func(&status);
     if (status != CLDNN_SUCCESS)
         CLDNN_THROW(err_msg, status);
 }
 
-#define API_CLASS(the_class) static_assert(std::is_standard_layout<the_class>::value, #the_class " has to be 'standart layout' class");
+#define CLDNN_API_CLASS(the_class) static_assert(std::is_standard_layout<the_class>::value, #the_class " has to be 'standart layout' class");
 
 }
 
@@ -109,4 +88,55 @@ template<typename T>
 typename std::enable_if<std::is_integral<T>::value, bool>::type is_aligned_to(T size, size_t align)
 {
     return !(size % align);
+}
+
+/// Computes ceil(@p val / @p divider) on unsigned integral numbers.
+///
+/// Computes division of unsigned integral numbers and rounds result up to full number (ceiling).
+/// The function works for unsigned integrals only. Signed integrals are converted to corresponding
+/// unsigned ones.
+///
+/// @tparam T1   Type of @p val. Type must be integral (SFINAE).
+/// @tparam T2   Type of @p divider. Type must be integral (SFINAE).
+///
+/// @param val       Divided value. If value is signed, it will be converted to corresponding unsigned type.
+/// @param divider   Divider value. If value is signed, it will be converted to corresponding unsigned type.
+///
+/// @return   Result of ceil(@p val / @p divider). The type of result is determined as if in normal integral
+///           division, except each operand is converted to unsigned type if necessary.
+template <typename T1, typename T2>
+constexpr auto ceil_div(T1 val, T2 divider)
+    -> typename std::enable_if<std::is_integral<T1>::value && std::is_integral<T2>::value,
+                               decltype(std::declval<typename std::make_unsigned<T1>::type>() / std::declval<typename std::make_unsigned<T2>::type>())>::type
+{
+    typedef typename std::make_unsigned<T1>::type UT1;
+    typedef typename std::make_unsigned<T2>::type UT2;
+    typedef decltype(std::declval<UT1>() / std::declval<UT2>()) RetT;
+
+    return static_cast<RetT>((static_cast<UT1>(val) + static_cast<UT2>(divider) - 1U) / static_cast<UT2>(divider));
+}
+
+/// Rounds @p val to nearest multiply of @p rounding that is greater or equal to @p val.
+///
+/// The function works for unsigned integrals only. Signed integrals are converted to corresponding
+/// unsigned ones.
+///
+/// @tparam T1       Type of @p val. Type must be integral (SFINAE).
+/// @tparam T2       Type of @p rounding. Type must be integral (SFINAE).
+///
+/// @param val        Value to round up. If value is signed, it will be converted to corresponding unsigned type.
+/// @param rounding   Rounding value. If value is signed, it will be converted to corresponding unsigned type.
+///
+/// @return   @p val rounded up to nearest multiply of @p rounding. The type of result is determined as if in normal integral
+///           division, except each operand is converted to unsigned type if necessary.
+template <typename T1, typename T2>
+constexpr auto round_up_to(T1 val, T2 rounding)
+    -> typename std::enable_if<std::is_integral<T1>::value && std::is_integral<T2>::value,
+                               decltype(std::declval<typename std::make_unsigned<T1>::type>() / std::declval<typename std::make_unsigned<T2>::type>())>::type
+{
+    typedef typename std::make_unsigned<T1>::type UT1;
+    typedef typename std::make_unsigned<T2>::type UT2;
+    typedef decltype(std::declval<UT1>() / std::declval<UT2>()) RetT;
+
+    return static_cast<RetT>(ceil_div(val, rounding) * static_cast<UT2>(rounding));
 }

@@ -30,7 +30,7 @@
 
 namespace cldnn
 {
-primitive_type_id depth_concatenate::type_id()
+primitive_type_id depth_concatenate_type_id()
 {
     static primitive_type_base<depth_concatenate, depth_concatenate_arg> instance;
     return &instance;
@@ -40,14 +40,27 @@ layout depth_concatenate_arg::calc_output_layout(const topology_map& topology_ma
 {
     auto& input_ids = desc->input();
     auto input0_desc = topology_map.at(input_ids.at(0))->primitive_desc;
+    auto input_layout = input0_desc->type()->calc_output_layout(topology_map, input0_desc);
+    auto result_sizes = input_layout.size.sizes();
+    auto input_format = input_layout.size.format;
 
-    auto result = input0_desc->type()->calc_output_layout(topology_map, input0_desc);
-    for(size_t i = 1; i < input_ids.size(); i++)
+    // get indicies of feature coordinates and initialize particular result coordinate to 0
+    auto& format_order = input_format.order();
+    assert(result_sizes.size() == format_order.size());
+    if (input_layout.size.feature.size() != 1) throw std::domain_error("depth_concatenate supports only one feature dimension");
+
+    auto feature_index = format_order.find_first_of(format_traits::feature_chars());
+    assert(feature_index != std::string::npos);
+
+    // calculate sum of features from all inputs
+    result_sizes[feature_index] = 0;
+    for(auto& id : input_ids)
     {
-        auto input_desc = topology_map.at(input_ids[i])->primitive_desc;
-        result.size.feature[0] += input_desc->type()->calc_output_layout(topology_map, input_desc).size.feature[0];
+        auto input_desc = topology_map.at(id)->primitive_desc;
+        auto input_sizes = input_desc->type()->calc_output_layout(topology_map, input_desc).size.sizes();
+        result_sizes[feature_index] += input_sizes[feature_index];
     }
-    return result;
+    return layout{input_layout.data_type, {input_format, result_sizes}};
 }
 
 depth_concatenate_arg::depth_concatenate_arg(network_impl& network, std::shared_ptr<const depth_concatenate> desc)
@@ -92,6 +105,7 @@ struct depth_concatenate_gpu : is_an_implementation
     {
         size_t input_idx;
         size_t gws0;
+        size_t gws1;
         size_t lws0;
         std::string kernel_name;
         bool fp16_unit_used;
@@ -108,13 +122,13 @@ struct depth_concatenate_gpu : is_an_implementation
         auto context = outer.get_network().get_engine()->get_context();
         auto engine_info = context->get_engine_info();
 
-        auto inputs_count = _outer.argument.input.size();
+        auto inputs_count = _outer.argument.input().size();
 
         _kernels_with_data.reserve(inputs_count);
         for (size_t input_idx = 0; input_idx < inputs_count; ++input_idx)
         {
             auto data = set_kernel_data(input_idx, _outer, engine_info);
-            gpu::kernel kernel(context, data.kernel_name, get_jit_constants(_outer, data));
+            gpu::kernel kernel(context, data.kernel_name, get_jit_constants(_outer, data), _outer.id());
 
             _kernels_with_data.emplace_back(std::move(kernel), std::move(data));
         }
@@ -132,6 +146,7 @@ struct depth_concatenate_gpu : is_an_implementation
 
         // Determine global work sizes.
         kd.gws0 = input_mem.argument().size.spatial[0] * input_mem.argument().size.spatial[1];
+        kd.gws1 = input_mem.argument().size.batch[0];
         // Find largest positive local work size that is divider for global work size.
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
         while (kd.gws0 % kd.lws0 != 0)
@@ -140,15 +155,14 @@ struct depth_concatenate_gpu : is_an_implementation
         }
 
         // Select kernel name.
-        if (input_mem.argument().format == memory::format::bfyx_f32)
+        if (input_mem.argument().format == memory::format::bfyx_f32 ||
+            input_mem.argument().format == memory::format::bfyx_f16)
         {
-            if (input_mem.argument().size.batch[0] != 1)
-                throw std::runtime_error("Depth concatenate for bfyx_f32 for batch != 1 not implemented yet!");
-
             kd.kernel_name = kernel_name_bfyx;
         }
         else
         {
+            kd.gws1 = 1;
             kd.kernel_name = kernel_name;
         }
         return kd;
@@ -159,26 +173,21 @@ struct depth_concatenate_gpu : is_an_implementation
         if (!data.fp16_supported && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        auto input_padding = outer.argument.input_padding.size().transform(cldnn::format::xy, 0);
-        if (input_padding.spatial[0] != 0 || input_padding.spatial[1] != 0)
-        {
-            throw std::runtime_error("input padding not implemented in depth concatenate yet!");
-        }
-
         return gpu::jit_constants {
-            gpu::make_jit_constant("INPUT",          outer.input_memory(data.input_idx).argument().size),
+            gpu::make_jit_constant("INPUT",          outer.input().at(data.input_idx)->non_padded_output_layout().size),
             gpu::make_jit_constant("OUTPUT",         outer.output_memory().argument().size),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(data.fp16_supported)),
             gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",      data.fp16_unit_used ? "half" : "float"),
-            gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding.size())
+            gpu::make_jit_constant("INPUT_PADDING",  outer.input().at(data.input_idx)->desc()->output_padding().size()),
+            gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding().size())
         };
     }
 
     cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
     {
 
-        size_t inputs_count = _outer.argument.input.size();
+        size_t inputs_count = _outer.argument.input().size();
 
         const auto& output_mem = _outer.output_memory();  // output
 
@@ -192,7 +201,7 @@ struct depth_concatenate_gpu : is_an_implementation
 
             uint32_t input_depth_count = input_mem.argument().size.feature[0];
             auto event = _kernels_with_data[input_idx].first.run<gpu::input_mem, gpu::output_mem, cl_uint>
-                ({{kd.gws0}, {kd.lws0}}, tmp_events, input_mem, output_mem, depth_offset);
+                ({{kd.gws0, kd.gws1}, {kd.lws0}}, tmp_events, input_mem, output_mem, depth_offset);
             depth_offset += input_depth_count;
             tmp_events.clear();
             tmp_events.push_back(event);
@@ -209,7 +218,8 @@ namespace {
             implementation_map<depth_concatenate>::add({
                 { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), depth_concatenate_gpu::create },
                 { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), depth_concatenate_gpu::create },
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), depth_concatenate_gpu::create }
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), depth_concatenate_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), depth_concatenate_gpu::create }
             });
         }
         ~attach() {}

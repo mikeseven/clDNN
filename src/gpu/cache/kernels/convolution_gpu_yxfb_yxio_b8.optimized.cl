@@ -1,7 +1,7 @@
-#ifdef RELU
-#define ACTIVATION(output, input) output = max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f);
+#if RELU
+    #define ACTIVATION(output, input) output = max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f);
 #else
-#define ACTIVATION(output, input) output = input;
+    #define ACTIVATION(output, input) output = input;
 #endif
 
 __attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))

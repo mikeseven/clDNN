@@ -68,7 +68,7 @@ struct pooling_gpu : is_an_implementation {
         : _outer(outer),
         _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info()),
         _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration)),
-        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
     {}
 
     static kernel_data set_default(const pooling& arg)
@@ -150,7 +150,7 @@ struct pooling_gpu : is_an_implementation {
             gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_INIT_VAL_MAX", data.fp16_unit_used ? "-HALF_MAX" : "-FLT_MAX"),
             gpu::make_jit_constant("UNIT_INIT_VAL_AVG", data.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding.size())
+            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding().size())
         };
         return mem_consts;
     }
@@ -187,29 +187,13 @@ struct pooling_gpu : is_an_implementation {
     }
 };
 
-pooling_gpu::kernel_data defauly_yxfb_f32(const pooling& arg)
+pooling_gpu::kernel_data defauly_yxfb(const pooling& arg)
 {
     pooling_gpu::kernel_data kd = pooling_gpu::set_default(arg);
-
-    // Select kernel name.
-    auto needs_boundary = pooling_gpu::needs_boundary_check(arg);
-    switch (arg.argument.mode)
-    {
-    case cldnn::pooling_mode::max:
-        kd.kernel_name = needs_boundary ? kernel_name_max_offset : kernel_name_max;
-        break;
-    case cldnn::pooling_mode::average:
-        kd.kernel_name = needs_boundary ? kernel_name_average_offset : kernel_name_average;
-        break;
-
-    default:
-        throw std::runtime_error("Unknown pooling mode.");
-    }
-
     return kd;
 }
 
-pooling_gpu::kernel_data defauly_bfyx_f32(const pooling& arg)
+pooling_gpu::kernel_data defauly_bfyx(const pooling& arg)
 {
     pooling_gpu::kernel_data kd = pooling_gpu::set_default(arg);
 
@@ -217,7 +201,7 @@ pooling_gpu::kernel_data defauly_bfyx_f32(const pooling& arg)
     auto needs_boundary = pooling_gpu::needs_boundary_check(arg);
     if (needs_boundary && arg.argument.mode != cldnn::pooling_mode::max)
         throw std::runtime_error("Not implemented boundary in pooling bfyx!");
-    if (kd.gws0 > 256)
+    //if (kd.gws0 > 256)
     {
         while (kd.gws0 % kd.lws0 != 0)
         {
@@ -247,9 +231,10 @@ pooling_gpu::kernel_data defauly_bfyx_f32(const pooling& arg)
 }
 
 kd_selector_t<pooling_gpu::kernel_data, pooling, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> pooling_gpu::ks = {
-    { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), defauly_yxfb_f32 },
-    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), defauly_bfyx_f32 },
-    { std::make_tuple(memory::format::yxfb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+    { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), defauly_yxfb },
+    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), defauly_bfyx },
+    { std::make_tuple(memory::format::yxfb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), defauly_yxfb },
+    { std::make_tuple(memory::format::bfyx_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), defauly_bfyx },
 };
 
 namespace
@@ -262,6 +247,7 @@ namespace
             implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), pooling_gpu::create);
             implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), pooling_gpu::create);
             implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), pooling_gpu::create);
         }
 
         ~attach()

@@ -22,11 +22,10 @@
 #include "primitive.hpp"
 
 namespace cldnn {
-class topology_impl;
 struct topology
 {
     topology()
-        : _impl(check_status<topology_impl*>("failed to create topology", create_topology_impl))
+        : _impl(check_status<cldnn_topology>("failed to create topology", cldnn_create_topology))
     {}
 
     template<class ...Args>
@@ -36,41 +35,62 @@ struct topology
         add<Args...>(args...);
     }
 
-    DLL_SYM topology(const topology& other);
-    DLL_SYM topology& operator=(const topology& other);
-    DLL_SYM ~topology();
+    topology(const topology& other) :_impl(other._impl)
+    {
+        retain();
+    }
+
+    topology& operator=(const topology& other)
+    {
+        if (_impl == other._impl) return *this;
+        release();
+        _impl = other._impl;
+        retain();
+        return *this;
+    }
+
+    ~topology()
+    {
+        release();
+    }
+
     friend bool operator==(const topology& lhs, const topology& rhs) { return lhs._impl == rhs._impl; }
     friend bool operator!=(const topology& lhs, const topology& rhs) { return !(lhs == rhs); }
 
     template<class PType>
     void add(const PType& desc)
     {
-        status_t status = add_primitive_dto(desc.get_dto());
-        if (status != CLDNN_SUCCESS)
-            CLDNN_THROW("primitive add failed", status);
+        check_status<void>("primitive add failed", [&](status_t* status) { cldnn_add_primitive(_impl, desc.get_dto(), status); });
     }
 
     template<class PType, class ...Args>
     void add(const PType& desc, Args... args)
     {
-        status_t status = add_primitive_dto(desc.get_dto());
-        if (status != CLDNN_SUCCESS)
-            CLDNN_THROW("primitive add failed", status);
+        check_status<void>("primitive add failed", [&](status_t* status) { cldnn_add_primitive(_impl, desc.get_dto(), status); });
         add<Args...>(args...);
     }
 
-    topology_impl* get() const { return _impl; }
+    cldnn_topology get() const { return _impl; }
 
 private:
     friend struct engine;
     friend struct network;
-    topology_impl* _impl;
-    topology(topology_impl* impl) :_impl(impl) {}
+    cldnn_topology _impl;
+    topology(cldnn_topology impl) :_impl(impl)
+    {
+        if (_impl == nullptr) throw std::invalid_argument("implementation pointer should not be null");
+    }
 
-    DLL_SYM static topology_impl* create_topology_impl(status_t* status);
-    DLL_SYM status_t add_primitive_dto(const primitive_dto* dto);
+    void retain()
+    {
+        check_status<void>("retain topology failed", [=](status_t* status) { cldnn_retain_topology(_impl, status); });
+    }
+    void release()
+    {
+        check_status<void>("retain topology failed", [=](status_t* status) { cldnn_release_topology(_impl, status); });
+    }
 };
 
-API_CLASS(topology)
+CLDNN_API_CLASS(topology)
 
 }

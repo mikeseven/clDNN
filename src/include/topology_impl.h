@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/topology.hpp"
+#include "api_impl.h"
 #include "refcounted_obj.h"
 #include "api/primitive.hpp"
 #include <map>
@@ -36,7 +36,7 @@ public:
 
 typedef std::map<primitive_id, std::shared_ptr<topology_node>> topology_map;
 
-class topology_impl : public refcounted_obj<topology_impl>
+struct topology_impl : public refcounted_obj<topology_impl>
 {
 public:
     topology_impl(const topology_map& map = topology_map()) : _primitives(map) {}
@@ -57,3 +57,5 @@ private:
     topology_map _primitives;
 };
 }
+
+API_CAST(::cldnn_topology, cldnn::topology_impl)

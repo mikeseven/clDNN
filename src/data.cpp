@@ -21,22 +21,24 @@
 
 namespace cldnn
 {
-primitive_type_id data::type_id()
+primitive_type_id data_type_id()
 {
     static primitive_type_base<data, data_arg> instance;
     return &instance;
 }
 
 namespace {
-    memory attach_or_copy_data(network_impl& network, memory mem)
+    cldnn::memory attach_or_copy_data(network_impl& network, const memory& mem)
     {
         auto engine = network.get_engine();
-        if (mem.get()->is_allocated_by(engine))
+        auto mem_ref = mem.get();
+        auto mem_impl = api_cast(mem_ref);
+        if (mem_impl->is_allocated_by(engine))
         {
             return mem;
         }
 
-        memory result(engine->allocate_buffer(mem.get_layout()));
+        memory result(api_cast(engine->allocate_buffer(mem.get_layout())));
         pointer<char> src(mem);
         pointer<char> dst(result);
         std::copy(src.begin(), src.end(), dst.begin());

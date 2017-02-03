@@ -20,7 +20,7 @@
 
 namespace cldnn
 {
-primitive_type_id normalization::type_id()
+primitive_type_id normalization_type_id()
 {
     static primitive_type_base<normalization, normalization_arg> instance;
     return &instance;

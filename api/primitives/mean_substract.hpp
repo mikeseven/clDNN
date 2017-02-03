@@ -16,18 +16,14 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "mean_substract.h"
 #include "../primitive.hpp"
 
 namespace cldnn
 {
-BEGIN_DTO(mean_substract)
-        primitive_id_ref mean;
-END_DTO(mean_substract)
-
-struct mean_substract : public primitive_base<mean_substract, DTO(mean_substract)>
+struct mean_substract : public primitive_base<mean_substract, CLDNN_PRIMITIVE_DESC(mean_substract)>
 {
-    DLL_SYM static primitive_type_id type_id();
-    typedef DTO(mean_substract) dto;
+    CLDNN_DECLATE_PRIMITIVE(mean_substract)
 
     mean_substract(
         const primitive_id& id,
@@ -56,7 +52,7 @@ protected:
 
     void init_dto()
     {
-        _dto.mean = mean;
+        _dto.mean = mean.c_str();
     }
 };
 }
