@@ -252,13 +252,10 @@ cldnn::memory file::create(file::arguments arg) {
     file_header file_head;
     rfile.read(reinterpret_cast<char *>(&file_head), sizeof(file_head));
 
-    switch (file_head.version)
-    {
-    case 3:
+    if(file_head.version == 3)
         return read_file(rfile, file_head, arg.engine);
-    default:
+    else
         throw std::runtime_error("file version not supported");
-    }
 }
 
 void file::serialize(const cldnn::memory& data, const std::string& name)
