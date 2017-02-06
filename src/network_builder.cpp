@@ -96,7 +96,6 @@ namespace cldnn
     // TODO: case when input primitive is used by multiple primitives
     void network_builder::prepare_padding()
     {
-#ifndef CLDNN_BUILT_FROM_OPENVX
         for (auto& pair : _topology_map)
         {
             // right now we optimize only for convolution
@@ -257,6 +256,5 @@ namespace cldnn
                 }
             }
         }
-#endif
     }
 }

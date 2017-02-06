@@ -31,6 +31,11 @@ if(MSVC)
       message(FATAL_ERROR "[clDNN] Minimum required version of Microsoft Visual C++ compiler is ${CLDNN__MIN_COMPILER_VERSION__MSVC}. Please update compiler.")
     endif()
   endif()
+  
+  CHECK_CXX_COMPILER_FLAG("-std=c++14" CLDNN_CompilerSupportsCxx14)
+  if(NOT CLDNN_CompilerSupportsCxx14)
+    message(STATUS "[clDNN] Compiler does not support C++14. Please update compiler.")
+  endif()
 
   intel_flag_register_settings(
       CompilerOptions

@@ -51,7 +51,7 @@ namespace cldnn
             }
 
             auto result = PType_Arg::calc_output_layout(topology_map, std::static_pointer_cast<const PType>(desc));
-            it->second->output_layout = std::unique_ptr<layout>(new layout(std::forward<layout>(result)));       
+            it->second->output_layout = std::make_unique<layout>(result);
             return result;
         };
 

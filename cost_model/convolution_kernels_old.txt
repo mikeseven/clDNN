@@ -1,0 +1,71 @@
+Convolution:
+------------
+type:F16
+inDims:227, 227, 3, 1
+outDims:55, 55, 96, 1
+filterSize:11, 11
+padding:0, 0
+stride:4, 4
+
+Convolution:
+------------
+type:F16
+inDims:27, 27, 48, 1
+outDims:27, 27, 128, 1
+filterSize:5, 5
+padding:2, 2
+stride:1, 1
+
+Convolution:
+------------
+type:F16
+inDims:27, 27, 48, 1
+outDims:27, 27, 128, 1
+filterSize:5, 5
+padding:2, 2
+stride:1, 1
+
+Convolution:
+------------
+type:F16
+inDims:13, 13, 256, 1
+outDims:13, 13, 384, 1
+filterSize:3, 3
+padding:1, 1
+stride:1, 1
+
+Convolution:
+------------
+type:F16
+inDims:13, 13, 192, 1
+outDims:13, 13, 192, 1
+filterSize:3, 3
+padding:1, 1
+stride:1, 1
+
+Convolution:
+------------
+type:F16
+inDims:13, 13, 192, 1
+outDims:13, 13, 128, 1
+filterSize:3, 3
+padding:1, 1
+stride:1, 1
+
+Convolution:
+------------
+type:F16
+inDims:13, 13, 192, 1
+outDims:13, 13, 192, 1
+filterSize:3, 3
+padding:1, 1
+stride:1, 1
+
+Convolution:
+------------
+type:F16
+inDims:13, 13, 192, 1
+outDims:13, 13, 128, 1
+filterSize:3, 3
+padding:1, 1
+stride:1, 1

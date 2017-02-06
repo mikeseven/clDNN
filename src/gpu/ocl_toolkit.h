@@ -46,7 +46,6 @@ class gpu_toolkit;
 class context_holder {
 protected:
     std::shared_ptr<gpu_toolkit> _context;
-    context_holder();
     context_holder(std::shared_ptr<gpu_toolkit> context) : _context(context) {}
     virtual ~context_holder() = default;
     const std::shared_ptr<gpu_toolkit>& context() const { return _context; }
@@ -84,9 +83,7 @@ class gpu_toolkit {
     kernels_cache _kernels_cache;
 //    cl::Program _program;
     std::vector<instrumentation::profiling_info> _profiling_info;
-    std::string extensions;
 
-    static std::shared_ptr<gpu_toolkit>get();
     friend class context_holder;
 public:
     gpu_toolkit(const configuration& configuration = neural::gpu::configuration());
@@ -100,7 +97,6 @@ public:
     void report_profiling(const instrumentation::profiling_info& info) { _profiling_info.push_back(info); }
     const std::vector<instrumentation::profiling_info>& get_profiling_info() const { return _profiling_info; }
     engine_info_internal get_engine_info() const { return _engine_info; }
-    inline bool extension_supported(const std::string ext) { return extensions.find(ext) != std::string::npos; }
 
     gpu_toolkit(const gpu_toolkit& other) = delete;
     gpu_toolkit(gpu_toolkit&& other) = delete;
@@ -109,6 +105,4 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline context_holder::context_holder() : _context(gpu_toolkit::get()) {}
-
 }}

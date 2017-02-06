@@ -194,20 +194,17 @@ using make_indexer_tt_t = typename make_indexer_tt<TypeTupleTy>::type;
 
 // -----------------------------------------------------------------------------------------------------------------------
 
-template< class T >
-using decay_t = typename std::decay<T>::type;
-
 namespace detail
 {
 template <template <typename> class DefaultValSelectorTTy,
           std::size_t DefaultedStartPos,
           std::size_t Idx,
           typename ArgTy>
-constexpr auto select_arg_or_default(ArgTy&& arg) -> decay_t<ArgTy>
+constexpr auto select_arg_or_default(ArgTy&& arg) -> std::decay_t<ArgTy>
 {
     return (Idx < DefaultedStartPos)
         ? std::forward<ArgTy>(arg)
-        : DefaultValSelectorTTy<decay_t<ArgTy>>::value;
+        : DefaultValSelectorTTy<std::decay_t<ArgTy>>::value;
 }
 
 template <template <typename> class DefaultValSelectorTTy,
@@ -215,7 +212,7 @@ template <template <typename> class DefaultValSelectorTTy,
           std::size_t ... Idxs,
           typename ... ArgTys>
 constexpr auto make_partially_defaulted_std_tuple(index_tuple<Idxs ...>&&, ArgTys&& ... args)
-    -> std::tuple<decay_t<ArgTys> ...>
+    -> std::tuple<std::decay_t<ArgTys> ...>
 {
     return std::make_tuple(
         select_arg_or_default<DefaultValSelectorTTy, DefaultedStartPos, Idxs>(std::forward<ArgTys>(args)) ...);
@@ -225,7 +222,7 @@ constexpr auto make_partially_defaulted_std_tuple(index_tuple<Idxs ...>&&, ArgTy
 template <template <typename> class DefaultValSelectorTTy,
           std::size_t DefaultedStartPos,
           typename ... ArgTys>
-constexpr auto make_partially_defaulted_std_tuple(ArgTys&& ... args) -> std::tuple<decay_t<ArgTys> ...>
+constexpr auto make_partially_defaulted_std_tuple(ArgTys&& ... args) -> std::tuple<std::decay_t<ArgTys> ...>
 {
     return detail::make_partially_defaulted_std_tuple<DefaultValSelectorTTy, DefaultedStartPos>(
         make_indexer_tt_t<type_tuple<ArgTys ...>>(),

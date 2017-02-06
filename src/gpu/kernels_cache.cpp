@@ -17,7 +17,6 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "kernels_cache.h"
 #include "ocl_toolkit.h"
-#include <iterator>
 #include <algorithm>
 #include <cassert>
 #include <sstream>
@@ -170,8 +169,7 @@ namespace {
             std::ostringstream os;
             os << oss.str();
             os << code << std::endl;
-            
-            std::for_each(std::begin(defined_macroses), std::end(defined_macroses), [&](const std::string& name) { os << "#undef " << name << std::endl; });
+            std::for_each(std::crbegin(defined_macroses), std::crend(defined_macroses), [&](const std::string& name) { os << "#undef " << name << std::endl; });
             return os.str();
         }
     };

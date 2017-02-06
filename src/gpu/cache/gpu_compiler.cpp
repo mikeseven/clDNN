@@ -33,48 +33,9 @@ code inject_jit(const jit& compile_options, const code& code)
 binary_data gpu_compiler::compile(context* context, const jit& compile_options, const code& code_src) // throws cl::BuildError
 {
     auto& clContext = context->context();
-    auto& clDevice = context->device();
     code source = inject_jit(compile_options, code_src);
-
-    cl_int status = CL_SUCCESS;
-    cl::Program program = cl::Program(clContext, source, false, &status);
-
-    if (status == CL_SUCCESS)
-    {
-        try
-        {
-            status = program.build(cl::vector<cl::Device>(1, clDevice), " -cl-no-subgroup-ifp  -cl-unsafe-math-optimizations");
-            //status = program.build(cl::vector<cl::Device>(1, clDevice), " -cl-no-subgroup-ifp");
-        }
-        catch (const std::exception &)
-        {
-            status = CL_BUILD_PROGRAM_FAILURE;
-        }
-
-        if (CL_SUCCESS != status)
-        {
-#ifndef NDEBUG
-            if (CL_BUILD_PROGRAM_FAILURE == status)
-            {
-                cl_int getLogStatus;
-                std::string buildLog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(clDevice, &getLogStatus);
-                std::cout << buildLog + "\n";
-
-                std::istringstream stream(source);
-                std::string line;
-                unsigned int lineNumber = 1;
-                while (std::getline(stream, line))
-                {
-                    std:: cout << lineNumber << ": " << line << "\n";
-                    lineNumber++;
-                }
-
-                std::cout << buildLog + "\n";
-            }
-#endif
-        }
-    }
-
+    cl::Program program(clContext, source, false);
+	program.compile();
     auto binaries = program.getInfo<CL_PROGRAM_BINARIES>();
 	assert(binaries.size() == 1 && "There should be only one binary");
 	return binary_data(binaries[0].begin(), binaries[0].end());

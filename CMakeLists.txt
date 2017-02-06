@@ -98,12 +98,6 @@ set(CLDNN_BUILD__DEFAULT_OUT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/build/out")
 # Prefix for all targets in internal pass.
 set(CLDNN_BUILD__PROJ_NAME_PREFIX "")
 
-# Minimum versions of compilers.
-set(CLDNN__MIN_COMPILER_VERSION__MSVC  "19.0")
-set(CLDNN__MIN_COMPILER_VERSION__GCC   "4.8")
-set(CLDNN__MIN_COMPILER_VERSION__CLANG "3.5")
-set(CLDNN__MIN_COMPILER_VERSION__ICC   "17.0")
-
 # Single/multi-configuration generator helpers.
 if(CMAKE_CFG_INTDIR STREQUAL ".")
   set(CLDNN__TARGET_CFG_VAR "${CMAKE_BUILD_TYPE}")
@@ -423,9 +417,27 @@ mark_as_advanced(CLDNN__INCLUDE_EXAMPLES)
 
 # ======================================================================================================
 
+# Include and build: Examples of usage of clDNN framework.
+set(CLDNN__INCLUDE_CORE ON CACHE BOOL "Include and build: clDNN core.")
+mark_as_advanced(CLDNN__INCLUDE_CORE)
+
+# ======================================================================================================
+
+# Include and build: Examples of usage of clDNN framework.
+set(CLDNN__INCLUDE_KERNEL_SELECTOR ON CACHE BOOL "Include and build: clDNN kernel selector.")
+mark_as_advanced(CLDNN__INCLUDE_KERNEL_SELECTOR)
+
+# ======================================================================================================
+
 # Include and build: Tests (unit tests and small acceptance tests) for clDNN framework.
 set(CLDNN__INCLUDE_TESTS ON CACHE BOOL "Include and build: clDNN framework's tests.")
 mark_as_advanced(CLDNN__INCLUDE_TESTS)
+
+# ======================================================================================================
+
+# Include and build: Tests (unit tests and small acceptance tests) for clDNN framework.
+set(CLDNN__INCLUDE_COST_MODEL ON CACHE BOOL "Include and build: clDNN cost model.")
+mark_as_advanced(CLDNN__INCLUDE_COST_MODEL)
 
 # ======================================================================================================
 
@@ -455,6 +467,18 @@ mark_as_advanced(CLDNN__CMAKE_DEBUG)
 
 
 # ======================================================================================================
+
+# Minimum versions of compilers.
+set(CLDNN__MIN_COMPILER_VERSION__MSVC  "19.0")
+set(CLDNN__MIN_COMPILER_VERSION__CLANG "3.5")
+set(CLDNN__MIN_COMPILER_VERSION__ICC   "17.0")
+
+if (CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_TESTS OR CLDNN__INCLUDE_EXAMPLES)
+  set(CLDNN__MIN_COMPILER_VERSION__GCC "5.2")
+else()
+  set(CLDNN__MIN_COMPILER_VERSION__GCC "4.8")
+endif()
+
 # ======================================================================================================
 # ======================================================================================================
 
@@ -651,6 +675,7 @@ message(STATUS "[clDNN]  - boost ver. used to build:   ${CLDNN__BOOST_VERSION}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Include/Build examples:     ${CLDNN__INCLUDE_EXAMPLES}")
 message(STATUS "[clDNN]  - Include/Build tests:        ${CLDNN__INCLUDE_TESTS}")
+message(STATUS "[clDNN]  - Include/Build cost_model:   ${CLDNN__INCLUDE_COST_MODEL}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Run tests:                  ${CLDNN__RUN_TESTS}")
 message(STATUS "[clDNN]")
@@ -1095,13 +1120,20 @@ link_directories(
   )
 
 # =================================== Link targets and dependencies ====================================
-
-add_subdirectory(src)
+if(CLDNN__INCLUDE_CORE)
+  add_subdirectory(src)
+endif()
+if(CLDNN__INCLUDE_KERNEL_SELECTOR)
+  add_subdirectory(kernel_selector)
+endif()
 if(CLDNN__INCLUDE_EXAMPLES)
   add_subdirectory(examples)
 endif()
 if(CLDNN__INCLUDE_TESTS)
   add_subdirectory(tests)
+endif()
+if(CLDNN__INCLUDE_COST_MODEL)
+  add_subdirectory(cost_model)
 endif()
 
 # ======================================================================================================
