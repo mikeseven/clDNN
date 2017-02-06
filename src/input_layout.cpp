@@ -42,7 +42,7 @@ void input_layout_arg::set_data(memory_impl* mem)
     }
     else
     {
-        pointer<char> src(api_cast(mem));
+        pointer<char> src(memory(api_cast(mem), true));
         pointer<char> dst(_output);
         std::copy(src.begin(), src.end(), dst.begin());
     }
