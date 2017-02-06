@@ -385,7 +385,6 @@ int main(int argc, char* argv[])
         ep.profiling = parsed_args["profiling"].as<bool>();
         ep.optimize_weights = parsed_args["optimize_weights"].as<bool>();
         ep.use_half = parsed_args["use_half"].as<bool>();
-
         ep.use_bfyx = parsed_args["use_bfyx"].as<bool>();
 
         if (!ep.use_half)
