@@ -149,6 +149,9 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
 
 #endif // #if NEURONS_PER_WORK_ITEM > 1
 
+    if(neuronIdx >= OUTPUT_ELEMENTS_COUNT)
+        return;
+
     vstore8(blockC00, out_id, output);
 #if BATCHES_PER_WORK_ITEM >= 16
     vstore8(blockC01, out_id + 1, output);
@@ -160,8 +163,10 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
 
 #if NEURONS_PER_WORK_ITEM > 1
 
-    vstore8(blockC10, out_id+INPUT_BATCH_NUM, output);
+    if(neuronIdx + 8 >= OUTPUT_ELEMENTS_COUNT)
+        return;
 
+    vstore8(blockC10, out_id+INPUT_BATCH_NUM, output);
 #if BATCHES_PER_WORK_ITEM >= 16
     vstore8(blockC11, out_id+INPUT_BATCH_NUM+1, output);
 #if BATCHES_PER_WORK_ITEM >= 32

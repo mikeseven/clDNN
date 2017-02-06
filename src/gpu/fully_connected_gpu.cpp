@@ -187,6 +187,7 @@ struct fully_connected_gpu : is_an_implementation
 
             mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", get_neurons_per_work_item(output_mem))); // how many neurons for a single batch will a single work item produce
             mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item));                 // how many batches will a single work item compute
+            mem_consts.add_constant(gpu::make_jit_constant("OUTPUT_ELEMENTS_COUNT", output_mem.count() / output_mem.argument().size.batch[0]));
         }
         return mem_consts;
     }
@@ -317,11 +318,10 @@ fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const full
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
     bool batch_multiple_of_8 = arg.input_memory(0).argument().size.batch[0] % 8 == 0;
 
-    if (batch_multiple_of_8 &&
-        (arg.output_memory().count() / arg.output_memory().argument().size.batch[0]) % 8 == 0)
+    if (batch_multiple_of_8)
     {
         size_t groups_per_batches = get_local_groups_size(arg.output_memory());
-        kd.gws0 = arg.output_memory().count() / (get_neurons_per_work_item(arg.output_memory()) * get_batches_per_work_item(arg.output_memory()) * groups_per_batches);
+        kd.gws0 = align_to(arg.output_memory().count() / (get_neurons_per_work_item(arg.output_memory()) * get_batches_per_work_item(arg.output_memory()) * groups_per_batches), 8);
         kd.gws1 = groups_per_batches;
         kd.lws0 = 8;
         kd.lws1 = 1;
@@ -330,7 +330,7 @@ fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const full
     else
     {
         // TODO: implement this case
-        throw std::runtime_error("Not implemented bs_xs_bsv8_xsv8_f32 for elements not dividable by 8");
+        throw std::runtime_error("Not implemented bs_xs_bsv8_xsv8_f32 for batch not multiple of 8");
     }
 
     return kd;
