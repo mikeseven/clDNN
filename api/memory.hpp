@@ -182,6 +182,7 @@ struct neural_memory
             yxio_f32,   // format used only for weights: o - output feature maps, i - input feature maps
             os_iyx_osv16_f32, // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
             bs_xs_xsv8_bsv8_f32, // format used only for Fully connected: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice, xsv - 8 values of single slice 
+            bs_x_bsv16_f32,      // format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx)
             byxf_b24_f32,        // for convolution_cpu_generic
             yxoi_o4_f32,       // for convolution_cpu_generic
             os_yxi_sv16_f32,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
@@ -201,6 +202,8 @@ struct neural_memory
             oyxi_f16,          // format used only for weights: o - output feature maps, i - input feature maps
             yxio_f16,          // format used only for weights: o - output feature maps, i - input feature maps
             os_iyx_osv16_f16,  // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
+            bs_xs_xsv8_bsv8_f16, // format used only for Fully connected: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice, xsv - 8 values of single slice
+            bs_x_bsv16_f16,    // format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx)
             byxf_b24_f16,      // for convolution_cpu_generic
             yxoi_o4_f16,       // for convolution_cpu_generic
             os_yxi_sv16_f16,   // format used only for weights: os - output slice, i - input feature maps, sv16 - 16 values of single slice
@@ -255,6 +258,7 @@ struct neural_memory
         case cldnn::format::yxio: return format::type::yxio_f32;
         case cldnn::format::os_iyx_osv16: return format::type::os_iyx_osv16_f32;
         case cldnn::format::bs_xs_xsv8_bsv8: return format::type::bs_xs_xsv8_bsv8_f32;
+        case cldnn::format::bs_x_bsv16: return format::type::bs_x_bsv16_f32;
         default: throw std::invalid_argument("unsupported format");
         }
     }
@@ -300,6 +304,7 @@ struct neural_memory
         case format::type::yxio_f32: return cldnn::format::yxio;
         case format::type::os_iyx_osv16_f32: return cldnn::format::os_iyx_osv16;
         case format::type::bs_xs_xsv8_bsv8_f32: return cldnn::format::bs_xs_xsv8_bsv8;
+        case format::type::bs_x_bsv16_f32: return cldnn::format::bs_x_bsv16;
         default: throw std::invalid_argument("unsupported format");
         }
     }

@@ -59,6 +59,7 @@ struct format
         yxio = cldnn_format_yxio, // format used only for weights: o - output feature maps, i - input feature maps
         os_iyx_osv16 = cldnn_format_os_iyx_osv16, // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
         bs_xs_xsv8_bsv8 = cldnn_format_bs_xs_xsv8_bsv8, // format used only for Fully connected: bs - batch slice, xs - x slice, xsv8 - 8 values of single slice, bsv8 - 8 values of single slice 
+        bs_x_bsv16 = cldnn_format_bs_x_bsv16, // format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx)
 
         format_num = cldnn_format_format_num,
         any = cldnn_format_any,
@@ -83,7 +84,8 @@ struct format
             { oyxi,{ 1, 2, 2, "oyxi" } },
             { yxio,{ 1, 2, 2, "yxio" } },
             { os_iyx_osv16, { 1, 2, 2, "oiyx"}},
-            { bs_xs_xsv8_bsv8, { 1, 1, 1, "bx"}}
+            { bs_xs_xsv8_bsv8, { 1, 1, 1, "bx"}},
+            { bs_x_bsv16, { 1, 1, 1, "bx"}}
         };
         return traits.at(fmt);
     }
@@ -334,6 +336,10 @@ struct tensor
             sizes[0] = align_to(sizes[0], 8);
             sizes[1] = align_to(sizes[1], 8);
         }
+        else if(this->format == cldnn::format::bs_x_bsv16 && !is_aligned_to(sizes[0], 16))
+        {
+            sizes[0] = align_to(sizes[0], 16);
+        }
         return std::accumulate(
             sizes.begin(),
             sizes.end(),
@@ -375,6 +381,11 @@ struct tensor
             my_sizes[1] = align_to(my_sizes[1], 8);
             adjusted_coords[0] = align_to(adjusted_coords[0], 8);
             adjusted_coords[1] = align_to(adjusted_coords[1], 8);
+        }
+        else if (this->format == cldnn::format::bs_x_bsv16 && !is_aligned_to(my_sizes[0], 16))
+        {
+            my_sizes[0] = align_to(my_sizes[0], 16);
+            adjusted_coords[0] = align_to(adjusted_coords[0], 16);
         }
 
         assert(my_sizes.size() == adjusted_coords.size());

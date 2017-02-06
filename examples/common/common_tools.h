@@ -140,6 +140,7 @@ struct execution_params {
     // - weights optimizer is integrated in network builder and is provided with more specific informations
     //until then it should probably be left here as a temporary solution
     bool use_bfyx;
+    bool use_bs;
 
     std::string run_single_layer;
 
