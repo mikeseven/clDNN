@@ -139,7 +139,6 @@ namespace cldnn
 
                     const auto add_padding = [](cldnn::padding newpadd, auto const& current, auto&&... params)
                     {
-                        assert(newpadd.size().format == current->output_padding().size().format && "New padding with different format?");
                         auto currpadd = current->output_padding().size().transform(newpadd.size().format, 0);
 
                         bool needs_update = false;
