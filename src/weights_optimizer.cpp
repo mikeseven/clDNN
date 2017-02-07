@@ -33,12 +33,10 @@ cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, c
     auto input_size = mem.get_layout().size;
     auto expected_mem_size = input_size;
 
-    if (type == weights_type::bias)
-    {
-        // TODO!!! put better logic here.
-        expected_mem_size = cldnn::tensor(cldnn::format::x, { static_cast<cldnn::tensor::value_type>(mem.get_layout().count()) });
-    }
-    else if (type == weights_type::mean)
+    auto input_format = input_size.format;
+
+
+    if (mem_id == "imagenet_mean.nnd")
     {
         // TODO!!! put better logic here.
         // NOTE: For reorder there is no need to reorder mean again. For mean_subtract the reorder is needed
@@ -48,7 +46,13 @@ cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, c
         //       Currently mean will not be optimized in any way (mean_subtract is not used in any topology).
         return mem_id;
     }
-    else if (type == weights_type::convolution)
+
+    if (input_format == cldnn::format::x) //bias
+    {
+        // TODO!!! put better logic here.
+        expected_mem_size = cldnn::tensor(cldnn::format::x, { static_cast<cldnn::tensor::value_type>(mem.get_layout().count()) });
+    }
+    else if (input_format == cldnn::format::oiyx || input_format == cldnn::format::yxio) //conv
     {
         // TODO!!! put better logic here.
         expected_mem_size = cldnn::tensor(cldnn::format::os_iyx_osv16,
@@ -56,7 +60,7 @@ cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, c
             input_size.feature[0], input_size.feature[1], input_size.spatial[0], input_size.spatial[1] // order: "oiyx"
         });
     }
-    else if (type == weights_type::fully_connected)
+    else if (input_format == cldnn::format::bfyx || input_format == cldnn::format::yxfb || input_format == cldnn::format::bx || input_format == cldnn::format::xb) //fc
     {
         // TODO!!! put better logic here.
         if (cldnn::neural_memory::traits(mem.get_layout()).dimension == 4)
