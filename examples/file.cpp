@@ -91,112 +91,13 @@ template<typename T_type, typename... T_args> std::unique_ptr<T_type> make_uniqu
 
 } //namespace {
 
-file::arguments::arguments(const cldnn::engine& eng, const std::string& aname, weights_type type)
+file::arguments::arguments(const cldnn::engine& eng, const std::string& aname)
     : engine(eng)
     , name(aname)
-    , weight_type(type)
 {}
 
-cldnn::memory read_file_v1_v2(std::ifstream &rfile, file_header &file_head, file::weights_type type, const cldnn::engine& engine)
-{
-    auto read_crc = [&rfile]() -> uint32_t {
-        uint32_t result;
-        rfile.read(reinterpret_cast<char *>(&result), sizeof(uint32_t));
-        return result;
-    };
 
-    // load header, verify 32-bit crc
-    if (read_crc() != crc32(&file_head, sizeof(file_head), CRC_INIT)) throw std::runtime_error("nn_data_t header crc mismatch");
-    if ((file_head.data_sizeof != sizeof(float) || file_head.data_type != 'F') &&
-        (file_head.data_sizeof != sizeof(half_t) || file_head.data_type != 'H')) throw std::runtime_error("nn_data_t has invalid type");
-    auto use_fp16_data = file_head.data_type == 'H';
-    // load size array, verify 32-bit crc
-    auto array = std::vector<uint64_t>(file_head.dimension);
-    //std::unique_ptr<uint64_t>(new uint64_t[file_head.dimension]);
-    auto array_size = file_head.dimension * sizeof(uint64_t);
-    rfile.read(reinterpret_cast<char *>(&array[0]), array_size);
-    if (read_crc() != crc32(&array[0], array_size, CRC_INIT)) 
-        throw std::runtime_error("nn_data_t size array crc mismatch");
-
-    // create target nn::data & load data into it               
-
-    std::unique_ptr<cldnn::layout> p_arg = nullptr;
-    auto data_type = use_fp16_data ? cldnn::data_types::f16 : cldnn::data_types::f32;
-
-    switch (file_head.dimension)
-    {
-    case 1: // biases 1D
-    {
-        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, { cldnn::format::x, {static_cast<cldnn::tensor::value_type>(array[0])} }));
-        break;
-    }
-    case 2: // 2D i.e. fully connected
-    {
-        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, 
-        { cldnn::format::bx,
-        {
-            static_cast<cldnn::tensor::value_type>(array[1]),
-            static_cast<cldnn::tensor::value_type>(array[0])
-        }
-        }));
-        break;
-    }
-    case 3: // 3D mean
-    {
-        auto a = array[0], b = array[1], c = array[2];
-        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
-        { cldnn::format::bfyx,
-        {
-            static_cast<cldnn::tensor::value_type>(1),
-            static_cast<cldnn::tensor::value_type>(c),
-            static_cast<cldnn::tensor::value_type>(b),
-            static_cast<cldnn::tensor::value_type>(a)
-        }
-        }));
-        break;
-    }
-    case 4: // 4D convolution or convolution to fc conversion
-    {
-        if (type == file::weights_type::convolution)
-        {
-            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
-            { cldnn::format::oiyx,
-            {
-                static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2]), // ofm, ifm
-                static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
-            }
-            }));
-        }
-        else if (type == file::weights_type::fully_connected)
-        {
-            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
-            { cldnn::format::bfyx,
-            {
-                static_cast<cldnn::tensor::value_type>(array[3]), // batches
-                static_cast<cldnn::tensor::value_type>(array[2]), // feature maps
-                static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
-            }
-            }));
-        }
-        else
-            throw std::runtime_error("Unsupported weights type");
-        break;
-    }
-    default:
-    {
-        throw std::runtime_error("dimension mismatch");
-        break;
-    }
-    }
-
-    auto mem = cldnn::memory::allocate(engine, *p_arg); // ofm, ifm
-    auto buf = mem.pointer<char>();
-    rfile.read(buf.data(), buf.size());
-
-    return mem;
-}
-
-cldnn::memory read_file_v3(std::ifstream &rfile, file_header &file_head, const cldnn::engine& engine)
+cldnn::memory read_file(std::ifstream &rfile, file_header &file_head, const cldnn::engine& engine)
 {
     file_header_ext_2 fh2;
     rfile.read(reinterpret_cast<char *>(&fh2), sizeof(fh2));
@@ -226,99 +127,115 @@ cldnn::memory read_file_v3(std::ifstream &rfile, file_header &file_head, const c
 
     std::unique_ptr<cldnn::layout> p_arg = nullptr;
 
-    switch (format)
-    {
-    case cldnn::format::oiyx: //CONV 
-    {
-        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
-        { cldnn::format::oiyx,
-        {
-            static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2]), // ofm, ifm
-            static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
-        }
-        }));
-        break;
-    }
 
-    case cldnn::format::bfyx: //FC
+    if (file_head.dimension == 3) //lets be sure we load imagenet 
     {
+        auto a = array[0], b = array[1], c = array[2];
         p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
         { cldnn::format::bfyx,
         {
-            static_cast<cldnn::tensor::value_type>(array[3]), // batches
-            static_cast<cldnn::tensor::value_type>(array[2]), // feature maps
-            static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
+            static_cast<cldnn::tensor::value_type>(1),
+            static_cast<cldnn::tensor::value_type>(c),
+            static_cast<cldnn::tensor::value_type>(b),
+            static_cast<cldnn::tensor::value_type>(a)
         }
         }));
-        break;
     }
-
-    case cldnn::format::bx: // 2D
+    else
     {
-        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
-        { cldnn::format::bx,
+        switch (format)
         {
-            static_cast<cldnn::tensor::value_type>(array[1]),
-            static_cast<cldnn::tensor::value_type>(array[0])
-        }
-        }));
-        break;
-    }
-
-    case cldnn::format::x: // 1D
-    {
-        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, { cldnn::format::x,{ static_cast<cldnn::tensor::value_type>(array[0]) } }));
-        break;
-
-    }
-
-    // FP32
-    case cldnn::format::oyxi:
-    case cldnn::format::yxoi:
-    case cldnn::format::yxio:
-    {
-        auto size = cldnn::tensor(cldnn::format::oiyx,
+        case cldnn::format::oiyx: //CONV 
         {
-            static_cast<cldnn::tensor::value_type>(array[0]), static_cast<cldnn::tensor::value_type>(array[1]), // ofm, ifm
-            static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2])  // kernel spatials y, x
+            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
+            { cldnn::format::oiyx,
+            {
+                static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2]), // ofm, ifm
+                static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
+            }
+            }));
+            break;
         }
-        ).transform(format, 1);
-        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, size));
-        break;
-    }
 
-    // FP32
-    case cldnn::format::byxf:
-    case cldnn::format::yxfb:
-    {
-        auto size = cldnn::tensor(cldnn::format::byxf,
+        case cldnn::format::bfyx: //FC
         {
-            static_cast<cldnn::tensor::value_type>(array[0]), // batch
-            static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2]),  // kernel spatials y, x
-            static_cast<cldnn::tensor::value_type>(array[1]), // fm
+            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
+            { cldnn::format::bfyx,
+            {
+                static_cast<cldnn::tensor::value_type>(array[3]), // batches
+                static_cast<cldnn::tensor::value_type>(array[2]), // feature maps
+                static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
+            }
+            }));
+            break;
         }
-        ).transform(format, 1);
-        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, size));
-        break;
-    }
 
-    // FP32
-    case cldnn::format::xb:
-    {
-        auto size = cldnn::tensor(cldnn::format::xb,
+        case cldnn::format::bx: // 2D
         {
-            static_cast<cldnn::tensor::value_type>(array[1]), // x
-            static_cast<cldnn::tensor::value_type>(array[0]), // batch
+            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
+            { cldnn::format::bx,
+            {
+                static_cast<cldnn::tensor::value_type>(array[1]),
+                static_cast<cldnn::tensor::value_type>(array[0])
+            }
+            }));
+            break;
         }
-        );
-        p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, size));
-        break;
-    }
 
-    default:
-        throw std::runtime_error("unsupported format");
-    }
+        case cldnn::format::x: // 1D
+        {
+            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, { cldnn::format::x,{ static_cast<cldnn::tensor::value_type>(array[0]) } }));
+            break;
 
+        }
+
+        // FP32
+        case cldnn::format::oyxi:
+        case cldnn::format::yxoi:
+        case cldnn::format::yxio:
+        {
+            auto size = cldnn::tensor(cldnn::format::oiyx,
+            {
+                static_cast<cldnn::tensor::value_type>(array[0]), static_cast<cldnn::tensor::value_type>(array[1]), // ofm, ifm
+                static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2])  // kernel spatials y, x
+            }
+            ).transform(format, 1);
+            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, size));
+            break;
+        }
+
+        // FP32
+        case cldnn::format::byxf:
+        case cldnn::format::yxfb:
+        {
+            auto size = cldnn::tensor(cldnn::format::byxf,
+            {
+                static_cast<cldnn::tensor::value_type>(array[0]), // batch
+                static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2]),  // kernel spatials y, x
+                static_cast<cldnn::tensor::value_type>(array[1]), // fm
+            }
+            ).transform(format, 1);
+            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, size));
+            break;
+        }
+
+        // FP32
+        case cldnn::format::xb:
+        {
+            auto size = cldnn::tensor(cldnn::format::xb,
+            {
+                static_cast<cldnn::tensor::value_type>(array[1]), // x
+                static_cast<cldnn::tensor::value_type>(array[0]), // batch
+            }
+            );
+            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, size));
+            break;
+        }
+
+        default:
+            throw std::runtime_error("unsupported format");
+        }
+    }
     auto mem = cldnn::memory::allocate(engine, *p_arg); // ofm, ifm
     auto buf = mem.pointer<char>();
     rfile.read(&buf[0], buf.size());
@@ -335,16 +252,10 @@ cldnn::memory file::create(file::arguments arg) {
     file_header file_head;
     rfile.read(reinterpret_cast<char *>(&file_head), sizeof(file_head));
 
-    switch (file_head.version)
-    {
-    case 1:
-    case 2:
-        return read_file_v1_v2(rfile, file_head, arg.weight_type, arg.engine);
-    case 3:
-        return read_file_v3(rfile, file_head, arg.engine);
-    default:
+    if(file_head.version == 3)
+        return read_file(rfile, file_head, arg.engine);
+    else
         throw std::runtime_error("file version not supported");
-    }
 }
 
 void file::serialize(const cldnn::memory& data, const std::string& name)

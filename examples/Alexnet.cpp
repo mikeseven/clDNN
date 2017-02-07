@@ -37,15 +37,15 @@ topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, cl
 
     // create conversion to yxfb format and subtract mean values
     tensor reorder_size = input_layout.size.transform(mem_format, 1);
-    auto reorder_mean = wo.create_weights_from_file(join_path(weights_dir, "imagenet_mean.nnd"), file::mean);
+    auto reorder_mean = wo.create_weights_from_file(join_path(weights_dir, "imagenet_mean.nnd"));
     auto reordered_input = reorder(
         "reorder",
         input,
         { input_layout.data_type, reorder_size },
         reorder_mean);
 
-    auto conv1_weights = wo.create_weights_from_file(join_path(weights_dir, "conv1_weights.nnd"), file::convolution);
-    auto conv1_biases = wo.create_weights_from_file(join_path(weights_dir, "conv1_biases.nnd"), file::bias);
+    auto conv1_weights = wo.create_weights_from_file(join_path(weights_dir, "conv1_weights.nnd"));
+    auto conv1_biases = wo.create_weights_from_file(join_path(weights_dir, "conv1_biases.nnd"));
     auto conv1 = convolution(
         "conv1",
         reordered_input,
@@ -70,10 +70,10 @@ topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, cl
         0.00002f,
         0.75f);
 
-    auto conv2_g1_weights = wo.create_weights_from_file(join_path(weights_dir, "conv2_g1_weights.nnd"), file::convolution);
-    auto conv2_g1_biases = wo.create_weights_from_file(join_path(weights_dir, "conv2_g1_biases.nnd"), file::bias);
-    auto conv2_g2_weights = wo.create_weights_from_file(join_path(weights_dir, "conv2_g2_weights.nnd"), file::convolution);
-    auto conv2_g2_biases = wo.create_weights_from_file(join_path(weights_dir, "conv2_g2_biases.nnd"), file::bias);
+    auto conv2_g1_weights = wo.create_weights_from_file(join_path(weights_dir, "conv2_g1_weights.nnd"));
+    auto conv2_g1_biases = wo.create_weights_from_file(join_path(weights_dir, "conv2_g1_biases.nnd"));
+    auto conv2_g2_weights = wo.create_weights_from_file(join_path(weights_dir, "conv2_g2_weights.nnd"));
+    auto conv2_g2_biases = wo.create_weights_from_file(join_path(weights_dir, "conv2_g2_biases.nnd"));
     auto conv2_group2 = convolution(
         "conv2_group2",
         lrn1,
@@ -98,8 +98,8 @@ topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, cl
         0.00002f,
         0.75f);
 
-    auto conv3_weights = wo.create_weights_from_file(join_path(weights_dir, "conv3_weights.nnd"), file::convolution);
-    auto conv3_biases = wo.create_weights_from_file(join_path(weights_dir, "conv3_biases.nnd"), file::bias);
+    auto conv3_weights = wo.create_weights_from_file(join_path(weights_dir, "conv3_weights.nnd"));
+    auto conv3_biases = wo.create_weights_from_file(join_path(weights_dir, "conv3_biases.nnd"));
     auto conv3 = convolution(
         "conv3",
         lrn2,
@@ -109,10 +109,10 @@ topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, cl
         { format::yx, {1,1} },
         true);
 
-    auto conv4_g1_weights = wo.create_weights_from_file(join_path(weights_dir, "conv4_g1_weights.nnd"), file::convolution);
-    auto conv4_g1_biases = wo.create_weights_from_file(join_path(weights_dir, "conv4_g1_biases.nnd"), file::bias);
-    auto conv4_g2_weights = wo.create_weights_from_file(join_path(weights_dir, "conv4_g2_weights.nnd"), file::convolution);
-    auto conv4_g2_biases = wo.create_weights_from_file(join_path(weights_dir, "conv4_g2_biases.nnd"), file::bias);
+    auto conv4_g1_weights = wo.create_weights_from_file(join_path(weights_dir, "conv4_g1_weights.nnd"));
+    auto conv4_g1_biases = wo.create_weights_from_file(join_path(weights_dir, "conv4_g1_biases.nnd"));
+    auto conv4_g2_weights = wo.create_weights_from_file(join_path(weights_dir, "conv4_g2_weights.nnd"));
+    auto conv4_g2_biases = wo.create_weights_from_file(join_path(weights_dir, "conv4_g2_biases.nnd"));
     auto conv4_group2 = convolution(
         "conv4_group2",
         conv3,
@@ -122,10 +122,10 @@ topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, cl
         { format::yx, {1,1} },
         true);
 
-    auto conv5_g1_weights = wo.create_weights_from_file(join_path(weights_dir, "conv5_g1_weights.nnd"), file::convolution);
-    auto conv5_g1_biases = wo.create_weights_from_file(join_path(weights_dir, "conv5_g1_biases.nnd"), file::bias);
-    auto conv5_g2_weights = wo.create_weights_from_file(join_path(weights_dir, "conv5_g2_weights.nnd"), file::convolution);
-    auto conv5_g2_biases = wo.create_weights_from_file(join_path(weights_dir, "conv5_g2_biases.nnd"), file::bias);
+    auto conv5_g1_weights = wo.create_weights_from_file(join_path(weights_dir, "conv5_g1_weights.nnd"));
+    auto conv5_g1_biases = wo.create_weights_from_file(join_path(weights_dir, "conv5_g1_biases.nnd"));
+    auto conv5_g2_weights = wo.create_weights_from_file(join_path(weights_dir, "conv5_g2_weights.nnd"));
+    auto conv5_g2_biases = wo.create_weights_from_file(join_path(weights_dir, "conv5_g2_biases.nnd"));
     auto conv5_group2 = convolution(
         "conv5_group2",
         conv4_group2,
@@ -142,8 +142,8 @@ topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, cl
         { format::xy,{ 2, 2 } }, // strd
         { format::xy,{ 3, 3 } }); // kernel
 
-    auto fc6_weights = wo.create_weights_from_file(join_path(weights_dir, "fc6_weights.nnd"), file::fully_connected);
-    auto fc6_biases = wo.create_weights_from_file(join_path(weights_dir, "fc6_biases.nnd"), file::bias);
+    auto fc6_weights = wo.create_weights_from_file(join_path(weights_dir, "fc6_weights.nnd"));
+    auto fc6_biases = wo.create_weights_from_file(join_path(weights_dir, "fc6_biases.nnd"));
     auto fc6 = fully_connected(
         "fc6",
         pool5,
@@ -151,8 +151,8 @@ topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, cl
         fc6_biases,
         true);
 
-    auto fc7_weights = wo.create_weights_from_file(join_path(weights_dir, "fc7_weights.nnd"), file::fully_connected);
-    auto fc7_biases = wo.create_weights_from_file(join_path(weights_dir, "fc7_biases.nnd"), file::bias);
+    auto fc7_weights = wo.create_weights_from_file(join_path(weights_dir, "fc7_weights.nnd"));
+    auto fc7_biases = wo.create_weights_from_file(join_path(weights_dir, "fc7_biases.nnd"));
     auto fc7 = fully_connected(
         "fc7",
         fc6,
@@ -160,8 +160,8 @@ topology build_alexnet(const std::string& weights_dir, weights_optimizer& wo, cl
         fc7_biases,
         true);
 
-    auto fc8_weights = wo.create_weights_from_file(join_path(weights_dir, "fc8_weights.nnd"), file::fully_connected);
-    auto fc8_biases = wo.create_weights_from_file(join_path(weights_dir, "fc8_biases.nnd"), file::bias);
+    auto fc8_weights = wo.create_weights_from_file(join_path(weights_dir, "fc8_weights.nnd"));
+    auto fc8_biases = wo.create_weights_from_file(join_path(weights_dir, "fc8_biases.nnd"));
     auto fc8 = fully_connected(
         "fc8",
         fc7,
