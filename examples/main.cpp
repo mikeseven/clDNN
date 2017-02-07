@@ -189,7 +189,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("weights", bpo::value<std::string>()->value_name("<weights-dir>"),
             "Path to directory containing weights used in classification.\n"
             "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
-            "If not specified, the \"<executable-dir>/weights\" path is used.")
+            "If not specified, the \"<executable-dir>/<model-name>\" path is used.")
         ("use_half", bpo::bool_switch(),
             "Uses half precision floating point numbers (FP16, halfs) instead of single precision ones (float) in "
             "computations of selected model.")
@@ -350,7 +350,7 @@ int main(int argc, char* argv[])
             // relative to current working directory or absolute - if specified).
             auto weights_dir = parsed_args.count("weights")
                 ? bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string()
-                : join_path(exec_info->dir(), "weights");
+                : join_path(exec_info->dir(), parsed_args["model"].as<std::string>());
             // Validate weights directory.
             if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
             {
