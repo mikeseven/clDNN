@@ -178,19 +178,19 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
     return topology(
         input,
         reordered_input,
-        conv1,
+        conv1, conv1_weights, conv1_biases,
         pool1,
         lrn1,
-        conv2_group2,
+        conv2_group2, conv2_g1_weights, conv2_g1_biases, conv2_g2_weights, conv2_g2_biases,
         pool2,
         lrn2,
-        conv3,
-        conv4_group2,
-        conv5_group2,
+        conv3, conv3_weights, conv3_biases,
+        conv4_group2, conv4_g1_weights, conv4_g1_biases, conv4_g2_weights, conv4_g2_biases,
+        conv5_group2, conv5_g1_weights, conv5_g1_biases, conv5_g2_weights, conv5_g2_biases,
         pool5,
-        fc6,
-        fc7,
-        fc8,
+        fc6, fc6_weights, fc6_biases,
+        fc7, fc7_weights, fc7_biases,
+        fc8, fc8_weights, fc8_biases,
         softmax
     );
 }

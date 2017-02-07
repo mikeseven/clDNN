@@ -347,10 +347,10 @@ cldnn::memory file::read(file::arguments arg) {
     }
 }
 
-cldnn::data file::create(file::arguments arg) {
+cldnn::data::dto* file::create(file::arguments arg) {
     auto data_id = boost::filesystem::path(arg.name).filename().string();
     auto ret = cldnn::data(data_id, file::read(arg));
-    return ret;
+    return cldnn::as_dto<cldnn::data>(ret.get_dto());
 }
 
 void file::serialize(const cldnn::memory& data, const std::string& name)

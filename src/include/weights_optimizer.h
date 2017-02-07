@@ -26,6 +26,20 @@
 
 namespace cldnn
 {
+
+template <class T>
+struct deduce_ret_type;
+
+template <class Ret, class C, class... Args>
+struct deduce_ret_type<Ret(C::*)(Args...)>
+{
+    using type = Ret;
+};
+
+template <class T>
+using deduce_ret_type_t = typename deduce_ret_type<T>::type;
+
+
 // TODO!!! - optimize weights based on HW
 class weights_optimizer
 {
@@ -51,7 +65,7 @@ public:
 
     cldnn::primitive_id add_weights(const std::shared_ptr<const data> data_prim, weights_type type, unsigned int batch_size);
 
-    auto optimize() const -> decltype(network_impl(_engine, _topology, _outputs).execute(std::vector<refcounted_obj_ptr<event_impl>>()));
+    auto optimize() const -> deduce_ret_type_t<decltype(&network_impl::get_primitives)>;
     auto get_engine() { return _engine; }
 };
 }

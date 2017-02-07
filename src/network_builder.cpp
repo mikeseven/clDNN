@@ -28,8 +28,94 @@
 #include "api/primitives/normalization.hpp"
 
 #include <set>
+#include <functional>
 
 using namespace cldnn;
+
+namespace {
+    
+    //helper function for selecting function basing on the type of the given primitive
+    //this is the termination case for parameter pack reccurence, see overload below for logic
+    template <class... T>
+    void do_for_types(std::shared_ptr<const primitive> prim)
+    {
+        return;
+    }
+
+    //helper function for selecting function basing on the type of the given primitive
+    //this function should be explicitly given set of types and implicitly set of functions.
+    //both sets should have equal size. First function will be called if type of the given primitive
+    //will match first explicitly given type, second will be called if it matches second explicitly given
+    //type etc.
+    //Functions given as arguments should themselfs take std::shared_ptr<const T> as argument
+    //where T is the type that should be match if this function should be called
+    //
+    //example:
+    // do_for_types<
+    //      convolution,
+    //      pooling
+    //  >(primitive,
+    //      [](std::shared_ptr<const convolution>){ do something if 'primitive' is a convolution },
+    //      [](std::shared_ptr<const pooling>){ do something if 'primitive' as a pooling }
+    //  );
+    template <class T, class... RestOfT, class Func, class... RestOfFuncs>
+    decltype(static_cast<void>(std::declval<Func>()(std::declval<T>()))) do_for_types(
+        std::shared_ptr<const primitive> prim,
+        Func const& func,
+        RestOfFuncs const&... rest)
+    {
+        if (prim->type() == T::type_id())
+            func(std::static_pointer_cast<const T>(prim));
+        else
+            do_for_types<RestOfT...>(prim, rest...);
+    }
+
+    //helper function which creates single-element array if it's given anything
+    //other than std::vector.
+    //It should be used in generic code when there's a need to force vector usage
+    //in foreach loop over variable which can in one context be a vector or a scalar
+    //in another.
+    //example:
+    // T t;
+    // for (auto& string : wrap_if_single(t.dump()))
+    //depending on type T, t.dump() may return either std::string or std::vector<std::string>,
+    //to ensure compatibility between these cases, wrap_if_single will create single-element
+    //container in case t.dump() would return plain std::string.
+    //
+    // T& case -> returns container which holds T&
+    template <class T>
+    auto wrap_if_single(T& t)
+    {
+        return std::array<std::reference_wrapper<T>, 1>{ std::ref(t) };
+    }
+
+    //helper function which creates single-element array if it's given anything
+    //other than std::vector.
+    // T const& case -> returns constainer which holds T const&
+    template <class T>
+    auto wrap_if_single(T const& t)
+    {
+        return std::array<std::reference_wrapper<const T>, 1>{ std::cref(t) };
+    }
+
+    //helper function which creates single-element array if it's given anything
+    //other than std::vector.
+    // T&& case -> returns constainer which holds new instance of T created by moving given param
+    template <class T>
+    auto wrap_if_single(T&& t)
+    {
+        return std::array<T, 1>{ std::move(t) };
+    }
+
+    //helper function which creates single-element array if it's given anything
+    //other than std::vector.
+    // std::vector case -> does not wrap, returns t as-is
+    template <class T>
+    auto wrap_if_single(std::vector<T> const& t)
+    {
+        return t;
+    }
+}
 
 network_builder::network_builder(refcounted_obj_ptr<engine_impl> eng, const build_options& options)
     : _engine(eng), _options(options)
@@ -43,7 +129,7 @@ network_impl* network_builder::build_network(refcounted_obj_ptr<topology_impl> t
     _topology_map = tpl->get_primitives();
 
     if (_options.get<build_option::optimize_data>())
-        _optimize_weights();
+        optimize_weights();
         
     prepare_padding();
 
@@ -245,83 +331,77 @@ void network_builder::prepare_padding()
     }
 }
 
-namespace {
-    /* Internal function which fills new vector with primitives, determining for each primitve in 'old' whether it needs optimization:
-       - if primitive is already in optimal format, it's inserted into 'optimized' as is
-       - otherwise new primitive which optimize old's format is inserted
-    */
-    void replace_prim_to_opt(std::vector<primitive_id> const& old, std::vector<primitive_id>& optimized, weights_optimizer& wo,
-                                            weights_optimizer::weights_type type, unsigned int batch_size, topology_map const& topo)
-    {
-        for (auto const& prim_id : old)
-        {
-            auto prim = topo.find(prim_id)->second;
-            assert(prim->primitive_desc->type() == data::type_id() && "Optimization of type different than cldnn::data");
-            optimized.push_back(wo.add_weights(std::static_pointer_cast<const data>(prim->primitive_desc), type, batch_size));
-        }
-    }
-}
-
-void network_builder::_optimize_weights()
+void network_builder::optimize_weights()
 {
     weights_optimizer wo{ _engine, true };
+
+    //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
+    //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
+    //some basic sanity checks about existance of the primitive and it's type. throws std::logic_error
+    const auto add_weights = [this, &wo](primitive_id const& weigths_id, weights_optimizer::weights_type type, uint32_t batch_size) -> void
+    {
+        auto itr = _topology_map.find(weigths_id);
+        if (itr == _topology_map.end())
+            throw std::logic_error("Weights primitive with id " + weigths_id + " does not exist in topology map");
+
+        auto weigths_prim = itr->second->primitive_desc;
+        if (weigths_prim->type() != data::type_id())
+            throw std::logic_error("Optimization of weights which are not of type cldnn::data");
+
+        wo.add_weights(std::static_pointer_cast<const data>(weigths_prim), type, batch_size);
+    };
+
+    //generic lambda function which prepares given primitive for weights optimization
+    //it deduces the type of weights from the type of the argument and calls 'add_weights' for all
+    //weights and biases used by given primitive.
+    //argument should match few requirements:
+    // - it should be of a form 'std::shared_ptr<const T>'
+    // - T should be 'convolution' or 'fully_connected'
+    // - both 'weights' and 'bias' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
+    const auto prep_opt = [this, &wo, &add_weights](auto prim) -> void
+    {
+        auto  batch_size = prim->type()->calc_output_layout(_topology_map, prim).size.batch[0];
+
+        weights_optimizer::weights_type w_type;
+        auto prim_type = std::remove_reference_t<decltype(*prim.get())>::type_id();
+
+        if (prim_type == convolution::type_id())
+            w_type = weights_optimizer::weights_type::convolution;
+        else if (prim_type == fully_connected::type_id())
+            w_type = weights_optimizer::weights_type::fully_connected;
+        else
+            throw std::logic_error("Weights optimization for unsupported primitive type");
+
+        for (auto const& w_id : wrap_if_single(prim->weights))
+            add_weights(w_id, w_type, batch_size);
+
+        for (auto const& w_id : wrap_if_single(prim->bias))
+            add_weights(w_id, weights_optimizer::weights_type::bias, batch_size);
+    };
 
     for (auto& p : _topology_map)
     {
         auto& prim = p.second;
 
-        if (prim->primitive_desc->type() == convolution::type_id())
-            _prepare_for_optimization(wo, std::static_pointer_cast<const convolution>(prim->primitive_desc));
-        else if (prim->primitive_desc->type() == fully_connected::type_id())
-            _prepare_for_optimization(wo, std::static_pointer_cast<const fully_connected>(prim->primitive_desc));
+        do_for_types<convolution, fully_connected>(prim->primitive_desc,
+            prep_opt,   //case for convolution
+            prep_opt    //case for fully_connected
+        );
     }
 
     //all optimizing primitives has beed added and inputs for all primitives has been updated.
     //run reorders now
-    wo.optimize();
-}
+    auto outputs = wo.optimize();
 
-void cldnn::network_builder::_prepare_for_optimization(weights_optimizer& wo, std::shared_ptr<const convolution> prim)
-{
-    std::vector<primitive_id> new_weights;
-    std::vector<primitive_id> new_bias;
+    //replace weights primitives with optimized one, if required
+    for (auto const& output : outputs)
+    {
+        if (output->input().empty()) //output has no input so no optimization required for this prim
+            continue;
 
-    unsigned int batch_size = prim->type()->calc_output_layout(_topology_map, prim).size.batch[0];
-
-    replace_prim_to_opt(prim->weights, new_weights, wo, weights_optimizer::weights_type::convolution, batch_size, _topology_map);
-    replace_prim_to_opt(prim->bias, new_bias, wo, weights_optimizer::weights_type::bias, batch_size, _topology_map);
-
-    _topology_map[prim->id()]->primitive_desc = std::make_shared<cldnn::convolution>(
-        prim->id(),
-        prim->input().at(0),
-        new_weights,
-        new_bias,
-        prim->input_padding(),
-        prim->stride,
-        prim->with_activation,
-        prim->activation_negative_slope,
-        prim->output_padding()
-    );
-}
-
-void cldnn::network_builder::_prepare_for_optimization(weights_optimizer& wo, std::shared_ptr<const fully_connected> prim)
-{
-    std::vector<primitive_id> new_weights;
-    std::vector<primitive_id> new_bias;
-
-    unsigned int batch_size = prim->type()->calc_output_layout(_topology_map, prim).size.batch[0];
-
-    replace_prim_to_opt({ prim->weights }, new_weights, wo, weights_optimizer::weights_type::fully_connected, batch_size, _topology_map);
-    replace_prim_to_opt({ prim->bias }, new_bias, wo, weights_optimizer::weights_type::bias, batch_size, _topology_map);
-
-    _topology_map[prim->id()]->primitive_desc = std::make_shared<cldnn::fully_connected>(
-        prim->id(),
-        prim->input().at(0),
-        new_weights.at(0),
-        new_bias.at(0),
-        prim->with_activation,
-        prim->activation_negative_slope,
-        prim->input_padding(),
-        prim->output_padding()
-    );
+        _topology_map[output->input()[0]->id()]->primitive_desc = std::make_shared<cldnn::data>(
+            output->input()[0]->id(),
+            output->output_memory()
+        );
+    }
 }

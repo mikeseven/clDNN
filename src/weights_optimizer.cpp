@@ -114,7 +114,9 @@ cldnn::primitive_id cldnn::weights_optimizer::add_weights(const std::shared_ptr<
         : data_prim->id();
 }
 
-auto weights_optimizer::optimize() const -> decltype(network_impl(_engine, _topology, _outputs).execute(std::vector<refcounted_obj_ptr<event_impl>>()))
+auto weights_optimizer::optimize() const -> deduce_ret_type_t<decltype(&network_impl::get_primitives)>
 {
-    return network_impl(_engine, _topology, _outputs).execute(std::vector<refcounted_obj_ptr<event_impl>>());
+    network_impl net(_engine, _topology, _outputs);
+    net.execute(std::vector<refcounted_obj_ptr<event_impl>>());
+    return net.get_primitives(net.get_output_ids());
 }

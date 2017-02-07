@@ -44,8 +44,6 @@ private:
     // Prepares output padding for primitives
     // TODO: case when input primitive is used by multiple primitives
     void prepare_padding();
-    void _optimize_weights();
-    void _prepare_for_optimization(weights_optimizer& wo, std::shared_ptr<const convolution> prim);
-    void _prepare_for_optimization(weights_optimizer& wo, std::shared_ptr<const fully_connected> prim);
+    void optimize_weights();
 };
 }
