@@ -62,6 +62,12 @@ struct padding
         return *this;
     }
 
+    // returns true if padding size is not zero
+    explicit operator bool() const
+    {
+        return std::any_of(_size.raw.begin(), _size.raw.end(), [](auto& el) { return el != 0; });
+    }
+
 private:
     tensor _size;
     types _type;

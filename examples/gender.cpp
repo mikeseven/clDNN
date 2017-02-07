@@ -44,8 +44,8 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         layout( input_layout.data_type, reorder_size ),
         std::vector<float>{ (float)104.0069879317889, (float)116.66876761696767, (float)122.6789143406786 });
 
-    auto conv1_weights = file::create({ engine, join_path(weights_dir, "conv1_weights.nnd"), file::convolution });
-    auto conv1_bias = file::create({ engine, join_path(weights_dir, "conv1_bias.nnd"), file::bias });
+    auto conv1_weights = file::create({ engine, join_path(weights_dir, "conv1_weights.nnd")});
+    auto conv1_bias = file::create({ engine, join_path(weights_dir, "conv1_bias.nnd")});
     auto conv1 = convolution(
         "conv1",
         reordered_input,
@@ -62,8 +62,8 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         { format::yx, {1,1} },  // strd
         { format::yx, {3,3} }); // kernel
 
-    auto conv2_weights = file::create({ engine, join_path(weights_dir, "conv2_weights.nnd"), file::convolution });
-    auto conv2_bias = file::create({ engine, join_path(weights_dir, "conv2_bias.nnd"), file::bias });
+    auto conv2_weights = file::create({ engine, join_path(weights_dir, "conv2_weights.nnd")});
+    auto conv2_bias = file::create({ engine, join_path(weights_dir, "conv2_bias.nnd")});
     auto conv2 = convolution(
         "conv2",
         pool1,
@@ -80,8 +80,8 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         { format::yx, {2,2} },  // strd
         { format::yx, {3,3} }); // kernel
 
-    auto conv3_weights = file::create({ engine, join_path(weights_dir, "conv3_weights.nnd"), file::convolution });
-    auto conv3_bias = file::create({ engine, join_path(weights_dir, "conv3_bias.nnd"), file::bias });
+    auto conv3_weights = file::create({ engine, join_path(weights_dir, "conv3_weights.nnd")});
+    auto conv3_bias = file::create({ engine, join_path(weights_dir, "conv3_bias.nnd")});
     auto conv3 = convolution(
         "conv3",
         pool2,
@@ -98,8 +98,8 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         { format::yx, {2,2} },  // strd
         { format::yx, {3,3} }); // kernel
 
-    auto fc1_g_weights = file::create({ engine, join_path(weights_dir, "fc1_g_weights.nnd"), file::fully_connected });
-    auto fc1_g_bias = file::create({ engine, join_path(weights_dir, "fc1_g_bias.nnd"), file::bias });
+    auto fc1_g_weights = file::create({ engine, join_path(weights_dir, "fc1_g_weights.nnd")});
+    auto fc1_g_bias = file::create({ engine, join_path(weights_dir, "fc1_g_bias.nnd")});
     auto fc1_g = fully_connected(
         "fc1_g",
         pool3,
@@ -108,8 +108,8 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         true,
         0);
 
-    auto fc3_g_weights = file::create({ engine, join_path(weights_dir, "fc3_g_weights.nnd"), file::fully_connected });
-    auto fc3_g_bias = file::create({ engine, join_path(weights_dir, "fc3_g_bias.nnd"), file::bias });
+    auto fc3_g_weights = file::create({ engine, join_path(weights_dir, "fc3_g_weights.nnd")});
+    auto fc3_g_bias = file::create({ engine, join_path(weights_dir, "fc3_g_bias.nnd")});
     auto fc3_g = fully_connected(
         "fc3_g",
         fc1_g,

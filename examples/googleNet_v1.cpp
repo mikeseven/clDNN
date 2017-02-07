@@ -46,8 +46,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { input_layout.data_type, reorder_size },
         std::vector<float>{ 104.0f, 117.0f, 123.0f });
 
-    auto conv1_7x7_s2_w = file::create({ engine, join_path(weights_dir, "conv1_7x7_s2_weights.nnd"), file::convolution });
-    auto conv1_7x7_s2_b = file::create({ engine, join_path(weights_dir, "conv1_7x7_s2_bias.nnd"), file::bias });
+    auto conv1_7x7_s2_w = file::create({ engine, join_path(weights_dir, "conv1_7x7_s2_weights.nnd")});
+    auto conv1_7x7_s2_b = file::create({ engine, join_path(weights_dir, "conv1_7x7_s2_bias.nnd")});
     auto conv1_7x7_s2 = convolution("conv1_7x7_s2",
         reordered_input,
         { conv1_7x7_s2_w },
@@ -69,8 +69,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         0.00002f,
         0.75f);
 
-    auto conv2_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "conv2_3x3_reduce_weights.nnd"), file::convolution });
-    auto conv2_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "conv2_3x3_reduce_bias.nnd"), file::bias });
+    auto conv2_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "conv2_3x3_reduce_weights.nnd")});
+    auto conv2_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "conv2_3x3_reduce_bias.nnd")});
     auto conv2_3x3_reduce = convolution("conv2_3x3_reduce",
         pool1_norm1,
         { conv2_3x3_reduce_w },
@@ -79,8 +79,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto conv2_3x3_w = file::create({ engine, join_path(weights_dir, "conv2_3x3_weights.nnd"), file::convolution });
-    auto conv2_3x3_b = file::create({ engine, join_path(weights_dir, "conv2_3x3_bias.nnd"),  file::bias });
+    auto conv2_3x3_w = file::create({ engine, join_path(weights_dir, "conv2_3x3_weights.nnd")});
+    auto conv2_3x3_b = file::create({ engine, join_path(weights_dir, "conv2_3x3_bias.nnd")});
     auto conv2_3x3 = convolution("conv2_3x3",
         conv2_3x3_reduce,
         { conv2_3x3_w },
@@ -105,8 +105,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     // ----------- END OF PIPE -------------
     // Inception 1
     // 1st branch
-    auto inception_3a_1x1_w = file::create({ engine, join_path(weights_dir, "inception_3a_1x1_weights.nnd"), file::convolution });
-    auto inception_3a_1x1_b = file::create({ engine, join_path(weights_dir, "inception_3a_1x1_bias.nnd"), file::bias });
+    auto inception_3a_1x1_w = file::create({ engine, join_path(weights_dir, "inception_3a_1x1_weights.nnd")});
+    auto inception_3a_1x1_b = file::create({ engine, join_path(weights_dir, "inception_3a_1x1_bias.nnd")});
     auto inception_3a_1x1 = convolution("inception_3a_1x1",
         pool2_3x3_s2,
         { inception_3a_1x1_w },
@@ -117,8 +117,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // 2nd branch
 
-    auto inception_3a_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_3a_3x3_reduce_weights.nnd"), file::convolution });
-    auto inception_3a_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_3a_3x3_reduce_bias.nnd"),  file::bias });
+    auto inception_3a_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_3a_3x3_reduce_weights.nnd")});
+    auto inception_3a_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_3a_3x3_reduce_bias.nnd") });
     auto inception_3a_3x3_reduce = convolution("inception_3a_3x3_reduce",
         pool2_3x3_s2,
         { inception_3a_3x3_reduce_w },
@@ -128,8 +128,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         true);
 
 
-    auto inception_3a_3x3_w = file::create({ engine, join_path(weights_dir, "inception_3a_3x3_weights.nnd"), file::convolution });
-    auto inception_3a_3x3_b = file::create({ engine, join_path(weights_dir, "inception_3a_3x3_bias.nnd"),  file::bias });
+    auto inception_3a_3x3_w = file::create({ engine, join_path(weights_dir, "inception_3a_3x3_weights.nnd")});
+    auto inception_3a_3x3_b = file::create({ engine, join_path(weights_dir, "inception_3a_3x3_bias.nnd") });
     auto inception_3a_3x3 = convolution("inception_3a_3x3",
         inception_3a_3x3_reduce,
         { inception_3a_3x3_w },
@@ -140,8 +140,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // 3rd branch
 
-    auto inception_3a_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_3a_5x5_reduce_weights.nnd"), file::convolution });
-    auto inception_3a_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_3a_5x5_reduce_bias.nnd"),  file::bias });
+    auto inception_3a_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_3a_5x5_reduce_weights.nnd")});
+    auto inception_3a_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_3a_5x5_reduce_bias.nnd") });
     auto inception_3a_5x5_reduce = convolution("inception_3a_5x5_reduce",
         pool2_3x3_s2,
         { inception_3a_5x5_reduce_w },
@@ -151,8 +151,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         true);
 
 
-    auto inception_3a_5x5_w = file::create({ engine, join_path(weights_dir, "inception_3a_5x5_weights.nnd"), file::convolution });
-    auto inception_3a_5x5_b = file::create({ engine, join_path(weights_dir, "inception_3a_5x5_bias.nnd"),  file::bias });
+    auto inception_3a_5x5_w = file::create({ engine, join_path(weights_dir, "inception_3a_5x5_weights.nnd")});
+    auto inception_3a_5x5_b = file::create({ engine, join_path(weights_dir, "inception_3a_5x5_bias.nnd") });
     auto inception_3a_5x5 = convolution("inception_3a_5x5",
         inception_3a_5x5_reduce,
         { inception_3a_5x5_w },
@@ -171,8 +171,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { -1, -1 } } //padding 
     );
 
-    auto inception_3a_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_3a_pool_proj_weights.nnd"), file::convolution });
-    auto inception_3a_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_3a_pool_proj_bias.nnd"),  file::bias });
+    auto inception_3a_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_3a_pool_proj_weights.nnd")});
+    auto inception_3a_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_3a_pool_proj_bias.nnd") });
     auto inception_3a_pool_proj = convolution("inception_3a_pool_proj",
         inception_3a_pool,
         { inception_3a_pool_proj_w },
@@ -193,8 +193,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     // --------------------- 2nd inception ---------------------------------
 
     // 1st branch
-    auto inception_3b_1x1_w = file::create({ engine, join_path(weights_dir, "inception_3b_1x1_weights.nnd"), file::convolution });
-    auto inception_3b_1x1_b = file::create({ engine, join_path(weights_dir, "inception_3b_1x1_bias.nnd"),  file::bias });
+    auto inception_3b_1x1_w = file::create({ engine, join_path(weights_dir, "inception_3b_1x1_weights.nnd")});
+    auto inception_3b_1x1_b = file::create({ engine, join_path(weights_dir, "inception_3b_1x1_bias.nnd") });
     auto inception_3b_1x1 = convolution("inception_3b_1x1",
         inception_3a_output,
         { inception_3b_1x1_w },
@@ -205,8 +205,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // 2nd branch
 
-    auto inception_3b_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_3b_3x3_reduce_weights.nnd"), file::convolution });
-    auto inception_3b_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_3b_3x3_reduce_bias.nnd"),  file::bias });
+    auto inception_3b_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_3b_3x3_reduce_weights.nnd")});
+    auto inception_3b_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_3b_3x3_reduce_bias.nnd") });
     auto inception_3b_3x3_reduce = convolution("inception_3b_3x3_reduce",
         inception_3a_output,
         { inception_3b_3x3_reduce_w },
@@ -215,8 +215,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_3b_3x3_w = file::create({ engine, join_path(weights_dir, "inception_3b_3x3_weights.nnd"), file::convolution });
-    auto inception_3b_3x3_b = file::create({ engine, join_path(weights_dir, "inception_3b_3x3_bias.nnd"),  file::bias });
+    auto inception_3b_3x3_w = file::create({ engine, join_path(weights_dir, "inception_3b_3x3_weights.nnd")});
+    auto inception_3b_3x3_b = file::create({ engine, join_path(weights_dir, "inception_3b_3x3_bias.nnd") });
     auto inception_3b_3x3 = convolution("inception_3b_3x3",
         inception_3b_3x3_reduce,
         { inception_3b_3x3_w },
@@ -227,8 +227,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // 3rd branch
 
-    auto inception_3b_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_3b_5x5_reduce_weights.nnd"), file::convolution });
-    auto inception_3b_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_3b_5x5_reduce_bias.nnd"),  file::bias });
+    auto inception_3b_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_3b_5x5_reduce_weights.nnd")});
+    auto inception_3b_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_3b_5x5_reduce_bias.nnd") });
     auto inception_3b_5x5_reduce = convolution("inception_3b_5x5_reduce",
         inception_3a_output,
         { inception_3b_5x5_reduce_w },
@@ -237,8 +237,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_3b_5x5_w = file::create({ engine, join_path(weights_dir, "inception_3b_5x5_weights.nnd"), file::convolution });
-    auto inception_3b_5x5_b = file::create({ engine, join_path(weights_dir, "inception_3b_5x5_bias.nnd"),  file::bias });
+    auto inception_3b_5x5_w = file::create({ engine, join_path(weights_dir, "inception_3b_5x5_weights.nnd")});
+    auto inception_3b_5x5_b = file::create({ engine, join_path(weights_dir, "inception_3b_5x5_bias.nnd") });
     auto inception_3b_5x5 = convolution("inception_3b_5x5",
         inception_3b_5x5_reduce,
         { inception_3b_5x5_w },
@@ -257,8 +257,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { -1, -1 } } //padding 
     );
 
-    auto inception_3b_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_3b_pool_proj_weights.nnd"), file::convolution });
-    auto inception_3b_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_3b_pool_proj_bias.nnd"),  file::bias });
+    auto inception_3b_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_3b_pool_proj_weights.nnd")});
+    auto inception_3b_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_3b_pool_proj_bias.nnd") });
     auto inception_3b_pool_proj = convolution("inception_3b_pool_proj",
         inception_3b_pool,
         { inception_3b_pool_proj_w },
@@ -286,8 +286,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // --------------------- 3rd inception ---------------------------------
     // 1st branch
-    auto inception_4a_1x1_w = file::create({ engine, join_path(weights_dir, "inception_4a_1x1_weights.nnd"), file::convolution });
-    auto inception_4a_1x1_b = file::create({ engine, join_path(weights_dir, "inception_4a_1x1_bias.nnd"),  file::bias });
+    auto inception_4a_1x1_w = file::create({ engine, join_path(weights_dir, "inception_4a_1x1_weights.nnd")});
+    auto inception_4a_1x1_b = file::create({ engine, join_path(weights_dir, "inception_4a_1x1_bias.nnd") });
     auto inception_4a_1x1 = convolution("inception_4a_1x1",
         pool3_3x3_s2,
         { inception_4a_1x1_w },
@@ -298,8 +298,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // 2nd branch
 
-    auto inception_4a_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4a_3x3_reduce_weights.nnd"), file::convolution });
-    auto inception_4a_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4a_3x3_reduce_bias.nnd"),  file::bias });
+    auto inception_4a_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4a_3x3_reduce_weights.nnd")});
+    auto inception_4a_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4a_3x3_reduce_bias.nnd") });
     auto inception_4a_3x3_reduce = convolution("inception_4a_3x3_reduce",
         pool3_3x3_s2,
         { inception_4a_3x3_reduce_w },
@@ -308,8 +308,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_4a_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4a_3x3_weights.nnd"), file::convolution });
-    auto inception_4a_3x3_b = file::create({ engine, join_path(weights_dir, "inception_4a_3x3_bias.nnd"),  file::bias });
+    auto inception_4a_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4a_3x3_weights.nnd")});
+    auto inception_4a_3x3_b = file::create({ engine, join_path(weights_dir, "inception_4a_3x3_bias.nnd") });
     auto inception_4a_3x3 = convolution("inception_4a_3x3",
         inception_4a_3x3_reduce,
         { inception_4a_3x3_w },
@@ -320,8 +320,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // 3rd branch
 
-    auto inception_4a_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4a_5x5_reduce_weights.nnd"), file::convolution });
-    auto inception_4a_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4a_5x5_reduce_bias.nnd"),  file::bias });
+    auto inception_4a_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4a_5x5_reduce_weights.nnd")});
+    auto inception_4a_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4a_5x5_reduce_bias.nnd") });
     auto inception_4a_5x5_reduce = convolution("inception_4a_5x5_reduce",
         pool3_3x3_s2,
         { inception_4a_5x5_reduce_w },
@@ -330,8 +330,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_4a_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4a_5x5_weights.nnd"), file::convolution });
-    auto inception_4a_5x5_b = file::create({ engine, join_path(weights_dir, "inception_4a_5x5_bias.nnd"),  file::bias });
+    auto inception_4a_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4a_5x5_weights.nnd")});
+    auto inception_4a_5x5_b = file::create({ engine, join_path(weights_dir, "inception_4a_5x5_bias.nnd") });
     auto inception_4a_5x5 = convolution("inception_4a_5x5",
         inception_4a_5x5_reduce,
         { inception_4a_5x5_w },
@@ -350,8 +350,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx,{ -1, -1 } } //padding 
     );
 
-    auto inception_4a_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4a_pool_proj_weights.nnd"), file::convolution });
-    auto inception_4a_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_4a_pool_proj_bias.nnd"),  file::bias });
+    auto inception_4a_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4a_pool_proj_weights.nnd")});
+    auto inception_4a_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_4a_pool_proj_bias.nnd") });
     auto inception_4a_pool_proj = convolution("inception_4a_pool_proj",
         inception_4a_pool,
         { inception_4a_pool_proj_w },
@@ -371,8 +371,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // --------------------- 4th inception ---------------------------------
     // 1st branch
-    auto inception_4b_1x1_w = file::create({ engine, join_path(weights_dir, "inception_4b_1x1_weights.nnd"), file::convolution });
-    auto inception_4b_1x1_b = file::create({ engine, join_path(weights_dir, "inception_4b_1x1_bias.nnd"),  file::bias });
+    auto inception_4b_1x1_w = file::create({ engine, join_path(weights_dir, "inception_4b_1x1_weights.nnd")});
+    auto inception_4b_1x1_b = file::create({ engine, join_path(weights_dir, "inception_4b_1x1_bias.nnd") });
     auto inception_4b_1x1 = convolution("inception_4b_1x1",
         inception_4a_output,
         { inception_4b_1x1_w },
@@ -383,8 +383,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // 2nd branch
 
-    auto inception_4b_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4b_3x3_reduce_weights.nnd"), file::convolution });
-    auto inception_4b_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4b_3x3_reduce_bias.nnd"),  file::bias });
+    auto inception_4b_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4b_3x3_reduce_weights.nnd")});
+    auto inception_4b_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4b_3x3_reduce_bias.nnd") });
     auto inception_4b_3x3_reduce = convolution("inception_4b_3x3_reduce",
         inception_4a_output,
         { inception_4b_3x3_reduce_w },
@@ -393,8 +393,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_4b_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4b_3x3_weights.nnd"), file::convolution });
-    auto inception_4b_3x3_b = file::create({ engine, join_path(weights_dir, "inception_4b_3x3_bias.nnd"),  file::bias });
+    auto inception_4b_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4b_3x3_weights.nnd")});
+    auto inception_4b_3x3_b = file::create({ engine, join_path(weights_dir, "inception_4b_3x3_bias.nnd") });
     auto inception_4b_3x3 = convolution("inception_4b_3x3",
         inception_4b_3x3_reduce,
         { inception_4b_3x3_w },
@@ -405,8 +405,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // 3rd branch
 
-    auto inception_4b_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4b_5x5_reduce_weights.nnd"), file::convolution });
-    auto inception_4b_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4b_5x5_reduce_bias.nnd"),  file::bias });
+    auto inception_4b_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4b_5x5_reduce_weights.nnd")});
+    auto inception_4b_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4b_5x5_reduce_bias.nnd") });
     auto inception_4b_5x5_reduce = convolution("inception_4b_5x5_reduce",
         inception_4a_output,
         { inception_4b_5x5_reduce_w },
@@ -415,8 +415,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_4b_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4b_5x5_weights.nnd"), file::convolution });
-    auto inception_4b_5x5_b = file::create({ engine, join_path(weights_dir, "inception_4b_5x5_bias.nnd"),  file::bias });
+    auto inception_4b_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4b_5x5_weights.nnd")});
+    auto inception_4b_5x5_b = file::create({ engine, join_path(weights_dir, "inception_4b_5x5_bias.nnd") });
     auto inception_4b_5x5 = convolution("inception_4b_5x5",
         inception_4b_5x5_reduce,
         { inception_4b_5x5_w },
@@ -435,8 +435,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx,{ -1, -1 } } //padding 
     );
 
-    auto inception_4b_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4b_pool_proj_weights.nnd"), file::convolution });
-    auto inception_4b_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_4b_pool_proj_bias.nnd"),  file::bias });
+    auto inception_4b_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4b_pool_proj_weights.nnd")});
+    auto inception_4b_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_4b_pool_proj_bias.nnd") });
     auto inception_4b_pool_proj = convolution("inception_4b_pool_proj",
         inception_4b_pool,
         { inception_4b_pool_proj_w },
@@ -457,8 +457,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     
     // --------------------- 5th inception ---------------------------------
     // 1st branch
-    auto inception_4c_1x1_w = file::create({ engine, join_path(weights_dir, "inception_4c_1x1_weights.nnd"), file::convolution });
-    auto inception_4c_1x1_b = file::create({ engine, join_path(weights_dir, "inception_4c_1x1_bias.nnd"),  file::bias });
+    auto inception_4c_1x1_w = file::create({ engine, join_path(weights_dir, "inception_4c_1x1_weights.nnd")});
+    auto inception_4c_1x1_b = file::create({ engine, join_path(weights_dir, "inception_4c_1x1_bias.nnd") });
     auto inception_4c_1x1 = convolution("inception_4c_1x1",
         inception_4b_output,
         { inception_4c_1x1_w },
@@ -469,8 +469,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // 2nd branch
 
-    auto inception_4c_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4c_3x3_reduce_weights.nnd"), file::convolution });
-    auto inception_4c_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4c_3x3_reduce_bias.nnd"),  file::bias });
+    auto inception_4c_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4c_3x3_reduce_weights.nnd")});
+    auto inception_4c_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4c_3x3_reduce_bias.nnd") });
     auto inception_4c_3x3_reduce = convolution("inception_4c_3x3_reduce",
         inception_4b_output,
         { inception_4c_3x3_reduce_w },
@@ -479,8 +479,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_4c_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4c_3x3_weights.nnd"), file::convolution });
-    auto inception_4c_3x3_b = file::create({ engine, join_path(weights_dir, "inception_4c_3x3_bias.nnd"),  file::bias });
+    auto inception_4c_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4c_3x3_weights.nnd")});
+    auto inception_4c_3x3_b = file::create({ engine, join_path(weights_dir, "inception_4c_3x3_bias.nnd") });
     auto inception_4c_3x3 = convolution("inception_4c_3x3",
         inception_4c_3x3_reduce,
         { inception_4c_3x3_w },
@@ -490,8 +490,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         true);
 
     // 3rd branch
-    auto inception_4c_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4c_5x5_reduce_weights.nnd"), file::convolution });
-    auto inception_4c_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4c_5x5_reduce_bias.nnd"),  file::bias });
+    auto inception_4c_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4c_5x5_reduce_weights.nnd")});
+    auto inception_4c_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4c_5x5_reduce_bias.nnd") });
     auto inception_4c_5x5_reduce = convolution("inception_4c_5x5_reduce",
         inception_4b_output,
         { inception_4c_5x5_reduce_w },
@@ -500,8 +500,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_4c_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4c_5x5_weights.nnd"), file::convolution });
-    auto inception_4c_5x5_b = file::create({ engine, join_path(weights_dir, "inception_4c_5x5_bias.nnd"),  file::bias });
+    auto inception_4c_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4c_5x5_weights.nnd")});
+    auto inception_4c_5x5_b = file::create({ engine, join_path(weights_dir, "inception_4c_5x5_bias.nnd") });
     auto inception_4c_5x5 = convolution("inception_4c_5x5",
         inception_4c_5x5_reduce,
         { inception_4c_5x5_w },
@@ -520,8 +520,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx,{ -1, -1 } } //padding 
     );
 
-    auto inception_4c_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4c_pool_proj_weights.nnd"), file::convolution });
-    auto inception_4c_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_4c_pool_proj_bias.nnd"),  file::bias });
+    auto inception_4c_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4c_pool_proj_weights.nnd")});
+    auto inception_4c_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_4c_pool_proj_bias.nnd") });
     auto inception_4c_pool_proj = convolution("inception_4c_pool_proj",
         inception_4c_pool,
         { inception_4c_pool_proj_w },
@@ -540,8 +540,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // --------------------- 6th inception ---------------------------------
     // 1st branch
-    auto inception_4d_1x1_w = file::create({ engine, join_path(weights_dir, "inception_4d_1x1_weights.nnd"), file::convolution });
-    auto inception_4d_1x1_b = file::create({ engine, join_path(weights_dir, "inception_4d_1x1_bias.nnd"),  file::bias });
+    auto inception_4d_1x1_w = file::create({ engine, join_path(weights_dir, "inception_4d_1x1_weights.nnd")});
+    auto inception_4d_1x1_b = file::create({ engine, join_path(weights_dir, "inception_4d_1x1_bias.nnd") });
     auto inception_4d_1x1 = convolution("inception_4d_1x1",
         inception_4c_output,
         { inception_4d_1x1_w },
@@ -552,8 +552,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // 2nd branch
 
-    auto inception_4d_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4d_3x3_reduce_weights.nnd"), file::convolution });
-    auto inception_4d_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4d_3x3_reduce_bias.nnd"),  file::bias });
+    auto inception_4d_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4d_3x3_reduce_weights.nnd")});
+    auto inception_4d_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4d_3x3_reduce_bias.nnd") });
     auto inception_4d_3x3_reduce = convolution("inception_4d_3x3_reduce",
         inception_4c_output,
         { inception_4d_3x3_reduce_w },
@@ -562,8 +562,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_4d_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4d_3x3_weights.nnd"), file::convolution });
-    auto inception_4d_3x3_b = file::create({ engine, join_path(weights_dir, "inception_4d_3x3_bias.nnd"),  file::bias });
+    auto inception_4d_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4d_3x3_weights.nnd")});
+    auto inception_4d_3x3_b = file::create({ engine, join_path(weights_dir, "inception_4d_3x3_bias.nnd") });
     auto inception_4d_3x3 = convolution("inception_4d_3x3",
         inception_4d_3x3_reduce,
         { inception_4d_3x3_w },
@@ -573,8 +573,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         true);
 
     // 3rd branch
-    auto inception_4d_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4d_5x5_reduce_weights.nnd"), file::convolution });
-    auto inception_4d_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4d_5x5_reduce_bias.nnd"),  file::bias });
+    auto inception_4d_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4d_5x5_reduce_weights.nnd")});
+    auto inception_4d_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4d_5x5_reduce_bias.nnd") });
     auto inception_4d_5x5_reduce = convolution("inception_4d_5x5_reduce",
         inception_4c_output,
         { inception_4d_5x5_reduce_w },
@@ -583,8 +583,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_4d_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4d_5x5_weights.nnd"), file::convolution });
-    auto inception_4d_5x5_b = file::create({ engine, join_path(weights_dir, "inception_4d_5x5_bias.nnd"),  file::bias });
+    auto inception_4d_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4d_5x5_weights.nnd")});
+    auto inception_4d_5x5_b = file::create({ engine, join_path(weights_dir, "inception_4d_5x5_bias.nnd") });
     auto inception_4d_5x5 = convolution("inception_4d_5x5",
         inception_4d_5x5_reduce,
         { inception_4d_5x5_w },
@@ -603,8 +603,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx,{ -1, -1 } } //padding 
     );
 
-    auto inception_4d_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4d_pool_proj_weights.nnd"), file::convolution });
-    auto inception_4d_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_4d_pool_proj_bias.nnd"),  file::bias });
+    auto inception_4d_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4d_pool_proj_weights.nnd")});
+    auto inception_4d_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_4d_pool_proj_bias.nnd") });
     auto inception_4d_pool_proj = convolution("inception_4d_pool_proj",
         inception_4d_pool,
         { inception_4d_pool_proj_w },
@@ -623,8 +623,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // --------------------- 7th inception ---------------------------------
     // 1st branch
-    auto inception_4e_1x1_w = file::create({ engine, join_path(weights_dir, "inception_4e_1x1_weights.nnd"), file::convolution });
-    auto inception_4e_1x1_b = file::create({ engine, join_path(weights_dir, "inception_4e_1x1_bias.nnd"),  file::bias });
+    auto inception_4e_1x1_w = file::create({ engine, join_path(weights_dir, "inception_4e_1x1_weights.nnd")});
+    auto inception_4e_1x1_b = file::create({ engine, join_path(weights_dir, "inception_4e_1x1_bias.nnd") });
     auto inception_4e_1x1 = convolution("inception_4e_1x1",
         inception_4d_output,
         { inception_4e_1x1_w },
@@ -635,8 +635,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // 2nd branch
 
-    auto inception_4e_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4e_3x3_reduce_weights.nnd"), file::convolution });
-    auto inception_4e_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4e_3x3_reduce_bias.nnd"),  file::bias });
+    auto inception_4e_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4e_3x3_reduce_weights.nnd")});
+    auto inception_4e_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4e_3x3_reduce_bias.nnd") });
     auto inception_4e_3x3_reduce = convolution("inception_4e_3x3_reduce",
         inception_4d_output,
         { inception_4e_3x3_reduce_w },
@@ -645,8 +645,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_4e_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4e_3x3_weights.nnd"), file::convolution });
-    auto inception_4e_3x3_b = file::create({ engine, join_path(weights_dir, "inception_4e_3x3_bias.nnd"),  file::bias });
+    auto inception_4e_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4e_3x3_weights.nnd")});
+    auto inception_4e_3x3_b = file::create({ engine, join_path(weights_dir, "inception_4e_3x3_bias.nnd") });
     auto inception_4e_3x3 = convolution("inception_4e_3x3",
         inception_4e_3x3_reduce,
         { inception_4e_3x3_w },
@@ -656,8 +656,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         true);
 
     // 3rd branch
-    auto inception_4e_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4e_5x5_reduce_weights.nnd"), file::convolution });
-    auto inception_4e_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4e_5x5_reduce_bias.nnd"),  file::bias });
+    auto inception_4e_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_4e_5x5_reduce_weights.nnd")});
+    auto inception_4e_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_4e_5x5_reduce_bias.nnd") });
     auto inception_4e_5x5_reduce = convolution("inception_4e_5x5_reduce",
         inception_4d_output,
         { inception_4e_5x5_reduce_w },
@@ -666,8 +666,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_4e_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4e_5x5_weights.nnd"), file::convolution });
-    auto inception_4e_5x5_b = file::create({ engine, join_path(weights_dir, "inception_4e_5x5_bias.nnd"),  file::bias });
+    auto inception_4e_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4e_5x5_weights.nnd")});
+    auto inception_4e_5x5_b = file::create({ engine, join_path(weights_dir, "inception_4e_5x5_bias.nnd") });
     auto inception_4e_5x5 = convolution("inception_4e_5x5",
         inception_4e_5x5_reduce,
         { inception_4e_5x5_w },
@@ -686,8 +686,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx,{ -1, -1 } } //padding 
     );
 
-    auto inception_4e_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4e_pool_proj_weights.nnd"), file::convolution });
-    auto inception_4e_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_4e_pool_proj_bias.nnd"),  file::bias });
+    auto inception_4e_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4e_pool_proj_weights.nnd")});
+    auto inception_4e_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_4e_pool_proj_bias.nnd") });
     auto inception_4e_pool_proj = convolution("inception_4e_pool_proj",
         inception_4e_pool,
         { inception_4e_pool_proj_w },
@@ -715,8 +715,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // --------------------- 8th inception ---------------------------------
     // 1st branch
-    auto inception_5a_1x1_w = file::create({ engine, join_path(weights_dir, "inception_5a_1x1_weights.nnd"), file::convolution });
-    auto inception_5a_1x1_b = file::create({ engine, join_path(weights_dir, "inception_5a_1x1_bias.nnd"),  file::bias });
+    auto inception_5a_1x1_w = file::create({ engine, join_path(weights_dir, "inception_5a_1x1_weights.nnd")});
+    auto inception_5a_1x1_b = file::create({ engine, join_path(weights_dir, "inception_5a_1x1_bias.nnd") });
     auto inception_5a_1x1 = convolution("inception_5a_1x1",
         pool4_3x3_s2,
         { inception_5a_1x1_w },
@@ -727,8 +727,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // 2nd branch
 
-    auto inception_5a_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_5a_3x3_reduce_weights.nnd"), file::convolution });
-    auto inception_5a_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_5a_3x3_reduce_bias.nnd"),  file::bias });
+    auto inception_5a_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_5a_3x3_reduce_weights.nnd")});
+    auto inception_5a_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_5a_3x3_reduce_bias.nnd") });
     auto inception_5a_3x3_reduce = convolution("inception_5a_3x3_reduce",
         pool4_3x3_s2,
         { inception_5a_3x3_reduce_w },
@@ -737,8 +737,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_5a_3x3_w = file::create({ engine, join_path(weights_dir, "inception_5a_3x3_weights.nnd"), file::convolution });
-    auto inception_5a_3x3_b = file::create({ engine, join_path(weights_dir, "inception_5a_3x3_bias.nnd"),  file::bias });
+    auto inception_5a_3x3_w = file::create({ engine, join_path(weights_dir, "inception_5a_3x3_weights.nnd")});
+    auto inception_5a_3x3_b = file::create({ engine, join_path(weights_dir, "inception_5a_3x3_bias.nnd") });
     auto inception_5a_3x3 = convolution("inception_5a_3x3",
         inception_5a_3x3_reduce,
         { inception_5a_3x3_w },
@@ -748,8 +748,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         true);
 
     // 3rd branch
-    auto inception_5a_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_5a_5x5_reduce_weights.nnd"), file::convolution });
-    auto inception_5a_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_5a_5x5_reduce_bias.nnd"),  file::bias });
+    auto inception_5a_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_5a_5x5_reduce_weights.nnd")});
+    auto inception_5a_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_5a_5x5_reduce_bias.nnd") });
     auto inception_5a_5x5_reduce = convolution("inception_5a_5x5_reduce",
         pool4_3x3_s2,
         { inception_5a_5x5_reduce_w },
@@ -758,8 +758,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_5a_5x5_w = file::create({ engine, join_path(weights_dir, "inception_5a_5x5_weights.nnd"), file::convolution });
-    auto inception_5a_5x5_b = file::create({ engine, join_path(weights_dir, "inception_5a_5x5_bias.nnd"),  file::bias });
+    auto inception_5a_5x5_w = file::create({ engine, join_path(weights_dir, "inception_5a_5x5_weights.nnd")});
+    auto inception_5a_5x5_b = file::create({ engine, join_path(weights_dir, "inception_5a_5x5_bias.nnd") });
     auto inception_5a_5x5 = convolution("inception_5a_5x5",
         inception_5a_5x5_reduce,
         { inception_5a_5x5_w },
@@ -778,8 +778,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx,{ -1, -1 } } //padding 
     );
 
-    auto inception_5a_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_5a_pool_proj_weights.nnd"), file::convolution });
-    auto inception_5a_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_5a_pool_proj_bias.nnd"),  file::bias });
+    auto inception_5a_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_5a_pool_proj_weights.nnd")});
+    auto inception_5a_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_5a_pool_proj_bias.nnd") });
     auto inception_5a_pool_proj = convolution("inception_5a_pool_proj",
         inception_5a_pool,
         { inception_5a_pool_proj_w },
@@ -798,8 +798,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // --------------------- 8th inception ---------------------------------
     // 1st branch
-    auto inception_5b_1x1_w = file::create({ engine, join_path(weights_dir, "inception_5b_1x1_weights.nnd"), file::convolution });
-    auto inception_5b_1x1_b = file::create({ engine, join_path(weights_dir, "inception_5b_1x1_bias.nnd"),  file::bias });
+    auto inception_5b_1x1_w = file::create({ engine, join_path(weights_dir, "inception_5b_1x1_weights.nnd")});
+    auto inception_5b_1x1_b = file::create({ engine, join_path(weights_dir, "inception_5b_1x1_bias.nnd") });
     auto inception_5b_1x1 = convolution("inception_5b_1x1",
         inception_5a_output,
         { inception_5b_1x1_w },
@@ -810,8 +810,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 
     // 2nd branch
 
-    auto inception_5b_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_5b_3x3_reduce_weights.nnd"), file::convolution });
-    auto inception_5b_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_5b_3x3_reduce_bias.nnd"),  file::bias });
+    auto inception_5b_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "inception_5b_3x3_reduce_weights.nnd")});
+    auto inception_5b_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "inception_5b_3x3_reduce_bias.nnd") });
     auto inception_5b_3x3_reduce = convolution("inception_5b_3x3_reduce",
         inception_5a_output,
         { inception_5b_3x3_reduce_w },
@@ -820,8 +820,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_5b_3x3_w = file::create({ engine, join_path(weights_dir, "inception_5b_3x3_weights.nnd"), file::convolution });
-    auto inception_5b_3x3_b = file::create({ engine, join_path(weights_dir, "inception_5b_3x3_bias.nnd"),  file::bias });
+    auto inception_5b_3x3_w = file::create({ engine, join_path(weights_dir, "inception_5b_3x3_weights.nnd")});
+    auto inception_5b_3x3_b = file::create({ engine, join_path(weights_dir, "inception_5b_3x3_bias.nnd") });
     auto inception_5b_3x3 = convolution("inception_5b_3x3",
         inception_5b_3x3_reduce,
         { inception_5b_3x3_w },
@@ -831,8 +831,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         true);
 
     // 3rd branch
-    auto inception_5b_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_5b_5x5_reduce_weights.nnd"), file::convolution });
-    auto inception_5b_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_5b_5x5_reduce_bias.nnd"),  file::bias });
+    auto inception_5b_5x5_reduce_w = file::create({ engine, join_path(weights_dir, "inception_5b_5x5_reduce_weights.nnd")});
+    auto inception_5b_5x5_reduce_b = file::create({ engine, join_path(weights_dir, "inception_5b_5x5_reduce_bias.nnd") });
     auto inception_5b_5x5_reduce = convolution("inception_5b_5x5_reduce",
         inception_5a_output,
         { inception_5b_5x5_reduce_w },
@@ -841,8 +841,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 1, 1 } },
         true);
 
-    auto inception_5b_5x5_w = file::create({ engine, join_path(weights_dir, "inception_5b_5x5_weights.nnd"), file::convolution });
-    auto inception_5b_5x5_b = file::create({ engine, join_path(weights_dir, "inception_5b_5x5_bias.nnd"),  file::bias });
+    auto inception_5b_5x5_w = file::create({ engine, join_path(weights_dir, "inception_5b_5x5_weights.nnd")});
+    auto inception_5b_5x5_b = file::create({ engine, join_path(weights_dir, "inception_5b_5x5_bias.nnd") });
     auto inception_5b_5x5 = convolution("inception_5b_5x5",
         inception_5b_5x5_reduce,
         { inception_5b_5x5_w },
@@ -861,8 +861,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx,{ -1, -1 } } //padding 
     );
 
-    auto inception_5b_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_5b_pool_proj_weights.nnd"), file::convolution });
-    auto inception_5b_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_5b_pool_proj_bias.nnd"),  file::bias });
+    auto inception_5b_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_5b_pool_proj_weights.nnd")});
+    auto inception_5b_pool_proj_b = file::create({ engine, join_path(weights_dir, "inception_5b_pool_proj_bias.nnd") });
     auto inception_5b_pool_proj = convolution("inception_5b_pool_proj",
         inception_5b_pool,
         { inception_5b_pool_proj_w },
@@ -888,8 +888,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     );
 
 
-    auto loss3_classifier_w = file::create({ engine, join_path(weights_dir, "loss3_classifier_weights.nnd"), file::fully_connected });
-    auto loss3_classifier_b = file::create({ engine, join_path(weights_dir, "loss3_classifier_bias.nnd"), file::bias });
+    auto loss3_classifier_w = file::create({ engine, join_path(weights_dir, "loss3_classifier_weights.nnd")});
+    auto loss3_classifier_b = file::create({ engine, join_path(weights_dir, "loss3_classifier_bias.nnd")});
     auto loss3_classifier = fully_connected("loss3_classifier",
         pool5_7x7_s1,
         loss3_classifier_w,

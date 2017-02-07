@@ -20,20 +20,12 @@
 
 namespace file
 {
-    enum weights_type
-    {
-        bias,
-        convolution,
-        fully_connected,
-        mean
-    };
     struct arguments
     {
         cldnn::engine                engine;
         std::string                  name;
-        weights_type                 weight_type;
 
-        arguments(const cldnn::engine& eng, const std::string& aname, weights_type = weights_type::convolution);
+        arguments(const cldnn::engine& eng, const std::string& aname);
     };
 
     cldnn::memory read(arguments arg);
