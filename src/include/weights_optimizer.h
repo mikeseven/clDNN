@@ -27,6 +27,8 @@
 namespace cldnn
 {
 
+//helper type for deducing return type from member function pointer
+//doesn't require passing arguments like std::result_of
 template <class T>
 struct deduce_ret_type;
 

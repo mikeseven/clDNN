@@ -367,11 +367,11 @@ void network_builder::optimize_weights()
     //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
     //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
     //some basic sanity checks about existance of the primitive and it's type. throws std::logic_error
-    const auto add_weights = [this, &wo](primitive_id const& weigths_id, weights_optimizer::weights_type type, uint32_t batch_size) -> void
+    const auto add_weights = [this, &wo](primitive_id const& weights_id, weights_optimizer::weights_type type, uint32_t batch_size) -> void
     {
-        auto itr = _topology_map.find(weigths_id);
+        auto itr = _topology_map.find(weights_id);
         if (itr == _topology_map.end())
-            throw std::logic_error("Weights primitive with id " + weigths_id + " does not exist in topology map");
+            throw std::logic_error("Weights primitive with id " + weights_id + " does not exist in topology map");
 
         auto weigths_prim = itr->second->primitive_desc;
         if (weigths_prim->type() != data::type_id())
