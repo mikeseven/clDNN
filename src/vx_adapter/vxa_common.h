@@ -131,6 +131,7 @@ namespace clDNN
         case clDNN::KernelType::CONVOLUTION: return "CONVOLUTION";
         case clDNN::KernelType::NORMALIZATION: return "NORMALIZATION";
         case clDNN::KernelType::POOLING: return "POOLING";
+        case clDNN::KernelType::ROI_POOLING: return "ROI_POOLING";
         case clDNN::KernelType::FULLY_CONNECTED: return "FULLY_CONNECTED";
         case clDNN::KernelType::LOCALLY_CONNECTED: return "LOCALLY_CONNECTED";
         case clDNN::KernelType::ACTIVATION: return "ACTIVATION";

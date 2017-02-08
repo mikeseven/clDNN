@@ -13,6 +13,7 @@ namespace clDNN
         CONVOLUTION,
         NORMALIZATION,
         POOLING,
+        ROI_POOLING,
         FULLY_CONNECTED,
         LOCALLY_CONNECTED,
         ACTIVATION,
@@ -217,6 +218,19 @@ namespace clDNN
         };
 
         DedicatedParams poolParams;
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ROIPoolingParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ROIPoolingParams : public BaseParams
+    {
+        //TODO: out_arr height is actually h * c * r * b so that after the division below, it still remains h * r
+        ROIPoolingParams() : BaseParams(KernelType::ROI_POOLING) {}
+
+        size_t rois;
+        size_t pitch_rois_r;
+        size_t pitch_rois_b;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

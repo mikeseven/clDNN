@@ -5,6 +5,7 @@
 #include "vxa_locally_connected_kernel.h"
 #include "vxa_normalization_kernel.h"
 #include "vxa_pooling_kernel.h"
+#include "vxa_roi_pooling_kernel.h"
 #include "vxa_softmax_kernel.h"
 #include "vxa_binary_op_kernel.h"
 #include "vxa_table_lookup_kernel.h"
@@ -55,6 +56,9 @@ namespace clDNN
                 break;
             case KernelType::POOLING:
                 pKernelBinary = CreateKernelBinaryT<PoolingKernelBinary, PoolingParams>(params);
+                break;
+            case KernelType::ROI_POOLING:
+                pKernelBinary = CreateKernelBinaryT<ROIPoolingKernelBinary, ROIPoolingParams>(params);
                 break;
             case KernelType::FULLY_CONNECTED:
                 pKernelBinary = CreateKernelBinaryT<FullyConnectedKernelBinary, FullyConnectedParams>(params);
