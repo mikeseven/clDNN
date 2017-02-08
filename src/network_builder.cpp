@@ -239,29 +239,29 @@ void network_builder::prepare_padding()
                 primitive_id prev_id = pair.second->primitive_desc->input().at(0);
                 auto prim = _topology_map.at(prev_id)->primitive_desc;
 
-                    const auto add_padding = [](cldnn::padding newpadd, auto const& current, auto&&... params)
+                const auto add_padding = [](cldnn::padding newpadd, auto const& current, auto&&... params)
+                {
+                    auto currpadd = current->output_padding().size().transform(newpadd.size().format, 0);
+
+                    bool needs_update = false;
+                    auto newsizes = newpadd.size().sizes();
+                    auto const& currsizes = currpadd.sizes();
+                    for (uint32_t i = 0; i < newsizes.size(); ++i)
                     {
-                        auto currpadd = current->output_padding().size().transform(newpadd.size().format, 0);
+                        if (newsizes[i] > currsizes[i])
+                            needs_update = true;
+                        else
+                            newsizes[i] = currsizes[i]; //select max(old, new) for each component
+                    }
 
-                        bool needs_update = false;
-                        auto newsizes = newpadd.size().sizes();
-                        auto const& currsizes = currpadd.sizes();
-                        for (uint32_t i = 0; i < newsizes.size(); ++i)
-                        {
-                            if (newsizes[i] > currsizes[i])
-                                needs_update = true;
-                            else
-                                newsizes[i] = currsizes[i]; //select max(old, new) for each component
-                        }
-
-                        if (!needs_update)
-                            return current;
+                    if (!needs_update)
+                        return current;
                         
-                        return std::make_shared<std::remove_reference_t<decltype(*current.operator->())>>(
-                            std::forward<std::remove_reference_t<decltype(params)>>(params)...,
-                            cldnn::padding(newpadd.size().format, newsizes, newpadd.type())
-                        );
-                    };
+                    return std::make_shared<std::remove_reference_t<decltype(*current.operator->())>>(
+                        std::forward<std::remove_reference_t<decltype(params)>>(params)...,
+                        cldnn::padding(newpadd.size().format, newsizes, newpadd.type())
+                    );
+                };
 
                 // set output padding for previous primitive
                 if (prim->type() == cldnn::pooling::type_id())
