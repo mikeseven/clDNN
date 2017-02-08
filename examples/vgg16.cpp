@@ -246,30 +246,36 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         "output",
         fc8);
 
-    return topology {
+    cldnn::topology topology{
         input,
-        reordered_input,
-        conv1_1,
-        conv1_2,
-        pool1,
-        conv2_1,
-        conv2_2,
-        pool2,
-        conv3_1,
-        conv3_2,
-        conv3_3,
-        pool3,
-        conv4_1,
-        conv4_2,
-        conv4_3,
-        pool4,
-        conv5_1,
-        conv5_2,
-        conv5_3,
-        pool5,
-        fc6,
-        fc7,
-        fc8,
-        softmax
-    };
+        reordered_input, reorder_mean,
+        conv1_1, conv1_1_w, conv1_1_b,
+        conv1_2, conv1_2_w, conv1_2_b,
+        pool1 };
+    topology.add(
+        conv2_1, conv2_1_w, conv2_1_b,
+        conv2_2, conv2_2_w, conv2_2_b,
+        pool2);
+    topology.add(
+        conv3_1, conv3_1_w, conv3_1_b,
+        conv3_2, conv3_2_w, conv3_2_b,
+        conv3_3, conv3_3_w, conv3_3_b,
+        pool3);
+    topology.add(
+        conv4_1, conv4_1_w, conv4_1_b,
+        conv4_2, conv4_2_w, conv4_2_b,
+        conv4_3, conv4_3_w, conv4_3_b,
+        pool4);
+    topology.add(
+        conv5_1, conv5_1_w, conv5_1_b,
+        conv5_2, conv5_2_w, conv5_2_b,
+        conv5_3, conv5_3_w, conv5_3_b,
+        pool5);
+    topology.add(
+        fc6, fc6_w, fc6_b,
+        fc7, fc7_w, fc7_b,
+        fc8, fc8_w, fc8_b,
+        softmax);
+
+    return topology;
 }

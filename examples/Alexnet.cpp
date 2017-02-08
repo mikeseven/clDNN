@@ -177,7 +177,7 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
 
     return topology(
         input,
-        reordered_input,
+        reordered_input, reorder_mean,
         conv1, conv1_weights, conv1_biases,
         pool1,
         lrn1,

@@ -125,14 +125,14 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
     return topology{
         input,
         reordered_input,
-        conv1,
+        conv1, conv1_weights, conv1_bias,
         pool1,
-        conv2,
+        conv2, conv2_weights, conv2_bias,
         pool2,
-        conv3,
+        conv3, conv3_weights, conv3_bias,
         pool3,
-        fc1_g,
-        fc3_g,
+        fc1_g, fc1_g_weights, fc1_g_bias,
+        fc3_g, fc3_g_weights, fc3_g_bias,
         softmax
    };
 }
