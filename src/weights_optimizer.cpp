@@ -26,10 +26,9 @@ weights_optimizer::weights_optimizer(refcounted_obj_ptr<engine_impl> eng, bool e
 {
 }
 
-cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, unsigned int batch_size)
+cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, data_types expected_type, unsigned int batch_size)
 {
     auto reorder_id = std::string("reorder_") + mem_id;
-    auto data_type = mem.get_layout().data_type; //currently weights optimizer shouldn't change data type
     auto input_size = mem.get_layout().size;
     auto expected_mem_size = input_size;
 
@@ -55,17 +54,22 @@ cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, c
     else if (input_format == cldnn::format::oiyx || input_format == cldnn::format::yxio) //conv
     {
         // TODO!!! put better logic here.
-        expected_mem_size = cldnn::tensor(cldnn::format::os_iyx_osv16,
-        {
-            input_size.feature[0], input_size.feature[1], input_size.spatial[0], input_size.spatial[1] // order: "oiyx"
-        });
+        expected_mem_size = batch_size == 1 || expected_type != data_types::f16
+            ? cldnn::tensor(cldnn::format::os_iyx_osv16,
+            {
+                input_size.feature[0], input_size.feature[1], input_size.spatial[0], input_size.spatial[1] // order: "oiyx"
+            })
+            : cldnn::tensor(cldnn::format::yxio,
+            {
+                input_size.spatial[0], input_size.spatial[1], input_size.feature[1], input_size.feature[0]  // order: "yxio"
+            });
     }
     else if (input_format == cldnn::format::bfyx || input_format == cldnn::format::yxfb || input_format == cldnn::format::bx || input_format == cldnn::format::xb) //fc
     {
         // TODO!!! put better logic here.
         if (cldnn::neural_memory::traits(mem.get_layout()).dimension == 4)
         {
-            if (batch_size > 1 && data_type != data_types::f16)
+            if (batch_size > 1 && expected_type != data_types::f16)
             {
                 expected_mem_size = cldnn::tensor(cldnn::format::bs_xs_xsv8_bsv8,
                 {
@@ -87,7 +91,7 @@ cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, c
         }
         else if (cldnn::neural_memory::traits(mem.get_layout()).dimension == 2)
         {
-            expected_mem_size = batch_size >= 8 && data_type != data_types::f16
+            expected_mem_size = batch_size >= 8 && expected_type != data_types::f16
                 ? cldnn::tensor(cldnn::format::bs_xs_xsv8_bsv8,
                 {
                     input_size.batch[0], input_size.spatial[0]  // order: "bs_xs_bsv8_xsv8"
@@ -99,7 +103,7 @@ cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, c
         }
     }
 
-    cldnn::layout expected_mem_layout(data_type, expected_mem_size);
+    cldnn::layout expected_mem_layout(expected_type, expected_mem_size);
 
     if (mem.get_layout() != expected_mem_layout)
     {
@@ -110,11 +114,11 @@ cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, c
     return mem_id;
 }
 
-cldnn::primitive_id cldnn::weights_optimizer::add_weights(const std::shared_ptr<const data> data_prim, unsigned int batch_size)
+cldnn::primitive_id cldnn::weights_optimizer::add_weights(const std::shared_ptr<const data> data_prim, data_types expected_type, unsigned int batch_size)
 {
     _topology->add(data_prim);
     return _enabled
-        ? _try_optimize(data_prim->mem, data_prim->id(), batch_size)
+        ? _try_optimize(data_prim->mem, data_prim->id(), expected_type, batch_size)
         : data_prim->id();
 }
 

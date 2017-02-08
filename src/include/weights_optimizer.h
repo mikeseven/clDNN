@@ -52,12 +52,12 @@ public:
     std::vector<primitive_id> _outputs;
 
     //this function returns either mem_id directly, if mem does not need optimization, or id of a reorder which tooks mem as input and returns it in optimizied format
-    cldnn::primitive_id _try_optimize(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, unsigned int batch_size);
+    cldnn::primitive_id _try_optimize(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, data_types exptected_type, unsigned int batch_size);
 
 public:
     explicit weights_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled = true);
 
-    cldnn::primitive_id add_weights(const std::shared_ptr<const data> data_prim, unsigned int batch_size);
+    cldnn::primitive_id add_weights(const std::shared_ptr<const data> data_prim, data_types exptected_type, unsigned int batch_size);
 
     auto optimize() const -> deduce_ret_type_t<decltype(&network_impl::get_primitives)>;
     auto get_engine() { return _engine; }
