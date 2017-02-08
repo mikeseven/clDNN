@@ -189,7 +189,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("weights", bpo::value<std::string>()->value_name("<weights-dir>"),
             "Path to directory containing weights used in classification.\n"
             "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
-            "If not specified, the \"<executable-dir>/<model-name>\" path is used.")
+            "If not specified, the \"<executable-dir>/<model-name>\" path is used in first place with \"<executable-dir>/weights\" as fallback.")
         ("use_half", bpo::bool_switch(),
             "Uses half precision floating point numbers (FP16, halfs) instead of single precision ones (float) in "
             "computations of selected model.")
@@ -348,14 +348,30 @@ int main(int argc, char* argv[])
 
             // Determine weights directory (either based on executable directory - if not specified, or
             // relative to current working directory or absolute - if specified).
-            auto weights_dir = parsed_args.count("weights")
-                ? bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string()
-                : join_path(exec_info->dir(), parsed_args["model"].as<std::string>());
+            auto weights_dir = std::string(); 
+            if (parsed_args.count("weights"))
+                weights_dir = bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string();
+            else
+            {
+                weights_dir = join_path(exec_info->dir(), parsed_args["model"].as<std::string>());
+                if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
+                    weights_dir = join_path(exec_info->dir(), "weights");
+            }
+
             // Validate weights directory.
             if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
             {
-                std::cerr << "ERROR: specified network weights path (\"" << weights_dir
-                    << "\") does not exist or does not point to directory (--weights option invald)!!!" << std::endl;
+                if (parsed_args.count("weights"))
+                {
+                    std::cerr << "ERROR: specified network weights path (\"" << weights_dir
+                        << "\") does not exist or does not point to directory (--weights option invald)!!!" << std::endl;
+                }
+                else
+                {
+                    std::cerr << "ERROR: could not find default network weights path for selected topology. Neither '"
+                        << parsed_args["model"].as<std::string>() << "' nor 'weights' folder exist!!!" << std::endl;
+                }
+
                 return 1;
             }
 
