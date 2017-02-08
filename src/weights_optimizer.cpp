@@ -26,7 +26,7 @@ weights_optimizer::weights_optimizer(refcounted_obj_ptr<engine_impl> eng, bool e
 {
 }
 
-cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, weights_type type, unsigned int batch_size)
+cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, unsigned int batch_size)
 {
     auto reorder_id = std::string("reorder_") + mem_id;
     auto data_type = mem.get_layout().data_type; //currently weights optimizer shouldn't change data type
@@ -110,11 +110,11 @@ cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, c
     return mem_id;
 }
 
-cldnn::primitive_id cldnn::weights_optimizer::add_weights(const std::shared_ptr<const data> data_prim, weights_type type, unsigned int batch_size)
+cldnn::primitive_id cldnn::weights_optimizer::add_weights(const std::shared_ptr<const data> data_prim, unsigned int batch_size)
 {
     _topology->add(data_prim);
     return _enabled
-        ? _try_optimize(data_prim->mem, data_prim->id(), type, batch_size)
+        ? _try_optimize(data_prim->mem, data_prim->id(), batch_size)
         : data_prim->id();
 }
 

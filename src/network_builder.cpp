@@ -35,7 +35,7 @@ using namespace cldnn;
 namespace {
     
     //helper function for selecting function basing on the type of the given primitive
-    //this is the termination case for parameter pack reccurence, see overload below for logic
+    //this is the termination case for parameter pack recurrence, see overload below for logic
     template <class... T>
     void do_for_types(std::shared_ptr<const primitive> prim)
     {
@@ -47,7 +47,7 @@ namespace {
     //both sets should have equal size. First function will be called if type of the given primitive
     //will match first explicitly given type, second will be called if it matches second explicitly given
     //type etc.
-    //Functions given as arguments should themselfs take std::shared_ptr<const T> as argument
+    //Functions given as arguments should themselves take std::shared_ptr<const T> as argument
     //where T is the type that should be match if this function should be called
     //
     //example:
@@ -91,7 +91,7 @@ namespace {
 
     //helper function which creates single-element array if it's given anything
     //other than std::vector.
-    // T const& case -> returns constainer which holds T const&
+    // T const& case -> returns container which holds T const&
     template <class T>
     auto wrap_if_single(T const& t)
     {
@@ -100,7 +100,7 @@ namespace {
 
     //helper function which creates single-element array if it's given anything
     //other than std::vector.
-    // T&& case -> returns constainer which holds new instance of T created by moving given param
+    // T&& case -> returns container which holds new instance of T created by moving given param
     template <class T>
     auto wrap_if_single(T&& t)
     {
@@ -366,8 +366,8 @@ void network_builder::optimize_weights()
 
     //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
     //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
-    //some basic sanity checks about existance of the primitive and it's type. throws std::logic_error
-    const auto add_weights = [this, &wo](primitive_id const& weights_id, weights_optimizer::weights_type type, uint32_t batch_size) -> void
+    //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
+    const auto add_weights = [this, &wo](primitive_id const& weights_id, uint32_t batch_size) -> void
     {
         auto itr = _topology_map.find(weights_id);
         if (itr == _topology_map.end())
@@ -377,7 +377,7 @@ void network_builder::optimize_weights()
         if (weigths_prim->type() != data::type_id())
             throw std::logic_error("Optimization of weights which are not of type cldnn::data");
 
-        wo.add_weights(std::static_pointer_cast<const data>(weigths_prim), type, batch_size);
+        wo.add_weights(std::static_pointer_cast<const data>(weigths_prim), batch_size);
     };
 
     //generic lambda function which prepares given primitive for weights optimization
@@ -385,27 +385,16 @@ void network_builder::optimize_weights()
     //weights and biases used by given primitive.
     //argument should match few requirements:
     // - it should be of a form 'std::shared_ptr<const T>'
-    // - T should be 'convolution' or 'fully_connected'
-    // - both 'weights' and 'bias' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
+    // - both 'T.weights' and 'T.bias' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
     const auto prep_opt = [this, &wo, &add_weights](auto prim) -> void
     {
         auto  batch_size = prim->type()->calc_output_layout(_topology_map, prim).size.batch[0];
 
-        weights_optimizer::weights_type w_type;
-        auto prim_type = std::remove_reference_t<decltype(*prim.get())>::type_id();
-
-        if (prim_type == convolution::type_id())
-            w_type = weights_optimizer::weights_type::convolution;
-        else if (prim_type == fully_connected::type_id())
-            w_type = weights_optimizer::weights_type::fully_connected;
-        else
-            throw std::logic_error("Weights optimization for unsupported primitive type");
-
         for (auto const& w_id : wrap_if_single(prim->weights))
-            add_weights(w_id, w_type, batch_size);
+            add_weights(w_id, batch_size);
 
         for (auto const& w_id : wrap_if_single(prim->bias))
-            add_weights(w_id, weights_optimizer::weights_type::bias, batch_size);
+            add_weights(w_id, batch_size);
     };
 
     for (auto& p : _topology_map)
@@ -418,7 +407,7 @@ void network_builder::optimize_weights()
         );
     }
 
-    //all optimizing primitives has beed added and inputs for all primitives has been updated.
+    //all optimizing primitives has been added and inputs for all primitives has been updated.
     //run reorders now
     auto outputs = wo.optimize();
 
