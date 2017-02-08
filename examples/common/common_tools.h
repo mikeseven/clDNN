@@ -21,6 +21,7 @@
 #include "instrumentation.h"
 
 #include "api/topology.hpp"
+#include "api/network.hpp"
 #include "api/profiling.hpp"
 #include "api/memory.hpp"
 
