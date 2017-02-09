@@ -23,10 +23,6 @@
 namespace cldnn
 {
 
-struct convolution;
-struct fully_connected;
-class weights_optimizer;
-
 class network_builder
 {
 public:

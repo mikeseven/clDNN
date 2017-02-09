@@ -367,7 +367,7 @@ void network_builder::optimize_weights()
     //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
     //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
     //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
-    const auto add_weights = [this, &wo](primitive_id const& weights_id, data_types expected_type, uint32_t batch_size) -> void
+    const auto add_weights = [this, &wo](primitive_id const& weights_id, weights_optimizer::weights_type weights_type, auto prim, layout const& output_layout) -> void
     {
         auto itr = _topology_map.find(weights_id);
         if (itr == _topology_map.end())
@@ -377,7 +377,7 @@ void network_builder::optimize_weights()
         if (weigths_prim->type() != data::type_id())
             throw std::logic_error("Optimization of weights which are not of type cldnn::data");
 
-        wo.add_weights(std::static_pointer_cast<const data>(weigths_prim), expected_type, batch_size);
+        wo.add_weights(std::static_pointer_cast<const data>(weigths_prim), weights_type, prim, output_layout);
     };
 
     //generic lambda function which prepares given primitive for weights optimization
@@ -389,17 +389,12 @@ void network_builder::optimize_weights()
     const auto prep_opt = [this, &wo, &add_weights](auto prim) -> void
     {
         auto output_layout = prim->type()->calc_output_layout(_topology_map, prim);
-        auto batch_size = output_layout.size.batch[0];
-
-        //todo: primitive should tell explicitly which weights type it requires
-        //for now deduce it from output layout
-        auto expected_type = output_layout.data_type;
 
         for (auto const& w_id : wrap_if_single(prim->weights))
-            add_weights(w_id, expected_type, batch_size);
+            add_weights(w_id, weights_optimizer::weights_type::weights, prim, output_layout);
 
         for (auto const& w_id : wrap_if_single(prim->bias))
-            add_weights(w_id, expected_type, batch_size);
+            add_weights(w_id, weights_optimizer::weights_type::bias, prim, output_layout);
     };
 
     for (auto& p : _topology_map)

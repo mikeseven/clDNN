@@ -19,6 +19,10 @@
 
 #include "network_impl.h"
 #include "memory_impl.h"
+#include "meta_utils.h"
+
+#include "convolution_arg.h"
+#include "fully_connected_arg.h"
 
 #include <boost/optional.hpp>
 
@@ -27,39 +31,55 @@
 namespace cldnn
 {
 
-//helper type for deducing return type from member function pointer
-//doesn't require passing arguments like std::result_of
-template <class T>
-struct deduce_ret_type;
-
-template <class Ret, class C, class... Args>
-struct deduce_ret_type<Ret(C::*)(Args...)>
-{
-    using type = Ret;
-};
-
-template <class T>
-using deduce_ret_type_t = typename deduce_ret_type<T>::type;
-
-
 // TODO!!! - optimize weights based on HW
 class weights_optimizer
 {
 public:
+    enum class weights_type
+    {
+        weights,
+        bias
+    };
+
     bool _enabled;
     refcounted_obj_ptr<topology_impl> _topology;
     refcounted_obj_ptr<engine_impl> _engine;
     std::vector<primitive_id> _outputs;
 
-    //this function returns either mem_id directly, if mem does not need optimization, or id of a reorder which tooks mem as input and returns it in optimizied format
-    cldnn::primitive_id _try_optimize(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, data_types exptected_type, unsigned int batch_size);
+    //this functions return either mem_id directly, if mem does not need optimization, or id of a reorder which tooks mem as input and returns it in optimizied format
+    layout get_expected_layout(const cldnn::memory& mem, weights_type type, std::shared_ptr<const convolution> prim, layout const& output_layout);
+    layout get_expected_layout(const cldnn::memory& mem, weights_type type, std::shared_ptr<const fully_connected> prim, layout const& output_layout);
+
+    //returns true if reorder is actually needed
+    bool add_reorder_if_needed(const cldnn::memory& mem, const cldnn::primitive_id& memid, layout const& expected_layout);
 
 public:
     explicit weights_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled = true);
 
-    cldnn::primitive_id add_weights(const std::shared_ptr<const data> data_prim, data_types exptected_type, unsigned int batch_size);
+    template <class T>
+    auto add_weights(const std::shared_ptr<const data> data_prim, weights_type type, std::shared_ptr<const T> prim, layout const& output_layout)
+        -> std::enable_if_t<meta::is_any_of_v<T, convolution, fully_connected>>
+    {
+        if (!_enabled)
+            return;
 
-    auto optimize() const -> deduce_ret_type_t<decltype(&network_impl::get_primitives)>;
+        auto expected_layout = get_expected_layout(data_prim->mem, type, prim, output_layout);
+        if (!add_reorder_if_needed(data_prim->mem, data_prim->id(), expected_layout))
+            return;
+
+        //reoreder was added so we need to add 'data_prim' to topology so it can be used as input
+        _topology->add(data_prim);
+    }
+
+    template <class T>
+    auto add_weights(const std::shared_ptr<const data> data_prim, weights_type type, std::shared_ptr<const T> prim, layout const& output_layout)
+        -> std::enable_if_t<!meta::is_any_of_v<T, convolution, fully_connected>>
+    {
+        static_assert(meta::always_false<T>::value, "Weights optimization for given primitive type is not currently supported!");
+        return primitive_id();
+    }
+
+    auto optimize() const -> meta::deduce_ret_type_t<decltype(&network_impl::get_primitives)>;
     auto get_engine() { return _engine; }
 };
 }

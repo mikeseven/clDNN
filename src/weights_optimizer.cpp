@@ -26,104 +26,102 @@ weights_optimizer::weights_optimizer(refcounted_obj_ptr<engine_impl> eng, bool e
 {
 }
 
-cldnn::primitive_id weights_optimizer::_try_optimize(const cldnn::memory& mem, const cldnn::primitive_id& mem_id, data_types expected_type, unsigned int batch_size)
+layout weights_optimizer::get_expected_layout(const cldnn::memory& mem, weights_type type, std::shared_ptr<const convolution> prim, layout const& output_layout)
 {
-    auto reorder_id = std::string("reorder_") + mem_id;
-    auto input_size = mem.get_layout().size;
-    auto expected_mem_size = input_size;
+    auto current_layout = mem.get_layout();
+    auto expected_tensor = current_layout.size;
+    auto expected_data_type = output_layout.data_type;
 
-    auto input_format = input_size.format;
+    auto batch = output_layout.size.batch[0];
 
-
-    if (mem_id == "imagenet_mean.nnd")
+    switch (type)
     {
-        // TODO!!! put better logic here.
-        // NOTE: For reorder there is no need to reorder mean again. For mean_subtract the reorder is needed
-        //       when data is not in yxfb_f32 or bfyx_f32 formats (yxfb_f16 or bfyx_f16 if use_half is true).
-        //
-        //       The problem is that we are unable to detect for which primitive these weights are optimized.
-        //       Currently mean will not be optimized in any way (mean_subtract is not used in any topology).
-        return mem_id;
+    case weights_type::bias: //convolution bias
+        expected_tensor = cldnn::tensor(cldnn::format::x, { static_cast<tensor::value_type>(current_layout.count()) });
+        break;
+
+    case weights_type::weights: //convolution weights
+        if (batch == 1 || expected_data_type == data_types::f16)
+            expected_tensor = current_layout.size.transform(format::os_iyx_osv16, 1);
+        else
+            expected_tensor = current_layout.size.transform(format::yxio, 1);
+
+        break;
+
+    default:
+        throw std::runtime_error("Unsupported weights type in weights_optimizer::get_expected_layout for convolution primitive");
     }
 
-    if (input_format == cldnn::format::x) //bias
+    return layout(expected_data_type, expected_tensor);
+}
+
+layout weights_optimizer::get_expected_layout(const cldnn::memory& mem, weights_type type, std::shared_ptr<const fully_connected> prim, layout const& output_layout)
+{
+    auto current_layout = mem.get_layout();
+    auto expected_tensor = current_layout.size;
+    auto expected_data_type = output_layout.data_type;
+
+    auto batch = output_layout.size.batch[0];
+
+    switch (type)
     {
-        // TODO!!! put better logic here.
-        expected_mem_size = cldnn::tensor(cldnn::format::x, { static_cast<cldnn::tensor::value_type>(mem.get_layout().count()) });
-    }
-    else if (input_format == cldnn::format::oiyx || input_format == cldnn::format::yxio) //conv
+    case weights_type::bias: //fc bias
+        expected_tensor = cldnn::tensor(cldnn::format::x, { static_cast<tensor::value_type>(current_layout.count()) });
+        break;
+
+    case weights_type::weights: //fc weights
     {
-        // TODO!!! put better logic here.
-        expected_mem_size = batch_size == 1 || expected_type != data_types::f16
-            ? cldnn::tensor(cldnn::format::os_iyx_osv16,
-            {
-                input_size.feature[0], input_size.feature[1], input_size.spatial[0], input_size.spatial[1] // order: "oiyx"
-            })
-            : cldnn::tensor(cldnn::format::yxio,
-            {
-                input_size.spatial[0], input_size.spatial[1], input_size.feature[1], input_size.feature[0]  // order: "yxio"
-            });
-    }
-    else if (input_format == cldnn::format::bfyx || input_format == cldnn::format::yxfb || input_format == cldnn::format::bx || input_format == cldnn::format::xb) //fc
-    {
-        // TODO!!! put better logic here.
-        if (cldnn::neural_memory::traits(mem.get_layout()).dimension == 4)
+        auto dimensions = neural_memory::traits(mem.get_layout()).dimension;
+        if (dimensions == 4)
         {
-            if (batch_size > 1 && expected_type != data_types::f16)
+            if (batch > 1 && expected_data_type != data_types::f16)
             {
-                expected_mem_size = cldnn::tensor(cldnn::format::bs_xs_xsv8_bsv8,
+                expected_tensor = cldnn::tensor(cldnn::format::bs_xs_xsv8_bsv8,
                 {
-                    input_size.batch[0], input_size.feature[0] * input_size.spatial[0] * input_size.spatial[1]
+                    current_layout.size.batch[0], current_layout.size.feature[0] * current_layout.size.spatial[0] * current_layout.size.spatial[1]
                 });
             }
+            else if (batch == 1)
+                expected_tensor = current_layout.size.transform(format::fyxb, 1);
             else
-            {
-                expected_mem_size = batch_size == 1
-                    ? cldnn::tensor(cldnn::format::fyxb,
-                    {
-                        input_size.feature[0], input_size.spatial[0], input_size.spatial[1], input_size.batch[0] // order: "fyxb"
-                    })
-                    : cldnn::tensor(cldnn::format::yxfb,
-                    {
-                        input_size.spatial[0], input_size.spatial[1], input_size.feature[0], input_size.batch[0]  // order: "yxfb"
-                    });
-            }
+                expected_tensor = current_layout.size.transform(format::yxfb, 1);
         }
-        else if (cldnn::neural_memory::traits(mem.get_layout()).dimension == 2)
+        else if (dimensions == 2)
         {
-            expected_mem_size = batch_size >= 8 && expected_type != data_types::f16
-                ? cldnn::tensor(cldnn::format::bs_xs_xsv8_bsv8,
-                {
-                    input_size.batch[0], input_size.spatial[0]  // order: "bs_xs_bsv8_xsv8"
-                })
-                : cldnn::tensor(cldnn::format::xb,
-            {
-                input_size.spatial[0], input_size.batch[0]  // order: "xb"
-            });
+            if (batch >= 8 && expected_data_type != data_types::f16)
+                expected_tensor = current_layout.size.transform(format::bs_xs_xsv8_bsv8, 1);
+            else
+                expected_tensor = current_layout.size.transform(format::xb, 1);
         }
+
+        break;
     }
 
-    cldnn::layout expected_mem_layout(expected_type, expected_mem_size);
+    default:
+        throw std::runtime_error("Unsupported weights type in weights_optimizer::get_expected_layout for fully-connected primitive");
+    }
 
-    if (mem.get_layout() != expected_mem_layout)
+    return layout(expected_data_type, expected_tensor);
+}
+
+bool weights_optimizer::add_reorder_if_needed(const cldnn::memory& mem, const cldnn::primitive_id& memid, layout const& expected_layout)
+{
+    if (mem.get_layout() != expected_layout)
     {
-        _topology->add(std::make_shared<cldnn::reorder>(reorder_id, mem_id, expected_mem_layout));
+        auto reorder_id = "reorder_" + memid;
+        _topology->add(std::make_shared<cldnn::reorder>(reorder_id, memid, expected_layout));
         _outputs.push_back(reorder_id);
-        return reorder_id;
+        return true;
     }
-    return mem_id;
+
+    return false;
 }
 
-cldnn::primitive_id cldnn::weights_optimizer::add_weights(const std::shared_ptr<const data> data_prim, data_types expected_type, unsigned int batch_size)
+auto weights_optimizer::optimize() const -> meta::deduce_ret_type_t<decltype(&network_impl::get_primitives)>
 {
-    _topology->add(data_prim);
-    return _enabled
-        ? _try_optimize(data_prim->mem, data_prim->id(), expected_type, batch_size)
-        : data_prim->id();
-}
+    if (!_enabled)
+        return meta::deduce_ret_type_t<decltype(&network_impl::get_primitives)>();
 
-auto weights_optimizer::optimize() const -> deduce_ret_type_t<decltype(&network_impl::get_primitives)>
-{
     network_impl net(_engine, _topology, _outputs);
     net.execute(std::vector<refcounted_obj_ptr<event_impl>>());
     return net.get_primitives(net.get_output_ids());
