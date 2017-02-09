@@ -31,12 +31,29 @@ struct format_traits
     size_t feature_num;
     size_t spatial_num;
     std::string order;
+    std::string internal_order;
     static const char* batch_chars() { return "bn"; }
     static const char* feature_chars() { return "fioc"; }
     static const char* spatial_chars() { return "xyzhsw"; }
     static bool is_batch_char(char c) { return std::string(batch_chars()).find_first_of(c) != std::string::npos; }
     static bool is_feature_char(char c) { return std::string(feature_chars()).find_first_of(c) != std::string::npos; }
     static bool is_spatial_char(char c) { return std::string(spatial_chars()).find_first_of(c) != std::string::npos; }
+
+    static size_t has_fixed_position_within_group(char c)
+    {
+        return (c == 'x' || c == 'y' || c == 'i' || c == 'o');
+    }
+
+    static size_t get_position_within_group(char c)
+    {
+        //spatials
+        if (c == 'x' || c == 'o')
+            return 0;
+        if (c == 'y' || c == 'i')
+            return 1;
+
+        return (size_t)-1;
+    }
 };
 
 struct format
@@ -69,23 +86,23 @@ struct format
     {
         static const std::map<type, format_traits> traits
         {
-            { x,   { 1, 1, 1, "x" } },
-            { yx,  { 1, 1, 2, "yx" } },
-            { xy,  { 1, 1, 2, "xy" } },
-            { xb,  { 1, 1, 1, "xb" } },
-            { bx,  { 1, 1, 1, "bx" } },
-            { yxfn,{ 1, 1, 2, "yxfn" } },
-            { yxfb,{ 1, 1, 2, "yxfb" } },
-            { byxf,{ 1, 1, 2, "byxf" } },
-            { bfyx,{ 1, 1, 2, "bfyx" } },
-            { fyxb,{ 1, 1, 2, "fyxb" } },
-            { oiyx,{ 1, 2, 2, "oiyx" } },
-            { yxoi,{ 1, 2, 2, "yxoi" } },
-            { oyxi,{ 1, 2, 2, "oyxi" } },
-            { yxio,{ 1, 2, 2, "yxio" } },
-            { os_iyx_osv16, { 1, 2, 2, "oiyx"}},
-            { bs_xs_xsv8_bsv8, { 1, 1, 1, "bx"}},
-            { bs_x_bsv16, { 1, 1, 1, "bx"}}
+            { x,   { 1, 1, 1, "x", "??x" } },
+            { yx,  { 1, 1, 2, "yx", "??xy" } },
+            { xy,  { 1, 1, 2, "xy", "??xy" } },
+            { xb,  { 1, 1, 1, "xb", "b?x" } },
+            { bx,  { 1, 1, 1, "bx", "b?x" } },
+            { yxfn,{ 1, 1, 2, "yxfn", "nfxy" } },
+            { yxfb,{ 1, 1, 2, "yxfb", "bfxy" } },
+            { byxf,{ 1, 1, 2, "byxf", "bfxy" } },
+            { bfyx,{ 1, 1, 2, "bfyx", "bfxy" } },
+            { fyxb,{ 1, 1, 2, "fyxb", "bfxy" } },
+            { oiyx,{ 1, 2, 2, "oiyx", "?oixy" } },
+            { yxoi,{ 1, 2, 2, "yxoi", "?oixy" } },
+            { oyxi,{ 1, 2, 2, "oyxi", "?oixy" } },
+            { yxio,{ 1, 2, 2, "yxio", "?oixy" } },
+            { os_iyx_osv16, { 1, 2, 2, "oiyx", "?oixy" }},
+            { bs_xs_xsv8_bsv8, { 1, 1, 1, "bx", "b?x" }},
+            { bs_x_bsv16, { 1, 1, 1, "bx", "b?x" }}
         };
         return traits.at(fmt);
     }
@@ -94,11 +111,13 @@ struct format
     static size_t feature_num(type fmt) { return traits(fmt).feature_num; }
     static size_t spatial_num(type fmt) { return traits(fmt).spatial_num; }
     static const std::string& order(type fmt) { return traits(fmt).order; }
+    static const std::string& internal_order(type fmt) { return traits(fmt).internal_order; }
 
     size_t batch_num() const { return traits(value).batch_num; }
     size_t feature_num() const { return traits(value).feature_num; }
     size_t spatial_num() const { return traits(value).spatial_num; }
     const std::string& order() const { return traits(value).order; }
+    const std::string& internal_order() const { return traits(value).internal_order; }
 
     type value;
     constexpr format(type t) :value(t) {}
@@ -134,45 +153,21 @@ struct tensor
         , feature(_sizes+ fmt.batch_num(), fmt.feature_num())
         , spatial(_sizes+ fmt.batch_num() + fmt.feature_num(), fmt.spatial_num())
     {
-        auto order = fmt.order();
+        auto input_order = fmt.order();
+        auto internal_order = fmt.internal_order();
         std::fill_n(_sizes, CLDNN_TENSOR_DIM_MAX, default_size);
 
-        if (sizes.size() != order.length())
+        if (sizes.size() != input_order.length())
             throw std::invalid_argument("number of sizes does not match format");
 
-        size_t batch_idx = 0;
-        // if format has 'input' or 'output' feature then store other features starting from third position
-        size_t feature_idx = (order.find_first_of("io") == order.npos) ? 0 : 2;
-        size_t spatial_idx = 0;
-        for (size_t i = 0; i < sizes.size(); i++)
+        for (size_t i = 0; i < input_order.size(); ++i)
         {
-            auto c = order[i];
-            if ('o' == c)
-            {
-                //NOTE special case: output_feature map is always first
-                _sizes[batch.size()] = sizes[i];
-            }
-            else if ('i' == c)
-            {
-                //NOTE special case: input feature map is always second
-                _sizes[batch.size() + 1] = sizes[i];
-            }
-            else if (format_traits::is_batch_char(c))
-            {
-                _sizes[batch_idx++] = sizes[i];
-            }
-            else if (format_traits::is_feature_char(c))
-            {
-                _sizes[batch.size() + (feature_idx++)] = sizes[i];
-            }
-            else if (format_traits::is_spatial_char(c))
-            {
-                _sizes[batch.size() + feature.size() + (spatial_idx++)] = sizes[i];
-            }
-            else
-            {
-                throw std::domain_error(std::string("unknown coord type: ") + c);
-            }
+            auto c = input_order[i];
+            auto pos = internal_order.find(c);
+            if (pos == internal_order.npos)
+                throw std::domain_error(std::string("Unknown coord type: ") + c);
+
+            _sizes[pos] = sizes[i];
         }
     }
 
@@ -298,42 +293,20 @@ struct tensor
     }
 
     std::vector<value_type> sizes() const {
-        auto order = format.order();
-        std::vector<value_type> sizes(order.size(), 0);
-        size_t batch_idx = 0;
-        // if format has 'input' or 'output' feature then read other features starting from third position
-        size_t feature_idx = (order.find_first_of("io") == order.npos) ? 0 : 2;
-        size_t spatial_idx = 0;
-        for (size_t i = 0; i < sizes.size(); i++)
+        auto output_order = format.order();
+        auto internal_order = format.internal_order();
+        std::vector<value_type> sizes(output_order.size(), 0);
+
+        for (size_t i = 0; i < sizes.size(); ++i)
         {
-            auto c = order[i];
-            if ('o' == c)
-            {
-                //NOTE special case: output_feature map is always first
-                sizes[i] = feature[0];
-            }
-            else if ('i' == c)
-            {
-                //NOTE special case: input feature map is always second
-                sizes[i] = feature[1];
-            }
-            else if (format_traits::is_batch_char(c))
-            {
-                sizes[i] = batch[batch_idx++];
-            }
-            else if (format_traits::is_feature_char(c))
-            {
-                sizes[i] = feature[feature_idx++];
-            }
-            else if (format_traits::is_spatial_char(c))
-            {
-                sizes[i] = spatial[spatial_idx++];
-            }
-            else
-            {
-                throw std::domain_error(std::string("unknown coord type: ") + c);
-            }
+            auto c = output_order[i];
+            auto pos = internal_order.find(c);
+            if (pos == internal_order.npos)
+                throw std::domain_error(std::string("Unknown coord type") + c);
+            
+            sizes[i] = _sizes[pos];
         }
+
         return sizes;
     }
 
