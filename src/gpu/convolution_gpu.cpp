@@ -67,6 +67,7 @@ struct convolution_gpu : is_an_implementation {
         size_t input_block_width;      ///< Number of elements in X dimension stored/cached in input block.
         std::string kernel_name;       ///< Name of a kernel/algorithm to execute.
         bool fp16_unit_used;           ///< Value indicating that FP16 half precision floating point type will be used (instead of single precision).
+        size_t leftovers;
     } _kernel_data;
 
     gpu::kernel _kernel;
@@ -100,6 +101,7 @@ struct convolution_gpu : is_an_implementation {
         kd.prefetch = 0;
         kd.input_block_array_size = 0;
         kd.input_block_width = 0;
+        kd.leftovers = 0;
         return kd;
     }
 
@@ -110,7 +112,7 @@ struct convolution_gpu : is_an_implementation {
         : outer(arg)
         , _engine_info(arg.get_network().get_engine()->get_context()->get_engine_info())
         , _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.weights_memory(0).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration))
-        , _kernel(arg.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants())
+        , _kernel(arg.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(), outer.id())
     {}
 
     gpu::jit_constants get_jit_constants() const {
@@ -128,7 +130,7 @@ struct convolution_gpu : is_an_implementation {
         auto input_size = outer.input().at(0)->non_padded_output_layout().size;
         cldnn::tensor stride(cldnn::format::yx, { std::min(outer.argument.stride.spatial[0], input_size.spatial[0]),
             std::min(outer.argument.stride.spatial[1], input_size.spatial[1]) });
-        cldnn::padding input_padding(cldnn::format::yx, { filter_mem.argument().size.spatial[0] - 1, filter_mem.argument().size.spatial[1] - 1 });
+        cldnn::padding input_padding = outer.input().at(0)->desc()->output_padding();
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT",                     input_size),
@@ -197,6 +199,8 @@ struct convolution_gpu : is_an_implementation {
             mem_consts.add_constant(gpu::make_jit_constant("IN_BLOCK_ARRAY_SIZE", _kernel_data.input_block_array_size));
             mem_consts.add_constant(gpu::make_jit_constant("IN_BLOCK_WIDTH",      _kernel_data.input_block_width));
             mem_consts.add_constant(gpu::make_jit_constant("PREFETCH",            _kernel_data.prefetch));
+            if (_kernel_data.leftovers)
+                mem_consts.add_constant(gpu::make_jit_constant("LEFTOVERS",       _kernel_data.leftovers));
         }
 
         return mem_consts;
@@ -492,6 +496,9 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
     // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
     constexpr uint32_t sub_group_size = 16;
 
+    const uint32_t of_threads_per_batch = round_up_to(filter_mem.argument().size.feature[0], sub_group_size);
+    kd.leftovers = of_threads_per_batch - filter_mem.argument().size.feature[0];
+
     if (filter_mem.argument().size.spatial[0] > max_supported_filter_size ||
         filter_mem.argument().size.spatial[1] > max_supported_filter_size)
     {
@@ -510,15 +517,21 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
         }        
         //if less than 16 values is required to compute one single row of output
         //then each WI shall compute one sinle row to maximise reuse within SIMD subgroup (this gives very nice performance results)
-        else if (output_size.spatial[0] + filter_mem.argument().size.spatial[0] - 1 < 16)
+        else if (output_size.spatial[0] + filter_mem.argument().size.spatial[0] - 1 < sub_group_size)
         {
             kd.block_width = output_size.spatial[0];
             kd.block_height = 1;
             kd.prefetch = 4;
         }
-        else //fallback to fixed output size
+        else if (filter_mem.argument().size.spatial[0] < 5 && filter_mem.argument().size.spatial[1] < 5)
         {
-            kd.block_width = 4; //note: original 6x4 has been changed to 4x3 since, on GT2, this gives better results
+            kd.block_width = sub_group_size - filter_mem.argument().size.spatial[0] + 1;
+            kd.block_height = 2;
+            kd.prefetch = 4;
+        }
+        else
+        {
+            kd.block_width = 4;
             kd.block_height = 3;
             kd.prefetch = 4;
         }
@@ -557,7 +570,7 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
     
     kd.gws0 = ceil_div(output_size.spatial[0], kd.block_width);
     kd.gws1 = ceil_div(output_size.spatial[1], kd.block_height);
-    kd.gws2 = round_up_to(filter_mem.argument().size.feature[0] * output_size.batch[0], sub_group_size);
+    kd.gws2 = of_threads_per_batch * output_size.batch[0];
 
     kd.lws0 = 1;
     kd.lws1 = 1;

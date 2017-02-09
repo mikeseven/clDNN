@@ -69,6 +69,19 @@ struct profiling_period_ocl_start_stop
     cl_profiling_info start;
     cl_profiling_info stop;
 };
+
+bool is_event_profiled(const cl::Event& event)
+{
+    if (event() != nullptr)
+    {
+        auto queue = event.getInfo<CL_EVENT_COMMAND_QUEUE>();
+        if(queue() != nullptr)
+        {
+            return (queue.getInfo<CL_QUEUE_PROPERTIES>() & CL_QUEUE_PROFILING_ENABLE) != 0;
+        }
+    }
+    return false;
+}
 }
 
 const std::vector<cldnn_profiling_interval>& event_impl::get_profiling_info()
@@ -80,16 +93,22 @@ const std::vector<cldnn_profiling_interval>& event_impl::get_profiling_info()
         { "executing",  CL_PROFILING_COMMAND_START,  CL_PROFILING_COMMAND_END },
     };
 
-    if (_profiling_info.empty() && (_event.getInfo<CL_EVENT_COMMAND_QUEUE>().getInfo<CL_QUEUE_PROPERTIES>() & CL_QUEUE_PROFILING_ENABLE))
+    if (_profiling_info.empty())
     {
         for (auto& pp : profiling_periods)
         {
-            cl_ulong start;
-            _event.getProfilingInfo(pp.start, &start);
-            cl_ulong end;
-            _event.getProfilingInfo(pp.stop, &end);
-            auto value = end - start;
-            _profiling_info.push_back({ pp.name, value });
+            _profiling_info.push_back({ pp.name, 0 });
+        }
+        if (is_event_profiled(_event))
+        {
+            for (size_t i = 0; i < profiling_periods.size(); i++)
+            {
+                cl_ulong start;
+                _event.getProfilingInfo(profiling_periods[i].start, &start);
+                cl_ulong end;
+                _event.getProfilingInfo(profiling_periods[i].stop, &end);
+                _profiling_info[i].nanoseconds = end - start;
+            }
         }
     }
     return _profiling_info;

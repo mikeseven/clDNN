@@ -24,14 +24,16 @@
     _result = mad( _blockB.s7, acol7, _result ); \
 }
 
-__attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
+#define SUB_GROUP_SIZE 8
+
+__attribute__((reqd_work_group_size(SUB_GROUP_SIZE, 1, 1)))
 KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
     const __global float* input, 
     __global float* output, 
     const __global float* weight,
     const __global float* bias)
 {
-	const uint global_id = get_global_id(0);
+    const uint global_id = get_global_id(0);
 	const uint group_id = get_global_id(1); // which part of batches we are computing, for example for batch 64 we compute batches 0..31 for group_id == 0 and batches 32..65 for group_id == 1
 	uint sub_group_idx = get_local_id(0) % 8;
 

@@ -53,7 +53,7 @@ struct softmax_gpu : is_an_implementation
     softmax_gpu(const softmax& outer)
         : _outer(outer),
         _kernel_data(set_kernel_data(_outer)),
-        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
     {}
 
     static kernel_data set_kernel_data(const softmax& outer)
@@ -81,7 +81,10 @@ struct softmax_gpu : is_an_implementation
 
             kd.kernel_name = kernel_name;
         }
-        else if (input_mem.argument().format == memory::format::bx_f32 || input_mem.argument().format == memory::format::bx_f16)
+        else if (input_mem.argument().format == memory::format::bx_f32 || 
+            input_mem.argument().format == memory::format::bx_f16 ||
+            input_mem.argument().format == memory::format::bfyx_f32 ||
+            input_mem.argument().format == memory::format::bfyx_f16)
         {
             // We have two units of data per work item in current implementation.
             auto local_mem_per_wi = 2 * (kd.fp16_unit_used ? sizeof(half_t) : sizeof(float));
@@ -97,9 +100,11 @@ struct softmax_gpu : is_an_implementation
                 kd.items_num /= 2;
             }
 
+            assert((kd.items_num + 1) * kd.lws0 >= (out_buffer_size / batch_num) && "More than 'lws0' items per batch remains! Lws too small?");
+            
             kd.gws0 = kd.lws0;
             kd.gws1 = batch_num;
-            kd.leftovers = out_buffer_size % kd.lws0;
+            kd.leftovers = (out_buffer_size / batch_num) % kd.lws0;
 
             kd.kernel_name = kernel_name_batches_bx;
         }
@@ -135,8 +140,16 @@ struct softmax_gpu : is_an_implementation
         if (!data.fp16_supported && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
+        auto input_size = outer.input_memory(0).argument().size;
+
+        //kernel relies on INPUT_SIZE_X being a number of values per batch, for bfyx format, when spatials == 1,1
+        //and actual number of values is stored as fueatures count (squeezenet), swap feature[0] with spatial[0]
+        if (input_size.format == cldnn::format::bfyx)
+            if (input_size.feature[0] > 1)
+                input_size = cldnn::tensor(cldnn::format::bfyx, { input_size.batch[0], input_size.spatial[0], input_size.feature[0], input_size.spatial[1] });
+
         return gpu::jit_constants{
-            gpu::make_jit_constant("INPUT",          outer.input_memory(0).argument().size),
+            gpu::make_jit_constant("INPUT",          input_size),
             gpu::make_jit_constant("ITEMS_NUM",      data.items_num),
             gpu::make_jit_constant("LWS",            data.lws0),
             gpu::make_jit_constant("GWS",            data.gws0),

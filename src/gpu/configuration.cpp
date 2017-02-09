@@ -22,6 +22,7 @@ namespace neural {
 
         configuration::configuration()
             : enable_profiling(false)
+            , meaningful_kernels_names(false)
             , device_type(gpu)
             , device_vendor(0x8086)
             , compiler_options("")

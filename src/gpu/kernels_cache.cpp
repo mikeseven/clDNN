@@ -152,16 +152,17 @@ namespace {
             return *this;
         }
 
-        code_builder& decoration_macro(const std::string& name, const std::string& prefix, const std::string& postfix)
+        code_builder& decoration_macro(const std::string& name, const std::string& prefix, const std::string& postfix, const std::string& name_prefix = std::string())
         {
-            oss << "#define " << name << "(name) " << prefix << " name" << (postfix.empty() ? "" : "##_") << postfix << std::endl;
+            oss << "#define " << name << "(name) " << prefix << " " + name_prefix + "_##" + "name" << (postfix.empty() ? "" : "##_") << postfix << std::endl;
             return register_macro(name);
         }
+
 
         code_builder& value_macro(const std::string& name, const std::string& value)
         {
             oss << "#define " << name << " " << value << std::endl;
-            return register_macro(name);
+            return register_macro(name.substr(0, name.find('(')));
         }
 
         std::string str()
@@ -179,16 +180,22 @@ namespace {
 
 kernels_cache::kernels_cache(gpu_toolkit& context): _context(context) {}
 
-kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, jit_definitions definitions) {
+kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_name) {
     // TODO: FIXIT: more than one kernel can be created for same template_name and definitions
-    auto kernel_num = definitions.empty() ? "" : std::to_string(_kernel_codes.size());
-    auto kernel_name = template_name + (kernel_num.empty() ? "" : "_") + kernel_num;
 
+    std::replace(kernel_name.begin(), kernel_name.end(), '.', '_');
+    auto kernel_num = definitions.empty() ? "" : std::to_string(_kernel_codes.size());
+
+    if (kernel_name.empty() || !_context.get_configuration().meaningful_kernels_names)
+        kernel_name = template_name;
+
+    kernel_name += (kernel_num.empty() ? "" : "_") + kernel_num;
+    
     class code_builder code;
     code.add_line("\n//====================================================")
         .add_line("// Kernel template: " + template_name + " ")
         .add_line("// Kernel name: " + kernel_name)
-        .decoration_macro("KERNEL", "__kernel void", kernel_num)
+        .value_macro("KERNEL(name)", "__kernel void " + kernel_name)
         .decoration_macro("FUNC", "", kernel_num)
         .decoration_macro("FUNC_CALL", "", kernel_num);
     for (auto& definition : definitions) {

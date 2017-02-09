@@ -15,6 +15,8 @@
 //    - lately single WI finds maximum from all partial maximums found in step 1
 //  This value is lately used by all WI to calculate exp(x_i - x_max) and analogical operation is performed to calculate sum of these values.
 //  Finaly, calculated sum is used to scale each value: exp(x_i - x_max) / sum.
+__attribute__((intel_reqd_sub_group_size(LWS)))
+__attribute__((reqd_work_group_size(LWS, 1, 1)))
 KERNEL (softmax_gpu_batches_bx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
     const uint batch_idx = get_global_id(1);        //in processing of which batch this WI participates?
@@ -22,7 +24,7 @@ KERNEL (softmax_gpu_batches_bx)(const __global UNIT_TYPE* input, __global UNIT_T
     const uint in_batch_idx = get_global_id(0);     //this WI's id in group of items processing single batch
 
     const uint batch_offset = batch_idx * INPUT_SIZE_X;
-    const uint my_data_offset = batch_offset + in_batch_idx * ITEMS_NUM;
+    const uint my_data_offset = batch_offset + in_batch_idx;
 
     UNIT_TYPE my_chunk[ITEMS_NUM + 1];
     UNIT_TYPE my_maximum = -UNIT_VAL_MAX;
@@ -33,7 +35,7 @@ KERNEL (softmax_gpu_batches_bx)(const __global UNIT_TYPE* input, __global UNIT_T
     //each WI reads ITEMS_NUM consecutive items from batch
     for (uint i=0; i<ITEMS_NUM; ++i)
     {
-        tmp = input[my_data_offset + i];
+        tmp = input[my_data_offset + i * LWS];
         my_maximum = max(my_maximum, tmp); 
         my_chunk[i] = tmp;
     }
@@ -86,7 +88,7 @@ KERNEL (softmax_gpu_batches_bx)(const __global UNIT_TYPE* input, __global UNIT_T
     my_sum = lw_storage[0];
 
     for (uint i=0; i<ITEMS_NUM; ++i)
-        output[my_data_offset + i] = my_chunk[i] / my_sum;
+        output[my_data_offset + i * LWS] = my_chunk[i] / my_sum;
     if (in_batch_idx < LEFTOVERS)
         output[batch_offset + LWS * ITEMS_NUM + in_batch_idx] = my_chunk[ITEMS_NUM] / my_sum;
 }

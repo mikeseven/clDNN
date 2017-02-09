@@ -24,8 +24,10 @@
     _result = mad( _blockB.s7, acol7, _result ); \
 }
 
-__attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
-__attribute__((intel_reqd_sub_group_size(8)))
+#define SUB_GROUP_SIZE 8
+
+__attribute__((reqd_work_group_size(SUB_GROUP_SIZE, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
     const __global float* input, 
     __global float* output, 
@@ -37,9 +39,9 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
     const uint batch_group_id = get_global_id(1); // which part of batches we are computing, for example for batch 64 we compute batches 0..31 for batch_group_id == 0 and batches 32..65 for batch_group_id == 1
     const uint id_in_sub_group = get_sub_group_local_id();
 
-    const uint out_id = (id_in_sub_group * BATCHES_PER_WORK_ITEM * get_global_size(1)) / 8 + group_id * BATCHES_PER_WORK_ITEM * NEURONS_PER_WORK_ITEM * get_global_size(1) + (BATCHES_PER_WORK_ITEM * batch_group_id) / 8;
+    const uint out_id = (id_in_sub_group * BATCHES_PER_WORK_ITEM * get_global_size(1)) / SUB_GROUP_SIZE + group_id * BATCHES_PER_WORK_ITEM * NEURONS_PER_WORK_ITEM * get_global_size(1) + (BATCHES_PER_WORK_ITEM * batch_group_id) / SUB_GROUP_SIZE;
 
-    uint neuronIdx = id_in_sub_group + group_id * 8 * NEURONS_PER_WORK_ITEM;
+    uint neuronIdx = id_in_sub_group + group_id * SUB_GROUP_SIZE * NEURONS_PER_WORK_ITEM;
 
     float8 blockC00 = 0.f;
     float8 blockC10 = 0.f;
@@ -55,10 +57,10 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
 #endif
 #endif
 
-	uint weight_offset = id_in_sub_group + 8 * group_id * NEURONS_PER_WORK_ITEM * INPUT_ELEMENTS_COUNT;
+	uint weight_offset = id_in_sub_group + SUB_GROUP_SIZE * group_id * NEURONS_PER_WORK_ITEM * INPUT_ELEMENTS_COUNT;
 #if NEURONS_PER_WORK_ITEM > 1
 
-    uint weight_offset2 = weight_offset + 8 * INPUT_ELEMENTS_COUNT;
+    uint weight_offset2 = weight_offset + SUB_GROUP_SIZE * INPUT_ELEMENTS_COUNT;
 
 #endif // #if NEURONS_PER_WORK_ITEM > 1
 
@@ -147,6 +149,9 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
 
 #endif // #if NEURONS_PER_WORK_ITEM > 1
 
+    if(neuronIdx >= OUTPUT_ELEMENTS_COUNT)
+        return;
+
     vstore8(blockC00, out_id, output);
 #if BATCHES_PER_WORK_ITEM >= 16
     vstore8(blockC01, out_id + 1, output);
@@ -158,8 +163,10 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
 
 #if NEURONS_PER_WORK_ITEM > 1
 
-    vstore8(blockC10, out_id+INPUT_BATCH_NUM, output);
+    if(neuronIdx + 8 >= OUTPUT_ELEMENTS_COUNT)
+        return;
 
+    vstore8(blockC10, out_id+INPUT_BATCH_NUM, output);
 #if BATCHES_PER_WORK_ITEM >= 16
     vstore8(blockC11, out_id+INPUT_BATCH_NUM+1, output);
 #if BATCHES_PER_WORK_ITEM >= 32
@@ -171,5 +178,6 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
 #endif // #if NEURONS_PER_WORK_ITEM > 1
 }
 
+#undef SUB_GROUP_SIZE
 #undef MULTIPLY_BLOCKS_8x8
 #undef ACTIVATION

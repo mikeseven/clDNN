@@ -137,40 +137,68 @@ namespace cldnn
                     primitive_id prev_id = pair.second->primitive_desc->input().at(0);
                     auto prim = _topology_map.at(prev_id)->primitive_desc;
 
+                    const auto add_padding = [](cldnn::padding newpadd, auto const& current, auto&&... params)
+                    {
+                        auto currpadd = current->output_padding().size().transform(newpadd.size().format, 0);
+
+                        bool needs_update = false;
+                        auto newsizes = newpadd.size().sizes();
+                        auto const& currsizes = currpadd.sizes();
+                        for (uint32_t i = 0; i < newsizes.size(); ++i)
+                        {
+                            if (newsizes[i] > currsizes[i])
+                                needs_update = true;
+                            else
+                                newsizes[i] = currsizes[i]; //select max(old, new) for each component
+                        }
+
+                        if (!needs_update)
+                            return current;
+                        
+                        return std::make_shared<std::remove_reference_t<decltype(*current.operator->())>>(
+                            std::forward<std::remove_reference_t<decltype(params)>>(params)...,
+                            cldnn::padding(newpadd.size().format, newsizes, newpadd.type())
+                        );
+                    };
+
                     // set output padding for previous primitive
                     if (prim->type() == cldnn::pooling::type_id())
                     {
                         const auto _pool = std::static_pointer_cast<const cldnn::pooling>(prim);
-                        auto new_pool = std::make_shared<pooling>(
+                        auto new_pool = add_padding(
+                            needed_padding,
+                            _pool,
                             _pool->id(),
                             _pool->input().at(0),
                             _pool->mode,
                             _pool->stride,
                             _pool->size,
-                            _pool->input_padding(),
-                            needed_padding
+                            _pool->input_padding()
                             );
                         _topology_map[_pool->id()]->primitive_desc = new_pool;
                     }
                     else if (prim->type() == cldnn::normalization::type_id())
                     {
                         const auto _lrn = std::static_pointer_cast<const cldnn::normalization>(prim);
-                        auto new_lrn = std::make_shared<normalization>(
+                        auto new_lrn = add_padding(
+                            needed_padding,
+                            _lrn,
                             _lrn->id(),
                             _lrn->input().at(0),
                             _lrn->size,
                             _lrn->k,
                             _lrn->alpha,
                             _lrn->beta,
-                            _lrn->input_padding(),
-                            needed_padding
+                            _lrn->input_padding()
                             );
                         _topology_map[_lrn->id()]->primitive_desc = new_lrn;
                     }
                     else if (prim->type() == cldnn::convolution::type_id())
                     {
                         const auto _conv = std::static_pointer_cast<const cldnn::convolution>(prim);
-                        auto new_conv = std::make_shared<convolution>(
+                        auto new_conv = add_padding(
+                            needed_padding,
+                            _conv,
                             _conv->id(),
                             _conv->input().at(0),
                             _conv->weights,
@@ -178,8 +206,7 @@ namespace cldnn
                             _conv->input_padding(),
                             _conv->stride,
                             _conv->with_activation ? true : false,
-                            _conv->activation_negative_slope,
-                            needed_padding
+                            _conv->activation_negative_slope
                             );
                         _topology_map[_conv->id()]->primitive_desc = new_conv;
                     }
@@ -197,25 +224,27 @@ namespace cldnn
                         const auto _reorder = std::static_pointer_cast<const cldnn::reorder>(prim);
                         if (!_reorder->substract_per_feature.empty())
                         {
-                            auto new_reorder = std::make_shared<reorder>(
+                            auto new_reorder = add_padding(
+                                needed_padding,
+                                _reorder,
                                 _reorder->id(),
                                 _reorder->input().at(0),
                                 _reorder->output_layout,
                                 _reorder->substract_per_feature,
-                                _reorder->input_padding(),
-                                needed_padding
+                                _reorder->input_padding()
                                 );
                             _topology_map[_reorder->id()]->primitive_desc = new_reorder;
                         }
                         else
                         {
-                            auto new_reorder = std::make_shared<reorder>(
+                            auto new_reorder = add_padding(
+                                needed_padding,
+                                _reorder,
                                 _reorder->id(),
                                 _reorder->input().at(0),
                                 _reorder->output_layout,
                                 _reorder->mean,
-                                _reorder->input_padding(),
-                                needed_padding
+                                _reorder->input_padding()
                                 );
                             _topology_map[_reorder->id()]->primitive_desc = new_reorder;
                         }
