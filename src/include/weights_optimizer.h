@@ -75,7 +75,7 @@ public:
     auto add_weights(const std::shared_ptr<const data> data_prim, weights_type type, std::shared_ptr<const T> prim, layout const& output_layout)
         -> std::enable_if_t<!meta::is_any_of_v<T, convolution, fully_connected>>
     {
-        static_assert(meta::always_false<T>::value, "Weights optimization for given primitive type is not currently supported!");
+        static_assert(meta::always_false_v<T>, "Weights optimization for given primitive type is not currently supported!");
         return primitive_id();
     }
 

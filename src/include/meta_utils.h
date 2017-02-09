@@ -48,5 +48,14 @@ struct deduce_ret_type<Ret(C::*)(Args...)>
 template <class T>
 using deduce_ret_type_t = typename deduce_ret_type<T>::type;
 
+template <class T>
+struct always_false
+{
+    static constexpr bool value = false;
+};
+
+template <class T>
+constexpr bool always_false_v = always_false<T>::value;
+
 }
 }
