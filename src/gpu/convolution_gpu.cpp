@@ -128,8 +128,8 @@ struct convolution_gpu : is_an_implementation {
         const int batch_size = output_mem.argument().size.batch[0];
 
         auto input_size = outer.input().at(0)->non_padded_output_layout().size;
-        cldnn::tensor stride(cldnn::format::yx, { std::min(outer.argument.stride.spatial[0], input_size.spatial[0]),
-            std::min(outer.argument.stride.spatial[1], input_size.spatial[1]) });
+        cldnn::tensor stride(cldnn::format::yx, { std::min(outer.argument.stride.spatial[1], input_size.spatial[1]),
+            std::min(outer.argument.stride.spatial[0], input_size.spatial[0]) });
         cldnn::padding input_padding = outer.input().at(0)->desc()->output_padding();
 
         gpu::jit_constants mem_consts{

@@ -146,7 +146,7 @@ struct softmax_gpu : is_an_implementation
         //and actual number of values is stored as fueatures count (squeezenet), swap feature[0] with spatial[0]
         if (input_size.format == cldnn::format::bfyx)
             if (input_size.feature[0] > 1)
-                input_size = cldnn::tensor(cldnn::format::bfyx, { input_size.batch[0], input_size.spatial[0], input_size.feature[0], input_size.spatial[1] });
+                input_size = cldnn::tensor(cldnn::format::bfyx, { input_size.batch[0], input_size.spatial[0], input_size.spatial[1], input_size.feature[0] });
 
         return gpu::jit_constants{
             gpu::make_jit_constant("INPUT",          input_size),

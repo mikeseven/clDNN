@@ -315,7 +315,7 @@ void network_builder::prepare_padding()
                 {
                     filter_layout = std::static_pointer_cast<const cldnn::reorder>(filter_desc)->output_layout;
                 }
-                cldnn::padding needed_padding(cldnn::format::yx, { filter_layout.size.spatial[0] - 1, filter_layout.size.spatial[1] - 1 });
+                cldnn::padding needed_padding(cldnn::format::xy, { filter_layout.size.spatial[0] - 1, filter_layout.size.spatial[1] - 1 });
 
                 // convolution have only one input primitive
                 primitive_id prev_id = pair.second->primitive_desc->input().at(0);
