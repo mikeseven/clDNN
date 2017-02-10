@@ -621,7 +621,7 @@ __kernel void convolution_f32(
                     }
 
                     // remaining output channels
-                    for (int i = 0; i < OUT_DEPTH % 24; i++)
+                    for (int i = 0; i < OUT_DEPTH % 8; i++)
                     {
                         out0[(24+i) * OUT_SLICE_PITCH] = activation_function(blockC30[i], NL_M, NL_N);
                     }
@@ -644,7 +644,7 @@ __kernel void convolution_f32(
                         out0[( 8+i) * OUT_SLICE_PITCH] = blockC10[i];
                     }
 
-                    for (int i = 0; i < OUT_DEPTH % 16; i++)
+                    for (int i = 0; i < OUT_DEPTH % 8; i++)
                     {
                         out0[(16+i) * OUT_SLICE_PITCH] = activation_function(blockC20[i], NL_M, NL_N);
 
@@ -684,7 +684,7 @@ __kernel void convolution_f32(
         }
     }
 
-    if( global_y * TILE_M + 1 < OUT_WIDTH * OUT_HEIGHT )
+    if ((global_y * TILE_M + 1) < OUT_WIDTH * OUT_HEIGHT )
     {
         if ( ( OUT_DEPTH % TILE_N ) == 0 )
         {
@@ -755,7 +755,7 @@ __kernel void convolution_f32(
                     }
 
                     // Remaining channels
-                    for (int i = 0; i < OUT_DEPTH % 24; i++)
+                    for (int i = 0; i < OUT_DEPTH % 8; i++)
                     {
                         out1[(24+i) * OUT_SLICE_PITCH] = activation_function(blockC31[i], NL_M, NL_N);
                     }
@@ -777,7 +777,7 @@ __kernel void convolution_f32(
                         out1[( 8+i) * OUT_SLICE_PITCH] = blockC11[i];
                     }
 
-                    for (int i = 0; i < OUT_DEPTH % 16; i++)
+                    for (int i = 0; i < OUT_DEPTH % 8; i++)
                     {
                         out1[(16+i) * OUT_SLICE_PITCH] = activation_function(blockC21[i], NL_M, NL_N);
                     }
