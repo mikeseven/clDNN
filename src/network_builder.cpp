@@ -613,15 +613,15 @@ void network_builder::optimize_weights()
         for (auto const& w_id : wrap_if_single(prim->weights))
         {
             auto reorder = add_weights(w_id, layout_optimizer::data_type::weights, prim, output_layout);
-            add_if_new(reorder);
-            new_weights.push_back(reorder.first ? reorder.first->id() : w_id);
+            this->add_if_new(reorder); //gcc bug? in generic lambda we must explicitly provide 'this'
+            new_weights.push_back(reorder.first ? reorder.first->id() : static_cast<primitive_id>(w_id));
         }
 
         for (auto const& w_id : wrap_if_single(prim->bias))
         {
             auto reorder = add_weights(w_id, layout_optimizer::data_type::bias, prim, output_layout);
-            add_if_new(reorder);
-            new_bias.push_back(reorder.first ? reorder.first->id() : w_id);
+            this->add_if_new(reorder);
+            new_bias.push_back(reorder.first ? reorder.first->id() : static_cast<primitive_id>(w_id));
         }
 
         _topology_map[prim->id()]->primitive_desc = replace_weights(prim, new_weights, new_bias);
