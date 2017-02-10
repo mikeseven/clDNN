@@ -129,7 +129,10 @@ network_impl* network_builder::build_network(refcounted_obj_ptr<topology_impl> t
     _topology_map = tpl->get_primitives();
 
     if (_options.get<build_option::optimize_data>())
+    {
+        reorder_inputs();
         optimize_weights();
+    }
         
     prepare_padding();
 
@@ -140,6 +143,18 @@ network_impl* network_builder::build_network(refcounted_obj_ptr<topology_impl> t
     assert(outputs_option && !outputs_option->outputs.empty());
 
     return new network_impl(get_engine(), network_topology, outputs_option->outputs);
+}
+
+void cldnn::network_builder::add_input(primitive_id const & id, input_type type, primitive_id const& user)
+{
+    auto itr = inputs.find(id);
+    if (itr == inputs.end())
+        return (void)inputs.insert(std::make_pair(id, input_info{ type, { user } }));
+
+    if (itr->second.type != type)
+        throw std::runtime_error("one cldnn::input_layout used simultaneously as image and weights");
+
+    itr->second.users.push_back(user);
 }
 
 void network_builder::optimize_topology()
@@ -361,24 +376,34 @@ void network_builder::prepare_padding()
     }
 }
 
+void cldnn::network_builder::reorder_inputs()
+{
+}
+
 void network_builder::optimize_weights()
 {
-    weights_optimizer wo{ _engine, true };
+    layout_optimizer lo{ _engine, true };
 
     //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
     //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
     //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
-    const auto add_weights = [this, &wo](primitive_id const& weights_id, weights_optimizer::weights_type weights_type, auto prim, layout const& output_layout) -> void
+    const auto add_weights = [this, &lo](primitive_id const& weights_id, layout_optimizer::data_type weights_type, auto prim, layout const& output_layout) -> void
     {
         auto itr = _topology_map.find(weights_id);
         if (itr == _topology_map.end())
             throw std::logic_error("Weights primitive with id " + weights_id + " does not exist in topology map");
 
         auto weigths_prim = itr->second->primitive_desc;
-        if (weigths_prim->type() != data::type_id())
-            throw std::logic_error("Optimization of weights which are not of type cldnn::data");
-
-        wo.add_weights(std::static_pointer_cast<const data>(weigths_prim), weights_type, prim, output_layout);
+        if (weigths_prim->type() == data::type_id())
+        {
+            lo.add_weights_for_optimization(std::static_pointer_cast<const data>(weigths_prim), weights_type, prim, output_layout);
+        }
+        else if (weights_prim->type() == input_layout::type_id())
+        {
+            auto reorder = wo.get_reorder()
+        }
+        else
+            throw std::logic_error("Optimization of weights which are neither of type cldnn::data nor cldnn::input_layout!");
     };
 
     //generic lambda function which prepares given primitive for weights optimization

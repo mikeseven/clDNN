@@ -31,6 +31,23 @@ public:
     const refcounted_obj_ptr<engine_impl>& get_engine() const { return _engine; }
 
 private:
+    enum class input_type
+    {
+        image,          //input_layout is used for network input, i.e. image to classify
+        weights         //input_layout is used for weights, i.e. weights or bias for convolution/fc
+    };
+
+    struct input_info
+    {
+        input_type type;
+        std::vector<primitive_id> users;
+    };
+
+    std::map<primitive_id, input_info> inputs;
+
+    void add_input(primitive_id const& id, input_type type, primitive_id const& user);
+
+private:
     const refcounted_obj_ptr<engine_impl> _engine;
     build_options _options;
     topology_map _topology_map;
@@ -40,6 +57,8 @@ private:
     // Prepares output padding for primitives
     // TODO: case when input primitive is used by multiple primitives
     void prepare_padding();
+
+    void reorder_inputs();
     void optimize_weights();
 };
 }

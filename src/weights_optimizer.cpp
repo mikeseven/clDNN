@@ -21,14 +21,13 @@
 
 using namespace cldnn;
 
-weights_optimizer::weights_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled)
+layout_optimizer::layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled)
     : _enabled(enabled), _topology(new topology_impl(), false), _engine(eng), _outputs()
 {
 }
 
-layout weights_optimizer::get_expected_layout(const cldnn::memory& mem, weights_type type, std::shared_ptr<const convolution> prim, layout const& output_layout)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_layout)
 {
-    auto current_layout = mem.get_layout();
     auto expected_tensor = current_layout.size;
     auto expected_data_type = output_layout.data_type;
 
@@ -36,11 +35,11 @@ layout weights_optimizer::get_expected_layout(const cldnn::memory& mem, weights_
 
     switch (type)
     {
-    case weights_type::bias: //convolution bias
+    case data_type::bias: //convolution bias
         expected_tensor = cldnn::tensor(cldnn::format::x, { static_cast<tensor::value_type>(current_layout.count()) });
         break;
 
-    case weights_type::weights: //convolution weights
+    case data_type::weights: //convolution weights
         if (batch == 1 || expected_data_type != data_types::f16)
             expected_tensor = current_layout.size.transform(format::os_iyx_osv16, 1);
         else
@@ -48,16 +47,22 @@ layout weights_optimizer::get_expected_layout(const cldnn::memory& mem, weights_
 
         break;
 
+    case data_type::input: //convolution input
+        if (neural_memory::traits(current_layout).dimension != 4)
+            throw std::runtime_error("Convolution input not 4-dimensional?");
+
+        expected_tensor = current_layout.size.transform(format::bfyx, 1);
+        break;
+
     default:
-        throw std::runtime_error("Unsupported weights type in weights_optimizer::get_expected_layout for convolution primitive");
+        throw std::runtime_error("Unsupported data type in layout_optimizer::get_expected_layout for convolution primitive");
     }
 
     return layout(expected_data_type, expected_tensor);
 }
 
-layout weights_optimizer::get_expected_layout(const cldnn::memory& mem, weights_type type, std::shared_ptr<const fully_connected> prim, layout const& output_layout)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, layout const& output_layout)
 {
-    auto current_layout = mem.get_layout();
     auto expected_tensor = current_layout.size;
     auto expected_data_type = output_layout.data_type;
 
@@ -65,13 +70,13 @@ layout weights_optimizer::get_expected_layout(const cldnn::memory& mem, weights_
 
     switch (type)
     {
-    case weights_type::bias: //fc bias
+    case data_type::bias: //fc bias
         expected_tensor = cldnn::tensor(cldnn::format::x, { static_cast<tensor::value_type>(current_layout.count()) });
         break;
 
-    case weights_type::weights: //fc weights
+    case data_type::weights: //fc weights
     {
-        auto dimensions = neural_memory::traits(mem.get_layout()).dimension;
+        auto dimensions = neural_memory::traits(current_layout).dimension;
         if (dimensions == 4)
         {
             if (batch > 1 && expected_data_type != data_types::f16)
@@ -107,26 +112,21 @@ layout weights_optimizer::get_expected_layout(const cldnn::memory& mem, weights_
     }
 
     default:
-        throw std::runtime_error("Unsupported weights type in weights_optimizer::get_expected_layout for fully-connected primitive");
+        throw std::runtime_error("Unsupported data type in layout_optimizer::get_expected_layout for fully-connected primitive");
     }
 
     return layout(expected_data_type, expected_tensor);
 }
 
-bool weights_optimizer::add_reorder_if_needed(const cldnn::memory& mem, const cldnn::primitive_id& memid, layout const& expected_layout)
+std::shared_ptr<const cldnn::reorder> layout_optimizer::add_reorder_if_needed(const cldnn::memory& mem, const cldnn::primitive_id& memid, layout const& expected_layout)
 {
     if (mem.get_layout() != expected_layout)
-    {
-        auto reorder_id = "reorder_" + memid;
-        _topology->add(std::make_shared<cldnn::reorder>(reorder_id, memid, expected_layout));
-        _outputs.push_back(reorder_id);
-        return true;
-    }
+        return std::make_shared<cldnn::reorder>("reorder_" + memid, memid, expected_layout);
 
-    return false;
+    return std::shared_ptr<const cldnn::reorder>();
 }
 
-auto weights_optimizer::optimize() const -> meta::deduce_ret_type_t<decltype(&network_impl::get_primitives)>
+auto layout_optimizer::optimize() const -> meta::deduce_ret_type_t<decltype(&network_impl::get_primitives)>
 {
     if (!_enabled)
         return meta::deduce_ret_type_t<decltype(&network_impl::get_primitives)>();
