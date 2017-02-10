@@ -171,7 +171,8 @@ namespace {
         if (prim->output_layout == output_layout)
             return prim;
 
-        if (prim->substract_per_feature.empty())
+        if (!prim->substract_per_feature.empty())
+        {
             return std::make_shared<const reorder>(
                 prim->id(),
                 prim->input().at(0),
@@ -180,7 +181,9 @@ namespace {
                 prim->input_padding(),
                 prim->output_padding()
                 );
+        }
         else
+        {
             return std::make_shared<const reorder>(
                 prim->id(),
                 prim->input().at(0),
@@ -189,6 +192,7 @@ namespace {
                 prim->input_padding(),
                 prim->output_padding()
                 );
+        }
     }
 }
 
@@ -640,11 +644,8 @@ void network_builder::optimize_weights()
     //replace weights primitives with optimized one, if required
     for (auto const& output : outputs)
     {
-        if (output->input().empty()) //output has no input so no optimization required for this prim
-            continue;
-
-        _topology_map[output->input()[0]->id()]->primitive_desc = std::make_shared<cldnn::data>(
-            output->input()[0]->id(),
+        _topology_map[output->id()]->primitive_desc = std::make_shared<cldnn::data>(
+            output->id(),
             output->output_memory()
         );
     }
