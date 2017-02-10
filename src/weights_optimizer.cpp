@@ -41,7 +41,7 @@ layout weights_optimizer::get_expected_layout(const cldnn::memory& mem, weights_
         break;
 
     case weights_type::weights: //convolution weights
-        if (batch == 1 || expected_data_type == data_types::f16)
+        if (batch == 1 || expected_data_type != data_types::f16)
             expected_tensor = current_layout.size.transform(format::os_iyx_osv16, 1);
         else
             expected_tensor = current_layout.size.transform(format::yxio, 1);
