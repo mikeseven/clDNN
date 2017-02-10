@@ -60,10 +60,38 @@ private:
     refcounted_obj_ptr<engine_impl> _engine;
     std::vector<primitive_id> _outputs;
 
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_layout);
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, layout const& output_layout);
+    struct cache_key
+    {
+        primitive_id data_source;
+        layout expected_layout;
 
-    std::shared_ptr<const cldnn::reorder> add_reorder_if_needed(const cldnn::memory& mem, const cldnn::primitive_id& memid, layout const& expected_layout);
+        friend bool operator ==(cache_key const& lhs, cache_key const& rhs)
+        {
+            return lhs.data_source == rhs.data_source && lhs.expected_layout == rhs.expected_layout;
+        }
+
+        friend bool operator !=(cache_key const& lhs, cache_key const& rhs)
+        {
+            return !(lhs == rhs);
+        }
+
+        friend bool operator <(cache_key const& lhs, cache_key const& rhs)
+        {
+            if (lhs.data_source != rhs.data_source)
+                return (lhs.data_source < rhs.data_source);
+            return lhs.expected_layout < rhs.expected_layout;
+        }
+    };
+
+    std::map<cache_key, std::shared_ptr<const reorder>> _cached_reorders;
+
+    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, boost::optional<layout> const& output_layout);
+    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, boost::optional<layout> const& output_layout);
+
+    //pair.first is reorder (may be nullptr if reorder is not needed), pair.second tells if returned reorder was cached (no need to add it to 'ouputs' etc.)
+    //for pair.first == nullptr, pair.second == true
+    std::pair<std::shared_ptr<const cldnn::reorder>, bool>
+    create_reorder_if_needed(const layout& current_layout, const cldnn::primitive_id& memid, layout const& expected_layout);
 
 public:
     explicit layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled = true);
@@ -76,6 +104,9 @@ public:
     //
     //if 'data_layout' is already optimal, nullptr is returned
     //currently optimizations are supported only for convolution and fully-connected.
+    //
+    //returns a pair<reorder,bool> - where pair.first is a pointer to the reorder primitive and pair.second tells if it's been reused
+    //from cache, pair.second == false means this is a newly created primitive and probably needs to be added to topology etc.
     template <class T>
     auto get_reorder(layout const& data_layout,
                      primitive_id const& id,
@@ -84,40 +115,50 @@ public:
                      boost::optional<layout> user_layout = boost::optional<layout>())
         -> std::enable_if_t<
             meta::is_any_of_v<T, convolution, fully_connected>,
-            meta::deduce_ret_type_t<decltype(&layout_optimizer::add_reorder_if_needed)>
+            meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>
         >
     {
         if (!_enabled)
-            return meta::deduce_ret_type_t<decltype(&layout_optimizer::add_reorder_if_needed)>();
+            return meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>();
 
-        auto expected_layout = get_expected_layout(data_layout, type, prim, output_layout);
-        return add_reorder_if_needed(data_layout, id, expected_layout);
+        auto expected_layout = get_expected_layout(data_layout, type, user, user_layout);
+        return create_reorder_if_needed(data_layout, id, expected_layout);
     }
 
     //case for unsupported 'user' primitives
     template <class T>
     auto get_reorder(layout const& data_layout,
+                     primitive_id const& id,
                      data_type type,
                      std::shared_ptr<const T> user,
                      boost::optional<layout> user_layout = boost::optional<layout>())
         -> std::enable_if_t<
-            meta::is_any_of_v<T, convolution, fully_connected>,
-            meta::deduce_ret_type_t<decltype(&layout_optimizer::add_reorder_if_needed)>
+            !meta::is_any_of_v<T, convolution, fully_connected>,
+            meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>
         >
     {
         static_assert(meta::always_false_v<T>, "Layout optimization for given primitive type is currently unsupported!");
-        return meta::deduce_ret_type_t<decltype(&layout_optimizer::add_reorder_if_needed)>();
+        return meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>();
     }
 
     template <class T>
-    void add_weights_for_optimization(const std::shared_ptr<const data> data_prim, weights_type type, std::shared_ptr<const T> prim, layout const& output_layout)
+    auto add_weights_for_optimization(const std::shared_ptr<const data> data_prim,
+                                      data_type type,
+                                      std::shared_ptr<const T> user,
+                                      boost::optional<layout> user_layout = boost::optional<layout>())
     {
-        auto reorder = get_reorder(data_prim->mem.get_layout(), data_prim->id(), type, prim, output_layout);
-        if (!reorder)
-            return;
+        auto reorder = get_reorder(data_prim->mem.get_layout(), data_prim->id(), type, user, user_layout);
+        if (reorder.first)
+        {
+            _topology->add(data_prim);
+            if (!reorder.second) //returned reorder is a new primitive (i.e. not cached), add it to topology and as an output
+            {
+                _topology->add(reorder.first);
+                _outputs.push_back(reorder.first->id());
+            }
+        }
 
-        _topology->add(data_prim, reorder);
-        _outputs.push_back(reorder);
+        return reorder;
     }
 
     auto optimize() const -> meta::deduce_ret_type_t<decltype(&network_impl::get_primitives)>;

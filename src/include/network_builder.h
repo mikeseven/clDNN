@@ -19,6 +19,7 @@
 #include "engine_impl.h"
 #include "network_impl.h"
 #include "topology_impl.h"
+#include "weights_optimizer.h"
 
 namespace cldnn
 {
@@ -52,6 +53,8 @@ private:
     build_options _options;
     topology_map _topology_map;
 
+    layout_optimizer _lo;
+
     void optimize_topology();
 
     // Prepares output padding for primitives
@@ -60,5 +63,7 @@ private:
 
     void reorder_inputs();
     void optimize_weights();
+
+    void add_if_new(std::pair<std::shared_ptr<const reorder>, bool> const& reorder_from_optimizer);
 };
 }

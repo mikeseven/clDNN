@@ -19,6 +19,8 @@
 #include <api/primitives/reorder.hpp>
 #include <boost/filesystem.hpp>
 
+#include <sstream>
+
 using namespace cldnn;
 
 layout_optimizer::layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled)
@@ -26,12 +28,19 @@ layout_optimizer::layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool ena
 {
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_layout)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, boost::optional<layout> const& output_layout)
 {
     auto expected_tensor = current_layout.size;
-    auto expected_data_type = output_layout.data_type;
+    auto expected_data_type = current_layout.data_type;
+    auto batch = current_layout.size.batch[0];
 
-    auto batch = output_layout.size.batch[0];
+    if (output_layout)
+    {
+        expected_data_type = output_layout.get().data_type;
+        batch = output_layout.get().size.batch[0];
+    }
+    else if (type != data_type::input)
+        throw std::runtime_error("'output_layout' is required parameter for weights/bias optimization");
 
     switch (type)
     {
@@ -61,12 +70,19 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_tensor);
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, layout const& output_layout)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, boost::optional<layout> const& output_layout)
 {
     auto expected_tensor = current_layout.size;
-    auto expected_data_type = output_layout.data_type;
+    auto expected_data_type = current_layout.data_type;
+    auto batch = current_layout.size.batch[0];
 
-    auto batch = output_layout.size.batch[0];
+    if (output_layout)
+    {
+        expected_data_type = output_layout.get().data_type;
+        batch = output_layout.get().size.batch[0];
+    }
+    else if (type != data_type::input)
+        throw std::runtime_error("'output_layout' is required parameter for weights/bias optimization");
 
     switch (type)
     {
@@ -118,12 +134,26 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_tensor);
 }
 
-std::shared_ptr<const cldnn::reorder> layout_optimizer::add_reorder_if_needed(const cldnn::memory& mem, const cldnn::primitive_id& memid, layout const& expected_layout)
+std::pair<std::shared_ptr<const cldnn::reorder>, bool>
+layout_optimizer::create_reorder_if_needed(const layout& current_layout, const cldnn::primitive_id& memid, layout const& expected_layout)
 {
-    if (mem.get_layout() != expected_layout)
-        return std::make_shared<cldnn::reorder>("reorder_" + memid, memid, expected_layout);
+    if (current_layout != expected_layout)
+    {
+        cache_key ckey{ memid, expected_layout };
+        auto itr = _cached_reorders.find(ckey);
+        if (itr != _cached_reorders.end())
+            return std::make_pair(itr->second, true);
 
-    return std::shared_ptr<const cldnn::reorder>();
+        auto count = _cached_reorders.size();
+        std::stringstream ss;
+        ss << "reorder_" << count << "_" << memid;
+
+        auto reorder = std::make_shared<cldnn::reorder>(ss.str(), memid, expected_layout);
+        _cached_reorders[ckey] = reorder;
+        return std::make_pair(reorder, false);
+    }
+
+    return std::make_pair(nullptr, true);
 }
 
 auto layout_optimizer::optimize() const -> meta::deduce_ret_type_t<decltype(&network_impl::get_primitives)>

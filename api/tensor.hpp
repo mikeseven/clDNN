@@ -238,6 +238,19 @@ struct tensor
         return !(lhs == rhs);
     }
 
+    friend bool operator<(const tensor& lhs, const tensor& rhs)
+    {
+        if (lhs.format != rhs.format)
+            return lhs.format < rhs.format;
+        if (lhs.raw.size() != rhs.raw.size())
+            return lhs.raw.size() < rhs.raw.size();
+        for (size_t i = 0; i < lhs.raw.size(); ++i)
+            if (lhs.raw[i] < rhs.raw[i])
+                return true;
+
+        return false;
+    }
+
     tensor negate() const
     {
         auto result = *this;

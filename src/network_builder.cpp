@@ -21,11 +21,11 @@
 #include "network_impl.h"
 #include "convolution_arg.h"
 #include "fully_connected_arg.h"
-#include "weights_optimizer.h"
 #include "api/primitives/convolution.hpp"
 #include "api/primitives/pooling.hpp"
 #include "api/primitives/depth_concatenate.hpp"
 #include "api/primitives/normalization.hpp"
+#include "api/primitives/mean_substract.hpp"
 
 #include <set>
 #include <functional>
@@ -59,7 +59,7 @@ namespace {
     //      [](std::shared_ptr<const pooling>){ do something if 'primitive' as a pooling }
     //  );
     template <class T, class... RestOfT, class Func, class... RestOfFuncs>
-    decltype(static_cast<void>(std::declval<Func>()(std::declval<T>()))) do_for_types(
+    decltype(static_cast<void>(std::declval<Func>()(std::declval<std::shared_ptr<const T>>()))) do_for_types(
         std::shared_ptr<const primitive> prim,
         Func const& func,
         RestOfFuncs const&... rest)
@@ -115,10 +115,85 @@ namespace {
     {
         return t;
     }
+
+    auto replace_weights(std::shared_ptr<const convolution> prim, std::vector<primitive_id> const& weights, std::vector<primitive_id> const& bias)
+    {
+        return std::make_shared<const convolution>(
+            prim->id(),
+            prim->input().at(0),
+            weights,
+            bias,
+            prim->input_padding(),
+            prim->stride,
+            prim->with_activation,
+            prim->activation_negative_slope,
+            prim->output_padding()
+            );
+    }
+
+    auto replace_weights(std::shared_ptr<const fully_connected> prim, std::vector<primitive_id> const& weights, std::vector<primitive_id> const& bias)
+    {
+        if (weights.size() != 1 || bias.size() != 1)
+            throw std::runtime_error("Fully connected primitive accepts exactly one weights/bias");
+
+        return std::make_shared<const fully_connected>(
+            prim->id(),
+            prim->input().at(0),
+            weights.at(0),
+            bias.at(0),
+            prim->with_activation,
+            prim->activation_negative_slope,
+            prim->input_padding(),
+            prim->output_padding()
+            );
+    }
+
+    auto replace_inputs(std::shared_ptr<const convolution> prim, std::vector<primitive_id> const& inputs)
+    {
+        if (inputs.size() != 1)
+            throw std::runtime_error("Convolution primitive accepts exactly one input");
+
+        return std::make_shared<const convolution>(
+            prim->id(),
+            inputs.at(0),
+            prim->weights,
+            prim->bias,
+            prim->input_padding(),
+            prim->stride,
+            prim->with_activation,
+            prim->activation_negative_slope,
+            prim->output_padding()
+            );
+    }
+
+    auto replace_reorder_layout(std::shared_ptr<const reorder> prim, const layout& output_layout)
+    {
+        if (prim->output_layout == output_layout)
+            return prim;
+
+        if (prim->substract_per_feature.empty())
+            return std::make_shared<const reorder>(
+                prim->id(),
+                prim->input().at(0),
+                output_layout,
+                prim->substract_per_feature,
+                prim->input_padding(),
+                prim->output_padding()
+                );
+        else
+            return std::make_shared<const reorder>(
+                prim->id(),
+                prim->input().at(0),
+                output_layout,
+                prim->mean,
+                prim->input_padding(),
+                prim->output_padding()
+                );
+    }
 }
 
 network_builder::network_builder(refcounted_obj_ptr<engine_impl> eng, const build_options& options)
-    : _engine(eng), _options(options)
+    : _engine(eng), _options(options), _lo(_engine, _options.get<build_option::optimize_data>() != nullptr)
 {
 }
 
@@ -292,7 +367,7 @@ void network_builder::prepare_padding()
                         _pool->size,
                         _pool->input_padding()
                     );
-                    _topology_map[_pool->id()]->primitive_desc = new_pool;
+                    _topology_map[_pool->id()]->replace(new_pool);
                 }
                 else if (prim->type() == cldnn::normalization::type_id())
                 {
@@ -309,7 +384,7 @@ void network_builder::prepare_padding()
                         _lrn->norm_region,
                         _lrn->input_padding()
                     );
-                    _topology_map[_lrn->id()]->primitive_desc = new_lrn;
+                    _topology_map[_lrn->id()]->replace(new_lrn);
                 }
                 else if (prim->type() == cldnn::convolution::type_id())
                 {
@@ -326,7 +401,7 @@ void network_builder::prepare_padding()
                         _conv->with_activation,
                         _conv->activation_negative_slope
                     );
-                    _topology_map[_conv->id()]->primitive_desc = new_conv;
+                    _topology_map[_conv->id()]->replace(new_conv);
                 }
                 else if (prim->type() == cldnn::depth_concatenate::type_id())
                 {
@@ -335,7 +410,7 @@ void network_builder::prepare_padding()
                         _depth_concat->id(),
                         _depth_concat->input()
                     );
-                    _topology_map[_depth_concat->id()]->primitive_desc = new_depth_concat;
+                    _topology_map[_depth_concat->id()]->replace(new_depth_concat);
                 }
                 else if (prim->type() == cldnn::reorder::type_id())
                 {
@@ -351,7 +426,7 @@ void network_builder::prepare_padding()
                             _reorder->substract_per_feature,
                             _reorder->input_padding()
                             );
-                        _topology_map[_reorder->id()]->primitive_desc = new_reorder;
+                        _topology_map[_reorder->id()]->replace(new_reorder);
                     }
                     else
                     {
@@ -364,7 +439,7 @@ void network_builder::prepare_padding()
                             _reorder->mean,
                             _reorder->input_padding()
                             );
-                        _topology_map[_reorder->id()]->primitive_desc = new_reorder;
+                        _topology_map[_reorder->id()]->replace(new_reorder);
                     }
                 }
                 else
@@ -378,29 +453,141 @@ void network_builder::prepare_padding()
 
 void cldnn::network_builder::reorder_inputs()
 {
+    const auto reorder_input = [this](std::shared_ptr<const convolution> conv)
+    {
+        std::vector<primitive_id> new_inputs;
+        for (auto const& in_id : conv->input())
+        {
+            auto in = _topology_map[in_id]->primitive_desc;
+            if (in->type() == data::type_id())
+            {
+                auto reorder = _lo.add_weights_for_optimization(std::static_pointer_cast<const data>(in),
+                    layout_optimizer::data_type::input,
+                    conv);
+                add_if_new(reorder);
+                new_inputs.push_back(reorder.first ? reorder.first->id() : in->id());
+            }
+            else if (in->type() == input_layout::type_id())
+            {
+                auto reorder = _lo.get_reorder(
+                    std::static_pointer_cast<const input_layout>(in)->layout,
+                    in->id(),
+                    layout_optimizer::data_type::input,
+                    conv);
+                add_if_new(reorder);
+                new_inputs.push_back(reorder.first ? reorder.first->id() : in->id());
+            }
+            else if (in->type() == reorder::type_id()) //convolution's input is a reorder
+            {
+                auto current = std::static_pointer_cast<const reorder>(in);
+                auto current_layout = current->output_layout;
+                auto opt_reorder = _lo.get_reorder(
+                    current_layout,
+                    current->id(),
+                    layout_optimizer::data_type::input,
+                    conv);
+
+                if (opt_reorder.first) //output format is not optimal
+                {
+                    auto opt_layout = opt_reorder.first->output_layout;
+                    auto current_input = _topology_map[current->input().at(0)]->primitive_desc;
+                    auto input_layout = current_input->type()->calc_output_layout(_topology_map, current_input);
+                    if (input_layout == opt_layout) //current reorder 'breaks' optimal format
+                    {
+                        if (current->substract_per_feature.empty() &&
+                            current->mean.empty() &&
+                            !current->input_padding() &&
+                            !current->output_padding()) //just plain reorder
+                        {
+                            new_inputs.push_back(current_input->id());
+                        }
+                        else //change reorder's output layout
+                        {
+                            current = replace_reorder_layout(current, opt_layout);
+                            _topology_map[current->id()]->replace(current);
+                            new_inputs.push_back(current->id());
+                        }
+                    }
+                    else //current reorder gives bad output, simply change it
+                    {
+                        current = replace_reorder_layout(current, opt_layout);
+                        _topology_map[current->id()]->replace(current);
+                        new_inputs.push_back(current->id());
+                    }
+                }
+                else
+                    new_inputs.push_back(in->id());
+            }
+            else if (in->type() == mean_substract::type_id())
+            {
+                auto current = std::static_pointer_cast<const mean_substract>(in);
+                auto current_layout = current->type()->calc_output_layout(_topology_map, current);
+                auto opt_reorder = _lo.get_reorder(
+                    current_layout,
+                    current->id(),
+                    layout_optimizer::data_type::input,
+                    conv);
+
+                if (!opt_reorder.first)
+                    new_inputs.push_back(current->id());
+                else //not optimal, fuse mean_substract with reorder
+                {
+                    auto fused_reorder = std::make_shared<const reorder>(
+                        current->id(),
+                        current->input().at(0),
+                        opt_reorder.first->output_layout,
+                        current->mean
+                    );
+
+                    _topology_map[current->id()]->replace(fused_reorder);
+                    new_inputs.push_back(fused_reorder->id());
+                }
+            }
+            else
+                new_inputs.push_back(in->id());
+        }
+
+        _topology_map[conv->id()]->replace(replace_inputs(conv, new_inputs));
+    };
+
+    for (auto& p : _topology_map)
+    {
+        auto& prim = p.second;
+
+        //there's an assumption that only convolution will take data/input_layout as input
+        //exception to that rule would be a convolution which takes a reorder as input - see reoder_input above
+        do_for_types<convolution>(prim->primitive_desc,
+            reorder_input       //case for convolution
+            );
+    }
 }
 
 void network_builder::optimize_weights()
 {
-    layout_optimizer lo{ _engine, true };
-
     //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
     //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
     //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
-    const auto add_weights = [this, &lo](primitive_id const& weights_id, layout_optimizer::data_type weights_type, auto prim, layout const& output_layout) -> void
+    const auto add_weights = [this](primitive_id const& weights_id, layout_optimizer::data_type weights_type, auto prim, layout const& output_layout)
     {
         auto itr = _topology_map.find(weights_id);
         if (itr == _topology_map.end())
             throw std::logic_error("Weights primitive with id " + weights_id + " does not exist in topology map");
 
-        auto weigths_prim = itr->second->primitive_desc;
-        if (weigths_prim->type() == data::type_id())
+        auto weights_prim = itr->second->primitive_desc;
+        if (weights_prim->type() == data::type_id())
         {
-            lo.add_weights_for_optimization(std::static_pointer_cast<const data>(weigths_prim), weights_type, prim, output_layout);
+            return _lo.add_weights_for_optimization(std::static_pointer_cast<const data>(weights_prim), weights_type, prim, output_layout);
         }
         else if (weights_prim->type() == input_layout::type_id())
         {
-            auto reorder = wo.get_reorder()
+            auto reorder = _lo.get_reorder(
+                std::static_pointer_cast<const input_layout>(weights_prim)->layout,
+                weights_id,
+                weights_type,
+                prim,
+                output_layout);
+
+            return reorder;
         }
         else
             throw std::logic_error("Optimization of weights which are neither of type cldnn::data nor cldnn::input_layout!");
@@ -412,15 +599,28 @@ void network_builder::optimize_weights()
     //argument should match few requirements:
     // - it should be of a form 'std::shared_ptr<const T>'
     // - both 'T.weights' and 'T.bias' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
-    const auto prep_opt = [this, &wo, &add_weights](auto prim) -> void
+    const auto prep_opt = [this, &add_weights](auto prim) -> void
     {
         auto output_layout = prim->type()->calc_output_layout(_topology_map, prim);
 
+        std::vector<primitive_id> new_weights;
+        std::vector<primitive_id> new_bias;
+
         for (auto const& w_id : wrap_if_single(prim->weights))
-            add_weights(w_id, weights_optimizer::weights_type::weights, prim, output_layout);
+        {
+            auto reorder = add_weights(w_id, layout_optimizer::data_type::weights, prim, output_layout);
+            add_if_new(reorder);
+            new_weights.push_back(reorder.first ? reorder.first->id() : w_id);
+        }
 
         for (auto const& w_id : wrap_if_single(prim->bias))
-            add_weights(w_id, weights_optimizer::weights_type::bias, prim, output_layout);
+        {
+            auto reorder = add_weights(w_id, layout_optimizer::data_type::bias, prim, output_layout);
+            add_if_new(reorder);
+            new_bias.push_back(reorder.first ? reorder.first->id() : w_id);
+        }
+
+        _topology_map[prim->id()]->primitive_desc = replace_weights(prim, new_weights, new_bias);
     };
 
     for (auto& p : _topology_map)
@@ -435,7 +635,7 @@ void network_builder::optimize_weights()
 
     //all optimizing primitives has been added and inputs for all primitives has been updated.
     //run reorders now
-    auto outputs = wo.optimize();
+    auto outputs = _lo.optimize();
 
     //replace weights primitives with optimized one, if required
     for (auto const& output : outputs)
@@ -448,4 +648,17 @@ void network_builder::optimize_weights()
             output->output_memory()
         );
     }
+}
+
+void network_builder::add_if_new(std::pair<std::shared_ptr<const reorder>, bool> const& reorder_from_optimizer)
+{
+    if (!reorder_from_optimizer.first)
+        return;
+
+    auto id = reorder_from_optimizer.first->id();
+    auto itr = _topology_map.find(id);
+    if (itr != _topology_map.end())
+        return;
+
+    _topology_map[id] = std::make_shared<topology_node>(reorder_from_optimizer.first);
 }

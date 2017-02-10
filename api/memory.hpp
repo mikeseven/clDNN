@@ -144,6 +144,13 @@ struct layout
         return !(lhs == rhs);
     }
 
+    friend bool operator<(const layout& lhs, const layout& rhs)
+    {
+        if (lhs.data_type != rhs.data_type)
+            return (lhs.data_type < rhs.data_type);
+        return (lhs.size < rhs.size);
+    }
+
     /**
      * \brief 
      * \return number of bytes needed to store this layout
