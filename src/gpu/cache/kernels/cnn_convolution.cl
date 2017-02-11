@@ -119,7 +119,7 @@ __kernel void convolution_f16(
      + ( ( global_y % OUT_WIDTH ) * STRIDE_X );                // x offset
 #endif
 
-    const __global half *src0_read = src0;
+    const __global half *src0_read = src0 + src0_read_offset;
 
     // Src1 (filter) is directly used as btile.
     // It starts at the top of src1 and walks down.
@@ -169,9 +169,22 @@ __kernel void convolution_f16(
             // ...
             const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
             #if defined(INPUT_BUFFER_WIDTH_PADDED) && defined(INPUT_BUFFER_HEIGHT_PADDED)
-            half_t blockA00 = ( (const __global half_t*)(src0_read + src0_read_offset) )[  0  ];
+            
+            // in case the data is not aligned to sizeof(T)*KERNEL_WIDTH we need to use vload or set the data in a loop
+            half blockA00[KERNEL_WIDTH];
+            {
+                int i = 0;
+                LOOP(KERNEL_WIDTH, i, 
+                {
+                    blockA00[i] = src0_read[i];
+                } )
+            }
+            
             half*  pblockA00 = (half*)(&blockA00);
+
             #elif !defined(INPUT_BUFFER_WIDTH_PADDED) && !defined(INPUT_BUFFER_HEIGHT_PADDED)
+            // TODO: Fixed vload issue in this path.
+            #pragma error
             half_t blockA00;
             half*  pblockA00 = (half*)(&blockA00);
             #if (INPUT_PADDING_X == 1) && (INPPUT_PADDING_Y == 1) && (KERNEL_WIDTH == 3) && (KERNEL_HEIGHT == 3)
@@ -181,7 +194,7 @@ __kernel void convolution_f16(
             }
             else
             {
-                 blockA00 = ( (const __global half_t*)(src0_read + src0_read_offset - partial_left) )[0];
+                 blockA00 = ( (const __global half_t*)(src0_read - partial_left) )[0];
                  if (partial_left) pblockA00[0] = 0;
                  if (partial_right != KERNEL_WIDTH) pblockA00[KERNEL_WIDTH - 1] = 0;
             }
@@ -192,23 +205,25 @@ __kernel void convolution_f16(
             }
             else
             {
-                 blockA00 = ( (const __global half_t*)(src0_read + src0_read_offset - partial_left) )[0];
+                 blockA00 = ( (const __global half_t*)(src0_read - partial_left) )[0];
                  for (int i = 0; i < partial_left; ++i) pblockA00[i] = 0;
                  for (int i = partial_right; i < KERNEL_WIDTH; ++i) pblockA00[i] = 0;
 
             }
             #endif
             #elif defined(INPUT_BUFFER_WIDTH_PADDED)
+            // TODO: Fixed vload issue in this path.
+            #pragma error
             if ((y_offset +  patch_row < 0) || ((y_offset + patch_row) >= INPUT_HEIGHT))
             {
                 blockA00 = half_zeros;
             }
             else
             {
-                blockA00 = ( (const __global half_t*)(src0_read + src0_read_offset) )[0];
+                blockA00 = ( (const __global half_t*)(src0_read) )[0];
             }
             #endif
-            src0_read_offset += INPUT_ROW_PITCH;
+            src0_read += INPUT_ROW_PITCH;
 
             ushort blockB00[KERNEL_WIDTH * 2];
             ushort4* p4BlockB00 = (ushort4*)blockB00;
@@ -247,7 +262,7 @@ __kernel void convolution_f16(
         }
         while( ++patch_row < KERNEL_HEIGHT );
 
-        src0_read_offset += INPUT_SLICE_PITCH - ( KERNEL_HEIGHT * INPUT_ROW_PITCH ); // reset to start of next slice of patch
+        src0_read += INPUT_SLICE_PITCH - ( KERNEL_HEIGHT * INPUT_ROW_PITCH ); // reset to start of next slice of patch
     }
     while ( ++patch_depth < INPUT_DEPTH );
 
@@ -457,8 +472,22 @@ __kernel void convolution_f32(
             // ...
             const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
 
-            float_t blockA00 = ( (const __global float_t*)(src0 + src0_read_offset0))[  0  ];
-            float_t blockA01 = ( (const __global float_t*)(src0 + src0_read_offset1))[  0  ];
+            const __global float *src0_read0 = src0 + src0_read_offset0;
+            const __global float *src0_read1 = src0 + src0_read_offset1;
+            
+            float blockA00[KERNEL_WIDTH];
+            float blockA01[KERNEL_WIDTH];
+            
+            // in case the data is not aligned to sizeof(T)*KERNEL_WIDTH we need to use vload or set the data in a loop
+            {
+                int i = 0;
+                LOOP(KERNEL_WIDTH, i, 
+                {
+                    blockA00[i] = src0_read0[i];
+                    blockA01[i] = src0_read1[i];
+                } )
+            }
+
             float*  pblockA00 = (float*)(&blockA00);
             float*  pblockA01 = (float*)(&blockA01);
 
@@ -827,7 +856,7 @@ __kernel void convolution_f32(
 #define TILE_N          16      // Num filter channels per tile (src1)
 
 #define TILE_X          12      // Width of tile loaded in input (src0)
-#define TILE_Y          10       // Height of tile loaded in input (src0)
+#define TILE_Y          10      // Height of tile loaded in input (src0)
 
 __attribute__((intel_reqd_sub_group_size(16)))
 __kernel void convolution_f16_10x12x16(
@@ -870,8 +899,20 @@ __kernel void convolution_f16_10x12x16(
         // (0, 1) (8, 1) (16, 1) (24, 1) ... =>    (0, 2) (8, 2) (16, 2) (24, 2) ...
         // (0, 2) (8, 2) (16, 2) (24, 2) ...       ...
         // ...
+
+        #if ((INPUT_ROW_PITCH) % 4) == 0
+        // aligned - can ignore vload
         half4 blockA0 = *(const __global half4 *)( src0 + src0_offset );
         half4 blockA1 = *(const __global half4 *)( src0 + src0_offset + INPUT_ROW_PITCH * 5 );
+        #elif ((INPUT_ROW_PITCH) % 2) == 0
+        // in case the data is not aligned to sizeof(T)*4 we need to use vload or set the data in a loop
+        // first one is aligned
+        half4 blockA0 = *(const __global half4 *)( src0 + src0_offset );
+        half4 blockA1 = vload4(0, src0 + src0_offset + INPUT_ROW_PITCH * 5 );
+        #else
+        half4 blockA0 = vload4(0, src0 + src0_offset );
+        half4 blockA1 = vload4(0, src0 + src0_offset + INPUT_ROW_PITCH * 5 );
+        #endif
         src0_offset += INPUT_SLICE_PITCH;
 
         half blockB[KERNEL_WIDTH * KERNEL_HEIGHT];
@@ -1021,7 +1062,9 @@ __kernel void convolution_f16_8x8x16(
         // (0, 1) (8, 1) (16, 1) (24, 1) ... =>    (0, 2) (8, 2) (16, 2) (24, 2) ...
         // (0, 2) (8, 2) (16, 2) (24, 2) ...       ...
         // ...
-        half4 blockA = *(const __global half4 *)( src0 + src0_offset );
+        
+        // in case the data is not aligned to sizeof(T)*KERNEL_WIDTH we need to use vload or set the data in a loop
+        half4 blockA = vload4(0, src0 + src0_offset );
         src0_offset += SLICE_PITCH;
 
         half blockB[KERNEL_WIDTH * KERNEL_HEIGHT];
