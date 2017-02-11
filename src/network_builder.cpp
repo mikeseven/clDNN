@@ -224,18 +224,6 @@ network_impl* network_builder::build_network(refcounted_obj_ptr<topology_impl> t
     return new network_impl(get_engine(), network_topology, outputs_option->outputs);
 }
 
-void cldnn::network_builder::add_input(primitive_id const & id, input_type type, primitive_id const& user)
-{
-    auto itr = inputs.find(id);
-    if (itr == inputs.end())
-        return (void)inputs.insert(std::make_pair(id, input_info{ type, { user } }));
-
-    if (itr->second.type != type)
-        throw std::runtime_error("one cldnn::input_layout used simultaneously as image and weights");
-
-    itr->second.users.push_back(user);
-}
-
 void network_builder::optimize_topology()
 {
     // TODO some optimizations aka weights reordering, fusing, etc.

@@ -19,7 +19,7 @@
 #include "engine_impl.h"
 #include "network_impl.h"
 #include "topology_impl.h"
-#include "weights_optimizer.h"
+#include "layout_optimizer.h"
 
 namespace cldnn
 {
@@ -30,23 +30,6 @@ public:
     network_builder(refcounted_obj_ptr<engine_impl> eng, const build_options& options);
     network_impl* build_network(refcounted_obj_ptr<topology_impl> tpl);
     const refcounted_obj_ptr<engine_impl>& get_engine() const { return _engine; }
-
-private:
-    enum class input_type
-    {
-        image,          //input_layout is used for network input, i.e. image to classify
-        weights         //input_layout is used for weights, i.e. weights or bias for convolution/fc
-    };
-
-    struct input_info
-    {
-        input_type type;
-        std::vector<primitive_id> users;
-    };
-
-    std::map<primitive_id, input_info> inputs;
-
-    void add_input(primitive_id const& id, input_type type, primitive_id const& user);
 
 private:
     const refcounted_obj_ptr<engine_impl> _engine;
