@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "weights_optimizer.h"
+#include "layout_optimizer.h"
 #include <api/primitives/data.hpp>
 #include <api/primitives/reorder.hpp>
 #include <boost/filesystem.hpp>
