@@ -62,10 +62,10 @@ class OpenCL2CHeaders(object):
 
         for i, line in enumerate(content.split('\n')):
             if i % max_lines == 0:
-                res += '\n)__krnl"\nR"__krnl(\n'
+                res += ')__krnl"\nR"__krnl('
             res += line + '\n'
 
-        res += '\n)__krnl"}},\n\n'.format(name[:name.find('.')] ,self.append_file_content(filename, filename))
+        res += ')__krnl"}},\n\n'.format(name[:name.find('.')] ,self.append_file_content(filename, filename))
 
         return res
 

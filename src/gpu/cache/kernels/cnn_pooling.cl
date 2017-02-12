@@ -11,12 +11,18 @@
 
 __kernel void pooling(__global DATA_TYPE *src, __global DATA_TYPE *out)
 {
-    unsigned int out_x = get_global_id(0); 
-    unsigned int out_y = get_global_id(1);
-    unsigned int outPlane = get_global_id(2);
+    const unsigned int out_x = get_global_id(0); 
+    const unsigned int out_y = get_global_id(1);
+#if OUT_BATCH == 1
+    const unsigned int outPlane = get_global_id(2);
+    const unsigned int outBatch = 0;
+#else
+    const unsigned int outPlane = get_global_id(2) / OUT_BATCH;
+    const unsigned int outBatch = get_global_id(2) / OUT_DEPTH;
+#endif
     unsigned int src_width_step = INPUT_ROW_PITCH * POOL_STRIDE_Y;
     
-    __global DATA_TYPE* src_ptr = src + outPlane*INPUT_SLICE_PITCH + INPUT_OFFSET;
+    __global DATA_TYPE* src_ptr = src + outBatch*INPUT_BATCH_PITCH + outPlane*INPUT_SLICE_PITCH + INPUT_OFFSET;
 
 
 #ifdef MAX_POOLING
@@ -48,6 +54,6 @@ __kernel void pooling(__global DATA_TYPE *src, __global DATA_TYPE *out)
         res = res / (DATA_TYPE)(POOL_SIZE_X * POOL_SIZE_Y);
     #endif
     
-    unsigned int out_index = out_x + out_y * OUT_ROW_PITCH + outPlane*OUT_SLICE_PITCH + OUT_OFFSET;
+    unsigned int out_index = out_x + out_y * OUT_ROW_PITCH + outPlane*OUT_SLICE_PITCH + outBatch*OUT_BATCH_PITCH + OUT_OFFSET;
     out[out_index] = activation_function(res, NL_M, NL_N);
 }

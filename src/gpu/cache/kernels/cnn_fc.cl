@@ -19,11 +19,12 @@ __kernel void fc(
 {
     const unsigned int x = get_global_id(0);
     const unsigned int y = get_global_id(1);
-    const unsigned int z = get_global_id(2); 
+    const unsigned int z = get_global_id(2) / OUT_BATCH;
+    const unsigned int w = get_global_id(2) / OUT_DEPTH;
     
     const unsigned int input_size = INPUT_WIDTH * INPUT_HEIGHT * INPUT_DEPTH;
 
-    unsigned int output_idx = z*OUT_SLICE_PITCH + y * OUT_ROW_PITCH + x + OUT_OFFSET;
+    unsigned int output_idx = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y * OUT_ROW_PITCH + x + OUT_OFFSET;
     unsigned offset = z*OUT_WIDTH * OUT_HEIGHT + y*OUT_WIDTH + x;
     COUNTER_TYPE dotProd = (COUNTER_TYPE)(biases[offset]);
 
@@ -37,7 +38,7 @@ __kernel void fc(
        {
            for(unsigned int width = 0; width < INPUT_WIDTH; ++width )
            {
-               unsigned int input_idx = plane*INPUT_SLICE_PITCH + height*INPUT_ROW_PITCH + width + INPUT_OFFSET;
+               unsigned int input_idx = w*INPUT_BATCH_PITCH + plane*INPUT_SLICE_PITCH + height*INPUT_ROW_PITCH + width + INPUT_OFFSET;
 
                dotProd += (COUNTER_TYPE)(processed_input_batch[input_idx] * processed_neuron_weights[weight_idx]);
 
@@ -61,11 +62,25 @@ __kernel void fc_f16(
     __global const half  *biases)
 {
     local half slm[WORK_GROUP_X];
-    const int x = get_local_id(0);
-    const int y = get_global_id(1);
-    const int local_sz = WORK_GROUP_X;
-    const int oidx = (y / OUT_WIDTH) * OUT_ROW_PITCH + y % OUT_WIDTH + OUT_OFFSET;
-    int w = W;
+    const unsigned x = get_local_id(0);
+    const unsigned y = get_global_id(1);
+#if OUT_BATCH == 1
+    const unsigned oidx = (y / OUT_WIDTH) * OUT_ROW_PITCH + y % OUT_WIDTH + OUT_OFFSET;
+    const unsigned batch_id = 0;
+#else
+    const unsigned batch_id = get_global_id(2);
+    
+    const unsigned out_z = y / (OUT_WIDTH * OUT_HEIGHT);
+    const unsigned out_yx = y % (OUT_WIDTH * OUT_HEIGHT);
+    const unsigned out_y = out_yx / (OUT_WIDTH);
+    const unsigned out_x = out_yx % (OUT_WIDTH);
+    
+    const unsigned oidx = batch_id*OUT_BATCH_PITCH + out_z*OUT_SLICE_PITCH + out_y*OUT_ROW_PITCH + out_x + OUT_OFFSET;
+#endif
+    
+    // TODO: we need to support multi dims. currently it doesn't
+    // TODO: check cases we have padding in y/z dimensions
+    unsigned w = INPUT_BATCH_PITCH;
     
     #if (LAST_INPUT_SIZE_DIV_4 == 0)
     w /= VEC_SIZE;
@@ -79,7 +94,7 @@ __kernel void fc_f16(
     #endif
 
     int m_offset = start_offset + x;
-    int v_offset = INPUT_OFFSET + x;
+    int v_offset = batch_id*INPUT_BATCH_PITCH + INPUT_OFFSET + x;
     half4 sum = (half4)(0);
     #if (LAST_INPUT_SIZE_REMAINDER == 0)
     for (; m_offset < end_offset; m_offset += WORK_GROUP_X, v_offset += WORK_GROUP_X) {
@@ -157,11 +172,24 @@ __kernel void fc_f32(
     __global const float  *biases)
 {
     local float slm[WORK_GROUP_X];
-    const int x = get_local_id(0);
-    const int y = get_global_id(1);
-    const int local_sz = WORK_GROUP_X;
-    const int oidx = (y / OUT_WIDTH) * OUT_ROW_PITCH + y % OUT_WIDTH + OUT_OFFSET;
-    int w = W;
+    const unsigned x = get_local_id(0);
+    const unsigned y = get_global_id(1);
+#if OUT_BATCH == 1
+    const unsigned oidx = (y / OUT_WIDTH) * OUT_ROW_PITCH + y % OUT_WIDTH + OUT_OFFSET;
+    const unsigned batch_id = 0;
+#else
+    const unsigned batch_id = get_global_id(2);
+    
+    const unsigned out_z = y / (OUT_WIDTH * OUT_HEIGHT);
+    const unsigned out_yx = y % (OUT_WIDTH * OUT_HEIGHT);
+    const unsigned out_y = out_yx / (OUT_WIDTH);
+    const unsigned out_x = out_yx % (OUT_WIDTH);
+    
+    const unsigned oidx = batch_id*OUT_BATCH_PITCH + out_z*OUT_SLICE_PITCH + out_y*OUT_ROW_PITCH + out_x + OUT_OFFSET;
+#endif
+    // TODO: we need to support multi dims. currently it doesn't
+    // TODO: check cases we have padding in y/z dimensions
+    unsigned w = INPUT_BATCH_PITCH;
     
     #ifdef OUTPUT_BIASED
     const float bias = biases[y];
@@ -181,7 +209,7 @@ __kernel void fc_f32(
     #endif
 
     int m_offset = start_offset + x;
-    int v_offset = INPUT_OFFSET + x;
+    int v_offset = batch_id*INPUT_BATCH_PITCH + INPUT_OFFSET + x;
     float4 sum = (float4)(0);
     #if (LAST_INPUT_SIZE_REMAINDER == 0)
     for (; m_offset < end_offset; m_offset += WORK_GROUP_X, v_offset += WORK_GROUP_X) {

@@ -25,7 +25,7 @@ namespace clDNN
             jit << "#define __convolution" << "\n";
             m_EntryPoint = "convolution";
             const auto& out = m_Params.outDims;
-            m_kernelInfo.SetGlobalWGS(out.x, out.y, out.z);
+            m_kernelInfo.SetGlobalWGS(out.x, out.y, out.z*out.w);
             m_algorithmID = REFERENCE_CONVOLUTION;
         }
         else

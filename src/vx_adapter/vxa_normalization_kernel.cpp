@@ -11,7 +11,7 @@ namespace clDNN
 
         m_EntryPoint = "normalization";
         const auto& out = m_Params.outDims;
-        m_kernelInfo.SetGlobalWGS(out.x, out.y, out.z);
+        m_kernelInfo.SetGlobalWGS(out.x, out.y, out.z*out.w);
 
         std::stringstream jit;
         jit << GetBaseJit(m_Params);

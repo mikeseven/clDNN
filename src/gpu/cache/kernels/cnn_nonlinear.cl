@@ -14,10 +14,13 @@ __kernel void nonlinear(__global DATA_TYPE* input, __global DATA_TYPE* output)
 {
     const unsigned int x = get_global_id(0);
     const unsigned int y = get_global_id(1);
+    const unsigned int z = get_global_id(2) / OUT_BATCH;
+    const unsigned int w = get_global_id(2) / OUT_DEPTH;
 
-    const unsigned int offset = x  + y * INPUT_ROW_PITCH + INPUT_OFFSET; 
+    const unsigned src_index = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
+    const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
 	
-    output[y * OUT_ROW_PITCH + x + OUT_OFFSET] = activation_function(input[offset], NL_M, NL_N);
+    output[dst_index] = activation_function(input[src_index], NL_M, NL_N);
 }
 
 #elif (NUM_ROWS_WI == 1) && (NUM_COLS_WI == 4)
@@ -26,6 +29,8 @@ __kernel void nonlinear(__global DATA_TYPE* input, __global DATA_TYPE* output)
 {
     const unsigned int x = get_global_id(0) * NUM_COLS_WI;
     const unsigned int y = get_global_id(1);
+    const unsigned int z = get_global_id(2) / OUT_BATCH;
+    const unsigned int w = get_global_id(2) / OUT_DEPTH;
 
     unsigned int input_offset = x  + y * INPUT_ROW_PITCH + INPUT_OFFSET; 
     unsigned int out_offset = x  + y * OUT_ROW_PITCH + OUT_OFFSET; 

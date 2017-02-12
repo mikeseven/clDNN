@@ -15,9 +15,10 @@ __kernel void softmax(__global DATA_TYPE* input, __global DATA_TYPE* output)
 {
     const unsigned int x = get_global_id(0);
     const unsigned int y = get_global_id(1);
-    const unsigned int z = get_global_id(2);
+    const unsigned int z = get_global_id(2) / OUT_BATCH;
+    const unsigned int w = get_global_id(2) / OUT_DEPTH;
 
-    unsigned int in_depth_offset = z*INPUT_SLICE_PITCH + INPUT_OFFSET;
+    unsigned int in_depth_offset = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + INPUT_OFFSET;
     
     DATA_TYPE max_value = input[in_depth_offset];
     for (int srcY = 0; srcY < INPUT_HEIGHT; ++srcY)
@@ -41,8 +42,8 @@ __kernel void softmax(__global DATA_TYPE* input, __global DATA_TYPE* output)
         }
     }
     
-    const unsigned int input_idx  = z * INPUT_SLICE_PITCH + y * INPUT_ROW_PITCH + x;
-    const unsigned int output_idx = z * OUT_SLICE_PITCH + y * OUT_ROW_PITCH + x + OUT_OFFSET;
+    const unsigned int input_idx  = in_depth_offset + y*INPUT_ROW_PITCH + x;
+    const unsigned int output_idx = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
     const DATA_TYPE res = exp(input[input_idx] - max_value) / (DATA_TYPE)denominator;
     
     output[output_idx] = res;

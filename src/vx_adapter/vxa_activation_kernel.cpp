@@ -31,14 +31,14 @@ namespace clDNN
         {
             jit << "#define USE_CNN_EXT_REFERENCE_KERNEL\n";
             const auto& out = m_Params.outDims;
-            m_kernelInfo.SetGlobalWGS(out.x, out.y, out.z);
+            m_kernelInfo.SetGlobalWGS(out.x, out.y, out.z*out.w);
         }
         else
         {
             m_kernelInfo.SetGlobalWGS(
                 (m_Params.inDims.x + NUM_COLS_WI - 1) / NUM_COLS_WI,
                 (nonWidthDim + NUM_ROWS_WI - 1) / NUM_ROWS_WI,
-                1);
+                m_Params.outDims.w);
 
             jit << "#define NUM_ROWS_WI (" << NUM_ROWS_WI << ")\n"
                 << "#define NUM_COLS_WI (" << NUM_COLS_WI << ")\n"

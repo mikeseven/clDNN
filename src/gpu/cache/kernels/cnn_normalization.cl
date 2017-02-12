@@ -24,9 +24,15 @@ __kernel void normalization(__global const DATA_TYPE* input, __global DATA_TYPE*
 {
     const unsigned int x                = get_global_id(0);
     const unsigned int y                = get_global_id(1);
+#if OUT_BATCH == 1
     const unsigned int z                = get_global_id(2);
-    const unsigned int input_index      = z * INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
-    const unsigned int output_index     = z * OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
+    const unsigned int w                = 0;
+#else
+    const unsigned int z                = get_global_id(2) / OUT_BATCH;
+    const unsigned int w                = get_global_id(2) / OUT_DEPTH;
+#endif
+    const unsigned int input_index      = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
+    const unsigned int output_index     = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
 
     COUNTER_TYPE sum = 0.0f;
 
@@ -49,7 +55,7 @@ __kernel void normalization(__global const DATA_TYPE* input, __global DATA_TYPE*
 
     const int x_start = ((int)x - ROUND_NORM_HALF_SIZE);
     const int y_start = ((int)y - ROUND_NORM_HALF_SIZE);
-    unsigned int input_offset  = z * INPUT_SLICE_PITCH + y_start*INPUT_ROW_PITCH + x_start;
+    unsigned int input_offset = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y_start*INPUT_ROW_PITCH + x_start + INPUT_OFFSET;
 
     for (unsigned int j = 0; j < ROUND_NORM_SIZE ; ++j) 
     {

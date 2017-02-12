@@ -12,11 +12,12 @@
 #if defined(__convolution)
 __kernel void convolution(__global DATA_TYPE* input, __global DATA_TYPE* output, __global DATA_TYPE* weights, __global DATA_TYPE* biases)
 {
-    const unsigned int x = get_global_id(0);
-    const unsigned int y = get_global_id(1);
-    const unsigned int z = get_global_id(2);
+    const unsigned x = get_global_id(0);
+    const unsigned y = get_global_id(1);
+    const unsigned z = get_global_id(2) / OUT_BATCH;
+    const unsigned w = get_global_id(2) / OUT_DEPTH;
 
-    const unsigned int filter_size = INPUT_DEPTH * KERNEL_HEIGHT * KERNEL_WIDTH;
+    const unsigned filter_size = INPUT_DEPTH * KERNEL_HEIGHT * KERNEL_WIDTH;
 
     DATA_TYPE dotProd  =  biases[z];
 
@@ -29,15 +30,15 @@ __kernel void convolution(__global DATA_TYPE* input, __global DATA_TYPE* output,
     int input_y = max((int)(y * STRIDE_Y - INPUT_PADDING_Y),0);
 
     unsigned int filter_offset = z * filter_size + yk_start * KERNEL_WIDTH + xk_start;
-    unsigned int input_offset = input_y * INPUT_ROW_PITCH + input_x + INPUT_OFFSET;
+    unsigned int input_offset = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + input_y * INPUT_ROW_PITCH + input_x + INPUT_OFFSET;
 
     int xk_steps = xk_end - xk_start;
     int yk_steps = yk_end - yk_start;
-    for (unsigned int k = 0; k < INPUT_DEPTH; ++k)
+    for (unsigned k = 0; k < INPUT_DEPTH; ++k)
     {
-        for (unsigned int j = yk_start; j < yk_end ; ++j)
+        for (unsigned j = yk_start; j < yk_end ; ++j)
         {
-            for (unsigned int i = xk_start; i < xk_end ; ++i)
+            for (unsigned i = xk_start; i < xk_end ; ++i)
             {
                 dotProd += input[input_offset] * weights[filter_offset];
                 ++input_offset;
@@ -49,7 +50,9 @@ __kernel void convolution(__global DATA_TYPE* input, __global DATA_TYPE* output,
         input_offset += (INPUT_SLICE_PITCH/INPUT_ROW_PITCH - yk_steps) * INPUT_ROW_PITCH;
         filter_offset += (KERNEL_HEIGHT - yk_steps) * KERNEL_WIDTH;
     }
-    output[z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET] = activation_function(dotProd, NL_M, NL_N);
+    
+    const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
+    output[dst_index] = activation_function(dotProd, NL_M, NL_N);
 }
 
 #endif
@@ -66,15 +69,15 @@ __kernel void convolution_f16(
     const __global half *src1,
     const __global half *bias)
 {
-    const int group_x = get_group_id(0);
-    const int group_y = get_group_id(1);
-    const int global_x = get_global_id(0);
-    const int global_y = get_global_id(1);
-    const int global_z = get_global_id(2);
+    const unsigned group_x = get_group_id(0);
+    const unsigned group_y = get_group_id(1);
+    const unsigned global_x = get_global_id(0);
+    const unsigned global_y = get_global_id(1);
+    const unsigned global_z = get_global_id(2);
 
-    int interleaved_y;
-    int kernel_y;
-    int kernel_idx;
+    unsigned interleaved_y;
+    unsigned kernel_y;
+    unsigned kernel_idx;
 
     // Result ctile (*dst) is M rows x N columns
     // LWG size is 1x16.  Thus each thread calculates 16*M rows x N cols of ctile.
@@ -149,11 +152,11 @@ __kernel void convolution_f16(
     // Walk DOWN src0 (patch 0, 1, 2, ...) and DOWN src1.
     // Inner loop loads and FMADs one row (KERNEL_WIDTH) of each input patch
     // and KERNEL_WIDTH/2 rows of interleaved filter.
-    int patch_depth = 0;
+    unsigned patch_depth = 0;
     __attribute__((opencl_unroll_hint(1)))
     do
     {
-        int patch_row = 0;
+        unsigned patch_row = 0;
         __attribute__((opencl_unroll_hint(1)))
         do
         {
@@ -173,7 +176,7 @@ __kernel void convolution_f16(
             // in case the data is not aligned to sizeof(T)*KERNEL_WIDTH we need to use vload or set the data in a loop
             half blockA00[KERNEL_WIDTH];
             {
-                int i = 0;
+                unsigned i = 0;
                 LOOP(KERNEL_WIDTH, i, 
                 {
                     blockA00[i] = src0_read[i];
@@ -206,8 +209,8 @@ __kernel void convolution_f16(
             else
             {
                  blockA00 = ( (const __global half_t*)(src0_read - partial_left) )[0];
-                 for (int i = 0; i < partial_left; ++i) pblockA00[i] = 0;
-                 for (int i = partial_right; i < KERNEL_WIDTH; ++i) pblockA00[i] = 0;
+                 for (unsigned i = 0; i < partial_left; ++i) pblockA00[i] = 0;
+                 for (unsigned i = partial_right; i < KERNEL_WIDTH; ++i) pblockA00[i] = 0;
 
             }
             #endif
@@ -276,8 +279,8 @@ __kernel void convolution_f16(
      + ( ( global_y * TILE_M ) / OUT_WIDTH ) * OUT_ROW_PITCH  // y offset
      + ( ( global_y * TILE_M ) % OUT_WIDTH );               // x offset
 
-    int m = NL_M;
-    int n = NL_N;
+    unsigned m = NL_M;
+    unsigned n = NL_N;
 
     const half in_m = *(half*)(&m);
     const half in_n = *(half*)(&n);
@@ -298,7 +301,7 @@ __kernel void convolution_f16(
         blockC00 = activation_function_half16(blockC00, in_m, in_n);
         blockC10 = activation_function_half16(blockC10, in_m, in_n);
 
-        for (int i = 0; i < 16; i++)
+        for (unsigned i = 0; i < 16; i++)
         {
             out[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
             out[(16+i) * OUT_SLICE_PITCH] = blockC10[i];
@@ -315,7 +318,7 @@ __kernel void convolution_f16(
             blockC00 = activation_function_half16(blockC00, in_m, in_n);
             blockC10 = activation_function_half16(blockC10, in_m, in_n);
 
-            for ( int i = 0; i < 16; i++ )
+            for ( unsigned i = 0; i < 16; i++ )
             {
                 out[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
                 out[(16+i) * OUT_SLICE_PITCH] = blockC10[i];
@@ -329,7 +332,7 @@ __kernel void convolution_f16(
 
             blockC00 = activation_function_half16(blockC00, in_m, in_n);
 
-            for (int i = 0; i < 16; i++)
+            for (unsigned i = 0; i < 16; i++)
             {
                 out[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
             }
@@ -345,7 +348,7 @@ __kernel void convolution_f16(
             blockC00 = activation_function_half16(blockC00, in_m, in_n);
             blockC10 = activation_function_half16(blockC10, in_m, in_n);
 
-            for ( int i = 0; i < 16; i++ )
+            for ( unsigned i = 0; i < 16; i++ )
             {
                 out[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
                 out[(16+i) * OUT_SLICE_PITCH] = blockC10[i];
@@ -363,11 +366,11 @@ __kernel void convolution_f16(
             blockC00 = activation_function_half16(blockC00, in_m, in_n);
             blockC10 = activation_function_half16(blockC10, in_m, in_n);
 
-            for (int i = 0; i < 16 ; i++)
+            for (unsigned i = 0; i < 16 ; i++)
             {
                 out[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
             }
-            for (int i = 0; i < OUT_DEPTH % 16 ; i++)
+            for (unsigned i = 0; i < OUT_DEPTH % 16 ; i++)
             {
                 out[(16+i) * OUT_SLICE_PITCH] = blockC10[i];
             }
@@ -378,7 +381,7 @@ __kernel void convolution_f16(
 
             blockC00 = activation_function_half16(blockC00, in_m, in_n);
 
-            for (int i = 0; i < OUT_DEPTH % 16 ; i++)
+            for (unsigned i = 0; i < OUT_DEPTH % 16 ; i++)
             {
                 out[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
             }
@@ -403,14 +406,14 @@ __kernel void convolution_f32(
     const __global float *src1,
     const __global float *bias)
 {
-    const int group_x = get_group_id(0);
-    const int group_y = get_group_id(1);
-    const int global_x = get_global_id(0);
-    const int global_y = get_global_id(1);
-    const int global_z = get_global_id(2);
-    int interleaved_y;
-    int kernel_y;
-    int kernel_idx;
+    const unsigned group_x = get_group_id(0);
+    const unsigned group_y = get_group_id(1);
+    const unsigned global_x = get_global_id(0);
+    const unsigned global_y = get_global_id(1);
+    const unsigned global_z = get_global_id(2);
+    unsigned interleaved_y;
+    unsigned kernel_y;
+    unsigned kernel_idx;
 
     // Result ctile (*dst) is M rows x N columns
     // LWG size is 1x8.  Thus each thread calculates 8*M rows x N cols of ctile.
@@ -454,10 +457,10 @@ __kernel void convolution_f32(
     // Walk DOWN src0 (patch 0, 1, 2, ...) and DOWN src1.
     // Inner loop loads and FMADs one row (KERNEL_WIDTH) of each input patch
     // and KERNEL_WIDTH/2 rows of interleaved filter.
-    int patch_depth = 0;
+    unsigned patch_depth = 0;
     do
     {
-        int patch_row = 0;
+        unsigned patch_row = 0;
         do
         {
             // Load atile and btile.
@@ -480,7 +483,7 @@ __kernel void convolution_f32(
             
             // in case the data is not aligned to sizeof(T)*KERNEL_WIDTH we need to use vload or set the data in a loop
             {
-                int i = 0;
+                unsigned i = 0;
                 LOOP(KERNEL_WIDTH, i, 
                 {
                     blockA00[i] = src0_read0[i];
@@ -574,8 +577,8 @@ __kernel void convolution_f32(
     #ifdef OUTPUT_BIASED
     __global float8* biasPtr = (__global float8*) (bias + global_z * OUT_DEPTH + group_x * TILE_N);
     #endif
-    int m = NL_M;
-    int n = NL_N;
+    unsigned m = NL_M;
+    unsigned n = NL_N;
 
     float in_m = *(float*)(&m);
     float in_n = *(float*)(&n);
@@ -595,7 +598,7 @@ __kernel void convolution_f32(
             blockC20 = activation_function_float8(blockC20, in_m, in_n);
             blockC30 = activation_function_float8(blockC30, in_m, in_n);
 
-            for( int i = 0; i < 8; i++ )
+            for( unsigned i = 0; i < 8; i++ )
             {
                 out0[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
                 out0[( 8+i) * OUT_SLICE_PITCH] = blockC10[i];
@@ -619,7 +622,7 @@ __kernel void convolution_f32(
                 blockC20 = activation_function_float8(blockC20, in_m, in_n);
                 blockC30 = activation_function_float8(blockC30, in_m, in_n);
 
-                for ( int i = 0; i < 8; i++ )
+                for ( unsigned i = 0; i < 8; i++ )
                 {
                     out0[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
                     out0[( 8+i) * OUT_SLICE_PITCH] = blockC10[i];
@@ -642,7 +645,7 @@ __kernel void convolution_f32(
                     blockC10 = activation_function_float8(blockC10, in_m, in_n);
                     blockC20 = activation_function_float8(blockC20, in_m, in_n);
 
-                    for (int i = 0; i < 8; i++)
+                    for (unsigned i = 0; i < 8; i++)
                     {
                         out0[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
                         out0[( 8+i) * OUT_SLICE_PITCH] = blockC10[i];
@@ -650,7 +653,7 @@ __kernel void convolution_f32(
                     }
 
                     // remaining output channels
-                    for (int i = 0; i < OUT_DEPTH % 8; i++)
+                    for (unsigned i = 0; i < OUT_DEPTH % 8; i++)
                     {
                         out0[(24+i) * OUT_SLICE_PITCH] = activation_function(blockC30[i], NL_M, NL_N);
                     }
@@ -667,13 +670,13 @@ __kernel void convolution_f32(
                     blockC00 = activation_function_float8(blockC00, in_m, in_n);
                     blockC10 = activation_function_float8(blockC10, in_m, in_n);
 
-                    for (int i = 0; i < 8; i++)
+                    for (unsigned i = 0; i < 8; i++)
                     {
                         out0[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
                         out0[( 8+i) * OUT_SLICE_PITCH] = blockC10[i];
                     }
 
-                    for (int i = 0; i < OUT_DEPTH % 8; i++)
+                    for (unsigned i = 0; i < OUT_DEPTH % 8; i++)
                     {
                         out0[(16+i) * OUT_SLICE_PITCH] = activation_function(blockC20[i], NL_M, NL_N);
 
@@ -689,12 +692,12 @@ __kernel void convolution_f32(
 
                     blockC00 = activation_function_float8(blockC00, in_m, in_n);
 
-                    for (int i = 0; i < 8; i++)
+                    for (unsigned i = 0; i < 8; i++)
                     {
                         out0[( 0+i) * OUT_SLICE_PITCH] = blockC00[i];
                     }
 
-                    for (int i = 0; i < OUT_DEPTH % 8; i++)
+                    for (unsigned i = 0; i < OUT_DEPTH % 8; i++)
                     {
                         out0[(8+i) * OUT_SLICE_PITCH] = activation_function(blockC10[i], NL_M, NL_N);
                     }
@@ -704,7 +707,7 @@ __kernel void convolution_f32(
                     #ifdef OUTPUT_BIASED
                     blockC00 += *biasPtr;
                     #endif
-                    for (int i = 0; i < OUT_DEPTH % 8; i++)
+                    for (unsigned i = 0; i < OUT_DEPTH % 8; i++)
                     {
                         out0[( 0+i) * OUT_SLICE_PITCH] = activation_function(blockC00[i], NL_M, NL_N);
                     }
@@ -729,7 +732,7 @@ __kernel void convolution_f32(
             blockC21 = activation_function_float8(blockC21, in_m, in_n);
             blockC31 = activation_function_float8(blockC31, in_m, in_n);
 
-            for( int i = 0; i < 8; i++ )
+            for( unsigned i = 0; i < 8; i++ )
             {
                 out1[( 0+i) * OUT_SLICE_PITCH] = blockC01[i];
                 out1[( 8+i) * OUT_SLICE_PITCH] = blockC11[i];
@@ -753,7 +756,7 @@ __kernel void convolution_f32(
                 blockC21 = activation_function_float8(blockC21, in_m, in_n);
                 blockC31 = activation_function_float8(blockC31, in_m, in_n);
 
-                for ( int i = 0; i < 8; i++ )
+                for ( unsigned i = 0; i < 8; i++ )
                 {
                     out1[( 0+i) * OUT_SLICE_PITCH] = blockC01[i];
                     out1[( 8+i) * OUT_SLICE_PITCH] = blockC11[i];
@@ -776,7 +779,7 @@ __kernel void convolution_f32(
                     blockC11 = activation_function_float8(blockC11, in_m, in_n);
                     blockC21 = activation_function_float8(blockC21, in_m, in_n);
 
-                    for (int i = 0; i < 8; i++)
+                    for (unsigned i = 0; i < 8; i++)
                     {
                         out1[( 0+i) * OUT_SLICE_PITCH] = blockC01[i];
                         out1[( 8+i) * OUT_SLICE_PITCH] = blockC11[i];
@@ -784,7 +787,7 @@ __kernel void convolution_f32(
                     }
 
                     // Remaining channels
-                    for (int i = 0; i < OUT_DEPTH % 8; i++)
+                    for (unsigned i = 0; i < OUT_DEPTH % 8; i++)
                     {
                         out1[(24+i) * OUT_SLICE_PITCH] = activation_function(blockC31[i], NL_M, NL_N);
                     }
@@ -800,13 +803,13 @@ __kernel void convolution_f32(
                     blockC01 = activation_function_float8(blockC01, in_m, in_n);
                     blockC11 = activation_function_float8(blockC11, in_m, in_n);
 
-                    for (int i = 0; i < 8; i++)
+                    for (unsigned i = 0; i < 8; i++)
                     {
                         out1[( 0+i) * OUT_SLICE_PITCH] = blockC01[i];
                         out1[( 8+i) * OUT_SLICE_PITCH] = blockC11[i];
                     }
 
-                    for (int i = 0; i < OUT_DEPTH % 8; i++)
+                    for (unsigned i = 0; i < OUT_DEPTH % 8; i++)
                     {
                         out1[(16+i) * OUT_SLICE_PITCH] = activation_function(blockC21[i], NL_M, NL_N);
                     }
@@ -820,12 +823,12 @@ __kernel void convolution_f32(
 
                     blockC01 = activation_function_float8(blockC01, in_m, in_n);
 
-                    for (int i = 0; i < 8; i++)
+                    for (unsigned i = 0; i < 8; i++)
                     {
                         out1[( 0+i) * OUT_SLICE_PITCH] = blockC01[i];
                     }
 
-                    for (int i = 0; i < OUT_DEPTH % 8; i++)
+                    for (unsigned i = 0; i < OUT_DEPTH % 8; i++)
                     {
                         out1[(8+i) * OUT_SLICE_PITCH] = activation_function(blockC11[i], NL_M, NL_N);
                     }
@@ -836,7 +839,7 @@ __kernel void convolution_f32(
                     blockC01 += *biasPtr;
                     #endif
 
-                    for (int i = 0; i < OUT_DEPTH % 8; i++)
+                    for (unsigned i = 0; i < OUT_DEPTH % 8; i++)
                     {
                         out1[( 0+i) * OUT_SLICE_PITCH] = activation_function(blockC01[i], NL_M, NL_N);
                     }
@@ -865,13 +868,13 @@ __kernel void convolution_f16_10x12x16(
     const __global half *src1,
     const __global half *biases)
 {
-    const int global_x = get_global_id(0);
-    const int global_y = get_global_id(1);
-    const int global_z = get_global_id(2);
-    const int group_x = get_group_id(0);
-    const int group_z = get_group_id(2);
-    const int max_group_x = get_num_groups(0);
-    const int local_z = get_local_id(2);
+    const unsigned global_x = get_global_id(0);
+    const unsigned global_y = get_global_id(1);
+    const unsigned global_z = get_global_id(2);
+    const unsigned group_x = get_group_id(0);
+    const unsigned group_z = get_group_id(2);
+    const unsigned max_group_x = get_num_groups(0);
+    const unsigned local_z = get_local_id(2);
 
     half blockC[TILE_M * TILE_K] = { 0 };
 
@@ -885,7 +888,7 @@ __kernel void convolution_f16_10x12x16(
 
     const __global half *src1_read = src1 + ( group_z * TILE_N % WIDTH1 ) * 2;
 
-    int patch_depth = 0;
+    unsigned patch_depth = 0;
     __attribute__((opencl_unroll_hint(1)))
     do
     {
@@ -920,7 +923,7 @@ __kernel void convolution_f16_10x12x16(
         ushort*  pBlockB =  (ushort* )blockB;
 
         const bool kernel_slice_is_odd = ( KERNEL_WIDTH * KERNEL_HEIGHT ) % 2 == 1;
-        int interleaved_y = 0;
+        unsigned interleaved_y = 0;
         LOOP(KERNEL_SLICE_DIV2, interleaved_y,
         {
             p2BlockB[interleaved_y] = intel_sub_group_block_read_us2( (const __global ushort*)src1_read );
@@ -939,23 +942,23 @@ __kernel void convolution_f16_10x12x16(
         // Perform MADs
         // Loop through all patches in tile (patch_x/y)
         // For each patch, sum values (x/y)
-        int patch_y=0;
+        unsigned patch_y=0;
         LOOP(TILE_M, patch_y,
         {
-            int patch_x=0;
+            unsigned patch_x=0;
             LOOP(TILE_K, patch_x,
             {
-                int tile_idx = patch_y * TILE_X * STRIDE_Y + patch_x * STRIDE_X;
-                int out_idx  = patch_y * TILE_K + patch_x;
+                unsigned tile_idx = patch_y * TILE_X * STRIDE_Y + patch_x * STRIDE_X;
+                unsigned out_idx  = patch_y * TILE_K + patch_x;
 
-                int y=0;
+                unsigned y=0;
                 LOOP(KERNEL_HEIGHT, y,
                 {
-                    int x=0;
+                    unsigned x=0;
                     LOOP(KERNEL_WIDTH, x,
                     {
-                        int offset_idx = y * TILE_X + x;
-                        int out_chan_idx = y * KERNEL_WIDTH + x;
+                        unsigned offset_idx = y * TILE_X + x;
+                        unsigned out_chan_idx = y * KERNEL_WIDTH + x;
 
                         blockC[out_idx] = mad( BLOCK_A( tile_idx + offset_idx ), blockB[out_chan_idx], blockC[out_idx] );
                     } )
@@ -984,13 +987,13 @@ __kernel void convolution_f16_10x12x16(
         {
             typedef CAT( half, TILE_K ) half_t;
             half bias = biases[global_z];
-            for( int y = 0; y < TILE_M; y++ )
+            for( unsigned y = 0; y < TILE_M; y++ )
             {
                 if ( global_y * TILE_M + y < OUT_HEIGHT )
                 {
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
-                    for (int i = 0; i < TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                    for (unsigned i = 0; i < TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
                     *(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
                 }
             }
@@ -998,13 +1001,13 @@ __kernel void convolution_f16_10x12x16(
         else
         {
             typedef CAT( half, RIGHT_PARTIAL_TILE_K ) half_t;
-            for( int y = 0; y < TILE_M; y++ )
+            for( unsigned y = 0; y < TILE_M; y++ )
             {
                 if ( global_y * TILE_M + y < OUT_HEIGHT )
                 {
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
-                    for (int i = 0; i < RIGHT_PARTIAL_TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                    for (unsigned i = 0; i < RIGHT_PARTIAL_TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
                     *(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
                 }
             }
@@ -1028,13 +1031,13 @@ __kernel void convolution_f16_8x8x16(
     const __global half *src1,
     const __global half *bias)
 {
-    const int global_x = get_global_id(0);
-    const int global_y = get_global_id(1);
-    const int global_z = get_global_id(2);
-    const int group_x = get_group_id(0);
-    const int group_z = get_group_id(2);
-    const int max_group_x = get_num_groups(0);
-    const int local_z = get_local_id(2);
+    const unsigned global_x = get_global_id(0);
+    const unsigned global_y = get_global_id(1);
+    const unsigned global_z = get_global_id(2);
+    const unsigned group_x = get_group_id(0);
+    const unsigned group_z = get_group_id(2);
+    const unsigned max_group_x = get_num_groups(0);
+    const unsigned local_z = get_local_id(2);
 
     half blockC[TILE_M * TILE_K] = { 0 };
 
@@ -1048,7 +1051,7 @@ __kernel void convolution_f16_8x8x16(
 
     const __global half *src1_read = src1 + ( group_z * TILE_N % WIDTH1 ) * 2;
 
-    int patch_depth = 0;
+    unsigned patch_depth = 0;
     __attribute__((opencl_unroll_hint(1)))
     do
     {
@@ -1072,7 +1075,7 @@ __kernel void convolution_f16_8x8x16(
         ushort*  pBlockB =  (ushort* )blockB;
 
         const bool kernel_slice_is_odd = ( KERNEL_WIDTH * KERNEL_HEIGHT ) % 2 == 1;
-        int interleaved_y = 0;
+        unsigned interleaved_y = 0;
         LOOP(KERNEL_SLICE_DIV2, interleaved_y,
         {
             p2BlockB[interleaved_y] = intel_sub_group_block_read_us2( (const __global ushort*)src1_read );
@@ -1089,23 +1092,23 @@ __kernel void convolution_f16_8x8x16(
         // Perform MADs
         // Loop through all patches in tile (patch_x/y)
         // For each patch, sum values (x/y)
-        int patch_y=0;
+        unsigned patch_y=0;
         LOOP(TILE_M, patch_y,
         {
-            int patch_x=0;
+            unsigned patch_x=0;
             LOOP(TILE_K, patch_x,
             {
-                int tile_idx = patch_y * TILE_X * STRIDE_Y + patch_x * STRIDE_X;
-                int out_idx  = patch_y * TILE_K + patch_x;
+                unsigned tile_idx = patch_y * TILE_X * STRIDE_Y + patch_x * STRIDE_X;
+                unsigned out_idx  = patch_y * TILE_K + patch_x;
 
-                int y=0;
+                unsigned y=0;
                 LOOP(KERNEL_HEIGHT, y,
                 {
-                    int x=0;
+                    unsigned x=0;
                     LOOP(KERNEL_WIDTH, x,
                     {
-                        int offset_idx = y * TILE_X + x;
-                        int out_chan_idx = y * KERNEL_WIDTH + x;
+                        unsigned offset_idx = y * TILE_X + x;
+                        unsigned out_chan_idx = y * KERNEL_WIDTH + x;
 
                         blockC[out_idx] = mad( BLOCK_A( tile_idx + offset_idx ), blockB[out_chan_idx], blockC[out_idx] );
                     } )
@@ -1133,13 +1136,13 @@ __kernel void convolution_f16_8x8x16(
              group_x < max_group_x - 1 )
         {
             typedef CAT( half, TILE_K ) half_t;
-            for( int y = 0; y < TILE_M; y++ )
+            for( unsigned y = 0; y < TILE_M; y++ )
             {
                 if ( global_y * TILE_M + y < OUT_HEIGHT )
                 {
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
-                    for (int i = 0; i < TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                    for (unsigned i = 0; i < TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
                     *(__global half_t*)(out + y * OUT_PITCH_X) = vBlockC;
                 }
             }
@@ -1147,13 +1150,13 @@ __kernel void convolution_f16_8x8x16(
         else
         {
             typedef CAT( half, RIGHT_PARTIAL_TILE_K ) half_t;
-            for( int y = 0; y < TILE_M; y++ )
+            for( unsigned y = 0; y < TILE_M; y++ )
             {
                 if ( global_y * TILE_M + y < OUT_HEIGHT )
                 {
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
-                    for (int i = 0; i < RIGHT_PARTIAL_TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                    for (unsigned i = 0; i < RIGHT_PARTIAL_TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
                     *(__global half_t*)(out + y * OUT_PITCH_X) = vBlockC;
                 }
             }

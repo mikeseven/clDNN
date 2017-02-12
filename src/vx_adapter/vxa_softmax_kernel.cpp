@@ -25,7 +25,7 @@ namespace clDNN
         {
             jit << "#define USE_CNN_EXT_REFERENCE_KERNEL\n";
             const auto& out = m_Params.outDims;
-            m_kernelInfo.SetGlobalWGS(out.x, out.y, out.z);
+            m_kernelInfo.SetGlobalWGS(out.x, out.y, out.z*out.w);
         }
         else
         {

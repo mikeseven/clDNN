@@ -25,7 +25,7 @@ namespace clDNN
             jit << "#define __fc" << "\n";
             m_EntryPoint = "fc";
             const auto& out = m_Params.outDims;
-            m_kernelInfo.SetGlobalWGS(out.x, out.y, out.z);
+            m_kernelInfo.SetGlobalWGS(out.x, out.y, out.z*out.w);
             m_algorithmID = REFERENCE_FC;
         }
         else
@@ -50,14 +50,12 @@ namespace clDNN
             }
 
             m_kernelInfo = KernelInfo(1, 1, 1, 64, 1, 1, 1, 1, 1);
-            m_kernelInfo.SetGlobalWGS(64, m_Params.outDims.Length() /*remove w*/, 1/*batching*/);
+            m_kernelInfo.SetGlobalWGS(64, m_Params.outDims.Length()/ m_Params.outDims.w, m_Params.outDims.w);
         }
 
         UpdateInputTensorDesc();
 
-        jit << GetBaseJit(m_Params)
-            << "#define W (" << m_Params.inDesc.pitches.z << ")\n";
-
+        jit << GetBaseJit(m_Params);
         jit << "#define OUTPUT_BIASED\n";
 
         if (m_algorithmID == GEMMV_64_FC)

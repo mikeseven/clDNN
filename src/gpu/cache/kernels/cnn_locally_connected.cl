@@ -17,7 +17,8 @@ __kernel void locally_connected(
 {
     const unsigned int x = get_global_id(0);
     const unsigned int y = get_global_id(1);
-    const unsigned int z = get_global_id(2);
+    const unsigned int z = get_global_id(2) / OUT_BATCH;
+    const unsigned int w = get_global_id(2) / OUT_DEPTH;
     
     const unsigned bias_offset = z*OUT_WIDTH*OUT_HEIGHT + y*OUT_WIDTH + x;
     DATA_TYPE dotProd = biases[bias_offset];
@@ -31,10 +32,9 @@ __kernel void locally_connected(
             for (int i = 0; i < KERNEL_WIDTH; ++i)
             {
                 const int src_x = x * STRIDE_X + i - INPUT_PADDING_X;
-                const int imgY = y * STRIDE_Y + j - INPUT_PADDING_Y;
-                const int src_y = INPUT_HEIGHT * k + imgY;
+                const int src_y = y * STRIDE_Y + j - INPUT_PADDING_Y;
 
-                if (src_x < 0 || src_x >= INPUT_WIDTH || imgY < 0 || imgY >= INPUT_HEIGHT)
+                if (src_x < 0 || src_x >= INPUT_WIDTH || src_y < 0 || src_y >= INPUT_HEIGHT)
                     continue;
 
                 const int conv_idx = z * OUT_HEIGHT * OUT_WIDTH * INPUT_DEPTH * conv_size
@@ -42,15 +42,15 @@ __kernel void locally_connected(
                     + x * INPUT_DEPTH * conv_size
                     + k * conv_size + j * KERNEL_WIDTH + i;
 
-                const int input_idx = src_y*INPUT_ROW_PITCH + src_x + INPUT_OFFSET;
+                const int input_idx = w*INPUT_BATCH_PITCH + k*INPUT_SLICE_PITCH + src_y*INPUT_ROW_PITCH + src_x + INPUT_OFFSET;
                 
                 const DATA_TYPE w = weights[conv_idx];
                 const DATA_TYPE v = input[input_idx];
-                dotProd += w *v;
+                dotProd += w*v;
             }
         } 
     }
     
-    unsigned int output_idx = z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
+    const unsigned int output_idx = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
     output[output_idx] = activation_function(dotProd, NL_M, NL_N);
 }
