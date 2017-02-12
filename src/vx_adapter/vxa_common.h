@@ -107,6 +107,22 @@ namespace clDNN
         }
     }
 
+    inline std::string toString(ConvertTypes dType)
+    {
+        switch (dType)
+        {
+        case clDNN::ConvertTypes::U8 : return "U8";
+        case clDNN::ConvertTypes::U16: return "U16";
+        case clDNN::ConvertTypes::U32: return "U32";
+        case clDNN::ConvertTypes::S8 : return "S8";
+        case clDNN::ConvertTypes::S16: return "S16";
+        case clDNN::ConvertTypes::S32: return "S32";
+        case clDNN::ConvertTypes::F16: return "F16";
+        case clDNN::ConvertTypes::F32: return "F32";
+        default: return "";
+        }
+    }
+
     inline std::string toString(KernelType kt)
     {
         switch (kt)
