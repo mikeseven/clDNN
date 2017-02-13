@@ -17,10 +17,15 @@ __kernel void fc(
     __global DATA_TYPE* weights, 
     __global DATA_TYPE* biases)
 {
-    const unsigned int x = get_global_id(0);
-    const unsigned int y = get_global_id(1);
-    const unsigned int z = get_global_id(2) / OUT_BATCH;
-    const unsigned int w = get_global_id(2) / OUT_DEPTH;
+    const unsigned x = get_global_id(0);
+    const unsigned y = get_global_id(1);
+#if OUT_BATCH == 1
+    const unsigned z = get_global_id(2);
+    const unsigned w = 0;
+#else
+    const unsigned z = get_global_id(2) % OUT_DEPTH;
+    const unsigned w = get_global_id(2) / OUT_DEPTH;
+#endif
     
     const unsigned int input_size = INPUT_WIDTH * INPUT_HEIGHT * INPUT_DEPTH;
 

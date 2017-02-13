@@ -28,7 +28,7 @@ __kernel void normalization(__global const DATA_TYPE* input, __global DATA_TYPE*
     const unsigned int z                = get_global_id(2);
     const unsigned int w                = 0;
 #else
-    const unsigned int z                = get_global_id(2) / OUT_BATCH;
+    const unsigned int z                = get_global_id(2) % OUT_DEPTH;
     const unsigned int w                = get_global_id(2) / OUT_DEPTH;
 #endif
     const unsigned int input_index      = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;

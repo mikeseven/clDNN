@@ -14,8 +14,13 @@ __kernel void convolution(__global DATA_TYPE* input, __global DATA_TYPE* output,
 {
     const unsigned x = get_global_id(0);
     const unsigned y = get_global_id(1);
-    const unsigned z = get_global_id(2) / OUT_BATCH;
+#if OUT_BATCH == 1
+    const unsigned z = get_global_id(2);
+    const unsigned w = 0;
+#else
+    const unsigned z = get_global_id(2) % OUT_DEPTH;
     const unsigned w = get_global_id(2) / OUT_DEPTH;
+#endif
 
     const unsigned filter_size = INPUT_DEPTH * KERNEL_HEIGHT * KERNEL_WIDTH;
 
@@ -30,7 +35,7 @@ __kernel void convolution(__global DATA_TYPE* input, __global DATA_TYPE* output,
     int input_y = max((int)(y * STRIDE_Y - INPUT_PADDING_Y),0);
 
     unsigned int filter_offset = z * filter_size + yk_start * KERNEL_WIDTH + xk_start;
-    unsigned int input_offset = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + input_y * INPUT_ROW_PITCH + input_x + INPUT_OFFSET;
+    unsigned int input_offset = w*INPUT_BATCH_PITCH + input_y * INPUT_ROW_PITCH + input_x + INPUT_OFFSET;
 
     int xk_steps = xk_end - xk_start;
     int yk_steps = yk_end - yk_start;

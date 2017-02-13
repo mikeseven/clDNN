@@ -17,7 +17,7 @@ __kernel void pooling(__global DATA_TYPE *src, __global DATA_TYPE *out)
     const unsigned int outPlane = get_global_id(2);
     const unsigned int outBatch = 0;
 #else
-    const unsigned int outPlane = get_global_id(2) / OUT_BATCH;
+    const unsigned int outPlane = get_global_id(2) % OUT_DEPTH;
     const unsigned int outBatch = get_global_id(2) / OUT_DEPTH;
 #endif
     unsigned int src_width_step = INPUT_ROW_PITCH * POOL_STRIDE_Y;
