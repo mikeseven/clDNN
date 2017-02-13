@@ -9,6 +9,7 @@
 #include "vxa_binary_op_kernel.h"
 #include "vxa_table_lookup_kernel.h"
 #include "vxa_reorder_kernel.h"
+#include "vxa_convert_kernel.h"
 #include "vxa_common.h"
 
 namespace clDNN
@@ -75,6 +76,9 @@ namespace clDNN
                 break;
             case KernelType::REORDER:
                 pKernelBinary = CreateKernelBinaryT<ReorderKernelBinary, ReorderParams>(params);
+                break;
+            case KernelType::CONVERT:
+                pKernelBinary = CreateKernelBinaryT<ConvertKernelBinary, ConvertParams>(params);
                 break;
             default:
                 assert(0);

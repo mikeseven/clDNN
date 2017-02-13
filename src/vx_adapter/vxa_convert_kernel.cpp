@@ -7,7 +7,7 @@ namespace clDNN
         BaseKernelBinary(KernelType::CONVERT, "cnn_convert"),
         m_Params(params)
     {
-        InitInputOutputArgsLocations(2);
+        InitInputOutputArgsLocations(1);
 
         m_EntryPoint = "convert";
         const auto& out = m_Params.outDims;

@@ -9,21 +9,21 @@
 
 #include "include/cnn_common.cl"
 
-#if      defined(COVERT_TYPE_U8)
+#if   defined(COVERT_TYPE_U8)
 #define COVERT_TYPE unsigned char
-#else if defined(COVERT_TYPE_U16)
+#elif defined(COVERT_TYPE_U16)
 #define COVERT_TYPE unsigned short
-#else if defined(COVERT_TYPE_U32)
+#elif defined(COVERT_TYPE_U32)
 #define COVERT_TYPE unsigned int
-#else if defined(COVERT_TYPE_S8)
+#elif defined(COVERT_TYPE_S8)
 #define COVERT_TYPE char
-#else if defined(COVERT_TYPE_S16)
+#elif defined(COVERT_TYPE_S16)
 #define COVERT_TYPE short
-#else if defined(COVERT_TYPE_S32)
+#elif defined(COVERT_TYPE_S32)
 #define COVERT_TYPE int
-#else if defined(COVERT_TYPE_F16)
+#elif defined(COVERT_TYPE_F16)
 #define COVERT_TYPE half
-#else if defined(COVERT_TYPE_F32)
+#elif defined(COVERT_TYPE_F32)
 #define COVERT_TYPE float
 #endif
 
