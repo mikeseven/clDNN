@@ -93,7 +93,7 @@ struct eltwise_gpu : is_an_implementation
 
         return{
             gpu::make_jit_constant("INPUT",                 outer.input_memory(0).argument().size),
-            gpu::make_jit_constant("OUTPUT",                outer.output_memory().argument().size),
+            gpu::make_jit_constant("OUTPUT",                outer.non_padded_output_layout().size),
             gpu::make_jit_constant("INPUT2" ,               outer.input_memory(1).argument().size),
             gpu::make_jit_constant("OUTPUT_PADDING",        outer.argument.output_padding().size()),
             gpu::make_jit_constant("FP16_SUPPORTED",        static_cast<int>(engine_info.supports_fp16)),
