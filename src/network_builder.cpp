@@ -26,7 +26,7 @@
 #include "api/primitives/depth_concatenate.hpp"
 #include "api/primitives/normalization.hpp"
 #include "api/primitives/mean_substract.hpp"
-
+#include "api/primitives/eltwise.hpp"
 #include <set>
 #include <functional>
 
@@ -433,6 +433,20 @@ void network_builder::prepare_padding()
                             );
                         _topology_map[_reorder->id()]->replace(new_reorder);
                     }
+                }
+                else if (prim->type() == cldnn::eltwise::type_id())
+                {
+                    const auto _eltwise = std::static_pointer_cast<const cldnn::eltwise>(prim);
+                    auto new_eltwise = add_padding(
+                        needed_padding,
+                        _eltwise,
+                        _eltwise->id(),
+                        _eltwise->input().at(0),
+                        _eltwise->input2,
+                        _eltwise->mode,
+                        _eltwise->input_padding()
+                        );
+                    _topology_map[_eltwise->id()]->primitive_desc = new_eltwise;
                 }
                 else
                 {

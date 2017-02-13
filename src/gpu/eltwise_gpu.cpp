@@ -27,6 +27,7 @@ namespace neural
 {
 // Kernel names.
 static const std::string kernel_name = "eltwise_gpu";
+static const std::string kernel_name_bfyx = "eltwise_gpu_bfyx";
 
 struct eltwise_gpu : is_an_implementation
 {
@@ -71,7 +72,14 @@ struct eltwise_gpu : is_an_implementation
             --kd.lws0;
         }
 
-        kd.kernel_name = kernel_name;
+        if (input_mem.argument().format == cldnn::format::bfyx)
+        {
+            kd.kernel_name == kernel_name_bfyx;
+        }
+        else
+        {
+            kd.kernel_name = kernel_name;
+        }
 
         return kd;
     }
@@ -87,6 +95,7 @@ struct eltwise_gpu : is_an_implementation
             gpu::make_jit_constant("INPUT",                 outer.input_memory(0).argument().size),
             gpu::make_jit_constant("OUTPUT",                outer.output_memory().argument().size),
             gpu::make_jit_constant("INPUT2" ,               outer.input_memory(1).argument().size),
+            gpu::make_jit_constant("OUTPUT_PADDING",        outer.argument.output_padding().size()),
             gpu::make_jit_constant("FP16_SUPPORTED",        static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",        static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",             data.fp16_unit_used ? "half" : "float"),
@@ -116,12 +125,12 @@ struct eltwise_gpu : is_an_implementation
 namespace {
     struct attach {
         attach() {
-            auto val_fw = eltwise_gpu::create;
-
-            auto key_fw = std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32);
-            implementation_map<eltwise>::add(key_fw, val_fw);
-            key_fw = std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16);
-            implementation_map<eltwise>::add(key_fw, val_fw);
+            implementation_map<eltwise>::add({
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), eltwise_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), eltwise_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), eltwise_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), eltwise_gpu::create }
+            });
         }
         ~attach() {}
     };
