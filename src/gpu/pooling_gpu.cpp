@@ -36,6 +36,7 @@ static const std::string kernel_name_average_offset = "pooling_gpu_average_offse
 static const std::string kernel_name_bfyx_max       = "pooling_gpu_bfyx_max";
 static const std::string kernel_name_bfyx_max_offset = "pooling_gpu_bfyx_max_offset";
 static const std::string kernel_name_bfyx_average   = "pooling_gpu_bfyx_average";
+static const std::string kernel_name_bfyx_average_offset = "pooling_gpu_bfyx_average_offset";
 
 template <>
 struct kd_default_value_selector<neural::gpu::engine_info_internal::architectures>
@@ -199,8 +200,6 @@ pooling_gpu::kernel_data defauly_bfyx(const pooling& arg)
 
     // Select kernel name.
     auto needs_boundary = pooling_gpu::needs_boundary_check(arg);
-    if (needs_boundary && arg.argument.mode != cldnn::pooling_mode::max)
-        throw std::runtime_error("Not implemented boundary in pooling bfyx!");
     //if (kd.gws0 > 256)
     {
         while (kd.gws0 % kd.lws0 != 0)
@@ -210,11 +209,13 @@ pooling_gpu::kernel_data defauly_bfyx(const pooling& arg)
     }
 
     if (needs_boundary)
-        kd.kernel_name = kernel_name_bfyx_max_offset;
-    else if (arg.argument.mode == cldnn::pooling_mode::average)
-        kd.kernel_name = kernel_name_bfyx_average;
+    {
+        kd.kernel_name = cldnn::pooling_mode::average == arg.argument.mode ? kernel_name_bfyx_average_offset : kernel_name_bfyx_max_offset;
+    }
     else
-        kd.kernel_name = kernel_name_bfyx_max;
+    {
+        kd.kernel_name = cldnn::pooling_mode::average == arg.argument.mode ? kernel_name_bfyx_average : kernel_name_bfyx_max;
+    }
 
     auto output_size = arg.non_padded_output_layout().size;
     // Determine global work sizes.
