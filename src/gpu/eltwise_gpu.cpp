@@ -102,7 +102,9 @@ struct eltwise_gpu : is_an_implementation
             gpu::make_jit_constant("SUM_MODE_USED",         outer.argument.mode == cldnn::eltwise_mode::sum ? 1 : 0),
             gpu::make_jit_constant("MAX_MODE_USED",         outer.argument.mode == cldnn::eltwise_mode::max ? 1 : 0),
             gpu::make_jit_constant("SUB_MODE_USED",         outer.argument.mode == cldnn::eltwise_mode::sub ? 1 : 0),
-            gpu::make_jit_constant("PROD_MODE_USED",        outer.argument.mode == cldnn::eltwise_mode::prod ? 1 : 0)
+            gpu::make_jit_constant("PROD_MODE_USED",        outer.argument.mode == cldnn::eltwise_mode::prod ? 1 : 0),
+            gpu::make_jit_constant("RELU",                  static_cast<int>(outer.argument.with_activation)),
+            gpu::make_jit_constant("NEGATIVE_SLOPE",        outer.argument.activation_negative_slope),
         };
     }
 

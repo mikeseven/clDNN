@@ -2,6 +2,13 @@
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
+#if RELU && FP16_UNIT_USED
+    #define ACTIVATION(output, input) output = max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h);
+#elif RELU
+    #define ACTIVATION(output, input) output = max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f);
+#else
+    #define ACTIVATION(output, input) output = input;
+#endif
 
 KERNEL (eltwise_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output, const __global UNIT_TYPE* input2)
 {
@@ -23,15 +30,18 @@ KERNEL (eltwise_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* o
     output_id += (y + OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
     output_id += x + OUTPUT_PADDING_SIZE_X;
 
-#if MAX_MODE_USED
     const UNIT_TYPE in1 = input[input_id]; 
     const UNIT_TYPE in2 = input2[(batch_id % INPUT2_BATCH_NUM) + INPUT2_BATCH_NUM * (feature_id + INPUT2_FEATURE_NUM * (x + INPUT2_SIZE_X * y))];
-    output[output_id] = (in1 > in2 ? in1 : in2);
+    uint result;
+#if MAX_MODE_USED
+    result = (in1 > in2 ? in1 : in2);
 #elif PROD_MODE_USED
-    output[output_id] = input[input_id] * input2[(batch_id % INPUT2_BATCH_NUM) + INPUT2_BATCH_NUM * (feature_id + INPUT2_FEATURE_NUM * (x + INPUT2_SIZE_X * y))];
+    result = in1 * in2;
 #elif SUB_MODE_USED
-    output[output_id] = input[input_id] - input2[(batch_id % INPUT2_BATCH_NUM) + INPUT2_BATCH_NUM * (feature_id + INPUT2_FEATURE_NUM * (x + INPUT2_SIZE_X * y))];
+    result = in1 - in2;
 #else 
-    output[output_id] = input[input_id] + input2[(batch_id % INPUT2_BATCH_NUM) + INPUT2_BATCH_NUM * (feature_id + INPUT2_FEATURE_NUM * (x + INPUT2_SIZE_X * y))];
+    result = in1 + in2;
 #endif
+
+    ACTIVATION(output[output_id], result);
 }

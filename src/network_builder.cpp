@@ -444,6 +444,8 @@ void network_builder::prepare_padding()
                         _eltwise->input().at(0),
                         _eltwise->input2,
                         _eltwise->mode,
+                        _eltwise->with_activation,
+                        _eltwise->activation_negative_slope,
                         _eltwise->input_padding()
                         );
                     _topology_map[_eltwise->id()]->primitive_desc = new_eltwise;

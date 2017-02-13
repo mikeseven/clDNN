@@ -39,12 +39,20 @@ namespace cldnn
             const primitive_id& input,
             const primitive_id& input2,
             eltwise_mode mode,
+            bool with_activation = false,
+            float activation_slp = 0.0f,
             const padding& input_padding = padding(),
             const padding& output_padding = padding()
         )
-            :primitive_base(id, { input }, input_padding, output_padding, "", static_cast<cldnn_eltwise_mode>(mode))
+            :primitive_base(id, { input }, input_padding, output_padding,
+                            "",
+                            static_cast<cldnn_eltwise_mode>(mode),
+                            static_cast<uint32_t>(with_activation),
+                            activation_slp)
             , input2(input2)
             , mode(mode)
+            , with_activation(with_activation)
+            , activation_negative_slope(_dto.activation_negative_slope)
         {
             init_dto();
         }
@@ -53,12 +61,17 @@ namespace cldnn
             :primitive_base(dto)
             , input2(dto->input2)
             , mode(static_cast<eltwise_mode>(_dto.mode))
+            , with_activation(_dto.with_activation != 0)
+            , activation_negative_slope(_dto.activation_negative_slope)
         {
             init_dto();
         }
 
         const primitive_id input2;
         const eltwise_mode mode;
+
+        const bool with_activation;
+        const float activation_negative_slope;
 
     protected:
         std::vector<primitive_id> get_dependencies() const override { return{ input2 }; }
