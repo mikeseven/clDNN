@@ -33,7 +33,7 @@
 //                           responses for at least one input data set from batch.
 //  - LAST_RG_SIZE         - [int] Number of responses in last group of written responses.
 //                           Responses are grouped in UNITS_PER_SG_READ-sized groups. The parameter describes how
-//                           many responsed is in last group or 0, if group is full.
+//                           many responses are in last group or 0, if group is full.
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Helpers:

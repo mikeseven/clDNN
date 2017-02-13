@@ -119,6 +119,11 @@ struct reorder_gpu : is_an_implementation {
                         uint _x_slice_id = pos[2] / 8; \
                         uint _x_id_in_slice = pos[2] % 8; \
                         return _b_id_in_slice + 8 * (_x_id_in_slice + 8 * _x_slice_id + _b_slice_id * size[2]);)__C";
+        case memory::format::type::bs_x_bsv16_f32:
+        case memory::format::type::bs_x_bsv16_f16:
+            return R"__C(uint _slice_id = pos[0] / 16; \
+                        uint _id_in_slice = pos[0] % 16; \
+                        return _id_in_slice + 16 * (pos[2] + size[2] * _slice_id);)__C";
         case memory::format::type::bx_f32:
         case memory::format::type::bx_f16:
             return "return pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[0] + pos[0]);";
@@ -163,9 +168,6 @@ struct reorder_gpu : is_an_implementation {
         case memory::format::type::fyxb_f32:
         case memory::format::type::fyxb_f16:
             return { 0, 2, 3, 1 };
-        case memory::format::type::os_iyx_osv16_f32:
-        case memory::format::type::os_iyx_osv16_f16:
-            return { 0, 1, 3, 4, 2 };
         case memory::format::type::bx_f32:
         case memory::format::type::bx_f16:
             return { 1, 2, 0 };
@@ -196,6 +198,10 @@ struct reorder_gpu : is_an_implementation {
                         uint _x_slice_id = (pos[2] + size[2] * (pos[3] + size[3] * pos[1])) / 8; \
                         uint _x_id_in_slice = (pos[2] + size[2] * (pos[3] + size[3] * pos[1])) % 8; \
                         return _b_id_in_slice + 8 * (_x_id_in_slice + 8 * _x_slice_id + _b_slice_id * (size[2] * size[3] * size[1]));)__C";
+        case cldnn::format::bs_x_bsv16:
+            return R"__C(uint _slice_id = pos[0] / 16; \
+                        uint _id_in_slice = pos[0] % 16; \
+                        return _id_in_slice + 16 * (pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * _slice_id)));)__C";
         //equivalent to axis = 1 (feature), end_axis = -1(x) in caffe
         case cldnn::format::bx:
             return "return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));";
