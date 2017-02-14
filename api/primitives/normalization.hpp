@@ -53,10 +53,10 @@ struct normalization :public primitive_base<normalization, CLDNN_PRIMITIVE_DESC(
         , norm_region(_dto.norm_region)
     {}
 
-    const uint32_t& size;
-    const float& k;
-    const float& alpha;
-    const float& beta;
-    const cldnn_lrn_norm_region& norm_region;
+    const uint32_t size;
+    const float k;
+    const float alpha;
+    const float beta;
+    const cldnn_lrn_norm_region norm_region;
 };
 }
