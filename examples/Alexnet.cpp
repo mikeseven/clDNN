@@ -70,7 +70,8 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         5,
         1.0f,
         0.00002f,
-        0.75f);
+        0.75f,
+		cldnn_lrn_norm_region_across_channel);
 
     auto conv2_g1_weights = file::create({ engine, join_path(weights_dir, "conv2_g1_weights.nnd")});
     auto conv2_g1_biases = file::create({ engine, join_path(weights_dir, "conv2_g1_biases.nnd")});
@@ -98,7 +99,8 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         5,
         1.0f,
         0.00002f,
-        0.75f);
+        0.75f,
+		cldnn_lrn_norm_region_across_channel);
 
     auto conv3_weights = file::create({ engine, join_path(weights_dir, "conv3_weights.nnd")});
     auto conv3_biases = file::create({ engine, join_path(weights_dir, "conv3_biases.nnd")});

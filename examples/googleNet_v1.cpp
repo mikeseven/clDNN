@@ -67,7 +67,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         5,
         1.0f,
         0.00002f,
-        0.75f);
+        0.75f,
+		cldnn_lrn_norm_region_across_channel);
 
     auto conv2_3x3_reduce_w = file::create({ engine, join_path(weights_dir, "conv2_3x3_reduce_weights.nnd")});
     auto conv2_3x3_reduce_b = file::create({ engine, join_path(weights_dir, "conv2_3x3_reduce_bias.nnd")});
@@ -94,7 +95,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         5,
         1.0f,
         0.00002f,
-        0.75f);
+        0.75f,
+		cldnn_lrn_norm_region_across_channel);
 
     auto pool2_3x3_s2 = pooling("pool2_3x3_s2",
         conv2_norm2,
