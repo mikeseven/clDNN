@@ -67,7 +67,7 @@ struct relu_gpu : is_an_implementation
             --kd.lws0;
         }
 
-        if (input_mem.argument().format == cldnn::format::bfyx)
+        if (input_mem.get_layout().size.format == cldnn::format::bfyx)
         {
             kd.kernel_name = kernel_name_bfyx;
         }
