@@ -32,14 +32,16 @@ struct normalization :public primitive_base<normalization, CLDNN_PRIMITIVE_DESC(
         float k,
         float alpha,
         float beta,
+        cldnn_lrn_norm_region lrn_norm_region,
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_padding, output_padding, size, k, alpha, beta)
+        : primitive_base(id, {input}, input_padding, output_padding, size, k, alpha, beta, lrn_norm_region)
         , size(_dto.size)
         , k(_dto.k)
         , alpha(_dto.alpha)
         , beta(_dto.beta)
+        , norm_region(_dto.norm_region)
     {}
 
     normalization(const dto* dto)
@@ -48,11 +50,13 @@ struct normalization :public primitive_base<normalization, CLDNN_PRIMITIVE_DESC(
         , k(_dto.k)
         , alpha(_dto.alpha)
         , beta(_dto.beta)
+        , norm_region(_dto.norm_region)
     {}
 
-    const uint32_t size;
-    const float k;
-    const float alpha;
-    const float beta;
+    const uint32_t& size;
+    const float& k;
+    const float& alpha;
+    const float& beta;
+    const cldnn_lrn_norm_region& norm_region;
 };
 }

@@ -24,11 +24,19 @@
 extern "C" {
 #endif
 
+typedef enum /*:int32_t*/
+{
+    cldnn_lrn_norm_region_across_channel,
+    cldnn_lrn_norm_region_within_channel
+} cldnn_lrn_norm_region;
+
+
 CLDNN_BEGIN_PRIMITIVE_DESC(normalization)
 uint32_t size;
 float k;
 float alpha;
 float beta;
+cldnn_lrn_norm_region norm_region;
 CLDNN_END_PRIMITIVE_DESC(normalization)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(normalization);

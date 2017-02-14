@@ -291,6 +291,7 @@ void network_builder::prepare_padding()
                         _lrn->k,
                         _lrn->alpha,
                         _lrn->beta,
+                        _lrn->norm_region,
                         _lrn->input_padding()
                     );
                     _topology_map[_lrn->id()]->primitive_desc = new_lrn;

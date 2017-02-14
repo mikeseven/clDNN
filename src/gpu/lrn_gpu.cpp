@@ -33,6 +33,7 @@ namespace neural
 static const std::string kernel_name = "lrn_gpu";
 static const std::string kernel_name_b8 = "lrn_gpu_b8";
 static const std::string kernel_name_bfyx = "lrn_gpu_bfyx";
+static const std::string kernel_name_within_channel_bfyx = "lrn_gpu_within_channel_bfyx";
 template <>
 struct kd_default_value_selector<neural::gpu::engine_info_internal::architectures>
 {
@@ -90,19 +91,30 @@ struct lrn_gpu : is_an_implementation
         kd.lws1 = 1;
         kd.lws2 = 1;
 
-        // TODO: add half case: b16 (b*f dividable by 128).
-        if (!kd.fp16_unit_used &&                        // halfs are not used
-            input_mem.argument().size.batch[0] % 8 == 0 && // batch_num is multiple of 8
-            kd.gws0 % 64 == 0)                           // batch_num * feature_num is multiple of 64
+        if (arg.argument.norm_region == cldnn_lrn_norm_region_across_channel)
         {
-            kd.gws0 /= 8;
-            kd.lws0 = 8; // gws0 is dividable by 64, so after correction it will be dividable by 8.
+            // TODO: add half case: b16 (b*f dividable by 128).
+            if (!kd.fp16_unit_used &&                        // halfs are not used
+                input_mem.argument().size.batch[0] % 8 == 0 && // batch_num is multiple of 8
+                kd.gws0 % 64 == 0)                           // batch_num * feature_num is multiple of 64
+            {
+                kd.gws0 /= 8;
+                kd.lws0 = 8; // gws0 is dividable by 64, so after correction it will be dividable by 8.
 
-            kd.kernel_name = kernel_name_b8;
+                kd.kernel_name = kernel_name_b8;
+            }
+            else
+            {
+                kd.kernel_name = kernel_name;
+            }
+        }
+        else if (arg.argument.norm_region == cldnn_lrn_norm_region_within_channel)
+        {
+            kd.kernel_name = kernel_name_within_channel_bfyx;
         }
         else
         {
-            kd.kernel_name = kernel_name;
+            throw std::runtime_error("Invalid norm region");
         }
 
         // Checking for supported paddings.
@@ -125,7 +137,8 @@ struct lrn_gpu : is_an_implementation
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        auto size = outer.argument.size;
+        int size = outer.argument.size;
+        int pad = (size - 1) / 2;
 
         // When used FP16 the value cannot be scaled afterwards by alpha (it must be scaled before computing sum of squares).
         auto alpha_sign = std::signbit(outer.argument.alpha) ? -1.0f : 1.0f;
@@ -138,10 +151,15 @@ struct lrn_gpu : is_an_implementation
         }
 
         auto input_size = outer.input().at(0)->non_padded_output_layout().size;
+
+        int count = input_size.sizes()[0] * input_size.sizes()[1] * input_size.sizes()[2] * input_size.sizes()[3];
+
         gpu::jit_constants mem_consts {
             gpu::make_jit_constant("INPUT",             input_size),
+            gpu::make_jit_constant("COUNT",             count),
             gpu::make_jit_constant("OUTPUT",            outer.non_padded_output_layout().size),
             gpu::make_jit_constant("P_SIZE",            size),
+            gpu::make_jit_constant("PAD",               pad),
             gpu::make_jit_constant("ALPHA",             data.fp16_unit_used ? alpha_sign : outer.argument.alpha),
             gpu::make_jit_constant("ALPHA_VAL_FACTOR",  data.fp16_unit_used ? alpha_abs_sqrt : 1.0f),
             gpu::make_jit_constant("BETA",              outer.argument.beta),
@@ -181,12 +199,30 @@ lrn_gpu::kernel_data default_yxfb(const normalization::response& arg)
     return kd;
 }
 
-lrn_gpu::kernel_data default_bfyx(const normalization::response& arg)
+
+lrn_gpu::kernel_data default_bfyx_within_channel(const normalization::response& arg)
+{
+    lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
+
+    kd.kernel_name = kernel_name_within_channel_bfyx;
+   
+    kd.gws0 = 128 * 128;
+    kd.gws1 = 1;
+    kd.gws2 = 1;
+
+    kd.lws0 = 128;
+    kd.lws1 = 1;
+    kd.lws2 = 1;
+    return kd;
+}
+
+lrn_gpu::kernel_data default_bfyx_across_channel(const normalization::response& arg)
 {
     auto& input_mem = arg.input_memory(0);
     lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
 
     kd.kernel_name = kernel_name_bfyx;
+   
     kd.gws0 = input_mem.argument().size.spatial[0];
     kd.gws1 = input_mem.argument().size.spatial[1];
     kd.gws2 = input_mem.argument().size.feature[0] * input_mem.argument().size.batch[0];
@@ -198,6 +234,20 @@ lrn_gpu::kernel_data default_bfyx(const normalization::response& arg)
     kd.lws1 = 1;
     kd.lws2 = 1;
     return kd;
+}
+
+
+lrn_gpu::kernel_data default_bfyx(const normalization::response& arg)
+{
+    switch (arg.argument.norm_region)
+    {
+        case cldnn_lrn_norm_region_across_channel: 
+            return default_bfyx_across_channel(arg);
+        case cldnn_lrn_norm_region_within_channel:
+            return default_bfyx_within_channel(arg);
+        default:
+            throw std::runtime_error("Invalid norm region");
+    }
 }
 
 kd_selector_t<lrn_gpu::kernel_data, normalization::response, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> lrn_gpu::ks = {
