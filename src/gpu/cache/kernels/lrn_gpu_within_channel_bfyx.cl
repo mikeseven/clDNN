@@ -11,12 +11,12 @@
 
 KERNEL (lrn_gpu_within_channel_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
-    for (int index = get_global_id(0) ; index < COUNT ; index += get_global_size(0)) 
+    for (uint index = get_global_id(0) ; index < COUNT ; index += get_global_size(0)) 
     {
-        const int pw = index % OUTPUT_SIZE_X;
-        const int ph = (index / OUTPUT_SIZE_X) % OUTPUT_SIZE_Y;
-        const int c = (index / OUTPUT_SIZE_X / OUTPUT_SIZE_Y) % OUTPUT_FEATURE_NUM;
-        const int n = index / OUTPUT_SIZE_X / OUTPUT_SIZE_Y / OUTPUT_FEATURE_NUM;
+        const uint pw = index % OUTPUT_SIZE_X;
+        const uint ph = (index / OUTPUT_SIZE_X) % OUTPUT_SIZE_Y;
+        const uint c = (index / OUTPUT_SIZE_X / OUTPUT_SIZE_Y) % OUTPUT_FEATURE_NUM;
+        const uint n = index / OUTPUT_SIZE_X / OUTPUT_SIZE_Y / OUTPUT_FEATURE_NUM;
         int hstart = ph - PAD;
         int wstart = pw - PAD;
         int hend = min(hstart + P_SIZE, INPUT_SIZE_Y + PAD);

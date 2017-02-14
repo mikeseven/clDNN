@@ -195,6 +195,11 @@ struct lrn_gpu : is_an_implementation
 
 lrn_gpu::kernel_data default_yxfb(const normalization::response& arg)
 {
+    if (arg.argument.norm_region == cldnn_lrn_norm_region_within_channel)
+    {
+        throw std::runtime_error("LRN within channel is not implemented for YXFB format");
+    }
+
     lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
     return kd;
 }
