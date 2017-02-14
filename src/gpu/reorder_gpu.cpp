@@ -74,8 +74,8 @@ struct reorder_gpu : is_an_implementation {
     {
         kernel_data kd;
 
-        kd.have_subtraction = outer.have_substract();
-        kd.padding_only = (!kd.have_subtraction) && (outer.input_memory(0).argument().format == outer.output_memory().argument().format) && outer.input_memory(0).argument().format == memory::format::type::bfyx_f32;
+        kd.have_subtraction = outer.have_substract(); //why 'false' when !subtract_per_feature.empty()? maybe rename to 'have_mean'?
+        kd.padding_only = (!kd.have_subtraction) && outer.argument.substract_per_feature.empty() && (outer.input_memory(0).argument().format == outer.output_memory().argument().format) && outer.input_memory(0).argument().format == memory::format::type::bfyx_f32;
         kd.is_flatten = (outer.input_memory(0).argument().size.raw.size() != outer.output_memory().argument().size.raw.size());
 
         return kd;
