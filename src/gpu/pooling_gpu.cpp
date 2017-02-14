@@ -139,7 +139,20 @@ struct pooling_gpu : is_an_implementation {
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
+        auto& input_mem = outer.input_memory(0);
+
+        auto input_padding = outer.input().at(0)->desc()->output_padding();
+        auto output_padding = outer.argument.output_padding();
         auto input_size = outer.input().at(0)->non_padded_output_layout().size;
+
+        if (input_mem.get_layout().size.format != cldnn::format::bfyx)
+        {
+            if (input_padding || output_padding)
+            {
+                throw std::runtime_error("Only bfyx format supports input/output padding in pooling layer!");
+            }
+        }
+
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT",             input_size),
             gpu::make_jit_constant("OUTPUT",            outer.non_padded_output_layout().size),
@@ -151,7 +164,8 @@ struct pooling_gpu : is_an_implementation {
             gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_INIT_VAL_MAX", data.fp16_unit_used ? "-HALF_MAX" : "-FLT_MAX"),
             gpu::make_jit_constant("UNIT_INIT_VAL_AVG", data.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding().size())
+            gpu::make_jit_constant("INPUT_PADDING",     input_padding.size()),
+            gpu::make_jit_constant("OUTPUT_PADDING",    output_padding.size())
         };
         return mem_consts;
     }

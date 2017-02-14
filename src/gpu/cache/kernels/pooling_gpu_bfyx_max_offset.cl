@@ -9,8 +9,8 @@ KERNEL(pooling_gpu_bfyx_max_offset)(const __global UNIT_TYPE* input, __global UN
 
     const uint x = get_global_id(0);
     const uint y = get_global_id(1);
-    const int offset_x = x * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
-    const int offset_y = y * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
+    const int offset_x = INPUT_PADDING_SIZE_X + x * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
+    const int offset_y = INPUT_PADDING_SIZE_Y + y * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
 
     UNIT_TYPE result = UNIT_INIT_VAL_MAX;
 
@@ -27,12 +27,12 @@ KERNEL(pooling_gpu_bfyx_max_offset)(const __global UNIT_TYPE* input, __global UN
                 bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
                 if(!zero)
                 {
-                    int input_idx = batch_and_feature_offset * INPUT_SIZE_X * INPUT_SIZE_Y + input_offset_y * INPUT_SIZE_X + input_offset_x;
+                    int input_idx = batch_and_feature_offset * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) * (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y);
+                    input_idx += input_offset_y * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) + input_offset_x;
                     result = max(result, input[input_idx]);
                 }
             }
         }
-
     }
 
     const uint b = batch_and_feature_offset / INPUT_FEATURE_NUM;
