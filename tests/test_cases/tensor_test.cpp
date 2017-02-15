@@ -36,7 +36,7 @@ TEST(tensor_api, order_x)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 1);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i+1);
 }
 
@@ -60,7 +60,7 @@ TEST(tensor_api, order_yx)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 2);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i+1);
 }
 
@@ -84,7 +84,7 @@ TEST(tensor_api, order_xy)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 2);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i+1);
 }
 
@@ -107,7 +107,7 @@ TEST(tensor_api, order_xb)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 2);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i+1);
 }
 
@@ -130,7 +130,7 @@ TEST(tensor_api, order_bx)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 2);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i+1);
 }
 
@@ -152,7 +152,7 @@ TEST(tensor_api, order_yxfn)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 4);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i+1);
 }
 
@@ -174,7 +174,7 @@ TEST(tensor_api, order_yxfb)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 4);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i+1);
 }
 
@@ -196,7 +196,7 @@ TEST(tensor_api, order_byxf)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 4);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i+1);
 }
 
@@ -218,7 +218,7 @@ TEST(tensor_api, order_bfyx)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 4);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i+1);
 }
 
@@ -240,7 +240,7 @@ TEST(tensor_api, order_fyxb)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 4);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i+1);
 }
 
@@ -265,7 +265,7 @@ TEST(tensor_api, order_oiyx)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 4);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i+1);
 }
 
@@ -290,7 +290,7 @@ TEST(tensor_api, order_yxoi)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 4);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i + 1);
 }
 
@@ -315,7 +315,7 @@ TEST(tensor_api, order_oyxi)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 4);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i + 1);
 }
 
@@ -340,7 +340,7 @@ TEST(tensor_api, order_yxio)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 4);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i + 1);
 }
 
@@ -365,7 +365,7 @@ TEST(tensor_api, order_os_iyx_osv16)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 4);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i + 1);
 }
 
@@ -388,6 +388,29 @@ TEST(tensor_api, order_bs_xs_xsv8_bsv8)
     //reverse
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), 2);
-    for (int i = 0; i < sizes.size(); ++i)
+    for (size_t i = 0; i < sizes.size(); ++i)
+        EXPECT_EQ(sizes[i], i + 1);
+}
+
+TEST(tensor_api, order_bs_x_bsv16)
+{
+    cldnn::tensor test{ cldnn::format::bs_x_bsv16, 0,{ 1, 2 } };
+
+    //sizes
+    EXPECT_EQ(test.batch.size(), 1);
+    EXPECT_EQ(test.feature.size(), 1);
+    EXPECT_EQ(test.spatial.size(), 1);
+
+    //passed values
+    EXPECT_EQ(test.spatial[0], 2);
+    EXPECT_EQ(test.batch[0], 1);
+
+    //defaults
+    EXPECT_EQ(test.feature[0], 0);
+
+    //reverse
+    auto sizes = test.sizes();
+    EXPECT_EQ(sizes.size(), 2);
+    for (size_t i = 0; i < sizes.size(); ++i)
         EXPECT_EQ(sizes[i], i + 1);
 }

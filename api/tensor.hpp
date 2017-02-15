@@ -38,22 +38,6 @@ struct format_traits
     static bool is_batch_char(char c) { return std::string(batch_chars()).find_first_of(c) != std::string::npos; }
     static bool is_feature_char(char c) { return std::string(feature_chars()).find_first_of(c) != std::string::npos; }
     static bool is_spatial_char(char c) { return std::string(spatial_chars()).find_first_of(c) != std::string::npos; }
-
-    static size_t has_fixed_position_within_group(char c)
-    {
-        return (c == 'x' || c == 'y' || c == 'i' || c == 'o');
-    }
-
-    static size_t get_position_within_group(char c)
-    {
-        //spatials
-        if (c == 'x' || c == 'o')
-            return 0;
-        if (c == 'y' || c == 'i')
-            return 1;
-
-        return (size_t)-1;
-    }
 };
 
 struct format
@@ -302,7 +286,7 @@ struct tensor
             auto c = output_order[i];
             auto pos = internal_order.find(c);
             if (pos == internal_order.npos)
-                throw std::domain_error(std::string("Unknown coord type") + c);
+                throw std::domain_error(std::string("Unknown coord type: ") + c);
             
             sizes[i] = _sizes[pos];
         }
