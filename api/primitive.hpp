@@ -65,7 +65,7 @@ struct padding
     // returns true if padding size is not zero
     explicit operator bool() const
     {
-        return std::any_of(_size.raw.begin(), _size.raw.end(), [](auto& el) { return el != 0; });
+        return std::any_of(_size.raw.begin(), _size.raw.end(), [](tensor::value_type const& el) { return el != 0; });
     }
 
 private:
