@@ -37,7 +37,7 @@ TEST(tensor_api, order_x)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(1));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i+1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_yx)
@@ -61,7 +61,7 @@ TEST(tensor_api, order_yx)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(2));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i+1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_xy)
@@ -85,7 +85,7 @@ TEST(tensor_api, order_xy)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(2));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i+1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_xb)
@@ -108,7 +108,7 @@ TEST(tensor_api, order_xb)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(2));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i+1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_bx)
@@ -131,7 +131,7 @@ TEST(tensor_api, order_bx)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(2));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i+1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_yxfn)
@@ -153,7 +153,7 @@ TEST(tensor_api, order_yxfn)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(4));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i+1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_yxfb)
@@ -175,7 +175,7 @@ TEST(tensor_api, order_yxfb)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(4));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i+1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_byxf)
@@ -197,7 +197,7 @@ TEST(tensor_api, order_byxf)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(4));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i+1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_bfyx)
@@ -219,7 +219,7 @@ TEST(tensor_api, order_bfyx)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(4));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i+1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_fyxb)
@@ -241,7 +241,7 @@ TEST(tensor_api, order_fyxb)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(4));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i+1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_oiyx)
@@ -266,7 +266,7 @@ TEST(tensor_api, order_oiyx)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(4));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i+1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_yxoi)
@@ -291,7 +291,7 @@ TEST(tensor_api, order_yxoi)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(4));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i + 1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_oyxi)
@@ -316,7 +316,7 @@ TEST(tensor_api, order_oyxi)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(4));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i + 1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_yxio)
@@ -341,7 +341,7 @@ TEST(tensor_api, order_yxio)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(4));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i + 1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_os_iyx_osv16)
@@ -366,7 +366,7 @@ TEST(tensor_api, order_os_iyx_osv16)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(4));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i + 1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_bs_xs_xsv8_bsv8)
@@ -389,7 +389,7 @@ TEST(tensor_api, order_bs_xs_xsv8_bsv8)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(2));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i + 1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
 
 TEST(tensor_api, order_bs_x_bsv16)
@@ -412,5 +412,5 @@ TEST(tensor_api, order_bs_x_bsv16)
     auto sizes = test.sizes();
     EXPECT_EQ(sizes.size(), size_t(2));
     for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], i + 1);
+        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
 }
