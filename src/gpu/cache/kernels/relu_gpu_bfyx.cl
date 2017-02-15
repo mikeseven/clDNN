@@ -19,12 +19,17 @@ KERNEL (relu_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* outp
     const uint x = ((global_id / batch_num) / INPUT_FEATURE_NUM) % INPUT_SIZE_X;
     const uint y = ((global_id / batch_num) / INPUT_FEATURE_NUM) / INPUT_SIZE_X;
 
-    uint output_id = b * OUTPUT_FEATURE_NUM * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
-    output_id += f * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
+    uint input_id = batch_id * INPUT_FEATURE_NUM * (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X);
+    input_id += feature_id * (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X);
+    input_id += (INPUT_PADDING_SIZE_Y + y) * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X);
+    input_id += INPUT_PADDING_SIZE_X + x;
+
+    uint output_id = batch_id * OUTPUT_FEATURE_NUM * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
+    output_id += feature_id * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
     output_id += (y + OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
     output_id += x + OUTPUT_PADDING_SIZE_X;
 
-    ACTIVATION(output[output_id], input[global_id]);
+    ACTIVATION(output[output_id], input[input_id]);
 }
 
 #undef ACTIVATION
