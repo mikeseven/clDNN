@@ -74,7 +74,7 @@ struct eltwise_gpu : is_an_implementation
 
         if (input_mem.get_layout().size.format == cldnn::format::bfyx)
         {
-            kd.kernel_name == kernel_name_bfyx;
+            kd.kernel_name = kernel_name_bfyx;
         }
         else
         {
