@@ -168,7 +168,7 @@ void print_2d(VVF &data) {
 	std::cout << std::endl;
 }
 
-TEST(DISABLED_convolution_f32_fw_gpu, basic_convolution) {
+TEST(convolution_f32_fw_gpu, basic_convolution) {
 	//  Filter : 2x3
 	//  Stride : 2x1
 	//  Input  : 4x5
