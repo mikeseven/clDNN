@@ -84,21 +84,5 @@ private:
         _dto.mean_substract = mean.c_str();
         _dto.substract_per_feature = float_vector_to_arr(substract_per_feature);
     }
-
-    static std::vector<float> float_arr_to_vector(const cldnn_float_arr& arr)
-    {
-        std::vector<float> result(arr.size);
-        for (size_t i = 0; i < arr.size; i++)
-        {
-            result[i] = arr.data[i];
-        }
-        return result;
-    }
-
-    static cldnn_float_arr float_vector_to_arr(const std::vector<float>& stor)
-    {
-        return { stor.data(), stor.size() };
-    }
-
 };
 }

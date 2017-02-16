@@ -21,6 +21,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "cldnn.h"
 
@@ -139,4 +140,21 @@ constexpr auto round_up_to(T1 val, T2 rounding)
     typedef decltype(std::declval<UT1>() / std::declval<UT2>()) RetT;
 
     return static_cast<RetT>(ceil_div(val, rounding) * static_cast<UT2>(rounding));
+}
+
+
+inline std::vector<float> float_arr_to_vector(const cldnn_float_arr& arr)
+{
+    std::vector<float> result(arr.size);
+    for (size_t i = 0; i < arr.size; i++)
+    {
+        result[i] = arr.data[i];
+    }
+    return result;
+}
+
+
+inline cldnn_float_arr float_vector_to_arr(const std::vector<float>& stor)
+{
+    return { stor.data(), stor.size() };
 }
