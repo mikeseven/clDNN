@@ -27,7 +27,6 @@ namespace neural
 {
 // Kernel names.
 static const std::string kernel_name = "eltwise_gpu";
-static const std::string kernel_name_bfyx = "eltwise_gpu_bfyx";
 
 struct eltwise_gpu : is_an_implementation
 {
@@ -50,18 +49,18 @@ struct eltwise_gpu : is_an_implementation
 
     static kernel_data set_kernel_data(const eltwise& outer)
     {
-        const auto& input_mem = outer.input_memory(0);  // input
-        const auto& input2_mem = outer.input_memory(1);  // input2
         const auto& output_mem = outer.output_memory(); // output
 
-        if (input_mem.argument().format != input2_mem.argument().format)
+        if (outer.input().at(0)->desc()->output_padding() ||
+            outer.input().at(1)->desc()->output_padding() ||
+            outer.desc()->input_padding())
         {
-            throw std::runtime_error("different formats of input layers");
+            throw std::runtime_error("Input padding for eltwise not yet supported");
         }
 
         kernel_data kd;
 
-        kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
+        kd.fp16_unit_used = output_mem.get_layout().data_type == cldnn::data_types::f16;
 
         // Determine global work sizes.
         kd.gws0 = output_mem.count();
@@ -72,14 +71,7 @@ struct eltwise_gpu : is_an_implementation
             --kd.lws0;
         }
 
-        if (input_mem.get_layout().size.format == cldnn::format::bfyx)
-        {
-            kd.kernel_name = kernel_name_bfyx;
-        }
-        else
-        {
-            kd.kernel_name = kernel_name;
-        }
+        kd.kernel_name = kernel_name;
 
         return kd;
     }
