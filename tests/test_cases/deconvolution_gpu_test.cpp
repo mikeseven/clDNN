@@ -85,7 +85,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_nopad) {
         23.f, 42.5f, 15.5f
     };
 
-    for (int i = 0; i < expected_output_vec.size(); i++)
+    for (unsigned int i = 0; i < expected_output_vec.size(); i++)
     {
         EXPECT_FLOAT_EQ(expected_output_vec[i], output_ptr[i]);
     }
@@ -146,7 +146,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_nopad_oiyx) {
         23.f, 42.5f, 15.5f
     };
 
-    for (int i = 0; i < expected_output_vec.size(); i++)
+    for (unsigned int i = 0; i < expected_output_vec.size(); i++)
     {
         EXPECT_FLOAT_EQ(expected_output_vec[i], output_ptr[i]);
     }
@@ -258,7 +258,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_stride2_nopad) {
         22.f, 10.f, 32.5f, 14.5f
     };
 
-    for (int i = 0; i < expected_output_vec.size(); i++)
+    for (unsigned int i = 0; i < expected_output_vec.size(); i++)
     {
         EXPECT_FLOAT_EQ(expected_output_vec[i], output_ptr[i]);
     }
@@ -316,16 +316,14 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_stride4_pad2) {
 
     auto output_ptr = output_prim.pointer<float>();
 
-    std::vector<float> output;
     std::vector<float> expected_output_vec = {
         40.f, 0.f, 1.5f,
         0.f, 0.f, 0.f,
         6.f, 0.f, -18.f
     };
 
-    for (int i = 0; i < expected_output_vec.size(); i++)
+    for (unsigned int i = 0; i < expected_output_vec.size(); i++)
     {
-        output.push_back(output_ptr[i]);
         EXPECT_FLOAT_EQ(expected_output_vec[i], output_ptr[i]);
     }
 }
@@ -380,15 +378,13 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_stride2_pad1) {
 
     auto output_ptr = output_prim.pointer<float>();
 
-    std::vector<float> output;
     std::vector<float> expected_output_vec = {
         -3.f, 0.5f, 4.5f, 22.f,
         13.f, 5.f, -17.f, -7.f
     };
 
-    for (int i = 0; i < expected_output_vec.size(); i++)
+    for (unsigned int i = 0; i < expected_output_vec.size(); i++)
     {
-        output.push_back(output_ptr[i]);
         EXPECT_FLOAT_EQ(expected_output_vec[i], output_ptr[i]);
     }
 }
@@ -447,15 +443,13 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2x2_in2x2x1x1_stride2_pad1) {
 
     auto output_ptr = output_prim.pointer<float>();
 
-    std::vector<float> output;
     std::vector<float> expected_output_vec = {
         -3.f, 1.f, 4.5f, 8.5f,
         13.f, 17.f, -17.f, -13.f
     };
 
-    for (int i = 0; i < expected_output_vec.size(); i++)
+    for (unsigned int i = 0; i < expected_output_vec.size(); i++)
     {
-        output.push_back(output_ptr[i]);
         EXPECT_FLOAT_EQ(expected_output_vec[i], output_ptr[i]);
     }
 }
