@@ -450,6 +450,15 @@ void network_builder::prepare_padding()
                         );
                     _topology_map[_eltwise->id()]->replace(new_eltwise);
                 }
+                else if (prim->type() == cldnn::data::type_id())
+                {
+                    const auto _data = std::static_pointer_cast<const cldnn::data>(prim);
+                    auto new_data = std::make_shared<cldnn::data>(
+                        _data->id(),
+                        _data->mem
+                        );
+                    _topology_map[_data->id()]->replace(new_data);
+                }
                 else
                 {
                     throw std::runtime_error("want to add output padding to primitive type that does not support it yet!");

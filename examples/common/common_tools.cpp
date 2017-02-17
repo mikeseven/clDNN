@@ -549,7 +549,7 @@ void run_topology(const execution_params &ep)
     else if (ep.topology_name == "gender")
         primitives = build_gender(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else if (ep.topology_name == "microbench")
-        primitives = build_microbench(ep.weights_dir, engine, input_layout, gpu_batch_size);
+        primitives = build_microbench(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else if(ep.topology_name == "squeezenet")
         primitives = build_squeezenet(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else
