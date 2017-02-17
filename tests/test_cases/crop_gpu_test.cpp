@@ -42,7 +42,7 @@ std::vector<T> generate_random_input(size_t b, size_t f, size_t y, size_t x, int
     return v;
 }
 
-TEST(DISABLED_crop_gpu, basic_in2x3x2x2_crop_all) {
+TEST(crop_gpu, basic_in2x3x2x2_crop_all) {
     //  Reference  : 1x2x2x2
     //  Input      : 2x3x4x5
     //  Output     : 1x2x2x3
@@ -96,7 +96,7 @@ TEST(DISABLED_crop_gpu, basic_in2x3x2x2_crop_all) {
     }
 }
 
-TEST(DISABLED_crop_gpu, basic_in2x3x2x2_crop_all_bfyx) {
+TEST(crop_gpu, basic_in2x3x2x2_crop_all_bfyx) {
     //  Reference  : 3x1x2x2
     //  Input      : 6x2x4x3
     //  Output     : 3x1x2x2
@@ -151,7 +151,7 @@ TEST(DISABLED_crop_gpu, basic_in2x3x2x2_crop_all_bfyx) {
     }
 }
 
-TEST(DISABLED_crop_gpu, basic_in2x3x2x2_crop_offsets) {
+TEST(crop_gpu, basic_in2x3x2x2_crop_offsets) {
     //  Reference  : 1x2x2x1
     //  Offsets    : 1x0x1x1
     //  Input      : 2x2x3x2
