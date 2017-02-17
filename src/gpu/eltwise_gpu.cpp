@@ -27,6 +27,7 @@ namespace neural
 {
 // Kernel names.
 static const std::string kernel_name = "eltwise_gpu";
+static const std::string kernel_name_bfyx = "eltwise_gpu_bfyx";
 
 struct eltwise_gpu : is_an_implementation
 {
@@ -71,7 +72,17 @@ struct eltwise_gpu : is_an_implementation
             --kd.lws0;
         }
 
-        kd.kernel_name = kernel_name;
+        if (output_mem.get_layout().size.format == cldnn::format::bfyx)
+        {
+            kd.kernel_name = kernel_name_bfyx;
+        }
+        else
+        {
+            if (outer.desc()->output_padding())
+                throw std::runtime_error("Input padding for eltwise is not yet supported for not-bfyx input");
+
+            kd.kernel_name = kernel_name;
+        }
 
         return kd;
     }
