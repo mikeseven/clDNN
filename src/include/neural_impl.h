@@ -32,7 +32,6 @@
 #include "softmax_arg.h"
 #include "batch_norm_arg.h"
 #include "scale_arg.h"
-#include "crop_arg.h"
 #include "simpler_nms_arg.h"
 #include "roi_pooling_arg.h"
 
@@ -56,7 +55,6 @@ namespace neural
     }
     using pooling = cldnn::pooling_arg;
     using scale = cldnn::scale_arg;
-    using crop = cldnn::crop_arg;
     using simpler_nms = cldnn::simpler_nms_arg;
     using roi_pooling = cldnn::roi_pooling_arg;
 

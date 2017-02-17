@@ -15,6 +15,7 @@
 */
 
 #include "neural_impl.h"
+#include "crop_arg.h"
 #include "engine_impl.h"
 #include "network_impl.h"
 #include "implementation_map.h"
@@ -44,7 +45,7 @@ namespace neural
 
     struct crop_gpu : is_an_implementation
     {
-        const crop& _outer;
+        const cldnn::crop_arg& _outer;
         gpu::engine_info_internal _engine_info;
 
         struct kernel_data
@@ -58,16 +59,16 @@ namespace neural
         } _kernel_data;
         gpu::kernel _kernel;
 
-        static kd_selector_t<kernel_data, crop, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
+        static kd_selector_t<kernel_data, cldnn::crop_arg, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
 
-        crop_gpu(const crop& outer) :
+        crop_gpu(const cldnn::crop_arg& outer) :
             _outer(outer),
             _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info()),
             _kernel_data(ks.get_kernel(outer, _engine_info.architecture, _engine_info.configuration)),
             _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
         {}
 
-        static kernel_data set_kernel_data(const crop& outer)
+        static kernel_data set_kernel_data(const cldnn::crop_arg& outer)
         {
             auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
 
@@ -95,7 +96,7 @@ namespace neural
             return kd;
         }
 
-        static gpu::jit_constants get_jit_constants(const crop& outer, const kernel_data& data)
+        static gpu::jit_constants get_jit_constants(const cldnn::crop_arg& outer, const kernel_data& data)
         {
             if (!data.fp16_supported && data.fp16_unit_used)
                 throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
@@ -123,10 +124,10 @@ namespace neural
             return _kernel.run<gpu::input_mem, gpu::output_mem>({ {kd.gws0, kd.gws1, kd.gws2 }, {kd.lws0, kd.lws1, kd.lws2 } }, events, input_mem, output_mem);
         }
 
-        static is_an_implementation *create(crop &arg) { return new crop_gpu(arg); };
+        static is_an_implementation *create(cldnn::crop_arg &arg) { return new crop_gpu(arg); };
     };
 
-    crop_gpu::kernel_data set_default(const crop& arg)
+    crop_gpu::kernel_data set_default(const cldnn::crop_arg& arg)
     {
         crop_gpu::kernel_data kd = crop_gpu::set_kernel_data(arg);
         kd.crop_bfyx_used = (memory::to_tensor_format(arg.input_memory(0).argument().format) == cldnn::format::bfyx) ? true : false;
@@ -135,7 +136,7 @@ namespace neural
         return kd;
     }
 
-    kd_selector_t<crop_gpu::kernel_data, crop, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> crop_gpu::ks = {
+    kd_selector_t<crop_gpu::kernel_data, cldnn::crop_arg, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> crop_gpu::ks = {
         { std::make_tuple(gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
     };
 
@@ -144,10 +145,10 @@ namespace neural
             attach() {
                 auto val_fw = crop_gpu::create;
 
-                implementation_map<crop>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw);
-                implementation_map<crop>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw);
-                implementation_map<crop>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw);
-                implementation_map<crop>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), val_fw);
+                implementation_map<cldnn::crop_arg>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw);
+                implementation_map<cldnn::crop_arg>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw);
+                implementation_map<cldnn::crop_arg>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw);
+                implementation_map<cldnn::crop_arg>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), val_fw);
             }
             ~attach() {}
         };
