@@ -42,11 +42,21 @@ layout convolution_arg::calc_output_layout(const topology_map& topology_map, std
     // outp <= (input_size - (2*input_offset) - kernel_size)/ stride 
     auto kernel_xy = weights_layout.size.spatial;
     assert(kernel_xy.size() == 2);
-    //TODO !!!implement correct output size calculation!!!
-    auto output_spatial_x = (input_layout.size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_xy[0]) / strd.spatial[0] + 1;
-    auto output_spatial_y = (input_layout.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_xy[1]) / strd.spatial[1] + 1;
-    //auto output_spatial_x = static_cast<int32_t>(ceil(static_cast<float>(input_layout.size.spatial[0] - (2*input_offset.spatial[0]) - kernel_xy[0]) / static_cast<float>(strd.spatial[0]))) + 1;
-    //auto output_spatial_y = static_cast<int32_t>(ceil(static_cast<float>(input_layout.size.spatial[1] - (2*input_offset.spatial[1]) - kernel_xy[1]) / static_cast<float>(strd.spatial[1]))) + 1;
+
+    // TODO: Consider moving general parameter verification to arguments constructor.
+    if (strd.spatial[0] <= 0 || strd.spatial[1] <= 0)
+        throw std::invalid_argument("Stride must be positive (>= 1)");
+    if (2 * input_offset.spatial[0] >= input_layout.size.spatial[0] || 2 * input_offset.spatial[1] >= input_layout.size.spatial[1])
+        throw std::invalid_argument("Input offset is greater than input data range. There is no input data to process");
+
+    auto output_spatial_x = static_cast<cldnn::tensor::value_type>(
+        2 * input_offset.spatial[0] < input_layout.size.spatial[0]
+            ? ceil_div(std::max(input_layout.size.spatial[0] - 2 * input_offset.spatial[0] - kernel_xy[1], 0), strd.spatial[0]) + 1
+            : 0);
+    auto output_spatial_y = static_cast<cldnn::tensor::value_type>(
+        2 * input_offset.spatial[1] < input_layout.size.spatial[1]
+            ? ceil_div(std::max(input_layout.size.spatial[1] - 2 * input_offset.spatial[1] - kernel_xy[1], 0), strd.spatial[1]) + 1
+            : 0);
     // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
     auto number_of_features = weights_layout.size.feature[0] * static_cast<int32_t>(split);
 
@@ -85,7 +95,7 @@ convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const co
         if (filter_arg.size.raw.size() != output_arg.size.raw.size() + 1) throw std::runtime_error("window_size != 5");
         if (bias_arg.size.raw.size() != 3) throw std::runtime_error("biases isn't 1D vector."); // b=1, f=1
         if (bias_arg.size.spatial[0] != output_size.feature[0] / split) throw std::runtime_error("biases/output feature maps number does not match.");
-        if (desc->padding_type() != padding::types::zero) throw std::runtime_error("unknown padding mode.");
+        if (desc->padding_filling_value() != 0.0f) throw std::runtime_error("unknown padding mode.");
         if (input_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("input offset/input number of dimension does not match.");
         //not relevant anymore
         //if (output_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("output offset/input number of dimension does not match.");

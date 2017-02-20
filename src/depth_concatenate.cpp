@@ -188,8 +188,8 @@ struct depth_concatenate_gpu : is_an_implementation
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(fp16_supported)),
             gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",      data.fp16_unit_used ? "half" : "float"),
-            gpu::make_jit_constant("INPUT_PADDING",  _outer.input().at(input_idx)->desc()->output_padding().size()),
-            gpu::make_jit_constant("OUTPUT_PADDING", _outer.argument.output_padding().size())
+            gpu::make_jit_constant("INPUT_PADDING",  _outer.input().at(input_idx)->desc()->output_padding()),
+            gpu::make_jit_constant("OUTPUT_PADDING", _outer.argument.output_padding())
         };
     }
 

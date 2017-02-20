@@ -75,7 +75,13 @@ struct reorder_gpu : is_an_implementation {
         kernel_data kd;
 
         kd.have_subtraction = outer.have_substract(); //why 'false' when !subtract_per_feature.empty()? maybe rename to 'have_mean'?
-        kd.padding_only = (!kd.have_subtraction) && outer.argument.substract_per_feature.empty() && (outer.input_memory(0).argument().format == outer.output_memory().argument().format) && outer.input_memory(0).argument().format == memory::format::type::bfyx_f32;
+        kd.padding_only = (!kd.have_subtraction) && outer.argument.substract_per_feature.empty() &&
+            outer.input_memory(0).argument().format == outer.output_memory().argument().format &&
+            (outer.input_memory(0).argument().format == memory::format::type::bfyx_f32 || outer.input_memory(0).argument().format == memory::format::type::bfyx_f16) &&
+            outer.desc()->output_padding().lower_size().transform(cldnn::format::bfyx, 0).feature[0] == 0 &&
+            outer.desc()->output_padding().lower_size().transform(cldnn::format::bfyx, 0).batch[0] == 0 &&
+            outer.desc()->output_padding().upper_size().transform(cldnn::format::bfyx, 0).feature[0] == 0 &&
+            outer.desc()->output_padding().upper_size().transform(cldnn::format::bfyx, 0).batch[0] == 0;
         kd.is_flatten = (outer.input_memory(0).argument().size.raw.size() != outer.output_memory().argument().size.raw.size());
 
         return kd;
@@ -92,22 +98,22 @@ struct reorder_gpu : is_an_implementation {
         // 0 - batch (b), 1, 2 - feature (o -> 1, i -> 2), 3, 4 - spatial (x -> 3, y -> 4)
         case memory::format::type::byxf_f32:
         case memory::format::type::byxf_f16:
-            return "return pad[1] + pos[1] + (2 * pad[1] + size[1]) * (pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3] + (2 * pad[3] + size[3]) * (pad[0] + pos[0])));";
+            return "return lpad[1] + pos[1] + (lpad[1] + size[1] + upad[1]) * (lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[3] + pos[3] + (lpad[3] + size[3] + upad[3]) * (lpad[0] + pos[0])));";
         case memory::format::type::yxfb_f32:
         case memory::format::type::yxfb_f16:
-            return "return pad[0] + pos[0] + (2 * pad[0] + size[0]) * (pad[1] + pos[1] + (2 * pad[1] + size[1]) * (pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3])));";
+            return "return lpad[0] + pos[0] + (lpad[0] + size[0] + upad[0]) * (lpad[1] + pos[1] + (lpad[1] + size[1] + upad[1]) * (lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[3] + pos[3])));";
         case memory::format::type::fyxb_f32:
         case memory::format::type::fyxb_f16:
-            return "return pad[0] + pos[0] + (2 * pad[0] + size[0]) * (pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3] + (2 * pad[3] + size[3]) * (pad[1] + pos[1])));";
+            return "return lpad[0] + pos[0] + (lpad[0] + size[0] + upad[0]) * (lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[3] + pos[3] + (lpad[3] + size[3] + upad[3]) * (lpad[1] + pos[1])));";
         case memory::format::type::bfyx_f32:
         case memory::format::type::bfyx_f16:
-            return "return pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3] + (2 * pad[3] + size[3]) * (pad[1] + pos[1] + (2 * pad[1] + size[1]) * (pad[0] + pos[0])));";
+            return "return lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[3] + pos[3] + (lpad[3] + size[3] + upad[3]) * (lpad[1] + pos[1] + (lpad[1] + size[1] + upad[1]) * (lpad[0] + pos[0])));";
         case memory::format::type::oiyx_f32:
         case memory::format::type::oiyx_f16:
-            return "return pad[3] + pos[3] + (2 * pad[3] + size[3]) * (pad[4] + pos[4] + (2 * pad[4] + size[4]) * (pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[1] + pos[1])));";
+            return "return lpad[3] + pos[3] + (lpad[3] + size[3] + upad[3]) * (lpad[4] + pos[4] + (lpad[4] + size[4] + upad[4]) * (lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[1] + pos[1])));";
         case memory::format::type::yxio_f32:
         case memory::format::type::yxio_f16:
-            return "return pad[1] + pos[1] + (2 * pad[1] + size[1]) * (pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[3] + pos[3] + (2 * pad[3] + size[3]) * (pad[4] + pos[4])));";
+            return "return lpad[1] + pos[1] + (lpad[1] + size[1] + upad[1]) * (lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[3] + pos[3] + (lpad[3] + size[3] + upad[3]) * (lpad[4] + pos[4])));";
         case memory::format::type::os_iyx_osv16_f32:
         case memory::format::type::os_iyx_osv16_f16:
             return R"__C(uint _slice_id = pos[1] / 16; \
@@ -126,14 +132,14 @@ struct reorder_gpu : is_an_implementation {
                         return _id_in_slice + 16 * (pos[2] + size[2] * _slice_id);)__C";
         case memory::format::type::bx_f32:
         case memory::format::type::bx_f16:
-            return "return pad[2] + pos[2] + (2 * pad[2] + size[2]) * (pad[0] + pos[0]);";
+            return "return lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[0] + pos[0]);";
         case memory::format::type::xb_f32:
         case memory::format::type::xb_f16:
-            return "return pad[0] + pos[0] + (2 * pad[0] + size[0]) * (pad[2] + pos[2]);";
+            return "return lpad[0] + pos[0] + (lpad[0] + size[0] + upad[0]) * (lpad[2] + pos[2]);";
         // No reorder, only conversion (use simpler 1D kernels for that).
         case memory::format::type::x_f32:
         case memory::format::type::x_f16:
-            return "return pad[2] + pos[2];";
+            return "return lpad[2] + pos[2];";
 
         default:
             throw std::invalid_argument("This format is not supported in GPU reorder");
@@ -241,7 +247,8 @@ struct reorder_gpu : is_an_implementation {
         auto input_use_half = input_mem.get_layout().data_type == cldnn::data_types::f16;
         auto output_use_half = output_mem.get_layout().data_type == cldnn::data_types::f16;
         int input_output_type_cvt = input_use_half != output_use_half;
-        auto padding = outer.desc()->output_offset().transform(output_mem.get_layout().size.format, 0);
+        auto lower_padding = outer.desc()->output_padding().lower_size().transform(output_mem.get_layout().size.format, 0);
+        auto upper_padding = outer.desc()->output_padding().upper_size().transform(output_mem.get_layout().size.format, 0);
 
         if (!engine_info.supports_fp16 && (input_use_half || output_use_half))
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
@@ -270,10 +277,20 @@ struct reorder_gpu : is_an_implementation {
             s << "(uint[]){ ";
             for (uint32_t i = 0; i < output_mem.argument().size.raw.size(); i++)
             {
-                s << static_cast<uint32_t>(padding.raw[i]) << ", ";
+                s << static_cast<uint32_t>(lower_padding.raw[i]) << ", ";
             }
             s << " }";
-            mem_consts.add_constant(gpu::make_jit_constant("PADDING", s.str()));
+            mem_consts.add_constant(gpu::make_jit_constant("LOWER_PADDING", s.str()));
+        }
+        {
+            std::stringstream s;
+            s << "(uint[]){ ";
+            for (uint32_t i = 0; i < output_mem.argument().size.raw.size(); i++)
+            {
+                s << static_cast<uint32_t>(upper_padding.raw[i]) << ", ";
+            }
+            s << " }";
+            mem_consts.add_constant(gpu::make_jit_constant("UPPER_PADDING", s.str()));
         }
 
         if (data.padding_only)
@@ -303,7 +320,8 @@ struct reorder_gpu : is_an_implementation {
                     s << 0/*static_cast<uint32_t>(padding.raw[i])*/ << ", ";
                 }
                 s << " }";
-                mem_consts.add_constant(gpu::make_jit_constant("SUBTRTACT_PADDING", s.str()));
+                mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_LOWER_PADDING", s.str()));
+                mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_UPPER_PADDING", s.str()));
             }
 
         }

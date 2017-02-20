@@ -96,9 +96,9 @@ struct relu_gpu : is_an_implementation
         gpu::jit_constants mem_consts
         {
             gpu::make_jit_constant("INPUT",          input_size),
-            gpu::make_jit_constant("INPUT_PADDING",  outer.input().at(0)->desc()->output_padding().size()),
+            gpu::make_jit_constant("INPUT_PADDING",  outer.input().at(0)->desc()->output_padding()),
             gpu::make_jit_constant("OUTPUT",         outer.non_padded_output_layout().size),
-            gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding().size()),
+            gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding()),
             gpu::make_jit_constant("RELU",           1),
             gpu::make_jit_constant("NEGATIVE_SLOPE", outer.argument.negative_slope),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16)),

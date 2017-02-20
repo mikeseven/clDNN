@@ -164,8 +164,8 @@ struct pooling_gpu : is_an_implementation {
             gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_INIT_VAL_MAX", data.fp16_unit_used ? "-HALF_MAX" : "-FLT_MAX"),
             gpu::make_jit_constant("UNIT_INIT_VAL_AVG", data.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("INPUT_PADDING",     input_padding.size()),
-            gpu::make_jit_constant("OUTPUT_PADDING",    output_padding.size())
+            gpu::make_jit_constant("INPUT_PADDING",     input_padding),
+            gpu::make_jit_constant("OUTPUT_PADDING",    output_padding)
         };
         return mem_consts;
     }
@@ -190,9 +190,9 @@ struct pooling_gpu : is_an_implementation {
         auto& output_buffer_size = output_arg.size;
         auto& stride = arg.argument.stride;
         auto& window = arg.argument.size;
-        auto padding = arg.desc()->padding_type();
+        const auto padding = arg.desc()->padding_filling_value();
 
-        if (cldnn::padding::types::zero != padding)                                      throw std::logic_error("Pooling supports only zero padding.");
+        if (padding != 0.0f)                                               throw std::logic_error("Pooling supports only zero padding.");
         if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::invalid_argument("Pooling input/output number of dimension does not match.");
         if (stride.raw.size() != output_buffer_size.raw.size())            throw std::invalid_argument("Pooling stride/output number of dimension does not match.");
         if (window.raw.size() != output_buffer_size.raw.size())            throw std::invalid_argument("Pooling window_size/output number of dimension does not match.");

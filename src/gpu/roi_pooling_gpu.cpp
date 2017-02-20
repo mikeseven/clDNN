@@ -137,9 +137,9 @@ struct roi_pooling_gpu : is_an_implementation {
         cldnn::neural_memory::arguments input_arg  = arg.input_memory(0).argument();
         cldnn::neural_memory::arguments output_arg = arg.output_memory().argument();
 
-        cldnn::padding::types padding = arg.desc()->padding_type();
+        const auto padding_filling_value = arg.desc()->padding_filling_value();
 
-        if (cldnn::padding::types::zero != padding) {
+        if (padding_filling_value != 0.0f) {
             throw std::logic_error("ROI pooling supports only zero padding.");
         }
 
