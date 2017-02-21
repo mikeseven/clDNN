@@ -27,12 +27,6 @@ __kernel void roi_pooling_gpu
     const int b = i / DST_W / DST_H / CHAN_NUM / ROIS_NUM;
 
     const __global UNIT_TYPE * roi_ptr = &src_rois[PITCH_ROI_R * r + PITCH_ROI_B * b];
-
-    // TODO: check issue with rounding mode
-//    const int roi_x  = convert_int(roi_ptr[0]);
-//    const int roi_y  = convert_int(roi_ptr[1]);
-//    const int roi_x1 = convert_int(roi_ptr[2]);
-//    const int roi_y1 = convert_int(roi_ptr[3]);
     const int roi_x  = (int)round(roi_ptr[0]);
     const int roi_y  = (int)round(roi_ptr[1]);
     const int roi_x1 = (int)round(roi_ptr[2]);
