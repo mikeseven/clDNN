@@ -372,8 +372,7 @@ public:
             context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
         }
 
-        cldnn::refcounted_obj_ptr<cldnn::event_impl> e(new cldnn::event_impl(end_event), false);
-        return e;
+		return { new cldnn::event_impl(end_event), false };
     }
 };
 
