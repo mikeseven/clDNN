@@ -47,6 +47,7 @@
 *  - ROI pooling
 *  - Simpler NMS
 *  - Prior box
+*  - Detection output
 *
 *  With this primitive set, user can build and execute most common image recognition, semantic segmentation and object detection networks topologies like:
 *   - Alexnet 
