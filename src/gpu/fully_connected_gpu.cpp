@@ -335,7 +335,13 @@ fully_connected_gpu::kernel_data default_bfyx_f32(const fully_connected& arg)
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
     if (arg.input_memory(0).argument().size.batch[0] != 1)
     {
-        kd.kernel_name = kernel_name_bx_bx_from_fyxb;
+        auto input_mem = arg.input_memory(0);
+        cldnn::topology topology(
+            cldnn::input_layout("input", input_mem.get_layout()),
+            cldnn::reorder("reorder", "input", cldnn::layout{ input_mem.get_layout().data_type, input_mem.argument().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
+        );
+        kd.reorder.push_back({ arg.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
+        kd.kernel_name = kernel_name_xb_xb;
     }
     else
     {
@@ -551,7 +557,7 @@ fully_connected_gpu::ks_type fully_connected_gpu::ks = {
     { std::make_tuple(memory::format::xb_f32, memory::format::bx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_xb_f32_bx_f32 },
     { std::make_tuple(memory::format::x_f32, memory::format::bx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_xb_f32_bx_f32 },
 
-    { std::make_tuple(memory::format::bfyx_f32, memory::format::yxfb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::yxfb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32 },
 
     { std::make_tuple(memory::format::bfyx_f32, memory::format::fyxb_f32, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32_fyxb_f32_b1 },
     { std::make_tuple(memory::format::bx_f32, memory::format::xb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32 },

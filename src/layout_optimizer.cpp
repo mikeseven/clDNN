@@ -99,7 +99,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         auto dimensions = neural_memory::traits(current_layout).dimension;
         if (dimensions == 4)
         {
-            if (batch > 1 && expected_data_type != data_types::f16)
+            if (batch > 1 && expected_data_type != data_types::f16 && batch % 8 == 0)
             {
                 expected_tensor = cldnn::tensor(cldnn::format::bs_xs_xsv8_bsv8,
                 {
@@ -120,7 +120,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         }
         else if (dimensions == 2)
         {
-            if (batch >= 8 && expected_data_type != data_types::f16)
+            if (batch >= 8 && expected_data_type != data_types::f16 && batch % 8 == 0)
                 expected_tensor = current_layout.size.transform(format::bs_xs_xsv8_bsv8, 1);
             else if (batch == 1)
                 expected_tensor = current_layout.size.transform(format::bs_x_bsv16, 1);
