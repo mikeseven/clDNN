@@ -44,9 +44,9 @@ binary_data persistent_cache::cache_file::read()
     return "";
 }
 
+#ifndef CLDNN_BUILT_FROM_OPENVX
 void persistent_cache::cache_file::write(const binary_data& data)
 {
-#ifndef CLDNN_BUILT_FROM_OPENVX
     std::ofstream c_file(cache_file_name, std::ios::binary);
     if (c_file.is_open())
     {
@@ -55,9 +55,10 @@ void persistent_cache::cache_file::write(const binary_data& data)
         return;
     }
 	throw std::system_error(errno, std::system_category( ));
-#else
-    data;
-#endif
 }
-
+#else
+void persistent_cache::cache_file::write(const binary_data&)
+{
+}
+#endif
 } } }
