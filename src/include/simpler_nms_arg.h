@@ -49,10 +49,20 @@ namespace cldnn
     {
     public:
 
+        // indices of the memory objects used by the layer
         enum input_index {
             cls_scores_index,
-            bbox_pred_index
+            bbox_pred_index,
+			image_info_index
         };
+
+        // indices of the image info parameters inside the image_info memory object (the object
+        // is an integer array of these parameters)
+		enum image_info_size_index {
+			image_info_width_index = 0,
+			image_info_height_index = 1,
+			image_info_depth_index = 2
+		};
     
         simpler_nms_arg(network_impl& network, std::shared_ptr<const simpler_nms> desc);
 

@@ -21,6 +21,7 @@
 #include <api/memory.hpp>
 #include <api/primitives/input_layout.hpp>
 #include <api/primitives/simpler_nms.hpp>
+#include <include/simpler_nms_arg.h>
 #include <api/topology.hpp>
 #include <api/network.hpp>
 #include <api/engine.hpp>
@@ -75,23 +76,28 @@ TEST(simpler_nms, basic) {
     p = bbox_pred.pointer<char>().data();
     memcpy(p, &bbox_pred_data[0], bbox_pred_data_size * sizeof(float));
 
+	memory image_info = memory::allocate(engine, { data_types::i32,{ format::x,{ 3 } } });
+	int* image_info_mem = image_info.pointer<int>().data();	
+	image_info_mem[cldnn::simpler_nms_arg::image_info_width_index]  = image_w;
+	image_info_mem[cldnn::simpler_nms_arg::image_info_height_index] = image_h;
+	image_info_mem[cldnn::simpler_nms_arg::image_info_depth_index]  = image_z;
+
     // prepare the network
     topology topology;
     topology.add(input_layout("cls_scores", cls_scores.get_layout()));
     topology.add(input_layout("bbox_pred", bbox_pred.get_layout()));
+	topology.add(input_layout("image_info", image_info.get_layout()));
 
     simpler_nms test_layer( layer_name, 
                             "cls_scores", 
                             "bbox_pred",
+							"image_info",
                             max_proposals,
                             iou_threshold,
                             min_bbox_size,
                             feature_stride,
                             pre_nms_topn,
                             post_nms_topn,
-                            image_w,
-                            image_h,
-                            image_z,
                             scales,
                             padding(),
                             padding());
@@ -102,6 +108,7 @@ TEST(simpler_nms, basic) {
 
     network.set_input_data("cls_scores", cls_scores);
     network.set_input_data("bbox_pred", bbox_pred);
+	network.set_input_data("image_info", image_info);
 
     std::map<primitive_id, network_output> network_output = network.execute();
     EXPECT_EQ(network_output.begin()->first, layer_name);

@@ -33,29 +33,24 @@ struct simpler_nms : public primitive_base<simpler_nms, CLDNN_PRIMITIVE_DESC(sim
         const primitive_id& id,        
         const primitive_id& cls_scores,
         const primitive_id& bbox_pred,
+		const primitive_id& image_info,
         int max_proposals,
         float iou_threshold,
         int min_bbox_size,
         int feature_stride,
         int pre_nms_topn,
         int post_nms_topn,
-        int image_w,
-        int image_h, 
-        int image_z,       
-        const std::vector<float>& scales_param,        
-        const padding& input_padding,
-        const padding& output_padding
+		const std::vector<float>& scales_param,
+        const padding& input_padding = padding(),
+        const padding& output_padding = padding()
         )
-        : primitive_base(id, {cls_scores, bbox_pred}, input_padding, output_padding, 
+        : primitive_base(id, {cls_scores, bbox_pred, image_info}, input_padding, output_padding, 
                          max_proposals,
                          iou_threshold,
                          min_bbox_size,
                          feature_stride,
                          pre_nms_topn,
                          post_nms_topn,
-                         image_w,
-                         image_h,
-                         image_z,
                          cldnn_float_arr{nullptr, 0}),
                  max_proposals(_dto.max_proposals),
                  iou_threshold(_dto.iou_threshold),
@@ -63,9 +58,6 @@ struct simpler_nms : public primitive_base<simpler_nms, CLDNN_PRIMITIVE_DESC(sim
                  feature_stride(_dto.feature_stride),
                  pre_nms_topn(_dto.pre_nms_topn),
                  post_nms_topn(_dto.post_nms_topn),
-                 image_w(_dto.image_w),
-                 image_h(_dto.image_h),
-                 image_z(_dto.image_z),
                  scales(scales_param)
     {
         init_dto();
@@ -79,9 +71,6 @@ struct simpler_nms : public primitive_base<simpler_nms, CLDNN_PRIMITIVE_DESC(sim
         feature_stride(_dto.feature_stride),
         pre_nms_topn(_dto.pre_nms_topn),
         post_nms_topn(_dto.post_nms_topn),
-        image_w(_dto.image_w),
-        image_h(_dto.image_h),   
-        image_z(_dto.image_z),     
         scales(float_arr_to_vector(_dto.scales))
     {
         init_dto();
@@ -93,9 +82,6 @@ struct simpler_nms : public primitive_base<simpler_nms, CLDNN_PRIMITIVE_DESC(sim
     int feature_stride;
     int pre_nms_topn;
     int post_nms_topn;      
-    int image_w;
-    int image_h;
-    int image_z;
     const std::vector<float> scales;
 
     private:

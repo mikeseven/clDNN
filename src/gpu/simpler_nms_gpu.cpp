@@ -245,6 +245,7 @@ struct simpler_nms_gpu : is_an_implementation {
       
         const cldnn::memory& cls_scores = _outer.input_memory(cldnn::simpler_nms_arg::cls_scores_index);  
         const cldnn::memory& bbox_pred  = _outer.input_memory(cldnn::simpler_nms_arg::bbox_pred_index);  
+		const cldnn::memory& image_info = _outer.input_memory(cldnn::simpler_nms_arg::image_info_index);
 
         // feat map sizes
         int fm_h = cls_scores.get_layout().size.sizes()[2];
@@ -253,9 +254,11 @@ struct simpler_nms_gpu : is_an_implementation {
         int fm_sz = fm_w * fm_h;
 
         // original input image to the graph (after possible scaling etc.) so that coordinates are valid for it
-        int img_w = _outer.argument.image_w;
-        int img_h = _outer.argument.image_h;
-        int img_z = _outer.argument.image_z;
+		const int* image_info_mem = image_info.pointer<int>().data();
+
+		int img_w = image_info_mem[cldnn::simpler_nms_arg::image_info_width_index];
+        int img_h = image_info_mem[cldnn::simpler_nms_arg::image_info_height_index];
+		int img_z = image_info_mem[cldnn::simpler_nms_arg::image_info_depth_index];
 
         int scaled_min_bbox_size = _outer.argument.min_bbox_size * img_z;
 

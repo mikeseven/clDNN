@@ -33,9 +33,6 @@ CLDNN_BEGIN_PRIMITIVE_DESC(simpler_nms)
     int feature_stride;
     int pre_nms_topn;
     int post_nms_topn;
-    int image_w;
-    int image_h;
-    int image_z;
     cldnn_float_arr scales;
 CLDNN_END_PRIMITIVE_DESC(simpler_nms)
 
