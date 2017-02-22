@@ -359,16 +359,14 @@ struct reorder_gpu : is_an_implementation {
         }
         else if (_kernel_data.padding_only)
         {
-            if (input_mem.argument().size.spatial[1] > 255)
-                throw std::runtime_error("We don't support padding reorder with Y > 256");
             gpu::kernel_execution_options exec_options{
                 {
                     static_cast<size_t>(input_mem.argument().size.batch[0]),
                     static_cast<size_t>(input_mem.argument().size.feature[0]),
-                    static_cast<size_t>(input_mem.argument().size.spatial[1])
+                    static_cast<size_t>(align_to(input_mem.argument().size.spatial[1], 32))
                 },
                 {
-                    1, 1, static_cast<size_t>(input_mem.argument().size.spatial[1])
+                    1, 1, 32
                 }
             };
             return me->_kernel.run<gpu::input_mem, gpu::output_mem>
