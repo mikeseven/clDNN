@@ -56,7 +56,7 @@ layout depth_concatenate_arg::calc_output_layout(const topology_map& topology_ma
 
     // calculate sum of features from all inputs
     result_sizes[feature_index] = 0;
-    for(auto& id : input_ids)
+    for(auto id : input_ids)
     {
         auto input_desc = topology_map.at(id)->primitive_desc;
         auto input_sizes = input_desc->type()->calc_output_layout(topology_map, input_desc).size.sizes();

@@ -276,6 +276,17 @@ struct tensor
         return add(rhs.negate());
     }
 
+    tensor max(const tensor& rhs) const
+    {
+        auto transformed_rhs = rhs.transform(format, std::numeric_limits<value_type>::min());
+        auto result = *this;
+        for (size_t i = 0; i < result.raw.size(); ++i)
+        {
+            result._sizes[i] = std::max(result._sizes[i], transformed_rhs._sizes[i]);
+        }
+        return result;
+    }
+
     std::vector<value_type> sizes() const {
         auto output_order = format.order();
         auto internal_order = format.internal_order();

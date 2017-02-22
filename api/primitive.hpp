@@ -71,6 +71,13 @@ struct padding
                std::any_of(_upper_size.raw.begin(), _upper_size.raw.end(), [](const tensor::value_type& el) { return el != 0; });
     }
 
+    padding max(const padding& padd) const
+    {
+        padding result = *this;
+        result._size = _size.max(padd._size);
+        return result;
+    }
+
 private:
     tensor _lower_size;    ///< Lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
     tensor _upper_size;    ///< Upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
@@ -99,6 +106,82 @@ namespace details
 {
 class primitive_id_arr
 {
+private:
+    template <class CppStr, class CStr>
+    struct primitive_id_arr_ref
+    {
+        primitive_id_arr_ref(CppStr& cppstr, CStr& cstr) : myself(cppstr, cstr)
+        {}
+
+        std::add_const_t<CppStr>& operator *() const { return *myself.first; }
+
+        template <class... Dummy, class Guard = std::enable_if_t<!std::is_const<CppStr>::value>>
+        CStr& operator *() { return *myself.first; }
+
+        template <class... Dummy, class Guard = std::enable_if_t<!std::is_const<CppStr>::value>>
+        primitive_id_arr_ref& operator=(primitive_id const& id)
+        {
+            myself.first = id;
+            myself.second = myself.first.c_str();
+            return *this;
+        }
+
+        template <class... Dummy, class Guard = std::enable_if_t<!std::is_const<CppStr>::value>>
+        primitive_id_arr_ref& operator=(primitive_id&& id)
+        {
+            myself.first = std::move(id);
+            myself.second = myself.first.c_str();
+            return *this;
+        }
+
+        operator std::add_const_t<CppStr>& () const { return myself.first; }
+
+        //for inter-compatibility with std::reference_wrapper
+        // U foo;
+        // U bar;
+        // T<U> t{ bar };
+        // t.get() = foo;
+        //where T can be either primitive_id_arr_ref of std::reference_wrapper
+        //should in both cases modify wrapped 'bar' object
+        decltype(auto) get() { return *this; }
+        decltype(auto) get() const { return *this; }
+
+    private:
+        std::pair<CppStr&, CStr&> myself;
+    };
+
+    template <class CppStr, class CStr>
+    struct iterator_base
+    {
+        using reference = primitive_id_arr_ref<CppStr, CStr>;
+        using const_reference = primitive_id_arr_ref<std::add_const_t<CppStr>, std::add_const_t<CStr>>;
+        using pointer = CppStr*;
+        using const_pointer = std::add_const_t<CppStr>*;
+        using value_type = CppStr;
+        using difference_type = ptrdiff_t;
+
+        iterator_base(CppStr* cppstr, CStr* cstr) : myself(cppstr, cstr)
+        {}
+
+        iterator_base& operator ++() { ++myself.first; ++myself.second; return *this; }
+        iterator_base operator ++(int) { auto copy = *this; ++myself.first; ++myself.second; return copy; }
+
+        bool operator ==(iterator_base const& itr) { return myself.first == itr.myself.first; }
+        bool operator !=(iterator_base const& itr) { return myself.first != itr.myself.first; }
+
+        const_reference operator *() const { return const_reference{ *myself.first, *myself.second }; }
+
+        template <class... Dummy, class Guard = std::enable_if_t<!std::is_const<CppStr>::value>>
+        reference operator *() { return reference{ *myself.first, *myself.second }; }
+
+    private:
+        std::pair<CppStr*, CStr*> myself;
+    };
+
+public:
+    using iterator = iterator_base<primitive_id, cldnn_primitive_id>;
+    using const_iterator = iterator_base<const primitive_id, const cldnn_primitive_id>;
+
 public:
     primitive_id_arr(const std::vector<primitive_id>& arr)
         : _data_store(arr)
@@ -135,10 +218,12 @@ public:
     decltype(auto) at(size_t idx) const { return _data_store.at(idx); }
     decltype(auto) operator[](size_t idx) const { return _data_store.operator[](idx); }
     auto data() const { return _data_store.data(); }
-    auto begin() const { return _data_store.begin(); }
-    auto end() const { return _data_store.end(); }
-    auto cbegin() const { return _data_store.cbegin(); }
-    auto cend() const { return _data_store.cend(); }
+    auto begin() { return iterator{ _data_store.data(), _ref_store.data() }; }
+    auto begin() const { return const_iterator{ _data_store.data(), _ref_store.data() }; }
+    auto end() { return iterator{ _data_store.data() + size(), _ref_store.data() + size() }; }
+    auto end() const { return const_iterator{ _data_store.data() + size(), _ref_store.data() + size() }; }
+    auto cbegin() const { return const_iterator{ _data_store.data(), _ref_store.data() }; }
+    auto cend() const { return const_iterator{ _data_store.data() + size(), _ref_store.data() + size() }; }
 
     //allow modifications through following functions (keeps synchronisation with C API storage)
     void update(size_t pos, primitive_id const& pid)
@@ -157,21 +242,6 @@ public:
             return;
         _data_store[pos] = std::move(pid);
         _ref_store[pos] = at(pos).c_str();
-    }
-
-    void erase(size_t pos)
-    {
-        assert(pos < size() && "Array element out of range");
-        if (pos >= size())
-            return;
-        _data_store.erase(begin() + pos);
-        _ref_store.erase(_ref_store.begin() + pos);
-    }
-
-    void push_back(primitive_id const& pid)
-    {
-        _data_store.push_back(pid);
-        _ref_store.push_back(back().c_str());
     }
 
     // explicit conversion
@@ -290,8 +360,8 @@ class primitive_base : public primitive
 public:
     const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const override
     {
-        update_dto(*_dto.get());
-        return reinterpret_cast<const CLDNN_PRIMITIVE_DESC(primitive)*>(_dto.get());
+        update_dto(_dto);
+        return reinterpret_cast<const CLDNN_PRIMITIVE_DESC(primitive)*>(&_dto);
     }
 
 protected:
@@ -301,12 +371,10 @@ protected:
         const padding& input_padding = padding(),
         const padding& output_padding = padding())
         : primitive(PType::type_id(), id, input, input_padding, output_padding)
-        , _dto{ new DTO }
     {}
 
     primitive_base(const DTO* dto)
         : primitive(reinterpret_cast<const CLDNN_PRIMITIVE_DESC(primitive)*>(dto))
-        , _dto{ new DTO }
     {
         if (dto->type != PType::type_id()) 
             throw std::invalid_argument("DTO type mismatch");
@@ -322,7 +390,7 @@ protected:
     }
    
 private:
-    std::unique_ptr<DTO> _dto;
+    mutable DTO _dto;
 };
 
 #define CLDNN_DEFINE_TYPE_ID(PType) static primitive_type_id type_id()\
@@ -336,4 +404,29 @@ private:
 #define CLDNN_DECLATE_PRIMITIVE(PType) typedef CLDNN_PRIMITIVE_DESC(PType) dto;\
     CLDNN_DEFINE_TYPE_ID(PType)
 
+}
+
+namespace std
+{
+template <>
+struct iterator_traits<cldnn::details::primitive_id_arr::const_iterator>
+{
+    using iterator_category = input_iterator_tag;
+
+    using reference = cldnn::details::primitive_id_arr::const_iterator::reference;
+    using pointer = cldnn::details::primitive_id_arr::const_iterator::pointer;
+    using value_type = cldnn::details::primitive_id_arr::const_iterator::value_type;
+    using difference_type = cldnn::details::primitive_id_arr::const_iterator::difference_type;
+};
+
+template <>
+struct iterator_traits<cldnn::details::primitive_id_arr::iterator>
+{
+    using iterator_category = input_iterator_tag;
+
+    using reference = cldnn::details::primitive_id_arr::const_iterator::reference;
+    using pointer = cldnn::details::primitive_id_arr::const_iterator::pointer;
+    using value_type = cldnn::details::primitive_id_arr::const_iterator::value_type;
+    using difference_type = cldnn::details::primitive_id_arr::const_iterator::difference_type;
+};
 }

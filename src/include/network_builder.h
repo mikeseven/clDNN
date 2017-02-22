@@ -47,6 +47,6 @@ private:
     void reorder_inputs();
     void optimize_weights();
 
-    void add_if_new(std::pair<std::shared_ptr<const reorder>, bool> const& reorder_from_optimizer);
+    void add_if_new(std::pair<std::shared_ptr<reorder>, bool> const& reorder_from_optimizer);
 };
 }

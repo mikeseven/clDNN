@@ -47,7 +47,7 @@ namespace {
     //both sets should have equal size. First function will be called if type of the given primitive
     //will match first explicitly given type, second will be called if it matches second explicitly given
     //type etc.
-    //Functions given as arguments should themselves take std::shared_ptr<const T> as argument
+    //Functions given as arguments should themselves take std::shared_ptr<T> as argument
     //where T is the type that should be match if this function should be called
     //
     //example:
@@ -55,17 +55,17 @@ namespace {
     //      convolution,
     //      pooling
     //  >(primitive,
-    //      [](std::shared_ptr<const convolution>){ do something if 'primitive' is a convolution },
-    //      [](std::shared_ptr<const pooling>){ do something if 'primitive' as a pooling }
+    //      [](std::shared_ptr<convolution>){ do something if 'primitive' is a convolution },
+    //      [](std::shared_ptr<pooling>){ do something if 'primitive' as a pooling }
     //  );
     template <class T, class... RestOfT, class Func, class... RestOfFuncs>
-    decltype(static_cast<void>(std::declval<Func>()(std::declval<std::shared_ptr<const T>>()))) do_for_types(
-        std::shared_ptr<const primitive> prim,
+    decltype(static_cast<void>(std::declval<Func>()(std::declval<std::shared_ptr<T>>()))) do_for_types(
+        std::shared_ptr<primitive> prim,
         Func const& func,
         RestOfFuncs const&... rest)
     {
         if (prim->type() == T::type_id())
-            func(std::static_pointer_cast<const T>(prim));
+            func(std::static_pointer_cast<T>(prim));
         else
             do_for_types<RestOfT...>(prim, rest...);
     }
@@ -110,97 +110,9 @@ namespace {
     //helper function which creates single-element array if it's given anything
     //other than std::vector.
     // std::vector case -> does not wrap, returns t as-is
-    template <class T>
-    auto wrap_if_single(std::vector<T> const& t)
+    decltype(auto) wrap_if_single(details::primitive_id_arr& t)
     {
         return t;
-    }
-
-    //helper function which creates single-element array if it's given anything
-    //other than std::vector.
-    // std::vector case -> does not wrap, returns t as-is
-    auto wrap_if_single(details::primitive_id_arr const& t)
-    {
-        return t.store();
-    }
-
-    auto replace_weights(std::shared_ptr<const convolution> prim, std::vector<primitive_id> const& weights, std::vector<primitive_id> const& bias)
-    {
-        return std::make_shared<const convolution>(
-            prim->id(),
-            prim->input().at(0),
-            weights,
-            bias,
-            prim->input_padding(),
-            prim->stride,
-            prim->with_activation,
-            prim->activation_negative_slope,
-            prim->output_padding()
-            );
-    }
-
-    auto replace_weights(std::shared_ptr<const fully_connected> prim, std::vector<primitive_id> const& weights, std::vector<primitive_id> const& bias)
-    {
-        if (weights.size() != 1 || bias.size() != 1)
-            throw std::runtime_error("Fully connected primitive accepts exactly one weights/bias");
-
-        return std::make_shared<const fully_connected>(
-            prim->id(),
-            prim->input().at(0),
-            weights.at(0),
-            bias.at(0),
-            prim->with_activation,
-            prim->activation_negative_slope,
-            prim->input_padding(),
-            prim->output_padding()
-            );
-    }
-
-    auto replace_inputs(std::shared_ptr<const convolution> prim, std::vector<primitive_id> const& inputs)
-    {
-        if (inputs.size() != 1)
-            throw std::runtime_error("Convolution primitive accepts exactly one input");
-
-        return std::make_shared<const convolution>(
-            prim->id(),
-            inputs.at(0),
-            prim->weights,
-            prim->bias,
-            prim->input_padding(),
-            prim->stride,
-            prim->with_activation,
-            prim->activation_negative_slope,
-            prim->output_padding()
-            );
-    }
-
-    auto replace_reorder_layout(std::shared_ptr<const reorder> prim, const layout& output_layout)
-    {
-        if (prim->output_layout == output_layout)
-            return prim;
-
-        if (!prim->substract_per_feature.empty())
-        {
-            return std::make_shared<const reorder>(
-                prim->id(),
-                prim->input().at(0),
-                output_layout,
-                prim->substract_per_feature,
-                prim->input_padding(),
-                prim->output_padding()
-                );
-        }
-        else
-        {
-            return std::make_shared<const reorder>(
-                prim->id(),
-                prim->input().at(0),
-                output_layout,
-                prim->mean,
-                prim->input_padding(),
-                prim->output_padding()
-                );
-        }
     }
 }
 
@@ -349,162 +261,8 @@ void network_builder::prepare_padding()
 
                 cldnn::padding needed_padding(cldnn::format::xy, { left_padding, top_padding }, { right_padding, bottom_padding });
 
-                const auto add_padding = [this](cldnn::padding newpadd, auto const& current, auto&&... params)
-                {
-                    auto currpadd_lower = current->output_padding().lower_size().transform(newpadd.format(), 0);
-                    auto currpadd_upper = current->output_padding().upper_size().transform(newpadd.format(), 0);
+                prim->output_padding() = needed_padding.max(prim->output_padding());
 
-                    bool needs_update = false;
-                    auto newsizes_lower = newpadd.lower_size().sizes();
-                    auto const& currsizes_lower = currpadd_lower.sizes();
-                    for (uint32_t i = 0; i < newsizes_lower.size(); ++i)
-                    {
-                        if (newsizes_lower[i] > currsizes_lower[i])
-                            needs_update = true;
-                        else
-                            newsizes_lower[i] = currsizes_lower[i]; //select max(old, new) for each component
-                    }
-
-                    auto newsizes_upper = newpadd.upper_size().sizes();
-                    auto const& currsizes_upper = currpadd_upper.sizes();
-                    for (uint32_t i = 0; i < newsizes_upper.size(); ++i)
-                    {
-                        if (newsizes_upper[i] > currsizes_upper[i])
-                            needs_update = true;
-                        else
-                            newsizes_upper[i] = currsizes_upper[i]; //select max(old, new) for each component
-                    }
-
-                    // TODO: Provide correct adjustment for right padding during computation of "merged" pading (so the result buffer size will be corretly aligned).
-
-                    if (!needs_update)
-                        return current;
-                        
-                    return std::make_shared<std::remove_reference_t<decltype(*current.operator->())>>(
-                        std::forward<std::remove_reference_t<decltype(params)>>(params)...,
-                        cldnn::padding(newpadd.lower_size().format, newsizes_lower, newsizes_upper, newpadd.filling_value())
-                    );
-                };
-
-                // set output padding for previous primitive
-                if (prim->type() == cldnn::pooling::type_id())
-                {
-                    const auto _pool = std::static_pointer_cast<const cldnn::pooling>(prim);
-                    auto new_pool = add_padding(
-                        needed_padding,
-                        _pool,
-                        _pool->id(),
-                        _pool->input().at(0),
-                        _pool->mode,
-                        _pool->stride,
-                        _pool->size,
-                        _pool->input_padding()
-                    );
-                    _topology_map[_pool->id()]->replace(new_pool);
-                }
-                else if (prim->type() == cldnn::normalization::type_id())
-                {
-                    const auto _lrn = std::static_pointer_cast<const cldnn::normalization>(prim);
-                    auto new_lrn = add_padding(
-                        needed_padding,
-                        _lrn,
-                        _lrn->id(),
-                        _lrn->input().at(0),
-                        _lrn->size,
-                        _lrn->k,
-                        _lrn->alpha,
-                        _lrn->beta,
-                        _lrn->norm_region,
-                        _lrn->input_padding()
-                    );
-                    _topology_map[_lrn->id()]->replace(new_lrn);
-                }
-                else if (prim->type() == cldnn::convolution::type_id())
-                {
-                    const auto _conv = std::static_pointer_cast<const cldnn::convolution>(prim);
-                    auto new_conv = add_padding(
-                        needed_padding,
-                        _conv,
-                        _conv->id(),
-                        _conv->input().at(0),
-                        _conv->weights,
-                        _conv->bias,
-                        _conv->input_padding(),
-                        _conv->stride,
-                        _conv->with_activation,
-                        _conv->activation_negative_slope
-                    );
-                    _topology_map[_conv->id()]->replace(new_conv);
-                }
-                else if (prim->type() == cldnn::depth_concatenate::type_id())
-                {
-                    const auto _depth_concat = std::static_pointer_cast<const cldnn::depth_concatenate>(prim);
-                    auto new_depth_concat = std::make_shared<depth_concatenate>(
-                        _depth_concat->id(),
-                        _depth_concat->input(),
-                        needed_padding
-                    );
-                    _topology_map[_depth_concat->id()]->replace(new_depth_concat);
-                }
-                else if (prim->type() == cldnn::reorder::type_id())
-                {
-                    const auto _reorder = std::static_pointer_cast<const cldnn::reorder>(prim);
-                    if (!_reorder->substract_per_feature.empty())
-                    {
-                        auto new_reorder = add_padding(
-                            needed_padding,
-                            _reorder,
-                            _reorder->id(),
-                            _reorder->input().at(0),
-                            _reorder->output_layout,
-                            _reorder->substract_per_feature,
-                            _reorder->input_padding()
-                            );
-                        _topology_map[_reorder->id()]->replace(new_reorder);
-                    }
-                    else
-                    {
-                        auto new_reorder = add_padding(
-                            needed_padding,
-                            _reorder,
-                            _reorder->id(),
-                            _reorder->input().at(0),
-                            _reorder->output_layout,
-                            _reorder->mean,
-                            _reorder->input_padding()
-                            );
-                        _topology_map[_reorder->id()]->replace(new_reorder);
-                    }
-                }
-                else if (prim->type() == cldnn::eltwise::type_id())
-                {
-                    const auto _eltwise = std::static_pointer_cast<const cldnn::eltwise>(prim);
-                    auto new_eltwise = add_padding(
-                        needed_padding,
-                        _eltwise,
-                        _eltwise->id(),
-                        _eltwise->input().at(0),
-                        _eltwise->input2,
-                        _eltwise->mode,
-                        _eltwise->with_activation,
-                        _eltwise->activation_negative_slope,
-                        _eltwise->input_padding()
-                        );
-                    _topology_map[_eltwise->id()]->replace(new_eltwise);
-                }
-                else if (prim->type() == cldnn::data::type_id())
-                {
-                    const auto _data = std::static_pointer_cast<const cldnn::data>(prim);
-                    auto new_data = std::make_shared<cldnn::data>(
-                        _data->id(),
-                        _data->mem
-                        );
-                    _topology_map[_data->id()]->replace(new_data);
-                }
-                else
-                {
-                    throw std::runtime_error("want to add output padding to primitive type that does not support it yet!");
-                }
             }
         }
     }
@@ -512,43 +270,42 @@ void network_builder::prepare_padding()
 
 void cldnn::network_builder::reorder_inputs()
 {
-    const auto reorder_input = [this](std::shared_ptr<const convolution> conv)
+    const auto reorder_input = [this](std::shared_ptr<convolution> conv)
     {
-        std::vector<primitive_id> new_inputs;
-        for (auto const& in_id : conv->input())
+        std::shared_ptr<const convolution> const_conv = std::static_pointer_cast<const convolution>(conv);
+
+        for (auto in_id : conv->input())
         {
-            auto in = _topology_map[in_id]->primitive_desc;
+            std::shared_ptr<primitive> in = _topology_map[in_id]->primitive_desc;
+            std::pair<std::shared_ptr<reorder>, bool> new_input = { nullptr, false };
+
             if (in->type() == data::type_id())
             {
-                auto reorder = _lo.add_weights_for_optimization(std::static_pointer_cast<const data>(in),
+                new_input = _lo.add_weights_for_optimization(std::static_pointer_cast<data>(in),
                     layout_optimizer::data_type::input,
-                    conv);
-                add_if_new(reorder);
-                new_inputs.push_back(reorder.first ? reorder.first->id() : in->id());
+                    const_conv);
             }
             else if (in->type() == input_layout::type_id())
             {
-                auto reorder = _lo.get_reorder(
+                new_input = _lo.get_reorder(
                     std::static_pointer_cast<const input_layout>(in)->layout,
                     in->id(),
                     layout_optimizer::data_type::input,
-                    conv);
-                add_if_new(reorder);
-                new_inputs.push_back(reorder.first ? reorder.first->id() : in->id());
+                    const_conv);
             }
             else if (in->type() == reorder::type_id()) //convolution's input is a reorder
             {
-                auto current = std::static_pointer_cast<const reorder>(in);
+                auto current = std::static_pointer_cast<reorder>(in);
                 auto current_layout = current->output_layout;
-                auto opt_reorder = _lo.get_reorder(
+                new_input = _lo.get_reorder(
                     current_layout,
                     current->id(),
                     layout_optimizer::data_type::input,
-                    conv);
+                    const_conv);
 
-                if (opt_reorder.first) //output format is not optimal
+                if (new_input.first) //output format is not optimal
                 {
-                    auto opt_layout = opt_reorder.first->output_layout;
+                    auto opt_layout = new_input.first->output_layout;
                     auto current_input = _topology_map[current->input().at(0)]->primitive_desc;
                     auto input_layout = current_input->type()->calc_output_layout(_topology_map, current_input);
                     if (input_layout == opt_layout) //current reorder 'breaks' optimal format
@@ -558,55 +315,44 @@ void cldnn::network_builder::reorder_inputs()
                             !current->input_padding() &&
                             !current->output_padding()) //just plain reorder
                         {
-                            new_inputs.push_back(current_input->id());
+                            in_id.get() = current_input->id();
+                            new_input.first = nullptr;
                         }
                         else //change reorder's output layout
                         {
-                            current = replace_reorder_layout(current, opt_layout);
-                            _topology_map[current->id()]->replace(current);
-                            new_inputs.push_back(current->id());
+                            current->output_layout = opt_layout;
+                            new_input.first = nullptr;
                         }
                     }
                     else //current reorder gives bad output, simply change it
                     {
-                        current = replace_reorder_layout(current, opt_layout);
-                        _topology_map[current->id()]->replace(current);
-                        new_inputs.push_back(current->id());
+                        current->output_layout = opt_layout;
+                        new_input.first = nullptr;
                     }
                 }
-                else
-                    new_inputs.push_back(in->id());
             }
             else if (in->type() == mean_substract::type_id())
             {
                 auto current = std::static_pointer_cast<const mean_substract>(in);
                 auto current_layout = current->type()->calc_output_layout(_topology_map, current);
-                auto opt_reorder = _lo.get_reorder(
+                new_input = _lo.get_reorder(
                     current_layout,
                     current->id(),
                     layout_optimizer::data_type::input,
-                    conv);
+                    const_conv);
 
-                if (!opt_reorder.first)
-                    new_inputs.push_back(current->id());
-                else //not optimal, fuse mean_substract with reorder
+                if (new_input.first) //not optimal, fuse mean_substract with reorder
                 {
-                    auto fused_reorder = std::make_shared<const reorder>(
-                        current->id(),
-                        current->input().at(0),
-                        opt_reorder.first->output_layout,
-                        current->mean
-                    );
-
-                    _topology_map[current->id()]->replace(fused_reorder);
-                    new_inputs.push_back(fused_reorder->id());
+                    new_input.first->mean = current->id();
                 }
             }
-            else
-                new_inputs.push_back(in->id());
-        }
 
-        _topology_map[conv->id()]->replace(replace_inputs(conv, new_inputs));
+            if (new_input.first)
+            {
+                add_if_new(new_input);
+                in_id.get() = new_input.first->id();
+            }
+        }
     };
 
     for (auto& p : _topology_map)
@@ -628,6 +374,8 @@ void network_builder::optimize_weights()
     //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
     const auto add_weights = [this](primitive_id const& weights_id, layout_optimizer::data_type weights_type, auto prim, layout const& output_layout)
     {
+        auto const_prim = std::static_pointer_cast<std::add_const_t<std::remove_reference_t<decltype(*prim.get())>>>(prim);
+
         auto itr = _topology_map.find(weights_id);
         if (itr == _topology_map.end())
             throw std::logic_error("Weights primitive with id " + weights_id + " does not exist in topology map");
@@ -635,7 +383,8 @@ void network_builder::optimize_weights()
         auto weights_prim = itr->second->primitive_desc;
         if (weights_prim->type() == data::type_id())
         {
-            return _lo.add_weights_for_optimization(std::static_pointer_cast<const data>(weights_prim), weights_type, prim, output_layout);
+            return _lo.add_weights_for_optimization(std::static_pointer_cast<data>(weights_prim), weights_type,
+                const_prim, output_layout);
         }
         else if (weights_prim->type() == input_layout::type_id())
         {
@@ -643,7 +392,7 @@ void network_builder::optimize_weights()
                 std::static_pointer_cast<const input_layout>(weights_prim)->layout,
                 weights_id,
                 weights_type,
-                prim,
+                const_prim,
                 output_layout);
 
             return reorder;
@@ -662,24 +411,25 @@ void network_builder::optimize_weights()
     {
         auto output_layout = prim->type()->calc_output_layout(_topology_map, prim);
 
-        std::vector<primitive_id> new_weights;
-        std::vector<primitive_id> new_bias;
-
-        for (auto const& w_id : wrap_if_single(prim->weights))
+        for (auto w_id : wrap_if_single(prim->weights))
         {
             auto reorder = add_weights(w_id, layout_optimizer::data_type::weights, prim, output_layout);
-            this->add_if_new(reorder); //gcc bug? in generic lambda we must explicitly provide 'this'
-            new_weights.push_back(reorder.first ? reorder.first->id() : static_cast<primitive_id>(w_id));
+            if (reorder.first)
+            {
+                this->add_if_new(reorder);
+                w_id.get() = reorder.first->id();
+            }
         }
 
-        for (auto const& w_id : wrap_if_single(prim->bias))
+        for (auto b_id : wrap_if_single(prim->bias))
         {
-            auto reorder = add_weights(w_id, layout_optimizer::data_type::bias, prim, output_layout);
-            this->add_if_new(reorder);
-            new_bias.push_back(reorder.first ? reorder.first->id() : static_cast<primitive_id>(w_id));
+            auto reorder = add_weights(b_id, layout_optimizer::data_type::bias, prim, output_layout);
+            if (reorder.first)
+            {
+                this->add_if_new(reorder);
+                b_id.get() = reorder.first->id();
+            }
         }
-
-        _topology_map[prim->id()]->primitive_desc = replace_weights(prim, new_weights, new_bias);
     };
 
     for (auto& p : _topology_map)
@@ -706,7 +456,7 @@ void network_builder::optimize_weights()
     }
 }
 
-void network_builder::add_if_new(std::pair<std::shared_ptr<const reorder>, bool> const& reorder_from_optimizer)
+void network_builder::add_if_new(std::pair<std::shared_ptr<reorder>, bool> const& reorder_from_optimizer)
 {
     if (!reorder_from_optimizer.first)
         return;
