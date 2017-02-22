@@ -26,6 +26,8 @@
 #include <stdexcept>
 #include <string>
 
+#define EPSILON 0.00001f
+
 using namespace cldnn;
 
 namespace neural
@@ -254,11 +256,11 @@ struct simpler_nms_gpu : is_an_implementation {
         int fm_sz = fm_w * fm_h;
 
         // original input image to the graph (after possible scaling etc.) so that coordinates are valid for it
-		const int* image_info_mem = image_info.pointer<int>().data();
+        const float* image_info_mem = image_info.pointer<float>().data();
 
-		int img_w = image_info_mem[cldnn::simpler_nms_arg::image_info_width_index];
-        int img_h = image_info_mem[cldnn::simpler_nms_arg::image_info_height_index];
-		int img_z = image_info_mem[cldnn::simpler_nms_arg::image_info_depth_index];
+        int img_w = (int)(image_info_mem[cldnn::simpler_nms_arg::image_info_width_index] + EPSILON);
+        int img_h = (int)(image_info_mem[cldnn::simpler_nms_arg::image_info_height_index] + EPSILON);
+		int img_z = (int)(image_info_mem[cldnn::simpler_nms_arg::image_info_depth_index] + EPSILON);
 
         int scaled_min_bbox_size = _outer.argument.min_bbox_size * img_z;
 

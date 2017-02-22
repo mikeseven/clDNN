@@ -41,7 +41,7 @@ layout simpler_nms_arg::calc_output_layout(const topology_map& topology_map, std
 
 	assert(input_layout.data_type == data_types::f32);
 	
-	return layout(input_layout.data_type, { format::bx, { 1, desc->post_nms_topn * CLDNN_ROI_VECTOR_SIZE}});
+	return layout(input_layout.data_type, { format::bx, { desc->post_nms_topn, CLDNN_ROI_VECTOR_SIZE}});
 }
 
 

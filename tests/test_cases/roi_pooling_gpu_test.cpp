@@ -83,7 +83,7 @@ TestRunner<Dtype>::TestRunner(
                        int pooled_height,
                        float spatial_scale) :
                             _data_layout(cldnn::type_to_data_type<Dtype>::value, { format::bfyx, { 1, channels, height, width } } ),
-                            _rois_layout(cldnn::type_to_data_type<Dtype>::value, { format::bfyx, { 1, 1, num_rois, CLDNN_ROI_VECTOR_SIZE } }),
+                            _rois_layout(cldnn::type_to_data_type<Dtype>::value, { format::bx, { num_rois, CLDNN_ROI_VECTOR_SIZE } }),
                             _test_layer(roi_pooling( layer_name, 
                                     data_name, 
                                     rois_name,

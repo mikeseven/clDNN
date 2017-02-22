@@ -77,10 +77,10 @@ TEST(simpler_nms, basic) {
     memcpy(p, &bbox_pred_data[0], bbox_pred_data_size * sizeof(float));
 
 	memory image_info = memory::allocate(engine, { data_types::i32,{ format::x,{ 3 } } });
-	int* image_info_mem = image_info.pointer<int>().data();	
-	image_info_mem[cldnn::simpler_nms_arg::image_info_width_index]  = image_w;
-	image_info_mem[cldnn::simpler_nms_arg::image_info_height_index] = image_h;
-	image_info_mem[cldnn::simpler_nms_arg::image_info_depth_index]  = image_z;
+	float* image_info_mem = image_info.pointer<float>().data();	
+	image_info_mem[cldnn::simpler_nms_arg::image_info_width_index]  = (float)image_w - 0.0000001f;  // check handling of fp robustness
+	image_info_mem[cldnn::simpler_nms_arg::image_info_height_index] = (float)image_h;
+	image_info_mem[cldnn::simpler_nms_arg::image_info_depth_index]  = (float)image_z;
 
     // prepare the network
     topology topology;

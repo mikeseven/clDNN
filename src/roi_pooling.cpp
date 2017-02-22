@@ -37,11 +37,11 @@ layout roi_pooling_arg::calc_output_layout(const topology_map& topology_map, std
 {
     auto input_desc = topology_map.at(desc->input()[data_index])->primitive_desc;
     layout input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);    
-    int fm = input_layout.size.sizes()[1];
+    int fm = input_layout.size.feature[0];
 
     input_desc = topology_map.at(desc->input()[rois_index])->primitive_desc;
     input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);    
-    int num_rois = input_layout.size.sizes()[2];
+    int num_rois = input_layout.size.batch[0];
 
     return layout( input_layout.data_type, { format::bfyx, { num_rois, fm, desc->pooled_height, desc->pooled_width }});
 }
