@@ -115,10 +115,10 @@ private:
 
         std::add_const_t<CppStr>& operator *() const { return *myself.first; }
 
-        template <class... Dummy, class Guard = std::enable_if_t<!std::is_const<CppStr>::value>>
+        template <class... Dummy, class T = CppStr, class Guard = std::enable_if_t<!std::is_const<T>::value>>
         CStr& operator *() { return *myself.first; }
 
-        template <class... Dummy, class Guard = std::enable_if_t<!std::is_const<CppStr>::value>>
+        template <class... Dummy, class T = CppStr, class Guard = std::enable_if_t<!std::is_const<T>::value>>
         primitive_id_arr_ref& operator=(primitive_id const& id)
         {
             myself.first = id;
@@ -126,7 +126,7 @@ private:
             return *this;
         }
 
-        template <class... Dummy, class Guard = std::enable_if_t<!std::is_const<CppStr>::value>>
+        template <class... Dummy, class T = CppStr, class Guard = std::enable_if_t<!std::is_const<T>::value>>
         primitive_id_arr_ref& operator=(primitive_id&& id)
         {
             myself.first = std::move(id);
@@ -171,7 +171,7 @@ private:
 
         const_reference operator *() const { return const_reference{ *myself.first, *myself.second }; }
 
-        template <class... Dummy, class Guard = std::enable_if_t<!std::is_const<CppStr>::value>>
+        template <class... Dummy, class T = CppStr, class Guard = std::enable_if_t<!std::is_const<T>::value>>
         reference operator *() { return reference{ *myself.first, *myself.second }; }
 
     private:
