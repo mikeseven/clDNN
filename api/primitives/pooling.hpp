@@ -40,22 +40,31 @@ struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_padding, output_padding, static_cast<cldnn_pooling_mode>(mode), stride, size)
-        , mode(static_cast<pooling_mode>(_dto.mode))
-        , stride(_dto.stride)
-        , size(_dto.size)
+        : primitive_base(id, {input}, input_padding, output_padding)
+        , mode(static_cast<pooling_mode>(mode))
+        , stride(stride)
+        , size(size)
     {}
 
     pooling(const dto* dto)
         : primitive_base(dto)
-        , mode(static_cast<pooling_mode>(_dto.mode))
-        , stride(_dto.stride)
-        , size(_dto.size)
+        , mode(static_cast<pooling_mode>(dto->mode))
+        , stride(dto->stride)
+        , size(dto->size)
     {}
 
-    const pooling_mode mode;
-    const tensor stride;
-    const tensor size;
+    pooling_mode mode;
+    tensor stride;
+    tensor size;
+
+protected:
+    void update_dto(dto& dto) const override
+    {
+        primitive_base::update_dto(dto);
+        dto.mode = static_cast<int32_t>(mode);
+        dto.stride = stride;
+        dto.size = size;
+    }
 };
 
 }

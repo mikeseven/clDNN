@@ -35,37 +35,38 @@ struct fully_connected : public primitive_base<fully_connected, CLDNN_PRIMITIVE_
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_padding, output_padding, static_cast<uint32_t>(with_activation), activation_slp, "", "")
+        : primitive_base(id, {input}, input_padding, output_padding)
         , weights(weights)
         , bias(bias)
         , with_activation(with_activation)
-        , activation_negative_slope(_dto.activation_negative_slope)
+        , activation_negative_slope(activation_slp)
     {
-        init_dto();
     }
 
     fully_connected(const dto* dto)
         :primitive_base(dto)
         , weights(dto->weights)
         , bias(dto->bias)
-        , with_activation(_dto.with_activation != 0)
-        , activation_negative_slope(_dto.activation_negative_slope)
+        , with_activation(dto->with_activation != 0)
+        , activation_negative_slope(dto->activation_negative_slope)
     {
-        init_dto();
     }
 
-    const primitive_id weights;
-    const primitive_id bias;
-    const bool with_activation;
-    const float activation_negative_slope;
+    primitive_id weights;
+    primitive_id bias;
+    bool with_activation;
+    float activation_negative_slope;
+
 protected:
     std::vector<primitive_id> get_dependencies() const override { return{ weights, bias }; }
 
-private:
-    void init_dto()
+    void update_dto(dto& dto) const override
     {
-        _dto.weights = weights.c_str();
-        _dto.bias = bias.c_str();
+        primitive_base::update_dto(dto);
+        dto.weights = weights.c_str();
+        dto.bias = bias.c_str();
+        dto.with_activation = with_activation;
+        dto.activation_negative_slope = activation_negative_slope;
     }
 };
 }

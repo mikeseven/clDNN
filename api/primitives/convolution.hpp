@@ -31,70 +31,61 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         const primitive_id& input,
         const std::vector<primitive_id>& weights,
         const std::vector<primitive_id>& bias,
-        const padding& input_padding = { format::yx, {0,0} },
+        const padding& input_padding = { format::yx, { 0,0 } },
         tensor stride = { format::yx, 0, { 1, 1 } },
         bool with_activation = false,
         float activation_slp = 0.0f,
-        const padding& output_padding = { format::yx,{ 0,0 } }
+        const padding& output_padding = { format::yx, { 0,0 } }
     )
-        :primitive_base(id, { input }, input_padding, output_padding,
-                        stride,
-                        static_cast<uint32_t>(with_activation),
-                        activation_slp,
-                        static_cast<int32_t>(weights.size()),
-                        cldnn_primitive_id_arr{ nullptr, 0 },
-                        cldnn_primitive_id_arr{ nullptr, 0 } )
-        , _weights(weights)
-        , _bias(bias)
-        , weights(_weights)
-        , bias(_bias)
-        , split(_dto.split)
-        , stride(_dto.stride)
+        :primitive_base(id, { input }, input_padding, output_padding)
+        , weights(weights)
+        , bias(bias)
+        , stride(stride)
         , with_activation(with_activation)
-        , activation_negative_slope(_dto.activation_negative_slope)
+        , activation_negative_slope(activation_slp)
     {
-        init_dto();
+        if (weights.size() != bias.size())
+            throw std::runtime_error("convolution's weights/bias count does not match");
     }
 
     convolution(const dto* dto)
         :primitive_base(dto)
-        , _weights(dto->weights)
-        , _bias(dto->bias)
-        , weights(_weights)
-        , bias(_bias)
-        , split(_dto.split)
-        , stride(_dto.stride)
-        , with_activation(_dto.with_activation != 0)
-        , activation_negative_slope(_dto.activation_negative_slope)
+        , weights(dto->weights)
+        , bias(dto->bias)
+        , stride(dto->stride)
+        , with_activation(dto->with_activation != 0)
+        , activation_negative_slope(dto->activation_negative_slope)
     {
-        init_dto();
+        if (weights.size() != bias.size() || dto->split != weights.size())
+            throw std::runtime_error("Invalid convolution dto: bad split value");
     }
 
-protected:
-    const detail::primitive_id_arr _weights;
-    const detail::primitive_id_arr _bias;
-
 public:
-    const std::vector<primitive_id>& weights;
-    const std::vector<primitive_id>& bias;
-    const int32_t split;
-    const tensor stride;
-    const bool with_activation;
-    const float activation_negative_slope;
+    details::primitive_id_arr weights;
+    details::primitive_id_arr bias;
+    tensor stride;
+    bool with_activation;
+    float activation_negative_slope;
 
-protected:
+    int32_t split() const { return static_cast<int32_t>(weights.size()); }
+
     std::vector<primitive_id> get_dependencies() const override
     {
-        auto result = weights;
+        auto result = weights.store();
         result.insert(result.end(), bias.begin(), bias.end());
         return result;
     }
 
-    void init_dto()
+protected:
+    void update_dto(dto& dto) const override
     {
-        if (_weights.size() != _bias.size()) throw std::invalid_argument("numbers of weights and biases do not match");
-        _dto.weights = _weights.ref();
-        _dto.bias = _bias.ref();
+        primitive_base::update_dto(dto);
+        dto.weights = weights.ref();
+        dto.bias = bias.ref();
+        dto.stride = stride;
+        dto.split = split();
+        dto.with_activation = with_activation;
+        dto.activation_negative_slope = activation_negative_slope;
     }
 };
 }

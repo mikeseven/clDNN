@@ -34,12 +34,11 @@ struct scale : public primitive_base<scale, CLDNN_PRIMITIVE_DESC(scale)>
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :primitive_base(id, {input}, input_padding, output_padding, "", bias_term)
+        :primitive_base(id, {input}, input_padding, output_padding)
         , scale_input(scale_input)
-        , bias_term(_dto.bias_term)
+        , bias_term(bias_term)
         , bias("")
     {
-        init_dto();
     }
 
     scale(
@@ -51,26 +50,24 @@ struct scale : public primitive_base<scale, CLDNN_PRIMITIVE_DESC(scale)>
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :primitive_base(id, { input }, input_padding, output_padding, "", bias_term, "")
+        :primitive_base(id, { input }, input_padding, output_padding)
         , scale_input(scale_input)
-        , bias_term(_dto.bias_term)
+        , bias_term(bias_term)
         , bias(bias)
     {
-        init_dto();
     }
 
     scale(const dto* dto)
         :primitive_base(dto)
         , scale_input(dto->scale_input)
-        , bias_term(_dto.bias_term)
+        , bias_term(dto->bias_term)
         , bias(dto->bias)
     {
-        init_dto();
     }
 
-    const primitive_id scale_input;
-    const bool bias_term;
-    const primitive_id bias;
+    primitive_id scale_input;
+    bool bias_term;
+    primitive_id bias;
 
 protected:
     std::vector<primitive_id> get_dependencies() const override
@@ -81,10 +78,12 @@ protected:
             return{ scale_input, bias };
     }
 
-    void init_dto()
+    void update_dto(dto& dto) const override
     {
-        _dto.scale_input = scale_input.c_str();
-        _dto.bias = bias.c_str();
+        primitive_base::update_dto(dto);
+        dto.scale_input = scale_input.c_str();
+        dto.bias_term = bias_term;
+        dto.bias = bias.c_str();
     }
 };
 }

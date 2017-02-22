@@ -33,47 +33,38 @@ struct simpler_nms : public primitive_base<simpler_nms, CLDNN_PRIMITIVE_DESC(sim
         const primitive_id& id,        
         const primitive_id& cls_scores,
         const primitive_id& bbox_pred,
-		const primitive_id& image_info,
+        const primitive_id& image_info,
         int max_proposals,
         float iou_threshold,
         int min_bbox_size,
         int feature_stride,
         int pre_nms_topn,
         int post_nms_topn,
-		const std::vector<float>& scales_param,
+        const std::vector<float>& scales_param,
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {cls_scores, bbox_pred, image_info}, input_padding, output_padding, 
-                         max_proposals,
-                         iou_threshold,
-                         min_bbox_size,
-                         feature_stride,
-                         pre_nms_topn,
-                         post_nms_topn,
-                         cldnn_float_arr{nullptr, 0}),
-                 max_proposals(_dto.max_proposals),
-                 iou_threshold(_dto.iou_threshold),
-                 min_bbox_size(_dto.min_bbox_size),
-                 feature_stride(_dto.feature_stride),
-                 pre_nms_topn(_dto.pre_nms_topn),
-                 post_nms_topn(_dto.post_nms_topn),
+        : primitive_base(id, {cls_scores, bbox_pred}, input_padding, output_padding),
+                 max_proposals(max_proposals),
+                 iou_threshold(iou_threshold),
+                 min_bbox_size(min_bbox_size),
+                 feature_stride(feature_stride),
+                 pre_nms_topn(pre_nms_topn),
+                 post_nms_topn(post_nms_topn),
                  scales(scales_param)
     {
-        init_dto();
     }
 
     simpler_nms(const dto* dto) :
         primitive_base(dto),
-        max_proposals(_dto.max_proposals),
-        iou_threshold(_dto.iou_threshold),
-        min_bbox_size(_dto.min_bbox_size),
-        feature_stride(_dto.feature_stride),
-        pre_nms_topn(_dto.pre_nms_topn),
-        post_nms_topn(_dto.post_nms_topn),
-        scales(float_arr_to_vector(_dto.scales))
+        max_proposals(dto->max_proposals),
+        iou_threshold(dto->iou_threshold),
+        min_bbox_size(dto->min_bbox_size),
+        feature_stride(dto->feature_stride),
+        pre_nms_topn(dto->pre_nms_topn),
+        post_nms_topn(dto->post_nms_topn),
+        scales(float_arr_to_vector(dto->scales))
     {
-        init_dto();
     }
 
     int max_proposals;
@@ -82,13 +73,19 @@ struct simpler_nms : public primitive_base<simpler_nms, CLDNN_PRIMITIVE_DESC(sim
     int feature_stride;
     int pre_nms_topn;
     int post_nms_topn;      
-    const std::vector<float> scales;
+    std::vector<float> scales;
 
-    private:
-
-    void init_dto()
+protected:
+    void update_dto(dto& dto) const override
     {
-        _dto.scales = float_vector_to_arr(scales);
+        primitive_base::update_dto(dto);
+        dto.max_proposals = max_proposals;
+        dto.iou_threshold = iou_threshold;
+        dto.min_bbox_size = min_bbox_size;
+        dto.feature_stride = feature_stride;
+        dto.pre_nms_topn = pre_nms_topn;
+        dto.post_nms_topn = post_nms_topn;
+        dto.scales = float_vector_to_arr(scales);
     }
 };
 

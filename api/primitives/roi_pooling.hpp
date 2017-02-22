@@ -37,22 +37,31 @@ struct roi_pooling : public primitive_base<roi_pooling, CLDNN_PRIMITIVE_DESC(roi
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input_data, input_rois}, input_padding, output_padding, pooled_width, pooled_height, spatial_scale)
-        , pooled_width(_dto.pooled_width)
-        , pooled_height(_dto.pooled_height)
-        , spatial_scale(_dto.spatial_scale)
+        : primitive_base(id, {input_data, input_rois}, input_padding, output_padding)
+        , pooled_width(pooled_width)
+        , pooled_height(pooled_height)
+        , spatial_scale(spatial_scale)
     {}
 
     roi_pooling(const dto* dto)
         : primitive_base(dto)
-        , pooled_width(_dto.pooled_width)
-        , pooled_height(_dto.pooled_height)
-        , spatial_scale(_dto.spatial_scale)
+        , pooled_width(dto->pooled_width)
+        , pooled_height(dto->pooled_height)
+        , spatial_scale(dto->spatial_scale)
     {}
 
-    const int pooled_width;
-    const int pooled_height;
-    const float spatial_scale;
+    int pooled_width;
+    int pooled_height;
+    float spatial_scale;
+
+protected:
+    void update_dto(dto& dto) const override
+    {
+        primitive_base::update_dto(dto);
+        dto.pooled_width = pooled_width;
+        dto.pooled_height = pooled_height;
+        dto.spatial_scale = spatial_scale;
+    }
 };
 
 }

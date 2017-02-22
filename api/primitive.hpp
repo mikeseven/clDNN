@@ -95,51 +95,110 @@ using primitive_type_id = cldnn_primitive_type_id;
 using primitive_id_ref = cldnn_primitive_id;
 using primitive_id = std::string;
 
-namespace detail
+namespace details
 {
 class primitive_id_arr
 {
 public:
-    typedef primitive_id value_type;
     primitive_id_arr(const std::vector<primitive_id>& arr)
-        :_data_store(arr), _ref_store(create_ref(_data_store))
-    {}
+        : _data_store(arr)
+    {
+        update_ref();
+    }
+
+    primitive_id_arr(std::vector<primitive_id>&& arr)
+        : _data_store(std::move(arr))
+    {
+        update_ref();
+    }
 
     primitive_id_arr(const cldnn_primitive_id_arr& arr)
-        : primitive_id_arr(create_store(arr))
+        : _data_store(create_store(arr))
+    {
+        update_ref();
+    }
+
+    primitive_id_arr(primitive_id_arr&& other)
+        : _data_store(std::move(other)), _ref_store(std::move(other._ref_store))
     {}
 
     primitive_id_arr(const primitive_id_arr& other)
-        : _data_store(other._data_store), _ref_store(create_ref(_data_store))
-    {}
-
-    size_t size() const
+        : _data_store(other)
     {
-        return _data_store.size();
+        update_ref();
+    }
+
+    //allow only const functions
+    auto size() const { return _data_store.size(); }
+    decltype(auto) back() const { return _data_store.back(); }
+    decltype(auto) front() const { return _data_store.front(); }
+    decltype(auto) at(size_t idx) const { return _data_store.at(idx); }
+    decltype(auto) operator[](size_t idx) const { return _data_store.operator[](idx); }
+    auto data() const { return _data_store.data(); }
+    auto begin() const { return _data_store.begin(); }
+    auto end() const { return _data_store.end(); }
+    auto cbegin() const { return _data_store.cbegin(); }
+    auto cend() const { return _data_store.cend(); }
+
+    //allow modifications through following functions (keeps synchronisation with C API storage)
+    void update(size_t pos, primitive_id const& pid)
+    {
+        assert(pos < size() && "Array element out of range");
+        if (pos >= size())
+            return;
+        _data_store[pos] = pid;
+        _ref_store[pos] = at(pos).c_str();
+    }
+
+    void update(size_t pos, primitive_id&& pid)
+    {
+        assert(pos < size() && "Array element out of range");
+        if (pos >= size())
+            return;
+        _data_store[pos] = std::move(pid);
+        _ref_store[pos] = at(pos).c_str();
+    }
+
+    void erase(size_t pos)
+    {
+        assert(pos < size() && "Array element out of range");
+        if (pos >= size())
+            return;
+        _data_store.erase(begin() + pos);
+        _ref_store.erase(_ref_store.begin() + pos);
+    }
+
+    void push_back(primitive_id const& pid)
+    {
+        _data_store.push_back(pid);
+        _ref_store.push_back(back().c_str());
     }
 
     // explicit conversion
     cldnn_primitive_id_arr ref() const
     {
-        return{ _ref_store.data(), _ref_store.size() };
+        return { _ref_store.data(), _ref_store.size() };
     }
-    const std::vector<primitive_id>& store() const { return _data_store; }
 
-    // implicit conversion
-    operator const std::vector<primitive_id>&() const { return _data_store; }
-private:
-    const std::vector<primitive_id> _data_store;
-    const std::vector<cldnn_primitive_id> _ref_store;
-
-    static std::vector<cldnn_primitive_id> create_ref(const std::vector<primitive_id>& store)
+    auto const& store() const
     {
-        //fill _ref_store by references to strings in _data_store
-        std::vector<cldnn_primitive_id> result(store.size());
-        for (size_t i = 0; i < store.size(); i++)
-        {
-            result[i] = store[i].c_str();
-        }
-        return std::move(result);
+        return _data_store;
+    }
+
+    operator std::vector<primitive_id> const&() const
+    {
+        return _data_store;
+    }
+
+private:
+    std::vector<primitive_id> _data_store;
+    std::vector<cldnn_primitive_id> _ref_store;
+
+    void update_ref()
+    {
+        _ref_store.resize(size());
+        for (size_t i = 0; i < size(); ++i)
+            _ref_store[i] = at(i).c_str();
     }
 
     static std::vector<primitive_id> create_store(const cldnn_primitive_id_arr& arr)
@@ -189,14 +248,19 @@ struct primitive
 
     const primitive_type_id& type() const { return _type; }
     const primitive_id& id() const { return _id; }
-    const std::vector<primitive_id>& input() const { return _input; }
+
+    auto& input() { return _input; }
+    const auto& input() const { return _input; }
+    padding& input_padding() { return _input_padding; }
     const padding& input_padding() const { return _input_padding; }
+    padding& output_padding() { return _output_padding; }
     const padding& output_padding() const { return _output_padding; }
 
     virtual const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const = 0;
+
     std::vector<primitive_id> dependecies() const
     {
-        auto result = input();
+        auto result = input().store();
         auto deps = get_dependencies();
         result.insert(result.end(), deps.begin(), deps.end());
         return result;
@@ -208,12 +272,14 @@ struct primitive
     tensor input_offset() const { return input_padding().lower_size().negate(); }
     tensor output_offset() const { return output_padding().lower_size(); }
     float padding_filling_value() const { return input_padding().filling_value(); }
+
 protected:
     const primitive_type_id _type;
     const primitive_id _id;
-    const detail::primitive_id_arr _input;
-    const padding _input_padding;
-    const padding _output_padding;
+
+    details::primitive_id_arr _input;
+    padding _input_padding;
+    padding _output_padding;
 
     virtual std::vector<primitive_id> get_dependencies() const { return{}; }
 };
@@ -222,8 +288,11 @@ template<class PType, class DTO>
 class primitive_base : public primitive
 {
 public:
-    const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const override { return reinterpret_cast<const CLDNN_PRIMITIVE_DESC(primitive)*>(&_dto); }
-
+    const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const override
+    {
+        update_dto(*_dto.get());
+        return reinterpret_cast<const CLDNN_PRIMITIVE_DESC(primitive)*>(_dto.get());
+    }
 
 protected:
     explicit primitive_base(
@@ -232,30 +301,28 @@ protected:
         const padding& input_padding = padding(),
         const padding& output_padding = padding())
         : primitive(PType::type_id(), id, input, input_padding, output_padding)
-        , _dto{ _type, _id.c_str(), _input.ref(), _input_padding, _output_padding }
-    {}
-
-    template<typename ...Args>
-    explicit primitive_base(
-        const primitive_id& id,
-        const std::vector<primitive_id>& input,
-        const padding& input_padding,
-        const padding& output_padding,
-        Args... args)
-        : primitive(PType::type_id(), id, input, input_padding, output_padding)
-        , _dto{ _type, _id.c_str(), _input.ref(), _input_padding, _output_padding, args... }
+        , _dto{ new DTO }
     {}
 
     primitive_base(const DTO* dto)
         : primitive(reinterpret_cast<const CLDNN_PRIMITIVE_DESC(primitive)*>(dto))
-        , _dto( *dto )
+        , _dto{ new DTO }
     {
-        if (_dto.type != PType::type_id()) throw std::invalid_argument("DTO type mismatch");
-        _dto.id = _id.c_str();
-        _dto.input = _input.ref();
+        if (dto->type != PType::type_id()) 
+            throw std::invalid_argument("DTO type mismatch");
     }
 
-    DTO _dto;
+    virtual void update_dto(DTO& dto) const
+    {
+        dto.id = _id.c_str();
+        dto.type = _type;
+        dto.input = _input.ref();
+        dto.input_padding = _input_padding;
+        dto.output_padding = _output_padding;
+    }
+   
+private:
+    std::unique_ptr<DTO> _dto;
 };
 
 #define CLDNN_DEFINE_TYPE_ID(PType) static primitive_type_id type_id()\

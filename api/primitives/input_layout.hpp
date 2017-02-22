@@ -27,15 +27,22 @@ struct input_layout : public primitive_base<input_layout, CLDNN_PRIMITIVE_DESC(i
     CLDNN_DECLATE_PRIMITIVE(input_layout)
 
     input_layout(const primitive_id& id, const layout& layout)
-        :primitive_base(id, {}, padding(), padding(), layout)
-        , layout(_dto.layout)
+        :primitive_base(id, {}, padding(), padding())
+        , layout(layout)
     {}
 
     explicit input_layout(const dto* dto)
         :primitive_base(dto)
-        , layout(_dto.layout)
+        , layout(dto->layout)
     {}
 
     const cldnn::layout layout;
+
+private:
+    void update_dto(dto& dto) const override
+    {
+        primitive_base::update_dto(dto);
+        dto.layout = layout;
+    }
 };
 }

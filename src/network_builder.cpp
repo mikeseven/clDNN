@@ -116,6 +116,14 @@ namespace {
         return t;
     }
 
+    //helper function which creates single-element array if it's given anything
+    //other than std::vector.
+    // std::vector case -> does not wrap, returns t as-is
+    auto wrap_if_single(details::primitive_id_arr const& t)
+    {
+        return t.store();
+    }
+
     auto replace_weights(std::shared_ptr<const convolution> prim, std::vector<primitive_id> const& weights, std::vector<primitive_id> const& bias)
     {
         return std::make_shared<const convolution>(

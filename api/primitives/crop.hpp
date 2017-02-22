@@ -34,31 +34,29 @@ struct crop : public primitive_base<crop, CLDNN_PRIMITIVE_DESC(crop)>
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :primitive_base(id, {input}, input_padding, output_padding, "", offsets)
+        :primitive_base(id, {input}, input_padding, output_padding)
         , reference_input(reference_input)
-        , offsets(_dto.offsets)
+        , offsets(offsets)
     {
-        init_dto();
     }
 
     crop(const dto* dto)
         :primitive_base(dto)
         , reference_input(dto->reference_input)
-        , offsets(_dto.offsets)
+        , offsets(dto->offsets)
     {
-        init_dto();
     }
 
-    const primitive_id reference_input;
-    const tensor offsets;
-
+    primitive_id reference_input;
+    tensor offsets;
 
 protected:
     std::vector<primitive_id> get_dependencies() const override { return{ reference_input }; }
 
-    void init_dto()
+    void update_dto(dto& dto) const override
     {
-        _dto.reference_input = reference_input.c_str();
+        dto.reference_input = reference_input.c_str();
+        dto.offsets = offsets;
     }
 };
 }
