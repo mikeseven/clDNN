@@ -492,9 +492,9 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
     kd.kernel_name = kernel_name_bfyx_os_iyx_osv16;
 
     // Maximum supported size (in any dimension) of filter by "kernel_name_bfyx_os_iyx_osv16" kernel.
-    constexpr size_t max_supported_filter_size = 11;
+    constexpr int max_supported_filter_size = 11;
     // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
-    constexpr uint32_t sub_group_size = 16;
+    constexpr int sub_group_size = 16;
 
     const uint32_t of_threads_per_batch = round_up_to(filter_mem.argument().size.feature[0], sub_group_size);
     kd.leftovers = of_threads_per_batch - filter_mem.argument().size.feature[0];

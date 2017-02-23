@@ -43,10 +43,11 @@ unsigned int const random_seed = rnd_device();
 unsigned int const random_seed = 1337;
 #endif
 
-using VF = std::vector<float>;		// vector
+using VF = std::vector<float>;		// float vector
 using VVF = std::vector<VF>;		// feature map
 using VVVF = std::vector<VVF>;		// 3d feature map
 using VVVVF = std::vector<VVVF>;	// batch of 3d feature maps
+using VVVVVF = std::vector<VVVVF>;	// split of oiyx filters
 
 template<typename T>
 T kahan_summation(std::vector<T> &input) {
@@ -61,23 +62,28 @@ T kahan_summation(std::vector<T> &input) {
 	return sum;
 }
 
-VVF convolve(VVVF &input, VVVF &filter, size_t stride, float bias, size_t f_begin = 0) {
-	VVF output;
-	size_t output_y = 1 + (input[0].size() - filter[0].size()) / stride;
-	size_t output_x = 1 + (input[0][0].size() - filter[0][0].size()) / stride;
-	output.assign(output_y, VF(output_x, bias));
+VVF convolve(VVVF &input, VVVF &filter, int stride_y, int stride_x, float bias, 
+		int input_padding_y = 0, int input_padding_x = 0, int output_padding_y = 0, 
+		int output_padding_x = 0, size_t f_begin = 0)
+{
+	size_t output_y = 1 + (input[0].size() - filter[0].size() + 2 * input_padding_y) / stride_y + 2 * output_padding_y;
+	size_t output_x = 1 + (input[0][0].size() - filter[0][0].size() + 2 * input_padding_x) / stride_x + 2 * output_padding_x;
+	VVF output(output_y, VF(output_x, bias));
 	for (size_t f = 0; f < filter.size(); ++f) {
-		for (size_t y = 0; y < output_y; ++y) {
-			for (size_t x = 0; x < output_x; ++x) {
+		for (size_t y = 0; y < (output_y - 2 * output_padding_y); ++y) {
+			for (size_t x = 0; x < (output_x - 2 * output_padding_x); ++x) {
 				VF values;
-				values.reserve(filter[0].size() * filter[0][0].size() + 1);
+				values.reserve(filter[0].size() * filter[0][0].size());
 				for (size_t yf = 0; yf < filter[0].size(); ++yf) {
+					int yi = -input_padding_y + (int)yf + stride_y * (int)y;
+					if (yi < 0 || (int)input[0].size() <= yi) continue;
 					for (size_t xf = 0; xf < filter[0][0].size(); ++xf) {
-						values.push_back(input[f_begin + f][yf + stride * y][xf + stride * x] * filter[f][yf][xf]);
+						int xi = -input_padding_x + (int)xf + stride_x * (int)x;
+						if (xi < 0 || (int)input[0][0].size() <= xi) continue;
+						values.push_back(input[f_begin + f][yi][xi] * filter[f][yf][xf]);
 					}
 				}
-				values.push_back(bias);
-				output[y][x] = kahan_summation<float>(values);
+				output[y + output_padding_y][x + output_padding_x] += kahan_summation<float>(values);
 			}
 		}
 	}
@@ -146,6 +152,15 @@ std::vector<std::vector<std::vector<std::vector<T>>>> generate_random_4d(size_t 
 	return v;
 }
 
+// parameters order is assumed to be soiyx for filters when split > 1 
+template<typename T>
+std::vector<std::vector<std::vector<std::vector<std::vector<T>>>>> generate_random_5d(size_t a, size_t b, size_t c, size_t d, size_t e, int min, int max) {
+	std::vector<std::vector<std::vector<std::vector<std::vector<T>>>>> v(a);
+	for (size_t i = 0; i < a; ++i)
+		v[i] = generate_random_4d<T>(b, c, d, e, min, max);
+	return v;
+}
+
 // rounds floating point number, fraction precision should be in the range [0,23]
 // masks the bits:
 // 1 11111111 11111111111111100000000
@@ -166,6 +181,204 @@ void print_2d(VVF &data) {
 		std::cout << std::endl;
 	}
 	std::cout << std::endl;
+}
+
+void generic_convolution_test(int input_b, int input_f, int input_y, int input_x,
+	int filter_o, int filter_i, int filter_y, int filter_x, int stride_y, int stride_x,
+	int input_padding_y, int input_padding_x, int output_padding_y, int output_padding_x) {
+
+	int min_random = -2, max_random = 2;
+	int split = input_f / filter_i;
+
+	VVVVF input_rnd = generate_random_4d<float>(input_b, input_f, input_y, input_x, min_random, max_random);
+	VVVVVF filter_rnd = generate_random_5d<float>(split, filter_o, filter_i, filter_y, filter_x, min_random, max_random);
+	VVF bias_rnd_vec = generate_random_2d<float>(split, filter_o, min_random, max_random);
+	VVVVF output_cpu(input_b, VVVF(filter_o * split));
+	for (int output_b = 0; output_b < input_b; ++output_b) {
+		for (int s = 0; s < split; ++s) {
+			for (int output_f = 0; output_f < filter_o; ++output_f) {
+				output_cpu[output_b][output_f + s * filter_o] = convolve(input_rnd[output_b], filter_rnd[s][output_f], stride_y, stride_x,
+					bias_rnd_vec[s][output_f], input_padding_y, input_padding_x, output_padding_y, output_padding_x, s * filter_i);
+			}
+		}
+	}
+
+	engine engine;
+
+	auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ input_y, input_x, input_f, input_b } } });
+	std::vector<memory> weights, biases;
+	weights.reserve(split);
+	biases.reserve(split);
+	for (int s = 0; s < split; ++s) {
+		weights.push_back(memory::allocate(engine, { data_types::f32,{ format::oiyx,{ filter_o, filter_i, filter_y, filter_x } } }));
+		biases.push_back(memory::allocate(engine, { data_types::f32,{ format::x,{ filter_o } } }));
+	}
+
+	VF input_rnd_vec = flatten_4d(format::yxfb, input_rnd);
+	set_values(input, input_rnd_vec);
+	for (int s = 0; s < split; ++s) {
+		VF filter_rnd_vec = flatten_4d(format::oiyx, filter_rnd[s]);
+		set_values(weights[s], filter_rnd_vec);
+		set_values(biases[s], bias_rnd_vec[s]);
+	}
+
+	std::vector<std::string> weights_str(split), biases_str(split);
+	for (int s = 0; s < split; ++s) {
+		weights_str[s] = "weights" + std::to_string(s);
+		biases_str[s] = "biases" + std::to_string(s);
+	}
+
+	topology topology(
+		input_layout("input", input.get_layout()),
+		convolution(
+			"conv",
+			"input",
+			weights_str,
+			biases_str,
+			{ format::yx, { input_padding_y, input_padding_x } },
+			{ format::yx, 0, { stride_y, stride_x } },
+			false,
+			0,
+			{ format::yx, { output_padding_y, output_padding_x } })
+	);
+
+	for (int s = 0; s < split; ++s) {
+		topology.add(data(weights_str[s], weights[s]));
+		topology.add(data(biases_str[s], biases[s]));
+	}
+
+	network network(engine, topology);
+	network.set_input_data("input", input);
+
+	auto outputs = network.execute();
+	EXPECT_EQ(outputs.size(), size_t(1));
+	EXPECT_EQ(outputs.begin()->first, "conv");
+
+	auto output_memory = outputs.at("conv").get_memory();
+	auto output_layout = output_memory.get_layout();
+	auto output_ptr = output_memory.pointer<float>();
+
+	int y_size = output_layout.size.sizes()[0];
+	int x_size = output_layout.size.sizes()[1];
+	int f_size = output_layout.size.sizes()[2];
+	int b_size = output_layout.size.sizes()[3];
+	EXPECT_EQ(output_layout.size.format, format::yxfb);
+	EXPECT_EQ(y_size, (int)output_cpu[0][0].size());
+	EXPECT_EQ(x_size, (int)output_cpu[0][0][0].size());
+	EXPECT_EQ(f_size, (int)output_cpu[0].size());
+	EXPECT_EQ(b_size, (int)output_cpu.size());
+	bool test_is_correct = true;
+	VF output_cpu_vec = flatten_4d(format::yxfb, output_cpu);
+	for (size_t i = 0; i < output_cpu_vec.size(); ++i) {
+		if (output_cpu_vec[i] != output_ptr[i]) {
+//            printf("found error in index %lu\n", i);
+			test_is_correct = false;
+            break;
+        }
+	}
+	EXPECT_EQ(test_is_correct, true) << std::endl
+		<< "failing test parameters:" << std::endl
+		<< "input_b = " << input_b << std::endl
+		<< "input_f = " << input_f << std::endl
+		<< "input_y = " << input_y << std::endl
+		<< "input_x = " << input_x << std::endl
+		<< "filter_o = " << filter_o << std::endl
+		<< "filter_i = " << filter_i << std::endl
+		<< "filter_y = " << filter_y << std::endl
+		<< "filter_x = " << filter_x << std::endl
+		<< "stride_y = " << stride_y << std::endl
+		<< "stride_x = " << stride_x << std::endl
+		<< "input_padding_y = " << input_padding_y << std::endl
+		<< "input_padding_x = " << input_padding_x << std::endl
+		<< "output_padding_y = " << output_padding_y << std::endl
+		<< "output_padding_x = " << output_padding_x << std::endl;
+
+	bool print_data = false;
+	if (!print_data) return;
+
+	std::cout << "\ninput:\n\n";
+	for (int b = 0; b < input_b; ++b) {
+		for (int f = 0; f < input_f; ++f) {
+			std::cout << "b" << b << ", f" << f << ":\n";
+			print_2d(input_rnd[b][f]);
+		}
+	}
+	std::cout << "\nfilter:\n\n";
+	for (int s = 0; s < split; ++s) {
+		for (int o = 0; o < filter_o; ++o) {
+			for (int i = 0; i < filter_i; ++i) {
+				std::cout << "s" << s << " o" << o << ", i" << i << ":\n";
+				print_2d(filter_rnd[s][o][i]);
+			}
+			std::cout << "s" << s << " o" << o << " bias = " << bias_rnd_vec[s][o] << "\n\n";
+		}
+	}
+
+	VVVVF output_gpu(b_size, VVVF(f_size, VVF(y_size, VF(x_size))));
+	for (int b = 0; b < b_size; ++b) {
+		for (int f = 0; f < f_size; ++f) {
+			for (int y = 0; y < y_size; ++y) {
+				for (int x = 0; x < x_size; ++x) {
+					output_gpu[b][f][y][x] = output_ptr[b + b_size * (f + f_size * (x + x_size * y))];
+				}
+			}
+		}
+	}
+	std::cout << "\ngpu test output:\n";
+	for (int b = 0; b < b_size; ++b) {
+		for (int f = 0; f < f_size; ++f) {
+			std::cout << "b" << b << " f" << f << ":\n";
+			print_2d(output_gpu[b][f]);
+		}
+	}
+	
+	std::cout << "\ncpu reference test output:\n";
+	for (int b = 0; b < b_size; ++b) {
+		for (int f = 0; f < f_size; ++f) {
+			std::cout << "b" << b << " f" << f << ":\n";
+			print_2d(output_cpu[b][f]);
+		}
+	}
+}
+
+// Test that should cover different combinations of parameters.
+// It uses a cpu convolution implementation developed for tests only.
+// Note: to debug a failing combination more easily try:
+//    * Isolate the problematic combination of parameters.
+//    * Decrease the random values range in generic_convolution_test().
+//    * Set k = 1 inside the function generate_random_1d().
+TEST(DISABLED_convolution_f32_fw_gpu, generic_random_yxfb) {
+	for (int input_b = 1; input_b <= 1; input_b *= 2) {
+		for (int input_f = 1; input_f <= 6; ++input_f) {
+			for (int filter_o = 1; filter_o <= 2; ++filter_o) {
+				for (int filter_i = 1; filter_i <= input_f; ++filter_i) {
+					if (input_f % filter_i != 0) 
+                        continue; // only legal split is allowed
+					for (int filter_y = 1; filter_y <= 3; ++filter_y) {
+						for (int filter_x = 1; filter_x <= 3; ++filter_x) {
+							for (int stride_y = 1; stride_y <= 2; ++stride_y) {
+								for (int stride_x = 1; stride_x <= 2; ++stride_x) {
+									for (int input_padding_y = 0; input_padding_y <= 0; ++input_padding_y) {
+										for (int input_padding_x = 0; input_padding_x <= 0; ++input_padding_x) {
+											for (int output_padding_y = 0; output_padding_y <= 0; ++output_padding_y) {
+												for (int output_padding_x = 0; output_padding_x <= 1; ++output_padding_x) {
+													generic_convolution_test(input_b, input_f, 12, 18,	// BFYX
+																			 filter_o, filter_i, filter_y, filter_x, 
+																		     stride_y, stride_x,
+																			 input_padding_y, input_padding_x, 
+																			 output_padding_y, output_padding_x);
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 TEST(convolution_f32_fw_gpu, basic_convolution) {
@@ -484,7 +697,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x1x1_nopad_random) {
 	VVVVF output_rnd(batch, VVVF(filter_rnd.size()));
 	for (size_t b = 0; b < output_rnd.size(); ++b) {
 		for (size_t of = 0; of < filter_rnd.size(); ++of) {
-			output_rnd[b][of] = convolve(input_rnd[b], filter_rnd[of], 2, bias_rnd[of]);
+			output_rnd[b][of] = convolve(input_rnd[b], filter_rnd[of], 2, 2, bias_rnd[of]);
 		}
 	}
 	VF output_rnd_vec = flatten_4d(format::yxfb, output_rnd);
@@ -554,7 +767,7 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in2x2x1x2_nopad_random) {
 	VVVVF output_rnd(batch, VVVF(filter_rnd.size()));
 	for (size_t b = 0; b < output_rnd.size(); ++b) {
 		for (size_t of = 0; of < filter_rnd.size(); ++of) {
-			output_rnd[b][of] = convolve(input_rnd[b], filter_rnd[of], 2, bias_rnd[of]);
+			output_rnd[b][of] = convolve(input_rnd[b], filter_rnd[of], 2, 2, bias_rnd[of]);
 		}
 	}
 	VF output_rnd_vec = flatten_4d(format::yxfb, output_rnd);
