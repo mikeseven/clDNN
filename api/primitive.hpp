@@ -136,6 +136,8 @@ struct primitive
     const primitive_type_id& type() const { return _type; }
     const primitive_id& id() const { return _id; }
 
+    //TODO: make access to primitive's fields consistent - either use access directly via public members,
+    // like in derived classes, or use getters/setter in derived classes like below
     auto& input() { return _input.cpp_ids; }
     auto const& input() const { return _input.cpp_ids; }
 
