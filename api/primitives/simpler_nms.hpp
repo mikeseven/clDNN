@@ -44,7 +44,7 @@ struct simpler_nms : public primitive_base<simpler_nms, CLDNN_PRIMITIVE_DESC(sim
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {cls_scores, bbox_pred}, input_padding, output_padding),
+        : primitive_base(id, {cls_scores, bbox_pred, image_info}, input_padding, output_padding),
                  max_proposals(max_proposals),
                  iou_threshold(iou_threshold),
                  min_bbox_size(min_bbox_size),
