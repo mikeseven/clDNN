@@ -38,11 +38,13 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         const padding& output_padding = { format::yx, { 0,0 } }
     )
         :primitive_base(id, { input }, input_padding, output_padding)
-        , weights(weights)
-        , bias(bias)
+        , weights(_weights.cpp_ids)
+        , bias(_bias.cpp_ids)
         , stride(stride)
         , with_activation(with_activation)
         , activation_negative_slope(activation_slp)
+        , _weights(weights)
+        , _bias(bias)
     {
         if (weights.size() != bias.size())
             throw std::runtime_error("convolution's weights/bias count does not match");
@@ -50,19 +52,21 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
 
     convolution(const dto* dto)
         :primitive_base(dto)
-        , weights(dto->weights)
-        , bias(dto->bias)
+        , weights(_weights.cpp_ids)
+        , bias(_bias.cpp_ids)
         , stride(dto->stride)
         , with_activation(dto->with_activation != 0)
         , activation_negative_slope(dto->activation_negative_slope)
+        , _weights(dto->weights)
+        , _bias(dto->bias)
     {
         if (weights.size() != bias.size() || dto->split != weights.size())
             throw std::runtime_error("Invalid convolution dto: bad split value");
     }
 
 public:
-    details::primitive_id_arr weights;
-    details::primitive_id_arr bias;
+    std::vector<primitive_id>& weights;
+    std::vector<primitive_id>& bias;
     tensor stride;
     bool with_activation;
     float activation_negative_slope;
@@ -71,17 +75,20 @@ public:
 
     std::vector<primitive_id> get_dependencies() const override
     {
-        auto result = weights.store();
+        auto result = weights;
         result.insert(result.end(), bias.begin(), bias.end());
         return result;
     }
 
 protected:
+    primitive_id_arr _weights;
+    primitive_id_arr _bias;
+
     void update_dto(dto& dto) const override
     {
         primitive_base::update_dto(dto);
-        dto.weights = weights.ref();
-        dto.bias = bias.ref();
+        dto.weights = _weights.ref();
+        dto.bias = _bias.ref();
         dto.stride = stride;
         dto.split = split();
         dto.with_activation = with_activation;

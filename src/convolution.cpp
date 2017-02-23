@@ -89,8 +89,8 @@ layout convolution_arg::calc_output_layout(const topology_map& topology_map, std
 
 convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const convolution> desc)
     : primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
-    , _weights(network.get_primitives(desc->weights.store()))
-    , _biases(network.get_primitives(desc->bias.store()))
+    , _weights(network.get_primitives(desc->weights))
+    , _biases(network.get_primitives(desc->bias))
 {
     auto stride = desc->stride;
     auto output_size = output_memory().argument().size;

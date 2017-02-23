@@ -70,6 +70,26 @@ namespace {
             do_for_types<RestOfT...>(prim, rest...);
     }
 
+    template <class T>
+    struct single_element_container
+    {
+        single_element_container(T& t) : elem(&t)
+        {}
+
+        auto begin() const { return single_element_container(elem); }
+        auto end() const { return single_element_container(nullptr); }
+        auto& operator ++() { elem = nullptr; return *this; }
+        bool operator !=(single_element_container const& sec) { return elem != sec.elem; }
+
+        decltype(auto) operator *() { return *elem; }
+
+    private:
+        single_element_container(T* t) : elem(t)
+        {}
+
+        T* elem;
+    };
+
     //helper function which creates single-element array if it's given anything
     //other than std::vector.
     //It should be used in generic code when there's a need to force vector usage
@@ -86,7 +106,7 @@ namespace {
     template <class T>
     auto wrap_if_single(T& t)
     {
-        return std::array<std::reference_wrapper<T>, 1>{ std::ref(t) };
+        return single_element_container<T>(t);
     }
 
     //helper function which creates single-element array if it's given anything
@@ -95,7 +115,7 @@ namespace {
     template <class T>
     auto wrap_if_single(T const& t)
     {
-        return std::array<std::reference_wrapper<const T>, 1>{ std::cref(t) };
+        return single_element_container<T const>(t);
     }
 
     //helper function which creates single-element array if it's given anything
@@ -104,13 +124,15 @@ namespace {
     template <class T>
     auto wrap_if_single(T&& t)
     {
-        return std::array<T, 1>{ std::move(t) };
+        static_assert(meta::always_false_v<T>, "Wrapping temporary object into single_element_container is an error (requires valid reference)");
+        return single_element_container(t);
     }
 
     //helper function which creates single-element array if it's given anything
     //other than std::vector.
     // std::vector case -> does not wrap, returns t as-is
-    decltype(auto) wrap_if_single(details::primitive_id_arr& t)
+    template <class T>
+    decltype(auto) wrap_if_single(std::vector<T>& t)
     {
         return t;
     }
@@ -274,7 +296,7 @@ void cldnn::network_builder::reorder_inputs()
     {
         std::shared_ptr<const convolution> const_conv = std::static_pointer_cast<const convolution>(conv);
 
-        for (auto in_id : conv->input())
+        for (auto& in_id : conv->input())
         {
             std::shared_ptr<primitive> in = _topology_map[in_id]->primitive_desc;
             std::pair<std::shared_ptr<reorder>, bool> new_input = { nullptr, false };
@@ -315,7 +337,7 @@ void cldnn::network_builder::reorder_inputs()
                             !current->input_padding() &&
                             !current->output_padding()) //just plain reorder
                         {
-                            in_id.get() = current_input->id();
+                            in_id = current_input->id();
                             new_input.first = nullptr;
                         }
                         else //change reorder's output layout
@@ -350,7 +372,7 @@ void cldnn::network_builder::reorder_inputs()
             if (new_input.first)
             {
                 add_if_new(new_input);
-                in_id.get() = new_input.first->id();
+                in_id = new_input.first->id();
             }
         }
     };
@@ -411,23 +433,23 @@ void network_builder::optimize_weights()
     {
         auto output_layout = prim->type()->calc_output_layout(_topology_map, prim);
 
-        for (auto w_id : wrap_if_single(prim->weights))
+        for (auto& w_id : wrap_if_single(prim->weights))
         {
             auto reorder = add_weights(w_id, layout_optimizer::data_type::weights, prim, output_layout);
             if (reorder.first)
             {
                 this->add_if_new(reorder);
-                w_id.get() = reorder.first->id();
+                w_id = reorder.first->id();
             }
         }
 
-        for (auto b_id : wrap_if_single(prim->bias))
+        for (auto& b_id : wrap_if_single(prim->bias))
         {
             auto reorder = add_weights(b_id, layout_optimizer::data_type::bias, prim, output_layout);
             if (reorder.first)
             {
                 this->add_if_new(reorder);
-                b_id.get() = reorder.first->id();
+                b_id = reorder.first->id();
             }
         }
     };
