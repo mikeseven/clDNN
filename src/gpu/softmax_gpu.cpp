@@ -85,15 +85,10 @@ struct softmax_gpu : is_an_implementation
             kd.gws1 = batch_num;
             kd.lws0 = 32;
             kd.items_num = feature_num;
-            if (kd.fp16_unit_used == true)
-            {
-                kd.kernel_name = kernel_name_batches_yxfb;
-            }
-                
+            if(kd.fp16_unit_used == true)
+                kd.kernel_name = kernel_name_batches_yxfb;       
             else
-            {
                 kd.kernel_name = kernel_name_batches_bfyx;
-            }
                 
         }
         else if (batch_num <= 1)
@@ -168,11 +163,17 @@ struct softmax_gpu : is_an_implementation
         //kernel relies on INPUT_SIZE_X being a number of values per batch, for bfyx format, when spatials == 1,1
         //and actual number of values is stored as fueatures count (squeezenet), swap feature[0] with spatial[0]
         if (input_size.format == cldnn::format::bfyx)
+        {
             if (input_size.feature[0] > 1)
                 input_size = cldnn::tensor(cldnn::format::bfyx, { input_size.batch[0], input_size.spatial[0], input_size.spatial[1], input_size.feature[0] });
+        }
+
         else if (input_size.format == cldnn::format::yxfb)
+        {
             if (input_size.feature[0] > 1)
                 input_size = cldnn::tensor(cldnn::format::yxfb, { input_size.spatial[1], input_size.feature[0], input_size.spatial[0], input_size.batch[0] });
+        }
+
 
         return gpu::jit_constants{
             gpu::make_jit_constant("INPUT",          input_size),
