@@ -31,7 +31,7 @@ namespace cldnn
 struct padding
 {
     float filling_value() const { return _filling_value; }
-
+    
     /// Gets lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
     ///
     /// @return Tensor with padding for top/left/lower bounds of data.
@@ -69,13 +69,6 @@ struct padding
     {
         return std::any_of(_lower_size.raw.begin(), _lower_size.raw.end(), [](const tensor::value_type& el) { return el != 0; }) ||
                std::any_of(_upper_size.raw.begin(), _upper_size.raw.end(), [](const tensor::value_type& el) { return el != 0; });
-    }
-
-    padding max(const padding& padd) const
-    {
-        padding result = *this;
-        result._size = _size.max(padd._size);
-        return result;
     }
 
 private:
@@ -259,3 +252,10 @@ private:
 
 }
 
+namespace std
+{
+inline cldnn::padding max(cldnn::padding const& lhs, cldnn::padding const& rhs, cldnn::padding::types padd_type = cldnn::padding::zero)
+{
+    return cldnn::padding{ std::max(lhs.size(), rhs.size()), padd_type };
+}
+}

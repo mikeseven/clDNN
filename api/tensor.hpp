@@ -21,6 +21,7 @@
 #include "cldnn_defs.h"
 #include "compounds.h"
 #include <map>
+#include <list>
 #include <algorithm>
 
 namespace cldnn
@@ -96,6 +97,36 @@ struct format
     static size_t spatial_num(type fmt) { return traits(fmt).spatial_num; }
     static const std::string& order(type fmt) { return traits(fmt).order; }
     static const std::string& internal_order(type fmt) { return traits(fmt).internal_order; }
+
+    static type common_format(type t1, type t2)
+    {
+        auto merged_channels = order(t1);
+        for (auto c : order(t2))
+            if (merged_channels.find(c) == merged_channels.npos)
+                merged_channels.push_back(c);
+
+        std::list<type> formats;
+        for (int fmt = x; fmt < format_num; ++fmt)
+            if (order(static_cast<type>(fmt)).size() == merged_channels.size())
+                formats.push_back(static_cast<type>(fmt));
+
+        for (auto c : merged_channels)
+        {
+            auto itr = formats.begin();
+            while (itr != formats.end())
+            {
+                if (order(*itr).find(c) == std::string::npos)
+                    itr = formats.erase(itr);
+                else
+                    ++itr;
+            }
+        }
+
+        if (formats.empty())
+            throw std::domain_error("Could not find common format for formats: " + order(t1) + " and " + order(t2));
+
+        return formats.front();
+    }
 
     size_t batch_num() const { return traits(value).batch_num; }
     size_t feature_num() const { return traits(value).feature_num; }
@@ -276,17 +307,6 @@ struct tensor
         return add(rhs.negate());
     }
 
-    tensor max(const tensor& rhs) const
-    {
-        auto transformed_rhs = rhs.transform(format, std::numeric_limits<value_type>::min());
-        auto result = *this;
-        for (size_t i = 0; i < result.raw.size(); ++i)
-        {
-            result._sizes[i] = std::max(result._sizes[i], transformed_rhs._sizes[i]);
-        }
-        return result;
-    }
-
     std::vector<value_type> sizes() const {
         auto output_order = format.order();
         auto internal_order = format.internal_order();
@@ -387,4 +407,18 @@ inline tensor operator+(const tensor& lhs, const tensor& rhs) { return lhs.add(r
 inline tensor operator-(const tensor& lhs, const tensor& rhs) { return lhs.sub(rhs); }
 inline tensor operator*(const tensor& lhs, tensor::value_type rhs) { return lhs.mul(rhs); }
 inline tensor operator/(const tensor& lhs, tensor::value_type rhs) { return lhs.div(rhs); }
+}
+
+namespace std
+{
+inline cldnn::tensor max(cldnn::tensor const& lhs, cldnn::tensor const& rhs)
+{
+    auto comm_format = cldnn::format::common_format(lhs.format, rhs.format);
+    auto trans_lhs = lhs.transform(comm_format, std::numeric_limits<cldnn::tensor::value_type>::min());
+    auto trans_rhs = rhs.transform(comm_format, std::numeric_limits<cldnn::tensor::value_type>::min());
+    for (size_t i = 0; i < trans_lhs.raw.size(); ++i)
+        trans_lhs._sizes[i] = std::max(trans_lhs.raw[i], trans_rhs.raw[i]);
+
+    return trans_lhs;
+}
 }
