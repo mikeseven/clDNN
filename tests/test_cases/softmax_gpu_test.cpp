@@ -187,6 +187,66 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, values_batch_wise) {
     compare_out_buffer_with_expected_batch_wise();
 }
 
+TEST(softmax_gpu_bfyx_f32, sum_to_one_per_feature) {
+    //  Input  : 2x3x2x2
+    static const int32_t x_size = 2, y_size = 2, feature_num = 3,
+        batch_num = 2, buf_size = x_size*y_size * batch_num * feature_num;
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ batch_num, feature_num, y_size , x_size } } });
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(softmax("softmax", "input"));
+
+    set_values(input, {  //bfyx    
+             //y0x0  y0x1   y1x0    y1x1
+        /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
+        /*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b1f2*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b1f0*/3.f,  0.5f,  7.f,   12.f,
+        /*b1f1*/4.f,  0.5f,  8.f,   8.2f,
+        /*b1f2*/0.2f, 0.2f,  -10.f, 5.2f
+    });
+
+    network network(engine, topology);
+
+    network.set_input_data("input", input);
+    auto outputs = network.execute();
+
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "softmax");
+
+    auto output = outputs.at("softmax").get_memory();
+    auto output_ptr = output.pointer<float>();
+    float out_buffer[buf_size];
+    for (uint32_t i = 0; i < buf_size; i++)
+    {
+        out_buffer[i] = get_value<float>(output_ptr, i);
+    }
+    float sum = 0;
+    float expected_sum = 1.0f;
+
+
+    for (uint32_t i = 0; i < batch_num; i++) //this for loops will sum results in a batch per feature, we expect that: sum = 1.0f
+    {
+        for (uint32_t j = 0; j < y_size; j++)
+        {
+            for (uint32_t k = 0; k < x_size; k++)
+            {
+                for (uint32_t l = 0; l < feature_num; l++)
+                {
+                    int index = i * feature_num * x_size * y_size + j * x_size + k + l * x_size * y_size;
+                    sum += out_buffer[index];
+                }
+                EXPECT_EQ(true, are_equal(sum, expected_sum));
+                sum = 0.0f;
+            }
+        }
+
+    }
+}
+
+
 //TEST(softmax_gpu_xb_f32_test, basic_with_offsets) {
 //
 //    const uint32_t output_x  = 7, output_b  = 3,  // size of whole output buffer
