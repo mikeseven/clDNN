@@ -28,9 +28,12 @@
 namespace neural
 {
 // Kernel names.
-static const std::string kernel_name            = "softmax_gpu";
-static const std::string kernel_name_batches    = "softmax_gpu_batches";
-static const std::string kernel_name_batches_bx = "softmax_gpu_batches_bx";
+static const std::string kernel_name              = "softmax_gpu";
+static const std::string kernel_name_batches      = "softmax_gpu_batches";
+static const std::string kernel_name_batches_bx   = "softmax_gpu_batches_bx";
+static const std::string kernel_name_batches_bfyx = "softmax_gpu_batches_bfyx";
+static const std::string kernel_name_batches_yxfb = "softmax_gpu_batches_yxfb";
+
 
 namespace normalization
 {
@@ -43,7 +46,7 @@ struct softmax_gpu : is_an_implementation
         size_t gws1;
         size_t lws0;
         std::string kernel_name;
-        size_t items_num, leftovers;
+        size_t items_num, leftovers, elements_in_batch;
         bool fp16_unit_used;
         bool fp16_supported;
     } _kernel_data;
@@ -65,13 +68,29 @@ struct softmax_gpu : is_an_implementation
 
         kernel_data kd;
 
-        kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
-        kd.fp16_supported = engine_info.supports_fp16 != 0;
-
+        kd.fp16_unit_used      = input_mem.get_layout().data_type == cldnn::data_types::f16;
+        kd.fp16_supported      = engine_info.supports_fp16 != 0;
         auto batch_num         = outer.output_memory().get_layout().size.batch[0];
+        auto feature_num       = outer.input_memory(0).get_layout().size.feature[0];
         size_t out_buffer_size = output_mem.count();
-
-        if (batch_num <= 1)
+        auto input_size = input_mem.argument().size;
+        
+        if (input_mem.argument().format == memory::format::bfyx_f32 ||//floats
+            input_mem.argument().format == memory::format::bfyx_f16 ||
+            input_mem.argument().format == memory::format::yxfb_f32 ||//halfs
+            input_mem.argument().format == memory::format::yxfb_f16)
+        {
+            kd.elements_in_batch = input_size.spatial[0] * input_size.spatial[1];
+            kd.gws0 = align_to(kd.elements_in_batch, 32);
+            kd.gws1 = batch_num;
+            kd.lws0 = 32;
+            kd.items_num = feature_num;
+            if(kd.fp16_unit_used == true)
+                kd.kernel_name = kernel_name_batches_yxfb;
+            else
+                kd.kernel_name = kernel_name_batches_bfyx;
+        }
+        else if (batch_num <= 1)
         {
             kd.lws0 = std::min(std::max(out_buffer_size, static_cast<size_t>(1)), static_cast<size_t>(32));
             kd.leftovers = out_buffer_size % kd.lws0;
@@ -82,9 +101,7 @@ struct softmax_gpu : is_an_implementation
             kd.kernel_name = kernel_name;
         }
         else if (input_mem.argument().format == memory::format::bx_f32 || 
-            input_mem.argument().format == memory::format::bx_f16 ||
-            input_mem.argument().format == memory::format::bfyx_f32 ||
-            input_mem.argument().format == memory::format::bfyx_f16)
+            input_mem.argument().format == memory::format::bx_f16)
         {
             // We have two units of data per work item in current implementation.
             auto local_mem_per_wi = 2 * (kd.fp16_unit_used ? sizeof(half_t) : sizeof(float));
@@ -147,6 +164,9 @@ struct softmax_gpu : is_an_implementation
         if (input_size.format == cldnn::format::bfyx)
             if (input_size.feature[0] > 1)
                 input_size = cldnn::tensor(cldnn::format::bfyx, { input_size.batch[0], input_size.spatial[0], input_size.spatial[1], input_size.feature[0] });
+        else if (input_size.format == cldnn::format::yxfb)
+            if (input_size.feature[0] > 1)
+                input_size = cldnn::tensor(cldnn::format::yxfb, { input_size.spatial[1], input_size.feature[0], input_size.spatial[0], input_size.batch[0] });
 
         return gpu::jit_constants{
             gpu::make_jit_constant("INPUT",          input_size),
@@ -158,7 +178,8 @@ struct softmax_gpu : is_an_implementation
             gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",      data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_VAL_MAX",   data.fp16_unit_used ? "HALF_MAX" : "FLT_MAX"),
-            gpu::make_jit_constant("UNIT_VAL_ZERO",  data.fp16_unit_used ? "0.0h" : "0.0f")
+            gpu::make_jit_constant("UNIT_VAL_ZERO",  data.fp16_unit_used ? "0.0h" : "0.0f"),
+            gpu::make_jit_constant("ELEMENTS_NUM",   data.elements_in_batch)
         };
     }
 
