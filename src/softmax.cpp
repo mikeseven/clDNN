@@ -34,12 +34,11 @@ layout softmax_arg::calc_output_layout(const topology_map& topology_map, std::sh
     cldnn::layout layoutTemp = input_layout;
     if (input_layout.size.raw.size() == 4 && input_layout.size.spatial[0] == 1 && input_layout.size.spatial[1] == 1) //squeezenet spatials are 1x1
     {
-        if (input_layout.size.format == format::bfyx) 
+        if (input_layout.size.format == format::bfyx)
             layoutTemp = cldnn::layout(input_layout.data_type, tensor(format::bx, { input_layout.size.batch[0], input_layout.size.feature[0] }));
         else 
             layoutTemp = cldnn::layout(input_layout.data_type, tensor(format::xb, { input_layout.size.feature[0], input_layout.size.batch[0] }));
     }
-
     return layoutTemp;
 }
 
