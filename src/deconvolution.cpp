@@ -83,13 +83,6 @@ deconvolution_arg::deconvolution_arg(network_impl& network, std::shared_ptr<cons
         if (bias_arg.size.spatial[0] != output_size.feature[0] / split) throw std::runtime_error("biases/output feature maps number does not match.");
         if (desc->padding_type() != padding::types::zero) throw std::runtime_error("unknown padding mode.");
         if (input_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("input offset/input number of dimension does not match.");
-        //not relevant anymore
-        //if (output_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("output offset/input number of dimension does not match.");
-
-        //Is not relevant anymore
-        //for (uint32_t i = 0; i < output_arg.size.raw.size(); i++)
-        //    if (output_arg.size.raw.at(i) < output_size.raw.at(i) + output_offset.raw.at(i))
-        //        throw std::runtime_error("output buffer size is too small.");
 
         assert(1 == output_size.feature.size());
         assert(1 == output_size.batch.size());

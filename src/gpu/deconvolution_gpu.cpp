@@ -32,6 +32,8 @@ namespace neural
 
 static const std::string kernel_name_yxfb_oiyx = "deconvolution_gpu_yxfb_oiyx";
 static const std::string kernel_name_yxfb_yxio = "deconvolution_gpu_yxfb_yxio";
+static const std::string kernel_name_bfyx_oiyx = "deconvolution_gpu_bfyx_oiyx";
+static const std::string kernel_name_bfyx_yxio = "deconvolution_gpu_bfyx_yxio";
 
 template <>
 struct kd_default_value_selector<neural::gpu::engine_info_internal::architectures>
@@ -146,24 +148,6 @@ struct deconvolution_gpu : is_an_implementation {
             gpu::make_jit_constant("NEGATIVE_SLOPE",            outer.argument.activation_negative_slope),
         };
 
-        if (filter_mem.argument().format == memory::format::yxio_f32 ||
-            filter_mem.argument().format == memory::format::yxoi_f32 ||
-            filter_mem.argument().format == memory::format::yxio_f16)
-        {
-            const auto local_work_group_size = _kernel_data.lws0;
-
-            mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE",                         local_work_group_size));
-            mem_consts.add_constant(gpu::make_jit_constant("OFM_PER_WORK_ITEM",                             _kernel_data.ofm_per_work_item)); // how many output feature maps for a single batch will a single work item produce
-            mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM",                         _kernel_data.batches_per_work_item)); // how many batches will a single work item compute
-            mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max(batch_size / _kernel_data.batches_per_work_item / local_work_group_size, static_cast<size_t>(1)))); // how many local work groups we need to compute single element for each batch
-            mem_consts.add_constant(gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS",        batch_size / _kernel_data.batches_per_work_item)); // how many work items we need to compute single element for each batch
-
-            if (input_mem.argument().size.feature[0] > 4)
-            {
-                mem_consts.add_constant(gpu::make_jit_constant("USE_BLOCK_READ_2", ""));
-            }
-        }
-
         return mem_consts;
     }
 
@@ -229,26 +213,29 @@ struct deconvolution_gpu : is_an_implementation {
 deconvolution_gpu::kernel_data default_oiyx_f32(const cldnn::deconvolution_arg& arg)
 {
     deconvolution_gpu::kernel_data kd = deconvolution_gpu::set_default(arg);
-    kd.kernel_name = kernel_name_yxfb_oiyx;
+    kd.kernel_name = (memory::to_tensor_format(arg.input_memory(0).argument().format) == cldnn::format::bfyx) ? kernel_name_bfyx_oiyx : kernel_name_yxfb_oiyx;
     return kd;
 }
 
 deconvolution_gpu::kernel_data default_yxio_f32(const cldnn::deconvolution_arg& arg)
 {
     deconvolution_gpu::kernel_data kd = deconvolution_gpu::set_default(arg);
-    kd.kernel_name = kernel_name_yxfb_yxio;
+    kd.kernel_name = (memory::to_tensor_format(arg.input_memory(0).argument().format) == cldnn::format::bfyx) ? kernel_name_bfyx_yxio : kernel_name_yxfb_yxio;
     return kd;
 }
 
 deconvolution_gpu::ks_type deconvolution_gpu::ks = {
     { std::make_tuple(memory::format::yxfb_f32, memory::format::oiyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
     { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::oiyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, memory::format::yxio_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
 };
 
 namespace{
     struct attach {
         attach() {
             implementation_map<cldnn::deconvolution_arg>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), deconvolution_gpu::create);
+            implementation_map<cldnn::deconvolution_arg>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), deconvolution_gpu::create);
         }
         ~attach() {}
     };

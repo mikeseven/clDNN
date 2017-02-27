@@ -453,3 +453,125 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2x2_in2x2x1x1_stride2_pad1) {
         EXPECT_FLOAT_EQ(expected_output_vec[i], output_ptr[i]);
     }
 }
+
+TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_pad1) {
+    //  Filter : 2x2
+    //  Input  : 2x2x1x2
+    //  Output : 2x2x1x2
+    //  Stride : 2x2
+    //  Pad    : 1x1
+    //
+    //  Input:
+    //  8  0.5    1   3
+    //  6  9      2   4
+    //
+    //  Filter
+    //  -2   2
+    //   7  -0.5
+    //
+    //  Bias
+    //  1
+    //
+    //  Output:
+    //  -3    4.5    0.5   22
+    //   13  -17     5    -7
+
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 2, 2 } } });
+    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
+    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+
+    set_values(input, { 8.f, 0.5f, 6.f, 9.f, 1.f, 3.f, 2.f, 4.f });
+    set_values(weights, { -2.f, 2.f, 7.f, -0.5f });
+    set_values(biases, { 1.0f });
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        deconvolution("deconv", "input", { "weights" }, { "biases" }, { format::yx,{ 1,1 } }, { format::yx,{ 2,2 } })
+    );
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "deconv");
+
+    auto output_prim = outputs.begin()->second.get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
+    std::vector<float> expected_output_vec = {
+        -3.f, 4.5f, 13.f, -17.f,
+        .5f, 22.f, 5.f, -7.f
+    };
+
+    for (unsigned int i = 0; i < expected_output_vec.size(); i++)
+    {
+        EXPECT_FLOAT_EQ(expected_output_vec[i], output_ptr[i]);
+    }
+}
+
+TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_yxio_stride2_pad1) {
+    //  Filter : 2x2
+    //  Input  : 2x2x1x2
+    //  Output : 2x2x1x2
+    //  Stride : 2x2
+    //  Pad    : 1x1
+    //
+    //  Input:
+    //  8  0.5    1   3
+    //  6  9      2   4
+    //
+    //  Filter
+    //  -2   2
+    //   7  -0.5
+    //
+    //  Bias
+    //  1
+    //
+    //  Output:
+    //  -3    4.5    0.5   22
+    //   13  -17     5    -7
+
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 2, 2 } } });
+    auto weights = memory::allocate(engine, { data_types::f32,{ format::yxio,{ 2, 2, 1, 1 } } });
+    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+
+    set_values(input, { 8.f, 0.5f, 6.f, 9.f, 1.f, 3.f, 2.f, 4.f });
+    set_values(weights, { -2.f, 2.f, 7.f, -0.5f });
+    set_values(biases, { 1.0f });
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        deconvolution("deconv", "input", { "weights" }, { "biases" }, { format::yx,{ 1,1 } }, { format::yx,{ 2,2 } })
+    );
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "deconv");
+
+    auto output_prim = outputs.begin()->second.get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
+    std::vector<float> expected_output_vec = {
+        -3.f, 4.5f, 13.f, -17.f,
+        .5f, 22.f, 5.f, -7.f
+    };
+
+    for (unsigned int i = 0; i < expected_output_vec.size(); i++)
+    {
+        EXPECT_FLOAT_EQ(expected_output_vec[i], output_ptr[i]);
+    }
+}
