@@ -27,8 +27,6 @@
 using namespace cldnn;
 using namespace tests;
 
-unsigned int const random_seed = 1337;
-
 template<typename T>
 std::vector<T> generate_random_input(size_t b, size_t f, size_t y, size_t x, int min, int max) {
     static std::default_random_engine generator(random_seed);

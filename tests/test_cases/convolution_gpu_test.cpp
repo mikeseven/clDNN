@@ -35,20 +35,6 @@
 using namespace cldnn;
 using namespace tests;
 
-#define USE_RANDOM_SEED 0
-#if USE_RANDOM_SEED
-std::random_device rnd_device;
-unsigned int const random_seed = rnd_device();
-#else
-unsigned int const random_seed = 1337;
-#endif
-
-using VF = std::vector<float>;		// float vector
-using VVF = std::vector<VF>;		// feature map
-using VVVF = std::vector<VVF>;		// 3d feature map
-using VVVVF = std::vector<VVVF>;	// batch of 3d feature maps
-using VVVVVF = std::vector<VVVVF>;	// split of oiyx filters
-
 template<typename T>
 T kahan_summation(std::vector<T> &input) {
 	T sum = 0;
@@ -88,77 +74,6 @@ VVF convolve(VVVF &input, VVVF &filter, int stride_y, int stride_x, float bias,
 		}
 	}
 	return output;
-}
-
-VF flatten_4d(format format, VVVVF &data) {
-	size_t a = data.size();
-	size_t b = data[0].size();
-	size_t c = data[0][0].size();
-	size_t d = data[0][0][0].size();
-	VF vec(a * b * c * d, 0.0f);
-	size_t idx = 0;
-	if (format == format::yxfb) {
-		for (size_t yi = 0; yi < c; ++yi)
-			for (size_t xi = 0; xi < d; ++xi)
-				for (size_t fi = 0; fi < b; ++fi)
-					for (size_t bi = 0; bi < a; ++bi)
-						vec[idx++] = data[bi][fi][yi][xi];
-	}
-	else if (format == format::oiyx) {
-		for (size_t oi = 0; oi < a; ++oi)
-			for (size_t ii = 0; ii < b; ++ii)
-				for (size_t yi = 0; yi < c; ++yi)
-					for (size_t xi = 0; xi < d; ++xi)
-						vec[idx++] = data[oi][ii][yi][xi];
-	}
-	return vec;
-}
-
-template<typename T>
-std::vector<T> generate_random_1d(size_t a, int min, int max) {
-	static std::default_random_engine generator(random_seed);
-	int k = 8; // 1/k is the resolution of the floating point numbers
-	std::uniform_int_distribution<int> distribution(k * min, k * max);
-	std::vector<T> v(a);
-	for (size_t i = 0; i < a; ++i) {
-		v[i] = (T)distribution(generator);
-		v[i] /= k;
-	}
-	return v;
-}
-
-template<typename T>
-std::vector<std::vector<T>> generate_random_2d(size_t a, size_t b, int min, int max) {
-	std::vector<std::vector<T>> v(a);
-	for (size_t i = 0; i < a; ++i)
-		v[i] = generate_random_1d<T>(b, min, max);
-	return v;
-}
-
-template<typename T>
-std::vector<std::vector<std::vector<T>>> generate_random_3d(size_t a, size_t b, size_t c, int min, int max) {
-	std::vector<std::vector<std::vector<T>>> v(a);
-	for (size_t i = 0; i < a; ++i)
-		v[i] = generate_random_2d<T>(b, c, min, max);
-	return v;
-}
-
-// parameters order is assumed to be bfyx or oiyx
-template<typename T>
-std::vector<std::vector<std::vector<std::vector<T>>>> generate_random_4d(size_t a, size_t b, size_t c, size_t d, int min, int max) {
-	std::vector<std::vector<std::vector<std::vector<T>>>> v(a);
-	for (size_t i = 0; i < a; ++i)
-		v[i] = generate_random_3d<T>(b, c, d, min, max);
-	return v;
-}
-
-// parameters order is assumed to be soiyx for filters when split > 1 
-template<typename T>
-std::vector<std::vector<std::vector<std::vector<std::vector<T>>>>> generate_random_5d(size_t a, size_t b, size_t c, size_t d, size_t e, int min, int max) {
-	std::vector<std::vector<std::vector<std::vector<std::vector<T>>>>> v(a);
-	for (size_t i = 0; i < a; ++i)
-		v[i] = generate_random_4d<T>(b, c, d, e, min, max);
-	return v;
 }
 
 // rounds floating point number, fraction precision should be in the range [0,23]
