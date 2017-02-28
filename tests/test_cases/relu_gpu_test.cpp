@@ -37,7 +37,8 @@ namespace{
 using namespace cldnn;
 using namespace tests;
 
-VVVVF relu_reference(VVVVF &input, float slope = 0.0f,
+
+VVVVF<float> relu_reference(VVVVF<float> &input, float slope = 0.0f,
 	int input_padding_y = 0, int input_padding_x = 0,
 	int output_padding_y = 0, int output_padding_x = 0) {
 
@@ -47,7 +48,7 @@ VVVVF relu_reference(VVVVF &input, float slope = 0.0f,
 	size_t output_f = input[0].size();
 	size_t output_y = input[0][0].size() + 2 * padding_y;
 	size_t output_x = input[0][0][0].size() + 2 * padding_x;
-	VVVVF output(output_b, VVVF(output_f, VVF(output_y, VF(output_x, 0.0f))));
+	VVVVF<float> output(output_b, VVVF<float>(output_f, VVF<float>(output_y, VF<float>(output_x, 0.0f))));
 
 	for (size_t b = 0; b < output_b; ++b) {
 		for (size_t f = 0; f < output_f; ++f) {
@@ -67,8 +68,8 @@ void generic_relu_test(int input_b, int input_f, int input_y, int input_x, float
 	int input_padding_y, int input_padding_x, int output_padding_y, int output_padding_x) {
 
 	int min_random = -2, max_random = 2;
-	VVVVF input_rnd = generate_random_4d<float>(input_b, input_f, input_y, input_x, min_random, max_random);
-	VF input_rnd_vec = flatten_4d(format::yxfb, input_rnd);
+	VVVVF<float> input_rnd = generate_random_4d<float>(input_b, input_f, input_y, input_x, min_random, max_random);
+	VF<float> input_rnd_vec = flatten_4d(format::yxfb, input_rnd);
 
 	engine engine;
 	auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ input_y, input_x, input_f, input_b } } });
@@ -102,8 +103,8 @@ void generic_relu_test(int input_b, int input_f, int input_y, int input_x, float
 	EXPECT_EQ(b_size, input_b);
 	
 	bool test_is_correct = true;
-	VVVVF output_cpu = relu_reference(input_rnd, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
-	VF output_cpu_vec = flatten_4d(format::yxfb, output_cpu);
+	VVVVF<float> output_cpu = relu_reference(input_rnd, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
+	VF<float> output_cpu_vec = flatten_4d(format::yxfb, output_cpu);
 	for (size_t i = 0; i < output_cpu_vec.size(); ++i) {
 		testing::internal::FloatingPoint<float> val_cpu(output_cpu_vec[i]), val_gpu(output_ptr[i]);
 		if (!val_cpu.AlmostEquals(val_gpu)) {
@@ -147,7 +148,7 @@ TEST(relu_f32_fw_gpu, basic_yxfb) {
 	  2.0f, 2.0f, 3.0f, 4.0f, -6.0f,
 	  3.0f, -3.0f, 3.0f, 5.0f, 1.0f,
 	  1.0f, 1.0f, 1.0f, -1.0f, 1.0f });
-	VF output_vec = {
+	VF<float> output_vec = {
 		1.0f, -1.0f, -1.5f, 4.0f, 5.0f,
 		2.0f, 2.0f, 3.0f, 4.0f, -3.0f,
 		3.0f, -1.5f, 3.0f, 5.0f, 1.0f,
@@ -214,7 +215,7 @@ TEST(DISABLED_relu_f32_fw_gpu, basic_input_padding_yxfb) {
 		2.0f, 2.0f, 3.0f, 4.0f, -6.0f,
 		3.0f, -3.0f, 3.0f, 5.0f, 1.0f,
 		1.0f, 1.0f, 1.0f, -1.0f, 1.0f });
-	VF output_vec = {
+	VF<float> output_vec = {
 		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, -1.0f, -1.5f, 4.0f, 5.0f, 0.0f,
@@ -288,7 +289,7 @@ TEST(DISABLED_relu_f32_fw_gpu, basic_input_and_output_padding_yxfb) {
 		2.0f, 2.0f, 3.0f, 4.0f, -6.0f,
 		3.0f, -3.0f, 3.0f, 5.0f, 1.0f,
 		1.0f, 1.0f, 1.0f, -1.0f, 1.0f });
-	VF output_vec = {
+	VF<float> output_vec = {
 		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
@@ -329,7 +330,7 @@ TEST(DISABLED_relu_f32_fw_gpu, basic_input_and_output_padding_yxfb) {
 }
 
 TEST(DISABLED_relu_f32_fw_gpu, generic_random_yxfb_short) {
-	VF slopes = { 0.0f, -17.19f, 1028.8f, std::numeric_limits<float>::max() };
+	VF<float> slopes = { 0.0f, -17.19f, 1028.8f, std::numeric_limits<float>::max() };
 	std::vector<std::pair<int, int>> input_sizes = { { 100, 100 },{ 227, 227 },{ 400, 600 },{ 531, 777 },{ 4096, 1980 } };
 	for (int i = 1; i <= 16; ++i) {
 		input_sizes.emplace_back(i, i);

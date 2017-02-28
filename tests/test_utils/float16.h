@@ -26,14 +26,28 @@ struct FLOAT16
     FLOAT16(int i) { v = Float32toFloat16(float(i)); }
     explicit FLOAT16(int16_t d) : v(d) {}
     friend FLOAT16 operator +(const FLOAT16 &v1, const FLOAT16 &v2);
+	friend FLOAT16 operator -(const FLOAT16 &v1, const FLOAT16 &v2);
     friend FLOAT16 operator *(const FLOAT16 &v1, const FLOAT16 &v2);
     friend FLOAT16 operator /(const FLOAT16 &v1, const FLOAT16 &v2);
     friend bool operator >(const FLOAT16 &v1, const FLOAT16 &v2);
     friend bool operator <(const FLOAT16 &v1, const FLOAT16 &v2);
     friend bool operator >(const FLOAT16 &v1, const float &v2);
     friend bool operator <(const FLOAT16 &v1, const float &v2);
+    friend bool operator !=(const FLOAT16 &v1, const FLOAT16 &v2);
 
     FLOAT16() {}
+
+	FLOAT16& operator +=(const FLOAT16 &v1)
+	{
+		*this = (float)*this + (float)v1;
+		return *this;
+	}
+
+	FLOAT16& operator /=(const FLOAT16 &v1)
+	{
+		*this = (float)*this / (float)v1;
+		return *this;
+	}
 
     static inline uint16_t Float32toFloat16(float value)
     {
@@ -184,3 +198,48 @@ struct FLOAT16
     }
 };
 
+
+inline FLOAT16 operator +(const FLOAT16 &v1, const FLOAT16 &v2)
+{
+	return (float)v1 + (float)v2;
+}
+
+inline FLOAT16 operator -(const FLOAT16 &v1, const FLOAT16 &v2)
+{
+	return (float)v1 - (float)v2;
+}
+
+inline FLOAT16 operator *(const FLOAT16 &v1, const FLOAT16 &v2)
+{
+	return (float)v1 * (float)v2;
+}
+
+inline FLOAT16 operator /(const FLOAT16 &v1, const FLOAT16 &v2)
+{
+	return (float)v1 / (float)v2;
+}
+
+inline bool operator >(const FLOAT16 &v1, const FLOAT16 &v2)
+{
+	return (float)v1 > (float)v2;
+}
+
+inline bool operator <(const FLOAT16 &v1, const FLOAT16 &v2)
+{
+	return (float)v1 < (float)v2;
+}
+
+inline bool operator >(const FLOAT16 &v1, const float &v2)
+{
+	return (float)v1 > v2;
+}
+
+inline bool operator <(const FLOAT16 &v1, const float &v2)
+{
+	return (float)v1 < v2;
+}
+
+inline bool operator !=(const FLOAT16 &v1, const FLOAT16 &v2)
+{
+    return v1.v != v2.v;
+}

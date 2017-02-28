@@ -34,32 +34,57 @@ namespace tests {
 	unsigned int const random_seed = 1337;
 #endif
 
-using VF = std::vector<float>;		// float vector
-using VVF = std::vector<VF>;		// feature map
-using VVVF = std::vector<VVF>;		// 3d feature map
-using VVVVF = std::vector<VVVF>;	// batch of 3d feature maps
-using VVVVVF = std::vector<VVVVF>;	// split of oiyx filters
+template<typename T>
+using VF = std::vector<T>;		// float vector
+template<typename T>
+using VVF = std::vector<VF<T>>;		// feature map
+template<typename T>
+using VVVF = std::vector<VVF<T>>;		// 3d feature map
+template<typename T>
+using VVVVF = std::vector<VVVF<T>>;	// batch of 3d feature maps
+template<typename T>
+using VVVVVF = std::vector<VVVVF<T>>;	// split of oiyx filters
 
-inline VF flatten_4d(cldnn::format format, VVVVF &data) {
+template<typename T>
+inline VF<T> flatten_4d(cldnn::format input_format, VVVVF<T> &data) {
 	size_t a = data.size();
 	size_t b = data[0].size();
 	size_t c = data[0][0].size();
 	size_t d = data[0][0][0].size();
-	VF vec(a * b * c * d, 0.0f);
+	VF<T> vec(a * b * c * d, 0.0f);
 	size_t idx = 0;
-	if (format == cldnn::format::yxfb) {
-		for (size_t yi = 0; yi < c; ++yi)
-			for (size_t xi = 0; xi < d; ++xi)
-				for (size_t fi = 0; fi < b; ++fi)
-					for (size_t bi = 0; bi < a; ++bi)
-						vec[idx++] = data[bi][fi][yi][xi];
-	}
-	else if (format == cldnn::format::oiyx) {
-		for (size_t oi = 0; oi < a; ++oi)
-			for (size_t ii = 0; ii < b; ++ii)
-				for (size_t yi = 0; yi < c; ++yi)
-					for (size_t xi = 0; xi < d; ++xi)
-						vec[idx++] = data[oi][ii][yi][xi];
+
+	switch (input_format.value) {
+		case cldnn::format::yxfb:
+			for (size_t yi = 0; yi < c; ++yi)
+				for (size_t xi = 0; xi < d; ++xi)
+					for (size_t fi = 0; fi < b; ++fi)
+						for (size_t bi = 0; bi < a; ++bi)
+							vec[idx++] = data[bi][fi][yi][xi];
+			break;
+
+		case cldnn::format::oiyx:
+    		for (size_t oi = 0; oi < a; ++oi)
+    			for (size_t ii = 0; ii < b; ++ii)
+    				for (size_t yi = 0; yi < c; ++yi)
+    					for (size_t xi = 0; xi < d; ++xi)
+    						vec[idx++] = data[oi][ii][yi][xi];
+            break;
+		
+		case cldnn::format::bfyx:
+			// this is the default format of the input data
+			break;
+		
+		case cldnn::format::yxio:
+			for (size_t yi = 0; yi < c; ++yi)
+				for (size_t xi = 0; xi < d; ++xi)
+					for (size_t ii = 0; ii < b; ++ii)
+						for (size_t oi = 0; oi < a; ++oi)															
+							vec[idx++] = data[oi][ii][yi][xi];
+			break;
+
+		default:
+			assert(0);
 	}
 	return vec;
 }
