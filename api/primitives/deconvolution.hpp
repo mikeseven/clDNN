@@ -38,25 +38,25 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
         const padding& output_padding = { format::yx,{ 0,0 } }
     )
         :primitive_base(id, { input }, input_padding, output_padding)
-        , _weights(weights)
-        , _bias(bias)
         , weights(_weights.cpp_ids)
         , bias(_bias.cpp_ids)
         , stride(stride)
         , with_activation(with_activation)
         , activation_negative_slope(activation_slp)
+        , _weights(weights)
+        , _bias(bias)
     {
     }
 
     deconvolution(const dto* dto)
         :primitive_base(dto)
-        , _weights(dto->weights)
-        , _bias(dto->bias)
         , weights(_weights.cpp_ids)
         , bias(_bias.cpp_ids)
         , stride(dto->stride)
         , with_activation(dto->with_activation != 0)
         , activation_negative_slope(dto->activation_negative_slope)
+        , _weights(dto->weights)
+        , _bias(dto->bias)
     {
         if (weights.size() != bias.size() || dto->split != weights.size())
             throw std::runtime_error("Invalid deconvolution dto: bad split value");
