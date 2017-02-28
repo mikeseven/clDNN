@@ -28,7 +28,7 @@ CLDNN_BEGIN_PRIMITIVE_DESC(deconvolution)
 cldnn_tensor stride;
 uint32_t with_activation;
 float activation_negative_slope;
-int32_t split;
+uint32_t split;
 cldnn_primitive_id_arr weights;
 cldnn_primitive_id_arr bias;
 CLDNN_END_PRIMITIVE_DESC(deconvolution)

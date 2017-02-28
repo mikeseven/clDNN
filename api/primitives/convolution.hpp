@@ -60,7 +60,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , _weights(dto->weights)
         , _bias(dto->bias)
     {
-        if (weights.size() != bias.size() || dto->split != weights.size())
+        if (!dto->split || weights.size() != bias.size() || dto->split != weights.size())
             throw std::runtime_error("Invalid convolution dto: bad split value");
     }
 
