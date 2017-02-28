@@ -105,7 +105,8 @@ void generic_relu_test(int input_b, int input_f, int input_y, int input_x, float
 	VVVVF output_cpu = relu_reference(input_rnd, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
 	VF output_cpu_vec = flatten_4d(format::yxfb, output_cpu);
 	for (size_t i = 0; i < output_cpu_vec.size(); ++i) {
-		if (output_cpu_vec[i] != output_ptr[i]) {
+		testing::internal::FloatingPoint<float> val_cpu(output_cpu_vec[i]), val_gpu(output_ptr[i]);
+		if (!val_cpu.AlmostEquals(val_gpu)) {
 			test_is_correct = false;
 			break;
 		}
@@ -327,7 +328,7 @@ TEST(relu_f32_fw_gpu, basic_input_and_output_padding_yxfb) {
 	}
 }
 
-TEST(relu_f32_fw_gpu, generic_random_yxfb) {
+TEST(relu_f32_fw_gpu, generic_random_yxfb_short) {
 	VF slopes = { 0.0f, -17.19f, 1028.8f, std::numeric_limits<float>::max() };
 	std::vector<std::pair<int, int>> input_sizes = { { 100, 100 },{ 227, 227 },{ 400, 600 },{ 531, 777 },{ 4096, 1980 } };
 	for (int i = 1; i <= 16; ++i) {
@@ -337,10 +338,10 @@ TEST(relu_f32_fw_gpu, generic_random_yxfb) {
 		for (int input_f = 1; input_f <= 1; ++input_f) {
 			for (std::pair<int, int> &input_yx : input_sizes) {
 				for (float slope : slopes) {
-					for (int input_padding_y = 0; input_padding_y <= 0; ++input_padding_y) {
-						for (int input_padding_x = 0; input_padding_x <= 0; ++input_padding_x) {
-							for (int output_padding_y = 0; output_padding_y <= 0; ++output_padding_y) {
-								for (int output_padding_x = 0; output_padding_x <= 0; ++output_padding_x) {
+					for (int input_padding_y = 0; input_padding_y <= 1; ++input_padding_y) {
+						for (int input_padding_x = 0; input_padding_x <= 1; ++input_padding_x) {
+							for (int output_padding_y = 0; output_padding_y <= 1; ++output_padding_y) {
+								for (int output_padding_x = 0; output_padding_x <= 1; ++output_padding_x) {
 									generic_relu_test(input_b, input_f, input_yx.first, input_yx.second, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
 								}
 							}

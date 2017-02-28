@@ -185,11 +185,11 @@ void generic_convolution_test(int input_b, int input_f, int input_y, int input_x
 	bool test_is_correct = true;
 	VF output_cpu_vec = flatten_4d(format::yxfb, output_cpu);
 	for (size_t i = 0; i < output_cpu_vec.size(); ++i) {
-		if (output_cpu_vec[i] != output_ptr[i]) {
-//            printf("found error in index %lu\n", i);
+		testing::internal::FloatingPoint<float> val_cpu(output_cpu_vec[i]), val_gpu(output_ptr[i]);
+		if (!val_cpu.AlmostEquals(val_gpu)) {
 			test_is_correct = false;
-            break;
-        }
+			break;
+		}
 	}
 	EXPECT_EQ(test_is_correct, true) << std::endl
 		<< "failing test parameters:" << std::endl
