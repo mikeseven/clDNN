@@ -181,7 +181,7 @@ TEST(relu_f32_fw_gpu, basic_yxfb) {
 	}
 }
 
-TEST(relu_f32_fw_gpu, basic_input_padding_yxfb) {
+TEST(DISABLED_relu_f32_fw_gpu, basic_input_padding_yxfb) {
 	//  Input Padding: 2x1 (yx format)
 	//
 	//  Input:
@@ -252,7 +252,7 @@ TEST(relu_f32_fw_gpu, basic_input_padding_yxfb) {
 	}
 }
 
-TEST(relu_f32_fw_gpu, basic_input_and_output_padding_yxfb) {
+TEST(DISABLED_relu_f32_fw_gpu, basic_input_and_output_padding_yxfb) {
 	//  Input Padding: 2x1  (yx format)
 	//  Output Padding: 1x2 (yx format)
 	//
@@ -328,7 +328,7 @@ TEST(relu_f32_fw_gpu, basic_input_and_output_padding_yxfb) {
 	}
 }
 
-TEST(relu_f32_fw_gpu, generic_random_yxfb_short) {
+TEST(DISABLED_relu_f32_fw_gpu, generic_random_yxfb_short) {
 	VF slopes = { 0.0f, -17.19f, 1028.8f, std::numeric_limits<float>::max() };
 	std::vector<std::pair<int, int>> input_sizes = { { 100, 100 },{ 227, 227 },{ 400, 600 },{ 531, 777 },{ 4096, 1980 } };
 	for (int i = 1; i <= 16; ++i) {
