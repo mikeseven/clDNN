@@ -15,31 +15,31 @@ KERNEL (softmax_gpu_batches_bfyx)(const __global UNIT_TYPE* input, __global UNIT
         return;
 
     UNIT_TYPE tmp_vals = UNIT_VAL_ZERO;
-    UNIT_TYPE my_maximum = -UNIT_VAL_MAX;
-    UNIT_TYPE my_sum = UNIT_VAL_ZERO;
-    UNIT_TYPE my_chunk[ITEMS_NUM];
+    UNIT_TYPE feature_maximum = -UNIT_VAL_MAX;
+    UNIT_TYPE feature_sum = UNIT_VAL_ZERO;
+    UNIT_TYPE vals[ITEMS_NUM];
 
    
-    //find max and allocate inputs to my_chunk
+    //find max and allocate inputs to vals
     for (uint i = 0; i<ITEMS_NUM; ++i)
     {
         tmp_vals = input[element_id + i*in_batch_offset+batch_id*batch_offset];
-        my_maximum = max(my_maximum, tmp_vals);
-        my_chunk[i] = tmp_vals;
+        feature_maximum = max(feature_maximum, tmp_vals);
+        vals[i] = tmp_vals;
     }
 
     //calculate native_exp and sum 
     for (uint i = 0; i<ITEMS_NUM; ++i)
     {
-        tmp_vals = native_exp(my_chunk[i] - my_maximum);
-        my_sum += tmp_vals;
-        my_chunk[i] = tmp_vals;
+        tmp_vals = native_exp(vals[i] - feature_maximum);
+        feature_sum += tmp_vals;
+        vals[i] = tmp_vals;
     }
 
 
     for (uint i = 0; i<ITEMS_NUM; ++i)
     {
-        output[global_id + i*in_batch_offset] = my_chunk[i] / my_sum;
+        output[global_id + i*in_batch_offset] = vals[i] / feature_sum;
     }
     
 }

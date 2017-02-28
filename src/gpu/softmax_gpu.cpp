@@ -73,7 +73,7 @@ struct softmax_gpu : is_an_implementation
         auto batch_num         = outer.output_memory().get_layout().size.batch[0];
         auto feature_num       = outer.input_memory(0).get_layout().size.feature[0];
         size_t out_buffer_size = output_mem.count();
-        auto input_size = input_mem.argument().size;
+        auto input_size        = input_mem.argument().size;
         
         if (input_mem.argument().format == memory::format::bfyx_f32 ||//floats
             input_mem.argument().format == memory::format::bfyx_f16 ||
