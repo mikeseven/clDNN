@@ -68,30 +68,30 @@ layout depth_concatenate_arg::calc_output_layout(const topology_map& topology_ma
 depth_concatenate_arg::depth_concatenate_arg(network_impl& network, std::shared_ptr<const depth_concatenate> desc)
     :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
-    auto input_arg = input_memory(0).argument();
-    auto output_arg = output_memory().argument();
-
-    auto format = input_arg.format;
+    auto input_format = input_memory(0).argument().format;
+    auto output_format = output_memory().argument().format;
 
     tensor::value_type depth_count = 0;
-    auto input_size = input_arg.size;
+    auto input_size = _inputs.at(0)->non_padded_output_layout().size;
+    auto output_size = non_padded_output_layout().size;
     for (auto i : _inputs)
     {
         auto& input_mem = i->output_memory();
-        if (input_mem.argument().format != format) throw std::runtime_error("Every input must have the same format!");
-        if (input_mem.argument().size.batch[0] != input_size.batch[0]) throw std::runtime_error("Every input must have the same number of batches!");
-        if (input_mem.argument().size.spatial[0] != input_size.spatial[0]) throw std::runtime_error("Every input must have the same size in X dimension!");
+        auto input_mem_size = i->non_padded_output_layout().size;
+        if (input_mem.argument().format != input_format) throw std::runtime_error("Every input must have the same format!");
+        if (input_mem_size.batch[0] != input_size.batch[0]) throw std::runtime_error("Every input must have the same number of batches!");
+        if (input_mem_size.spatial[0] != input_size.spatial[0]) throw std::runtime_error("Every input must have the same size in X dimension!");
         if (input_size.spatial.size() > 1)
-            if (input_mem.argument().size.spatial[1] != input_size.spatial[1]) throw std::runtime_error("Every input must have the same size in Y dimension!");
+            if (input_mem_size.spatial[1] != input_size.spatial[1]) throw std::runtime_error("Every input must have the same size in Y dimension!");
         depth_count += input_mem.argument().size.feature[0];
     }
 
-    if (output_arg.format != format) throw std::runtime_error("Input and output must have the same format!");
-    if (depth_count != output_arg.size.feature[0]) throw std::runtime_error("Output depth count mismatch sum of input depths!");
-    if (output_arg.size.batch[0] != input_size.batch[0]) throw std::runtime_error("Output batch size must match input batch size!");
-    if (output_arg.size.spatial[0] != input_size.spatial[0]) throw std::runtime_error("Output X size must match input X size!");
+    if (output_format != input_format) throw std::runtime_error("Input and output must have the same format!");
+    if (depth_count != output_size.feature[0]) throw std::runtime_error("Output depth count mismatch sum of input depths!");
+    if (output_size.batch[0] != input_size.batch[0]) throw std::runtime_error("Output batch size must match input batch size!");
+    if (output_size.spatial[0] != input_size.spatial[0]) throw std::runtime_error("Output X size must match input X size!");
     if (input_size.spatial.size() > 1)
-        if (output_arg.size.spatial[1] != input_size.spatial[1]) throw std::runtime_error("Output Y size must match input Y size!");
+        if (output_size.spatial[1] != input_size.spatial[1]) throw std::runtime_error("Output Y size must match input Y size!");
 }
 }
 
@@ -183,7 +183,7 @@ struct depth_concatenate_gpu : is_an_implementation
 
         return gpu::jit_constants{
             gpu::make_jit_constant("INPUT",          _outer.input().at(input_idx)->non_padded_output_layout().size),
-            gpu::make_jit_constant("OUTPUT",         _outer.output_memory().argument().size),
+            gpu::make_jit_constant("OUTPUT",         _outer.non_padded_output_layout().size),
             gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", _outer.input_memory(input_idx).count() / _outer.input_memory(input_idx).get_layout().size.batch[0]),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(fp16_supported)),
             gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),

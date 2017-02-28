@@ -400,7 +400,8 @@ void network_builder::prepare_padding()
                     const auto _depth_concat = std::static_pointer_cast<const cldnn::depth_concatenate>(prim);
                     auto new_depth_concat = std::make_shared<depth_concatenate>(
                         _depth_concat->id(),
-                        _depth_concat->input()
+                        _depth_concat->input(),
+                        needed_padding
                     );
                     _topology_map[_depth_concat->id()]->replace(new_depth_concat);
                 }
@@ -449,6 +450,15 @@ void network_builder::prepare_padding()
                         _eltwise->input_padding()
                         );
                     _topology_map[_eltwise->id()]->replace(new_eltwise);
+                }
+                else if (prim->type() == cldnn::data::type_id())
+                {
+                    const auto _data = std::static_pointer_cast<const cldnn::data>(prim);
+                    auto new_data = std::make_shared<cldnn::data>(
+                        _data->id(),
+                        _data->mem
+                        );
+                    _topology_map[_data->id()]->replace(new_data);
                 }
                 else
                 {
