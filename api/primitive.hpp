@@ -71,6 +71,12 @@ struct padding
                std::any_of(_upper_size.raw.begin(), _upper_size.raw.end(), [](const tensor::value_type& el) { return el != 0; });
     }
 
+    static padding max(padding const& lhs, padding const& rhs, types type = zero)
+    {
+        return padding{ tensor::max(lhs.size(), rhs.size()), type };
+    }
+
+
 private:
     tensor _lower_size;    ///< Lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
     tensor _upper_size;    ///< Upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
@@ -250,12 +256,4 @@ private:
 #define CLDNN_DECLATE_PRIMITIVE(PType) typedef CLDNN_PRIMITIVE_DESC(PType) dto;\
     CLDNN_DEFINE_TYPE_ID(PType)
 
-}
-
-namespace std
-{
-inline cldnn::padding max(cldnn::padding const& lhs, cldnn::padding const& rhs, cldnn::padding::types padd_type = cldnn::padding::zero)
-{
-    return cldnn::padding{ std::max(lhs.size(), rhs.size()), padd_type };
-}
 }

@@ -283,7 +283,7 @@ void network_builder::prepare_padding()
 
                 cldnn::padding needed_padding(cldnn::format::xy, { left_padding, top_padding }, { right_padding, bottom_padding });
 
-                prim->output_padding() = std::max(needed_padding, prim->output_padding());
+                prim->output_padding() = padding::max(needed_padding, prim->output_padding());
             }
         }
     }

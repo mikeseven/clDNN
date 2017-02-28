@@ -399,6 +399,17 @@ struct tensor
         }
         return offset;
     }
+
+    static tensor max(tensor const& lhs, tensor const& rhs)
+    {
+        auto comm_format = format::common_format(lhs.format, rhs.format);
+        auto trans_lhs = lhs.transform(comm_format, std::numeric_limits<value_type>::min());
+        auto trans_rhs = rhs.transform(comm_format, std::numeric_limits<value_type>::min());
+        for (size_t i = 0; i < trans_lhs.raw.size(); ++i)
+            trans_lhs._sizes[i] = std::max(trans_lhs.raw[i], trans_rhs.raw[i]);
+
+        return trans_lhs;
+    }
 };
 
 CLDNN_API_CLASS(tensor)
@@ -407,18 +418,4 @@ inline tensor operator+(const tensor& lhs, const tensor& rhs) { return lhs.add(r
 inline tensor operator-(const tensor& lhs, const tensor& rhs) { return lhs.sub(rhs); }
 inline tensor operator*(const tensor& lhs, tensor::value_type rhs) { return lhs.mul(rhs); }
 inline tensor operator/(const tensor& lhs, tensor::value_type rhs) { return lhs.div(rhs); }
-}
-
-namespace std
-{
-inline cldnn::tensor max(cldnn::tensor const& lhs, cldnn::tensor const& rhs)
-{
-    auto comm_format = cldnn::format::common_format(lhs.format, rhs.format);
-    auto trans_lhs = lhs.transform(comm_format, std::numeric_limits<cldnn::tensor::value_type>::min());
-    auto trans_rhs = rhs.transform(comm_format, std::numeric_limits<cldnn::tensor::value_type>::min());
-    for (size_t i = 0; i < trans_lhs.raw.size(); ++i)
-        trans_lhs._sizes[i] = std::max(trans_lhs.raw[i], trans_rhs.raw[i]);
-
-    return trans_lhs;
-}
 }
