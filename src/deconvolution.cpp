@@ -68,7 +68,7 @@ deconvolution_arg::deconvolution_arg(network_impl& network, std::shared_ptr<cons
     if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("input/output number of dimension does not match.");
     if (stride.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("stride/output number of dimension does not match.");
 
-    auto split = desc->split;
+    auto split = desc->split();
     for (decltype(split) j = 0; j < split; j++)
     {
         auto& filter_mem = weights_memory(j);

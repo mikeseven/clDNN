@@ -37,52 +37,43 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
         float activation_slp = 0.0f,
         const padding& output_padding = { format::yx,{ 0,0 } }
     )
-        :primitive_base(id, { input }, input_padding, output_padding,
-                        stride,
-                        static_cast<uint32_t>(with_activation),
-                        activation_slp,
-                        static_cast<int32_t>(weights.size()),
-                        cldnn_primitive_id_arr{ nullptr, 0 },
-                        cldnn_primitive_id_arr{ nullptr, 0 } )
+        :primitive_base(id, { input }, input_padding, output_padding)
         , _weights(weights)
         , _bias(bias)
-        , weights(_weights)
-        , bias(_bias)
-        , split(_dto.split)
-        , stride(_dto.stride)
+        , weights(_weights.cpp_ids)
+        , bias(_bias.cpp_ids)
+        , stride(stride)
         , with_activation(with_activation)
-        , activation_negative_slope(_dto.activation_negative_slope)
+        , activation_negative_slope(activation_slp)
     {
-        init_dto();
     }
 
     deconvolution(const dto* dto)
         :primitive_base(dto)
         , _weights(dto->weights)
         , _bias(dto->bias)
-        , weights(_weights)
-        , bias(_bias)
-        , split(_dto.split)
-        , stride(_dto.stride)
-        , with_activation(_dto.with_activation != 0)
-        , activation_negative_slope(_dto.activation_negative_slope)
+        , weights(_weights.cpp_ids)
+        , bias(_bias.cpp_ids)
+        , stride(dto->stride)
+        , with_activation(dto->with_activation != 0)
+        , activation_negative_slope(dto->activation_negative_slope)
     {
-        init_dto();
+        if (weights.size() != bias.size() || dto->split != weights.size())
+            throw std::runtime_error("Invalid deconvolution dto: bad split value");
     }
 
-protected:
-    const detail::primitive_id_arr _weights;
-    const detail::primitive_id_arr _bias;
+    std::vector<primitive_id>& weights;
+    std::vector<primitive_id>& bias;
+    tensor stride;
+    bool with_activation;
+    float activation_negative_slope;
 
-public:
-    const std::vector<primitive_id>& weights;
-    const std::vector<primitive_id>& bias;
-    const int32_t split;
-    const tensor stride;
-    const bool with_activation;
-    const float activation_negative_slope;
+    int32_t split() const { return static_cast<int32_t>(weights.size()); }
 
 protected:
+    primitive_id_arr _weights;
+    primitive_id_arr _bias;
+
     std::vector<primitive_id> get_dependencies() const override
     {
         auto result = weights;
@@ -90,11 +81,15 @@ protected:
         return result;
     }
 
-    void init_dto()
+    void update_dto(dto& dto) const override
     {
-        if (_weights.size() != _bias.size()) throw std::invalid_argument("numbers of weights and biases do not match");
-        _dto.weights = _weights.ref();
-        _dto.bias = _bias.ref();
+        primitive_base::update_dto(dto);
+        dto.weights = _weights.ref();
+        dto.bias = _bias.ref();
+        dto.split = split();
+        dto.stride = stride;
+        dto.with_activation = with_activation;
+        dto.activation_negative_slope = activation_negative_slope;
     }
 };
 }

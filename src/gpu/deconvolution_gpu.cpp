@@ -73,7 +73,7 @@ struct deconvolution_gpu : is_an_implementation {
         const auto& input_mem = arg.input_memory(0);  // input
         const auto& output_mem = arg.output_memory(); // output
 
-        auto split = arg.argument.split;
+        auto split = arg.argument.split();
         auto batch_size = output_mem.argument().size.batch[0];
 
         kernel_data kd;
@@ -119,7 +119,7 @@ struct deconvolution_gpu : is_an_implementation {
         auto output_offset = outer.desc()->output_offset().transform(output_mem.get_layout().size.format, 0);
         auto& output_size = outer.output_memory().argument().size;
         auto& filter_mem = outer.weights_memory(0);
-        auto split = outer.argument.split;
+        auto split = outer.argument.split();
         auto input_size = outer.input().at(0)->non_padded_output_layout().size;
         cldnn::tensor stride(cldnn::format::yx, { outer.argument.stride.spatial[0], outer.argument.stride.spatial[1] });
         cldnn::padding input_padding = outer.input().at(0)->desc()->output_padding();
@@ -152,7 +152,7 @@ struct deconvolution_gpu : is_an_implementation {
     {
         auto me = this;
 
-        auto split = outer.argument.split;
+        auto split = outer.argument.split();
 
         auto& input_mem = outer.input_memory(0);
         auto& output_mem = outer.output_memory();
@@ -191,7 +191,7 @@ struct deconvolution_gpu : is_an_implementation {
     static is_an_implementation *create(cldnn::deconvolution_arg &arg) {
         auto filter_arg = arg.weights_memory(0).argument(); //deconvolution filter
 
-        assert(arg.output_memory().argument().size.feature[0] / arg.argument.split == filter_arg.size.feature[0]); // memory::format oixy
+        assert(arg.output_memory().argument().size.feature[0] / arg.argument.split() == filter_arg.size.feature[0]); // memory::format oixy
         
         switch (filter_arg.format)
         {

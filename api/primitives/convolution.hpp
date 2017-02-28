@@ -64,7 +64,6 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
             throw std::runtime_error("Invalid convolution dto: bad split value");
     }
 
-public:
     std::vector<primitive_id>& weights;
     std::vector<primitive_id>& bias;
     tensor stride;
@@ -73,16 +72,16 @@ public:
 
     int32_t split() const { return static_cast<int32_t>(weights.size()); }
 
+protected:
+    primitive_id_arr _weights;
+    primitive_id_arr _bias;
+
     std::vector<primitive_id> get_dependencies() const override
     {
         auto result = weights;
         result.insert(result.end(), bias.begin(), bias.end());
         return result;
     }
-
-protected:
-    primitive_id_arr _weights;
-    primitive_id_arr _bias;
 
     void update_dto(dto& dto) const override
     {
