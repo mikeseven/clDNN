@@ -182,7 +182,7 @@ TEST(relu_f32_fw_gpu, basic_yxfb) {
 }
 
 TEST(relu_f32_fw_gpu, basic_input_padding_yxfb) {
-	//  Input Padding: 2x1
+	//  Input Padding: 2x1 (yx format)
 	//
 	//  Input:
 	//  z  z  z  z  z  z  z
@@ -253,8 +253,8 @@ TEST(relu_f32_fw_gpu, basic_input_padding_yxfb) {
 }
 
 TEST(relu_f32_fw_gpu, basic_input_and_output_padding_yxfb) {
-	//  Input Padding: 2x1
-	//  Output Padding: 1x2
+	//  Input Padding: 2x1  (yx format)
+	//  Output Padding: 1x2 (yx format)
 	//
 	//  Input:
 	//  z  z  z  z  z  z  z
