@@ -106,8 +106,6 @@ void generic_relu_test(int input_b, int input_f, int input_y, int input_x, float
 	VF output_cpu_vec = flatten_4d(format::yxfb, output_cpu);
 	for (size_t i = 0; i < output_cpu_vec.size(); ++i) {
 		if (output_cpu_vec[i] != output_ptr[i]) {
-			float x = output_cpu_vec[i];
-			float y = output_ptr[i];
 			test_is_correct = false;
 			break;
 		}
