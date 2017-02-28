@@ -400,7 +400,8 @@ void network_builder::prepare_padding()
                     const auto _depth_concat = std::static_pointer_cast<const cldnn::depth_concatenate>(prim);
                     auto new_depth_concat = std::make_shared<depth_concatenate>(
                         _depth_concat->id(),
-                        _depth_concat->input()
+                        _depth_concat->input(),
+                        needed_padding
                     );
                     _topology_map[_depth_concat->id()]->replace(new_depth_concat);
                 }
