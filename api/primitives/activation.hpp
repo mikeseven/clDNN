@@ -48,7 +48,6 @@ struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activ
 protected:
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.negative_slope = negative_slope;
     }
 };

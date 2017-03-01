@@ -72,7 +72,6 @@ protected:
 
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.input2 = input2.c_str();
         dto.mode = static_cast<cldnn_eltwise_mode>(mode);
         dto.with_activation = with_activation;

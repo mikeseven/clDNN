@@ -60,7 +60,6 @@ struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
 protected:
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.mode = static_cast<int32_t>(mode);
         dto.stride = stride;
         dto.size = size;

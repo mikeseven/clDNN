@@ -110,7 +110,6 @@ struct prior_box : public primitive_base<prior_box, CLDNN_PRIMITIVE_DESC(prior_b
 private:
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.img_size = img_size;
         dto.min_sizes = float_vector_to_arr(min_sizes);
         dto.max_sizes = float_vector_to_arr(max_sizes);

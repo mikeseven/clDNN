@@ -57,7 +57,6 @@ struct roi_pooling : public primitive_base<roi_pooling, CLDNN_PRIMITIVE_DESC(roi
 protected:
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.pooled_width = pooled_width;
         dto.pooled_height = pooled_height;
         dto.spatial_scale = spatial_scale;

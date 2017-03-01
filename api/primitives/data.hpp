@@ -41,7 +41,6 @@ struct data : public primitive_base<data, CLDNN_PRIMITIVE_DESC(data)>
 protected:
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.mem = mem.get();
     }
 };

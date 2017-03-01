@@ -62,7 +62,6 @@ protected:
 
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.weights = weights.c_str();
         dto.bias = bias.c_str();
         dto.with_activation = with_activation;

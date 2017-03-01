@@ -78,7 +78,6 @@ struct simpler_nms : public primitive_base<simpler_nms, CLDNN_PRIMITIVE_DESC(sim
 protected:
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.max_proposals = max_proposals;
         dto.iou_threshold = iou_threshold;
         dto.min_bbox_size = min_bbox_size;

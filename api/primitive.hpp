@@ -85,6 +85,10 @@ private:
                            ///< to it using round-towards-nearest-even (for floating-point data types) or round-towards-zero (for integral
                            ///< data types).
 
+    padding(tensor const& size, types type = zero)
+        : _size(size), _type(type)
+    {}
+
     static std::vector<tensor::value_type> to_abs(const std::vector<tensor::value_type>& sizes)
     {
         std::vector<tensor::value_type> result;
@@ -212,6 +216,14 @@ class primitive_base : public primitive
 public:
     const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const override
     {
+        //update common dto fields
+        _dto.id = _id.c_str();
+        _dto.type = _type;
+        _dto.input = _input.ref();
+        _dto.input_padding = _input_padding;
+        _dto.output_padding = _output_padding;
+
+        //call abstract method to update primitive-specific fields
         update_dto(_dto);
         return reinterpret_cast<const CLDNN_PRIMITIVE_DESC(primitive)*>(&_dto);
     }
@@ -232,17 +244,10 @@ protected:
             throw std::invalid_argument("DTO type mismatch");
     }
 
-    virtual void update_dto(DTO& dto) const
-    {
-        dto.id = _id.c_str();
-        dto.type = _type;
-        dto.input = _input.ref();
-        dto.input_padding = _input_padding;
-        dto.output_padding = _output_padding;
-    }
-   
 private:
     mutable DTO _dto;
+
+    virtual void update_dto(DTO& dto) const = 0;
 };
 
 #define CLDNN_DEFINE_TYPE_ID(PType) static primitive_type_id type_id()\

@@ -55,7 +55,6 @@ protected:
 
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.reference_input = reference_input.c_str();
         dto.offsets = offsets;
     }

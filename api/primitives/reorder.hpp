@@ -78,7 +78,6 @@ protected:
 
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.output_layout = output_layout;
         dto.mean_substract = mean.c_str();
         dto.substract_per_feature = float_vector_to_arr(substract_per_feature);

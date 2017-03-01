@@ -63,7 +63,6 @@ protected:
 
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.mean = mean.c_str();
         dto.variance = variance.c_str();
         dto.use_global_stats = use_global_stats;

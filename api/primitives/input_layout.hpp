@@ -41,7 +41,6 @@ struct input_layout : public primitive_base<input_layout, CLDNN_PRIMITIVE_DESC(i
 private:
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.layout = layout;
     }
 };

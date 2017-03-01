@@ -62,7 +62,6 @@ struct normalization :public primitive_base<normalization, CLDNN_PRIMITIVE_DESC(
 protected:
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.size = size;
         dto.k = k;
         dto.alpha = alpha;

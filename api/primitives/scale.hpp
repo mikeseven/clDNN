@@ -80,7 +80,6 @@ protected:
 
     void update_dto(dto& dto) const override
     {
-        primitive_base::update_dto(dto);
         dto.scale_input = scale_input.c_str();
         dto.bias_term = bias_term;
         dto.bias = bias.c_str();
