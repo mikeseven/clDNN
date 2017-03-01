@@ -120,9 +120,6 @@ struct deconvolution_gpu : is_an_implementation {
         auto& output_size = outer.output_memory().argument().size;
         auto& filter_mem = outer.weights_memory(0);
         auto split = outer.argument.split;
-
-        const int batch_size = output_mem.argument().size.batch[0];
-
         auto input_size = outer.input().at(0)->non_padded_output_layout().size;
         cldnn::tensor stride(cldnn::format::yx, { outer.argument.stride.spatial[0], outer.argument.stride.spatial[1] });
         cldnn::padding input_padding = outer.input().at(0)->desc()->output_padding();
