@@ -78,10 +78,10 @@ struct reorder_gpu : is_an_implementation {
         kd.padding_only = (!kd.have_subtraction) && outer.argument.substract_per_feature.empty() &&
             outer.input_memory(0).argument().format == outer.output_memory().argument().format &&
             (outer.input_memory(0).argument().format == memory::format::type::bfyx_f32 || outer.input_memory(0).argument().format == memory::format::type::bfyx_f16) &&
-            outer.desc()->output_padding().lower_size().transform(cldnn::format::bfyx, 0).feature[0] == 0 &&
-            outer.desc()->output_padding().lower_size().transform(cldnn::format::bfyx, 0).batch[0] == 0 &&
-            outer.desc()->output_padding().upper_size().transform(cldnn::format::bfyx, 0).feature[0] == 0 &&
-            outer.desc()->output_padding().upper_size().transform(cldnn::format::bfyx, 0).batch[0] == 0;
+            outer.desc()->output_padding().lower_size().feature[0] == 0 &&
+            outer.desc()->output_padding().lower_size().batch[0] == 0 &&
+            outer.desc()->output_padding().upper_size().feature[0] == 0 &&
+            outer.desc()->output_padding().upper_size().batch[0] == 0;
         kd.is_flatten = (outer.input_memory(0).argument().size.raw.size() != outer.output_memory().argument().size.raw.size());
 
         return kd;
