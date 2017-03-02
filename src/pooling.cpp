@@ -51,7 +51,8 @@ layout pooling_arg::calc_output_layout(const topology_map& topology_map, std::sh
 
             output_sizes[i] = static_cast<cldnn::tensor::value_type>(
                 2 * input_offsets[i] < output_sizes[i]
-                    ? ceil_div(std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0), strides[i]) + 1
+                    ? std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0) / strides[i] + 1
+                    // ? ceil_div(std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0), strides[i]) + 1
                     : 0);
         }
     }
