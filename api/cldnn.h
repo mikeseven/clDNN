@@ -168,17 +168,13 @@ typedef struct
     cldnn_tensor size;
 } cldnn_layout;
 
-typedef enum /*:int32_t*/
-{
-    cldnn_padding_zero,
-    cldnn_padding_one,
-    cldnn_padding_two,
-} cldnn_padding_type;
-
 typedef struct
 {
-    cldnn_tensor size;
-    int32_t type; /*cldnn_padding_type*/
+    cldnn_tensor lower_size; ///< Lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
+    cldnn_tensor upper_size; ///< Upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
+    float filling_value;     ///< Filling value for an element of padding. If data type of elements is different than float it is converted
+                             ///< to it using round-towards-nearest-even (for floating-point data types) or round-towards-zero (for integral
+                             ///< data types).
 } cldnn_padding;
 
 typedef struct

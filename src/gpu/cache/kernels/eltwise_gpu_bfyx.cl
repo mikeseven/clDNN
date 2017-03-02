@@ -12,22 +12,25 @@
 
 KERNEL (eltwise_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output, const __global UNIT_TYPE* input2)
 {
+    // constexpr:
+    const uint output_buffer_size_x = OUTPUT_PADDING_LOWER_SIZE_X + OUTPUT_SIZE_X + OUTPUT_PADDING_UPPER_SIZE_X;
+    const uint output_buffer_size_y = OUTPUT_PADDING_LOWER_SIZE_Y + OUTPUT_SIZE_Y + OUTPUT_PADDING_UPPER_SIZE_Y;
+
+
     const uint batch_num = INPUT_BATCH_NUM;
 
     const uint global_id = get_global_id(0);
 
     uint input_id = global_id;
 
-#if OUTPUT_PADDING_SIZE_Y > 0 || OUTPUT_PADDING_SIZE_X > 0
+#if OUTPUT_PADDING_LOWER_SIZE_X > 0 || OUTPUT_PADDING_UPPER_SIZE_X > 0 || OUTPUT_PADDING_LOWER_SIZE_Y > 0 || OUTPUT_PADDING_UPPER_SIZE_Y > 0
     const uint x = global_id % INPUT_SIZE_X;
     const uint y = (global_id / (INPUT_SIZE_X)) % INPUT_SIZE_Y;
     const uint f = (global_id / (INPUT_SIZE_X * INPUT_SIZE_Y)) % INPUT_FEATURE_NUM;
     const uint b = (global_id / (INPUT_SIZE_X * INPUT_SIZE_Y * INPUT_FEATURE_NUM));
     
-    uint output_id = b * OUTPUT_FEATURE_NUM * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
-    output_id += f * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
-    output_id += (y + OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
-    output_id += x + OUTPUT_PADDING_SIZE_X;
+    uint output_id = (b * OUTPUT_FEATURE_NUM + f) * output_buffer_size_x * output_buffer_size_y;
+    output_id += (OUTPUT_PADDING_LOWER_SIZE_Y + y) * output_buffer_size_x + OUTPUT_PADDING_LOWER_SIZE_X + x;
 #else
     uint output_id = input_id;
 #endif

@@ -16,70 +16,75 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+
 #include "cldnn_defs.h"
 #include "compounds.h"
 #include "tensor.hpp"
+
+#include <algorithm>
 #include <string>
+#include <vector>
+
 
 namespace cldnn
 {
 struct padding
 {
-    enum types : int32_t
-    {
-        zero = cldnn_padding_zero,
-        one = cldnn_padding_one,
-        two = cldnn_padding_two,
-    };
+    float filling_value() const { return _filling_value; }
 
-    types type() const { return _type; };
-    tensor size() const { return _size; };
-    padding(format format, const std::vector<tensor::value_type>& sizes, types type = zero )
-        : _size(format, 0, to_abs(sizes)), _type(type)
+    /// Gets lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
+    ///
+    /// @return Tensor with padding for top/left/lower bounds of data.
+    tensor lower_size() const { return _lower_size; }
+    /// Gets upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
+    ///
+    /// @return Tensor with padding for bottom/right/upper bounds of data.
+    tensor upper_size() const { return _upper_size; }
+    /// Gets format of tensors used in padding.
+    cldnn::format format() const { return _lower_size.format; }
+
+    padding(cldnn::format format, const std::vector<tensor::value_type>& lower_sizes, const std::vector<tensor::value_type>& upper_sizes, float filling_value = 0.0f)
+        : _lower_size(format, 0, to_abs(lower_sizes)), _upper_size(format, 0, to_abs(upper_sizes)), _filling_value(filling_value)
     {}
 
-    padding(): padding(format::x, {0}, zero){}
-
-    padding(const padding& other)
-        : _size(other._size), _type(other._type)
+    padding(cldnn::format format, const std::vector<tensor::value_type>& sizes, float filling_value = 0.0f)
+        : padding(format, sizes, sizes, filling_value)
     {}
+
+    padding(): padding(format::x, {0}) {}
 
     padding(const cldnn_padding& other)
-        : _size(other.size), _type(static_cast<types>(other.type))
+        : _lower_size(other.lower_size), _upper_size(other.upper_size), _filling_value(other.filling_value)
     {}
 
     operator cldnn_padding() const
     {
-        return{ static_cast<cldnn_tensor>(_size), static_cast<cldnn_padding_type>(_type) };
-    }
-
-    padding& operator=(const padding& other)
-    {
-        if (this == &other)
-            return *this;
-        _size = other._size;
-        _type = other._type;
-        return *this;
+        return { static_cast<cldnn_tensor>(_lower_size),
+                 static_cast<cldnn_tensor>(_upper_size),
+                 _filling_value };
     }
 
     // returns true if padding size is not zero
     explicit operator bool() const
     {
-        return std::any_of(_size.raw.begin(), _size.raw.end(), [](tensor::value_type const& el) { return el != 0; });
+        return std::any_of(_lower_size.raw.begin(), _lower_size.raw.end(), [](const tensor::value_type& el) { return el != 0; }) ||
+               std::any_of(_upper_size.raw.begin(), _upper_size.raw.end(), [](const tensor::value_type& el) { return el != 0; });
     }
 
 private:
-    tensor _size;
-    types _type;
+    tensor _lower_size;    ///< Lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
+    tensor _upper_size;    ///< Upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
+    // TODO: Add support for non-zero filling value (if necessary) or remove variable (if not necessary).
+    float  _filling_value; ///< Filling value for an element of padding. If data type of elements is different than float it is converted
+                           ///< to it using round-towards-nearest-even (for floating-point data types) or round-towards-zero (for integral
+                           ///< data types).
 
     static std::vector<tensor::value_type> to_abs(const std::vector<tensor::value_type>& sizes)
     {
-        std::vector<tensor::value_type> result(sizes.size());
-        for(size_t i = 0; i < result.size(); i++)
-        {
-            result[i] = abs(sizes[i]);
-        }
-        return std::move(result);
+        std::vector<tensor::value_type> result;
+        result.reserve(sizes.size());
+        std::transform(sizes.cbegin(), sizes.cend(), std::back_inserter(result), [](const tensor::value_type& el) { return abs(el); });
+        return result; // NRVO
     }
 };
 
@@ -200,9 +205,9 @@ struct primitive
     operator primitive_id() const { return id(); }
 
     //TODO remove backward compatibility
-    tensor input_offset() const { return input_padding().size().negate(); }
-    tensor output_offset() const { return output_padding().size(); }
-    padding::types padding_type() const { return input_padding().type(); }
+    tensor input_offset() const { return input_padding().lower_size().negate(); }
+    tensor output_offset() const { return output_padding().lower_size(); }
+    float padding_filling_value() const { return input_padding().filling_value(); }
 protected:
     const primitive_type_id _type;
     const primitive_id _id;

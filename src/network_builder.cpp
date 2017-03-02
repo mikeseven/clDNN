@@ -315,33 +315,66 @@ void network_builder::prepare_padding()
                 {
                     filter_layout = std::static_pointer_cast<const cldnn::reorder>(filter_desc)->output_layout;
                 }
-                cldnn::padding needed_padding(cldnn::format::xy, { filter_layout.size.spatial[0] - 1, filter_layout.size.spatial[1] - 1 });
 
                 // convolution have only one input primitive
                 primitive_id prev_id = pair.second->primitive_desc->input().at(0);
                 auto prim = _topology_map.at(prev_id)->primitive_desc;
 
-                const auto add_padding = [](cldnn::padding newpadd, auto const& current, auto&&... params)
+                auto prev_prim_output_layout = prim->type()->calc_output_layout(_topology_map, prim);
+
+                // Compute initial required paddings for primitive used as input for convolution.
+                auto input_offset = conv->input_offset().transform(conv_layout.size.format, 0);
+                auto stride = conv->stride.transform(cldnn::format::yx, 0);
+                auto input_limit_x = input_offset.spatial[0] + (conv_layout.size.spatial[0] - 1) * stride.spatial[0] + filter_layout.size.spatial[0];
+                auto input_limit_y = input_offset.spatial[1] + (conv_layout.size.spatial[1] - 1) * stride.spatial[1] + filter_layout.size.spatial[1];
+
+                auto left_padding = std::max(-input_offset.spatial[0], 0);
+                auto top_padding = std::max(-input_offset.spatial[1], 0);
+                auto right_padding = std::max(input_limit_x - prev_prim_output_layout.size.spatial[0], 0);
+                auto bottom_padding = std::max(input_limit_y - prev_prim_output_layout.size.spatial[1], 0);
+
+                // Adjust right padding, so entire buffer size in X dimension is properly aligned.
+                // TODO: NOTE: Will be reenabled with next check-in once heuristic for line-aligned algorithm will be added.
+                //auto needed_buffer_size_x = static_cast<cldnn::tensor::value_type>(
+                //    round_up_to(left_padding + prev_prim_output_layout.size.spatial[0] + right_padding, 16));
+                //right_padding = needed_buffer_size_x - left_padding - prev_prim_output_layout.size.spatial[0];
+
+                cldnn::padding needed_padding(cldnn::format::xy, { left_padding, top_padding }, { right_padding, bottom_padding });
+
+                const auto add_padding = [this](cldnn::padding newpadd, auto const& current, auto&&... params)
                 {
-                    auto currpadd = current->output_padding().size().transform(newpadd.size().format, 0);
+                    auto currpadd_lower = current->output_padding().lower_size().transform(newpadd.format(), 0);
+                    auto currpadd_upper = current->output_padding().upper_size().transform(newpadd.format(), 0);
 
                     bool needs_update = false;
-                    auto newsizes = newpadd.size().sizes();
-                    auto const& currsizes = currpadd.sizes();
-                    for (uint32_t i = 0; i < newsizes.size(); ++i)
+                    auto newsizes_lower = newpadd.lower_size().sizes();
+                    auto const& currsizes_lower = currpadd_lower.sizes();
+                    for (uint32_t i = 0; i < newsizes_lower.size(); ++i)
                     {
-                        if (newsizes[i] > currsizes[i])
+                        if (newsizes_lower[i] > currsizes_lower[i])
                             needs_update = true;
                         else
-                            newsizes[i] = currsizes[i]; //select max(old, new) for each component
+                            newsizes_lower[i] = currsizes_lower[i]; //select max(old, new) for each component
                     }
+
+                    auto newsizes_upper = newpadd.upper_size().sizes();
+                    auto const& currsizes_upper = currpadd_upper.sizes();
+                    for (uint32_t i = 0; i < newsizes_upper.size(); ++i)
+                    {
+                        if (newsizes_upper[i] > currsizes_upper[i])
+                            needs_update = true;
+                        else
+                            newsizes_upper[i] = currsizes_upper[i]; //select max(old, new) for each component
+                    }
+
+                    // TODO: Provide correct adjustment for right padding during computation of "merged" pading (so the result buffer size will be corretly aligned).
 
                     if (!needs_update)
                         return current;
                         
                     return std::make_shared<std::remove_reference_t<decltype(*current.operator->())>>(
                         std::forward<std::remove_reference_t<decltype(params)>>(params)...,
-                        cldnn::padding(newpadd.size().format, newsizes, newpadd.type())
+                        cldnn::padding(newpadd.lower_size().format, newsizes_lower, newsizes_upper, newpadd.filling_value())
                     );
                 };
 

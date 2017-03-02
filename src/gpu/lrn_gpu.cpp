@@ -118,14 +118,8 @@ struct lrn_gpu : is_an_implementation
         }
 
         // Checking for supported paddings.
-        switch (arg.desc()->input_padding().type())
-        {
-        case cldnn::padding::types::zero:
-            break;
-
-        default:
+        if (arg.desc()->input_padding().filling_value() != 0.0f)
             throw std::runtime_error("Unknown padding mode in lrn");
-        }
 
         return kd;
     }
@@ -144,8 +138,8 @@ struct lrn_gpu : is_an_implementation
         auto alpha_sign = std::signbit(outer.argument.alpha) ? -1.0f : 1.0f;
         auto alpha_abs_sqrt = std::sqrt(std::abs(outer.argument.alpha));
 
-        auto input_padding = outer.argument.input_padding().size().transform(cldnn::format::xy, 0);
-        if (input_padding.spatial[0] != 0 || input_padding.spatial[1] != 0)
+        auto input_padding = outer.argument.input_padding();
+        if (input_padding)
         {
             throw std::runtime_error("input padding not implemented in LRN yet!");
         }
@@ -169,8 +163,8 @@ struct lrn_gpu : is_an_implementation
             gpu::make_jit_constant("FP16_UNIT_USED",    static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_VAL_ZERO",     data.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("INPUT_PADDING",     outer.argument.input_padding().size()),
-            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding().size())
+            gpu::make_jit_constant("INPUT_PADDING",     outer.argument.input_padding()),
+            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding())
         };
 
         return mem_consts;
