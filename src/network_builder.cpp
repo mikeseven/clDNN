@@ -334,9 +334,10 @@ void network_builder::prepare_padding()
                 auto bottom_padding = std::max(input_limit_y - prev_prim_output_layout.size.spatial[1], 0);
 
                 // Adjust right padding, so entire buffer size in X dimension is properly aligned.
-                auto needed_buffer_size_x = static_cast<cldnn::tensor::value_type>(
-                    round_up_to(left_padding + prev_prim_output_layout.size.spatial[0] + right_padding, 16));
-                right_padding = needed_buffer_size_x - left_padding - prev_prim_output_layout.size.spatial[0];
+                // TODO: NOTE: Will be reenabled with next check-in once heuristic for line-aligned algorithm will be added.
+                //auto needed_buffer_size_x = static_cast<cldnn::tensor::value_type>(
+                //    round_up_to(left_padding + prev_prim_output_layout.size.spatial[0] + right_padding, 16));
+                //right_padding = needed_buffer_size_x - left_padding - prev_prim_output_layout.size.spatial[0];
 
                 cldnn::padding needed_padding(cldnn::format::xy, { left_padding, top_padding }, { right_padding, bottom_padding });
 
