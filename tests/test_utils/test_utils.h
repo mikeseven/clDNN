@@ -23,8 +23,6 @@
 #include <iostream>
 #include <limits>
 #include <random>
-#include <gtest/gtest.h>
-#include <api/primitive.hpp>
 
 namespace tests {
 
@@ -159,19 +157,6 @@ void set_values(const cldnn::memory& mem, std::vector<T> args) {
         *it++ = x;
 }
 
-template<typename T>
-void set_random_valus(const cldnn::memory& mem, float min, float max) {
-	auto ptr = mem.pointer<T>();
-
-	std::default_random_engine generator(1);
-	std::uniform_real_distribution<float> distribution(min, max);
-
-	for (auto it = ptr.begin(); it != ptr.end(); ++it)
-	{
-		*it = distribution(generator);
-	}
-}
-
 // todo remove
 // [[deprecated]]
 template <typename T>
@@ -220,44 +205,5 @@ inline bool are_equal(
 
         return true;
 }
-
-
-class test_params
-{
-public:
-
-	test_params(int32_t batch_size, int32_t feature_size, cldnn::tensor input_size) :
-		input({ cldnn::format::bfyx,{ batch_size, feature_size, input_size.spatial[1],  input_size.spatial[0] } })
-	{ }
-
-	cldnn::tensor input;
-
-	//TODO:
-	//formats
-	//data-types
-	//input + output padding
-};
-
-class generic_test : public ::testing::TestWithParam<std::tuple<test_params*, cldnn::primitive*>>
-{
-public:
-
-	generic_test();
-
-	static void TearDownTestCase();
-
-	void run_single_test();
-
-	static std::vector<test_params*> generate_generic_test_params();
-
-	virtual void generate_reference(cldnn::memory& input, cldnn::memory& output) = 0;
-
-	test_params* generic_params;
-	cldnn::primitive* layer_parmas;
-
-private:
-
-	static std::vector<test_params*> all_generic_params;
-};
 
 }
