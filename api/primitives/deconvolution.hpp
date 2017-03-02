@@ -59,7 +59,7 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
         , _bias(dto->bias)
     {
         if (!dto->split || weights.size() != bias.size() || dto->split != weights.size())
-            throw std::runtime_error("Invalid deconvolution dto: bad split value");
+            throw std::invalid_argument("Invalid deconvolution dto: bad split value");
     }
 
     std::vector<primitive_id>& weights;
