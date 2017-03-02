@@ -51,7 +51,7 @@ layout convolution_arg::calc_output_layout(const topology_map& topology_map, std
 
     auto output_spatial_x = static_cast<cldnn::tensor::value_type>(
         2 * input_offset.spatial[0] < input_layout.size.spatial[0]
-            ? ceil_div(std::max(input_layout.size.spatial[0] - 2 * input_offset.spatial[0] - kernel_xy[1], 0), strd.spatial[0]) + 1
+            ? ceil_div(std::max(input_layout.size.spatial[0] - 2 * input_offset.spatial[0] - kernel_xy[0], 0), strd.spatial[0]) + 1
             : 0);
     auto output_spatial_y = static_cast<cldnn::tensor::value_type>(
         2 * input_offset.spatial[1] < input_layout.size.spatial[1]

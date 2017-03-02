@@ -131,8 +131,8 @@ struct deconvolution_gpu : is_an_implementation {
             gpu::make_jit_constant("INPUT_OFFSET",              input_offset),
             gpu::make_jit_constant("OUTPUT_OFFSET",             output_offset),
             gpu::make_jit_constant("OUTPUT_LIMIT",              output_size),
-            gpu::make_jit_constant("INPUT_PADDING",             input_padding.size()),
-            gpu::make_jit_constant("OUTPUT_PADDING",            outer.argument.output_padding().size()),
+            gpu::make_jit_constant("INPUT_PADDING",             input_padding),
+            gpu::make_jit_constant("OUTPUT_PADDING",            outer.argument.output_padding()),
             gpu::make_jit_constant("FILTER",                    filter_mem.argument().size),
             gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
             gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"),
@@ -158,7 +158,7 @@ struct deconvolution_gpu : is_an_implementation {
         auto& output_mem = outer.output_memory();
         auto& filter_mem = outer.weights_memory(0);
 
-        if (outer.desc()->padding_type() != cldnn::padding::zero)
+        if (outer.desc()->padding_filling_value() != 0.0f)
             throw std::invalid_argument("Unknown padding mode in deconvolution.");
 
         // Check whether all memory elements use the same unit type (FP16 or FP32).

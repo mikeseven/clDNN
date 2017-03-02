@@ -65,7 +65,7 @@ KERNEL(roi_pooling_gpu)(const __global UNIT_TYPE* input_data,
 
     UNIT_TYPE maxval = is_empty ? 0 : -UNIT_INIT_VAL_MAX;
     int offset = (roi_batch_ind * CHANNELS + c) * HEIGHT * WIDTH;
-    __global UNIT_TYPE* input = input_data + offset + (INPUT_PADDING_SIZE_Y * WIDTH) + INPUT_PADDING_SIZE_X;
+    __global UNIT_TYPE* input = input_data + offset + (INPUT_PADDING_LOWER_SIZE_Y * WIDTH) + INPUT_PADDING_LOWER_SIZE_X;
     
     for (int h = ystart; h < yend; ++h) {
         for (int w = xstart; w < xend; ++w) {
