@@ -257,3 +257,139 @@ TEST(local_response_normalization_gpu, test_within_channel) {
     // test clean
 
 }
+
+
+using namespace cldnn;
+
+class lrn_test : public tests::generic_test
+{
+
+public:
+
+	static void TearDownTestCase() 
+	{
+		generic_test::TearDownTestCase();
+
+		for (auto layer_params : all_layer_params)
+		{
+			delete layer_params;
+		}
+	}
+
+	static std::vector<cldnn::primitive*> generate_specific_test_params()
+	{
+		all_layer_params.push_back(new normalization("lrn", "input", 5, 2.f, 2.f, 0.24f, cldnn_lrn_norm_region_within_channel));
+		all_layer_params.push_back(new normalization("lrn", "input", 5, 2.f, 2.f, 0.24f, cldnn_lrn_norm_region_across_channel));
+
+		//TODO: add more combinations
+
+		return all_layer_params;
+	}
+
+	virtual void generate_reference(memory& input, memory& output)
+	{
+		const cldnn::normalization* lrn = (cldnn::normalization*)layer_parmas;
+		float alpha = (*lrn).alpha;
+		float beta = (*lrn).beta;
+		float k = (*lrn).k;
+		uint32_t size = (*lrn).size;
+		cldnn_lrn_norm_region lrn_norm_region = (*lrn).norm_region;
+		float* input_mem = input.pointer<float>().data();
+		float* output_mem = output.pointer<float>().data();
+		int batch = input.get_layout().size.batch[0];
+		int feature = input.get_layout().size.feature[0];
+		int height = input.get_layout().size.spatial[1];
+		int width = input.get_layout().size.spatial[0];
+		switch (lrn_norm_region)
+		{
+			case cldnn_lrn_norm_region::cldnn_lrn_norm_region_across_channel:
+			{
+				for (int n = 0; n < batch; ++n) 
+				{
+					for (int c = 0; c < feature; ++c) 
+					{
+						for (int h = 0; h < height; ++h) 
+						{
+							for (int w = 0; w < width; ++w) 
+							{
+								int c_start = c - (size - 1) / 2;
+								int c_end = std::min((int)(c_start + size), feature);
+								c_start = std::max(c_start, 0);
+								float scale = k;
+								for (int i = c_start; i < c_end; ++i) 
+								{
+									int input_index = ((n * feature + i) * height + h) * width + w;
+									float value = input_mem[input_index];
+									scale += value * value * alpha / size;
+								}
+								int index = ((n * feature + c) * height + h) * width + w;
+								output_mem[index] = input_mem[index] / pow(scale, beta);
+							}
+						}
+					}
+				}
+				break;
+			}
+			case cldnn_lrn_norm_region::cldnn_lrn_norm_region_within_channel:
+			{
+				int pad = (size - 1) / 2;
+				for (int n = 0; n < batch; ++n) 
+				{
+					for (int c = 0; c < feature; ++c) 
+					{
+						for (int h = 0; h < height; ++h) 
+						{
+							for (int w = 0; w < width; ++w) 
+							{
+								float scale = 0.f;
+								int h_start = h - pad;
+								int w_start = w - pad;
+								int h_end = std::min((int)(h_start + size), height + pad);
+								int w_end = std::min((int)(w_start + size), width + pad);
+								int pool_size = (h_end - h_start) * (w_end - w_start);
+								h_start = std::max(h_start, 0);
+								w_start = std::max(w_start, 0);
+								h_end = std::min(h_end, height);
+								w_end = std::min(w_end, width);
+								for (int nh = h_start; nh < h_end; ++nh) 
+								{
+									for (int nw = w_start; nw < w_end; ++nw) 
+									{
+										int input_index = ((n * feature + c) * height + nh) * width + nw;
+										float value = input_mem[input_index];
+										scale += value * value;
+									}
+								}
+								scale /= pool_size;
+								int index = ((n * feature + c) * height + h) * width + w;
+								output_mem[index] = input_mem[index] / pow(scale * alpha + k, beta);
+							}
+						}
+					}
+				}
+				break;
+			}
+			default:
+			{
+				assert(0);
+			}
+		}
+	}
+
+private:
+
+	static std::vector<cldnn::primitive*> all_layer_params;	
+};
+
+std::vector<cldnn::primitive*> lrn_test::all_layer_params = {};
+
+TEST_P(lrn_test, DISABLED_test_all)
+{
+	run_single_test();
+}
+
+INSTANTIATE_TEST_CASE_P(LRN, 
+						lrn_test, 
+						::testing::Combine(::testing::ValuesIn(tests::generic_test::generate_generic_test_params()), ::testing::ValuesIn(lrn_test::generate_specific_test_params())), 
+						tests::generic_test::custom_param_name_functor());
+
