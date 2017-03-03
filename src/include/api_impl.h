@@ -41,9 +41,6 @@ T exception_handler(cldnn_status default_error, cldnn_status* status, const T& d
             *status = CLDNN_OUT_OF_RESOURCES;
         static_cast<void>(default_result);
         throw;
-#ifndef NDEBUG
-        return default_result;
-#endif
     }
     catch (...)
     {
