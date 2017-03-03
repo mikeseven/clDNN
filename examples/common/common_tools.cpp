@@ -386,10 +386,12 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
 
         return network;
     }
-    catch (const std::out_of_range &ex)
+    catch (const cldnn::error &err)
     {
-        std::cout << "ERROR: " << ex.what() << ". Try smaller batch size" << std::endl;
-        throw std::runtime_error("Network build failed");
+        std::cout << "ERROR: " << err.what() << std::endl;
+        if (err.status() == CLDNN_OUT_OF_RESOURCES)
+            std::cout << "HINT: Try to use smaller batch size" << std::endl;
+        throw;
     }
     catch (...)
     {
