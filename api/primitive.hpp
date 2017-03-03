@@ -71,9 +71,11 @@ struct padding
                std::any_of(_upper_size.raw.begin(), _upper_size.raw.end(), [](const tensor::value_type& el) { return el != 0; });
     }
 
-    static padding max(padding const& lhs, padding const& rhs, types type = zero)
+    static padding max(padding const& lhs, padding const& rhs, float filling_value = 0.0f)
     {
-        return padding{ tensor::max(lhs.size(), rhs.size()), type };
+        return padding{ tensor::max(lhs.lower_size(), rhs.lower_size()),
+                        tensor::max(lhs.upper_size(), rhs.upper_size()),
+                        filling_value };
     }
 
 
@@ -85,8 +87,8 @@ private:
                            ///< to it using round-towards-nearest-even (for floating-point data types) or round-towards-zero (for integral
                            ///< data types).
 
-    padding(tensor const& size, types type = zero)
-        : _size(size), _type(type)
+    padding(tensor const& lower, tensor const& upper, float filling_value = 0.0f)
+        : _lower_size(lower), _upper_size(upper), _filling_value(filling_value)
     {}
 
     static std::vector<tensor::value_type> to_abs(const std::vector<tensor::value_type>& sizes)
