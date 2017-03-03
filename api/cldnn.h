@@ -54,6 +54,7 @@ extern "C" {
 #define CLDNN_ERROR   -1
 #define CLDNN_UNSUPPORTED -2
 #define CLDNN_INVALID_ARG -3
+#define CLDNN_OUT_OF_RESOURCES -4
 
 typedef int32_t cldnn_status;
 

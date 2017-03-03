@@ -18,6 +18,7 @@
 #pragma once
 #include "api/cldnn.h"
 #include <functional>
+#include <stdexcept>
 
 #define API_CAST(api_type, impl_type) \
 inline api_type api_cast(impl_type* value) { return reinterpret_cast<api_type>(value); } \
@@ -33,6 +34,16 @@ T exception_handler(cldnn_status default_error, cldnn_status* status, const T& d
         if (status)
             *status = CLDNN_SUCCESS;
         return func();
+    }
+    catch (const std::out_of_range&)
+    {
+        if (status)
+            *status = CLDNN_OUT_OF_RESOURCES;
+        static_cast<void>(default_result);
+        throw;
+#ifndef NDEBUG
+        return default_result;
+#endif
     }
     catch (...)
     {
@@ -55,6 +66,12 @@ inline void exception_handler(cldnn_status default_error, cldnn_status* status, 
         if (status)
             *status = CLDNN_SUCCESS;
         func();
+    }
+    catch (const std::out_of_range&)
+    {
+        if (status)
+          *status = CLDNN_OUT_OF_RESOURCES;
+        throw;
     }
     catch (...)
     {

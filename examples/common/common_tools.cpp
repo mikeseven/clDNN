@@ -370,20 +370,32 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     if (ep.profiling)           options.set_option(cldnn::build_option::profiling);
     if (ep.dump_hidden_layers || ep.profiling)  options.set_option(cldnn::build_option::debug);
 
-    std::vector<cldnn::primitive_id> outputs{"output"};
+    std::vector<cldnn::primitive_id> outputs{ "output" };
     if (!ep.dump_layer_name.empty())  outputs.push_back(ep.dump_layer_name);
     if (!ep.run_single_layer.empty()) outputs.push_back(ep.run_single_layer);
     options.set_option(cldnn::build_option::outputs(outputs));
-
-    cldnn::network network(engine, topology, options);
-    auto compile_time = timer_compilation.uptime();
-    
-    if (ep.print_type == Verbose)
+    try 
     {
-        std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
-    }
+        cldnn::network network(engine, topology, options);
+        auto compile_time = timer_compilation.uptime();
 
-    return network;
+        if (ep.print_type == Verbose)
+        {
+            std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
+        }
+
+        return network;
+    }
+    catch (const std::out_of_range &ex)
+    {
+        std::cout << "ERROR: " << ex.what() << ". Try smaller batch size" << std::endl;
+        throw std::runtime_error("Network build failed");
+    }
+    catch (...)
+    {
+        std::cout << "ERROR: Network build failed" << std::endl;
+        throw;
+    } 
 }
 
 uint32_t get_next_nearest_power_of_two(int number)

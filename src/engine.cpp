@@ -41,7 +41,13 @@ engine_impl::engine_impl(const engine_configuration& conf)
 
 memory_impl* engine_impl::allocate_buffer(layout layout)
 {
-    return new neural::gpu::gpu_buffer(this, layout);
+    try {
+        return new neural::gpu::gpu_buffer(this, layout);
+    }
+    catch (...)
+    {
+        throw std::out_of_range("out of GPU resources");
+    }
 }
 
 event_impl* engine_impl::create_user_event()

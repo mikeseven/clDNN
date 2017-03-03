@@ -50,15 +50,23 @@ namespace cldnn {
 
 using status_t = ::cldnn_status;
 
-#define CLDNN_THROW(msg, status) throw std::runtime_error(msg);
+#define CLDNN_THROW_RT(msg, status) throw std::runtime_error(msg)
+#define CLDNN_THROW_OUT_OF_RESOURCES(msg, status) throw std::out_of_range(msg)
 
 template<class T>
 T check_status(std::string err_msg, std::function<T(status_t*)> func)
 {
     status_t status;
     auto result = func(&status);
-    if (status != CLDNN_SUCCESS)
-        CLDNN_THROW(err_msg, status);
+    
+    if (status == CLDNN_OUT_OF_RESOURCES)
+    {
+        CLDNN_THROW_OUT_OF_RESOURCES(err_msg, status);
+    }
+    else if (status != CLDNN_SUCCESS)
+    {
+        CLDNN_THROW_RT(err_msg, status);
+    }
     return result;
 }
 
@@ -67,8 +75,14 @@ inline void check_status<void>(std::string err_msg, std::function<void(status_t*
 {
     status_t status;
     func(&status);
-    if (status != CLDNN_SUCCESS)
-        CLDNN_THROW(err_msg, status);
+    if (status == CLDNN_OUT_OF_RESOURCES)
+    {
+        CLDNN_THROW_OUT_OF_RESOURCES(err_msg, status);
+    }
+    else if (status != CLDNN_SUCCESS)
+    {
+        CLDNN_THROW_RT(err_msg, status);
+    }
 }
 
 #define CLDNN_API_CLASS(the_class) static_assert(std::is_standard_layout<the_class>::value, #the_class " has to be 'standart layout' class");
