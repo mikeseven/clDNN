@@ -17,6 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "api/cldnn.h"
+#include "api/cldnn_defs.h"
 #include <functional>
 #include <stdexcept>
 
@@ -35,12 +36,14 @@ T exception_handler(cldnn_status default_error, cldnn_status* status, const T& d
             *status = CLDNN_SUCCESS;
         return func();
     }
-    catch (const std::out_of_range&)
+    catch (const cldnn::error& err)
     {
         if (status)
-            *status = CLDNN_OUT_OF_RESOURCES;
+            *status = err.status();
+#ifndef NDEBUG
         static_cast<void>(default_result);
         throw;
+#endif
     }
     catch (...)
     {
@@ -49,10 +52,12 @@ T exception_handler(cldnn_status default_error, cldnn_status* status, const T& d
 #ifndef NDEBUG
         static_cast<void>(default_result);
         throw;
-#else
-        return default_result;
 #endif
     }
+
+#ifdef NDEBUG
+    return default_result;
+#endif
 }
 
 inline void exception_handler(cldnn_status default_error, cldnn_status* status, std::function<void()> func)
@@ -64,11 +69,13 @@ inline void exception_handler(cldnn_status default_error, cldnn_status* status, 
             *status = CLDNN_SUCCESS;
         func();
     }
-    catch (const std::out_of_range&)
+    catch (const cldnn::error& err)
     {
         if (status)
-          *status = CLDNN_OUT_OF_RESOURCES;
+          *status = err.status();
+#ifndef NDEBUG
         throw;
+#endif
     }
     catch (...)
     {

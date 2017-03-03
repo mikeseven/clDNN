@@ -187,7 +187,7 @@ void cldnn_get_event_profiling_info(cldnn_event event, cldnn_profiling_interval*
 
 cldnn_network cldnn_build_network(cldnn_engine engine, cldnn_topology topology, cldnn_build_option* options, size_t options_num, cldnn_status* status)
 {
-    return exception_handler<cldnn_network>(CLDNN_OUT_OF_RESOURCES, status, nullptr, [&]() // during network build, most common failure is OOM
+    return exception_handler<cldnn_network>(CLDNN_ERROR, status, nullptr, [&]()
     {
         cldnn::build_options options_obj(cldnn::array_ref<cldnn_build_option>(options, options_num));
         return api_cast(api_cast(engine)->build_network(api_cast(topology), options_obj));

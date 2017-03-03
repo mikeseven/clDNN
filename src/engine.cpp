@@ -44,9 +44,17 @@ memory_impl* engine_impl::allocate_buffer(layout layout)
     try {
         return new neural::gpu::gpu_buffer(this, layout);
     }
-    catch (...)
+    catch (const cl::Error& clErr)
     {
-        throw std::out_of_range("out of GPU resources");
+        switch (clErr.err())
+        {
+        case CL_MEM_OBJECT_ALLOCATION_FAILURE:
+        case CL_OUT_OF_RESOURCES:
+        case CL_OUT_OF_HOST_MEMORY:
+            throw error("out of GPU resources", CLDNN_OUT_OF_RESOURCES);
+        default:
+            throw error("GPU buffer allocation failed", CLDNN_ERROR);
+        }
     }
 }
 
