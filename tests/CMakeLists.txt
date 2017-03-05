@@ -73,13 +73,19 @@ file(GLOB __CLDNN_Sources__gtest
     "${__CLDNN_Directory__gtest}/*.cc"
   )
 
-
+if (MSVC)
+  file(GLOB __CLDNN_Sources__natvis
+    "${CMAKE_CURRENT_SOURCE_DIR}/float16.natvis"
+  )
+endif()
+  
 set(__CLDNN_AllSources
     ${__CLDNN_Sources__main}
     ${__CLDNN_Sources__test_cases}
     ${__CLDNN_Sources__test_utils}
     ${__CLDNN_Sources__module_tests}
     ${__CLDNN_Sources__gtest}
+    ${__CLDNN_Sources__natvis}
   )
 
 # =============================================== Filters ==============================================
