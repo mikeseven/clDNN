@@ -425,7 +425,7 @@ TEST(convolution_f32_fw_gpu, basic_convolution) {
 	//print_2d(temp_vec);
 }
 
-TEST(DISABLED_convolution_f32_fw_gpu, basic_convolution_input_padding) {
+TEST(convolution_f32_fw_gpu, basic_convolution_input_padding) {
 	//  Filter : 2x2
 	//  Stride : 1x1
 	//  Input  : 3x4
@@ -526,7 +526,7 @@ TEST(DISABLED_convolution_f32_fw_gpu, basic_convolution_input_padding) {
 	//print_2d(temp_vec);
 }
 
-TEST(DISABLED_convolution_f32_fw_gpu, basic_convolution_input_and_output_padding) {
+TEST(convolution_f32_fw_gpu, basic_convolution_input_and_output_padding) {
 	//  Filter : 2x2
 	//  Stride : 1x1
 	//  Input  : 3x4
