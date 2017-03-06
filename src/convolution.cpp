@@ -42,11 +42,40 @@ layout convolution_arg::calc_output_layout(const topology_map& topology_map, std
     // outp <= (input_size - (2*input_offset) - kernel_size)/ stride 
     auto kernel_xy = weights_layout.size.spatial;
     assert(kernel_xy.size() == 2);
-    //TODO !!!implement correct output size calculation!!!
-    auto output_spatial_x = (input_layout.size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_xy[0]) / strd.spatial[0] + 1;
-    auto output_spatial_y = (input_layout.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_xy[1]) / strd.spatial[1] + 1;
-    //auto output_spatial_x = static_cast<int32_t>(ceil(static_cast<float>(input_layout.size.spatial[0] - (2*input_offset.spatial[0]) - kernel_xy[0]) / static_cast<float>(strd.spatial[0]))) + 1;
-    //auto output_spatial_y = static_cast<int32_t>(ceil(static_cast<float>(input_layout.size.spatial[1] - (2*input_offset.spatial[1]) - kernel_xy[1]) / static_cast<float>(strd.spatial[1]))) + 1;
+
+    // TODO: Consider moving general parameter verification to arguments constructor.
+    if (strd.spatial[0] <= 0 || strd.spatial[1] <= 0)
+        throw std::invalid_argument("Stride must be positive (>= 1)");
+    if (2 * input_offset.spatial[0] >= input_layout.size.spatial[0] || 2 * input_offset.spatial[1] >= input_layout.size.spatial[1])
+        throw std::invalid_argument("Input offset is greater than input data range. There is no input data to process");
+
+    // NOTE: Using most common calculation.
+    //       For example - consider convolution with input=224x224, filter=7x7, offset=-3 (top/left/right/bottom), stride=2x2:
+    //       Input index range is: 0-223, including offset: (-3)-226 (values outside of input index range are assumed to be 0).
+    //       Output size should be: 113, becuase output index range would be: 0-112 which uses windows in input:
+    //       (-3)-3; (-1)-5; 1-7; ...; 219-225; 221-227
+    //       Common algorithm returns: 112, output index range: 0-111 which uses windows in input:
+    //       (-3)-3; (-1)-5; 1-7; ...; 217-223; 219-225
+    //
+    //       The situation is even worse when we have e.g. input=230x230, filter=7x7, offset=0 (top/left/right/bottom), stride=2x2:
+    //       Input index range is: 0-229, including offset: 0-229 (values outside of input index range are assumed to be 0).
+    //       Output size should be: 113, becuase output index range would be: 0-112 which uses windows in input:
+    //       0-6; 2-8; 4-10; ...; 222-228; 224-230
+    //       Common algorithm returns: 112, output index range: 0-111 which uses windows in input:
+    //       0-6; 2-8; 4-10; ...; 220-226; 222-228
+    //
+    //       In common calculation we dropped entire valid column and row of input data. Please, take into consideration this
+    //       behavior (it can omit from calculation up to stride-1 last rows and columns).
+    auto output_spatial_x = static_cast<cldnn::tensor::value_type>(
+        2 * input_offset.spatial[0] < input_layout.size.spatial[0]
+            ? std::max(input_layout.size.spatial[0] - 2 * input_offset.spatial[0] - kernel_xy[0], 0) / strd.spatial[0] + 1
+            // ? ceil_div(std::max(input_layout.size.spatial[0] - 2 * input_offset.spatial[0] - kernel_xy[0], 0), strd.spatial[0]) + 1
+            : 0);
+    auto output_spatial_y = static_cast<cldnn::tensor::value_type>(
+        2 * input_offset.spatial[1] < input_layout.size.spatial[1]
+            ? std::max(input_layout.size.spatial[1] - 2 * input_offset.spatial[1] - kernel_xy[1], 0) / strd.spatial[1] + 1
+            // ? ceil_div(std::max(input_layout.size.spatial[1] - 2 * input_offset.spatial[1] - kernel_xy[1], 0), strd.spatial[1]) + 1
+            : 0);
     // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
     auto number_of_features = weights_layout.size.feature[0] * static_cast<int32_t>(split);
 
@@ -72,7 +101,7 @@ convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const co
     if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("input/output number of dimension does not match.");
     if (stride.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("stride/output number of dimension does not match.");
 
-    auto split = desc->split;
+    auto split = desc->split();
     for (decltype(split) j = 0; j < split; j++)
     {
         auto& filter_mem = weights_memory(j);
@@ -85,7 +114,7 @@ convolution_arg::convolution_arg(network_impl& network, std::shared_ptr<const co
         if (filter_arg.size.raw.size() != output_arg.size.raw.size() + 1) throw std::runtime_error("window_size != 5");
         if (bias_arg.size.raw.size() != 3) throw std::runtime_error("biases isn't 1D vector."); // b=1, f=1
         if (bias_arg.size.spatial[0] != output_size.feature[0] / split) throw std::runtime_error("biases/output feature maps number does not match.");
-        if (desc->padding_type() != padding::types::zero) throw std::runtime_error("unknown padding mode.");
+        if (desc->padding_filling_value() != 0.0f) throw std::runtime_error("unknown padding mode.");
         if (input_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("input offset/input number of dimension does not match.");
         //not relevant anymore
         //if (output_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("output offset/input number of dimension does not match.");

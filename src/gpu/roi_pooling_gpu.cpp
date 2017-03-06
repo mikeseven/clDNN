@@ -110,8 +110,8 @@ struct roi_pooling_gpu : is_an_implementation {
             gpu::make_jit_constant("WIDTH",             width),
             gpu::make_jit_constant("POOLED_HEIGHT",     outer.argument.pooled_height),
             gpu::make_jit_constant("POOLED_WIDTH",      outer.argument.pooled_width),
-            gpu::make_jit_constant("INPUT_PADDING",     outer.input().at(cldnn::roi_pooling_arg::data_index)->desc()->output_padding().size()),
-            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding().size()),
+            gpu::make_jit_constant("INPUT_PADDING",     outer.input().at(cldnn::roi_pooling_arg::data_index)->desc()->output_padding()),
+            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding()),
             gpu::make_jit_constant("SPATIAL_SCALE",     outer.argument.spatial_scale),
             gpu::make_jit_constant("FP16_SUPPORTED",    static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",    static_cast<int>(data.fp16_unit_used)),
@@ -137,9 +137,9 @@ struct roi_pooling_gpu : is_an_implementation {
         cldnn::neural_memory::arguments input_arg  = arg.input_memory(0).argument();
         cldnn::neural_memory::arguments output_arg = arg.output_memory().argument();
 
-        cldnn::padding::types padding = arg.desc()->padding_type();
+        const auto padding_filling_value = arg.desc()->padding_filling_value();
 
-        if (cldnn::padding::types::zero != padding) {
+        if (padding_filling_value != 0.0f) {
             throw std::logic_error("ROI pooling supports only zero padding.");
         }
 

@@ -68,7 +68,7 @@ deconvolution_arg::deconvolution_arg(network_impl& network, std::shared_ptr<cons
     if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("input/output number of dimension does not match.");
     if (stride.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("stride/output number of dimension does not match.");
 
-    auto split = desc->split;
+    auto split = desc->split();
     for (decltype(split) j = 0; j < split; j++)
     {
         auto& filter_mem = weights_memory(j);
@@ -81,7 +81,7 @@ deconvolution_arg::deconvolution_arg(network_impl& network, std::shared_ptr<cons
         if (filter_arg.size.raw.size() != output_arg.size.raw.size() + 1) throw std::runtime_error("window_size != 5");
         if (bias_arg.size.raw.size() != 3) throw std::runtime_error("biases isn't 1D vector."); // b=1, f=1
         if (bias_arg.size.spatial[0] != output_size.feature[0] / split) throw std::runtime_error("biases/output feature maps number does not match.");
-        if (desc->padding_type() != padding::types::zero) throw std::runtime_error("unknown padding mode.");
+        if (desc->padding_filling_value() != 0.0f) throw std::runtime_error("unknown padding mode.");
         if (input_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("input offset/input number of dimension does not match.");
 
         assert(1 == output_size.feature.size());

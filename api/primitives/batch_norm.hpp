@@ -36,37 +36,37 @@ struct batch_norm : public primitive_base<batch_norm, CLDNN_PRIMITIVE_DESC(batch
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :primitive_base(id, {input}, input_padding, output_padding, "", "", use_global_stats, epsilon)
+        :primitive_base(id, {input}, input_padding, output_padding)
         , mean(mean)
         , variance(variance)
-        , use_global_stats(_dto.use_global_stats)
-        , epsilon(_dto.epsilon)
+        , use_global_stats(use_global_stats)
+        , epsilon(epsilon)
     {
-        init_dto();
     }
 
     batch_norm(const dto* dto)
         :primitive_base(dto)
         , mean(dto->mean)
         , variance(dto->variance)
-        , use_global_stats(_dto.use_global_stats)
-        , epsilon(_dto.epsilon)
+        , use_global_stats(dto->use_global_stats)
+        , epsilon(dto->epsilon)
     {
-        init_dto();
     }
 
-    const primitive_id mean;
-    const primitive_id variance;
-    const bool use_global_stats;
-    const float epsilon;
+    primitive_id mean;
+    primitive_id variance;
+    bool use_global_stats;
+    float epsilon;
 
 protected:
     std::vector<primitive_id> get_dependencies() const override { return{ mean, variance }; }
 
-    void init_dto()
+    void update_dto(dto& dto) const override
     {
-        _dto.mean = mean.c_str();
-        _dto.variance = variance.c_str();
+        dto.mean = mean.c_str();
+        dto.variance = variance.c_str();
+        dto.use_global_stats = use_global_stats;
+        dto.epsilon = epsilon;
     }
 };
 }

@@ -5,12 +5,19 @@
 
 KERNEL(pooling_gpu_bfyx_average_offset)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
+    // constexpr:
+    const int input_buffer_size_x = INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X + INPUT_PADDING_UPPER_SIZE_X;
+    const int input_buffer_size_y = INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y + INPUT_PADDING_UPPER_SIZE_Y;
+    const uint output_buffer_size_x = OUTPUT_PADDING_LOWER_SIZE_X + OUTPUT_SIZE_X + OUTPUT_PADDING_UPPER_SIZE_X;
+    const uint output_buffer_size_y = OUTPUT_PADDING_LOWER_SIZE_Y + OUTPUT_SIZE_Y + OUTPUT_PADDING_UPPER_SIZE_Y;
+
+
     const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
 
     const uint x = get_global_id(0);
     const uint y = get_global_id(1);
-    const int offset_x = INPUT_PADDING_SIZE_X + x * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
-    const int offset_y = INPUT_PADDING_SIZE_Y + y * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
+    const int offset_x = INPUT_PADDING_LOWER_SIZE_X + x * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
+    const int offset_y = INPUT_PADDING_LOWER_SIZE_Y + y * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
 
     UNIT_TYPE result = UNIT_INIT_VAL_AVG;
 
@@ -27,8 +34,8 @@ KERNEL(pooling_gpu_bfyx_average_offset)(const __global UNIT_TYPE* input, __globa
                 bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
                 if(!zero)
                 {
-                    int input_idx = batch_and_feature_offset * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) * (INPUT_SIZE_Y + 2 * INPUT_PADDING_SIZE_Y);
-                    input_idx += input_offset_y * (INPUT_SIZE_X + 2 * INPUT_PADDING_SIZE_X) + input_offset_x;
+                    int input_idx = batch_and_feature_offset * input_buffer_size_x * input_buffer_size_y;
+                    input_idx += input_offset_y * input_buffer_size_x + input_offset_x;
                     result += input[input_idx];
                 }
             }
@@ -37,10 +44,8 @@ KERNEL(pooling_gpu_bfyx_average_offset)(const __global UNIT_TYPE* input, __globa
 
     const uint b = batch_and_feature_offset / INPUT_FEATURE_NUM;
     const uint f = batch_and_feature_offset % INPUT_FEATURE_NUM;
-    uint output_pos = b * OUTPUT_FEATURE_NUM * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
-    output_pos += f * (OUTPUT_SIZE_Y + 2 * OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
-    output_pos += (y + OUTPUT_PADDING_SIZE_Y) * (OUTPUT_SIZE_X + 2 * OUTPUT_PADDING_SIZE_X);
-    output_pos += x + OUTPUT_PADDING_SIZE_X;
+    uint output_pos = (b * OUTPUT_FEATURE_NUM + f) * output_buffer_size_x * output_buffer_size_y;
+    output_pos += (OUTPUT_PADDING_LOWER_SIZE_Y + y) * output_buffer_size_x + OUTPUT_PADDING_LOWER_SIZE_X + x;
 
     output[output_pos] = result / (UNIT_TYPE)(WINDOW_SIZE_Y * WINDOW_SIZE_X);
 }

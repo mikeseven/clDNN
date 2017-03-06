@@ -138,7 +138,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_tensor);
 }
 
-std::pair<std::shared_ptr<const cldnn::reorder>, bool>
+std::pair<std::shared_ptr<cldnn::reorder>, bool>
 layout_optimizer::create_reorder_if_needed(const layout& current_layout, const cldnn::primitive_id& memid, layout const& expected_layout)
 {
     if (current_layout != expected_layout)

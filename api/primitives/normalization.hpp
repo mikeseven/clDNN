@@ -36,27 +36,37 @@ struct normalization :public primitive_base<normalization, CLDNN_PRIMITIVE_DESC(
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_padding, output_padding, size, k, alpha, beta, lrn_norm_region)
-        , size(_dto.size)
-        , k(_dto.k)
-        , alpha(_dto.alpha)
-        , beta(_dto.beta)
-        , norm_region(_dto.norm_region)
+        : primitive_base(id, {input}, input_padding, output_padding)
+        , size(size)
+        , k(k)
+        , alpha(alpha)
+        , beta(beta)
+        , norm_region(lrn_norm_region)
     {}
 
     normalization(const dto* dto)
         : primitive_base(dto)
-        , size(_dto.size)
-        , k(_dto.k)
-        , alpha(_dto.alpha)
-        , beta(_dto.beta)
-        , norm_region(_dto.norm_region)
+        , size(dto->size)
+        , k(dto->k)
+        , alpha(dto->alpha)
+        , beta(dto->beta)
+        , norm_region(dto->norm_region)
     {}
 
-    const uint32_t size;
-    const float k;
-    const float alpha;
-    const float beta;
-    const cldnn_lrn_norm_region norm_region;
+    uint32_t size;
+    float k;
+    float alpha;
+    float beta;
+    cldnn_lrn_norm_region norm_region;
+
+protected:
+    void update_dto(dto& dto) const override
+    {
+        dto.size = size;
+        dto.k = k;
+        dto.alpha = alpha;
+        dto.beta = beta;
+        dto.norm_region = norm_region;
+    }
 };
 }

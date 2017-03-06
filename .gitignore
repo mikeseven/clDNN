@@ -1,4 +1,4 @@
 build/*
 *.pyc
 *~
-/bin/Debug
+**/.idea/*

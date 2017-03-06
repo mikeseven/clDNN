@@ -32,27 +32,25 @@ struct mean_substract : public primitive_base<mean_substract, CLDNN_PRIMITIVE_DE
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :primitive_base(id, {input}, input_padding, output_padding, "")
+        :primitive_base(id, {input}, input_padding, output_padding)
         , mean(mean)
     {
-        init_dto();
     }
 
     mean_substract(const dto* dto)
         :primitive_base(dto)
         , mean(dto->mean)
     {
-        init_dto();
     }
 
-    const primitive_id mean;
+    primitive_id mean;
 
 protected:
     std::vector<primitive_id> get_dependencies() const override { return{ mean }; }
 
-    void init_dto()
+    void update_dto(dto& dto) const override
     {
-        _dto.mean = mean.c_str();
+        dto.mean = mean.c_str();
     }
 };
 }

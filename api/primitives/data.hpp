@@ -27,14 +27,21 @@ struct data : public primitive_base<data, CLDNN_PRIMITIVE_DESC(data)>
     CLDNN_DECLATE_PRIMITIVE(data)
 
     data(const primitive_id& id, const memory& mem)
-        :primitive_base(id, {}, padding(), padding(), mem.get())
-        , mem(_dto.mem, true)
+        :primitive_base(id, {}, padding(), padding())
+        , mem(mem.get(), true)
     {}
 
     explicit data(const dto* dto)
         :primitive_base(dto)
-        , mem(_dto.mem, true)
+        , mem(dto->mem, true)
     {}
-    const memory mem;
+
+    memory mem;
+
+protected:
+    void update_dto(dto& dto) const override
+    {
+        dto.mem = mem.get();
+    }
 };
 }

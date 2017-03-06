@@ -27,10 +27,10 @@ struct layout;
 struct topology_node
 {
 public:
-    topology_node(std::shared_ptr<const primitive> prim_desc)
+    topology_node(std::shared_ptr<primitive> prim_desc)
         : primitive_desc(prim_desc){}
 
-    void replace(std::shared_ptr<const primitive> new_prim)
+    void replace(std::shared_ptr<primitive> new_prim)
     {
         if (primitive_desc == new_prim)
             return;
@@ -39,7 +39,7 @@ public:
         output_layout = nullptr; //invalidate output_layout if primitive_desc has been changedd
     }
 
-    std::shared_ptr<const primitive> primitive_desc;
+    std::shared_ptr<primitive> primitive_desc;
     std::unique_ptr<layout> output_layout;
 };
 
@@ -50,7 +50,7 @@ struct topology_impl : public refcounted_obj<topology_impl>
 public:
     topology_impl(const topology_map& map = topology_map()) : _primitives(map) {}
 
-    void add(std::shared_ptr<const primitive> desc)
+    void add(std::shared_ptr<primitive> desc)
     {
         auto id = desc->id();
         auto itr = _primitives.find(id);

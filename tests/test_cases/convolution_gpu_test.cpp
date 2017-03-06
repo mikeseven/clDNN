@@ -112,7 +112,7 @@ void print_2d(VVF<T> &data) {
 }
 
 template<typename T>
-void generic_convolution_test(cldnn::format input_fmt, cldnn::format filter_fmt,
+void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_filter_fmt,
 							  int input_b, int input_f, int input_y, int input_x,
 							  int filter_o, int filter_i, int filter_y, int filter_x, 
 							  int stride_y, int stride_x,
@@ -136,20 +136,23 @@ void generic_convolution_test(cldnn::format input_fmt, cldnn::format filter_fmt,
 	}
 
 	engine engine;
+    
+    tensor input_tensor(format::bfyx,{ input_b, input_f, input_y, input_x });
+    tensor filter_tensor(format::oiyx, { filter_o, filter_i, filter_y, filter_x });
 
-	auto input = memory::allocate(engine, { cldnn::type_to_data_type<T>::value,{ input_fmt,{ input_y, input_x, input_f, input_b } } });
+	auto input = memory::allocate(engine, { cldnn::type_to_data_type<T>::value, input_tensor.transform(test_input_fmt, 0 ) } );
 	std::vector<memory> weights, biases;
 	weights.reserve(split);
 	biases.reserve(split);
 	for (int s = 0; s < split; ++s) {
-		weights.push_back(memory::allocate(engine, { cldnn::type_to_data_type<T>::value,{ filter_fmt,{ filter_o, filter_i, filter_y, filter_x } } }));
+		weights.push_back(memory::allocate(engine, { cldnn::type_to_data_type<T>::value,filter_tensor.transform(test_filter_fmt, 0) }));
 		biases.push_back(memory::allocate(engine, { cldnn::type_to_data_type<T>::value,{ format::x,{ filter_o } } }));
 	}
 
-	VF<T> input_rnd_vec = flatten_4d<T>(input_fmt, input_rnd);
+	VF<T> input_rnd_vec = flatten_4d<T>(test_input_fmt, input_rnd);
 	set_values(input, input_rnd_vec);
 	for (int s = 0; s < split; ++s) {
-		VF<T> filter_rnd_vec = flatten_4d<T>(filter_fmt, filter_rnd[s]);
+		VF<T> filter_rnd_vec = flatten_4d<T>(test_filter_fmt, filter_rnd[s]);
 		set_values(weights[s], filter_rnd_vec);
 		set_values(biases[s], bias_rnd_vec[s]);
 	}
@@ -194,13 +197,13 @@ void generic_convolution_test(cldnn::format input_fmt, cldnn::format filter_fmt,
 	int x_size = output_layout.size.sizes()[1];
 	int f_size = output_layout.size.sizes()[2];
 	int b_size = output_layout.size.sizes()[3];
-	EXPECT_EQ(output_layout.size.format.value, input_fmt.value);
+	EXPECT_EQ(output_layout.size.format.value, test_input_fmt.value);
 	EXPECT_EQ(y_size, (int)output_cpu[0][0].size());
 	EXPECT_EQ(x_size, (int)output_cpu[0][0][0].size());
 	EXPECT_EQ(f_size, (int)output_cpu[0].size());
 	EXPECT_EQ(b_size, (int)output_cpu.size());
 	bool test_is_correct = true;
-	VF<T> output_cpu_vec = flatten_4d<T>(input_fmt, output_cpu);
+	VF<T> output_cpu_vec = flatten_4d<T>(test_input_fmt, output_cpu);
 	for (size_t i = 0; i < output_cpu_vec.size(); ++i) {
 		testing::internal::FloatingPoint<float> val_cpu(output_cpu_vec[i]), val_gpu(output_ptr[i]);
 		if (!val_cpu.AlmostEquals(val_gpu)) {

@@ -42,8 +42,7 @@ struct prior_box : public primitive_base<prior_box, CLDNN_PRIMITIVE_DESC(prior_b
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_padding, output_padding, img_size, cldnn_float_arr{ nullptr, 0 }, cldnn_float_arr{ nullptr, 0 }, cldnn_float_arr{ nullptr, 0 },
-			flip, clip, cldnn_float_arr{ nullptr, 0 }, step_width, step_height, offset)
+        : primitive_base(id, {input}, input_padding, output_padding)
 		, img_size(img_size)
         , min_sizes(min_sizes)
         , max_sizes(max_sizes)
@@ -81,39 +80,47 @@ struct prior_box : public primitive_base<prior_box, CLDNN_PRIMITIVE_DESC(prior_b
 			// Set default to 0.1.
 			this->variance.push_back(0.1f);
 		}
-
-		_dto.min_sizes = float_vector_to_arr(this->min_sizes);
-		_dto.max_sizes = float_vector_to_arr(this->max_sizes);
-		_dto.aspect_ratios = float_vector_to_arr(this->aspect_ratios);
-		_dto.variance = float_vector_to_arr(this->variance);
 	}
 
 	prior_box(const dto* dto)
         : primitive_base(dto)
-		, img_size(_dto.img_size)
-        , min_sizes(float_arr_to_vector(_dto.min_sizes))
-        , max_sizes(float_arr_to_vector(_dto.max_sizes))
-		, aspect_ratios(float_arr_to_vector(_dto.aspect_ratios))
-		, flip(_dto.flip != 0)
-		, clip(_dto.clip != 0)
-		, variance(float_arr_to_vector(_dto.variance))
-		, step_width(_dto.step_width)
-		, step_height(_dto.step_height)
-		, offset(_dto.offset)
+		, img_size(dto->img_size)
+        , min_sizes(float_arr_to_vector(dto->min_sizes))
+        , max_sizes(float_arr_to_vector(dto->max_sizes))
+		, aspect_ratios(float_arr_to_vector(dto->aspect_ratios))
+		, flip(dto->flip != 0)
+		, clip(dto->clip != 0)
+		, variance(float_arr_to_vector(dto->variance))
+		, step_width(dto->step_width)
+		, step_height(dto->step_height)
+		, offset(dto->offset)
     {}
 
-	const tensor img_size;
-	const std::vector<float> min_sizes;
-	const std::vector<float> max_sizes;
+	tensor img_size;
+	std::vector<float> min_sizes;
+	std::vector<float> max_sizes;
 	std::vector<float> aspect_ratios;
-	const bool flip;
-	const bool clip;
+	bool flip;
+	bool clip;
 	std::vector<float> variance;
-	const float step_width;
-	const float step_height;
-	const float offset;
+	float step_width;
+	float step_height;
+	float offset;
 
 private:
+    void update_dto(dto& dto) const override
+    {
+        dto.img_size = img_size;
+        dto.min_sizes = float_vector_to_arr(min_sizes);
+        dto.max_sizes = float_vector_to_arr(max_sizes);
+        dto.aspect_ratios = float_vector_to_arr(aspect_ratios);
+        dto.flip = flip;
+        dto.clip = clip;
+        dto.variance = float_vector_to_arr(variance);
+        dto.step_width = step_width;
+        dto.step_height = step_height;
+        dto.offset = offset;
+    }
 
 	static cldnn_float_arr float_vector_to_arr(const std::vector<float>& stor)
 	{

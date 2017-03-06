@@ -28,7 +28,7 @@ namespace cldnn {
 }
 struct cldnn_primitive_type
 {
-    virtual std::shared_ptr<const cldnn::primitive> from_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto) const = 0;
+    virtual std::shared_ptr<cldnn::primitive> from_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto) const = 0;
     virtual std::shared_ptr<const cldnn::primitive_arg> create_arg(cldnn::network_impl& network, std::shared_ptr<const cldnn::primitive> desc) const = 0;
     virtual ~cldnn_primitive_type() = default;
     virtual cldnn::layout calc_output_layout(const cldnn::topology_map& topology_map, std::shared_ptr<const cldnn::primitive> desc) const = 0;
