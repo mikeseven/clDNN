@@ -18,7 +18,6 @@
 #include <api/primitives/data.hpp>
 #include <api/primitives/reorder.hpp>
 #include <boost/filesystem.hpp>
-
 #include <sstream>
 
 using namespace cldnn;
@@ -28,7 +27,7 @@ layout_optimizer::layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool ena
 {
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, boost::optional<layout> const& output_layout)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution>, boost::optional<layout> const& output_layout)
 {
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
@@ -74,7 +73,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_tensor);
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, boost::optional<layout> const& output_layout)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected>, boost::optional<layout> const& output_layout)
 {
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
