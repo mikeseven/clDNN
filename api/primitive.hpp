@@ -143,14 +143,14 @@ struct primitive
 
     //TODO: make access to primitive's fields consistent - either use access directly via public members,
     // like in derived classes, or use getters/setter in derived classes like below
-    auto& input() { return _input.cpp_ids; }
-    auto const& input() const { return _input.cpp_ids; }
+    std::vector<primitive_id>& input() { return _input.cpp_ids; }
+    const std::vector<primitive_id>& input() const { return _input.cpp_ids; }
 
-    auto& input_padding() { return _input_padding; }
-    auto const& input_padding() const { return _input_padding; }
+    padding& input_padding() { return _input_padding; }
+    const padding& input_padding() const { return _input_padding; }
 
-    auto& output_padding() { return _output_padding; }
-    auto const& output_padding() const { return _output_padding; }
+    padding& output_padding() { return _output_padding; }
+    const padding& output_padding() const { return _output_padding; }
 
     virtual const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const = 0;
 
@@ -186,8 +186,10 @@ protected:
                 cpp_ids[i] = c_id_arr.data[i];
         }
 
+        std::vector<primitive_id> cpp_ids;
+        mutable std::vector<cldnn_primitive_id> c_ids;
         //get C API id array
-        auto ref() const
+        auto ref() const -> decltype(cldnn_primitive_id_arr{c_ids.data(), c_ids.size()})
         {
             c_ids.resize(cpp_ids.size());
             for (size_t i = 0; i < cpp_ids.size(); ++i)
@@ -196,10 +198,10 @@ protected:
             return cldnn_primitive_id_arr{ c_ids.data(), c_ids.size() };
         }
 
-        auto size() const { return cpp_ids.size(); }
+        size_t size() const { return cpp_ids.size(); }
 
-        std::vector<primitive_id> cpp_ids;
-        mutable std::vector<cldnn_primitive_id> c_ids;
+
+
     };
 
     const primitive_type_id _type;
