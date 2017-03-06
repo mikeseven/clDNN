@@ -140,12 +140,12 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
     tensor input_tensor(format::bfyx,{ input_b, input_f, input_y, input_x });
     tensor filter_tensor(format::oiyx, { filter_o, filter_i, filter_y, filter_x });
 
-	auto input = memory::allocate(engine, { cldnn::type_to_data_type<T>::value, input_tensor.transform(test_input_fmt, 0 ) } );
+	auto input = memory::allocate(engine, { cldnn::type_to_data_type<T>::value, input_tensor.transform(test_input_fmt, 1 ) } );
 	std::vector<memory> weights, biases;
 	weights.reserve(split);
 	biases.reserve(split);
 	for (int s = 0; s < split; ++s) {
-		weights.push_back(memory::allocate(engine, { cldnn::type_to_data_type<T>::value,filter_tensor.transform(test_filter_fmt, 0) }));
+		weights.push_back(memory::allocate(engine, { cldnn::type_to_data_type<T>::value,filter_tensor.transform(test_filter_fmt, 1) }));
 		biases.push_back(memory::allocate(engine, { cldnn::type_to_data_type<T>::value,{ format::x,{ filter_o } } }));
 	}
 
