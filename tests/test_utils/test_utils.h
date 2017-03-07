@@ -227,8 +227,8 @@ class test_params
 {
 public:
 
-	test_params(int32_t batch_size, int32_t feature_size, cldnn::tensor input_size) :
-		input({ cldnn::format::bfyx,{ batch_size, feature_size, input_size.spatial[1],  input_size.spatial[0] } })
+	test_params(cldnn_format_type input_format, int32_t batch_size, int32_t feature_size, cldnn::tensor input_size) :
+		input(cldnn::tensor( cldnn::format::bfyx,{ batch_size, feature_size, input_size.spatial[1],  input_size.spatial[0] } ).transform(cldnn::format(input_format), 1))
 	{ }
 
 	cldnn::tensor input;
@@ -246,13 +246,15 @@ public:
 
 	generic_test();
 
-	static void TearDownTestCase();
-
 	void run_single_test();
 
-	static std::vector<test_params*> generate_generic_test_params();
+	uint32_t get_linear_index(cldnn::layout layout, int b, int f, int y, int x);
 
-	virtual void generate_reference(cldnn::memory& input, cldnn::memory& output) = 0;
+	static std::vector<test_params*> generate_generic_test_params(std::vector<test_params*> all_generic_params);
+
+	virtual cldnn::memory generate_reference(cldnn::memory& input) = 0;
+
+	virtual bool is_format_supported(cldnn::format format) = 0;
 
 	struct custom_param_name_functor {
 		std::string operator()(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info) {
@@ -262,9 +264,9 @@ public:
 
 protected:
 
+	cldnn::engine engine;
 	test_params* generic_params;
 	cldnn::primitive* layer_parmas;
-	static std::vector<test_params*> all_generic_params;
 };
 
 
