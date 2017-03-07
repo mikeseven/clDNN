@@ -24,7 +24,12 @@
 #include "memory_impl.h"
 #include "primitive_arg.h"
 
-
+#define SHOULD_NOT_BE_NULL(arg, msg_prefix) \
+    if(arg == nullptr) \
+        throw std::invalid_argument( std::string(msg_prefix)  + " should not be null.");
+#define SHOULD_NOT_EQUAL_0(arg, msg_prefix) \
+    if(arg == 0) \
+        throw std::invalid_argument( std::string(msg_prefix)  + " should not equals 0.");
 extern "C"
 {
 
@@ -40,6 +45,10 @@ void cldnn_add_primitive(cldnn_topology topology, const CLDNN_PRIMITIVE_DESC(pri
 {
     return exception_handler(CLDNN_ERROR, status, [&]()
     {
+        SHOULD_NOT_BE_NULL(topology,           "Topology");
+        SHOULD_NOT_BE_NULL(dto,                "Primitive");
+        SHOULD_NOT_BE_NULL(dto->id,            "Primitive id");
+        SHOULD_NOT_BE_NULL(dto->type,          "Primitive type");
         api_cast(topology)->add(dto->type->from_dto(dto));
     });
 }
@@ -48,6 +57,7 @@ void cldnn_retain_topology(cldnn_topology topology, cldnn_status* status)
 {
     return exception_handler(CLDNN_ERROR, status, [&]()
     {
+        SHOULD_NOT_BE_NULL(topology, "Topology");
         api_cast(topology)->add_ref();
     });
 }
@@ -55,6 +65,7 @@ void cldnn_release_topology(cldnn_topology topology, cldnn_status* status)
 {
     return exception_handler(CLDNN_ERROR, status, [&]()
     {
+        SHOULD_NOT_BE_NULL(topology, "Topology");
         api_cast(topology)->release();
     });
 }
@@ -90,18 +101,27 @@ cldnn_engine cldnn_create_engine(/*cldnn_engine_type*/ int32_t type, uint32_t en
 
 void cldnn_retain_engine(cldnn_engine engine, cldnn_status* status)
 {
-    exception_handler(CLDNN_ERROR, status, [&]() { api_cast(engine)->add_ref(); });
+        exception_handler(CLDNN_ERROR, status, [&]() 
+        { 
+            SHOULD_NOT_BE_NULL(engine, "Engine");
+            api_cast(engine)->add_ref(); 
+        });
 }
 
 void cldnn_release_engine(cldnn_engine engine, cldnn_status* status)
 {
-    exception_handler(CLDNN_ERROR, status, [&]() { api_cast(engine)->release(); });
+        exception_handler(CLDNN_ERROR, status, [&]() 
+        { 
+            SHOULD_NOT_BE_NULL(engine, "Engine");
+            api_cast(engine)->release(); 
+        });
 }
 
 cldnn_engine_info cldnn_get_engine_info(cldnn_engine engine, cldnn_status* status)
 {
     return exception_handler<cldnn_engine_info>(CLDNN_ERROR, status, { 0, 0, 0, 0, 0, 0 }, [&]() -> cldnn_engine_info
     {
+        SHOULD_NOT_BE_NULL(engine, "Engine");
         auto info = api_cast(engine)->get_engine_info();
         return
         {
@@ -111,7 +131,7 @@ cldnn_engine_info cldnn_get_engine_info(cldnn_engine engine, cldnn_status* statu
             info.max_local_mem_size,
             info.supports_fp16,
             info.supports_fp16_denorms
-        };
+       };
     });
 }
 
@@ -119,6 +139,7 @@ cldnn_engine_info cldnn_get_engine_info(cldnn_engine engine, cldnn_status* statu
 {
     return exception_handler<int32_t>(CLDNN_ERROR, status, cldnn_engine_ocl, [&]()
     {
+        SHOULD_NOT_BE_NULL(engine, "Engine");
         return static_cast<int32_t>(api_cast(engine)->type());
     });
 }
@@ -127,24 +148,35 @@ cldnn_event cldnn_create_user_event(cldnn_engine engine, cldnn_status* status)
 {
     return exception_handler<cldnn_event>(CLDNN_ERROR, status, nullptr, [&]()
     {
+        SHOULD_NOT_BE_NULL(engine, "Engine");
         return api_cast(api_cast(engine)->create_user_event());
     });
 }
 
 void cldnn_retain_event(cldnn_event event, cldnn_status* status)
 {
-    exception_handler(CLDNN_ERROR, status, [&]() { api_cast(event)->add_ref(); });
+
+    exception_handler(CLDNN_ERROR, status, [&]() 
+    { 
+        SHOULD_NOT_BE_NULL(event, "Event");
+        api_cast(event)->add_ref(); 
+    });
 }
 
 void cldnn_release_event(cldnn_event event, cldnn_status* status)
 {
-    exception_handler(CLDNN_ERROR, status, [&]() { api_cast(event)->release(); });
+    exception_handler(CLDNN_ERROR, status, [&]() 
+    { 
+        SHOULD_NOT_BE_NULL(event, "Event");
+        api_cast(event)->release(); 
+    });
 }
 
 void cldnn_wait_for_event(cldnn_event event, cldnn_status* status)
 {
     exception_handler(CLDNN_ERROR, status, [&]()
     {
+        SHOULD_NOT_BE_NULL(event, "Event");
         api_cast(event)->wait();
     });
 }
@@ -153,6 +185,7 @@ void cldnn_set_event(cldnn_event event, cldnn_status* status)
 {
     exception_handler(CLDNN_ERROR, status, [&]()
     {
+        SHOULD_NOT_BE_NULL(event, "Event");
         api_cast(event)->set();
     });
 }
@@ -161,6 +194,8 @@ void cldnn_add_event_handler(cldnn_event event, cldnn_event_handler handler, voi
 {
     exception_handler(CLDNN_ERROR, status, [&]()
     {
+        SHOULD_NOT_BE_NULL(handler, "Handler");
+        SHOULD_NOT_BE_NULL(event,   "Event");
         api_cast(event)->add_event_handler(handler, param);
     });
 }
@@ -169,7 +204,9 @@ void cldnn_get_event_profiling_info(cldnn_event event, cldnn_profiling_interval*
 {
     exception_handler(CLDNN_ERROR, status, [&]()
     {
+        SHOULD_NOT_BE_NULL(event, "Event");
         auto& profiling_info = api_cast(event)->get_profiling_info();
+        SHOULD_NOT_EQUAL_0(profiling_info.size(), "Profiling info of event");
         if (size_ret)
             *size_ret = profiling_info.size();
         if(size < profiling_info.size())
@@ -189,6 +226,8 @@ cldnn_network cldnn_build_network(cldnn_engine engine, cldnn_topology topology, 
 {
     return exception_handler<cldnn_network>(CLDNN_ERROR, status, nullptr, [&]()
     {
+        SHOULD_NOT_BE_NULL(engine,   "Engine");
+        SHOULD_NOT_BE_NULL(topology, "Topology");
         cldnn::build_options options_obj(cldnn::array_ref<cldnn_build_option>(options, options_num));
         return api_cast(api_cast(engine)->build_network(api_cast(topology), options_obj));
     });
@@ -198,6 +237,7 @@ void cldnn_retain_network(cldnn_network network, cldnn_status* status)
 {
     exception_handler(CLDNN_ERROR, status, [&]()
     {
+        SHOULD_NOT_BE_NULL(network, "Network");
         api_cast(network)->add_ref();
     });
 }
@@ -206,6 +246,7 @@ void cldnn_release_network(cldnn_network network, cldnn_status* status)
 {
     exception_handler(CLDNN_ERROR, status, [&]()
     {
+        SHOULD_NOT_BE_NULL(network, "Network");
         api_cast(network)->release();
     });
 }
@@ -214,6 +255,11 @@ void cldnn_set_network_input(cldnn_network network, cldnn_primitive_id id, cldnn
 {
     exception_handler(CLDNN_ERROR, status, [&]()
     {
+        auto mem_size = api_cast(mem)->size();
+        SHOULD_NOT_BE_NULL(network,     "Network");
+        SHOULD_NOT_BE_NULL(id,          "Id");
+        SHOULD_NOT_BE_NULL(mem,         "Mem");
+        SHOULD_NOT_EQUAL_0(mem_size,    "Memory size");
         api_cast(network)->set_input_data(id, api_cast(mem));
     });
 }
@@ -222,6 +268,7 @@ cldnn_engine cldnn_get_network_engine(cldnn_network network, cldnn_status* statu
 {
     return exception_handler<cldnn_engine>(CLDNN_ERROR, status, nullptr, [&]()
     {
+        SHOULD_NOT_BE_NULL(network, "Network");
         auto engine_ptr = api_cast(network)->get_engine();
         if (!engine_ptr) throw std::logic_error("no assigned engine");
         return api_cast(engine_ptr.detach());
@@ -231,9 +278,10 @@ cldnn_engine cldnn_get_network_engine(cldnn_network network, cldnn_status* statu
 cldnn_topology cldnn_get_network_topology(cldnn_network network, cldnn_status* status)
 {
     return exception_handler<cldnn_topology>(CLDNN_ERROR, status, nullptr, [&]()
-    {
+    {   
+        SHOULD_NOT_BE_NULL(network, "Network");
         auto topology_ptr = api_cast(network)->get_topology();
-        if(!topology_ptr) throw std::logic_error("no assigned topology");
+        if (!topology_ptr) throw std::logic_error("no assigned topology");
         return api_cast(topology_ptr.detach());
     });
 }
@@ -242,6 +290,9 @@ void cldnn_get_network_output_names(cldnn_network network, char* names, size_t s
 {
     exception_handler(CLDNN_ERROR, status, [&]()
     {
+        auto output_size = api_cast(network)->get_output_ids().size();        
+        SHOULD_NOT_BE_NULL(network,        "Network");
+        SHOULD_NOT_EQUAL_0(output_size, "Output size");
         auto& output_ids = api_cast(network)->get_output_ids();
         *size_ret = std::accumulate(
             std::begin(output_ids),
@@ -281,6 +332,7 @@ void cldnn_execute_network(cldnn_network network, cldnn_event* dependencies, siz
 {
     exception_handler(CLDNN_ERROR, status, [&]()
     {
+        SHOULD_NOT_BE_NULL(network, "Network");
         std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>> deps;
         deps.reserve(deps_num);
         for(size_t i = 0; i < deps_num; i++)
@@ -297,12 +349,13 @@ cldnn_network_output cldnn_get_network_output(cldnn_network network, const char*
     cldnn_network_output error_result = { nullptr, nullptr };
     return exception_handler<cldnn_network_output>(CLDNN_ERROR, status, error_result, [&]() -> cldnn_network_output
     {
+        SHOULD_NOT_BE_NULL(network, "Network");
+        SHOULD_NOT_BE_NULL(name,    "ID of primitive");
         cldnn::primitive_id id(name);
         auto event = api_cast(network)->get_primitive_event(id);
-
         auto mem_result = api_cast(network)->get_primitive(id)->output_memory().get();
         api_cast(mem_result)->add_ref();
-        return { api_cast(event.detach()), mem_result };
+        return{ api_cast(event.detach()), mem_result };
     });
 }
 
@@ -310,6 +363,17 @@ cldnn_memory cldnn_allocate_memory(cldnn_engine engine, cldnn_layout layout, cld
 {
     return exception_handler<cldnn_memory>(CLDNN_ERROR, status, nullptr, [&]()
     {
+        SHOULD_NOT_BE_NULL(engine, "Engine");
+        if (layout.size.format < cldnn_format_any || layout.size.format >= cldnn_format_format_num)
+            throw std::invalid_argument("Unknown format of layout.");
+        if (layout.data_type != cldnn_data_type::cldnn_f16 &&
+            layout.data_type != cldnn_data_type::cldnn_f32 &&
+            layout.data_type != cldnn_data_type::cldnn_f64 &&
+            layout.data_type != cldnn_data_type::cldnn_i8  &&
+            layout.data_type != cldnn_data_type::cldnn_i16 &&
+            layout.data_type != cldnn_data_type::cldnn_i32 &&
+            layout.data_type != cldnn_data_type::cldnn_i64)
+            throw std::invalid_argument("Unknown data_type of layout.");
         return api_cast(api_cast(engine)->allocate_buffer(layout));
     });
 }
@@ -319,7 +383,8 @@ cldnn_memory cldnn_attach_memory(cldnn_layout layout, void* pointer, size_t size
     return exception_handler<cldnn_memory>(CLDNN_ERROR, status, nullptr, [&]()
     {
         cldnn::layout layout_obj(layout);
-        if (layout_obj.data_size() > size) std::invalid_argument("buffer size does not match layout size");
+        if (layout_obj.data_size() > size) 
+            std::invalid_argument("buffer size does not match layout size");
         return api_cast(new cldnn::simple_attached_memory(layout_obj, pointer));
     });
 }
@@ -328,6 +393,7 @@ void cldnn_retain_memory(cldnn_memory memory, cldnn_status* status)
 {
     exception_handler(CLDNN_ERROR, status, [&]()
     {
+        SHOULD_NOT_BE_NULL(memory, "Memory");
         api_cast(memory)->add_ref();
     });
 }
@@ -336,6 +402,7 @@ void cldnn_release_memory(cldnn_memory memory, cldnn_status* status)
 {
     exception_handler(CLDNN_ERROR, status, [&]()
     {
+        SHOULD_NOT_BE_NULL(memory, "Memory");
         api_cast(memory)->release();
     });
 }
@@ -344,6 +411,7 @@ void* cldnn_lock_memory(cldnn_memory memory, cldnn_status* status)
 {
     return exception_handler<void*>(CLDNN_ERROR, status, nullptr, [&]()
     {
+        SHOULD_NOT_BE_NULL(memory, "Memory");
         return api_cast(memory)->lock();
     });
 }
@@ -352,6 +420,7 @@ void cldnn_unlock_memory(cldnn_memory memory, cldnn_status* status)
 {
     exception_handler(CLDNN_ERROR, status, [&]()
     {
+        SHOULD_NOT_BE_NULL(memory, "Memory");
         api_cast(memory)->unlock();
     });
 }
@@ -362,6 +431,9 @@ cldnn_layout cldnn_get_memory_layout(cldnn_memory memory, cldnn_status* status)
 
     return exception_handler<cldnn_layout>(CLDNN_ERROR, status, error_result, [&]()
     {
+        SHOULD_NOT_BE_NULL(memory, "Memory");
+        auto memory_size = api_cast(memory)->size();
+        SHOULD_NOT_EQUAL_0(memory_size, "Memory size");
         return api_cast(memory)->get_layout();
     });
 }
@@ -370,6 +442,7 @@ cldnn_engine cldnn_get_memory_engine(cldnn_memory memory, cldnn_status* status)
 {
     return exception_handler<cldnn_engine>(CLDNN_ERROR, status, nullptr, [&]()
     {
+        SHOULD_NOT_BE_NULL(memory, "Memory");
         auto engine_ptr = api_cast(memory)->get_engine();
         if (!engine_ptr) throw std::logic_error("no assigned engine");
         return api_cast(engine_ptr.detach());
