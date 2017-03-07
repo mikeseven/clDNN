@@ -33,7 +33,7 @@ struct prior_box : public primitive_base<prior_box, CLDNN_PRIMITIVE_DESC(prior_b
 		const std::vector<float>& min_sizes,
 		const std::vector<float>& max_sizes = {},
 		const std::vector<float>& aspect_ratios = {},
-		const bool flip = true,
+		bool flip = true,
 		const bool clip = false,
 		const std::vector<float>& variance = {},
 		const float step_width = 0.f,
@@ -63,9 +63,9 @@ struct prior_box : public primitive_base<prior_box, CLDNN_PRIMITIVE_DESC(prior_b
 			}
 			if (!already_exist) {
 				this->aspect_ratios.push_back(new_aspect_ratio);
-				//if (flip) {  flip is constant
-				this->aspect_ratios.push_back(1.f / new_aspect_ratio);
-				//}
+				if (flip) {
+					this->aspect_ratios.push_back(1.f / new_aspect_ratio);
+				}
 			}
 		}
 		if (variance.size() > 1) {
