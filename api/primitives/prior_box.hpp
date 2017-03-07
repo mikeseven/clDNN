@@ -63,9 +63,9 @@ struct prior_box : public primitive_base<prior_box, CLDNN_PRIMITIVE_DESC(prior_b
 			}
 			if (!already_exist) {
 				this->aspect_ratios.push_back(new_aspect_ratio);
-				if (flip) {
-					this->aspect_ratios.push_back(1.f / new_aspect_ratio);
-				}
+				//if (flip) {  flip is constant
+				this->aspect_ratios.push_back(1.f / new_aspect_ratio);
+				//}
 			}
 		}
 		if (variance.size() > 1) {

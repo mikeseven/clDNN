@@ -20,10 +20,10 @@
 #include "implementation_map.h"
 #include "kernel.h"
 #include "kd_selector.h"
-#include "api/primitives/simpler_nms.hpp"
+//#include "api/primitives/simpler_nms.hpp"
 
 #include <algorithm>
-#include <stdexcept>
+//#include <stdexcept>
 #include <string>
 
 #define EPSILON 0.00001f
@@ -237,7 +237,7 @@ struct simpler_nms_gpu : is_an_implementation {
 
     cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
     {
-		for (auto a : events) {
+		for (auto& a : events) {
 			a->wait();
 		}
 

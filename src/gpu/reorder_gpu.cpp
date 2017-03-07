@@ -17,11 +17,11 @@
 #include "neural_impl.h"
 #include "engine_impl.h"
 #include "network_impl.h"
-#include "implementation_map.h"
+//#include "implementation_map.h"
 #include "kernel.h"
 #include "kd_selector.h"
 
-#include <algorithm>
+//#include <algorithm>
 #include <stdexcept>
 #include <string>
 

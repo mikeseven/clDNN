@@ -20,7 +20,6 @@
 
 #include "neural_impl.h"
 #include "gpu/kernel.h"
-#include "implementation_map.h"
 #include "gpu/kd_selector.h"
 
 #include <algorithm>
@@ -74,7 +73,7 @@ depth_concatenate_arg::depth_concatenate_arg(network_impl& network, std::shared_
     tensor::value_type depth_count = 0;
     auto input_size = _inputs.at(0)->non_padded_output_layout().size;
     auto output_size = non_padded_output_layout().size;
-    for (auto i : _inputs)
+    for (const auto& i : _inputs)
     {
         auto& input_mem = i->output_memory();
         auto input_mem_size = i->non_padded_output_layout().size;

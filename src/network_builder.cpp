@@ -22,11 +22,11 @@
 #include "convolution_arg.h"
 #include "fully_connected_arg.h"
 #include "api/primitives/convolution.hpp"
-#include "api/primitives/pooling.hpp"
-#include "api/primitives/depth_concatenate.hpp"
-#include "api/primitives/normalization.hpp"
+//#include "api/primitives/pooling.hpp"
+//#include "api/primitives/depth_concatenate.hpp"
+//#include "api/primitives/normalization.hpp"
 #include "api/primitives/mean_substract.hpp"
-#include "api/primitives/eltwise.hpp"
+//#include "api/primitives/eltwise.hpp"
 #include <set>
 #include <functional>
 

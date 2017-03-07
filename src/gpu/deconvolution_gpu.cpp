@@ -20,12 +20,12 @@
 #include "kernel.h"
 #include "network_impl.h"
 #include "engine_impl.h"
-#include "boost/functional/hash.hpp"
+//#include "boost/functional/hash.hpp"
 #include "kd_selector.h"
 
-#include <unordered_map>
+//#include <unordered_map>
 #include <initializer_list>
-#include "kd_selector.h"
+//#include "kd_selector.h"
 
 namespace neural 
 {
