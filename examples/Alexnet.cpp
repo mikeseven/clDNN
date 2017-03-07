@@ -69,7 +69,7 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         pool1,
         5,
         1.0f,
-        0.00002f,
+        0.0001f,
         0.75f,
 		cldnn_lrn_norm_region_across_channel);
 
@@ -98,7 +98,7 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         pool2,
         5,
         1.0f,
-        0.00002f,
+        0.0001f,
         0.75f,
 		cldnn_lrn_norm_region_across_channel);
 

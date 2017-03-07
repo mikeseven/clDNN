@@ -25,11 +25,11 @@ KERNEL(convolution_gpu_yxfb_yxio_fp16)(
     half result = 0.0h;
 
     bool finish = false;
-    const uint out_x = get_global_id(1);
-    const uint out_y = get_global_id(2);
+    const int out_x = get_global_id(1) - OUTPUT_PADDING_LOWER_SIZE_X;
+    const int out_y = get_global_id(2) - OUTPUT_PADDING_LOWER_SIZE_Y;
 
-    finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_OFFSET_SIZE_X;
-    finish = (out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_OFFSET_SIZE_Y) ? true : finish;
+    finish = out_x >= OUTPUT_SIZE_X || out_x < 0;
+    finish = (out_y >= OUTPUT_SIZE_Y || out_y < 0) ? true : finish;
 
     if(!finish)
     {

@@ -31,13 +31,13 @@ KERNEL (lrn_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* outpu
     {
         bool zero = input_offset_f < 0 || input_offset_f >= INPUT_FEATURE_NUM;
 
-        UNIT_TYPE value = zero ? UNIT_VAL_ZERO : UNIT_CVT_FUNC(ALPHA_VAL_FACTOR) * input[input_idx];
+        UNIT_TYPE value = zero ? UNIT_VAL_ZERO : UNIT_CVT_FUNC(ALPHA_VAL_FACTOR_DIV_BY_SIZE) * input[input_idx];
         acc = mad(value, value, acc);
 
         input_offset_f++;
         input_idx += INPUT_SIZE_X * INPUT_SIZE_Y;
     }
-    acc = mad(acc, UNIT_CVT_FUNC(ALPHA), UNIT_CVT_FUNC(K));
+    acc = mad(acc, UNIT_CVT_FUNC(ALPHA_DIV_BY_SIZE), UNIT_CVT_FUNC(K));
     acc = native_powr(acc, -UNIT_CVT_FUNC(BETA));
 
     uint output_pos = (b * OUTPUT_FEATURE_NUM + f) * output_buffer_size_x * output_buffer_size_y;

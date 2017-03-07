@@ -50,7 +50,7 @@ TEST(local_response_normalization_gpu, lrn_test) {
         -0.21721f, -0.13945f, -0.15913f, -0.16455f, -0.17056f, -0.17725f, -0.23420f };  // b=0, x=1, y=1
 
                                                                                         // lrn parameters:
-    const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
+    const float pk = 1.0f, palpha = 3.0f, pbeta = 0.75f;
 
     engine engine;
 
@@ -143,7 +143,7 @@ TEST(local_response_normalization_gpu, lrn_test_batches) {
          0.26604f, -0.17725f,
          0.37728f, -0.23420f };
                                                                                         // lrn parameters:
-    const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
+    const float pk = 1.0f, palpha = 3.0f, pbeta = 0.75f;
 
     engine engine;
 
@@ -268,7 +268,10 @@ public:
 
 	static void TearDownTestCase() 
 	{
-		generic_test::TearDownTestCase();
+		for (auto generic_params : all_generic_params)
+		{
+			delete generic_params;
+		}
 
 		for (auto layer_params : all_layer_params)
 		{
@@ -286,8 +289,24 @@ public:
 		return all_layer_params;
 	}
 
-	virtual void generate_reference(memory& input, memory& output)
+	static std::vector<tests::test_params*> generate_generic_test_params()
 	{
+		return generic_test::generate_generic_test_params(all_generic_params);
+	}
+
+	virtual bool is_format_supported(cldnn::format format)
+	{
+		if ((format == cldnn_format_type::cldnn_format_yxfb) || (format == cldnn_format_type::cldnn_format_bfyx))
+		{
+			return true;
+		}
+		return false;
+	}
+
+	virtual memory generate_reference(memory& input)
+	{
+		auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().size.transform(cldnn::format::bfyx, 0)));
+
 		const cldnn::normalization* lrn = (cldnn::normalization*)layer_parmas;
 		float alpha = (*lrn).alpha;
 		float beta = (*lrn).beta;
@@ -296,10 +315,11 @@ public:
 		cldnn_lrn_norm_region lrn_norm_region = (*lrn).norm_region;
 		float* input_mem = input.pointer<float>().data();
 		float* output_mem = output.pointer<float>().data();
-		int batch = input.get_layout().size.batch[0];
-		int feature = input.get_layout().size.feature[0];
-		int height = input.get_layout().size.spatial[1];
-		int width = input.get_layout().size.spatial[0];
+		int batch = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
+		int feature = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
+		int height = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
+		int width = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+
 		switch (lrn_norm_region)
 		{
 			case cldnn_lrn_norm_region::cldnn_lrn_norm_region_across_channel:
@@ -374,14 +394,19 @@ public:
 				assert(0);
 			}
 		}
+
+		return output;
 	}
 
 private:
 
-	static std::vector<cldnn::primitive*> all_layer_params;	
+	static std::vector<tests::test_params*> all_generic_params;
+	static std::vector<cldnn::primitive*> all_layer_params;
+	
 };
 
 std::vector<cldnn::primitive*> lrn_test::all_layer_params = {};
+std::vector<tests::test_params*> lrn_test::all_generic_params = {};
 
 TEST_P(lrn_test, DISABLED_test_all)
 {
@@ -390,6 +415,7 @@ TEST_P(lrn_test, DISABLED_test_all)
 
 INSTANTIATE_TEST_CASE_P(LRN, 
 						lrn_test, 
-						::testing::Combine(::testing::ValuesIn(tests::generic_test::generate_generic_test_params()), ::testing::ValuesIn(lrn_test::generate_specific_test_params())), 
+						::testing::Combine(::testing::ValuesIn(lrn_test::generate_generic_test_params()),
+										   ::testing::ValuesIn(lrn_test::generate_specific_test_params())), 
 						tests::generic_test::custom_param_name_functor());
 
