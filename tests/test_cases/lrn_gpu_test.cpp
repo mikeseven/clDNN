@@ -50,7 +50,7 @@ TEST(local_response_normalization_gpu, lrn_test) {
         -0.21721f, -0.13945f, -0.15913f, -0.16455f, -0.17056f, -0.17725f, -0.23420f };  // b=0, x=1, y=1
 
                                                                                         // lrn parameters:
-    const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
+    const float pk = 1.0f, palpha = 3.0f, pbeta = 0.75f;
 
     engine engine;
 
@@ -143,7 +143,7 @@ TEST(local_response_normalization_gpu, lrn_test_batches) {
          0.26604f, -0.17725f,
          0.37728f, -0.23420f };
                                                                                         // lrn parameters:
-    const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
+    const float pk = 1.0f, palpha = 3.0f, pbeta = 0.75f;
 
     engine engine;
 

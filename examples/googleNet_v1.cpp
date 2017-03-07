@@ -66,7 +66,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pool1_3x3_s2,
         5,
         1.0f,
-        0.00002f,
+        0.0001f,
         0.75f,
 		cldnn_lrn_norm_region_across_channel);
 
@@ -94,7 +94,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         conv2_3x3,
         5,
         1.0f,
-        0.00002f,
+        0.0001f,
         0.75f,
 		cldnn_lrn_norm_region_across_channel);
 

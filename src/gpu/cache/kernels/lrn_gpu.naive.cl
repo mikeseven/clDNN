@@ -23,13 +23,13 @@ KERNEL (lrn_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     {
         bool zero = input_offset_f < 0 || input_offset_f >= INPUT_FEATURE_NUM * INPUT_BATCH_NUM;
 
-        UNIT_TYPE value = zero ? UNIT_VAL_ZERO : UNIT_CVT_FUNC(ALPHA_VAL_FACTOR) * input[input_idx];
+        UNIT_TYPE value = zero ? UNIT_VAL_ZERO : UNIT_CVT_FUNC(ALPHA_VAL_FACTOR_DIV_BY_SIZE) * input[input_idx];
         acc = mad(value, value, acc);
 
         input_offset_f += INPUT_BATCH_NUM;
         input_idx += INPUT_BATCH_NUM;
     }
-    acc = mad(acc, UNIT_CVT_FUNC(ALPHA), UNIT_CVT_FUNC(K));
+    acc = mad(acc, UNIT_CVT_FUNC(ALPHA_DIV_BY_SIZE), UNIT_CVT_FUNC(K));
     acc = native_powr(acc, -UNIT_CVT_FUNC(BETA));
 
     output[linear_id] = acc * input[linear_id];
