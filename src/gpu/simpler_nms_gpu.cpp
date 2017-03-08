@@ -245,7 +245,9 @@ struct simpler_nms_gpu : is_an_implementation {
     template<typename dtype>
     inline void float_write_helper(dtype* mem, float f)
     {
-        if (sizeof(dtype) == 4) 
+		bool is_fp32 = (sizeof(dtype) == 4);
+
+        if (is_fp32) 
         {
             *mem = *((dtype*)&f);
         }
