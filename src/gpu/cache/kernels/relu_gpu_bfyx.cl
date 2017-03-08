@@ -18,7 +18,7 @@ KERNEL (relu_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* outp
     const uint input_buffer_size_y = INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y + INPUT_PADDING_UPPER_SIZE_Y;
     const uint output_buffer_size_x = OUTPUT_PADDING_LOWER_SIZE_X + OUTPUT_SIZE_X + OUTPUT_PADDING_UPPER_SIZE_X;
     const uint output_buffer_size_y = OUTPUT_PADDING_LOWER_SIZE_Y + OUTPUT_SIZE_Y + OUTPUT_PADDING_UPPER_SIZE_Y;
-
+    const uint batch_num = INPUT_BATCH_NUM;
 
     const uint global_id = get_global_id(0);
     const uint batch_id = global_id % batch_num;

@@ -134,9 +134,13 @@ struct lrn_gpu : is_an_implementation
         int size = outer.argument.size;
         int pad = (size - 1) / 2;
 
+        //alpha_div_by_size is used for norm. region: within channels, alpha is used for norm. region: across channel
+        auto alpha = outer.argument.alpha;
+        auto alpha_div_by_size = outer.argument.alpha / outer.argument.size;
+        auto alpha_sign = std::signbit(alpha) ? -1.0f : 1.0f;
         // When used FP16 the value cannot be scaled afterwards by alpha (it must be scaled before computing sum of squares).
-        auto alpha_sign = std::signbit(outer.argument.alpha) ? -1.0f : 1.0f;
-        auto alpha_abs_sqrt = std::sqrt(std::abs(outer.argument.alpha));
+        auto alpha_abs_sqrt = std::sqrt(std::abs(alpha));
+        auto alpha_div_by_size_abs_sqrt = std::sqrt(std::abs(alpha_div_by_size));
 
         auto input_padding = outer.argument.input_padding();
         if (input_padding)
@@ -149,22 +153,24 @@ struct lrn_gpu : is_an_implementation
         int count = input_size.sizes()[0] * input_size.sizes()[1] * input_size.sizes()[2] * input_size.sizes()[3];
 
         gpu::jit_constants mem_consts {
-            gpu::make_jit_constant("INPUT",             input_size),
-            gpu::make_jit_constant("COUNT",             count),
-            gpu::make_jit_constant("OUTPUT",            outer.non_padded_output_layout().size),
-            gpu::make_jit_constant("P_SIZE",            size),
-            gpu::make_jit_constant("PAD",               pad),
-            gpu::make_jit_constant("ALPHA",             data.fp16_unit_used ? alpha_sign : outer.argument.alpha),
-            gpu::make_jit_constant("ALPHA_VAL_FACTOR",  data.fp16_unit_used ? alpha_abs_sqrt : 1.0f),
-            gpu::make_jit_constant("BETA",              outer.argument.beta),
-            gpu::make_jit_constant("K",                 outer.argument.k),
-            gpu::make_jit_constant("HELP_INPUT_OFFSET", outer.desc()->input_offset().feature[0] - static_cast<int32_t>(size / 2)),
-            gpu::make_jit_constant("FP16_SUPPORTED",    static_cast<int>(engine_info.supports_fp16)),
-            gpu::make_jit_constant("FP16_UNIT_USED",    static_cast<int>(data.fp16_unit_used)),
-            gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),
-            gpu::make_jit_constant("UNIT_VAL_ZERO",     data.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("INPUT_PADDING",     outer.argument.input_padding()),
-            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding())
+            gpu::make_jit_constant("INPUT",                         input_size),
+            gpu::make_jit_constant("COUNT",                         count),
+            gpu::make_jit_constant("OUTPUT",                        outer.non_padded_output_layout().size),
+            gpu::make_jit_constant("P_SIZE",                        size),
+            gpu::make_jit_constant("PAD",                           pad),
+            gpu::make_jit_constant("ALPHA",                         data.fp16_unit_used ? alpha_sign : alpha),
+            gpu::make_jit_constant("ALPHA_DIV_BY_SIZE",             data.fp16_unit_used ? alpha_sign : alpha_div_by_size),
+            gpu::make_jit_constant("ALPHA_VAL_FACTOR",              data.fp16_unit_used ? alpha_abs_sqrt : 1.0f),
+            gpu::make_jit_constant("ALPHA_VAL_FACTOR_DIV_BY_SIZE",  data.fp16_unit_used ? alpha_div_by_size_abs_sqrt : 1.0f),
+            gpu::make_jit_constant("BETA",                          outer.argument.beta),
+            gpu::make_jit_constant("K",                             outer.argument.k),
+            gpu::make_jit_constant("HELP_INPUT_OFFSET",             outer.desc()->input_offset().feature[0] - static_cast<int32_t>(size / 2)),
+            gpu::make_jit_constant("FP16_SUPPORTED",                static_cast<int>(engine_info.supports_fp16)),
+            gpu::make_jit_constant("FP16_UNIT_USED",                static_cast<int>(data.fp16_unit_used)),
+            gpu::make_jit_constant("UNIT_TYPE",                     data.fp16_unit_used ? "half" : "float"),
+            gpu::make_jit_constant("UNIT_VAL_ZERO",                 data.fp16_unit_used ? "0.0h" : "0.0f"),
+            gpu::make_jit_constant("INPUT_PADDING",                 outer.argument.input_padding()),
+            gpu::make_jit_constant("OUTPUT_PADDING",                outer.argument.output_padding())
         };
 
         return mem_consts;
