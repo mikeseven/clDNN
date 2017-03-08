@@ -260,15 +260,15 @@ class test_params
 {
 public:
 
-	test_params(cldnn_format_type input_format, int32_t batch_size, int32_t feature_size, cldnn::tensor input_size) :
+	test_params(cldnn::data_types data_type, cldnn_format_type input_format, int32_t batch_size, int32_t feature_size, cldnn::tensor input_size) :
+		data_type(data_type),
 		input(cldnn::tensor( cldnn::format::bfyx,{ batch_size, feature_size, input_size.spatial[1],  input_size.spatial[0] } ).transform(cldnn::format(input_format), 1))
 	{ }
 
+	cldnn::data_types data_type;
 	cldnn::tensor input;
 
 	//TODO:
-	//formats
-	//data-types
 	//input + output padding
 };
 
@@ -281,11 +281,14 @@ public:
 
 	void run_single_test();
 
+	template<typename Type>
+	void compare_buffers(const cldnn::memory& out, const cldnn::memory& ref, float error);
+
 	uint32_t get_linear_index(cldnn::layout layout, int b, int f, int y, int x);
 
 	static std::vector<test_params*> generate_generic_test_params(std::vector<test_params*> all_generic_params);
 
-	virtual cldnn::memory generate_reference(cldnn::memory& input) = 0;
+	virtual cldnn::memory generate_reference(const cldnn::memory& input) = 0;
 
 	virtual bool is_format_supported(cldnn::format format) = 0;
 

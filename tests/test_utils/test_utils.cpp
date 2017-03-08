@@ -23,6 +23,7 @@
 #include <api/network.hpp>
 #include <api/engine.hpp>
 #include "test_utils.h"
+#include "float16.h"
 
 using namespace cldnn;
 
@@ -33,9 +34,18 @@ namespace tests
 
 	void generic_test::run_single_test()
 	{
-		auto input = memory::allocate(engine, { data_types::f32, (*generic_params).input });
+		assert((generic_params->data_type == data_types::f32) || (generic_params->data_type == data_types::f16));
 
-		tests::set_random_values<float>(input, -100, 100);
+		auto input = memory::allocate(engine, { generic_params->data_type, generic_params->input });
+
+		if (generic_params->data_type == data_types::f32)
+		{
+			tests::set_random_values<float>(input, -100, 100);
+		}
+		else
+		{
+			tests::set_random_values<FLOAT16>(input, -100, 100);
+		}
 
 		topology topology;
 		topology.add(input_layout("input", input.get_layout()));
@@ -58,8 +68,21 @@ namespace tests
 
 		auto output_ref = generate_reference(input);
 
-		auto out_layout = output.get_layout();
-		auto ref_layout = output_ref.get_layout();
+		if (generic_params->data_type == data_types::f32)
+		{
+			compare_buffers<float>(output, output_ref, 1e-4f);
+		}
+		else
+		{
+			compare_buffers<FLOAT16>(output, output_ref, 1e-3f);
+		}	
+	}
+
+	template<typename Type>
+	void generic_test::compare_buffers(const memory& out, const memory& ref, float error)
+	{
+		auto out_layout = out.get_layout();
+		auto ref_layout = ref.get_layout();
 
 		assert(out_layout.size.transform(cldnn::format::bfyx, 0) == ref_layout.size.transform(cldnn::format::bfyx, 0));
 
@@ -68,8 +91,8 @@ namespace tests
 		int y_size = out_layout.size.transform(cldnn::format::bfyx, 0).sizes()[2];
 		int x_size = out_layout.size.transform(cldnn::format::bfyx, 0).sizes()[3];
 
-		auto res_data = output.pointer<float>().data();
-		auto ref_data = output_ref.pointer<float>().data();
+		auto res_data = out.pointer<Type>().data();
+		auto ref_data = ref.pointer<Type>().data();
 
 		for (int b = 0; b < batch_size; b++)
 		{
@@ -79,24 +102,17 @@ namespace tests
 				{
 					for (int x = 0; x < x_size; x++)
 					{
-						size_t res_index = get_linear_index(out_layout,b,f,y,x);
-						size_t ref_index = get_linear_index(ref_layout,b,f,y,x);
+						size_t res_index = get_linear_index(out_layout, b, f, y, x);
+						size_t ref_index = get_linear_index(ref_layout, b, f, y, x);
 
-						EXPECT_NEAR(res_data[res_index], ref_data[ref_index], 1e-4);
+						EXPECT_NEAR(res_data[res_index], ref_data[ref_index], error);
+
 						if (HasFailure())
 						{
-							break;
+							return;
 						}
 					}
-					if (HasFailure())
-					{
-						break;
-					}
 				}
-			}
-			if (HasFailure())
-			{
-				break;
 			}
 		}
 	}
@@ -143,6 +159,7 @@ namespace tests
 
 	std::vector<test_params*> generic_test::generate_generic_test_params(std::vector<test_params*> all_generic_params)
 	{
+		std::vector<cldnn::data_types> data_types = { cldnn::data_types::f32, cldnn::data_types::f16 };
 		std::vector<cldnn_format_type> formats = { cldnn_format_type::cldnn_format_bfyx , cldnn_format_type::cldnn_format_yxfb, cldnn_format_type::cldnn_format_fyxb };
 		std::vector<int32_t> batch_sizes = { 1, 2 };// 4, 8, 16};
 		std::vector<int32_t> feature_sizes = { 1, 2 };// , 3, 15};
@@ -152,19 +169,22 @@ namespace tests
 		//{ format::yx,{ 8,8 } } , { format::yx,{ 9,9 } } , { format::yx,{ 10,10 } } , { format::yx,{ 11,11 } } , { format::yx,{ 12,12 } } , { format::yx,{ 13,13 } } ,
 		//{ format::yx,{ 14,14 } } , { format::yx,{ 15,15 } } , { format::yx,{ 16,16 } } };
 
-		for (cldnn_format_type fmt : formats)
+		for (cldnn::data_types data_type : data_types)
 		{
-			for (int batch_size : batch_sizes)
+			for (cldnn_format_type fmt : formats)
 			{
-				for (int feature_size : feature_sizes)
+				for (int batch_size : batch_sizes)
 				{
-					for (tensor input_size : input_sizes)
+					for (int feature_size : feature_sizes)
 					{
-						all_generic_params.push_back(new test_params(fmt, batch_size, feature_size, input_size));
+						for (tensor input_size : input_sizes)
+						{
+							all_generic_params.push_back(new test_params(data_type, fmt, batch_size, feature_size, input_size));
+						}
 					}
 				}
 			}
-		}
+		}		
 
 		return all_generic_params;
 	}

@@ -25,6 +25,7 @@
 #include <api/engine.hpp>
 #include "test_utils/test_utils.h"
 #include <iostream>
+#include "float16.h"
 
 TEST(local_response_normalization_gpu, lrn_test) {
 
@@ -303,18 +304,23 @@ public:
 		return false;
 	}
 
-	virtual memory generate_reference(memory& input)
+	template<typename Type>
+	memory generate_reference_typed(const memory& input)
 	{
+		//Output is bfyx
 		auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().size.transform(cldnn::format::bfyx, 0)));
 
 		const cldnn::normalization* lrn = (cldnn::normalization*)layer_parmas;
-		float alpha = (*lrn).alpha;
-		float beta = (*lrn).beta;
-		float k = (*lrn).k;
+		Type alpha = lrn->alpha;
+		Type beta = lrn->beta;
+		Type k = lrn->k;
 		uint32_t size = (*lrn).size;
 		cldnn_lrn_norm_region lrn_norm_region = (*lrn).norm_region;
-		float* input_mem = input.pointer<float>().data();
-		float* output_mem = output.pointer<float>().data();
+		Type alpha_div_by_size_abs_sqrt = std::sqrt(std::abs(lrn->alpha / lrn->size));
+		Type alpha_sign = std::signbit(lrn->alpha) ? -1.0f : 1.0f;
+
+		Type* input_mem = input.pointer<Type>().data();
+		Type* output_mem = output.pointer<Type>().data();
 		int batch = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
 		int feature = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
 		int height = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
@@ -335,15 +341,17 @@ public:
 								int c_start = c - (size - 1) / 2;
 								int c_end = std::min((int)(c_start + size), feature);
 								c_start = std::max(c_start, 0);
-								float scale = k;
+								Type scale = 0;
 								for (int i = c_start; i < c_end; ++i) 
 								{
-									int input_index = ((n * feature + i) * height + h) * width + w;
-									float value = input_mem[input_index];
-									scale += value * value * alpha / size;
+									int input_index = get_linear_index(input.get_layout(), n, i, h, w);
+									Type value = input_mem[input_index];
+									scale += (value * alpha_div_by_size_abs_sqrt) * (value * alpha_div_by_size_abs_sqrt);
 								}
-								int index = ((n * feature + c) * height + h) * width + w;
-								output_mem[index] = input_mem[index] / pow(scale, beta);
+								scale = scale * alpha_sign + k;
+								int output_index = ((n * feature + c) * height + h) * width + w;
+								int input_index = get_linear_index(input.get_layout(), n, c, h, w);
+								output_mem[output_index] = input_mem[input_index] / (Type)(float)pow((float)scale, (float)beta);
 							}
 						}
 					}
@@ -361,7 +369,7 @@ public:
 						{
 							for (int w = 0; w < width; ++w) 
 							{
-								float scale = 0.f;
+								Type scale = 0.f;
 								int h_start = h - pad;
 								int w_start = w - pad;
 								int h_end = std::min((int)(h_start + size), height + pad);
@@ -375,14 +383,15 @@ public:
 								{
 									for (int nw = w_start; nw < w_end; ++nw) 
 									{
-										int input_index = ((n * feature + c) * height + nh) * width + nw;
-										float value = input_mem[input_index];
+										int input_index = get_linear_index(input.get_layout(), n, c, nh, nw);
+										Type value = input_mem[input_index];
 										scale += value * value;
 									}
 								}
 								scale /= pool_size;
-								int index = ((n * feature + c) * height + h) * width + w;
-								output_mem[index] = input_mem[index] / pow(scale * alpha + k, beta);
+								int input_index = get_linear_index(input.get_layout(), n, c, h, w);
+								int output_index = ((n * feature + c) * height + h) * width + w;
+								output_mem[output_index] = input_mem[input_index] / (Type)(float)pow((float)(scale * alpha + k), (float)beta);
 							}
 						}
 					}
@@ -396,6 +405,18 @@ public:
 		}
 
 		return output;
+	}
+
+	virtual memory generate_reference(const memory& input)
+	{
+		if (generic_params->data_type == data_types::f32)
+		{
+			return generate_reference_typed<float>(input);
+		}
+		else
+		{
+			return generate_reference_typed<FLOAT16>(input);
+		}		
 	}
 
 private:
