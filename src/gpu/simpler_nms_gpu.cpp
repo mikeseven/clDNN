@@ -281,8 +281,10 @@ struct simpler_nms_gpu : is_an_implementation {
 
         int scaled_min_bbox_size = _outer.argument.min_bbox_size * img_z;
 
-        dtype* cls_scores_mem = cls_scores.pointer<dtype>().data();
-        dtype* bbox_pred_mem  = bbox_pred.pointer<dtype>().data();
+        pointer<dtype> cls_scores_ptr = cls_scores.pointer<dtype>();
+        pointer<dtype> bbox_pred_ptr  = bbox_pred.pointer<dtype>();
+        dtype* cls_scores_mem = cls_scores_ptr.data();
+        dtype* bbox_pred_mem  = bbox_pred_ptr.data();
 
         std::vector<simpler_nms_proposal_t> sorted_proposals_confidence;
         for (int y = 0; y < fm_h; ++y)
