@@ -253,7 +253,7 @@ struct simpler_nms_gpu : is_an_implementation {
         }
         else
         {
-			*mem = (dtype)float32_to_float16(f);            
+    		*mem = (dtype)float32_to_float16(f);            
         }
     }
     
