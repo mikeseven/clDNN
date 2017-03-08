@@ -20,10 +20,8 @@
 #include "implementation_map.h"
 #include "kernel.h"
 #include "kd_selector.h"
-//#include "api/primitives/simpler_nms.hpp"
 
 #include <algorithm>
-//#include <stdexcept>
 #include <string>
 
 #define EPSILON 0.00001f

@@ -15,9 +15,7 @@
 */
 
 #include "neural_impl.h"
-//#include "engine_impl.h"
 #include "network_impl.h"
-//#include "implementation_map.h"
 #include "primitive_type_base.h"
 
 //#include <cmath>

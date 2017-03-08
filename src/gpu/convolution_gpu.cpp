@@ -19,7 +19,6 @@
 #include "kernel.h"
 #include "network_impl.h"
 #include "engine_impl.h"
-//#include "boost/functional/hash.hpp"
 #include "kd_selector.h"
 
 //#include <unordered_map>

@@ -33,7 +33,7 @@ struct prior_box : public primitive_base<prior_box, CLDNN_PRIMITIVE_DESC(prior_b
 		const std::vector<float>& min_sizes,
 		const std::vector<float>& max_sizes = {},
 		const std::vector<float>& aspect_ratios = {},
-		bool flip = true,
+		const bool flip = true,
 		const bool clip = false,
 		const std::vector<float>& variance = {},
 		const float step_width = 0.f,
