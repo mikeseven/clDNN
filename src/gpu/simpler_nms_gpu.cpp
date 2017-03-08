@@ -236,13 +236,25 @@ struct simpler_nms_gpu : is_an_implementation {
     }
 
     template<typename dtype>
-    inline float mem_read_helper(const dtype* mem)
+    inline float float_read_helper(const dtype* mem)
     {
         return ( sizeof(dtype) == 4 ? *mem : 
                                       Float16toFloat32(*((uint16_t*)(mem))) );
     }
 
-
+    template<typename dtype>
+    inline void float_write_helper(dtype* mem, float f)
+    {
+        if (sizeof(dtype) == 4) 
+        {
+            *mem = *((dtype*)&f);
+        }
+        else
+        {
+			*mem = (dtype)Float32toFloat16(f);            
+        }
+    }
+    
     template<typename dtype>
     void execute()
     {
@@ -285,15 +297,15 @@ struct simpler_nms_gpu : is_an_implementation {
                 // we assume proposals are grouped by window location
                 for (unsigned int anchor_index = 0; anchor_index < anchors_num ; anchor_index++)
                 {
-                    float dx0 = mem_read_helper(bbox_pred_mem + location_index + fm_sz * (anchor_index * 4 + 0));
-                    float dy0 = mem_read_helper(bbox_pred_mem + location_index + fm_sz * (anchor_index * 4 + 1));
-                    float dx1 = mem_read_helper(bbox_pred_mem + location_index + fm_sz * (anchor_index * 4 + 2));
-                    float dy1 = mem_read_helper(bbox_pred_mem + location_index + fm_sz * (anchor_index * 4 + 3));
+                    float dx0 = float_read_helper(bbox_pred_mem + location_index + fm_sz * (anchor_index * 4 + 0));
+                    float dy0 = float_read_helper(bbox_pred_mem + location_index + fm_sz * (anchor_index * 4 + 1));
+                    float dx1 = float_read_helper(bbox_pred_mem + location_index + fm_sz * (anchor_index * 4 + 2));
+                    float dy1 = float_read_helper(bbox_pred_mem + location_index + fm_sz * (anchor_index * 4 + 3));
 
                     simpler_nms_delta_t bbox_delta { dx0, dy0, dx1, dy1 };
 
                     unsigned int scores_index = location_index + fm_sz * (anchor_index + (unsigned int)anchors_num * 1);
-                    float proposal_confidence = mem_read_helper(cls_scores_mem + scores_index);
+                    float proposal_confidence = float_read_helper(cls_scores_mem + scores_index);
 
                     simpler_nms_roi_t tmp_roi = simpler_nms_gen_bbox(anchors[anchor_index], bbox_delta, anchor_shift_x, anchor_shift_y);
                     simpler_nms_roi_t roi = tmp_roi.clamp({ 0, 0, float(img_w - 1), float(img_h - 1) });
@@ -317,25 +329,14 @@ struct simpler_nms_gpu : is_an_implementation {
         dtype* top_data = output.pointer<dtype>().data();        
 
 		size_t res_num_rois = res.size();
+        
         for (size_t i = 0; i < res_num_rois; ++i)
         {
-			switch (sizeof(dtype)) {
-			case 4:
-				top_data[5 * i + 0] = dtype(0);
-				top_data[5 * i + 1] = *((dtype*)&(res[i].x0));
-				top_data[5 * i + 2] = *((dtype*)&(res[i].y0));
-				top_data[5 * i + 3] = *((dtype*)&(res[i].x1));
-				top_data[5 * i + 4] = *((dtype*)&(res[i].y1));
-	    		break;
-			case 2:
-				top_data[5 * i + 0] = (dtype)Float32toFloat16(0.0f);
-				top_data[5 * i + 1] = (dtype)Float32toFloat16(res[i].x0);
-				top_data[5 * i + 2] = (dtype)Float32toFloat16(res[i].y0);
-				top_data[5 * i + 3] = (dtype)Float32toFloat16(res[i].x1);
-				top_data[5 * i + 4] = (dtype)Float32toFloat16(res[i].y1);
-				break;
-			default: ;
-			}
+            float_write_helper(top_data + 5 * i    , 0.0f);
+            float_write_helper(top_data + 5 * i + 1, res[i].x0);
+            float_write_helper(top_data + 5 * i + 2, res[i].y0);
+            float_write_helper(top_data + 5 * i + 3, res[i].x1);
+            float_write_helper(top_data + 5 * i + 4, res[i].y1);
         }
     }
 

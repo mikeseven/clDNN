@@ -17,7 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include <math.h>
+#include <cmath>
 
 #include "prior_box.h"
 #include "../primitive.hpp"
@@ -59,7 +59,7 @@ struct prior_box : public primitive_base<prior_box, CLDNN_PRIMITIVE_DESC(prior_b
 		for (auto new_aspect_ratio : aspect_ratios) {
 			bool already_exist = false;
 			for (auto aspect_ratio : this->aspect_ratios) {
-				if (fabs(new_aspect_ratio - aspect_ratio) < 1e-6) {
+				if (std::fabs(new_aspect_ratio - aspect_ratio) < 1e-6) {
 					already_exist = true;
 					break;
 				}
