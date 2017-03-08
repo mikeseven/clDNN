@@ -18,7 +18,6 @@
 #include "network_impl.h"
 #include "primitive_type_base.h"
 
-//#include <cmath>
 
 namespace cldnn
 {

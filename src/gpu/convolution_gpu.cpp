@@ -21,7 +21,6 @@
 #include "engine_impl.h"
 #include "kd_selector.h"
 
-//#include <unordered_map>
 #include <initializer_list>
 
 namespace neural 
