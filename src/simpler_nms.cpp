@@ -39,8 +39,6 @@ layout simpler_nms_arg::calc_output_layout(const topology_map& topology_map, std
 	auto input_desc = topology_map.at(desc->input()[simpler_nms_arg::cls_scores_index])->primitive_desc;
 	layout input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
 
-	assert(input_layout.data_type == data_types::f32);
-	
 	return layout(input_layout.data_type, { format::bx, { desc->post_nms_topn, CLDNN_ROI_VECTOR_SIZE}});
 }
 
