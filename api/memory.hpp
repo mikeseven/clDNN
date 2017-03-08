@@ -346,7 +346,10 @@ struct memory
     {
         if (!ptr) throw std::invalid_argument("pointer should not be null");
         size_t data_size = size * sizeof(T);
-        if (data_size != layout.data_size()) throw std::invalid_argument("buffer size mismatch");
+        if (data_size != layout.data_size()) {
+            std::string err_str("buffer size mismatch - input size " + std::to_string(data_size) + " layout size " + std::to_string(layout.data_size()));
+            throw std::invalid_argument(err_str);
+        }
         
         return check_status<cldnn_memory>("memory attach failed", [&](status_t* status)
         {

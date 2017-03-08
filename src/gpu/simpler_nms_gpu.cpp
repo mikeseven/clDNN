@@ -20,6 +20,8 @@
 #include "implementation_map.h"
 #include "kernel.h"
 #include "kd_selector.h"
+#include "api/primitives/simpler_nms.hpp"
+#include "math_utils.h"
 
 #include <algorithm>
 #include <string>
@@ -204,7 +206,6 @@ struct simpler_nms_gpu : is_an_implementation {
         kernel_data kd;
 
 		cldnn::data_types input_dt = outer.input_memory(cldnn::simpler_nms_arg::cls_scores_index).get_layout().data_type;
-		assert(input_dt == data_types::f32);
 
 		kd.fp16_unit_used = (input_dt == cldnn::data_types::f16);
 
@@ -233,12 +234,31 @@ struct simpler_nms_gpu : is_an_implementation {
         return foo;     
     }
 
-    cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
+    template<typename dtype>
+    inline float float_read_helper(const dtype* mem)
     {
-		for (auto& a : events) {
-			a->wait();
-		}
+        return ( sizeof(dtype) == 4 ? *mem : 
+                                      float16_to_float32(*((uint16_t*)(mem))) );
+    }
 
+    template<typename dtype>
+    inline void float_write_helper(dtype* mem, float f)
+    {
+		bool is_fp32 = (sizeof(dtype) == 4);
+
+        if (is_fp32) 
+        {
+            *mem = *((dtype*)&f);
+        }
+        else
+        {
+    		*mem = (dtype)float32_to_float16(f);            
+        }
+    }
+    
+    template<typename dtype>
+    void execute()
+    {
         const std::vector<anchor>& anchors = _outer.get_anchors();
 
         size_t anchors_num = anchors.size();
@@ -254,7 +274,8 @@ struct simpler_nms_gpu : is_an_implementation {
         int fm_sz = fm_w * fm_h;
 
         // original input image to the graph (after possible scaling etc.) so that coordinates are valid for it
-        const float* image_info_mem = image_info.pointer<float>().data();
+        pointer<float> image_info_ptr = image_info.pointer<float>();
+        const float* image_info_mem = image_info_ptr.data();
 
         int img_w = (int)(image_info_mem[cldnn::simpler_nms_arg::image_info_width_index] + EPSILON);
         int img_h = (int)(image_info_mem[cldnn::simpler_nms_arg::image_info_height_index] + EPSILON);
@@ -262,8 +283,10 @@ struct simpler_nms_gpu : is_an_implementation {
 
         int scaled_min_bbox_size = _outer.argument.min_bbox_size * img_z;
 
-        float* cls_scores_mem = cls_scores.pointer<float>().data();
-        float* bbox_pred_mem  = bbox_pred.pointer<float>().data();
+        pointer<dtype> cls_scores_ptr = cls_scores.pointer<dtype>();
+        pointer<dtype> bbox_pred_ptr  = bbox_pred.pointer<dtype>();
+        dtype* cls_scores_mem = cls_scores_ptr.data();
+        dtype* bbox_pred_mem  = bbox_pred_ptr.data();
 
         std::vector<simpler_nms_proposal_t> sorted_proposals_confidence;
         for (int y = 0; y < fm_h; ++y)
@@ -278,13 +301,15 @@ struct simpler_nms_gpu : is_an_implementation {
                 // we assume proposals are grouped by window location
                 for (unsigned int anchor_index = 0; anchor_index < anchors_num ; anchor_index++)
                 {
-                    float dx0 = bbox_pred_mem[location_index + fm_sz * (anchor_index * 4 + 0)];
-                    float dy0 = bbox_pred_mem[location_index + fm_sz * (anchor_index * 4 + 1)];
-                    float dx1 = bbox_pred_mem[location_index + fm_sz * (anchor_index * 4 + 2)];
-                    float dy1 = bbox_pred_mem[location_index + fm_sz * (anchor_index * 4 + 3)];
+                    float dx0 = float_read_helper(bbox_pred_mem + location_index + fm_sz * (anchor_index * 4 + 0));
+                    float dy0 = float_read_helper(bbox_pred_mem + location_index + fm_sz * (anchor_index * 4 + 1));
+                    float dx1 = float_read_helper(bbox_pred_mem + location_index + fm_sz * (anchor_index * 4 + 2));
+                    float dy1 = float_read_helper(bbox_pred_mem + location_index + fm_sz * (anchor_index * 4 + 3));
+
                     simpler_nms_delta_t bbox_delta { dx0, dy0, dx1, dy1 };
 
-                    float proposal_confidence = cls_scores_mem[location_index + fm_sz * (anchor_index + anchors_num * 1)];
+                    unsigned int scores_index = location_index + fm_sz * (anchor_index + (unsigned int)anchors_num * 1);
+                    float proposal_confidence = float_read_helper(cls_scores_mem + scores_index);
 
                     simpler_nms_roi_t tmp_roi = simpler_nms_gen_bbox(anchors[anchor_index], bbox_delta, anchor_shift_x, anchor_shift_y);
                     simpler_nms_roi_t roi = tmp_roi.clamp({ 0, 0, float(img_w - 1), float(img_h - 1) });
@@ -305,20 +330,38 @@ struct simpler_nms_gpu : is_an_implementation {
         std::vector< simpler_nms_roi_t > res = simpler_nms_perform_nms(sorted_proposals_confidence, _outer.argument.iou_threshold, _outer.argument.post_nms_topn);
 
         const cldnn::memory& output = _outer.output_memory();
-        float* top_data = output.pointer<float>().data();        
+        
+        pointer<dtype> output_ptr = output.pointer<dtype>();
+        dtype* top_data = output_ptr.data();        
 
-        size_t res_num_rois = res.size();
+		size_t res_num_rois = res.size();
+        
         for (size_t i = 0; i < res_num_rois; ++i)
         {
-            top_data[5 * i + 0] = 0;    // roi_batch_ind, always zero on test time
-            top_data[5 * i + 1] = res[i].x0;
-            top_data[5 * i + 2] = res[i].y0;
-            top_data[5 * i + 3] = res[i].x1;
-            top_data[5 * i + 4] = res[i].y1;
+            float_write_helper(top_data + 5 * i    , 0.0f);
+            float_write_helper(top_data + 5 * i + 1, res[i].x0);
+            float_write_helper(top_data + 5 * i + 2, res[i].y0);
+            float_write_helper(top_data + 5 * i + 3, res[i].x1);
+            float_write_helper(top_data + 5 * i + 4, res[i].y1);
+        }
+    }
+
+    cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
+    {
+		for (auto a : events) {
+			a->wait();
+		}
+
+        if (_kernel_data.fp16_unit_used) {
+            execute<data_type_to_type<data_types::f16>::type>();
+        }
+        else {
+            execute<data_type_to_type<data_types::f32>::type>();
         }
        
         cldnn::event_impl* ev = _outer.get_network().get_engine().get()->create_user_event();
         ev->set();
+
         return ev;
     }
 
@@ -329,15 +372,10 @@ struct simpler_nms_gpu : is_an_implementation {
 };
 
 
-simpler_nms_gpu::kernel_data defauly_bfyx_f32(const simpler_nms& arg)
-{
-    simpler_nms_gpu::kernel_data kd = simpler_nms_gpu::set_default(arg);
-
-    return kd;
-}
 
 kd_selector_t<simpler_nms_gpu::kernel_data, simpler_nms, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> simpler_nms_gpu::ks = {
-    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), defauly_bfyx_f32 },
+    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+    { std::make_tuple(memory::format::bfyx_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default }
 };
 
 namespace
@@ -348,6 +386,7 @@ namespace
         attach()
         {
             implementation_map<simpler_nms>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), simpler_nms_gpu::create);
+            implementation_map<simpler_nms>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), simpler_nms_gpu::create);
         }
 
         ~attach()
