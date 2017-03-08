@@ -61,6 +61,12 @@ struct FLOAT16
             *this = (float)*this / (float)v1;
             return *this;
     }
+
+	FLOAT16& operator *=(const FLOAT16 &v1)
+	{
+		*this = (float)*this * (float)v1;
+		return *this;
+	}
 };
 
 

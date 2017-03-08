@@ -100,7 +100,7 @@ void generic_relu_test(cldnn::format test_input_fmt, int input_b, int input_f, i
 	auto output_layout = output_memory.get_layout();
 	auto output_ptr = output_memory.pointer<T>();
 
-	EXPECT_TRUE(output_layout.size.format == test_input_fmt);
+	EXPECT_EQ(output_layout.size.format.value, test_input_fmt.value);
 	output_layout.size = output_layout.size.transform(cldnn::format::yxfb, 0);
 	int y_size = output_layout.size.sizes()[0];
 	int x_size = output_layout.size.sizes()[1];
