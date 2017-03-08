@@ -14,14 +14,25 @@
 // limitations under the License.
 */
 
+#pragma once
 
 struct FLOAT16
 {
-    int16_t v = 0;
+	union
+	{
+		uint16_t v = 0;
+		struct // added this struct for the .natvis file (for debug)
+		{
+			uint16_t significand : 10;
+			uint16_t exponent : 5;
+			uint16_t sign : 1;
+		} format;
+	};
+
     operator double() const { double d = (double)Float16toFloat32(v); return d; }
     operator float() const { float f = Float16toFloat32(v); return f; }
-    operator int16_t() const { return v; }
-    operator uint32_t() const { return *(uint16_t*)(&v); }
+    operator int16_t() const { return *(int16_t*)(&v); }
+    operator uint32_t() const { return v; }
     FLOAT16(float f) { v = Float32toFloat16(f); }
     FLOAT16(int i) { v = Float32toFloat16(float(i)); }
     explicit FLOAT16(int16_t d) : v(d) {}
@@ -46,6 +57,12 @@ struct FLOAT16
 	FLOAT16& operator /=(const FLOAT16 &v1)
 	{
 		*this = (float)*this / (float)v1;
+		return *this;
+	}
+
+	FLOAT16& operator *=(const FLOAT16 &v1)
+	{
+		*this = (float)*this * (float)v1;
 		return *this;
 	}
 

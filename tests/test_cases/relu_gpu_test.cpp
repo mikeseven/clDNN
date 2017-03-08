@@ -24,6 +24,7 @@
 #include <api/network.hpp>
 #include <api/engine.hpp>
 #include "test_utils/test_utils.h"
+#include "test_utils/float16.h"
 
 namespace{
     auto calc_idx = [](std::vector<uint32_t> yxfb_pos, std::vector<uint32_t>& buf_size_bfyx) -> uint32_t{
@@ -34,11 +35,16 @@ namespace{
     };
 }
 
+namespace cldnn
+{
+	template<> struct type_to_data_type<FLOAT16> { static const data_types value = data_types::f16; };
+}
+
 using namespace cldnn;
 using namespace tests;
 
-
-VVVVF<float> relu_reference(VVVVF<float> &input, float slope = 0.0f,
+template <typename T>
+VVVVF<T> relu_reference(VVVVF<T> &input, T slope = 0.0f,
 	int input_padding_y = 0, int input_padding_x = 0,
 	int output_padding_y = 0, int output_padding_x = 0) {
 
@@ -48,14 +54,14 @@ VVVVF<float> relu_reference(VVVVF<float> &input, float slope = 0.0f,
 	size_t output_f = input[0].size();
 	size_t output_y = input[0][0].size() + 2 * padding_y;
 	size_t output_x = input[0][0][0].size() + 2 * padding_x;
-	VVVVF<float> output(output_b, VVVF<float>(output_f, VVF<float>(output_y, VF<float>(output_x, 0.0f))));
+	VVVVF<T> output(output_b, VVVF<T>(output_f, VVF<T>(output_y, VF<T>(output_x))));
 
 	for (size_t b = 0; b < output_b; ++b) {
 		for (size_t f = 0; f < output_f; ++f) {
 			for (size_t y = 0; y < input[0][0].size(); ++y) {
 				for (size_t x = 0; x < input[0][0][0].size(); ++x) {
 					output[b][f][y + padding_y][x + padding_x] = input[b][f][y][x];
-					if (input[b][f][y][x] < 0)
+					if (input[b][f][y][x] < (T)0)
 						output[b][f][y + padding_y][x + padding_x] *= slope;
 				}
 			}
@@ -64,15 +70,17 @@ VVVVF<float> relu_reference(VVVVF<float> &input, float slope = 0.0f,
 	return output;
 }
 
-void generic_relu_test(int input_b, int input_f, int input_y, int input_x, float slope,
+template <typename T>
+void generic_relu_test(cldnn::format test_input_fmt, int input_b, int input_f, int input_y, int input_x, T slope,
 	int input_padding_y, int input_padding_x, int output_padding_y, int output_padding_x) {
 
 	int min_random = -2, max_random = 2;
-	VVVVF<float> input_rnd = generate_random_4d<float>(input_b, input_f, input_y, input_x, min_random, max_random);
-	VF<float> input_rnd_vec = flatten_4d(format::yxfb, input_rnd);
-
+	VVVVF<T> input_rnd = generate_random_4d<T>(input_b, input_f, input_y, input_x, min_random, max_random);
+	VF<T> input_rnd_vec = flatten_4d<T>(test_input_fmt, input_rnd);
+	
 	engine engine;
-	auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ input_y, input_x, input_f, input_b } } });
+	tensor input_tensor(format::bfyx, { input_b, input_f, input_y, input_x });
+	auto input = memory::allocate(engine, { type_to_data_type<T>::value, input_tensor.transform(test_input_fmt, 0) });
 	set_values(input, input_rnd_vec);
 	topology topology(
 		input_layout("input", input.get_layout()),
@@ -90,24 +98,24 @@ void generic_relu_test(int input_b, int input_f, int input_y, int input_x, float
 
 	auto output_memory = outputs.at("relu").get_memory();
 	auto output_layout = output_memory.get_layout();
-	auto output_ptr = output_memory.pointer<float>();
+	auto output_ptr = output_memory.pointer<T>();
 
+	EXPECT_TRUE(output_layout.size.format == test_input_fmt);
+	output_layout.size = output_layout.size.transform(cldnn::format::yxfb, 0);
 	int y_size = output_layout.size.sizes()[0];
 	int x_size = output_layout.size.sizes()[1];
 	int f_size = output_layout.size.sizes()[2];
 	int b_size = output_layout.size.sizes()[3];
-	EXPECT_EQ(output_layout.size.format, format::yxfb);
 	EXPECT_EQ(y_size, input_y);
 	EXPECT_EQ(x_size, input_x);
 	EXPECT_EQ(f_size, input_f);
 	EXPECT_EQ(b_size, input_b);
 	
 	bool test_is_correct = true;
-	VVVVF<float> output_cpu = relu_reference(input_rnd, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
-	VF<float> output_cpu_vec = flatten_4d(format::yxfb, output_cpu);
+	VVVVF<T> output_cpu = relu_reference<T>(input_rnd, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
+	VF<T> output_cpu_vec = flatten_4d<T>(test_input_fmt, output_cpu);
 	for (size_t i = 0; i < output_cpu_vec.size(); ++i) {
-		testing::internal::FloatingPoint<float> val_cpu(output_cpu_vec[i]), val_gpu(output_ptr[i]);
-		if (!val_cpu.AlmostEquals(val_gpu)) {
+		if (!floating_point_equal(output_cpu_vec[i], output_ptr[i])) {
 			test_is_correct = false;
 			break;
 		}
@@ -118,11 +126,12 @@ void generic_relu_test(int input_b, int input_f, int input_y, int input_x, float
 		<< "input_f = " << input_f << std::endl
 		<< "input_y = " << input_y << std::endl
 		<< "input_x = " << input_x << std::endl
-		<< "slope = " << slope << std::endl
+		<< "slope = " << (float)slope << std::endl
 		<< "input_padding_y = " << input_padding_y << std::endl
 		<< "input_padding_x = " << input_padding_x << std::endl
 		<< "output_padding_y = " << output_padding_y << std::endl
-		<< "output_padding_x = " << output_padding_x << std::endl;
+		<< "output_padding_x = " << output_padding_x << std::endl
+		<< "type = " << (sizeof(T) == 2 ? "float16" : "float32") << std::endl;
 }
 
 TEST(relu_f32_fw_gpu, basic_yxfb) {
@@ -135,10 +144,10 @@ TEST(relu_f32_fw_gpu, basic_yxfb) {
 	//  Slope: 0.5
 	//
 	//  Output:
-	//  1  -1   -1.5  4    5
-	//  2   2    3    4   -3
-	//  3  -1.5  3    5    1
-	//  1   1    1   -0.5  1
+	//  1   -1   -1.5  4    5
+	//  2    2    3    4   -3
+	//  3   -1.5  3    5    1
+	//  1    1    1   -0.5  1
 
 	engine engine;
 
@@ -329,21 +338,33 @@ TEST(DISABLED_relu_f32_fw_gpu, basic_input_and_output_padding_yxfb) {
 	}
 }
 
-TEST(DISABLED_relu_f32_fw_gpu, generic_random_yxfb_short) {
-	VF<float> slopes = { 0.0f, -17.19f, 1028.8f, std::numeric_limits<float>::max() };
+TEST(DISABLED_relu_gpu, generic_random_short) {
+	VF<cldnn::format> test_inputs_fmts = { cldnn::format::bfyx, cldnn::format::yxfb };
+	VF<float> slopes = { 0.0f, -0.0f, -17.19f, 1028.8f, std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity() };
 	std::vector<std::pair<int, int>> input_sizes = { { 100, 100 },{ 227, 227 },{ 400, 600 },{ 531, 777 },{ 4096, 1980 } };
 	for (int i = 1; i <= 16; ++i) {
 		input_sizes.emplace_back(i, i);
 	}
-	for (int input_b = 1; input_b <= 16; input_b *= 2) {
-		for (int input_f = 1; input_f <= 1; ++input_f) {
-			for (std::pair<int, int> &input_yx : input_sizes) {
-				for (float slope : slopes) {
-					for (int input_padding_y = 0; input_padding_y <= 1; ++input_padding_y) {
-						for (int input_padding_x = 0; input_padding_x <= 1; ++input_padding_x) {
-							for (int output_padding_y = 0; output_padding_y <= 1; ++output_padding_y) {
-								for (int output_padding_x = 0; output_padding_x <= 1; ++output_padding_x) {
-									generic_relu_test(input_b, input_f, input_yx.first, input_yx.second, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
+	
+	engine engine;
+	bool f16_supported = !!engine.get_info().supports_fp16;
+	if (!f16_supported) {
+		std::cout << "[ SKIPPED  ] float16 combinations are skipped (cl_khr_fp16 is not supported)." << std::endl;
+	}
+
+	for (cldnn::format test_input_fmt : test_inputs_fmts) {
+		for (int input_b = 1; input_b <= 16; input_b *= 2) {
+			for (int input_f = 1; input_f <= 1; ++input_f) {
+				for (std::pair<int, int> &input_yx : input_sizes) {
+					for (float slope : slopes) {
+						for (int input_padding_y = 0; input_padding_y <= 1; ++input_padding_y) {
+							for (int input_padding_x = 0; input_padding_x <= 1; ++input_padding_x) {
+								for (int output_padding_y = 0; output_padding_y <= 1; ++output_padding_y) {
+									for (int output_padding_x = 0; output_padding_x <= 1; ++output_padding_x) {
+										generic_relu_test<float>(test_input_fmt, input_b, input_f, input_yx.first, input_yx.second, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
+										if (!f16_supported) continue;
+										generic_relu_test<FLOAT16>(test_input_fmt, input_b, input_f, input_yx.first, input_yx.second, (FLOAT16)slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
+									}
 								}
 							}
 						}
