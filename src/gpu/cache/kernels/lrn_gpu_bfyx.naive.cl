@@ -18,7 +18,7 @@ KERNEL (lrn_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* outpu
 
     const uint x = get_global_id(0);
     const uint y = get_global_id(1);
-    if (x > INPUT_SIZE_X)
+    if (x >= INPUT_SIZE_X)
         return;
     const uint b_f = get_global_id(2);
     const uint b = b_f / INPUT_FEATURE_NUM;
