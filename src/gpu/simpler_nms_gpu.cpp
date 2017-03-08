@@ -239,7 +239,7 @@ struct simpler_nms_gpu : is_an_implementation {
     inline float float_read_helper(const dtype* mem)
     {
         return ( sizeof(dtype) == 4 ? *mem : 
-                                      Float16toFloat32(*((uint16_t*)(mem))) );
+                                      float16_to_float32(*((uint16_t*)(mem))) );
     }
 
     template<typename dtype>
@@ -253,7 +253,7 @@ struct simpler_nms_gpu : is_an_implementation {
         }
         else
         {
-			*mem = (dtype)Float32toFloat16(f);            
+			*mem = (dtype)float32_to_float16(f);            
         }
     }
     

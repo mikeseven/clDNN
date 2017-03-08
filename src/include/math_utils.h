@@ -19,7 +19,7 @@
 
 #include <immintrin.h>
 
-static inline uint16_t Float32toFloat16(float value)
+static inline uint16_t float32_to_float16(float value)
 {
 #if 0 // AVX ONLY
     __m128 in = _mm_set1_ps(value);
@@ -98,7 +98,7 @@ static inline uint16_t Float32toFloat16(float value)
 #endif
 }
 
-static inline float Float16toFloat32(uint16_t value)
+static inline float float16_to_float32(uint16_t value)
 {
 #if 0 // AVX ONLY
     __m128i in = _mm_set1_epi16(value);

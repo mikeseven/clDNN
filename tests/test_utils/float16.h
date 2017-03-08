@@ -20,12 +20,12 @@
 struct FLOAT16
 {
     int16_t v = 0;
-    operator double() const { double d = (double)Float16toFloat32(v); return d; }
-    operator float() const { float f = Float16toFloat32(v); return f; }
+    operator double() const { double d = (double)float16_to_float32(v); return d; }
+    operator float() const { float f = float16_to_float32(v); return f; }
     operator int16_t() const { return v; }
     operator uint32_t() const { return *(uint16_t*)(&v); }
-    FLOAT16(float f) { v = Float32toFloat16(f); }
-    FLOAT16(int i) { v = Float32toFloat16(float(i)); }
+    FLOAT16(float f) { v = float32_to_float16(f); }
+    FLOAT16(int i) { v = float32_to_float16(float(i)); }
     explicit FLOAT16(int16_t d) : v(d) {}
     friend FLOAT16 operator +(const FLOAT16 &v1, const FLOAT16 &v2);
 	friend FLOAT16 operator -(const FLOAT16 &v1, const FLOAT16 &v2);
