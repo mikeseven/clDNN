@@ -228,14 +228,11 @@ lrn_gpu::kernel_data default_bfyx_across_channel(const normalization::response& 
 
     kd.kernel_name = kernel_name_bfyx;
    
-    kd.gws0 = input_mem.argument().size.spatial[0];
+    kd.gws0 = align_to(input_mem.argument().size.spatial[0],32);
     kd.gws1 = input_mem.argument().size.spatial[1];
     kd.gws2 = input_mem.argument().size.feature[0] * input_mem.argument().size.batch[0];
 
-    if (kd.gws0 > 256)
-        throw std::runtime_error("Not implemented yet lrn for X greater than 256!");
-
-    kd.lws0 = kd.gws0;
+    kd.lws0 = 32;
     kd.lws1 = 1;
     kd.lws2 = 1;
     return kd;
