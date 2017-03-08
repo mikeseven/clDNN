@@ -273,7 +273,8 @@ struct simpler_nms_gpu : is_an_implementation {
         int fm_sz = fm_w * fm_h;
 
         // original input image to the graph (after possible scaling etc.) so that coordinates are valid for it
-        const float* image_info_mem = image_info.pointer<float>().data();
+        pointer<float> image_info_ptr = image_info.pointer<float>();
+        const float* image_info_mem = image_info_ptr.data();
 
         int img_w = (int)(image_info_mem[cldnn::simpler_nms_arg::image_info_width_index] + EPSILON);
         int img_h = (int)(image_info_mem[cldnn::simpler_nms_arg::image_info_height_index] + EPSILON);
@@ -328,7 +329,9 @@ struct simpler_nms_gpu : is_an_implementation {
         std::vector< simpler_nms_roi_t > res = simpler_nms_perform_nms(sorted_proposals_confidence, _outer.argument.iou_threshold, _outer.argument.post_nms_topn);
 
         const cldnn::memory& output = _outer.output_memory();
-        dtype* top_data = output.pointer<dtype>().data();        
+        
+        pointer<dtype> output_ptr = output.pointer<dtype>();
+        dtype* top_data = output_ptr.data();        
 
 		size_t res_num_rois = res.size();
         
