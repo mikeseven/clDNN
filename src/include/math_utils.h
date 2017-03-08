@@ -21,12 +21,6 @@
 
 static inline uint16_t float32_to_float16(float value)
 {
-#if 0 // AVX ONLY
-    __m128 in = _mm_set1_ps(value);
-    __m128i out = _mm_cvtps_ph(in, _MM_FROUND_TRUNC);
-    uint16_t out16 = (uint16_t)_mm_extract_epi16(out, 0);
-    return out16;
-#else    
 #define TO_M128i(a) (*(__m128i*)&(a))
 #define TO_M128(a) (*(__m128*)&(a))
 
@@ -95,18 +89,10 @@ static inline uint16_t float32_to_float16(float value)
     iPackedResult = _mm_or_si128(iPackedResult, iSignInWords);
     uint16_t out16 = (uint16_t)_mm_extract_epi16(iPackedResult, 0);
     return out16;
-#endif
 }
 
 static inline float float16_to_float32(uint16_t value)
 {
-#if 0 // AVX ONLY
-    __m128i in = _mm_set1_epi16(value);
-    __m128 out = _mm_cvtph_ps(in);
-    int out32 = _mm_extract_ps(out, 0);
-    float outf32 = *(float*)&out32;
-    return outf32;
-#else
     static const uint32_t FLOAT16_EXP_SHIFT = (23 - 10);
     static const uint32_t FLOAT16_EXP_MASK = 0x7C00;
     static const uint32_t FLOAT32_EXP_MASK = 0x7F800000;
@@ -162,7 +148,6 @@ static inline float float16_to_float32(uint16_t value)
 
     float outf32 = *(float*)&out32;
     return outf32;
-#endif
 }
 
 
