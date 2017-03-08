@@ -66,16 +66,17 @@ struct softmax_gpu : is_an_implementation
         const auto& input_mem  = outer.input_memory(0);  // input
         const auto& output_mem = outer.output_memory(); // output
 
-        kernel_data kd = {
-            kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
-            kd.fp16_supported = engine_info.supports_fp16 != 0;
-            auto batch_num = outer.output_memory().get_layout().size.batch[0];
-            auto feature_num = outer.input_memory(0).get_layout().size.feature[0];
-            size_t out_buffer_size = output_mem.count();
-            auto input_size = input_mem.argument().size;
-            kd.leftovers = 0;
-            kd.elements_in_batch = 0;
-        };
+        kernel_data kd;
+
+        kd.fp16_unit_used      = input_mem.get_layout().data_type == cldnn::data_types::f16;
+        kd.fp16_supported      = engine_info.supports_fp16 != 0;
+        auto batch_num         = outer.output_memory().get_layout().size.batch[0];
+        auto feature_num       = outer.input_memory(0).get_layout().size.feature[0];
+        size_t out_buffer_size = output_mem.count();
+        auto input_size        = input_mem.argument().size;
+        kd.leftovers = 0;
+        kd.elements_in_batch = 0;
+        
         if (input_mem.argument().format == memory::format::bfyx_f32 ||//floats
             input_mem.argument().format == memory::format::bfyx_f16 ||
             input_mem.argument().format == memory::format::yxfb_f32 ||//halfs
