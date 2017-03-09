@@ -32,7 +32,7 @@ __kernel void activation(__global DATA_TYPE* input, __global DATA_TYPE* output)
     int m = NL_M;
     int n = NL_N;
 
-    v = CAT(CAT(activation_function_,DATA_TYPE),4)(v, *((DATA_TYPE*)&m), *((DATA_TYPE*)&n));
+    v = CAT(CAT(activation_function_,DATA_TYPE),4)(v, NL_M, NL_N);
 
 #if (INPUT_WIDTH_MOD_COLS_WI == 0)
     *((__global CAT(DATA_TYPE,4)*)(output + out_offset)) = v;

@@ -238,11 +238,6 @@ __kernel void convolution_f16(
      + ( ( global_y * TILE_M ) / OUT_WIDTH ) * OUT_ROW_PITCH  // y offset
      + ( ( global_y * TILE_M ) % OUT_WIDTH );               // x offset
 
-    unsigned m = NL_M;
-    unsigned n = NL_N;
-
-    const half in_m = *(half*)(&m);
-    const half in_n = *(half*)(&n);
 
     if (global_y * TILE_M < OUT_WIDTH * OUT_HEIGHT )
     {
@@ -257,8 +252,8 @@ __kernel void convolution_f16(
         blockC10 += *(biasPtr + 1);
         #endif
 
-        blockC00 = activation_function_half16(blockC00, in_m, in_n);
-        blockC10 = activation_function_half16(blockC10, in_m, in_n);
+        blockC00 = activation_function_half16(blockC00, NL_M, NL_N);
+        blockC10 = activation_function_half16(blockC10, NL_M, NL_N);
 
         for (unsigned i = 0; i < 16; i++)
         {
@@ -274,8 +269,8 @@ __kernel void convolution_f16(
             blockC10 += *(biasPtr + 1);
             #endif
 
-            blockC00 = activation_function_half16(blockC00, in_m, in_n);
-            blockC10 = activation_function_half16(blockC10, in_m, in_n);
+            blockC00 = activation_function_half16(blockC00, NL_M, NL_N);
+            blockC10 = activation_function_half16(blockC10, NL_M, NL_N);
 
             for ( unsigned i = 0; i < 16; i++ )
             {
@@ -289,7 +284,7 @@ __kernel void convolution_f16(
             blockC00 += *biasPtr;
             #endif
 
-            blockC00 = activation_function_half16(blockC00, in_m, in_n);
+            blockC00 = activation_function_half16(blockC00, NL_M, NL_N);
 
             for (unsigned i = 0; i < 16; i++)
             {
@@ -304,8 +299,8 @@ __kernel void convolution_f16(
             blockC10 += *(biasPtr + 1);
             #endif
 
-            blockC00 = activation_function_half16(blockC00, in_m, in_n);
-            blockC10 = activation_function_half16(blockC10, in_m, in_n);
+            blockC00 = activation_function_half16(blockC00, NL_M, NL_N);
+            blockC10 = activation_function_half16(blockC10, NL_M, NL_N);
 
             for ( unsigned i = 0; i < 16; i++ )
             {
@@ -322,8 +317,8 @@ __kernel void convolution_f16(
             blockC10 += *(biasPtr + 1);
             #endif
 
-            blockC00 = activation_function_half16(blockC00, in_m, in_n);
-            blockC10 = activation_function_half16(blockC10, in_m, in_n);
+            blockC00 = activation_function_half16(blockC00, NL_M, NL_N);
+            blockC10 = activation_function_half16(blockC10, NL_M, NL_N);
 
             for (unsigned i = 0; i < 16 ; i++)
             {
@@ -338,7 +333,7 @@ __kernel void convolution_f16(
             blockC00 += *biasPtr;
             #endif
 
-            blockC00 = activation_function_half16(blockC00, in_m, in_n);
+            blockC00 = activation_function_half16(blockC00, NL_M, NL_N);
 
             for (unsigned i = 0; i < OUT_DEPTH % 16 ; i++)
             {
@@ -536,11 +531,7 @@ __kernel void convolution_f32(
     #ifdef OUTPUT_BIASED
     __global float8* biasPtr = (__global float8*) (bias + global_z * OUT_DEPTH + group_x * TILE_N);
     #endif
-    unsigned m = NL_M;
-    unsigned n = NL_N;
-
-    float in_m = *(float*)(&m);
-    float in_n = *(float*)(&n);
+    
     if( global_y * TILE_M < OUT_WIDTH * OUT_HEIGHT )
     {
         if ( ( OUT_DEPTH % TILE_N ) == 0 )
@@ -552,10 +543,10 @@ __kernel void convolution_f32(
             blockC30 += *(biasPtr + 3);
             #endif
 
-            blockC00 = activation_function_float8(blockC00, in_m, in_n);
-            blockC10 = activation_function_float8(blockC10, in_m, in_n);
-            blockC20 = activation_function_float8(blockC20, in_m, in_n);
-            blockC30 = activation_function_float8(blockC30, in_m, in_n);
+            blockC00 = activation_function_float8(blockC00, NL_M, NL_N);
+            blockC10 = activation_function_float8(blockC10, NL_M, NL_N);
+            blockC20 = activation_function_float8(blockC20, NL_M, NL_N);
+            blockC30 = activation_function_float8(blockC30, NL_M, NL_N);
 
             for( unsigned i = 0; i < 8; i++ )
             {
@@ -576,10 +567,10 @@ __kernel void convolution_f32(
                 blockC30 += *(biasPtr + 3);
                 #endif
 
-                blockC00 = activation_function_float8(blockC00, in_m, in_n);
-                blockC10 = activation_function_float8(blockC10, in_m, in_n);
-                blockC20 = activation_function_float8(blockC20, in_m, in_n);
-                blockC30 = activation_function_float8(blockC30, in_m, in_n);
+                blockC00 = activation_function_float8(blockC00, NL_M, NL_N);
+                blockC10 = activation_function_float8(blockC10, NL_M, NL_N);
+                blockC20 = activation_function_float8(blockC20, NL_M, NL_N);
+                blockC30 = activation_function_float8(blockC30, NL_M, NL_N);
 
                 for ( unsigned i = 0; i < 8; i++ )
                 {
@@ -600,9 +591,9 @@ __kernel void convolution_f32(
                     if (( OUT_DEPTH % TILE_N) > 24 ) blockC30 += *(biasPtr + 3);
                     #endif
 
-                    blockC00 = activation_function_float8(blockC00, in_m, in_n);
-                    blockC10 = activation_function_float8(blockC10, in_m, in_n);
-                    blockC20 = activation_function_float8(blockC20, in_m, in_n);
+                    blockC00 = activation_function_float8(blockC00, NL_M, NL_N);
+                    blockC10 = activation_function_float8(blockC10, NL_M, NL_N);
+                    blockC20 = activation_function_float8(blockC20, NL_M, NL_N);
 
                     for (unsigned i = 0; i < 8; i++)
                     {
@@ -626,8 +617,8 @@ __kernel void convolution_f32(
                         blockC20 += *(biasPtr + 2);
                     #endif
 
-                    blockC00 = activation_function_float8(blockC00, in_m, in_n);
-                    blockC10 = activation_function_float8(blockC10, in_m, in_n);
+                    blockC00 = activation_function_float8(blockC00, NL_M, NL_N);
+                    blockC10 = activation_function_float8(blockC10, NL_M, NL_N);
 
                     for (unsigned i = 0; i < 8; i++)
                     {
@@ -649,7 +640,7 @@ __kernel void convolution_f32(
                         blockC10 += *(biasPtr + 1);
                     #endif
 
-                    blockC00 = activation_function_float8(blockC00, in_m, in_n);
+                    blockC00 = activation_function_float8(blockC00, NL_M, NL_N);
 
                     for (unsigned i = 0; i < 8; i++)
                     {
@@ -686,10 +677,10 @@ __kernel void convolution_f32(
             blockC31 += *(biasPtr + 3);
             #endif
 
-            blockC01 = activation_function_float8(blockC01, in_m, in_n);
-            blockC11 = activation_function_float8(blockC11, in_m, in_n);
-            blockC21 = activation_function_float8(blockC21, in_m, in_n);
-            blockC31 = activation_function_float8(blockC31, in_m, in_n);
+            blockC01 = activation_function_float8(blockC01, NL_M, NL_N);
+            blockC11 = activation_function_float8(blockC11, NL_M, NL_N);
+            blockC21 = activation_function_float8(blockC21, NL_M, NL_N);
+            blockC31 = activation_function_float8(blockC31, NL_M, NL_N);
 
             for( unsigned i = 0; i < 8; i++ )
             {
@@ -710,10 +701,10 @@ __kernel void convolution_f32(
                 blockC31 += *(biasPtr + 3);
                 #endif
 
-                blockC01 = activation_function_float8(blockC01, in_m, in_n);
-                blockC11 = activation_function_float8(blockC11, in_m, in_n);
-                blockC21 = activation_function_float8(blockC21, in_m, in_n);
-                blockC31 = activation_function_float8(blockC31, in_m, in_n);
+                blockC01 = activation_function_float8(blockC01, NL_M, NL_N);
+                blockC11 = activation_function_float8(blockC11, NL_M, NL_N);
+                blockC21 = activation_function_float8(blockC21, NL_M, NL_N);
+                blockC31 = activation_function_float8(blockC31, NL_M, NL_N);
 
                 for ( unsigned i = 0; i < 8; i++ )
                 {
@@ -734,9 +725,9 @@ __kernel void convolution_f32(
                     if ( ( OUT_DEPTH % TILE_N ) > 24 ) blockC31 += *(biasPtr + 3);
                     #endif
 
-                    blockC01 = activation_function_float8(blockC01, in_m, in_n);
-                    blockC11 = activation_function_float8(blockC11, in_m, in_n);
-                    blockC21 = activation_function_float8(blockC21, in_m, in_n);
+                    blockC01 = activation_function_float8(blockC01, NL_M, NL_N);
+                    blockC11 = activation_function_float8(blockC11, NL_M, NL_N);
+                    blockC21 = activation_function_float8(blockC21, NL_M, NL_N);
 
                     for (unsigned i = 0; i < 8; i++)
                     {
@@ -759,8 +750,8 @@ __kernel void convolution_f32(
                     if ( ( OUT_DEPTH % TILE_N ) > 16 ) blockC21 += *(biasPtr + 2);
                     #endif
 
-                    blockC01 = activation_function_float8(blockC01, in_m, in_n);
-                    blockC11 = activation_function_float8(blockC11, in_m, in_n);
+                    blockC01 = activation_function_float8(blockC01, NL_M, NL_N);
+                    blockC11 = activation_function_float8(blockC11, NL_M, NL_N);
 
                     for (unsigned i = 0; i < 8; i++)
                     {
@@ -780,7 +771,7 @@ __kernel void convolution_f32(
                     if ( ( OUT_DEPTH % TILE_N ) > 8 ) blockC11 += *(biasPtr + 1);
                     #endif
 
-                    blockC01 = activation_function_float8(blockC01, in_m, in_n);
+                    blockC01 = activation_function_float8(blockC01, NL_M, NL_N);
 
                     for (unsigned i = 0; i < 8; i++)
                     {

@@ -246,11 +246,8 @@ __constant float1 float_zeros     = (float1){0};
 #endif
 
 
-inline DATA_TYPE activation_function(DATA_TYPE in_f, int im, int in)
+inline DATA_TYPE activation_function(DATA_TYPE in_f, float m, float n)
 {
-    DATA_TYPE m = *(DATA_TYPE*)&im;
-    DATA_TYPE n = *(DATA_TYPE*)&in;
-    
 #if defined ACTIVATION_FUNCTION_LOGISTIC
     DATA_TYPE res = (DATA_TYPE)1.0 / ((DATA_TYPE)1.0 + exp(-in_f));
     return isinf(res) ? (DATA_TYPE)0 : res;
@@ -262,7 +259,7 @@ inline DATA_TYPE activation_function(DATA_TYPE in_f, int im, int in)
     return (in_f > (DATA_TYPE)0 ? in_f : (DATA_TYPE)0);
 
 #elif defined ACTIVATION_FUNCTION_BRELU
-    return min(m, max((DATA_TYPE)0, in_f));
+    return min((DATA_TYPE)m, max((DATA_TYPE)0, in_f));
 
 #elif defined ACTIVATION_FUNCTION_SOFTRELU
     DATA_TYPE res = log(1 + exp(in_f));
@@ -278,13 +275,13 @@ inline DATA_TYPE activation_function(DATA_TYPE in_f, int im, int in)
     return sqrt(in_f);
 
 #elif defined ACTIVATION_FUNCTION_LINEAR
-    return m * in_f + n;
+    return (DATA_TYPE)m * in_f + (DATA_TYPE)n;
 #else
     return in_f;
 #endif
 }
 
-inline half2 activation_function_half2(half2 value, half m, half n)
+inline half2 activation_function_half2(half2 value, float m, float n)
 {
 #if defined ACTIVATION_FUNCTION_LOGISTIC
     return (half2)(1.0) / ((half2)(1.0) + exp(-value));
@@ -319,7 +316,7 @@ inline half2 activation_function_half2(half2 value, half m, half n)
 #endif
 }
 
-inline half3 activation_function_half3(half3 value, half m, half n)
+inline half3 activation_function_half3(half3 value, float m, float n)
 {
 #if defined ACTIVATION_FUNCTION_LOGISTIC
     return (half3)(1.0) / ((half3)(1.0) + exp(-value));
@@ -354,7 +351,7 @@ inline half3 activation_function_half3(half3 value, half m, half n)
 #endif
 }
 
-inline half4 activation_function_half4(half4 value, half m, half n)
+inline half4 activation_function_half4(half4 value, float m, float n)
 {
 #if defined ACTIVATION_FUNCTION_LOGISTIC
     return (half4)(1.0) / ((half4)(1.0) + exp(-value));
@@ -390,7 +387,7 @@ inline half4 activation_function_half4(half4 value, half m, half n)
 }
 
 
-inline half16 activation_function_half16(half16 value, half m, half n)
+inline half16 activation_function_half16(half16 value, float m, float n)
 {
 #if defined ACTIVATION_FUNCTION_LOGISTIC
     return (half16)(1.0) / ((half16)(1.0) + exp(-value));
