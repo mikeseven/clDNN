@@ -21,52 +21,61 @@
 
 namespace cldnn
 {
-    enum class eltwise_mode : int32_t
+enum class eltwise_mode : int32_t
+{
+    sum = cldnn_eltwise_sum,
+    sub = cldnn_eltwise_sub,
+    max = cldnn_eltwise_max,
+    prod = cldnn_eltwise_prod,
+};
+
+
+struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
+{
+    CLDNN_DECLATE_PRIMITIVE(eltwise)
+
+    eltwise(
+        const primitive_id& id,
+        const primitive_id& input,
+        const primitive_id& input2,
+        eltwise_mode mode,
+        bool with_activation = false,
+        float activation_slp = 0.0f,
+        const padding& input_padding = padding(),
+        const padding& output_padding = padding()
+    )
+        :primitive_base(id, { input }, input_padding, output_padding)
+        , input2(input2)
+        , mode(mode)
+        , with_activation(with_activation)
+        , activation_negative_slope(activation_slp)
     {
-        sum = cldnn_eltwise_sum,
-        sub = cldnn_eltwise_sub,
-        max = cldnn_eltwise_max,
-        prod = cldnn_eltwise_prod,
-    };
+    }
 
-
-    struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
+    eltwise(const dto* dto)
+        :primitive_base(dto)
+        , input2(dto->input2)
+        , mode(static_cast<eltwise_mode>(dto->mode))
+        , with_activation(dto->with_activation != 0)
+        , activation_negative_slope(dto->activation_negative_slope)
     {
-        CLDNN_DECLATE_PRIMITIVE(eltwise)
+    }
 
-        eltwise(
-            const primitive_id& id,
-            const primitive_id& input,
-            const primitive_id& input2,
-            eltwise_mode mode,
-            const padding& input_padding = padding(),
-            const padding& output_padding = padding()
-        )
-            :primitive_base(id, { input }, input_padding, output_padding, "", static_cast<cldnn_eltwise_mode>(mode))
-            , input2(input2)
-            , mode(mode)
-        {
-            init_dto();
-        }
+    primitive_id input2;
+    eltwise_mode mode;
 
-        eltwise(const dto* dto)
-            :primitive_base(dto)
-            , input2(dto->input2)
-            , mode(static_cast<eltwise_mode>(_dto.mode))
-        {
-            init_dto();
-        }
+    bool with_activation;
+    float activation_negative_slope;
 
-        const primitive_id input2;
-        const eltwise_mode mode;
+protected:
+    std::vector<primitive_id> get_dependencies() const override { return{ input2 }; }
 
-    protected:
-        std::vector<primitive_id> get_dependencies() const override { return{ input2 }; }
-
-        void init_dto()
-        {
-            _dto.input2 = input2.c_str();
-            _dto.mode = static_cast<cldnn_eltwise_mode>(mode);
-        }
-    };
+    void update_dto(dto& dto) const override
+    {
+        dto.input2 = input2.c_str();
+        dto.mode = static_cast<cldnn_eltwise_mode>(mode);
+        dto.with_activation = with_activation;
+        dto.activation_negative_slope = activation_negative_slope;
+    }
+};
 }

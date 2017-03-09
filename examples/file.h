@@ -15,6 +15,7 @@
 */
 #pragma once
 #include "api/memory.hpp"
+#include "api/primitives/data.hpp"
 #include <string>
 
 namespace file
@@ -27,6 +28,7 @@ namespace file
         arguments(const cldnn::engine& eng, const std::string& aname);
     };
 
-    cldnn::memory create(arguments arg);
+    cldnn::memory read(arguments arg);
+    cldnn::data create(arguments arg);
     void serialize(const cldnn::memory&, const std::string&);
 }

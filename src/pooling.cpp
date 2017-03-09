@@ -18,7 +18,6 @@
 #include "primitive_type_base.h"
 #include "network_impl.h"
 
-#include <cmath>
 
 namespace cldnn
 {
@@ -33,9 +32,9 @@ layout pooling_arg::calc_output_layout(const topology_map& topology_map, std::sh
     auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
     auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
     assert(input_layout.size.spatial.size() == 2);
-    auto input_offset = desc->input_offset().transform(input_layout.size.format, 0).sizes();
-    auto siz = desc->size.transform(input_layout.size.format, 1).sizes();
-    auto strd = desc->stride.transform(input_layout.size.format, 1).sizes();
+    auto input_offsets = desc->input_offset().transform(input_layout.size.format, 0).sizes();
+    auto strides = desc->stride.transform(input_layout.size.format, 1).sizes();
+    auto window_sizes = desc->size.transform(input_layout.size.format, 1).sizes();
     //TODO !!!implement correct output size calculation!!!
     auto output_sizes = input_layout.size.sizes();
     auto format_order = input_layout.size.format.order();
@@ -44,15 +43,17 @@ layout pooling_arg::calc_output_layout(const topology_map& topology_map, std::sh
     {
         if (format_traits::is_spatial_char(format_order[i]))
         {
-            if (strd[i] < 1) throw std::invalid_argument("stride should be >= 1");
-            if (strd[i] > 1 || 0 != input_offset[i])
-            {
-                output_sizes[i] = static_cast<int32_t>(ceil(static_cast<float>(output_sizes[i] - (2 * input_offset[i]) - siz[i]) / static_cast<float>(strd[i]))) + 1;
-            }
-            else
-            {
-                output_sizes[i] = (output_sizes[i] - (2 * input_offset[i]) - siz[i]) / strd[i] + 1;
-            }
+            // TODO: Consider moving general parameter verification to arguments constructor.
+            if (strides[i] <= 0)
+                throw std::invalid_argument("Stride must be positive (>= 1)");
+            if (2 * input_offsets[i] >= output_sizes[i])
+                throw std::invalid_argument("Input offset is greater than input data range. There is no input data to process");
+
+            output_sizes[i] = static_cast<cldnn::tensor::value_type>(
+                2 * input_offsets[i] < output_sizes[i]
+                    // ? std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0) / strides[i] + 1
+                    ? ceil_div(std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0), strides[i]) + 1
+                    : 0);
         }
     }
 

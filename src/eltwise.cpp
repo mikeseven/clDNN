@@ -37,12 +37,12 @@ layout eltwise_arg::calc_output_layout(const topology_map& topology_map, std::sh
 eltwise_arg::eltwise_arg(network_impl& network, std::shared_ptr<const eltwise> desc)
     :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
-    auto input_format = input_memory(0).get_layout().size.format;
-    auto input2_format = input2_memory().get_layout().size.format;
+    auto input_layout = input_memory(0).get_layout();
+    auto input2_layout = input2_memory().get_layout();
 
-    if (input_format != input2_format)
+    if (input_layout != input2_layout)
     {
-        throw std::runtime_error("Different formats of eltwise input layers");
+        throw std::runtime_error("Different layouts of eltwise's inputs");
     }
 }
 

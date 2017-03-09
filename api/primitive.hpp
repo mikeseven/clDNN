@@ -16,70 +16,87 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+
 #include "cldnn_defs.h"
 #include "compounds.h"
 #include "tensor.hpp"
+
+#include <algorithm>
 #include <string>
+#include <vector>
+
 
 namespace cldnn
 {
 struct padding
 {
-    enum types : int32_t
-    {
-        zero = cldnn_padding_zero,
-        one = cldnn_padding_one,
-        two = cldnn_padding_two,
-    };
+    float filling_value() const { return _filling_value; }
+    
+    /// Gets lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
+    ///
+    /// @return Tensor with padding for top/left/lower bounds of data.
+    tensor lower_size() const { return _lower_size; }
+    /// Gets upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
+    ///
+    /// @return Tensor with padding for bottom/right/upper bounds of data.
+    tensor upper_size() const { return _upper_size; }
+    /// Gets format of tensors used in padding.
+    cldnn::format format() const { return _lower_size.format; }
 
-    types type() const { return _type; };
-    tensor size() const { return _size; };
-    padding(format format, const std::vector<tensor::value_type>& sizes, types type = zero )
-        : _size(format, 0, to_abs(sizes)), _type(type)
+    padding(cldnn::format format, const std::vector<tensor::value_type>& lower_sizes, const std::vector<tensor::value_type>& upper_sizes, float filling_value = 0.0f)
+        : _lower_size(format, 0, to_abs(lower_sizes)), _upper_size(format, 0, to_abs(upper_sizes)), _filling_value(filling_value)
     {}
 
-    padding(): padding(format::x, {0}, zero){}
-
-    padding(const padding& other)
-        : _size(other._size), _type(other._type)
+    padding(cldnn::format format, const std::vector<tensor::value_type>& sizes, float filling_value = 0.0f)
+        : padding(format, sizes, sizes, filling_value)
     {}
+
+    padding(): padding(format::x, {0}) {}
 
     padding(const cldnn_padding& other)
-        : _size(other.size), _type(static_cast<types>(other.type))
+        : _lower_size(other.lower_size), _upper_size(other.upper_size), _filling_value(other.filling_value)
     {}
 
     operator cldnn_padding() const
     {
-        return{ static_cast<cldnn_tensor>(_size), static_cast<cldnn_padding_type>(_type) };
-    }
-
-    padding& operator=(const padding& other)
-    {
-        if (this == &other)
-            return *this;
-        _size = other._size;
-        _type = other._type;
-        return *this;
+        return { static_cast<cldnn_tensor>(_lower_size),
+                 static_cast<cldnn_tensor>(_upper_size),
+                 _filling_value };
     }
 
     // returns true if padding size is not zero
     explicit operator bool() const
     {
-        return std::any_of(_size.raw.begin(), _size.raw.end(), [](auto& el) { return el != 0; });
+        return std::any_of(_lower_size.raw.begin(), _lower_size.raw.end(), [](const tensor::value_type& el) { return el != 0; }) ||
+               std::any_of(_upper_size.raw.begin(), _upper_size.raw.end(), [](const tensor::value_type& el) { return el != 0; });
     }
 
+    static padding max(padding const& lhs, padding const& rhs, float filling_value = 0.0f)
+    {
+        return padding{ tensor::max(lhs.lower_size(), rhs.lower_size()),
+                        tensor::max(lhs.upper_size(), rhs.upper_size()),
+                        filling_value };
+    }
+
+
 private:
-    tensor _size;
-    types _type;
+    tensor _lower_size;    ///< Lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
+    tensor _upper_size;    ///< Upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
+    // TODO: Add support for non-zero filling value (if necessary) or remove variable (if not necessary).
+    float  _filling_value; ///< Filling value for an element of padding. If data type of elements is different than float it is converted
+                           ///< to it using round-towards-nearest-even (for floating-point data types) or round-towards-zero (for integral
+                           ///< data types).
+
+    padding(tensor const& lower, tensor const& upper, float filling_value = 0.0f)
+        : _lower_size(lower), _upper_size(upper), _filling_value(filling_value)
+    {}
 
     static std::vector<tensor::value_type> to_abs(const std::vector<tensor::value_type>& sizes)
     {
-        std::vector<tensor::value_type> result(sizes.size());
-        for(size_t i = 0; i < result.size(); i++)
-        {
-            result[i] = abs(sizes[i]);
-        }
-        return std::move(result);
+        std::vector<tensor::value_type> result;
+        result.reserve(sizes.size());
+        std::transform(sizes.cbegin(), sizes.cend(), std::back_inserter(result), [](const tensor::value_type& el) { return abs(el); });
+        return result; // NRVO
     }
 };
 
@@ -89,67 +106,6 @@ CLDNN_API_CLASS(padding)
 using primitive_type_id = cldnn_primitive_type_id;
 using primitive_id_ref = cldnn_primitive_id;
 using primitive_id = std::string;
-
-namespace detail
-{
-class primitive_id_arr
-{
-public:
-    typedef primitive_id value_type;
-    primitive_id_arr(const std::vector<primitive_id>& arr)
-        :_data_store(arr), _ref_store(create_ref(_data_store))
-    {}
-
-    primitive_id_arr(const cldnn_primitive_id_arr& arr)
-        : primitive_id_arr(create_store(arr))
-    {}
-
-    primitive_id_arr(const primitive_id_arr& other)
-        : _data_store(other._data_store), _ref_store(create_ref(_data_store))
-    {}
-
-    size_t size() const
-    {
-        return _data_store.size();
-    }
-
-    // explicit conversion
-    cldnn_primitive_id_arr ref() const
-    {
-        return{ _ref_store.data(), _ref_store.size() };
-    }
-    const std::vector<primitive_id>& store() const { return _data_store; }
-
-    // implicit conversion
-    operator const std::vector<primitive_id>&() const { return _data_store; }
-private:
-    const std::vector<primitive_id> _data_store;
-    const std::vector<cldnn_primitive_id> _ref_store;
-
-    static std::vector<cldnn_primitive_id> create_ref(const std::vector<primitive_id>& store)
-    {
-        //fill _ref_store by references to strings in _data_store
-        std::vector<cldnn_primitive_id> result(store.size());
-        for (size_t i = 0; i < store.size(); i++)
-        {
-            result[i] = store[i].c_str();
-        }
-        return std::move(result);
-    }
-
-    static std::vector<primitive_id> create_store(const cldnn_primitive_id_arr& arr)
-    {
-        //Fill _data_store by copies of strings referenced in arr
-        std::vector<primitive_id> result;
-        result.reserve(arr.size);
-        for (size_t i = 0; i < arr.size; i++)
-        {
-            result.push_back(arr.data[i]);
-        }
-        return std::move(result);
-    }
-};
-} // namespace detail
 
 template<class PType>
 typename PType::dto* as_dto(CLDNN_PRIMITIVE_DESC(primitive)* dto)
@@ -184,11 +140,20 @@ struct primitive
 
     const primitive_type_id& type() const { return _type; }
     const primitive_id& id() const { return _id; }
-    const std::vector<primitive_id>& input() const { return _input; }
+
+    //TODO: make access to primitive's fields consistent - either use access directly via public members,
+    // like in derived classes, or use getters/setter in derived classes like below
+    std::vector<primitive_id>& input() { return _input.cpp_ids; }
+    const std::vector<primitive_id>& input() const { return _input.cpp_ids; }
+
+    padding& input_padding() { return _input_padding; }
     const padding& input_padding() const { return _input_padding; }
+
+    padding& output_padding() { return _output_padding; }
     const padding& output_padding() const { return _output_padding; }
 
     virtual const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const = 0;
+
     std::vector<primitive_id> dependecies() const
     {
         auto result = input();
@@ -200,15 +165,51 @@ struct primitive
     operator primitive_id() const { return id(); }
 
     //TODO remove backward compatibility
-    tensor input_offset() const { return input_padding().size().negate(); }
-    tensor output_offset() const { return output_padding().size(); }
-    padding::types padding_type() const { return input_padding().type(); }
+    tensor input_offset() const { return input_padding().lower_size().negate(); }
+    tensor output_offset() const { return output_padding().lower_size(); }
+    float padding_filling_value() const { return input_padding().filling_value(); }
+
 protected:
+    struct primitive_id_arr
+    {
+        primitive_id_arr(std::vector<primitive_id> const& vec) : cpp_ids(vec)
+        {}
+
+        primitive_id_arr(std::vector<primitive_id>&& vec) : cpp_ids(std::move(vec))
+        {}
+
+        //create from C API id array
+        primitive_id_arr(cldnn_primitive_id_arr c_id_arr)
+        {
+            cpp_ids.resize(c_id_arr.size);
+            for (size_t i = 0; i < c_id_arr.size; ++i)
+                cpp_ids[i] = c_id_arr.data[i];
+        }
+
+        std::vector<primitive_id> cpp_ids;
+        mutable std::vector<cldnn_primitive_id> c_ids;
+        //get C API id array
+        auto ref() const -> decltype(cldnn_primitive_id_arr{c_ids.data(), c_ids.size()})
+        {
+            c_ids.resize(cpp_ids.size());
+            for (size_t i = 0; i < cpp_ids.size(); ++i)
+                c_ids[i] = cpp_ids[i].c_str();
+
+            return cldnn_primitive_id_arr{ c_ids.data(), c_ids.size() };
+        }
+
+        size_t size() const { return cpp_ids.size(); }
+
+
+
+    };
+
     const primitive_type_id _type;
     const primitive_id _id;
-    const detail::primitive_id_arr _input;
-    const padding _input_padding;
-    const padding _output_padding;
+
+    primitive_id_arr _input;
+    padding _input_padding;
+    padding _output_padding;
 
     virtual std::vector<primitive_id> get_dependencies() const { return{}; }
 };
@@ -217,8 +218,19 @@ template<class PType, class DTO>
 class primitive_base : public primitive
 {
 public:
-    const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const override { return reinterpret_cast<const CLDNN_PRIMITIVE_DESC(primitive)*>(&_dto); }
+    const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const override
+    {
+        //update common dto fields
+        _dto.id = _id.c_str();
+        _dto.type = _type;
+        _dto.input = _input.ref();
+        _dto.input_padding = _input_padding;
+        _dto.output_padding = _output_padding;
 
+        //call abstract method to update primitive-specific fields
+        update_dto(_dto);
+        return reinterpret_cast<const CLDNN_PRIMITIVE_DESC(primitive)*>(&_dto);
+    }
 
 protected:
     explicit primitive_base(
@@ -227,30 +239,19 @@ protected:
         const padding& input_padding = padding(),
         const padding& output_padding = padding())
         : primitive(PType::type_id(), id, input, input_padding, output_padding)
-        , _dto{ _type, _id.c_str(), _input.ref(), _input_padding, _output_padding }
-    {}
-
-    template<typename ...Args>
-    explicit primitive_base(
-        const primitive_id& id,
-        const std::vector<primitive_id>& input,
-        const padding& input_padding,
-        const padding& output_padding,
-        Args... args)
-        : primitive(PType::type_id(), id, input, input_padding, output_padding)
-        , _dto{ _type, _id.c_str(), _input.ref(), _input_padding, _output_padding, args... }
     {}
 
     primitive_base(const DTO* dto)
         : primitive(reinterpret_cast<const CLDNN_PRIMITIVE_DESC(primitive)*>(dto))
-        , _dto( *dto )
     {
-        if (_dto.type != PType::type_id()) throw std::invalid_argument("DTO type mismatch");
-        _dto.id = _id.c_str();
-        _dto.input = _input.ref();
+        if (dto->type != PType::type_id()) 
+            throw std::invalid_argument("DTO type mismatch");
     }
 
-    DTO _dto;
+private:
+    mutable DTO _dto;
+
+    virtual void update_dto(DTO& dto) const = 0;
 };
 
 #define CLDNN_DEFINE_TYPE_ID(PType) static primitive_type_id type_id()\

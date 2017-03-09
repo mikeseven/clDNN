@@ -234,6 +234,9 @@ def getRegressions(sessionIds):
             sys.stdout.flush()
 
         return False
+    except Exception as ex:
+        log.error('Fetching list of regressions failed for one of test sessions (ids = {})\n    Exception details: {}'.format(sessionIds, str(ex)))
+        return True
     except:
         log.error('Fetching list of regressions failed for one of test sessions (ids = {})'.format(sessionIds))
         return True

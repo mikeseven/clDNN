@@ -58,13 +58,13 @@ struct topology
     friend bool operator!=(const topology& lhs, const topology& rhs) { return !(lhs == rhs); }
 
     template<class PType>
-    void add(const PType& desc)
+    void add(PType const& desc)
     {
         check_status<void>("primitive add failed", [&](status_t* status) { cldnn_add_primitive(_impl, desc.get_dto(), status); });
     }
 
     template<class PType, class ...Args>
-    void add(const PType& desc, Args... args)
+    void add(PType const& desc, Args const&... args)
     {
         check_status<void>("primitive add failed", [&](status_t* status) { cldnn_add_primitive(_impl, desc.get_dto(), status); });
         add<Args...>(args...);

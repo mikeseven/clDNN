@@ -32,15 +32,23 @@ struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activ
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_padding, output_padding, slope)
-        , negative_slope(_dto.negative_slope)
-    {}
+        : primitive_base(id, {input}, input_padding, output_padding)
+        , negative_slope(slope)
+    {
+    }
 
     activation(const dto* dto)
         : primitive_base(dto)
-        , negative_slope(_dto.negative_slope)
-    {}
+        , negative_slope(dto->negative_slope)
+    {
+    }
 
-    const float negative_slope;
+    float negative_slope;
+
+protected:
+    void update_dto(dto& dto) const override
+    {
+        dto.negative_slope = negative_slope;
+    }
 };
 }

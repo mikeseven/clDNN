@@ -21,6 +21,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "cldnn.h"
 
@@ -49,13 +50,34 @@ namespace cldnn {
 
 using status_t = ::cldnn_status;
 
-#define CLDNN_THROW(msg, status) throw std::runtime_error(msg);
+class error : public std::runtime_error
+{
+public:
+    explicit error(const std::string& _Message, status_t status = CLDNN_ERROR)
+        : runtime_error(_Message)
+        , _status(status)
+    {
+    }
+
+    explicit error(const char* _Message, status_t status = CLDNN_ERROR)
+        : runtime_error(_Message)
+        , _status(status)
+    {
+    }
+
+    const status_t& status() const { return _status; }
+private:
+    status_t _status;
+};
+
+#define CLDNN_THROW(msg, status) throw cldnn::error(msg, status);
 
 template<class T>
 T check_status(std::string err_msg, std::function<T(status_t*)> func)
 {
     status_t status;
     auto result = func(&status);
+    
     if (status != CLDNN_SUCCESS)
         CLDNN_THROW(err_msg, status);
     return result;
@@ -139,4 +161,21 @@ constexpr auto round_up_to(T1 val, T2 rounding)
     typedef decltype(std::declval<UT1>() / std::declval<UT2>()) RetT;
 
     return static_cast<RetT>(ceil_div(val, rounding) * static_cast<UT2>(rounding));
+}
+
+
+inline std::vector<float> float_arr_to_vector(const cldnn_float_arr& arr)
+{
+    std::vector<float> result(arr.size);
+    for (size_t i = 0; i < arr.size; i++)
+    {
+        result[i] = arr.data[i];
+    }
+    return result;
+}
+
+
+inline cldnn_float_arr float_vector_to_arr(const std::vector<float>& stor)
+{
+    return { stor.data(), stor.size() };
 }

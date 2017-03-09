@@ -41,7 +41,7 @@ public:
     layout non_padded_output_layout() const
     {
         layout tmp = _output.get_layout();
-        tmp.size = tmp.size.sub(_desc->output_padding().size().mul(2));
+        tmp.size = tmp.size.sub(_desc->output_padding().lower_size()).sub(_desc->output_padding().upper_size());
         return tmp;
     }
     primitive_type_id type() const { return _desc->type(); }

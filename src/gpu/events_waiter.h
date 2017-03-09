@@ -57,7 +57,8 @@ public:
         else {
             const_cast<cl::CommandQueue&>(context()->queue()).enqueueMarkerWithWaitList(&events, &end_event);
         }
-        return new cldnn::event_impl(end_event);
+        
+		return { new cldnn::event_impl(end_event), false };
     }
 };
 }}

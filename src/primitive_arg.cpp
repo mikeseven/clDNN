@@ -52,9 +52,7 @@ primitive_arg::primitive_arg(network_impl& network, std::shared_ptr<const primit
 memory primitive_arg::allocate_output(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout)
 {
     auto output_size = output_layout.size;
-    auto padding_size = desc->output_padding().size();
-    auto padding_size2 = padding_size.mul(2);
-    auto allocation_size = output_size.add(padding_size2);
+    auto allocation_size = output_size.add(desc->output_padding().lower_size()).add(desc->output_padding().upper_size());
     //auto allocation_size = output_layout.size.add(desc()->output_padding().size().mul(2));
     return api_cast(network.get_engine()->allocate_buffer({ output_layout.data_type, allocation_size }));
 }

@@ -40,13 +40,13 @@ namespace cldnn
 
         auto scale_batch_size = scale_memory().get_layout().size.batch[0];
         auto scale_feature_size = scale_memory().get_layout().size.feature[0];
-        auto scale_x_size = scale_memory().get_layout().size.spatial[1];
-        auto scale_y_size = scale_memory().get_layout().size.spatial[0];
+        auto scale_x_size = scale_memory().get_layout().size.spatial[0];
+        auto scale_y_size = scale_memory().get_layout().size.spatial[1];
 
         auto input_batch_size = input_memory(0).get_layout().size.batch[0];
         auto input_feature_size = input_memory(0).get_layout().size.feature[0];
-        auto input_x_size = input_memory(0).get_layout().size.spatial[1];
-        auto input_y_size = input_memory(0).get_layout().size.spatial[0];
+        auto input_x_size = input_memory(0).get_layout().size.spatial[0];
+        auto input_y_size = input_memory(0).get_layout().size.spatial[1];
 
         if((scale_batch_size != input_batch_size) && (scale_batch_size != 1))
             throw std::runtime_error("Batch dimension mismatch between input and scale input!");

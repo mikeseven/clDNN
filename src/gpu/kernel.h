@@ -149,6 +149,29 @@ inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, 
     return std::static_pointer_cast<jit_constant>(std::make_shared<vector_jit_constant>(name, value));
 }
 
+class padding_jit_constant : public jit_constant {
+    vector_jit_constant _lower_size_jit;
+    vector_jit_constant _upper_size_jit;
+
+public:
+    padding_jit_constant(const std::string& name, const cldnn::padding& pad)
+        : jit_constant(name),
+          _lower_size_jit(name + "_LOWER", pad.lower_size()),
+          _upper_size_jit(name + "_UPPER", pad.upper_size()) {}
+
+    kernels_cache::jit_definitions get_definitions() const override {
+        auto&& lower_jits = _lower_size_jit.get_definitions();
+        auto&& upper_jits = _upper_size_jit.get_definitions();
+        lower_jits.insert(lower_jits.cend(), upper_jits.cbegin(), upper_jits.cend());
+
+        return lower_jits;
+    }
+};
+
+inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const cldnn::padding& value) {
+    return std::make_shared<padding_jit_constant>(name, value);
+}
+
 class memory_jit_constant : public vector_jit_constant {
     const cldnn::memory _mem;
 
@@ -172,6 +195,8 @@ public:
 inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const cldnn::memory& value) {
     return std::static_pointer_cast<jit_constant>(std::make_shared<memory_jit_constant>(name, value));
 }
+
+
 
 class memories_jit_constant : public vector_jit_constant {
     const std::vector<cldnn::memory> _mem;
@@ -371,7 +396,8 @@ public:
             setArgs<0>(clkernel, std::forward<Args>(args)...);
             context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
         }
-        return new cldnn::event_impl(end_event);
+
+		return { new cldnn::event_impl(end_event), false };
     }
 };
 

@@ -15,7 +15,6 @@
 */
 
 #include "neural_impl.h"
-#include "implementation_map.h"
 #include "kernel.h"
 #include "engine_impl.h"
 #include "network_impl.h"
@@ -29,6 +28,8 @@ namespace neural
 {
 // Kernel names.
 static const std::string kernel_name = "relu_gpu";
+static const std::string kernel_name_bfyx = "relu_gpu_bfyx";
+
 
 struct relu_gpu : is_an_implementation
 {
@@ -51,14 +52,13 @@ struct relu_gpu : is_an_implementation
     static kernel_data set_kernel_data(const relu& outer)
     {
         const auto& input_mem  = outer.input_memory(0);  // input
-        const auto& output_mem = outer.output_memory(); // output
 
         kernel_data kd;
 
         kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
 
         // Determine global work sizes.
-        kd.gws0 = output_mem.count();
+        kd.gws0 = outer.non_padded_output_layout().count();
         // Find largest positive local work size that is divider for global work size.
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
         while (kd.gws0 % kd.lws0 != 0)
@@ -66,7 +66,20 @@ struct relu_gpu : is_an_implementation
             --kd.lws0;
         }
 
-        kd.kernel_name = kernel_name;
+        if (input_mem.get_layout().size.format == cldnn::format::bfyx)
+        {
+            kd.kernel_name = kernel_name_bfyx;
+        }
+        else
+        {
+            if (outer.argument.output_padding())
+                throw std::runtime_error("Error, output padding not supported in non bfyx format in RELU primitive!");
+
+            if(outer.input().at(0)->desc()->output_padding())
+                throw std::runtime_error("Error, input padding not supported in non bfyx format in RELU primitive!");
+
+            kd.kernel_name = kernel_name;
+        }
 
         return kd;
     }
@@ -78,8 +91,13 @@ struct relu_gpu : is_an_implementation
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
+        auto input_size = outer.input().at(0)->non_padded_output_layout().size;
         gpu::jit_constants mem_consts
         {
+            gpu::make_jit_constant("INPUT",          input_size),
+            gpu::make_jit_constant("INPUT_PADDING",  outer.input().at(0)->desc()->output_padding()),
+            gpu::make_jit_constant("OUTPUT",         outer.non_padded_output_layout().size),
+            gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding()),
             gpu::make_jit_constant("RELU",           1),
             gpu::make_jit_constant("NEGATIVE_SLOPE", outer.argument.negative_slope),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16)),
@@ -106,26 +124,21 @@ struct relu_gpu : is_an_implementation
 
 
 namespace {
-struct attach {
-    attach() {
-        auto val_fw = relu_gpu::create;
-
-        implementation_map<relu>::add({
-            {std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw},
-            {std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw},
-            {std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw},
-            {std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw},
-        });
-    }
-    ~attach() {}
-};
-
-#ifdef __GNUC__
-    __attribute__((visibility("default"))) //todo meybe dll_sym?
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
-attach attach_impl;
-
+    struct attach {
+        attach() {
+            auto val_fw = relu_gpu::create;
+    
+            implementation_map<relu>::add({
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw},
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw},
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw},
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw},
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), val_fw },
+            });
+        }
+        ~attach() {}
+    };
+    attach attach_impl;
 }
 }

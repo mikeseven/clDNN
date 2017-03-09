@@ -41,7 +41,22 @@ engine_impl::engine_impl(const engine_configuration& conf)
 
 memory_impl* engine_impl::allocate_buffer(layout layout)
 {
-    return new neural::gpu::gpu_buffer(this, layout);
+    try {
+        return new neural::gpu::gpu_buffer(this, layout);
+    }
+    catch (const cl::Error& clErr)
+    {
+        switch (clErr.err())
+        {
+        case CL_MEM_OBJECT_ALLOCATION_FAILURE:
+        case CL_OUT_OF_RESOURCES:
+        case CL_OUT_OF_HOST_MEMORY:
+        case CL_INVALID_BUFFER_SIZE:
+            throw error("out of GPU resources", CLDNN_OUT_OF_RESOURCES);
+        default:
+            throw error("GPU buffer allocation failed", CLDNN_ERROR);
+        }
+    }
 }
 
 event_impl* engine_impl::create_user_event()

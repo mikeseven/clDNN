@@ -7,6 +7,11 @@
 import os.path
 import sys
 
+
+# Workaround for C2026 in Visual Studio (until limit of around 64K).
+def split_into_sized_literals(s, size):
+    return '\n'.join(['R"__krnl({})__krnl"'.format(s[i:i + size]) for i in range(0, len(s), size)])
+
 kernels_dir_name = sys.argv[2]
 out_file_name = os.path.join(sys.argv[1], 'primitive_db.inc')
 
@@ -17,7 +22,8 @@ with open(out_file_name, 'w') as out_file:
             print('processing {}'.format(file_name))
             with open(os.path.join(kernels_dir_name, 
                                    file_name), 'r') as kernel_file:
-                out_file.write('{{"{}",\nR"__krnl({})__krnl"}},\n\n'.format(file_name[:file_name.find('.')],
-                                                        kernel_file.read()))
+                out_file.write('{{"{}",\n{}}},\n\n'.format(
+                    file_name[:file_name.find('.')],
+                    split_into_sized_literals(kernel_file.read(), 16000)))
                 
     

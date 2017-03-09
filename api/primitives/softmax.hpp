@@ -37,5 +37,8 @@ struct softmax : public primitive_base<softmax, CLDNN_PRIMITIVE_DESC(softmax)>
     softmax(const dto* dto)
         :primitive_base(dto)
     {}
+
+private:
+    void update_dto(dto&) const override {}
 };
 }

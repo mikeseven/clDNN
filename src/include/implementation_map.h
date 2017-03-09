@@ -20,6 +20,7 @@
 #include <functional>
 #include "input_layout_arg.h"
 #include "data_arg.h"
+#include "prior_box_arg.h"
 
 template<typename T, typename U>
 class singleton_map : public std::map<T, U> {
@@ -74,6 +75,16 @@ struct implementation_key<input_layout_arg>
     {
         return engine_type;
     }
+};
+
+template<>
+struct implementation_key<prior_box_arg>
+{
+	typedef cldnn::engine_types type;
+	type operator()(engine_types engine_type, prior_box_arg&)
+	{
+		return engine_type;
+	}
 };
 
 template<typename primitive_kind>

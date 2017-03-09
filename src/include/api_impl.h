@@ -17,7 +17,9 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "api/cldnn.h"
+#include "api/cldnn_defs.h"
 #include <functional>
+#include <stdexcept>
 
 #define API_CAST(api_type, impl_type) \
 inline api_type api_cast(impl_type* value) { return reinterpret_cast<api_type>(value); } \
@@ -34,6 +36,15 @@ T exception_handler(cldnn_status default_error, cldnn_status* status, const T& d
             *status = CLDNN_SUCCESS;
         return func();
     }
+    catch (const cldnn::error& err)
+    {
+        if (status)
+            *status = err.status();
+#ifndef NDEBUG
+        static_cast<void>(default_result);
+        throw;
+#endif
+    }
     catch (...)
     {
         if (status)
@@ -41,10 +52,12 @@ T exception_handler(cldnn_status default_error, cldnn_status* status, const T& d
 #ifndef NDEBUG
         static_cast<void>(default_result);
         throw;
-#else
-        return default_result;
 #endif
     }
+
+#ifdef NDEBUG
+    return default_result;
+#endif
 }
 
 inline void exception_handler(cldnn_status default_error, cldnn_status* status, std::function<void()> func)
@@ -55,6 +68,14 @@ inline void exception_handler(cldnn_status default_error, cldnn_status* status, 
         if (status)
             *status = CLDNN_SUCCESS;
         func();
+    }
+    catch (const cldnn::error& err)
+    {
+        if (status)
+          *status = err.status();
+#ifndef NDEBUG
+        throw;
+#endif
     }
     catch (...)
     {

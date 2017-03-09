@@ -22,7 +22,7 @@ KERNEL (lrn_gpu_b8)(const __global float* input, __global float* output)
         input_offset_f+= INPUT_BATCH_NUM/8;
         input_idx += INPUT_BATCH_NUM/8;
     }
-    acc = mad(acc, ALPHA, K);
+    acc = mad(acc, ALPHA_DIV_BY_SIZE, K);
     acc = native_powr(acc, -BETA);
 
     float8 _in = vload8(linear_id, input);

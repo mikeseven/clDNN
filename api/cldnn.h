@@ -54,6 +54,7 @@ extern "C" {
 #define CLDNN_ERROR   -1
 #define CLDNN_UNSUPPORTED -2
 #define CLDNN_INVALID_ARG -3
+#define CLDNN_OUT_OF_RESOURCES -4
 
 typedef int32_t cldnn_status;
 
@@ -132,7 +133,8 @@ typedef enum /*:int32_t*/
     cldnn_format_oyxi,          // format used only for weights: o - output feature maps, i - input feature maps
     cldnn_format_yxio,          // format used only for weights: o - output feature maps, i - input feature maps
     cldnn_format_os_iyx_osv16,  // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
-    cldnn_format_bs_xs_xsv8_bsv8, // format used only for Fully connected: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice 
+    cldnn_format_bs_xs_xsv8_bsv8, // format used only for Fully connected: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice
+    cldnn_format_bs_x_bsv16,    // format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx)
     cldnn_format_format_num,
     cldnn_format_any = -1
 } cldnn_format_type;
@@ -167,17 +169,13 @@ typedef struct
     cldnn_tensor size;
 } cldnn_layout;
 
-typedef enum /*:int32_t*/
-{
-    cldnn_padding_zero,
-    cldnn_padding_one,
-    cldnn_padding_two,
-} cldnn_padding_type;
-
 typedef struct
 {
-    cldnn_tensor size;
-    int32_t type; /*cldnn_padding_type*/
+    cldnn_tensor lower_size; ///< Lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
+    cldnn_tensor upper_size; ///< Upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
+    float filling_value;     ///< Filling value for an element of padding. If data type of elements is different than float it is converted
+                             ///< to it using round-towards-nearest-even (for floating-point data types) or round-towards-zero (for integral
+                             ///< data types).
 } cldnn_padding;
 
 typedef struct

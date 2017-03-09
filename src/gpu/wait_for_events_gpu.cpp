@@ -17,6 +17,7 @@
 #include "primitive_arg.h"
 #include "input_layout_arg.h"
 #include "data_arg.h"
+#include "prior_box_arg.h"
 #include "network_impl.h"
 #include "implementation_map.h"
 #include "events_waiter.h"
@@ -45,6 +46,11 @@ public:
     {
         return new wait_for_events_gpu(&input);
     }
+
+	static primitive_impl* create_prior_box(prior_box_arg& prior_box)
+	{
+		return new wait_for_events_gpu(&prior_box);
+	}
 };
 
 namespace {
@@ -57,17 +63,14 @@ namespace {
             implementation_map<input_layout_arg>::add({
                 { engine_types::ocl, wait_for_events_gpu::create_input_layout }
             });
+
+			implementation_map<prior_box_arg>::add({
+				{ engine_types::ocl, wait_for_events_gpu::create_prior_box }
+			});
         }
         ~attach() {}
     };
-
-#ifdef __GNUC__
-    __attribute__((visibility("default"))) //todo meybe dll_sym?
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
     attach attach_impl;
-
 }
 
 }

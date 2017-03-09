@@ -16,7 +16,6 @@
 
 #include "neural_impl.h"
 #include "network_impl.h"
-#include "implementation_map.h"
 #include "kernel.h"
 
 #include <algorithm>
@@ -27,6 +26,7 @@ namespace neural
 {
 // Kernel names.
 static const std::string kernel_name = "eltwise_gpu";
+static const std::string kernel_name_bfyx = "eltwise_gpu_bfyx";
 
 struct eltwise_gpu : is_an_implementation
 {
@@ -37,7 +37,6 @@ struct eltwise_gpu : is_an_implementation
         size_t lws0;
         std::string kernel_name;
         bool fp16_unit_used;
-        bool bfyx_mean_format_used;
     } _kernel_data;
     gpu::kernel _kernel;
 
@@ -49,18 +48,18 @@ struct eltwise_gpu : is_an_implementation
 
     static kernel_data set_kernel_data(const eltwise& outer)
     {
-        const auto& input_mem = outer.input_memory(0);  // input
-        const auto& input2_mem = outer.input_memory(1);  // input2
         const auto& output_mem = outer.output_memory(); // output
 
-        if (input_mem.argument().format != input2_mem.argument().format)
+        if (outer.input().at(0)->desc()->output_padding() ||
+            outer.input().at(1)->desc()->output_padding() ||
+            outer.desc()->input_padding())
         {
-            throw std::runtime_error("different formats of input layers");
+            throw std::runtime_error("Input padding for eltwise not yet supported");
         }
 
         kernel_data kd;
 
-        kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
+        kd.fp16_unit_used = output_mem.get_layout().data_type == cldnn::data_types::f16;
 
         // Determine global work sizes.
         kd.gws0 = output_mem.count();
@@ -71,7 +70,17 @@ struct eltwise_gpu : is_an_implementation
             --kd.lws0;
         }
 
-        kd.kernel_name = kernel_name;
+        if (output_mem.get_layout().size.format == cldnn::format::bfyx)
+        {
+            kd.kernel_name = kernel_name_bfyx;
+        }
+        else
+        {
+            if (outer.desc()->output_padding())
+                throw std::runtime_error("Input padding for eltwise is not yet supported for not-bfyx input");
+
+            kd.kernel_name = kernel_name;
+        }
 
         return kd;
     }
@@ -85,15 +94,18 @@ struct eltwise_gpu : is_an_implementation
 
         return{
             gpu::make_jit_constant("INPUT",                 outer.input_memory(0).argument().size),
-            gpu::make_jit_constant("OUTPUT",                outer.output_memory().argument().size),
+            gpu::make_jit_constant("OUTPUT",                outer.non_padded_output_layout().size),
             gpu::make_jit_constant("INPUT2" ,               outer.input_memory(1).argument().size),
+            gpu::make_jit_constant("OUTPUT_PADDING",        outer.argument.output_padding()),
             gpu::make_jit_constant("FP16_SUPPORTED",        static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",        static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",             data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("SUM_MODE_USED",         outer.argument.mode == cldnn::eltwise_mode::sum ? 1 : 0),
             gpu::make_jit_constant("MAX_MODE_USED",         outer.argument.mode == cldnn::eltwise_mode::max ? 1 : 0),
             gpu::make_jit_constant("SUB_MODE_USED",         outer.argument.mode == cldnn::eltwise_mode::sub ? 1 : 0),
-            gpu::make_jit_constant("PROD_MODE_USED",        outer.argument.mode == cldnn::eltwise_mode::prod ? 1 : 0)
+            gpu::make_jit_constant("PROD_MODE_USED",        outer.argument.mode == cldnn::eltwise_mode::prod ? 1 : 0),
+            gpu::make_jit_constant("RELU",                  static_cast<int>(outer.argument.with_activation)),
+            gpu::make_jit_constant("NEGATIVE_SLOPE",        outer.argument.activation_negative_slope),
         };
     }
 
@@ -116,22 +128,15 @@ struct eltwise_gpu : is_an_implementation
 namespace {
     struct attach {
         attach() {
-            auto val_fw = eltwise_gpu::create;
-
-            auto key_fw = std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32);
-            implementation_map<eltwise>::add(key_fw, val_fw);
-            key_fw = std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16);
-            implementation_map<eltwise>::add(key_fw, val_fw);
+            implementation_map<eltwise>::add({
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), eltwise_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), eltwise_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), eltwise_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), eltwise_gpu::create }
+            });
         }
         ~attach() {}
     };
-
-#ifdef __GNUC__
-        __attribute__((visibility("default"))) //todo meybe dll_sym?
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
-        attach attach_impl;
-
-    }
+    attach attach_impl;
+}
 }

@@ -27,13 +27,18 @@ struct depth_concatenate : public primitive_base<depth_concatenate, CLDNN_PRIMIT
 
     depth_concatenate(
         const primitive_id& id,
-        const std::vector<primitive_id>& input
+        const std::vector<primitive_id>& input,
+        const padding& output_padding = { format::yx,{ 0,0 } }
     )
-        :primitive_base(id, input)
+        // We're not using input padding but we must provide it, so it will always be 0,0
+        :primitive_base(id, { input }, { format::yx,{ 0,0 } }, output_padding)
     {}
 
     depth_concatenate(const dto* dto)
         :primitive_base(dto)
     {}
+
+private:
+    void update_dto(dto&) const override {}
 };
 }

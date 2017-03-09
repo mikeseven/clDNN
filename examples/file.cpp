@@ -244,7 +244,7 @@ cldnn::memory read_file(std::ifstream &rfile, file_header &file_head, const cldn
 }
 
 // creates primitive with memry buffer loaded from specified file
-cldnn::memory file::create(file::arguments arg) {
+cldnn::memory file::read(file::arguments arg) {
     std::ifstream rfile;
     rfile.exceptions(std::ios::failbit | std::ios::badbit);
     rfile.open(arg.name, std::ios::binary);
@@ -256,6 +256,11 @@ cldnn::memory file::create(file::arguments arg) {
         return read_file(rfile, file_head, arg.engine);
     else
         throw std::runtime_error("file version not supported");
+}
+
+cldnn::data file::create(file::arguments arg) {
+    auto data_id = boost::filesystem::path(arg.name).filename().string();
+    return cldnn::data(data_id, file::read(arg));
 }
 
 void file::serialize(const cldnn::memory& data, const std::string& name)

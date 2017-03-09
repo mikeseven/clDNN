@@ -16,12 +16,10 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "primitive_type.h"
-#include "network_impl.h"
 #include "engine_impl.h"
+#include "network_impl.h"
 #include "topology_impl.h"
-#include <map>
-#include <set>
+#include "layout_optimizer.h"
 
 namespace cldnn
 {
@@ -29,12 +27,7 @@ namespace cldnn
 class network_builder
 {
 public:
-    network_builder(refcounted_obj_ptr<engine_impl> eng, const build_options& options)
-        : _engine(eng)
-        , _options(options)
-    {
-    }
-
+    network_builder(refcounted_obj_ptr<engine_impl> eng, const build_options& options);
     network_impl* build_network(refcounted_obj_ptr<topology_impl> tpl);
     const refcounted_obj_ptr<engine_impl>& get_engine() const { return _engine; }
 
@@ -43,10 +36,17 @@ private:
     build_options _options;
     topology_map _topology_map;
 
+    layout_optimizer _lo;
+
     void optimize_topology();
 
     // Prepares output padding for primitives
     // TODO: case when input primitive is used by multiple primitives
     void prepare_padding();
+
+    void reorder_inputs();
+    void optimize_weights();
+
+    void add_if_new(std::pair<std::shared_ptr<reorder>, bool> const& reorder_from_optimizer);
 };
 }

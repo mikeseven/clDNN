@@ -26,7 +26,7 @@ namespace cldnn
     template<class PType, class PType_Arg>
     struct primitive_type_base : ::cldnn_primitive_type
     {
-        std::shared_ptr<const primitive> from_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto) const override
+        std::shared_ptr<primitive> from_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto) const override
         {
             if (dto->type != this) throw std::invalid_argument("dto: primitive type mismatch");
             return std::make_shared<PType>(as_dto<PType>(dto));

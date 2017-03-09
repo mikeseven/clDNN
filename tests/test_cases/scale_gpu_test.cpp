@@ -303,7 +303,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_scalar) {
     }
 }
 
-TEST(scale_gpu, basic_in2x3x2x2_scale_x) {
+TEST(scale_gpu, basic_in2x3x2x2_scale_y) {
     //  Scale  : 2
     //  Input  : 2x3x2x2
     //  Output : 2x3x2x2
@@ -369,7 +369,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_x) {
     }
 }
 
-TEST(scale_gpu, basic_in2x3x2x2_scale_y) {
+TEST(scale_gpu, basic_in2x3x2x2_scale_x) {
     //  Scale  : 3
     //  Input  : 2x3x2x2
     //  Output : 2x3x2x2

@@ -32,14 +32,13 @@ layout softmax_arg::calc_output_layout(const topology_map& topology_map, std::sh
     auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
 
     cldnn::layout layoutTemp = input_layout;
-    if (input_layout.size.raw.size() == 4)
+    if (input_layout.size.raw.size() == 4 && input_layout.size.spatial[0] == 1 && input_layout.size.spatial[1] == 1) //squeezenet spatials are 1x1
     {
         if (input_layout.size.format == format::bfyx)
             layoutTemp = cldnn::layout(input_layout.data_type, tensor(format::bx, { input_layout.size.batch[0], input_layout.size.feature[0] }));
-        else
+        else 
             layoutTemp = cldnn::layout(input_layout.data_type, tensor(format::xb, { input_layout.size.feature[0], input_layout.size.batch[0] }));
     }
-
     return layoutTemp;
 }
 
@@ -59,10 +58,10 @@ softmax_arg::softmax_arg(network_impl& network, std::shared_ptr<const softmax> d
     //        if(output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("Softmax sizes too small.");
     //    }
 
-    auto& input_arg = network.get_topology()->get_primitives().at(desc->input()[0]);
-    if (input_arg->output_layout->size.format == cldnn::format::bfyx)
-        if (input_arg->output_layout->size.spatial[0] != 1 || input_arg->output_layout->size.spatial[1] != 1)
-            throw std::runtime_error("Softmax input has more than one dimension per batch");
+    //auto& input_arg = network.get_topology()->get_primitives().at(desc->input()[0]);
+    //if (input_arg->output_layout->size.format == cldnn::format::bfyx)
+    //    if (input_arg->output_layout->size.spatial[0] != 1 || input_arg->output_layout->size.spatial[1] != 1)
+    //        throw std::runtime_error("Softmax input has more than one dimension per batch");
 }
 
 }

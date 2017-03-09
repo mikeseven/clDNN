@@ -35,6 +35,8 @@ typedef enum /*:int32_t*/
 CLDNN_BEGIN_PRIMITIVE_DESC(eltwise)
 cldnn_primitive_id input2;
 int32_t mode; /*cldnn_eltwise_mode*/
+uint32_t with_activation;
+float activation_negative_slope;
 CLDNN_END_PRIMITIVE_DESC(eltwise)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(eltwise);

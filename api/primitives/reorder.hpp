@@ -34,12 +34,11 @@ struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        : primitive_base(id, { input }, input_padding, output_padding, static_cast<cldnn_layout>(output_layout), "", cldnn_float_arr{nullptr, 0})
-        , output_layout(_dto.output_layout)
+        : primitive_base(id, { input }, input_padding, output_padding)
+        , output_layout(output_layout)
         , mean("")
         , substract_per_feature(values_to_substract)
     {
-        init_dto();
     }
 
     reorder(
@@ -50,26 +49,24 @@ struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        : primitive_base(id, { input }, input_padding, output_padding, static_cast<cldnn_layout>(output_layout), "", cldnn_float_arr{ nullptr, 0 })
-        , output_layout(_dto.output_layout)
+        : primitive_base(id, { input }, input_padding, output_padding)
+        , output_layout(output_layout)
         , mean(mean)
         , substract_per_feature(0)
     {
-        init_dto();
     }
 
     reorder(const dto* dto)
         : primitive_base(dto)
-        , output_layout(_dto.output_layout)
+        , output_layout(dto->output_layout)
         , mean(dto->mean_substract)
-        , substract_per_feature(float_arr_to_vector(_dto.substract_per_feature))
+        , substract_per_feature(float_arr_to_vector(dto->substract_per_feature))
     {
-        init_dto();
     }
 
-    const layout output_layout;
-    const primitive_id mean;
-    const std::vector<float> substract_per_feature;
+    layout output_layout;
+    primitive_id mean;
+    std::vector<float> substract_per_feature;
 
 protected:
     std::vector<primitive_id> get_dependencies() const override 
@@ -78,27 +75,12 @@ protected:
             return{};
         return{ mean };
     }
-private:
-    void init_dto()
-    {
-        _dto.mean_substract = mean.c_str();
-        _dto.substract_per_feature = float_vector_to_arr(substract_per_feature);
-    }
 
-    static std::vector<float> float_arr_to_vector(const cldnn_float_arr& arr)
+    void update_dto(dto& dto) const override
     {
-        std::vector<float> result(arr.size);
-        for (size_t i = 0; i < arr.size; i++)
-        {
-            result[i] = arr.data[i];
-        }
-        return result;
+        dto.output_layout = output_layout;
+        dto.mean_substract = mean.c_str();
+        dto.substract_per_feature = float_vector_to_arr(substract_per_feature);
     }
-
-    static cldnn_float_arr float_vector_to_arr(const std::vector<float>& stor)
-    {
-        return { stor.data(), stor.size() };
-    }
-
 };
 }

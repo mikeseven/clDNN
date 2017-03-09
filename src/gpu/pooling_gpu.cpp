@@ -36,6 +36,7 @@ static const std::string kernel_name_average_offset = "pooling_gpu_average_offse
 static const std::string kernel_name_bfyx_max       = "pooling_gpu_bfyx_max";
 static const std::string kernel_name_bfyx_max_offset = "pooling_gpu_bfyx_max_offset";
 static const std::string kernel_name_bfyx_average   = "pooling_gpu_bfyx_average";
+static const std::string kernel_name_bfyx_average_offset = "pooling_gpu_bfyx_average_offset";
 
 template <>
 struct kd_default_value_selector<neural::gpu::engine_info_internal::architectures>
@@ -138,7 +139,20 @@ struct pooling_gpu : is_an_implementation {
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
+        auto& input_mem = outer.input_memory(0);
+
+        auto input_padding = outer.input().at(0)->desc()->output_padding();
+        auto output_padding = outer.argument.output_padding();
         auto input_size = outer.input().at(0)->non_padded_output_layout().size;
+
+        if (input_mem.get_layout().size.format != cldnn::format::bfyx)
+        {
+            if (input_padding || output_padding)
+            {
+                throw std::runtime_error("Only bfyx format supports input/output padding in pooling layer!");
+            }
+        }
+
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT",             input_size),
             gpu::make_jit_constant("OUTPUT",            outer.non_padded_output_layout().size),
@@ -150,7 +164,8 @@ struct pooling_gpu : is_an_implementation {
             gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_INIT_VAL_MAX", data.fp16_unit_used ? "-HALF_MAX" : "-FLT_MAX"),
             gpu::make_jit_constant("UNIT_INIT_VAL_AVG", data.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding().size())
+            gpu::make_jit_constant("INPUT_PADDING",     input_padding),
+            gpu::make_jit_constant("OUTPUT_PADDING",    output_padding)
         };
         return mem_consts;
     }
@@ -175,9 +190,9 @@ struct pooling_gpu : is_an_implementation {
         auto& output_buffer_size = output_arg.size;
         auto& stride = arg.argument.stride;
         auto& window = arg.argument.size;
-        auto padding = arg.desc()->padding_type();
+        const auto padding = arg.desc()->padding_filling_value();
 
-        if (cldnn::padding::types::zero != padding)                                      throw std::logic_error("Pooling supports only zero padding.");
+        if (padding != 0.0f)                                               throw std::logic_error("Pooling supports only zero padding.");
         if (input_buffer_size.raw.size() != output_buffer_size.raw.size()) throw std::invalid_argument("Pooling input/output number of dimension does not match.");
         if (stride.raw.size() != output_buffer_size.raw.size())            throw std::invalid_argument("Pooling stride/output number of dimension does not match.");
         if (window.raw.size() != output_buffer_size.raw.size())            throw std::invalid_argument("Pooling window_size/output number of dimension does not match.");
@@ -199,8 +214,6 @@ pooling_gpu::kernel_data defauly_bfyx(const pooling& arg)
 
     // Select kernel name.
     auto needs_boundary = pooling_gpu::needs_boundary_check(arg);
-    if (needs_boundary && arg.argument.mode != cldnn::pooling_mode::max)
-        throw std::runtime_error("Not implemented boundary in pooling bfyx!");
     //if (kd.gws0 > 256)
     {
         while (kd.gws0 % kd.lws0 != 0)
@@ -210,11 +223,13 @@ pooling_gpu::kernel_data defauly_bfyx(const pooling& arg)
     }
 
     if (needs_boundary)
-        kd.kernel_name = kernel_name_bfyx_max_offset;
-    else if (arg.argument.mode == cldnn::pooling_mode::average)
-        kd.kernel_name = kernel_name_bfyx_average;
+    {
+        kd.kernel_name = cldnn::pooling_mode::average == arg.argument.mode ? kernel_name_bfyx_average_offset : kernel_name_bfyx_max_offset;
+    }
     else
-        kd.kernel_name = kernel_name_bfyx_max;
+    {
+        kd.kernel_name = cldnn::pooling_mode::average == arg.argument.mode ? kernel_name_bfyx_average : kernel_name_bfyx_max;
+    }
 
     auto output_size = arg.non_padded_output_layout().size;
     // Determine global work sizes.
@@ -249,18 +264,8 @@ namespace
             implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), pooling_gpu::create);
             implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), pooling_gpu::create);
         }
-
-        ~attach()
-        {
-        }
+        ~attach() {}
     };
-
-#ifdef __GNUC__
-    __attribute__((visibility("default")))
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
     attach attach_impl;
-
 }
 }

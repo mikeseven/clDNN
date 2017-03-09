@@ -28,6 +28,7 @@
 #include <regex>
 #include <string>
 #include <api/primitives/data.hpp>
+#include <api/network.hpp>
 
 using namespace boost::filesystem;
 
@@ -369,20 +370,34 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     if (ep.profiling)           options.set_option(cldnn::build_option::profiling);
     if (ep.dump_hidden_layers || ep.profiling)  options.set_option(cldnn::build_option::debug);
 
-    std::vector<cldnn::primitive_id> outputs{"output"};
+    std::vector<cldnn::primitive_id> outputs{ "output" };
     if (!ep.dump_layer_name.empty())  outputs.push_back(ep.dump_layer_name);
     if (!ep.run_single_layer.empty()) outputs.push_back(ep.run_single_layer);
     options.set_option(cldnn::build_option::outputs(outputs));
-
-    cldnn::network network(engine, topology, options);
-    auto compile_time = timer_compilation.uptime();
-    
-    if (ep.print_type == Verbose)
+    try 
     {
-        std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
-    }
+        cldnn::network network(engine, topology, options);
+        auto compile_time = timer_compilation.uptime();
 
-    return network;
+        if (ep.print_type == Verbose)
+        {
+            std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
+        }
+
+        return network;
+    }
+    catch (const cldnn::error &err)
+    {
+        std::cout << "ERROR: " << err.what() << std::endl;
+        if (err.status() == CLDNN_OUT_OF_RESOURCES)
+            std::cout << "HINT: Try to use smaller batch size" << std::endl;
+        throw;
+    }
+    catch (...)
+    {
+        std::cout << "ERROR: Network build failed" << std::endl;
+        throw;
+    } 
 }
 
 uint32_t get_next_nearest_power_of_two(int number)
@@ -531,8 +546,6 @@ void run_topology(const execution_params &ep)
 
     html output_file(ep.topology_name, ep.topology_name + " run");
 
-    weights_optimizer weights_optimizer(engine, gpu_batch_size, ep.optimize_weights, ep.use_half, ep.use_bfyx);
-
     cldnn::topology primitives;
 
     if (ep.print_type == Verbose)
@@ -542,17 +555,17 @@ void run_topology(const execution_params &ep)
     cldnn::instrumentation::timer<> timer_build;
     cldnn::layout input_layout = { ep.use_half ? cldnn::data_types::f16 : cldnn::data_types::f32, {} };
     if (ep.topology_name == "alexnet")
-        primitives = build_alexnet(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_bfyx);
+        primitives = build_alexnet(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else if (ep.topology_name == "vgg16" || ep.topology_name == "vgg16_face")
-        primitives = build_vgg16(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_bfyx);
+        primitives = build_vgg16(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else if (ep.topology_name == "googlenet")
-        primitives = build_googlenetv1(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_bfyx);
+        primitives = build_googlenetv1(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else if (ep.topology_name == "gender")
-        primitives = build_gender(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_bfyx);
+        primitives = build_gender(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else if (ep.topology_name == "microbench")
-        primitives = build_microbench(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size);
+        primitives = build_microbench(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else if(ep.topology_name == "squeezenet")
-        primitives = build_squeezenet(ep.weights_dir, weights_optimizer, input_layout, gpu_batch_size, ep.use_bfyx);
+        primitives = build_squeezenet(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
 
@@ -562,9 +575,6 @@ void run_topology(const execution_params &ep)
     {
         std::cout << "Building " << ep.topology_name << " finished in " << instrumentation::to_string(build_time) << std::endl;
     }
-
-    // optimize weights if needed
-    weight_optimization(weights_optimizer, primitives);
 
     auto network = build_network(engine, primitives, ep);
     auto input = cldnn::memory::allocate(engine, input_layout);
@@ -648,18 +658,4 @@ void run_topology(const execution_params &ep)
         }
     }
 
-}
-
-// Optimizing weights
-void weight_optimization(weights_optimizer &wo, cldnn::topology& topology)
-{
-    std::cout << "Weights optimization started" << std::endl;
-    cldnn::instrumentation::timer<> timer_execution;
-    auto outputs = wo.optimize();
-    for(auto& p : outputs)
-    {
-        topology.add(cldnn::data(p.first, p.second.get_memory()));
-    }
-    auto optimizing_time(timer_execution.uptime());
-    std::cout << "Weights optimization finished in " << instrumentation::to_string(optimizing_time) << std::endl;
 }
