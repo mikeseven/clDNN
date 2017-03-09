@@ -87,12 +87,13 @@ namespace KernelSelctor
 
     cldnn::tensor dim_2_tensor(const uDims& dim, cldnn::format f)
     {
+        assert(f == bfyx);
         return{ f,
         {
             (cldnn::tensor::value_type)dim.w,
             (cldnn::tensor::value_type)dim.z,
-            (cldnn::tensor::value_type)dim.x,
-            (cldnn::tensor::value_type)dim.y
+            (cldnn::tensor::value_type)dim.y,
+            (cldnn::tensor::value_type)dim.x
         }
         };
     }
@@ -131,14 +132,14 @@ namespace KernelSelctor
             cldnn::format::os_iyx_osv16, // TODO: support more layouts
             { (cldnn::tensor::value_type)params.outDims.z,
               (cldnn::tensor::value_type)params.inDims.z,
-              (cldnn::tensor::value_type)cp.filterSize.x,
-              (cldnn::tensor::value_type)cp.filterSize.y });
+              (cldnn::tensor::value_type)cp.filterSize.y,
+              (cldnn::tensor::value_type)cp.filterSize.x });
         cldnn::tensor input_tensor = dim_2_tensor(params.inDims, params_2_cldnn(params.inputLayout));
         cldnn::tensor output_tensor = dim_2_tensor(params.outDims, params_2_cldnn(params.outputLayout));
         cldnn::tensor input_padding_tensor = cldnn::tensor(
             cldnn::format::yx,
-            { (cldnn::tensor::value_type)cp.padding.x,
-              (cldnn::tensor::value_type)cp.padding.y });
+            { (cldnn::tensor::value_type)cp.padding.y,
+              (cldnn::tensor::value_type)cp.padding.x });
         cldnn::tensor output_padding_tensor = cldnn::tensor(
             cldnn::format::yx,
             { (cldnn::tensor::value_type)0,
