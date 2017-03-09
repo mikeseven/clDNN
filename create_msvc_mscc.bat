@@ -24,8 +24,6 @@ set "SOLUTION_DIR32=%ROOT_DIR%\build\%SOLUTION_TARGET32%"
 set "SOLUTION_TARGET64=Windows64"
 set "SOLUTION_DIR64=%ROOT_DIR%\build\%SOLUTION_TARGET64%"
 
-del %SOLUTION_DIR32%\CMakeCache.txt
-del %SOLUTION_DIR64%\CMakeCache.txt
 
 echo Creating Visual Studio 2015 (Win32) files in %SOLUTION_DIR32%... && ^
 cd "%ROOT_DIR%" && cmake -E make_directory "%SOLUTION_DIR32%" && cd "%SOLUTION_DIR32%" && cmake -G "Visual Studio 14 2015" "-DCLDNN__ARCHITECTURE_TARGET=%SOLUTION_TARGET32%" "%ROOT_DIR%"

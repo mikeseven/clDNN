@@ -716,7 +716,7 @@ endfunction()
 function(intel_arch_detect targetArchVarName hostArchVarName)
   string(TOLOWER "${CMAKE_GENERATOR}" _cmakeGenerator)
   string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _cmakeTargetProcessor)
-  
+
   # Target architecture:
   # Detect target architecture on Windows using suffix from generator.
   if(CMAKE_SYSTEM_NAME MATCHES "Windows")
