@@ -281,10 +281,15 @@ namespace KernelSelctor {
         case KernelType::CONVOLUTION: return "CONVOLUTION";
         case KernelType::NORMALIZATION: return "NORMALIZATION";
         case KernelType::POOLING: return "POOLING";
+        case KernelType::ROI_POOLING: return "ROI_POOLING";
         case KernelType::FULLY_CONNECTED: return "FULLY_CONNECTED";
         case KernelType::LOCALLY_CONNECTED: return "LOCALLY_CONNECTED";
         case KernelType::ACTIVATION: return "ACTIVATION";
         case KernelType::SOFT_MAX: return "SOFT_MAX";
+        case KernelType::ELTWISE: return "ELTWISE";
+        case KernelType::TABLE_LOOKUP: return "TABLE_LOOKUP";
+        case KernelType::REORDER: return "REORDER";
+        case KernelType::CONVERT: return "CONVERT";
         default:
             return "";
         }

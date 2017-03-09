@@ -33,7 +33,7 @@ namespace KernelSelctor {
 
     KernelsData ROIPoolingKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
     {
-        assert(params.GetType() == KernelType::ACTIVATION);
+        assert(params.GetType() == KernelType::ROI_POOLING);
 
         KernelData kd = KernelData::Default<ROIPoolingParams>(params, 1);
 
