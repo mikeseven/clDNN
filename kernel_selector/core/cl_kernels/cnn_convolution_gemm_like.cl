@@ -52,6 +52,7 @@ __kernel void convolution_f16(
      + ( ( global_y / OUT_WIDTH ) * STRIDE_Y * INPUT_ROW_PITCH )      // y offset
      + ( ( global_y % OUT_WIDTH ) * STRIDE_X );                 // x offset
 #elif !defined(INPUT_BUFFER_WIDTH_PADDED) && !defined(INPUT_BUFFER_HEIGHT_PADDED)
+    #pragma error - fix this path
     const int y_offset = ( global_y / OUT_WIDTH ) * STRIDE_Y - INPUT_PADDING_Y;
     const int x_offset = ( global_y % OUT_WIDTH ) * STRIDE_X - INPUT_PADDING_X;
     uint src0_read_offset = INPUT_OFFSET + INPUT_BATCH_PITCH * global_z
@@ -74,6 +75,7 @@ __kernel void convolution_f16(
         partial_right = KERNEL_WIDTH;
 
 #elif defined(INPUT_BUFFER_WIDTH_PADDED)
+    #pragma error - fix this path
     // TODO: Handle offset
     const int y_offset = ( global_y / OUT_WIDTH ) * STRIDE_Y -INPUT_PADDING_Y;
     int src0_read_offset = INPUT_BATCH_PITCH * global_z        // batch offset
@@ -242,7 +244,7 @@ __kernel void convolution_f16(
     if (global_y * TILE_M < OUT_WIDTH * OUT_HEIGHT )
     {
          #ifdef OUTPUT_BIASED
-         __global half16* biasPtr = (__global half16*) (bias + global_z * OUT_DEPTH + group_x * TILE_N);
+         __global half16* biasPtr = (__global half16*) (bias + group_x * TILE_N);
          #endif
 
 #if ( ( OUT_DEPTH % TILE_N ) == 0 )
@@ -529,7 +531,7 @@ __kernel void convolution_f32(
      + ( ( global_y * TILE_M + 1 ) % OUT_WIDTH );               // x offset
 
     #ifdef OUTPUT_BIASED
-    __global float8* biasPtr = (__global float8*) (bias + global_z * OUT_DEPTH + group_x * TILE_N);
+    __global float8* biasPtr = (__global float8*) (bias + group_x * TILE_N);
     #endif
     
     if( global_y * TILE_M < OUT_WIDTH * OUT_HEIGHT )

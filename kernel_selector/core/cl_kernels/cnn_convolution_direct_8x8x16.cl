@@ -18,8 +18,8 @@
 
 //////////////////////////////////////////////////////////////////////////////
 // Direct Convolution
+#if defined(cl_intel_subgroups_short)
 
-#if defined(__convolution_f16_8x8x16) && defined(cl_intel_subgroups_short)
 #define TILE_M          DY      // Height of tile in input patches (src0)
 #define TILE_K          DX      // Width of tile in input patches (src0)
 #define TILE_N          16      // Num filter channels per tile (src1)
@@ -30,13 +30,15 @@
 __attribute__((intel_reqd_sub_group_size(16)))
 __kernel void convolution_f16_8x8x16(
     const __global half *src0,
-    __global half *dst
+    __global half *dst,
     const __global half *src1,
-    const __global half *bias)
+    const __global half *biases)
 {
     const unsigned global_x = get_global_id(0);
     const unsigned global_y = get_global_id(1);
     const unsigned global_z = get_global_id(2);
+    const unsigned out_fm   = global_z % WIDTH1;
+    const unsigned batch_id = global_z / WIDTH1;
     const unsigned group_x = get_group_id(0);
     const unsigned group_z = get_group_id(2);
     const unsigned max_group_x = get_num_groups(0);
@@ -45,7 +47,7 @@ __kernel void convolution_f16_8x8x16(
     half blockC[TILE_M * TILE_K] = { 0 };
 
     uint src0_offset_tile =
-       ( global_z / WIDTH1 ) * INPUT_BATCH_PITCH            // batch offset
+       batch_id * INPUT_BATCH_PITCH                         // batch offset
      + ( global_y * TILE_M * STRIDE_Y ) * INPUT_ROW_PITCH   // y offset
      + ( global_x * TILE_K * STRIDE_X );                    // x offset
     uint src0_offset = src0_offset_tile
@@ -55,7 +57,7 @@ __kernel void convolution_f16_8x8x16(
     const __global half *src1_read = src1 + ( group_z * TILE_N % WIDTH1 ) * 2;
 
     unsigned patch_depth = 0;
-    __attribute__((opencl_unroll_hint(1)))
+    __attribute__((opencl_unroll_hint(3)))
     do
     {
         // Load atile (input) and btile (filters).
@@ -71,7 +73,7 @@ __kernel void convolution_f16_8x8x16(
         
         // in case the data is not aligned to sizeof(T)*KERNEL_WIDTH we need to use vload or set the data in a loop
         half4 blockA = vload4(0, src0 + src0_offset );
-        src0_offset += SLICE_PITCH;
+        src0_offset += INPUT_SLICE_PITCH;
 
         half blockB[KERNEL_WIDTH * KERNEL_HEIGHT];
         ushort2* p2BlockB = (ushort2*)blockB;
@@ -126,19 +128,19 @@ __kernel void convolution_f16_8x8x16(
     // Group stores into vectors to expedite writeback.  One large write is faster than many
     // small saves. Right-most column may be smaller if output width not divisible by tile width.
     __global half *out = dst
-     + ( global_z / WIDTH1 ) * OUT_BATCH_PITCH                    // batch offset
-     + ( global_z % WIDTH1 ) * OUT_SLICE_PITCH                    // channel offset
+     + batch_id * OUT_BATCH_PITCH            // batch offset
+     + out_fm * OUT_SLICE_PITCH              // channel offset
      + ( global_y * TILE_M ) * OUT_ROW_PITCH // y offset
-     + ( global_x * TILE_K );                      // x offset
+     + ( global_x * TILE_K );                // x offset
 
-    if ( global_z < WIDTH1 * NUM_BATCHES &&
-         global_z % WIDTH1 < OUT_DEPTH )
+    if ( batch_id < OUT_BATCH && out_fm < OUT_DEPTH )
     {
-        half bias = biases[global_z];
+        half bias = biases[out_fm];
         if ( OUT_WIDTH % TILE_K == 0 ||
              group_x < max_group_x - 1 )
         {
             typedef CAT( half, TILE_K ) half_t;
+            half bias = biases[out_fm];
             for( unsigned y = 0; y < TILE_M; y++ )
             {
                 if ( global_y * TILE_M + y < OUT_HEIGHT )
@@ -146,7 +148,7 @@ __kernel void convolution_f16_8x8x16(
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
                     for (unsigned i = 0; i < TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
-                    *(__global half_t*)(out + y * OUT_PITCH_X) = vBlockC;
+                    *(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
                 }
             }
         }
@@ -160,10 +162,10 @@ __kernel void convolution_f16_8x8x16(
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
                     for (unsigned i = 0; i < RIGHT_PARTIAL_TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
-                    *(__global half_t*)(out + y * OUT_PITCH_X) = vBlockC;
+                    *(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
                 }
             }
         }
     }
 }
-#endif
+#endif // cl_intel_subgroups_short

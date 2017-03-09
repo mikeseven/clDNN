@@ -47,7 +47,7 @@ namespace KernelSelctor {
             << "#define SRC_W (" << newParams.inDims.x << ")\n"
             << "#define SRC_H (" << newParams.inDims.y << ")\n"
             << "#define DST_W (" << newParams.outDims.x << ")\n"
-            << "#define DST_H (" << (newParams.outDims.y / newParams.inDims.z) << ")\n"
+            << "#define DST_H (" << newParams.outDims.y << ")\n"
             << "#define CHAN_NUM (" << newParams.inDims.z << ")\n"
             << "#define ROIS_NUM (" << newParams.rois << ")\n"
             << "#define BATCH_NUM (" << newParams.inDims.w << ")\n"
@@ -57,12 +57,12 @@ namespace KernelSelctor {
             << "#define PITCH_ROI_R (" << newParams.pitch_rois_r << ")\n"
             << "#define PITCH_ROI_B (" << newParams.pitch_rois_b << ")\n"
             << "#define PITCH_DST_H (" << newParams.outDesc.pitches.x << ")\n"
-            << "#define PITCH_DST_C (" << (newParams.outDesc.pitches.y / newParams.inDims.z) << ")\n" //TODO: Note in ROIPoolingParams about it being c * r
-            << "#define PITCH_DST_R (" << newParams.outDesc.pitches.y << ")\n"
-            << "#define PITCH_DST_B (" << newParams.outDesc.pitches.z << ")\n";
+            << "#define PITCH_DST_C (" << newParams.outDesc.pitches.y << ")\n"
+            << "#define PITCH_DST_R (" << newParams.outDesc.pitches.z << ")\n"
+            << "#define PITCH_DST_B (" << newParams.outDesc.pitches.w << ")\n";
 
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(newParams.outDims.Length(), 1, 1);
+        kernel.work_groups.global = cl::NDRange(newParams.outDims.Length() * newParams.inDims.w, 1, 1);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "roi_pooling_gpu");
         kernel.args_desc = GetArgumentDesc(2, false, false);
 

@@ -37,6 +37,8 @@ __kernel void convolution_f16_10x12x16(
     const unsigned global_x = get_global_id(0);
     const unsigned global_y = get_global_id(1);
     const unsigned global_z = get_global_id(2);
+    const unsigned out_fm   = global_z % WIDTH1;
+    const unsigned batch_id = global_z / WIDTH1;
     const unsigned group_x = get_group_id(0);
     const unsigned group_z = get_group_id(2);
     const unsigned max_group_x = get_num_groups(0);
@@ -45,7 +47,7 @@ __kernel void convolution_f16_10x12x16(
     half blockC[TILE_M * TILE_K] = { 0 };
 
     uint src0_offset_tile =
-       ( global_z / WIDTH1 ) * INPUT_BATCH_PITCH            // batch offset
+       batch_id * INPUT_BATCH_PITCH                         // batch offset
      + ( global_y * TILE_M * STRIDE_Y ) * INPUT_ROW_PITCH   // y offset
      + ( global_x * TILE_K * STRIDE_X );                    // x offset
     uint src0_offset = src0_offset_tile
@@ -139,20 +141,19 @@ __kernel void convolution_f16_10x12x16(
     // Group stores into vectors to expedite writeback.  One large write is faster than many
     // small saves. Right-most column may be smaller if output width not divisible by tile width.
     __global half *out = dst
-     + ( global_z / WIDTH1 ) * OUT_BATCH_PITCH              // batch offset
-     + ( global_z % WIDTH1 ) * OUT_SLICE_PITCH              // channel offset
+     + batch_id * OUT_BATCH_PITCH            // batch offset
+     + out_fm * OUT_SLICE_PITCH              // channel offset
      + ( global_y * TILE_M ) * OUT_ROW_PITCH // y offset
      + ( global_x * TILE_K );                // x offset
 
-    if ( global_z < WIDTH1 * OUT_BATCH &&
-         global_z % WIDTH1 < OUT_DEPTH )
+    if ( batch_id < OUT_BATCH && out_fm < OUT_DEPTH )
     {
-        half bias = biases[global_z];
+        half bias = biases[out_fm];
         if ( OUT_WIDTH % TILE_K == 0 ||
              group_x < max_group_x - 1 )
         {
             typedef CAT( half, TILE_K ) half_t;
-            half bias = biases[global_z];
+            half bias = biases[out_fm];
             for( unsigned y = 0; y < TILE_M; y++ )
             {
                 if ( global_y * TILE_M + y < OUT_HEIGHT )

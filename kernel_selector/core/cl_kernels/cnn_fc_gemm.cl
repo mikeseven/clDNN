@@ -23,7 +23,7 @@
 #define VEC_SIZE 4
 __attribute__ ((reqd_work_group_size(WORK_GROUP_X, 1, 1)))
 __kernel void fc_f16(
-    __global const half4 *src_vector,
+    __global const half  *src_vector,
     __global half        *dst_vector,
     __global const half  *matrix,
     __global const half  *biases)
@@ -60,13 +60,14 @@ __kernel void fc_f16(
     const int end_offset = start_offset + (w + VEC_SIZE - 1) / VEC_SIZE;
     #endif
 
+    __global const half4 *src_read    = (__global const half4 *) (src_vector + batch_id*INPUT_BATCH_PITCH + INPUT_OFFSET);
     int m_offset = start_offset + x;
-    int v_offset = batch_id*INPUT_BATCH_PITCH + INPUT_OFFSET + x;
+    int v_offset = x;
     half4 sum = (half4)(0);
     #if (LAST_INPUT_SIZE_REMAINDER == 0)
     for (; m_offset < end_offset; m_offset += WORK_GROUP_X, v_offset += WORK_GROUP_X) {
         const half4 m = mat_read[m_offset];
-        const half4 v = src_vector[v_offset];
+        const half4 v = src_read[v_offset];
         sum = mad(m, v, sum);
     }
     #else
@@ -74,14 +75,14 @@ __kernel void fc_f16(
         #if (LAST_INPUT_SIZE_DIV_4 == 0)
         for (; m_offset < end_offset; m_offset += WORK_GROUP_X, v_offset += WORK_GROUP_X) {
             const half4 m = mat_read[m_offset];
-            const half4 v = src_vector[v_offset];
+            const half4 v = src_read[v_offset];
 
             sum = mad(m, v, sum);
         }
         #else
         for (; m_offset < end_offset - WORK_GROUP_X; m_offset += WORK_GROUP_X, v_offset += WORK_GROUP_X) {
             const half4 m = vload4(m_offset, (__global const half*)mat_read);
-            const half4 v = vload4(v_offset, (__global const half*)src_vector);
+            const half4 v = vload4(v_offset, (__global const half*)src_read);
 
             sum = mad(m, v, sum);
         }
@@ -89,7 +90,7 @@ __kernel void fc_f16(
         if (m_offset < end_offset)
         {
             const half4 m = vload4(m_offset, (__global const half*)mat_read);
-            const half4 v = vload4(v_offset, (__global const half*)src_vector);
+            const half4 v = vload4(v_offset, (__global const half*)src_read);
             if ((x + 1) == ((LAST_INPUT_SIZE_REMAINDER + VEC_SIZE - 1) / VEC_SIZE))
             {
                 #if (LAST_INPUT_SIZE_DIV_4 == 3)
@@ -133,7 +134,7 @@ __kernel void fc_f16(
 #define VEC_SIZE 4
 __attribute__ ((reqd_work_group_size(WORK_GROUP_X, 1, 1)))
 __kernel void fc_f32(
-    __global const float4 *src_vector,
+    __global const float  *src_vector,
     __global float        *dst_vector,
     __global const float  *matrix,
     __global const float  *biases)
@@ -175,13 +176,14 @@ __kernel void fc_f32(
     const int end_offset = start_offset + (w + VEC_SIZE - 1) / VEC_SIZE;
     #endif
 
+    __global const float4 *src_read    = (__global const float4 *) (src_vector + batch_id*INPUT_BATCH_PITCH + INPUT_OFFSET);
     int m_offset = start_offset + x;
-    int v_offset = batch_id*INPUT_BATCH_PITCH + INPUT_OFFSET + x;
+    int v_offset = x;
     float4 sum = (float4)(0);
     #if (LAST_INPUT_SIZE_REMAINDER == 0)
     for (; m_offset < end_offset; m_offset += WORK_GROUP_X, v_offset += WORK_GROUP_X) {
         const float4 m = mat_read[m_offset];
-        const float4 v = src_vector[v_offset];
+        const float4 v = src_read[v_offset];
         sum = mad(m, v, sum);
     }
     #else
@@ -189,14 +191,14 @@ __kernel void fc_f32(
         #if (LAST_INPUT_SIZE_DIV_4 == 0)
         for (; m_offset < end_offset; m_offset += WORK_GROUP_X, v_offset += WORK_GROUP_X) {
             const float4 m = mat_read[m_offset];
-            const float4 v = src_vector[v_offset];
+            const float4 v = src_read[v_offset];
 
             sum = mad(m, v, sum);
         }
         #else
         for (; m_offset < end_offset - WORK_GROUP_X; m_offset += WORK_GROUP_X, v_offset += WORK_GROUP_X) {
             const float4 m = mat_read[m_offset];
-            const float4 v = src_vector[v_offset];
+            const float4 v = src_read[v_offset];
 
             sum = mad(m, v, sum);
         }
@@ -204,7 +206,7 @@ __kernel void fc_f32(
         if (m_offset < end_offset)
         {
             const float4 m = mat_read[m_offset];
-            const float4 v = src_vector[v_offset];
+            const float4 v = src_read[v_offset];
             if ((x + 1) == ((LAST_INPUT_SIZE_REMAINDER + VEC_SIZE - 1) / VEC_SIZE))
             {
                 #if (LAST_INPUT_SIZE_DIV_4 == 3)

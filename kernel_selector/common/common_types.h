@@ -139,12 +139,12 @@ namespace KernelSelctor
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct NonLinearParams
     {
-        float m = 1;
-        float n = 0;
+        float m = 1.f;
+        float n = 0.f;
 
         NonLinearParams() = default;
         NonLinearParams(const NonLinearParams&) = default;
-        NonLinearParams(int m, int n) : m(m), n(n) {}
+        NonLinearParams(float m, float n) : m(m), n(n) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
