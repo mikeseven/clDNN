@@ -193,11 +193,12 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
 	auto output_layout = output_memory.get_layout();
 	T* output_ptr = output_memory.pointer<T>().data();
 
-	int y_size = output_layout.size.sizes()[0];
-	int x_size = output_layout.size.sizes()[1];
-	int f_size = output_layout.size.sizes()[2];
-	int b_size = output_layout.size.sizes()[3];
 	EXPECT_EQ(output_layout.size.format.value, test_input_fmt.value);
+	tensor output_tensor = output_layout.size.transform(cldnn::format::yxfb, 0);
+	int y_size = output_tensor.sizes()[0];
+	int x_size = output_tensor.sizes()[1];
+	int f_size = output_tensor.sizes()[2];
+	int b_size = output_tensor.sizes()[3];
 	EXPECT_EQ(y_size, (int)output_cpu[0][0].size());
 	EXPECT_EQ(x_size, (int)output_cpu[0][0][0].size());
 	EXPECT_EQ(f_size, (int)output_cpu[0].size());
@@ -205,8 +206,7 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
 	bool test_is_correct = true;
 	VF<T> output_cpu_vec = flatten_4d<T>(test_input_fmt, output_cpu);
 	for (size_t i = 0; i < output_cpu_vec.size(); ++i) {
-		testing::internal::FloatingPoint<float> val_cpu(output_cpu_vec[i]), val_gpu(output_ptr[i]);
-		if (!val_cpu.AlmostEquals(val_gpu)) {
+		if (!floating_point_equal(output_cpu_vec[i], output_ptr[i])) {
 			test_is_correct = false;
 			break;
 		}
@@ -228,7 +228,7 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
 		<< "output_padding_y = " << output_padding_y << std::endl
 		<< "output_padding_x = " << output_padding_x << std::endl;
 
-	bool print_data = false;
+	bool print_data = !test_is_correct;
 	if (!print_data) return;
 
 	std::cout << "\ninput:\n\n";
@@ -297,42 +297,50 @@ static input_filter_format_pair test_formats[] = {
 //    * Isolate the problematic combination of parameters.
 //    * Decrease the random values range in generic_convolution_test().
 //    * Set k = 1 inside the function generate_random_1d().
-TEST(DISABLED_convolution_f32_fw_gpu, generic_random) {
-	int input_y = 12;
-	int input_x = 18;
+TEST(DISABLED_convolution_gpu, generic_random) {
+	std::vector<std::pair<int, int>> input_sizes = { { 100, 100 },{ 227, 227 },{ 400, 600 },{ 531, 777 },{ 4096, 1980 } };
+	std::vector<std::pair<int, int>> filter_sizes = { { 1, 1 },{ 2, 2 },{ 3, 3 },{ 4, 4 },{ 5, 5 },{ 7, 7 },{ 9, 9 },{ 11, 11 },{ 1, 3 },{ 5, 2 } };
+
+	engine engine;
+	bool f16_supported = !!engine.get_info().supports_fp16;
+	if (!f16_supported) {
+		std::cout << "[ SKIPPED  ] float16 combinations are skipped (cl_khr_fp16 is not supported)." << std::endl;
+	}
 
 	for (int input_b = 1; input_b <= 1; input_b *= 2) {
 		for (int input_f = 1; input_f <= 6; ++input_f) {
-			for (int filter_o = 1; filter_o <= 2; ++filter_o) {
-				for (int filter_i = 1; filter_i <= input_f; ++filter_i) {
-					if (input_f % filter_i != 0) 
-                        continue; // only legal split is allowed
-					for (int filter_y = 1; filter_y <= 3; ++filter_y) {
-						for (int filter_x = 1; filter_x <= 3; ++filter_x) {
-							for (int stride_y = 1; stride_y <= 2; ++stride_y) {
-								for (int stride_x = 1; stride_x <= 2; ++stride_x) {
-									for (int input_padding_y = 0; input_padding_y <= 0; ++input_padding_y) {
-										for (int input_padding_x = 0; input_padding_x <= 0; ++input_padding_x) {
-											for (int output_padding_y = 0; output_padding_y <= 0; ++output_padding_y) {
+			for (std::pair<int, int> &input_yx : input_sizes) {
+				for (int filter_o = 1; filter_o <= 2; ++filter_o) {
+					for (int filter_i = 1; filter_i <= input_f; ++filter_i) {
+						if (input_f % filter_i != 0)
+							continue; // only legal split is allowed
+						for (std::pair<int, int> &filter_yx : filter_sizes) {
+							if (input_yx.first < filter_yx.first || input_yx.second < filter_yx.second)
+								continue; // the filter can't be larger than the input
+							for (int stride_y = 1; stride_y <= 5; ++stride_y) {
+								for (int stride_x = 1; stride_x <= 5; ++stride_x) {
+									for (int input_padding_y = 0; input_padding_y <= 1; ++input_padding_y) {
+										for (int input_padding_x = 0; input_padding_x <= 1; ++input_padding_x) {
+											for (int output_padding_y = 0; output_padding_y <= 1; ++output_padding_y) {
 												for (int output_padding_x = 0; output_padding_x <= 1; ++output_padding_x) {
 													for (int i = 0; i < (int)ARRAY_SIZE(test_formats); i++) {
-                                                        if (test_formats[i].is_fp32) {
-                                                            generic_convolution_test<float>(test_formats[i].input, test_formats[i].filter,
-                                                                                            input_b, input_f, input_y, input_x,	// BFYX
-                                                                                            filter_o, filter_i, filter_y, filter_x,
-                                                                                            stride_y, stride_x,
-                                                                                            input_padding_y, input_padding_x,
-                                                                                            output_padding_y, output_padding_x);
-                                                        }
-
-                                                        if (test_formats[i].is_fp16) {
-                                                            generic_convolution_test<FLOAT16>(test_formats[i].input, test_formats[i].filter,
-                                                                                    input_b, input_f, input_y, input_x,	// BFYX
-                                                                                    filter_o, filter_i, filter_y, filter_x,
-                                                                                    stride_y, stride_x,
-                                                                                    input_padding_y, input_padding_x,
-                                                                                    output_padding_y, output_padding_x);
-                                                        }
+														if (test_formats[i].is_fp32) {
+															generic_convolution_test<float>(test_formats[i].input, test_formats[i].filter,
+																input_b, input_f, input_yx.first, input_yx.second,	// BFYX
+																filter_o, filter_i, filter_yx.first, filter_yx.second,
+																stride_y, stride_x,
+																input_padding_y, input_padding_x,
+																output_padding_y, output_padding_x);
+														}
+														if (!f16_supported) continue;
+														if (test_formats[i].is_fp16) {
+															generic_convolution_test<FLOAT16>(test_formats[i].input, test_formats[i].filter,
+																input_b, input_f, input_yx.first, input_yx.second,	// BFYX
+																filter_o, filter_i, filter_yx.first, filter_yx.second,
+																stride_y, stride_x,
+																input_padding_y, input_padding_x,
+																output_padding_y, output_padding_x);
+														}
 													}
 												}
 											}

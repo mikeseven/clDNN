@@ -102,11 +102,11 @@ void generic_relu_test(cldnn::format test_input_fmt, int input_b, int input_f, i
 	auto output_ptr = output_memory.pointer<T>();
 
 	EXPECT_EQ(output_layout.size.format.value, test_input_fmt.value);
-	output_layout.size = output_layout.size.transform(cldnn::format::yxfb, 0);
-	int y_size = output_layout.size.sizes()[0];
-	int x_size = output_layout.size.sizes()[1];
-	int f_size = output_layout.size.sizes()[2];
-	int b_size = output_layout.size.sizes()[3];
+	tensor output_tensor = output_layout.size.transform(cldnn::format::yxfb, 0);
+	int y_size = output_tensor.sizes()[0];
+	int x_size = output_tensor.sizes()[1];
+	int f_size = output_tensor.sizes()[2];
+	int b_size = output_tensor.sizes()[3];
 	EXPECT_EQ(y_size, input_y + 2 * output_padding_y);
 	EXPECT_EQ(x_size, input_x + 2 * output_padding_x);
 	EXPECT_EQ(f_size, input_f);
@@ -328,13 +328,10 @@ TEST(relu_f32_fw_gpu, basic_output_padding_yxfb) {
 	}
 }
 
-TEST(DISABLED_relu_gpu, generic_random_short) {
+TEST(DISABLED_relu_gpu, generic_random) {
 	VF<cldnn::format> test_inputs_fmts = { cldnn::format::bfyx, cldnn::format::yxfb };
 	VF<float> slopes = { 0.0f, -0.0f, -17.19f, 1028.8f, std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity() };
 	std::vector<std::pair<int, int>> input_sizes = { { 100, 100 },{ 227, 227 },{ 400, 600 },{ 531, 777 },{ 4096, 1980 } };
-	for (int i = 1; i <= 16; ++i) {
-		input_sizes.emplace_back(i, i);
-	}
 	
 	engine engine;
 	bool f16_supported = !!engine.get_info().supports_fp16;
