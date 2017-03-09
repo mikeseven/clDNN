@@ -73,9 +73,9 @@ struct padding
 
     static padding max(padding const& lhs, padding const& rhs, float filling_value = 0.0f)
     {
-        return padding{ tensor::max(lhs.lower_size(), rhs.lower_size()),
-                        tensor::max(lhs.upper_size(), rhs.upper_size()),
-                        filling_value };
+        auto lower = tensor::max(lhs.lower_size(), rhs.lower_size());
+        auto upper = tensor::max(lhs.upper_size(), rhs.upper_size());
+        return padding{ lower.format, lower.sizes(), upper.sizes(), filling_value };
     }
 
 
