@@ -34,6 +34,7 @@ static const std::string kernel_name = "lrn_gpu";
 static const std::string kernel_name_b8 = "lrn_gpu_b8";
 static const std::string kernel_name_bfyx = "lrn_gpu_bfyx";
 static const std::string kernel_name_within_channel_bfyx = "lrn_gpu_within_channel_bfyx";
+static const std::string kernel_name_within_channel_yxfb = "lrn_gpu_within_channel_yxfb";
 template <>
 struct kd_default_value_selector<neural::gpu::engine_info_internal::architectures>
 {
@@ -193,23 +194,22 @@ struct lrn_gpu : is_an_implementation
 
 };
 
-lrn_gpu::kernel_data default_yxfb(const normalization::response& arg)
+
+lrn_gpu::kernel_data get_kernel_within_channel(const normalization::response& arg, cldnn::format format)
 {
-    if (arg.argument.norm_region == cldnn_lrn_norm_region_within_channel)
+    lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
+
+    switch (format) 
     {
-        throw std::runtime_error("LRN within channel is not implemented for YXFB format");
-    }
-
-    lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
-    return kd;
-}
-
-
-lrn_gpu::kernel_data default_bfyx_within_channel(const normalization::response& arg)
-{
-    lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
-
-    kd.kernel_name = kernel_name_within_channel_bfyx;
+        case cldnn::format::bfyx:
+            kd.kernel_name = kernel_name_within_channel_bfyx;
+            break;
+        case cldnn::format::yxfb:
+            kd.kernel_name = kernel_name_within_channel_yxfb;
+            break;
+        default:
+            throw std::invalid_argument("Unsupported LRN within channel format - " + cldnn::format::traits(format).order);
+    }    
    
     kd.gws0 = 128 * 128;
     kd.gws1 = 1;
@@ -221,42 +221,59 @@ lrn_gpu::kernel_data default_bfyx_within_channel(const normalization::response& 
     return kd;
 }
 
-lrn_gpu::kernel_data default_bfyx_across_channel(const normalization::response& arg)
+lrn_gpu::kernel_data get_kernel_across_channel(const normalization::response& arg, cldnn::format format)
 {
     auto& input_mem = arg.input_memory(0);
     lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
 
-    kd.kernel_name = kernel_name_bfyx;
-   
-    kd.gws0 = align_to(input_mem.argument().size.spatial[0],32);
-    kd.gws1 = input_mem.argument().size.spatial[1];
-    kd.gws2 = input_mem.argument().size.feature[0] * input_mem.argument().size.batch[0];
+    if (format == cldnn::format::bfyx)
+    {
+        kd.kernel_name = kernel_name_bfyx;   
+        kd.gws0 = align_to(input_mem.argument().size.spatial[0],32);
+        kd.gws1 = input_mem.argument().size.spatial[1];
+        kd.gws2 = input_mem.argument().size.feature[0] * input_mem.argument().size.batch[0];
 
-    kd.lws0 = 32;
-    kd.lws1 = 1;
-    kd.lws2 = 1;
+        kd.lws0 = 32;
+        kd.lws1 = 1;
+        kd.lws2 = 1;        
+    }    
+   
     return kd;
 }
 
 
-lrn_gpu::kernel_data default_bfyx(const normalization::response& arg)
+lrn_gpu::kernel_data get_yxfb_lrn_kernel(const normalization::response& arg)
 {
     switch (arg.argument.norm_region)
     {
         case cldnn_lrn_norm_region_across_channel: 
-            return default_bfyx_across_channel(arg);
+            return get_kernel_across_channel(arg, cldnn::format::yxfb);
         case cldnn_lrn_norm_region_within_channel:
-            return default_bfyx_within_channel(arg);
+            return get_kernel_within_channel(arg, cldnn::format::yxfb);
+        default:
+            throw std::runtime_error("Invalid norm region");
+    }
+}
+
+
+lrn_gpu::kernel_data get_bfyx_lrn_kernel(const normalization::response& arg)
+{
+    switch (arg.argument.norm_region)
+    {
+        case cldnn_lrn_norm_region_across_channel: 
+            return get_kernel_across_channel(arg, cldnn::format::bfyx);
+        case cldnn_lrn_norm_region_within_channel:
+            return get_kernel_within_channel(arg, cldnn::format::bfyx);
         default:
             throw std::runtime_error("Invalid norm region");
     }
 }
 
 kd_selector_t<lrn_gpu::kernel_data, normalization::response, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> lrn_gpu::ks = {
-    { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb },
-    { std::make_tuple(memory::format::yxfb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb },
-    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx },
-    { std::make_tuple(memory::format::bfyx_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx },
+    { std::make_tuple(memory::format::yxfb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), get_yxfb_lrn_kernel },
+    { std::make_tuple(memory::format::yxfb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), get_yxfb_lrn_kernel },
+    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), get_bfyx_lrn_kernel },
+    { std::make_tuple(memory::format::bfyx_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), get_bfyx_lrn_kernel },
 };
 
 
