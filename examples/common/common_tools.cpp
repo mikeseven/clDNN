@@ -369,9 +369,9 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     cldnn::build_options options;
 
     //TODO set proper network build options
-    if (ep.optimize_weights)    options.set_option(cldnn::build_option::optimize_data);
-    if (ep.profiling)           options.set_option(cldnn::build_option::profiling);
-    if (ep.dump_hidden_layers || ep.profiling)  options.set_option(cldnn::build_option::debug);
+    options.set_option(cldnn::build_option::optimize_data(ep.optimize_weights));
+    options.set_option(cldnn::build_option::profiling(ep.profiling));
+    options.set_option(cldnn::build_option::debug(ep.dump_hidden_layers || ep.profiling));
 
     std::vector<cldnn::primitive_id> outputs{ "output" };
     if (!ep.dump_layer_name.empty())  outputs.push_back(ep.dump_layer_name);

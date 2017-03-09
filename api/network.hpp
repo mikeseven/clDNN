@@ -35,95 +35,85 @@ namespace cldnn
 /// @defgroup cpp_network Network Execution
 /// @{
 
-/// @brief Represents user-provided network build option type.
-enum class build_option_type
-{
-    /// @brief Allow primitives fusing during network build (default: false).
-    fusing        = cldnn_build_option_fusing,
-
-    /// @brief Enable primitives profiling (default: false).
-    /// @details This option allows to collect @ref profiling_interval for every network output.
-    /// This option reduces performance.
-    profiling     = cldnn_build_option_profiling,
-
-    /// @brief Enable implicit reordering for user inputs (default: false).
-    optimize_data = cldnn_build_option_optimize_data,
-
-    /// @brief Enable debug mode (default: false).
-    /// @details This option enforce all network primitives to be accessible as outputs.
-    debug         = cldnn_build_option_debug,
-
-    /// @brief User selected list of network outputs.
-    outputs       = cldnn_build_option_outputs
-};
-
+/// @brief Represents user-provided network build option.
 struct build_option
-{
+{   
     /// @brief Allow primitives fusing during network build (default: false).
-    static const build_option_type fusing        = build_option_type::fusing;
-
+    static std::shared_ptr<const build_option> fusing(bool enable = false);
     /// @brief Enable primitives profiling (default: false).
     /// @details This option allows to collect @ref profiling_interval for every network output.
     /// This option reduces performance.
-    static const build_option_type profiling     = build_option_type::profiling;
-
+    static std::shared_ptr<const build_option> profiling(bool enable = false);
     /// @brief Enable implicit reordering for user inputs (default: false).
-    static const build_option_type optimize_data = build_option_type::optimize_data;
-
+    static std::shared_ptr<const build_option> optimize_data(bool enable = false);
     /// @brief Enable debug mode (default: false).
     /// @details This option enforce all network primitives to be accessible as outputs.
-    static const build_option_type debug         = build_option_type::debug;
+    static std::shared_ptr<const build_option> debug(bool enable = false);
 
     /// @brief User selected list of network outputs.
-    static const build_option* outputs(const std::vector<primitive_id>& outs);
+    static std::shared_ptr<const build_option> outputs(const std::vector<primitive_id>& outs);
+
     virtual ~build_option() = default;
 
-protected:
-    build_option(const cldnn_build_option& value) : _value(value) {}
 private:
-    build_option(const build_option& other) = delete;
-    build_option& operator=(const build_option& other) = delete;
-    const cldnn_build_option _value;
-    friend class build_options;
+    /// @brief Returns option type represented by this object.
+    virtual cldnn_build_option_type get_type() const = 0;
+    /// @brief Returns option @ref ::cldnn_build_option::data represented by this object.
+    virtual const void* get_data() const = 0;
 
-    static bool is_option_bool(build_option_type type)
+    friend class build_options;
+};
+
+/// @brief @ref build_option specialization for boolean options.
+template<cldnn_build_option_type OptType>
+struct build_option_bool : build_option
+{
+    /// @brief Constructs option.
+    /// @param value Is option enabled.
+    explicit build_option_bool(bool value) : _value(value) {}
+
+    /// @brief Constructs from C API @ref ::cldnn_build_option.
+    explicit build_option_bool(const cldnn_build_option& value)
+        : _value(*reinterpret_cast<const bool*>(value.data))
     {
-        switch (type)
-        {
-        case fusing:
-        case profiling:
-        case optimize_data:
-        case debug:
-            return true;
-        default:
-            return false;
-        }
+        assert(value.type == static_cast<int32_t>(OptType));
     }
+
+    /// @brief Is option enabled.
+    bool enabled() const { return _value; }
+private:
+    cldnn_build_option_type get_type() const override { return OptType; }
+    const void* get_data() const override { return &_value; }
+    bool _value;
 };
 
 /// @brief @ref build_option specialization for network outputs list.
 struct build_option_outputs : build_option
 {
-    typedef const cldnn_primitive_id_arr* data_pointer_type;
-
     /// @brief The list of output ids (names)
     const std::vector<primitive_id> outputs;
 
     /// @brief Constructs option.
     /// @param outs List of ouput ids (names)
     explicit build_option_outputs(const std::vector<primitive_id>& outs)
-        : build_option({ cldnn_build_option_outputs, &_outputs_ref })
-        , outputs(outs)
+        : outputs(outs)
         , _ref_store(to_refs(outputs))
-        , _outputs_ref({ _ref_store.data(), _ref_store.size()})
+        , _outputs_ref({ _ref_store.data(), _ref_store.size() })
     {}
 
     /// @brief Constructs from C API @ref ::cldnn_build_option.
     explicit build_option_outputs(const cldnn_build_option& value)
         : build_option_outputs(make_outputs_from_ref(value))
-    {}
+    {
+        assert(value.type == static_cast<int32_t>(cldnn_build_option_outputs));
+    }
 
 private:
+    /// @brief Returns cldnn_build_option_outputs.
+    cldnn_build_option_type get_type() const override { return cldnn_build_option_outputs; }
+    /// @brief Returns pointer to @ref cldnn_primitive_is_arr
+    const void* get_data() const override { return &_outputs_ref; }
+
     build_option_outputs(const build_option_outputs& other) = delete;
     build_option_outputs& operator=(const build_option_outputs& other) = delete;
 
@@ -144,10 +134,10 @@ private:
     {
         if (value.type != cldnn_build_option_outputs) throw std::invalid_argument("option type does not match: should be 'output'");
         if (value.data == nullptr) throw std::invalid_argument("output data is empty");
-        auto refs = reinterpret_cast<data_pointer_type>(value.data);
+        auto refs = reinterpret_cast<const cldnn_primitive_id_arr*>(value.data);
         std::vector<primitive_id> result;
         result.reserve(refs->size);
-        for(decltype(refs->size) i = 0; i < refs->size; i++)
+        for (decltype(refs->size) i = 0; i < refs->size; i++)
         {
             result.push_back(refs->data[i]);
         }
@@ -155,53 +145,116 @@ private:
     }
 };
 
+namespace detail
+{
 /// @brief Helper template to convert @ref build_option_type value to particular @ref build_option class.
-template<build_option_type OptType>
-struct build_option_traits;
+template<cldnn_build_option_type OptType>
+struct build_option_traits
+{
+    /// @brief @ref build_option object type which represents the particular @p OptType.
+    typedef build_option object_type;
+    /// @brief Make default @ref build_option corresponding @p OptType
+    static std::shared_ptr<const build_option> make_default();
+    /// @brief Make @ref build_option from C API @ref ::cldnn_build_option
+    static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option);
+};
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-template<> struct build_option_traits<build_option_type::fusing>        { typedef build_option object_type; };
-template<> struct build_option_traits<build_option_type::profiling>     { typedef build_option object_type; };
-template<> struct build_option_traits<build_option_type::optimize_data> { typedef build_option object_type; };
-template<> struct build_option_traits<build_option_type::debug>         { typedef build_option object_type; };
-template<> struct build_option_traits<build_option_type::outputs>       { typedef build_option_outputs object_type; };
-
-inline const build_option* build_option::outputs(const std::vector<primitive_id>& outs)
+template<> struct build_option_traits<cldnn_build_option_fusing>
 {
-    return new build_option_outputs(outs);
+    typedef build_option_bool<cldnn_build_option_fusing> object_type;
+    static std::shared_ptr<const build_option> make_default() { return build_option::fusing(); }
+    static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option)
+    {
+        assert(option.type == cldnn_build_option_fusing);
+        return std::make_shared<build_option_bool<cldnn_build_option_fusing>>(option);
+    }
+};
+template<> struct build_option_traits<cldnn_build_option_profiling>
+{
+    typedef build_option_bool<cldnn_build_option_profiling> object_type;
+    static std::shared_ptr<const build_option> make_default() { return build_option::profiling(); }
+    static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option)
+    {
+        assert(option.type == cldnn_build_option_profiling);
+        return std::make_shared<build_option_bool<cldnn_build_option_profiling>>(option);
+    }
+};
+template<> struct build_option_traits<cldnn_build_option_optimize_data>
+{
+    typedef build_option_bool<cldnn_build_option_optimize_data> object_type;
+    static std::shared_ptr<const build_option> make_default() { return build_option::optimize_data(); }
+    static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option)
+    {
+        assert(option.type == cldnn_build_option_optimize_data);
+        return std::make_shared<build_option_bool<cldnn_build_option_optimize_data>>(option);
+    }
+};
+template<> struct build_option_traits<cldnn_build_option_debug>
+{
+    typedef build_option_bool<cldnn_build_option_debug> object_type;
+    static std::shared_ptr<const build_option> make_default() { return build_option::debug(); }
+    static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option)
+    {
+        assert(option.type == cldnn_build_option_debug);
+        return std::make_shared<build_option_bool<cldnn_build_option_debug>>(option);
+    }
+};
+template<> struct build_option_traits<cldnn_build_option_outputs>
+{
+    typedef build_option_outputs object_type;
+    static std::shared_ptr<const build_option> make_default() { return build_option::outputs({}); }
+    static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option)
+    {
+        assert(option.type == cldnn_build_option_outputs);
+        return std::make_shared<build_option_outputs>(option);
+    }
+};
+} // namespace detail
+#endif
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+inline std::shared_ptr<const build_option> build_option::fusing(bool enable)
+{
+    return std::make_shared<build_option_bool<cldnn_build_option_fusing>>(enable);
+}
+
+inline std::shared_ptr<const build_option> build_option::profiling(bool enable)
+{
+    return std::make_shared<build_option_bool<cldnn_build_option_profiling>>(enable);
+}
+
+inline std::shared_ptr<const build_option> build_option::optimize_data(bool enable)
+{
+    return std::make_shared<build_option_bool<cldnn_build_option_optimize_data>>(enable);
+}
+
+inline std::shared_ptr<const build_option> build_option::debug(bool enable)
+{
+    return std::make_shared<build_option_bool<cldnn_build_option_debug>>(enable);
+}
+
+inline std::shared_ptr<const build_option> build_option::outputs(const std::vector<primitive_id>& outs)
+{
+    return std::make_shared<build_option_outputs>(outs);
 }
 #endif
 
+/// @brief Represents network build options list.
 class build_options
 {
 public:
     /// @brief Adds or replace option to the options list
-    void set_option(const build_option* opt)
+    void set_option(std::shared_ptr<const build_option> opt)
     {
         add_or_replace_option(opt);
-    }
-
-    /// @brief Adds or replace boolean option to the options list
-    void set_option(build_option_type type)
-    {
-        assert(build_option::is_option_bool(type));
-        add_or_replace_option(new build_option({ static_cast<cldnn_build_option_type>(type), nullptr }));
     }
 
     /// @brief Adds or replace options to the options list
     template<typename ...Args>
-    void set_option(const build_option* opt, Args... args)
+    void set_option(std::shared_ptr<const build_option> opt, Args... args)
     {
         add_or_replace_option(opt);
-        set_option(args...);
-    }
-
-    /// @brief Adds or replace boolean options to the options list
-    template<typename ...Args>
-    void set_option(build_option_type type, Args... args)
-    {
-        assert(build_option::is_option_bool(type));
-        add_or_replace_option(new build_option({ static_cast<cldnn_build_option_type>(type), nullptr }));
         set_option(args...);
     }
 
@@ -221,25 +274,30 @@ public:
         }
     }
 
-    /// @brief Returns network build option of requested @p type.
-    /// @param type Build option type to be returned.
-    /// @returns Pointer to build option or nullptr if option is not set.
-    const build_option* get(build_option_type type)
+    /// @brief Copy constructor.
+    build_options(const build_options& other)
+        : _options(other._options)
+    {}
+
+    /// @brief Copy assignment.
+    build_options& operator=(const build_options& other)
     {
-        for(auto& option: _options)
-        {
-            if (option->_value.type == static_cast<cldnn_build_option_type>(type))
-                return option.get();
-        }
-        return nullptr;
+        if (this == &other)
+            return *this;
+        _options = other._options;
+        return *this;
     }
 
     /// @brief Returns network build option for @p OptType
-    /// @returns Casted pointer to build option or nullptr if option is not set.
-    template<build_option_type OptType>
-    const typename build_option_traits<OptType>::object_type* get()
+    template<cldnn_build_option_type OptType, class T = typename detail::build_option_traits<OptType>::object_type>
+    std::shared_ptr<const T> get()
     {
-        return static_cast<const typename build_option_traits<OptType>::object_type*>(get(OptType));
+        for (auto& option : _options)
+        {
+            if (option->get_type() == OptType)
+                return std::static_pointer_cast<const T>(option);
+        }
+        return std::static_pointer_cast<const T>(detail::build_option_traits<OptType>::make_default());
     }
 
 private:
@@ -253,35 +311,38 @@ private:
         std::vector<cldnn_build_option> result;
         for (auto& o : _options)
         {
-            result.push_back(o->_value);
+            result.push_back({ o->get_type(), o->get_data() });
         }
         return result;
     }
 
-    void add_or_replace_option(const build_option* opt)
+    void add_or_replace_option(std::shared_ptr<const build_option> opt)
     {
         for(auto& p : _options)
         {
-            if(p->_value.type == opt->_value.type)
+            if(p->get_type() == opt->get_type())
             {
-                p.reset(opt);
+                p = opt;
                 return;
             }
         }
-        _options.emplace_back(opt);
+        _options.push_back(opt);
     }
 
-    static const build_option* make_option(const cldnn_build_option& option)
+    static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option)
     {
         switch (option.type)
         {
         case cldnn_build_option_fusing:
+            return  detail::build_option_traits<cldnn_build_option_fusing>::make_option(option);
         case cldnn_build_option_profiling:
+            return detail::build_option_traits<cldnn_build_option_profiling>::make_option(option);
         case cldnn_build_option_optimize_data:
+            return detail::build_option_traits<cldnn_build_option_optimize_data>::make_option(option);
         case cldnn_build_option_debug:
-            return new build_option(option);
+            return detail::build_option_traits<cldnn_build_option_debug>::make_option(option);
         case cldnn_build_option_outputs:
-            return new build_option_outputs(option);
+            return detail::build_option_traits<cldnn_build_option_outputs>::make_option(option);
         default: throw std::out_of_range("unsupported build option type");
         }
     }
@@ -291,10 +352,8 @@ private:
 struct network_output
 {
     /// @brief Returns @ref event associated with the output.
-    event get_event() const
-    {
-        return _event;
-    }
+    event get_event() const { return _event; }
+
     /// @brief Returns @ref memory object of the output. Blocked until associated @ref event is not complete.
     memory get_memory() const
     {
@@ -355,7 +414,7 @@ struct network
     friend bool operator==(const network& lhs, const network& rhs) { return lhs._impl == rhs._impl; }
     friend bool operator!=(const network& lhs, const network& rhs) { return !(lhs == rhs); }
 
-    /// @brief Returns @ref engine by which network was built.
+    /// @brief Returns @ref engine by which network waas built.
     engine get_engine() const
     {
         return check_status<cldnn_engine>("get network engine failed", [&](status_t* status) { return cldnn_get_network_engine(_impl, status); });
@@ -410,8 +469,6 @@ struct network
 
     /// @brief Executes network and returns the list of @ref network_output.
     /// @param dependencies List of @ref event objects to be waited before network execution.
-    /// @note User should call set_input_data() for every @ref input_layout defined in source @ref topology
-    /// before network execution.
     std::map<primitive_id, network_output> execute(const std::vector<event>& dependencies = {}) const
     {
         std::vector<cldnn_event> dep_refs(dependencies.size());
