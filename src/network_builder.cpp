@@ -135,7 +135,7 @@ namespace {
 }
 
 network_builder::network_builder(refcounted_obj_ptr<engine_impl> eng, const build_options& options)
-    : _engine(eng), _options(options), _lo(_engine, _options.get<cldnn_build_option_optimize_data>()->enabled())
+    : _engine(eng), _options(options), _lo(_engine, _options.get<build_option_type::optimize_data>()->enabled())
 {
 }
 
@@ -145,7 +145,7 @@ network_impl* network_builder::build_network(refcounted_obj_ptr<topology_impl> t
     assert(tpl);
     _topology_map = tpl->get_primitives();
 
-    if (_options.get<cldnn_build_option_optimize_data>()->enabled())
+    if (_options.get<build_option_type::optimize_data>()->enabled())
     {
         reorder_inputs();
         optimize_weights();
@@ -156,7 +156,7 @@ network_impl* network_builder::build_network(refcounted_obj_ptr<topology_impl> t
     optimize_topology();
     auto network_topology = refcounted_obj_ptr<topology_impl>(new topology_impl(_topology_map), false);
 
-    auto outputs_option = _options.get<cldnn_build_option_outputs>();
+    auto outputs_option = _options.get<build_option_type::outputs>();
     assert(outputs_option && !outputs_option->outputs.empty());
 
     return new network_impl(get_engine(), network_topology, outputs_option->outputs);
@@ -165,10 +165,10 @@ network_impl* network_builder::build_network(refcounted_obj_ptr<topology_impl> t
 void network_builder::optimize_topology()
 {
     // TODO some optimizations aka weights reordering, fusing, etc.
-    auto outputs_option = _options.get<cldnn_build_option_outputs>();
+    auto outputs_option = _options.get<build_option_type::outputs>();
 
     // in debug mode select all primitives as output
-    if (_options.get<cldnn_build_option_debug>()->enabled())
+    if (_options.get<build_option_type::debug>()->enabled())
     {
         std::vector<primitive_id> outputs;
         if (outputs_option != nullptr)
