@@ -36,20 +36,10 @@ layout activation_arg::calc_output_layout(const topology_map& topology_map, std:
 activation_arg::activation_arg(network_impl& network, std::shared_ptr<const activation> desc)
     :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
-    auto input_offset = desc->input_offset().transform(input_memory(0).get_layout().size.format, 0);
-    auto output_offset = desc->output_offset().transform(output_memory().get_layout().size.format, 0);
-    auto& output_size = output_memory().get_layout().size;
-    
     auto input_arg  = input_memory(0).argument();
     auto output_arg = output_memory().argument();
     
     if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("ReLU input/output number of dimension does not match.");
-    for (auto x : input_offset.raw)  if (x < 0)                     throw std::runtime_error("ReLU negative input offset.");
-    
-    for (size_t i = 0; i < input_arg.size.raw.size(); ++i) {
-        if (input_arg.size.raw[i]  < output_size.raw[i] + input_offset.raw[i]) throw std::runtime_error("ReLU input/output size does not match.");
-        if (output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("ReLU sizes to small.");
-    }
 }
 
 }
