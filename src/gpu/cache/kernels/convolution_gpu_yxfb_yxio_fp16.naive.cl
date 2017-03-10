@@ -2,7 +2,8 @@
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
     #if RELU
-        #define ACTIVATION(output, input) output = max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h);
+        #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
+        input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
     #else
         #define ACTIVATION(output, input) output = input;
     #endif
