@@ -70,16 +70,16 @@ namespace tests
 
 		if (generic_params->data_type == data_types::f32)
 		{
-			compare_buffers<float>(output, output_ref, 1e-4f);
+			compare_buffers<float>(output, output_ref);
 		}
 		else
 		{
-			compare_buffers<FLOAT16>(output, output_ref, 1e-3f);
+			compare_buffers<FLOAT16>(output, output_ref);
 		}	
 	}
 
 	template<typename Type>
-	void generic_test::compare_buffers(const memory& out, const memory& ref, float error)
+	void generic_test::compare_buffers(const memory& out, const memory& ref)
 	{
 		auto out_layout = out.get_layout();
 		auto ref_layout = ref.get_layout();
@@ -105,7 +105,8 @@ namespace tests
 						size_t res_index = get_linear_index(out_layout, b, f, y, x);
 						size_t ref_index = get_linear_index(ref_layout, b, f, y, x);
 
-						EXPECT_NEAR(res_data[res_index], ref_data[ref_index], error);
+						EXPECT_TRUE(floating_point_equal(res_data[res_index], ref_data[ref_index]))
+							<< "Expected " << (float)res_data[res_index] << " to be almost equal (within 4 ULP's) to " << (float)ref_data[ref_index] << " (ref index = " << ref_index << ")!";
 
 						if (HasFailure())
 						{

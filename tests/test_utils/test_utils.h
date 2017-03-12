@@ -237,7 +237,7 @@ inline bool floating_point_equal(FLOAT16 x, FLOAT16 y, int16_t max_ulps_diff = 4
 		return a == 0 && b == 0;
 	}
 	else {
-		return std::abs(a - b) < max_ulps_diff;
+		return std::abs(a - b) <= max_ulps_diff;
 	}
 }
 
@@ -251,7 +251,7 @@ inline bool floating_point_equal(float x, float y, int32_t max_ulps_diff = 4) {
 		return a == 0 && b == 0;
 	}
 	else {
-		return std::abs(a - b) < max_ulps_diff;
+		return std::abs(a - b) <= max_ulps_diff;
 	}
 }
 
@@ -282,7 +282,7 @@ public:
 	void run_single_test();
 
 	template<typename Type>
-	void compare_buffers(const cldnn::memory& out, const cldnn::memory& ref, float error);
+	void compare_buffers(const cldnn::memory& out, const cldnn::memory& ref);
 
 	uint32_t get_linear_index(cldnn::layout layout, int b, int f, int y, int x);
 

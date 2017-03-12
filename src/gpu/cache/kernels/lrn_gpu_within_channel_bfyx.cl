@@ -32,7 +32,7 @@ KERNEL (lrn_gpu_within_channel_bfyx)(const __global UNIT_TYPE* input, __global U
         {
             for (int w = wstart; w < wend; ++w) 
             {
-                UNIT_TYPE tmp_val = bottom_slice[h * INPUT_SIZE_X + w];
+                UNIT_TYPE tmp_val = bottom_slice[h * INPUT_SIZE_X + w] * UNIT_CVT_FUNC(ALPHA_VAL_FACTOR);
                 aveval += (tmp_val * tmp_val);
             }
         }
