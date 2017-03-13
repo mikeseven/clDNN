@@ -87,7 +87,7 @@ namespace KernelSelctor
 
     cldnn::tensor dim_2_tensor(const uDims& dim, cldnn::format f)
     {
-        assert(f == bfyx);
+        assert(f == cldnn::format::bfyx);
         return{ f,
         {
             (cldnn::tensor::value_type)dim.w,
