@@ -367,9 +367,13 @@ elseif(DEFINED XCODE_VERSION)
 endif()
 
 # ======================================================================================================
+if(CLDNN__OUTPUT_DIR)
+  set(CLDNN__OUTPUT_BIN_DIR "${CLDNN__OUTPUT_DIR}" CACHE PATH "Output directory path where the final exetuables, examples and tests will be stored.")
+  set(CLDNN__OUTPUT_LIB_DIR "${CLDNN__OUTPUT_DIR}" CACHE PATH "Output directory path where the final libraries will be stored.")
+else()
 if(CLDNN_BUILT_FROM_OPENVX)
-    set(CLDNN__OUTPUT_BIN_DIR "${CMAKE_BIN_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final libraries, examples and tests will be stored.")
-    set(CLDNN__OUTPUT_LIB_DIR "${CMAKE_LIB_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final libraries, examples and tests will be stored.")
+    set(CLDNN__OUTPUT_BIN_DIR "${CMAKE_BIN_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final exetuables, examples and tests will be stored.")
+    set(CLDNN__OUTPUT_LIB_DIR "${CMAKE_LIB_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final libraries will be stored.")
 else()
     # Output directory path where the final libraries, examples and tests will be stored.
     if(CLDNN__MULTI_CFG_GEN)
@@ -378,9 +382,10 @@ else()
     else()
       set(__CLDNN_OutDir "${CLDNN_BUILD__DEFAULT_OUT_ROOT}/${CLDNN__ARCHITECTURE_TARGET}/${__CLDNN_BuildType}")
     endif()
-    set(CLDNN__OUTPUT_BIN_DIR "${__CLDNN_OutDir}" CACHE PATH "Output directory path where the final libraries, examples and tests will be stored.")
-    set(CLDNN__OUTPUT_LIB_DIR "${CLDNN__OUTPUT_BIN_DIR}" CACHE PATH "Output directory path where the final libraries, examples and tests will be stored.")
+    set(CLDNN__OUTPUT_BIN_DIR "${__CLDNN_OutDir}" CACHE PATH "Output directory path where the final exetuables, examples and tests will be stored.")
+    set(CLDNN__OUTPUT_LIB_DIR "${CLDNN__OUTPUT_BIN_DIR}" CACHE PATH "Output directory path where the final libraries will be stored.")
     unset(__CLDNN_OutDir)
+  endif()
 endif()
 
 # ======================================================================================================
