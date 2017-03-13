@@ -19,6 +19,12 @@
 #define SIMPLER_NMS_H
 
 #include "../cldnn.h"
+/// @addtogroup c_api C API
+/// @{
+/// @addtogroup c_topology Network Topology
+/// @{
+/// @addtogroup c_primitives Primitives
+/// @{
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,5 +48,8 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(simpler_nms);
 }
 #endif
 
+/// @}
+/// @}
+/// @}
 #endif /* SIMPLER_NMS_H */
 

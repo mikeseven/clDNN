@@ -19,20 +19,34 @@
 #define POOLING_H
 
 #include "../cldnn.h"
+/// @addtogroup c_api C API
+/// @{
+/// @addtogroup c_topology Network Topology
+/// @{
+/// @addtogroup c_primitives Primitives
+/// @{
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/// @brief Select method for Pooling layer ( @CLDNN_PRIMITIVE_DESC{pooling} ).
 typedef enum /*:int32_t*/
 {
+    /// @brief Maximum-pooling method.
     cldnn_pooling_max,
+    /// @brief Average-pooling method.
     cldnn_pooling_average
 } cldnn_pooling_mode;
 
+/// @brief Performs "pooling" operation which is a form of non-linear down-sampling.
+/// @details Pools the input image by taking the max, average, etc. within regions.
 CLDNN_BEGIN_PRIMITIVE_DESC(pooling)
-int32_t mode; /*cldnn_pooling_mode*/
+/// @brief Pooling method. See #cldnn_pooling_mode.
+int32_t mode;
+/// @brief Defines shift in input buffer between adjacent calculations of output values.
 cldnn_tensor stride;
+/// @brief Pooling kernel size.
 cldnn_tensor size;
 CLDNN_END_PRIMITIVE_DESC(pooling)
 
@@ -42,5 +56,8 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(pooling);
 }
 #endif
 
+/// @}
+/// @}
+/// @}
 #endif /* POOLING_H */
 

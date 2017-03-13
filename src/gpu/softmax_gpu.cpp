@@ -83,7 +83,7 @@ struct softmax_gpu : is_an_implementation
             input_mem.argument().format == memory::format::yxfb_f16)
         {
             kd.elements_in_batch = input_size.spatial[0] * input_size.spatial[1];
-            kd.gws0 = align_to(kd.elements_in_batch, 32);
+            kd.gws0 = cldnn::align_to(kd.elements_in_batch, 32);
             kd.gws1 = batch_num;
             kd.lws0 = 32;
             kd.items_num = feature_num;

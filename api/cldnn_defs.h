@@ -14,6 +14,14 @@
 // limitations under the License.
 */
 
+/*! @mainpage clDNN Documentation
+* @section intro Introduction
+* Compute Library for Deep Neural Networks (clDNN) is a middle-ware software
+*  for accelerating DNN inference on Intel &reg; HD and Iris&trade; Pro Graphics.
+* @section example Example MNIST network
+* @include example_cldnn.cpp
+*/
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
@@ -48,8 +56,15 @@ typedef half_impl half_t;
 
 namespace cldnn {
 
+/// @addtogroup cpp_api C++ API
+/// @{
+
+/// @defgroup cpp_error Error Handling
+/// @{
+
 using status_t = ::cldnn_status;
 
+/// @brief clDNN specific exception type.
 class error : public std::runtime_error
 {
 public:
@@ -65,6 +80,7 @@ public:
     {
     }
 
+    /// @brief Returns clDNN status code.
     const status_t& status() const { return _status; }
 private:
     status_t _status;
@@ -92,9 +108,15 @@ inline void check_status<void>(std::string err_msg, std::function<void(status_t*
         CLDNN_THROW(err_msg, status);
 }
 
+/// @}
+
+/// @cond CPP_HELPERS
+
+/// @defgroup cpp_helpers Helpers
+/// @{
+
 #define CLDNN_API_CLASS(the_class) static_assert(std::is_standard_layout<the_class>::value, #the_class " has to be 'standart layout' class");
 
-}
 
 template<typename T>
 typename std::enable_if<std::is_integral<T>::value, T>::type align_to(T size, size_t align) {
@@ -163,7 +185,9 @@ constexpr auto round_up_to(T1 val, T2 rounding)
     return static_cast<RetT>(ceil_div(val, rounding) * static_cast<UT2>(rounding));
 }
 
-
+///
+/// \brief Converts C API float array to std::vector<float>
+///
 inline std::vector<float> float_arr_to_vector(const cldnn_float_arr& arr)
 {
     std::vector<float> result(arr.size);
@@ -175,7 +199,17 @@ inline std::vector<float> float_arr_to_vector(const cldnn_float_arr& arr)
 }
 
 
+///
+/// \brief Converts std::vector<float> to C API float_array
+///
 inline cldnn_float_arr float_vector_to_arr(const std::vector<float>& stor)
 {
     return { stor.data(), stor.size() };
+}
+
+/// @}
+
+/// @endcond
+
+/// @}
 }

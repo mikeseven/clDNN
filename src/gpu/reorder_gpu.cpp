@@ -379,7 +379,7 @@ struct reorder_gpu : is_an_implementation {
                 {
                     static_cast<size_t>(input_mem.argument().size.batch[0]),
                     static_cast<size_t>(input_mem.argument().size.feature[0]),
-                    static_cast<size_t>(align_to(input_mem.argument().size.spatial[1], 32))
+                    static_cast<size_t>(cldnn::align_to(input_mem.argument().size.spatial[1], 32))
                 },
                 {
                     1, 1, 32
