@@ -340,8 +340,8 @@ fully_connected_gpu::kernel_data default_bfyx_f32(const fully_connected& arg)
             cldnn::input_layout("input", input_mem.get_layout()),
             cldnn::reorder("reorder", "input", cldnn::layout{ input_mem.get_layout().data_type, input_mem.argument().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
         );
-        kd.reorder.push_back({ arg.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
-        kd.kernel_name = kernel_name_xb_xb;
+        kd = default_yxfb_f32(arg); //fallback to (yxfb, yfxb, fp32) case
+        kd.reorder.push_back({ arg.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false }); //add input reorder bfyx -> yxfb
     }
     else
     {
@@ -528,8 +528,7 @@ fully_connected_gpu::kernel_data default_bfyx_bs_x_bsv16_b1(const fully_connecte
 
 fully_connected_gpu::kernel_data default_bfyx_f16_yxfb_f16(const fully_connected& arg)
 {
-    fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
-    kd.kernel_name = kernel_name_bx_bx_from_fyxb;
+    fully_connected_gpu::kernel_data kd = default_yxfb_fp16(arg); //fallback to (yxfb, yxfb, f16) case
 
     auto input_mem = arg.input_memory(0);
     cldnn::topology topology(

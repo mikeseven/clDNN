@@ -181,6 +181,7 @@ kernels_cache::kernels_cache(gpu_toolkit& context): _context(context) {}
 kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_name) {
     // TODO: FIXIT: more than one kernel can be created for same template_name and definitions
 
+    std::string primitive_name = kernel_name;
     std::replace(kernel_name.begin(), kernel_name.end(), '.', '_');
     auto kernel_num = definitions.empty() ? "" : std::to_string(_kernel_codes.size());
 
@@ -193,6 +194,7 @@ kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::s
     code.add_line("\n//====================================================")
         .add_line("// Kernel template: " + template_name + " ")
         .add_line("// Kernel name: " + kernel_name)
+        .add_line("// Primitive id: " + primitive_name)
         .value_macro("KERNEL(name)", "__kernel void " + kernel_name)
         .decoration_macro("FUNC", "", kernel_num)
         .decoration_macro("FUNC_CALL", "", kernel_num);

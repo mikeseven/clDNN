@@ -61,7 +61,7 @@ struct roi_pooling_gpu : is_an_implementation {
         : _outer(outer),
         _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info()),
         _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration)),
-        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
     {}
 
     static kernel_data set_default(const roi_pooling& outer)
