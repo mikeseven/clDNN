@@ -340,7 +340,7 @@ fully_connected_gpu::kernel_data default_bfyx_f32(const fully_connected& arg)
             cldnn::input_layout("input", input_mem.get_layout()),
             cldnn::reorder("reorder", "input", cldnn::layout{ input_mem.get_layout().data_type, input_mem.argument().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
         );
-        kd = default_yxfb_f32(arg); //fallback to (yxfb, yfxb, fp32) case
+        kd = default_yxfb_f32(arg); //fallback to (yxfb, yxfb, fp32) case
         kd.reorder.push_back({ arg.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false }); //add input reorder bfyx -> yxfb
     }
     else
