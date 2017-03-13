@@ -22,20 +22,38 @@
 
 namespace cldnn
 {
+/// @addtogroup cpp_api C++ API
+/// @{
+/// @addtogroup cpp_topology Network Topology
+/// @{
+/// @addtogroup cpp_primitives Primitives
+/// @{
+
+/// @brief Provides input data to topology.
+/// @details This primitive allows to pass data which is known at topology creation.
+/// For example, weights and biases for scoring networks.
+/// @note Passing data at topology may improve network performance if data optimization is enabled.
 struct data : public primitive_base<data, CLDNN_PRIMITIVE_DESC(data)>
 {
     CLDNN_DECLATE_PRIMITIVE(data)
 
+    /// @brief Constructs data primitive.
+    /// @param id This primitive id.
+    /// @param mem @ref memory object which contains data.
+    /// @note If memory is attached by memory::attach(), the attached buffer should be valid till network build.
     data(const primitive_id& id, const memory& mem)
         :primitive_base(id, {}, padding(), padding())
         , mem(mem.get(), true)
     {}
 
+    /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{data}
     explicit data(const dto* dto)
         :primitive_base(dto)
         , mem(dto->mem, true)
     {}
 
+    /// @brief @ref memory object which contains data.
+    /// @note If memory is attached by memory::attach(), the attached buffer should be valid till network build.
     memory mem;
 
 protected:
@@ -44,4 +62,7 @@ protected:
         dto.mem = mem.get();
     }
 };
+/// @}
+/// @}
+/// @}
 }

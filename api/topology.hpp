@@ -22,12 +22,22 @@
 #include "primitive.hpp"
 
 namespace cldnn {
+
+/// @addtogroup cpp_api C++ API
+/// @{
+
+/// @defgroup cpp_topology Network Topology
+/// @{
+
+/// @brief Network topology to be defined by user.
 struct topology
 {
+    /// @brief Constructs empty network topology.
     topology()
         : _impl(check_status<cldnn_topology>("failed to create topology", cldnn_create_topology))
     {}
 
+    /// @brief Constructs topology containing primitives provided in argument(s).
     template<class ...Args>
     topology(const Args&... args)
         : topology()
@@ -35,11 +45,13 @@ struct topology
         add<Args...>(args...);
     }
 
+    /// @brief Copy construction.
     topology(const topology& other) :_impl(other._impl)
     {
         retain();
     }
 
+    /// @brief Copy assignment.
     topology& operator=(const topology& other)
     {
         if (_impl == other._impl) return *this;
@@ -49,6 +61,7 @@ struct topology
         return *this;
     }
 
+    /// @brief Releases wrapped C API @ref cldnn_topology.
     ~topology()
     {
         release();
@@ -57,12 +70,14 @@ struct topology
     friend bool operator==(const topology& lhs, const topology& rhs) { return lhs._impl == rhs._impl; }
     friend bool operator!=(const topology& lhs, const topology& rhs) { return !(lhs == rhs); }
 
+    /// @brief Adds a primitive to topology.
     template<class PType>
     void add(PType const& desc)
     {
         check_status<void>("primitive add failed", [&](status_t* status) { cldnn_add_primitive(_impl, desc.get_dto(), status); });
     }
 
+    /// @brief Adds primitives to topology.
     template<class PType, class ...Args>
     void add(PType const& desc, Args const&... args)
     {
@@ -70,6 +85,7 @@ struct topology
         add<Args...>(args...);
     }
 
+    /// @brief Returns wrapped C API @ref cldnn_topology.
     cldnn_topology get() const { return _impl; }
 
 private:
@@ -92,5 +108,6 @@ private:
 };
 
 CLDNN_API_CLASS(topology)
-
+/// @}
+/// @}
 }

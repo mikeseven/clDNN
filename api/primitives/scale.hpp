@@ -21,6 +21,12 @@
 
 namespace cldnn
 {
+/// @addtogroup cpp_api C++ API
+/// @{
+/// @addtogroup cpp_topology Network Topology
+/// @{
+/// @addtogroup cpp_primitives Primitives
+/// @{
 
 struct scale : public primitive_base<scale, CLDNN_PRIMITIVE_DESC(scale)>
 {
@@ -85,4 +91,7 @@ protected:
         dto.bias = bias.c_str();
     }
 };
+/// @}
+/// @}
+/// @}
 }

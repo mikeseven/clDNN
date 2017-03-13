@@ -19,12 +19,20 @@
 #define ACTIVATION_H
 
 #include "../cldnn.h"
+/// @addtogroup c_api C API
+/// @{
+/// @addtogroup c_topology Network Topology
+/// @{
+/// @addtogroup c_primitives Primitives
+/// @{
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/// @brief Activiation using rectified linear unit.
 CLDNN_BEGIN_PRIMITIVE_DESC(activation)
+/// @brief Activation negative slope.
 float negative_slope;
 CLDNN_END_PRIMITIVE_DESC(activation)
 
@@ -34,5 +42,7 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(activation);
 }
 #endif
 
+/// @}
+/// @}
+/// @}
 #endif /* ACTIVATION_H */
-

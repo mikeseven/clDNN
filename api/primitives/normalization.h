@@ -19,6 +19,12 @@
 #define NORMALIZATION_H
 
 #include "../cldnn.h"
+/// @addtogroup c_api C API
+/// @{
+/// @addtogroup c_topology Network Topology
+/// @{
+/// @addtogroup c_primitives Primitives
+/// @{
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,12 +36,27 @@ typedef enum /*:int32_t*/
     cldnn_lrn_norm_region_within_channel
 } cldnn_lrn_norm_region;
 
-
+/// @brief Local response normalization
+/// @details LRN layer as described in chapter 3.3 of "ImageNet Classification with Deep Convolutional
+/// Neural Networks" by Khrizevsky, Sutskever, Hinton. @n See: http://www.cs.toronto.edu/~fritz/absps/imagenet.pdf
+/// @par Alogrithm:
+///   b(i,x,y) = a(i,x,y) / (k+alpha*sum(min(N-1, i+n/2); j=max(0,i-n/2); a(j,x,y)^2))
+/// @par Where:
+///   @li b(i,x,y) : value at x, y from i-th feature map after normalization
+///   @li b(i,x,y) : value at x, y from i-th feature map before normalization
+///   @li N : number of feature maps
+///   @li n : size of normalization
+///   @li k, alpha, beta : hyper parameters (equal to 2, 10e-4, 0.75 in paper).
 CLDNN_BEGIN_PRIMITIVE_DESC(normalization)
+/// @brief Size of normalization.
 uint32_t size;
+/// @brief Hyper parameter "k".
 float k;
+/// @brief Hyper parameter "alpha".
 float alpha;
+/// @brief Hyper parameter "beta".
 float beta;
+/// @brief Normalize across or within channel
 cldnn_lrn_norm_region norm_region;
 CLDNN_END_PRIMITIVE_DESC(normalization)
 
@@ -45,5 +66,8 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(normalization);
 }
 #endif
 
+/// @}
+/// @}
+/// @}
 #endif /* NORMALIZATION_H */
 

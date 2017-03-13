@@ -22,20 +22,38 @@
 
 namespace cldnn
 {
+/// @addtogroup cpp_api C++ API
+/// @{
+/// @addtogroup cpp_topology Network Topology
+/// @{
+/// @addtogroup cpp_primitives Primitives
+/// @{
+
+/// @brief Provides input layout for a data to be passed later to network.
+/// @details This primitive allows to define the layout for input data
+/// which will be passed to network before execution.
+/// For example, network input images.
+/// @note User should call network::set_input_data() for every @p input_layout primitive before network execution.
+/// @sa network::set_input_data(), cldnn::data
 struct input_layout : public primitive_base<input_layout, CLDNN_PRIMITIVE_DESC(input_layout)>
 {
     CLDNN_DECLATE_PRIMITIVE(input_layout)
 
+    /// @brief Constructs input layout primitive.
+    /// @param id This primitive id.
+    /// @param layout Defines layout for the data will be passed to network.
     input_layout(const primitive_id& id, const layout& layout)
         :primitive_base(id, {}, padding(), padding())
         , layout(layout)
     {}
 
+    /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{input_layout}
     explicit input_layout(const dto* dto)
         :primitive_base(dto)
         , layout(dto->layout)
     {}
 
+    /// @brief Defines layout for the data will be passed to network.
     const cldnn::layout layout;
 
 private:
@@ -44,4 +62,7 @@ private:
         dto.layout = layout;
     }
 };
+/// @}
+/// @}
+/// @}
 }

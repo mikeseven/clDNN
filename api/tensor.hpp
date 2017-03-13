@@ -26,47 +26,67 @@
 
 namespace cldnn
 {
+/// @addtogroup cpp_api C++ API
+/// @{
+
+/// @addtogroup cpp_memory
+/// @{
+
+/// @brief Format information helper class.
 struct format_traits
 {
+    /// @brief Number of batch dimensions in a format.
     size_t batch_num;
+    /// @brief Number of feature map/channel dimensions in a format.
     size_t feature_num;
+    /// @brief Number of spatial (x,y) dimensions in a format.
     size_t spatial_num;
+    /// @brief Dimensions changing order from rare to often.
     std::string order;
+    /// @brief Dimensions order for internal storage.
     std::string internal_order;
+    /// @brief Characters representing batch dimensions in an order.
     static const char* batch_chars() { return "bn"; }
+    /// @brief Characters representing feature map/channel dimensions in an order.
     static const char* feature_chars() { return "fioc"; }
+    /// @brief Characters representing spatial dimensions in an order.
     static const char* spatial_chars() { return "xyzhsw"; }
+    /// @brief Checks if @p c represents batch dimension.
     static bool is_batch_char(char c) { return std::string(batch_chars()).find_first_of(c) != std::string::npos; }
+    /// @brief Checks if @p c represents feature map/channel dimension.
     static bool is_feature_char(char c) { return std::string(feature_chars()).find_first_of(c) != std::string::npos; }
+    /// @brief Checks if @p c represents spatial dimension.
     static bool is_spatial_char(char c) { return std::string(spatial_chars()).find_first_of(c) != std::string::npos; }
 };
 
+/// @brief Represents memory formats (orders).
 struct format
 {
     enum type : int32_t
     {
-           x = cldnn_format_x,
-          yx = cldnn_format_yx,
-          xy = cldnn_format_xy,
-          xb = cldnn_format_xb,   // 1D+batch, float32
-          bx = cldnn_format_bx,   // 1D+batch, float32
-        yxfn = cldnn_format_yxfn, // 3D + number of neurons - used in fully connected weights
-        yxfb = cldnn_format_yxfb, // 3D+batch, float32
-        byxf = cldnn_format_byxf, // for convolution_cpu_jit_batch1
-        bfyx = cldnn_format_bfyx, // used in Caffe
-        fyxb = cldnn_format_fyxb, // used in Caffe
-        oiyx = cldnn_format_oiyx, // format used only for weights: o - output feature maps, i - input feature maps
-        yxoi = cldnn_format_yxoi, // format used only for weights: o - output feature maps, i - input feature maps
-        oyxi = cldnn_format_oyxi, // format used only for weights: o - output feature maps, i - input feature maps
-        yxio = cldnn_format_yxio, // format used only for weights: o - output feature maps, i - input feature maps
-        os_iyx_osv16 = cldnn_format_os_iyx_osv16, // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
-        bs_xs_xsv8_bsv8 = cldnn_format_bs_xs_xsv8_bsv8, // format used only for Fully connected: bs - batch slice, xs - x slice, xsv8 - 8 values of single slice, bsv8 - 8 values of single slice 
-        bs_x_bsv16 = cldnn_format_bs_x_bsv16, // format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx)
+           x = cldnn_format_x,    ///< 1D.
+          yx = cldnn_format_yx,   ///< 2D, X-axis then Y-axis: { x0y0, x1y0, x0y1, x1y1}.
+          xy = cldnn_format_xy,   ///< 2D, Y-axis then X-axis: { x0y0, x0y1, x1y0, x1y1}.
+          xb = cldnn_format_xb,   ///< 1D+batch.
+          bx = cldnn_format_bx,   ///< 1D+batch.
+        yxfn = cldnn_format_yxfn, ///< 3D + number of neurons.
+        yxfb = cldnn_format_yxfb, ///< 3D + batch.
+        byxf = cldnn_format_byxf, ///< batch + 3D.
+        bfyx = cldnn_format_bfyx, ///< used in Caffe.
+        fyxb = cldnn_format_fyxb, ///< used in Caffe.
+        oiyx = cldnn_format_oiyx, ///< format used only for weights: o - output feature maps, i - input feature maps.
+        yxoi = cldnn_format_yxoi, ///< format used only for weights: o - output feature maps, i - input feature maps.
+        oyxi = cldnn_format_oyxi, ///< format used only for weights: o - output feature maps, i - input feature maps.
+        yxio = cldnn_format_yxio, ///< format used only for weights: o - output feature maps, i - input feature maps.
+        os_iyx_osv16 = cldnn_format_os_iyx_osv16, ///< format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice.
+        bs_xs_xsv8_bsv8 = cldnn_format_bs_xs_xsv8_bsv8, ///< format used only for Fully connected: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice.
+        bs_x_bsv16 = cldnn_format_bs_x_bsv16, ///< format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx).
 
         format_num = cldnn_format_format_num,
         any = cldnn_format_any,
     };
 
+    /// @brief Get format traits for particular @p format::type
     static const format_traits& traits(type fmt)
     {
         static const std::map<type, format_traits> traits
@@ -92,12 +112,18 @@ struct format
         return traits.at(fmt);
     }
 
+    /// @brief Returns number of batch dimensions for a @p format.
     static size_t batch_num(type fmt) { return traits(fmt).batch_num; }
+    /// @brief Returns number of feature dimensions for a @p format.
     static size_t feature_num(type fmt) { return traits(fmt).feature_num; }
+    /// @brief Returns number of spatial dimensions for a @p format.
     static size_t spatial_num(type fmt) { return traits(fmt).spatial_num; }
+    /// @brief Returns an order of dimensions for a @ format.
     static const std::string& order(type fmt) { return traits(fmt).order; }
+    /// @brief Returns an internal orders of dimensions for a @p format.
     static const std::string& internal_order(type fmt) { return traits(fmt).internal_order; }
 
+    /// @brief Find common format.
     static type common_format(type t1, type t2)
     {
         auto merged_channels = order(t1);
@@ -128,31 +154,38 @@ struct format
         return formats.front();
     }
 
+    /// @brief Returns number of batch dimensions.
     size_t batch_num() const { return traits(value).batch_num; }
+    /// @brief Returns number of feature dimensions.
     size_t feature_num() const { return traits(value).feature_num; }
+    /// @brief Returns number of spatial dimensions.
     size_t spatial_num() const { return traits(value).spatial_num; }
+    /// @brief Returns an order of dimensions in form of string.
     const std::string& order() const { return traits(value).order; }
+    /// @brief Returns an internal orders of dimensions form of string.
     const std::string& internal_order() const { return traits(value).internal_order; }
 
     type value;
+    /// @brief Implicit conversion from format::type.
     constexpr format(type t) :value(t) {}
+    /// @brief Implicit conversion to format::type.
     constexpr operator type() const { return value; }
+    /// @brief Conversion from C API @ref ::cldnn_format_type.
     constexpr explicit format(cldnn_format_type t) : value(static_cast<type>(t)) {}
+    /// @brief Conversion to C API @ref ::cldnn_format_type.
     constexpr explicit operator cldnn_format_type() const { return static_cast<cldnn_format_type>(value); }
 };
 
-/**
- * \brief 
- */
+/// @brief N-dimensional vector. Mostly used to represent memory size.
 struct tensor
 {
-    typedef int32_t value_type;
+    typedef int32_t value_type;     ///< Values type stored in tensor.
     //TODO find the way to prevent direct change of following fields.
     cldnn::format format;
-    array_ref<value_type> raw;
-    array_ref<value_type> batch;
-    array_ref<value_type> feature;
-    array_ref<value_type> spatial;
+    array_ref<value_type> raw;      ///< Raw representation of all dimensions.
+    array_ref<value_type> batch;    ///< Batch dimensions.
+    array_ref<value_type> feature;  ///< Feature maps.
+    array_ref<value_type> spatial;  ///< Spatial dimensions.
 
     /**
      * \brief Internal storage for tensor's data.
@@ -161,6 +194,21 @@ struct tensor
      */
     value_type _sizes[CLDNN_TENSOR_DIM_MAX];
 
+    /// @brief Constructs @p tensor.
+    /// @param[in] fmt Format (order).
+    /// @param[in] default_size Default value for coordinates not reperesented in format.
+    /// @param[in] sizes Dimensions in order defined in @p fmt.
+    /// @details Example:
+    /*! @code
+     * 
+       tensor my_tensor(format::yx, 10, { 2, 3 });   // y=2, x=3, b,f - not set
+       cout << my_tensor.batch[0] << endl;           // 10 - default_size
+       cout << my_tensor.feature[0] << endl;         // 10 - default_size
+       cout << "x=" << my_tensor.spatial[0] << endl; // x=3
+       cout << "y=" << my_tensor.spatial[1] << endl; // y=2
+     *
+     * @endcode
+     */ 
     tensor(cldnn::format fmt, value_type default_size, const std::vector<value_type>& sizes)
         : format(fmt)
         , raw(_sizes, fmt.batch_num() + fmt.feature_num() + fmt.spatial_num())
@@ -186,12 +234,29 @@ struct tensor
         }
     }
 
+    /// @brief Constructs @p tensor with default value 1.
+    /// @param[in] fmt Format (order).
+    /// @param[in] sizes Dimensions in order defined in @p fmt.
+    /// @details Useful for @ref memory allocation.
+    /// Example:
+    /*! @code
+    *
+    tensor my_tensor(format::yx, { 2, 3 });
+    cout << my_tensor.batch[0] << endl;           // 1
+    cout << my_tensor.feature[0] << endl;         // 1
+    cout << "x=" << my_tensor.spatial[0] << endl; // x=3
+    cout << "y=" << my_tensor.spatial[1] << endl; // y=2
+    *
+    * @endcode
+    */
     tensor(cldnn::format fmt, const std::vector<value_type>& sizes)
         :tensor(fmt, 1, sizes)
     {}
 
+    /// @brief Constructs tensor with size 0.
     tensor() :tensor(format::x, 0, { 0 }) {}
 
+    /// @brief Implicit conversion form C API :: cldnn_tensor.
     tensor(const cldnn_tensor& other)
         : format(static_cast<cldnn::format::type>(other.format))
         , raw(_sizes, format.batch_num() + format.feature_num() + format.spatial_num())
@@ -202,6 +267,7 @@ struct tensor
         std::copy_n(other.sizes, CLDNN_TENSOR_DIM_MAX, _sizes);
     }
 
+    /// @brief Implicit conversion to C API ::cldnn_tensor.
     operator cldnn_tensor() const
     {
         cldnn_tensor result;
@@ -213,6 +279,7 @@ struct tensor
         return result;
     }
 
+    /// @brief Copy construction.
     tensor(const tensor& other)
         : format(other.format)
         ,     raw(_sizes, format.batch_num() + format.feature_num() + format.spatial_num())
@@ -223,6 +290,7 @@ struct tensor
         std::copy_n(other._sizes, CLDNN_TENSOR_DIM_MAX, _sizes);
     }
 
+    /// @brief Copy assignment.
     tensor& operator=(const tensor& other)
     {
         if (this == &other)
@@ -261,6 +329,7 @@ struct tensor
         return false;
     }
 
+    /// @brief Returns a tensor with all negated elements.
     tensor negate() const
     {
         auto result = *this;
@@ -271,6 +340,7 @@ struct tensor
         return result;
     }
 
+    /// @brief Returns a tensor with all elements multilied to @p multiplier.
     tensor mul(value_type multiplier) const
     {
         auto result = *this;
@@ -281,6 +351,7 @@ struct tensor
         return result;
     }
 
+    /// @brief Returns a tensor with all elements divided by @p divider.
     tensor div(value_type divider) const
     {
         auto result = *this;
@@ -291,6 +362,7 @@ struct tensor
         return result;
     }
 
+    /// @brief Returns a tensor with all elements added by appropriate elements of @p rhs
     tensor add(const tensor& rhs) const
     {
         auto transformed_rhs = rhs.transform(format, 0);
@@ -302,11 +374,13 @@ struct tensor
         return result;
     }
 
+    /// @brief Returns a tensor with all elements subtracted by appropriate elements of @p rhs
     tensor sub(const tensor& rhs) const
     {
         return add(rhs.negate());
     }
 
+    /// @brief Returns a vector of tensors values, ordered regarding to @p format.
     std::vector<value_type> sizes() const {
         auto output_order = format.order();
         auto internal_order = format.internal_order();
@@ -325,6 +399,7 @@ struct tensor
         return sizes;
     }
 
+    /// @brief Get linear tensor size calcualted as multiplicatin of all elements.
     size_t get_linear_size() const
     {
         auto sizes = this->sizes();
@@ -349,6 +424,24 @@ struct tensor
         );
     }
 
+    /// @brief Returns new tensor based on current but transformed to new @p format.
+    /// @param[in] new_fmt Format of new tensor.
+    /// @param[in] default_size Default element values for positions not defined by current format.
+    /// @details Example:
+    /*!
+     * @code
+       tensor my_tensor(format::yx, { 2, 3 });
+       auto my_sizes = my_tensor.sizes();
+       cout << "dims_num=" << my_sizes.size() << endl; // dims_num=2
+       cout << "x=" << my_sizes[1] << endl;            // x=3
+       cout << "y=" << my_sizes[0] << endl;            // y=2
+       auto new_tensor = my_tensor.transform(format::fyxb, 10);
+       auto new_sizes = new_tensor.sizes();
+       cout << "new_num=" << new_sizes.size() << endl;   // new_num=4
+       for(auto dim : new_sizes) cout << " " << dim;     //  10 2 3 10
+       cout << endl;
+       * @endcode
+     */
     tensor transform(cldnn::format new_fmt, value_type default_size) const
     {
         if (format == new_fmt) return *this;
@@ -367,6 +460,8 @@ struct tensor
         return{ new_fmt, default_size, new_sizes };
     }
 
+    /// @brief Calculates linear offset for given @p coord within current tensor.
+    /// @param coord The coordinate within current tensor.
     size_t get_linear_offset(const tensor& coord) const
     {
         auto my_sizes = sizes();
@@ -400,6 +495,7 @@ struct tensor
         return offset;
     }
 
+    /// @brief Returns a tensor containing values maximum from @p lhs and @p rhs.
     static tensor max(tensor const& lhs, tensor const& rhs)
     {
         auto comm_format = format::common_format(lhs.format, rhs.format);
@@ -414,8 +510,15 @@ struct tensor
 
 CLDNN_API_CLASS(tensor)
 
+/// @brief Adds two @p tensors
 inline tensor operator+(const tensor& lhs, const tensor& rhs) { return lhs.add(rhs); }
+/// @brief Subtracts two @p tensors
 inline tensor operator-(const tensor& lhs, const tensor& rhs) { return lhs.sub(rhs); }
+/// @brief Multiplies a @p tensor to a @p scalar
 inline tensor operator*(const tensor& lhs, tensor::value_type rhs) { return lhs.mul(rhs); }
+/// @brief Divides a @p tensor by a @p scalar
 inline tensor operator/(const tensor& lhs, tensor::value_type rhs) { return lhs.div(rhs); }
+
+/// @}
+/// @}
 }
