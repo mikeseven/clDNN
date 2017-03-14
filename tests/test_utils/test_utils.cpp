@@ -34,39 +34,52 @@ namespace tests
 
 	void generic_test::run_single_test()
 	{
-		assert((generic_params->data_type == data_types::f32) || (generic_params->data_type == data_types::f16));
+        assert((generic_params->data_type == data_types::f32) || (generic_params->data_type == data_types::f16));
+        
+        topology topology;               
+        topology.add(*layer_params);
+        
+        std::vector<memory> input_mems;
 
-		auto input = memory::allocate(engine, { generic_params->data_type, generic_params->input });
-
-		if (generic_params->data_type == data_types::f32)
-		{
-			tests::set_random_values<float>(input, -100, 100);
-		}
-		else
-		{
-			tests::set_random_values<FLOAT16>(input, -100, 100);
-		}
-
-		topology topology;
-		topology.add(input_layout("input", input.get_layout()));
-		topology.add(*layer_params);
-
-		if (!is_format_supported(input.get_layout().size.format))
-		{
-			ASSERT_THROW(network bad(engine, topology), std::runtime_error);
-			return;
-		}
-
+        for (size_t i = 0 ; i < generic_params->input_layouts.size() ; i++)
+        {           
+            input_mems.push_back( memory::allocate(engine, { generic_params->data_type, generic_params->input_layouts[i] }) );
+            
+            if (generic_params->data_type == data_types::f32)
+            {
+                tests::set_random_values<float>(input_mems[i], -100, 100);
+            }
+            else
+            {
+                tests::set_random_values<FLOAT16>(input_mems[i], -100, 100);
+            }   
+            
+            std::string layer_name = "input" + std::to_string(i);
+            topology.add(input_layout(layer_name, input_mems[i].get_layout()));            
+            
+            if (!is_format_supported(generic_params->input_layouts[i].format))
+            {
+                ASSERT_THROW(network bad(engine, topology), std::exception);
+                return;
+            }       
+        }
+        		
 		network network(engine, topology);
 
-		network.set_input_data("input", input);
+        for (size_t i = 0 ; i < generic_params->input_layouts.size() ; i++)
+        {
+            std::string layer_name = "input" + std::to_string(i);
+            network.set_input_data(layer_name, input_mems[i]);
+        }		
+        
+        prepare_input_for_test(input_mems);
 
 		auto outputs = network.execute();
 		EXPECT_EQ(outputs.size(), size_t(1));
 
 		auto output = outputs.begin()->second.get_memory();
 
-		auto output_ref = generate_reference(input);
+		auto output_ref = generate_reference(input_mems);
         
 		if (generic_params->data_type == data_types::f32)
 		{
@@ -80,7 +93,9 @@ namespace tests
         if (HasFailure())
         {
             printf("Error on test\n");
+            printf("Test params: ");
             generic_params->print();
+            printf("Layer params: ");
             print_params();
         }        
 	}
@@ -167,25 +182,20 @@ namespace tests
 
 	std::vector<test_params*> generic_test::generate_generic_test_params(std::vector<test_params*> all_generic_params)
 	{
-		std::vector<cldnn::data_types> data_types = { cldnn::data_types::f32, cldnn::data_types::f16 };
-		std::vector<cldnn_format_type> formats = { cldnn_format_type::cldnn_format_bfyx , cldnn_format_type::cldnn_format_yxfb, cldnn_format_type::cldnn_format_fyxb };
-		std::vector<int32_t> batch_sizes = { 1, 2 };// 4, 8, 16};
-		std::vector<int32_t> feature_sizes = { 1, 2 };// , 3, 15};
-		std::vector<tensor> input_sizes = { { format::yx,{ 100,100 } } ,{ format::yx,{ 227,227 } } ,{ format::yx,{ 400,600 } } };
 		// , { format::yx,{ 531,777 } } , { format::yx,{ 4096,1980 } } ,
 		//{ format::yx,{ 1,1 } } , { format::yx,{ 2,2 } } , { format::yx,{ 3,3 } } , { format::yx,{ 4,4 } } , { format::yx,{ 5,5 } } , { format::yx,{ 6,6 } } , { format::yx,{ 7,7 } } ,
 		//{ format::yx,{ 8,8 } } , { format::yx,{ 9,9 } } , { format::yx,{ 10,10 } } , { format::yx,{ 11,11 } } , { format::yx,{ 12,12 } } , { format::yx,{ 13,13 } } ,
 		//{ format::yx,{ 14,14 } } , { format::yx,{ 15,15 } } , { format::yx,{ 16,16 } } };
 
-		for (cldnn::data_types data_type : data_types)
+		for (cldnn::data_types data_type : test_data_types)
 		{
-			for (cldnn_format_type fmt : formats)
+			for (cldnn::format fmt : test_formats)
 			{
-				for (int batch_size : batch_sizes)
+				for (int batch_size : test_batch_sizes)
 				{
-					for (int feature_size : feature_sizes)
+					for (int feature_size : test_feature_sizes)
 					{
-						for (tensor input_size : input_sizes)
+						for (tensor input_size : test_input_sizes)
 						{
 							all_generic_params.push_back(new test_params(data_type, fmt, batch_size, feature_size, input_size));
 						}
@@ -200,11 +210,24 @@ namespace tests
     
     void test_params::print()
     {
-        printf("Test params: data type %s format %s sizes [ ", data_type_traits::name(data_type).c_str(), format::traits(input.format).order.c_str() );
-        for (size_t i = 0 ; i < input.sizes().size() ; i ++) 
+        printf("Test params: data type %s\n", data_type_traits::name(data_type).c_str());
+        
+        for (int j = 0 ; j < (int)input_layouts.size(); j++)
         {
-            printf("%d ", input.sizes()[i]);
+            const cldnn::tensor& t = input_layouts[j];
+            
+            printf("input %d: format %s sizes [", j, format::traits(t.format).order.c_str());
+            for (size_t i = 0 ; i < t.sizes().size() ; i ++) 
+            {
+                printf("%d ", t.sizes()[i]);
+            }
+            printf("]\n");            
         }
-        printf("]\n");
     }
+    
+    std::vector<cldnn::data_types> generic_test::test_data_types = { cldnn::data_types::f32, cldnn::data_types::f16 };
+    std::vector<cldnn::format> generic_test::test_formats = { cldnn::format::bfyx , cldnn::format::yxfb, cldnn::format::fyxb };
+    std::vector<int32_t> generic_test::test_batch_sizes = { 1, 2 };// 4, 8, 16};
+    std::vector<int32_t> generic_test::test_feature_sizes = { 1, 2 };// , 3, 15};
+    std::vector<tensor> generic_test::test_input_sizes = { { format::yx,{ 100,100 } } ,{ format::yx,{ 227,227 } } ,{ format::yx,{ 400,600 } } };    
 }

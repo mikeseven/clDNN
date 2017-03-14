@@ -27,7 +27,10 @@
 #include <api/primitive.hpp>
 #include "float16.h"
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
 namespace tests {
+
 
 #define USE_RANDOM_SEED 0
 #if USE_RANDOM_SEED
@@ -256,17 +259,29 @@ inline bool floating_point_equal(float x, float y, int32_t max_ulps_diff = 4) {
 }
 
 
-class test_params
+class test_params 
 {
 public:
+    
+    test_params()
+    {        
+    }
 
-	test_params(cldnn::data_types data_type, cldnn_format_type input_format, int32_t batch_size, int32_t feature_size, cldnn::tensor input_size) :
-		data_type(data_type),
-		input(cldnn::tensor( cldnn::format::bfyx,{ batch_size, feature_size, input_size.spatial[1],  input_size.spatial[0] } ).transform(cldnn::format(input_format), 1))
-	{ }
+    test_params(cldnn::data_types dt, cldnn::format input_format, int32_t batch_size, int32_t feature_size, cldnn::tensor input_size) :
+        data_type(dt) 
+        {
+            cldnn::tensor t = cldnn::tensor( cldnn::format::bfyx,
+                                             { batch_size, feature_size, input_size.spatial[1],  input_size.spatial[0] } ).transform(cldnn::format(input_format), 1);
+                                             
+            input_layouts.push_back( t.transform(cldnn::format(input_format), 1));
 
-	cldnn::data_types data_type;
-	cldnn::tensor input;
+            //TODO:
+            //input + output padding
+            //    test_params() {}
+        }
+
+    cldnn::data_types data_type;
+    std::vector<cldnn::tensor> input_layouts;            
         
     void print();
 
@@ -279,34 +294,45 @@ class generic_test : public ::testing::TestWithParam<std::tuple<test_params*, cl
 	
 public:
 
-	generic_test();
+    generic_test();
 
-	void run_single_test();
+    void run_single_test();
 
-	template<typename Type>
-	void compare_buffers(const cldnn::memory& out, const cldnn::memory& ref);
+    template<typename Type>
+    void compare_buffers(const cldnn::memory& out, const cldnn::memory& ref);
 
-	uint32_t get_linear_index(cldnn::layout layout, int b, int f, int y, int x);
+    uint32_t get_linear_index(cldnn::layout layout, int b, int f, int y, int x);
 
-	static std::vector<test_params*> generate_generic_test_params(std::vector<test_params*> all_generic_params);
+    static std::vector<test_params*> generate_generic_test_params(std::vector<test_params*> all_generic_params);
 
-	virtual cldnn::memory generate_reference(const cldnn::memory& input) = 0;
+    virtual bool is_format_supported(cldnn::format format) = 0;
 
-	virtual bool is_format_supported(cldnn::format format) = 0;
-
-	struct custom_param_name_functor {
-		std::string operator()(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info) {
-			return std::to_string(info.index);
-		}
-	};
+    struct custom_param_name_functor {
+            std::string operator()(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info) {
+                    return std::to_string(info.index);
+            }
+    };
 
 protected:
         
-    virtual void print_params() { printf("NOT IMPLEMENTED!!!\n"); }
+    virtual void print_params() { printf("%s:%d - NOT IMPLEMENTED!!!\n", __FILE__, __LINE__); }
 
     cldnn::engine engine;
     test_params* generic_params;
     cldnn::primitive* layer_params;
+    virtual cldnn::memory generate_reference(const std::vector<cldnn::memory>& inputs) = 0;
+    // Allows the test to override the random input data that the framework generates
+
+    virtual void prepare_input_for_test(std::vector<cldnn::memory>& inputs) 
+    {
+        inputs = inputs;
+    }
+   
+    static std::vector<cldnn::data_types> test_data_types;
+    static std::vector<cldnn::format> test_formats;
+    static std::vector<int32_t> test_batch_sizes;
+    static std::vector<int32_t> test_feature_sizes;
+    static std::vector<cldnn::tensor> test_input_sizes;
 };
 
 

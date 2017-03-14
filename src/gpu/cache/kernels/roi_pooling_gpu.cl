@@ -11,8 +11,8 @@ KERNEL(roi_pooling_gpu)(const __global UNIT_TYPE* input_data,
 
     int pw = index % POOLED_WIDTH;
     int ph = (index / POOLED_WIDTH) % POOLED_HEIGHT;
-    int c = (index / POOLED_WIDTH / POOLED_HEIGHT) % CHANNELS;
-    int n = index / POOLED_WIDTH / POOLED_HEIGHT / CHANNELS;
+    int c = (index / POOLED_WIDTH / POOLED_HEIGHT) % INPUT_FEATURE_NUM;
+    int n = index / POOLED_WIDTH / POOLED_HEIGHT / INPUT_FEATURE_NUM;
 
     const __global UNIT_TYPE* rois = input_rois + n * 5;
     int roi_batch_ind = rois[0];
@@ -20,11 +20,11 @@ KERNEL(roi_pooling_gpu)(const __global UNIT_TYPE* input_data,
     int roi_start_y = round(rois[2] * SPATIAL_SCALE);
     int roi_end_x = round(rois[3] * SPATIAL_SCALE);
     int roi_end_y = round(rois[4] * SPATIAL_SCALE);
-
+    
     // Force malformed ROIs to be 1x1
     int roi_width = max(roi_end_x - roi_start_x + 1, 1);
     int roi_height = max(roi_end_y - roi_start_y + 1, 1);
-
+    
     // The following computation of ystart, xstart, yend, xend is
     // done with integers due to floating precision errors.
     // As the floating point computing on GPU is not identical to CPU,
@@ -56,20 +56,20 @@ KERNEL(roi_pooling_gpu)(const __global UNIT_TYPE* input_data,
         ++xend;
     }
 
-    ystart = min(max(ystart + roi_start_y, 0), HEIGHT);
-    yend = min(max(yend + roi_start_y, 0), HEIGHT);
-    xstart = min(max(xstart + roi_start_x, 0), WIDTH);
-    xend = min(max(xend + roi_start_x, 0), WIDTH);
+    ystart = min(max(ystart + roi_start_y, 0), INPUT_SIZE_Y);
+    yend = min(max(yend + roi_start_y, 0), INPUT_SIZE_Y);
+    xstart = min(max(xstart + roi_start_x, 0), INPUT_SIZE_X);
+    xend = min(max(xend + roi_start_x, 0), INPUT_SIZE_X);
     // rounding to integer can lead to a zero sized box
     bool is_empty = (yend == ystart) || (xend == xstart);
-
+      
     UNIT_TYPE maxval = is_empty ? 0 : -UNIT_INIT_VAL_MAX;
-    int offset = (roi_batch_ind * CHANNELS + c) * HEIGHT * WIDTH;
-    const __global UNIT_TYPE* input = input_data + offset + (INPUT_PADDING_LOWER_SIZE_Y * WIDTH) + INPUT_PADDING_LOWER_SIZE_X;
+    int offset = (roi_batch_ind * INPUT_FEATURE_NUM + c) * INPUT_SIZE_Y * INPUT_SIZE_X;
+    const __global UNIT_TYPE* input = input_data + offset + (INPUT_PADDING_LOWER_SIZE_Y * INPUT_SIZE_X) + INPUT_PADDING_LOWER_SIZE_X;
     
     for (int h = ystart; h < yend; ++h) {
         for (int w = xstart; w < xend; ++w) {
-            int bottom_index = h * WIDTH + w;
+            int bottom_index = h * INPUT_SIZE_X + w;
             if (input[bottom_index] > maxval) {                
                 maxval = input[bottom_index];
             }

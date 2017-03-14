@@ -292,8 +292,8 @@ public:
 
 		for (auto norm_region : norm_regions)
 		{
-			all_layer_params.push_back(new normalization("lrn", "input", 3, 1.f, 5e-05f, 0.75f, norm_region));
-			all_layer_params.push_back(new normalization("lrn", "input", 5, 17.19f, 0.079f, 0.19f, norm_region));
+			all_layer_params.push_back(new normalization("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region));
+			all_layer_params.push_back(new normalization("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region));
 		}
 
 		//The test checks only valid combinations.
@@ -309,18 +309,15 @@ public:
 
 	virtual bool is_format_supported(cldnn::format format)
 	{
-		if ((format == cldnn_format_type::cldnn_format_yxfb) || (format == cldnn_format_type::cldnn_format_bfyx))
-		{
-			return true;
-		}
-		return false;
+		return ((format == cldnn_format_type::cldnn_format_yxfb) || (format == cldnn_format_type::cldnn_format_bfyx));
 	}
 
 	template<typename Type>
-	memory generate_reference_typed(const memory& input)
+	memory generate_reference_typed(const std::vector<cldnn::memory>& inputs)
 	{
 		//Output is bfyx
-		auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().size.transform(cldnn::format::bfyx, 0)));
+        data_types dt = inputs[0].get_layout().data_type;
+		auto output = memory::allocate( engine, cldnn::layout(dt, inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0)) );
 
 		const cldnn::normalization* lrn = (cldnn::normalization*)layer_params;
 		Type beta = lrn->beta;
@@ -328,17 +325,17 @@ public:
 		uint32_t size = lrn->size;
 		cldnn_lrn_norm_region lrn_norm_region = lrn->norm_region;
 		Type alpha_sign = std::signbit(lrn->alpha) ? -1.0f : 1.0f;
-		Type alpha = (input.get_layout().data_type == cldnn::data_types::f32) ? (Type)lrn->alpha : alpha_sign;
-		Type alpha_div_by_size = (input.get_layout().data_type == cldnn::data_types::f32) ? (Type)(lrn->alpha / lrn->size) : alpha_sign;
-		Type alpha_div_by_size_abs_sqrt = (input.get_layout().data_type == cldnn::data_types::f32) ? 1.0f : std::sqrt(std::abs(lrn->alpha / lrn->size));
-		Type alpha_abs_sqrt = (input.get_layout().data_type == cldnn::data_types::f32) ? 1.0f : std::sqrt(std::abs(lrn->alpha));
+		Type alpha = (dt == cldnn::data_types::f32) ? (Type)lrn->alpha : alpha_sign;
+		Type alpha_div_by_size = (dt == cldnn::data_types::f32) ? (Type)(lrn->alpha / lrn->size) : alpha_sign;
+		Type alpha_div_by_size_abs_sqrt = (dt == cldnn::data_types::f32) ? 1.0f : std::sqrt(std::abs(lrn->alpha / lrn->size));
+		Type alpha_abs_sqrt = (dt == cldnn::data_types::f32) ? 1.0f : std::sqrt(std::abs(lrn->alpha));
 
-		Type* input_mem = input.pointer<Type>().data();
+		Type* input_mem = inputs[0].pointer<Type>().data();
 		Type* output_mem = output.pointer<Type>().data();
-		int batch = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
-		int feature = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
-		int height = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
-		int width = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+		int batch = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
+		int feature = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
+		int height = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
+		int width = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
 
 		switch (lrn_norm_region)
 		{
@@ -358,13 +355,13 @@ public:
 								Type scale = 0;
 								for (int i = c_start; i < c_end; ++i) 
 								{
-									int input_index = get_linear_index(input.get_layout(), n, i, h, w);
+									int input_index = get_linear_index(inputs[0].get_layout(), n, i, h, w);
 									Type value = input_mem[input_index] * alpha_div_by_size_abs_sqrt;
 									scale += value * value;
 								}
 								scale = scale * alpha_div_by_size + k;
 								int output_index = ((n * feature + c) * height + h) * width + w;
-								int input_index = get_linear_index(input.get_layout(), n, c, h, w);
+								int input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 								output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)scale, -(float)beta);
 							}
 						}
@@ -397,13 +394,13 @@ public:
 								{
 									for (int nw = w_start; nw < w_end; ++nw) 
 									{
-										int input_index = get_linear_index(input.get_layout(), n, c, nh, nw);
+										int input_index = get_linear_index(inputs[0].get_layout(), n, c, nh, nw);
 										Type value = input_mem[input_index] * alpha_abs_sqrt;
 										scale += value * value;
 									}
 								}
 								scale /= pool_size;
-								int input_index = get_linear_index(input.get_layout(), n, c, h, w);
+								int input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 								int output_index = ((n * feature + c) * height + h) * width + w;
 								output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)(scale * alpha + k), -(float)beta);							
 							}
@@ -421,15 +418,15 @@ public:
 		return output;
 	}
 
-	virtual memory generate_reference(const memory& input)
+	virtual memory generate_reference(const std::vector<cldnn::memory>& inputs)
 	{
 		if (generic_params->data_type == data_types::f32)
 		{
-			return generate_reference_typed<float>(input);
+			return generate_reference_typed<float>(inputs);
 		}
 		else
 		{
-			return generate_reference_typed<FLOAT16>(input);
+			return generate_reference_typed<FLOAT16>(inputs);
 		}		
 	}
 
