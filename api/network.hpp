@@ -39,27 +39,27 @@ namespace cldnn
 enum class build_option_type
 {
     /// @brief Allow primitives fusing during network build (default: false).
-    fusing = cldnn_build_option_fusing,
+    fusing        = cldnn_build_option_fusing,
 
     /// @brief Enable primitives profiling (default: false).
     /// @details This option allows to collect @ref profiling_interval for every network output.
     /// This option reduces performance.
-    profiling = cldnn_build_option_profiling,
+    profiling     = cldnn_build_option_profiling,
 
     /// @brief Enable implicit reordering for user inputs (default: false).
     optimize_data = cldnn_build_option_optimize_data,
 
     /// @brief Enable debug mode (default: false).
     /// @details This option enforce all network primitives to be accessible as outputs.
-    debug = cldnn_build_option_debug,
+    debug         = cldnn_build_option_debug,
 
     /// @brief User selected list of network outputs.
-    outputs = cldnn_build_option_outputs
+    outputs       = cldnn_build_option_outputs
 };
 
 /// @brief Represents user-provided network build option.
 struct build_option
-{   
+{
     /// @brief Allow primitives fusing during network build (default: false).
     static std::shared_ptr<const build_option> fusing(bool enable = false);
 
@@ -428,7 +428,7 @@ struct network
     friend bool operator==(const network& lhs, const network& rhs) { return lhs._impl == rhs._impl; }
     friend bool operator!=(const network& lhs, const network& rhs) { return !(lhs == rhs); }
 
-    /// @brief Returns @ref engine by which network waas built.
+    /// @brief Returns @ref engine by which network was built.
     engine get_engine() const
     {
         return check_status<cldnn_engine>("get network engine failed", [&](status_t* status) { return cldnn_get_network_engine(_impl, status); });
@@ -483,6 +483,8 @@ struct network
 
     /// @brief Executes network and returns the list of @ref network_output.
     /// @param dependencies List of @ref event objects to be waited before network execution.
+    /// @note User should call set_input_data() for every @ref input_layout defined in source @ref topology
+    /// before network execution.
     std::map<primitive_id, network_output> execute(const std::vector<event>& dependencies = {}) const
     {
         std::vector<cldnn_event> dep_refs(dependencies.size());
