@@ -1,7 +1,3 @@
-#if defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wswitch"
-#endif
-
 #include "output_parser.h"
 #include "api/network.hpp"
 
@@ -209,7 +205,9 @@ void html::batch(const cldnn::memory& mem_primitive, const std::string& categori
                 std::cout << std::setprecision(2) << std::fixed << batch[img_idx][0].first * 100 << "%"<<" ";
                 std::cout << category << std::endl;                           
             }
-			break;
+            break;
+            default:
+                throw std::invalid_argument("Unsupported print type.");
 			}
         }
 		// table cell end

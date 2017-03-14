@@ -13,9 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-#if defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
 
 #include "file.h"
 #include <fstream>
@@ -29,13 +26,14 @@ using memory = cldnn::neural_memory;
 #define CRC_INIT 0xbaba7007
 
 namespace {
-uint32_t crc32(const void *buffer, uint64_t count, uint32_t crc) {
+//unused function
+/*uint32_t crc32(const void *buffer, uint64_t count, uint32_t crc) {
     const uint8_t *ptr = static_cast<const uint8_t *>(buffer);
     for(; count>=4; count-=4, ptr+=4)
         crc = _mm_crc32_u32( crc,*reinterpret_cast<const uint32_t *>(ptr) );
     while(count--) crc = _mm_crc32_u32(crc, *(ptr++));
     return crc;
-}
+}*/ 
 
 #pragma pack(push,1)   /* The data has been redefined (alignment 4), so the pragma pack is not necessary,
                           but who knows if in the future, the compiler does not align to 8?  */

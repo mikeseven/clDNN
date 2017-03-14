@@ -13,11 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-
-#if defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wpedantic"
-#endif
-
 #include "instrumentation.h"
 #include "common_tools.h"
 #include "FreeImage_wraps.h"
@@ -442,7 +437,8 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     if (log_energy)
     {
         try {
-            energyLib.StartLog(L"power_log.csv");
+            wchar_t fileName[] = L"power_log.csv";
+            energyLib.StartLog(fileName);
         }
         catch (...)
         {
