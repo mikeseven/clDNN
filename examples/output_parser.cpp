@@ -1,3 +1,7 @@
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wswitch"
+#endif
+
 #include "output_parser.h"
 #include "api/network.hpp"
 
