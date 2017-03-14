@@ -267,6 +267,8 @@ public:
 
 	cldnn::data_types data_type;
 	cldnn::tensor input;
+        
+    void print();
 
 	//TODO:
 	//input + output padding
@@ -299,10 +301,12 @@ public:
 	};
 
 protected:
+        
+    virtual void print_params() { printf("NOT IMPLEMENTED!!!\n"); }
 
-	cldnn::engine engine;
-	test_params* generic_params;
-	cldnn::primitive* layer_parmas;
+    cldnn::engine engine;
+    test_params* generic_params;
+    cldnn::primitive* layer_params;
 };
 
 

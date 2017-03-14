@@ -108,6 +108,30 @@ struct data_type_traits
         default: return size_t(1);
         }
     }
+    
+    static std::string name(data_types data_type)
+    {
+        switch (data_type)
+        {
+        case data_types::i8:
+            return "i8";
+        case data_types::i16:
+            return "i16";
+        case data_types::i32:
+            return "i32";
+        case data_types::i64:
+            return "i64";
+        case data_types::f16:
+            return "f16";
+        case data_types::f32:
+            return "f32";
+        case data_types::f64:
+            return "f64";
+        default: 
+            assert(0);            
+            return std::string("invalid data type: " + std::to_string((int)data_type));
+        }        
+    }
 };
 
 /// Helper function to check if C++ type matches @p data_type.

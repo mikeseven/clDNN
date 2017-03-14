@@ -280,6 +280,11 @@ public:
 		}
 	}
 
+    void print_params()
+    {
+        const cldnn::normalization* lrn = (cldnn::normalization*)layer_params;
+        printf("Layer params: beta %f k %f size %u norm region %d alpha %f\n", lrn->beta, lrn->k, lrn->size, lrn->norm_region, lrn->alpha);
+    }
 
 	static std::vector<cldnn::primitive*> generate_specific_test_params()
 	{
@@ -317,7 +322,7 @@ public:
 		//Output is bfyx
 		auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().size.transform(cldnn::format::bfyx, 0)));
 
-		const cldnn::normalization* lrn = (cldnn::normalization*)layer_parmas;
+		const cldnn::normalization* lrn = (cldnn::normalization*)layer_params;
 		Type beta = lrn->beta;
 		Type k = lrn->k;
 		uint32_t size = lrn->size;
