@@ -274,12 +274,12 @@ struct simpler_nms_gpu : is_an_implementation {
         int fm_sz = fm_w * fm_h;
 
         // original input image to the graph (after possible scaling etc.) so that coordinates are valid for it
-        pointer<float> image_info_ptr = image_info.pointer<float>();
-        const float* image_info_mem = image_info_ptr.data();
+        pointer<dtype> image_info_ptr = image_info.pointer<dtype>();
+        const dtype* image_info_mem = image_info_ptr.data();
 
-        int img_w = (int)(image_info_mem[cldnn::simpler_nms_arg::image_info_width_index] + EPSILON);
-        int img_h = (int)(image_info_mem[cldnn::simpler_nms_arg::image_info_height_index] + EPSILON);
-		int img_z = (int)(image_info_mem[cldnn::simpler_nms_arg::image_info_depth_index] + EPSILON);
+        int img_w = (int)(float_read_helper(image_info_mem + cldnn::simpler_nms_arg::image_info_width_index) + EPSILON);
+        int img_h = (int)(float_read_helper(image_info_mem + cldnn::simpler_nms_arg::image_info_height_index) + EPSILON);
+		int img_z = (int)(float_read_helper(image_info_mem + cldnn::simpler_nms_arg::image_info_depth_index) + EPSILON);
 
         int scaled_min_bbox_size = _outer.argument.min_bbox_size * img_z;
 
