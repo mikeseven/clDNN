@@ -100,7 +100,7 @@ template <typename Dtype>
 TestRunnerSimplerNMS<Dtype>::TestRunnerSimplerNMS() :
                             _cls_scores_layout(cldnn::type_to_data_type<Dtype>::value, { format::bfyx, { 1, 18, 14, 23 } } ),
                             _bbox_pred_layout(cldnn::type_to_data_type<Dtype>::value, { format::bfyx, { 1, 36, 14, 23 } } ),
-                            _image_info_layout(data_types::f32, { format::x, { 3 } } ),
+                            _image_info_layout(cldnn::type_to_data_type<Dtype>::value, { format::x, { 3 } } ),
                             _test_layer(layer_name, 
                                         cls_scores_name, 
                                         bbox_pred_name,
@@ -137,9 +137,9 @@ memory TestRunnerSimplerNMS<Dtype>::Run(std::vector<Dtype>& cls_scores_vals,
     memory cls_scores = memory::attach(_cls_scores_layout, cls_scores_vals.data(), cls_scores_vals.size());
     memory bbox_pred  = memory::attach(_bbox_pred_layout, bbox_pred_vals.data(), bbox_pred_vals.size());
 
-    float image_info_vals[] = { (float)image_w - 0.0000001f, // check fp robustness of the layer
-                                (float)image_h + 0.0000001f, // check fp robustness of the layer 
-                                (float)image_z };
+    Dtype image_info_vals[] = { (Dtype)((float)image_w - 0.0000001f), // check fp robustness of the layer
+                                (Dtype)((float)image_h + 0.0000001f), // check fp robustness of the layer 
+                                (Dtype)((float)image_z) };
     memory image_info = memory::attach(_image_info_layout, &image_info_vals[0], 3);
    
     _network->set_input_data(cls_scores_name, cls_scores);
