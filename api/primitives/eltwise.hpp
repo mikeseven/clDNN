@@ -28,19 +28,33 @@ namespace cldnn
 /// @addtogroup cpp_primitives Primitives
 /// @{
 
+/// @brief Select mode for the @ref eltwise layer.
 enum class eltwise_mode : int32_t
 {
+    /// @brief Eltwise sum.
     sum = cldnn_eltwise_sum,
+    /// @brief Eltwise subtract.
     sub = cldnn_eltwise_sub,
+    /// @brief Eltwise max.
     max = cldnn_eltwise_max,
+    /// @brief Eltwise product.
     prod = cldnn_eltwise_prod,
 };
 
-
+/// @brief Performs elementwise operations (sum, subtract, max or product) on two input primitives
+/// Also supports built-in Relu @ref activation available by setting it in arguments.
+/// @details Second input (input2) needs to be the same size as input.
 struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
 {
     CLDNN_DECLATE_PRIMITIVE(eltwise)
 
+    /// @brief Constructs eltwise primitive.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param input2 Second input primitive id with values needed for eltwise computation.
+    /// @param mode Eltwise mode.
+    /// @param with_activation Enables Relu activation.
+    /// @param activation_slp Relu activation slope.
     eltwise(
         const primitive_id& id,
         const primitive_id& input,
@@ -59,6 +73,7 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
     {
     }
 
+    /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{eltwise}
     eltwise(const dto* dto)
         :primitive_base(dto)
         , input2(dto->input2)
@@ -68,10 +83,13 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
     {
     }
 
+    /// @brief Second input primitive id with values needed for eltwise computation.
     primitive_id input2;
+    /// @param mode Eltwise mode.
     eltwise_mode mode;
-
+    /// @brief Enables Relu activation.
     bool with_activation;
+    /// @brief Relu activation slope.
     float activation_negative_slope;
 
 protected:

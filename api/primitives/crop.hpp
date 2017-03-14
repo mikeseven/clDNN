@@ -28,10 +28,17 @@ namespace cldnn
 /// @addtogroup cpp_primitives Primitives
 /// @{
 
+/// @brief Performs crop operation on input.
+/// @details Crops the input to the shape of reference_input accross all dimensions taking into account specified input offsets.
 struct crop : public primitive_base<crop, CLDNN_PRIMITIVE_DESC(crop)>
 {
     CLDNN_DECLATE_PRIMITIVE(crop)
 
+    /// @brief Constructs crop primitive.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param input2 Reference input primitive id with the required dimensions.
+    /// @param offsets Input offsets.
     crop(
         const primitive_id& id,
         const primitive_id& input,
@@ -46,6 +53,7 @@ struct crop : public primitive_base<crop, CLDNN_PRIMITIVE_DESC(crop)>
     {
     }
 
+    /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{crop}
     crop(const dto* dto)
         :primitive_base(dto)
         , reference_input(dto->reference_input)
@@ -53,7 +61,9 @@ struct crop : public primitive_base<crop, CLDNN_PRIMITIVE_DESC(crop)>
     {
     }
 
+    /// @brief Reference input primitive id with the required dimensions.
     primitive_id reference_input;
+    /// @brief Input offsets.
     tensor offsets;
 
 protected:
