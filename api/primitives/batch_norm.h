@@ -19,15 +19,29 @@
 #define BATCH_NORM_H
 
 #include "../cldnn.h"
+/// @addtogroup c_api C API
+/// @{
+/// @addtogroup c_topology Network Topology
+/// @{
+/// @addtogroup c_primitives Primitives
+/// @{
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/// @brief Batch normalization primitive.
+/// @details Performs batch normalization as discribed in
+/// "Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift" by Ioffe, Szegedy
+/// @n See: http://arxiv.org/abs/1502.03167
 CLDNN_BEGIN_PRIMITIVE_DESC(batch_norm)
+/// @brief Primitive id containing mean data.
 cldnn_primitive_id mean;
+/// @brief Primitive id containing variance.
 cldnn_primitive_id variance;
-bool use_global_stats;
+/// @brief Use global statistics.
+uint32_t use_global_stats;
+/// @brief Epsilon.
 float epsilon;
 CLDNN_END_PRIMITIVE_DESC(batch_norm)
 
@@ -37,5 +51,8 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(batch_norm);
 }
 #endif
 
+/// @}
+/// @}
+/// @}
 #endif /* BATCH_NORM_H */
 

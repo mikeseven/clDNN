@@ -28,21 +28,53 @@
 
 namespace cldnn
 {
-enum class build_option_type : int32_t
+
+/// @addtogroup cpp_api C++ API
+/// @{
+
+/// @defgroup cpp_network Network Execution
+/// @{
+
+/// @brief Represents user-provided network build option type.
+enum class build_option_type
 {
+    /// @brief Allow primitives fusing during network build (default: false).
     fusing        = cldnn_build_option_fusing,
+
+    /// @brief Enable primitives profiling (default: false).
+    /// @details This option allows to collect @ref profiling_interval for every network output.
+    /// This option reduces performance.
     profiling     = cldnn_build_option_profiling,
+
+    /// @brief Enable implicit reordering for user inputs (default: false).
     optimize_data = cldnn_build_option_optimize_data,
+
+    /// @brief Enable debug mode (default: false).
+    /// @details This option enforce all network primitives to be accessible as outputs.
     debug         = cldnn_build_option_debug,
+
+    /// @brief User selected list of network outputs.
     outputs       = cldnn_build_option_outputs
 };
 
 struct build_option
 {
+    /// @brief Allow primitives fusing during network build (default: false).
     static const build_option_type fusing        = build_option_type::fusing;
+
+    /// @brief Enable primitives profiling (default: false).
+    /// @details This option allows to collect @ref profiling_interval for every network output.
+    /// This option reduces performance.
     static const build_option_type profiling     = build_option_type::profiling;
+
+    /// @brief Enable implicit reordering for user inputs (default: false).
     static const build_option_type optimize_data = build_option_type::optimize_data;
+
+    /// @brief Enable debug mode (default: false).
+    /// @details This option enforce all network primitives to be accessible as outputs.
     static const build_option_type debug         = build_option_type::debug;
+
+    /// @brief User selected list of network outputs.
     static const build_option* outputs(const std::vector<primitive_id>& outs);
     virtual ~build_option() = default;
 
@@ -69,11 +101,16 @@ private:
     }
 };
 
+/// @brief @ref build_option specialization for network outputs list.
 struct build_option_outputs : build_option
 {
     typedef const cldnn_primitive_id_arr* data_pointer_type;
+
+    /// @brief The list of output ids (names)
     const std::vector<primitive_id> outputs;
 
+    /// @brief Constructs option.
+    /// @param outs List of ouput ids (names)
     explicit build_option_outputs(const std::vector<primitive_id>& outs)
         : build_option({ cldnn_build_option_outputs, &_outputs_ref })
         , outputs(outs)
@@ -81,14 +118,15 @@ struct build_option_outputs : build_option
         , _outputs_ref({ _ref_store.data(), _ref_store.size()})
     {}
 
+    /// @brief Constructs from C API @ref ::cldnn_build_option.
     explicit build_option_outputs(const cldnn_build_option& value)
         : build_option_outputs(make_outputs_from_ref(value))
     {}
 
+private:
     build_option_outputs(const build_option_outputs& other) = delete;
     build_option_outputs& operator=(const build_option_outputs& other) = delete;
 
-private:
     const std::vector<cldnn_primitive_id> _ref_store;
     const cldnn_primitive_id_arr _outputs_ref;
 
@@ -117,9 +155,11 @@ private:
     }
 };
 
+/// @brief Helper template to convert @ref build_option_type value to particular @ref build_option class.
 template<build_option_type OptType>
 struct build_option_traits;
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 template<> struct build_option_traits<build_option_type::fusing>        { typedef build_option object_type; };
 template<> struct build_option_traits<build_option_type::profiling>     { typedef build_option object_type; };
 template<> struct build_option_traits<build_option_type::optimize_data> { typedef build_option object_type; };
@@ -130,23 +170,25 @@ inline const build_option* build_option::outputs(const std::vector<primitive_id>
 {
     return new build_option_outputs(outs);
 }
+#endif
 
 class build_options
 {
 public:
-    void set_option(void){}
-
+    /// @brief Adds or replace option to the options list
     void set_option(const build_option* opt)
     {
         add_or_replace_option(opt);
     }
 
+    /// @brief Adds or replace boolean option to the options list
     void set_option(build_option_type type)
     {
         assert(build_option::is_option_bool(type));
         add_or_replace_option(new build_option({ static_cast<cldnn_build_option_type>(type), nullptr }));
     }
 
+    /// @brief Adds or replace options to the options list
     template<typename ...Args>
     void set_option(const build_option* opt, Args... args)
     {
@@ -154,6 +196,7 @@ public:
         set_option(args...);
     }
 
+    /// @brief Adds or replace boolean options to the options list
     template<typename ...Args>
     void set_option(build_option_type type, Args... args)
     {
@@ -162,12 +205,14 @@ public:
         set_option(args...);
     }
 
+    /// @brief Constructs build options list from its arguments.
     template<typename ...Args>
     build_options(Args... args)
     {
         set_option(args...);
     }
 
+    /// @brief Constructs build options list from C API ::cldnn_build_options.
     build_options(array_ref<cldnn_build_option> options)
     {
         for(auto& o: options)
@@ -176,29 +221,9 @@ public:
         }
     }
 
-    build_options(const build_options& other)
-        : _options(other._options)
-    {
-    }
-
-    build_options& operator=(const build_options& other)
-    {
-        if (this == &other)
-            return *this;
-        _options = other._options;
-        return *this;
-    }
-
-    std::vector<cldnn_build_option> get_refs() const
-    {
-        std::vector<cldnn_build_option> result;
-        for (auto& o : _options)
-        {
-            result.push_back(o->_value);
-        }
-        return result;
-    }
-
+    /// @brief Returns network build option of requested @p type.
+    /// @param type Build option type to be returned.
+    /// @returns Pointer to build option or nullptr if option is not set.
     const build_option* get(build_option_type type)
     {
         for(auto& option: _options)
@@ -209,14 +234,29 @@ public:
         return nullptr;
     }
 
-    template<build_option_type OptType, class T = typename build_option_traits<OptType>::object_type>
-    const T* get()
+    /// @brief Returns network build option for @p OptType
+    /// @returns Casted pointer to build option or nullptr if option is not set.
+    template<build_option_type OptType>
+    const typename build_option_traits<OptType>::object_type* get()
     {
-        return static_cast<const T*>(get(OptType));
+        return static_cast<const typename build_option_traits<OptType>::object_type*>(get(OptType));
     }
 
 private:
+    friend struct network;
     std::vector<std::shared_ptr<const build_option>> _options;
+    void set_option(void) {}
+
+    /// @brief Returns C API compatible list of ::cldnn_build_option
+    std::vector<cldnn_build_option> get_refs() const
+    {
+        std::vector<cldnn_build_option> result;
+        for (auto& o : _options)
+        {
+            result.push_back(o->_value);
+        }
+        return result;
+    }
 
     void add_or_replace_option(const build_option* opt)
     {
@@ -247,12 +287,15 @@ private:
     }
 };
 
+/// @brief Represents network output returned by @ref network::get_output().
 struct network_output
 {
+    /// @brief Returns @ref event associated with the output.
     event get_event() const
     {
         return _event;
     }
+    /// @brief Returns @ref memory object of the output. Blocked until associated @ref event is not complete.
     memory get_memory() const
     {
         _event.wait();
@@ -266,8 +309,13 @@ private:
     friend struct network;
 };
 
+/// @brief Executable network built from @ref topology by @ref engine.
 struct network
 {
+    /// @brief Build network
+    /// @param engine Engine to be used to compile @p topology into @network.
+    /// @param topology Network topology definition.
+    /// @param options Network build options. See @ref build_option and @ref build_options for details.
     network(const engine& engine, const topology& topology, const build_options& options = build_options())
         :_impl(check_status<cldnn_network>("network build failed", [&](status_t* status)
                 {
@@ -276,15 +324,19 @@ struct network
                 }))
     {}
 
+    /// @brief Constructs network object from C API @ref cldnn_network.
     network(cldnn_network impl) :_impl(impl)
     {
         if (_impl == nullptr) throw std::invalid_argument("implementation pointer should not be null");
     }
 
+    /// @brief Copy construction.
     network(const network& other) :_impl(other._impl)
     {
         retain();
     }
+
+    /// @brief Copy assignment.
     network& operator=(const network& other)
     {
         if (_impl == other._impl) return *this;
@@ -293,6 +345,8 @@ struct network
         retain();
         return *this;
     }
+
+    /// @brief Releases wrapped C API @ref cldnn_network.
     ~network()
     {
         release();
@@ -301,21 +355,25 @@ struct network
     friend bool operator==(const network& lhs, const network& rhs) { return lhs._impl == rhs._impl; }
     friend bool operator!=(const network& lhs, const network& rhs) { return !(lhs == rhs); }
 
+    /// @brief Returns @ref engine by which network was built.
     engine get_engine() const
     {
         return check_status<cldnn_engine>("get network engine failed", [&](status_t* status) { return cldnn_get_network_engine(_impl, status); });
     }
 
+    /// @brief Returns network internal @ref topology. Can be differ that the @p topology passed to construction.
     topology get_topology() const
     {
         return check_status<cldnn_topology>("get network topology failed", [&](status_t* status) { return cldnn_get_network_topology(_impl, status); });
     }
 
+    /// @brief Provides @ref memory for @ref input_layout primitives defined by user in source @ref topology.
     void set_input_data(const primitive_id& id, const memory& mem) const
     {
         check_status<void>("set network input failed", [&](status_t* status) {cldnn_set_network_input(_impl, id.c_str(), mem.get(), status); });
     }
 
+    /// @brief Returns the list of available network outputs.
     std::vector<primitive_id> get_output_ids() const
     {
         size_t size_ret = 0;
@@ -339,6 +397,7 @@ struct network
         return result;
     }
 
+    /// @brief Returns @ref network_output object for particular @p output
     network_output get_output(const primitive_id& output_id) const
     {
         cldnn_network_output output =
@@ -349,6 +408,10 @@ struct network
         return network_output( output.event, output.memory );
     }
 
+    /// @brief Executes network and returns the list of @ref network_output.
+    /// @param dependencies List of @ref event objects to be waited before network execution.
+    /// @note User should call set_input_data() for every @ref input_layout defined in source @ref topology
+    /// before network execution.
     std::map<primitive_id, network_output> execute(const std::vector<event>& dependencies = {}) const
     {
         std::vector<cldnn_event> dep_refs(dependencies.size());
@@ -371,6 +434,7 @@ struct network
         return result;
     }
 
+    /// @brief Returns wrapped C API @ref cldnn_network handler.
     cldnn_network get() const { return _impl; }
 
 private:
@@ -386,4 +450,6 @@ private:
     }
 };
 CLDNN_API_CLASS(network)
+/// @}
+/// @}
 }

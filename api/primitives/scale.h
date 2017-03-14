@@ -19,6 +19,12 @@
 #define SCALE_H
 
 #include "../cldnn.h"
+/// @addtogroup c_api C API
+/// @{
+/// @addtogroup c_topology Network Topology
+/// @{
+/// @addtogroup c_primitives Primitives
+/// @{
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,5 +42,8 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(scale);
 }
 #endif
 
+/// @}
+/// @}
+/// @}
 #endif /* SCALE_H */
 

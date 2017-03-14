@@ -33,7 +33,7 @@ namespace {
     //helper function for selecting function basing on the type of the given primitive
     //this is the termination case for parameter pack recurrence, see overload below for logic
     template <class... T>
-    void do_for_types(std::shared_ptr<const primitive> prim)
+    void do_for_types(std::shared_ptr<const primitive>)
     {
         return;
     }
