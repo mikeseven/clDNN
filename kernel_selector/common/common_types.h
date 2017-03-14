@@ -144,6 +144,7 @@ namespace KernelSelctor
 
         NonLinearParams() = default;
         NonLinearParams(const NonLinearParams&) = default;
+        NonLinearParams& operator=(const NonLinearParams&) = default;
         NonLinearParams(float m, float n) : m(m), n(n) {}
     };
 
@@ -157,6 +158,7 @@ namespace KernelSelctor
 
         Size() = default;
         Size(const Size&) = default;
+        Size& operator=(const Size&) = default;
         Size(T x, T y) : x(x), y(y) {}
     };
 
@@ -174,6 +176,7 @@ namespace KernelSelctor
 
         Dims() = default;
         Dims(const Dims& dim) = default;
+        Dims& operator=(const Dims&) = default;
 
         Dims(T x) : x(x) {}
         Dims(T x, T y) : x(x), y(y) {}
@@ -233,6 +236,7 @@ namespace KernelSelctor
         TensorDesc() = default;
         TensorDesc(std::size_t of, const uDims& p, bool zp) : offset(of), pitches(p), zeroPadded(zp) {}
         TensorDesc(const TensorDesc&) = default;
+        TensorDesc& operator=(const TensorDesc&) = default;
         std::size_t Size() { return offset + pitches.w; }
     };
 }

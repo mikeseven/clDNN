@@ -50,7 +50,8 @@ namespace clDNN
         bool NullRange = true;
 
         WorkGroup() = default;
-        WorkGroup(const WorkGroup& dim) = default;
+        WorkGroup(const WorkGroup&) = default;
+        WorkGroup& operator=(const WorkGroup&) = default;
         WorkGroup(std::size_t x, std::size_t y, std::size_t z) : x(x), y(y), z(z), NullRange(false) {}
     };
 
