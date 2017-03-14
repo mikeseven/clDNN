@@ -201,6 +201,8 @@ namespace KernelSelctor {
             const T& orgParams = static_cast<const T&>(_params);
             kd.params = std::make_shared<T>(orgParams);
             kd.kernels.resize(kernel_nums);
+            kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE; // for KW
+            kd.reorder_input = false; // for KW
             return kd;
         }
     };

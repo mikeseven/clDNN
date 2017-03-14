@@ -27,8 +27,6 @@ namespace KernelSelctor
 
         short* input_ptr = (short*)input;
         short* output_ptr = (short*)output;
-        const auto bpp = BytesPerElement(params->inputType);
-        const uint32_t of_threads_per_batch = round_up_to(params->outDims.z, sub_group_size);
 
         uint size[5] = {
             params->outDims.w,
@@ -121,7 +119,6 @@ namespace KernelSelctor
     {
         const auto split = 1; // TODO: do we need to support split (from performance aspect)?
 
-        const int batch_size = params.outDims.w;
         const auto& cp = params.convParams;
 
         cldnn::tensor stride(

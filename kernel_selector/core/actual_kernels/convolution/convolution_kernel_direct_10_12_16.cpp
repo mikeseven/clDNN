@@ -65,6 +65,9 @@ namespace KernelSelctor {
 
         SubGroupInfo run_info;
 
+        // for KW only
+        kd.reorder_input = false;
+
         if (optParams.allow_padding)
         {
             if (!bProperInputDesc)

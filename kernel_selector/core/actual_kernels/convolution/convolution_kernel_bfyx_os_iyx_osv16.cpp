@@ -190,6 +190,9 @@ namespace KernelSelctor
             return KernelsData();
         }
         
+        // for KW only
+        kd.reorder_input = false;
+
         if (optParams.allow_padding && !bProperInputDesc)
         {
             newParams.inDesc = req_input;

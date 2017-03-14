@@ -98,12 +98,15 @@ namespace KernelSelctor
                 {
                     for (uint x = 0; x < alignedTransposedFilterWidth / xStride; x++)
                     {
-                        memcpy(pDst + x * xStride * 2,
+                        const std::size_t size = xStride * sizeof(T);
+                        memcpy_s(pDst + x * xStride * 2,
+                            size,
                             tmpSrc + x * xStride,
-                            xStride * sizeof(T));
-                        memcpy(pDst + x * xStride * 2 + xStride,
+                            size);
+                        memcpy_s(pDst + x * xStride * 2 + xStride,
+                            size,
                             tmpSrc + x * xStride + alignedTransposedFilterWidth,
-                            xStride * sizeof(T));
+                            size);
                     }
                 }
                 else
@@ -112,17 +115,22 @@ namespace KernelSelctor
                     std::size_t x = 0;
                     for (; x + 1 < count; x++)
                     {
-                        memcpy(pDst + x * xStride * 2,
+                        const std::size_t size = xStride * sizeof(T);
+                        memcpy_s(pDst + x * xStride * 2,
+                            size,
                             tmpSrc + x * xStride,
-                            xStride * sizeof(T));
-                        memcpy(pDst + x * xStride * 2 + xStride,
+                            size);
+                        memcpy_s(pDst + x * xStride * 2 + xStride,
+                            size,
                             tmpSrc + x * xStride + alignedTransposedFilterWidth,
-                            xStride * sizeof(T));
+                            size);
                     }
 
-                    memcpy(pDst + x * xStride * 2,
+                    const std::size_t size = sizeof(T) * (alignedTransposedFilterWidth - x * xStride);
+                    memcpy_s(pDst + x * xStride * 2,
+                        size,
                         tmpSrc + x * xStride,
-                        sizeof(T) * (alignedTransposedFilterWidth - x * xStride));
+                        size);
                 }
                 pDst += yDstStride;
                 y += 2;
@@ -144,12 +152,14 @@ namespace KernelSelctor
                 {
                     if (remaining >= stride)
                     {
-                        memcpy(pDst + x * 2, tmpSrc + x, stride * sizeof(T));
+                        size_t size = stride * sizeof(T);
+                        memcpy_s(pDst + x * 2, size, tmpSrc + x, size);
                         remaining -= stride;
                     }
                     else
                     {
-                        memcpy(pDst + x * 2, tmpSrc + x, remaining * sizeof(T));
+                        size_t size = remaining * sizeof(T);
+                        memcpy_s(pDst + x * 2, size, tmpSrc + x, size);
                     }
                 }
                 pDst += yDstStride;

@@ -75,7 +75,7 @@ private:
 template<class T>
 T check_status(std::string err_msg, std::function<T(status_t*)> func)
 {
-    status_t status;
+    status_t status = CLDNN_SUCCESS;
     auto result = func(&status);
     
     if (status != CLDNN_SUCCESS)
@@ -86,7 +86,7 @@ T check_status(std::string err_msg, std::function<T(status_t*)> func)
 template<>
 inline void check_status<void>(std::string err_msg, std::function<void(status_t*)> func)
 {
-    status_t status;
+    status_t status = CLDNN_SUCCESS;
     func(&status);
     if (status != CLDNN_SUCCESS)
         CLDNN_THROW(err_msg, status);
