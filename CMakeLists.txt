@@ -777,7 +777,14 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/CMakeCompilerLinkerOpts.txt" NO_POLICY_SCOP
 
 # ======================================= Handle C++14 Stuffs ==========================================
 
-if(NOT CLDNN_CompilerSupportsCxx14)
+if(CLDNN_BUILT_FROM_OPENVX)
+  # currently OpenVX Klockwork doesn't support c++14
+  set(CLDNN_UseCxx14 OFF)
+else()
+  set(CLDNN_UseCxx14 CLDNN_CompilerSupportsCxx14)
+endif()
+
+if(NOT CLDNN_UseCxx14)
   set(CLDNN__INCLUDE_EXAMPLES OFF CACHE BOOL "" FORCE)
   set(CLDNN__INCLUDE_TESTS OFF CACHE BOOL "" FORCE)
 endif()
@@ -949,7 +956,7 @@ intel_config_flag_apply_settings(
       RttiDisabled
   )
 
-if(CLDNN_CompilerSupportsCxx14)
+if(CLDNN_UseCxx14)
   intel_config_flag_apply_settings(
       CompilerOptions
       CMAKE_CXX_FLAGS
