@@ -18,6 +18,17 @@
 
 namespace KernelSelctor 
 {
+    namespace
+    {
+        void imemcpy_s(void *dest, std::size_t dmax, const void *src, std::size_t slen)
+        {
+#if defined __GNUC__ && __GNUC__ <= 4
+            memcpy(dest, src, std::min(dmax, slen));
+#else
+            memcpy_s(dest, dmax, src, slen);
+#endif
+        }
+    }
 
     std::string CNNConvolutionKernelBase::GetConvolutionJit(const ConvolutionParams& params, SubGroupInfo& run_info) const
     {
@@ -99,11 +110,11 @@ namespace KernelSelctor
                     for (uint x = 0; x < alignedTransposedFilterWidth / xStride; x++)
                     {
                         const std::size_t size = xStride * sizeof(T);
-                        memcpy_s(pDst + x * xStride * 2,
+                        imemcpy_s(pDst + x * xStride * 2,
                             size,
                             tmpSrc + x * xStride,
                             size);
-                        memcpy_s(pDst + x * xStride * 2 + xStride,
+                        imemcpy_s(pDst + x * xStride * 2 + xStride,
                             size,
                             tmpSrc + x * xStride + alignedTransposedFilterWidth,
                             size);
@@ -116,18 +127,18 @@ namespace KernelSelctor
                     for (; x + 1 < count; x++)
                     {
                         const std::size_t size = xStride * sizeof(T);
-                        memcpy_s(pDst + x * xStride * 2,
+                        imemcpy_s(pDst + x * xStride * 2,
                             size,
                             tmpSrc + x * xStride,
                             size);
-                        memcpy_s(pDst + x * xStride * 2 + xStride,
+                        imemcpy_s(pDst + x * xStride * 2 + xStride,
                             size,
                             tmpSrc + x * xStride + alignedTransposedFilterWidth,
                             size);
                     }
 
                     const std::size_t size = sizeof(T) * (alignedTransposedFilterWidth - x * xStride);
-                    memcpy_s(pDst + x * xStride * 2,
+                    imemcpy_s(pDst + x * xStride * 2,
                         size,
                         tmpSrc + x * xStride,
                         size);
@@ -153,13 +164,13 @@ namespace KernelSelctor
                     if (remaining >= stride)
                     {
                         size_t size = stride * sizeof(T);
-                        memcpy_s(pDst + x * 2, size, tmpSrc + x, size);
+                        imemcpy_s(pDst + x * 2, size, tmpSrc + x, size);
                         remaining -= stride;
                     }
                     else
                     {
                         size_t size = remaining * sizeof(T);
-                        memcpy_s(pDst + x * 2, size, tmpSrc + x, size);
+                        imemcpy_s(pDst + x * 2, size, tmpSrc + x, size);
                     }
                 }
                 pDst += yDstStride;
