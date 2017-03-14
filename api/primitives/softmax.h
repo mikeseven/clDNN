@@ -19,11 +19,25 @@
 #define SOFTMAX_H
 
 #include "../cldnn.h"
+/// @addtogroup c_api C API
+/// @{
+/// @addtogroup c_topology Network Topology
+/// @{
+/// @addtogroup c_primitives Primitives
+/// @{
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/// @brief Normalizes results so they sum to 1.
+/// @details
+/// @par Algorithm:
+///   b = e^a/sum(N-1; j=0; e^j)
+/// @par Where:
+///   @li N : number of values to normalize
+///   @li b : value after normalization
+///   @li a : value before normalization
 CLDNN_BEGIN_PRIMITIVE_DESC(softmax)
 CLDNN_END_PRIMITIVE_DESC(softmax)
 
@@ -33,5 +47,8 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(softmax);
 }
 #endif
 
+/// @}
+/// @}
+/// @}
 #endif /* SOFTMAX_H */
 

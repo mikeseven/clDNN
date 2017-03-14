@@ -24,6 +24,12 @@
 
 namespace cldnn
 {
+/// @addtogroup cpp_api C++ API
+/// @{
+/// @addtogroup cpp_topology Network Topology
+/// @{
+/// @addtogroup cpp_primitives Primitives
+/// @{
 
 struct prior_box : public primitive_base<prior_box, CLDNN_PRIMITIVE_DESC(prior_box)>
 {
@@ -140,5 +146,7 @@ private:
 		return result;
 	}
 };
-
+/// @}
+/// @}
+/// @}
 }

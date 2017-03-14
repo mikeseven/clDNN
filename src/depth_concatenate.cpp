@@ -241,7 +241,7 @@ depth_concatenate_gpu::kernel_data default_bfyx(const std::pair<int, const depth
     if (!input_padding && !output_padding && input_mem.get_layout().data_type == cldnn::data_types::f32)
     {
         kd.gws0 = input_size.batch[0];
-        kd.gws1 = align_to(input_mem.count() / input_mem.get_layout().size.batch[0] / 8, 16);
+        kd.gws1 = cldnn::align_to(input_mem.count() / input_mem.get_layout().size.batch[0] / 8, 16);
 
         kd.lws0 = 1;
         kd.lws1 = 16;
@@ -251,7 +251,7 @@ depth_concatenate_gpu::kernel_data default_bfyx(const std::pair<int, const depth
     else
     {
         kd.gws0 = input_size.batch[0];
-        kd.gws1 = align_to(input_size.feature[0] * input_size.spatial[1], 32);
+        kd.gws1 = cldnn::align_to(input_size.feature[0] * input_size.spatial[1], 32);
 
         kd.lws0 = 1;
         kd.lws1 = 32;

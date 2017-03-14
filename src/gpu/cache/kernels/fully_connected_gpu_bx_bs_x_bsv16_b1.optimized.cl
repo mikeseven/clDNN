@@ -96,7 +96,8 @@
 
 // Activation function used in ReLU.
 #if RELU
-    #define ACTIVATION(output, input) output = fma(CVT_UNIT(NEGATIVE_SLOPE), min(input, UNIT_VAL_ZERO), max(input, UNIT_VAL_ZERO))
+    #define ACTIVATION(output, input) output = isinf(CVT_UNIT(NEGATIVE_SLOPE)) ? ((input >= UNIT_VAL_ZERO) ? \
+    input : -CVT_UNIT(NEGATIVE_SLOPE)) : (fma(CVT_UNIT(NEGATIVE_SLOPE), min(input, UNIT_VAL_ZERO), max(input, UNIT_VAL_ZERO)));
 #else
     #define ACTIVATION(output, input) output = input
 #endif

@@ -228,7 +228,7 @@ lrn_gpu::kernel_data default_bfyx_across_channel(const normalization::response& 
 
     kd.kernel_name = kernel_name_bfyx;
    
-    kd.gws0 = align_to(input_mem.argument().size.spatial[0],32);
+    kd.gws0 = cldnn::align_to(input_mem.argument().size.spatial[0],32);
     kd.gws1 = input_mem.argument().size.spatial[1];
     kd.gws2 = input_mem.argument().size.feature[0] * input_mem.argument().size.batch[0];
 
@@ -266,7 +266,7 @@ namespace {
             implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), lrn_gpu::create);
             implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), lrn_gpu::create);
             implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), lrn_gpu::create);
-			implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), lrn_gpu::create);
+            implementation_map<normalization::response>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), lrn_gpu::create);
         }
         ~attach() {}
     };

@@ -28,35 +28,55 @@
 
 namespace cldnn
 {
+/// @addtogroup cpp_api C++ API
+/// @{
+
+/// @addtogroup cpp_topology Network Topology
+/// @{
+
+/// @brief Represents data padding information.
 struct padding
 {
+    /// @brief Filling value for padding area.
     float filling_value() const { return _filling_value; }
     
-    /// Gets lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
-    ///
+    /// @brief Gets lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
     /// @return Tensor with padding for top/left/lower bounds of data.
     tensor lower_size() const { return _lower_size; }
-    /// Gets upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
-    ///
+
+    /// @brief Gets upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
     /// @return Tensor with padding for bottom/right/upper bounds of data.
     tensor upper_size() const { return _upper_size; }
-    /// Gets format of tensors used in padding.
+
+    /// @brief Gets format of tensors used in padding.
     cldnn::format format() const { return _lower_size.format; }
 
+    /// @brief 
+    /// @param format @ref cldnn::format for provided sizes.
+    /// @param lower_sizes Top-left padding sizes. See @ref tensor::tensor(cldnn::format, value_type, const std::vector<value_type>&) for details.
+    /// @param upper_sizes Bottom-right padding sizes. See @ref tensor::tensor(cldnn::format, value_type, const std::vector<value_type>&) for details.
+    /// @param filling_value Filling value for padding area.
     padding(cldnn::format format, const std::vector<tensor::value_type>& lower_sizes, const std::vector<tensor::value_type>& upper_sizes, float filling_value = 0.0f)
         : _lower_size(format, 0, to_abs(lower_sizes)), _upper_size(format, 0, to_abs(upper_sizes)), _filling_value(filling_value)
     {}
 
+    /// @brief Constrcuts symmetric padding.
+    /// @param format @ref cldnn::format for provided sizes.
+    /// @param sizes Top-left and bottom-right padding sizes. See @ref tensor::tensor(cldnn::format, value_type, const std::vector<value_type>&) for details.
+    /// @param filling_value Filling value for padding area.
     padding(cldnn::format format, const std::vector<tensor::value_type>& sizes, float filling_value = 0.0f)
         : padding(format, sizes, sizes, filling_value)
     {}
 
+    /// @brief Constructs "zero-sized" padding.
     padding(): padding(format::x, {0}) {}
 
+    /// @brief Copy construction.
     padding(const cldnn_padding& other)
         : _lower_size(other.lower_size), _upper_size(other.upper_size), _filling_value(other.filling_value)
     {}
 
+    /// @brief Implicit conversion to C API @ref cldnn_padding.
     operator cldnn_padding() const
     {
         return { static_cast<cldnn_tensor>(_lower_size),
@@ -64,7 +84,7 @@ struct padding
                  _filling_value };
     }
 
-    // returns true if padding size is not zero
+    /// @brief Returns true if padding size is not zero.
     explicit operator bool() const
     {
         return std::any_of(_lower_size.raw.begin(), _lower_size.raw.end(), [](const tensor::value_type& el) { return el != 0; }) ||
@@ -102,17 +122,22 @@ private:
 
 CLDNN_API_CLASS(padding)
 
-// TODO check this:
+/// @brief Globally unique primitive type id.
 using primitive_type_id = cldnn_primitive_type_id;
+/// @brief C API compatible unique @p id of a primitive within a topology.
 using primitive_id_ref = cldnn_primitive_id;
+/// @brief Unique @p id of a primitive within a topology.
 using primitive_id = std::string;
 
+/// @brief Dynamic cast to specified primitive description type.
 template<class PType>
 typename PType::dto* as_dto(CLDNN_PRIMITIVE_DESC(primitive)* dto)
 {
     if (dto->type != PType::type_id()) throw std::invalid_argument("type");
     return reinterpret_cast<typename PType::dto*>(dto);
 }
+
+/// @brief Dynamic cast to specified primitive description type.
 template<class PType>
 const typename PType::dto* as_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto)
 {
@@ -120,8 +145,10 @@ const typename PType::dto* as_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto)
     return reinterpret_cast<const typename PType::dto*>(dto);
 }
 
+/// @brief Base class of network primitive description.
 struct primitive
 {
+    /// @brief Initialize fields common for all primitives.
     primitive(
         const primitive_type_id& type,
         const primitive_id& id,
@@ -132,28 +159,36 @@ struct primitive
         :_type(type), _id(id), _input(input), _input_padding(input_padding), _output_padding(output_padding)
     {}
 
+    /// @brief Constructs a copy from basic C API @CLDNN_PRIMITIVE_DESC{primitive}
     primitive(const CLDNN_PRIMITIVE_DESC(primitive)* dto)
         :_type(dto->type), _id(dto->id), _input(dto->input), _input_padding(dto->input_padding), _output_padding(dto->output_padding)
     {}
 
     virtual ~primitive() = default;
 
+    /// @brief Returns primitive type id.
     const primitive_type_id& type() const { return _type; }
+    /// @brief Returns primitive id.
     const primitive_id& id() const { return _id; }
-
     //TODO: make access to primitive's fields consistent - either use access directly via public members,
     // like in derived classes, or use getters/setter in derived classes like below
+    /// @brief List of ids of input primitives.
     std::vector<primitive_id>& input() { return _input.cpp_ids; }
+    /// @brief List of ids of input primitives.
     const std::vector<primitive_id>& input() const { return _input.cpp_ids; }
 
     padding& input_padding() { return _input_padding; }
     const padding& input_padding() const { return _input_padding; }
 
+    /// @brief Requested output padding.
     padding& output_padding() { return _output_padding; }
+    /// @brief Requested output padding.
     const padding& output_padding() const { return _output_padding; }
 
+    /// @brief Returns pointer to a C API primitive descriptor casted to @CLDNN_PRIMITIVE_DESC{primitive}.
     virtual const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const = 0;
 
+    /// @brief Returns all primitive ids on which this primitive depends - inputs, weights, biases, etc.
     std::vector<primitive_id> dependecies() const
     {
         auto result = input();
@@ -162,6 +197,7 @@ struct primitive
         return result;
     }
 
+    /// @brief Implicit conversion to primiitive id.
     operator primitive_id() const { return id(); }
 
     //TODO remove backward compatibility
@@ -214,10 +250,12 @@ protected:
     virtual std::vector<primitive_id> get_dependencies() const { return{}; }
 };
 
+/// @brief base class for all primitives implementations.
 template<class PType, class DTO>
 class primitive_base : public primitive
 {
 public:
+    /// @brief Returns pointer to a C API primitive descriptor casted to @CLDNN_PRIMITIVE_DESC{primitive}.
     const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const override
     {
         //update common dto fields
@@ -264,5 +302,6 @@ private:
 
 #define CLDNN_DECLATE_PRIMITIVE(PType) typedef CLDNN_PRIMITIVE_DESC(PType) dto;\
     CLDNN_DEFINE_TYPE_ID(PType)
-
+/// @}
+/// @}
 }

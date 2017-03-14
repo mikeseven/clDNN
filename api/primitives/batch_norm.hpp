@@ -21,11 +21,28 @@
 
 namespace cldnn
 {
+/// @addtogroup cpp_api C++ API
+/// @{
+/// @addtogroup cpp_topology Network Topology
+/// @{
+/// @addtogroup cpp_primitives Primitives
+/// @{
 
+/// @brief Batch normalization primitive.
+/// @details Performs batch normalization as discribed in
+/// "Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift" by Ioffe, Szegedy
+/// @n See: http://arxiv.org/abs/1502.03167
 struct batch_norm : public primitive_base<batch_norm, CLDNN_PRIMITIVE_DESC(batch_norm)>
 {
     CLDNN_DECLATE_PRIMITIVE(batch_norm)
 
+    /// @brief Constructs batch normalization primitive.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param mean Primitive id containing mean data.
+    /// @param variance Primitive id containing variance.
+    /// @param use_global_stats Use global statistics.
+    /// @param epsilon Epsilon.
     batch_norm(
         const primitive_id& id,
         const primitive_id& input,
@@ -44,18 +61,23 @@ struct batch_norm : public primitive_base<batch_norm, CLDNN_PRIMITIVE_DESC(batch
     {
     }
 
+    /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{batch_norm}
     batch_norm(const dto* dto)
         :primitive_base(dto)
         , mean(dto->mean)
         , variance(dto->variance)
-        , use_global_stats(dto->use_global_stats)
+        , use_global_stats(dto->use_global_stats != 0)
         , epsilon(dto->epsilon)
     {
     }
 
+    /// @brief Primitive id containing mean data.
     primitive_id mean;
+    /// @brief Primitive id containing variance.
     primitive_id variance;
+    /// @brief Use global statistics.
     bool use_global_stats;
+    /// @brief Epsilon.
     float epsilon;
 
 protected:
@@ -69,4 +91,7 @@ protected:
         dto.epsilon = epsilon;
     }
 };
+/// @}
+/// @}
+/// @}
 }
