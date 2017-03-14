@@ -19,27 +19,15 @@
 #define FULLY_CONNECTED_H
 
 #include "../cldnn.h"
-/// @addtogroup c_api C API
-/// @{
-/// @addtogroup c_topology Network Topology
-/// @{
-/// @addtogroup c_primitives Primitives
-/// @{
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/// @brief Performs forward fully connected layer (inner product).
-/// Also supports built-in Relu @CLDNN_PRIMITIVE_DESC{activation} available by setting it in arguments.
 CLDNN_BEGIN_PRIMITIVE_DESC(fully_connected)
-/// @brief Enable Relu activation.
 uint32_t with_activation;
-/// @brief Relu activation slope.
 float activation_negative_slope;
-/// @brief Primitive id containing weights data.
 cldnn_primitive_id weights;
-/// @brief Primitive id containing bias data.
 cldnn_primitive_id bias;
 CLDNN_END_PRIMITIVE_DESC(fully_connected)
 
@@ -49,8 +37,5 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(fully_connected);
 }
 #endif
 
-/// @}
-/// @}
-/// @}
 #endif /* FULLY_CONNECTED_H */
 

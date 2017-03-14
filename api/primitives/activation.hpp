@@ -21,22 +21,10 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
-
-/// @brief Activiation using rectified linear unit.
 struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activation)>
 {
     CLDNN_DECLATE_PRIMITIVE(activation)
 
-    /// @brief Constructs activation primitive.
-    /// @param id This primitive id.
-    /// @param input Input primitive id.
-    /// @param slope Relu activation slope.
     activation(
         const primitive_id& id,
         const primitive_id& input,
@@ -49,14 +37,12 @@ struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activ
     {
     }
 
-    /// @brief Constructs a copy from basic C API @CLDNN_PRIMITIVE_DESC{activation}
     activation(const dto* dto)
         : primitive_base(dto)
         , negative_slope(dto->negative_slope)
     {
     }
 
-    /// @brief Relu activation slope.
     float negative_slope;
 
 protected:
@@ -65,7 +51,4 @@ protected:
         dto.negative_slope = negative_slope;
     }
 };
-/// @}
-/// @}
-/// @}
 }

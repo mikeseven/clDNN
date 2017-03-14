@@ -21,30 +21,11 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
 
-/// @brief Performs forward spatial convolution with weight sharing.
-/// Also supports built-in Relu @CLDNN_PRIMITIVE_DESC{activation} available by setting it in arguments.
-/// @details Parameters are defined in context of "direct" convolution, but actual algorithm is not implied.
-/// Look into docs/size_offset_stride_padding.html for description how size, offsets, stride & padding parameter work.
 struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(convolution)>
 {
     CLDNN_DECLATE_PRIMITIVE(convolution)
 
-    /// @brief Constructs convolution primitive.
-    /// @param id This primitive id.
-    /// @param input Input primitive id.
-    /// @param weights List of primitive ids containing weights data.
-    /// @param bias List of primitive ids containing bias data.
-    /// @param input_padding Input padding/offset.
-    /// @param stride Defines shift in input buffer between adjacent calculations of output values.
-    /// @param with_activation Enable Relu activation.
-    /// @param activation_slp Relu activation slope.
     convolution(
         const primitive_id& id,
         const primitive_id& input,
@@ -69,7 +50,6 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
             throw std::runtime_error("convolution's weights/bias count does not match");
     }
 
-    /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{convolution}
     convolution(const dto* dto)
         :primitive_base(dto)
         , weights(_weights.cpp_ids)
@@ -84,18 +64,12 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
             throw std::invalid_argument("Invalid convolution dto: bad split value");
     }
 
-    /// @brief List of primitive ids containing weights data.
     std::vector<primitive_id>& weights;
-    /// @brief List of primitive ids containing bias data.
     std::vector<primitive_id>& bias;
-    /// @brief Defines shift in input buffer between adjacent calculations of output values.
     tensor stride;
-    /// @brief Enable Relu activation.
     bool with_activation;
-    /// @brief Relu activation slope.
     float activation_negative_slope;
 
-    /// @brief On how many cards split the computation to.
     int32_t split() const { return static_cast<int32_t>(weights.size()); }
 
 protected:
@@ -119,7 +93,4 @@ protected:
         dto.activation_negative_slope = activation_negative_slope;
     }
 };
-/// @}
-/// @}
-/// @}
 }

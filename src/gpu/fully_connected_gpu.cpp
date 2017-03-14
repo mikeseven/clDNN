@@ -255,7 +255,7 @@ struct fully_connected_gpu : is_an_implementation
 
         // validate arguments
         if (input_size.format == cldnn::format::yxfb ||
-            input_size.format == cldnn::format::bfyx)
+			input_size.format == cldnn::format::bfyx)
         {
             if (weights_mem.argument().format != memory::format::bs_xs_xsv8_bsv8_f32 &&
                 weights_mem.argument().format != memory::format::bs_x_bsv16_f32 &&
@@ -358,7 +358,7 @@ fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const full
     if (batch_multiple_of_8)
     {
         size_t groups_per_batches = get_local_groups_size(arg.output_memory());
-        kd.gws0 = cldnn::align_to(arg.output_memory().count() / (get_neurons_per_work_item(arg.output_memory()) * get_batches_per_work_item(arg.output_memory()) * groups_per_batches), 8);
+        kd.gws0 = align_to(arg.output_memory().count() / (get_neurons_per_work_item(arg.output_memory()) * get_batches_per_work_item(arg.output_memory()) * groups_per_batches), 8);
         kd.gws1 = groups_per_batches;
         kd.lws0 = 8;
         kd.lws1 = 1;
@@ -444,7 +444,7 @@ fully_connected_gpu::kernel_data default_yxfb_fp16(const fully_connected& arg)
     {
         // Number of response groups. Each group (except last) writes units_per_sg_read responses
         // for at least one input data set from batch.
-        auto rg_count = cldnn::ceil_div(response_size, units_per_sg_read);
+        auto rg_count = ceil_div(response_size, units_per_sg_read);
 
         kd.lws0 = sub_group_size;
         // Number of work items needed to process all response groups.
@@ -503,7 +503,7 @@ fully_connected_gpu::kernel_data default_bfyx_bs_x_bsv16_b1(const fully_connecte
 
     // Number of response groups. Each group (except last) writes responses_per_sg_exec responses
     // for at least one input data set from batch.
-    auto rg_count = cldnn::ceil_div(response_size, responses_per_sg_exec);
+    auto rg_count = ceil_div(response_size, responses_per_sg_exec);
 
     kd.lws0 = sub_group_size;
     // Number of work items needed to process all response groups.

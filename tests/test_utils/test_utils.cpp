@@ -29,7 +29,7 @@ using namespace cldnn;
 
 namespace tests 
 {
-	generic_test::generic_test() : generic_params(std::get<0>(GetParam())), layer_params(std::get<1>(GetParam()))
+	generic_test::generic_test() : generic_params(std::get<0>(GetParam())), layer_parmas(std::get<1>(GetParam()))
 	{}
 
 	void generic_test::run_single_test()
@@ -49,7 +49,7 @@ namespace tests
 
 		topology topology;
 		topology.add(input_layout("input", input.get_layout()));
-		topology.add(*layer_params);
+		topology.add(*layer_parmas);
 
 		if (!is_format_supported(input.get_layout().size.format))
 		{
@@ -67,7 +67,7 @@ namespace tests
 		auto output = outputs.begin()->second.get_memory();
 
 		auto output_ref = generate_reference(input);
-        
+
 		if (generic_params->data_type == data_types::f32)
 		{
 			compare_buffers<float>(output, output_ref);
@@ -76,13 +76,6 @@ namespace tests
 		{
 			compare_buffers<FLOAT16>(output, output_ref);
 		}	
-        
-        if (HasFailure())
-        {
-            printf("Error on test\n");
-            generic_params->print();
-            print_params();
-        }        
 	}
 
 	template<typename Type>
@@ -196,15 +189,4 @@ namespace tests
 
 		return all_generic_params;
 	}
-    
-    
-    void test_params::print()
-    {
-        printf("Test params: data type %s format %s sizes [ ", data_type_traits::name(data_type).c_str(), format::traits(input.format).order.c_str() );
-        for (size_t i = 0 ; i < input.sizes().size() ; i ++) 
-        {
-            printf("%d ", input.sizes()[i]);
-        }
-        printf("]\n");
-    }
 }

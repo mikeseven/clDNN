@@ -14,10 +14,6 @@
 // limitations under the License.
 */
 
-#if defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wpedantic"
-#endif
-
 #include "instrumentation.h"
 #include "common_tools.h"
 #include "FreeImage_wraps.h"
@@ -270,6 +266,7 @@ void load_images_from_file_list(
     auto dst_ptr = memory.pointer<MemElemTy>();
     auto it = dst_ptr.begin();
 
+    auto batches = std::min(memory_layout.size.batch[0], static_cast<cldnn::tensor::value_type>(images_list.size()));
     auto dim = memory_layout.size.spatial;
 
     if(memory_layout.size.format != cldnn::format::byxf) throw std::runtime_error("Only bfyx format is supported as input to images from files");

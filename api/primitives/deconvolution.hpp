@@ -21,12 +21,6 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
 
 struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC(deconvolution)>
 {
@@ -97,7 +91,4 @@ protected:
         dto.activation_negative_slope = activation_negative_slope;
     }
 };
-/// @}
-/// @}
-/// @}
 }

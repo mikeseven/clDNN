@@ -21,34 +21,16 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
-
-/// @brief Select method for the @ref pooling layer.
 enum class pooling_mode : int32_t
 {
-    /// @brief Maximum-pooling method.
     max     = cldnn_pooling_max,
-    /// @brief Average-pooling method.
     average = cldnn_pooling_average
 };
 
-/// @brief Performs "pooling" operation which is a form of non-linear down-sampling.
-/// @details Pools the input image by taking the max, average, etc. within regions.
 struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
 {
     CLDNN_DECLATE_PRIMITIVE(pooling)
 
-    /// @brief Constructs pooling primitive.
-    /// @param id This primitive id.
-    /// @param input Input primitive id.
-    /// @param mode Pooling mode.
-    /// @param stride Defines shift in input buffer between adjacent calculations of output values.
-    /// @param size Pooling kernel size.
     pooling(
         const primitive_id& id,
         const primitive_id& input,
@@ -64,7 +46,6 @@ struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
         , size(size)
     {}
 
-    /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{pooling}
     pooling(const dto* dto)
         : primitive_base(dto)
         , mode(static_cast<pooling_mode>(dto->mode))
@@ -72,11 +53,8 @@ struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
         , size(dto->size)
     {}
 
-    /// @brief Pooling mode.
     pooling_mode mode;
-    /// @brief Defines shift in input buffer between adjacent calculations of output values.
     tensor stride;
-    /// @brief Pooling kernel size.
     tensor size;
 
 protected:
@@ -87,7 +65,5 @@ protected:
         dto.size = size;
     }
 };
-/// @}
-/// @}
-/// @}
+
 }

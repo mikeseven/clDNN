@@ -31,7 +31,7 @@ template<typename T>
 T* allocate_aligned(size_t size, size_t align) {
     assert(sizeof(T) <= size);
     assert(alignof(T) <= align);
-    return reinterpret_cast<T*>(_mm_malloc(cldnn::align_to(size, align), align));
+    return reinterpret_cast<T*>(_mm_malloc(align_to(size, align), align));
 }
 
 template<typename T>

@@ -21,22 +21,10 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
-
-/// @brief Subtract mean from input.
 struct mean_substract : public primitive_base<mean_substract, CLDNN_PRIMITIVE_DESC(mean_substract)>
 {
     CLDNN_DECLATE_PRIMITIVE(mean_substract)
 
-    /// @brief Constructs mean subtract primitive.
-    /// @param id This primitive id.
-    /// @param input Input primitive id.
-    /// @param mean Primitive id to get mean subtract values.
     mean_substract(
         const primitive_id& id,
         const primitive_id& input,
@@ -49,14 +37,12 @@ struct mean_substract : public primitive_base<mean_substract, CLDNN_PRIMITIVE_DE
     {
     }
 
-    /// @brief Constructs a copy from basic C API @CLDNN_PRIMITIVE_DESC{mean_substract}
     mean_substract(const dto* dto)
         :primitive_base(dto)
         , mean(dto->mean)
     {
     }
 
-    /// @brief Primitive id to get mean subtract values.
     primitive_id mean;
 
 protected:
@@ -67,7 +53,4 @@ protected:
         dto.mean = mean.c_str();
     }
 };
-/// @}
-/// @}
-/// @}
 }

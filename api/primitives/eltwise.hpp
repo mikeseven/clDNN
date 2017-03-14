@@ -21,13 +21,6 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
-
 enum class eltwise_mode : int32_t
 {
     sum = cldnn_eltwise_sum,
@@ -85,7 +78,4 @@ protected:
         dto.activation_negative_slope = activation_negative_slope;
     }
 };
-/// @}
-/// @}
-/// @}
 }

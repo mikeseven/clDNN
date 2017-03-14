@@ -23,23 +23,13 @@
 
 namespace cldnn
 {
-
-/// @addtogroup cpp_api C++ API
-/// @{
-
-/// @addtogroup cpp_event Events Support
-/// @{
-
-/// @brief Represents an clDNN Event object
 struct event
 {
-    /// @brief Create an event which can be set to 'completed' by user.
     static event create_user_event(const engine& engine)
     {
         return check_status<cldnn_event>("create user event failed", [&](status_t* status) { return cldnn_create_user_event(engine.get(), status); });
     }
     
-    /// @brief Construct from C API handler @ref ::cldnn_event.
     event(cldnn_event impl) : _impl(impl)
     {
         if (_impl == nullptr) throw std::invalid_argument("implementation pointer should not be null");
@@ -67,19 +57,14 @@ struct event
     friend bool operator==(const event& lhs, const event& rhs) { return lhs._impl == rhs._impl; }
     friend bool operator!=(const event& lhs, const event& rhs) { return !(lhs == rhs); }
 
-    /// @brief Wait for event completion.
     void wait() const { check_status<void>("wait event failed", [=](status_t* status) { cldnn_wait_for_event(_impl, status); }); }
-
-    /// @brief Set event status to 'completed'.
     void set() const { check_status<void>("set event failed", [=](status_t* status) { cldnn_set_event(_impl, status); }); }
 
-    /// @brief Register call back to be called on event completion.
     void set_event_handler(cldnn_event_handler handler, void* param) const
     {
         check_status<void>("set event handler failed", [=](status_t* status) { cldnn_add_event_handler(_impl, handler, param, status); });
     }
 
-    /// @brief Get profiling info for the event associated with network output.
     std::vector<instrumentation::profiling_interval> get_profiling_info() const
     {
         using namespace instrumentation;
@@ -112,7 +97,6 @@ struct event
         return result;
     }
 
-    /// @brief Returns C API event handler.
     cldnn_event get() const { return _impl; }
 private:
     cldnn_event _impl;
@@ -126,7 +110,4 @@ private:
     }
 };
 CLDNN_API_CLASS(event)
-
-/// @}
-/// @}
 }

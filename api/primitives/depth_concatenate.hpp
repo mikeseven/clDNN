@@ -21,13 +21,6 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
-
 struct depth_concatenate : public primitive_base<depth_concatenate, CLDNN_PRIMITIVE_DESC(depth_concatenate)>
 {
     CLDNN_DECLATE_PRIMITIVE(depth_concatenate)
@@ -48,7 +41,4 @@ struct depth_concatenate : public primitive_base<depth_concatenate, CLDNN_PRIMIT
 private:
     void update_dto(dto&) const override {}
 };
-/// @}
-/// @}
-/// @}
 }

@@ -19,27 +19,14 @@
 #define REORDER_H
 
 #include "../cldnn.h"
-/// @addtogroup c_api C API
-/// @{
-/// @addtogroup c_topology Network Topology
-/// @{
-/// @addtogroup c_primitives Primitives
-/// @{
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/// @brief Changes how data is ordered in memory. Value type is not changed & all information is preserved.
-/// @details Corresponding values are bitwise equal before/after reorder.
-/// Also merged with subtraction layer, which can subtract values while doing reordering.
-/// NOTE THAT THIS WILL SUBTRACT THE SAME VALUES FROM EACH BATCH.
 CLDNN_BEGIN_PRIMITIVE_DESC(reorder)
-/// @brief Requested memory layout.
 cldnn_layout output_layout;
-/// @brief Primitive id to get mean subtract values. Ignored if substract_per_featrue is set.
 cldnn_primitive_id mean_substract;
-/// @brief Array of mean subtract values.
 cldnn_float_arr substract_per_feature;
 CLDNN_END_PRIMITIVE_DESC(reorder)
 
@@ -49,8 +36,5 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(reorder);
 }
 #endif
 
-/// @}
-/// @}
-/// @}
 #endif /* REORDER_H */
 

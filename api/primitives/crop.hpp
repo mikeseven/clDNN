@@ -21,12 +21,6 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
 
 struct crop : public primitive_base<crop, CLDNN_PRIMITIVE_DESC(crop)>
 {
@@ -65,7 +59,4 @@ protected:
         dto.offsets = offsets;
     }
 };
-/// @}
-/// @}
-/// @}
 }
