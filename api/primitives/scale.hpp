@@ -28,10 +28,25 @@ namespace cldnn
 /// @addtogroup cpp_primitives Primitives
 /// @{
 
+/// @brief Performs elementwise product of input and scale_input.
+/// Input size : 2x3x4x5(BFYX)
+///     Possible scale inputs sizes :
+///     2x3x4x5 - works the same as(axis == 0 == -4) in caffe
+///     1x3x4x5 - works the same as(axis == 1 == -3) in caffe
+///     1x1x4x5 - works the same as(axis == 2 == -2) in caffe
+///     1x1x1x5 - works the same as(axis == 3 == -1) in caffe
+///     1x1x1x1 - works the same as empty shape(scalar) in caffe
+/// When scale_input is the same as input, the behavior is the same as eltwise with product operation.
+/// Optionally it can also add provided biases by setting bias_term.
 struct scale : public primitive_base<scale, CLDNN_PRIMITIVE_DESC(scale)>
 {
     CLDNN_DECLATE_PRIMITIVE(scale)
 
+    /// @brief Constructs scale primitive without adding bias.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param scale_input Scale input primitive id with values needed for product computation.
+    /// @param bias_term Flag to set optional adding biases.
     scale(
         const primitive_id& id,
         const primitive_id& input,
@@ -47,6 +62,12 @@ struct scale : public primitive_base<scale, CLDNN_PRIMITIVE_DESC(scale)>
     {
     }
 
+    /// @brief Constructs scale primitive with optional adding bias.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param scale_input Scale input primitive id with values needed for product computation.
+    /// @param bias_term Flag to set optional adding biases.
+    /// @param bias Primitive id containing bias data.
     scale(
         const primitive_id& id,
         const primitive_id& input,
@@ -63,6 +84,7 @@ struct scale : public primitive_base<scale, CLDNN_PRIMITIVE_DESC(scale)>
     {
     }
 
+    /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{scale}
     scale(const dto* dto)
         :primitive_base(dto)
         , scale_input(dto->scale_input)
@@ -71,8 +93,11 @@ struct scale : public primitive_base<scale, CLDNN_PRIMITIVE_DESC(scale)>
     {
     }
 
+    /// @brief Scale input primitive id with values needed for product computation.
     primitive_id scale_input;
+    /// @brief Flag to set optional adding biases.
     bool bias_term;
+    /// @brief Primitive id containing bias data.
     primitive_id bias;
 
 protected:
