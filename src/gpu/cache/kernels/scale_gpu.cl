@@ -9,7 +9,11 @@ KERNEL (scale_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output, 
 )
 #endif
 {
+	#if INPUT_BFYX_USED
+	const uint linear_id = (get_global_id(2) % INPUT_SIZE_X) + INPUT_SIZE_X * ((get_global_id(2) / INPUT_SIZE_X) + INPUT_SIZE_Y * (get_global_id(1) + get_global_id(0) * INPUT_FEATURE_NUM));
+	#else
 	const uint linear_id = get_global_id(0) + INPUT_BATCH_NUM * (get_global_id(1) + INPUT_FEATURE_NUM * ((get_global_id(2) % INPUT_SIZE_X) + INPUT_SIZE_X * (get_global_id(2) / INPUT_SIZE_X)));
+	#endif
 	const uint scale_batch_id = (SCALE_BATCH_NUM == 1) ? 0 : get_global_id(0);
 	const uint scale_feature_id = (SCALE_FEATURE_NUM == 1) ? 0 : get_global_id(1);
 	const uint x = (SCALE_SIZE_X == 1) ? 0 : ((SCALE_SIZE_Y == 1) ? (get_global_id(2) % INPUT_SIZE_X) : (get_global_id(2) % SCALE_SIZE_X));

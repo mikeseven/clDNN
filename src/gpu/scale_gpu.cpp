@@ -54,6 +54,7 @@ namespace neural
             std::string kernel_name;
             bool fp16_unit_used;
             bool fp16_supported;
+            bool input_bfyx_used; ///< Indicates that bfyx format of input is used.
             bool scale_bfyx_used; ///< Indicates that bfyx format of scale is used.
         } _kernel_data;
         gpu::kernel _kernel;
@@ -107,6 +108,7 @@ namespace neural
                 gpu::make_jit_constant("UNIT_TYPE",             data.fp16_unit_used ? "half" : "float"),
                 gpu::make_jit_constant("BIAS_TERM",             static_cast<int>(outer.bias_term())),
                 gpu::make_jit_constant("SCALE_BFYX_USED",       static_cast<int>(data.scale_bfyx_used)),
+                gpu::make_jit_constant("INPUT_BFYX_USED",       static_cast<int>(data.input_bfyx_used)),
             };
 
             return mem_consts;
@@ -137,6 +139,7 @@ namespace neural
     {
         scale_gpu::kernel_data kd = scale_gpu::set_kernel_data(arg);
         kd.scale_bfyx_used = (memory::to_tensor_format(arg.scale_memory().argument().format) == cldnn::format::bfyx) ? true : false;
+        kd.input_bfyx_used = (memory::to_tensor_format(arg.input_memory(0).argument().format) == cldnn::format::bfyx) ? true : false;
         kd.kernel_name = kernel_name;
 
         return kd;
@@ -145,6 +148,8 @@ namespace neural
     kd_selector_t<scale_gpu::kernel_data, scale, neural::memory::format::type, kd_optional_selector_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> scale_gpu::ks = {
         { std::make_tuple(memory::format::yxfb_f32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
         { std::make_tuple(memory::format::yxfb_f16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+        { std::make_tuple(memory::format::bfyx_f32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+        { std::make_tuple(memory::format::bfyx_f16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
     };
 
     namespace {
@@ -154,6 +159,8 @@ namespace neural
 
                 implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw);
                 implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw);
+                implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw);
+                implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), val_fw);
             }
             ~attach() {}
         };

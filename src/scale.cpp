@@ -59,6 +59,7 @@ namespace cldnn
 
         if (bias_term())
         {
+            if (desc->bias.empty()) throw std::runtime_error("Bias_term parameter set to true, but no bias data provided!");
             auto bias_format = bias_memory().get_layout().size.format;
             auto bias_raw_sizes = bias_memory().get_layout().size.raw;
 
