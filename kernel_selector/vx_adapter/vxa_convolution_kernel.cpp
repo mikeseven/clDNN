@@ -30,6 +30,7 @@ namespace clDNN
         ksParams.convParams.filterSize = params.convParams.filterSize;
         ksParams.convParams.padding = params.convParams.padding;
         ksParams.convParams.stride = params.convParams.stride;
+        ksParams.convParams.biasPerOutputResult = params.convParams.biasPerOutputResult;
 
         KernelSelctor::ConvolutionOptionalParams ksOptParams;
         ksOptParams.allow_padding = params.bAllowChangeInputTensor;

@@ -48,6 +48,11 @@ namespace KernelSelctor
             << "#define KERNEL_SLICE_DIV2 " << (cp.filterSize.x * cp.filterSize.y) / 2 << "\n";
 
         jit << "#define OUTPUT_BIASED" << "\n";
+        
+        if (cp.biasPerOutputResult)
+        {
+            jit << "#define BIAS_PER_OUTPUT \n";
+        }
 
         return jit.str();
     }

@@ -29,6 +29,8 @@ namespace KernelSelctor
         k.SetOffsetSupport();
         k.SetPitchesSupport();
         k.SetSubGroupSupport();
+        k.SetBiasPerFeatureMap();
+        k.SetBiasPerOutput();
         k.SetNumDims(4);
         return k;
     }

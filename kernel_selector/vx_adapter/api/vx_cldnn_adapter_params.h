@@ -42,6 +42,7 @@ namespace clDNN
         virtual ~BaseParams() {}
 
         Datatype            inputType = Datatype::F16;
+        DataLayout          inputLayout = DataLayout::bfyx;
         ActivationFunction  activationFunc = ActivationFunction::NONE;
         NonLinearParams     nlParams;
         uDims               inDims;
@@ -67,6 +68,7 @@ namespace clDNN
             uSize filterSize;
             uSize stride;
             uSize padding;
+            bool  biasPerOutputResult = false;
         };
 
         DedicatedParams convParams;

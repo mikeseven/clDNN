@@ -24,7 +24,8 @@ namespace KernelSelctor {
         k.SetDataType(Datatype::F16);
         k.SetDataType(Datatype::F32);
         k.SetInputLayout(bfyx);
-        k.SetOutputLayout(bfyx);
+        k.SetInputLayout(bx);
+        k.SetOutputLayout(bx);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
         k.SetNumDims(4);
@@ -38,7 +39,6 @@ namespace KernelSelctor {
         KernelData kd = KernelData::Default<FullyConnectedParams>(params, 1);
 
         FullyConnectedParams& newParams = *static_cast<FullyConnectedParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
 
         std::string entry_point;
         std::stringstream jit;
@@ -56,14 +56,20 @@ namespace KernelSelctor {
         const uint localWorkSizeX = 64;
         const uint globalWorkSizeX = localWorkSizeX;
         const uint vecSize = 4;
+        std::size_t matrixLineSize = newParams.inDesc.pitches.z;
+
+        if (newParams.inputLayout == bx)
+        {
+            matrixLineSize = newParams.inDesc.pitches.x;
+        }
 
         jit << GetBaseJit(newParams)
             << GetFullyConnectedJit(newParams)
-            << "#define LAST_INPUT_SIZE_REMAINDER (" << newParams.inDesc.pitches.z % (globalWorkSizeX * vecSize) << ")\n"
-            << "#define LAST_INPUT_SIZE_DIV_4 (" << newParams.inDesc.pitches.z % vecSize << ")\n";
+            << "#define LAST_INPUT_SIZE_REMAINDER (" << matrixLineSize % (globalWorkSizeX * vecSize) << ")\n"
+            << "#define LAST_INPUT_SIZE_DIV_4 (" << matrixLineSize % vecSize << ")\n";
         
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(globalWorkSizeX, newParams.outDims.Length() / newParams.outDims.w, newParams.outDims.w);
+        kernel.work_groups.global = cl::NDRange(globalWorkSizeX, newParams.outDims.x, newParams.outDims.y);
         kernel.work_groups.local = cl::NDRange(localWorkSizeX, 1, 1);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), entry_point);
         kernel.args_desc = GetArgumentDesc(1, true, true);

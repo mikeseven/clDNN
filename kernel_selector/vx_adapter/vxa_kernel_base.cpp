@@ -99,8 +99,18 @@ namespace clDNN
     void BaseKernelBinary::InitBaseParams(const BaseParams& vxParams, KernelSelctor::BaseParams& ksParams)
     {
         ksParams.inputType = vxParams.inputType;
-        ksParams.inputLayout = KernelSelctor::DataLayout::bfyx;
-        ksParams.outputLayout = KernelSelctor::DataLayout::bfyx;
+
+        if (vxParams.inputLayout == DataLayout::bx)
+        {
+            ksParams.inputLayout = KernelSelctor::DataLayout::bx;
+            ksParams.outputLayout = KernelSelctor::DataLayout::bx;
+        }
+        else
+        {
+            ksParams.inputLayout = KernelSelctor::DataLayout::bfyx;
+            ksParams.outputLayout = KernelSelctor::DataLayout::bfyx;
+        }
+
         ksParams.activationFunc = vxParams.activationFunc;
         ksParams.nlParams = vxParams.nlParams;
         ksParams.inDims = vxParams.inDims;

@@ -79,7 +79,11 @@ namespace KernelSelctor
                             uint floor : 1;
                             uint ceil : 1;
                         } pooling;
-                        struct conv_t {} conv;
+                        struct conv_t 
+                        {
+                            uint biasPerFeatureMap : 1;
+                            uint biasPerOutput : 1;
+                        } conv;
                         struct fc_t {} fc;
                         struct lc_t {} lc;
                         struct softmax_t {} softmax;
@@ -192,6 +196,16 @@ namespace KernelSelctor
             default:
                 break;
             }
+        }
+
+        void SetBiasPerFeatureMap()
+        {
+            key.restrict.val.dedicated.conv.biasPerFeatureMap = 1;
+        }
+
+        void SetBiasPerOutput()
+        {
+            key.restrict.val.dedicated.conv.biasPerOutput = 1;
         }
 
         bool Support(const ParamsKey& k) const
@@ -311,6 +325,7 @@ namespace KernelSelctor
             uSize filterSize;
             uSize stride;
             uSize padding;
+            bool  biasPerOutputResult = false;
         };
 
         DedicatedParams convParams;
@@ -319,7 +334,17 @@ namespace KernelSelctor
 
         virtual ParamsKey GetParamsKey() const
         {
-            return BaseParams::GetParamsKey();
+            ParamsKey k = BaseParams::GetParamsKey();
+            if (convParams.biasPerOutputResult)
+            {
+                k.SetBiasPerOutput();
+            }
+            else
+            {
+                k.SetBiasPerFeatureMap();
+            }
+
+            return k;
         }
     };
 

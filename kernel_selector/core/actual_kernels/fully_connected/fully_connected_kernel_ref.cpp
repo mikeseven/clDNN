@@ -24,7 +24,8 @@ namespace KernelSelctor
         k.SetDataType(Datatype::F16);
         k.SetDataType(Datatype::F32);
         k.SetInputLayout(bfyx);
-        k.SetOutputLayout(bfyx);
+        k.SetInputLayout(bx);
+        k.SetOutputLayout(bx);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
         k.SetNumDims(4);
@@ -38,7 +39,6 @@ namespace KernelSelctor
         KernelData kd = KernelData::Default<FullyConnectedParams>(params, 1);
 
         FullyConnectedParams& newParams = *static_cast<FullyConnectedParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
 
         std::stringstream jit;
         jit << GetBaseJit(newParams)
@@ -46,7 +46,7 @@ namespace KernelSelctor
 
         const auto& out = newParams.outDims;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
+        kernel.work_groups.global = cl::NDRange(out.x, out.y);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "fc");
         kernel.args_desc = GetArgumentDesc(1, true, true);
 

@@ -213,7 +213,12 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
 
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
-            out[r * OUT_BLOCK_WIDTH + c] += bias[feature_idx];
+#ifdef BIAS_PER_OUTPUT
+            const unsigned bias_index = feature_idx*OUTPUT_SIZE_X*OUTPUT_SIZE_Y + or*OUTPUT_SIZE_X + oc;
+#else
+            const unsigned bias_index = feature_idx;
+#endif
+            out[r * OUT_BLOCK_WIDTH + c] += bias[bias_index];
         }
     }
 

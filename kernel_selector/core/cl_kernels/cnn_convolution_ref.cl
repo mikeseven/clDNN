@@ -29,8 +29,14 @@ __kernel void convolution(__global DATA_TYPE* input, __global DATA_TYPE* output,
 #endif
 
     const unsigned filter_size = INPUT_DEPTH * KERNEL_HEIGHT * KERNEL_WIDTH;
+    
+#ifdef BIAS_PER_OUTPUT
+    const unsigned bias_index = z*OUT_WIDTH*OUT_HEIGHT + y*OUT_WIDTH + x;
+#else
+    const unsigned bias_index = z;
+#endif
 
-    DATA_TYPE dotProd  =  biases[z];
+    DATA_TYPE dotProd  =  biases[bias_index];
 
     int xk_start = max((int)(INPUT_PADDING_X - x * STRIDE_X), 0);
     int yk_start = max((int)(INPUT_PADDING_Y - y * STRIDE_Y), 0);

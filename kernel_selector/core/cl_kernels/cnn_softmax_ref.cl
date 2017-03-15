@@ -30,33 +30,30 @@ __kernel void softmax(__global DATA_TYPE* input, __global DATA_TYPE* output)
     const unsigned w = get_global_id(2) / OUT_DEPTH;
 #endif
 
-    unsigned int in_depth_offset = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + INPUT_OFFSET;
+    const unsigned int in_depth_offset = w*INPUT_BATCH_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
+    const unsigned int out_depth_offset = w*OUT_BATCH_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
     
     DATA_TYPE max_value = input[in_depth_offset];
-    for (int srcY = 0; srcY < INPUT_HEIGHT; ++srcY)
+    for (int srcZ = 0; srcZ < INPUT_DEPTH; ++srcZ)
     {
-        for (int srcX = 0; srcX < INPUT_WIDTH; ++srcX)
-        {
-            const unsigned int index = in_depth_offset + srcY*INPUT_ROW_PITCH + srcX;
-            max_value = max(max_value, input[index]);
-        }
+        const unsigned int index = in_depth_offset + srcZ*INPUT_SLICE_PITCH;
+        max_value = max(max_value, input[index]);
     }
 
     // TODO: currently we calculate on float32 because it's lot of "add" operation and it stuck on the value "8192.0f"
     float denominator = 0.0;
-    for (int srcY = 0; srcY < INPUT_HEIGHT; ++srcY)
+    for (int srcZ = 0; srcZ < INPUT_DEPTH; ++srcZ)
     {
-        for (int srcX = 0; srcX < INPUT_WIDTH; ++srcX)
-        {
-            const unsigned int index = in_depth_offset + srcY*INPUT_ROW_PITCH + srcX;
-            const DATA_TYPE v = input[index];
-            denominator += exp(v - max_value);
-        }
+        const unsigned int index = in_depth_offset + srcZ*INPUT_SLICE_PITCH;
+        const DATA_TYPE v = input[index];
+        denominator += exp(v - max_value);
     }
     
-    const unsigned int input_idx  = in_depth_offset + y*INPUT_ROW_PITCH + x;
-    const unsigned int output_idx = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
-    const DATA_TYPE res = exp(input[input_idx] - max_value) / (DATA_TYPE)denominator;
-    
-    output[output_idx] = res;
+    for (int srcZ = 0; srcZ < INPUT_DEPTH; ++srcZ)
+    {
+        const unsigned int input_idx  = in_depth_offset + srcZ*INPUT_SLICE_PITCH;
+        const unsigned int output_idx = out_depth_offset + srcZ*OUT_SLICE_PITCH;
+        const DATA_TYPE res = exp(input[input_idx] - max_value) / (DATA_TYPE)denominator;
+        output[output_idx] = res;
+    }
 }

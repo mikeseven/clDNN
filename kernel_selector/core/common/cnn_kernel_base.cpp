@@ -26,22 +26,50 @@ namespace KernelSelctor {
             << "#define TYPE_" << toString(params.inputType) << "\n"
             << "#define NL_M (" << std::to_string(params.nlParams.m) << ")\n"
             << "#define NL_N (" << std::to_string(params.nlParams.n) << ")\n"
-            << "#define INPUT_WIDTH (" << params.inDims.x << ")\n"
-            << "#define INPUT_HEIGHT (" << params.inDims.y << ")\n"
-            << "#define INPUT_DEPTH (" << params.inDims.z << ")\n"
-            << "#define INPUT_BATCH (" << params.inDims.w << ")\n"
             << "#define INPUT_OFFSET (" << params.inDesc.offset << ")\n"
-            << "#define INPUT_ROW_PITCH (" << params.inDesc.pitches.x << ")\n"
-            << "#define INPUT_SLICE_PITCH (" << params.inDesc.pitches.y << ")\n"
-            << "#define INPUT_BATCH_PITCH (" << params.inDesc.pitches.z << ")\n"
-            << "#define OUT_WIDTH (" << params.outDims.x << ")\n"
-            << "#define OUT_HEIGHT (" << params.outDims.y << ")\n"
-            << "#define OUT_DEPTH (" << params.outDims.z << ")\n"
-            << "#define OUT_BATCH (" << params.outDims.w << ")\n"
-            << "#define OUT_OFFSET (" << params.outDesc.offset << ")\n"
-            << "#define OUT_ROW_PITCH (" << params.outDesc.pitches.x << ")\n"
-            << "#define OUT_SLICE_PITCH (" << params.outDesc.pitches.y << ")\n"
-            << "#define OUT_BATCH_PITCH (" << params.outDesc.pitches.z << ")\n";
+            << "#define OUT_OFFSET (" << params.outDesc.offset << ")\n";
+
+        if (params.inputLayout == bx)
+        {
+            jit << "#define INPUT_WIDTH (1)\n"
+                << "#define INPUT_HEIGHT (1)\n"
+                << "#define INPUT_DEPTH (" << params.inDims.x << ")\n"
+                << "#define INPUT_BATCH (" << params.inDims.y << ")\n"
+                << "#define INPUT_ROW_PITCH (1)\n"
+                << "#define INPUT_SLICE_PITCH (1)\n"
+                << "#define INPUT_BATCH_PITCH (" << params.inDesc.pitches.x << ")\n";
+        }
+        else
+        {
+            jit << "#define INPUT_WIDTH (" << params.inDims.x << ")\n"
+                << "#define INPUT_HEIGHT (" << params.inDims.y << ")\n"
+                << "#define INPUT_DEPTH (" << params.inDims.z << ")\n"
+                << "#define INPUT_BATCH (" << params.inDims.w << ")\n"
+                << "#define INPUT_ROW_PITCH (" << params.inDesc.pitches.x << ")\n"
+                << "#define INPUT_SLICE_PITCH (" << params.inDesc.pitches.y << ")\n"
+                << "#define INPUT_BATCH_PITCH (" << params.inDesc.pitches.z << ")\n";
+        }
+
+        if (params.outputLayout == bx)
+        {
+            jit << "#define OUT_WIDTH (1)\n"
+                << "#define OUT_HEIGHT (1)\n"
+                << "#define OUT_DEPTH (" << params.outDims.x << ")\n"
+                << "#define OUT_BATCH (" << params.outDims.y << ")\n"
+                << "#define OUT_ROW_PITCH (1)\n"
+                << "#define OUT_SLICE_PITCH (1)\n"
+                << "#define OUT_BATCH_PITCH (" << params.outDesc.pitches.x << ")\n";
+        }
+        else
+        {
+            jit << "#define OUT_WIDTH (" << params.outDims.x << ")\n"
+                << "#define OUT_HEIGHT (" << params.outDims.y << ")\n"
+                << "#define OUT_DEPTH (" << params.outDims.z << ")\n"
+                << "#define OUT_BATCH (" << params.outDims.w << ")\n"
+                << "#define OUT_ROW_PITCH (" << params.outDesc.pitches.x << ")\n"
+                << "#define OUT_SLICE_PITCH (" << params.outDesc.pitches.y << ")\n"
+                << "#define OUT_BATCH_PITCH (" << params.outDesc.pitches.z << ")\n";
+        }
 
         return jit.str();
     }

@@ -23,8 +23,8 @@ namespace KernelSelctor
         ParamsKey k;
         k.SetDataType(Datatype::F16);
         k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetOutputLayout(bfyx);
+        k.SetInputLayout(bx);
+        k.SetOutputLayout(bx);
         k.SetOffsetSupport();
         k.SetNumDims(1);
         return k;
@@ -37,7 +37,7 @@ namespace KernelSelctor
         KernelData kd = KernelData::Default<SoftMaxParams>(params, 1);
 
         SoftMaxParams& newParams = *static_cast<SoftMaxParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
+        newParams.inputLayout = newParams.outputLayout = bx;
 
         const uint maxLocalWorkGroup    = 32;
         const uint dst_size             = newParams.outDims.Length();

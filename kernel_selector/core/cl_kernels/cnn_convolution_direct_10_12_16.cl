@@ -148,7 +148,10 @@ __kernel void convolution_f16_10x12x16(
 
     if ( batch_id < OUT_BATCH && out_fm < OUT_DEPTH )
     {
+#ifndef BIAS_PER_OUTPUT
         half bias = biases[out_fm];
+#endif
+        
         if ( OUT_WIDTH % TILE_K == 0 ||
              group_x < max_group_x - 1 )
         {
@@ -160,7 +163,14 @@ __kernel void convolution_f16_10x12x16(
                 {
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
-                    for (unsigned i = 0; i < TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                    for (unsigned i = 0; i < TILE_K; i++) 
+                    {
+                    #ifdef BIAS_PER_OUTPUT
+                        const unsigned bias_index = out_fm*OUT_WIDTH*OUT_HEIGHT + ( global_y * TILE_M + y )*OUT_WIDTH + ( global_x * TILE_K + i);
+                        half bias = biases[bias_index];
+                    #endif
+                        pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                    }
                     *(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
                 }
             }
@@ -174,7 +184,14 @@ __kernel void convolution_f16_10x12x16(
                 {
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
-                    for (unsigned i = 0; i < RIGHT_PARTIAL_TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                    for (unsigned i = 0; i < RIGHT_PARTIAL_TILE_K; i++) 
+                    {
+                    #ifdef BIAS_PER_OUTPUT
+                        const unsigned bias_index = out_fm*OUT_WIDTH*OUT_HEIGHT + ( global_y * TILE_M + y )*OUT_WIDTH + ( global_x * TILE_K + i);
+                        half bias = biases[bias_index];
+                    #endif
+                        pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                    }
                     *(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
                 }
             }

@@ -24,7 +24,9 @@ namespace KernelSelctor
         k.SetDataType(Datatype::F16);
         k.SetDataType(Datatype::F32);
         k.SetInputLayout(bfyx);
+        k.SetInputLayout(bx);
         k.SetOutputLayout(bfyx);
+        k.SetOutputLayout(bx);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
         k.SetNumDims(4);
@@ -38,11 +40,20 @@ namespace KernelSelctor
         KernelData kd = KernelData::Default<SoftMaxParams>(params, 1);
 
         SoftMaxParams& newParams = *static_cast<SoftMaxParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
-
         const auto& out = newParams.outDims;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
+
+        if (newParams.inputLayout == bx)
+        {
+            const auto numBatch = out.y;
+            kernel.work_groups.global = cl::NDRange(1, 1, numBatch);
+        }
+        else
+        {
+            const auto numBatch = out.w;
+            kernel.work_groups.global = cl::NDRange(out.x, out.y, numBatch);
+        }
+        
         kernel.kernel_string = GetKernelString(kernel_name, GetBaseJit(newParams), "softmax");
         kernel.args_desc = GetArgumentDesc(1, false, false);
 
