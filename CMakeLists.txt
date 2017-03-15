@@ -229,43 +229,52 @@ endfunction()
 
 # Expressing CMake setting for current build configuration as option and providing a way to correct it (treat as case-insensitive).
 if(NOT CLDNN_BUILT_FROM_OPENVX)
-    if(DEFINED CMAKE_BUILD_TYPE)
-      string(TOLOWER "${CMAKE_BUILD_TYPE}" __CLDNN_BuildType)
-      string(STRIP "${__CLDNN_BuildType}" __CLDNN_BuildType)
+  if(DEFINED CMAKE_BUILD_TYPE)
+    string(TOLOWER "${CMAKE_BUILD_TYPE}" __CLDNN_BuildType)
+    string(STRIP "${__CLDNN_BuildType}" __CLDNN_BuildType)
 
-      if(__CLDNN_BuildType MATCHES "^release$")
-        set(__CLDNN_BuildType "Release")
-      elseif(__CLDNN_BuildType MATCHES "^debug$")
-        set(__CLDNN_BuildType "Debug")
-      else()
-        set(__CLDNN_BuildType "Debug")
-        if(NOT CLDNN__MULTI_CFG_GEN)
-          message(WARNING "[clDNN] CMAKE_BUILD_TYPE: Unknown build configuration. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
-              The \"${__CLDNN_BuildType}\" configuration will be used.
-
-              This value has meaning only for single-configuration generators (like Make). It will be ignored for MSVC/XCode."
-            )
-        endif()
-      endif()
+    if(__CLDNN_BuildType MATCHES "^release$")
+      set(__CLDNN_BuildType "Release")
+    elseif(__CLDNN_BuildType MATCHES "^debug$")
+      set(__CLDNN_BuildType "Debug")
     else()
       set(__CLDNN_BuildType "Debug")
       if(NOT CLDNN__MULTI_CFG_GEN)
-        message(WARNING "[clDNN] CMAKE_BUILD_TYPE: No build configuration specified. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
+        message(WARNING "[clDNN] CMAKE_BUILD_TYPE: Unknown build configuration. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
             The \"${__CLDNN_BuildType}\" configuration will be used.
 
             This value has meaning only for single-configuration generators (like Make). It will be ignored for MSVC/XCode."
           )
       endif()
     endif()
+  else()
+    set(__CLDNN_BuildType "Debug")
+    if(NOT CLDNN__MULTI_CFG_GEN)
+      message(WARNING "[clDNN] CMAKE_BUILD_TYPE: No build configuration specified. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
+          The \"${__CLDNN_BuildType}\" configuration will be used.
+
+          This value has meaning only for single-configuration generators (like Make). It will be ignored for MSVC/XCode."
+        )
+    endif()
+  endif()
   set(CMAKE_BUILD_TYPE "${__CLDNN_BuildType}")
+  unset(__CLDNN_BuildType)
 endif()
 
 # ======================================================================================================
 
 # Detecting, setting and validating target architecture for compilation.
-intel_arch_detect(__CLDNN_DetectedArch_Target __CLDNN_DetectedArch_Host)
+
+if(CLDNN_BUILT_FROM_OPENVX)
+  set(__CLDNN_RequestedArch __ARCH)
+else()
+  set(__CLDNN_RequestedArch "")
+endif()
+
+intel_arch_detect(__CLDNN_DetectedArch_Target __CLDNN_DetectedArch_Host __CLDNN_RequestedArch)
 intel_arch_validate(__CLDNN_DetectedArchValid_Target "${__CLDNN_DetectedArch_Target}")
 unset(__CLDNN_DetectedArch_Host)
+unset(__CLDNN_RequestedArch)
 
 if(DEFINED CLDNN__ARCHITECTURE_TARGET)
   intel_arch_normalize(__CLDNN_Arch_Target "${CLDNN__ARCHITECTURE_TARGET}")
@@ -367,25 +376,25 @@ elseif(DEFINED XCODE_VERSION)
 endif()
 
 # ======================================================================================================
-if(CLDNN__OUTPUT_DIR)
+if(DEFINED CLDNN__OUTPUT_DIR)
   set(CLDNN__OUTPUT_BIN_DIR "${CLDNN__OUTPUT_DIR}" CACHE PATH "Output directory path where the final exetuables, examples and tests will be stored.")
   set(CLDNN__OUTPUT_LIB_DIR "${CLDNN__OUTPUT_DIR}" CACHE PATH "Output directory path where the final libraries will be stored.")
-else()
+endif()
+
 if(CLDNN_BUILT_FROM_OPENVX)
-    set(CLDNN__OUTPUT_BIN_DIR "${CMAKE_BIN_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final exetuables, examples and tests will be stored.")
-    set(CLDNN__OUTPUT_LIB_DIR "${CMAKE_LIB_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final libraries will be stored.")
+  set(CLDNN__OUTPUT_BIN_DIR "${CMAKE_BIN_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final exetuables, examples and tests will be stored.")
+  set(CLDNN__OUTPUT_LIB_DIR "${CMAKE_LIB_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final libraries will be stored.")
 else()
-    # Output directory path where the final libraries, examples and tests will be stored.
-    if(CLDNN__MULTI_CFG_GEN)
-      # Multi-configuration generators automatically append build type subdirectory.
-      set(__CLDNN_OutDir "${CLDNN_BUILD__DEFAULT_OUT_ROOT}/${CLDNN__ARCHITECTURE_TARGET}")
-    else()
-      set(__CLDNN_OutDir "${CLDNN_BUILD__DEFAULT_OUT_ROOT}/${CLDNN__ARCHITECTURE_TARGET}/${__CLDNN_BuildType}")
-    endif()
-    set(CLDNN__OUTPUT_BIN_DIR "${__CLDNN_OutDir}" CACHE PATH "Output directory path where the final exetuables, examples and tests will be stored.")
-    set(CLDNN__OUTPUT_LIB_DIR "${CLDNN__OUTPUT_BIN_DIR}" CACHE PATH "Output directory path where the final libraries will be stored.")
-    unset(__CLDNN_OutDir)
+  # Output directory path where the final libraries, examples and tests will be stored.
+  if(CLDNN__MULTI_CFG_GEN)
+    # Multi-configuration generators automatically append build type subdirectory.
+    set(__CLDNN_OutDir "${CLDNN_BUILD__DEFAULT_OUT_ROOT}/${CLDNN__ARCHITECTURE_TARGET}")
+  else()
+    set(__CLDNN_OutDir "${CLDNN_BUILD__DEFAULT_OUT_ROOT}/${CLDNN__ARCHITECTURE_TARGET}/${CMAKE_BUILD_TYPE}")
   endif()
+  set(CLDNN__OUTPUT_BIN_DIR "${__CLDNN_OutDir}" CACHE PATH "Output directory path where the final exetuables, examples and tests will be stored.")
+  set(CLDNN__OUTPUT_LIB_DIR "${CLDNN__OUTPUT_BIN_DIR}" CACHE PATH "Output directory path where the final libraries will be stored.")
+  unset(__CLDNN_OutDir)
 endif()
 
 # ======================================================================================================
@@ -470,7 +479,7 @@ mark_as_advanced(CLDNN__COMPILE_LINK_ALLOW_UNSAFE_SIZE_OPT)
 set(CLDNN__CMAKE_DEBUG OFF CACHE BOOL "CMake: Enables debug trace messages in clDNN project.")
 mark_as_advanced(CLDNN__CMAKE_DEBUG)
 
-
+# ======================================================================================================
 # ======================================================================================================
 
 # Minimum versions of compilers.
@@ -484,7 +493,6 @@ else()
   set(CLDNN__MIN_COMPILER_VERSION__GCC "4.8")
 endif()
 
-# ======================================================================================================
 # ======================================================================================================
 
 # Checking whether tests can be run.
@@ -662,9 +670,9 @@ message(STATUS "[clDNN] Build type:       ${CMAKE_BUILD_TYPE} (for single-config
 message(STATUS "[clDNN] Av. build types:  ${CMAKE_CONFIGURATION_TYPES} (for multi-configuration generators)")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN] Output bin directory:")
-message(STATUS "[clDNN]    \"${CLDNN__OUTPUT_BIN_DIR}\"")
+message(STATUS "[clDNN]  - \"${CLDNN__OUTPUT_BIN_DIR}\"")
 message(STATUS "[clDNN] Output lib directory:")
-message(STATUS "[clDNN]    \"${CLDNN__OUTPUT_LIB_DIR}\"")
+message(STATUS "[clDNN]  - \"${CLDNN__OUTPUT_LIB_DIR}\"")
 message(STATUS "[clDNN] Architecture:")
 message(STATUS "[clDNN]  - target: ${CLDNN__ARCHITECTURE_TARGET}    (detected: ${__CLDNN_DetectedArch_Target})")
 message(STATUS "[clDNN]")
@@ -781,7 +789,7 @@ if(CLDNN_BUILT_FROM_OPENVX)
   # currently OpenVX Klockwork doesn't support c++14
   set(CLDNN_UseCxx14 OFF)
 else()
-  set(CLDNN_UseCxx14 CLDNN_CompilerSupportsCxx14)
+  set(CLDNN_UseCxx14 CLDNN__COMPILER_SUPPORTS_CXX14)
 endif()
 
 if(NOT CLDNN_UseCxx14)
