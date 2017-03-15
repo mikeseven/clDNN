@@ -120,18 +120,24 @@ struct pooling_gpu : typed_primitive_impl<pooling>
     // Checks if we need boundary checking in kernel.
     static bool needs_boundary_check(const pooling_node& outer)
     {
-        auto input_buffer_size = outer.input().get_output_layout().get_buffer_size();
+        auto input_size = outer.input().get_output_layout().size;
         auto input_offset = outer.get_primitive()->input_offset;
         
         if (input_offset.spatial[0] || input_offset.spatial[1])
             return true;
 
         auto& kernel_size = outer.get_primitive()->size;
+
+        if ((kernel_size.spatial[0] > input_size.spatial[0]) || (kernel_size.spatial[1] > input_size.spatial[1]))
+        {
+            return true;
+        }
+        
         auto& stride = outer.get_primitive()->stride;
 
         // If modulo is not 0 that means it is not dividable by stride, so we would go out of boundary.
-        auto mod_x = (input_buffer_size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_size.spatial[0]) % stride.spatial[0];
-        auto mod_y = (input_buffer_size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_size.spatial[1]) % stride.spatial[1];
+        auto mod_x = (input_size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_size.spatial[0]) % stride.spatial[0];
+        auto mod_y = (input_size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_size.spatial[1]) % stride.spatial[1];
 
         return mod_x || mod_y;
     }
@@ -189,10 +195,6 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         auto const& stride_dimensions = stride.batch.size() + stride.feature.size() + stride.spatial.size();
         auto& window = arg.get_primitive()->size;
         auto const& window_dimensions = window.batch.size() + window.feature.size() + window.spatial.size();
-        const auto padding = arg.get_output_layout().data_padding.filling_value();
-
-        if (padding != 0.0f) 
-            throw std::logic_error("Pooling supports only zero padding.");
 
         if (input_dimensions != output_dimensions)
             throw std::invalid_argument("Pooling input/output number of dimension does not match.");

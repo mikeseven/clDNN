@@ -36,23 +36,19 @@ KERNEL(pooling_gpu_max_offset)(const __global UNIT_TYPE* input, __global UNIT_TY
     const int offset_x = INPUT_PADDING_LOWER_SIZE_X + x * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
     const int offset_y = INPUT_PADDING_LOWER_SIZE_Y + y * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
 
-	if ((offset_x >= INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X) ||
-	   (offset_y >= INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y))
-		return;
-
     UNIT_TYPE result = UNIT_INIT_VAL_MAX;
 
     const int batch_and_feature_offset = get_global_id(0);
     for(uint j = 0; j < WINDOW_SIZE_Y; j++)
     {
         int input_offset_y = offset_y + j;
-        bool zero_y = input_offset_y >= input_buffer_size_y || input_offset_y < 0;
+        bool zero_y = (input_offset_y >= INPUT_PADDING_LOWER_SIZE_Y+INPUT_SIZE_Y) || (input_offset_y < INPUT_PADDING_LOWER_SIZE_Y);
         if(!zero_y)
         {
             for(uint i = 0; i < WINDOW_SIZE_X; i++)
             {
                 int input_offset_x = offset_x + i;
-                bool zero = input_offset_x >= input_buffer_size_x || input_offset_x < 0;
+                bool zero = (input_offset_x >= INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X) || (input_offset_x < INPUT_PADDING_LOWER_SIZE_X);
                 if(!zero)
                 {
                     int input_idx = batch_and_feature_offset + INPUT_BATCH_NUM * INPUT_FEATURE_NUM * (input_offset_x + input_offset_y * input_buffer_size_x);
