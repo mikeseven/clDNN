@@ -233,7 +233,19 @@ elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
       ALIAS DeadCodeEliminate
       ALIAS DeadCodePreserve
     )
-
+  
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.9")
+    intel_flag_register_settings(
+        CompilerOptions
+        ALIAS StackProtector "-fstack-protector"
+      )
+  else()
+    intel_flag_register_settings(
+        CompilerOptions
+        ALIAS StackProtector "-fstack-protector-strong"
+      )
+  endif()
+  
   if(CLDNN__COMPILE_LINK_ALLOW_UNSAFE_SIZE_OPT)
     intel_flag_register_settings(
         CompilerOptions

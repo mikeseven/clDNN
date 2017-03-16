@@ -713,16 +713,17 @@ endfunction()
 #
 # @param targetArchVarName Name of variable placeholder for target architecture.
 # @param hostArchVarName   Name of variable placeholder for host architecture.
-function(intel_arch_detect targetArchVarName hostArchVarName arch)
+# @param targetArchBits    Hint about target architecture. (in case that the user specify the architecture explicitly)
+function(intel_arch_detect targetArchVarName hostArchVarName targetArchBits)
   string(TOLOWER "${CMAKE_GENERATOR}" _cmakeGenerator)
   string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _cmakeTargetProcessor)
 
   # Target architecture:
   # Detect target architecture on Windows using suffix from generator.
   if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-    if(arch MATCHES 32)
+    if(targetArchBits MATCHES 32)
       set(_targetArchitecture "Windows32")
-    elseif(arch MATCHES 64)
+    elseif(targetArchBits MATCHES 64)
       set(_targetArchitecture "Windows64")
     else()
       if(_cmakeGenerator MATCHES " (arm|aarch64)$")
@@ -743,9 +744,9 @@ function(intel_arch_detect targetArchVarName hostArchVarName arch)
       set(_targetArchOS "Darwin")
     endif()
     
-    if(arch MATCHES 32)
+    if(targetArchBits MATCHES 32)
       set(_targetArchitecture "${_targetArchOS}32")
-    elseif(arch MATCHES 64)
+    elseif(targetArchBits MATCHES 64)
       set(_targetArchitecture "${_targetArchOS}64")
     else()
       if(_cmakeTargetProcessor MATCHES "(x64|x86_64|amd64|64[ ]*\\-[ ]*bit)")

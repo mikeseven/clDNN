@@ -379,9 +379,7 @@ endif()
 if(DEFINED CLDNN__OUTPUT_DIR)
   set(CLDNN__OUTPUT_BIN_DIR "${CLDNN__OUTPUT_DIR}" CACHE PATH "Output directory path where the final exetuables, examples and tests will be stored.")
   set(CLDNN__OUTPUT_LIB_DIR "${CLDNN__OUTPUT_DIR}" CACHE PATH "Output directory path where the final libraries will be stored.")
-endif()
-
-if(CLDNN_BUILT_FROM_OPENVX)
+elseif(CLDNN_BUILT_FROM_OPENVX)
   set(CLDNN__OUTPUT_BIN_DIR "${CMAKE_BIN_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final exetuables, examples and tests will be stored.")
   set(CLDNN__OUTPUT_LIB_DIR "${CMAKE_LIB_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final libraries will be stored.")
 else()
@@ -396,7 +394,6 @@ else()
   set(CLDNN__OUTPUT_LIB_DIR "${CLDNN__OUTPUT_BIN_DIR}" CACHE PATH "Output directory path where the final libraries will be stored.")
   unset(__CLDNN_OutDir)
 endif()
-
 # ======================================================================================================
 
 # Intel OpenCL SDK ICD: Version of ICD used to build clDNN.
@@ -787,15 +784,21 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/CMakeCompilerLinkerOpts.txt" NO_POLICY_SCOP
 
 if(CLDNN_BUILT_FROM_OPENVX)
   # currently OpenVX Klockwork doesn't support c++14
-  set(CLDNN_UseCxx14 OFF)
+  set(__CLDNN_UseCxx14 OFF)
 else()
-  set(CLDNN_UseCxx14 CLDNN__COMPILER_SUPPORTS_CXX14)
+  set(__CLDNN_UseCxx14 ${CLDNN__COMPILER_SUPPORTS_CXX14})
 endif()
 
-if(NOT CLDNN_UseCxx14)
+if(NOT __CLDNN_UseCxx14)
+  if(CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_EXAMPLES OR CLDNN__INCLUDE_TESTS)
+    message(WARNING "Due to lack of support of c++14 switch cldnn_core/examples/tests projects will not be included in created solution")
+  endif()
+  
+  set(CLDNN__INCLUDE_CORE OFF CACHE BOOL "" FORCE)
   set(CLDNN__INCLUDE_EXAMPLES OFF CACHE BOOL "" FORCE)
   set(CLDNN__INCLUDE_TESTS OFF CACHE BOOL "" FORCE)
 endif()
+unset(__CLDNN_UseCxx14)
 
 # ======================================= Generic compiler options =====================================
 # Selecting C++ Runtime.
@@ -932,6 +935,13 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
           -fPIC
           -Wl,--no-undefined
       )
+    intel_config_flag_apply_settings(
+        CompilerOptions
+        "${__CLDNN_CompilerFlagName}"
+        ALL_PATTERN ""
+        SET
+         StackProtector
+     )
   elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
     intel_config_flag_apply_settings(
         CompilerOptions
