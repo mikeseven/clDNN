@@ -106,7 +106,7 @@ namespace tests
 		auto out_layout = out.get_layout();
 		auto ref_layout = ref.get_layout();
 
-		assert(out_layout.size.transform(cldnn::format::bfyx, 0) == ref_layout.size.transform(cldnn::format::bfyx, 0));
+		EXPECT_EQ(out_layout.size.transform(cldnn::format::bfyx, 0), ref_layout.size.transform(cldnn::format::bfyx, 0));
 
 		int batch_size = out_layout.size.transform(cldnn::format::bfyx, 0).sizes()[0];
 		int feature_size = out_layout.size.transform(cldnn::format::bfyx, 0).sizes()[1];
@@ -128,7 +128,8 @@ namespace tests
 						size_t ref_index = get_linear_index(ref_layout, b, f, y, x);
 
 						EXPECT_TRUE(floating_point_equal(res_data[res_index], ref_data[ref_index]))
-							<< "Expected " << (float)res_data[res_index] << " to be almost equal (within 4 ULP's) to " << (float)ref_data[ref_index] << " (ref index = " << ref_index << ")!";
+							<< "Expected " << (float)res_data[res_index] << " to be almost equal (within 4 ULP's) to " << (float)ref_data[ref_index] 
+							<< " (ref index = " << ref_index << ", B " << b << ", F "<< f << ", Y " << y << ", X " << x << ")!";
 
 						if (HasFailure())
 						{

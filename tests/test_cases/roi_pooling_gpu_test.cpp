@@ -249,7 +249,7 @@ public:
     
 	static std::vector<test_params*> generate_input_buffers_params()
 	{        
-        std::vector<int> test_rois_sizes = { 1};//, 2 };          
+        std::vector<int> test_rois_sizes = { 1, 20 };          
         
 		for (cldnn::data_types data_type : test_data_types)
 		{
@@ -463,6 +463,17 @@ private:
                             output_mem[pool_index] = 0;
                             //   argmax_data[pool_index] = -1;
                         }
+						else
+						{
+							if (sizeof(Type) == 4)
+							{
+								output_mem[pool_index] = -FLT_MAX;
+							}
+							else
+							{
+								output_mem[pool_index] = FLOAT16::min_val();
+							}
+						}
 
                         for (int h = ystart; h < yend; ++h) 
                         {
@@ -501,8 +512,7 @@ private:
         const cldnn::roi_pooling* roi_pooling = (cldnn::roi_pooling*)layer_params;
         
         int fm = generic_params->input_layouts[0].feature[0];
-        int num_rois = generic_params->input_layouts[0].batch[0];
-        
+        int num_rois = generic_params->input_layouts[1].batch[0];
         cldnn::tensor output_layout = { format::bfyx, { num_rois, fm, roi_pooling->pooled_height, roi_pooling->pooled_width }};
         return output_layout;
     }
@@ -514,7 +524,7 @@ private:
 std::vector<cldnn::primitive*> roi_pooling_test::all_layer_params = {};
 std::vector<tests::test_params*> roi_pooling_test::all_generic_params = {};
 
-TEST_P(roi_pooling_test, DISABLED_test_all) 
+TEST_P(roi_pooling_test, test_all) 
 {
     run_single_test();
 }
