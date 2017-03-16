@@ -28,7 +28,7 @@ KERNEL (depth_concatenate_gpu_bfyx_no_padding)(__global float* input, __global f
     uint output_offset = element_group_offset + batch_id * OUTPUT_FEATURE_NUM * OUTPUT_SIZE_X * OUTPUT_SIZE_Y;
     output_offset += OUTPUT_SIZE_X * OUTPUT_SIZE_Y * depth_offset;
 
-    if(element_group_offset < INPUT_ELEMENTS_COUNT )
+    if(element_group_offset < INPUT_ELEMENTS_COUNT - WORK_GROUP_SIZE * ELEMENTS_PER_WORK_ITEM )
     {
         float8 in = as_float8(intel_sub_group_block_read8((const __global uint*)input + input_offset));
         intel_sub_group_block_write8((__global uint*)output + output_offset, as_uint8(in));
@@ -37,13 +37,14 @@ KERNEL (depth_concatenate_gpu_bfyx_no_padding)(__global float* input, __global f
     {
         // This is the last SIMD that needs to write only partial data.
         uint element_offset = get_global_id(1) * ELEMENTS_PER_WORK_ITEM;
+        uint element_offset_in_workitem = element_offset - element_group_offset;
         for(uint i = 0; i < ELEMENTS_PER_WORK_ITEM; i++)
         {
             if(element_offset >= INPUT_ELEMENTS_COUNT)
                 return;
 
-            output[output_offset + element_offset] = input[input_offset + element_offset];
-            element_offset++;
+            output[output_offset + element_offset_in_workitem] = input[input_offset + element_offset_in_workitem];
+            element_offset_in_workitem++;
         }
     }
 }
