@@ -236,8 +236,8 @@ template<> struct build_option_traits<build_option_type::outputs>
         return std::make_shared<object_type>(option);
     }
 };
-} // namespace detail
 #endif
+} // namespace detail
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 inline std::shared_ptr<const build_option> build_option::fusing(bool enable)

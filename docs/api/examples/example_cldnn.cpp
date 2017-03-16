@@ -200,7 +200,7 @@ int main()
     // Build the network. Allow implicit data optimizations.
     // The "softmax" primitive is not used as an input for other primitives,
     // so we do not need to explicitly select it in build_options::outputs()
-    cldnn::network network(engine, topology, { build_option::optimize_data });
+    cldnn::network network(engine, topology, { build_option::optimize_data(true) });
 
     // Set network data which was not known at topology creation.
     network.set_input_data("conv2_weights", load_mem(engine, "conv2_weights.data"));
