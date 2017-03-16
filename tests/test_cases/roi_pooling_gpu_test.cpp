@@ -534,4 +534,3 @@ INSTANTIATE_TEST_CASE_P(ROI_POOLING,
         ::testing::Combine(::testing::ValuesIn(roi_pooling_test::generate_input_buffers_params()),
         ::testing::ValuesIn(roi_pooling_test::generate_layer_params())),
         tests::generic_test::custom_param_name_functor());
-

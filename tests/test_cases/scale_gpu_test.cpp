@@ -637,3 +637,339 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_batch1) {
         }
     }
 }
+
+//////////////////////////////////////////////////////////////////////////////
+//                                                                          //
+//                      New non-Hila-style tests                            //
+//                                                                          //
+//////////////////////////////////////////////////////////////////////////////
+
+//TODO: this should be done using TEST_P or some equivallent construct
+static network setup_scale_network(
+    const data_types dt,
+    const tensor input_tensor,
+    const tensor scale_tensor,
+    bool bias_term,
+    const tensor bias_tensor,
+    bool pass_bias_term,    //TODO: a WA for lack of std::optional<bool> bias_term
+    bool pass_bias          //TODO: a WA for lack of std::optional<tensor> bias
+)
+{
+    engine engine;
+    topology topology;
+
+    auto input_mem = memory::allocate(engine, { dt, input_tensor });
+    auto scale_mem = memory::allocate(engine, { dt, scale_tensor });
+    topology.add(input_layout("input", input_mem.get_layout()));
+    topology.add(input_layout("scale_input", scale_mem.get_layout()));
+
+    if (pass_bias_term)
+    {
+        if (pass_bias)
+        {
+            auto bias_mem = memory::allocate(engine, { dt, bias_tensor });
+            topology.add(input_layout("bias_input", bias_mem.get_layout()));
+
+            topology.add(scale("scale", "input", "scale_input", bias_term, "bias_input" ));
+        }
+        else
+        {
+            topology.add(scale("scale", "input", "scale_input", bias_term));
+        }
+    }
+//TODO: this will be supported after the API change
+//    else
+//    {
+//        assert(!pass_bias);
+//
+//        topology.add(scale("scale", "input", "scale_input"));
+//    }
+
+    return network(engine, topology);
+}
+
+TEST(NegativeScaleTest, TestAll) {
+    auto d = data_types::f32;
+    auto f = format::bfyx;
+    auto of = format::yxfb;
+
+    std::vector<int> t { 3, 4, 5, 6 };
+
+    // broadcast rules mean that either the dim size is equal to input dim or is 1
+    std::vector<std::vector<int>> good_ts =
+    {
+        { 1, 4, 5, 6 }, { 3, 1, 5, 6 }, { 3, 4, 1, 6 }, { 3, 4, 5, 1 },
+        { 1, 1, 5, 6 }, { 1, 4, 1, 6 }, { 1, 4, 5, 1 }, { 3, 1, 1, 6 }, { 3, 1, 5, 1 }, { 3, 4, 1, 1 },
+        { 1, 1, 1, 6 }, { 1, 1, 5, 1 }, { 1, 4, 1, 1 }, { 3, 1, 1, 1 }
+    };
+    std::vector<std::vector<int>> bad_ts = { { 2, 4, 5, 6 }, { 3, 2, 5, 6 }, { 3, 4, 2, 6 }, { 3, 4, 5, 2 } };
+
+    //TODO: should be ASSERT_THROW(statement, exception_type) - but what exception type?
+    ASSERT_ANY_THROW(setup_scale_network(d, { }, { }, false, { }, false, false));
+    ASSERT_ANY_THROW(setup_scale_network(d, { }, { }, false, { }, true, false));
+    ASSERT_ANY_THROW(setup_scale_network(d, { }, { }, false, { }, true, true));
+
+    ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(of, t), false, tensor(f, t), true, false));
+    ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(of, t), true, tensor(f, t), true, true));
+    ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, t), true, tensor(of, t), true, true));
+
+    // make sure that it's the input that's masked in the scale/bias with a "1", not ther other way around
+    for (const auto & good : good_ts)
+    {
+        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, good), tensor(f, t), false, tensor(f, t), true, false));
+        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, good), tensor(f, t), true, tensor(f, t), true, true));
+    }
+
+    // sizes must either be equal to input or at most have 
+    for (const auto & bad : bad_ts)
+    {
+        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, bad), false, tensor(f, t), true, false));
+        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, bad), true, tensor(f, t), true, true));
+        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, t), true, tensor(f, bad), true, true));
+
+        for (const auto & good : good_ts)
+        {
+            ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, bad), true, tensor(f, good), true, true));
+            ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, good), true, tensor(f, bad), true, true));
+        }
+    }
+
+    // we expect the broadcast mask to be identical for scale and bias, when present
+    for (unsigned i = 0; i < good_ts.size(); ++i)
+    for (unsigned j = 0; j < good_ts.size(); ++j)
+        if (i != j)
+            ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, good_ts[i]), true, tensor(f, good_ts[j]), true, true));
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//                                                                          //
+//                          New Hila-style tests                            //
+//                                                                          //
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace cldnn;
+
+class scale_test : public tests::generic_test
+{
+public:
+    static void TearDownTestCase()
+    {
+        for (auto generic_params : all_generic_params)
+        {
+            delete generic_params;
+        }
+
+        for (auto layer_params : all_layer_params)
+        {
+            delete layer_params;
+        }
+    }
+
+    virtual void print_params() override
+    {
+        const auto p = reinterpret_cast<cldnn::scale *>(layer_params);
+
+        printf("Layer params: bias_term: %d\n", p->bias_term);
+    }
+
+    //TODO: use an enum instead of int i
+    static std::vector<cldnn::primitive*> generate_specific_test_params(int variant)
+    {
+        std::vector<cldnn::primitive*> all_layer_params;
+
+        switch(variant)
+        {
+            case 0: all_layer_params.push_back(new scale("scale", "input0", "input1", false)); break;	//TODO: remove the false here!
+            case 1: all_layer_params.push_back(new scale("scale", "input0", "input1", true, "input2")); break;
+            case 2: all_layer_params.push_back(new scale("scale", "input0", "input1", false, "input2")); break;
+                    //	case 3: all_layer_params.push_back(new scale("scale", "input0", "input1", true));	// This case should be checked by negative_scale_test
+                    //	case 4: all_layer_params.push_back(new scale("scale", "input0", "input1", false));	// This case should be checked by negative_scale_test
+            default: assert(0);
+        }
+
+        return all_layer_params;
+    }
+
+    static std::vector<tests::test_params*> generate_generic_test_params(int variant)
+    {
+        assert(variant >= 0 && variant <= 2);
+
+        std::vector<tests::test_params*> all_generic_params;
+
+        for (cldnn::data_types dt : test_data_types)
+        for (cldnn::format fmt : test_formats)
+        for (tensor & t : test_input_sizes)
+        {
+            std::vector<std::array<int, 4>> attempted_dims;
+
+            for (int32_t b : test_batch_sizes)
+            for (auto f : test_feature_sizes)
+            for (int mask = 0; mask < 16; ++mask)	//TODO: do we want to restrict it to some smaller subset like for (auto mask : { 0, 1, 3, 7, 15, 5, 10})? the problem is that because of the layout we might miss some interesting combinations since this is effectively hardcoded int he kernels
+            {
+                const int w = t.spatial[0];
+                const int h = t.spatial[1];
+
+                const auto mb = mask & 0x8 ? b : 1;
+                const auto mf = mask & 0x4 ? f : 1;
+                const auto mh = mask & 0x2 ? h : 1;
+                const auto mw = mask & 0x1 ? w : 1;
+
+                // avoid adding test cases with different masks leading to the same dimensions
+                if(attempted_dims.end() == std::find_if(attempted_dims.begin(), attempted_dims.end(), [=](std::array<int, 4> & arr) { return arr[0] == mb && arr[1] == mf && arr[2] == mh && arr[3] == mw; }))
+                {
+                    attempted_dims.emplace_back<std::array<int, 4>>({mb, mf, mh, mw});
+
+                    test_params * tp = new test_params();
+                    tp->data_type = dt;
+
+                    tp->input_layouts.push_back( cldnn::tensor( fmt, { b, f, h, w } ));
+                    tp->input_layouts.push_back( cldnn::tensor( fmt, { mb, mf, mh, mw } ));
+                    if (variant)
+                            tp->input_layouts.push_back( cldnn::tensor( fmt, { mb, mf, mh, mw } ));
+
+                    all_generic_params.emplace_back(tp);
+                }
+            }
+        }
+
+        return all_generic_params;
+    }
+
+    static std::vector<std::tuple<test_params*, cldnn::primitive*>> generate_all_test_params()
+    {
+        std::vector<std::tuple<test_params*, cldnn::primitive*>> res;
+
+        for (int variant = 0; variant <= 2; ++variant)
+        {
+            auto tpv = generate_generic_test_params(variant); 
+            auto pv = generate_specific_test_params(variant);
+
+            all_generic_params.insert(all_generic_params.end(), tpv.begin(), tpv.end());
+            all_layer_params.insert(all_layer_params.end(), pv.begin(), pv.end());
+
+            for (auto & tp : tpv)
+            for (auto & p: pv)
+                res.emplace_back(tp, p);
+        }
+
+        return res;
+    }
+
+    virtual bool is_format_supported(cldnn::format format) override
+    {
+        return format == cldnn_format_type::cldnn_format_bfyx;
+    }
+
+    template<typename Type>
+    memory generate_reference_typed(const std::vector<memory> & inputs)
+    {
+        assert(inputs.size() == 3 || inputs.size() == 2);
+        const bool bias_input_present = inputs.size() == 3;
+
+        const memory & input = inputs[0];
+        const memory & scale = inputs[1];
+        const memory * bias = bias_input_present ? &inputs[2] : nullptr;
+        assert(!bias_input_present || bias);
+
+        //Output is bfyx
+        auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().size.transform(cldnn::format::bfyx, 0)));
+
+        const auto params = reinterpret_cast<cldnn::scale *>(layer_params);
+        const bool bias_term = params->bias_term;
+
+        const Type * const in0_mem = input.pointer<Type>().data();
+        const Type * const in1_mem = scale.pointer<Type>().data();
+        const Type * const in2_mem = bias && bias_term ? bias->pointer<Type>().data() : nullptr; //TODO: is the condition needed or is it nullptr anyway?
+        Type * const out_mem = output.pointer<Type>().data();
+
+        const int in0_b = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
+        const int in0_f = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
+        const int in0_h = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
+        const int in0_w = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+
+        { // asserting dims
+            const int out_b = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
+            const int out_f = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
+            const int out_h = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
+            const int out_w = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+
+            const int in1_b = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
+            const int in1_f = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
+            const int in1_h = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
+            const int in1_w = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+            // input and output dims must match
+            assert(in0_b == out_b && in0_f == out_f && in0_h == out_h && in0_w == out_w);
+
+            // input and output dims must match
+            assert(in0_b == out_b && in0_f == out_f && in0_h == out_h && in0_w == out_w);
+
+            // scale/bias dims must be equal to in/out or be 1 for broadcast
+            assert(in1_b == 1 || in1_b == in0_b);
+            assert(in1_f == 1 || in1_f == in0_f);
+            assert(in1_h == 1 || in1_h == in0_h);
+            assert(in1_w == 1 || in1_w == in0_w);
+
+            if (bias_term)
+            {
+                const int in2_b = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
+                const int in2_f = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
+                const int in2_h = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
+                const int in2_w = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+
+                // scale and bias dims must match
+                assert(in1_b == in2_b && in1_f == in2_f && in1_h == in2_h && in1_w == in2_w);
+            }
+        }
+
+        for (int n = 0; n < in0_b; ++n)
+        for (int c = 0; c < in0_f; ++c)
+        for (int y = 0; y < in0_h; ++y)
+        for (int x = 0; x < in0_w; ++x)
+        {
+            const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x);
+            const size_t in1_idx = get_linear_index_with_broadcast(scale.get_layout(), n, c, y, x, input.get_layout());
+            const size_t out_idx = get_linear_index(output.get_layout(), n, c, y, x);
+
+            out_mem[out_idx] = in0_mem[in0_idx] * in1_mem[in1_idx];
+
+            if (bias_term)
+            {
+                const size_t in2_idx = get_linear_index_with_broadcast(bias->get_layout(), n, c, y, x, input.get_layout());
+                out_mem[out_idx] += in2_mem[in2_idx];
+            }
+        }
+
+        return output;
+    }
+
+    virtual memory generate_reference(const std::vector<memory> & inputs) override
+    {
+        if (generic_params->data_type == data_types::f32)
+        {
+            return generate_reference_typed<float>(inputs);
+        }
+        else
+        {
+            return generate_reference_typed<FLOAT16>(inputs);
+        }
+    }
+
+private:
+    static std::vector<tests::test_params*> all_generic_params;
+    static std::vector<cldnn::primitive*> all_layer_params;
+};
+
+std::vector<cldnn::primitive*> scale_test::all_layer_params = {};
+std::vector<tests::test_params*> scale_test::all_generic_params = {};
+
+TEST_P(scale_test, DISABLED_TestAll)
+{
+    run_single_test();
+}
+
+INSTANTIATE_TEST_CASE_P(SCALE,
+    scale_test,
+    ::testing::ValuesIn(scale_test::generate_all_test_params()),
+    tests::generic_test::custom_param_name_functor());
+

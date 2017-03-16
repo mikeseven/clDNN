@@ -18,6 +18,8 @@
 
 #pragma once
 
+#define TEMP_USE_CUSTOM_ULP_IN_TESTING 0
+
 #include "api/memory.hpp"
 #include "api/tensor.hpp"
 #include <iostream>
@@ -230,7 +232,7 @@ inline bool are_equal(
         return true;
 }
 
-inline bool floating_point_equal(FLOAT16 x, FLOAT16 y, int16_t max_ulps_diff = 4) {
+inline bool floating_point_equal(FLOAT16 x, FLOAT16 y, int max_ulps_diff = 4) {
 	int16_t sign_bit_mask = 1;
 	sign_bit_mask <<= 15;
 	int16_t a = x.v, b = y.v;
@@ -244,7 +246,7 @@ inline bool floating_point_equal(FLOAT16 x, FLOAT16 y, int16_t max_ulps_diff = 4
 	}
 }
 
-inline bool floating_point_equal(float x, float y, int32_t max_ulps_diff = 4) {
+inline bool floating_point_equal(float x, float y, int max_ulps_diff = 4) {
 	int32_t sign_bit_mask = 1;
 	sign_bit_mask <<= 31;
 	int32_t a = reinterpret_cast<int32_t&>(x), b = reinterpret_cast<int32_t&>(y);
@@ -294,14 +296,19 @@ class generic_test : public ::testing::TestWithParam<std::tuple<test_params*, cl
 	
 public:
 
+#if TEMP_USE_CUSTOM_ULP_IN_TESTING
+    generic_test(int ulp=4);
+#else
     generic_test();
+#endif
 
     void run_single_test();
 
     template<typename Type>
     void compare_buffers(const cldnn::memory& out, const cldnn::memory& ref);
 
-    uint32_t get_linear_index(cldnn::layout layout, int b, int f, int y, int x);
+    size_t get_linear_index(const cldnn::layout & layout, int b, int f, int y, int x);
+    size_t get_linear_index_with_broadcast(const cldnn::layout & in_layout, int b, int f, int y, int x, const cldnn::layout & out_layout);
 
     static std::vector<test_params*> generate_generic_test_params(std::vector<test_params*> all_generic_params);
 
@@ -313,8 +320,7 @@ public:
             }
     };
 
-protected:
-        
+protected: 
     virtual void print_params() { printf("%s:%d - NOT IMPLEMENTED!!!\n", __FILE__, __LINE__); }
 
     cldnn::engine engine;
@@ -333,6 +339,10 @@ protected:
     static std::vector<int32_t> test_batch_sizes;
     static std::vector<int32_t> test_feature_sizes;
     static std::vector<cldnn::tensor> test_input_sizes;
+
+#if TEMP_USE_CUSTOM_ULP_IN_TESTING
+    const int ulp;
+#endif
 };
 
 
