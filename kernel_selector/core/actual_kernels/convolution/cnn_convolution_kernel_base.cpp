@@ -22,11 +22,11 @@ namespace KernelSelctor
     {
         void imemcpy_s(void *dest, std::size_t dmax, const void *src, std::size_t slen)
         {
-#if defined __GNUC__ && __GNUC__ <= 4
+//#if defined __GNUC__ && __GNUC__ <= 4
             memcpy(dest, src, std::min(dmax, slen));
-#else
-            memcpy_s(dest, dmax, src, slen);
-#endif
+//#else
+//            memcpy_s(dest, dmax, src, slen);
+//#endif
         }
     }
 
