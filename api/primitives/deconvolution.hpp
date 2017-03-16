@@ -21,12 +21,6 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
 
 /// @brief Performs transposed convolution.
 /// Also supports built-in Relu @ref activation available by setting it in arguments.
@@ -117,7 +111,4 @@ protected:
         dto.activation_negative_slope = activation_negative_slope;
     }
 };
-/// @}
-/// @}
-/// @}
 }

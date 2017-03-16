@@ -18,13 +18,7 @@
 #ifndef CROP_H
 #define CROP_H
 
-#include "../cldnn.h"
-/// @addtogroup c_api C API
-/// @{
-/// @addtogroup c_topology Network Topology
-/// @{
-/// @addtogroup c_primitives Primitives
-/// @{
+#include "api/cldnn.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,8 +39,5 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(crop);
 }
 #endif
 
-/// @}
-/// @}
-/// @}
 #endif /* CROP_H */
 

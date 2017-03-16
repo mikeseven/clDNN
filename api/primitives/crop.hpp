@@ -21,12 +21,6 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
 
 /// @brief Performs crop operation on input.
 /// @details Crops the input to the shape of reference_input accross all dimensions taking into account specified input offsets.
@@ -75,7 +69,4 @@ protected:
         dto.offsets = offsets;
     }
 };
-/// @}
-/// @}
-/// @}
 }

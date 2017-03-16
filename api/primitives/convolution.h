@@ -19,33 +19,17 @@
 #define CONVOLUTION_H
 
 #include "../cldnn.h"
-/// @addtogroup c_api C API
-/// @{
-/// @addtogroup c_topology Network Topology
-/// @{
-/// @addtogroup c_primitives Primitives
-/// @{
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/// @brief Performs forward spatial convolution with weight sharing.
-/// Also supports built-in Relu @CLDNN_PRIMITIVE_DESC{activation} available by setting it in arguments.
-/// @details Parameters are defined in context of "direct" convolution, but actual algorithm is not implied.
-/// Look into docs/size_offset_stride_padding.html for description how size, offsets, stride & padding parameter work.
 CLDNN_BEGIN_PRIMITIVE_DESC(convolution)
-/// @brief Defines shift in input buffer between adjacent calculations of output values.
 cldnn_tensor stride;
-/// @brief Enable Relu activation.
 uint32_t with_activation;
-/// @brief Relu activation slope.
 float activation_negative_slope;
-/// @brief On how many cards split the computation to.
 uint32_t split;
-/// @brief Array of primitive ids containing weights data. Size of array should be equivalent to @p split.
 cldnn_primitive_id_arr weights;
-/// @brief Array of primitive ids containing bias data. Size of array should be equivalent to @p split.
 cldnn_primitive_id_arr bias;
 CLDNN_END_PRIMITIVE_DESC(convolution)
 
@@ -55,8 +39,5 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(convolution);
 }
 #endif
 
-/// @}
-/// @}
-/// @}
 #endif /* CONVOLUTION_H */
 

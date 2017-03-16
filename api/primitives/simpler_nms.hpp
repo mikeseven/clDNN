@@ -24,13 +24,7 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
-
+    
 struct simpler_nms : public primitive_base<simpler_nms, CLDNN_PRIMITIVE_DESC(simpler_nms)>
 {
     CLDNN_DECLATE_PRIMITIVE(simpler_nms)
@@ -94,7 +88,4 @@ protected:
     }
 };
 
-/// @}
-/// @}
-/// @}
 }

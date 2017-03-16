@@ -21,12 +21,6 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
 
 /// @brief Performs elementwise product of input and scale_input.
 /// @details Scale input dimension should be equal to input dimension or be 1 if it is not there.<br>
@@ -117,7 +111,4 @@ protected:
         dto.bias = bias.c_str();
     }
 };
-/// @}
-/// @}
-/// @}
 }

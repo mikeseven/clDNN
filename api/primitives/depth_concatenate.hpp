@@ -21,13 +21,6 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
-
 /// @details Depth concatenation is used to concatenate features from multiple sources into one destination.
 /// Note that all sources must have the same spatial and batch sizes and also the same format as output.
 /// @par Alogrithm:
@@ -71,7 +64,4 @@ struct depth_concatenate : public primitive_base<depth_concatenate, CLDNN_PRIMIT
 private:
     void update_dto(dto&) const override {}
 };
-/// @}
-/// @}
-/// @}
 }

@@ -21,13 +21,6 @@
 
 namespace cldnn
 {
-/// @addtogroup cpp_api C++ API
-/// @{
-/// @addtogroup cpp_topology Network Topology
-/// @{
-/// @addtogroup cpp_primitives Primitives
-/// @{
-
 /// @brief Select mode for the @ref eltwise layer.
 enum class eltwise_mode : int32_t
 {
@@ -103,7 +96,4 @@ protected:
         dto.activation_negative_slope = activation_negative_slope;
     }
 };
-/// @}
-/// @}
-/// @}
 }
