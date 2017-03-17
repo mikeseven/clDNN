@@ -237,7 +237,6 @@ pooling_gpu::kernel_data defauly_bfyx(const pooling& arg)
     kd.gws0 = output_size.spatial[0];
     kd.gws1 = output_size.spatial[1];
 
-    // Find largest positive local work size that is divider for global work size.
     kd.lws0 = 32;
     kd.lws1 = 1;
     kd.lws2 = 1;
