@@ -18,11 +18,11 @@ KERNEL (lrn_gpu_b8)(const __global float* input, __global float* output)
 {
     const uint global_id = get_global_id(0);
     const uint element_offset = get_global_id(1) * (INPUT_BATCH_NUM/8) * INPUT_FEATURE_NUM;
-
+    
     const uint linear_id = global_id + element_offset;
     float8 acc = 0;
 
-    int input_offset_f = global_id + HELP_INPUT_OFFSET * (INPUT_BATCH_NUM/8);
+    int input_offset_f = global_id + HELP_INPUT_OFFSET * (INPUT_BATCH_NUM / 8);
     int input_idx = input_offset_f + element_offset;
     for (int i = 0; i < P_SIZE; i++)
     {
