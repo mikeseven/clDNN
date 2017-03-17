@@ -14,6 +14,10 @@ KERNEL(pooling_gpu_bfyx_max)(const __global UNIT_TYPE* input, __global UNIT_TYPE
 
     const uint x = get_global_id(0);
     const uint y = get_global_id(1);
+        
+    if (x >=  INPUT_SIZE_X)
+        return;
+
     const int offset_x = x * STRIDE_SIZE_X;
     const int offset_y = y * STRIDE_SIZE_Y;
 
