@@ -81,7 +81,7 @@ struct lrn_gpu : is_an_implementation
 
         // Determine global work sizes.
         kd.gws0 = input_mem.argument().size.batch[0] * input_mem.argument().size.feature[0];   // B, F
-        kd.gws1 = input_mem.argument().size.spatial[0] * input_mem.argument().size.spatial[1]; // X, Y
+        kd.gws1 = arg.input().at(0)->non_padded_output_layout().size.spatial[0] * arg.input().at(0)->non_padded_output_layout().size.spatial[1];
         kd.gws2 = 1;
         // Find largest positive local work size that is divider for global work size.
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
@@ -92,10 +92,12 @@ struct lrn_gpu : is_an_implementation
         kd.lws1 = 1;
         kd.lws2 = 1;
 
+        auto input_padding = arg.input().at(0)->desc()->output_padding();
         if (arg.argument.norm_region == cldnn_lrn_norm_region_across_channel)
         {
             // TODO: add half case: b16 (b*f dividable by 128).
             if (!kd.fp16_unit_used &&                        // halfs are not used
+                !input_padding &&                            // optimized kernel_batch8 does not support input padding
                 input_mem.argument().size.batch[0] % 8 == 0 && // batch_num is multiple of 8
                 kd.gws0 % 64 == 0)                           // batch_num * feature_num is multiple of 64
             {
@@ -143,12 +145,7 @@ struct lrn_gpu : is_an_implementation
         auto alpha_abs_sqrt = std::sqrt(std::abs(alpha));
         auto alpha_div_by_size_abs_sqrt = std::sqrt(std::abs(alpha_div_by_size));
 
-        auto input_padding = outer.argument.input_padding();
-        if (input_padding)
-        {
-            throw std::runtime_error("input padding not implemented in LRN yet!");
-        }
-
+        auto input_padding = outer.input().at(0)->desc()->output_padding();
         auto input_size = outer.input().at(0)->non_padded_output_layout().size;
 
         int count = input_size.sizes()[0] * input_size.sizes()[1] * input_size.sizes()[2] * input_size.sizes()[3];
@@ -170,7 +167,7 @@ struct lrn_gpu : is_an_implementation
             gpu::make_jit_constant("FP16_UNIT_USED",                static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",                     data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_VAL_ZERO",                 data.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("INPUT_PADDING",                 outer.argument.input_padding()),
+            gpu::make_jit_constant("INPUT_PADDING",                 input_padding),
             gpu::make_jit_constant("OUTPUT_PADDING",                outer.argument.output_padding())
         };
 
@@ -230,7 +227,7 @@ lrn_gpu::kernel_data get_kernel_across_channel(const normalization::response& ar
     {
         kd.kernel_name = kernel_name_bfyx;   
         kd.gws0 = cldnn::align_to(input_mem.argument().size.spatial[0],32);
-        kd.gws1 = input_mem.argument().size.spatial[1];
+        kd.gws1 = arg.input().at(0)->non_padded_output_layout().size.spatial[1];//input_mem.argument().size.spatial[1];
         kd.gws2 = input_mem.argument().size.feature[0] * input_mem.argument().size.batch[0];
 
         kd.lws0 = 32;

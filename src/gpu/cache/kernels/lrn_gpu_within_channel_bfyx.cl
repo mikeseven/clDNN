@@ -31,12 +31,19 @@ KERNEL (lrn_gpu_within_channel_bfyx)(const __global UNIT_TYPE* input, __global U
 
     for (uint index = get_global_id(0) ; index < COUNT ; index += get_global_size(0))
     {
-        const uint pw = index % OUTPUT_SIZE_X;
-        const uint ph = (index / OUTPUT_SIZE_X) % OUTPUT_SIZE_Y;
-        const uint c = (index / OUTPUT_SIZE_X / OUTPUT_SIZE_Y) % OUTPUT_FEATURE_NUM;
-        const uint n = index / OUTPUT_SIZE_X / OUTPUT_SIZE_Y / OUTPUT_FEATURE_NUM;
-        int hstart = ph - PAD;
-        int wstart = pw - PAD;
+        const uint input_buffer_size_x = INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X + INPUT_PADDING_UPPER_SIZE_X;
+        const uint input_buffer_size_y = INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y + INPUT_PADDING_UPPER_SIZE_Y;
+        const uint batch_num = INPUT_BATCH_NUM;
+        const uint global_id = index;
+        const uint batch_id = index / (COUNT / batch_num);
+        const uint feature_id = (index % (COUNT / batch_num)) / (INPUT_SIZE_X*INPUT_SIZE_Y);
+        const uint x = index% INPUT_SIZE_X;
+        const uint y = (index / INPUT_SIZE_X)%INPUT_SIZE_Y;
+        const uint first_index_in_batch = (batch_id * INPUT_FEATURE_NUM + feature_id) * input_buffer_size_x * input_buffer_size_y;
+        const uint input_id = first_index_in_batch + (INPUT_PADDING_LOWER_SIZE_Y + y) * input_buffer_size_x + INPUT_PADDING_LOWER_SIZE_X + x;
+
+        int wstart = x - PAD;
+        int hstart = y - PAD;
         int hend = min(hstart + P_SIZE, INPUT_SIZE_Y + PAD);
         int wend = min(wstart + P_SIZE, INPUT_SIZE_X + PAD);
         const int pool_size = (hend - hstart) * (wend - wstart);
@@ -45,12 +52,13 @@ KERNEL (lrn_gpu_within_channel_bfyx)(const __global UNIT_TYPE* input, __global U
         hend = min(hend, INPUT_SIZE_Y);
         wend = min(wend, INPUT_SIZE_X);
         UNIT_TYPE aveval = 0;
-        __global const UNIT_TYPE* bottom_slice = input + (n * OUTPUT_FEATURE_NUM + c) * INPUT_SIZE_Y * INPUT_SIZE_X;
+        const uint first_element_offset = INPUT_PADDING_UPPER_SIZE_X + input_buffer_size_x * INPUT_PADDING_UPPER_SIZE_Y;
+        __global const UNIT_TYPE* bottom_slice = input + first_index_in_batch + first_element_offset;
         for (int h = hstart; h < hend; ++h)
         {
             for (int w = wstart; w < wend; ++w)
             {
-                UNIT_TYPE tmp_val = bottom_slice[h * INPUT_SIZE_X + w] * UNIT_CVT_FUNC(ALPHA_VAL_FACTOR);
+                UNIT_TYPE tmp_val = bottom_slice[h * input_buffer_size_x + w] * UNIT_CVT_FUNC(ALPHA_VAL_FACTOR);
                 aveval += (tmp_val * tmp_val);
             }
         }
@@ -59,9 +67,9 @@ KERNEL (lrn_gpu_within_channel_bfyx)(const __global UNIT_TYPE* input, __global U
         acc = mad(acc, UNIT_CVT_FUNC(ALPHA), UNIT_CVT_FUNC(K));
         acc = native_powr(acc, -UNIT_CVT_FUNC(BETA));
 
-        uint output_pos = (n * OUTPUT_FEATURE_NUM + c) * output_buffer_size_x * output_buffer_size_y;
-        output_pos += (OUTPUT_PADDING_LOWER_SIZE_Y + ph) * output_buffer_size_x + OUTPUT_PADDING_LOWER_SIZE_X + pw;
+        uint output_pos = (batch_id * OUTPUT_FEATURE_NUM + feature_id) * output_buffer_size_x * output_buffer_size_y;
+        output_pos += (OUTPUT_PADDING_LOWER_SIZE_Y + y) * output_buffer_size_x + OUTPUT_PADDING_LOWER_SIZE_X + x;
 
-        output[output_pos] = acc * input[index];
+        output[output_pos] = acc * input[input_id];
     }
 }

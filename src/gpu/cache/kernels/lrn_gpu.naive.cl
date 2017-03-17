@@ -28,16 +28,26 @@ KERNEL (lrn_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
     const uint global_id = get_global_id(0);
     const uint element_offset = get_global_id(1) * INPUT_BATCH_NUM * INPUT_FEATURE_NUM;
-
     const uint linear_id = global_id + element_offset;
-    UNIT_TYPE acc = UNIT_VAL_ZERO;
-
     int input_offset_f = global_id + HELP_INPUT_OFFSET * INPUT_BATCH_NUM;
-    int input_idx = input_offset_f + element_offset;
+    const uint input_buffer_size_x = INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X + INPUT_PADDING_UPPER_SIZE_X;
+    const uint input_buffer_size_y = INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y + INPUT_PADDING_UPPER_SIZE_Y;
+
+    const uint batch_num = INPUT_BATCH_NUM;
+    const uint feature_id = global_id / batch_num;
+    const uint batch_id = linear_id % batch_num;
+    const uint x = ((linear_id / batch_num) / INPUT_FEATURE_NUM) % INPUT_SIZE_X;
+    const uint y = ((linear_id / batch_num) / INPUT_FEATURE_NUM) / INPUT_SIZE_X;
+    int input_id = batch_id + batch_num * (feature_id + INPUT_FEATURE_NUM * ((INPUT_PADDING_LOWER_SIZE_Y + y) * input_buffer_size_x + INPUT_PADDING_LOWER_SIZE_X + x));
+    
+    const uint first_element_offset = INPUT_FEATURE_NUM * INPUT_BATCH_NUM * INPUT_PADDING_UPPER_SIZE_X + INPUT_PADDING_UPPER_SIZE_Y * input_buffer_size_x * INPUT_FEATURE_NUM * INPUT_BATCH_NUM;
+    const uint element_offset_y = y * INPUT_FEATURE_NUM * INPUT_BATCH_NUM * (INPUT_PADDING_LOWER_SIZE_X + INPUT_PADDING_UPPER_SIZE_X);
+    int input_idx = input_offset_f + first_element_offset +element_offset + element_offset_y;
+
+    UNIT_TYPE acc = UNIT_VAL_ZERO;
     for (int i = 0; i < P_SIZE; i++)
     {
         bool zero = input_offset_f < 0 || input_offset_f >= INPUT_FEATURE_NUM * INPUT_BATCH_NUM;
-
         UNIT_TYPE value = zero ? UNIT_VAL_ZERO : UNIT_CVT_FUNC(ALPHA_VAL_FACTOR_DIV_BY_SIZE) * input[input_idx];
         acc = mad(value, value, acc);
 
@@ -47,7 +57,7 @@ KERNEL (lrn_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     acc = mad(acc, UNIT_CVT_FUNC(ALPHA_DIV_BY_SIZE), UNIT_CVT_FUNC(K));
     acc = native_powr(acc, -UNIT_CVT_FUNC(BETA));
 
-    output[linear_id] = acc * input[linear_id];
+    output[linear_id] =acc * input[input_id];
 }
 
 
