@@ -17,7 +17,7 @@ KERNEL(pooling_gpu_bfyx_average_offset)(const __global UNIT_TYPE* input, __globa
     const uint x = get_global_id(0);
     const uint y = get_global_id(1);
         
-    if (x >=  INPUT_SIZE_X)
+    if (x >=  OUTPUT_SIZE_X)
         return;
 
     const int offset_x = INPUT_PADDING_LOWER_SIZE_X + x * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
