@@ -11,6 +11,9 @@
 
 KERNEL (lrn_gpu_within_channel_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
+    const uint output_buffer_size_x = OUTPUT_PADDING_LOWER_SIZE_X + OUTPUT_SIZE_X + OUTPUT_PADDING_UPPER_SIZE_X;
+    const uint output_buffer_size_y = OUTPUT_PADDING_LOWER_SIZE_Y + OUTPUT_SIZE_Y + OUTPUT_PADDING_UPPER_SIZE_Y;
+
     for (uint index = get_global_id(0) ; index < COUNT ; index += get_global_size(0)) 
     {
         const uint pw = index % OUTPUT_SIZE_X;
@@ -41,6 +44,9 @@ KERNEL (lrn_gpu_within_channel_bfyx)(const __global UNIT_TYPE* input, __global U
         acc = mad(acc, UNIT_CVT_FUNC(ALPHA), UNIT_CVT_FUNC(K));
         acc = native_powr(acc, -UNIT_CVT_FUNC(BETA));
 
-        output[index] = acc * input[index];
+        uint output_pos = (n * OUTPUT_FEATURE_NUM + c) * output_buffer_size_x * output_buffer_size_y;
+        output_pos += (OUTPUT_PADDING_LOWER_SIZE_Y + ph) * output_buffer_size_x + OUTPUT_PADDING_LOWER_SIZE_X + pw;
+
+        output[output_pos] = acc * input[index];
     }    
 }

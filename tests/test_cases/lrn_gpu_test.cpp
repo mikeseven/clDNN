@@ -293,7 +293,9 @@ public:
 		for (auto norm_region : norm_regions)
 		{
 			all_layer_params.push_back(new normalization("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region));
+			all_layer_params.push_back(new normalization("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 13, 6 } }));
 			all_layer_params.push_back(new normalization("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region));
+			all_layer_params.push_back(new normalization("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 5, 11 },{ 19, 0 } }));
 		}
 
 		//The test checks only valid combinations.
@@ -315,11 +317,15 @@ public:
 	template<typename Type>
 	memory generate_reference_typed(const std::vector<cldnn::memory>& inputs)
 	{
+		const cldnn::normalization* lrn = (cldnn::normalization*)layer_params;
+
 		//Output is bfyx
         data_types dt = inputs[0].get_layout().data_type;
-		auto output = memory::allocate( engine, cldnn::layout(dt, inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0)) );
+		auto output = memory::allocate( engine, cldnn::layout(dt, inputs[0].get_layout().size.add(lrn->output_padding().lower_size()).add(lrn->output_padding().upper_size()).transform(cldnn::format::bfyx, 0)) );
 
-		const cldnn::normalization* lrn = (cldnn::normalization*)layer_params;
+		// TODO: need to add support for input padding.
+		assert(!lrn->input_padding());
+
 		Type beta = lrn->beta;
 		Type k = lrn->k;
 		uint32_t size = lrn->size;
@@ -332,10 +338,17 @@ public:
 
 		Type* input_mem = inputs[0].pointer<Type>().data();
 		Type* output_mem = output.pointer<Type>().data();
+
 		int batch = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
 		int feature = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
 		int height = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
 		int width = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+
+		int output_height = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
+		int output_width = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+
+		//Initialized output with zeros.
+		memset(output_mem, 0, output.get_layout().data_size());
 
 		switch (lrn_norm_region)
 		{
@@ -360,7 +373,11 @@ public:
 									scale += value * value;
 								}
 								scale = scale * alpha_div_by_size + k;
-								int output_index = ((n * feature + c) * height + h) * width + w;
+
+								int output_index = (n * feature + c) * output_height * output_width;
+								tensor lower_padding = lrn->output_padding().lower_size().transform(cldnn::format::bfyx, 0);
+								output_index += (lower_padding.sizes()[2] + h) * output_width + lower_padding.sizes()[3] + w;
+
 								int input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 								output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)scale, -(float)beta);
 							}
@@ -401,7 +418,11 @@ public:
 								}
 								scale /= pool_size;
 								int input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
-								int output_index = ((n * feature + c) * height + h) * width + w;
+
+								int output_index = (n * feature + c) * output_height * output_width;
+								tensor lower_padding = lrn->output_padding().lower_size().transform(cldnn::format::bfyx, 0);
+								output_index += (lower_padding.sizes()[2] + h) * output_width + lower_padding.sizes()[3] + w;
+
 								output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)(scale * alpha + k), -(float)beta);							
 							}
 						}
