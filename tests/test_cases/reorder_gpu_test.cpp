@@ -817,3 +817,159 @@ TEST(reorder_gpu_f32, basic_flatten_yxfb_to_x)
         EXPECT_EQ(output_ptr[linear_id], input_vec[linear_id]);
     }
 }
+
+
+using namespace cldnn;
+
+class reorder_test : public tests::generic_test
+{
+
+public:
+
+	static void TearDownTestCase()
+	{
+		for (auto generic_params : all_generic_params)
+		{
+			delete generic_params;
+		}
+		for (auto test_param : all_test_params)
+		{
+			auto primitive = std::get<1>(test_param);
+			delete primitive;
+		}
+	}
+
+
+	static std::vector<std::tuple<test_params*, cldnn::primitive*>> generate_specific_test_params()
+	{
+		generic_test::generate_generic_test_params(all_generic_params, true);
+
+		const std::vector<cldnn::data_types> data_types = { cldnn::data_types::f32 ,  cldnn::data_types::f16 };
+
+		for (auto test_param : all_generic_params)
+		{
+			cldnn::tensor input_tensor = test_param->input_layouts[0];
+			const cldnn::format input_format = input_tensor.format;
+
+			std::vector<cldnn::layout> output_layouts = {};
+
+			for (auto dt : data_types)
+			{
+				if (test_param->is_weight_format(input_format))
+				{
+					for (auto fmt : generic_test::test_weight_formats)
+					{
+						output_layouts.push_back({ dt, input_tensor.transform(fmt, 1) });
+					}
+				}
+				else
+				{
+					for (auto fmt : generic_test::test_input_formats)
+					{
+						output_layouts.push_back({ dt, input_tensor.transform(fmt, 1) });
+					}
+				}
+			}
+			// TODO: check unsupported formats.
+
+			//TODO: check subtract.
+			std::vector<float> subtract = {};
+
+			for (auto output_layout : output_layouts)
+			{
+				//TODO: check input + output padding.
+				all_test_params.push_back(std::make_tuple(test_param, new reorder("reorder", "input0", output_layout, subtract)));
+			}
+		}
+
+		return all_test_params;
+	}
+
+	virtual bool is_format_supported(cldnn::format format)
+	{
+		return (	(format == cldnn_format_type::cldnn_format_yxfb) ||
+					(format == cldnn_format_type::cldnn_format_byxf) ||
+					(format == cldnn_format_type::cldnn_format_bfyx) ||
+					(format == cldnn_format_type::cldnn_format_fyxb) ||
+					(format == cldnn_format_type::cldnn_format_oiyx) ||
+					(format == cldnn_format_type::cldnn_format_yxoi) ||
+					(format == cldnn_format_type::cldnn_format_oyxi) ||
+					(format == cldnn_format_type::cldnn_format_yxio)
+				);	
+	}
+
+	virtual cldnn::tensor get_expected_output_tensor()
+	{
+		return ((cldnn::reorder*)layer_params)->output_layout.size;
+	}
+
+	template<typename InputType, typename OutputType>
+	memory generate_reference_typed(const std::vector<cldnn::memory>& inputs)
+	{
+		const cldnn::reorder* reorder = (cldnn::reorder*)layer_params;
+		const layout& output_layout = reorder->output_layout;
+		primitive_id mean = reorder->mean;
+		std::vector<float> substract_per_feature = reorder->substract_per_feature;
+		assert(mean == "");
+		assert(substract_per_feature.size() == 0);
+		
+		auto output = memory::allocate(engine, cldnn::layout(output_layout.data_type, inputs[0].get_layout().size));
+
+		cldnn::pointer<InputType> input_mem = inputs[0].pointer<InputType>();
+		cldnn::pointer<OutputType> output_mem = output.pointer<OutputType>();
+
+		for (size_t i = 0; i < inputs[0].get_layout().size.get_linear_size(); i++)
+		{
+			// Write the output in the same order as the input with type conversion as needed.
+			// The correct order will be checked in generic_test::compare_buffers.
+			output_mem[i] = (OutputType)input_mem[i];
+		}
+
+		return output;
+	}
+
+	virtual memory generate_reference(const std::vector<cldnn::memory>& inputs)
+	{
+		if (generic_params->data_type == data_types::f32)
+		{
+			if (((cldnn::reorder*)layer_params)->output_layout.data_type == data_types::f32)
+			{
+				return generate_reference_typed<float, float>(inputs);
+			}
+			else
+			{
+				return generate_reference_typed<float, FLOAT16>(inputs);
+			}
+		}
+		else
+		{
+			if (((cldnn::reorder*)layer_params)->output_layout.data_type == data_types::f32)
+			{
+				return generate_reference_typed<FLOAT16, float>(inputs);
+			}
+			else
+			{
+				return generate_reference_typed<FLOAT16, FLOAT16>(inputs);
+			}
+		}		
+	}
+
+private:
+
+	static std::vector<tests::test_params*> all_generic_params;
+	static std::vector<std::tuple<test_params*, cldnn::primitive*>> all_test_params;
+
+};
+
+std::vector<tests::test_params*> reorder_test::all_generic_params = {};
+std::vector<std::tuple<test_params*, cldnn::primitive*>> reorder_test::all_test_params = {};
+
+TEST_P(reorder_test, DISABLED_test_all)
+{
+	run_single_test();
+}
+
+INSTANTIATE_TEST_CASE_P(REORDER,
+						reorder_test,
+						::testing::ValuesIn(reorder_test::generate_specific_test_params()),
+						tests::generic_test::custom_param_name_functor());

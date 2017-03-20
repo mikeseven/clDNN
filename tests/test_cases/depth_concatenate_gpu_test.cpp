@@ -198,7 +198,7 @@ public:
         std::vector<tests::test_params*> all_generic_params;
 
         for (cldnn::data_types dt : test_data_types)
-        for (cldnn::format fmt : test_formats)
+        for (cldnn::format fmt : test_input_formats)
         for (int32_t b : test_batch_sizes)
         for (tensor & t : test_input_sizes)
         {

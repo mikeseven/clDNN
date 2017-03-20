@@ -243,7 +243,7 @@ public:
         
 		for (cldnn::data_types data_type : test_data_types)
 		{
-			for (cldnn::format fmt : test_formats)
+			for (cldnn::format fmt : test_input_formats)
 			{        
                 for (int batch_size : test_batch_sizes)
                 {

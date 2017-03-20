@@ -31,6 +31,7 @@
 #include "api/primitives/roi_pooling.hpp"
 #include "api/primitives/scale.hpp"
 #include "api/primitives/softmax.hpp"
+#include "api/primitives/reorder.hpp"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -273,12 +274,10 @@ public:
 
     test_params(cldnn::data_types dt, cldnn::format input_format, int32_t batch_size, int32_t feature_size, cldnn::tensor input_size) :
         data_type(dt) 
-        {
-            cldnn::tensor t = cldnn::tensor( cldnn::format::bfyx,
-                                             { batch_size, feature_size, input_size.spatial[1],  input_size.spatial[0] } ).transform(cldnn::format(input_format), 1);
-                                             
-            input_layouts.push_back( t.transform(cldnn::format(input_format), 1));
-        }
+	{
+		cldnn::tensor t = cldnn::tensor(is_weight_format(input_format) ? cldnn::format::oiyx : cldnn::format::bfyx, { batch_size, feature_size, input_size.spatial[1],  input_size.spatial[0] } );
+		input_layouts.push_back( t.transform(cldnn::format(input_format), 1));
+	}
 
     cldnn::data_types data_type;
     std::vector<cldnn::tensor> input_layouts;            
@@ -287,6 +286,7 @@ public:
         
     std::string print();
 	std::string print_tensor(cldnn::tensor tensor);
+	bool is_weight_format(cldnn::format fmt);
 };
 
 class generic_test : public ::testing::TestWithParam<std::tuple<test_params*, cldnn::primitive*>>
@@ -303,7 +303,7 @@ public:
     size_t get_linear_index(const cldnn::layout & layout, int b, int f, int y, int x);
     size_t get_linear_index_with_broadcast(const cldnn::layout & in_layout, int b, int f, int y, int x, const cldnn::layout & out_layout);
 
-    static std::vector<test_params*> generate_generic_test_params(std::vector<test_params*> all_generic_params);
+    static std::vector<test_params*> generate_generic_test_params(std::vector<test_params*>& all_generic_params, bool use_weight_formats = false);
 
     virtual bool is_format_supported(cldnn::format format) = 0;
 
@@ -328,7 +328,8 @@ protected:
     }
    
     static std::vector<cldnn::data_types> test_data_types;
-    static std::vector<cldnn::format> test_formats;
+    static std::vector<cldnn::format> test_input_formats;
+	static std::vector<cldnn::format> test_weight_formats;
     static std::vector<int32_t> test_batch_sizes;
     static std::vector<int32_t> test_feature_sizes;
     static std::vector<cldnn::tensor> test_input_sizes;
@@ -386,6 +387,11 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
         auto sm = static_cast<cldnn::softmax *>(primitive);
         (void)sm;
     }
+	else if (primitive->type == cldnn::reorder::type_id())
+	{
+		auto reorder = static_cast<cldnn::reorder*>(primitive);
+		str << "Output data type: " << cldnn::data_type_traits::name(reorder->output_layout.data_type) << " Output tensor: " << test_param->print_tensor(reorder->output_layout.size) << " Mean: " << reorder->mean << "Subtract per feature: " << "TODO" /*std::vector<float> substract_per_feature*/;
+	}
     else
     {
 		throw std::runtime_error("Not implemented yet for this primitive.");

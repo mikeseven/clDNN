@@ -82,7 +82,7 @@ namespace tests
 
 		auto output_ref = generate_reference(input_mems);
         
-		if (generic_params->data_type == data_types::f32)
+		if (output.get_layout().data_type == data_types::f32)
 		{
 			compare_buffers<float>(output, output_ref);
 		}
@@ -98,15 +98,19 @@ namespace tests
 		auto out_layout = out.get_layout();
 		auto ref_layout = ref.get_layout();
 
-		EXPECT_EQ(out_layout.size.transform(cldnn::format::bfyx, 0), ref_layout.size.transform(cldnn::format::bfyx, 0));
+		cldnn::format base_fmt = (cldnn::format::traits(out_layout.size.format).internal_order == "bfxy") ? cldnn::format::bfyx : cldnn::format::oiyx;
+
+		EXPECT_EQ(out_layout.size.transform(base_fmt, 1), ref_layout.size.transform(base_fmt, 1));
 		EXPECT_EQ(out_layout.data_type, ref_layout.data_type);
 		EXPECT_EQ(get_expected_output_tensor(), out_layout.size);
 		EXPECT_EQ(out_layout.size.get_linear_size(), ref_layout.size.get_linear_size());
 
-		int batch_size = out_layout.size.transform(cldnn::format::bfyx, 0).sizes()[0];
-		int feature_size = out_layout.size.transform(cldnn::format::bfyx, 0).sizes()[1];
-		int y_size = out_layout.size.transform(cldnn::format::bfyx, 0).sizes()[2];
-		int x_size = out_layout.size.transform(cldnn::format::bfyx, 0).sizes()[3];
+		auto output_sizes = out_layout.size.transform(base_fmt, 0).sizes();
+
+		int batch_size = output_sizes[0];
+		int feature_size = output_sizes[1];
+		int y_size = output_sizes[2];
+		int x_size = output_sizes[3];
 
 		auto res_data = out.pointer<Type>();
 		auto ref_data = ref.pointer<Type>();
@@ -169,6 +173,51 @@ namespace tests
 				fPitch = layout.size.sizes()[1] * yPitch;
 				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
 			}
+			case format::byxf:
+			{
+				//b=sizes[0], y=sizes[1], x=sizes[2], f=sizes[3]
+				fPitch = 1;
+				xPitch = layout.size.sizes()[3] * fPitch;
+				yPitch = layout.size.sizes()[2] * xPitch;
+				bPitch = layout.size.sizes()[1] * yPitch;
+				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
+			}
+			case format::oiyx:
+			{
+				//o=sizes[0], i=sizes[1], y=sizes[2], x=sizes[3]
+				xPitch = 1;
+				yPitch = layout.size.sizes()[3] * xPitch;
+				fPitch = layout.size.sizes()[2] * yPitch;
+				bPitch = layout.size.sizes()[1] * fPitch;
+				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
+			}
+			case format::yxoi:
+			{
+				//y=sizes[0], x=sizes[1], o=sizes[2], i=sizes[3]
+				fPitch = 1;
+				bPitch = layout.size.sizes()[3] * fPitch;
+				xPitch = layout.size.sizes()[2] * bPitch;
+				yPitch = layout.size.sizes()[1] * xPitch;
+				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
+			}
+			case format::oyxi:
+			{
+				//o=sizes[0], y=sizes[1], x=sizes[2], i=sizes[3]
+				fPitch = 1;
+				xPitch = layout.size.sizes()[3] * fPitch;
+				yPitch = layout.size.sizes()[2] * xPitch;
+				bPitch = layout.size.sizes()[1] * yPitch;
+				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
+			}
+			case format::yxio:
+			{
+				//y=sizes[0], x=sizes[1], i=sizes[2], o=sizes[3]
+				bPitch = 1;
+				fPitch = layout.size.sizes()[3] * bPitch;
+				xPitch = layout.size.sizes()[2] * fPitch;
+				yPitch = layout.size.sizes()[1] * xPitch;
+				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
+			}
 			default:
 			{
 				throw std::runtime_error("Format not supported yet.");
@@ -178,7 +227,7 @@ namespace tests
 
 	//TODO: change the sig to take the layout size only for the output stuff
 	//TODO: is it ok that it assumes flat memory?
-        size_t generic_test::get_linear_index_with_broadcast(const layout & in_layout, int b, int f, int y, int x, const layout & out_layout)
+    size_t generic_test::get_linear_index_with_broadcast(const layout & in_layout, int b, int f, int y, int x, const layout & out_layout)
 	{
 		assert(in_layout.size.format == out_layout.size.format);	//TODO: won't be needed after sig change. we could support different layouts but there's no need, atm.
 
@@ -249,16 +298,21 @@ namespace tests
 		return generic_params->input_layouts[0].add(layer_params->output_padding.lower_size()).add(layer_params->output_padding.upper_size());
 	}
 
-	std::vector<test_params*> generic_test::generate_generic_test_params(std::vector<test_params*> all_generic_params)
+	std::vector<test_params*> generic_test::generate_generic_test_params(std::vector<test_params*>& all_generic_params, bool use_weight_formats)
 	{
 		// , { format::yx,{ 531,777 } } , { format::yx,{ 4096,1980 } } ,
 		//{ format::yx,{ 1,1 } } , { format::yx,{ 2,2 } } , { format::yx,{ 3,3 } } , { format::yx,{ 4,4 } } , { format::yx,{ 5,5 } } , { format::yx,{ 6,6 } } , { format::yx,{ 7,7 } } ,
 		//{ format::yx,{ 8,8 } } , { format::yx,{ 9,9 } } , { format::yx,{ 10,10 } } , { format::yx,{ 11,11 } } , { format::yx,{ 12,12 } } , { format::yx,{ 13,13 } } ,
 		//{ format::yx,{ 14,14 } } , { format::yx,{ 15,15 } } , { format::yx,{ 16,16 } } };
+		std::vector<cldnn::format> all_test_formats = { test_input_formats };
+		if (use_weight_formats)
+		{
+			all_test_formats.insert(all_test_formats.end(), test_weight_formats.begin(), test_weight_formats.end());
+		}
 
 		for (cldnn::data_types data_type : test_data_types)
 		{
-			for (cldnn::format fmt : test_formats)
+			for (cldnn::format fmt : all_test_formats)
 			{
 				for (int batch_size : test_batch_sizes)
 				{
@@ -301,9 +355,17 @@ namespace tests
         }
 		return str.str();
     }
+
+	bool test_params::is_weight_format(cldnn::format fmt)
+	{
+		assert((cldnn::format::traits(fmt).internal_order == "bfxy") || (cldnn::format::traits(fmt).internal_order == "?oixy"));
+
+		return cldnn::format::traits(fmt).internal_order == "?oixy";
+	}
     
-    std::vector<cldnn::data_types> generic_test::test_data_types = { cldnn::data_types::f32, cldnn::data_types::f16 };
-    std::vector<cldnn::format> generic_test::test_formats = { cldnn::format::bfyx , cldnn::format::yxfb, cldnn::format::fyxb };
+    std::vector<cldnn::data_types> generic_test::test_data_types = { cldnn::data_types::f32 , cldnn::data_types::f16 };
+    std::vector<cldnn::format> generic_test::test_input_formats = { cldnn::format::bfyx , cldnn::format::yxfb, cldnn::format::fyxb, cldnn::format::byxf };
+	std::vector<cldnn::format> generic_test::test_weight_formats = { cldnn::format::oiyx , cldnn::format::yxoi , cldnn::format::oyxi, cldnn::format::yxio };
     std::vector<int32_t> generic_test::test_batch_sizes = { 1, 2 };// 4, 8, 16};
     std::vector<int32_t> generic_test::test_feature_sizes = { 1, 2 };// , 3, 15};
     std::vector<tensor> generic_test::test_input_sizes = { { format::yx,{ 100,100 } } ,{ format::yx,{ 227,227 } } ,{ format::yx,{ 400,600 } } };    
