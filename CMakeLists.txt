@@ -828,6 +828,7 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
         TreatWarnAsErrorEnabled
         WarnLevel4
         FastMath
+        StackProtector
     )
   intel_config_flag_apply_settings(
       CompilerOptions
@@ -934,13 +935,6 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
           -fPIC
           -Wl,--no-undefined
       )
-    intel_config_flag_apply_settings(
-        CompilerOptions
-        "${__CLDNN_CompilerFlagName}"
-        ALL_PATTERN ""
-        SET
-         StackProtector
-     )
   elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
     intel_config_flag_apply_settings(
         CompilerOptions
