@@ -46,9 +46,7 @@
     #pragma clang diagnostic ignored "-Wunused-function"
     #pragma clang diagnostic ignored "-Wignored-qualifiers"
 #elif defined __GNUC__
-    #if __GNUC__ >= 6
-        #pragma GCC diagnostic push
-    #endif
+    #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wsign-compare"
     #pragma GCC diagnostic ignored "-Wunused-parameter"
     #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -73,9 +71,7 @@
 #elif defined __clang__
     #pragma clang diagnostic pop
 #elif defined __GNUC__
-    #if __GNUC__ >= 6
-        #pragma GCC diagnostic pop
-    #endif
+    #pragma GCC diagnostic pop
 #endif
 
 #endif // CL2_WRAPPER_H_

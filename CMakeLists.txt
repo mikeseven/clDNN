@@ -798,7 +798,6 @@ if(NOT __CLDNN_UseCxx14)
   set(CLDNN__INCLUDE_EXAMPLES OFF CACHE BOOL "" FORCE)
   set(CLDNN__INCLUDE_TESTS OFF CACHE BOOL "" FORCE)
 endif()
-unset(__CLDNN_UseCxx14)
 
 # ======================================= Generic compiler options =====================================
 # Selecting C++ Runtime.
@@ -967,7 +966,7 @@ intel_config_flag_apply_settings(
       RttiDisabled
   )
 
-if(CLDNN_UseCxx14)
+if(__CLDNN_UseCxx14)
   intel_config_flag_apply_settings(
       CompilerOptions
       CMAKE_CXX_FLAGS
@@ -984,6 +983,7 @@ else()
         StandardCxx11
     )
 endif()
+unset(__CLDNN_UseCxx14)
 
 
 # NOTE: [WA] Workaround for possible crash problem (double destruction of static objects on bionic).
