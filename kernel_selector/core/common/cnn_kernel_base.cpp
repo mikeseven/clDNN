@@ -24,8 +24,8 @@ namespace KernelSelctor {
 
         jit << "#define ACTIVATION_FUNCTION_" << toString(params.activationFunc) << "\n"
             << "#define TYPE_" << toString(params.inputType) << "\n"
-            << "#define NL_M (" << std::to_string(params.nlParams.m) << ")\n"
-            << "#define NL_N (" << std::to_string(params.nlParams.n) << ")\n"
+            << "#define NL_M (" << Float2Str(params.nlParams.m) << ")\n"
+            << "#define NL_N (" << Float2Str(params.nlParams.n) << ")\n"
             << "#define INPUT_OFFSET (" << params.inDesc.offset << ")\n"
             << "#define OUT_OFFSET (" << params.outDesc.offset << ")\n";
 

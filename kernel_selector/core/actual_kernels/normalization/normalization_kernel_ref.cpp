@@ -58,9 +58,9 @@ namespace KernelSelctor
         jit << GetBaseJit(newParams)
             << "#define ROUND_NORM_SIZE (" << round_norm_size << ")\n"
             << "#define ROUND_NORM_HALF_SIZE (" << round_norm_size / 2 << ")\n"
-            << "#define NUM_ELEMENTS_DIV (" << num_element_div << ")\n"
-            << "#define ALPHA (" << newParams.normParams.alpha << ")\n"
-            << "#define BETA (" << newParams.normParams.beta << ")\n"
+            << "#define NUM_ELEMENTS_DIV (" << Float2Str(num_element_div) << ")\n"
+            << "#define ALPHA (" << Float2Str(newParams.normParams.alpha) << ")\n"
+            << "#define BETA (" << Float2Str(newParams.normParams.beta) << ")\n"
             << "#define NORM_K (1)\n";
 
         const auto& out = newParams.outDims;
