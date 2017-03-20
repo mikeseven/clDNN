@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # To add new kernel please add a .cl file to kernels directory
 # the database name will be the part of the file name up to first '.' character

@@ -500,10 +500,10 @@ endif()
 
 # ======================================================================================================
 
-# Check for python 3.x interpreter (required tool).
-find_package(PythonInterp)
+# Check for python 2.7 interpreter (required tool).
+find_package(PythonInterp 2.7)
 if(NOT PYTHONINTERP_FOUND)
-  message(WARNING "[clDNN] Project requires Python 3.3+ interpreter to build (with python loader). CMake could not detect it correctly.
+  message(WARNING "[clDNN] Project requires Python 2.7 interpreter to build (with python loader). CMake could not detect it correctly.
       If you have installed this interpreter, please disregard this warning or specify PYTHON_EXECUTABLE in CMake command-line."
     )
 endif()
@@ -907,7 +907,6 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
           -pipe
           -fmessage-length=0
           -fno-strict-aliasing
-         #-fstack-protector-strong - it's supported on GCC 4.8.4
           -W
           -Wno-unknown-pragmas
           -Wwrite-strings

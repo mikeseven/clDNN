@@ -93,6 +93,7 @@ if(MSVC)
 
       ALIAS DeadCodeEliminate
       ALIAS DeadCodePreserve
+      ALIAS StackProtector 
     )
 elseif(CMAKE_COMPILER_IS_INTEL)
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "${CLDNN__MIN_COMPILER_VERSION__ICC}")
@@ -157,6 +158,7 @@ elseif(CMAKE_COMPILER_IS_INTEL)
 
       ALIAS DeadCodeEliminate
       ALIAS DeadCodePreserve
+      ALIAS StackProtector 
     )
 
   if(CLDNN__COMPILE_LINK_ALLOW_UNSAFE_SIZE_OPT)
@@ -320,6 +322,7 @@ elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES
 
       ALIAS DeadCodeEliminate
       ALIAS DeadCodePreserve
+      ALIAS StackProtector 
     )
 else()
   message(FATAL_ERROR "[clDNN] Unknown compiler. Please define support for it or use different compiler.")
