@@ -47,8 +47,8 @@ __kernel void convolution_f16(
     // Each work item points to the start of a different patch.
     // atile is M rows x K columns.
 #if defined(INPUT_BUFFER_WIDTH_PADDED) && defined(INPUT_BUFFER_HEIGHT_PADDED)
-    uint src0_read_offset = //INPUT_OFFSET - TODO: make sure that it handles correctly
-       INPUT_BATCH_PITCH * global_z                                   // batch offset
+    uint src0_read_offset = INPUT_OFFEST_FOR_PADDED_PART
+     + INPUT_BATCH_PITCH * global_z                                   // batch offset
      + ( ( global_y / OUT_WIDTH ) * STRIDE_Y * INPUT_ROW_PITCH )      // y offset
      + ( ( global_y % OUT_WIDTH ) * STRIDE_X );                 // x offset
 #elif !defined(INPUT_BUFFER_WIDTH_PADDED) && !defined(INPUT_BUFFER_HEIGHT_PADDED)

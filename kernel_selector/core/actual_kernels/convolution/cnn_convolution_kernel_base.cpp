@@ -35,7 +35,15 @@ namespace KernelSelctor
         std::stringstream jit;
         const auto& cp = params.convParams;
 
-        jit << "#define KERNEL_WIDTH " << cp.filterSize.x << "\n"
+        const std::size_t paddedSize = 
+            params.convParams.padding.x + 
+            params.convParams.padding.y*params.inDesc.pitches.x;
+
+        assert(params.inDesc.offset >= paddedSize);
+        const std::size_t inputOffsetForPaddedPart = params.inDesc.offset - paddedSize;
+
+        jit << "#define INPUT_OFFEST_FOR_PADDED_PART " << inputOffsetForPaddedPart << "\n"
+            << "#define KERNEL_WIDTH " << cp.filterSize.x << "\n"
             << "#define KERNEL_HEIGHT " << cp.filterSize.y << "\n"
             << "#define STRIDE_X (" << cp.stride.x << ")\n"
             << "#define STRIDE_Y (" << cp.stride.y << ")\n"

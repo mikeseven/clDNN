@@ -46,8 +46,8 @@ __kernel void convolution_f16_10x12x16(
 
     half blockC[TILE_M * TILE_K] = { 0 };
 
-    uint src0_offset_tile =
-       batch_id * INPUT_BATCH_PITCH                         // batch offset
+    uint src0_offset_tile = INPUT_OFFEST_FOR_PADDED_PART    // data offset
+     + batch_id * INPUT_BATCH_PITCH                         // batch offset
      + ( global_y * TILE_M * STRIDE_Y ) * INPUT_ROW_PITCH   // y offset
      + ( global_x * TILE_K * STRIDE_X );                    // x offset
     uint src0_offset = src0_offset_tile
