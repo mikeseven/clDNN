@@ -1,3 +1,18 @@
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 #if RELU
     #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
     input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
@@ -30,8 +45,8 @@
 __attribute__((reqd_work_group_size(SUB_GROUP_SIZE, 1, 1)))
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
-    const __global float* input, 
-    __global float* output, 
+    const __global float* input,
+    __global float* output,
     const __global float* weight,
     const __global float* bias)
 {
@@ -58,7 +73,7 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
 #endif
 #endif
 
-	uint weight_offset = id_in_sub_group + SUB_GROUP_SIZE * group_id * NEURONS_PER_WORK_ITEM * INPUT_ELEMENTS_COUNT;
+    uint weight_offset = id_in_sub_group + SUB_GROUP_SIZE * group_id * NEURONS_PER_WORK_ITEM * INPUT_ELEMENTS_COUNT;
 #if NEURONS_PER_WORK_ITEM > 1
 
     uint weight_offset2 = weight_offset + SUB_GROUP_SIZE * INPUT_ELEMENTS_COUNT;

@@ -1,12 +1,27 @@
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 #if FP16_SUPPORTED
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
 
-KERNEL(roi_pooling_gpu)(const __global UNIT_TYPE* input_data, 
+KERNEL(roi_pooling_gpu)(const __global UNIT_TYPE* input_data,
                         const __global UNIT_TYPE* input_rois,
                         __global UNIT_TYPE* output)
-{    
+{
     int index = get_global_id(0);
 
     int pw = index % POOLED_WIDTH;
@@ -66,18 +81,18 @@ KERNEL(roi_pooling_gpu)(const __global UNIT_TYPE* input_data,
     UNIT_TYPE maxval = is_empty ? 0 : -UNIT_INIT_VAL_MAX;
     int offset = (roi_batch_ind * CHANNELS + c) * HEIGHT * WIDTH;
     const __global UNIT_TYPE* input = input_data + offset + (INPUT_PADDING_LOWER_SIZE_Y * WIDTH) + INPUT_PADDING_LOWER_SIZE_X;
-    
+
     for (int h = ystart; h < yend; ++h) {
         for (int w = xstart; w < xend; ++w) {
             int bottom_index = h * WIDTH + w;
-            if (input[bottom_index] > maxval) {                
+            if (input[bottom_index] > maxval) {
                 maxval = input[bottom_index];
             }
         }
     }
 
     output[index] = maxval;
-    
+
     // TODO: currently not used in clCaffe
     //argmax_data[index] = index of the maximum value;
 }
