@@ -1,3 +1,18 @@
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 #if FP16_SUPPORTED
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
@@ -31,7 +46,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
 
 
     const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
-    uint global_id = ((get_global_id(0) / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM)) * WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS; 
+    uint global_id = ((get_global_id(0) / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM)) * WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS;
 
     const uint sub_group_id = get_local_id(0);
 
@@ -76,7 +91,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
                 for (uint j = 0; j < FILTER_SIZE_X; j++)
                 {
                     int input_offset_x = x + j;
-                    
+
                     bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
 
                     if(!zero)
@@ -120,7 +135,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
                             filter_idx += FILTER_OUTPUT_FEATURE_NUM;
                         }
                     }
-                } 
+                }
             }
         }
     }

@@ -1,3 +1,18 @@
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 #if FP16_SUPPORTED
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
@@ -30,14 +45,14 @@ KERNEL (eltwise_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* o
     const uint y = (global_id / (INPUT_SIZE_X)) % INPUT_SIZE_Y;
     const uint f = (global_id / (INPUT_SIZE_X * INPUT_SIZE_Y)) % INPUT_FEATURE_NUM;
     const uint b = (global_id / (INPUT_SIZE_X * INPUT_SIZE_Y * INPUT_FEATURE_NUM));
-    
+
     uint output_id = (b * OUTPUT_FEATURE_NUM + f) * output_buffer_size_x * output_buffer_size_y;
     output_id += (OUTPUT_PADDING_LOWER_SIZE_Y + y) * output_buffer_size_x + OUTPUT_PADDING_LOWER_SIZE_X + x;
 #else
     uint output_id = input_id;
 #endif
 
-    const UNIT_TYPE in1 = input[input_id]; 
+    const UNIT_TYPE in1 = input[input_id];
     const UNIT_TYPE in2 = input2[input_id];
     UNIT_TYPE result;
 #if MAX_MODE_USED
@@ -46,7 +61,7 @@ KERNEL (eltwise_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* o
     result = in1 * in2;
 #elif SUB_MODE_USED
     result = in1 - in2;
-#else 
+#else
     result = in1 + in2;
 #endif
 
