@@ -23,8 +23,8 @@ namespace KernelSelctor {
         ParamsKey k;
         k.SetDataType(Datatype::F16);
         k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetOutputLayout(bfyx);
+        k.EnableAllInputLayout();
+        k.EnableAllOutputLayout();
         k.SetOffsetSupport();
         k.SetPitchesSupport();
         k.SetNumDims(4);

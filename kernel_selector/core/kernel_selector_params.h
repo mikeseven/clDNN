@@ -128,9 +128,19 @@ namespace KernelSelctor
             key.input_layout |= (1 << l);
         }
 
+        void EnableAllInputLayout()
+        {
+            key.input_layout = 0xffffffff;
+        }
+
         void SetOutputLayout(DataLayout l)
         {
             key.output_layout |= (1 << l);
+        }
+
+        void EnableAllOutputLayout()
+        {
+            key.output_layout = 0xffffffff;
         }
 
         void SetOffsetSupport()
