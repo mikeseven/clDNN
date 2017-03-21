@@ -42,6 +42,10 @@ namespace KernelSelctor {
 
         std::stringstream jit;
         jit << GetBaseJit(newParams)
+            << "#define INPUT_OFFSET1 (" << newParams.eltwiseParams.inDesc1.offset << ")\n"
+            << "#define INPUT_ROW_PITCH1 (" << newParams.eltwiseParams.inDesc1.pitches.x << ")\n"
+            << "#define INPUT_SLICE_PITCH1 (" << newParams.eltwiseParams.inDesc1.pitches.y << ")\n"
+            << "#define INPUT_BATCH_PITCH1 (" << newParams.eltwiseParams.inDesc1.pitches.z << ")\n"
             << "#define ELTWISE_MODE_" << toString(newParams.eltwiseParams.mode) << "\n"
             << "#define SCALAR (" << newParams.eltwiseParams.scalar << ")\n";
 

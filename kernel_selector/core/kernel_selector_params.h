@@ -491,6 +491,7 @@ namespace KernelSelctor
 
         struct DedicatedParams
         {
+            TensorDesc  inDesc1; // TODO: Support multi Inputs
             EltwiseMode mode = EltwiseMode::ADD;
             float scalar = 0;
         };

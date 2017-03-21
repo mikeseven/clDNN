@@ -31,17 +31,18 @@ __kernel void eltwise(
     const unsigned w = get_global_id(2) / OUT_DEPTH;
 #endif
 
-    const unsigned src_index = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
+    const unsigned src_index0 = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
+    const unsigned src_index1 = w*INPUT_BATCH_PITCH1 + z*INPUT_SLICE_PITCH1 + y*INPUT_ROW_PITCH1 + x + INPUT_OFFSET1;
     const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
 
 #ifdef ELTWISE_MODE_ADD
-    DATA_TYPE res = input0[src_index] + input1[src_index] + (DATA_TYPE)SCALAR;
+    DATA_TYPE res = input0[src_index0] + input1[src_index1] + (DATA_TYPE)SCALAR;
 #elif defined ELTWISE_MODE_SUB
-    DATA_TYPE res = input0[src_index] - input1[src_index] + (DATA_TYPE)SCALAR;
+    DATA_TYPE res = input0[src_index0] - input1[src_index1] + (DATA_TYPE)SCALAR;
 #elif defined ELTWISE_MODE_MUL
-    DATA_TYPE res = input0[src_index] * input1[src_index] + (DATA_TYPE)SCALAR;
+    DATA_TYPE res = input0[src_index0] * input1[src_index1] + (DATA_TYPE)SCALAR;
 #elif defined ELTWISE_MODE_DIV
-    DATA_TYPE res = input0[src_index] / input1[src_index] + (DATA_TYPE)SCALAR;
+    DATA_TYPE res = input0[src_index0] / input1[src_index1] + (DATA_TYPE)SCALAR;
 #endif
     output[dst_index] = activation_function(res, NL_M, NL_N);
 }

@@ -174,6 +174,7 @@ namespace clDNN
 
         struct DedicatedParams
         {
+            TensorDesc  inDesc1; // TODO: move to basic params and support more than one input
             EltwiseMode mode = EltwiseMode::ADD;
             float scalar = 0;
         };
