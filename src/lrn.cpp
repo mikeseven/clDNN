@@ -35,6 +35,11 @@ layout normalization_arg::calc_output_layout(const topology_map& topology_map, s
 
 normalization_arg::normalization_arg(network_impl& network, std::shared_ptr<const normalization> desc)
     :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
-{}
+{
+	if (desc->size == 0)
+	{
+		throw std::runtime_error("LRN size must be greater than 0!");
+	}		
+}
 
 }

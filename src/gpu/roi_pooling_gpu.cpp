@@ -61,7 +61,7 @@ struct roi_pooling_gpu : is_an_implementation {
         : _outer(outer),
         _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info()),
         _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration)),
-        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
+        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
     {}
 
     static kernel_data set_default(const roi_pooling& outer)
@@ -99,15 +99,10 @@ struct roi_pooling_gpu : is_an_implementation {
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        std::vector<int> input_sizes = outer.input_memory(cldnn::roi_pooling_arg::data_index).get_layout().size.sizes();
-        int channels = input_sizes[1];
-        int height   = input_sizes[2];
-        int width    = input_sizes[3];
+        const cldnn::tensor& input_size = outer.input_memory(cldnn::roi_pooling_arg::data_index).get_layout().size;
 
         gpu::jit_constants mem_consts{
-            gpu::make_jit_constant("CHANNELS",          channels),
-            gpu::make_jit_constant("HEIGHT",            height),
-            gpu::make_jit_constant("WIDTH",             width),
+            gpu::make_jit_constant("INPUT",             input_size),
             gpu::make_jit_constant("POOLED_HEIGHT",     outer.argument.pooled_height),
             gpu::make_jit_constant("POOLED_WIDTH",      outer.argument.pooled_width),
             gpu::make_jit_constant("INPUT_PADDING",     outer.input().at(cldnn::roi_pooling_arg::data_index)->desc()->output_padding()),

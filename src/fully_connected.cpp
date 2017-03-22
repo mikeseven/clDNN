@@ -65,8 +65,7 @@ layout fully_connected_arg::calc_output_layout(const topology_map& topology_map,
 
     if(is_batch_after_spatial(input_layout.size.format.order()) || 
         (input_layout.size.format == format::bfyx &&                //this condition tests whether our input is batch>1 in bfyx format, if yes there will be
-            input_layout.data_type == data_types::f32 &&            //extra reorder between input and this fc from bfyx to yxfb format (so "is_batch_after_spetial" should return true)
-        input_layout.size.batch[0] > 1))
+        input_layout.size.batch[0] > 1))                            //extra reorder between input and this fc from bfyx to yxfb format (so "is_batch_after_spatial" should return true)
     {
         auto result = layout(input_layout.data_type, tensor(format::xb, { bias_layout.size.spatial[0], input_layout.size.batch[0] }));
         return result;

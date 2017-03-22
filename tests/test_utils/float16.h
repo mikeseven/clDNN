@@ -31,6 +31,13 @@ struct FLOAT16
 		} format;
 	};
 
+	static FLOAT16 min_val()
+	{
+		FLOAT16 f16;
+		f16.v = 0xFC00;
+		return f16;
+	}
+
     operator double() const { double d = (double)float16_to_float32(v); return d; }
     operator float() const { float f = float16_to_float32(v); return f; }
     operator int16_t() const { return *(int16_t*)(&v); }

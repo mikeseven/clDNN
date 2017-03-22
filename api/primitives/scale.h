@@ -19,14 +19,34 @@
 #define SCALE_H
 
 #include "../cldnn.h"
+/// @addtogroup c_api C API
+/// @{
+/// @addtogroup c_topology Network Topology
+/// @{
+/// @addtogroup c_primitives Primitives
+/// @{
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/// @brief Performs elementwise product of input and scale_input.
+/// @details Scale input dimension should be equal to input dimension or be 1 if it is not there.<br>
+/// Input size : 2x3x4x5(BFYX)<br>
+///     Possible scale inputs sizes :<br>
+///     2x3x4x5 - works the same as(axis == 0 == -4) in caffe<br>
+///     1x3x4x5 - works the same as(axis == 1 == -3) in caffe<br>
+///     1x1x4x5 - works the same as(axis == 2 == -2) in caffe<br>
+///     1x1x1x5 - works the same as(axis == 3 == -1) in caffe<br>
+///     1x1x1x1 - works the same as empty shape(scalar) in caffe<br>
+/// When scale_input is the same as input, the behavior is the same as @CLDNN_PRIMITIVE_DESC{eltwise} with product operation.<br>
+/// Optionally it can also add provided biases by setting bias_term.<br>
 CLDNN_BEGIN_PRIMITIVE_DESC(scale)
+/// @brief Scale input primitive id with values needed for product computation.
 cldnn_primitive_id scale_input;
+/// @brief Flag to set optional adding biases.
 bool bias_term;
+/// @brief Primitive id containing bias data.
 cldnn_primitive_id bias;
 CLDNN_END_PRIMITIVE_DESC(scale)
 
@@ -36,5 +56,8 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(scale);
 }
 #endif
 
+/// @}
+/// @}
+/// @}
 #endif /* SCALE_H */
 

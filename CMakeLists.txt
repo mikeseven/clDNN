@@ -826,7 +826,7 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
         ExtensionsEnabled
         TreatWarnAsErrorEnabled
         WarnLevel4
-        FastMath
+        NoFastMath
         StackProtector
     )
   intel_config_flag_apply_settings(

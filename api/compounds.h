@@ -23,6 +23,14 @@
 
 namespace cldnn {
 
+/// @addtogroup cpp_api C++ API
+/// @{
+
+/// @cond CPP_HELPERS
+
+/// @defgroup cpp_helpers Helpers
+/// @{
+
 template<typename T>
 class mutable_array_ref
 {
@@ -214,4 +222,10 @@ public:
 
 typedef basic_string_ref<char> string_ref;
 typedef basic_string_ref<wchar_t> wstring_ref;
+
+/// @}
+
+/// @endcond
+
+/// @}
 }

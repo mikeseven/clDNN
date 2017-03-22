@@ -1,4 +1,4 @@
-/*
+﻿/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,7 @@
 #include <api/engine.hpp>
 #include "test_utils/test_utils.h"
 #include "test_utils/float16.h"
+#include "api/primitives/reorder.hpp"
 
 namespace{
     auto calc_idx = [](std::vector<uint32_t> yxfb_pos, std::vector<uint32_t>& buf_size_bfyx) -> uint32_t{
@@ -101,13 +102,13 @@ void generic_relu_test(cldnn::format test_input_fmt, int input_b, int input_f, i
 	auto output_ptr = output_memory.pointer<T>();
 
 	EXPECT_EQ(output_layout.size.format.value, test_input_fmt.value);
-	output_layout.size = output_layout.size.transform(cldnn::format::yxfb, 0);
-	int y_size = output_layout.size.sizes()[0];
-	int x_size = output_layout.size.sizes()[1];
-	int f_size = output_layout.size.sizes()[2];
-	int b_size = output_layout.size.sizes()[3];
-	EXPECT_EQ(y_size, input_y);
-	EXPECT_EQ(x_size, input_x);
+	tensor output_tensor = output_layout.size.transform(cldnn::format::yxfb, 0);
+	int y_size = output_tensor.sizes()[0];
+	int x_size = output_tensor.sizes()[1];
+	int f_size = output_tensor.sizes()[2];
+	int b_size = output_tensor.sizes()[3];
+	EXPECT_EQ(y_size, input_y + 2 * output_padding_y);
+	EXPECT_EQ(x_size, input_x + 2 * output_padding_x);
 	EXPECT_EQ(f_size, input_f);
 	EXPECT_EQ(b_size, input_b);
 	
@@ -191,8 +192,9 @@ TEST(relu_f32_fw_gpu, basic_yxfb) {
 	}
 }
 
-TEST(DISABLED_relu_f32_fw_gpu, basic_input_padding_yxfb) {
-	//  Input Padding: 2x1 (yx format)
+TEST(relu_f32_fw_gpu, basic_input_padding_yxfb) {
+	//  Input Padding: 2x1 (yx format) out of the reorder layer
+    //  The expected size is the same as in put - the output padding is set to 0, 0
 	//
 	//  Input:
 	//  z  z  z  z  z  z  z
@@ -207,40 +209,33 @@ TEST(DISABLED_relu_f32_fw_gpu, basic_input_padding_yxfb) {
 	//  Slope: 0.5
 	//
 	//  Output:
-	//  0    0    0    0    0    0    0
-	//  0    0    0    0    0    0    0
-	//  0    1   -1   -1.5  4    5    0
-	//  0    2    2    3    4   -3    0
-	//  0    3   -1.5  3    5    1    0
-	//  0    1    1    1   -0.5  1    0
-	//  0    0    0    0    0    0    0
-	//  0    0    0    0    0    0    0
+	//  1   -1   -1.5  4    5
+	//  2    2    3    4   -3
+	//  3   -1.5  3    5    1
+	//  1    1    1   -0.5  1
 
 	engine engine;
 
 	auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 5, 1, 1 } } });
+
 	set_values(input,
 	{ 1.0f, -2.0f, -3.0f, 4.0f, 5.0f,
 		2.0f, 2.0f, 3.0f, 4.0f, -6.0f,
 		3.0f, -3.0f, 3.0f, 5.0f, 1.0f,
 		1.0f, 1.0f, 1.0f, -1.0f, 1.0f });
-	VF<float> output_vec = {
-		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 1.0f, -1.0f, -1.5f, 4.0f, 5.0f, 0.0f,
-		0.0f, 2.0f, 2.0f, 3.0f, 4.0f, -3.0f, 0.0f,
-		0.0f, 3.0f, -1.5f, 3.0f, 5.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 1.0f, 1.0f, -0.5f, 1.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+    VF<float> output_vec = {
+         1.0f, -1.0f, -1.5f, 4.0f, 5.0f,
+         2.0f, 2.0f, 3.0f, 4.0f, -3.0f,
+         3.0f, -1.5f, 3.0f, 5.0f, 1.0f,
+         1.0f, 1.0f, 1.0f, -0.5f, 1.0f};
 
 	topology topology(
 		input_layout("input", input.get_layout()),
-		activation("relu", "input", 0.5, { format::yx,{ 2, 1 } }, { format::yx,{ 0, 0 } }));
+        reorder("reorder", "input", input.get_layout(), "" ,{ format::yx,{ 0, 0 } }, { format::yx,{ 2, 1 } }),
+		activation("relu", "reorder", 0.5, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();
-	EXPECT_EQ(outputs.size(), size_t(1));
 	EXPECT_EQ(outputs.begin()->first, "relu");
 
 	auto output_memory = outputs.at("relu").get_memory();
@@ -252,8 +247,8 @@ TEST(DISABLED_relu_f32_fw_gpu, basic_input_padding_yxfb) {
 	int f_size = output_layout.size.sizes()[2];
 	int b_size = output_layout.size.sizes()[3];
 	EXPECT_EQ(output_layout.size.format, format::yxfb);
-	EXPECT_EQ(y_size, 8);
-	EXPECT_EQ(x_size, 7);
+	EXPECT_EQ(y_size, 4);
+	EXPECT_EQ(x_size, 5);
 	EXPECT_EQ(f_size, 1);
 	EXPECT_EQ(b_size, 1);
 
@@ -262,19 +257,14 @@ TEST(DISABLED_relu_f32_fw_gpu, basic_input_padding_yxfb) {
 	}
 }
 
-TEST(DISABLED_relu_f32_fw_gpu, basic_input_and_output_padding_yxfb) {
-	//  Input Padding: 2x1  (yx format)
-	//  Output Padding: 1x2 (yx format)
+TEST(relu_f32_fw_gpu, basic_output_padding_yxfb) {
+	//  Output Padding: 3x3 (yx format)
 	//
 	//  Input:
-	//  z  z  z  z  z  z  z
-	//  z  z  z  z  z  z  z
-	//  z  1 -2 -3  4  5  z
-	//  z  2  2  3  4 -6  z
-	//  z  3 -3  3  5  1  z
-	//  z  1  1  1 -1  1  z
-	//  z  z  z  z  z  z  z
-	//  z  z  z  z  z  z  z
+	//  1 -2 -3  4  5
+	//  2  2  3  4 -6
+	//  3 -3  3  5  1
+	//  1  1  1 -1  1
 	//
 	//  Slope: 0.5
 	//
@@ -312,7 +302,7 @@ TEST(DISABLED_relu_f32_fw_gpu, basic_input_and_output_padding_yxfb) {
 
 	topology topology(
 		input_layout("input", input.get_layout()),
-		activation("relu", "input", 0.5, { format::yx,{ 2, 1 } }, { format::yx,{ 1, 2 } }));
+		activation("relu", "input", 0.5, { format::yx,{ 0, 0 } }, { format::yx,{ 3, 3 } }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();
@@ -328,8 +318,8 @@ TEST(DISABLED_relu_f32_fw_gpu, basic_input_and_output_padding_yxfb) {
 	int f_size = output_layout.size.sizes()[2];
 	int b_size = output_layout.size.sizes()[3];
 	EXPECT_EQ(output_layout.size.format, format::yxfb);
-	EXPECT_EQ(y_size, 9);
-	EXPECT_EQ(x_size, 9);
+	EXPECT_EQ(y_size, 10);
+	EXPECT_EQ(x_size, 11);
 	EXPECT_EQ(f_size, 1);
 	EXPECT_EQ(b_size, 1);
 
@@ -338,13 +328,10 @@ TEST(DISABLED_relu_f32_fw_gpu, basic_input_and_output_padding_yxfb) {
 	}
 }
 
-TEST(DISABLED_relu_gpu, generic_random_short) {
+TEST(DISABLED_relu_gpu, generic_random) {
 	VF<cldnn::format> test_inputs_fmts = { cldnn::format::bfyx, cldnn::format::yxfb };
 	VF<float> slopes = { 0.0f, -0.0f, -17.19f, 1028.8f, std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity() };
 	std::vector<std::pair<int, int>> input_sizes = { { 100, 100 },{ 227, 227 },{ 400, 600 },{ 531, 777 },{ 4096, 1980 } };
-	for (int i = 1; i <= 16; ++i) {
-		input_sizes.emplace_back(i, i);
-	}
 	
 	engine engine;
 	bool f16_supported = !!engine.get_info().supports_fp16;
@@ -357,8 +344,8 @@ TEST(DISABLED_relu_gpu, generic_random_short) {
 			for (int input_f = 1; input_f <= 1; ++input_f) {
 				for (std::pair<int, int> &input_yx : input_sizes) {
 					for (float slope : slopes) {
-						for (int input_padding_y = 0; input_padding_y <= 1; ++input_padding_y) {
-							for (int input_padding_x = 0; input_padding_x <= 1; ++input_padding_x) {
+						for (int input_padding_y = 0; input_padding_y <= 0; ++input_padding_y) {
+							for (int input_padding_x = 0; input_padding_x <= 0; ++input_padding_x) {
 								for (int output_padding_y = 0; output_padding_y <= 1; ++output_padding_y) {
 									for (int output_padding_x = 0; output_padding_x <= 1; ++output_padding_x) {
 										generic_relu_test<float>(test_input_fmt, input_b, input_f, input_yx.first, input_yx.second, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);

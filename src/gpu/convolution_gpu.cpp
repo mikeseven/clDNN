@@ -474,9 +474,9 @@ static std::pair<size_t, size_t> get_bfyx_req_input_block_dims(
     std::size_t input_block_req_height = (output_block_height - 1) * stride.spatial[1] + filter_size.spatial[1];
 
     // Required number of elements in X dimension rounded to nearest >= read chunk size.
-    std::size_t input_block_read_width = std::max(round_up_to(input_block_req_width, read_chunk_size), min_read_size);
+    std::size_t input_block_read_width = std::max(cldnn::round_up_to(input_block_req_width, read_chunk_size), min_read_size);
     // Number of sub-group-sized vectors of unit type needed to store input block.
-    std::size_t input_block_array_size = ceil_div(input_block_req_height * input_block_read_width, sub_group_size);
+    std::size_t input_block_array_size = cldnn::ceil_div(input_block_req_height * input_block_read_width, sub_group_size);
 
     return std::make_pair(input_block_array_size, input_block_read_width);
 }
@@ -494,7 +494,7 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
     // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
     constexpr int sub_group_size = 16;
 
-    const uint32_t of_threads_per_batch = round_up_to(filter_mem.argument().size.feature[0], sub_group_size);
+    const uint32_t of_threads_per_batch = cldnn::round_up_to(filter_mem.argument().size.feature[0], sub_group_size);
     kd.leftovers = of_threads_per_batch - filter_mem.argument().size.feature[0];
 
     if (filter_mem.argument().size.spatial[0] > max_supported_filter_size ||
@@ -566,8 +566,8 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
         kd.input_block_width      = input_block_dims.second;
     }
     
-    kd.gws0 = ceil_div(output_size.spatial[0], kd.block_width);
-    kd.gws1 = ceil_div(output_size.spatial[1], kd.block_height);
+    kd.gws0 = cldnn::ceil_div(output_size.spatial[0], kd.block_width);
+    kd.gws1 = cldnn::ceil_div(output_size.spatial[1], kd.block_height);
     kd.gws2 = of_threads_per_batch * output_size.batch[0];
 
     kd.lws0 = 1;

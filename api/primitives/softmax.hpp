@@ -21,10 +21,28 @@
 
 namespace cldnn
 {
+/// @addtogroup cpp_api C++ API
+/// @{
+/// @addtogroup cpp_topology Network Topology
+/// @{
+/// @addtogroup cpp_primitives Primitives
+/// @{
+
+/// @brief Normalizes results so they sum to 1.
+/// @details
+/// @par Algorithm:
+///   b = e^a/sum(N-1; j=0; e^j)
+/// @par Where:
+///   @li N : number of values to normalize
+///   @li b : value after normalization
+///   @li a : value before normalization
 struct softmax : public primitive_base<softmax, CLDNN_PRIMITIVE_DESC(softmax)>
 {
     CLDNN_DECLATE_PRIMITIVE(softmax)
 
+    /// @brief Constructs softmax primitive.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
     softmax(
         const primitive_id& id,
         const primitive_id& input,
@@ -34,6 +52,7 @@ struct softmax : public primitive_base<softmax, CLDNN_PRIMITIVE_DESC(softmax)>
         :primitive_base(id, {input}, input_padding, output_padding)
     {}
 
+    /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{softmax}
     softmax(const dto* dto)
         :primitive_base(dto)
     {}
@@ -41,4 +60,7 @@ struct softmax : public primitive_base<softmax, CLDNN_PRIMITIVE_DESC(softmax)>
 private:
     void update_dto(dto&) const override {}
 };
+/// @}
+/// @}
+/// @}
 }

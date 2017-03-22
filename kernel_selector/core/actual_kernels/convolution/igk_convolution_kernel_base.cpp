@@ -16,6 +16,7 @@
 
 #include "igk_convolution_kernel_base.h"
 #include "api/tensor.hpp"
+#include "api/cldnn_defs.h"
 
 namespace KernelSelctor 
 {
@@ -62,7 +63,7 @@ namespace KernelSelctor
             params->convParams.filterSize.x *
             params->convParams.filterSize.y *
             params->inDims.z *
-            round_up_to(params->outDims.z, sub_group_size) *
+            cldnn::round_up_to(params->outDims.z, sub_group_size) *
             BytesPerElement(params->inputType);
     }
 

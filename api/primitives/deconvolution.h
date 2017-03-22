@@ -19,17 +19,33 @@
 #define DECONVOLUTION_H
 
 #include "../cldnn.h"
+/// @addtogroup c_api C API
+/// @{
+/// @addtogroup c_topology Network Topology
+/// @{
+/// @addtogroup c_primitives Primitives
+/// @{
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/// @brief Performs transposed convolution.
+/// Also supports built-in Relu @CLDNN_PRIMITIVE_DESC{activation} available by setting it in arguments.
+/// @details Deconvolution is similar to convolution layer with the weights flipped on the axis and stride and input padding parameters used in opposite sense as in convolution.
+/// Look into docs/size_offset_stride_padding.html for description how size, offsets, stride & padding parameter work.
 CLDNN_BEGIN_PRIMITIVE_DESC(deconvolution)
+/// @brief Defines the spatial dimensions of stride of adjacent elements in input buffer.
 cldnn_tensor stride;
+/// @brief Enables Relu activation.
 uint32_t with_activation;
+/// @brief Relu activation slope.
 float activation_negative_slope;
+/// @brief On how many cards split the computation to.
 uint32_t split;
+/// @brief Array of primitive ids containing weights data. Size of array should be equivalent to @p split.
 cldnn_primitive_id_arr weights;
+/// @brief Array of primitive ids containing bias data. Size of array should be equivalent to @p split.
 cldnn_primitive_id_arr bias;
 CLDNN_END_PRIMITIVE_DESC(deconvolution)
 
@@ -39,5 +55,8 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(deconvolution);
 }
 #endif
 
+/// @}
+/// @}
+/// @}
 #endif /* DECONVOLUTION_H */
 

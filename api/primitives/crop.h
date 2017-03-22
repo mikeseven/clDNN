@@ -18,14 +18,24 @@
 #ifndef CROP_H
 #define CROP_H
 
-#include "api/cldnn.h"
+#include "../cldnn.h"
+/// @addtogroup c_api C API
+/// @{
+/// @addtogroup c_topology Network Topology
+/// @{
+/// @addtogroup c_primitives Primitives
+/// @{
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/// @brief Performs crop operation on input.
+/// @details Crops the input to the shape of reference_input accross all dimensions taking into account specified input offsets.
 CLDNN_BEGIN_PRIMITIVE_DESC(crop)
+/// @brief Reference input primitive id with the required dimensions.
 cldnn_primitive_id reference_input;
+/// @brief Input offsets.
 cldnn_tensor offsets;
 CLDNN_END_PRIMITIVE_DESC(crop)
 
@@ -35,5 +45,8 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(crop);
 }
 #endif
 
+/// @}
+/// @}
+/// @}
 #endif /* CROP_H */
 

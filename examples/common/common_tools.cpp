@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-
 #include "instrumentation.h"
 #include "common_tools.h"
 #include "FreeImage_wraps.h"
@@ -266,7 +265,6 @@ void load_images_from_file_list(
     auto dst_ptr = memory.pointer<MemElemTy>();
     auto it = dst_ptr.begin();
 
-    auto batches = std::min(memory_layout.size.batch[0], static_cast<cldnn::tensor::value_type>(images_list.size()));
     auto dim = memory_layout.size.spatial;
 
     if(memory_layout.size.format != cldnn::format::byxf) throw std::runtime_error("Only bfyx format is supported as input to images from files");
@@ -366,9 +364,9 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     cldnn::build_options options;
 
     //TODO set proper network build options
-    if (ep.optimize_weights)    options.set_option(cldnn::build_option::optimize_data);
-    if (ep.profiling)           options.set_option(cldnn::build_option::profiling);
-    if (ep.dump_hidden_layers || ep.profiling)  options.set_option(cldnn::build_option::debug);
+    options.set_option(cldnn::build_option::optimize_data(ep.optimize_weights));
+    options.set_option(cldnn::build_option::profiling(ep.profiling));
+    options.set_option(cldnn::build_option::debug(ep.dump_hidden_layers || ep.profiling));
 
     std::vector<cldnn::primitive_id> outputs{ "output" };
     if (!ep.dump_layer_name.empty())  outputs.push_back(ep.dump_layer_name);
@@ -439,7 +437,8 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     if (log_energy)
     {
         try {
-            energyLib.StartLog(L"power_log.csv");
+            wchar_t fileName[] = L"power_log.csv";
+            energyLib.StartLog(fileName);
         }
         catch (...)
         {

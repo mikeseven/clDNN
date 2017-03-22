@@ -83,11 +83,15 @@ def main(parsedArgs):
             buildCount = buildStepCount
             foundGoodCorrBuild = False
 
+            corrBranchName = parsedArgs.corr_branch.strip()
+            corrBranchLocator = '(name:{branchName})'.format(branchName = corrBranchName) if corrBranchName != '' else '(default:true)'
+
             while buildCount >= buildStepCount and not foundGoodCorrBuild:
-                logger.debug("Scanning latest successful finished ci-main builds run on default branch ({0}-{1})..."
+                logger.debug("Scanning latest successful finished correlation builds run on correlation branch ({0}-{1})..."
                              .format(buildStartIdx + 1, buildStartIdx + buildCount))
-                buildsInfo = conn("builds/?locator=buildType:(id:{corrConfigId}),status:SUCCESS,personal:false,canceled:false,failedToStart:false,running:false,branch:(default:true),start:{startIdx},count:{count}&fields=count,build(id,number,finishDate,tags(count,tag))",
-                                  corrConfigId = parsedArgs.corr_config_id, startIdx = buildStartIdx,
+                buildsInfo = conn("builds/?locator=buildType:(id:{corrConfigId}),status:SUCCESS,personal:false,canceled:false,failedToStart:false,running:false,branch:{corrBranch},start:{startIdx},count:{count}&fields=count,build(id,number,finishDate,tags(count,tag))",
+                                  corrConfigId = parsedArgs.corr_config_id, corrBranch = corrBranchLocator,
+                                  startIdx = buildStartIdx,
                                   count = buildCount)
 
                 buildCount = buildsInfo["count"]
@@ -158,6 +162,7 @@ if __name__ == "__main__":
     parser.add_argument('-ult', '--use-local-time', dest = 'use_local_time', metavar = '<ult>',                 type = int,     nargs = '?', const = 1, default = 0, choices = (0, 1), help = 'Boolean int value / Flag which indicates that the local time should be used instead of UTC time in some build parameters.')
     parser.add_argument('-ca',  '--change-author',  dest = 'change_auth',    metavar = '<change-author>',       type = unicode, default = '',                                          help = 'TeamCity user name who triggered build. If the value is specified and verified by TeamCity REST API, VCS deduction (last commit author) is not performed.')
     parser.add_argument('-cci', '--corr-config-id', dest = 'corr_config_id', metavar = '<build-config-id>',     type = unicode, default = 'SEIgk1_GenGpuClDNN_CiMain',                 help = 'Identifier of build configuration that will be used as source of correlation builds.')
+    parser.add_argument('-cb',  '--corr-branch',    dest = 'corr_branch',    metavar = '<branch-name-or-ref>',  type = unicode, default = '',                                          help = 'Name or reference of branch in VCS that will be used as source of correlation builds. If not specified or empty, default branch is used.')
     parser.add_argument('-tc',  '--tc-server-url',  dest = 'tc_url',         metavar = '<teamcity-url>',        type = unicode, default = '',                                          help = 'URL to TeamCity server.')
     parser.add_argument('-au',  '--agent-user',     dest = 'agent_user',     metavar = '<agent-user-id>',       type = unicode, default = '',                                          help = 'Temporary agent user ID for TeamCity (to access TeamCity data).')
     parser.add_argument('-ap',  '--agent-password', dest = 'agent_pass',     metavar = '<agent-pass>',          type = unicode, default = '',                                          help = 'Temporary agent password for TeamCity (to access TeamCity data).')

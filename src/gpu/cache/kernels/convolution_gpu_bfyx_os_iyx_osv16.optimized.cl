@@ -1,3 +1,18 @@
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 // Extensions and additional capabilities.
 #if FP16_SUPPORTED
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
@@ -49,9 +64,11 @@ if (_kernel_data.leftovers)
 
 // Activation function used in ReLU.
 #if RELU && FP16_UNIT_USED
-    #define ACTIVATION(output, input) output = max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h);
+    #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
+    input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
 #elif RELU
-    #define ACTIVATION(output, input) output = max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f);
+    #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
+    input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
 #else
     #define ACTIVATION(output, input) output = input;
 #endif
@@ -83,11 +100,11 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
     const uint output_buffer_size_y = OUTPUT_PADDING_LOWER_SIZE_Y + OUTPUT_SIZE_Y + OUTPUT_PADDING_UPPER_SIZE_Y;
 
 
-    const uint oc  = get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column 
+    const uint oc  = get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column
     const uint or  = get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
-    const uint fm  = get_global_id(2);                    // fm = Feature Map = od = Output Depth 
+    const uint fm  = get_global_id(2);                    // fm = Feature Map = od = Output Depth
     const uint lid = get_sub_group_local_id();
-    
+
     uint batch_idx = fm / FEATURES_THREADS_PER_BATCH;
     uint feature_idx = fm % FEATURES_THREADS_PER_BATCH;
     uint fmg = feature_idx / SUB_GROUP_SIZE;
@@ -97,8 +114,8 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
     UNIT_TYPE w[PREFETCH];
     uint in_addr;
     uint weight_addr = fmg * FILTER_INPUT_FEATURE_NUM * FILTER_SIZE_X * FILTER_SIZE_Y * SUB_GROUP_SIZE + lid;
-    
-    for(int i = 0; i < (OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT); i++) { 
+
+    for(int i = 0; i < (OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT); i++) {
         out[i] = UNIT_VAL_ZERO;
     }
 
@@ -169,16 +186,16 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
             uint kc = 0; // kc = Kernel Column
             LOOP(FILTER_SIZE_X, kc,
             {
-                //w = weights[weight_addr];	
+                //w = weights[weight_addr];
                 for(uint br=0; br<OUT_BLOCK_HEIGHT; br++) {
                     for(uint bc=0; bc<OUT_BLOCK_WIDTH; bc++) {
 
 #if IN_BLOCK_WIDTH != SUB_GROUP_SIZE
-                        //if we fix the programming model, then we could use a nice simple 2d array: val = in[br * STRIDE_SIZE_Y + kr][bc * STRIDE_SIZE_X + kc]; 
+                        //if we fix the programming model, then we could use a nice simple 2d array: val = in[br * STRIDE_SIZE_Y + kr][bc * STRIDE_SIZE_X + kc];
                         UNIT_TYPE val = intel_sub_group_shuffle( in[(((br * STRIDE_SIZE_Y + kr) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc)) / SUB_GROUP_SIZE],
                                                                     (((br * STRIDE_SIZE_Y + kr) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc)) % SUB_GROUP_SIZE);
 #else
-                        UNIT_TYPE val = intel_sub_group_shuffle( in[br * STRIDE_SIZE_X + kr], bc * STRIDE_SIZE_X + kc);	
+                        UNIT_TYPE val = intel_sub_group_shuffle( in[br * STRIDE_SIZE_X + kr], bc * STRIDE_SIZE_X + kc);
 #endif
 
                         out[br * OUT_BLOCK_WIDTH + bc] = mad(w[wi % PREFETCH], val, out[br * OUT_BLOCK_WIDTH + bc]);

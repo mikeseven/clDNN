@@ -1,5 +1,21 @@
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 #if RELU
-    #define ACTIVATION(output, input) output = max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f);
+    #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
+    input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
 #else
     #define ACTIVATION(output, input) output = input;
 #endif
@@ -20,7 +36,7 @@ KERNEL(convolution_gpu_yxfb_oiyx)(
     const int ofm_offset = (global_id / batch_num) % FILTER_OUTPUT_FEATURE_NUM;
 
     float result = bias[ofm_offset];
-    
+
     bool finish = false;
     const uint out_x = get_global_id(1);
     const uint out_y = get_global_id(2);
@@ -64,11 +80,11 @@ KERNEL(convolution_gpu_yxfb_oiyx)(
                             input_idx += INPUT_SIZE_X * INPUT_SIZE_Y;
                         }
                     }
-                } 
+                }
             }
         }
     }
-	ACTIVATION(output[global_id], result);
+    ACTIVATION(output[global_id], result);
 }
 
 #undef ACTIVATION

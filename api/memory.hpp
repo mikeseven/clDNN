@@ -27,6 +27,13 @@
 namespace cldnn
 {
 
+/// @addtogroup cpp_api C++ API
+/// @{
+
+/// @defgroup cpp_memory Memory Management
+/// @{
+
+/// @brief Possible data types could be stored in memory.
 enum class data_types : size_t
 {
     i8  = cldnn_i8,
@@ -38,7 +45,9 @@ enum class data_types : size_t
     f64 = cldnn_f64
 };
 
+/// Converts C++ type to @ref data_types .
 template <typename T> struct type_to_data_type;
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 template<> struct type_to_data_type  <int8_t> { static const data_types value = data_types::i8; };
 template<> struct type_to_data_type <uint8_t> { static const data_types value = data_types::i8; };
 template<> struct type_to_data_type <int16_t> { static const data_types value = data_types::i16; };
@@ -50,8 +59,11 @@ template<> struct type_to_data_type<uint64_t> { static const data_types value = 
 template<> struct type_to_data_type  <half_t> { static const data_types value = data_types::f16; };
 template<> struct type_to_data_type   <float> { static const data_types value = data_types::f32; };
 template<> struct type_to_data_type  <double> { static const data_types value = data_types::f64; };
+#endif
 
+/// Converts @ref data_types to C++ type.
 template<data_types Data_Type> struct data_type_to_type;
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 template<> struct data_type_to_type <data_types::i8> { typedef int8_t type; };
 template<> struct data_type_to_type<data_types::i16> { typedef int16_t type; };
 template<> struct data_type_to_type<data_types::i32> { typedef int32_t type; };
@@ -59,7 +71,10 @@ template<> struct data_type_to_type<data_types::i64> { typedef int64_t type; };
 template<> struct data_type_to_type<data_types::f16> { typedef half_t type; };
 template<> struct data_type_to_type<data_types::f32> { typedef float type; };
 template<> struct data_type_to_type<data_types::f64> { typedef double type; };
+#endif
 
+
+/// Helper class to identify key properties for data_types.
 struct data_type_traits
 {
     static size_t size_of(data_types data_type)
@@ -93,26 +108,56 @@ struct data_type_traits
         default: return size_t(1);
         }
     }
+    
+    static std::string name(data_types data_type)
+    {
+        switch (data_type)
+        {
+        case data_types::i8:
+            return "i8";
+        case data_types::i16:
+            return "i16";
+        case data_types::i32:
+            return "i32";
+        case data_types::i64:
+            return "i64";
+        case data_types::f16:
+            return "f16";
+        case data_types::f32:
+            return "f32";
+        case data_types::f64:
+            return "f64";
+        default: 
+            assert(0);            
+            return std::string("invalid data type: " + std::to_string((int)data_type));
+        }        
+    }
 };
 
+/// Helper function to check if C++ type matches @p data_type.
 template <typename T>
 bool data_type_match(data_types data_type)
 {
     return data_type == type_to_data_type<T>::value;
 }
 
+/// @brief Describes memory layout.
+/// @details Contains information about data stored in @ref memory.
 struct layout
 {
+    /// Constructs layout based on @p data_type and @p size information described by @ref tensor
     layout(data_types data_type, tensor size)
         : data_type(data_type)
         , size(size)
     {}
 
+    /// Construct C++ layout based on C API @p cldnn_layout
     layout(const cldnn_layout& other)
         : data_type(static_cast<data_types>(other.data_type))
         , size(other.size)
     {}
 
+    /// Convert to C API @p cldnn_layout
     operator cldnn_layout() const
     {
         return{ static_cast<decltype(cldnn_layout::data_type)>(data_type), size };
@@ -151,23 +196,22 @@ struct layout
         return (lhs.size < rhs.size);
     }
 
-    /**
-     * \brief 
-     * \return number of bytes needed to store this layout
-     */
+    /// Number of bytes needed to store this layout
     size_t data_size() const { return data_type_traits::size_of(data_type) * size.get_linear_size(); }
 
-    /**
-     * \brief 
-     * \return number of elements to be stored in this layout
-     */
+    /// number of elements to be stored in this memory layout
     size_t count() const { return size.get_linear_size(); }
 
+    /// Data type stored in @ref memory (see. @ref data_types)
     data_types data_type;
+
+    /// The size of the @ref memory
     tensor size;
 };
 
+#ifndef DOXYGEN_HIDE_DEPRECATED
 // TODO remove this backward compatibility class
+/// @deprecated This class is defined only for backward compatibility
 struct neural_memory
 {
     struct format
@@ -327,10 +371,15 @@ struct neural_memory
         arguments(const cldnn::layout& layout): format(convert_format(layout)), size(layout.size){}
     };
 };
+#endif
 
 template<typename T> struct pointer;
+
+/// @brief Represents buffer with particular @ref layout.
+/// @details Usually allocated by @ref engine except cases when attached to user-allocated buffer.
 struct memory
 {
+    /// Allocate memory on @p engine using specified @p layout
     static memory allocate(const engine& engine, const layout& layout)
     {
         size_t size = layout.data_size();
@@ -341,6 +390,10 @@ struct memory
         });
     }
 
+    /// Create memory object attached to the buffer allocated by user.
+    /// @param ptr  The pointer to user allocated buffer.
+    /// @param size Size (in bytes) of the buffer. Should be equal to @p layout.data_size()
+    /// @note User is responsible for buffer deallocation. Buffer lifetime should be bigger than lifetime of the memory object.
     template<typename T>
     static memory attach(const cldnn::layout& layout, T* ptr, size_t size)
     {
@@ -358,6 +411,7 @@ struct memory
     }
 
     // TODO remove cldnn::memory usage from the implementation code
+    /// @brief Constructs memory object form C API ::cldnn_memory handler
     memory(cldnn_memory data, bool add_ref = false)
         :_impl(data), _layout(get_layout_impl(data))
     {
@@ -388,19 +442,16 @@ struct memory
     friend bool operator==(const memory& lhs, const memory& rhs) { return lhs._impl == rhs._impl; }
     friend bool operator!=(const memory& lhs, const memory& rhs) { return !(lhs == rhs); }
 
-    /**
-     * \brief 
-     * \return number of elements of _layout.data_type stored in memory
-     */
+    /// number of elements of _layout.data_type stored in memory
     size_t count() const { return get_layout().count(); }
 
-    /**
-     * \brief 
-     * \return number of bytes used by memory
-     */
+    /// number of bytes used by memory
     size_t size() const { return get_layout().data_size(); }
+
+    /// Associated @ref layout
     const layout& get_layout() const { return _layout; }
 
+    /// Test if memory is allocated by @p engine
     bool is_allocated_by(const engine& engine) const
     {
         auto my_engine = check_status<cldnn_engine>("get memory engine failed", [&](status_t* status)
@@ -410,12 +461,17 @@ struct memory
         return my_engine == engine.get();
     }
 
+#ifndef DOXYGEN_HIDE_DEPRECATED
     // TODO remove this backward compatibility call
-    neural_memory::arguments argument() const { return neural_memory::arguments(get_layout()); };
+    /// @deprecated This function is defined only for backward compatibility
+    neural_memory::arguments argument() const { return neural_memory::arguments(get_layout()); }
+#endif
 
+    /// Creates the @ref pointer object to get an access memory data
     template<typename T> friend struct cldnn::pointer;
     template<typename T> cldnn::pointer<T> pointer() const;
 
+    /// C API memory handle
     cldnn_memory get() const { return _impl; }
 
 private:
@@ -455,9 +511,16 @@ private:
 
 CLDNN_API_CLASS(memory)
 
+/// @brief Helper class to get an access @ref memory data
+/// @details
+/// This class followis RAII idiom and implements basic C++ collection members.
+/// @ref memory object is locked on construction of pointer and "unlocked" on descruction.
+/// Objects of this class could be used in many STL utility functions like copy(), transform(), etc.
+/// As well as in range-for loops.
 template<typename T>
 struct pointer
 {
+    /// Constructs pointer from @ref memory and locks @c (pin) ref@ memory object.
     pointer(const memory& mem): _mem(mem)
     {
         auto data_type = _mem.get_layout().data_type;
@@ -467,26 +530,32 @@ struct pointer
         }
         _ptr = static_cast<T*>(_mem.lock());
     }
+
+    /// Unlocks @ref memory
     ~pointer() { _mem.unlock(); }
 
+    /// Returns a pointer to locked memory
     T* data() { return _ptr; }
+
+    /// Returns the number of elements (of type T) stored in memory
     size_t size() const { return _mem.size() / sizeof(T); }
 
 #if defined(_SECURE_SCL) && (_SECURE_SCL > 0)
     typedef stdext::checked_array_iterator<T*> iterator;
-    stdext::checked_array_iterator<T*> begin() const&
-    {
-        return stdext::make_checked_array_iterator(_ptr, size());
-    }
+    typedef stdext::checked_array_iterator<const T*> const_iterator;
 
-    stdext::checked_array_iterator<T*> end() const&
-    {
-        return stdext::make_checked_array_iterator(_ptr, size(), size());
-    }
+    iterator begin() & { return stdext::make_checked_array_iterator(_ptr, size()); }
+    iterator end() & { return stdext::make_checked_array_iterator(_ptr, size(), size()); }
+
+    const_iterator begin() const& { return stdext::make_checked_array_iterator(_ptr, size()); }
+    const_iterator end() const& { return stdext::make_checked_array_iterator(_ptr, size(), size()); }
 #else
     typedef T* iterator;
-    T* begin() const& { return _ptr; }
-    T* end() const& { return _ptr + size(); }
+    typedef const T* const_iterator;
+    iterator begin() & { return _ptr; }
+    iterator end() & { return _ptr + size(); }
+    const_iterator begin() const& { return _ptr; }
+    const_iterator end() const& { return _ptr + size(); }
 #endif
 
     T& operator[](size_t idx) const&
@@ -507,8 +576,11 @@ struct pointer
 
     // do not use this class as temporary object
     // ReSharper disable CppMemberFunctionMayBeStatic, CppMemberFunctionMayBeConst
+    /// Prevents to use pointer as temporary object
     void begin() && {}
+    /// Prevents to use pointer as temporary object
     void end() && {}
+    /// Prevents to use pointer as temporary object
     void operator[](size_t idx) && {}
     // ReSharper restore CppMemberFunctionMayBeConst, CppMemberFunctionMayBeStatic
 
@@ -517,7 +589,13 @@ private:
     T* _ptr;
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 template <typename T>
 pointer<T> memory::pointer() const { return cldnn::pointer<T>(*this); }
+#endif
+
+/// @}
+
+/// @}
 
 }

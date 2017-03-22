@@ -19,11 +19,36 @@
 #define DEPTH_CONCATENATE_H
 
 #include "../cldnn.h"
+/// @addtogroup c_api C API
+/// @{
+/// @addtogroup c_topology Network Topology
+/// @{
+/// @addtogroup c_primitives Primitives
+/// @{
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/// @details Depth concatenation is used to concatenate features from multiple sources into one destination.
+/// Note that all sources must have the same spatial and batch sizes and also the same format as output.
+/// @par Alogrithm:
+/// \code
+///     int outputIdx = 0
+///     for(i : input)
+///     {
+///         for(f : i.features)
+///         {
+///             output[outputIdx] = f
+///             outputIdx += 1
+///         }
+///     }
+/// \endcode
+/// @par Where: 
+///   @li input : data structure holding all source inputs for this primitive
+///   @li output : data structure holding output data for this primitive
+///   @li i.features : number of features in currently processed input
+///   @li outputIdx : index of destination feature 
 CLDNN_BEGIN_PRIMITIVE_DESC(depth_concatenate)
 CLDNN_END_PRIMITIVE_DESC(depth_concatenate)
 
@@ -33,5 +58,8 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(depth_concatenate);
 }
 #endif
 
+/// @}
+/// @}
+/// @}
 #endif /* DEPTH_CONCATENATE_H */
 

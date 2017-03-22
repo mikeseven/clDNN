@@ -63,12 +63,11 @@ void test_conv(
 
     topology.add(data(id + "_input", input), data(id + "_weights", weights), data(id + "_bias", bias), conv);
 }
-
-cldnn::topology build_microbench(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx)
+cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx)
 {
     topology topology;
     bool use_half = input_layout.data_type == data_types::f16 ? true : false;
-
+  
     //not used but needs to be initialized
     input_layout.size = { format::byxf,{ 1, 1, 1, 1 } };
 

@@ -21,10 +21,36 @@
 
 namespace cldnn
 {
+/// @addtogroup cpp_api C++ API
+/// @{
+/// @addtogroup cpp_topology Network Topology
+/// @{
+/// @addtogroup cpp_primitives Primitives
+/// @{
+
+/// @brief Local response normalization
+/// @details LRN layer as described in chapter 3.3 of "ImageNet Classification with Deep Convolutional
+/// Neural Networks" by Khrizevsky, Sutskever, Hinton. @n See: http://www.cs.toronto.edu/~fritz/absps/imagenet.pdf
+/// @par Alogrithm:
+///   b(i,x,y) = a(i,x,y) / (k+alpha*sum(min(N-1, i+n/2); j=max(0,i-n/2); a(j,x,y)^2))
+/// @par Where:
+///   @li b(i,x,y) : value at x, y from i-th feature map after normalization
+///   @li b(i,x,y) : value at x, y from i-th feature map before normalization
+///   @li N : number of feature maps
+///   @li n : size of normalization
+///   @li k, alpha, beta : hyper parameters (equal to 2, 10e-4, 0.75 in paper).
 struct normalization :public primitive_base<normalization, CLDNN_PRIMITIVE_DESC(normalization)>
 {
     CLDNN_DECLATE_PRIMITIVE(normalization)
 
+    /// @brief Constructs LRN primitive.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param size Size of normalization.
+    /// @param k Hyper parameter "k".
+    /// @param alpha Hyper parameter "alpha".
+    /// @param beta Hyper parameter "beta".
+    /// @param lrn_norm_region Normalize across or within channel
     normalization(
         const primitive_id& id,
         const primitive_id& input,
@@ -44,6 +70,7 @@ struct normalization :public primitive_base<normalization, CLDNN_PRIMITIVE_DESC(
         , norm_region(lrn_norm_region)
     {}
 
+    /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{normalization}
     normalization(const dto* dto)
         : primitive_base(dto)
         , size(dto->size)
@@ -53,10 +80,15 @@ struct normalization :public primitive_base<normalization, CLDNN_PRIMITIVE_DESC(
         , norm_region(dto->norm_region)
     {}
 
+    /// @brief Size of normalization.
     uint32_t size;
+    /// @brief Hyper parameter "k".
     float k;
+    /// @brief Hyper parameter "alpha".
     float alpha;
+    /// @brief Hyper parameter "beta".
     float beta;
+    /// @brief Normalize across or within channel
     cldnn_lrn_norm_region norm_region;
 
 protected:
@@ -69,4 +101,7 @@ protected:
         dto.norm_region = norm_region;
     }
 };
+/// @}
+/// @}
+/// @}
 }

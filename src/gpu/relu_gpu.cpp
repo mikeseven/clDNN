@@ -72,12 +72,6 @@ struct relu_gpu : is_an_implementation
         }
         else
         {
-            if (outer.argument.output_padding())
-                throw std::runtime_error("Error, output padding not supported in non bfyx format in RELU primitive!");
-
-            if(outer.input().at(0)->desc()->output_padding())
-                throw std::runtime_error("Error, input padding not supported in non bfyx format in RELU primitive!");
-
             kd.kernel_name = kernel_name;
         }
 

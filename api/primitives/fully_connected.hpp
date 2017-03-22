@@ -21,10 +21,26 @@
 
 namespace cldnn
 {
+/// @addtogroup cpp_api C++ API
+/// @{
+/// @addtogroup cpp_topology Network Topology
+/// @{
+/// @addtogroup cpp_primitives Primitives
+/// @{
+
+/// @brief Performs forward fully connected layer (inner product).
+/// Also supports built-in Relu @CLDNN_PRIMITIVE_DESC{activation} available by setting it in arguments.
 struct fully_connected : public primitive_base<fully_connected, CLDNN_PRIMITIVE_DESC(fully_connected)>
 {
     CLDNN_DECLATE_PRIMITIVE(fully_connected)
 
+    /// @brief Constructs fully connected layer.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param weights Primitive id containing weights data.
+    /// @param bias Primitive id containing bias data.
+    /// @param with_activation Enable Relu activation.
+    /// @param activation_slp Relu activation slope.
     fully_connected(
         const primitive_id& id,
         const primitive_id& input,
@@ -43,6 +59,7 @@ struct fully_connected : public primitive_base<fully_connected, CLDNN_PRIMITIVE_
     {
     }
 
+    /// @brief Constructs a copy from basic C API @CLDNN_PRIMITIVE_DESC{fully_connected}
     fully_connected(const dto* dto)
         :primitive_base(dto)
         , weights(dto->weights)
@@ -52,9 +69,13 @@ struct fully_connected : public primitive_base<fully_connected, CLDNN_PRIMITIVE_
     {
     }
 
+    /// @brief Primitive id containing weights data.
     primitive_id weights;
+    /// @brief Primitive id containing bias data.
     primitive_id bias;
+    /// @brief Enable Relu activation.
     bool with_activation;
+    /// @brief Relu activation slope.
     float activation_negative_slope;
 
 protected:
@@ -68,4 +89,7 @@ protected:
         dto.activation_negative_slope = activation_negative_slope;
     }
 };
+/// @}
+/// @}
+/// @}
 }

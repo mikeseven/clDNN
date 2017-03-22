@@ -19,12 +19,20 @@
 #define MEAN_SUBSTRACT_H
 
 #include "../cldnn.h"
+/// @addtogroup c_api C API
+/// @{
+/// @addtogroup c_topology Network Topology
+/// @{
+/// @addtogroup c_primitives Primitives
+/// @{
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/// @brief Subtract mean from input.
 CLDNN_BEGIN_PRIMITIVE_DESC(mean_substract)
+/// @brief Primitive id to get mean subtract values.
 cldnn_primitive_id mean;
 CLDNN_END_PRIMITIVE_DESC(mean_substract)
 
@@ -34,5 +42,8 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(mean_substract);
 }
 #endif
 
+/// @}
+/// @}
+/// @}
 #endif /* MEAN_SUBSTRACT_H */
 
