@@ -889,15 +889,15 @@ public:
         const int in0_w = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
 
         { // asserting dims
-            const int out_b = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
-            const int out_f = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
-            const int out_h = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
-            const int out_w = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+            const int out_b = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0]; (void) out_b;
+            const int out_f = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1]; (void) out_f;
+            const int out_h = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2]; (void) out_h;
+            const int out_w = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3]; (void) out_w;
 
-            const int in1_b = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
-            const int in1_f = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
-            const int in1_h = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
-            const int in1_w = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+            const int in1_b = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0]; (void) in1_b;
+            const int in1_f = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1]; (void) in1_f;
+            const int in1_h = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2]; (void) in1_h;
+            const int in1_w = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3]; (void) in1_w;
             // input and output dims must match
             assert(in0_b == out_b && in0_f == out_f && in0_h == out_h && in0_w == out_w);
 
@@ -912,10 +912,10 @@ public:
 
             if (bias_term)
             {
-                const int in2_b = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
-                const int in2_f = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
-                const int in2_h = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
-                const int in2_w = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+                const int in2_b = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0]; (void) in2_b;
+                const int in2_f = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1]; (void) in2_f;
+                const int in2_h = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2]; (void) in2_h;
+                const int in2_w = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3]; (void) in2_w;
 
                 // scale and bias dims must match
                 assert(in1_b == in2_b && in1_f == in2_f && in1_h == in2_h && in1_w == in2_w);
