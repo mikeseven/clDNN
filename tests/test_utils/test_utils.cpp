@@ -88,16 +88,7 @@ namespace tests
 		else
 		{
 			compare_buffers<FLOAT16>(output, output_ref);
-		}	
-        
-        if (HasFailure())
-        {
-            printf("Error on test\n");
-            printf("Test params: ");
-            generic_params->print();
-            printf("Layer params: ");
-            print_params();
-        }        
+		}   
 	}
 
 	template<typename Type>
@@ -107,6 +98,9 @@ namespace tests
 		auto ref_layout = ref.get_layout();
 
 		EXPECT_EQ(out_layout.size.transform(cldnn::format::bfyx, 0), ref_layout.size.transform(cldnn::format::bfyx, 0));
+		EXPECT_EQ(out_layout.data_type, ref_layout.data_type);
+		EXPECT_EQ(get_expected_output_tensor(), out_layout.size);
+		EXPECT_EQ(out_layout.size.get_linear_size(), ref_layout.size.get_linear_size());
 
 		int batch_size = out_layout.size.transform(cldnn::format::bfyx, 0).sizes()[0];
 		int feature_size = out_layout.size.transform(cldnn::format::bfyx, 0).sizes()[1];
@@ -180,6 +174,11 @@ namespace tests
 		}
 	}
 
+	//Default implementation. Should be overridden in derived class otherwise.
+	cldnn::tensor generic_test::get_expected_output_tensor()
+	{
+		return generic_params->input_layouts[0].add(layer_params->output_padding().lower_size()).add(layer_params->output_padding().upper_size());
+	}
 
 	std::vector<test_params*> generic_test::generate_generic_test_params(std::vector<test_params*> all_generic_params)
 	{
@@ -207,23 +206,31 @@ namespace tests
 
 		return all_generic_params;
 	}
+
+	std::string test_params::print_tensor(cldnn::tensor t)
+	{
+		std::stringstream str;
+		str << "Format " << format::traits(t.format).order << " sizes [ ";
+		for (size_t i = 0; i < t.sizes().size(); i++)
+		{
+			str << t.sizes()[i] << " ";
+		}
+		str << "]";
+		return str.str();
+	}
     
-    
-    void test_params::print()
+	std::string test_params::print()
     {
-        printf("Test params: data type %s\n", data_type_traits::name(data_type).c_str());
-        
+		std::stringstream str;
+		str << "Data type: " << data_type_traits::name(data_type) << std::endl;
+
         for (int j = 0 ; j < (int)input_layouts.size(); j++)
         {
             const cldnn::tensor& t = input_layouts[j];
             
-            printf("input %d: format %s sizes [", j, format::traits(t.format).order.c_str());
-            for (size_t i = 0 ; i < t.sizes().size() ; i ++) 
-            {
-                printf("%d ", t.sizes()[i]);
-            }
-            printf("]\n");            
+			str << "Input " << j << ": " << print_tensor(t) << std::endl;
         }
+		return str.str();
     }
     
     std::vector<cldnn::data_types> generic_test::test_data_types = { cldnn::data_types::f32, cldnn::data_types::f16 };

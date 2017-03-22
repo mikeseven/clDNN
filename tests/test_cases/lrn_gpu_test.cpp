@@ -280,12 +280,6 @@ public:
 		}
 	}
 
-    void print_params()
-    {
-        const cldnn::normalization* lrn = (cldnn::normalization*)layer_params;
-        printf("Layer params: beta %f k %f size %u norm region %d alpha %f\n", lrn->beta, lrn->k, lrn->size, lrn->norm_region, lrn->alpha);
-    }
-
 	static std::vector<cldnn::primitive*> generate_specific_test_params()
 	{
 		std::vector<cldnn_lrn_norm_region> norm_regions = { cldnn_lrn_norm_region_across_channel, cldnn_lrn_norm_region_within_channel };
