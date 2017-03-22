@@ -235,7 +235,7 @@ namespace clDNN
         }
         else
         {
-            printf("Internal Error\n");
+            //printf("Internal Error\n");
         }
     }
 }

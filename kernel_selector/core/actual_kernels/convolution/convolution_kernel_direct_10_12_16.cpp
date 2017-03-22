@@ -93,7 +93,7 @@ namespace KernelSelctor {
 
         jit << "#define RIGHT_PARTIAL_TILE_K " << orgParams.outDims.x % run_info.globalWorkSizeDX << "\n"
             << GetBaseJit(newParams)
-            << GetConvolutionJit(newParams, run_info);
+            << GetConvolutionJit(newParams, run_info, true);
 
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(

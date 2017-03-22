@@ -107,7 +107,7 @@ namespace KernelSelctor
         }
 
         jit << GetBaseJit(newParams)
-            << GetConvolutionJit(newParams, run_info);
+            << GetConvolutionJit(newParams, run_info, true);
 
         int sgemm_m = CLDNN_ALIGN(newParams.outDims.x * newParams.outDims.y, run_info.subBlockDimM);
         int sgemm_n = CLDNN_ALIGN(newParams.outDims.z, run_info.subBlockDimN);

@@ -76,6 +76,6 @@ namespace KernelSelctor {
         virtual ~CNNConvolutionKernelBase() {}
     
     protected:
-        std::string GetConvolutionJit(const ConvolutionParams& params, SubGroupInfo& run_info) const;
+        std::string GetConvolutionJit(const ConvolutionParams& params, SubGroupInfo& run_info, bool bPad = false) const;
     };
 }

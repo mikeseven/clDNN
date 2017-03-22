@@ -22,13 +22,7 @@ __kernel void softmax(__global DATA_TYPE* input, __global DATA_TYPE* output)
 {
     const unsigned x = get_global_id(0);
     const unsigned y = get_global_id(1);
-#if OUT_BATCH == 1
-    const unsigned z = get_global_id(2);
-    const unsigned w = 0;
-#else
-    const unsigned z = get_global_id(2) % OUT_DEPTH;
-    const unsigned w = get_global_id(2) / OUT_DEPTH;
-#endif
+    const unsigned w = get_global_id(2);
 
     const unsigned int in_depth_offset = w*INPUT_BATCH_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
     const unsigned int out_depth_offset = w*OUT_BATCH_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
