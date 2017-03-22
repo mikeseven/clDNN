@@ -79,7 +79,7 @@ namespace neural
             kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
             kd.fp16_supported = engine_info.supports_fp16 != 0;
             kd.scale_bfyx_used = false;
-
+            kd.input_bfyx_used = false;
             // Determine global work sizes.
             kd.gws0 = input_mem.argument().size.batch[0];   // B
             kd.gws1 = input_mem.argument().size.feature[0]; // F
