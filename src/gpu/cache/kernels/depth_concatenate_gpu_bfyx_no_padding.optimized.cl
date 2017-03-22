@@ -36,26 +36,45 @@ KERNEL (depth_concatenate_gpu_bfyx_no_padding)(__global float* input, __global f
 
     // Which pack of 16*8 elements we are processing.
     uint element_group_id = get_group_id(1);
+    uint element_offset = get_global_id(1) * ELEMENTS_PER_WORK_ITEM;
 
     const uint element_group_offset = element_group_id * WORK_GROUP_SIZE * ELEMENTS_PER_WORK_ITEM;
 
     uint input_offset = element_group_offset + batch_id * INPUT_FEATURE_NUM * INPUT_SIZE_X * INPUT_SIZE_Y;
-    uint output_offset = element_group_offset + batch_id * OUTPUT_FEATURE_NUM * OUTPUT_SIZE_X * OUTPUT_SIZE_Y;
-    output_offset += OUTPUT_SIZE_X * OUTPUT_SIZE_Y * depth_offset;
+    uint output_batch_offset = batch_id * OUTPUT_FEATURE_NUM * OUTPUT_SIZE_X * OUTPUT_SIZE_Y;
+    uint output_offset = element_group_offset + output_batch_offset;
+    uint depth_offset_size = OUTPUT_SIZE_X * OUTPUT_SIZE_Y * depth_offset;
+    output_offset += depth_offset_size;
 
-    if(element_group_offset < INPUT_ELEMENTS_COUNT - WORK_GROUP_SIZE * ELEMENTS_PER_WORK_ITEM )
+    //Check if current group in batch starts from 16-byte aligned pos. If not then move block read to 16-byte aligned position.
+    //Requirement for intel_sub_group_block_write8.
+    uint align_offset = 0;
+    uint group_start_pos = element_group_offset + output_batch_offset + depth_offset_size;
+    if(group_start_pos % WORK_GROUP_SIZE != 0)
     {
-        float8 in = as_float8(intel_sub_group_block_read8((const __global uint*)input + input_offset));
-        intel_sub_group_block_write8((__global uint*)output + output_offset, as_uint8(in));
+        uint next_aligned_pos = group_start_pos / WORK_GROUP_SIZE * WORK_GROUP_SIZE + WORK_GROUP_SIZE;
+        align_offset = next_aligned_pos - group_start_pos;
+    }
+
+    if(element_group_offset + align_offset + WORK_GROUP_SIZE * ELEMENTS_PER_WORK_ITEM < INPUT_ELEMENTS_COUNT)
+    {
+        float8 in = as_float8(intel_sub_group_block_read8((const __global uint*)input + input_offset + align_offset));
+        intel_sub_group_block_write8((__global uint*)output + output_offset + align_offset, as_uint8(in));
+        
+        //Fill the values that were missed upon adding align_offset
+        if((align_offset != 0) && (element_offset + output_batch_offset < group_start_pos + align_offset))
+        {
+            for(uint i = 0; i < align_offset; i++)
+                output[output_offset + i] = input[input_offset + i];
+        }
     }
     else
     {
         // This is the last SIMD that needs to write only partial data.
-        uint element_offset = get_global_id(1) * ELEMENTS_PER_WORK_ITEM;
         uint element_offset_in_workitem = element_offset - element_group_offset;
         for(uint i = 0; i < ELEMENTS_PER_WORK_ITEM; i++)
         {
-            if(element_offset >= INPUT_ELEMENTS_COUNT)
+            if(element_offset + i >= INPUT_ELEMENTS_COUNT)
                 return;
 
             output[output_offset + element_offset_in_workitem] = input[input_offset + element_offset_in_workitem];
