@@ -600,10 +600,7 @@ public:
 
     virtual bool is_format_supported(cldnn::format format) override
     {
-        return
-            format == cldnn_format_type::cldnn_format_bx ||
-            format == cldnn_format_type::cldnn_format_yxfb ||
-            format == cldnn_format_type::cldnn_format_bfyx;
+        return format == cldnn_format_type::cldnn_format_bfyx;
     }
 
     template<typename Type>
