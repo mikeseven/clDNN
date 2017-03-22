@@ -362,6 +362,25 @@ public:
         }
     }
 
+    static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info)
+    {
+        std::stringstream res;
+
+        const auto & generic_params = std::get<0>(info.param);
+
+        res << info.index
+            << "_DT" << (generic_params->data_type == data_types::f32 ? "f32" : "f16");
+
+        for (unsigned i = 0; i < generic_params->input_layouts.size(); ++i)
+            res << "_" << i << "InputFMT" << (generic_params->input_layouts[i].format == cldnn::format::bfyx ? "bfyx" : "other")
+                << "_" << i << "InputDims" << generic_params->input_layouts[i].sizes()[0]
+                << "x" << generic_params->input_layouts[i].sizes()[1]
+                << "x" << generic_params->input_layouts[i].sizes()[2]
+                << "x" << generic_params->input_layouts[i].sizes()[3];
+
+        return res.str();
+    }
+
 private:
 
     static std::vector<tests::test_params*> all_generic_params;
@@ -380,5 +399,5 @@ TEST_P(depth_concatenate_test, DISABLED_TestAll)
 INSTANTIATE_TEST_CASE_P(DEPTHCONCATENATE,
     depth_concatenate_test,
     ::testing::ValuesIn(depth_concatenate_test::generate_all_test_params()),
-    tests::generic_test::custom_param_name_functor());
+    depth_concatenate_test::custom_param_name);
 

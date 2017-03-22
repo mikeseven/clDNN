@@ -681,6 +681,24 @@ public:
         }
     }
 
+    static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info)
+    {
+        std::stringstream res;
+
+        const auto & generic_params = std::get<0>(info.param);
+
+        res << info.index
+            << "_DT" << (generic_params->data_type == data_types::f32 ? "f32" : "f16");
+
+        res << "_InputFMT" << (generic_params->input_layouts[0].format == cldnn::format::bfyx ? "bfyx" : "other")
+            << "_InputDims" << generic_params->input_layouts[0].sizes()[0]
+            << "x" << generic_params->input_layouts[0].sizes()[1]
+            << "x" << generic_params->input_layouts[0].sizes()[2]
+            << "x" << generic_params->input_layouts[0].sizes()[3];
+
+        return res.str();
+    }
+
 private:
 
     static std::vector<tests::test_params*> all_generic_params;
@@ -699,5 +717,5 @@ TEST_P(softmax_test, DISABLED_TestAll)
 INSTANTIATE_TEST_CASE_P(SOFTMAX,
     softmax_test,
     ::testing::Combine(::testing::ValuesIn(softmax_test::generate_generic_test_params()), ::testing::ValuesIn(softmax_test::generate_specific_test_params())),
-    tests::generic_test::custom_param_name_functor());
+    softmax_test::custom_param_name);
 

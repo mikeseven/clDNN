@@ -955,6 +955,36 @@ public:
         }
     }
 
+    static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info)
+    {
+        std::stringstream res;
+
+        const auto & generic_params = std::get<0>(info.param);
+
+        res << info.index
+            << "_DT" << (generic_params->data_type == data_types::f32 ? "f32" : "f16")
+            << "_InputFMT" << (generic_params->input_layouts[0].format == cldnn::format::bfyx ? "bfyx" : "other")
+            << "_InputDims" << generic_params->input_layouts[0].sizes()[0]
+                << "x" << generic_params->input_layouts[0].sizes()[1]
+                << "x" << generic_params->input_layouts[0].sizes()[2]
+                << "x" << generic_params->input_layouts[0].sizes()[3]
+            << "_ScaleFMT" << (generic_params->input_layouts[1].format == cldnn::format::bfyx ? "bfyx" : "other")
+            << "_ScaleDims" << generic_params->input_layouts[1].sizes()[0]
+                << "x" << generic_params->input_layouts[1].sizes()[1]
+                << "x" << generic_params->input_layouts[1].sizes()[2]
+                << "x" << generic_params->input_layouts[1].sizes()[3]
+            << "_BiasTermMaybe";   //TODO: how can we extract it? not passed to the test, right?
+
+        if (generic_params->input_layouts.size() > 2)
+            res << "_BiasFMT" << (generic_params->input_layouts[2].format == cldnn::format::bfyx ? "bfyx" : "other")
+                << "_ScaleDims" << generic_params->input_layouts[2].sizes()[0]
+                    << "x" << generic_params->input_layouts[2].sizes()[1]
+                    << "x" << generic_params->input_layouts[2].sizes()[2]
+                    << "x" << generic_params->input_layouts[2].sizes()[3];
+
+        return res.str();
+    }
+
 private:
     static std::vector<tests::test_params*> all_generic_params;
     static std::vector<cldnn::primitive*> all_layer_params;
@@ -971,5 +1001,5 @@ TEST_P(scale_test, DISABLED_TestAll)
 INSTANTIATE_TEST_CASE_P(SCALE,
     scale_test,
     ::testing::ValuesIn(scale_test::generate_all_test_params()),
-    tests::generic_test::custom_param_name_functor());
+    scale_test::custom_param_name);
 
