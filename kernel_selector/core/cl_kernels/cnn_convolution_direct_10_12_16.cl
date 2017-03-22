@@ -140,7 +140,7 @@ __kernel void convolution_f16_10x12x16(
     // TILE_K x TILE_M x SIMD.  Partial writes most likely generated if output padding used.
     // Group stores into vectors to expedite writeback.  One large write is faster than many
     // small saves. Right-most column may be smaller if output width not divisible by tile width.
-    __global half *out = dst
+    __global half *out = dst + OUT_OFFSET +
      + batch_id * OUT_BATCH_PITCH            // batch offset
      + out_fm * OUT_SLICE_PITCH              // channel offset
      + ( global_y * TILE_M ) * OUT_ROW_PITCH // y offset
