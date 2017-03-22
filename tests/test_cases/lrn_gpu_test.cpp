@@ -368,7 +368,7 @@ public:
 								Type scale = 0;
 								for (int i = c_start; i < c_end; ++i) 
 								{
-									int input_index = get_linear_index(inputs[0].get_layout(), n, i, h, w);
+									size_t input_index = get_linear_index(inputs[0].get_layout(), n, i, h, w);
 									Type value = input_mem[input_index] * alpha_div_by_size_abs_sqrt;
 									scale += value * value;
 								}
@@ -378,7 +378,7 @@ public:
 								tensor lower_padding = lrn->output_padding().lower_size().transform(cldnn::format::bfyx, 0);
 								output_index += (lower_padding.sizes()[2] + h) * output_width + lower_padding.sizes()[3] + w;
 
-								int input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
+								size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 								output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)scale, -(float)beta);
 							}
 						}
@@ -411,13 +411,13 @@ public:
 								{
 									for (int nw = w_start; nw < w_end; ++nw) 
 									{
-										int input_index = get_linear_index(inputs[0].get_layout(), n, c, nh, nw);
+										size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, nh, nw);
 										Type value = input_mem[input_index] * alpha_abs_sqrt;
 										scale += value * value;
 									}
 								}
 								scale /= pool_size;
-								int input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
+								size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 
 								int output_index = (n * feature + c) * output_height * output_width;
 								tensor lower_padding = lrn->output_padding().lower_size().transform(cldnn::format::bfyx, 0);

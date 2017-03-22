@@ -801,7 +801,7 @@ public:
         for (cldnn::format fmt : test_formats)
         for (tensor & t : test_input_sizes)
         {
-            std::vector<std::array<int, 4>> attempted_dims;
+            std::vector<std::vector<int>> attempted_dims;
 
             for (int32_t b : test_batch_sizes)
             for (auto f : test_feature_sizes)
@@ -816,9 +816,10 @@ public:
                 const auto mw = mask & 0x1 ? w : 1;
 
                 // avoid adding test cases with different masks leading to the same dimensions
-                if(attempted_dims.end() == std::find_if(attempted_dims.begin(), attempted_dims.end(), [=](std::array<int, 4> & arr) { return arr[0] == mb && arr[1] == mf && arr[2] == mh && arr[3] == mw; }))
+                if(attempted_dims.end() == std::find_if(attempted_dims.begin(), attempted_dims.end(), [=](const std::vector<int> & arr) { return arr[0] == mb && arr[1] == mf && arr[2] == mh && arr[3] == mw; }))
                 {
-                    attempted_dims.emplace_back<std::array<int, 4>>({mb, mf, mh, mw});
+                    std::vector<int> tmp { mb, mf, mh, mw };
+                    attempted_dims.push_back(tmp);
 
                     test_params * tp = new test_params();
                     tp->data_type = dt;
