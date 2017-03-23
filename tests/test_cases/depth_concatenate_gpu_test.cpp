@@ -88,7 +88,7 @@ TEST(depth_concatenate_f32_gpu, test01) {
 
 //////////////////////////////////////////////////////////////////////////////
 //                                                                          //
-//                      New non-Hila-style tests                            //
+//                      Exhaustive Negative Matrix tests                    //
 //                                                                          //
 //////////////////////////////////////////////////////////////////////////////
 
@@ -154,7 +154,7 @@ TEST(NegativeDepthConcatenateTest, DISABLED_TestAll) {
 
 //////////////////////////////////////////////////////////////////////////////
 //                                                                          //
-//                          New Hila-style tests                            //
+//                      Exhaustive Positive Matrix tests                    //
 //                                                                          //
 //////////////////////////////////////////////////////////////////////////////
 
@@ -207,17 +207,13 @@ public:
           default: assert(0);
         }
 
-        //The test checks only valid combinations.
-        //TODO: add more combinations.
-
         return all_layer_params;
     }
 
     static std::vector<tests::test_params*> generate_generic_test_params(int input_count)
     {
         std::vector<tests::test_params*> all_generic_params;
-//
-//        return generic_test::generate_generic_test_params(all_generic_params);
+
         for (cldnn::data_types dt : test_data_types)
         for (cldnn::format fmt : test_formats)
         for (int32_t b : test_batch_sizes)

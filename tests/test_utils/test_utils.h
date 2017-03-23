@@ -18,8 +18,6 @@
 
 #pragma once
 
-#define TEMP_USE_CUSTOM_ULP_IN_TESTING 0
-
 #include "api/memory.hpp"
 #include "api/tensor.hpp"
 #include <iostream>
@@ -32,7 +30,6 @@
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 namespace tests {
-
 
 #define USE_RANDOM_SEED 0
 #if USE_RANDOM_SEED
@@ -284,6 +281,8 @@ public:
 
     cldnn::data_types data_type;
     std::vector<cldnn::tensor> input_layouts;            
+
+    void * opaque_custom_param = nullptr;
         
     void print();
 
@@ -295,12 +294,7 @@ class generic_test : public ::testing::TestWithParam<std::tuple<test_params*, cl
 {
 	
 public:
-
-#if TEMP_USE_CUSTOM_ULP_IN_TESTING
-    generic_test(int ulp=4);
-#else
     generic_test();
-#endif
 
     void run_single_test();
 
@@ -339,13 +333,6 @@ protected:
     static std::vector<int32_t> test_batch_sizes;
     static std::vector<int32_t> test_feature_sizes;
     static std::vector<cldnn::tensor> test_input_sizes;
-
-#if TEMP_USE_CUSTOM_ULP_IN_TESTING
-    const int ulp;
-#endif
 };
-
-
-
 
 }

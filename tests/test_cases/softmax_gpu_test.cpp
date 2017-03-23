@@ -535,7 +535,7 @@ TEST(softmax_gpu_bfyx_f32, check_max_values_corectness) {
 
 //////////////////////////////////////////////////////////////////////////////
 //                                                                          //
-//                      New non-Hila-style tests                            //
+//                      Exhaustive Negative Matrix tests                    //
 //                                                                          //
 //////////////////////////////////////////////////////////////////////////////
 
@@ -545,7 +545,7 @@ TEST(softmax_gpu_bfyx_f32, check_max_values_corectness) {
 
 //////////////////////////////////////////////////////////////////////////////
 //                                                                          //
-//                          New Hila-style tests                            //
+//                      Exhaustive Positive Matrix tests                    //
 //                                                                          //
 //////////////////////////////////////////////////////////////////////////////
 
@@ -555,11 +555,7 @@ class softmax_test : public tests::generic_test
 {
 
 public:
-#if TEMP_USE_CUSTOM_ULP_IN_TESTING
-    softmax_test() : tests::generic_test(5)
-#else
     softmax_test() : tests::generic_test()
-#endif
     {
     }
 
@@ -600,7 +596,9 @@ public:
 
     virtual bool is_format_supported(cldnn::format format) override
     {
-        return format == cldnn_format_type::cldnn_format_bfyx;
+        return
+            format == cldnn_format_type::cldnn_format_yxfb ||
+            format == cldnn_format_type::cldnn_format_bfyx;
     }
 
     template<typename Type>
@@ -681,6 +679,16 @@ public:
         }
     }
 
+    static std::string fmt_to_string(cldnn::format fmt)
+    {
+        switch(fmt)
+        {
+        case cldnn::format::bfyx: return "bfyx";
+        case cldnn::format::yxfb: return "yxfb";
+        default: return "other";
+        }
+    }
+
     static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info)
     {
         std::stringstream res;
@@ -690,7 +698,7 @@ public:
         res << info.index
             << "_DT" << (generic_params->data_type == data_types::f32 ? "f32" : "f16");
 
-        res << "_InputFMT" << (generic_params->input_layouts[0].format == cldnn::format::bfyx ? "bfyx" : "other")
+        res << "_InputFMT" << fmt_to_string(generic_params->input_layouts[0].format)
             << "_InputDims" << generic_params->input_layouts[0].sizes()[0]
             << "x" << generic_params->input_layouts[0].sizes()[1]
             << "x" << generic_params->input_layouts[0].sizes()[2]

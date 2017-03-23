@@ -640,7 +640,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_batch1) {
 
 //////////////////////////////////////////////////////////////////////////////
 //                                                                          //
-//                      New non-Hila-style tests                            //
+//                      Exhaustive Negative Matrix tests                    //
 //                                                                          //
 //////////////////////////////////////////////////////////////////////////////
 
@@ -744,26 +744,29 @@ TEST(NegativeScaleTest, TestAll) {
 
 //////////////////////////////////////////////////////////////////////////////
 //                                                                          //
-//                          New Hila-style tests                            //
+//                      Exhaustive Positive Matrix tests                    //
 //                                                                          //
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace cldnn;
+
+namespace {
+    struct extraScaleTestParam {
+        bool bias_term;
+    };
+}
 
 class scale_test : public tests::generic_test
 {
 public:
     static void TearDownTestCase()
     {
-        for (auto generic_params : all_generic_params)
-        {
-            delete generic_params;
-        }
+        for (auto & p : all_generic_params)
+            if (p->opaque_custom_param)
+                delete reinterpret_cast<extraScaleTestParam *>(p->opaque_custom_param);
 
-        for (auto layer_params : all_layer_params)
-        {
-            delete layer_params;
-        }
+        all_generic_params.clear();
+        all_layer_params.clear();
     }
 
     virtual void print_params() override
@@ -829,6 +832,9 @@ public:
                     if (variant)
                             tp->input_layouts.push_back( cldnn::tensor( fmt, { mb, mf, mh, mw } ));
 
+                    auto extra_param = new extraScaleTestParam { variant == 1 };
+                    tp->opaque_custom_param = extra_param;
+
                     all_generic_params.emplace_back(tp);
                 }
             }
@@ -846,8 +852,11 @@ public:
             auto tpv = generate_generic_test_params(variant); 
             auto pv = generate_specific_test_params(variant);
 
-            all_generic_params.insert(all_generic_params.end(), tpv.begin(), tpv.end());
-            all_layer_params.insert(all_layer_params.end(), pv.begin(), pv.end());
+            for (auto & tp : tpv)
+                all_generic_params.emplace_back(tp);
+
+            for (auto & p : pv)
+                all_layer_params.emplace_back(p);
 
             for (auto & tp : tpv)
             for (auto & p: pv)
@@ -962,6 +971,9 @@ public:
 
         const auto & generic_params = std::get<0>(info.param);
 
+        assert(generic_params->opaque_custom_param);
+        bool bias_term = reinterpret_cast<extraScaleTestParam *>(generic_params->opaque_custom_param)->bias_term;
+
         res << info.index
             << "_DT" << (generic_params->data_type == data_types::f32 ? "f32" : "f16")
             << "_InputFMT" << (generic_params->input_layouts[0].format == cldnn::format::bfyx ? "bfyx" : "other")
@@ -974,7 +986,7 @@ public:
                 << "x" << generic_params->input_layouts[1].sizes()[1]
                 << "x" << generic_params->input_layouts[1].sizes()[2]
                 << "x" << generic_params->input_layouts[1].sizes()[3]
-            << "_BiasTermMaybe";   //TODO: how can we extract it? not passed to the test, right?
+            << "_BiasTerm" << bias_term;
 
         if (generic_params->input_layouts.size() > 2)
             res << "_BiasFMT" << (generic_params->input_layouts[2].format == cldnn::format::bfyx ? "bfyx" : "other")
@@ -987,12 +999,12 @@ public:
     }
 
 private:
-    static std::vector<tests::test_params*> all_generic_params;
-    static std::vector<cldnn::primitive*> all_layer_params;
+    static std::vector<std::unique_ptr<tests::test_params>> all_generic_params;
+    static std::vector<std::unique_ptr<cldnn::primitive>> all_layer_params;
 };
 
-std::vector<cldnn::primitive*> scale_test::all_layer_params = {};
-std::vector<tests::test_params*> scale_test::all_generic_params = {};
+std::vector<std::unique_ptr<cldnn::primitive>> scale_test::all_layer_params = {};
+std::vector<std::unique_ptr<tests::test_params>> scale_test::all_generic_params = {};
 
 TEST_P(scale_test, DISABLED_TestAll)
 {

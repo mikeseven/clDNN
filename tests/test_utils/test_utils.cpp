@@ -29,12 +29,9 @@ using namespace cldnn;
 
 namespace tests 
 {
-#if TEMP_USE_CUSTOM_ULP_IN_TESTING
-	generic_test::generic_test(int ulp_) : generic_params(std::get<0>(GetParam())), layer_params(std::get<1>(GetParam())), ulp(ulp_)
-#else
 	generic_test::generic_test() : generic_params(std::get<0>(GetParam())), layer_params(std::get<1>(GetParam()))
-#endif
-	{}
+	{
+	}
 
 	void generic_test::run_single_test()
 	{
@@ -131,15 +128,9 @@ namespace tests
 						size_t res_index = get_linear_index(out_layout, b, f, y, x);
 						size_t ref_index = get_linear_index(ref_layout, b, f, y, x);
 
-#if TEMP_USE_CUSTOM_ULP_IN_TESTING
-						EXPECT_TRUE(floating_point_equal(res_data[res_index], ref_data[ref_index],  ulp))
-							<< "Expected " << (float)res_data[res_index] << " to be almost equal (within " << ulp << " ULP's) to " << (float)ref_data[ref_index] 
-							<< " (ref index = " << ref_index << ", B " << b << ", F "<< f << ", Y " << y << ", X " << x << ")!";
-#else
 						EXPECT_TRUE(floating_point_equal(res_data[res_index], ref_data[ref_index]))
 							<< "Expected " << (float)res_data[res_index] << " to be almost equal (within 4 ULP's) to " << (float)ref_data[ref_index] 
 							<< " (ref index = " << ref_index << ", B " << b << ", F "<< f << ", Y " << y << ", X " << x << ")!";
-#endif
 
 						if (HasFailure())
 						{
