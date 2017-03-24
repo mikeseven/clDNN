@@ -241,6 +241,12 @@ struct reorder_gpu : primitive_impl
         if (!engine_info.supports_fp16 && (input_use_half || output_use_half))
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
+        if (outer.input().at(0)->non_padded_output_layout().count() != outer.non_padded_output_layout().count())
+        {
+            throw std::runtime_error("Input/output elements numbers mismatch!!");
+        }
+
+
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("DIMENSIONS", std::to_string(input_mem.get_layout().size.raw.size())),
             gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", data.is_flatten ? get_idx_calculation_flatten(output_mem.get_layout().size.format, input_mem.get_layout().size.format) : get_idx_calculation(output_mem.get_layout().size.format)),
