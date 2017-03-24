@@ -30,16 +30,14 @@ KERNEL (lrn_gpu_within_channel_yxfb)(const __global UNIT_TYPE* input, __global U
     const uint output_buffer_size_y = OUTPUT_PADDING_LOWER_SIZE_Y + OUTPUT_SIZE_Y + OUTPUT_PADDING_UPPER_SIZE_Y;
     for (uint index = get_global_id(0); index < COUNT; index += get_global_size(0))
     {
-        const uint input_buffer_size_x = INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X + INPUT_PADDING_UPPER_SIZE_X;
-        const uint input_buffer_size_y = INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y + INPUT_PADDING_UPPER_SIZE_Y;
         const uint b = index % OUTPUT_BATCH_NUM;
         const uint fm = (index / OUTPUT_BATCH_NUM) % OUTPUT_FEATURE_NUM;
         const uint x = (index / OUTPUT_BATCH_NUM / OUTPUT_FEATURE_NUM) % OUTPUT_SIZE_X;
         const uint y = index / OUTPUT_BATCH_NUM / OUTPUT_FEATURE_NUM / OUTPUT_SIZE_X;
 
-        const uint first_element_offset = INPUT_FEATURE_NUM * INPUT_BATCH_NUM * INPUT_PADDING_UPPER_SIZE_X + INPUT_PADDING_UPPER_SIZE_Y * input_buffer_size_x * INPUT_FEATURE_NUM * INPUT_BATCH_NUM;
+        const uint first_element_offset = INPUT_FEATURE_NUM * INPUT_BATCH_NUM * INPUT_PADDING_UPPER_SIZE_X + INPUT_PADDING_UPPER_SIZE_Y * INPUT_BUFFER_SIZE_X * INPUT_FEATURE_NUM * INPUT_BATCH_NUM;
         const uint batch_num = INPUT_BATCH_NUM;
-        int input_id = b + batch_num * (fm + INPUT_FEATURE_NUM * ((INPUT_PADDING_LOWER_SIZE_Y + y) * input_buffer_size_x + INPUT_PADDING_LOWER_SIZE_X + x));
+        int input_id = b + batch_num * (fm + INPUT_FEATURE_NUM * ((INPUT_PADDING_LOWER_SIZE_Y + y) * INPUT_BUFFER_SIZE_X + INPUT_PADDING_LOWER_SIZE_X + x));
 
         int hstart = y - PAD;
         int wstart = x - PAD;
@@ -55,7 +53,7 @@ KERNEL (lrn_gpu_within_channel_yxfb)(const __global UNIT_TYPE* input, __global U
         {
             for (int w = wstart; w < wend; ++w)
             {
-                int offset = first_element_offset + h * OUTPUT_BATCH_NUM * OUTPUT_FEATURE_NUM * input_buffer_size_x + w * OUTPUT_BATCH_NUM * OUTPUT_FEATURE_NUM + fm * OUTPUT_BATCH_NUM + b;
+                int offset = first_element_offset + h * OUTPUT_BATCH_NUM * OUTPUT_FEATURE_NUM * INPUT_BUFFER_SIZE_X + w * OUTPUT_BATCH_NUM * OUTPUT_FEATURE_NUM + fm * OUTPUT_BATCH_NUM + b;
                 UNIT_TYPE tmp_val = input[offset] * UNIT_CVT_FUNC(ALPHA_VAL_FACTOR);
                 aveval += (tmp_val * tmp_val);
 

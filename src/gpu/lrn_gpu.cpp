@@ -168,7 +168,9 @@ struct lrn_gpu : is_an_implementation
             gpu::make_jit_constant("UNIT_TYPE",                     data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_VAL_ZERO",                 data.fp16_unit_used ? "0.0h" : "0.0f"),
             gpu::make_jit_constant("INPUT_PADDING",                 input_padding),
-            gpu::make_jit_constant("OUTPUT_PADDING",                outer.argument.output_padding())
+            gpu::make_jit_constant("OUTPUT_PADDING",                outer.argument.output_padding()),
+            gpu::make_jit_constant("INPUT_BUFFER_SIZE_X",           !input_padding ? input_size.spatial[0] : input_size.spatial[0] + input_padding.upper_size().spatial[0] + input_padding.lower_size().spatial[0]),
+            gpu::make_jit_constant("INPUT_BUFFER_SIZE_Y",           !input_padding ? input_size.spatial[1] : input_size.spatial[1] + input_padding.upper_size().spatial[1] + input_padding.lower_size().spatial[1])
         };
 
         return mem_consts;
@@ -226,7 +228,7 @@ lrn_gpu::kernel_data get_kernel_across_channel(const normalization::response& ar
     if (format == cldnn::format::bfyx)
     {
         kd.kernel_name = kernel_name_bfyx;   
-        kd.gws0 = align_to(input_mem.argument().size.spatial[0],32);
+        kd.gws0 = cldnn::align_to(arg.input().at(0)->non_padded_output_layout().size.spatial[0],32);
         kd.gws1 = arg.input().at(0)->non_padded_output_layout().size.spatial[1];//input_mem.argument().size.spatial[1];
         kd.gws2 = input_mem.argument().size.feature[0] * input_mem.argument().size.batch[0];
 
