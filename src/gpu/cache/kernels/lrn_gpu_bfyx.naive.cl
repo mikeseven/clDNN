@@ -27,11 +27,8 @@
 KERNEL (lrn_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
     // constexpr:
-    const uint input_buffer_size_x = INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X + INPUT_PADDING_UPPER_SIZE_X;
-    const uint input_buffer_size_y = INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y + INPUT_PADDING_UPPER_SIZE_Y;
     const uint output_buffer_size_x = OUTPUT_PADDING_LOWER_SIZE_X + OUTPUT_SIZE_X + OUTPUT_PADDING_UPPER_SIZE_X;
     const uint output_buffer_size_y = OUTPUT_PADDING_LOWER_SIZE_Y + OUTPUT_SIZE_Y + OUTPUT_PADDING_UPPER_SIZE_Y;
-
 
     const uint x = get_global_id(0);
     const uint y = get_global_id(1);
@@ -41,15 +38,15 @@ KERNEL (lrn_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* outpu
     const uint b = b_f / INPUT_FEATURE_NUM;
     const uint f = b_f % INPUT_FEATURE_NUM;
 
-    const uint first_index_in_batch = (b* INPUT_FEATURE_NUM + f) * input_buffer_size_x * input_buffer_size_y;
-    const uint input_id = first_index_in_batch + (INPUT_PADDING_LOWER_SIZE_Y + y) * input_buffer_size_x + INPUT_PADDING_LOWER_SIZE_X + x;
+    const uint first_index_in_batch = (b* INPUT_FEATURE_NUM + f) * INPUT_BUFFER_SIZE_X * INPUT_BUFFER_SIZE_Y;
+    const uint input_id = first_index_in_batch + (INPUT_PADDING_LOWER_SIZE_Y + y) * INPUT_BUFFER_SIZE_X + INPUT_PADDING_LOWER_SIZE_X + x;
 
     const uint linear_id = x + INPUT_SIZE_X * (y + INPUT_SIZE_Y * b_f);
     UNIT_TYPE acc = UNIT_VAL_ZERO;
 
     int input_offset_f = f + HELP_INPUT_OFFSET;
-    const uint first_element_index = INPUT_PADDING_UPPER_SIZE_X + INPUT_PADDING_UPPER_SIZE_Y *input_buffer_size_x;
-    int input_idx = first_element_index + x + input_buffer_size_x * (y + input_buffer_size_y * (input_offset_f + INPUT_FEATURE_NUM * b));
+    const uint first_element_index = INPUT_PADDING_UPPER_SIZE_X + INPUT_PADDING_UPPER_SIZE_Y * INPUT_BUFFER_SIZE_X;
+    int input_idx = first_element_index + x + INPUT_BUFFER_SIZE_X * (y + INPUT_BUFFER_SIZE_Y * (input_offset_f + INPUT_FEATURE_NUM * b));
 
     for (int i = 0; i < P_SIZE; i++)
     {
@@ -59,7 +56,7 @@ KERNEL (lrn_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* outpu
         acc = mad(value, value, acc);
 
         input_offset_f++;
-        input_idx += input_buffer_size_x * input_buffer_size_y;
+        input_idx += INPUT_BUFFER_SIZE_X * INPUT_BUFFER_SIZE_Y;
     }
     acc = mad(acc, UNIT_CVT_FUNC(ALPHA_DIV_BY_SIZE), UNIT_CVT_FUNC(K));
     acc = native_powr(acc, -UNIT_CVT_FUNC(BETA));
