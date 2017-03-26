@@ -84,8 +84,10 @@ namespace KernelSelctor {
             cl_kernel.kernel_string = GetKernelString(weights_reorder_kernel_name, GetBaseJit(newParams), "align_weights");
             cl_kernel.args_desc = GetArgumentDesc(1, false, false);
 
+            // note that we use .z and not .w in aligned_input_size
+            // since output_size contains the batch as well
             const uint bpp = BytesPerElement(newParams.inputType);
-            const size_t aligned_input_size = newParams.inDesc.pitches.w;
+            const size_t aligned_input_size = newParams.inDesc.pitches.z;
             const size_t output_size = newParams.outDims.Length();
             const size_t new_buffer_size = output_size * aligned_input_size;
             const size_t new_buffer_size_in_bytes = new_buffer_size * bpp;
