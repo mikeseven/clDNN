@@ -85,7 +85,7 @@ namespace KernelSelctor {
             cl_kernel.args_desc = GetArgumentDesc(1, false, false);
 
             const uint bpp = BytesPerElement(newParams.inputType);
-            const size_t aligned_input_size = newParams.inDesc.pitches.w;
+            const size_t aligned_input_size = (newParams.inputLayout == bx) ? newParams.inDesc.pitches.x : newParams.inDesc.pitches.z;
             const size_t output_size = newParams.outDims.Length();
             const size_t new_buffer_size = output_size * aligned_input_size;
             const size_t new_buffer_size_in_bytes = new_buffer_size * bpp;
