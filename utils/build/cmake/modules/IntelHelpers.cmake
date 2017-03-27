@@ -11,12 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel
-# or otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+
 
 
 #cmake_policy(PUSH) # Not needed... CMake manages policy scope.
