@@ -238,15 +238,6 @@ public:
 		}
 	}
     
-    virtual void print_params()
-    {
-        const cldnn::roi_pooling* roi_pooling = (cldnn::roi_pooling*)layer_params;
-
-        printf("pooled width %d pooled height %d spatial scale %f\n", 
-                roi_pooling->pooled_width, roi_pooling->pooled_height, roi_pooling->spatial_scale);
-    }
-           
-    
 	static std::vector<test_params*> generate_input_buffers_params()
 	{        
         std::vector<int> test_rois_sizes = { 1, 20 };          
@@ -340,6 +331,11 @@ public:
         return (format == cldnn_format_type::cldnn_format_bfyx || 
                 format == cldnn_format_type::cldnn_format_bx );
     }
+
+	virtual cldnn::tensor get_expected_output_tensor()
+	{
+		return get_output_layout();
+	}
 
 private:
 

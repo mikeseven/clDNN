@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#if FP16_SUPPORTED
+    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
 
 KERNEL (reorder_gpu_padding_bfyx_f32)(const __global SRC_TYPE* input, __global DEST_TYPE* output)
 {

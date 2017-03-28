@@ -638,6 +638,354 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_batch1) {
     }
 }
 
+TEST(scale_gpu, basic_in2x3_scale_same_size_bx) {
+	//  Scale  : 2x3
+	//  Bias   : 2x3
+	//  Input  : 2x3
+	//  Output : 2x3
+
+	//  Input:
+	//  b0:	1		2		-0.75
+	//  b1: 0		-1.5	-3
+	//
+	//  Scale:
+	//  b0: 3.1		0.2		0.17   
+	//  b1: 10		-3		1
+
+	//  Bias:
+	//  b0: -0.1	3.2		7   
+	//  b1: 0		1		-1
+
+	engine engine;
+
+	auto input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
+	auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
+	auto bias_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
+
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale_input", scale_input.get_layout()));
+	topology.add(input_layout("bias_input", scale_input.get_layout()));
+	topology.add(scale("scale", "input", "scale_input", true, "bias_input"));
+
+	std::vector<float> input_vec = {
+		1.f, 2.f, -0.75f,
+		0.f, -1.5f, -3.f,
+	};
+	set_values(input, input_vec);
+
+	std::vector<float> scale_vec = {
+		3.1f, 0.2f, 0.17f,
+		10.f, -3.f, 1.f,
+	};
+	set_values(scale_input, scale_vec);
+
+	std::vector<float> bias_vec = {
+		-0.1f, 3.2f, 7.f,
+		0.f, 1.f, -1.f,
+	};
+	set_values(bias_input, bias_vec);
+
+	network network(engine, topology);
+
+	network.set_input_data("input", input);
+	network.set_input_data("scale_input", scale_input);
+	network.set_input_data("bias_input", bias_input);
+
+	auto outputs = network.execute();
+
+	auto output = outputs.at("scale").get_memory();
+	auto output_ptr = output.pointer<float>();
+
+	for (unsigned int i = 0; i < input_vec.size(); ++i) {
+		EXPECT_NEAR(output_ptr[i], input_vec[i] * scale_vec[i] + bias_vec[i], 1e-05F);
+	}
+}
+
+TEST(scale_gpu, basic_in2x3_scale_same_size_xb) {
+	//  Scale  : 2x3
+	//  Bias   : 2x3
+	//  Input  : 2x3
+	//  Output : 2x3
+
+	//  Input:
+	//  x0:	1		2		-0.75
+	//  x1: 0		-1.5	-3
+	//
+	//  Scale:
+	//  x0: 3.1		0.2		0.17   
+	//  x1: 10		-3		1
+
+	//  Bias:
+	//  x0: -0.1	3.2		7   
+	//  x1: 0		1		-1
+
+	engine engine;
+
+	auto input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
+	auto scale_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
+	auto bias_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
+
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale_input", scale_input.get_layout()));
+	topology.add(input_layout("bias_input", scale_input.get_layout()));
+	topology.add(scale("scale", "input", "scale_input", true, "bias_input"));
+
+	std::vector<float> input_vec = {
+		1.f, 2.f, -0.75f,
+		0.f, -1.5f, -3.f,
+	};
+	set_values(input, input_vec);
+
+	std::vector<float> scale_vec = {
+		3.1f, 0.2f, 0.17f,
+		10.f, -3.f, 1.f,
+	};
+	set_values(scale_input, scale_vec);
+
+	std::vector<float> bias_vec = {
+		-0.1f, 3.2f, 7.f,
+		0.f, 1.f, -1.f,
+	};
+	set_values(bias_input, bias_vec);
+
+	network network(engine, topology);
+
+	network.set_input_data("input", input);
+	network.set_input_data("scale_input", scale_input);
+	network.set_input_data("bias_input", bias_input);
+
+	auto outputs = network.execute();
+
+	auto output = outputs.at("scale").get_memory();
+	auto output_ptr = output.pointer<float>();
+
+	for (unsigned int i = 0; i < input_vec.size(); ++i) {
+		EXPECT_NEAR(output_ptr[i], input_vec[i] * scale_vec[i] + bias_vec[i], 1e-05F);
+	}
+}
+
+TEST(scale_gpu, basic_in2x3_scale_single_value_bx) {
+	//  Scale  : 1x1
+	//  Bias   : 1x1
+	//  Input  : 2x3
+	//  Output : 2x3
+
+	//  Input:
+	//  b0:	1		2		-0.75
+	//  b1: 0		-1.5	-3
+	//
+	//  Scale:
+	//  3.1
+
+	//  Bias:
+	//  -0.1
+
+	engine engine;
+
+	auto input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
+	auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 1, 1 } } });
+	auto bias_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 1, 1 } } });
+
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale_input", scale_input.get_layout()));
+	topology.add(input_layout("bias_input", scale_input.get_layout()));
+	topology.add(scale("scale", "input", "scale_input", true, "bias_input"));
+
+	std::vector<float> input_vec = {
+		1.f, 2.f, -0.75f,
+		0.f, -1.5f, -3.f,
+	};
+	set_values(input, input_vec);
+
+	std::vector<float> scale_vec = {
+		3.1f,
+	};
+	set_values(scale_input, scale_vec);
+
+	std::vector<float> bias_vec = {
+		-0.1f,
+	};
+	set_values(bias_input, bias_vec);
+
+	network network(engine, topology);
+
+	network.set_input_data("input", input);
+	network.set_input_data("scale_input", scale_input);
+	network.set_input_data("bias_input", bias_input);
+
+	auto outputs = network.execute();
+
+	auto output = outputs.at("scale").get_memory();
+	auto output_ptr = output.pointer<float>();
+
+	for (unsigned int i = 0; i < input_vec.size(); ++i) {
+		EXPECT_NEAR(output_ptr[i], input_vec[i] * scale_vec[0] + bias_vec[0], 1e-05F);
+	}
+}
+
+TEST(scale_gpu, basic_in2x3_scale_single_value_xb) {
+	//  Scale  : 1x1
+	//  Bias   : 1x1
+	//  Input  : 2x3
+	//  Output : 2x3
+
+	//  Input:
+	//  x0:	1		2		-0.75
+	//  x1: 0		-1.5	-3
+	//
+	//  Scale:
+	//  3.1
+
+	//  Bias:
+	//  -0.1
+
+	engine engine;
+
+	auto input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
+	auto scale_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 1, 1 } } });
+	auto bias_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 1, 1 } } });
+
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale_input", scale_input.get_layout()));
+	topology.add(input_layout("bias_input", scale_input.get_layout()));
+	topology.add(scale("scale", "input", "scale_input", true, "bias_input"));
+
+	std::vector<float> input_vec = {
+		1.f, 2.f, -0.75f,
+		0.f, -1.5f, -3.f,
+	};
+	set_values(input, input_vec);
+
+	std::vector<float> scale_vec = {
+		3.1f,
+	};
+	set_values(scale_input, scale_vec);
+
+	std::vector<float> bias_vec = {
+		-0.1f,
+	};
+	set_values(bias_input, bias_vec);
+
+	network network(engine, topology);
+
+	network.set_input_data("input", input);
+	network.set_input_data("scale_input", scale_input);
+	network.set_input_data("bias_input", bias_input);
+
+	auto outputs = network.execute();
+
+	auto output = outputs.at("scale").get_memory();
+	auto output_ptr = output.pointer<float>();
+
+	for (unsigned int i = 0; i < input_vec.size(); ++i) {
+		EXPECT_NEAR(output_ptr[i], input_vec[i] * scale_vec[0] + bias_vec[0], 1e-05F);
+	}
+}
+
+TEST(scale_gpu, basic_in2x3_scale_same_size_no_bias_bx) {
+	//  Scale  : 2x3
+	//  Input  : 2x3
+	//  Output : 2x3
+
+	//  Input:
+	//  b0:	1		2		-0.75
+	//  b1: 0		-1.5	-3
+	//
+	//  Scale:
+	//  b0: 3.1		0.2		0.17   
+	//  b1: 10		-3		1
+
+	engine engine;
+
+	auto input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
+	auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
+
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale_input", scale_input.get_layout()));
+	topology.add(scale("scale", "input", "scale_input", false));
+
+	std::vector<float> input_vec = {
+		1.f, 2.f, -0.75f,
+		0.f, -1.5f, -3.f,
+	};
+	set_values(input, input_vec);
+
+	std::vector<float> scale_vec = {
+		3.1f, 0.2f, 0.17f,
+		10.f, -3.f, 1.f,
+	};
+	set_values(scale_input, scale_vec);
+
+	network network(engine, topology);
+
+	network.set_input_data("input", input);
+	network.set_input_data("scale_input", scale_input);
+
+	auto outputs = network.execute();
+
+	auto output = outputs.at("scale").get_memory();
+	auto output_ptr = output.pointer<float>();
+
+	for (unsigned int i = 0; i < input_vec.size(); ++i) {
+		EXPECT_NEAR(output_ptr[i], input_vec[i] * scale_vec[i], 1e-05F);
+	}
+}
+
+TEST(scale_gpu, basic_in2x3_scale_same_size_no_bias_xb) {
+	//  Scale  : 2x3
+	//  Input  : 2x3
+	//  Output : 2x3
+
+	//  Input:
+	//  x0:	1		2		-0.75
+	//  x1: 0		-1.5	-3
+	//
+	//  Scale:
+	//  x0: 3.1		0.2		0.17   
+	//  x1: 10		-3		1
+
+	engine engine;
+
+	auto input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
+	auto scale_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
+
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale_input", scale_input.get_layout()));
+	topology.add(scale("scale", "input", "scale_input", false));
+
+	std::vector<float> input_vec = {
+		1.f, 2.f, -0.75f,
+		0.f, -1.5f, -3.f,
+	};
+	set_values(input, input_vec);
+
+	std::vector<float> scale_vec = {
+		3.1f, 0.2f, 0.17f,
+		10.f, -3.f, 1.f,
+	};
+	set_values(scale_input, scale_vec);
+
+	network network(engine, topology);
+
+	network.set_input_data("input", input);
+	network.set_input_data("scale_input", scale_input);
+
+	auto outputs = network.execute();
+
+	auto output = outputs.at("scale").get_memory();
+	auto output_ptr = output.pointer<float>();
+
+	for (unsigned int i = 0; i < input_vec.size(); ++i) {
+		EXPECT_NEAR(output_ptr[i], input_vec[i] * scale_vec[i], 1e-05F);
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////////
 //                                                                          //
 //                      Exhaustive Negative Matrix tests                    //
@@ -1015,4 +1363,3 @@ INSTANTIATE_TEST_CASE_P(SCALE,
     scale_test,
     ::testing::ValuesIn(scale_test::generate_all_test_params()),
     scale_test::custom_param_name);
-

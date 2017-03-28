@@ -79,11 +79,12 @@ namespace neural
             kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
             kd.fp16_supported = engine_info.supports_fp16 != 0;
             kd.scale_bfyx_used = false;
-
+            kd.input_bfyx_used = false;
             // Determine global work sizes.
             kd.gws0 = input_mem.argument().size.batch[0];   // B
             kd.gws1 = input_mem.argument().size.feature[0]; // F
-            kd.gws2 = input_mem.argument().size.spatial[0] * input_mem.argument().size.spatial[1]; // X, Y
+            kd.gws2 = input_mem.argument().size.spatial[0] * 
+                (input_mem.argument().size.spatial.size() > 1 ? input_mem.argument().size.spatial[1] : 1); // X, Y
             // Find largest positive local work size that is divider for global work size.
             kd.lws2 = std::min(std::max(kd.gws2, static_cast<size_t>(1)), static_cast<size_t>(32));
             while (kd.gws2 % kd.lws2 != 0)
@@ -150,6 +151,10 @@ namespace neural
         { std::make_tuple(memory::format::yxfb_f16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
         { std::make_tuple(memory::format::bfyx_f32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
         { std::make_tuple(memory::format::bfyx_f16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+        { std::make_tuple(memory::format::xb_f32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+        { std::make_tuple(memory::format::xb_f16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+        { std::make_tuple(memory::format::bx_f32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+        { std::make_tuple(memory::format::bx_f16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
     };
 
     namespace {
@@ -161,6 +166,10 @@ namespace neural
                 implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw);
                 implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw);
                 implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), val_fw);
+                implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw);
+                implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw);
+                implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f32), val_fw);
+                implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f16), val_fw);
             }
             ~attach() {}
         };

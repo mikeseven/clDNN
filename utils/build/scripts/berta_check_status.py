@@ -204,27 +204,35 @@ def getRegressions(sessionIds):
                 testCase = testSuite.reportTestStart(regression['test_case_name'])
 
                 isRegression = regression['prev_status_changes'] == 0
-                if regression['perf']:
-                    if regression['perf_status'] == 'perf_imp':
-                        testStatus = 'IMPROVEMENT'
-                        isRegression = False
-                    elif regression['perf_status'] == 'perf_ok':
-                        testStatus = 'NO CHANGE'
-                        isRegression = False
-                    elif regression['perf_status'] == 'perf_reg':
-                        testStatus = 'REGRESSION'
+                if ('perf' in regression) and regression['perf']:
+                    if 'perf_status' in regression:
+                        if regression['perf_status'] == 'perf_imp':
+                            testStatus = 'IMPROVEMENT'
+                            isRegression = False
+                        elif regression['perf_status'] == 'perf_ok':
+                            testStatus = 'NO CHANGE'
+                            isRegression = False
+                        elif regression['perf_status'] == 'perf_reg':
+                            testStatus = 'REGRESSION'
+                        else:
+                            testStatus = 'UNKNOWN ({0})'.format(regression['perf_status'])
                     else:
-                        testStatus = 'UNKNOWN ({0})'.format(regression['perf_status'])
+                        # Currently there is no way to determine regression without performance status field.
+                        testStatus = 'UNKNOWN (task: {0})'.format(regression['task_id'])
+                        isRegression = False
 
                     testMessage = 'Test:        {0}\nTest status: {1}\n\nTest change: {2} -> {3} [diff: {4}]' \
                         .format(regression['cmd_line'], testStatus, regression['prev_result'], regression['result'],
                                 regression['perf_diff'])
-                else:
+                elif 'result' in regression:
                     if tcu.cvtUni(regression['result']).lower().startswith('pass'):
                         isRegression = False
 
                     testMessage = 'Test:        {0}\nTest status: {1}\n\nTest change: {2} -> {1}' \
                         .format(regression['cmd_line'], regression['result'], regression['prev_result'])
+                else:
+                    testMessage = 'Test:        {0}\nTest status: UNKNOWN (VALIDATION FAILED)' \
+                        .format(regression['cmd_line'])
 
                 if isRegression:
                     testCase.reportFailed('REGRESSION', testMessage)

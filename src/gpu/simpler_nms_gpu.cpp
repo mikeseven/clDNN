@@ -348,7 +348,7 @@ struct simpler_nms_gpu : is_an_implementation {
 
     cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
     {
-		for (auto a : events) {
+		for (auto& a : events) {
 			a->wait();
 		}
 

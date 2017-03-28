@@ -26,6 +26,8 @@
 #include <gtest/gtest.h>
 #include <api/primitive.hpp>
 #include "float16.h"
+#include "api/primitives/normalization.hpp"
+#include "api/primitives/roi_pooling.hpp"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -273,10 +275,6 @@ public:
                                              { batch_size, feature_size, input_size.spatial[1],  input_size.spatial[0] } ).transform(cldnn::format(input_format), 1);
                                              
             input_layouts.push_back( t.transform(cldnn::format(input_format), 1));
-
-            //TODO:
-            //input + output padding
-            //    test_params() {}
         }
 
     cldnn::data_types data_type;
@@ -284,10 +282,8 @@ public:
 
     void * opaque_custom_param = nullptr;
         
-    void print();
-
-	//TODO:
-	//input + output padding
+    std::string print();
+	std::string print_tensor(cldnn::tensor tensor);
 };
 
 class generic_test : public ::testing::TestWithParam<std::tuple<test_params*, cldnn::primitive*>>
@@ -308,15 +304,15 @@ public:
 
     virtual bool is_format_supported(cldnn::format format) = 0;
 
+	virtual cldnn::tensor get_expected_output_tensor();
+
     struct custom_param_name_functor {
             std::string operator()(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info) {
                     return std::to_string(info.index);
             }
     };
 
-protected: 
-    virtual void print_params() { printf("%s:%d - NOT IMPLEMENTED!!!\n", __FILE__, __LINE__); }
-
+protected:
     cldnn::engine engine;
     test_params* generic_params;
     cldnn::primitive* layer_params;
@@ -335,4 +331,40 @@ protected:
     static std::vector<cldnn::tensor> test_input_sizes;
 };
 
+// When a test assertion such as EXPECT_EQ fails, Google-Test prints the argument values to help with debugging.
+// It does this using a user - extensible value printer.
+// This function will be used to print the test params in case of an error.
+inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*>& t, ::std::ostream* os)
+{
+	std::stringstream str;
+
+	auto test_param = std::get<0>(t);
+	auto primitive = std::get<1>(t);
+
+	str << std::endl << "Test params: " << test_param->print() << "Layer params: " << std::endl;
+
+	str << "Input padding: lower size: " << test_param->print_tensor(primitive->input_padding().lower_size())
+		<< " upper size : " << test_param->print_tensor(primitive->input_padding().upper_size()) << std::endl
+		<< "Output padding lower size: " << test_param->print_tensor(primitive->output_padding().lower_size())
+		<< " upper size: " << test_param->print_tensor(primitive->output_padding().upper_size()) << std::endl;
+
+	auto primitive_type = primitive->type();
+	if (primitive_type == cldnn::normalization::type_id())
+	{
+		cldnn::normalization* lrn = (cldnn::normalization*)(primitive);
+		std::string norm_region = (lrn->norm_region == cldnn_lrn_norm_region_across_channel) ? "across channel" : "within channel";
+		str << "Norm region: " << norm_region << " Size: " << lrn->size << " Alpha: " << lrn->alpha << " Beta: " << lrn->beta << " K: " << lrn->k;
+	}
+	else if (primitive_type == cldnn::roi_pooling::type_id())
+	{
+		cldnn::roi_pooling* roi_pooling = (cldnn::roi_pooling*)(primitive);
+		str << "Pooled width: " << roi_pooling->pooled_width << " Pooled height: " << roi_pooling->pooled_height << " Spatial scale: " << roi_pooling->spatial_scale;
+	}
+	else
+	{
+		throw std::runtime_error("Not implemented yet for this primitive.");
+	}
+		
+	*os << str.str();
+}
 }
