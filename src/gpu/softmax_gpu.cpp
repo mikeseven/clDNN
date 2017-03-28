@@ -87,10 +87,7 @@ struct softmax_gpu : is_an_implementation
             kd.gws1 = batch_num;
             kd.lws0 = 32;
             kd.items_num = feature_num;
-            if(kd.fp16_unit_used == true)
-                kd.kernel_name = kernel_name_batches_yxfb;       
-            else
-                kd.kernel_name = kernel_name_batches_bfyx;             
+            kd.kernel_name = (input_mem.get_layout().size.format == cldnn::format::bfyx) ? kernel_name_batches_bfyx : kernel_name_batches_yxfb;
         }
         else if (batch_num <= 1)
         {

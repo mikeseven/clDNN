@@ -48,7 +48,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         break;
 
     case data_type::weights: //convolution weights
-        if (batch == 1 || expected_data_type != data_types::f16)
+        if (batch < 32 || expected_data_type != data_types::f16)
             expected_tensor = current_layout.size.transform(format::os_iyx_osv16, 1);
         else
             expected_tensor = current_layout.size.transform(format::yxio, 1);
@@ -59,7 +59,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         if (neural_memory::traits(current_layout).dimension != 4)
             throw std::runtime_error("Convolution input not 4-dimensional?");
 
-        if (expected_data_type != data_types::f16 || batch == 1)
+        if (expected_data_type != data_types::f16 || batch < 32)
             expected_tensor = current_layout.size.transform(format::bfyx, 1);
         else
             expected_tensor = current_layout.size.transform(format::yxfb, 1);
