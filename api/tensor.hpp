@@ -399,7 +399,7 @@ struct tensor
         return sizes;
     }
 
-    /// @brief Get linear tensor size calcualted as multiplicatin of all elements.
+    /// @brief Get aligned linear tensor size calculated as multiplication of all elements. 
     size_t get_linear_size() const
     {
         auto sizes = this->sizes();
@@ -424,6 +424,17 @@ struct tensor
         );
     }
 
+    /// @brief Returns tensor elements count calculated as multiplication of all elements.
+    size_t count() const
+    {
+        auto sizes = this->sizes();
+        return std::accumulate(
+            sizes.begin(),
+            sizes.end(),
+            static_cast<size_t>(1),
+            std::multiplies<size_t>()
+        );
+    }
     /// @brief Returns new tensor based on current but transformed to new @p format.
     /// @param[in] new_fmt Format of new tensor.
     /// @param[in] default_size Default element values for positions not defined by current format.

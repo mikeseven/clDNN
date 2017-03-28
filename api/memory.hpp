@@ -200,7 +200,7 @@ struct layout
     size_t data_size() const { return data_type_traits::size_of(data_type) * size.get_linear_size(); }
 
     /// number of elements to be stored in this memory layout
-    size_t count() const { return size.get_linear_size(); }
+    size_t count() const { return size.count(); }
 
     /// Data type stored in @ref memory (see. @ref data_types)
     data_types data_type;
