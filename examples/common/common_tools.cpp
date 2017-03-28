@@ -364,7 +364,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     cldnn::build_options options;
 
     //TODO set proper network build options
-    options.set_option(cldnn::build_option::optimize_data(ep.optimize_weights));
+    options.set_option(cldnn::build_option::optimize_data(true));
     options.set_option(cldnn::build_option::profiling(ep.profiling));
     options.set_option(cldnn::build_option::debug(ep.dump_hidden_layers || ep.profiling));
 
