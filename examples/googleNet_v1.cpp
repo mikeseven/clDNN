@@ -30,20 +30,17 @@
 using namespace cldnn;
 
 // Building GoogLeNet v1 network with loading weights & biases from file
-cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx)
+cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
 {
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
     input_layout.size = { format::byxf,{ batch_size, 224, 224, 3 } };
     auto input = cldnn::input_layout("input", input_layout);
 
-    auto mem_format = use_bfyx ? format::bfyx : format::yxfb;
-
-    // create conversion to yxfb format and subtract mean values
-    tensor reorder_size = input_layout.size.transform(mem_format, 1);
+    // subtract mean values
     auto reordered_input = reorder(
         "reorder",
         input,
-        { input_layout.data_type, reorder_size },
+        { input_layout.data_type, input_layout.size },
         std::vector<float>{ 104.0f, 117.0f, 123.0f });
 
     auto conv1_7x7_s2_w = file::create({ engine, join_path(weights_dir, "conv1_7x7_s2_weights.nnd")});

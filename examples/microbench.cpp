@@ -37,13 +37,10 @@ void test_conv(
     int32_t out_feature,
     int32_t kernel_w,
     int32_t kernel_h,
-    bool use_half,
-    bool use_bfyx)
+    bool use_half)
 {
     auto data_type = use_half ? data_types::f16 : data_types::f32;
-    auto input_size = tensor(format::yxfb, {in_h, in_w, in_feature, batch_size });
-    if(use_bfyx)
-        input_size = tensor(format::bfyx, { batch_size, in_feature, in_h, in_w });
+    auto input_size = tensor(format::bfyx, { batch_size, in_feature, in_h, in_w });
 
     auto weight_size = tensor(format::yxio, { kernel_h, kernel_w, in_feature, out_feature });
     auto bias_size = tensor(format::x, { out_feature });
@@ -63,7 +60,7 @@ void test_conv(
 
     topology.add(data(id + "_input", input), data(id + "_weights", weights), data(id + "_bias", bias), conv);
 }
-cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx)
+cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
 {
     topology topology;
     bool use_half = input_layout.data_type == data_types::f16 ? true : false;
@@ -81,8 +78,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 2, 2 } }, // stride
         64, // output feature maps num
         7, 7, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     test_conv(
@@ -95,8 +91,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 2, 2 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     test_conv(
@@ -109,8 +104,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 1, 1 } }, // stride
         192, // output feature maps num
         3, 3, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     test_conv(
@@ -123,8 +117,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 1, 1 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     test_conv(
@@ -137,8 +130,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 1, 1 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     test_conv(
@@ -151,8 +143,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 1, 1 } }, // stride
         64, // output feature maps num
         3, 3, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     test_conv(
@@ -165,8 +156,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 1, 1 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     test_conv(
@@ -179,8 +169,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 1, 1 } }, // stride
         96, // output feature maps num
         3, 3, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     test_conv(
@@ -193,8 +182,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 1, 1 } }, // stride
         96, // output feature maps num
         3, 3, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     test_conv(
@@ -207,8 +195,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 1, 1 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     test_conv(
@@ -221,8 +208,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 1, 1 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     test_conv(
@@ -235,8 +221,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 1, 1 } }, // stride
         64, // output feature maps num
         3, 3, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
 
@@ -250,8 +235,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 1, 1 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     test_conv(
@@ -264,8 +248,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 1, 1 } }, // stride
         96, // output feature maps num
         3, 3, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     test_conv(
@@ -278,8 +261,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         { format::yx,{ 1, 1 } }, // stride
         96, // output feature maps num
         3, 3, // kernel size
-        use_half,
-        use_bfyx
+        use_half
     );
 
     //not used but needs to be in the topology
