@@ -572,13 +572,6 @@ public:
         }
     }
 
-    virtual void print_params() override
-    {
-//        const auto p = reinterpret_cast<cldnn::softmax *>(layer_params);
-
-        printf("Layer params: None!\n");
-    }
-
     static std::vector<cldnn::primitive*> generate_specific_test_params()
     {
         all_layer_params.push_back(new softmax("softmax", "input0"));
@@ -610,7 +603,7 @@ public:
         //Output is bfyx
         auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().size.transform(cldnn::format::bfyx, 0)));
 
-//        const auto params = reinterpret_cast<cldnn::softmax *>(layer_parmas);
+//        const auto params = static_cast<cldnn::softmax *>(layer_parmas);
 
         const Type * const in0_mem = input.pointer<Type>().data();
         Type * const out_mem = output.pointer<Type>().data();
@@ -679,30 +672,31 @@ public:
         }
     }
 
-    static std::string fmt_to_string(cldnn::format fmt)
-    {
-        switch(fmt)
-        {
-        case cldnn::format::bfyx: return "bfyx";
-        case cldnn::format::yxfb: return "yxfb";
-        default: return "other";
-        }
-    }
-
     static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info)
     {
         std::stringstream res;
 
-        const auto & generic_params = std::get<0>(info.param);
+        const auto & p = std::get<0>(info.param);
+
+        assert (p->data_type == data_types::f32 ||
+                p->data_type == data_types::f16);
 
         res << info.index
-            << "_DT" << (generic_params->data_type == data_types::f32 ? "f32" : "f16");
+            << "_" << (p->data_type == data_types::f32 ? "f32" : "f16");
 
-        res << "_InputFMT" << fmt_to_string(generic_params->input_layouts[0].format)
-            << "_InputDims" << generic_params->input_layouts[0].sizes()[0]
-            << "x" << generic_params->input_layouts[0].sizes()[1]
-            << "x" << generic_params->input_layouts[0].sizes()[2]
-            << "x" << generic_params->input_layouts[0].sizes()[3];
+        for (unsigned i = 0; i < p->input_layouts.size(); ++i)
+        {
+            assert (p->input_layouts[i].format == cldnn::format::yxfb ||
+                    p->input_layouts[i].format == cldnn::format::bfyx);
+
+            const char * fmt = p->input_layouts[i].format == cldnn::format::yxfb ? "yxfb" : "bfyx";
+
+            res << "_" << "Input" << i
+                << fmt[0] << p->input_layouts[i].sizes()[0]
+                << fmt[1] << p->input_layouts[i].sizes()[1]
+                << fmt[2] << p->input_layouts[i].sizes()[2]
+                << fmt[3] << p->input_layouts[i].sizes()[3];
+        }
 
         return res.str();
     }

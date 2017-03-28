@@ -748,6 +748,43 @@ public:
 		}		
 	}
 
+    static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<tests::test_params*, cldnn::primitive*>>& info)
+    {
+        std::stringstream res;
+
+        const auto & p = std::get<0>(info.param);
+        const auto & v = std::get<1>(info.param);
+
+        assert (p->data_type == data_types::f32 ||
+                p->data_type == data_types::f16);
+
+        res << info.index
+            << "_" << (p->data_type == data_types::f32 ? "f32" : "f16");
+
+        for (unsigned i = 0; i < p->input_layouts.size(); ++i)
+        {
+            assert (p->input_layouts[i].format == cldnn::format::yxfb ||
+                    p->input_layouts[i].format == cldnn::format::bfyx);
+
+            const char * fmt = p->input_layouts[i].format == cldnn::format::yxfb ? "yxfb" : "bfyx";
+
+            res << "_" << "Input" << i
+                << fmt[0] << p->input_layouts[i].sizes()[0]
+                << fmt[1] << p->input_layouts[i].sizes()[1]
+                << fmt[2] << p->input_layouts[i].sizes()[2]
+                << fmt[3] << p->input_layouts[i].sizes()[3];
+        }
+
+        const auto layer = static_cast<cldnn::normalization *>(v);
+        res << (layer->norm_region == cldnn_lrn_norm_region_across_channel ? "_Across" : "_Within")
+            << "_Size" << layer->size
+            << "_Alpha" << layer->alpha
+            << "_Beta" << layer->beta
+            << "_K" << layer->k;
+
+        return res.str();
+    }
+
 private:
 
 	static std::vector<tests::test_params*> all_generic_params;
@@ -767,5 +804,5 @@ INSTANTIATE_TEST_CASE_P(LRN,
 						lrn_test, 
 						::testing::Combine(::testing::ValuesIn(lrn_test::generate_generic_test_params()),
 										   ::testing::ValuesIn(lrn_test::generate_specific_test_params())), 
-						tests::generic_test::custom_param_name_functor());
+						lrn_test::custom_param_name);
 

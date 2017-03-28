@@ -1100,7 +1100,7 @@ using namespace cldnn;
 
 namespace {
     struct extraScaleTestParam {
-        bool bias_term;
+        bool bias_term_present;
     };
 }
 
@@ -1111,17 +1111,13 @@ public:
     {
         for (auto & p : all_generic_params)
             if (p->opaque_custom_param)
+            {
                 delete reinterpret_cast<extraScaleTestParam *>(p->opaque_custom_param);
+                p->opaque_custom_param = nullptr;
+            }
 
         all_generic_params.clear();
         all_layer_params.clear();
-    }
-
-    virtual void print_params() override
-    {
-        const auto p = reinterpret_cast<cldnn::scale *>(layer_params);
-
-        printf("Layer params: bias_term: %d\n", p->bias_term);
     }
 
     //TODO: use an enum instead of int i
@@ -1180,7 +1176,8 @@ public:
                     if (variant)
                             tp->input_layouts.push_back( cldnn::tensor( fmt, { mb, mf, mh, mw } ));
 
-                    auto extra_param = new extraScaleTestParam { variant == 1 };
+                    const bool bias_term_present = variant == 0 || variant == 1 || variant == 2;
+                    auto extra_param = new extraScaleTestParam { bias_term_present };
                     tp->opaque_custom_param = extra_param;
 
                     all_generic_params.emplace_back(tp);
@@ -1233,7 +1230,7 @@ public:
         //Output is bfyx
         auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().size.transform(cldnn::format::bfyx, 0)));
 
-        const auto params = reinterpret_cast<cldnn::scale *>(layer_params);
+        const auto params = static_cast<cldnn::scale *>(layer_params);
         const bool bias_term = params->bias_term;
 
         const Type * const in0_mem = input.pointer<Type>().data();
@@ -1317,31 +1314,37 @@ public:
     {
         std::stringstream res;
 
-        const auto & generic_params = std::get<0>(info.param);
+        const auto & p = std::get<0>(info.param);
+        const auto & v = std::get<1>(info.param);
 
-        assert(generic_params->opaque_custom_param);
-        bool bias_term = reinterpret_cast<extraScaleTestParam *>(generic_params->opaque_custom_param)->bias_term;
+        assert (p->data_type == data_types::f32 ||
+                p->data_type == data_types::f16);
 
         res << info.index
-            << "_DT" << (generic_params->data_type == data_types::f32 ? "f32" : "f16")
-            << "_InputFMT" << (generic_params->input_layouts[0].format == cldnn::format::bfyx ? "bfyx" : "other")
-            << "_InputDims" << generic_params->input_layouts[0].sizes()[0]
-                << "x" << generic_params->input_layouts[0].sizes()[1]
-                << "x" << generic_params->input_layouts[0].sizes()[2]
-                << "x" << generic_params->input_layouts[0].sizes()[3]
-            << "_ScaleFMT" << (generic_params->input_layouts[1].format == cldnn::format::bfyx ? "bfyx" : "other")
-            << "_ScaleDims" << generic_params->input_layouts[1].sizes()[0]
-                << "x" << generic_params->input_layouts[1].sizes()[1]
-                << "x" << generic_params->input_layouts[1].sizes()[2]
-                << "x" << generic_params->input_layouts[1].sizes()[3]
-            << "_BiasTerm" << bias_term;
+            << "_" << (p->data_type == data_types::f32 ? "f32" : "f16");
 
-        if (generic_params->input_layouts.size() > 2)
-            res << "_BiasFMT" << (generic_params->input_layouts[2].format == cldnn::format::bfyx ? "bfyx" : "other")
-                << "_ScaleDims" << generic_params->input_layouts[2].sizes()[0]
-                    << "x" << generic_params->input_layouts[2].sizes()[1]
-                    << "x" << generic_params->input_layouts[2].sizes()[2]
-                    << "x" << generic_params->input_layouts[2].sizes()[3];
+        for (unsigned i = 0; i < p->input_layouts.size(); ++i)
+        {
+            assert (p->input_layouts[i].format == cldnn::format::bfyx);
+
+            if (i == 0) res << "_Input";
+            if (i == 1) res << "_ScaleInput";
+            if (i == 2) res << "_BiasInput";
+
+            res << "b" << p->input_layouts[i].sizes()[0]
+                << "f" << p->input_layouts[i].sizes()[1]
+                << "y" << p->input_layouts[i].sizes()[2]
+                << "x" << p->input_layouts[i].sizes()[3];
+        }
+
+        assert(p->opaque_custom_param);
+        const bool bias_term_present = reinterpret_cast<extraScaleTestParam *>(p->opaque_custom_param)->bias_term_present;
+
+        if (bias_term_present)
+        {
+            const auto layer = static_cast<cldnn::scale *>(v);
+            res << "_BiasTerm" << (layer->bias_term ? "T" : "F");
+        }
 
         return res.str();
     }

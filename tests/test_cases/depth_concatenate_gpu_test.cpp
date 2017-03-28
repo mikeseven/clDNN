@@ -178,25 +178,8 @@ public:
         }
     }
 
-    virtual void print_params() override
-    {
-        std::cout
-            << "Layer params:"
-            << "\t{ data_type: " << (generic_params->data_type == data_types::f32 ? "f32" : "f16")
-            << ", inputs: [";
-        for (unsigned i = 0; i < generic_params->input_layouts.size(); ++i)
-            std::cout
-                << " { fmt: " << (generic_params->input_layouts[i].format == cldnn::format::bfyx ? "bfyx" : "???")
-                << ", b: " << generic_params->input_layouts[i].sizes()[0]
-                << ", f: " << generic_params->input_layouts[i].sizes()[1]
-                << ", y: " << generic_params->input_layouts[i].sizes()[2]
-                << ", x: " << generic_params->input_layouts[i].sizes()[3]
-                << " },";
-        std::cout << " ] }" << std::endl;
-    }
-
     static std::vector<cldnn::primitive*> generate_specific_test_params(int i)
-  {
+    {
         std::vector<cldnn::primitive*> all_layer_params;
 
         switch(i)
@@ -204,7 +187,7 @@ public:
             case 1 : all_layer_params.push_back(new depth_concatenate("depth_concatenate", {"input0"})); break;
             case 2 : all_layer_params.push_back(new depth_concatenate("depth_concatenate", {"input0", "input1"})); break;
             case 3 : all_layer_params.push_back(new depth_concatenate("depth_concatenate", {"input0", "input1", "input2"})); break;
-          default: assert(0);
+            default: assert(0);
         }
 
         return all_layer_params;
@@ -362,17 +345,24 @@ public:
     {
         std::stringstream res;
 
-        const auto & generic_params = std::get<0>(info.param);
+        const auto & p = std::get<0>(info.param);
+
+        assert (p->data_type == data_types::f32 ||
+                p->data_type == data_types::f16);
 
         res << info.index
-            << "_DT" << (generic_params->data_type == data_types::f32 ? "f32" : "f16");
+            << "_" << (p->data_type == data_types::f32 ? "f32" : "f16");
 
-        for (unsigned i = 0; i < generic_params->input_layouts.size(); ++i)
-            res << "_" << i << "InputFMT" << (generic_params->input_layouts[i].format == cldnn::format::bfyx ? "bfyx" : "other")
-                << "_" << i << "InputDims" << generic_params->input_layouts[i].sizes()[0]
-                << "x" << generic_params->input_layouts[i].sizes()[1]
-                << "x" << generic_params->input_layouts[i].sizes()[2]
-                << "x" << generic_params->input_layouts[i].sizes()[3];
+        for (unsigned i = 0; i < p->input_layouts.size(); ++i)
+        {
+            assert (p->input_layouts[i].format == cldnn::format::bfyx);
+
+            res << "_" << "Input" << i
+                << "b" << p->input_layouts[i].sizes()[0]
+                << "f" << p->input_layouts[i].sizes()[1]
+                << "y" << p->input_layouts[i].sizes()[2]
+                << "x" << p->input_layouts[i].sizes()[3];
+        }
 
         return res.str();
     }

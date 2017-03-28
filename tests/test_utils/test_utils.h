@@ -26,8 +26,11 @@
 #include <gtest/gtest.h>
 #include <api/primitive.hpp>
 #include "float16.h"
+#include "api/primitives/depth_concatenate.hpp"
 #include "api/primitives/normalization.hpp"
 #include "api/primitives/roi_pooling.hpp"
+#include "api/primitives/scale.hpp"
+#include "api/primitives/softmax.hpp"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -341,27 +344,51 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
 	auto test_param = std::get<0>(t);
 	auto primitive = std::get<1>(t);
 
-	str << std::endl << "Test params: " << test_param->print() << "Layer params: " << std::endl;
+	str << std::endl << "Test params: " << test_param->print();
 
-	str << "Input padding: lower size: " << test_param->print_tensor(primitive->input_padding().lower_size())
-		<< " upper size : " << test_param->print_tensor(primitive->input_padding().upper_size()) << std::endl
+    str << "Layer params:\n"
+        << "Input padding: lower size: " << test_param->print_tensor(primitive->input_padding().lower_size())
+		<< " upper size : " << test_param->print_tensor(primitive->input_padding().upper_size()) << '\n'
 		<< "Output padding lower size: " << test_param->print_tensor(primitive->output_padding().lower_size())
-		<< " upper size: " << test_param->print_tensor(primitive->output_padding().upper_size()) << std::endl;
+		<< " upper size: " << test_param->print_tensor(primitive->output_padding().upper_size()) << '\n';
 
-	auto primitive_type = primitive->type();
-	if (primitive_type == cldnn::normalization::type_id())
-	{
-		cldnn::normalization* lrn = (cldnn::normalization*)(primitive);
-		std::string norm_region = (lrn->norm_region == cldnn_lrn_norm_region_across_channel) ? "across channel" : "within channel";
-		str << "Norm region: " << norm_region << " Size: " << lrn->size << " Alpha: " << lrn->alpha << " Beta: " << lrn->beta << " K: " << lrn->k;
-	}
-	else if (primitive_type == cldnn::roi_pooling::type_id())
-	{
-		cldnn::roi_pooling* roi_pooling = (cldnn::roi_pooling*)(primitive);
-		str << "Pooled width: " << roi_pooling->pooled_width << " Pooled height: " << roi_pooling->pooled_height << " Spatial scale: " << roi_pooling->spatial_scale;
-	}
-	else
-	{
+    //TODO: do layers not have param dumping? we could consider adding it
+
+    if (primitive->type() == cldnn::depth_concatenate::type_id())
+    {
+        auto dc = static_cast<cldnn::depth_concatenate *>(primitive);
+        (void)dc;
+    }
+    else if(primitive->type() == cldnn::normalization::type_id())
+    {
+        auto lrn = static_cast<cldnn::normalization *>(primitive);
+        std::string norm_region = (lrn->norm_region == cldnn_lrn_norm_region_across_channel) ? "across channel" : "within channel";
+        str << "Norm region: " << norm_region
+            << " Size: " << lrn->size
+            << " Alpha: " << lrn->alpha
+            << " Beta: " << lrn->beta
+            << " K: " << lrn->k;
+    }
+    else if(primitive->type() == cldnn::roi_pooling::type_id())
+    {
+        auto roi_pooling = static_cast<cldnn::roi_pooling *>(primitive);
+        str << "Pooled width: " << roi_pooling->pooled_width
+            << " Pooled height: " << roi_pooling->pooled_height
+            << " Spatial scale: " << roi_pooling->spatial_scale;
+    }
+    else if(primitive->type() == cldnn::scale::type_id())
+    {
+        auto s = static_cast<cldnn::scale *>(primitive);
+        str << " Bias: " << s->bias_term;
+//        str << " PassBias: Maybe";    //TODO: the interface requires passing it atm, but it's goint to change
+    }
+    else if(primitive->type() == cldnn::softmax::type_id())
+    {
+        auto sm = static_cast<cldnn::softmax *>(primitive);
+        (void)sm;
+    }
+    else
+    {
 		throw std::runtime_error("Not implemented yet for this primitive.");
 	}
 		
