@@ -130,7 +130,7 @@ namespace KernelSelctor
         xwyz,
         wxyz,
         xzyw,
-        zxyw,
+        zyxw,
         yxzw,
     };
 

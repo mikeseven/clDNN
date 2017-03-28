@@ -319,7 +319,7 @@ namespace KernelSelctor {
         case ReorderMode::xwyz: return "XWYZ";
         case ReorderMode::wxyz: return "WXYZ";
         case ReorderMode::xzyw: return "XZYW";
-        case ReorderMode::zxyw: return "ZXYW";
+        case ReorderMode::zyxw: return "ZYXW";
         case ReorderMode::yxzw: return "YXZW";
         default:
             return "XYZW";

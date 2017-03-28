@@ -42,7 +42,7 @@ namespace KernelSelctor
 
         std::stringstream jit;
         jit << GetBaseJit(newParams);
-        jit << "REORDER_MODE_" << toString(newParams.reorderParams.mode);
+        jit << "#define REORDER_MODE_" << toString(newParams.reorderParams.mode);
 
         const auto& out = newParams.outDims;
         auto& kernel = kd.kernels[0];

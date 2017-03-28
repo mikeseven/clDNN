@@ -28,8 +28,8 @@ inline unsigned int get_soruce_index(unsigned int x, unsigned int w, unsigned in
 inline unsigned int get_soruce_index(unsigned int w, unsigned int x, unsigned int y, unsigned int z)
 #elif defined REORDER_MODE_XZYW
 inline unsigned int get_soruce_index(unsigned int x, unsigned int z, unsigned int y, unsigned int w)
-#elif defined REORDER_MODE_ZXYW
-inline unsigned int get_soruce_index(unsigned int z, unsigned int x, unsigned int y, unsigned int w)
+#elif defined REORDER_MODE_ZYXW
+inline unsigned int get_soruce_index(unsigned int z, unsigned int y, unsigned int x, unsigned int w)
 #elif defined REORDER_MODE_YXZW
 inline unsigned int get_soruce_index(unsigned int y, unsigned int x, unsigned int z, unsigned int w)
 #endif
@@ -46,11 +46,10 @@ __kernel void reorder(
     const unsigned int w = get_global_id(2);
     
     const unsigned int src_index = INPUT_OFFSET + w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH;
-    const unsigned int dst_index = 
 
     for (unsigned int x = 0 ; x < INPUT_WIDTH; x++)
     {
-         output[get_soruce_index(x, y, z, w)] = input[src_index + x]
+         output[get_soruce_index(x, y, z, w)] = input[src_index + x];
     }
 }
 
