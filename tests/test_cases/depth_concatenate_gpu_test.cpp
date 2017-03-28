@@ -355,13 +355,13 @@ public:
 
         for (unsigned i = 0; i < p->input_layouts.size(); ++i)
         {
-            assert (p->input_layouts[i].format == cldnn::format::bfyx);
+            const auto chans = format::traits(p->input_layouts[i].format).order;
 
-            res << "_" << "Input" << i
-                << "b" << p->input_layouts[i].sizes()[0]
-                << "f" << p->input_layouts[i].sizes()[1]
-                << "y" << p->input_layouts[i].sizes()[2]
-                << "x" << p->input_layouts[i].sizes()[3];
+            res << "_" << "Input" << i;
+            for (unsigned int j = 0; j < p->input_layouts[i].sizes().size(); ++j)
+            {
+                res << chans[j] << p->input_layouts[i].sizes()[j];
+            }
         }
 
         return res.str();

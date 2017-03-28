@@ -1325,16 +1325,16 @@ public:
 
         for (unsigned i = 0; i < p->input_layouts.size(); ++i)
         {
-            assert (p->input_layouts[i].format == cldnn::format::bfyx);
-
             if (i == 0) res << "_Input";
             if (i == 1) res << "_ScaleInput";
             if (i == 2) res << "_BiasInput";
 
-            res << "b" << p->input_layouts[i].sizes()[0]
-                << "f" << p->input_layouts[i].sizes()[1]
-                << "y" << p->input_layouts[i].sizes()[2]
-                << "x" << p->input_layouts[i].sizes()[3];
+            const auto chans = format::traits(p->input_layouts[i].format).order;
+
+            for (unsigned int j = 0; j < p->input_layouts[i].sizes().size(); ++j)
+            {
+                res << chans[j] << p->input_layouts[i].sizes()[j];
+            }
         }
 
         assert(p->opaque_custom_param);

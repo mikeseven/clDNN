@@ -686,16 +686,13 @@ public:
 
         for (unsigned i = 0; i < p->input_layouts.size(); ++i)
         {
-            assert (p->input_layouts[i].format == cldnn::format::yxfb ||
-                    p->input_layouts[i].format == cldnn::format::bfyx);
+            const auto chans = format::traits(p->input_layouts[i].format).order;
 
-            const char * fmt = p->input_layouts[i].format == cldnn::format::yxfb ? "yxfb" : "bfyx";
-
-            res << "_" << "Input" << i
-                << fmt[0] << p->input_layouts[i].sizes()[0]
-                << fmt[1] << p->input_layouts[i].sizes()[1]
-                << fmt[2] << p->input_layouts[i].sizes()[2]
-                << fmt[3] << p->input_layouts[i].sizes()[3];
+            res << "_" << "Input" << i;
+            for (unsigned int j = 0; j < p->input_layouts[i].sizes().size(); ++j)
+            {
+                res << chans[j] << p->input_layouts[i].sizes()[j];
+            }
         }
 
         return res.str();

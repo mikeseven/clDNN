@@ -352,28 +352,21 @@ public:
 
         for (unsigned i = 0; i < p->input_layouts.size(); ++i)
         {
-            assert (p->input_layouts[i].format == cldnn::format::bfyx ||
-                    p->input_layouts[i].format == cldnn::format::bx);
+            const auto chans = format::traits(p->input_layouts[i].format).order;
 
             res << "_" << "Input" << i;
-            if (p->input_layouts[i].format == cldnn::format::bfyx)
+            for (unsigned int j = 0; j < p->input_layouts[i].sizes().size(); ++j)
             {
-                res << "b" << p->input_layouts[i].sizes()[0]
-                    << "f" << p->input_layouts[i].sizes()[1]
-                    << "y" << p->input_layouts[i].sizes()[2]
-                    << "x" << p->input_layouts[i].sizes()[3];
-            }
-            else
-            {
-                res << "b" << p->input_layouts[i].sizes()[0]
-                    << "x" << p->input_layouts[i].sizes()[1];
+                res << chans[j] << p->input_layouts[i].sizes()[j];
             }
         }
 
         const auto layer = static_cast<cldnn::roi_pooling *>(v);
         res << "_PooledW" << layer->pooled_width
-            << "_PooledH" << layer->pooled_height
-            << "_SpatialScale" << layer->spatial_scale;
+            << "_PooledH" << layer->pooled_height;
+        //TODO: we should remove spatial scale altogether
+        //TODO: while it exists it should be escaped in the following
+//            << "_SpatialScale" << layer->spatial_scale;
 
         return res.str();
     }
