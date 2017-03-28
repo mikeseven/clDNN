@@ -532,3 +532,192 @@ TEST(softmax_gpu_bfyx_f32, check_max_values_corectness) {
 //    for(uint32_t output_element = 0; output_element < output_memory.count(); ++output_element)
 //        EXPECT_EQ(true, tests::are_equal(get_value<float>(ref_output_memory, output_element), get_value<float>(output_memory, output_element)));
 //}
+
+//////////////////////////////////////////////////////////////////////////////
+//                                                                          //
+//                      Exhaustive Negative Matrix tests                    //
+//                                                                          //
+//////////////////////////////////////////////////////////////////////////////
+
+//TODO:
+//TEST(NegativeSoftmaxTest, DISABLED_TestAll) {
+//}
+
+//////////////////////////////////////////////////////////////////////////////
+//                                                                          //
+//                      Exhaustive Positive Matrix tests                    //
+//                                                                          //
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace cldnn;
+
+class softmax_test : public tests::generic_test
+{
+
+public:
+    softmax_test() : tests::generic_test()
+    {
+    }
+
+    static void TearDownTestCase()
+    {
+        for (auto generic_params : all_generic_params)
+        {
+            delete generic_params;
+        }
+
+        for (auto layer_params : all_layer_params)
+        {
+            delete layer_params;
+        }
+    }
+
+    static std::vector<cldnn::primitive*> generate_specific_test_params()
+    {
+        all_layer_params.push_back(new softmax("softmax", "input0"));
+
+        //The test checks only valid combinations.
+        //TODO: add more combinations.
+
+        return all_layer_params;
+    }
+
+    static std::vector<tests::test_params*> generate_generic_test_params()
+    {
+        return generic_test::generate_generic_test_params(all_generic_params);
+    }
+
+    virtual bool is_format_supported(cldnn::format format) override
+    {
+        return
+            format == cldnn_format_type::cldnn_format_yxfb ||
+            format == cldnn_format_type::cldnn_format_bfyx;
+    }
+
+    template<typename Type>
+    memory generate_reference_typed(const std::vector<memory> & inputs)
+    {
+        assert(inputs.size() == 1);
+        const memory & input = inputs[0];
+
+        //Output is bfyx
+        auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().size.transform(cldnn::format::bfyx, 0)));
+
+//        const auto params = static_cast<cldnn::softmax *>(layer_parmas);
+
+        const Type * const in0_mem = input.pointer<Type>().data();
+        Type * const out_mem = output.pointer<Type>().data();
+
+        const int in0_b = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
+        const int in0_f = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
+        const int in0_h = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
+        const int in0_w = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+
+//        const int out_b = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
+//        const int out_f = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
+//        const int out_h = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
+//        const int out_w = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+
+//        assert(in0_b == out_b);
+//        assert(in0_f == out_f);
+//        assert(in0_h == out_h);
+//        assert(in0_w == out_w);
+
+        std::vector<float> cached_exp_vals;
+        cached_exp_vals.resize(in0_f);
+
+        for (int n = 0; n < in0_b; ++n)
+        for (int y = 0; y < in0_h; ++y)
+        for (int x = 0; x < in0_w; ++x)
+        {
+            float max_val = -std::numeric_limits<float>::infinity();
+
+            for (int c = 0; c < in0_f; ++c)
+            {
+                const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x);
+
+                max_val = std::max(max_val, static_cast<float>(in0_mem[in0_idx]));
+            }
+
+            float Z = 0;
+
+            for (int c = 0; c < in0_f; ++c)
+            {
+                const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x);
+
+                float tmp = static_cast<float>((Type)std::exp(static_cast<float>(in0_mem[in0_idx]) - max_val));
+                Z += tmp;
+                cached_exp_vals[c] = tmp;
+            }
+
+            for (int c = 0; c < in0_f; ++c)
+            {
+                const size_t out_idx = get_linear_index(output.get_layout(), n, c, y, x);
+                out_mem[out_idx] = (Type)(cached_exp_vals[c] / Z);
+            }
+        }
+
+        return output;
+    }
+
+    virtual memory generate_reference(const std::vector<memory> & inputs) override
+    {
+        if (generic_params->data_type == data_types::f32)
+        {
+            return generate_reference_typed<float>(inputs);
+        }
+        else
+        {
+            return generate_reference_typed<FLOAT16>(inputs);
+        }
+    }
+
+    static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info)
+    {
+        std::stringstream res;
+
+        const auto & p = std::get<0>(info.param);
+
+        assert (p->data_type == data_types::f32 ||
+                p->data_type == data_types::f16);
+
+        res << info.index
+            << "_" << (p->data_type == data_types::f32 ? "f32" : "f16");
+
+        for (unsigned i = 0; i < p->input_layouts.size(); ++i)
+        {
+            assert (p->input_layouts[i].format == cldnn::format::yxfb ||
+                    p->input_layouts[i].format == cldnn::format::bfyx);
+
+            const char * fmt = p->input_layouts[i].format == cldnn::format::yxfb ? "yxfb" : "bfyx";
+
+            res << "_" << "Input" << i
+                << fmt[0] << p->input_layouts[i].sizes()[0]
+                << fmt[1] << p->input_layouts[i].sizes()[1]
+                << fmt[2] << p->input_layouts[i].sizes()[2]
+                << fmt[3] << p->input_layouts[i].sizes()[3];
+        }
+
+        return res.str();
+    }
+
+private:
+
+    static std::vector<tests::test_params*> all_generic_params;
+    static std::vector<cldnn::primitive*> all_layer_params;
+
+};
+
+std::vector<cldnn::primitive*> softmax_test::all_layer_params = {};
+std::vector<tests::test_params*> softmax_test::all_generic_params = {};
+
+TEST_P(softmax_test, DISABLED_TestAll)
+{
+    run_single_test();
+}
+
+INSTANTIATE_TEST_CASE_P(SOFTMAX,
+    softmax_test,
+    ::testing::Combine(::testing::ValuesIn(softmax_test::generate_generic_test_params()), ::testing::ValuesIn(softmax_test::generate_specific_test_params())),
+    softmax_test::custom_param_name);
+

@@ -337,6 +337,47 @@ public:
 		return get_output_layout();
 	}
 
+    static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info)
+    {
+        std::stringstream res;
+
+        const auto & p = std::get<0>(info.param);
+        const auto & v = std::get<1>(info.param);
+
+        assert (p->data_type == data_types::f32 ||
+                p->data_type == data_types::f16);
+
+        res << info.index
+            << "_" << (p->data_type == data_types::f32 ? "f32" : "f16");
+
+        for (unsigned i = 0; i < p->input_layouts.size(); ++i)
+        {
+            assert (p->input_layouts[i].format == cldnn::format::bfyx ||
+                    p->input_layouts[i].format == cldnn::format::bx);
+
+            res << "_" << "Input" << i;
+            if (p->input_layouts[i].format == cldnn::format::bfyx)
+            {
+                res << "b" << p->input_layouts[i].sizes()[0]
+                    << "f" << p->input_layouts[i].sizes()[1]
+                    << "y" << p->input_layouts[i].sizes()[2]
+                    << "x" << p->input_layouts[i].sizes()[3];
+            }
+            else
+            {
+                res << "b" << p->input_layouts[i].sizes()[0]
+                    << "x" << p->input_layouts[i].sizes()[1];
+            }
+        }
+
+        const auto layer = static_cast<cldnn::roi_pooling *>(v);
+        res << "_PooledW" << layer->pooled_width
+            << "_PooledH" << layer->pooled_height
+            << "_SpatialScale" << layer->spatial_scale;
+
+        return res.str();
+    }
+
 private:
 
     template<typename Type>
@@ -529,5 +570,4 @@ INSTANTIATE_TEST_CASE_P(ROI_POOLING,
         roi_pooling_test,
         ::testing::Combine(::testing::ValuesIn(roi_pooling_test::generate_input_buffers_params()),
         ::testing::ValuesIn(roi_pooling_test::generate_layer_params())),
-        tests::generic_test::custom_param_name_functor());
-
+        roi_pooling_test::custom_param_name);

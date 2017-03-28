@@ -30,7 +30,8 @@ using namespace cldnn;
 namespace tests 
 {
 	generic_test::generic_test() : generic_params(std::get<0>(GetParam())), layer_params(std::get<1>(GetParam()))
-	{}
+	{
+	}
 
 	void generic_test::run_single_test()
 	{
@@ -135,7 +136,8 @@ namespace tests
 		}
 	}
 
-	uint32_t generic_test::get_linear_index(layout layout, int b, int f, int y, int x)
+	//TODO: is it ok that it assumes flat memory?
+	size_t generic_test::get_linear_index(const layout & layout, int b, int f, int y, int x)
 	{
 		uint32_t bPitch, fPitch, yPitch, xPitch;
 		switch (layout.size.format)
@@ -166,6 +168,73 @@ namespace tests
 				yPitch = layout.size.sizes()[2] * xPitch;
 				fPitch = layout.size.sizes()[1] * yPitch;
 				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
+			}
+			default:
+			{
+				throw std::runtime_error("Format not supported yet.");
+			}
+		}
+	}
+
+	//TODO: change the sig to take the layout size only for the output stuff
+	//TODO: is it ok that it assumes flat memory?
+        size_t generic_test::get_linear_index_with_broadcast(const layout & in_layout, int b, int f, int y, int x, const layout & out_layout)
+	{
+		assert(in_layout.size.format == out_layout.size.format);	//TODO: won't be needed after sig change. we could support different layouts but there's no need, atm.
+
+		const auto in0 = in_layout.size.sizes()[0];
+		const auto in1 = in_layout.size.sizes()[1];
+		const auto in2 = in_layout.size.sizes()[2];
+		const auto in3 = in_layout.size.sizes()[3];
+
+		const auto out0 = out_layout.size.sizes()[0];
+		const auto out1 = out_layout.size.sizes()[1];
+		const auto out2 = out_layout.size.sizes()[2];
+		const auto out3 = out_layout.size.sizes()[3];
+
+		assert(in0 == 1 || in0 == out0);
+		assert(in1 == 1 || in1 == out1);
+		assert(in2 == 1 || in2 == out2);
+		assert(in3 == 1 || in3 == out3);
+
+		uint32_t bPitch, fPitch, yPitch, xPitch;
+		switch (in_layout.size.format)
+		{
+			case format::bfyx:
+			{
+				//b=sizes[0], f=sizes[1], y=sizes[2], x=sizes[3]
+				xPitch = 1;
+				yPitch = in3 * xPitch;
+				fPitch = in2 * yPitch;
+				bPitch = in1 * fPitch;
+				return	(in3 == out3 ? x * xPitch : 0) +
+					(in2 == out2 ? y * yPitch : 0) +
+					(in1 == out1 ? f * fPitch : 0) +
+					(in0 == out0 ? b * bPitch : 0);
+			}
+			case format::yxfb:
+			{
+				//y=sizes[0], x=sizes[1], f=sizes[2], b=sizes[3]
+				bPitch = 1;
+				fPitch = in3 * bPitch;
+				xPitch = in2 * fPitch;
+				yPitch = in1 * xPitch;
+				return	(in3 == out3 ? b * bPitch : 0) +
+					(in2 == out2 ? f * fPitch : 0) +
+					(in1 == out1 ? x * xPitch : 0) +
+					(in0 == out0 ? y * yPitch : 0);
+			}
+			case format::fyxb:
+			{
+				//f=sizes[0], y=sizes[1], x=sizes[2], b=sizes[3]
+				bPitch = 1;
+				xPitch = in3 * bPitch;
+				yPitch = in2 * xPitch;
+				fPitch = in1 * yPitch;
+				return	(in3 == out3 ? b * bPitch : 0) +
+					(in2 == out2 ? x * xPitch : 0) +
+					(in1 == out1 ? y * yPitch : 0) +
+					(in0 == out0 ? f * fPitch : 0);
 			}
 			default:
 			{
