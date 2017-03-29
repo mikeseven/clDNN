@@ -17,8 +17,68 @@
 /*! @mainpage clDNN Documentation
 * @section intro Introduction
 * Compute Library for Deep Neural Networks (clDNN) is a middle-ware software
-*  for accelerating DNN inference on Intel &reg; HD and Iris&trade; Pro Graphics.
-* @section example Example MNIST network
+*  for accelerating DNN inference on Intel&reg; HD and Iris&trade; Pro Graphics.
+*  This project includes CNN primitives implementations on Intel GPUs with C and C++ interfaces.
+*
+* clDNN Library implements set of primitives:
+*  - Convolution
+*  - Fully connected
+*  - Pooling
+*   * average
+*   * maximum
+*  - Normalization
+*   * across channel
+*   * within channel
+*   * batch
+*  - Activation
+*   * logistic
+*   * tanh
+*   * rectified linear unit (ReLU)
+*   * softplus (softReLU)
+*   * abs
+*   * square
+*   * sqrt
+*   * linear
+*  - Softmax
+*  - Crop
+*  - Deconvolution
+*  - Depth concatenation
+*  - Eltwise
+*  - ROI pooling
+*  - Simpler NMS
+*  - Prior box
+*
+*  With this primitive set, user can build and execute most common image recognition and detection network topologies like:
+*   - Alexnet 
+*   - Googlenet(v1-v3)
+*   - ResNet
+*   - VGG
+*   - faster-rCNN 
+* and other.
+*  
+*
+* @section model Programming Model
+*  Intel&reg; clDNN is graph oriented library. To execute CNN you have to build, compile graph/topology and run to get results. 
+*  
+*  <B> Terminology: </B>
+*  - Primitive - dnn base functionality i.e. convolution, pooling, softmax. 
+*  - Data - special primitive type representing primitive parameters (weights and biases), inputs and outputs
+*  - Engine - type of accelerator that is executing network. Currently ocl engine is the only aviable. 
+*  - Topology - container of primitives, data, and relations between then. Topology represents graph. 
+*  - Program - optional step between Topology and Network. It is compiled Topology without memory allocations
+*  - Network - compiled Topology with memory allocations. Can be executed. During compilation, buidling parameters triggers special optimizations like fusing, data reordering.
+*
+*  <B> Execution Steps: </B>
+* -# Create Engine
+* -# Declare or define primitives parameters (weights and biases) if needed.
+* -# Create primitives. Each primitive requires to provide input name. This is a name of primitive which output will be input to current one. Name can be used before primitive definition.
+* -# Create topology
+* -# Add primitives to topology
+* -# Build Network from topology
+* -# Set Inputs data 
+* -# Execute Network
+
+* @section example C++ API Example MNIST network
 * @include example_cldnn.cpp
 */
 
