@@ -48,7 +48,7 @@
 *  - Simpler NMS
 *  - Prior box
 *
-*  With this primitive set, user can build and execute most common image recognition and detection network topologies like:
+*  With this primitive set, user can build and execute most common image recognition, semantic segmentation and object detection networks topologies like:
 *   - Alexnet 
 *   - Googlenet(v1-v3)
 *   - ResNet
