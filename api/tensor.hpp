@@ -425,16 +425,15 @@ struct tensor
     }
 
     /// @brief Returns tensor elements count calculated as multiplication of all elements.
-    size_t count() const
-    {
-        auto sizes = this->sizes();
+    size_t count() const { 
         return std::accumulate(
-            sizes.begin(),
-            sizes.end(),
+            raw.begin(),
+            raw.end(), 
             static_cast<size_t>(1),
             std::multiplies<size_t>()
         );
     }
+
     /// @brief Returns new tensor based on current but transformed to new @p format.
     /// @param[in] new_fmt Format of new tensor.
     /// @param[in] default_size Default element values for positions not defined by current format.
