@@ -85,9 +85,9 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
     }
 
     /// @brief List of primitive ids containing weights data.
-    std::vector<primitive_id>& weights;
+    fixed_size_vector_ref weights;
     /// @brief List of primitive ids containing bias data.
-    std::vector<primitive_id>& bias;
+    fixed_size_vector_ref bias;
     /// @brief Defines shift in input buffer between adjacent calculations of output values.
     tensor stride;
     /// @brief Enable Relu activation.
@@ -102,11 +102,16 @@ protected:
     primitive_id_arr _weights;
     primitive_id_arr _bias;
 
-    std::vector<primitive_id> get_dependencies() const override
+    std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override
     {
-        auto result = weights;
-        result.insert(result.end(), bias.begin(), bias.end());
-        return result;
+        std::vector<std::reference_wrapper<const primitive_id>> ret;
+        ret.reserve(weights.size() + bias.size());
+        for (auto& w : weights)
+            ret.push_back(w);
+        for (auto& b : bias)
+            ret.push_back(b);
+
+        return ret;
     }
 
     void update_dto(dto& dto) const override

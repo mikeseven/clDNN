@@ -15,38 +15,39 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "reorder_arg.h"
+#include "reorder_inst.h"
 #include "primitive_type_base.h"
 #include <memory>
 
 namespace cldnn
 {
-reorder_arg::reorder_arg(network_impl& network, std::shared_ptr<const reorder> desc)
-    : primitive_arg_base(network, desc, desc->output_layout)
-{
-    auto& input_mem = input_memory(0);
-
-    if (input_mem.argument().size.raw.size() < _output.argument().size.raw.size())
-        throw std::runtime_error("Input dimension < output dimension. Reorder primitive woks only with same dimension sizes (reorder) or when input > output (flatten).");
-    if (!desc->substract_per_feature.empty())
-    {
-        if (input_mem.argument().size.feature.size() > 1)
-        {
-            throw std::runtime_error("Subtracting values work only for formats that have feature dimension == 1");
-        }
-        if (static_cast<size_t>(input_mem.argument().size.feature[0]) != desc->substract_per_feature.size())
-            throw std::runtime_error("Number of features/channels in input does not match the number of features/channels in values to subtract");
-    }
-    if (desc->input_padding())
-    {
-        throw std::runtime_error("Reorder with input which contains padding is NOT IMPLEMENTED yet!");
-    }
-}
 
 primitive_type_id reorder_type_id()
 {
-    static primitive_type_base<reorder, reorder_arg> instance;
+    static primitive_type_base<reorder, reorder_inst> instance;
     return &instance;
+}
+
+reorder_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const reorder> desc)
+    : parent(network, desc, desc->output_layout)
+{
+    auto& input_mem = input_memory();
+
+    if (input_mem.get_layout().size.raw.size() < _output.get_layout().size.raw.size())
+        throw std::runtime_error("Input dimension < output dimension. Reorder primitive woks only with same dimension sizes (reorder) or when input > output (flatten).");
+    if (!desc->substract_per_feature.empty())
+    {
+        if (input_mem.get_layout().size.feature.size() > 1)
+        {
+            throw std::runtime_error("Subtracting values work only for formats that have feature dimension == 1");
+        }
+        if (static_cast<size_t>(input_mem.get_layout().size.feature[0]) != desc->substract_per_feature.size())
+            throw std::runtime_error("Number of features/channels in input does not match the number of features/channels in values to subtract");
+    }
+    if (argument.input_padding)
+    {
+        throw std::runtime_error("Reorder with input which contains padding is NOT IMPLEMENTED yet!");
+    }
 }
 
 }

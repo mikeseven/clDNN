@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "neural_impl.h"
+#include "eltwise_inst.h"
 #include "network_impl.h"
 #include "kernel.h"
 
@@ -22,15 +22,17 @@
 #include <stdexcept>
 #include <string>
 
+using namespace cldnn;
+
 namespace neural
 {
 // Kernel names.
 static const std::string kernel_name = "eltwise_gpu";
 static const std::string kernel_name_bfyx = "eltwise_gpu_bfyx";
 
-struct eltwise_gpu : is_an_implementation
+struct eltwise_gpu : primitive_impl
 {
-    const eltwise& _outer;
+    const eltwise_inst& _outer;
     struct kernel_data
     {
         size_t gws0;
@@ -40,19 +42,19 @@ struct eltwise_gpu : is_an_implementation
     } _kernel_data;
     gpu::kernel _kernel;
 
-    eltwise_gpu(const eltwise& outer)
+    eltwise_gpu(const eltwise_inst& outer)
         : _outer(outer),
         _kernel_data(set_kernel_data(_outer)),
         _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
     {}
 
-    static kernel_data set_kernel_data(const eltwise& outer)
+    static kernel_data set_kernel_data(const eltwise_inst& outer)
     {
         const auto& output_mem = outer.output_memory(); // output
 
-        if (outer.input().at(0)->desc()->output_padding() ||
-            outer.input().at(1)->desc()->output_padding() ||
-            outer.desc()->input_padding())
+        if (outer.input().at(0)->desc()->output_padding ||
+            outer.input().at(1)->desc()->output_padding ||
+            outer.desc()->input_padding)
         {
             throw std::runtime_error("Input padding for eltwise not yet supported");
         }
@@ -76,7 +78,7 @@ struct eltwise_gpu : is_an_implementation
         }
         else
         {
-            if (outer.desc()->output_padding())
+            if (outer.desc()->output_padding)
                 throw std::runtime_error("Input padding for eltwise is not yet supported for not-bfyx input");
 
             kd.kernel_name = kernel_name;
@@ -85,7 +87,7 @@ struct eltwise_gpu : is_an_implementation
         return kd;
     }
 
-    static gpu::jit_constants get_jit_constants(const eltwise& outer, const kernel_data& data)
+    static gpu::jit_constants get_jit_constants(const eltwise_inst& outer, const kernel_data& data)
     {
         auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
 
@@ -93,10 +95,10 @@ struct eltwise_gpu : is_an_implementation
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
         return{
-            gpu::make_jit_constant("INPUT",                 outer.input_memory(0).argument().size),
+            gpu::make_jit_constant("INPUT",                 outer.input_memory().get_layout().size),
             gpu::make_jit_constant("OUTPUT",                outer.non_padded_output_layout().size),
-            gpu::make_jit_constant("INPUT2" ,               outer.input_memory(1).argument().size),
-            gpu::make_jit_constant("OUTPUT_PADDING",        outer.argument.output_padding()),
+            gpu::make_jit_constant("INPUT2" ,               outer.input2_memory().get_layout().size),
+            gpu::make_jit_constant("OUTPUT_PADDING",        outer.argument.output_padding),
             gpu::make_jit_constant("FP16_SUPPORTED",        static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",        static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",             data.fp16_unit_used ? "half" : "float"),
@@ -113,26 +115,26 @@ struct eltwise_gpu : is_an_implementation
     {
         const auto& kd    = _kernel_data;
 
-        const auto& input_mem  = _outer.input_memory(0);  // input
-        const auto& input2_mem   = _outer.input_memory(1);  // input2
+        const auto& input_mem  = _outer.input_memory();  // input
+        const auto& input2_mem   = _outer.input2_memory();  // input2
         const auto& output_mem = _outer.output_memory(); // output
 
         // input2_mem memory in bfyx or yxfb.
         return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>({kd.gws0, kd.lws0}, events, input_mem, output_mem, input2_mem);
     }
 
-    static is_an_implementation *create(const eltwise& outer) { return new eltwise_gpu(outer); }
+    static primitive_impl* create(const eltwise_inst& outer) { return new eltwise_gpu(outer); }
 
 };
 
 namespace {
     struct attach {
         attach() {
-            implementation_map<eltwise>::add({
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), eltwise_gpu::create },
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), eltwise_gpu::create },
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), eltwise_gpu::create },
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), eltwise_gpu::create }
+            implementation_map<eltwise_inst>::add({
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), eltwise_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), eltwise_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), eltwise_gpu::create },
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), eltwise_gpu::create }
             });
         }
         ~attach() {}

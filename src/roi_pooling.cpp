@@ -14,10 +14,8 @@
 // limitations under the License.
 */
 
-#include "neural_impl.h"
-#include "network_impl.h"
+#include "roi_pooling_inst.h"
 #include "primitive_type_base.h"
-
 
 namespace cldnn
 {
@@ -25,27 +23,27 @@ namespace cldnn
 
 primitive_type_id roi_pooling_type_id()
 {
-    static primitive_type_base<roi_pooling, roi_pooling_arg> instance;
+    static primitive_type_base<roi_pooling, roi_pooling_inst> instance;
     return &instance;
 }
 
 
-layout roi_pooling_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const roi_pooling> desc)
+layout roi_pooling_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const roi_pooling> desc)
 {
-    auto input_desc = topology_map.at(desc->input()[data_index])->primitive_desc;
-    layout input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);    
+    auto input_desc = topology_map.at(desc->input[data_index])->primitive_desc;
+    layout input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);    
     int fm = input_layout.size.feature[0];
 
-    input_desc = topology_map.at(desc->input()[rois_index])->primitive_desc;
-    input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);    
+    input_desc = topology_map.at(desc->input[rois_index])->primitive_desc;
+    input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);    
     int num_rois = input_layout.size.batch[0];
 
     return layout( input_layout.data_type, { format::bfyx, { num_rois, fm, desc->pooled_height, desc->pooled_width }});
 }
 
 
-roi_pooling_arg::roi_pooling_arg(network_impl& network, std::shared_ptr<const roi_pooling> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+roi_pooling_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const roi_pooling> desc)
+    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {}
 
 }

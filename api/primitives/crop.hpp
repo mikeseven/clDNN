@@ -67,7 +67,7 @@ struct crop : public primitive_base<crop, CLDNN_PRIMITIVE_DESC(crop)>
     tensor offsets;
 
 protected:
-    std::vector<primitive_id> get_dependencies() const override { return{ reference_input }; }
+    std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override { return{ reference_input }; }
 
     void update_dto(dto& dto) const override
     {

@@ -42,14 +42,14 @@ std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memo
         cldnn::topology topology;
         cldnn::data input_data("input_mem", input_mem);
         topology.add(input_data);
-        cldnn::primitive_id curr_id = input_data.id();
+        cldnn::primitive_id curr_id = input_data.id;
 
         if(needs_data_type_conversion)
         {
             mem_layout.data_type = cldnn::data_types::f32;
             cldnn::reorder data_type_reorder("data_type_reorder", curr_id, mem_layout);
             topology.add(data_type_reorder);
-            curr_id = data_type_reorder.id();
+            curr_id = data_type_reorder.id;
         }
 
         if(needs_format_conversion)
@@ -57,7 +57,7 @@ std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memo
             mem_layout.size = mem_layout.size.transform(cldnn::format::xb, 1);
             cldnn::reorder format_reorder("format_reorder", curr_id, mem_layout);
             topology.add(format_reorder);
-            curr_id = format_reorder.id();
+            curr_id = format_reorder.id;
         }
 
         mem = cldnn::network(cldnn::engine(), topology, {cldnn::build_option::outputs({curr_id})}).execute().begin()->second.get_memory();

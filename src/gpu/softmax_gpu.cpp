@@ -14,16 +14,16 @@
 // limitations under the License.
 */
 
-#include "neural_impl.h"
-#include "engine_impl.h"
+#include "softmax_inst.h"
+#include "kernel.h"
 #include "network_impl.h"
 #include "implementation_map.h"
-#include "kernel.h"
 
 #include <algorithm>
 #include <stdexcept>
 #include <string>
 
+using namespace cldnn;
 
 namespace neural
 {
@@ -35,11 +35,9 @@ static const std::string kernel_name_batches_bfyx = "softmax_gpu_batches_bfyx";
 static const std::string kernel_name_batches_yxfb = "softmax_gpu_batches_yxfb";
 
 
-namespace normalization
+struct softmax_gpu : primitive_impl
 {
-struct softmax_gpu : is_an_implementation
-{
-    const softmax& _outer;
+    const softmax_inst& _outer;
     struct kernel_data
     {
         size_t gws0;
@@ -53,17 +51,17 @@ struct softmax_gpu : is_an_implementation
     gpu::kernel _kernel;
 
 
-    softmax_gpu(const softmax& outer)
+    softmax_gpu(const softmax_inst& outer)
         : _outer(outer),
         _kernel_data(set_kernel_data(_outer)),
         _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
     {}
 
-    static kernel_data set_kernel_data(const softmax& outer)
+    static kernel_data set_kernel_data(const softmax_inst& outer)
     {
         auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
 
-        const auto& input_mem  = outer.input_memory(0);  // input
+        const auto& input_mem  = outer.input_memory();  // input
         const auto& output_mem = outer.output_memory(); // output
 
         kernel_data kd;
@@ -71,16 +69,14 @@ struct softmax_gpu : is_an_implementation
         kd.fp16_unit_used      = input_mem.get_layout().data_type == cldnn::data_types::f16;
         kd.fp16_supported      = engine_info.supports_fp16 != 0;
         auto batch_num         = outer.output_memory().get_layout().size.batch[0];
-        auto feature_num       = outer.input_memory(0).get_layout().size.feature[0];
+        auto feature_num       = outer.input_memory().get_layout().size.feature[0];
         size_t out_buffer_size = output_mem.count();
-        auto input_size        = input_mem.argument().size;
+        auto input_size        = input_mem.get_layout().size;
         kd.leftovers = 0;
         kd.elements_in_batch = 0;
         
-        if (input_mem.argument().format == memory::format::bfyx_f32 ||//floats
-            input_mem.argument().format == memory::format::bfyx_f16 ||
-            input_mem.argument().format == memory::format::yxfb_f32 ||//halfs
-            input_mem.argument().format == memory::format::yxfb_f16)
+        if (input_mem.get_layout().size.format == format::bfyx ||
+            input_mem.get_layout().size.format == format::yxfb)
         {
             kd.elements_in_batch = input_size.spatial[0] * input_size.spatial[1];
             kd.gws0 = cldnn::align_to(kd.elements_in_batch, 32);
@@ -99,8 +95,7 @@ struct softmax_gpu : is_an_implementation
 
             kd.kernel_name = kernel_name;
         }
-        else if (input_mem.argument().format == memory::format::bx_f32 || 
-            input_mem.argument().format == memory::format::bx_f16)
+        else if (input_mem.get_layout().size.format == format::bx)
         {
             // We have two units of data per work item in current implementation.
             auto local_mem_per_wi = 2 * (kd.fp16_unit_used ? sizeof(half_t) : sizeof(float));
@@ -151,12 +146,12 @@ struct softmax_gpu : is_an_implementation
         return kd;
     }
 
-    static gpu::jit_constants get_jit_constants(const softmax& outer, const kernel_data& data)
+    static gpu::jit_constants get_jit_constants(const softmax_inst& outer, const kernel_data& data)
     {
         if (!data.fp16_supported && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        auto input_size = outer.input_memory(0).argument().size;
+        auto input_size = outer.input_memory().get_layout().size;
 
         //kernel relies on INPUT_SIZE_X being a number of values per batch, for bfyx format, when spatials == 1,1
         //and actual number of values is stored as fueatures count (squeezenet), swap feature[0] with spatial[0]
@@ -193,7 +188,7 @@ struct softmax_gpu : is_an_implementation
         const auto& outer = _outer;
         const auto& kd    = _kernel_data;
 
-        const auto& input_mem  = outer.input_memory(0);  // input
+        const auto& input_mem  = outer.input_memory();  // input
         const auto& output_mem = outer.output_memory(); // output
 
         assert(1 == output_mem.get_layout().size.feature.size());
@@ -202,25 +197,24 @@ struct softmax_gpu : is_an_implementation
         return _kernel.run<gpu::input_mem, gpu::output_mem>({ { kd.gws0, kd.gws1 }, { kd.lws0, 1 } }, events, input_mem, output_mem);
     }
 
-    static is_an_implementation *create(softmax &arg) { return new softmax_gpu(arg); };
+    static primitive_impl* create(softmax_inst &arg) { return new softmax_gpu(arg); };
 };
 
 namespace {
     struct attach {
         attach() {
             auto val_fw = softmax_gpu::create;
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw);
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw);
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f32), val_fw);
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f16), val_fw);
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw);
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw);
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw);
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), val_fw);
+            implementation_map<softmax_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::xb), val_fw);
+            implementation_map<softmax_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::xb), val_fw);
+            implementation_map<softmax_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bx), val_fw);
+            implementation_map<softmax_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bx), val_fw);
+            implementation_map<softmax_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), val_fw);
+            implementation_map<softmax_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), val_fw);
+            implementation_map<softmax_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), val_fw);
+            implementation_map<softmax_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), val_fw);
         }
         ~attach() {}
     };
 }
 attach attach_impl;
-} // namespace normalization
 } // namespace neural

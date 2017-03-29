@@ -16,16 +16,17 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "neural_impl.h"
-#include "network_impl.h"
-#include "engine_impl.h"
-#include "implementation_map.h"
+#include "fully_connected_inst.h"
 #include "kernel.h"
 #include "kd_selector.h"
+#include "network_impl.h"
+#include "implementation_map.h"
 
 #include <algorithm>
 #include <stdexcept>
 #include <string>
+
+using namespace cldnn;
 
 namespace neural
 {
@@ -55,22 +56,22 @@ struct kd_default_value_selector<gpu::engine_info_internal::configurations>
 };
 
 // how many batches will a single work item compute
-static int get_batches_per_work_item(const cldnn::memory &output_mem)
+static int get_batches_per_work_item(const memory &output_mem)
 {
-    int batch_size = output_mem.argument().size.batch[0];
+    int batch_size = output_mem.get_layout().size.batch[0];
     return std::min(batch_size, 32);
 }
 
-static int get_local_groups_size(const cldnn::memory &output_mem)
+static int get_local_groups_size(const memory &output_mem)
 {
-    int batch_size = output_mem.argument().size.batch[0];
+    int batch_size = output_mem.get_layout().size.batch[0];
     return std::max(1, batch_size / get_batches_per_work_item(output_mem));
 }
 
 // how many neurons for a single batch will a single work item produce 
-static int get_neurons_per_work_item(const cldnn::memory &output_mem)
+static int get_neurons_per_work_item(const memory &output_mem)
 {
-    int batch_size = output_mem.argument().size.batch[0];
+    int batch_size = output_mem.get_layout().size.batch[0];
     auto out_elements_count_per_batch = output_mem.count() / batch_size;
     if (out_elements_count_per_batch % 16 == 0)
         return 2;
@@ -78,9 +79,9 @@ static int get_neurons_per_work_item(const cldnn::memory &output_mem)
         return 1;
 }
 
-struct fully_connected_gpu : is_an_implementation
+struct fully_connected_gpu : primitive_impl
 {
-    fully_connected& _outer;
+    fully_connected_inst& _outer;
     gpu::engine_info_internal _engine_info;
 
     struct kernel_data 
@@ -119,20 +120,27 @@ struct fully_connected_gpu : is_an_implementation
     } _kernel_data;
     gpu::kernel _kernel;
 
-    typedef kd_selector_t<kernel_data, fully_connected, neural::memory::format::type, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, gpu::engine_info_internal::configurations> ks_type;
+    typedef kd_selector_t<kernel_data, fully_connected_inst, data_types, format::type, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, gpu::engine_info_internal::configurations> ks_type;
     static ks_type ks;
 
-    fully_connected_gpu(fully_connected& arg)
+    fully_connected_gpu(fully_connected_inst& arg)
       : _outer(arg)
         , _engine_info(arg.get_network().get_engine()->get_context()->get_engine_info())
-        , _kernel_data(ks.get_kernel(_outer, _outer.input_memory(0).argument().format, _outer.weights_memory().argument().format, _outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration))
+        , _kernel_data(ks.get_kernel(_outer,
+            _outer.input_memory().get_layout().data_type,
+            _outer.input_memory().get_layout().size.format,
+            _outer.weights_memory().get_layout().data_type,
+            _outer.weights_memory().get_layout().size.format,
+            _outer.input_memory().get_layout().size.batch[0]
+            , _engine_info.architecture,
+            _engine_info.configuration))
         ,_kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
     {
     }
 
-    static kernel_data set_kernel_data(const fully_connected& outer)
+    static kernel_data set_kernel_data(const fully_connected_inst& outer)
     {
-        const auto& input_mem  = outer.input_memory(0);   // input
+        const auto& input_mem  = outer.input_memory();   // input
         const auto& output_mem = outer.output_memory();  // output
 
         kernel_data kd;
@@ -154,22 +162,22 @@ struct fully_connected_gpu : is_an_implementation
         return kd;
     }
 
-    static gpu::jit_constants get_jit_constants(const fully_connected& outer, const kernel_data& data)
+    static gpu::jit_constants get_jit_constants(const fully_connected_inst& outer, const kernel_data& data)
     {
         auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
 
-        const auto& input_mem  = outer.input_memory(0);   // input
-        const auto& weight_mem = outer.input_memory(1);   // weights
+        const auto& input_mem  = outer.input_memory();   // input
+        const auto& weight_mem = outer.weights_memory();   // weights
         const auto& output_mem = outer.output_memory();  // output
 
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
         gpu::jit_constants mem_consts{
-            gpu::make_jit_constant("INPUT",                input_mem.argument().size),
-            gpu::make_jit_constant("OUTPUT",               output_mem.argument().size),
-            gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", input_mem.count() / input_mem.argument().size.batch[0]),
-            gpu::make_jit_constant("WEIGHTS",              weight_mem.argument().size),
+            gpu::make_jit_constant("INPUT",                input_mem.get_layout().size),
+            gpu::make_jit_constant("OUTPUT",               output_mem.get_layout().size),
+            gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", input_mem.count() / input_mem.get_layout().size.batch[0]),
+            gpu::make_jit_constant("WEIGHTS",              weight_mem.get_layout().size),
             gpu::make_jit_constant("FP16_SUPPORTED",       static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",       static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",            data.fp16_unit_used ? "half" : "float"),
@@ -216,7 +224,7 @@ struct fully_connected_gpu : is_an_implementation
 
             mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", get_neurons_per_work_item(output_mem))); // how many neurons for a single batch will a single work item produce
             mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item));                 // how many batches will a single work item compute
-            mem_consts.add_constant(gpu::make_jit_constant("OUTPUT_ELEMENTS_COUNT", output_mem.count() / output_mem.argument().size.batch[0]));
+            mem_consts.add_constant(gpu::make_jit_constant("OUTPUT_ELEMENTS_COUNT", output_mem.count() / output_mem.get_layout().size.batch[0]));
         }
         return mem_consts;
     }
@@ -225,9 +233,9 @@ struct fully_connected_gpu : is_an_implementation
     {
         const auto& kd    = _kernel_data;
 
-        const auto& input_mem  = _outer.input_memory(0);   // input
-        const auto& weight_mem = _outer.input_memory(1);   // weights
-        const auto& bias_mem   = _outer.input_memory(2);   // biases
+        const auto& input_mem  = _outer.input_memory();   // input
+        const auto& weight_mem = _outer.weights_memory();   // weights
+        const auto& bias_mem   = _outer.bias_memory();   // biases
         const auto& output_mem = _outer.output_memory();  // output
 
         if (kd.reorder.empty())
@@ -246,20 +254,19 @@ struct fully_connected_gpu : is_an_implementation
             ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, { network->get_primitive_event(output_id) }, reorder_output, output_mem, weight_mem, bias_mem);
     }
 
-    static is_an_implementation *create(fully_connected &arg) 
+    static primitive_impl* create(fully_connected_inst &arg)
     {
-        auto& input_mem = arg.input_memory(0);
-        auto& input_size = input_mem.argument().size;
+        auto& input_mem = arg.input_memory();
+        auto& input_size = input_mem.get_layout().size;
         auto& weights_mem = arg.weights_memory();
-        auto& weights_size = weights_mem.argument().size;
+        auto& weights_size = weights_mem.get_layout().size;
 
         // validate arguments
         if (input_size.format == cldnn::format::yxfb ||
             input_size.format == cldnn::format::bfyx)
         {
-            if (weights_mem.argument().format != memory::format::bs_xs_xsv8_bsv8_f32 &&
-                weights_mem.argument().format != memory::format::bs_x_bsv16_f32 &&
-                weights_mem.argument().format != memory::format::bs_x_bsv16_f16)
+            if (!weights_mem.get_layout().has_format(data_types::f32, format::bs_xs_xsv8_bsv8) &&
+                weights_mem.get_layout().size.format != format::bs_x_bsv16)
             {
                 // weights
                 if (input_size.feature.size() != weights_size.feature.size()
@@ -278,20 +285,20 @@ struct fully_connected_gpu : is_an_implementation
     };
 };
 
-fully_connected_gpu::kernel_data default_yxfb_f32_bfyx_f32(const fully_connected& arg)
+fully_connected_gpu::kernel_data default_yxfb_f32_bfyx_f32(const fully_connected_inst& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
     kd.kernel_name = kernel_name_yxfn;
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_yxfb_f32(const fully_connected& arg)
+fully_connected_gpu::kernel_data default_yxfb_f32(const fully_connected_inst& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
-    bool batch_multiple_of_8 = arg.input_memory(0).argument().size.batch[0] % 8 == 0;
+    bool batch_multiple_of_8 = arg.input_memory().get_layout().size.batch[0] % 8 == 0;
 
     if (batch_multiple_of_8 &&
-        (arg.output_memory().count() / arg.output_memory().argument().size.batch[0]) % 8 == 0)
+        (arg.output_memory().count() / arg.output_memory().get_layout().size.batch[0]) % 8 == 0)
     {
         size_t groups_per_batches = get_local_groups_size(arg.output_memory());
         kd.gws0 = arg.output_memory().count() / (get_neurons_per_work_item(arg.output_memory()) * get_batches_per_work_item(arg.output_memory()) * groups_per_batches);
@@ -308,17 +315,17 @@ fully_connected_gpu::kernel_data default_yxfb_f32(const fully_connected& arg)
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_xb_f32_bx_f32(const fully_connected& arg)
+fully_connected_gpu::kernel_data default_xb_f32_bx_f32(const fully_connected_inst& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
 
-    auto input_mem = arg.input_memory(0);
+    auto input_mem = arg.input_memory();
     auto output_mem = arg.output_memory();
 
-    if (input_mem.argument().size.batch[0] >= 8)
+    if (input_mem.get_layout().size.batch[0] >= 8)
     {
-        kd.gws0 = output_mem.argument().size.batch[0];
-        kd.gws1 = output_mem.argument().size.spatial[0];
+        kd.gws0 = output_mem.get_layout().size.batch[0];
+        kd.gws1 = output_mem.get_layout().size.spatial[0];
         kd.lws0 = 8;
         kd.lws1 = 1;
         kd.kernel_name = kernel_name_xb_bx_b8;
@@ -330,15 +337,15 @@ fully_connected_gpu::kernel_data default_xb_f32_bx_f32(const fully_connected& ar
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_f32(const fully_connected& arg)
+fully_connected_gpu::kernel_data default_bfyx_f32(const fully_connected_inst& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
-    if (arg.input_memory(0).argument().size.batch[0] != 1)
+    if (arg.input_memory().get_layout().size.batch[0] != 1)
     {
-        auto input_mem = arg.input_memory(0);
+        auto input_mem = arg.input_memory();
         cldnn::topology topology(
             cldnn::input_layout("input", input_mem.get_layout()),
-            cldnn::reorder("reorder", "input", cldnn::layout{ input_mem.get_layout().data_type, input_mem.argument().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
+            cldnn::reorder("reorder", "input", cldnn::layout{ input_mem.get_layout().data_type, input_mem.get_layout().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
         );
         kd = default_yxfb_f32(arg); //fallback to (yxfb, yxfb, fp32) case
         kd.reorder.push_back({ arg.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false }); //add input reorder bfyx -> yxfb
@@ -350,10 +357,10 @@ fully_connected_gpu::kernel_data default_bfyx_f32(const fully_connected& arg)
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const fully_connected& arg)
+fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const fully_connected_inst& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
-    bool batch_multiple_of_8 = arg.input_memory(0).argument().size.batch[0] % 8 == 0;
+    bool batch_multiple_of_8 = arg.input_memory().get_layout().size.batch[0] % 8 == 0;
 
     if (batch_multiple_of_8)
     {
@@ -373,9 +380,9 @@ fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const full
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_f32_bs_xs_xsv8_bsv8_f32(const fully_connected& arg)
+fully_connected_gpu::kernel_data default_bfyx_f32_bs_xs_xsv8_bsv8_f32(const fully_connected_inst& arg)
 {
-    auto input_mem = arg.input_memory(0);
+    auto input_mem = arg.input_memory();
     auto input_size = input_mem.get_layout().size;
     if (input_size.batch[0] < 8)
     {
@@ -398,9 +405,9 @@ fully_connected_gpu::kernel_data default_bfyx_f32_bs_xs_xsv8_bsv8_f32(const full
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_xb_f32_bs_xs_xsv8_bsv8_f32(const fully_connected& arg)
+fully_connected_gpu::kernel_data default_xb_f32_bs_xs_xsv8_bsv8_f32(const fully_connected_inst& arg)
 {
-    auto input_mem = arg.input_memory(0);
+    auto input_mem = arg.input_memory();
     auto input_size = input_mem.get_layout().size;
     if (input_size.batch[0] < 8)
     {
@@ -409,7 +416,7 @@ fully_connected_gpu::kernel_data default_xb_f32_bs_xs_xsv8_bsv8_f32(const fully_
     }
     cldnn::topology topology(
         cldnn::input_layout("input", input_mem.get_layout()),
-        cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_mem.argument().size.transform(cldnn::format::bs_xs_xsv8_bsv8, 1) }, "")
+        cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_mem.get_layout().size.transform(cldnn::format::bs_xs_xsv8_bsv8, 1) }, "")
     );
 
     fully_connected_gpu::kernel_data kd = default_yxfb_f32_bs_xs_xsv8_bsv8_f32(arg);
@@ -417,19 +424,19 @@ fully_connected_gpu::kernel_data default_xb_f32_bs_xs_xsv8_bsv8_f32(const fully_
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_f32_fyxb_f32_b1(const fully_connected& arg)
+fully_connected_gpu::kernel_data default_bfyx_f32_fyxb_f32_b1(const fully_connected_inst& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
     kd.kernel_name = kernel_name_bx_bx_from_fyx;
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_yxfb_fp16(const fully_connected& arg)
+fully_connected_gpu::kernel_data default_yxfb_fp16(const fully_connected_inst& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
 
-    auto batch_size = arg.output_memory().argument().size.batch[0];
-    auto response_size = arg.weights_memory().argument().size.batch[0];
+    auto batch_size = arg.output_memory().get_layout().size.batch[0];
+    auto response_size = arg.weights_memory().get_layout().size.batch[0];
     //bool batch_size_pow_2 = batch_size > 0 && (batch_size & (batch_size - 1)) == 0;
 
     constexpr uint32_t unit_byte_size = sizeof(cl_half);
@@ -471,10 +478,10 @@ fully_connected_gpu::kernel_data default_yxfb_fp16(const fully_connected& arg)
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_fp16(const fully_connected& arg)
+fully_connected_gpu::kernel_data default_bfyx_fp16(const fully_connected_inst& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
-    if (arg.input_memory(0).argument().size.batch[0] != 1)
+    if (arg.input_memory().get_layout().size.batch[0] != 1)
     {
         kd.kernel_name = kernel_name_bx_bx_from_fyxb;
     }
@@ -485,11 +492,11 @@ fully_connected_gpu::kernel_data default_bfyx_fp16(const fully_connected& arg)
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_bs_x_bsv16_b1(const fully_connected& arg)
+fully_connected_gpu::kernel_data default_bfyx_bs_x_bsv16_b1(const fully_connected_inst& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
 
-    auto response_size = arg.weights_memory().argument().size.batch[0];
+    auto response_size = arg.weights_memory().get_layout().size.batch[0];
 
     // Properties of chunk and unit.
     const uint32_t unit_byte_size = kd.fp16_unit_used ? sizeof(cl_half) : sizeof(float);
@@ -526,20 +533,20 @@ fully_connected_gpu::kernel_data default_bfyx_bs_x_bsv16_b1(const fully_connecte
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_f16_yxfb_f16(const fully_connected& arg)
+fully_connected_gpu::kernel_data default_bfyx_f16_yxfb_f16(const fully_connected_inst& arg)
 {
     fully_connected_gpu::kernel_data kd = default_yxfb_fp16(arg); //fallback to (yxfb, yxfb, f16) case
 
-    auto input_mem = arg.input_memory(0);
+    auto input_mem = arg.input_memory();
     cldnn::topology topology(
         cldnn::input_layout("input", input_mem.get_layout()),
-        cldnn::reorder("reorder", "input", cldnn::layout{ input_mem.get_layout().data_type, input_mem.argument().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
+        cldnn::reorder("reorder", "input", cldnn::layout{ input_mem.get_layout().data_type, input_mem.get_layout().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
     );
     kd.reorder.push_back({ arg.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_f16_fyxb_f16_b1(const fully_connected& arg)
+fully_connected_gpu::kernel_data default_bfyx_f16_fyxb_f16_b1(const fully_connected_inst& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
     kd.kernel_name = kernel_name_bx_bx_from_fyx;
@@ -547,37 +554,37 @@ fully_connected_gpu::kernel_data default_bfyx_f16_fyxb_f16_b1(const fully_connec
 }
 
 fully_connected_gpu::ks_type fully_connected_gpu::ks = {
-    { std::make_tuple(memory::format::yxfb_f32, memory::format::bfyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32_bfyx_f32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32_bfyx_f32 },
 
-    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxfb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
-    { std::make_tuple(memory::format::xb_f32, memory::format::xb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
-    { std::make_tuple(memory::format::x_f32, memory::format::xb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
+    { std::make_tuple(data_types::f32, format::xb, data_types::f32, format::xb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
+    { std::make_tuple(data_types::f32, format::x, data_types::f32, format::xb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
 
-    { std::make_tuple(memory::format::xb_f32, memory::format::bx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_xb_f32_bx_f32 },
-    { std::make_tuple(memory::format::x_f32, memory::format::bx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_xb_f32_bx_f32 },
+    { std::make_tuple(data_types::f32, format::xb, data_types::f32, format::bx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_xb_f32_bx_f32 },
+    { std::make_tuple(data_types::f32, format::x, data_types::f32, format::bx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_xb_f32_bx_f32 },
 
-    { std::make_tuple(memory::format::bfyx_f32, memory::format::yxfb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32 },
+    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32 },
 
-    { std::make_tuple(memory::format::bfyx_f32, memory::format::fyxb_f32, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32_fyxb_f32_b1 },
-    { std::make_tuple(memory::format::bx_f32, memory::format::xb_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32 },
+    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::fyxb, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32_fyxb_f32_b1 },
+    { std::make_tuple(data_types::f32, format::bx, data_types::f32, format::xb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32 },
 
-    { std::make_tuple(memory::format::bfyx_f32, memory::format::bs_xs_xsv8_bsv8_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32_bs_xs_xsv8_bsv8_f32 },
-    { std::make_tuple(memory::format::yxfb_f32, memory::format::bs_xs_xsv8_bsv8_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32_bs_xs_xsv8_bsv8_f32 },
-    { std::make_tuple(memory::format::xb_f32, memory::format::bs_xs_xsv8_bsv8_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_xb_f32_bs_xs_xsv8_bsv8_f32 },
+    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bs_xs_xsv8_bsv8, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32_bs_xs_xsv8_bsv8_f32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::bs_xs_xsv8_bsv8, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32_bs_xs_xsv8_bsv8_f32 },
+    { std::make_tuple(data_types::f32, format::xb, data_types::f32, format::bs_xs_xsv8_bsv8, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_xb_f32_bs_xs_xsv8_bsv8_f32 },
 
-    { std::make_tuple(memory::format::bfyx_f32, memory::format::bs_x_bsv16_f32, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
-    { std::make_tuple(memory::format::bx_f32, memory::format::bs_x_bsv16_f32, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
+    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bs_x_bsv16, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
+    { std::make_tuple(data_types::f32, format::bx, data_types::f32, format::bs_x_bsv16, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
     
-    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxfb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_fp16 },
-    { std::make_tuple(memory::format::xb_f16, memory::format::xb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_fp16 },
-    { std::make_tuple(memory::format::x_f16, memory::format::xb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_fp16 },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_fp16 },
+    { std::make_tuple(data_types::f16, format::xb, data_types::f16, format::xb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_fp16 },
+    { std::make_tuple(data_types::f16, format::x, data_types::f16, format::xb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_fp16 },
 
-    { std::make_tuple(memory::format::bfyx_f16, memory::format::yxfb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f16_yxfb_f16 },
-    { std::make_tuple(memory::format::bfyx_f16, memory::format::fyxb_f16, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f16_fyxb_f16_b1 },
-    { std::make_tuple(memory::format::bx_f16, memory::format::xb_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_fp16 },
+    { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f16_yxfb_f16 },
+    { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::fyxb, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f16_fyxb_f16_b1 },
+    { std::make_tuple(data_types::f16, format::bx, data_types::f16, format::xb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_fp16 },
 
-    { std::make_tuple(memory::format::bfyx_f16, memory::format::bs_x_bsv16_f16, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
-    { std::make_tuple(memory::format::bx_f16, memory::format::bs_x_bsv16_f16, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
+    { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::bs_x_bsv16, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
+    { std::make_tuple(data_types::f16, format::bx, data_types::f16, format::bs_x_bsv16, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
 };
 
 namespace {
@@ -585,20 +592,20 @@ namespace {
         attach() {
             auto val_fw = fully_connected_gpu::create;
 
-            implementation_map<fully_connected>::add({
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw },
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw },
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::x_f32), val_fw },
+            implementation_map<fully_connected_inst>::add({
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::xb), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::x), val_fw },
 
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw },
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw },
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::x_f16), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::xb), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::x), val_fw },
 
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw },
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f32), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bx), val_fw },
 
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), val_fw },
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bx_f16), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bx), val_fw },
             });
         }
         ~attach() {}

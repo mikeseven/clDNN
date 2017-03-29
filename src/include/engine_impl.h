@@ -17,7 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "refcounted_obj.h"
-#include "primitive_arg.h"
+#include "primitive_inst.h"
 #include "implementation_map.h"
 #include "gpu/engine_info.h"
 

@@ -14,13 +14,13 @@
 // limitations under the License.
 */
 #pragma once
-#include "primitive_arg.h"
-#include "reorder_arg.h"
+#include "primitive_inst.h"
+#include "reorder_inst.h"
 #include <map>
 #include <functional>
-#include "input_layout_arg.h"
-#include "data_arg.h"
-#include "prior_box_arg.h"
+#include "input_layout_inst.h"
+#include "data_inst.h"
+#include "prior_box_inst.h"
 
 template<typename T, typename U>
 class singleton_map : public std::map<T, U> {
@@ -40,48 +40,48 @@ namespace cldnn {
 template<typename primitive_kind>
 struct implementation_key 
 {
-    typedef std::tuple<engine_types, neural_memory::format::type> type;
+    typedef std::tuple<engine_types, data_types, format::type> type;
     type operator()(engine_types engine_type, primitive_kind& primitive)
 	{
-        return std::make_tuple(engine_type, primitive.input_memory(0).argument().format);
+        return std::make_tuple(engine_type, primitive.dep_memory(0).get_layout().data_type, primitive.dep_memory(0).get_layout().size.format);
     }
 };
 
 template<>
-struct implementation_key<reorder_arg>
+struct implementation_key<reorder_inst>
 {
 	typedef cldnn::engine_types type;
-	type operator()(engine_types engine_type, reorder_arg&)
+	type operator()(engine_types engine_type, reorder_inst&)
 	{
 		return engine_type;
 	}
 };
 
 template<>
-struct implementation_key<data_arg>
+struct implementation_key<data_inst>
 {
     typedef cldnn::engine_types type;
-    type operator()(engine_types engine_type, data_arg&)
+    type operator()(engine_types engine_type, data_inst&)
     {
         return engine_type;
     }
 };
 
 template<>
-struct implementation_key<input_layout_arg>
+struct implementation_key<input_layout_inst>
 {
     typedef cldnn::engine_types type;
-    type operator()(engine_types engine_type, input_layout_arg&)
+    type operator()(engine_types engine_type, input_layout_inst&)
     {
         return engine_type;
     }
 };
 
 template<>
-struct implementation_key<prior_box_arg>
+struct implementation_key<prior_box_inst>
 {
 	typedef cldnn::engine_types type;
-	type operator()(engine_types engine_type, prior_box_arg&)
+	type operator()(engine_types engine_type, prior_box_inst&)
 	{
 		return engine_type;
 	}

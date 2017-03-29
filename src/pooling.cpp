@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "pooling_arg.h"
+#include "pooling_inst.h"
 #include "primitive_type_base.h"
 #include "network_impl.h"
 
@@ -23,14 +23,14 @@ namespace cldnn
 {
 primitive_type_id pooling_type_id()
 {
-    static primitive_type_base<pooling, pooling_arg> instance;
+    static primitive_type_base<pooling, pooling_inst> instance;
     return &instance;
 }
 
-layout pooling_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const pooling> desc)
+layout pooling_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const pooling> desc)
 {
-    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
+    auto input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
     assert(input_layout.size.spatial.size() == 2);
     auto input_offsets = desc->input_offset().transform(input_layout.size.format, 0).sizes();
     auto strides = desc->stride.transform(input_layout.size.format, 1).sizes();
@@ -60,7 +60,7 @@ layout pooling_arg::calc_output_layout(const topology_map& topology_map, std::sh
     return{ input_layout.data_type, {input_layout.size.format, output_sizes} };
 }
 
-pooling_arg::pooling_arg(network_impl& network, std::shared_ptr<const pooling> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+pooling_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const pooling> desc)
+    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {}
 }

@@ -17,21 +17,30 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "api/primitives/scale.hpp"
-#include "primitive_arg.h"
-#include <memory>
+#include "primitive_inst.h"
 #include "topology_impl.h"
 
 namespace cldnn
 {
-    class scale_arg : public primitive_arg_base<scale>
-    {
-    public:
-        scale_arg(network_impl& network, std::shared_ptr<const scale> desc);
 
-        static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const scale> desc);
+template <>
+class typed_primitive_inst<scale> : public typed_primitive_inst_base<scale>
+{
+    using parent = typed_primitive_inst_base<scale>;
 
-        const memory& scale_memory() const;
-        const bool& bias_term() const;
-        const memory& bias_memory() const;
-    };
+public:
+    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const scale> desc);
+
+public:
+    typed_primitive_inst(network_impl& network, std::shared_ptr<const scale> desc);
+
+    const memory& input_memory() const { return dep_memory(0); }
+    const memory& scale_memory() const { return dep_memory(1); }
+    const memory& bias_memory() const { return dep_memory(2); }
+
+    const bool& bias_term() const { return argument.bias_term; }
+};
+
+using scale_inst = typed_primitive_inst<scale>;
+
 }

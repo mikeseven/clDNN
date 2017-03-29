@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "prior_box_arg.h"
+#include "prior_box_inst.h"
 #include "primitive_type_base.h"
 #include "network_impl.h"
 
@@ -24,14 +24,14 @@ namespace cldnn
 {
 primitive_type_id prior_box_type_id()
 {
-    static primitive_type_base<prior_box, prior_box_arg> instance;
+    static primitive_type_base<prior_box, prior_box_inst> instance;
     return &instance;
 }
 
-layout prior_box_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const prior_box> desc)
+layout prior_box_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const prior_box> desc)
 {
-    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
+    auto input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
     assert(input_layout.size.spatial.size() == 2);
 
 	const int layer_width = input_layout.size.spatial[1];
@@ -47,8 +47,8 @@ layout prior_box_arg::calc_output_layout(const topology_map& topology_map, std::
     return{ input_layout.data_type, cldnn::tensor(cldnn::format::bfyx,{ 1, 2, layer_width * layer_height * num_priors * 4, 1 }) };
 }
 
-prior_box_arg::prior_box_arg(network_impl& network, std::shared_ptr<const prior_box> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+prior_box_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const prior_box> desc)
+    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
 	//Check arguments
 	if (argument.min_sizes.size() == 0) {
@@ -95,7 +95,7 @@ prior_box_arg::prior_box_arg(network_impl& network, std::shared_ptr<const prior_
 	// Calculate output.
 	// All the inputs for this layer are known at this point,
 	// so the output buffer is written here and not in execute().
-	const auto& input_mem = input_memory(0);
+	const auto& input_mem = input_memory();
 	const auto& output_mem = output_memory();
 
 	const int layer_width = input_mem.get_layout().size.spatial[0];

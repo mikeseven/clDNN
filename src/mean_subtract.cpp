@@ -15,7 +15,7 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "mean_substract_arg.h"
+#include "mean_substract_inst.h"
 #include "primitive_type_base.h"
 #include "network_impl.h"
 
@@ -23,21 +23,21 @@ namespace cldnn
 {
 primitive_type_id mean_substract_type_id()
 {
-    static primitive_type_base<mean_substract, mean_substract_arg> instance;
+    static primitive_type_base<mean_substract, mean_substract_inst> instance;
     return &instance;
 }
 
-layout mean_substract_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const mean_substract> desc)
+layout mean_substract_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const mean_substract> desc)
 {
-    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto result = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
+    auto result = input_desc->type->calc_output_layout(topology_map, input_desc);
     return result;
 }
 
-mean_substract_arg::mean_substract_arg(network_impl& network, std::shared_ptr<const mean_substract> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+mean_substract_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const mean_substract> desc)
+    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
-    auto input_format = input_memory(0).get_layout().size.format;
+    auto input_format = input_memory().get_layout().size.format;
     auto output_format = output_memory().get_layout().size.format;
     auto mean_format = mean_memory().get_layout().size.format;
 
@@ -54,10 +54,5 @@ mean_substract_arg::mean_substract_arg(network_impl& network, std::shared_ptr<co
     {
         throw std::runtime_error("Mean subtract mean is not in yxfb or bfyx format!");
     }
-}
-
-const memory& mean_substract_arg::mean_memory() const
-{
-    return _network.get_primitive(argument.mean)->output_memory();
 }
 }

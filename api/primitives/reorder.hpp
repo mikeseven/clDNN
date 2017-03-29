@@ -94,7 +94,7 @@ struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
     std::vector<float> substract_per_feature;
 
 protected:
-    std::vector<primitive_id> get_dependencies() const override 
+    std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override
     {
         if (mean.empty())
             return{};

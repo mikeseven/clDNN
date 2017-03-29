@@ -13,11 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
+#pragma once
 
 #include <type_traits>
 
 namespace cldnn
 {
+
+struct primitive;
+
 namespace meta
 {
 
@@ -49,13 +53,19 @@ template <class T>
 using deduce_ret_type_t = typename deduce_ret_type<T>::type;
 
 template <class T>
-struct always_false
-{
-    static constexpr bool value = false;
-};
+struct always_false : public std::false_type {};
 
 template <class T>
 constexpr bool always_false_v = always_false<T>::value;
+
+template <class T>
+struct is_primitive : public std::integral_constant<bool,
+                                                    std::is_base_of<primitive, T>::value &&
+                                                    !std::is_same<primitive, std::remove_cv_t<T>>::value &&
+                                                    std::is_same<T, std::remove_cv_t<T>>::value> {};
+
+template <class T>
+constexpr bool is_primitive_v = is_primitive<T>::value;
 
 }
 }

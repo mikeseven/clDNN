@@ -93,7 +93,7 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
     float activation_negative_slope;
 
 protected:
-    std::vector<primitive_id> get_dependencies() const override { return{ input2 }; }
+    std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override { return{ input2 }; }
 
     void update_dto(dto& dto) const override
     {

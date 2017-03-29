@@ -14,14 +14,15 @@
 // limitations under the License.
 */
 
-#include "neural_impl.h"
-#include "implementation_map.h"
+#include "convolution_inst.h"
 #include "kernel.h"
 #include "network_impl.h"
-#include "engine_impl.h"
 #include "kd_selector.h"
+#include "implementation_map.h"
 
 #include <initializer_list>
+
+using namespace cldnn;
 
 namespace neural 
 {
@@ -48,8 +49,9 @@ struct kd_default_value_selector<gpu::engine_info_internal::configurations>
     static constexpr gpu::engine_info_internal::configurations value = gpu::engine_info_internal::configurations::GT_UNKNOWN;
 };
 
-struct convolution_gpu : is_an_implementation {
-    convolution &outer;
+struct convolution_gpu : primitive_impl
+{
+    convolution_inst &outer;
     gpu::engine_info_internal _engine_info;
 
     struct kernel_data
@@ -69,26 +71,26 @@ struct convolution_gpu : is_an_implementation {
 
     gpu::kernel _kernel;
 
-    static kernel_data set_default(const convolution& arg)
+    static kernel_data set_default(const convolution_inst& arg)
     {
-        const auto& input_mem = arg.input_memory(0);  // input
+        const auto& input_mem = arg.input_memory();  // input
         const auto& output_mem = arg.output_memory(); // output
 
         auto split = arg.argument.split();
-        auto batch_size = output_mem.argument().size.batch[0];
+        auto batch_size = output_mem.get_layout().size.batch[0];
 
         kernel_data kd;
 
         kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
 
-        kd.gws0 = (output_mem.argument().size.feature[0] * batch_size) / split;
+        kd.gws0 = (output_mem.get_layout().size.feature[0] * batch_size) / split;
         kd.lws0 = std::min(kd.gws0, static_cast<size_t>(32));
         while (kd.gws0 % kd.lws0)
         {
             kd.lws0--;
         }
-        kd.gws1 = output_mem.argument().size.spatial[0];
-        kd.gws2 = output_mem.argument().size.spatial[1];
+        kd.gws1 = output_mem.get_layout().size.spatial[0];
+        kd.gws2 = output_mem.get_layout().size.spatial[1];
         kd.lws1 = 1;
         kd.lws2 = 1;
         kd.ofm_per_work_item = 1;
@@ -102,32 +104,40 @@ struct convolution_gpu : is_an_implementation {
         return kd;
     }
 
-    typedef kd_selector_t<kernel_data, convolution, neural::memory::format::type, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, gpu::engine_info_internal::configurations> ks_type;
+    typedef kd_selector_t < kernel_data, convolution_inst, data_types, format::type, data_types, format::type , kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, gpu::engine_info_internal::configurations > ks_type;
     static ks_type ks;
 
-    convolution_gpu(convolution &arg)
+    convolution_gpu(convolution_inst &arg)
         : outer(arg)
         , _engine_info(arg.get_network().get_engine()->get_context()->get_engine_info())
-        , _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.weights_memory(0).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration))
+        , _kernel_data(ks.get_kernel(outer,
+            outer.input_memory().get_layout().data_type, 
+            outer.input_memory().get_layout().size.format, 
+            outer.weights_memory(0).get_layout().data_type, 
+            outer.weights_memory(0).get_layout().size.format,
+            outer.input_memory().get_layout().size.batch[0],
+            _engine_info.architecture,
+            _engine_info.configuration))
         , _kernel(arg.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(), outer.id())
     {}
 
-    gpu::jit_constants get_jit_constants() const {
+    gpu::jit_constants get_jit_constants() const
+    {
 
-        auto& input_mem = outer.input_memory(0);
+        auto& input_mem = outer.input_memory();
         auto input_offset = outer.desc()->input_offset().transform(input_mem.get_layout().size.format, 0);
         auto& output_mem = outer.output_memory();
         auto output_offset = outer.desc()->output_offset().transform(output_mem.get_layout().size.format, 0);
-        auto& output_size = outer.output_memory().argument().size;
+        auto& output_size = outer.output_memory().get_layout().size;
         auto& filter_mem = outer.weights_memory(0);
         auto split = outer.argument.split();
 
-        const int batch_size = output_mem.argument().size.batch[0];
+        const int batch_size = output_mem.get_layout().size.batch[0];
 
         auto input_size = outer.input().at(0)->non_padded_output_layout().size;
         cldnn::tensor stride(cldnn::format::yx, { std::min(outer.argument.stride.spatial[1], input_size.spatial[1]),
             std::min(outer.argument.stride.spatial[0], input_size.spatial[0]) });
-        cldnn::padding input_padding = outer.input().at(0)->desc()->output_padding();
+        cldnn::padding input_padding = outer.input().at(0)->desc()->output_padding;
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT",                     input_size),
@@ -138,8 +148,8 @@ struct convolution_gpu : is_an_implementation {
             // TODO: Output limit is incorrect for following cases (1. primitive used as input for two different convolutions with different padding, 2. asymmetric padding). Need to be checked and corrected.
             gpu::make_jit_constant("OUTPUT_LIMIT",              output_size),
             gpu::make_jit_constant("INPUT_PADDING",             input_padding),
-            gpu::make_jit_constant("OUTPUT_PADDING",            outer.argument.output_padding()),
-            gpu::make_jit_constant("FILTER",                    filter_mem.argument().size),
+            gpu::make_jit_constant("OUTPUT_PADDING",            outer.argument.output_padding),
+            gpu::make_jit_constant("FILTER",                    filter_mem.get_layout().size),
             gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
             gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"),
             gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM_1"),
@@ -151,9 +161,8 @@ struct convolution_gpu : is_an_implementation {
             gpu::make_jit_constant("NEGATIVE_SLOPE",            outer.argument.activation_negative_slope),
         };
 
-        if (filter_mem.argument().format == memory::format::yxio_f32 ||
-            filter_mem.argument().format == memory::format::yxoi_f32 ||
-            filter_mem.argument().format == memory::format::yxio_f16)
+        if (filter_mem.get_layout().size.format == format::yxio ||
+            filter_mem.get_layout().has_format(data_types::f32, format::yxio))
         {
             const auto local_work_group_size = _kernel_data.lws0;
 
@@ -172,7 +181,7 @@ struct convolution_gpu : is_an_implementation {
             }
             // A LITTLE HACK, for convolutions with low number of input features don't use block reads, and it will speed up by 25%
             // TODO - investigate why is this happening
-            else if (input_mem.argument().size.feature[0] > 4)
+            else if (input_mem.get_layout().size.feature[0] > 4)
             {
                 mem_consts.add_constant(gpu::make_jit_constant("USE_BLOCK_READ_2", ""));
             }
@@ -188,8 +197,7 @@ struct convolution_gpu : is_an_implementation {
                 mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 8));
         }
 
-        if (input_mem.argument().format == memory::format::bfyx_f32 ||
-            input_mem.argument().format == memory::format::bfyx_f16)
+        if (input_mem.get_layout().size.format == format::bfyx)
         {
             mem_consts.add_constant(gpu::make_jit_constant("SUB_GROUP_SIZE",      _kernel_data.lws2));
             mem_consts.add_constant(gpu::make_jit_constant("OUT_BLOCK_WIDTH",     _kernel_data.block_width));
@@ -210,7 +218,7 @@ struct convolution_gpu : is_an_implementation {
 
         auto split = outer.argument.split();
 
-        auto& input_mem = outer.input_memory(0);
+        auto& input_mem = outer.input_memory();
         auto& output_mem = outer.output_memory();
         auto& filter_mem = outer.weights_memory(0);
 
@@ -244,21 +252,17 @@ struct convolution_gpu : is_an_implementation {
         return tmp_events.at(0);
     }
 
-    static is_an_implementation *create(convolution &arg) {
-        auto filter_arg = arg.weights_memory(0).argument(); //convolution filter
+    static primitive_impl* create(convolution_inst &arg)
+    {
+        auto filter_arg = arg.weights_memory(0).get_layout(); //convolution filter
 
-        assert(arg.output_memory().argument().size.feature[0] / arg.argument.split() == filter_arg.size.feature[0]); // memory::format oixy
+        assert(arg.output_memory().get_layout().size.feature[0] / arg.argument.split() == filter_arg.size.feature[0]); // memory::format oixy
         
-        switch (filter_arg.format)
+        switch (filter_arg.size.format)
         {
-        // FP32 (float)
-        case memory::format::oiyx_f32:
-        case memory::format::yxio_f32:
-        case memory::format::os_iyx_osv16_f32:
-        // FP16 (half)
-        case memory::format::oiyx_f16:
-        case memory::format::yxio_f16:
-        case memory::format::os_iyx_osv16_f16:
+        case format::oiyx:
+        case format::yxio:
+        case format::os_iyx_osv16:
             break;
         default:
             throw std::runtime_error("Convolution weights format unsupported");
@@ -268,36 +272,36 @@ struct convolution_gpu : is_an_implementation {
     }
 };
 
-convolution_gpu::kernel_data default_oiyx_f32(const convolution& arg)
+convolution_gpu::kernel_data default_oiyx_f32(const convolution_inst& arg)
 {
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.kernel_name = kernel_name_yxfb_oiyx;
     return kd;
 }
 
-convolution_gpu::kernel_data default_yxio_f32(const convolution& arg)
+convolution_gpu::kernel_data default_yxio_f32(const convolution_inst& arg)
 {
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.kernel_name = kernel_name_yxfb_yxio;
     return kd;
 }
 
-convolution_gpu::kernel_data default_yxio_f32_b1(const convolution& arg)
+convolution_gpu::kernel_data default_yxio_f32_b1(const convolution_inst& arg)
 {
     auto& filter_mem = arg.weights_memory(0);
     auto& output_mem = arg.output_memory();
     auto split = arg.argument.split();
-    auto batch_size = output_mem.argument().size.batch[0];
+    auto batch_size = output_mem.get_layout().size.batch[0];
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.lws0 = 16;
-    if (filter_mem.argument().size.feature[0] * batch_size % kd.lws0 != 0)
+    if (filter_mem.get_layout().size.feature[0] * batch_size % kd.lws0 != 0)
     {
         kd = default_yxio_f32(arg);
     }
     else
     {
-        int output_feature_count = filter_mem.argument().size.feature[0];
+        int output_feature_count = filter_mem.get_layout().size.feature[0];
         // We cannot return 8 because we are processing 4 spatial coordinates for batch1,
         // and if we use more than 4 ofm_per_work_item we downgrade simd16 to simd8 which would break this algorithm.
         // NOTE: We could return 8 but then we must process only 2 coordinates, which is slower than processing 4 coordinates using blockread4
@@ -325,27 +329,27 @@ convolution_gpu::kernel_data default_yxio_f32_b1(const convolution& arg)
         }
         kd.kernel_name = kernel_name_yxfb_yxio_b1_block_multiple_x;
 
-        kd.gws0 = (output_mem.argument().size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
+        kd.gws0 = (output_mem.get_layout().size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
     }
     return kd;
 }
 
-convolution_gpu::kernel_data default_yxio_f32_b8(const convolution& arg)
+convolution_gpu::kernel_data default_yxio_f32_b8(const convolution_inst& arg)
 {
     auto& filter_mem = arg.weights_memory(0);
     auto& output_mem = arg.output_memory();
     auto split = arg.argument.split();
-    auto batch_size = output_mem.argument().size.batch[0];
+    auto batch_size = output_mem.get_layout().size.batch[0];
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.lws0 = batch_size == 8 ? 8 : 16;
-    if (filter_mem.argument().size.feature[0] * batch_size % kd.lws0 != 0)
+    if (filter_mem.get_layout().size.feature[0] * batch_size % kd.lws0 != 0)
     {
         kd = default_yxio_f32(arg);
     }
     else
     {
-        if (((filter_mem.argument().size.feature[0] * batch_size) / 16) % kd.lws0)
+        if (((filter_mem.get_layout().size.feature[0] * batch_size) / 16) % kd.lws0)
         {
             kd.ofm_per_work_item = 8;
         }
@@ -355,21 +359,21 @@ convolution_gpu::kernel_data default_yxio_f32_b8(const convolution& arg)
         }
         kd.kernel_name = kernel_name_yxfb_yxio_b8;
     
-        kd.gws0 = (output_mem.argument().size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
+        kd.gws0 = (output_mem.get_layout().size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
     }
     return kd;
 }
 
-convolution_gpu::kernel_data default_yxio_f32_b32(const convolution& arg)
+convolution_gpu::kernel_data default_yxio_f32_b32(const convolution_inst& arg)
 {
     auto& filter_mem = arg.weights_memory(0);
     auto& output_mem = arg.output_memory();
     auto split = arg.argument.split();
-    auto batch_size = output_mem.argument().size.batch[0];
+    auto batch_size = output_mem.get_layout().size.batch[0];
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.lws0 = 16;
-    if (filter_mem.argument().size.feature[0] * batch_size % kd.lws0 != 0)
+    if (filter_mem.get_layout().size.feature[0] * batch_size % kd.lws0 != 0)
     {
         kd = default_yxio_f32(arg);
     }
@@ -379,24 +383,24 @@ convolution_gpu::kernel_data default_yxio_f32_b32(const convolution& arg)
         kd.batches_per_work_item = 2;
         kd.kernel_name = kernel_name_yxfb_yxio_b16;
 
-        kd.gws0 = (output_mem.argument().size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
+        kd.gws0 = (output_mem.get_layout().size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
     }
     return kd;
 }
 
-convolution_gpu::kernel_data default_yxio_f16(const convolution& arg)
+convolution_gpu::kernel_data default_yxio_f16(const convolution_inst& arg)
 {
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.kernel_name = kernel_name_yxfb_yxio_fp16;
     return kd;
 }
 
-convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
+convolution_gpu::kernel_data default_yxio_f16_b16(const convolution_inst& arg)
 {
     auto& filter_mem = arg.weights_memory(0);
     auto& output_mem = arg.output_memory();
-    auto batch_size = output_mem.argument().size.batch[0];
-    auto filter_ofm_num = filter_mem.argument().size.feature[0];
+    auto batch_size = output_mem.get_layout().size.batch[0];
+    auto filter_ofm_num = filter_mem.get_layout().size.feature[0];
 
     const uint32_t min_ofm_per_wi = 16;
     const uint32_t min_batches_per_wi = 1;
@@ -422,7 +426,7 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution& arg)
             kd.batches_per_work_item = min_batches_per_wi;
         }
         // Assume that number of features in output correctly based on split and on number of output features in filter.
-        assert(output_mem.argument().size.feature[0] == filter_ofm_num * arg.argument.split());
+        assert(output_mem.get_layout().size.feature[0] == filter_ofm_num * arg.argument.split());
         kd.gws0 = filter_ofm_num * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item);
         kd.lws0 = min_lws;
         kd.kernel_name = kernel_name_yxfb_yxio_b16_fp16;
@@ -481,9 +485,9 @@ static std::pair<size_t, size_t> get_bfyx_req_input_block_dims(
     return std::make_pair(input_block_array_size, input_block_read_width);
 }
 
-convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
+convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution_inst& arg)
 {
-    auto& filter_mem = arg.input_memory(1);
+    auto& filter_mem = arg.weights_memory(0);
     auto output_size = arg.non_padded_output_layout().size;
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
@@ -494,11 +498,11 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
     // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
     constexpr int sub_group_size = 16;
 
-    const uint32_t of_threads_per_batch = cldnn::round_up_to(filter_mem.argument().size.feature[0], sub_group_size);
-    kd.leftovers = of_threads_per_batch - filter_mem.argument().size.feature[0];
+    const uint32_t of_threads_per_batch = cldnn::round_up_to(filter_mem.get_layout().size.feature[0], sub_group_size);
+    kd.leftovers = of_threads_per_batch - filter_mem.get_layout().size.feature[0];
 
-    if (filter_mem.argument().size.spatial[0] > max_supported_filter_size ||
-        filter_mem.argument().size.spatial[1] > max_supported_filter_size)
+    if (filter_mem.get_layout().size.spatial[0] > max_supported_filter_size ||
+        filter_mem.get_layout().size.spatial[1] > max_supported_filter_size)
     {
         // TODO: Implement and use naive bfyx algorithm here.
         // TODO: Implement naive bfyx algorithm here and add fall-back condition if abs(input_offset) >= filter_size.
@@ -507,7 +511,7 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
 
     if (arg.argument.stride.spatial[0] == 1 && arg.argument.stride.spatial[1] == 1)
     {
-        if (filter_mem.argument().size.spatial[0] == 1 && filter_mem.argument().size.spatial[1] == 1)
+        if (filter_mem.get_layout().size.spatial[0] == 1 && filter_mem.get_layout().size.spatial[1] == 1)
         {
             kd.block_width = 16;
             kd.block_height = 1;
@@ -515,15 +519,15 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
         }        
         //if less than 16 values is required to compute one single row of output
         //then each WI shall compute one sinle row to maximise reuse within SIMD subgroup (this gives very nice performance results)
-        else if (output_size.spatial[0] + filter_mem.argument().size.spatial[0] - 1 < sub_group_size)
+        else if (output_size.spatial[0] + filter_mem.get_layout().size.spatial[0] - 1 < sub_group_size)
         {
             kd.block_width = output_size.spatial[0];
             kd.block_height = 1;
             kd.prefetch = 4;
         }
-        else if (filter_mem.argument().size.spatial[0] < 5 && filter_mem.argument().size.spatial[1] < 5)
+        else if (filter_mem.get_layout().size.spatial[0] < 5 && filter_mem.get_layout().size.spatial[1] < 5)
         {
-            kd.block_width = sub_group_size - filter_mem.argument().size.spatial[0] + 1;
+            kd.block_width = sub_group_size - filter_mem.get_layout().size.spatial[0] + 1;
             kd.block_height = 2;
             kd.prefetch = 4;
         }
@@ -557,7 +561,7 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
     if (kd.kernel_name == kernel_name_bfyx_os_iyx_osv16)
     {
         auto input_block_dims = get_bfyx_req_input_block_dims(kd.block_width, kd.block_height,
-                                                                filter_mem.argument().size,
+                                                                filter_mem.get_layout().size,
                                                                 arg.argument.stride,
                                                                 sub_group_size,
                                                                 kd.fp16_unit_used ? sub_group_size : sub_group_size / 2,
@@ -578,33 +582,33 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution& arg)
 }
 
 convolution_gpu::ks_type convolution_gpu::ks = {
-    { std::make_tuple(memory::format::yxfb_f32, memory::format::oiyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
-    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
-    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b1 },
-    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 8, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
-    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
-    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
-    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 64, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
-    { std::make_tuple(memory::format::yxfb_f32, memory::format::yxio_f32, 128, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::oiyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b1 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 8, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 64, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 128, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
 
-    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16 },
-    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
-    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
-    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 64, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
-    { std::make_tuple(memory::format::yxfb_f16, memory::format::yxio_f16, 128, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxio, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16 },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxio, 16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxio, 32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxio, 64, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxio, 128, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
 
-    { std::make_tuple(memory::format::bfyx_f32, memory::format::os_iyx_osv16_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_os_iyx_osv16 },
+    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::os_iyx_osv16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_os_iyx_osv16 },
 
-    { std::make_tuple(memory::format::bfyx_f16, memory::format::os_iyx_osv16_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_os_iyx_osv16 },
+    { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::os_iyx_osv16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_os_iyx_osv16 },
 };
 
 namespace{
     struct attach {
         attach() {
-            implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), convolution_gpu::create);
-            implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), convolution_gpu::create);
-            implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), convolution_gpu::create);
-            implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), convolution_gpu::create);
+            implementation_map<convolution_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), convolution_gpu::create);
+            implementation_map<convolution_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), convolution_gpu::create);
+            implementation_map<convolution_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), convolution_gpu::create);
+            implementation_map<convolution_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), convolution_gpu::create);
         }
         ~attach() {}
     };

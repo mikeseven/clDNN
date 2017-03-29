@@ -14,26 +14,27 @@
 // limitations under the License.
 */
 
-#include "neural_impl.h"
+#include "activation_inst.h"
 #include "kernel.h"
-#include "engine_impl.h"
 #include "network_impl.h"
+#include "implementation_map.h"
 
 #include <algorithm>
 #include <stdexcept>
 #include <string>
 
+using namespace cldnn;
 
 namespace neural 
 {
 // Kernel names.
-static const std::string kernel_name = "relu_gpu";
-static const std::string kernel_name_bfyx = "relu_gpu_bfyx";
+static const std::string kernel_name = "activation_inst_gpu";
+static const std::string kernel_name_bfyx = "activation_inst_gpu_bfyx";
 
 
-struct relu_gpu : is_an_implementation
+struct activation_inst_gpu : primitive_impl
 {
-    relu& _outer;
+    activation_inst& _outer;
     struct kernel_data
     {
         size_t gws0;
@@ -43,15 +44,15 @@ struct relu_gpu : is_an_implementation
     } _kernel_data;
     gpu::kernel _kernel;
 
-    relu_gpu(relu& arg)
+    activation_inst_gpu(activation_inst& arg)
         : _outer(arg),
         _kernel_data(set_kernel_data(_outer)),
         _kernel(arg.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
     {}
 
-    static kernel_data set_kernel_data(const relu& outer)
+    static kernel_data set_kernel_data(const activation_inst& outer)
     {
-        const auto& input_mem  = outer.input_memory(0);  // input
+        const auto& input_mem  = outer.input_memory();  // input
 
         kernel_data kd;
 
@@ -78,7 +79,7 @@ struct relu_gpu : is_an_implementation
         return kd;
     }
 
-    static gpu::jit_constants get_jit_constants(const relu& outer, const kernel_data& data)
+    static gpu::jit_constants get_jit_constants(const activation_inst& outer, const kernel_data& data)
     {
         auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
 
@@ -89,10 +90,10 @@ struct relu_gpu : is_an_implementation
         gpu::jit_constants mem_consts
         {
             gpu::make_jit_constant("INPUT",          input_size),
-            gpu::make_jit_constant("INPUT_PADDING",  outer.input().at(0)->desc()->output_padding()),
+            gpu::make_jit_constant("INPUT_PADDING",  outer.input().at(0)->desc()->output_padding),
             gpu::make_jit_constant("OUTPUT",         outer.non_padded_output_layout().size),
-            gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding()),
-            gpu::make_jit_constant("RELU",           1),
+            gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding),
+            gpu::make_jit_constant("activation_inst",           1),
             gpu::make_jit_constant("NEGATIVE_SLOPE", outer.argument.negative_slope),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
@@ -107,28 +108,28 @@ struct relu_gpu : is_an_implementation
         const auto& outer = _outer;
         const auto& kd    = _kernel_data;
 
-        const auto& input_mem  = outer.input_memory(0);  // input
+        const auto& input_mem  = outer.input_memory();  // input
         const auto& output_mem = outer.output_memory(); // output
 
         return _kernel.run<gpu::input_mem, gpu::output_mem>({kd.gws0, kd.lws0}, events, input_mem, output_mem);
     }
 
-    static is_an_implementation *create(relu &arg) { return new relu_gpu(arg); };
+    static primitive_impl* create(activation_inst &arg) { return new activation_inst_gpu(arg); };
 };
 
 
 namespace {
     struct attach {
         attach() {
-            auto val_fw = relu_gpu::create;
+            auto val_fw = activation_inst_gpu::create;
     
-            implementation_map<relu>::add({
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32), val_fw},
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f32), val_fw},
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16), val_fw},
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::xb_f16), val_fw},
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), val_fw },
-                { std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), val_fw },
+            implementation_map<activation_inst>::add({
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), val_fw},
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::xb), val_fw},
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), val_fw},
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::xb), val_fw},
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), val_fw },
+                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), val_fw },
             });
         }
         ~attach() {}

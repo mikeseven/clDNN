@@ -17,18 +17,26 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "api/primitives/crop.hpp"
-#include "primitive_arg.h"
-#include <memory>
+#include "primitive_inst.h"
 #include "topology_impl.h"
 
 namespace cldnn
 {
-    class crop_arg : public primitive_arg_base<crop>
-    {
-    public:
-        crop_arg(network_impl& network, std::shared_ptr<const crop> desc);
 
-        static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const crop> desc);
+template <>
+class typed_primitive_inst<crop> : public typed_primitive_inst_base<crop>
+{
+    using parent = typed_primitive_inst_base<crop>;
 
-    };
+public:
+    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const crop> desc);
+
+public:
+    typed_primitive_inst(network_impl& network, std::shared_ptr<const crop> desc);
+
+    const memory& input_memory() const { return dep_memory(0); }
+    const memory& reference_input_memory() const { return dep_memory(1); }
+};
+
+using crop_inst = typed_primitive_inst<crop>;
 }

@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "softmax_arg.h"
+#include "softmax_inst.h"
 #include "primitive_type_base.h"
 #include "network_impl.h"
 
@@ -22,14 +22,14 @@ namespace cldnn
 {
 primitive_type_id softmax_type_id()
 {
-    static primitive_type_base<softmax, softmax_arg> instance;
+    static primitive_type_base<softmax, softmax_inst> instance;
     return &instance;
 }
 
-layout softmax_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const softmax> desc)
+layout softmax_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const softmax> desc)
 {
-    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
+    auto input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
 
     cldnn::layout layoutTemp = input_layout;
     if (input_layout.size.raw.size() == 4 && input_layout.size.spatial[0] == 1 && input_layout.size.spatial[1] == 1) //squeezenet spatials are 1x1
@@ -42,8 +42,8 @@ layout softmax_arg::calc_output_layout(const topology_map& topology_map, std::sh
     return layoutTemp;
 }
 
-softmax_arg::softmax_arg(network_impl& network, std::shared_ptr<const softmax> desc)
-    : primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+softmax_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const softmax> desc)
+    : parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
     //    auto& input_offset  = arg.input_offset;
     //    auto& output_offset = arg.output_offset;

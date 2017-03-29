@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "normalization_arg.h"
+#include "normalization_inst.h"
 #include "primitive_type_base.h"
 #include "network_impl.h"
 
@@ -22,19 +22,19 @@ namespace cldnn
 {
 primitive_type_id normalization_type_id()
 {
-    static primitive_type_base<normalization, normalization_arg> instance;
+    static primitive_type_base<normalization, normalization_inst> instance;
     return &instance;
 }
 
-layout normalization_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const normalization> desc)
+layout normalization_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const normalization> desc)
 {
-    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto result = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
+    auto result = input_desc->type->calc_output_layout(topology_map, input_desc);
     return result;
 }
 
-normalization_arg::normalization_arg(network_impl& network, std::shared_ptr<const normalization> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+normalization_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const normalization> desc)
+    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
 	if (desc->size == 0)
 	{

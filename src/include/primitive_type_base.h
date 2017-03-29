@@ -32,9 +32,9 @@ namespace cldnn
             return std::make_shared<PType>(as_dto<PType>(dto));
         }
 
-        std::shared_ptr<const primitive_arg> create_arg(network_impl& network, std::shared_ptr<const primitive> desc) const override
+        std::shared_ptr<const primitive_inst> create_inst(network_impl& network, std::shared_ptr<const primitive> desc) const override
         {
-            if (desc->type() != this) throw std::invalid_argument("desc: primitive type mismatch");
+            if (desc->type != this) throw std::invalid_argument("desc: primitive type mismatch");
             auto result = std::make_shared<PType_Arg>(network, std::static_pointer_cast<const PType>(desc));
             result->_impl = network.get_engine().get()->create_primitive_impl(*result);
             return result;
@@ -42,9 +42,9 @@ namespace cldnn
 
         layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const primitive> desc) const override
         {
-            if (desc->type() != this) throw std::invalid_argument("desc: primitive type mismatch");
+            if (desc->type != this) throw std::invalid_argument("desc: primitive type mismatch");
 
-            auto it = topology_map.find(desc->id());
+            auto it = topology_map.find(desc->id);
             if (it->second->output_layout)
             {
                 return *it->second->output_layout;

@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "simpler_nms_arg.h"
+#include "simpler_nms_inst.h"
 #include "primitive_type_base.h"
 #include "network_impl.h"
 
@@ -24,27 +24,27 @@ namespace cldnn
 {
 
 static void generate_anchors(unsigned int base_size, const std::vector<float>& ratios, const std::vector<float>& scales,   // input
-                             std::vector<anchor>& anchors);                                                                // output
+                             std::vector<simpler_nms_inst::anchor>& anchors);                                                                // output
 
 
 primitive_type_id simpler_nms_type_id()
 {
-    static primitive_type_base<simpler_nms, simpler_nms_arg> instance;
+    static primitive_type_base<simpler_nms, simpler_nms_inst> instance;
     return &instance;
 }
 
 
-layout simpler_nms_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const simpler_nms> desc)
+layout simpler_nms_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const simpler_nms> desc)
 {
-	auto input_desc = topology_map.at(desc->input()[simpler_nms_arg::cls_scores_index])->primitive_desc;
-	layout input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
+	auto input_desc = topology_map.at(desc->input[simpler_nms_inst::cls_scores_index])->primitive_desc;
+	layout input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
 
 	return layout(input_layout.data_type, { format::bx, { desc->post_nms_topn, CLDNN_ROI_VECTOR_SIZE}});
 }
 
 
-simpler_nms_arg::simpler_nms_arg(network_impl& network, std::shared_ptr<const simpler_nms> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+simpler_nms_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const simpler_nms> desc)
+    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
 	std::vector<float> default_ratios = { 0.5f, 1.0f, 2.0f };
 
@@ -53,7 +53,7 @@ simpler_nms_arg::simpler_nms_arg(network_impl& network, std::shared_ptr<const si
 	generate_anchors(default_size, default_ratios, desc->scales, _anchors);             	
 }
 
-static void calc_basic_params(const anchor& base_anchor,                                       // input
+static void calc_basic_params(const simpler_nms_inst::anchor& base_anchor,                                       // input
                             float& width, float& height, float& x_center, float& y_center)   // output
 {
     width  = base_anchor.end_x - base_anchor.start_x + 1.0f;
@@ -65,7 +65,7 @@ static void calc_basic_params(const anchor& base_anchor,                        
 
 
 static void make_anchors(const std::vector<float>& ws, const std::vector<float>& hs, float x_center, float y_center,   // input
-                        std::vector<anchor>& anchors)                                                            // output
+                        std::vector<simpler_nms_inst::anchor>& anchors)                                                            // output
 {
     size_t len = ws.size();
     anchors.clear();
@@ -81,8 +81,8 @@ static void make_anchors(const std::vector<float>& ws, const std::vector<float>&
 }
 
 
-static void calc_anchors(const anchor& base_anchor, const std::vector<float>& scales,        // input
-                        std::vector<anchor>& anchors)                                       // output
+static void calc_anchors(const simpler_nms_inst::anchor& base_anchor, const std::vector<float>& scales,        // input
+                        std::vector<simpler_nms_inst::anchor>& anchors)                                       // output
 {
     float width = 0.0f, height = 0.0f, x_center = 0.0f, y_center = 0.0f;
 
@@ -100,8 +100,8 @@ static void calc_anchors(const anchor& base_anchor, const std::vector<float>& sc
 }
 
 
-static void calc_ratio_anchors(const anchor& base_anchor, const std::vector<float>& ratios,        // input
-                             std::vector<anchor>& ratio_anchors)                                 // output
+static void calc_ratio_anchors(const simpler_nms_inst::anchor& base_anchor, const std::vector<float>& ratios,        // input
+                             std::vector<simpler_nms_inst::anchor>& ratio_anchors)                                 // output
 {
     float width = 0.0f, height = 0.0f, x_center = 0.0f, y_center = 0.0f;
 
@@ -123,19 +123,19 @@ static void calc_ratio_anchors(const anchor& base_anchor, const std::vector<floa
 }
 
 static void generate_anchors(unsigned int base_size, const std::vector<float>& ratios, const std::vector<float>& scales,   // input
-                     std::vector<anchor>& anchors)                                                           // output
+                     std::vector<simpler_nms_inst::anchor>& anchors)                                                           // output
 {
     float end = (float)(base_size - 1);        // because we start at zero
 
-    anchor base_anchor(0.0f, 0.0f, end, end);
+    simpler_nms_inst::anchor base_anchor(0.0f, 0.0f, end, end);
 
-    std::vector<anchor> ratio_anchors;
+    std::vector<simpler_nms_inst::anchor> ratio_anchors;
     calc_ratio_anchors(base_anchor, ratios, ratio_anchors);
 
     size_t num_ratio_anchors = ratio_anchors.size();
 
     for (unsigned int i = 0 ; i < num_ratio_anchors ; i++) {
-        std::vector<anchor> temp_anchors;
+        std::vector<simpler_nms_inst::anchor> temp_anchors;
         calc_anchors(ratio_anchors[i], scales, temp_anchors);
 
         size_t num_temp_anchors = temp_anchors.size();

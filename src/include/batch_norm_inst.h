@@ -16,21 +16,29 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/eltwise.hpp"
-#include "primitive_arg.h"
-#include <memory>
+#include "api/primitives/batch_norm.hpp"
+#include "primitive_inst.h"
 #include "topology_impl.h"
 
 namespace cldnn
 {
-    class eltwise_arg : public primitive_arg_base<eltwise>
-    {
-    public:
-        eltwise_arg(network_impl& network, std::shared_ptr<const eltwise> desc);
 
-        static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const eltwise> desc);
+template <>
+class typed_primitive_inst<batch_norm> : public typed_primitive_inst_base<batch_norm>
+{
+    using parent = typed_primitive_inst_base<batch_norm>;
 
-        const memory& input2_memory() const;
+public:
+    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const batch_norm> desc);
 
-    };
+public:
+    typed_primitive_inst(network_impl& network, std::shared_ptr<const batch_norm> desc);
+
+    const memory& input_memory() const { return dep_memory(0); }
+    const memory& mean_memory() const { return dep_memory(1); }
+    const memory& variance_memory() const { return dep_memory(2); }
+};
+
+using batch_norm_inst = typed_primitive_inst<batch_norm>;
+
 }

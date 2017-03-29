@@ -15,6 +15,7 @@
 */
 
 #include "instrumentation.h"
+#include "neural_memory.h"
 
 #include <fstream>
 #include <iomanip>
@@ -23,6 +24,8 @@
 
 #include <boost/filesystem.hpp>
 
+using cldnn::backward_comp::neural_memory;
+using cldnn::backward_comp::argument;
 
 namespace instrumentation {
     // initalize dumping directory for whole run
@@ -91,7 +94,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_byxf(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = mem.argument();
+        auto mem_arg = argument(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -121,7 +124,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_bfyx(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = mem.argument();
+        auto mem_arg = argument(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -151,7 +154,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_yxfb(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = mem.argument();
+        auto mem_arg = argument(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -181,7 +184,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_xb(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = mem.argument();
+        auto mem_arg = argument(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -201,7 +204,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_bx(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = mem.argument();
+        auto mem_arg = argument(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -221,7 +224,7 @@ namespace instrumentation {
     void logger::log_memory_to_file(const cldnn::memory& mem, std::string prefix, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id)
     {
         const auto& mem_prim = mem;
-        auto mem_arg = mem_prim.argument();
+        auto mem_arg = argument(mem_prim);
 
         boost::filesystem::create_directories(dump_dir);
         auto batch = mem_arg.size.batch[0];
@@ -236,54 +239,54 @@ namespace instrumentation {
         switch (mem_arg.format)
         {
         // FP32 (float)
-        case cldnn::neural_memory::format::byxf_f32:
+        case neural_memory::format::byxf_f32:
             {
                 dump_byxf<float>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::bfyx_f32:
+        case neural_memory::format::bfyx_f32:
             {
                 dump_bfyx<float>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::yxfb_f32:
+        case neural_memory::format::yxfb_f32:
             {
                 dump_yxfb<float>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::xb_f32:
+        case neural_memory::format::xb_f32:
             {
                 dump_xb<float>(mem_prim, single_batch, batch_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::bx_f32:
+        case neural_memory::format::bx_f32:
             {
                 dump_bx<float>(mem_prim, single_batch, batch_id, streams);
             }
             break;
 
         // FP16 (half)
-        case cldnn::neural_memory::format::byxf_f16:
+        case neural_memory::format::byxf_f16:
             {
                 dump_byxf<half_t>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::bfyx_f16:
+        case neural_memory::format::bfyx_f16:
             {
                 dump_bfyx<half_t>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::yxfb_f16:
+        case neural_memory::format::yxfb_f16:
             {
                 dump_yxfb<half_t>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::xb_f16:
+        case neural_memory::format::xb_f16:
             {
                 dump_xb<half_t>(mem_prim, single_batch, batch_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::bx_f16:
+        case neural_memory::format::bx_f16:
             {
                 dump_bx<half_t>(mem_prim, single_batch, batch_id, streams);
             }

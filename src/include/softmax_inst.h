@@ -16,21 +16,27 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/data.hpp"
-#include "primitive_arg.h"
-#include <memory>
+#include "api/primitives/softmax.hpp"
+#include "primitive_inst.h"
 #include "topology_impl.h"
 
 namespace cldnn
 {
-class data_arg : public primitive_arg_base<data>
-{
-public:
-    static layout calc_output_layout(const topology_map&, std::shared_ptr<const data> desc)
-    {
-        return desc->mem.get_layout();
-    }
 
-    data_arg(network_impl& network, std::shared_ptr<const data> desc);
+template <>
+class typed_primitive_inst<softmax> : public typed_primitive_inst_base<softmax>
+{
+    using parent = typed_primitive_inst_base<softmax>;
+
+public:
+    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const softmax> desc);
+
+public:
+    typed_primitive_inst(network_impl& network, std::shared_ptr<const softmax> desc);
+
+    const memory& input_memory() const { return dep_memory(0); }
 };
+
+using softmax_inst = typed_primitive_inst<softmax>;
+
 }

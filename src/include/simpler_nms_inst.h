@@ -17,21 +17,26 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "api/primitives/simpler_nms.hpp"
-#include "primitive_arg.h"
-#include <memory>
-#include <vector>
+#include "primitive_inst.h"
 #include "topology_impl.h"
 
 namespace cldnn
 {
-    struct anchor 
+
+template <>
+class typed_primitive_inst<simpler_nms> : public typed_primitive_inst_base<simpler_nms>
+{
+    using parent = typed_primitive_inst_base<simpler_nms>;
+
+public:
+    struct anchor
     {
         float start_x;
         float start_y;
         float end_x;
         float end_y;
 
-        anchor() 
+        anchor()
         {
             start_x = start_y = end_x = end_y = 0.0f;
         }
@@ -40,37 +45,37 @@ namespace cldnn
         {
             start_x = s_x;
             start_y = s_y;
-            end_x   = e_x;
-            end_y   = e_y;
+            end_x = e_x;
+            end_y = e_y;
         }
     };
 
-    class simpler_nms_arg : public primitive_arg_base<simpler_nms>
-    {
-    public:
-
-        // indices of the memory objects used by the layer
-        enum input_index {
-            cls_scores_index,
-            bbox_pred_index,
-			image_info_index
-        };
-
-        // indices of the image info parameters inside the image_info memory object (the object
-        // is an integer array of these parameters)
-		enum image_info_size_index {
-			image_info_width_index = 0,
-			image_info_height_index = 1,
-			image_info_depth_index = 2
-		};
-    
-        simpler_nms_arg(network_impl& network, std::shared_ptr<const simpler_nms> desc);
-
-        static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const simpler_nms> desc);
-
-        const std::vector<anchor>& get_anchors() const { return _anchors; }
-
-    private:
-        std::vector<anchor> _anchors;        
+    // indices of the memory objects used by the layer
+    enum input_index {
+        cls_scores_index,
+        bbox_pred_index,
+		image_info_index
     };
+
+    // indices of the image info parameters inside the image_info memory object (the object
+    // is an integer array of these parameters)
+	enum image_info_size_index {
+		image_info_width_index = 0,
+		image_info_height_index = 1,
+		image_info_depth_index = 2
+	};
+
+    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const simpler_nms> desc);
+
+public:    
+    typed_primitive_inst(network_impl& network, std::shared_ptr<const simpler_nms> desc);
+
+    const std::vector<anchor>& get_anchors() const { return _anchors; }
+
+private:
+    std::vector<anchor> _anchors;
+};
+
+using simpler_nms_inst = typed_primitive_inst<simpler_nms>;
+
 }

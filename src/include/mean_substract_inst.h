@@ -16,25 +16,28 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/fully_connected.hpp"
-#include "primitive_arg.h"
-#include <memory>
+#include "api/primitives/mean_substract.hpp"
+#include "primitive_inst.h"
 #include "topology_impl.h"
 
 namespace cldnn
 {
-    class fully_connected_arg : public primitive_arg_base<fully_connected>
-    {
-    public:
-        static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const fully_connected> desc);
 
-        fully_connected_arg(network_impl& network, std::shared_ptr<const fully_connected> desc);
+template <>
+class typed_primitive_inst<mean_substract> : public typed_primitive_inst_base<mean_substract>
+{
+    using parent = typed_primitive_inst_base<mean_substract>;
 
-        const memory& weights_memory() const;
+public:
+    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const mean_substract> desc);
 
-        const memory& bias_memory() const;
-    private:
-        std::shared_ptr<const primitive_arg> _weights;
-        std::shared_ptr<const primitive_arg> _bias;
-    };
+public:
+    typed_primitive_inst(network_impl& network, std::shared_ptr<const mean_substract> desc);
+
+    const memory& input_memory() const { return dep_memory(0); }
+    const memory& mean_memory() const { return dep_memory(1); }
+};
+
+using mean_substract_inst = typed_primitive_inst<mean_substract>;
+
 }

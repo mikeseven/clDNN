@@ -16,20 +16,28 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/mean_substract.hpp"
-#include "primitive_arg.h"
-#include <memory>
+#include "api/primitives/normalization.hpp"
+#include "primitive_inst.h"
+#include "topology_impl.h"
 #include "topology_impl.h"
 
 namespace cldnn
 {
-    class mean_substract_arg : public primitive_arg_base<mean_substract>
-    {
-    public:
-        mean_substract_arg(network_impl& network, std::shared_ptr<const mean_substract> desc);
 
-        static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const mean_substract> desc);
+template <>
+class typed_primitive_inst<normalization> : public typed_primitive_inst_base<normalization>
+{
+    using parent = typed_primitive_inst_base<normalization>;
 
-        const memory& mean_memory() const;
-    };
+public:
+    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const normalization> desc);
+
+public:
+    typed_primitive_inst(network_impl& network, std::shared_ptr<const normalization> desc);
+
+    const memory& input_memory() const { return dep_memory(0); }
+};
+
+using normalization_inst = typed_primitive_inst<normalization>;
+
 }

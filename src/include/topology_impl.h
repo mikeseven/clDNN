@@ -52,7 +52,7 @@ public:
 
     void add(std::shared_ptr<primitive> desc)
     {
-        auto id = desc->id();
+        auto id = desc->id;
         auto itr = _primitives.find(id);
         if (itr != _primitives.end())
         {

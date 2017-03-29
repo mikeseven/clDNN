@@ -15,14 +15,14 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "primitive_arg.h"
+#include "primitive_inst.h"
 #include "network_impl.h"
 #include "engine_impl.h"
 #include "memory_impl.h"
 
 namespace cldnn
 {
-refcounted_obj_ptr<event_impl> primitive_arg::execute(const std::vector<refcounted_obj_ptr<event_impl>>& events) const
+refcounted_obj_ptr<event_impl> primitive_inst::execute(const std::vector<refcounted_obj_ptr<event_impl>>& events) const
 {
     if (_inputs.size() == 0)
         return _impl->execute(events);
@@ -38,21 +38,21 @@ refcounted_obj_ptr<event_impl> primitive_arg::execute(const std::vector<refcount
     return _impl->execute(dependencies);
 }
 
-primitive_arg::primitive_arg(network_impl& network, std::shared_ptr<const primitive> desc, const memory& output_memory)
+primitive_inst::primitive_inst(network_impl& network, std::shared_ptr<const primitive> desc, const memory& output_memory)
     : _network(network)
     , _desc(desc)
     , _inputs(network.get_primitives(desc->dependecies()))
     , _output(output_memory)
 {}
 
-primitive_arg::primitive_arg(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout)
-    : primitive_arg(network, desc, allocate_output(network, desc, output_layout))
+primitive_inst::primitive_inst(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout)
+    : primitive_inst(network, desc, allocate_output(network, desc, output_layout))
 {}
 
-memory primitive_arg::allocate_output(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout)
+memory primitive_inst::allocate_output(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout)
 {
     auto output_size = output_layout.size;
-    auto allocation_size = output_size.add(desc->output_padding().lower_size()).add(desc->output_padding().upper_size());
+    auto allocation_size = output_size.add(desc->output_padding.lower_size()).add(desc->output_padding.upper_size());
     //auto allocation_size = output_layout.size.add(desc()->output_padding().size().mul(2));
     return api_cast(network.get_engine()->allocate_buffer({ output_layout.data_type, allocation_size }));
 }

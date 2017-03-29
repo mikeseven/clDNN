@@ -15,13 +15,13 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "fully_connected_arg.h"
+#include "fully_connected_inst.h"
 #include "primitive_type_base.h"
 namespace cldnn
 {
 primitive_type_id fully_connected_type_id()
 {
-    static primitive_type_base<fully_connected, fully_connected_arg> instance;
+    static primitive_type_base<fully_connected, fully_connected_inst> instance;
     return &instance;
 }
 
@@ -55,13 +55,13 @@ bool is_batch_after_spatial(const std::string order)
 }
 }
 
-layout fully_connected_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const fully_connected> desc)
+layout fully_connected_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const fully_connected> desc)
 {
-    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
+    auto input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
 
     auto bias_desc = topology_map.at(desc->bias)->primitive_desc;
-    auto bias_layout = bias_desc->type()->calc_output_layout(topology_map, bias_desc);
+    auto bias_layout = bias_desc->type->calc_output_layout(topology_map, bias_desc);
 
     if(is_batch_after_spatial(input_layout.size.format.order()) || 
         (input_layout.size.format == format::bfyx &&                //this condition tests whether our input is batch>1 in bfyx format, if yes there will be
@@ -77,12 +77,10 @@ layout fully_connected_arg::calc_output_layout(const topology_map& topology_map,
     }
 }
 
-fully_connected_arg::fully_connected_arg(network_impl& network, std::shared_ptr<const fully_connected> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
-    , _weights(network.get_primitive(desc->weights))
-    , _bias(network.get_primitive(desc->bias))
+fully_connected_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const fully_connected> desc)
+    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
-    auto input_size = input_memory(0).get_layout().size;
+    auto input_size = input_memory().get_layout().size;
     auto output_size = output_memory().get_layout().size;
 
     if(input_size.format != format::yxfb
@@ -91,16 +89,6 @@ fully_connected_arg::fully_connected_arg(network_impl& network, std::shared_ptr<
     {
         throw std::invalid_argument("Fully connected input/output number of dimension does not match.");
     }
-}
-
-const memory& fully_connected_arg::weights_memory() const
-{
-    return _weights->output_memory();
-}
-
-const memory& fully_connected_arg::bias_memory() const
-{
-    return _bias->output_memory();
 }
 
 }

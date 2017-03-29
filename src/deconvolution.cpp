@@ -15,7 +15,7 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "deconvolution_arg.h"
+#include "deconvolution_inst.h"
 #include "network_impl.h"
 #include "primitive_type_base.h"
 #include <memory>
@@ -24,16 +24,16 @@ namespace cldnn
 {
 primitive_type_id deconvolution_type_id()
 {
-    static primitive_type_base<deconvolution, deconvolution_arg> instance;
+    static primitive_type_base<deconvolution, deconvolution_inst> instance;
     return &instance;
 }
 
-layout deconvolution_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const deconvolution> desc)
+layout deconvolution_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const deconvolution> desc)
 {
-    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
+    auto input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
     auto weight0_desc = topology_map.at(desc->weights[0])->primitive_desc;
-    auto weights_layout = weight0_desc->type()->calc_output_layout(topology_map, weight0_desc);
+    auto weights_layout = weight0_desc->type->calc_output_layout(topology_map, weight0_desc);
     auto input_offset = desc->input_offset().transform(input_layout.size.format, 0);
     auto strd = desc->stride.transform(format::yx, 0);
     auto split = desc->weights.size();
@@ -54,15 +54,13 @@ layout deconvolution_arg::calc_output_layout(const topology_map& topology_map, s
     return result;
 }
 
-deconvolution_arg::deconvolution_arg(network_impl& network, std::shared_ptr<const deconvolution> desc)
-    : primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
-    , _weights(network.get_primitives(desc->weights))
-    , _biases(network.get_primitives(desc->bias))
+deconvolution_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const deconvolution> desc)
+    : parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
     auto stride = desc->stride;
-    auto output_size = output_memory().argument().size;
+    auto output_size = output_memory().get_layout().size;
 
-    auto input_arg = input_memory(0).get_layout();
+    auto input_arg = input_memory().get_layout();
     auto output_arg = output_memory().get_layout();
 
     if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("input/output number of dimension does not match.");
@@ -96,15 +94,5 @@ deconvolution_arg::deconvolution_arg(network_impl& network, std::shared_ptr<cons
         if ((input_arg.size.feature[0] - input_offset.feature[0]) / split < filter_arg.size.feature[1])
             throw std::runtime_error("weights/input feature maps number does not match.");
     }
-}
-
-const memory& deconvolution_arg::weights_memory(size_t index) const
-{
-    return _weights[index]->output_memory();
-}
-
-const memory& deconvolution_arg::bias_memory(size_t index) const
-{
-    return _biases[index]->output_memory();
 }
 }

@@ -14,62 +14,62 @@
 // limitations under the License.
 */
 
-#include "crop_arg.h"
+#include "crop_inst.h"
 #include "primitive_type_base.h"
 #include "network_impl.h"
 
 namespace cldnn
 {
-    primitive_type_id crop_type_id()
-    {
-        static primitive_type_base<crop, crop_arg> instance;
-        return &instance;
-    }
+primitive_type_id crop_type_id()
+{
+    static primitive_type_base<crop, crop_inst> instance;
+    return &instance;
+}
 
-    layout crop_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const crop> desc)
-    {
-        auto reference_input_desc = topology_map.at(desc->reference_input)->primitive_desc;
-        auto result = reference_input_desc->type()->calc_output_layout(topology_map, reference_input_desc);
-        return result;
-    }
+layout crop_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const crop> desc)
+{
+    auto reference_input_desc = topology_map.at(desc->reference_input)->primitive_desc;
+    auto result = reference_input_desc->type->calc_output_layout(topology_map, reference_input_desc);
+    return result;
+}
 
-    crop_arg::crop_arg(network_impl& network, std::shared_ptr<const crop> desc)
-        :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
-    {
-        auto reference_input_sizes = input_memory(1).get_layout().size;
-        auto reference_format = reference_input_sizes.format;
-        auto input_sizes = input_memory(0).get_layout().size;
-        auto input_format = input_sizes.format;
-        auto offsets = desc->offsets;
+crop_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const crop> desc)
+    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+{
+    auto reference_input_sizes = reference_input_memory().get_layout().size;
+    auto reference_format = reference_input_sizes.format;
+    auto input_sizes = input_memory().get_layout().size;
+    auto input_format = input_sizes.format;
+    auto offsets = desc->offsets;
 
-        if (input_format != reference_format)
-            throw std::runtime_error("Mismatch between input and reference_input format order!");
+    if (input_format != reference_format)
+        throw std::runtime_error("Mismatch between input and reference_input format order!");
 
-        if (offsets.format != input_format)
-            throw std::runtime_error("Mismatch between offsets and input format order!");
+    if (offsets.format != input_format)
+        throw std::runtime_error("Mismatch between offsets and input format order!");
 
-        if ((input_format!= format::yxfb) && (input_format != format::bfyx))
-            throw std::runtime_error("Crop layer is only supported for yxfb and bfyx formats!");
+    if ((input_format!= format::yxfb) && (input_format != format::bfyx))
+        throw std::runtime_error("Crop layer is only supported for yxfb and bfyx formats!");
 
-        //check if output sizes matches reference input sizes
-        if (reference_input_sizes.batch[0] > input_sizes.batch[0])
-            throw std::runtime_error("Reference input batch dimension > input batch dimension!");
-        if (reference_input_sizes.feature[0] > input_sizes.feature[0])
-            throw std::runtime_error("Reference input feature dimension > input batch dimension!");
-        if (reference_input_sizes.spatial[0] > input_sizes.spatial[0])
-            throw std::runtime_error("Reference input X dimension > input batch dimension!");
-        if (reference_input_sizes.spatial[1] > input_sizes.spatial[1])
-            throw std::runtime_error("Reference input Y dimension > input batch dimension!");
+    //check if output sizes matches reference input sizes
+    if (reference_input_sizes.batch[0] > input_sizes.batch[0])
+        throw std::runtime_error("Reference input batch dimension > input batch dimension!");
+    if (reference_input_sizes.feature[0] > input_sizes.feature[0])
+        throw std::runtime_error("Reference input feature dimension > input batch dimension!");
+    if (reference_input_sizes.spatial[0] > input_sizes.spatial[0])
+        throw std::runtime_error("Reference input X dimension > input batch dimension!");
+    if (reference_input_sizes.spatial[1] > input_sizes.spatial[1])
+        throw std::runtime_error("Reference input Y dimension > input batch dimension!");
 
-        //check if offsets do not extend input sizes and if match the output sizes
-        if (((offsets.batch[0] < 0) || (input_sizes.batch[0] - offsets.batch[0]) < reference_input_sizes.batch[0]))
-            throw std::runtime_error("Invalid Batch offset: negative value or exceeds data for output!");
-        if (((offsets.feature[0] < 0) || (input_sizes.feature[0] - offsets.feature[0]) < reference_input_sizes.feature[0]))
-            throw std::runtime_error("Invalid Feature offset: negative value or exceeds data for output!");
-        if (((offsets.spatial[0] < 0) || (input_sizes.spatial[0] - offsets.spatial[0]) < reference_input_sizes.spatial[0]))
-            throw std::runtime_error("Invalid X offset: negative value or exceeds data for output!");
-        if (((offsets.spatial[1] < 0) || (input_sizes.spatial[1] - offsets.spatial[1]) < reference_input_sizes.spatial[1]))
-            throw std::runtime_error("Invalid Y offset: negative value or exceeds data for output!");
+    //check if offsets do not extend input sizes and if match the output sizes
+    if (((offsets.batch[0] < 0) || (input_sizes.batch[0] - offsets.batch[0]) < reference_input_sizes.batch[0]))
+        throw std::runtime_error("Invalid Batch offset: negative value or exceeds data for output!");
+    if (((offsets.feature[0] < 0) || (input_sizes.feature[0] - offsets.feature[0]) < reference_input_sizes.feature[0]))
+        throw std::runtime_error("Invalid Feature offset: negative value or exceeds data for output!");
+    if (((offsets.spatial[0] < 0) || (input_sizes.spatial[0] - offsets.spatial[0]) < reference_input_sizes.spatial[0]))
+        throw std::runtime_error("Invalid X offset: negative value or exceeds data for output!");
+    if (((offsets.spatial[1] < 0) || (input_sizes.spatial[1] - offsets.spatial[1]) < reference_input_sizes.spatial[1]))
+        throw std::runtime_error("Invalid Y offset: negative value or exceeds data for output!");
 
-    }
+}
 }

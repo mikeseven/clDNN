@@ -16,18 +16,27 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/activation.hpp"
-#include "primitive_arg.h"
-#include <memory>
+#include "api/primitives/pooling.hpp"
+#include "primitive_inst.h"
 #include "topology_impl.h"
 
 namespace cldnn
 {
-class activation_arg : public primitive_arg_base<activation>
-{
-public:
-    activation_arg(network_impl& network, std::shared_ptr<const activation> desc);
 
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const activation> desc);
+template <>
+class typed_primitive_inst<pooling> : public typed_primitive_inst_base<pooling>
+{
+    using parent = typed_primitive_inst_base<pooling>;
+
+public:
+    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const pooling> desc);
+
+public:
+    typed_primitive_inst(network_impl& network, std::shared_ptr<const pooling> desc);
+
+    const memory& input_memory() const { return dep_memory(0); }
 };
+
+using pooling_inst = typed_primitive_inst<pooling>;
+
 }

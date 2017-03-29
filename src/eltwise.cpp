@@ -15,7 +15,7 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "eltwise_arg.h"
+#include "eltwise_inst.h"
 #include "primitive_type_base.h"
 #include "network_impl.h"
 
@@ -23,31 +23,26 @@ namespace cldnn
 {
 primitive_type_id eltwise_type_id()
 {
-    static primitive_type_base<eltwise, eltwise_arg> instance;
+    static primitive_type_base<eltwise, eltwise_inst> instance;
     return &instance;
 }
 
-layout eltwise_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const eltwise> desc)
+layout eltwise_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const eltwise> desc)
 {
-    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto result = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
+    auto result = input_desc->type->calc_output_layout(topology_map, input_desc);
     return result;
 }
 
-eltwise_arg::eltwise_arg(network_impl& network, std::shared_ptr<const eltwise> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+eltwise_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const eltwise> desc)
+    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
-    auto input_layout = input_memory(0).get_layout();
+    auto input_layout = input_memory().get_layout();
     auto input2_layout = input2_memory().get_layout();
 
     if (input_layout != input2_layout)
     {
         throw std::runtime_error("Different layouts of eltwise's inputs");
     }
-}
-
-const memory& eltwise_arg::input2_memory() const
-{
-    return _network.get_primitive(argument.input2)->output_memory();
 }
 }

@@ -98,7 +98,6 @@ struct padding
         return padding{ lower.format, lower.sizes(), upper.sizes(), filling_value };
     }
 
-
 private:
     tensor _lower_size;    ///< Lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
     tensor _upper_size;    ///< Upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
@@ -149,6 +148,33 @@ const typename PType::dto* as_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto)
 struct primitive
 {
     /// @brief Initialize fields common for all primitives.
+    struct fixed_size_vector_ref
+    {
+    public:
+        fixed_size_vector_ref(std::vector<primitive_id>& ref) : vref(ref)
+        {}
+
+        auto size() const { return vref.size(); }
+        auto begin() const { return vref.begin(); }
+        auto end() const { return vref.end(); }
+        auto cbegin() const { return vref.cbegin(); }
+        auto cned() const { return vref.cend(); }
+
+        primitive_id& operator[](size_t idx) { return vref[idx]; }
+        primitive_id const& operator[](size_t idx) const { return vref[idx]; }
+
+        primitive_id& at(size_t idx) { return vref.at(idx); }
+        primitive_id const& at(size_t idx) const { return vref.at(idx); }
+
+        primitive_id* data() { return vref.data(); }
+        const primitive_id* data() const { return vref.data(); }
+
+        const std::vector<primitive_id>& ref() const { return vref; }
+
+    private:
+        std::vector<primitive_id>& vref;
+    };
+public:
     primitive(
         const primitive_type_id& type,
         const primitive_id& id,
@@ -156,54 +182,67 @@ struct primitive
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :_type(type), _id(id), _input(input), _input_padding(input_padding), _output_padding(output_padding)
+        :type(type), id(id), input(_input.cpp_ids), input_padding(input_padding), output_padding(output_padding), _input(input)
     {}
 
     /// @brief Constructs a copy from basic C API @CLDNN_PRIMITIVE_DESC{primitive}
     primitive(const CLDNN_PRIMITIVE_DESC(primitive)* dto)
-        :_type(dto->type), _id(dto->id), _input(dto->input), _input_padding(dto->input_padding), _output_padding(dto->output_padding)
+        :type(dto->type), id(dto->id), input(_input.cpp_ids), input_padding(dto->input_padding), output_padding(dto->output_padding), _input(dto->input)
     {}
 
     virtual ~primitive() = default;
 
     /// @brief Returns primitive type id.
-    const primitive_type_id& type() const { return _type; }
     /// @brief Returns primitive id.
-    const primitive_id& id() const { return _id; }
-    //TODO: make access to primitive's fields consistent - either use access directly via public members,
-    // like in derived classes, or use getters/setter in derived classes like below
     /// @brief List of ids of input primitives.
-    std::vector<primitive_id>& input() { return _input.cpp_ids; }
     /// @brief List of ids of input primitives.
-    const std::vector<primitive_id>& input() const { return _input.cpp_ids; }
-
-    padding& input_padding() { return _input_padding; }
-    const padding& input_padding() const { return _input_padding; }
-
     /// @brief Requested output padding.
-    padding& output_padding() { return _output_padding; }
     /// @brief Requested output padding.
-    const padding& output_padding() const { return _output_padding; }
-
     /// @brief Returns pointer to a C API primitive descriptor casted to @CLDNN_PRIMITIVE_DESC{primitive}.
     virtual const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const = 0;
 
     /// @brief Returns all primitive ids on which this primitive depends - inputs, weights, biases, etc.
     std::vector<primitive_id> dependecies() const
     {
-        auto result = input();
+        auto result = input.ref();
         auto deps = get_dependencies();
         result.insert(result.end(), deps.begin(), deps.end());
         return result;
     }
 
+    void update_dependency(size_t dep_idx, primitive_id const& new_dep_id)
+    {
+        if (dep_idx >= input.size())
+        {
+            dep_idx -= input.size();
+            auto&& deps = get_dependencies();
+            if (dep_idx >= deps.size())
+                return;
+
+            //we need get_dependencies to be callable from within 'const' method so it returns 'const primitive_id&'
+            //however we are here in non-const context so we drop out this constantness
+            // note: this could be avoided by declaring non-const overload for get_dependencies but that would mean
+            // a lot of duplicated code in derived classes - this const_cast is simpler and more easy to maintain
+            const_cast<primitive_id&>(deps[dep_idx].get()) = new_dep_id;
+        }
+        else
+            input[dep_idx] = new_dep_id;
+    }
+
     /// @brief Implicit conversion to primiitive id.
-    operator primitive_id() const { return id(); }
+    operator primitive_id() const { return id; }
 
     //TODO remove backward compatibility
-    tensor input_offset() const { return input_padding().lower_size().negate(); }
-    tensor output_offset() const { return output_padding().lower_size(); }
-    float padding_filling_value() const { return input_padding().filling_value(); }
+    tensor input_offset() const { return input_padding.lower_size().negate(); }
+    tensor output_offset() const { return output_padding.lower_size(); }
+    float padding_filling_value() const { return input_padding.filling_value(); }
+
+    const primitive_type_id type;
+    const primitive_id id;
+
+    fixed_size_vector_ref input;
+    padding input_padding;
+    padding output_padding;
 
 protected:
     struct primitive_id_arr
@@ -240,14 +279,9 @@ protected:
 
     };
 
-    const primitive_type_id _type;
-    const primitive_id _id;
-
     primitive_id_arr _input;
-    padding _input_padding;
-    padding _output_padding;
 
-    virtual std::vector<primitive_id> get_dependencies() const { return{}; }
+    virtual std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const { return{}; }
 };
 
 /// @brief base class for all primitives implementations.
@@ -259,11 +293,11 @@ public:
     const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const override
     {
         //update common dto fields
-        _dto.id = _id.c_str();
-        _dto.type = _type;
+        _dto.id = id.c_str();
+        _dto.type = type;
         _dto.input = _input.ref();
-        _dto.input_padding = _input_padding;
-        _dto.output_padding = _output_padding;
+        _dto.input_padding = input_padding;
+        _dto.output_padding = output_padding;
 
         //call abstract method to update primitive-specific fields
         update_dto(_dto);

@@ -16,23 +16,28 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/input_layout.hpp"
-#include "primitive_arg.h"
-#include <memory>
+#include "api/primitives/data.hpp"
+#include "primitive_inst.h"
 #include "topology_impl.h"
 
 namespace cldnn
 {
-struct memory_impl;
-class input_layout_arg : public primitive_arg_base<input_layout>
+
+template <>
+class typed_primitive_inst<data> : public typed_primitive_inst_base<data>
 {
+    using parent = typed_primitive_inst_base<data>;
+
 public:
-    static layout calc_output_layout(const topology_map&, std::shared_ptr<const input_layout> desc)
+    static layout calc_output_layout(const topology_map&, std::shared_ptr<const data> desc)
     {
-        return desc->layout;
+        return desc->mem.get_layout();
     }
 
-    input_layout_arg(network_impl& network, std::shared_ptr<const input_layout> desc);
-    void set_data(memory_impl* mem);
+public:
+    typed_primitive_inst(network_impl& network, std::shared_ptr<const data> desc);
 };
+
+using data_inst = typed_primitive_inst<data>;
+
 }

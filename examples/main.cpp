@@ -15,6 +15,7 @@
 */
 
 #include "common/common_tools.h"
+#include "neural_memory.h"
 #include "api/memory.hpp"
 
 #include <boost/filesystem.hpp>
@@ -81,7 +82,7 @@ namespace
     };
 }
 
-// ADL-enabled parser / validators for some command-line options.
+//// ADL-enabled parser / validators for some command-line options.
 namespace cldnn
 {
     /// int type (to properly order overloads).
@@ -108,6 +109,8 @@ namespace cldnn
             throw bpo::invalid_option_value(value);
     }
 
+namespace backward_comp
+{
     /// ADL-accessible validation/parsing route for cldnn::neural_memory::format::type enum.
     ///
     /// This function is specific to examples main command-line parser. Please do not move it to any
@@ -120,7 +123,7 @@ namespace cldnn
     /// @param values           Input strings representing tokens with values for specific outVar variable.
     ///
     /// @exception boost::program_options::validation_error Parsing/validation failed on value of an option.
-    void validate(boost::any& outVar, const std::vector<std::string>& values, cldnn::neural_memory::format::type*, int)
+    void validate(boost::any& outVar, const std::vector<std::string>& values, cldnn::backward_comp::neural_memory::format::type*, int)
     {
         namespace bpo = boost::program_options;
 
@@ -131,7 +134,7 @@ namespace cldnn
             std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
         // Underlying type of cldnn::neural_memory::format::type.
-        using format_ut = std::underlying_type_t<cldnn::neural_memory::format::type>;
+        using format_ut = std::underlying_type_t<backward_comp::neural_memory::format::type>;
         // Type used for conversion/lexical_cast for cldnn::neural_memory::format::type (to avoid problems with char types
         // in lexical_cast).
         using format_pt = std::common_type_t<format_ut, unsigned>;
@@ -139,7 +142,7 @@ namespace cldnn
         {
             try
             {
-                outVar = boost::any(static_cast<cldnn::neural_memory::format::type>(
+                outVar = boost::any(static_cast<backward_comp::neural_memory::format::type>(
                     boost::numeric_cast<format_ut>(boost::lexical_cast<format_pt>(value))));
             }
             catch (...)
@@ -150,6 +153,7 @@ namespace cldnn
         else
             throw bpo::invalid_option_value(value);
     }
+} //namespace backward_comp
 } // namespace cldnn
 
   /// Prepares command-line options for current application.
@@ -212,7 +216,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
     // Conversions options.
     bpo::options_description weights_conv_cmdline_options("Weights conversion options");
     weights_conv_cmdline_options.add_options()
-        ("convert", bpo::value<cldnn::neural_memory::format::type>()->value_name("<format-type>"),
+        ("convert", bpo::value<cldnn::backward_comp::neural_memory::format::type>()->value_name("<format-type>"),
             "Convert weights of a neural network to given format (<format-type> represents numeric value of "
             "cldnn::neural_memory::format enum).")
         ("convert_filter", bpo::value<std::string>()->value_name("<filter>"),
@@ -279,7 +283,7 @@ int main(int argc, char* argv[])
     extern void alexnet(const execution_params &ep);
     extern void vgg16(const execution_params &ep);
     extern void googlenet_v1(const execution_params &ep);
-    extern void convert_weights(cldnn::neural_memory::format::type, std::string);
+    extern void convert_weights(cldnn::data_types dt, cldnn::format::type format, std::string);
 
 
     set_executable_info(argc, argv); // Must be set before using get_executable_info().
@@ -327,7 +331,11 @@ int main(int argc, char* argv[])
             auto convert_filter = parsed_args.count("convert_filter")
                 ? parsed_args["convert_filter"].as<std::string>()
                 : "";
-            convert_weights(parsed_args["convert"].as<cldnn::neural_memory::format::type>(), convert_filter);
+            auto format = parsed_args["convert"].as<cldnn::backward_comp::neural_memory::format::type>();
+            convert_weights(
+                cldnn::backward_comp::neural_memory::to_data_type(format),
+                cldnn::backward_comp::neural_memory::to_tensor_format(format),
+                convert_filter);
             return 0;
         }
 

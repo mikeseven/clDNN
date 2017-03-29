@@ -15,6 +15,8 @@
 */
 
 #include "file.h"
+#include "neural_memory.h"
+
 #include <fstream>
 #include <iostream>
 #include <nmmintrin.h>
@@ -22,7 +24,9 @@
 #include <boost/filesystem.hpp>
 #include <api/primitives/data.hpp>
 
-using memory = cldnn::neural_memory;
+using memory = cldnn::backward_comp::neural_memory;
+using cldnn::backward_comp::argument;
+
 #define CRC_INIT 0xbaba7007
 
 namespace {
@@ -267,8 +271,8 @@ cldnn::data file::create(file::arguments arg) {
 void file::serialize(const cldnn::memory& data, const std::string& name)
 {
     // TODO: start using boost
-    auto size = data.argument().size;
-    auto format = data.argument().format;
+    auto size = argument(data).size;
+    auto format = argument(data).format;
     boost::filesystem::path dir_path(std::string("weights_format_num") + std::to_string((uint32_t)format));
     boost::filesystem::create_directories(dir_path);
     dir_path /= boost::filesystem::path(name).filename();

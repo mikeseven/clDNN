@@ -60,7 +60,7 @@ struct mean_substract : public primitive_base<mean_substract, CLDNN_PRIMITIVE_DE
     primitive_id mean;
 
 protected:
-    std::vector<primitive_id> get_dependencies() const override { return{ mean }; }
+    std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override { return{ mean }; }
 
     void update_dto(dto& dto) const override
     {

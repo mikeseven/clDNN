@@ -18,47 +18,6 @@
 #pragma once
 #include "api/engine.hpp"
 #include "api/memory.hpp"
-#include "implementation_map.h"
-#include "primitive_arg.h"
-#include "reorder_arg.h"
-#include "convolution_arg.h"
-#include "fully_connected_arg.h"
-#include "activation_arg.h"
-#include "depth_concatenate_arg.h"
-#include "mean_substract_arg.h"
-#include "eltwise_arg.h"
-#include "normalization_arg.h"
-#include "pooling_arg.h"
-#include "softmax_arg.h"
-#include "batch_norm_arg.h"
-#include "scale_arg.h"
-#include "simpler_nms_arg.h"
-#include "roi_pooling_arg.h"
-#include "prior_box_arg.h"
+#include "primitive_inst.h"
 
-namespace neural
-{
-    using memory = cldnn::neural_memory;
-    template<typename primitive_kind> using implementation_map = cldnn::implementation_map<primitive_kind>;
-    using is_an_implementation = cldnn::primitive_impl;
-    using reorder = cldnn::reorder_arg;
-    using convolution = cldnn::convolution_arg;
-    using fully_connected = cldnn::fully_connected_arg;
-    using relu = cldnn::activation_arg;
-    using depth_concatenate = cldnn::depth_concatenate_arg;
-    using mean_substract = cldnn::mean_substract_arg;
-    using eltwise = cldnn::eltwise_arg;
-    namespace normalization
-    {
-        using response = cldnn::normalization_arg;
-        using softmax = cldnn::softmax_arg;
-        using batch_norm = cldnn::batch_norm_arg;
-    }
-    using pooling = cldnn::pooling_arg;
-    using scale = cldnn::scale_arg;
-    using simpler_nms = cldnn::simpler_nms_arg;
-    using roi_pooling = cldnn::roi_pooling_arg;
-	using prior_box = cldnn::prior_box_arg;
 
-    template<typename T> using vector = cldnn::tensor;
-}

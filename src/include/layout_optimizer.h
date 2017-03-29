@@ -21,8 +21,8 @@
 #include "memory_impl.h"
 #include "meta_utils.h"
 
-#include "convolution_arg.h"
-#include "fully_connected_arg.h"
+#include "api/primitives/convolution.hpp"
+#include "api/primitives/fully_connected.hpp"
 
 #include <boost/optional.hpp>
 
@@ -147,14 +147,14 @@ public:
                                       std::shared_ptr<const T> user,
                                       boost::optional<layout> user_layout = boost::optional<layout>())
     {
-        auto reorder = get_reorder(data_prim->mem.get_layout(), data_prim->id(), type, user, user_layout);
+        auto reorder = get_reorder(data_prim->mem.get_layout(), data_prim->id, type, user, user_layout);
         if (reorder.first)
         {
             _topology->add(data_prim);
             if (!reorder.second) //returned reorder is a new primitive (i.e. not cached), add it to topology and as an output
             {
                 _topology->add(reorder.first);
-                _outputs.push_back(reorder.first->id());
+                _outputs.push_back(reorder.first->id);
             }
         }
 

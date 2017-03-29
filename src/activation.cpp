@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "activation_arg.h"
+#include "activation_inst.h"
 #include "primitive_type_base.h"
 #include <memory>
 
@@ -22,22 +22,22 @@ namespace cldnn
 {
 primitive_type_id activation_type_id()
 {
-    static primitive_type_base<activation, activation_arg> instance;
+    static primitive_type_base<activation, activation_inst> instance;
     return &instance;
 }
 
-layout activation_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const activation> desc)
+layout activation_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const activation> desc)
 {
-    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto result = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
+    auto result = input_desc->type->calc_output_layout(topology_map, input_desc);
     return result;
 }
 
-activation_arg::activation_arg(network_impl& network, std::shared_ptr<const activation> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+activation_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const activation> desc)
+    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
 {
-    auto input_arg  = input_memory(0).argument();
-    auto output_arg = output_memory().argument();
+    auto input_arg  = input_memory().get_layout();
+    auto output_arg = output_memory().get_layout();
     
     if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("ReLU input/output number of dimension does not match.");
 }

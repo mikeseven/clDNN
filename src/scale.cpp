@@ -14,22 +14,22 @@
 // limitations under the License.
 */
 
-#include "scale_arg.h"
+#include "scale_inst.h"
 #include "primitive_type_base.h"
 #include "network_impl.h"
 
 namespace cldnn
 {
-    primitive_type_id scale_type_id()
-    {
-        static primitive_type_base<scale, scale_arg> instance;
-        return &instance;
-    }
+primitive_type_id scale_type_id()
+{
+    static primitive_type_base<scale, scale_inst> instance;
+    return &instance;
+}
 
-    layout scale_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const scale> desc)
-    {
-        auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-        auto result = input_desc->type()->calc_output_layout(topology_map, input_desc);
+layout scale_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const scale> desc)
+{
+    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
+    auto result = input_desc->type->calc_output_layout(topology_map, input_desc);
         auto scale_desc = topology_map.at(desc->scale_input)->primitive_desc;
         auto scale_sizes = scale_desc->type()->calc_output_layout(topology_map, scale_desc).size.transform(format::yxfb, 1);
         auto input_sizes = result.size.transform(format::yxfb, 1);
@@ -45,52 +45,37 @@ namespace cldnn
         if ((scale_y_size != input_y_size) && (scale_y_size != 1))
             throw std::runtime_error("Y dimension mismatch between input and scale input!");
             
-        return result;
-    }
+    return result;
+}
 
-    scale_arg::scale_arg(network_impl& network, std::shared_ptr<const scale> desc)
-        :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+scale_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const scale> desc)
+    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+{
+    auto scale_format = scale_memory().get_layout().size.format;
+
+    auto scale_batch_size = scale_memory().get_layout().size.batch[0];
+    auto scale_feature_size = scale_memory().get_layout().size.feature[0];
+
+    auto input_batch_size = input_memory().get_layout().size.batch[0];
+    auto input_feature_size = input_memory().get_layout().size.feature[0];
+
+    if((scale_batch_size != input_batch_size) && (scale_batch_size != 1))
+        throw std::runtime_error("Batch dimension mismatch between input and scale input!");
+    if ((scale_feature_size != input_feature_size) && (scale_feature_size != 1))
+        throw std::runtime_error("Feature dimension mismatch between input and scale input!");
+
+    if (bias_term())
     {
-        auto scale_format = scale_memory().get_layout().size.format;
+        if (desc->bias.empty()) throw std::runtime_error("Bias_term parameter set to true, but no bias data provided!");
+        auto bias_format = bias_memory().get_layout().size.format;
+        auto bias_raw_sizes = bias_memory().get_layout().size.raw;
 
-        auto scale_batch_size = scale_memory().get_layout().size.batch[0];
-        auto scale_feature_size = scale_memory().get_layout().size.feature[0];
+        if (scale_format != bias_format) throw std::runtime_error("Scale input format do not match bias format!");
 
-        auto input_batch_size = input_memory(0).get_layout().size.batch[0];
-        auto input_feature_size = input_memory(0).get_layout().size.feature[0];
-
-        if((scale_batch_size != input_batch_size) && (scale_batch_size != 1))
-            throw std::runtime_error("Batch dimension mismatch between input and scale input!");
-        if ((scale_feature_size != input_feature_size) && (scale_feature_size != 1))
-            throw std::runtime_error("Feature dimension mismatch between input and scale input!");
-
-        if (bias_term())
+        for (size_t i = 0; i < bias_memory().get_layout().size.raw.size(); ++i)
         {
-            if (desc->bias.empty()) throw std::runtime_error("Bias_term parameter set to true, but no bias data provided!");
-            auto bias_format = bias_memory().get_layout().size.format;
-            auto bias_raw_sizes = bias_memory().get_layout().size.raw;
-
-            if (scale_format != bias_format) throw std::runtime_error("Scale input format do not match bias format!");
-
-            for (size_t i = 0; i < bias_memory().get_layout().size.raw.size(); ++i)
-            {
-                if (scale_memory().get_layout().size.raw[i] != bias_raw_sizes[i]) throw std::runtime_error("Scale input size do not match bias size!");
-            }
+            if (scale_memory().get_layout().size.raw[i] != bias_raw_sizes[i]) throw std::runtime_error("Scale input size do not match bias size!");
         }
     }
-
-    const memory& scale_arg::scale_memory() const
-    {
-        return _network.get_primitive(argument.scale_input)->output_memory();
-    }
-
-    const bool& scale_arg::bias_term() const
-    {
-        return argument.bias_term;
-    }
-
-    const memory& scale_arg::bias_memory() const
-    {
-        return _network.get_primitive(argument.bias)->output_memory();
-    }
+}
 }

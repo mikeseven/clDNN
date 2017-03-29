@@ -22,7 +22,7 @@
 #include "primitive_type.h"
 #include "network_impl.h"
 #include "memory_impl.h"
-#include "primitive_arg.h"
+#include "primitive_inst.h"
 
 #define SHOULD_NOT_BE_NULL(arg, msg_prefix) \
     if(arg == nullptr) \

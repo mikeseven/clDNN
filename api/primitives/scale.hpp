@@ -102,7 +102,7 @@ struct scale : public primitive_base<scale, CLDNN_PRIMITIVE_DESC(scale)>
     primitive_id bias;
 
 protected:
-    std::vector<primitive_id> get_dependencies() const override
+    std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override
     { 
         if (bias.empty())
             return{ scale_input };

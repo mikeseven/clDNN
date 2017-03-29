@@ -21,7 +21,7 @@
 #include "engine_impl.h"
 #include "topology_impl.h"
 #include "refcounted_obj.h"
-#include "primitive_arg.h"
+#include "primitive_inst.h"
 #include <map>
 #include <vector>
 #include <unordered_map>
@@ -44,16 +44,16 @@ public:
     void execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events);
 
     // Implementation specific calls
-    std::shared_ptr<const primitive_arg> get_primitive(const primitive_id& id);
+    std::shared_ptr<const primitive_inst> get_primitive(const primitive_id& id);
     const refcounted_obj_ptr<event_impl>& get_primitive_event(const primitive_id& id) const { return _events.at(id); }
-    std::vector<std::shared_ptr<const primitive_arg>> get_primitives(const std::vector<primitive_id>& ids);
-    refcounted_obj_ptr<event_impl> execute_primitive(const std::shared_ptr<const primitive_arg>& primitive, const std::vector<refcounted_obj_ptr<event_impl>>& events);
+    std::vector<std::shared_ptr<const primitive_inst>> get_primitives(const std::vector<primitive_id>& ids);
+    refcounted_obj_ptr<event_impl> execute_primitive(const std::shared_ptr<const primitive_inst>& primitive, const std::vector<refcounted_obj_ptr<event_impl>>& events);
 
 private:
     const refcounted_obj_ptr<engine_impl> _engine;
     const refcounted_obj_ptr<topology_impl> _topology;
     std::vector<primitive_id> _output_ids;
-    std::map<primitive_id, std::shared_ptr<const primitive_arg>> _primitives;
+    std::map<primitive_id, std::shared_ptr<const primitive_inst>> _primitives;
     std::map<primitive_id, bool> _input_names;
     std::unordered_map<primitive_id, refcounted_obj_ptr<event_impl>> _events;
 };

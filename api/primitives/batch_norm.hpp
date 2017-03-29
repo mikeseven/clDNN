@@ -81,13 +81,14 @@ struct batch_norm : public primitive_base<batch_norm, CLDNN_PRIMITIVE_DESC(batch
     float epsilon;
 
 protected:
-    std::vector<primitive_id> get_dependencies() const override { return{ mean, variance }; }
+    std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override { return{ mean, variance }; }
 
     void update_dto(dto& dto) const override
     {
         dto.mean = mean.c_str();
         dto.variance = variance.c_str();
         dto.use_global_stats = use_global_stats;
+        dto.epsilon = epsilon;
         dto.epsilon = epsilon;
     }
 };

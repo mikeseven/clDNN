@@ -17,24 +17,42 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "api/primitives/deconvolution.hpp"
-#include "primitive_arg.h"
-#include <memory>
+#include "primitive_inst.h"
 #include "topology_impl.h"
 
 namespace cldnn
 {
-class deconvolution_arg : public primitive_arg_base<deconvolution>
+
+template <>
+class typed_primitive_inst<deconvolution> : public typed_primitive_inst_base<deconvolution>
 {
+    using parent = typed_primitive_inst_base<deconvolution>;
+
 public:
     static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const deconvolution> desc);
 
-    deconvolution_arg(network_impl& network, std::shared_ptr<const deconvolution> desc);
+public:
+    typed_primitive_inst(network_impl& network, std::shared_ptr<const deconvolution> desc);
 
-    const memory& weights_memory(size_t index) const;
+    const memory& input_memory() const { return dep_memory(0); }
 
-    const memory& bias_memory(size_t index) const;
-private:
-    std::vector<std::shared_ptr<const primitive_arg>> _weights;
-    std::vector<std::shared_ptr<const primitive_arg>> _biases;
+    const memory& weights_memory(size_t index) const
+    {
+        if (index >= argument.weights.size())
+            throw std::range_error("weights offset too big");
+
+        return dep_memory(1 + index);
+    }
+
+    const memory& bias_memory(size_t index) const
+    {
+        if (index >= argument.bias.size())
+            throw std::range_error("bias offset too big");
+
+        return dep_memory(1 + argument.weights.size() + index);
+    }
 };
+
+using deconvolution_inst = typed_primitive_inst<deconvolution>;
+
 }

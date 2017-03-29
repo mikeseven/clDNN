@@ -56,7 +56,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         break;
 
     case data_type::input: //convolution input
-        if (neural_memory::traits(current_layout).dimension != 4)
+        if (current_layout.size.format.dimension() != 4)
             throw std::runtime_error("Convolution input not 4-dimensional?");
 
         if (expected_data_type != data_types::f16 || batch < 32)
@@ -95,7 +95,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
 
     case data_type::weights: //fc weights
     {
-        auto dimensions = neural_memory::traits(current_layout).dimension;
+        auto dimensions = current_layout.size.format.dimension();
         if (dimensions == 4)
         {
             if (batch > 1 && expected_data_type != data_types::f16 && batch % 8 == 0)

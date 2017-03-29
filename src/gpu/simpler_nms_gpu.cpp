@@ -14,14 +14,14 @@
 // limitations under the License.
 */
 
-#include "neural_impl.h"
-#include "engine_impl.h"
-#include "network_impl.h"
-#include "implementation_map.h"
+#include "simpler_nms_inst.h"
 #include "kernel.h"
 #include "kd_selector.h"
-#include "api/primitives/simpler_nms.hpp"
+#include "network_impl.h"
+#include "implementation_map.h"
 #include "math_utils.h"
+
+#include "api/primitives/simpler_nms.hpp"
 
 #include <algorithm>
 #include <string>
@@ -68,7 +68,7 @@ struct simpler_nms_roi_t
 struct simpler_nms_delta_t { float shift_x, shift_y, log_w, log_h; };
 struct simpler_nms_proposal_t { simpler_nms_roi_t roi; float confidence; size_t ord; };
         
-simpler_nms_roi_t simpler_nms_gen_bbox( const anchor& box,
+simpler_nms_roi_t simpler_nms_gen_bbox( const simpler_nms_inst::anchor& box,
                                         const simpler_nms_delta_t& delta,
                                         int anchor_shift_x,
                                         int anchor_shift_y)
@@ -179,8 +179,9 @@ struct kd_default_value_selector<neural::gpu::engine_info_internal::configuratio
     static constexpr neural::gpu::engine_info_internal::configurations value = neural::gpu::engine_info_internal::configurations::GT_UNKNOWN;
 };
 
-struct simpler_nms_gpu : is_an_implementation {
-    const simpler_nms& _outer;
+struct simpler_nms_gpu : primitive_impl
+{
+    const simpler_nms_inst& _outer;
     gpu::engine_info_internal _engine_info;
 
     struct kernel_data 
@@ -192,20 +193,20 @@ struct simpler_nms_gpu : is_an_implementation {
     } _kernel_data;
     gpu::kernel _kernel;
 
-    static kd_selector_t<kernel_data, simpler_nms, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
+    static kd_selector_t<kernel_data, simpler_nms_inst, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
 
-    simpler_nms_gpu(const simpler_nms& outer)
+    simpler_nms_gpu(const simpler_nms_inst& outer)
         : _outer(outer),
         _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info()),
-        _kernel_data(ks.get_kernel(outer, outer.input_memory(0).argument().format, outer.input_memory(0).argument().size.batch[0], _engine_info.architecture, _engine_info.configuration)),
+        _kernel_data(ks.get_kernel(outer, outer.dep_memory(0).get_layout().data_type, outer.dep_memory(0).get_layout().size.format, outer.dep_memory(0).get_layout().size.batch[0], _engine_info.architecture, _engine_info.configuration)),
         _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data))
     {}
 
-    static kernel_data set_default(const simpler_nms& outer)
+    static kernel_data set_default(const simpler_nms_inst& outer)
     {
         kernel_data kd;
 
-		cldnn::data_types input_dt = outer.input_memory(cldnn::simpler_nms_arg::cls_scores_index).get_layout().data_type;
+		cldnn::data_types input_dt = outer.dep_memory(simpler_nms_inst::cls_scores_index).get_layout().data_type;
 
 		kd.fp16_unit_used = (input_dt == cldnn::data_types::f16);
 
@@ -224,10 +225,10 @@ struct simpler_nms_gpu : is_an_implementation {
         return kd;
     }
 
-    static gpu::jit_constants get_jit_constants(const simpler_nms& outer, const kernel_data& data)
+    static gpu::jit_constants get_jit_constants(const simpler_nms_inst& outer, const kernel_data& data)
     {   
         gpu::jit_constants foo{
-            gpu::make_jit_constant("INPUT", outer.input_memory(0).argument().size),
+            gpu::make_jit_constant("INPUT", outer.dep_memory(0).get_layout().size),
 			gpu::make_jit_constant("UNIT_TYPE", data.fp16_unit_used ? "half" : "float")
         };
 
@@ -259,13 +260,13 @@ struct simpler_nms_gpu : is_an_implementation {
     template<typename dtype>
     void execute()
     {
-        const std::vector<anchor>& anchors = _outer.get_anchors();
+        const std::vector<simpler_nms_inst::anchor>& anchors = _outer.get_anchors();
 
         size_t anchors_num = anchors.size();
       
-        const cldnn::memory& cls_scores = _outer.input_memory(cldnn::simpler_nms_arg::cls_scores_index);  
-        const cldnn::memory& bbox_pred  = _outer.input_memory(cldnn::simpler_nms_arg::bbox_pred_index);  
-		const cldnn::memory& image_info = _outer.input_memory(cldnn::simpler_nms_arg::image_info_index);
+        const memory& cls_scores = _outer.dep_memory(simpler_nms_inst::cls_scores_index);
+        const memory& bbox_pred  = _outer.dep_memory(simpler_nms_inst::bbox_pred_index);
+		const memory& image_info = _outer.dep_memory(simpler_nms_inst::image_info_index);
 
         // feat map sizes
         int fm_h = cls_scores.get_layout().size.sizes()[2];
@@ -277,9 +278,9 @@ struct simpler_nms_gpu : is_an_implementation {
         pointer<dtype> image_info_ptr = image_info.pointer<dtype>();
         const dtype* image_info_mem = image_info_ptr.data();
 
-        int img_w = (int)(float_read_helper(image_info_mem + cldnn::simpler_nms_arg::image_info_width_index) + EPSILON);
-        int img_h = (int)(float_read_helper(image_info_mem + cldnn::simpler_nms_arg::image_info_height_index) + EPSILON);
-		int img_z = (int)(float_read_helper(image_info_mem + cldnn::simpler_nms_arg::image_info_depth_index) + EPSILON);
+        int img_w = (int)(float_read_helper(image_info_mem + simpler_nms_inst::image_info_width_index) + EPSILON);
+        int img_h = (int)(float_read_helper(image_info_mem + simpler_nms_inst::image_info_height_index) + EPSILON);
+		int img_z = (int)(float_read_helper(image_info_mem + simpler_nms_inst::image_info_depth_index) + EPSILON);
 
         int scaled_min_bbox_size = _outer.argument.min_bbox_size * img_z;
 
@@ -327,9 +328,9 @@ struct simpler_nms_gpu : is_an_implementation {
         }
 
         sort_and_keep_n_items(sorted_proposals_confidence, _outer.argument.pre_nms_topn);
-        std::vector< simpler_nms_roi_t > res = simpler_nms_perform_nms(sorted_proposals_confidence, _outer.argument.iou_threshold, _outer.argument.post_nms_topn);
+        std::vector<simpler_nms_roi_t> res = simpler_nms_perform_nms(sorted_proposals_confidence, _outer.argument.iou_threshold, _outer.argument.post_nms_topn);
 
-        const cldnn::memory& output = _outer.output_memory();
+        const memory& output = _outer.output_memory();
         
         pointer<dtype> output_ptr = output.pointer<dtype>();
         dtype* top_data = output_ptr.data();        
@@ -346,7 +347,7 @@ struct simpler_nms_gpu : is_an_implementation {
         }
     }
 
-    cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
+    refcounted_obj_ptr<event_impl> execute(const std::vector<refcounted_obj_ptr<event_impl>>& events) override
     {
 		for (auto& a : events) {
 			a->wait();
@@ -359,13 +360,13 @@ struct simpler_nms_gpu : is_an_implementation {
             execute<data_type_to_type<data_types::f32>::type>();
         }
        
-        cldnn::event_impl* ev = _outer.get_network().get_engine().get()->create_user_event();
+        event_impl* ev = _outer.get_network().get_engine().get()->create_user_event();
         ev->set();
 
         return ev;
     }
 
-    static is_an_implementation *create(simpler_nms &arg) 
+    static primitive_impl* create(simpler_nms_inst &arg)
     {        
         return new simpler_nms_gpu(arg);
     }
@@ -373,9 +374,9 @@ struct simpler_nms_gpu : is_an_implementation {
 
 
 
-kd_selector_t<simpler_nms_gpu::kernel_data, simpler_nms, neural::memory::format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> simpler_nms_gpu::ks = {
-    { std::make_tuple(memory::format::bfyx_f32, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
-    { std::make_tuple(memory::format::bfyx_f16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default }
+kd_selector_t<simpler_nms_gpu::kernel_data, simpler_nms_inst, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> simpler_nms_gpu::ks = {
+    { std::make_tuple(data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
+    { std::make_tuple(data_types::f16, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default }
 };
 
 namespace
@@ -385,8 +386,8 @@ namespace
     {
         attach()
         {
-            implementation_map<simpler_nms>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f32), simpler_nms_gpu::create);
-            implementation_map<simpler_nms>::add(std::make_tuple(cldnn::engine_types::ocl, memory::format::bfyx_f16), simpler_nms_gpu::create);
+            implementation_map<simpler_nms_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), simpler_nms_gpu::create);
+            implementation_map<simpler_nms_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), simpler_nms_gpu::create);
         }
 
         ~attach()
@@ -394,12 +395,6 @@ namespace
         }
     };
 
-#ifdef __GNUC__
-    __attribute__((visibility("default")))
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
     attach attach_impl;
-
 }
-}
+} //namespace neural

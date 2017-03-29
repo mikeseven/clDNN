@@ -14,23 +14,25 @@
 // limitations under the License.
 */
 
-#include "neural_impl.h"
+#include "mean_substract_inst.h"
+#include "kernel.h"
 #include "network_impl.h"
 #include "implementation_map.h"
-#include "kernel.h"
 
 #include <algorithm>
 #include <stdexcept>
 #include <string>
+
+using namespace cldnn;
 
 namespace neural
 {
 // Kernel names.
 static const std::string kernel_name = "mean_subtract_gpu";
 
-struct mean_subtract_gpu : is_an_implementation
+struct mean_subtract_gpu : primitive_impl
 {
-    const mean_substract& _outer;
+    const mean_substract_inst& _outer;
     struct kernel_data
     {
         size_t gws0;
@@ -41,16 +43,16 @@ struct mean_subtract_gpu : is_an_implementation
     } _kernel_data;
     gpu::kernel _kernel;
 
-    mean_subtract_gpu(const mean_substract& outer)
+    mean_subtract_gpu(const mean_substract_inst& outer)
         : _outer(outer),
         _kernel_data(set_kernel_data(_outer)),
         _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
     {}
 
-    static kernel_data set_kernel_data(const mean_substract& outer)
+    static kernel_data set_kernel_data(const mean_substract_inst& outer)
     {
-        const auto& input_mem  = outer.input_memory(0);  // input
-        const auto& mean_mem   = outer.input_memory(1);  // mean
+        const auto& input_mem  = outer.input_memory();  // input
+        const auto& mean_mem   = outer.mean_memory();  // mean
         const auto& output_mem = outer.output_memory(); // output
 
         kernel_data kd;
@@ -68,32 +70,16 @@ struct mean_subtract_gpu : is_an_implementation
         }
 
         // Checking for supported mean formats.
-        if (kd.fp16_unit_used)
+        switch (mean_mem.get_layout().size.format)
         {
-            switch (mean_mem.argument().format)
-            {
-            case memory::format::yxfb_f16:
-                break;
-            case memory::format::bfyx_f16:
-                kd.bfyx_mean_format_used = true;
-                break;
+        case format::yxfb:
+            break;
+        case format::bfyx:
+            kd.bfyx_mean_format_used = true;
+            break;
 
-            default:
-                throw std::runtime_error("mean_subtract mean isn't yxfb_f16 or bfyx_f16 format");
-            }
-        }
-        else {
-            switch (mean_mem.argument().format)
-            {
-            case memory::format::yxfb_f32:
-                break;
-            case memory::format::bfyx_f32:
-                kd.bfyx_mean_format_used = true;
-                break;
-
-            default:
-                throw std::runtime_error("mean_subtract mean isn't yxfb_f32 or bfyx_f32 format");
-            }
+        default:
+            throw std::runtime_error("mean_subtract mean isn't yxfb or bfyx format");
         }
 
         kd.kernel_name = kernel_name;
@@ -101,7 +87,7 @@ struct mean_subtract_gpu : is_an_implementation
         return kd;
     }
 
-    static gpu::jit_constants get_jit_constants(const mean_substract& outer, const kernel_data& data)
+    static gpu::jit_constants get_jit_constants(const mean_substract_inst& outer, const kernel_data& data)
     {
         auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
 
@@ -109,8 +95,8 @@ struct mean_subtract_gpu : is_an_implementation
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
         return {
-            gpu::make_jit_constant("INPUT",                 outer.input_memory(0).argument().size),
-            gpu::make_jit_constant("MEAN" ,                 outer.input_memory(1).argument().size),
+            gpu::make_jit_constant("INPUT",                 outer.input_memory().get_layout().size),
+            gpu::make_jit_constant("MEAN" ,                 outer.mean_memory().get_layout().size),
             gpu::make_jit_constant("FP16_SUPPORTED",        static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",        static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",             data.fp16_unit_used ? "half" : "float"),
@@ -122,15 +108,15 @@ struct mean_subtract_gpu : is_an_implementation
     {
         const auto& kd    = _kernel_data;
 
-        const auto& input_mem  = _outer.input_memory(0);  // input
-        const auto& mean_mem   = _outer.input_memory(1);  // mean
+        const auto& input_mem  = _outer.input_memory();  // input
+        const auto& mean_mem   = _outer.mean_memory();  // mean
         const auto& output_mem = _outer.output_memory(); // output
 
         // mean_mem memory in bfyx or yxfb.
         return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>({kd.gws0, kd.lws0}, events, input_mem, output_mem, mean_mem);
     }
 
-    static is_an_implementation *create(const mean_substract& outer) { return new mean_subtract_gpu(outer); }
+    static primitive_impl* create(const mean_substract_inst& outer) { return new mean_subtract_gpu(outer); }
 
 };
 
@@ -139,10 +125,10 @@ namespace {
         attach() {
             auto val_fw = mean_subtract_gpu::create;
 
-            auto key_fw = std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f32);
-            implementation_map<mean_substract>::add(key_fw, val_fw);
-            key_fw = std::make_tuple(cldnn::engine_types::ocl, memory::format::yxfb_f16);
-            implementation_map<mean_substract>::add(key_fw, val_fw);
+            auto key_fw = std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb);
+            implementation_map<mean_substract_inst>::add(key_fw, val_fw);
+            key_fw = std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb);
+            implementation_map<mean_substract_inst>::add(key_fw, val_fw);
         }
         ~attach() {}
     };

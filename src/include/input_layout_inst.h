@@ -16,25 +16,31 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/convolution.hpp"
-#include "primitive_arg.h"
-#include <memory>
+#include "api/primitives/input_layout.hpp"
+#include "primitive_inst.h"
 #include "topology_impl.h"
 
 namespace cldnn
 {
-class convolution_arg : public primitive_arg_base<convolution>
+struct memory_impl;
+
+template <>
+class typed_primitive_inst<input_layout> : public typed_primitive_inst_base<input_layout>
 {
+    using parent = typed_primitive_inst_base<input_layout>;
+
 public:
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const convolution> desc);
+    static layout calc_output_layout(const topology_map&, std::shared_ptr<const input_layout> desc)
+    {
+        return desc->layout;
+    }
 
-    convolution_arg(network_impl& network, std::shared_ptr<const convolution> desc);
+public:
+    typed_primitive_inst(network_impl& network, std::shared_ptr<const input_layout> desc);
 
-    const memory& weights_memory(size_t index) const;
-
-    const memory& bias_memory(size_t index) const;
-private:
-    std::vector<std::shared_ptr<const primitive_arg>> _weights;
-    std::vector<std::shared_ptr<const primitive_arg>> _biases;
+    void set_data(memory_impl* mem);
 };
+
+using input_layout_inst = typed_primitive_inst<input_layout>;
+
 }

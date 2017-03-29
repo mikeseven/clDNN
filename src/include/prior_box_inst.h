@@ -16,18 +16,27 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/depth_concatenate.hpp"
-#include "primitive_arg.h"
-#include <memory>
+#include "api/primitives/prior_box.hpp"
+#include "primitive_inst.h"
 #include "topology_impl.h"
 
 namespace cldnn
 {
-class depth_concatenate_arg : public primitive_arg_base<depth_concatenate>
-{
-public:
-    depth_concatenate_arg(network_impl& network, std::shared_ptr<const depth_concatenate> desc);
 
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const depth_concatenate> desc);
+template <>
+class typed_primitive_inst<prior_box> : public typed_primitive_inst_base<prior_box>
+{
+    using parent = typed_primitive_inst_base<prior_box>;
+
+public:
+    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const prior_box> desc);
+
+public:
+    typed_primitive_inst(network_impl& network, std::shared_ptr<const prior_box> desc);
+
+    const memory& input_memory() const { return dep_memory(0); }
 };
+
+using prior_box_inst = typed_primitive_inst<prior_box>;
+
 }

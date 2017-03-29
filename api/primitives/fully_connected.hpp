@@ -79,7 +79,7 @@ struct fully_connected : public primitive_base<fully_connected, CLDNN_PRIMITIVE_
     float activation_negative_slope;
 
 protected:
-    std::vector<primitive_id> get_dependencies() const override { return{ weights, bias }; }
+    std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override { return{ weights, bias }; }
 
     void update_dto(dto& dto) const override
     {

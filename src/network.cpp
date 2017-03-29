@@ -22,7 +22,7 @@
 #include "event_impl.h"
 #include "network_builder.h"
 #include "primitive_type.h"
-#include "input_layout_arg.h"
+#include "input_layout_inst.h"
 #include <algorithm>
 #include "gpu/kernel.h"
 
@@ -85,8 +85,8 @@ void network_impl::set_input_data(const primitive_id& id, memory_impl* data)
     auto& primitive = _primitives.at(id);
     if (primitive->type() != input_layout::type_id()) throw std::invalid_argument("primitive " + id + " is not an input");
 
-    auto input_c = std::static_pointer_cast<const input_layout_arg>(primitive);
-    auto input = std::const_pointer_cast<input_layout_arg>(input_c);
+    auto input_c = std::static_pointer_cast<const input_layout_inst>(primitive);
+    auto input = std::const_pointer_cast<input_layout_inst>(input_c);
 
     //Wait for previous execution completion
     reset_execution(true);
@@ -115,7 +115,7 @@ void network_impl::execute(const std::vector<refcounted_obj_ptr<event_impl>>& ev
     }
 }
 
-std::shared_ptr<const primitive_arg> network_impl::get_primitive(const primitive_id& id)
+std::shared_ptr<const primitive_inst> network_impl::get_primitive(const primitive_id& id)
 {
     auto it = _primitives.find(id);
     if (it != _primitives.end())
@@ -124,18 +124,18 @@ std::shared_ptr<const primitive_arg> network_impl::get_primitive(const primitive
     }
 
     auto& desc = _topology->at(id)->primitive_desc;
-    auto primitive = desc->type()->create_arg(*this, desc);
+    auto primitive = desc->type->create_inst(*this, desc);
     return _primitives.insert({ id, primitive }).first->second;
 }
 
-std::vector<std::shared_ptr<const primitive_arg>> network_impl::get_primitives(const std::vector<primitive_id>& ids)
+std::vector<std::shared_ptr<const primitive_inst>> network_impl::get_primitives(const std::vector<primitive_id>& ids)
 {
-    std::vector<std::shared_ptr<const primitive_arg>> result(ids.size());
+    std::vector<std::shared_ptr<const primitive_inst>> result(ids.size());
     std::transform(std::begin(ids), std::end(ids), std::begin(result), [&](const primitive_id& id) { return get_primitive(id); });
     return result;
 }
 
-refcounted_obj_ptr<event_impl> network_impl::execute_primitive(const std::shared_ptr<const primitive_arg>& primitive, const std::vector<refcounted_obj_ptr<event_impl>>& events)
+refcounted_obj_ptr<event_impl> network_impl::execute_primitive(const std::shared_ptr<const primitive_inst>& primitive, const std::vector<refcounted_obj_ptr<event_impl>>& events)
 {
     auto id = primitive->id();
     auto it = _events.find(id);
