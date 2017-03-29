@@ -102,14 +102,20 @@ namespace neural
             if (!data.fp16_supported && data.fp16_unit_used)
                 throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
+            auto input_padding = outer.input().at(0)->desc()->output_padding();
+            auto output_padding = outer.argument.output_padding();
+
             gpu::jit_constants mem_consts{
-                gpu::make_jit_constant("INPUT",                 outer.input_memory(0).argument().size),
+                gpu::make_jit_constant("INPUT",                 outer.input().at(0)->non_padded_output_layout().size),
+                gpu::make_jit_constant("OUTPUT",                outer.non_padded_output_layout().size),
                 gpu::make_jit_constant("SCALE",                 outer.input_memory(1).argument().size),
                 gpu::make_jit_constant("FP16_UNIT_USED",        static_cast<int>(data.fp16_unit_used)),
                 gpu::make_jit_constant("UNIT_TYPE",             data.fp16_unit_used ? "half" : "float"),
                 gpu::make_jit_constant("BIAS_TERM",             static_cast<int>(outer.bias_term())),
                 gpu::make_jit_constant("SCALE_BFYX_USED",       static_cast<int>(data.scale_bfyx_used)),
                 gpu::make_jit_constant("INPUT_BFYX_USED",       static_cast<int>(data.input_bfyx_used)),
+                gpu::make_jit_constant("INPUT_PADDING",         input_padding),
+                gpu::make_jit_constant("OUTPUT_PADDING",        output_padding)
             };
 
             return mem_consts;
