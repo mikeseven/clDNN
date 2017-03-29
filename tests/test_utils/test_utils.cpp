@@ -246,7 +246,7 @@ namespace tests
 	//Default implementation. Should be overridden in derived class otherwise.
 	cldnn::tensor generic_test::get_expected_output_tensor()
 	{
-		return generic_params->input_layouts[0].add(layer_params->output_padding().lower_size()).add(layer_params->output_padding().upper_size());
+		return generic_params->input_layouts[0].add(layer_params->output_padding.lower_size()).add(layer_params->output_padding.upper_size());
 	}
 
 	std::vector<test_params*> generic_test::generate_generic_test_params(std::vector<test_params*> all_generic_params)

@@ -21,7 +21,7 @@
 #include <api/memory.hpp>
 #include <api/primitives/input_layout.hpp>
 #include <api/primitives/simpler_nms.hpp>
-#include <include/simpler_nms_arg.h>
+#include <include/simpler_nms_inst.h>
 #include <api/topology.hpp>
 #include <api/network.hpp>
 #include <api/engine.hpp>

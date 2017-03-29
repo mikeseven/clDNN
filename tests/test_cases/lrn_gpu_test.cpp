@@ -618,10 +618,10 @@ public:
 
 		//Output is bfyx
         data_types dt = inputs[0].get_layout().data_type;
-		auto output = memory::allocate( engine, cldnn::layout(dt, inputs[0].get_layout().size.add(lrn->output_padding().lower_size()).add(lrn->output_padding().upper_size()).transform(cldnn::format::bfyx, 0)) );
+		auto output = memory::allocate( engine, cldnn::layout(dt, inputs[0].get_layout().size.add(lrn->output_padding.lower_size()).add(lrn->output_padding.upper_size()).transform(cldnn::format::bfyx, 0)) );
 
 		// TODO: need to add support for input padding.
-		assert(!lrn->input_padding());
+		assert(!lrn->input_padding);
 
 		Type beta = lrn->beta;
 		Type k = lrn->k;
@@ -671,7 +671,7 @@ public:
 								scale = scale * alpha_div_by_size + k;
 
 								int output_index = (n * feature + c) * output_height * output_width;
-								tensor lower_padding = lrn->output_padding().lower_size().transform(cldnn::format::bfyx, 0);
+								tensor lower_padding = lrn->output_padding.lower_size().transform(cldnn::format::bfyx, 0);
 								output_index += (lower_padding.sizes()[2] + h) * output_width + lower_padding.sizes()[3] + w;
 
 								size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
@@ -716,7 +716,7 @@ public:
 								size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 
 								int output_index = (n * feature + c) * output_height * output_width;
-								tensor lower_padding = lrn->output_padding().lower_size().transform(cldnn::format::bfyx, 0);
+								tensor lower_padding = lrn->output_padding.lower_size().transform(cldnn::format::bfyx, 0);
 								output_index += (lower_padding.sizes()[2] + h) * output_width + lower_padding.sizes()[3] + w;
 
 								output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)(scale * alpha + k), -(float)beta);							

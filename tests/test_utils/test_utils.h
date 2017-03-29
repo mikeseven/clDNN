@@ -347,19 +347,19 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
 	str << std::endl << "Test params: " << test_param->print();
 
     str << "Layer params:\n"
-        << "Input padding: lower size: " << test_param->print_tensor(primitive->input_padding().lower_size())
-		<< " upper size : " << test_param->print_tensor(primitive->input_padding().upper_size()) << '\n'
-		<< "Output padding lower size: " << test_param->print_tensor(primitive->output_padding().lower_size())
-		<< " upper size: " << test_param->print_tensor(primitive->output_padding().upper_size()) << '\n';
+        << "Input padding: lower size: " << test_param->print_tensor(primitive->input_padding.lower_size())
+        << " upper size : " << test_param->print_tensor(primitive->input_padding.upper_size()) << '\n'
+        << "Output padding lower size: " << test_param->print_tensor(primitive->output_padding.lower_size())
+        << " upper size: " << test_param->print_tensor(primitive->output_padding.upper_size()) << '\n';
 
     //TODO: do layers not have param dumping? we could consider adding it
 
-    if (primitive->type() == cldnn::depth_concatenate::type_id())
+    if (primitive->type == cldnn::depth_concatenate::type_id())
     {
         auto dc = static_cast<cldnn::depth_concatenate *>(primitive);
         (void)dc;
     }
-    else if(primitive->type() == cldnn::normalization::type_id())
+    else if(primitive->type == cldnn::normalization::type_id())
     {
         auto lrn = static_cast<cldnn::normalization *>(primitive);
         std::string norm_region = (lrn->norm_region == cldnn_lrn_norm_region_across_channel) ? "across channel" : "within channel";
@@ -369,20 +369,20 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
             << " Beta: " << lrn->beta
             << " K: " << lrn->k;
     }
-    else if(primitive->type() == cldnn::roi_pooling::type_id())
+    else if(primitive->type == cldnn::roi_pooling::type_id())
     {
         auto roi_pooling = static_cast<cldnn::roi_pooling *>(primitive);
         str << "Pooled width: " << roi_pooling->pooled_width
             << " Pooled height: " << roi_pooling->pooled_height
             << " Spatial scale: " << roi_pooling->spatial_scale;
     }
-    else if(primitive->type() == cldnn::scale::type_id())
+    else if(primitive->type == cldnn::scale::type_id())
     {
         auto s = static_cast<cldnn::scale *>(primitive);
         str << " Bias: " << s->bias_term;
 //        str << " PassBias: Maybe";    //TODO: the interface requires passing it atm, but it's goint to change
     }
-    else if(primitive->type() == cldnn::softmax::type_id())
+    else if(primitive->type == cldnn::softmax::type_id())
     {
         auto sm = static_cast<cldnn::softmax *>(primitive);
         (void)sm;

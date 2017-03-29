@@ -28,8 +28,8 @@ using namespace cldnn;
 namespace neural 
 {
 // Kernel names.
-static const std::string kernel_name = "activation_inst_gpu";
-static const std::string kernel_name_bfyx = "activation_inst_gpu_bfyx";
+static const std::string kernel_name = "relu_gpu";
+static const std::string kernel_name_bfyx = "relu_gpu_bfyx";
 
 
 struct activation_inst_gpu : primitive_impl
@@ -93,7 +93,7 @@ struct activation_inst_gpu : primitive_impl
             gpu::make_jit_constant("INPUT_PADDING",  outer.input().at(0)->desc()->output_padding),
             gpu::make_jit_constant("OUTPUT",         outer.non_padded_output_layout().size),
             gpu::make_jit_constant("OUTPUT_PADDING", outer.argument.output_padding),
-            gpu::make_jit_constant("activation_inst",           1),
+            gpu::make_jit_constant("RELU",           1),
             gpu::make_jit_constant("NEGATIVE_SLOPE", outer.argument.negative_slope),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
