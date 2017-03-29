@@ -23,6 +23,7 @@
 #include <api/network.hpp>
 #include <api/engine.hpp>
 #include "test_utils/test_utils.h"
+#include "api/primitives/reorder.hpp"
 
 using namespace cldnn;
 using namespace tests;
@@ -986,6 +987,70 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_no_bias_xb) {
 	}
 }
 
+TEST(scale_gpu, basic_in2x3x2x2_scale_yxfb_bfyx_same_size_padding) {
+    //  Scale  : 2x2x1x1
+    //  Input  : 2x2x1x1
+    //  Output : 2x2x1x1
+    //  Output Padding: 2x2
+    //  Input Padding: 2x1 (with reorder)
+
+    //  Input:
+    //  1    2
+    //  3    4
+
+    //
+    //  Scale:
+    //  0.1    0.2
+    //  0.6    0.5
+     
+    engine engine;
+    std::vector<format> formats_to_test = { format::yxfb , format::bfyx };
+
+    for (std::vector<format>::iterator it = formats_to_test.begin(); it != formats_to_test.end(); ++it)
+    {
+        std::cout << "Testing format: " << format::order(*it) << std::endl;
+
+        tensor input_tensor(format::bfyx, { 1, 1, 2, 2 });
+
+        auto input = memory::allocate(engine, { data_types::f32, input_tensor.transform(*it, 1) });
+        auto scale_input = memory::allocate(engine, { data_types::f32, input_tensor.transform(*it, 1) });
+
+        topology topology;
+        topology.add(input_layout("input", input.get_layout()));
+        topology.add(reorder("reorder", "input", input.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 2, 1 } }));
+        topology.add(input_layout("scale_input", scale_input.get_layout()));
+        topology.add(scale("scale", "reorder", "scale_input", false, { format::yx,{ 0, 0 } }, { format::yx,{ 2, 2 } }));
+
+        std::vector<float> input_vec = { 1.f, 2.f, 3.f, 4.f };
+        set_values(input, input_vec);
+
+        std::vector<float> scale_input_vec = { 0.1f, 0.2f, 0.6f, 0.5f };
+        set_values(scale_input, scale_input_vec);
+
+        std::vector<float> expected = {
+            0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+            0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+            0.f, 0.f, 0.1f, 0.4f, 0.f, 0.f,
+            0.f, 0.f, 1.8f, 2.0f, 0.f, 0.f,
+            0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+            0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+        };
+
+        network network(engine, topology);
+
+        network.set_input_data("input", input);
+        network.set_input_data("scale_input", scale_input);
+
+        auto outputs = network.execute();
+
+        auto output = outputs.at("scale").get_memory();
+        auto output_ptr = output.pointer<float>();
+
+        for (unsigned int i = 0; i < expected.size(); ++i) {
+            EXPECT_NEAR(output_ptr[i], expected[i], 1e-05F);
+        }
+    }
+}
 //////////////////////////////////////////////////////////////////////////////
 //                                                                          //
 //                      Exhaustive Negative Matrix tests                    //

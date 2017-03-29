@@ -30,6 +30,24 @@ namespace cldnn
     {
         auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
         auto result = input_desc->type()->calc_output_layout(topology_map, input_desc);
+        auto scale_desc = topology_map.at(desc->scale_input)->primitive_desc;
+        auto scale_sizes = scale_desc->type()->calc_output_layout(topology_map, scale_desc).size;
+
+        auto scale_x_size = scale_sizes.spatial[0];
+        auto scale_y_size = scale_sizes.spatial.size() > 1 ?
+            scale_sizes.spatial[1] :
+            1;
+
+        auto input_x_size = result.size.spatial[0];
+        auto input_y_size = result.size.spatial.size() > 1 ?
+            result.size.spatial[1] :
+            1;
+
+        if ((scale_x_size != input_x_size) && (scale_x_size != 1))
+            throw std::runtime_error("X dimension mismatch between input and scale input!");
+        if ((scale_y_size != input_y_size) && (scale_y_size != 1))
+            throw std::runtime_error("Y dimension mismatch between input and scale input!");
+            
         return result;
     }
 
@@ -40,26 +58,14 @@ namespace cldnn
 
         auto scale_batch_size = scale_memory().get_layout().size.batch[0];
         auto scale_feature_size = scale_memory().get_layout().size.feature[0];
-        auto scale_x_size = scale_memory().get_layout().size.spatial[0];
-        auto scale_y_size = scale_memory().get_layout().size.spatial.size() > 1 ?
-            scale_memory().get_layout().size.spatial[1] :
-            1;
 
         auto input_batch_size = input_memory(0).get_layout().size.batch[0];
         auto input_feature_size = input_memory(0).get_layout().size.feature[0];
-        auto input_x_size = input_memory(0).get_layout().size.spatial[0];
-        auto input_y_size = input_memory(0).get_layout().size.spatial.size() > 1 ?
-            input_memory(0).get_layout().size.spatial[1]
-            : 1;
 
         if((scale_batch_size != input_batch_size) && (scale_batch_size != 1))
             throw std::runtime_error("Batch dimension mismatch between input and scale input!");
         if ((scale_feature_size != input_feature_size) && (scale_feature_size != 1))
             throw std::runtime_error("Feature dimension mismatch between input and scale input!");
-        if ((scale_x_size != input_x_size) && (scale_x_size != 1))
-            throw std::runtime_error("X dimension mismatch between input and scale input!");
-        if ((scale_y_size != input_y_size) && (scale_y_size != 1))
-            throw std::runtime_error("Y dimension mismatch between input and scale input!");
 
         if (bias_term())
         {
