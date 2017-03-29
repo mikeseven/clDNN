@@ -26,13 +26,15 @@
 #include <gtest/gtest.h>
 #include <api/primitive.hpp>
 #include "float16.h"
+#include "api/primitives/depth_concatenate.hpp"
 #include "api/primitives/normalization.hpp"
 #include "api/primitives/roi_pooling.hpp"
+#include "api/primitives/scale.hpp"
+#include "api/primitives/softmax.hpp"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 namespace tests {
-
 
 #define USE_RANDOM_SEED 0
 #if USE_RANDOM_SEED
@@ -232,7 +234,7 @@ inline bool are_equal(
         return true;
 }
 
-inline bool floating_point_equal(FLOAT16 x, FLOAT16 y, int16_t max_ulps_diff = 4) {
+inline bool floating_point_equal(FLOAT16 x, FLOAT16 y, int max_ulps_diff = 4) {
 	int16_t sign_bit_mask = 1;
 	sign_bit_mask <<= 15;
 	int16_t a = x.v, b = y.v;
@@ -246,7 +248,7 @@ inline bool floating_point_equal(FLOAT16 x, FLOAT16 y, int16_t max_ulps_diff = 4
 	}
 }
 
-inline bool floating_point_equal(float x, float y, int32_t max_ulps_diff = 4) {
+inline bool floating_point_equal(float x, float y, int max_ulps_diff = 4) {
 	int32_t sign_bit_mask = 1;
 	sign_bit_mask <<= 31;
 	int32_t a = reinterpret_cast<int32_t&>(x), b = reinterpret_cast<int32_t&>(y);
@@ -280,6 +282,8 @@ public:
 
     cldnn::data_types data_type;
     std::vector<cldnn::tensor> input_layouts;            
+
+    void * opaque_custom_param = nullptr;
         
     std::string print();
 	std::string print_tensor(cldnn::tensor tensor);
@@ -289,7 +293,6 @@ class generic_test : public ::testing::TestWithParam<std::tuple<test_params*, cl
 {
 	
 public:
-
     generic_test();
 
     void run_single_test();
@@ -297,7 +300,8 @@ public:
     template<typename Type>
     void compare_buffers(const cldnn::memory& out, const cldnn::memory& ref);
 
-    uint32_t get_linear_index(cldnn::layout layout, int b, int f, int y, int x);
+    size_t get_linear_index(const cldnn::layout & layout, int b, int f, int y, int x);
+    size_t get_linear_index_with_broadcast(const cldnn::layout & in_layout, int b, int f, int y, int x, const cldnn::layout & out_layout);
 
     static std::vector<test_params*> generate_generic_test_params(std::vector<test_params*> all_generic_params);
 
@@ -312,7 +316,6 @@ public:
     };
 
 protected:
-
     cldnn::engine engine;
     test_params* generic_params;
     cldnn::primitive* layer_params;
@@ -331,7 +334,6 @@ protected:
     static std::vector<cldnn::tensor> test_input_sizes;
 };
 
-
 // When a test assertion such as EXPECT_EQ fails, Google-Test prints the argument values to help with debugging.
 // It does this using a user - extensible value printer.
 // This function will be used to print the test params in case of an error.
@@ -342,31 +344,54 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
 	auto test_param = std::get<0>(t);
 	auto primitive = std::get<1>(t);
 
-	str << std::endl << "Test params: " << test_param->print() << "Layer params: " << std::endl;
+	str << std::endl << "Test params: " << test_param->print();
 
-	str << "Input padding: lower size: " << test_param->print_tensor(primitive->input_padding().lower_size())
-		<< " upper size : " << test_param->print_tensor(primitive->input_padding().upper_size()) << std::endl
+    str << "Layer params:\n"
+        << "Input padding: lower size: " << test_param->print_tensor(primitive->input_padding().lower_size())
+		<< " upper size : " << test_param->print_tensor(primitive->input_padding().upper_size()) << '\n'
 		<< "Output padding lower size: " << test_param->print_tensor(primitive->output_padding().lower_size())
-		<< " upper size: " << test_param->print_tensor(primitive->output_padding().upper_size()) << std::endl;
+		<< " upper size: " << test_param->print_tensor(primitive->output_padding().upper_size()) << '\n';
 
-	auto primitive_type = primitive->type();
-	if (primitive_type == cldnn::normalization::type_id())
-	{
-		cldnn::normalization* lrn = (cldnn::normalization*)(primitive);
-		std::string norm_region = (lrn->norm_region == cldnn_lrn_norm_region_across_channel) ? "across channel" : "within channel";
-		str << "Norm region: " << norm_region << " Size: " << lrn->size << " Alpha: " << lrn->alpha << " Beta: " << lrn->beta << " K: " << lrn->k;
-	}
-	else if (primitive_type == cldnn::roi_pooling::type_id())
-	{
-		cldnn::roi_pooling* roi_pooling = (cldnn::roi_pooling*)(primitive);
-		str << "Pooled width: " << roi_pooling->pooled_width << " Pooled height: " << roi_pooling->pooled_height << " Spatial scale: " << roi_pooling->spatial_scale;
-	}
-	else
-	{
+    //TODO: do layers not have param dumping? we could consider adding it
+
+    if (primitive->type() == cldnn::depth_concatenate::type_id())
+    {
+        auto dc = static_cast<cldnn::depth_concatenate *>(primitive);
+        (void)dc;
+    }
+    else if(primitive->type() == cldnn::normalization::type_id())
+    {
+        auto lrn = static_cast<cldnn::normalization *>(primitive);
+        std::string norm_region = (lrn->norm_region == cldnn_lrn_norm_region_across_channel) ? "across channel" : "within channel";
+        str << "Norm region: " << norm_region
+            << " Size: " << lrn->size
+            << " Alpha: " << lrn->alpha
+            << " Beta: " << lrn->beta
+            << " K: " << lrn->k;
+    }
+    else if(primitive->type() == cldnn::roi_pooling::type_id())
+    {
+        auto roi_pooling = static_cast<cldnn::roi_pooling *>(primitive);
+        str << "Pooled width: " << roi_pooling->pooled_width
+            << " Pooled height: " << roi_pooling->pooled_height
+            << " Spatial scale: " << roi_pooling->spatial_scale;
+    }
+    else if(primitive->type() == cldnn::scale::type_id())
+    {
+        auto s = static_cast<cldnn::scale *>(primitive);
+        str << " Bias: " << s->bias_term;
+//        str << " PassBias: Maybe";    //TODO: the interface requires passing it atm, but it's goint to change
+    }
+    else if(primitive->type() == cldnn::softmax::type_id())
+    {
+        auto sm = static_cast<cldnn::softmax *>(primitive);
+        (void)sm;
+    }
+    else
+    {
 		throw std::runtime_error("Not implemented yet for this primitive.");
 	}
 		
 	*os << str.str();
 }
-
 }

@@ -665,7 +665,7 @@ public:
 								Type scale = 0;
 								for (int i = c_start; i < c_end; ++i) 
 								{
-									int input_index = get_linear_index(inputs[0].get_layout(), n, i, h, w);
+									size_t input_index = get_linear_index(inputs[0].get_layout(), n, i, h, w);
 									Type value = input_mem[input_index] * alpha_div_by_size_abs_sqrt;
 									scale += value * value;
 								}
@@ -675,7 +675,7 @@ public:
 								tensor lower_padding = lrn->output_padding().lower_size().transform(cldnn::format::bfyx, 0);
 								output_index += (lower_padding.sizes()[2] + h) * output_width + lower_padding.sizes()[3] + w;
 
-								int input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
+								size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 								output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)scale, -(float)beta);
 							}
 						}
@@ -708,13 +708,13 @@ public:
 								{
 									for (int nw = w_start; nw < w_end; ++nw) 
 									{
-										int input_index = get_linear_index(inputs[0].get_layout(), n, c, nh, nw);
+										size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, nh, nw);
 										Type value = input_mem[input_index] * alpha_abs_sqrt;
 										scale += value * value;
 									}
 								}
 								scale /= pool_size;
-								int input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
+								size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 
 								int output_index = (n * feature + c) * output_height * output_width;
 								tensor lower_padding = lrn->output_padding().lower_size().transform(cldnn::format::bfyx, 0);
@@ -748,6 +748,42 @@ public:
 		}		
 	}
 
+    static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<tests::test_params*, cldnn::primitive*>>& info)
+    {
+        std::stringstream res;
+
+        const auto & p = std::get<0>(info.param);
+        const auto & v = std::get<1>(info.param);
+
+        assert (p->data_type == data_types::f32 ||
+                p->data_type == data_types::f16);
+
+        res << info.index
+            << "_" << (p->data_type == data_types::f32 ? "f32" : "f16");
+
+        for (unsigned i = 0; i < p->input_layouts.size(); ++i)
+        {
+            const auto chans = format::traits(p->input_layouts[i].format).order;
+
+            res << "_" << "Input" << i;
+            for (unsigned int j = 0; j < p->input_layouts[i].sizes().size(); ++j)
+            {
+                res << chans[j] << p->input_layouts[i].sizes()[j];
+            }
+        }
+
+        const auto layer = static_cast<cldnn::normalization *>(v);
+        res << (layer->norm_region == cldnn_lrn_norm_region_across_channel ? "_Across" : "_Within")
+            << "_Size" << layer->size;
+
+        // TODO: the following values need ot be escaped into an acceptable fmt
+//            << "_Alpha"  // << layer->alpha
+//            << "_Beta"   // << layer->beta
+//            << "_K" << layer->k;
+
+        return res.str();
+    }
+
 private:
 
 	static std::vector<tests::test_params*> all_generic_params;
@@ -767,5 +803,5 @@ INSTANTIATE_TEST_CASE_P(LRN,
 						lrn_test, 
 						::testing::Combine(::testing::ValuesIn(lrn_test::generate_generic_test_params()),
 										   ::testing::ValuesIn(lrn_test::generate_specific_test_params())), 
-						tests::generic_test::custom_param_name_functor());
+						lrn_test::custom_param_name);
 
