@@ -139,19 +139,9 @@ struct pooling_gpu : is_an_implementation {
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        auto& input_mem = outer.input_memory(0);
-
         auto input_padding = outer.input().at(0)->desc()->output_padding();
         auto output_padding = outer.argument.output_padding();
         auto input_size = outer.input().at(0)->non_padded_output_layout().size;
-
-        if (input_mem.get_layout().size.format != cldnn::format::bfyx)
-        {
-            if (input_padding || output_padding)
-            {
-                throw std::runtime_error("Only bfyx format supports input/output padding in pooling layer!");
-            }
-        }
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT",             input_size),
