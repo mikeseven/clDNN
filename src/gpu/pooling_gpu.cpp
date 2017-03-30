@@ -204,12 +204,10 @@ pooling_gpu::kernel_data defauly_bfyx(const pooling& arg)
 
     // Select kernel name.
     auto needs_boundary = pooling_gpu::needs_boundary_check(arg);
-    //if (kd.gws0 > 256)
+
+    while (kd.gws0 % kd.lws0 != 0)
     {
-        while (kd.gws0 % kd.lws0 != 0)
-        {
-            --kd.lws0;
-        }
+        --kd.lws0;
     }
 
     if (needs_boundary)
@@ -224,11 +222,10 @@ pooling_gpu::kernel_data defauly_bfyx(const pooling& arg)
     auto output_size = arg.non_padded_output_layout().size;
     // Determine global work sizes.
     kd.gws2 = output_size.batch[0] * output_size.feature[0];
-    kd.gws0 = output_size.spatial[0];
+    kd.gws0 = align_to(output_size.spatial[0], 32);
     kd.gws1 = output_size.spatial[1];
 
-    // Find largest positive local work size that is divider for global work size.
-    kd.lws0 = kd.gws0;
+    kd.lws0 = 32;
     kd.lws1 = 1;
     kd.lws2 = 1;
 
