@@ -31,17 +31,14 @@ namespace cldnn
         auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
         auto result = input_desc->type()->calc_output_layout(topology_map, input_desc);
         auto scale_desc = topology_map.at(desc->scale_input)->primitive_desc;
-        auto scale_sizes = scale_desc->type()->calc_output_layout(topology_map, scale_desc).size;
+        auto scale_sizes = scale_desc->type()->calc_output_layout(topology_map, scale_desc).size.transform(format::yxfb, 1);
+        auto input_sizes = result.size.transform(format::yxfb, 1);
 
         auto scale_x_size = scale_sizes.spatial[0];
-        auto scale_y_size = scale_sizes.spatial.size() > 1 ?
-            scale_sizes.spatial[1] :
-            1;
+        auto scale_y_size = scale_sizes.spatial[1];
 
-        auto input_x_size = result.size.spatial[0];
-        auto input_y_size = result.size.spatial.size() > 1 ?
-            result.size.spatial[1] :
-            1;
+        auto input_x_size = input_sizes.spatial[0];
+        auto input_y_size = input_sizes.spatial[1];
 
         if ((scale_x_size != input_x_size) && (scale_x_size != 1))
             throw std::runtime_error("X dimension mismatch between input and scale input!");
