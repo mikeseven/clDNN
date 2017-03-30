@@ -228,7 +228,7 @@ lrn_gpu::kernel_data get_kernel_across_channel(const normalization::response& ar
     if (format == cldnn::format::bfyx)
     {
         kd.kernel_name = kernel_name_bfyx;   
-        kd.gws0 = cldnn::align_to(arg.input().at(0)->non_padded_output_layout().size.spatial[0],32);
+        kd.gws0 = align_to(arg.input().at(0)->non_padded_output_layout().size.spatial[0],32);
         kd.gws1 = arg.input().at(0)->non_padded_output_layout().size.spatial[1];//input_mem.argument().size.spatial[1];
         kd.gws2 = input_mem.argument().size.feature[0] * input_mem.argument().size.batch[0];
 
