@@ -34,8 +34,8 @@ KERNEL(pooling_gpu_average)(const __global UNIT_TYPE* input, __global UNIT_TYPE*
     if ((x >= OUTPUT_SIZE_X) || (y >= OUTPUT_SIZE_Y))
         return;
 
-    const int offset_x = INPUT_PADDING_LOWER_SIZE_X + x * STRIDE_SIZE_X;
-    const int offset_y = INPUT_PADDING_LOWER_SIZE_Y + y * STRIDE_SIZE_Y;
+    const uint offset_x = INPUT_PADDING_LOWER_SIZE_X + x * STRIDE_SIZE_X;
+    const uint offset_y = INPUT_PADDING_LOWER_SIZE_Y + y * STRIDE_SIZE_Y;
 
     UNIT_TYPE result = UNIT_INIT_VAL_AVG;
 
