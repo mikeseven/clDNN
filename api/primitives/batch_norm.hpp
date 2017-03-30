@@ -89,7 +89,6 @@ protected:
         dto.variance = variance.c_str();
         dto.use_global_stats = use_global_stats;
         dto.epsilon = epsilon;
-        dto.epsilon = epsilon;
     }
 };
 /// @}

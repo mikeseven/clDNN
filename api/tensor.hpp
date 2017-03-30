@@ -123,7 +123,8 @@ struct format
     static const std::string& order(type fmt) { return traits(fmt).order; }
     /// @brief Returns an internal orders of dimensions for a @p format.
     static const std::string& internal_order(type fmt) { return traits(fmt).internal_order; }
-    static size_t dimension(type fmt) { return std::string(traits(fmt).order).size(); }
+    /// @brief Returns number of dimensions contained within a @p format
+    static size_t dimension(type fmt) { return order(fmt).size(); }
 
     /// @brief Find common format.
     static type common_format(type t1, type t2)
@@ -166,7 +167,8 @@ struct format
     const std::string& order() const { return traits(value).order; }
     /// @brief Returns an internal orders of dimensions form of string.
     const std::string& internal_order() const { return traits(value).internal_order; }
-    size_t dimension() const { return std::string(traits(value).order).size(); }
+    /// @brief Returns number of dimensions contained within this format
+    size_t dimension() const { return order(value).size(); }
 
     type value;
     /// @brief Implicit conversion from format::type.

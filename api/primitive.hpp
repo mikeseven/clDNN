@@ -192,41 +192,35 @@ public:
 
     virtual ~primitive() = default;
 
-    /// @brief Returns primitive type id.
-    /// @brief Returns primitive id.
-    /// @brief List of ids of input primitives.
-    /// @brief List of ids of input primitives.
+    
+    
     /// @brief Requested output padding.
     /// @brief Requested output padding.
     /// @brief Returns pointer to a C API primitive descriptor casted to @CLDNN_PRIMITIVE_DESC{primitive}.
     virtual const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const = 0;
 
-    /// @brief Returns all primitive ids on which this primitive depends - inputs, weights, biases, etc.
+    /// @brief Returns references to all primitive ids on which this primitive depends - inputs, weights, biases, etc.
+    std::vector<std::reference_wrapper<primitive_id>> dependecies()
+    {
+        std::vector<std::reference_wrapper<primitive_id>> result;
+        auto&& deps = get_dependencies();
+        
+        result.reserve(_input.size() + deps.size());
+        for (auto& pid : _input.cpp_ids)
+            result.push_back(std::ref(pid));
+        for (auto& pid : deps)
+            result.push_back(std::ref(const_cast<primitive_id&>(pid.get())));
+
+        return result;
+    }
+
+    /// @brief Returns copy of all primitive ids on which this primitive depends - inputs, weights, biases, etc.
     std::vector<primitive_id> dependecies() const
     {
         auto result = input.ref();
         auto deps = get_dependencies();
         result.insert(result.end(), deps.begin(), deps.end());
         return result;
-    }
-
-    void update_dependency(size_t dep_idx, primitive_id const& new_dep_id)
-    {
-        if (dep_idx >= input.size())
-        {
-            dep_idx -= input.size();
-            auto&& deps = get_dependencies();
-            if (dep_idx >= deps.size())
-                return;
-
-            //we need get_dependencies to be callable from within 'const' method so it returns 'const primitive_id&'
-            //however we are here in non-const context so we drop out this constantness
-            // note: this could be avoided by declaring non-const overload for get_dependencies but that would mean
-            // a lot of duplicated code in derived classes - this const_cast is simpler and more easy to maintain
-            const_cast<primitive_id&>(deps[dep_idx].get()) = new_dep_id;
-        }
-        else
-            input[dep_idx] = new_dep_id;
     }
 
     /// @brief Implicit conversion to primiitive id.
@@ -237,11 +231,19 @@ public:
     tensor output_offset() const { return output_padding.lower_size(); }
     float padding_filling_value() const { return input_padding.filling_value(); }
 
+    /// @brief Primitive's type id.
     const primitive_type_id type;
+
+    /// @brief Primitive's id.
     const primitive_id id;
 
+    /// @brief List of ids of input primitives.
     fixed_size_vector_ref input;
+
+    // to be removed
     padding input_padding;
+
+    /// @brief Requested output padding.
     padding output_padding;
 
 protected:
@@ -274,9 +276,6 @@ protected:
         }
 
         size_t size() const { return cpp_ids.size(); }
-
-
-
     };
 
     primitive_id_arr _input;
