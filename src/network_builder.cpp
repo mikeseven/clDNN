@@ -22,7 +22,6 @@
 #include "convolution_inst.h"
 #include "fully_connected_inst.h"
 #include "api/primitives/convolution.hpp"
-#include "api/primitives/mean_substract.hpp"
 #include <set>
 #include <functional>
 
@@ -345,21 +344,6 @@ void cldnn::network_builder::reorder_inputs()
                         current->output_layout = opt_layout;
                         new_input.first = nullptr;
                     }
-                }
-            }
-            else if (in->type == mean_substract::type_id())
-            {
-                auto current = std::static_pointer_cast<const mean_substract>(in);
-                auto current_layout = current->type->calc_output_layout(_topology_map, current);
-                new_input = _lo.get_reorder(
-                    current_layout,
-                    current->id,
-                    layout_optimizer::data_type::input,
-                    const_conv);
-
-                if (new_input.first) //not optimal, fuse mean_substract with reorder
-                {
-                    new_input.first->mean = current->id;
                 }
             }
 
