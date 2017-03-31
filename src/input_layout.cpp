@@ -27,9 +27,10 @@ primitive_type_id input_layout_type_id()
     return &instance;
 }
 
-input_layout_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const input_layout> desc)
-    : parent(network, desc, desc->layout)
+input_layout_inst::typed_primitive_inst(network_impl& network, input_layout_node const& node)
+    : parent(network, node)
 {
+    _has_valid_input = false; //by default input for 'input_layout' is invalid as long as user doesn't call set_data
 }
 
 void input_layout_inst::set_data(memory_impl* mem)

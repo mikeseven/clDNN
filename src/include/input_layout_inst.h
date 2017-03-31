@@ -18,11 +18,16 @@
 #pragma once
 #include "api/primitives/input_layout.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
 struct memory_impl;
+
+template <>
+struct typed_program_node<input_layout> : public typed_program_node_base<input_layout>
+{};
+
+using input_layout_node = typed_program_node<input_layout>;
 
 template <>
 class typed_primitive_inst<input_layout> : public typed_primitive_inst_base<input_layout>
@@ -30,13 +35,13 @@ class typed_primitive_inst<input_layout> : public typed_primitive_inst_base<inpu
     using parent = typed_primitive_inst_base<input_layout>;
 
 public:
-    static layout calc_output_layout(const topology_map&, std::shared_ptr<const input_layout> desc)
+    static layout calc_output_layout(input_layout_node const& node)
     {
-        return desc->layout;
+        return node.get_primitive()->layout;
     }
 
 public:
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const input_layout> desc);
+    typed_primitive_inst(network_impl& network, input_layout_node const& node);
 
     void set_data(memory_impl* mem);
 };

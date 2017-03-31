@@ -26,12 +26,11 @@ primitive_type_id scale_type_id()
     return &instance;
 }
 
-layout scale_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const scale> desc)
+layout scale_inst::calc_output_layout(scale_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
-    auto result = input_desc->type->calc_output_layout(topology_map, input_desc);
-    auto scale_desc = topology_map.at(desc->scale_input)->primitive_desc;
-    auto scale_sizes = scale_desc->type->calc_output_layout(topology_map, scale_desc).size.transform(format::yxfb, 1);
+    auto result = node.input().get_output_layout();
+
+    auto scale_sizes = node.scale().get_output_layout().size.transform(format::yxfb, 1);
     auto input_sizes = result.size.transform(format::yxfb, 1);
 
     auto scale_x_size = scale_sizes.spatial[0];
@@ -48,8 +47,8 @@ layout scale_inst::calc_output_layout(const topology_map& topology_map, std::sha
     return result;
 }
 
-scale_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const scale> desc)
-    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+scale_inst::typed_primitive_inst(network_impl& network, scale_node const& node)
+    :parent(network, node)
 {
     auto scale_format = scale_memory().get_layout().size.format;
 
@@ -64,12 +63,13 @@ scale_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const sc
     if ((scale_feature_size != input_feature_size) && (scale_feature_size != 1))
         throw std::runtime_error("Feature dimension mismatch between input and scale input!");
 
-        if (!desc->bias.empty())
-        {
-            auto bias_format = bias_memory().get_layout().size.format;
-            auto bias_raw_sizes = bias_memory().get_layout().size.raw;
+    if (!desc->bias.empty())
+    {
+        auto bias_format = bias_memory().get_layout().size.format;
+        auto bias_raw_sizes = bias_memory().get_layout().size.raw;
 
-        if (scale_format != bias_format) throw std::runtime_error("Scale input format do not match bias format!");
+        if (scale_format != bias_format)
+            throw std::runtime_error("Scale input format do not match bias format!");
 
         for (size_t i = 0; i < bias_memory().get_layout().size.raw.size(); ++i)
         {

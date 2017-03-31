@@ -18,26 +18,29 @@
 #pragma once
 #include "api/primitives/roi_pooling.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
+template <>
+struct typed_program_node<roi_pooling> : public typed_program_node_base<roi_pooling>
+{
+public:
+    auto& input() const { return get_dependency(0); }
+    auto& rois() const { return get_dependency(1); }
+};
+
+using roi_pooling_node = typed_program_node<roi_pooling>;
+
 template <>
 class typed_primitive_inst<roi_pooling> : public typed_primitive_inst_base<roi_pooling>
 {
     using parent = typed_primitive_inst_base<roi_pooling>;
 
 public:
-    enum input_index
-    {
-        data_index,
-        rois_index
-    };
-
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const roi_pooling> desc);
+    static layout calc_output_layout(roi_pooling_node const& node);
 
 public:    
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const roi_pooling> desc);
+    using parent::parent;
 
     const memory& input_memory() const { return dep_memory(0); }
     const memory& rois_memory() const { return dep_memory(1); }

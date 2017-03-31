@@ -18,10 +18,20 @@
 #pragma once
 #include "api/primitives/depth_concatenate.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
+
+template <>
+struct typed_program_node<depth_concatenate> : public typed_program_node_base<depth_concatenate>
+{
+public:
+    auto& input(size_t idx) const { return get_dependency(idx); }
+
+    auto inputs_count() const { return desc->input.size(); }
+};
+
+using depth_concatenate_node = typed_program_node<depth_concatenate>;
 
 template <>
 class typed_primitive_inst<depth_concatenate> : public typed_primitive_inst_base<depth_concatenate>
@@ -29,10 +39,10 @@ class typed_primitive_inst<depth_concatenate> : public typed_primitive_inst_base
     using parent = typed_primitive_inst_base<depth_concatenate>;
 
 public:
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const depth_concatenate> desc);
+    static layout calc_output_layout(depth_concatenate_node const& node);
 
 public:
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const depth_concatenate> desc);
+    typed_primitive_inst(network_impl& network, depth_concatenate_node const& node);
 
     const memory& input_memory(size_t idx) const { return dep_memory(idx); }
 };

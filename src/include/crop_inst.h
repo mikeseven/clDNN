@@ -18,10 +18,19 @@
 #pragma once
 #include "api/primitives/crop.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
+
+template <>
+class typed_program_node<crop> : public typed_program_node_base<crop>
+{
+public:
+    auto& input() const { return get_dependency(0); }
+    auto& reference_input() const { return get_dependency(1); }
+};
+
+using crop_node = typed_program_node<crop>;
 
 template <>
 class typed_primitive_inst<crop> : public typed_primitive_inst_base<crop>
@@ -29,10 +38,10 @@ class typed_primitive_inst<crop> : public typed_primitive_inst_base<crop>
     using parent = typed_primitive_inst_base<crop>;
 
 public:
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const crop> desc);
+    static layout calc_output_layout(crop_node const& node);
 
 public:
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const crop> desc);
+    typed_primitive_inst(network_impl& network, crop_node const& node);
 
     const memory& input_memory() const { return dep_memory(0); }
     const memory& reference_input_memory() const { return dep_memory(1); }

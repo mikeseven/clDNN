@@ -18,22 +18,31 @@
 #pragma once
 #include "api/primitives/eltwise.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
-
 #include <memory>
+#include "topology_impl.h"
 
 namespace cldnn
 {
+template <>
+struct typed_program_node<eltwise> : public typed_program_node_base<eltwise>
+{
+public:
+    auto& input() const { return get_dependency(0); }
+    auto& input2() const { return get_dependency(1); }
+};
+
+using eltwise_node = typed_program_node<eltwise>;
+
 template <>
 class typed_primitive_inst<eltwise> : public typed_primitive_inst_base<eltwise>
 {
     using parent = typed_primitive_inst_base<eltwise>;
 
 public:
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const eltwise> desc);
+    static layout calc_output_layout(eltwise_node const& node);
 
 public:
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const eltwise> desc);
+    typed_primitive_inst(network_impl& network, eltwise_node const& node);
 
     const memory& input_memory() const { return dep_memory(0); }
     const memory& input2_memory() const { return dep_memory(1); }

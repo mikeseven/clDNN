@@ -26,24 +26,23 @@ primitive_type_id softmax_type_id()
     return &instance;
 }
 
-layout softmax_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const softmax> desc)
+layout softmax_inst::calc_output_layout(softmax_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
-    auto input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
+    auto input_layout = node.input().get_output_layout();
 
     cldnn::layout layoutTemp = input_layout;
     if (input_layout.size.raw.size() == 4 && input_layout.size.spatial[0] == 1 && input_layout.size.spatial[1] == 1) //squeezenet spatials are 1x1
     {
         if (input_layout.size.format == format::bfyx)
             layoutTemp = cldnn::layout(input_layout.data_type, tensor(format::bx, { input_layout.size.batch[0], input_layout.size.feature[0] }));
-        else 
+        else
             layoutTemp = cldnn::layout(input_layout.data_type, tensor(format::xb, { input_layout.size.feature[0], input_layout.size.batch[0] }));
     }
     return layoutTemp;
 }
 
-softmax_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const softmax> desc)
-    : parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+softmax_inst::typed_primitive_inst(network_impl& network, softmax_node const& node)
+    : parent(network, node)
 {
     //    auto& input_offset  = arg.input_offset;
     //    auto& output_offset = arg.output_offset;
@@ -63,5 +62,4 @@ softmax_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const 
     //    if (input_arg->output_layout->size.spatial[0] != 1 || input_arg->output_layout->size.spatial[1] != 1)
     //        throw std::runtime_error("Softmax input has more than one dimension per batch");
 }
-
 }

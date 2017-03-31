@@ -46,8 +46,8 @@ namespace {
     }
 }
 
-data_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const data> desc)
-    : parent(network, desc, attach_or_copy_data(network, desc->mem))
+data_inst::typed_primitive_inst(network_impl& network, data_node const& node)
+    : parent(network, node, attach_or_copy_data(network, node.get_primitive()->mem))
 {
 }
 

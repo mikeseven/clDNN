@@ -18,10 +18,11 @@
 #pragma once
 #include "api/primitives/data.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
+
+using data_node = typed_program_node<data>;
 
 template <>
 class typed_primitive_inst<data> : public typed_primitive_inst_base<data>
@@ -29,13 +30,13 @@ class typed_primitive_inst<data> : public typed_primitive_inst_base<data>
     using parent = typed_primitive_inst_base<data>;
 
 public:
-    static layout calc_output_layout(const topology_map&, std::shared_ptr<const data> desc)
+    static layout calc_output_layout(data_node const& node)
     {
-        return desc->mem.get_layout();
+        return node.get_primitive()->mem.get_layout();
     }
 
 public:
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const data> desc);
+    typed_primitive_inst(network_impl& network, data_node const& node);
 };
 
 using data_inst = typed_primitive_inst<data>;

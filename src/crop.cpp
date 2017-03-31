@@ -26,21 +26,19 @@ primitive_type_id crop_type_id()
     return &instance;
 }
 
-layout crop_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const crop> desc)
+layout crop_inst::calc_output_layout(crop_node const& node)
 {
-    auto reference_input_desc = topology_map.at(desc->reference_input)->primitive_desc;
-    auto result = reference_input_desc->type->calc_output_layout(topology_map, reference_input_desc);
-    return result;
+    return node.reference_input().get_output_layout();
 }
 
-crop_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const crop> desc)
-    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+crop_inst::typed_primitive_inst(network_impl& network, crop_node const& node)
+    :parent(network, node)
 {
     auto reference_input_sizes = reference_input_memory().get_layout().size;
     auto reference_format = reference_input_sizes.format;
     auto input_sizes = input_memory().get_layout().size;
     auto input_format = input_sizes.format;
-    auto offsets = desc->offsets;
+    auto offsets = argument.offsets;
 
     if (input_format != reference_format)
         throw std::runtime_error("Mismatch between input and reference_input format order!");

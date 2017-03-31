@@ -18,10 +18,11 @@
 #pragma once
 #include "api/primitives/prior_box.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
+
+using prior_box_node = typed_program_node<prior_box>;
 
 template <>
 class typed_primitive_inst<prior_box> : public typed_primitive_inst_base<prior_box>
@@ -29,10 +30,10 @@ class typed_primitive_inst<prior_box> : public typed_primitive_inst_base<prior_b
     using parent = typed_primitive_inst_base<prior_box>;
 
 public:
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const prior_box> desc);
+    static layout calc_output_layout(prior_box_node const& node);
 
 public:
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const prior_box> desc);
+    typed_primitive_inst(network_impl& network, prior_box_node const& node);
 
     const memory& input_memory() const { return dep_memory(0); }
 };

@@ -26,20 +26,17 @@ primitive_type_id normalization_type_id()
     return &instance;
 }
 
-layout normalization_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const normalization> desc)
+layout normalization_inst::calc_output_layout(normalization_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
-    auto result = input_desc->type->calc_output_layout(topology_map, input_desc);
-    return result;
+    return node.input().get_output_layout();
 }
 
-normalization_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const normalization> desc)
-    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+normalization_inst::typed_primitive_inst(network_impl& network, normalization_node const& desc)
+    :parent(network, desc)
 {
-	if (desc->size == 0)
+	if (argument.size == 0)
 	{
 		throw std::runtime_error("LRN size must be greater than 0!");
 	}		
 }
-
 }

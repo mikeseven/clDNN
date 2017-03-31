@@ -18,10 +18,21 @@
 #pragma once
 #include "api/primitives/reorder.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
+
+template <>
+struct typed_program_node<reorder> : public typed_program_node_base<reorder>
+{
+public:
+    auto& input() const { return get_dependency(0); }
+    auto& mean() const { return get_dependency(1); }
+
+    bool has_mean() const { return !typed_desc()->mean.empty(); }
+};
+
+using reorder_node = typed_program_node<reorder>;
 
 template <>
 class typed_primitive_inst<reorder> : public typed_primitive_inst_base<reorder>
@@ -29,13 +40,13 @@ class typed_primitive_inst<reorder> : public typed_primitive_inst_base<reorder>
     using parent = typed_primitive_inst_base<reorder>;
 
 public:
-    static layout calc_output_layout(const topology_map&, std::shared_ptr<const reorder> desc)
+    static layout calc_output_layout(reorder_node const& node)
     {
-        return desc->output_layout;
+        return node.get_primitive()->output_layout;
     }
 
 public:
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const reorder> desc);
+    typed_primitive_inst(network_impl& network, reorder_node const& node);
 
     const memory& input_memory() const { return dep_memory(0); }
     const memory& mean_memory() const { return dep_memory(1); }

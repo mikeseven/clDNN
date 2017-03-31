@@ -23,38 +23,41 @@
 
 namespace cldnn
 {
-    template<class PType, class PType_Arg>
-    struct primitive_type_base : ::cldnn_primitive_type
+template<class PType, class PType_Inst>
+struct primitive_type_base : ::cldnn_primitive_type
+{
+    static_assert(std::is_base_of<primitive, PType>::value, "Primitive type passed to primitive_type_base should derive from cldnn::primitive");
+
+    std::shared_ptr<primitive> from_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto) const override
     {
-        std::shared_ptr<primitive> from_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto) const override
-        {
-            if (dto->type != this) throw std::invalid_argument("dto: primitive type mismatch");
-            return std::make_shared<PType>(as_dto<PType>(dto));
-        }
+        if (dto->type != this)
+            throw std::invalid_argument("primitive_type_base::from_dto: primitive type mismatch");
 
-        std::shared_ptr<const primitive_inst> create_inst(network_impl& network, std::shared_ptr<const primitive> desc) const override
-        {
-            if (desc->type != this) throw std::invalid_argument("desc: primitive type mismatch");
-            auto result = std::make_shared<PType_Arg>(network, std::static_pointer_cast<const PType>(desc));
-            result->_impl = network.get_engine().get()->create_primitive_impl(*result);
-            return result;
-        }
+        return std::make_shared<PType>(as_dto<PType>(dto));
+    }
 
-        layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const primitive> desc) const override
-        {
-            if (desc->type != this) throw std::invalid_argument("desc: primitive type mismatch");
+    std::shared_ptr<cldnn::primitive_inst> create_instance(network_impl& network, const cldnn::program_node& node) const override
+    {
+        if (node.get_primitive()->type != this)
+            throw std::invalid_argument("primitive_type_base::create_instance: primitive type mismatch");
 
-            auto it = topology_map.find(desc->id);
-            if (it->second->output_layout)
-            {
-                return *it->second->output_layout;
-            }
+        return std::make_shared<PType_Inst>(network, node);
+    }
 
-            auto result = PType_Arg::calc_output_layout(topology_map, std::static_pointer_cast<const PType>(desc));
-            it->second->output_layout = std::make_unique<layout>(result);
-            return result;
-        };
+    std::unique_ptr<primitive_impl> choose_impl(engine_impl& engine, const cldnn::program_node& node) const override
+    {
+        if (node.get_primitive()->type != this)
+            throw std::invalid_argument("primitive_type_base::choose_impl: primitive type mismatch");
 
-    };
+        return engine.create_primitive_impl(node.as<PType>());
+    }
 
+    cldnn::layout calc_output_layout(const cldnn::program_node& node) const override
+    {
+        if (node.get_primitive()->type != this)
+            throw std::invalid_argument("primitive_type_base::calc_output_layout: primitive type mismatch");
+
+        return PType_Inst::calc_output_layout(node);
+    }
+};
 }

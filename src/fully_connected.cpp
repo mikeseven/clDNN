@@ -55,13 +55,12 @@ bool is_batch_after_spatial(const std::string order)
 }
 }
 
-layout fully_connected_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const fully_connected> desc)
+layout fully_connected_inst::calc_output_layout(fully_connected_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
-    auto input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
+    auto desc = node.get_primitive();
     
-    auto weights_desc = topology_map.at(desc->weights)->primitive_desc;
-    auto weights_layout = weights_desc->type->calc_output_layout(topology_map, weights_desc);
+    auto input_layout = node.input().get_output_layout();
+    auto weights_layout = node.weights().get_output_layout();
 
     if(is_batch_after_spatial(input_layout.size.format.order()) || 
         (input_layout.size.format == format::bfyx &&                //this condition tests whether our input is batch>1 in bfyx format, if yes there will be
@@ -77,8 +76,8 @@ layout fully_connected_inst::calc_output_layout(const topology_map& topology_map
     }
 }
 
-fully_connected_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const fully_connected> desc)
-    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+fully_connected_inst::typed_primitive_inst(network_impl& network, fully_connected_node const& node)
+    :parent(network, node)
 {
     auto input_size = input_memory().get_layout().size;
     auto output_size = output_memory().get_layout().size;

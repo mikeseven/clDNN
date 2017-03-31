@@ -28,27 +28,27 @@ primitive_type_id prior_box_type_id()
     return &instance;
 }
 
-layout prior_box_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const prior_box> desc)
+layout prior_box_inst::calc_output_layout(prior_box_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
-    auto input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
+    auto desc = node.get_primitive();
+    auto input_layout = node.input().get_output_layout();
     assert(input_layout.size.spatial.size() == 2);
 
-	const int layer_width = input_layout.size.spatial[1];
-	const int layer_height = input_layout.size.spatial[0];
+    const int layer_width = input_layout.size.spatial[1];
+    const int layer_height = input_layout.size.spatial[0];
 
-	int num_priors = (int)desc->aspect_ratios.size() * (int)desc->min_sizes.size() + (int)desc->max_sizes.size();
+    int num_priors = (int)desc->aspect_ratios.size() * (int)desc->min_sizes.size() + (int)desc->max_sizes.size();
 
-	// Since all images in a batch has same height and width, we only need to
-	// generate one set of priors which can be shared across all images.
-	// 2 features. First feature stores the mean of each prior coordinate.
-	// Second feature stores the variance of each prior coordinate.
+    // Since all images in a batch has same height and width, we only need to
+    // generate one set of priors which can be shared across all images.
+    // 2 features. First feature stores the mean of each prior coordinate.
+    // Second feature stores the variance of each prior coordinate.
 
     return{ input_layout.data_type, cldnn::tensor(cldnn::format::bfyx,{ 1, 2, layer_width * layer_height * num_priors * 4, 1 }) };
 }
 
-prior_box_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const prior_box> desc)
-    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+prior_box_inst::typed_primitive_inst(network_impl& network, prior_box_node const& node)
+    :parent(network, node)
 {
 	//Check arguments
 	if (argument.min_sizes.size() == 0) {

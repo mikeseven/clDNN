@@ -18,11 +18,11 @@
 #pragma once
 #include "api/primitives/normalization.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
+
+using normalization_node = typed_program_node<normalization>;
 
 template <>
 class typed_primitive_inst<normalization> : public typed_primitive_inst_base<normalization>
@@ -30,10 +30,10 @@ class typed_primitive_inst<normalization> : public typed_primitive_inst_base<nor
     using parent = typed_primitive_inst_base<normalization>;
 
 public:
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const normalization> desc);
+    static layout calc_output_layout(normalization_node const& node);
 
 public:
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const normalization> desc);
+    typed_primitive_inst(network_impl& network, normalization_node const& node);
 
     const memory& input_memory() const { return dep_memory(0); }
 };

@@ -18,10 +18,19 @@
 #pragma once
 #include "api/primitives/mean_substract.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
+
+template <>
+struct typed_program_node<mean_substract> : public typed_program_node_base<mean_substract>
+{
+public:
+    auto& input() const { return get_dependency(0); }
+    auto& mean() const { return get_dependency(1); }
+};
+
+using mean_substract_node = typed_program_node<mean_substract>;
 
 template <>
 class typed_primitive_inst<mean_substract> : public typed_primitive_inst_base<mean_substract>
@@ -29,10 +38,10 @@ class typed_primitive_inst<mean_substract> : public typed_primitive_inst_base<me
     using parent = typed_primitive_inst_base<mean_substract>;
 
 public:
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const mean_substract> desc);
+    static layout calc_output_layout(mean_substract_node const& node);
 
 public:
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const mean_substract> desc);
+    typed_primitive_inst(network_impl& network, mean_substract_node const& node);
 
     const memory& input_memory() const { return dep_memory(0); }
     const memory& mean_memory() const { return dep_memory(1); }

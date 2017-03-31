@@ -27,10 +27,11 @@ primitive_type_id pooling_type_id()
     return &instance;
 }
 
-layout pooling_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const pooling> desc)
+layout pooling_inst::calc_output_layout(parent::typed_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
-    auto input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
+    auto desc = node.get_primitive();
+
+    auto input_layout = node.input().get_output_layout();
     assert(input_layout.size.spatial.size() == 2);
     auto input_offsets = desc->input_offset().transform(input_layout.size.format, 0).sizes();
     auto strides = desc->stride.transform(input_layout.size.format, 1).sizes();
@@ -51,16 +52,12 @@ layout pooling_inst::calc_output_layout(const topology_map& topology_map, std::s
 
             output_sizes[i] = static_cast<cldnn::tensor::value_type>(
                 2 * input_offsets[i] < output_sizes[i]
-                    // ? std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0) / strides[i] + 1
-                    ? ceil_div(std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0), strides[i]) + 1
-                    : 0);
+                // ? std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0) / strides[i] + 1
+                ? ceil_div(std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0), strides[i]) + 1
+                : 0);
         }
     }
 
-    return{ input_layout.data_type, {input_layout.size.format, output_sizes} };
+    return{ input_layout.data_type,{ input_layout.size.format, output_sizes } };
 }
-
-pooling_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const pooling> desc)
-    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
-{}
 }

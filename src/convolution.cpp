@@ -28,12 +28,13 @@ primitive_type_id convolution_type_id()
     return &instance;
 }
 
-layout convolution_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const convolution> desc)
+layout convolution_inst::calc_output_layout(convolution_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
-    auto input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
-    auto weight0_desc = topology_map.at(desc->weights[0])->primitive_desc;
-    auto weights_layout = weight0_desc->type->calc_output_layout(topology_map, weight0_desc);
+    auto desc = node.get_primitive();
+
+    auto input_layout = node.input().get_output_layout();
+    auto weights_layout = node.weights(0).get_output_layout(); //weights are stored after inputs
+
     auto input_offset = desc->input_offset().transform(input_layout.size.format, 0);
     auto strd = desc->stride.transform(format::yx, 0);
     auto split = desc->weights.size();
@@ -68,29 +69,29 @@ layout convolution_inst::calc_output_layout(const topology_map& topology_map, st
     //       behavior (it can omit from calculation up to stride-1 last rows and columns).
     auto output_spatial_x = static_cast<cldnn::tensor::value_type>(
         2 * input_offset.spatial[0] < input_layout.size.spatial[0]
-            ? std::max(input_layout.size.spatial[0] - 2 * input_offset.spatial[0] - kernel_xy[0], 0) / strd.spatial[0] + 1
-            // ? ceil_div(std::max(input_layout.size.spatial[0] - 2 * input_offset.spatial[0] - kernel_xy[0], 0), strd.spatial[0]) + 1
-            : 0);
+        ? std::max(input_layout.size.spatial[0] - 2 * input_offset.spatial[0] - kernel_xy[0], 0) / strd.spatial[0] + 1
+        // ? ceil_div(std::max(input_layout.size.spatial[0] - 2 * input_offset.spatial[0] - kernel_xy[0], 0), strd.spatial[0]) + 1
+        : 0);
     auto output_spatial_y = static_cast<cldnn::tensor::value_type>(
         2 * input_offset.spatial[1] < input_layout.size.spatial[1]
-            ? std::max(input_layout.size.spatial[1] - 2 * input_offset.spatial[1] - kernel_xy[1], 0) / strd.spatial[1] + 1
-            // ? ceil_div(std::max(input_layout.size.spatial[1] - 2 * input_offset.spatial[1] - kernel_xy[1], 0), strd.spatial[1]) + 1
-            : 0);
+        ? std::max(input_layout.size.spatial[1] - 2 * input_offset.spatial[1] - kernel_xy[1], 0) / strd.spatial[1] + 1
+        // ? ceil_div(std::max(input_layout.size.spatial[1] - 2 * input_offset.spatial[1] - kernel_xy[1], 0), strd.spatial[1]) + 1
+        : 0);
     // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
     auto number_of_features = weights_layout.size.feature[0] * static_cast<int32_t>(split);
 
     tensor output_size(format::yxfb, {
-                           output_spatial_y, output_spatial_x, number_of_features, input_layout.size.batch[0] }
-                      );
+        output_spatial_y, output_spatial_x, number_of_features, input_layout.size.batch[0] }
+    );
 
     auto result = layout({ input_layout.data_type, output_size.transform(input_layout.size.format, 1) });
     return result;
 }
 
-convolution_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const convolution> desc)
-    : parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+convolution_inst::typed_primitive_inst(network_impl& network, convolution_node const& node)
+    : parent(network, node)
 {
-    auto stride = desc->stride;
+    auto stride = argument.stride;
     auto output_size = output_memory().get_layout().size;
 
     auto input_arg = input_memory().get_layout();
@@ -99,7 +100,7 @@ convolution_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<co
     if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("input/output number of dimension does not match.");
     if (stride.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("stride/output number of dimension does not match.");
 
-    auto split = desc->split();
+    auto split = argument.split();
     for (decltype(split) j = 0; j < split; j++)
     {
         auto& filter_mem = weights_memory(j);
@@ -112,11 +113,11 @@ convolution_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<co
         }
             
 
-        auto input_offset = desc->input_offset().transform(input_arg.size.format, 0);
-        auto output_offset = desc->output_offset().transform(output_arg.size.format, 0);
+        auto input_offset = argument.input_offset().transform(input_arg.size.format, 0);
+        auto output_offset = argument.output_offset().transform(output_arg.size.format, 0);
 
         if (filter_arg.size.raw.size() != output_arg.size.raw.size() + 1) throw std::runtime_error("window_size != 5");
-        if (desc->padding_filling_value() != 0.0f) throw std::runtime_error("unknown padding mode.");
+        if (argument.padding_filling_value() != 0.0f) throw std::runtime_error("unknown padding mode.");
         if (input_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("input offset/input number of dimension does not match.");
 
         assert(1 == output_size.feature.size());

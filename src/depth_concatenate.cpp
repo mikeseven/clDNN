@@ -28,35 +28,36 @@ primitive_type_id depth_concatenate_type_id()
     return &instance;
 }
 
-layout depth_concatenate_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const depth_concatenate> desc)
+layout depth_concatenate_inst::calc_output_layout(depth_concatenate_node const& node)
 {
-    auto& input_ids = desc->input;
-    auto input0_desc = topology_map.at(input_ids.at(0))->primitive_desc;
-    auto input_layout = input0_desc->type->calc_output_layout(topology_map, input0_desc);
+    auto desc = node.get_primitive();
+
+    auto input_layout = node.input(0).get_output_layout();
     auto result_sizes = input_layout.size.sizes();
     auto input_format = input_layout.size.format;
 
     // get indicies of feature coordinates and initialize particular result coordinate to 0
     auto& format_order = input_format.order();
     assert(result_sizes.size() == format_order.size());
-    if (input_layout.size.feature.size() != 1) throw std::domain_error("depth_concatenate supports only one feature dimension");
+    if (input_layout.size.feature.size() != 1)
+        throw std::domain_error("depth_concatenate supports only one feature dimension");
 
     auto feature_index = format_order.find_first_of(format_traits::feature_chars());
     assert(feature_index != std::string::npos);
 
     // calculate sum of features from all inputs
     result_sizes[feature_index] = 0;
-    for(auto id : input_ids)
+    for (size_t i = 0; i < desc->input.size(); ++i)
     {
-        auto input_desc = topology_map.at(id)->primitive_desc;
-        auto input_sizes = input_desc->type->calc_output_layout(topology_map, input_desc).size.sizes();
+        auto input_sizes = node.input(i).get_output_layout().size.sizes();
         result_sizes[feature_index] += input_sizes[feature_index];
     }
-    return layout{input_layout.data_type, {input_format, result_sizes}};
+
+    return layout{ input_layout.data_type,{ input_format, result_sizes } };
 }
 
-depth_concatenate_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const depth_concatenate> desc)
-    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+depth_concatenate_inst::typed_primitive_inst(network_impl& network, depth_concatenate_node const& node)
+    :parent(network, node)
 {
     auto input_format = input_memory(0).get_layout().size.format;
     auto output_format = output_memory().get_layout().size.format;

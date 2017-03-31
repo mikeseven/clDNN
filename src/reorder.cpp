@@ -28,20 +28,20 @@ primitive_type_id reorder_type_id()
     return &instance;
 }
 
-reorder_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const reorder> desc)
-    : parent(network, desc, desc->output_layout)
+reorder_inst::typed_primitive_inst(network_impl& network, reorder_node const& node)
+    : parent(network, node)
 {
     auto& input_mem = input_memory();
 
     if (input_mem.get_layout().size.raw.size() < _output.get_layout().size.raw.size())
         throw std::runtime_error("Input dimension < output dimension. Reorder primitive woks only with same dimension sizes (reorder) or when input > output (flatten).");
-    if (!desc->substract_per_feature.empty())
+    if (!argument.substract_per_feature.empty())
     {
         if (input_mem.get_layout().size.feature.size() > 1)
         {
             throw std::runtime_error("Subtracting values work only for formats that have feature dimension == 1");
         }
-        if (static_cast<size_t>(input_mem.get_layout().size.feature[0]) != desc->substract_per_feature.size())
+        if (static_cast<size_t>(input_mem.get_layout().size.feature[0]) != argument.substract_per_feature.size())
             throw std::runtime_error("Number of features/channels in input does not match the number of features/channels in values to subtract");
     }
     if (argument.input_padding)

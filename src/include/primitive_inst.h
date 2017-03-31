@@ -19,76 +19,155 @@
 
 #include "api/memory.hpp"
 #include "api/primitive.hpp"
+
 #include "event_impl.h"
+#include "program_impl.h"
 #include "meta_utils.h"
 
 #include <memory>
+#include <vector>
 
 namespace neural { namespace gpu { class gpu_toolkit; } }
+
 namespace cldnn
 {
+
 struct network_impl;
-struct primitive_impl {
-    virtual refcounted_obj_ptr<event_impl> execute(const std::vector<refcounted_obj_ptr<event_impl>>& events) = 0;
+class primitive_inst;
+
+template <class PType>
+class typed_primitive_inst;
+
+/*
+    Base class for all implementations.
+*/
+struct primitive_impl
+{
     virtual ~primitive_impl() = default;
+
+    virtual event_impl::ptr execute(const std::vector<event_impl::ptr>& events, primitive_inst& instance) = 0;
 };
 
+/*
+    Base class for all primitive instances.
+    It's main responsibility is to allocate memory required to run single, specified in ctor,
+    program_node. It also contains informations about it's predecessor in network graph and checks (<<-- TODO)
+    if output should be recalculated between network runs.
+*/
 class primitive_inst
 {
 public:
     virtual ~primitive_inst() = default;
-    const std::vector<std::shared_ptr<const primitive_inst>>& input() const { return _inputs; }
-    const memory& dep_memory(size_t index) const { return input().at(index)->output_memory(); }
-    const memory& output_memory() const { return _output; }
-    layout non_padded_output_layout() const
-    {
-        layout tmp = _output.get_layout();
-        tmp.size = tmp.size.sub(_desc->output_padding.lower_size()).sub(_desc->output_padding.upper_size());
-        return tmp;
-    }
-    primitive_type_id type() const { return _desc->type; }
-    primitive_id id() const { return _desc->id; }
-    const std::shared_ptr<const primitive>& desc() const { return _desc; }
-    network_impl& get_network() const { return _network; }
-    std::unique_ptr<primitive_impl> _impl;
 
-    refcounted_obj_ptr<event_impl> execute(const std::vector<refcounted_obj_ptr<event_impl>>& events) const;
+    const std::vector<std::shared_ptr<const primitive_inst>>& dependencies() const
+    { 
+        return reinterpret_cast<std::vector<std::shared_ptr<const primitive_inst>> const&>(_inputs);
+    }
+
+    const memory& dep_memory(size_t index) const { return dependencies().at(index)->output_memory(); }
+    const memory& output_memory() const { return _output; }
+    layout non_padded_output_layout() const;
+    primitive_type_id type() const { return _node.get_primitive()->type; }
+    primitive_id id() const { return _node.get_primitive()->id; }
+    const auto desc() const { return _node.get_primitive(); }
+    network_impl& get_network() const { return _network; }
+
+    event_impl::ptr execute(const std::vector<event_impl::ptr>& events);
+
+    auto output_changed() const { return _output_changed; }
+
+    //return pointer to const to prevent arbitrary 'execute' call -> use primitive_inst.execute() instead
+    const auto get_impl() const { return _impl.get(); }
 
 protected:
-    primitive_inst(network_impl& network, std::shared_ptr<const primitive> desc, const memory& output_memory);
-    primitive_inst(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout);
-    static memory allocate_output(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout);
+    primitive_inst(network_impl& network, program_node const& node);
+    primitive_inst(network_impl& netowkr, program_node const& node, memory const& buffer);
+
     network_impl& _network;
-    std::shared_ptr<const primitive> _desc;
-    std::vector<std::shared_ptr<const primitive_inst>> _inputs;
+    program_node const& _node;
+
+    std::shared_ptr<primitive_impl> _impl;
+
+    std::vector<std::shared_ptr<primitive_inst>> _inputs;
     memory _output;
+
+    bool _output_changed; //todo: implement output reuse if neither of inputs has changed
+    bool _has_valid_input = true; //by default all primitives has valid inputs, exception is input_layout (see input_layout_inst)
+
+private:
+    memory allocate_output();
 };
 
+/*
+Base class for all implementation of specified primitive type.
+For example, all convolution implementations should derive from typed_primitive_impl<convolution>.
+*/
+template <class PType>
+struct typed_primitive_impl : public primitive_impl
+{
+    static_assert(meta::is_primitive_v<PType>, "PType should be a non-const, non-volatile class derived from primitive");
+
+private:
+    event_impl::ptr execute(const std::vector<refcounted_obj_ptr<event_impl>>& event, primitive_inst& instance) override
+    {
+        if (instance.type() != PType::type_id())
+            throw std::invalid_argument("Implementation type does not match primitive type");
+        if (instance.get_impl() != this)
+            throw std::invalid_argument("Trying to execute primitive implementation with mismatching primitive instance");
+
+        return execute_impl(event, reinterpret_cast<typed_primitive_inst<PType>&>(instance));
+    }
+
+    virtual event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& event, typed_primitive_inst<PType>& instance) = 0;
+};
+
+
+/*
+    Base class for all concrete primitive instances.
+*/
 template<class PType>
 class typed_primitive_inst_base : public primitive_inst
 {
     static_assert(meta::is_primitive_v<PType>, "PType should be a non-const, non-volatile class derived from primitive");
 
 public:
+    using typed_node = typed_program_node<PType>;
+    using typed_impl = typed_primitive_impl<PType>;
+
+    typed_primitive_inst_base(network_impl& network, typed_node const& node)
+        : primitive_inst(network, node)
+        , node(_node)
+        , argument(*node.get_primitive())
+    {}
+
+    typed_primitive_inst_base(network_impl& network, typed_node const& node, memory const& buffer)
+        : primitive_inst(network, node, buffer)
+        , node(_node)
+        , argument(*node.get_primitive())
+    {}
+
+    const typed_node& node;
     const PType& argument;
-
-    const std::shared_ptr<const PType> desc() const { return std::static_pointer_cast<const PType>(_desc); }
-
-protected:
-    typed_primitive_inst_base(network_impl& network, std::shared_ptr<const PType> desc, const memory& output_memory)
-        : primitive_inst(network, desc, output_memory)
-        , argument(*std::static_pointer_cast<const PType>(_desc))
-    {}
-
-    typed_primitive_inst_base(network_impl& network, std::shared_ptr<const PType> desc, const layout& output_layout)
-        : primitive_inst(network, desc, output_layout)
-        , argument(*std::static_pointer_cast<const PType>(_desc))
-    {}
 };
 
+/*
+    Template class which represents instance of primitive 'PType'.
+    Each new primitive should explicitly specialize this class.
+    The pattern is as follows:
+        struct new_primitive {}; // C++ API layer
+        template <>
+        class typed_primitive_inst<new_primitive> : public typed_primitive_inst_base<new_primitive> {}; // network instance specialization
+        using new_primitive_inst = typed_primitive_inst<new_primitive>; //to simplify usage
+
+    Using template specialization instead of dedicated classes for each primitive comes in hand
+    when writing other template methods/classes which would like to use primitive_inst.
+    As alternative to this, one could use some kind of type traits to translate primitive type
+    to related primitive_inst implementation but this approach does the same with less code/classes.
+*/
 template <class PType>
 class typed_primitive_inst : public typed_primitive_inst_base<PType>
-{
+{ 
     static_assert(meta::always_false_v<PType>, "Missing typed_primitive_inst specialization");
 };
+
 }

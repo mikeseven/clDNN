@@ -18,10 +18,34 @@
 #pragma once
 #include "api/primitives/deconvolution.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
+
+template <>
+struct typed_program_node<deconvolution> : public typed_program_node_base<deconvolution>
+{
+public:
+    auto& input() const { return get_dependency(0); }
+
+    auto& weights(size_t idx) const
+    {
+        if (idx >= typed_desc()->weights.size())
+            throw std::range_error("weights offset too big");
+
+        return get_dependency(1 + idx);
+    }
+
+    auto& bias(size_t idx) const 
+    { 
+        if (idx >= typed_desc()->bias.size()) 
+            throw std::range_error("bias offset too big");
+
+        return get_dependency(1 + typed_desc()->weights.size() + idx);
+    }
+};
+
+using deconvolution_node = typed_program_node<deconvolution>;
 
 template <>
 class typed_primitive_inst<deconvolution> : public typed_primitive_inst_base<deconvolution>
@@ -29,10 +53,10 @@ class typed_primitive_inst<deconvolution> : public typed_primitive_inst_base<dec
     using parent = typed_primitive_inst_base<deconvolution>;
 
 public:
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const deconvolution> desc);
+    static layout calc_output_layout(deconvolution_node const& node);
 
 public:
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const deconvolution> desc);
+    typed_primitive_inst(network_impl& network, deconvolution_node const& node);
 
     const memory& input_memory() const { return dep_memory(0); }
 

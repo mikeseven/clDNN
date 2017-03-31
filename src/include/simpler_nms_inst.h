@@ -18,10 +18,19 @@
 #pragma once
 #include "api/primitives/simpler_nms.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
+
+template <>
+struct typed_program_node<simpler_nms> : public typed_program_node_base<simpler_nms>
+{
+    auto& cls_score() const { return get_dependency(0); }
+    auto& bbox_pred() const { return get_dependency(1); }
+    auto& image_info() const { return get_dependency(2); }
+};
+
+using simpler_nms_node = typed_program_node<simpler_nms>;
 
 template <>
 class typed_primitive_inst<simpler_nms> : public typed_primitive_inst_base<simpler_nms>
@@ -65,10 +74,10 @@ public:
 		image_info_depth_index = 2
 	};
 
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const simpler_nms> desc);
+    static layout calc_output_layout(simpler_nms_node const& node);
 
 public:    
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const simpler_nms> desc);
+    typed_primitive_inst(network_impl& network, simpler_nms_node const& desc);
 
     const std::vector<anchor>& get_anchors() const { return _anchors; }
 

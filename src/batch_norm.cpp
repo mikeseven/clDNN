@@ -26,15 +26,13 @@ primitive_type_id batch_norm_type_id()
     return &instance;
 }
 
-layout batch_norm_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const batch_norm> desc)
+layout batch_norm_inst::calc_output_layout(batch_norm_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
-    auto result = input_desc->type->calc_output_layout(topology_map, input_desc);
-    return result;
+    return node.input().get_output_layout();
 }
 
-batch_norm_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const batch_norm> desc)
-    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+batch_norm_inst::typed_primitive_inst(network_impl& network, batch_norm_node const& node)
+    :parent(network, node) 
 {
     auto input_format = input_memory().get_layout().size.format;
     auto output_format = output_memory().get_layout().size.format;

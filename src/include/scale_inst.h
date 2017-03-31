@@ -18,10 +18,20 @@
 #pragma once
 #include "api/primitives/scale.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
+
+template <>
+struct typed_program_node<scale> : public typed_program_node_base<scale>
+{
+public:
+    auto& input() const { return get_dependency(0); }
+    auto& scale() const { return get_dependency(1); }
+    auto& bias() const { return get_dependency(2); }
+};
+
+using scale_node = typed_program_node<scale>;
 
 template <>
 class typed_primitive_inst<scale> : public typed_primitive_inst_base<scale>
@@ -29,10 +39,10 @@ class typed_primitive_inst<scale> : public typed_primitive_inst_base<scale>
     using parent = typed_primitive_inst_base<scale>;
 
 public:
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const scale> desc);
+    static layout calc_output_layout(scale_node const& node);
 
 public:
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const scale> desc);
+    typed_primitive_inst(network_impl& network, scale_node const& desc);
 
     const memory& input_memory() const { return dep_memory(0); }
     const memory& scale_memory() const { return dep_memory(1); }

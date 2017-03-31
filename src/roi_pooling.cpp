@@ -27,23 +27,15 @@ primitive_type_id roi_pooling_type_id()
     return &instance;
 }
 
-
-layout roi_pooling_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const roi_pooling> desc)
+layout roi_pooling_inst::calc_output_layout(roi_pooling_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input[data_index])->primitive_desc;
-    layout input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);    
-    int fm = input_layout.size.feature[0];
+    auto desc = node.get_primitive();
+    layout data_layout = node.input().get_output_layout();
+    int fm = data_layout.size.feature[0];
 
-    input_desc = topology_map.at(desc->input[rois_index])->primitive_desc;
-    input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);    
-    int num_rois = input_layout.size.batch[0];
+    layout rois_layout = node.rois().get_output_layout();
+    int num_rois = rois_layout.size.batch[0];
 
-    return layout( input_layout.data_type, { format::bfyx, { num_rois, fm, desc->pooled_height, desc->pooled_width }});
+    return layout(rois_layout.data_type, { format::bfyx,{ num_rois, fm, desc->pooled_height, desc->pooled_width } });
 }
-
-
-roi_pooling_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const roi_pooling> desc)
-    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
-{}
-
 }

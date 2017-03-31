@@ -18,10 +18,10 @@
 #pragma once
 #include "api/primitives/softmax.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
+using softmax_node = typed_program_node<softmax>;
 
 template <>
 class typed_primitive_inst<softmax> : public typed_primitive_inst_base<softmax>
@@ -29,10 +29,10 @@ class typed_primitive_inst<softmax> : public typed_primitive_inst_base<softmax>
     using parent = typed_primitive_inst_base<softmax>;
 
 public:
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const softmax> desc);
+    static layout calc_output_layout(softmax_node const& node);
 
 public:
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const softmax> desc);
+    typed_primitive_inst(network_impl& network, softmax_node const& desc);
 
     const memory& input_memory() const { return dep_memory(0); }
 };

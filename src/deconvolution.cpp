@@ -28,12 +28,12 @@ primitive_type_id deconvolution_type_id()
     return &instance;
 }
 
-layout deconvolution_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const deconvolution> desc)
+layout deconvolution_inst::calc_output_layout(deconvolution_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
-    auto input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
-    auto weight0_desc = topology_map.at(desc->weights[0])->primitive_desc;
-    auto weights_layout = weight0_desc->type->calc_output_layout(topology_map, weight0_desc);
+    auto desc = node.get_primitive();
+
+    auto input_layout = node.input().get_output_layout();
+    auto weights_layout = node.weights(0).get_output_layout(); //weights are stored after inputs
     auto input_offset = desc->input_offset().transform(input_layout.size.format, 0);
     auto strd = desc->stride.transform(format::yx, 0);
     auto split = desc->weights.size();
@@ -47,17 +47,17 @@ layout deconvolution_inst::calc_output_layout(const topology_map& topology_map, 
     auto number_of_features = weights_layout.size.feature[0] * static_cast<int32_t>(split);
 
     tensor output_size(format::yxfb, {
-                           output_spatial_y, output_spatial_x, number_of_features, input_layout.size.batch[0] }
-                      );
+        output_spatial_y, output_spatial_x, number_of_features, input_layout.size.batch[0] }
+    );
 
     auto result = layout({ input_layout.data_type, output_size.transform(input_layout.size.format, 1) });
     return result;
 }
 
-deconvolution_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const deconvolution> desc)
-    : parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+deconvolution_inst::typed_primitive_inst(network_impl& network, deconvolution_node const& node)
+    : parent(network, node)
 {
-    auto stride = desc->stride;
+    auto stride = argument.stride;
     auto output_size = output_memory().get_layout().size;
 
     auto input_arg = input_memory().get_layout();
@@ -66,19 +66,19 @@ deconvolution_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<
     if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("input/output number of dimension does not match.");
     if (stride.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("stride/output number of dimension does not match.");
 
-    auto split = desc->split();
+    auto split = argument.split();
     for (decltype(split) j = 0; j < split; j++)
     {
         auto& filter_mem = weights_memory(j);
         auto& filter_arg = filter_mem.get_layout(); //deconvolution filter
         auto& bias_arg = bias_memory(j).get_layout();
 
-        auto input_offset = desc->input_offset().transform(input_arg.size.format, 0);
-        auto output_offset = desc->output_offset().transform(output_arg.size.format, 0);
+        auto input_offset = argument.input_offset().transform(input_arg.size.format, 0);
+        auto output_offset = argument.output_offset().transform(output_arg.size.format, 0);
 
         if (bias_arg.size.raw.size() != 3) throw std::runtime_error("biases isn't 1D vector."); // b=1, f=1
         if (bias_arg.size.spatial[0] != output_size.feature[0] / split) throw std::runtime_error("biases/output feature maps number does not match.");
-        if (desc->padding_filling_value() != 0.0f) throw std::runtime_error("unknown padding mode.");
+        if (argument.padding_filling_value() != 0.0f) throw std::runtime_error("unknown padding mode.");
         if (input_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("input offset/input number of dimension does not match.");
 
         assert(1 == output_size.feature.size());

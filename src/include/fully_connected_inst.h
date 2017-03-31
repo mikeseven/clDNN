@@ -18,20 +18,30 @@
 #pragma once
 #include "api/primitives/fully_connected.hpp"
 #include "primitive_inst.h"
-#include "topology_impl.h"
 
 namespace cldnn
 {
+template <>
+struct typed_program_node<fully_connected> : public typed_program_node_base<fully_connected>
+{
+public:
+    auto& input() const { return get_dependency(0); }
+    auto& weights() const { return get_dependency(1); }
+    auto& bias() const { return get_dependency(2); }
+};
+
+using fully_connected_node = typed_program_node<fully_connected>;
+
 template <>
 class typed_primitive_inst<fully_connected> : public typed_primitive_inst_base<fully_connected>
 {
     using parent = typed_primitive_inst_base<fully_connected>;
 
 public:
-    static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const fully_connected> desc);
+    static layout calc_output_layout(fully_connected_node const& node);
 
 public:
-    typed_primitive_inst(network_impl& network, std::shared_ptr<const fully_connected> desc);
+    typed_primitive_inst(network_impl& network, fully_connected_node const& node);
 
     const memory& input_memory() const { return dep_memory(0); }
     const memory& weights_memory() const { return dep_memory(1); }

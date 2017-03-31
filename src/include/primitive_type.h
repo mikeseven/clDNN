@@ -18,18 +18,25 @@
 #pragma once
 #include "api/memory.hpp"
 #include "api/primitive.hpp"
-#include "api/topology.hpp"
+#include "api/program.hpp"
+
 #include "topology_impl.h"
+
 #include <memory>
 
 namespace cldnn {
     struct network_impl;
+    struct engine_impl;
+    struct program_node;
+    struct primitive_impl;
     class primitive_inst;
 }
 struct cldnn_primitive_type
 {
-    virtual std::shared_ptr<cldnn::primitive> from_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto) const = 0;
-    virtual std::shared_ptr<const cldnn::primitive_inst> create_inst(cldnn::network_impl& network, std::shared_ptr<const cldnn::primitive> desc) const = 0;
     virtual ~cldnn_primitive_type() = default;
-    virtual cldnn::layout calc_output_layout(const cldnn::topology_map& topology_map, std::shared_ptr<const cldnn::primitive> desc) const = 0;
+
+    virtual std::shared_ptr<cldnn::primitive> from_dto(const CLDNN_PRIMITIVE_DESC(primitive)* dto) const = 0;
+    virtual std::shared_ptr<cldnn::primitive_inst> create_instance(cldnn::network_impl& network, const cldnn::program_node& node) const = 0;
+    virtual std::unique_ptr<cldnn::primitive_impl> choose_impl(cldnn::engine_impl& engine, const cldnn::program_node& node) const = 0;    
+    virtual cldnn::layout calc_output_layout(const cldnn::program_node& node) const = 0;
 };

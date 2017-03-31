@@ -22,6 +22,9 @@
 namespace cldnn
 {
 
+template <class T>
+struct refcounted_obj_ptr;
+
 /**
  * \brief Base class for all reference counted pointers aka PIMPL implementations
  */
@@ -30,32 +33,45 @@ template<class T>
 class refcounted_obj
 {
 public:
+    using ptr = refcounted_obj_ptr<std::remove_const_t<T>>;
+    using cptr = refcounted_obj_ptr<std::add_const_t<T>>;
+
     refcounted_obj()
         : _ref_count(1)
     {}
 
     virtual ~refcounted_obj() = default;
 
-    void add_ref()
+    void add_ref() const
     {
         ++_ref_count;
     }
 
-    void release()
+    void release() const
     {
-        if ((--_ref_count) == 0) delete static_cast<T*>(this);
+        if ((--_ref_count) == 0) delete static_cast<const T*>(this);
     }
 
 private:
-    std::atomic_int _ref_count;
+    mutable std::atomic_int _ref_count;
 };
 
-template<class T, typename Dummy = typename std::enable_if<std::is_base_of<refcounted_obj<T>, T>::value>::type>
+template<class T>
 struct refcounted_obj_ptr
 {
+    template <class U = T>
     refcounted_obj_ptr(T* ptr, bool add_ref = true) : _ptr(ptr)
     {
+        static_assert(std::is_base_of<refcounted_obj<std::remove_const_t<U>>, U>::value, "Object handled with refcounted_obj_ptr should derive from refcounted_obj");
         if(add_ref) ptr_add_ref();
+    }
+
+    //for refcounted_obj_ptr<const T>, allow contruction from T*
+    template <class U = T, class = std::enable_if_t<std::is_const<U>::value>>
+    refcounted_obj_ptr(std::remove_const_t<T>* ptr, bool add_ref = true) : _ptr(ptr)
+    {
+        static_assert(std::is_base_of<refcounted_obj<std::remove_const_t<U>>, U>::value, "Object handled with refcounted_obj_ptr should derive from refcounted_obj");
+        if (add_ref) ptr_add_ref();
     }
 
     constexpr refcounted_obj_ptr() : _ptr(nullptr){}
@@ -121,6 +137,13 @@ struct refcounted_obj_ptr
     friend bool operator!=(const refcounted_obj_ptr& lhs, const refcounted_obj_ptr& rhs)
     {
         return !(lhs == rhs);
+    }
+
+    //for refcounted_obj_ptr<T>, allow conversion to refcounted_obj_ptr<const T>
+    template <class U = T, class = std::enable_if_t<!std::is_const<U>::value>>
+    operator refcounted_obj_ptr<std::add_const_t<T>> () const
+    {
+        return refcounted_obj_ptr<std::add_const_t<T>>(_ptr);
     }
 
 private:

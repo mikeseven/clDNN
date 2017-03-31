@@ -34,23 +34,23 @@ primitive_type_id simpler_nms_type_id()
 }
 
 
-layout simpler_nms_inst::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const simpler_nms> desc)
+layout simpler_nms_inst::calc_output_layout(simpler_nms_node const& node)
 {
-	auto input_desc = topology_map.at(desc->input[simpler_nms_inst::cls_scores_index])->primitive_desc;
-	layout input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
+    auto desc = node.get_primitive();
+    layout input_layout = node.get_dependency(cls_scores_index).get_output_layout();
 
-	return layout(input_layout.data_type, { format::bx, { desc->post_nms_topn, CLDNN_ROI_VECTOR_SIZE}});
+    return layout(input_layout.data_type, { format::bx,{ desc->post_nms_topn, CLDNN_ROI_VECTOR_SIZE } });
 }
 
 
-simpler_nms_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const simpler_nms> desc)
-    :parent(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+simpler_nms_inst::typed_primitive_inst(network_impl& network, simpler_nms_node const& node)
+    :parent(network, node)
 {
 	std::vector<float> default_ratios = { 0.5f, 1.0f, 2.0f };
 
 	int default_size = 16;
 
-	generate_anchors(default_size, default_ratios, desc->scales, _anchors);             	
+	generate_anchors(default_size, default_ratios, argument.scales, _anchors);             	
 }
 
 static void calc_basic_params(const simpler_nms_inst::anchor& base_anchor,                                       // input
