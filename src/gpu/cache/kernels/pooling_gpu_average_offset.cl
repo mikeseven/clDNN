@@ -26,7 +26,11 @@ KERNEL(pooling_gpu_average_offset)(const __global UNIT_TYPE* input, __global UNI
     const uint output_buffer_size_x = OUTPUT_PADDING_LOWER_SIZE_X + OUTPUT_SIZE_X + OUTPUT_PADDING_UPPER_SIZE_X;
 
 
+#if OUTPUT_PADDING_LOWER_SIZE_X || OUTPUT_PADDING_UPPER_SIZE_X || OUTPUT_PADDING_LOWER_SIZE_Y || OUTPUT_PADDING_UPPER_SIZE_Y
     const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * ((get_global_id(1) + OUTPUT_PADDING_LOWER_SIZE_X) + output_buffer_size_x * (get_global_id(2) + OUTPUT_PADDING_LOWER_SIZE_Y));
+#else
+    const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + output_buffer_size_x * get_global_id(2));
+#endif
 
     const uint x = get_global_id(1);
     const uint y = get_global_id(2);
@@ -52,7 +56,7 @@ KERNEL(pooling_gpu_average_offset)(const __global UNIT_TYPE* input, __global UNI
                 bool zero = input_offset_x >= input_buffer_size_x || input_offset_x < 0;
                 if(!zero)
                 {
-                    int input_idx = batch_and_feature_offset + OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (input_offset_x + input_offset_y * input_buffer_size_x);
+                    int input_idx = batch_and_feature_offset + INPUT_BATCH_NUM * INPUT_FEATURE_NUM * (input_offset_x + input_offset_y * input_buffer_size_x);
                     result += input[input_idx];
                 }
             }
