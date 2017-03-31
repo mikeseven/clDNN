@@ -29,9 +29,9 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
 {
     const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
     // we're computing 8 OUTPUT_FEATURE_MAP so we must divide by 8, but we got 8 batches, so no division is needed.
-    uint global_id = ((get_global_id(0) / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM)) * WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS;
+    uint global_id = (((uint)get_global_id(0) / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM)) * WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS;
 
-    const uint out_batch_id = get_local_id(0) + LOCAL_WORK_GROUP_SIZE * BATCHES_PER_WORK_ITEM * (get_group_id(0) % LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS);
+    const uint out_batch_id = (uint)get_local_id(0) + LOCAL_WORK_GROUP_SIZE * BATCHES_PER_WORK_ITEM * ((uint)get_group_id(0) % LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS);
     const uint out_x = get_global_id(1);
     const uint out_y = get_global_id(2);
 

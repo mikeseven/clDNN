@@ -46,9 +46,9 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block)(
 
         const uint batch_num = INPUT_BATCH_NUM;
         const uint linear_id_xy = get_group_id(1) + get_global_size(1) * get_group_id(2);
-        uint global_id = ((get_group_id(0) * LOCAL_WORK_GROUP_SIZE) / batch_num) * batch_num + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * batch_num;
+        uint global_id = (((uint)get_group_id(0) * LOCAL_WORK_GROUP_SIZE) / batch_num) * batch_num + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * batch_num;
 
-        const uint out_batch_id = get_local_id(0) % INPUT_BATCH_NUM;
+        const uint out_batch_id = (uint)get_local_id(0) % INPUT_BATCH_NUM;
         const uint out_x = get_group_id(1);
         const uint out_y = get_group_id(2);
 
@@ -59,7 +59,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block)(
         bool finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_OFFSET_SIZE_X
                    || out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_OFFSET_SIZE_Y;
 
-        const uint sub_group_id = get_local_id(0) % INPUT_BATCH_NUM;
+        const uint sub_group_id = (uint)get_local_id(0) % INPUT_BATCH_NUM;
 
         VECTOR_FLOAT _data0 = 0.f;
 

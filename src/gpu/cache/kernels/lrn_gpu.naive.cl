@@ -27,7 +27,7 @@
 KERNEL (lrn_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
     const uint global_id = get_global_id(0);
-    const uint element_offset = get_global_id(1) * INPUT_BATCH_NUM * INPUT_FEATURE_NUM;
+    const uint element_offset = (uint)get_global_id(1) * INPUT_BATCH_NUM * INPUT_FEATURE_NUM;
     const uint linear_id = global_id + element_offset;
     int input_offset_f = global_id + HELP_INPUT_OFFSET * INPUT_BATCH_NUM;
 

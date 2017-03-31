@@ -21,7 +21,7 @@ KERNEL (batch_norm_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* out
 {
     const uint feature_id = get_global_id(1);
     const uint feature_offset = feature_id * INPUT_BATCH_NUM;
-    const uint linear_id = get_global_id(0) + feature_offset + get_global_id(2) * INPUT_BATCH_NUM * INPUT_FEATURE_NUM;
+    const uint linear_id = (uint)get_global_id(0) + feature_offset + (uint)get_global_id(2) * INPUT_BATCH_NUM * INPUT_FEATURE_NUM;
 
     //compute mean
     UNIT_TYPE acc = UNIT_VAL_ZERO;

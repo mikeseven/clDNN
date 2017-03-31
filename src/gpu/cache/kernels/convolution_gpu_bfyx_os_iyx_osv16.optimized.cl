@@ -100,8 +100,8 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
     const uint output_buffer_size_y = OUTPUT_PADDING_LOWER_SIZE_Y + OUTPUT_SIZE_Y + OUTPUT_PADDING_UPPER_SIZE_Y;
 
 
-    const uint oc  = get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column
-    const uint or  = get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
+    const uint oc  = (uint)get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column
+    const uint or  = (uint)get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
     const uint fm  = get_global_id(2);                    // fm = Feature Map = od = Output Depth
     const uint lid = get_sub_group_local_id();
 

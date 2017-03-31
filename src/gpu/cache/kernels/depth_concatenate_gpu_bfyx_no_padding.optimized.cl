@@ -36,7 +36,7 @@ KERNEL (depth_concatenate_gpu_bfyx_no_padding)(__global float* input, __global f
 
     // Which pack of 16*8 elements we are processing.
     uint element_group_id = get_group_id(1);
-    uint element_offset = get_global_id(1) * ELEMENTS_PER_WORK_ITEM;
+    uint element_offset = (uint)get_global_id(1) * ELEMENTS_PER_WORK_ITEM;
 
     const uint element_group_offset = element_group_id * WORK_GROUP_SIZE * ELEMENTS_PER_WORK_ITEM;
 

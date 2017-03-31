@@ -51,9 +51,9 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
 {
     const uint global_id = get_global_id(0);
     const uint group_id = get_global_id(1); // which part of batches we are computing, for example for batch 64 we compute batches 0..31 for group_id == 0 and batches 32..65 for group_id == 1
-    uint sub_group_idx = get_local_id(0) % 8;
+    uint sub_group_idx = (uint)get_local_id(0) % 8;
 
-    const uint out_id = (sub_group_idx * BATCHES_PER_WORK_ITEM * get_global_size(1)) / 8 + (global_id / 8) * BATCHES_PER_WORK_ITEM * NEURONS_PER_WORK_ITEM * get_global_size(1) + (BATCHES_PER_WORK_ITEM * group_id) / 8;
+    const uint out_id = (sub_group_idx * BATCHES_PER_WORK_ITEM * (uint)get_global_size(1)) / 8 + (global_id / 8) * BATCHES_PER_WORK_ITEM * NEURONS_PER_WORK_ITEM * (uint)get_global_size(1) + (BATCHES_PER_WORK_ITEM * group_id) / 8;
 
     uint neuronIdx = sub_group_idx + (global_id / 8) * 8 * NEURONS_PER_WORK_ITEM;
 
@@ -80,7 +80,7 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
 
 #endif // #if NEURONS_PER_WORK_ITEM > 1
 
-    uint input_idx = sub_group_idx * (BATCHES_PER_WORK_ITEM / 8) * get_global_size(1) + (group_id * BATCHES_PER_WORK_ITEM) / 8;
+    uint input_idx = sub_group_idx * (BATCHES_PER_WORK_ITEM / 8) * (uint)get_global_size(1) + (group_id * BATCHES_PER_WORK_ITEM) / 8;
     for(uint h = 0; h < INPUT_ELEMENTS_COUNT / 8; h++)
     {
         float8 blockA00 = vload8(input_idx, input);
