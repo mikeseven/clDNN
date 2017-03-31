@@ -1268,10 +1268,11 @@ public:
         //Output is bfyx
         auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().size.transform(cldnn::format::bfyx, 0)));
 
-        const Type * const in0_mem = input.pointer<Type>();
-        const Type * const in1_mem = scale.pointer<Type>();
-        const Type * const in2_mem = bias ? bias->pointer<Type>() : nullptr; //TODO: is the condition needed or is it nullptr anyway?
-        Type * const out_mem = output.pointer<Type>();
+        const auto in0_mem = input.pointer<Type>();
+        const auto in1_mem = scale.pointer<Type>();
+        const auto in2_mem_ptr = bias ? std::make_shared<pointer<Type>>(*bias) : nullptr;
+        const Type * const in2_mem = in2_mem_ptr ? in2_mem_ptr->data() : nullptr; //TODO: is the condition needed or is it nullptr anyway?
+        auto out_mem = output.pointer<Type>();
 
         const int in0_b = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
         const int in0_f = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
