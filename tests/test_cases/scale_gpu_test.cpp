@@ -53,7 +53,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_same_size) {
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", false));
+    topology.add(scale("scale", "input", "scale_input"));
 
     std::vector<float> input_vec = { 1.f, 0.f, 5.f, 1.5f,
         2.f, 0.f, 6.f, 5.2f,
@@ -113,7 +113,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_same_size_bfyx) {
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", false));
+    topology.add(scale("scale", "input", "scale_input"));
 
     std::vector<float> input_vec = {
         1.f, 2.f, -10.f, 0.f, 0.f, -11.f,
@@ -176,7 +176,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_same_size_scale_bfyx) {
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", false));
+    topology.add(scale("scale", "input", "scale_input"));
 
     std::vector<float> input_vec = { 1.f, 0.f, 5.f, 1.5f,
         2.f, 0.f, 6.f, 5.2f,
@@ -251,7 +251,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_same_size_bias_term) {
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("scale_input", scale_input.get_layout()));
     topology.add(input_layout("bias", bias.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", true, "bias"));
+    topology.add(scale("scale", "input", "scale_input", "bias"));
 
     std::vector<float> input_vec = { 1.f, 0.f, 5.f, 1.5f,
         2.f, 0.f, 6.f, 5.2f,
@@ -324,7 +324,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_scalar) {
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", false));
+    topology.add(scale("scale", "input", "scale_input"));
 
     std::vector<float> input_vec = { 1.f, 0.f, 5.f, 1.5f,
         2.f, 0.f, 6.f, 5.2f,
@@ -389,7 +389,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_y) {
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", false));
+    topology.add(scale("scale", "input", "scale_input"));
 
     std::vector<float> input_vec = { 1.f, 0.f, 5.f, 1.5f,
         2.f, 0.f, 6.f, 5.2f,
@@ -455,7 +455,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_x) {
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", false));
+    topology.add(scale("scale", "input", "scale_input"));
 
     std::vector<float> input_vec = { 1.f, 0.f, 5.f, 1.5f,
         2.f, 0.f, 6.f, 5.2f,
@@ -523,7 +523,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_xy) {
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", false));
+    topology.add(scale("scale", "input", "scale_input"));
 
     std::vector<float> input_vec = { 1.f, 0.f, 5.f, 1.5f,
         2.f, 0.f, 6.f, 5.2f,
@@ -596,7 +596,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_batch1) {
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", false));
+    topology.add(scale("scale", "input", "scale_input"));
 
     std::vector<float> input_vec = { 1.f, 0.f, 5.f, 1.5f,
         2.f, 0.f, 6.f, 5.2f,
@@ -663,11 +663,11 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_bx) {
     auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
     auto bias_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
 
-    topology topology;
-    topology.add(input_layout("input", input.get_layout()));
-    topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(input_layout("bias_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", true, "bias_input"));
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale_input", scale_input.get_layout()));
+	topology.add(input_layout("bias_input", scale_input.get_layout()));
+	topology.add(scale("scale", "input", "scale_input", "bias_input"));
 
     std::vector<float> input_vec = {
         1.f, 2.f, -0.75f,
@@ -727,11 +727,11 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_xb) {
     auto scale_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
     auto bias_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
 
-    topology topology;
-    topology.add(input_layout("input", input.get_layout()));
-    topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(input_layout("bias_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", true, "bias_input"));
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale_input", scale_input.get_layout()));
+	topology.add(input_layout("bias_input", scale_input.get_layout()));
+	topology.add(scale("scale", "input", "scale_input", "bias_input"));
 
     std::vector<float> input_vec = {
         1.f, 2.f, -0.75f,
@@ -789,11 +789,11 @@ TEST(scale_gpu, basic_in2x3_scale_single_value_bx) {
     auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 1, 1 } } });
     auto bias_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 1, 1 } } });
 
-    topology topology;
-    topology.add(input_layout("input", input.get_layout()));
-    topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(input_layout("bias_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", true, "bias_input"));
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale_input", scale_input.get_layout()));
+	topology.add(input_layout("bias_input", scale_input.get_layout()));
+	topology.add(scale("scale", "input", "scale_input", "bias_input"));
 
     std::vector<float> input_vec = {
         1.f, 2.f, -0.75f,
@@ -849,11 +849,11 @@ TEST(scale_gpu, basic_in2x3_scale_single_value_xb) {
     auto scale_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 1, 1 } } });
     auto bias_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 1, 1 } } });
 
-    topology topology;
-    topology.add(input_layout("input", input.get_layout()));
-    topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(input_layout("bias_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", true, "bias_input"));
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale_input", scale_input.get_layout()));
+	topology.add(input_layout("bias_input", scale_input.get_layout()));
+	topology.add(scale("scale", "input", "scale_input", "bias_input"));
 
     std::vector<float> input_vec = {
         1.f, 2.f, -0.75f,
@@ -905,10 +905,10 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_no_bias_bx) {
     auto input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
     auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
 
-    topology topology;
-    topology.add(input_layout("input", input.get_layout()));
-    topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", false));
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale_input", scale_input.get_layout()));
+	topology.add(scale("scale", "input", "scale_input"));
 
     std::vector<float> input_vec = {
         1.f, 2.f, -0.75f,
@@ -955,10 +955,10 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_no_bias_xb) {
     auto input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
     auto scale_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
 
-    topology topology;
-    topology.add(input_layout("input", input.get_layout()));
-    topology.add(input_layout("scale_input", scale_input.get_layout()));
-    topology.add(scale("scale", "input", "scale_input", false));
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale_input", scale_input.get_layout()));
+	topology.add(scale("scale", "input", "scale_input"));
 
     std::vector<float> input_vec = {
         1.f, 2.f, -0.75f,
@@ -1019,7 +1019,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_yxfb_bfyx_same_size_padding) {
         topology.add(input_layout("input", input.get_layout()));
         topology.add(reorder("reorder", "input", input.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 2, 1 } }));
         topology.add(input_layout("scale_input", scale_input.get_layout()));
-        topology.add(scale("scale", "reorder", "scale_input", false, { format::yx,{ 0, 0 } }, { format::yx,{ 2, 2 } }));
+        topology.add(scale("scale", "reorder", "scale_input", { format::yx,{ 0, 0 } }, { format::yx,{ 2, 2 } }));
 
         std::vector<float> input_vec = { 1.f, 2.f, 3.f, 4.f };
         set_values(input, input_vec);
@@ -1062,9 +1062,7 @@ static network setup_scale_network(
     const data_types dt,
     const tensor input_tensor,
     const tensor scale_tensor,
-    bool bias_term,
     const tensor bias_tensor,
-    bool pass_bias_term,    //TODO: a WA for lack of std::optional<bool> bias_term
     bool pass_bias          //TODO: a WA for lack of std::optional<tensor> bias
 )
 {
@@ -1076,19 +1074,16 @@ static network setup_scale_network(
     topology.add(input_layout("input", input_mem.get_layout()));
     topology.add(input_layout("scale_input", scale_mem.get_layout()));
 
-    if (pass_bias_term)
+    if (pass_bias)
     {
-        if (pass_bias)
-        {
-            auto bias_mem = memory::allocate(engine, { dt, bias_tensor });
-            topology.add(input_layout("bias_input", bias_mem.get_layout()));
+        auto bias_mem = memory::allocate(engine, { dt, bias_tensor });
+        topology.add(input_layout("bias_input", bias_mem.get_layout()));
 
-            topology.add(scale("scale", "input", "scale_input", bias_term, "bias_input" ));
-        }
-        else
-        {
-            topology.add(scale("scale", "input", "scale_input", bias_term));
-        }
+        topology.add(scale("scale", "input", "scale_input", "bias_input" ));
+    }
+    else
+    {
+        topology.add(scale("scale", "input", "scale_input"));
     }
 //TODO: this will be supported after the API change
 //    else
@@ -1118,32 +1113,28 @@ TEST(NegativeScaleTest, TestAll) {
     std::vector<std::vector<int>> bad_ts = { { 2, 4, 5, 6 }, { 3, 2, 5, 6 }, { 3, 4, 2, 6 }, { 3, 4, 5, 2 } };
 
     //TODO: should be ASSERT_THROW(statement, exception_type) - but what exception type?
-    ASSERT_ANY_THROW(setup_scale_network(d, { }, { }, false, { }, false, false));
-    ASSERT_ANY_THROW(setup_scale_network(d, { }, { }, false, { }, true, false));
-    ASSERT_ANY_THROW(setup_scale_network(d, { }, { }, false, { }, true, true));
+    ASSERT_ANY_THROW(setup_scale_network(d, { }, { }, { }, false));
+    ASSERT_ANY_THROW(setup_scale_network(d, { }, { }, { }, true));
 
-    ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(of, t), false, tensor(f, t), true, false));
-    ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(of, t), true, tensor(f, t), true, true));
-    ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, t), true, tensor(of, t), true, true));
+    ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(of, t), tensor(f, t), true));
+    ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(of, t), tensor(f, t), false));
 
     // make sure that it's the input that's masked in the scale/bias with a "1", not ther other way around
     for (const auto & good : good_ts)
     {
-        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, good), tensor(f, t), false, tensor(f, t), true, false));
-        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, good), tensor(f, t), true, tensor(f, t), true, true));
+        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, good), tensor(f, t), tensor(f, t), true));
     }
 
     // sizes must either be equal to input or at most have 
     for (const auto & bad : bad_ts)
     {
-        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, bad), false, tensor(f, t), true, false));
-        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, bad), true, tensor(f, t), true, true));
-        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, t), true, tensor(f, bad), true, true));
+        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, bad), tensor(f, t), true));
+        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, t), tensor(f, bad), true));
 
         for (const auto & good : good_ts)
         {
-            ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, bad), true, tensor(f, good), true, true));
-            ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, good), true, tensor(f, bad), true, true));
+            ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, bad), tensor(f, good), true));
+            ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, good), tensor(f, bad), true));
         }
     }
 
@@ -1151,7 +1142,7 @@ TEST(NegativeScaleTest, TestAll) {
     for (unsigned i = 0; i < good_ts.size(); ++i)
     for (unsigned j = 0; j < good_ts.size(); ++j)
         if (i != j)
-            ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, good_ts[i]), true, tensor(f, good_ts[j]), true, true));
+            ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, good_ts[i]), tensor(f, good_ts[j]), true));
 
 }
 
@@ -1163,24 +1154,11 @@ TEST(NegativeScaleTest, TestAll) {
 
 using namespace cldnn;
 
-namespace {
-    struct extraScaleTestParam {
-        bool bias_term_present;
-    };
-}
-
 class scale_test : public tests::generic_test
 {
 public:
     static void TearDownTestCase()
     {
-        for (auto & p : all_generic_params)
-            if (p->opaque_custom_param)
-            {
-                delete reinterpret_cast<extraScaleTestParam *>(p->opaque_custom_param);
-                p->opaque_custom_param = nullptr;
-            }
-
         all_generic_params.clear();
         all_layer_params.clear();
     }
@@ -1192,9 +1170,8 @@ public:
 
         switch(variant)
         {
-            case 0: all_layer_params.push_back(new scale("scale", "input0", "input1", false)); break;	//TODO: remove the false here!
-            case 1: all_layer_params.push_back(new scale("scale", "input0", "input1", true, "input2")); break;
-            case 2: all_layer_params.push_back(new scale("scale", "input0", "input1", false, "input2")); break;
+            case 0: all_layer_params.push_back(new scale("scale", "input0", "input1")); break;
+            case 1: all_layer_params.push_back(new scale("scale", "input0", "input1", "input2")); break;
                     //	case 3: all_layer_params.push_back(new scale("scale", "input0", "input1", true));	// This case should be checked by negative_scale_test
                     //	case 4: all_layer_params.push_back(new scale("scale", "input0", "input1", false));	// This case should be checked by negative_scale_test
             default: assert(0);
@@ -1241,10 +1218,6 @@ public:
                     if (variant)
                             tp->input_layouts.push_back( cldnn::tensor( fmt, { mb, mf, mh, mw } ));
 
-                    const bool bias_term_present = variant == 0 || variant == 1 || variant == 2;
-                    auto extra_param = new extraScaleTestParam { bias_term_present };
-                    tp->opaque_custom_param = extra_param;
-
                     all_generic_params.emplace_back(tp);
                 }
             }
@@ -1257,7 +1230,7 @@ public:
     {
         std::vector<std::tuple<test_params*, cldnn::primitive*>> res;
 
-        for (int variant = 0; variant <= 2; ++variant)
+        for (int variant = 0; variant <= 1; ++variant)
         {
             auto tpv = generate_generic_test_params(variant); 
             auto pv = generate_specific_test_params(variant);
@@ -1295,14 +1268,10 @@ public:
         //Output is bfyx
         auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().size.transform(cldnn::format::bfyx, 0)));
 
-        const auto params = static_cast<cldnn::scale *>(layer_params);
-        const bool bias_term = bias && params->bias_term;
-
-        const auto in0_mem = input.pointer<Type>();
-        const auto in1_mem = scale.pointer<Type>();
-        const auto in2_mem_ptr = bias_term ? std::make_shared<pointer<Type>>(*bias) : nullptr;
-        const Type * const in2_mem = in2_mem_ptr ? in2_mem_ptr->data() : nullptr; //TODO: is the condition needed or is it nullptr anyway?
-        auto out_mem = output.pointer<Type>();
+        const Type * const in0_mem = input.pointer<Type>();
+        const Type * const in1_mem = scale.pointer<Type>();
+        const Type * const in2_mem = bias ? bias->pointer<Type>() : nullptr; //TODO: is the condition needed or is it nullptr anyway?
+        Type * const out_mem = output.pointer<Type>();
 
         const int in0_b = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
         const int in0_f = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
@@ -1331,7 +1300,7 @@ public:
             assert(in1_h == 1 || in1_h == in0_h);
             assert(in1_w == 1 || in1_w == in0_w);
 
-            if (bias_term)
+            if (bias)
             {
                 const int in2_b = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0]; (void) in2_b;
                 const int in2_f = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1]; (void) in2_f;
@@ -1354,7 +1323,7 @@ public:
 
             out_mem[out_idx] = in0_mem[in0_idx] * in1_mem[in1_idx];
 
-            if (bias_term)
+            if (bias)
             {
                 const size_t in2_idx = get_linear_index_with_broadcast(bias->get_layout(), n, c, y, x, input.get_layout());
                 out_mem[out_idx] += in2_mem[in2_idx];
@@ -1381,7 +1350,6 @@ public:
         std::stringstream res;
 
         const auto & p = std::get<0>(info.param);
-        const auto & v = std::get<1>(info.param);
 
         assert (p->data_type == data_types::f32 ||
                 p->data_type == data_types::f16);
@@ -1402,16 +1370,6 @@ public:
                 res << chans[j] << p->input_layouts[i].sizes()[j];
             }
         }
-
-        assert(p->opaque_custom_param);
-        const bool bias_term_present = reinterpret_cast<extraScaleTestParam *>(p->opaque_custom_param)->bias_term_present;
-
-        if (bias_term_present)
-        {
-            const auto layer = static_cast<cldnn::scale *>(v);
-            res << "_BiasTerm" << (layer->bias_term ? "T" : "F");
-        }
-
         return res.str();
     }
 

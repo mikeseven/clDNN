@@ -379,8 +379,7 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
     else if(primitive->type == cldnn::scale::type_id())
     {
         auto s = static_cast<cldnn::scale *>(primitive);
-        str << " Bias: " << s->bias_term;
-//        str << " PassBias: Maybe";    //TODO: the interface requires passing it atm, but it's goint to change
+        (void)s;
     }
     else if(primitive->type == cldnn::softmax::type_id())
     {

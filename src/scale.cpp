@@ -64,11 +64,10 @@ scale_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<const sc
     if ((scale_feature_size != input_feature_size) && (scale_feature_size != 1))
         throw std::runtime_error("Feature dimension mismatch between input and scale input!");
 
-    if (bias_term())
-    {
-        if (desc->bias.empty()) throw std::runtime_error("Bias_term parameter set to true, but no bias data provided!");
-        auto bias_format = bias_memory().get_layout().size.format;
-        auto bias_raw_sizes = bias_memory().get_layout().size.raw;
+        if (!desc->bias.empty())
+        {
+            auto bias_format = bias_memory().get_layout().size.format;
+            auto bias_raw_sizes = bias_memory().get_layout().size.raw;
 
         if (scale_format != bias_format) throw std::runtime_error("Scale input format do not match bias format!");
 

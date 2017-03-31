@@ -44,8 +44,6 @@ extern "C" {
 CLDNN_BEGIN_PRIMITIVE_DESC(scale)
 /// @brief Scale input primitive id with values needed for product computation.
 cldnn_primitive_id scale_input;
-/// @brief Flag to set optional adding biases.
-bool bias_term;
 /// @brief Primitive id containing bias data.
 cldnn_primitive_id bias;
 CLDNN_END_PRIMITIVE_DESC(scale)
