@@ -16,7 +16,6 @@
 
 #include "batch_norm_inst.h"
 #include "primitive_type_base.h"
-#include "network_impl.h"
 
 namespace cldnn
 {

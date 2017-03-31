@@ -374,12 +374,21 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     options.set_option(cldnn::build_option::outputs(outputs));
     try 
     {
-        cldnn::network network(engine, topology, options);
+        cldnn::program program(engine, topology, options);
         auto compile_time = timer_compilation.uptime();
 
         if (ep.print_type == Verbose)
         {
             std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
+            std::cout << "Network allocation started" << std::endl;
+        }
+
+        cldnn::network network(program);
+        auto allocation_time = timer_compilation.uptime() - compile_time;
+        
+        if (ep.print_type == Verbose)
+        {
+            std::cout << "Network allocation finished in " << instrumentation::to_string(allocation_time) << std::endl;
         }
 
         return network;

@@ -15,58 +15,57 @@
 */
 
 #include "primitive_inst.h"
-#include "input_layout_inst.h"
 #include "data_inst.h"
 #include "prior_box_inst.h"
-#include "network_impl.h"
+#include "input_layout_inst.h"
 #include "implementation_map.h"
+
+#include "network_impl.h"
 #include "events_waiter.h"
 
 namespace cldnn
 {
 class wait_for_events_gpu : public primitive_impl
 {
-    network_impl& _network;
-
 public:
-    wait_for_events_gpu(primitive_inst* primitive) : _network(primitive->get_network()) {}
+    wait_for_events_gpu(const program_node& /*node*/) {}
 
-    refcounted_obj_ptr<event_impl> execute(const std::vector<refcounted_obj_ptr<event_impl>>& events) override
+    event_impl::ptr execute(const std::vector<event_impl::ptr>& events, primitive_inst& instance) override
     {
-        neural::gpu::events_waiter events_waiter(_network.get_engine()->get_context());
+        neural::gpu::events_waiter events_waiter(instance.get_network().get_engine()->get_context());
         return events_waiter.run(events);
     }
 
-    static primitive_impl* create_data(data_inst& data)
+    static primitive_impl* create_data(const data_node& data)
     {
-        return new wait_for_events_gpu(&data);
+        return new wait_for_events_gpu(data);
     }
 
-    static primitive_impl* create_input_layout(input_layout_inst& input)
+    static primitive_impl* create_input_layout(const input_layout_node& input)
     {
-        return new wait_for_events_gpu(&input);
+        return new wait_for_events_gpu(input);
     }
 
-	static primitive_impl* create_prior_box(prior_box_inst& prior_box)
+	static primitive_impl* create_prior_box(const prior_box_node& prior_box)
 	{
-		return new wait_for_events_gpu(&prior_box);
+		return new wait_for_events_gpu(prior_box);
 	}
 };
 
 namespace {
     struct attach {
         attach() {
-            implementation_map<data_inst>::add({
+            implementation_map<data>::add({
                 { engine_types::ocl, wait_for_events_gpu::create_data }
             });
 
-            implementation_map<input_layout_inst>::add({
+            implementation_map<input_layout>::add({
                 { engine_types::ocl, wait_for_events_gpu::create_input_layout }
             });
 
-			implementation_map<prior_box_inst>::add({
-				{ engine_types::ocl, wait_for_events_gpu::create_prior_box }
-			});
+            implementation_map<prior_box>::add({
+                { engine_types::ocl, wait_for_events_gpu::create_prior_box }
+            });
         }
         ~attach() {}
     };

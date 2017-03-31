@@ -19,6 +19,7 @@
 #include "api_impl.h"
 #include "engine_impl.h"
 #include "topology_impl.h"
+#include "program_impl.h"
 #include "primitive_type.h"
 #include "network_impl.h"
 #include "memory_impl.h"
@@ -229,17 +230,54 @@ void cldnn_get_event_profiling_info(cldnn_event event, cldnn_profiling_interval*
     });
 }
 
-cldnn_network cldnn_build_network(cldnn_engine engine, cldnn_topology topology, cldnn_build_option* options, size_t options_num, cldnn_status* status)
+cldnn_program cldnn_build_program(cldnn_engine engine, cldnn_topology topology, cldnn_build_option* options, size_t options_num, cldnn_status* status)
 {
-    return exception_handler<cldnn_network>(CLDNN_ERROR, status, nullptr, [&]()
+    return exception_handler<cldnn_program>(CLDNN_ERROR, status, nullptr, [&]()
     {
         SHOULD_NOT_BE_NULL(engine,   "Engine");
         SHOULD_NOT_BE_NULL(topology, "Topology");
         cldnn::build_options options_obj(cldnn::array_ref<cldnn_build_option>(options, options_num));
-        return api_cast(api_cast(engine)->build_network(api_cast(topology), options_obj));
+        return api_cast(api_cast(engine)->build_program(*api_cast(topology), options_obj));
     });
 }
 
+void cldnn_retain_program(cldnn_program program, cldnn_status* status)
+{
+    exception_handler(CLDNN_ERROR, status, [&]()
+    {
+        SHOULD_NOT_BE_NULL(program, "Program");
+        api_cast(program)->add_ref();
+    });
+}
+
+void cldnn_release_program(cldnn_program program, cldnn_status* status)
+{
+    exception_handler(CLDNN_ERROR, status, [&]()
+    {
+        SHOULD_NOT_BE_NULL(program, "Program");
+        api_cast(program)->release();
+    });
+}
+
+cldnn_network cldnn_allocate_network(cldnn_program program, cldnn_status* status)
+{
+    return exception_handler<cldnn_network>(CLDNN_ERROR, status, nullptr, [&]()
+    {
+        SHOULD_NOT_BE_NULL(program, "Program");
+        return api_cast(api_cast(program)->get_engine()->allocate_network(api_cast(program)));
+    });
+}
+
+cldnn_network cldnn_build_network(cldnn_engine engine, cldnn_topology topology, cldnn_build_option* options, size_t options_num, cldnn_status* status)
+{
+    cldnn_program program = cldnn_build_program(engine, topology, options, options_num, status);
+    if (!program)
+        return nullptr;
+
+    cldnn_network network = cldnn_allocate_network(program, status);
+    //TODO: release program before returning network?
+    return network;
+}
 void cldnn_retain_network(cldnn_network network, cldnn_status* status)
 {
     exception_handler(CLDNN_ERROR, status, [&]()
@@ -282,14 +320,14 @@ cldnn_engine cldnn_get_network_engine(cldnn_network network, cldnn_status* statu
     });
 }
 
-cldnn_topology cldnn_get_network_topology(cldnn_network network, cldnn_status* status)
+cldnn_program cldnn_get_network_program(cldnn_network network, cldnn_status* status)
 {
-    return exception_handler<cldnn_topology>(CLDNN_ERROR, status, nullptr, [&]()
+    return exception_handler<cldnn_program>(CLDNN_ERROR, status, nullptr, [&]()
     {   
         SHOULD_NOT_BE_NULL(network, "Network");
-        auto topology_ptr = api_cast(network)->get_topology();
-        if (!topology_ptr) throw std::logic_error("no assigned topology");
-        return api_cast(topology_ptr.detach());
+        auto program_ptr = api_cast(network)->get_program();
+        if(!program_ptr) throw std::logic_error("no assigned program");
+        return api_cast(const_cast<cldnn::program_impl*>(program_ptr.detach()));
     });
 }
 
@@ -297,10 +335,10 @@ void cldnn_get_network_output_names(cldnn_network network, char* names, size_t s
 {
     exception_handler(CLDNN_ERROR, status, [&]()
     {
-        auto output_size = api_cast(network)->get_output_ids().size();        
+        auto output_size = api_cast(network)->get_output_ids().size();
         SHOULD_NOT_BE_NULL(network,        "Network");
         SHOULD_NOT_EQUAL_0(output_size, "Output size");
-        auto& output_ids = api_cast(network)->get_output_ids();
+        auto&& output_ids = api_cast(network)->get_output_ids();
         *size_ret = std::accumulate(
             std::begin(output_ids),
             std::end(output_ids),

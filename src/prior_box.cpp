@@ -16,7 +16,6 @@
 
 #include "prior_box_inst.h"
 #include "primitive_type_base.h"
-#include "network_impl.h"
 
 #include <cmath>
 
@@ -109,7 +108,7 @@ prior_box_inst::typed_primitive_inst(network_impl& network, prior_box_node const
 		step_h = static_cast<float>(img_height) / layer_height;
 	}
 	const float offset = argument.offset;
-	int num_priors = (int)desc->aspect_ratios.size() * (int)desc->min_sizes.size() + (int)desc->max_sizes.size();
+	int num_priors = (int)argument.aspect_ratios.size() * (int)argument.min_sizes.size() + (int)argument.max_sizes.size();
 
 	auto out_ptr = output_mem.pointer<float>();
 	int dim = layer_height * layer_width * num_priors * 4;

@@ -17,15 +17,11 @@
 #include "normalization_inst.h"
 #include "kernel.h"
 #include "kd_selector.h"
-#include "network_impl.h"
 #include "implementation_map.h"
 
 #include "api/primitives/data.hpp"
 
 #include <algorithm>
-#include <cmath>
-#include <stdexcept>
-#include <string>
 
 using namespace cldnn;
 
@@ -50,9 +46,9 @@ struct kd_default_value_selector<neural::gpu::engine_info_internal::configuratio
 };
 
 
-struct lrn_gpu : primitive_impl
+struct lrn_gpu : typed_primitive_impl<normalization>
 {
-    const normalization_inst& _outer;
+    const normalization_node& outer;
     gpu::engine_info_internal _engine_info;
 
     struct kernel_data
@@ -64,26 +60,32 @@ struct lrn_gpu : primitive_impl
     } _kernel_data;
     gpu::kernel _kernel;
 
-    static kd_selector_t<kernel_data, normalization_inst, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
+    static kd_selector_t<kernel_data, normalization_node, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
 
-    lrn_gpu(const normalization_inst& outer)
-        : _outer(outer),
-        _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info()),
-        _kernel_data(ks.get_kernel(outer, outer.input_memory().get_layout().data_type, outer.input_memory().get_layout().size.format, outer.input_memory().get_layout().size.batch[0], _engine_info.architecture, _engine_info.configuration)),
-        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
+    lrn_gpu(const normalization_node& arg)
+        : outer(arg),
+        _engine_info(outer.get_program().get_engine()->get_context()->get_engine_info()),
+        _kernel_data(ks.get_kernel(
+            outer,
+            outer.input().get_output_layout().data_type,
+            outer.input().get_output_layout().size.format,
+            outer.input().get_output_layout().size.batch[0],
+            _engine_info.architecture,
+            _engine_info.configuration)),
+        _kernel(outer.get_program().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(outer, _kernel_data), outer.id())
     {}
 
-    static kernel_data set_default(const normalization_inst& arg)
+    static kernel_data set_default(const normalization_node& arg)
     {
-        const auto& input_mem = arg.input_memory();  // input
+        auto input_layout = arg.input().get_output_layout();  // input
 
         kernel_data kd;
 
-        kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
+        kd.fp16_unit_used = input_layout.data_type == cldnn::data_types::f16;
 
         // Determine global work sizes.
-        kd.gws0 = input_mem.get_layout().size.batch[0] * input_mem.get_layout().size.feature[0];   // B, F
-        kd.gws1 = arg.input().at(0)->non_padded_output_layout().size.spatial[0] * arg.input().at(0)->non_padded_output_layout().size.spatial[1];
+        kd.gws0 = input_layout.size.batch[0] * input_layout.size.feature[0];   // B, F
+        kd.gws1 = input_layout.size.spatial[0] * input_layout.size.spatial[1]; // X, Y
         kd.gws2 = 1;
         // Find largest positive local work size that is divider for global work size.
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
@@ -94,13 +96,13 @@ struct lrn_gpu : primitive_impl
         kd.lws1 = 1;
         kd.lws2 = 1;
 
-        auto input_padding = arg.input().at(0)->desc()->output_padding;
-        if (arg.argument.norm_region == cldnn_lrn_norm_region_across_channel)
+        auto& input_padding = arg.input().get_primitive()->output_padding;
+        if (arg.get_primitive()->norm_region == cldnn_lrn_norm_region_across_channel)
         {
             // TODO: add half case: b16 (b*f dividable by 128).
             if (!kd.fp16_unit_used &&                        // halfs are not used
                 !input_padding &&                            // optimized kernel_batch8 does not support input padding
-                input_mem.get_layout().size.batch[0] % 8 == 0 && // batch_num is multiple of 8
+                input_layout.size.batch[0] % 8 == 0 && // batch_num is multiple of 8
                 kd.gws0 % 64 == 0)                           // batch_num * feature_num is multiple of 64
             {
                 kd.gws0 /= 8;
@@ -113,7 +115,7 @@ struct lrn_gpu : primitive_impl
                 kd.kernel_name = kernel_name;
             }
         }
-        else if (arg.argument.norm_region == cldnn_lrn_norm_region_within_channel)
+        else if (arg.get_primitive()->norm_region == cldnn_lrn_norm_region_within_channel)
         {
             kd.kernel_name = kernel_name_within_channel_bfyx;
         }
@@ -123,54 +125,54 @@ struct lrn_gpu : primitive_impl
         }
 
         // Checking for supported paddings.
-        if (arg.desc()->input_padding.filling_value() != 0.0f)
+        if (arg.get_primitive()->input_padding.filling_value() != 0.0f)
             throw std::runtime_error("Unknown padding mode in lrn");
 
         return kd;
     }
 
-    static gpu::jit_constants get_jit_constants(const normalization_inst& outer, const kernel_data& data)
+    static gpu::jit_constants get_jit_constants(const normalization_node& outer, const kernel_data& data)
     {
-        auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
+        auto engine_info = outer.get_program().get_engine()->get_context()->get_engine_info();
 
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        int size = outer.argument.size;
+        int size = outer.get_primitive()->size;
         int pad = (size - 1) / 2;
 
         //alpha_div_by_size is used for norm. region: within channels, alpha is used for norm. region: across channel
-        auto alpha = outer.argument.alpha;
-        auto alpha_div_by_size = outer.argument.alpha / outer.argument.size;
+        auto alpha = outer.get_primitive()->alpha;
+        auto alpha_div_by_size = outer.get_primitive()->alpha / outer.get_primitive()->size;
         auto alpha_sign = std::signbit(alpha) ? -1.0f : 1.0f;
         // When used FP16 the value cannot be scaled afterwards by alpha (it must be scaled before computing sum of squares).
         auto alpha_abs_sqrt = std::sqrt(std::abs(alpha));
         auto alpha_div_by_size_abs_sqrt = std::sqrt(std::abs(alpha_div_by_size));
 
-        auto input_padding = outer.input().at(0)->desc()->output_padding;
-        auto input_size = outer.input().at(0)->non_padded_output_layout().size;
+        auto input_padding = outer.get_primitive()->input_padding;
+        auto input_size = outer.input().get_output_layout().size;
 
         int count = input_size.sizes()[0] * input_size.sizes()[1] * input_size.sizes()[2] * input_size.sizes()[3];
 
         gpu::jit_constants mem_consts {
             gpu::make_jit_constant("INPUT",                         input_size),
             gpu::make_jit_constant("COUNT",                         count),
-            gpu::make_jit_constant("OUTPUT",                        outer.non_padded_output_layout().size),
+            gpu::make_jit_constant("OUTPUT",                        outer.get_output_layout().size),
             gpu::make_jit_constant("P_SIZE",                        size),
             gpu::make_jit_constant("PAD",                           pad),
             gpu::make_jit_constant("ALPHA",                         data.fp16_unit_used ? alpha_sign : alpha),
             gpu::make_jit_constant("ALPHA_DIV_BY_SIZE",             data.fp16_unit_used ? alpha_sign : alpha_div_by_size),
             gpu::make_jit_constant("ALPHA_VAL_FACTOR",              data.fp16_unit_used ? alpha_abs_sqrt : 1.0f),
             gpu::make_jit_constant("ALPHA_VAL_FACTOR_DIV_BY_SIZE",  data.fp16_unit_used ? alpha_div_by_size_abs_sqrt : 1.0f),
-            gpu::make_jit_constant("BETA",                          outer.argument.beta),
-            gpu::make_jit_constant("K",                             outer.argument.k),
-            gpu::make_jit_constant("HELP_INPUT_OFFSET",             outer.desc()->input_offset().feature[0] - static_cast<int32_t>(size / 2)),
+            gpu::make_jit_constant("BETA",                          outer.get_primitive()->beta),
+            gpu::make_jit_constant("K",                             outer.get_primitive()->k),
+            gpu::make_jit_constant("HELP_INPUT_OFFSET",             outer.get_primitive()->input_offset().feature[0] - static_cast<int32_t>(size / 2)),
             gpu::make_jit_constant("FP16_SUPPORTED",                static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",                static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",                     data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_VAL_ZERO",                 data.fp16_unit_used ? "0.0h" : "0.0f"),
             gpu::make_jit_constant("INPUT_PADDING",                 input_padding),
-            gpu::make_jit_constant("OUTPUT_PADDING",                outer.argument.output_padding),
+            gpu::make_jit_constant("OUTPUT_PADDING",                outer.get_primitive()->output_padding),
             gpu::make_jit_constant("INPUT_BUFFER_SIZE_X",           !input_padding ? input_size.spatial[0] : input_size.spatial[0] + input_padding.upper_size().spatial[0] + input_padding.lower_size().spatial[0]),
             gpu::make_jit_constant("INPUT_BUFFER_SIZE_Y",           !input_padding ? input_size.spatial[1] : input_size.spatial[1] + input_padding.upper_size().spatial[1] + input_padding.lower_size().spatial[1])
         };
@@ -178,25 +180,34 @@ struct lrn_gpu : primitive_impl
         return mem_consts;
     }
 
-    cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
+    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, normalization_inst& instance) override
     {
-        const auto& outer = _outer;
         const auto& kd    = _kernel_data;
 
-        const auto& input_mem  = outer.input_memory();  // input
-        const auto& output_mem = outer.output_memory(); // output
-
         return _kernel.run<gpu::input_mem, gpu::output_mem>
-            ({{kd.gws0, kd.gws1, kd.gws2}, {kd.lws0, kd.lws1, kd.lws2}}, events, input_mem, output_mem);
+            ({{ kd.gws0, kd.gws1, kd.gws2 }, { kd.lws0, kd.lws1, kd.lws2 }},
+                events,
+                instance.input_memory(),
+                instance.output_memory());
     }
 
 
-    static primitive_impl* create(normalization_inst &arg) { return new lrn_gpu(arg); }
+    static primitive_impl* create(const normalization_node& arg) { return new lrn_gpu(arg); }
 
 };
 
+lrn_gpu::kernel_data default_yxfb(const normalization_node& arg)
+{
+    if (arg.get_primitive()->norm_region == cldnn_lrn_norm_region_within_channel)
+    {
+        throw std::runtime_error("LRN within channel is not implemented for YXFB format");
+    }
 
-lrn_gpu::kernel_data get_kernel_within_channel(const normalization_inst& arg, cldnn::format format)
+    lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
+    return kd;
+}
+
+lrn_gpu::kernel_data get_kernel_within_channel(const normalization_node& arg, format format)
 {
     lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
 
@@ -222,17 +233,17 @@ lrn_gpu::kernel_data get_kernel_within_channel(const normalization_inst& arg, cl
     return kd;
 }
 
-lrn_gpu::kernel_data get_kernel_across_channel(const normalization_inst& arg, cldnn::format format)
+lrn_gpu::kernel_data get_kernel_across_channel(const normalization_node& arg, format format)
 {
-    auto& input_mem = arg.input_memory();
+    auto input_layout = arg.input().get_output_layout();
     lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
 
     if (format == cldnn::format::bfyx)
     {
         kd.kernel_name = kernel_name_bfyx;   
-        kd.gws0 = cldnn::align_to(arg.input().at(0)->non_padded_output_layout().size.spatial[0],32);
-        kd.gws1 = arg.input().at(0)->non_padded_output_layout().size.spatial[1];//input_mem.get_layout().size.spatial[1];
-        kd.gws2 = input_mem.get_layout().size.feature[0] * input_mem.get_layout().size.batch[0];
+        kd.gws0 = align_to(input_layout.size.spatial[0],32);
+        kd.gws1 = input_layout.size.spatial[1];
+        kd.gws2 = input_layout.size.feature[0] * input_layout.size.batch[0];
 
         kd.lws0 = 32;
         kd.lws1 = 1;
@@ -243,9 +254,9 @@ lrn_gpu::kernel_data get_kernel_across_channel(const normalization_inst& arg, cl
 }
 
 
-lrn_gpu::kernel_data get_yxfb_lrn_kernel(const normalization_inst& arg)
+lrn_gpu::kernel_data get_yxfb_lrn_kernel(const normalization_node& arg)
 {
-    switch (arg.argument.norm_region)
+    switch (arg.get_primitive()->norm_region)
     {
         case cldnn_lrn_norm_region_across_channel: 
             return get_kernel_across_channel(arg, cldnn::format::yxfb);
@@ -257,9 +268,9 @@ lrn_gpu::kernel_data get_yxfb_lrn_kernel(const normalization_inst& arg)
 }
 
 
-lrn_gpu::kernel_data get_bfyx_lrn_kernel(const normalization_inst& arg)
+lrn_gpu::kernel_data get_bfyx_lrn_kernel(const normalization_node& arg)
 {
-    switch (arg.argument.norm_region)
+    switch (arg.get_primitive()->norm_region)
     {
         case cldnn_lrn_norm_region_across_channel: 
             return get_kernel_across_channel(arg, cldnn::format::bfyx);
@@ -270,7 +281,7 @@ lrn_gpu::kernel_data get_bfyx_lrn_kernel(const normalization_inst& arg)
     }
 }
 
-kd_selector_t<lrn_gpu::kernel_data, normalization_inst, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> lrn_gpu::ks = {
+kd_selector_t<lrn_gpu::kernel_data, normalization_node, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> lrn_gpu::ks = {
     { std::make_tuple(data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), get_yxfb_lrn_kernel },
     { std::make_tuple(data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), get_yxfb_lrn_kernel },
     { std::make_tuple(data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), get_bfyx_lrn_kernel },
@@ -281,10 +292,10 @@ kd_selector_t<lrn_gpu::kernel_data, normalization_inst, data_types, format::type
 namespace {
     struct attach {
         attach() {
-            implementation_map<normalization_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), lrn_gpu::create);
-            implementation_map<normalization_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), lrn_gpu::create);
-            implementation_map<normalization_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), lrn_gpu::create);
-            implementation_map<normalization_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), lrn_gpu::create);
+            implementation_map<normalization>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), lrn_gpu::create);
+            implementation_map<normalization>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), lrn_gpu::create);
+            implementation_map<normalization>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), lrn_gpu::create);
+            implementation_map<normalization>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), lrn_gpu::create);
         }
         ~attach() {}
     };

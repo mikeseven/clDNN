@@ -17,7 +17,8 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "reorder_inst.h"
 #include "primitive_type_base.h"
-#include <memory>
+
+#include <algorithm>
 
 namespace cldnn
 {
@@ -32,9 +33,11 @@ reorder_inst::typed_primitive_inst(network_impl& network, reorder_node const& no
     : parent(network, node)
 {
     auto& input_mem = input_memory();
+    auto& output_mem = output_memory();
 
-    if (input_mem.get_layout().size.raw.size() < _output.get_layout().size.raw.size())
+    if (input_mem.get_layout().size.raw.size() < output_mem.get_layout().size.raw.size())
         throw std::runtime_error("Input dimension < output dimension. Reorder primitive woks only with same dimension sizes (reorder) or when input > output (flatten).");
+
     if (!argument.substract_per_feature.empty())
     {
         if (input_mem.get_layout().size.feature.size() > 1)
@@ -49,5 +52,4 @@ reorder_inst::typed_primitive_inst(network_impl& network, reorder_node const& no
         throw std::runtime_error("Reorder with input which contains padding is NOT IMPLEMENTED yet!");
     }
 }
-
 }

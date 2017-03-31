@@ -15,15 +15,18 @@
 */
 
 #include "layout_optimizer.h"
-#include <api/primitives/data.hpp>
-#include <api/primitives/reorder.hpp>
+#include "topology_impl.h"
+#include "network_impl.h"
+
+#include "api/primitives/data.hpp"
+#include "api/primitives/reorder.hpp"
 #include <boost/filesystem.hpp>
 #include <sstream>
 
 using namespace cldnn;
 
 layout_optimizer::layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled)
-    : _enabled(enabled), _topology(new topology_impl(), false), _engine(eng), _outputs(), _optimization_attributes()
+    : _enabled(enabled), _topology(), _engine(eng), _optimization_attributes()
 {
 }
 
@@ -159,12 +162,12 @@ layout_optimizer::create_reorder_if_needed(const layout& current_layout, const c
     return std::make_pair(nullptr, true);
 }
 
-auto layout_optimizer::optimize() const -> meta::deduce_ret_type_t<decltype(&network_impl::get_primitives)>
+auto layout_optimizer::optimize() const -> std::vector<std::shared_ptr<primitive_inst>>
 {
     if (!_enabled)
-        return meta::deduce_ret_type_t<decltype(&network_impl::get_primitives)>();
+        return std::vector<std::shared_ptr<primitive_inst>>();
 
-    network_impl net(_engine, _topology, _outputs);
+    network_impl net(_engine, _topology);
     net.execute(std::vector<refcounted_obj_ptr<event_impl>>());
-    return net.get_primitives(net.get_output_ids());
+    return net.get_outputs();
 }

@@ -16,9 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "convolution_inst.h"
-#include "network_impl.h"
 #include "primitive_type_base.h"
-#include <memory>
 
 namespace cldnn
 {
@@ -94,44 +92,52 @@ convolution_inst::typed_primitive_inst(network_impl& network, convolution_node c
     auto stride = argument.stride;
     auto output_size = output_memory().get_layout().size;
 
-    auto input_arg = input_memory().get_layout();
-    auto output_arg = output_memory().get_layout();
+    auto input_inst = input_memory().get_layout();
+    auto output_inst = output_memory().get_layout();
 
-    if (input_arg.size.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("input/output number of dimension does not match.");
-    if (stride.raw.size() != output_arg.size.raw.size()) throw std::runtime_error("stride/output number of dimension does not match.");
+    if (input_inst.size.raw.size() != output_inst.size.raw.size())
+        throw std::runtime_error("input/output number of dimension does not match.");
+    if (stride.raw.size() != output_inst.size.raw.size())
+        throw std::runtime_error("stride/output number of dimension does not match.");
 
     auto split = argument.split();
     for (decltype(split) j = 0; j < split; j++)
     {
         auto& filter_mem = weights_memory(j);
-        auto& filter_arg = filter_mem.get_layout(); //convolution filter
+        auto& filter_inst = filter_mem.get_layout(); //convolution filter
         if (bias_term())
         {
-            auto& bias_arg = bias_memory(j).get_layout();
-            if (bias_arg.size.raw.size() != 3) throw std::runtime_error("biases isn't 1D vector."); // b=1, f=1
-            if (bias_arg.size.spatial[0] != output_size.feature[0] / split) throw std::runtime_error("biases/output feature maps number does not match.");
+            auto& bias_inst = bias_memory(j).get_layout();
+            if (bias_inst.size.raw.size() != 3)
+                throw std::runtime_error("biases isn't 1D vector."); // b=1, f=1
+            if (bias_inst.size.spatial[0] != output_size.feature[0] / split)
+                throw std::runtime_error("biases/output feature maps number does not match.");
         }
-            
 
-        auto input_offset = argument.input_offset().transform(input_arg.size.format, 0);
-        auto output_offset = argument.output_offset().transform(output_arg.size.format, 0);
+        auto input_offset = argument.input_offset().transform(input_inst.size.format, 0);
+        auto output_offset = argument.output_offset().transform(output_inst.size.format, 0);
 
-        if (filter_arg.size.raw.size() != output_arg.size.raw.size() + 1) throw std::runtime_error("window_size != 5");
-        if (argument.padding_filling_value() != 0.0f) throw std::runtime_error("unknown padding mode.");
-        if (input_offset.raw.size() != input_arg.size.raw.size()) throw std::runtime_error("input offset/input number of dimension does not match.");
+        if (filter_inst.size.raw.size() != output_inst.size.raw.size() + 1)
+            throw std::runtime_error("window_size != 5");
+
+        if (argument.padding_filling_value() != 0.0f)
+            throw std::runtime_error("unknown padding mode.");
+
+        if (input_offset.raw.size() != input_inst.size.raw.size())
+            throw std::runtime_error("input offset/input number of dimension does not match.");
+
 
         assert(1 == output_size.feature.size());
         assert(1 == output_size.batch.size());
-        assert(2 == filter_arg.size.feature.size());
-        assert(1 == filter_arg.size.batch.size());
-        assert(1 == filter_arg.size.batch[0]);
+        assert(2 == filter_inst.size.feature.size());
+        assert(1 == filter_inst.size.batch.size());
+        assert(1 == filter_inst.size.batch[0]);
 
-        if (output_size.feature[0] + output_offset.feature[0] > output_arg.size.feature[0]
-            || (output_size.feature[0] / split) > filter_arg.size.feature[0])
+        if (output_size.feature[0] + output_offset.feature[0] > output_inst.size.feature[0]
+            || (output_size.feature[0] / split) > filter_inst.size.feature[0])
             throw std::runtime_error("weights/output feature maps number does not match.");
-        if ((input_arg.size.feature[0] - input_offset.feature[0]) / split < filter_arg.size.feature[1])
+        if ((input_inst.size.feature[0] - input_offset.feature[0]) / split < filter_inst.size.feature[1])
             throw std::runtime_error("weights/input feature maps number does not match.");
     }
 }
-
 }

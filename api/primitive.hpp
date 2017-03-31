@@ -192,8 +192,6 @@ public:
 
     virtual ~primitive() = default;
 
-    
-    
     /// @brief Requested output padding.
     /// @brief Requested output padding.
     /// @brief Returns pointer to a C API primitive descriptor casted to @CLDNN_PRIMITIVE_DESC{primitive}.

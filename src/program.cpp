@@ -26,7 +26,6 @@
 #include "api/primitives/depth_concatenate.hpp"
 #include "api/primitives/eltwise.hpp"
 #include "api/primitives/input_layout.hpp"
-#include "api/primitives/mean_substract.hpp"
 #include "api/primitives/normalization.hpp"
 #include "api/primitives/pooling.hpp"
 #include "api/primitives/reorder.hpp"
@@ -146,12 +145,14 @@ void program_node::replace_dependency(size_t idx, program_node& new_dep)
 {
     if (idx >= dependencies.size())
         return;
+    if (dependencies[idx] == &new_dep)
+        return;
 
     dependencies[idx]->users.remove(this);
     myprog.remove_if_dangling(*dependencies[idx]);
 
     dependencies[idx] = &new_dep;
-    desc->update_dependency(idx, new_dep.id());
+    desc->dependecies()[idx].get() = new_dep.id();
     new_dep.users.push_back(this);
 }
 
@@ -269,7 +270,7 @@ void program_impl::set_outputs()
         for (auto& node : nodes_map)
         {
             //do not add cldnn::data as output
-            if (node.second->get_primitive()->type == data::type_id())
+            if (node.second->type() == data::type_id())
                 continue;
 
             node.second->set_output(true);
@@ -279,7 +280,7 @@ void program_impl::set_outputs()
         return;
     }
 
-    if (outputs_option)
+    if (!outputs_option->outputs.empty())
     {
         for (auto const& output : outputs_option->outputs)
         {
@@ -369,21 +370,6 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                     reorder_prim->output_layout = opt_layout;
                     new_input = nullptr;
                 }
-            }
-        }
-        else if (input_node.type() == mean_substract::type_id())
-        {
-            auto ms_prim = input_node.as<mean_substract>().get_primitive();
-            auto input_layout = input_node.get_output_layout();
-            new_input = lo.get_reorder(
-                input_layout,
-                ms_prim->id,
-                layout_optimizer::data_type::input,
-                conv_prim).first;
-
-            if (new_input) //not optimal, fuse mean_substract with reorder
-            {
-                new_input->mean = ms_prim->id;
             }
         }
 

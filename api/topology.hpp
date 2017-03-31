@@ -34,7 +34,7 @@ struct topology
 {
     /// @brief Constructs empty network topology.
     topology()
-        : _impl(check_status<cldnn_topology>("failed to create topology", cldnn_create_topology))
+        : _impl(check_status<cldnn_topology>("failed to create topology", [&](status_t* status) { return cldnn_create_topology(status); }))
     {}
 
     /// @brief Constructs topology containing primitives provided in argument(s).
@@ -92,6 +92,7 @@ private:
     friend struct engine;
     friend struct network;
     cldnn_topology _impl;
+
     topology(cldnn_topology impl) :_impl(impl)
     {
         if (_impl == nullptr) throw std::invalid_argument("implementation pointer should not be null");

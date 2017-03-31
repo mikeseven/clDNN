@@ -16,7 +16,6 @@
 
 #include "simpler_nms_inst.h"
 #include "primitive_type_base.h"
-#include "network_impl.h"
 
 #include <cmath>
 
@@ -46,14 +45,12 @@ layout simpler_nms_inst::calc_output_layout(simpler_nms_node const& node)
 simpler_nms_inst::typed_primitive_inst(network_impl& network, simpler_nms_node const& node)
     :parent(network, node)
 {
-	std::vector<float> default_ratios = { 0.5f, 1.0f, 2.0f };
-
-	int default_size = 16;
-
-	generate_anchors(default_size, default_ratios, argument.scales, _anchors);             	
+    std::vector<float> default_ratios = { 0.5f, 1.0f, 2.0f };
+    int default_size = 16;
+    generate_anchors(default_size, default_ratios, argument.scales, _anchors);
 }
 
-static void calc_basic_params(const simpler_nms_inst::anchor& base_anchor,                                       // input
+static void calc_basic_params(const simpler_nms_inst::anchor& base_anchor,                   // input
                             float& width, float& height, float& x_center, float& y_center)   // output
 {
     width  = base_anchor.end_x - base_anchor.start_x + 1.0f;
@@ -65,13 +62,14 @@ static void calc_basic_params(const simpler_nms_inst::anchor& base_anchor,      
 
 
 static void make_anchors(const std::vector<float>& ws, const std::vector<float>& hs, float x_center, float y_center,   // input
-                        std::vector<simpler_nms_inst::anchor>& anchors)                                                            // output
+                        std::vector<simpler_nms_inst::anchor>& anchors)                                                // output
 {
     size_t len = ws.size();
     anchors.clear();
     anchors.resize(len);
 
-    for (unsigned int i = 0 ; i < len ; i++) {
+    for (unsigned int i = 0 ; i < len ; i++)
+    {
         // transpose to create the anchor
         anchors[i].start_x = x_center - 0.5f * (ws[i] - 1.0f);
         anchors[i].start_y = y_center - 0.5f * (hs[i] - 1.0f);
@@ -81,7 +79,7 @@ static void make_anchors(const std::vector<float>& ws, const std::vector<float>&
 }
 
 
-static void calc_anchors(const simpler_nms_inst::anchor& base_anchor, const std::vector<float>& scales,        // input
+static void calc_anchors(const simpler_nms_inst::anchor& base_anchor, const std::vector<float>& scales,       // input
                         std::vector<simpler_nms_inst::anchor>& anchors)                                       // output
 {
     float width = 0.0f, height = 0.0f, x_center = 0.0f, y_center = 0.0f;
@@ -91,7 +89,8 @@ static void calc_anchors(const simpler_nms_inst::anchor& base_anchor, const std:
     size_t num_scales = scales.size();
     std::vector<float> ws(num_scales), hs(num_scales);
 
-    for (unsigned int i = 0 ; i < num_scales ; i++) {
+    for (unsigned int i = 0 ; i < num_scales ; i++)
+    {
         ws[i] = width * scales[i];
         hs[i] = height * scales[i];
     }
@@ -100,7 +99,7 @@ static void calc_anchors(const simpler_nms_inst::anchor& base_anchor, const std:
 }
 
 
-static void calc_ratio_anchors(const simpler_nms_inst::anchor& base_anchor, const std::vector<float>& ratios,        // input
+static void calc_ratio_anchors(const simpler_nms_inst::anchor& base_anchor, const std::vector<float>& ratios,      // input
                              std::vector<simpler_nms_inst::anchor>& ratio_anchors)                                 // output
 {
     float width = 0.0f, height = 0.0f, x_center = 0.0f, y_center = 0.0f;
@@ -113,7 +112,8 @@ static void calc_ratio_anchors(const simpler_nms_inst::anchor& base_anchor, cons
 
     std::vector<float> ws(num_ratios), hs(num_ratios);
 
-    for (unsigned int i = 0 ; i < num_ratios ; i++) {
+    for (unsigned int i = 0 ; i < num_ratios ; i++)
+    {
         float new_size = size / ratios[i];
         ws[i] = round(sqrt(new_size));
         hs[i] = round(ws[i] * ratios[i]);
@@ -134,17 +134,15 @@ static void generate_anchors(unsigned int base_size, const std::vector<float>& r
 
     size_t num_ratio_anchors = ratio_anchors.size();
 
-    for (unsigned int i = 0 ; i < num_ratio_anchors ; i++) {
-        std::vector<simpler_nms_inst::anchor> temp_anchors;
-        calc_anchors(ratio_anchors[i], scales, temp_anchors);
+    for (unsigned int i = 0 ; i < num_ratio_anchors ; i++)
+    {
+        calc_anchors(ratio_anchors[i], scales, anchors);
 
-        size_t num_temp_anchors = temp_anchors.size();
+        size_t num_temp_anchors = anchors.size();
 
         for (unsigned int j = 0 ; j < num_temp_anchors ; j++) {
-            anchors.push_back(temp_anchors[j]);
+            anchors.push_back(anchors[j]);
         }
     }
 }
-
-
 }

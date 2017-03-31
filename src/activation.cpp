@@ -16,7 +16,6 @@
 
 #include "activation_inst.h"
 #include "primitive_type_base.h"
-#include <memory>
 
 namespace cldnn
 {
@@ -37,7 +36,7 @@ activation_inst::typed_primitive_inst(network_impl& network, activation_node con
     auto input_arg  = input_memory().get_layout();
     auto output_arg = output_memory().get_layout();
     
-    if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("ReLU input/output number of dimension does not match.");
+    if (input_arg.size.raw.size() != output_arg.size.raw.size())
+        throw std::runtime_error("ReLU input/output number of dimension does not match.");
 }
-
 }

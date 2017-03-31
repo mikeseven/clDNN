@@ -37,6 +37,7 @@ void input_layout_inst::set_data(memory_impl* mem)
 {
     if (mem->get_layout() != _output.get_layout())
         throw std::invalid_argument("data layout does not match");
+
     if (mem->is_allocated_by(get_network().get_engine()))
     {
         _output = memory(api_cast(mem), true);
@@ -47,6 +48,9 @@ void input_layout_inst::set_data(memory_impl* mem)
         pointer<char> dst(_output);
         std::copy(src.begin(), src.end(), dst.begin());
     }
+
+    _has_valid_input = true;
+    _output_changed = true;
 }
 
 }

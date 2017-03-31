@@ -16,12 +16,15 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "api/profiling.hpp"
+#include "api/primitive.hpp"
+
 #include "memory_gpu.h"
 #include "kernels_cache.h"
-#include "api/profiling.hpp"
+#include "event_impl.h"
+
 #include <iostream>
 #include <sstream>
-#include "event_impl.h"
 
 namespace neural { namespace gpu {
 

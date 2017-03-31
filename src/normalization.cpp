@@ -16,7 +16,6 @@
 
 #include "normalization_inst.h"
 #include "primitive_type_base.h"
-#include "network_impl.h"
 
 namespace cldnn
 {
@@ -34,9 +33,9 @@ layout normalization_inst::calc_output_layout(normalization_node const& node)
 normalization_inst::typed_primitive_inst(network_impl& network, normalization_node const& desc)
     :parent(network, desc)
 {
-	if (argument.size == 0)
-	{
-		throw std::runtime_error("LRN size must be greater than 0!");
-	}		
+    if (argument.size == 0)
+    {
+        throw std::runtime_error("LRN size must be greater than 0!");
+    }
 }
 }

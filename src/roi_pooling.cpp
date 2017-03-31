@@ -19,8 +19,6 @@
 
 namespace cldnn
 {
-
-
 primitive_type_id roi_pooling_type_id()
 {
     static primitive_type_base<roi_pooling, roi_pooling_inst> instance;
@@ -36,6 +34,6 @@ layout roi_pooling_inst::calc_output_layout(roi_pooling_node const& node)
     layout rois_layout = node.rois().get_output_layout();
     int num_rois = rois_layout.size.batch[0];
 
-    return layout(rois_layout.data_type, { format::bfyx,{ num_rois, fm, desc->pooled_height, desc->pooled_width } });
+    return layout(rois_layout.data_type, { format::bfyx, { num_rois, fm, desc->pooled_height, desc->pooled_width }});
 }
 }

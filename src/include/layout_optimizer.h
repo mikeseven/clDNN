@@ -16,11 +16,13 @@
 
 #pragma once
 
-
-#include "network_impl.h"
 #include "memory_impl.h"
+#include "engine_impl.h"
+#include "topology_impl.h"
 #include "meta_utils.h"
 
+#include "api/primitives/data.hpp"
+#include "api/primitives/reorder.hpp"
 #include "api/primitives/convolution.hpp"
 #include "api/primitives/fully_connected.hpp"
 
@@ -30,6 +32,8 @@
 
 namespace cldnn
 {
+
+class primitive_inst;
 
 //this class is used for both static and dynamic reordering of data withing network.
 //static reordering is done for cldnn::data (i.e. immutable) primitives via internal network 
@@ -64,9 +68,8 @@ public:
 
 private:
     bool _enabled;
-    refcounted_obj_ptr<topology_impl> _topology;
-    refcounted_obj_ptr<engine_impl> _engine;
-    std::vector<primitive_id> _outputs;
+    topology_impl _topology;
+    engine_impl::ptr _engine;
     optimization_attributes _optimization_attributes;
 
     struct cache_key
@@ -103,7 +106,7 @@ private:
     create_reorder_if_needed(const layout& current_layout, const cldnn::primitive_id& memid, layout const& expected_layout);
 
 public:
-    explicit layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled = true);
+    explicit layout_optimizer(engine_impl::ptr eng, bool enabled = true);
 
     //this method creates reorder for data, which is currently in 'data_layout' format, to best format in context of 'user' primitive.
     //data is used by 'user' in a way described by 'type' (i.e. weights/bias/input).
@@ -159,12 +162,9 @@ public:
         auto reorder = get_reorder(data_prim->mem.get_layout(), data_prim->id, type, user, user_layout);
         if (reorder.first)
         {
-            _topology->add(data_prim);
+            _topology.add(data_prim);
             if (!reorder.second) //returned reorder is a new primitive (i.e. not cached), add it to topology and as an output
-            {
-                _topology->add(reorder.first);
-                _outputs.push_back(reorder.first->id);
-            }
+                _topology.add(reorder.first);
         }
 
         return reorder;
@@ -181,7 +181,7 @@ public:
         }
     }
 
-    auto optimize() const -> meta::deduce_ret_type_t<decltype(&network_impl::get_primitives)>;
+    auto optimize() const -> std::vector<std::shared_ptr<primitive_inst>>;
     auto get_engine() { return _engine; }
 };
 }

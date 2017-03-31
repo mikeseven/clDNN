@@ -17,6 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "fully_connected_inst.h"
 #include "primitive_type_base.h"
+
 namespace cldnn
 {
 primitive_type_id fully_connected_type_id()
@@ -89,5 +90,4 @@ fully_connected_inst::typed_primitive_inst(network_impl& network, fully_connecte
         throw std::invalid_argument("Fully connected input/output number of dimension does not match.");
     }
 }
-
 }

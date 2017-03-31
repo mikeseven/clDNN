@@ -22,12 +22,15 @@
 
 namespace cldnn
 {
-refcounted_obj_ptr<event_impl> primitive_inst::execute(const std::vector<refcounted_obj_ptr<event_impl>>& events) const
+event_impl::ptr primitive_inst::execute(const std::vector<event_impl::ptr>& events)
 {
-    if (_inputs.size() == 0)
-        return _impl->execute(events);
+    if (!_has_valid_input)
+        throw std::runtime_error("Cannot execute primitive " + id() + " with invalid/unset input");
 
-    std::vector<refcounted_obj_ptr<event_impl>> dependencies;
+    if (_inputs.size() == 0)
+        return _impl->execute(events, *this);
+
+    std::vector<event_impl::ptr> dependencies;
     dependencies.reserve(_inputs.size());
 
     for(auto& input : _inputs)
@@ -35,25 +38,41 @@ refcounted_obj_ptr<event_impl> primitive_inst::execute(const std::vector<refcoun
         dependencies.emplace_back(get_network().execute_primitive(input, events));
     }
 
-    return _impl->execute(dependencies);
+    return _impl->execute(dependencies, *this);
 }
 
-primitive_inst::primitive_inst(network_impl& network, std::shared_ptr<const primitive> desc, const memory& output_memory)
+primitive_inst::primitive_inst(network_impl& network, program_node const& node)
     : _network(network)
-    , _desc(desc)
-    , _inputs(network.get_primitives(desc->dependecies()))
-    , _output(output_memory)
+    , _node(node)
+    , _impl(node.get_selected_impl())
+    , _inputs(network.get_primitives(desc()->dependecies()))
+    , _output(allocate_output())
+    , _output_changed(false)
 {}
 
-primitive_inst::primitive_inst(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout)
-    : primitive_inst(network, desc, allocate_output(network, desc, output_layout))
-{}
-
-memory primitive_inst::allocate_output(network_impl& network, std::shared_ptr<const primitive> desc, const layout& output_layout)
+primitive_inst::primitive_inst(network_impl& network, program_node const& node, memory const& buffer)
+    : _network(network)
+    , _node(node)
+    , _impl(node.get_selected_impl())
+    , _inputs(network.get_primitives(desc()->dependecies()))
+    , _output(buffer)
+    , _output_changed(false)
 {
-    auto output_size = output_layout.size;
-    auto allocation_size = output_size.add(desc->output_padding.lower_size()).add(desc->output_padding.upper_size());
-    //auto allocation_size = output_layout.size.add(desc()->output_padding().size().mul(2));
-    return api_cast(network.get_engine()->allocate_buffer({ output_layout.data_type, allocation_size }));
+    auto req_layout = node.get_padded_output_layout();
+    if (buffer.get_layout() != req_layout)
+        throw std::runtime_error("Provided buffer does not meet primitive's requirements");
+}
+
+layout primitive_inst::non_padded_output_layout() const
+{
+    layout tmp = _output.get_layout();
+    tmp.size = tmp.size.sub(_node.get_primitive()->output_padding.lower_size()).sub(_node.get_primitive()->output_padding.upper_size());
+    return tmp;
+}
+
+memory primitive_inst::allocate_output()
+{
+    auto layout = _node.get_padded_output_layout();
+    return api_cast(get_network().get_engine()->allocate_buffer(layout));
 }
 }

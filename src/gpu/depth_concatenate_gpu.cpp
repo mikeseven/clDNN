@@ -17,7 +17,6 @@
 #include "depth_concatenate_inst.h"
 #include "kernel.h"
 #include "kd_selector.h"
-#include "network_impl.h"
 #include "implementation_map.h"
 
 #include <initializer_list>
@@ -44,7 +43,7 @@ struct kd_default_value_selector<gpu::engine_info_internal::configurations>
     static constexpr gpu::engine_info_internal::configurations value = gpu::engine_info_internal::configurations::GT_UNKNOWN;
 };
 
-struct depth_concatenate_gpu : primitive_impl
+struct depth_concatenate_gpu : typed_primitive_impl<depth_concatenate>
 {
     struct kernel_data
     {
@@ -56,43 +55,44 @@ struct depth_concatenate_gpu : primitive_impl
         bool fp16_unit_used;
     };
 
-    const depth_concatenate_inst& _outer;
+    const depth_concatenate_node& outer;
     gpu::engine_info_internal _engine_info;
 
     std::vector<std::pair<gpu::kernel, kernel_data>> _kernels_with_data;
 
-    typedef kd_selector_t<kernel_data, std::pair<int, const depth_concatenate_inst &>, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, gpu::engine_info_internal::configurations> ks_type;
+    typedef kd_selector_t<kernel_data, std::pair<int, const depth_concatenate_node &>, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, gpu::engine_info_internal::configurations> ks_type;
     static ks_type ks;
 
-    depth_concatenate_gpu(const depth_concatenate_inst& outer)
-        : _outer(outer)
-        , _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info())
+    depth_concatenate_gpu(const depth_concatenate_node& outer)
+        : outer(outer)
+        , _engine_info(outer.get_program().get_engine()->get_context()->get_engine_info())
     {
-        auto context = outer.get_network().get_engine()->get_context();
+        auto context = outer.get_program().get_engine()->get_context();
 
-        const int inputs_count = static_cast<int>(_outer.argument.input.size());
+        const int inputs_count = static_cast<int>(outer.inputs_count());
 
         _kernels_with_data.reserve(inputs_count);
         for (auto input_idx = 0; input_idx < inputs_count; ++input_idx)
         {
-            auto data = ks.get_kernel(std::make_pair(input_idx, std::cref(_outer)), _outer.input_memory(input_idx).get_layout().data_type, _outer.input_memory(input_idx).get_layout().size.format, outer.input_memory(input_idx).get_layout().size.batch[0], _engine_info.architecture, _engine_info.configuration);//set_kernel_data(/*input_idx,*/ _outer/*, engine_info*/);
-            gpu::kernel kernel(context, data.kernel_name, get_jit_constants(input_idx, data), _outer.id());
+            auto input_layout = outer.input(input_idx).get_output_layout();
+            auto data = ks.get_kernel(std::make_pair(input_idx, std::cref(outer)), input_layout.data_type, input_layout.size.format, input_layout.size.batch[0], _engine_info.architecture, _engine_info.configuration);//set_kernel_data(/*input_idx,*/ _outer/*, engine_info*/);
+            gpu::kernel kernel(context, data.kernel_name, get_jit_constants(input_idx, data), outer.id());
 
             _kernels_with_data.emplace_back(std::move(kernel), std::move(data));
         }
     }
 
-    static kernel_data set_kernel_data(int input_idx, const depth_concatenate_inst& outer)
+    static kernel_data set_kernel_data(int input_idx, const depth_concatenate_node& outer)
     {
-        const auto& input_mem = outer.input_memory(input_idx);  // current input
+        const auto& input_layout = outer.input(input_idx).get_padded_output_layout();  // current input
 
         kernel_data kd;
 
-        kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
+        kd.fp16_unit_used = input_layout.data_type == cldnn::data_types::f16;
 
         // Determine global work sizes.
-        kd.gws0 = input_mem.get_layout().size.spatial[0] * input_mem.get_layout().size.spatial[1];
-        kd.gws1 = input_mem.get_layout().size.batch[0];
+        kd.gws0 = input_layout.size.spatial[0] * input_layout.size.spatial[1];
+        kd.gws1 = input_layout.size.batch[0];
         // Find largest positive local work size that is divider for global work size.
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
         while (kd.gws0 % kd.lws0 != 0)
@@ -111,24 +111,28 @@ struct depth_concatenate_gpu : primitive_impl
         if (!fp16_supported && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
+        auto input_layout = outer.input(input_idx).get_output_layout();
+        auto input_padding = outer.input(input_idx).get_primitive()->output_padding;
+        auto output_padding = outer.get_primitive()->output_padding;
+        auto padded_input_layout = outer.input(input_idx).get_padded_output_layout();
+
         return gpu::jit_constants{
-            gpu::make_jit_constant("INPUT",          _outer.input().at(input_idx)->non_padded_output_layout().size),
-            gpu::make_jit_constant("OUTPUT",         _outer.non_padded_output_layout().size),
-            gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", _outer.input_memory(input_idx).count() / _outer.input_memory(input_idx).get_layout().size.batch[0]),
+            gpu::make_jit_constant("INPUT",          input_layout.size),
+            gpu::make_jit_constant("OUTPUT",         outer.get_output_layout().size),
+            gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", padded_input_layout.count() / padded_input_layout.size.batch[0]),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(fp16_supported)),
             gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",      data.fp16_unit_used ? "half" : "float"),
-            gpu::make_jit_constant("INPUT_PADDING",  _outer.input().at(input_idx)->desc()->output_padding),
-            gpu::make_jit_constant("OUTPUT_PADDING", _outer.argument.output_padding)
+            gpu::make_jit_constant("INPUT_PADDING",  input_padding),
+            gpu::make_jit_constant("OUTPUT_PADDING", output_padding)
         };
     }
 
-    cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
+    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, depth_concatenate_inst& instance) override
     {
+        size_t inputs_count = outer.inputs_count();
 
-        size_t inputs_count = _outer.argument.input.size();
-
-        const auto& output_mem = _outer.output_memory();  // output
+        const auto& output_mem = instance.output_memory();  // output
 
         uint32_t depth_offset = 0;
         auto tmp_events = events;
@@ -136,7 +140,7 @@ struct depth_concatenate_gpu : primitive_impl
         {
             const auto& kd = _kernels_with_data[input_idx].second;
 
-            const auto& input_mem = _outer.input_memory(input_idx);  // current input
+            const auto& input_mem = instance.input_memory(input_idx);  // current input
 
             uint32_t input_depth_count = input_mem.get_layout().size.feature[0];
             auto event = _kernels_with_data[input_idx].first.run<gpu::input_mem, gpu::output_mem, cl_uint>
@@ -148,10 +152,10 @@ struct depth_concatenate_gpu : primitive_impl
         return tmp_events.at(0);
     }
 
-    static primitive_impl *create(depth_concatenate_inst &arg) { return new depth_concatenate_gpu(arg); };
+    static primitive_impl* create(const depth_concatenate_node& arg) { return new depth_concatenate_gpu(arg); };
 };
 
-depth_concatenate_gpu::kernel_data default_yxfb(const std::pair<int, const depth_concatenate_inst&>& arg)
+depth_concatenate_gpu::kernel_data default_yxfb(const std::pair<int, const depth_concatenate_node&>& arg)
 {
     depth_concatenate_gpu::kernel_data kd = depth_concatenate_gpu::set_kernel_data(arg.first, arg.second);
     kd.gws1 = 1;
@@ -159,20 +163,21 @@ depth_concatenate_gpu::kernel_data default_yxfb(const std::pair<int, const depth
     return kd;
 }
 
-depth_concatenate_gpu::kernel_data default_bfyx(const std::pair<int, const depth_concatenate_inst&>& arg)
+depth_concatenate_gpu::kernel_data default_bfyx(const std::pair<int, const depth_concatenate_node&>& arg)
 {
     auto idx = arg.first;
-    auto input_mem = arg.second.input_memory(idx);
-    auto input_size = input_mem.get_layout().size;
+    auto input_layout = arg.second.input(idx).get_padded_output_layout();
+
     depth_concatenate_gpu::kernel_data kd = depth_concatenate_gpu::set_kernel_data(idx, arg.second);
 
-    auto input_padding = arg.second.input().at(idx)->desc()->output_padding;
-    auto output_padding = arg.second.argument.output_padding;
+    auto input_padding = arg.second.input(idx).get_primitive()->output_padding;
+    auto output_padding = arg.second.get_primitive()->output_padding;
+
     // TODO: add support for f16 into this no padding kernel
-    if (!input_padding && !output_padding && input_mem.get_layout().data_type == cldnn::data_types::f32)
+    if (!input_padding && !output_padding && input_layout.data_type == cldnn::data_types::f32)
     {
-        kd.gws0 = input_size.batch[0];
-        kd.gws1 = cldnn::align_to(input_mem.count() / input_mem.get_layout().size.batch[0] / 8, 16);
+        kd.gws0 = input_layout.size.batch[0];
+        kd.gws1 = align_to(input_layout.count() / input_layout.size.batch[0] / 8, 16);
 
         kd.lws0 = 1;
         kd.lws1 = 16;
@@ -181,8 +186,8 @@ depth_concatenate_gpu::kernel_data default_bfyx(const std::pair<int, const depth
     }
     else
     {
-        kd.gws0 = input_size.batch[0];
-        kd.gws1 = cldnn::align_to(input_size.feature[0] * input_size.spatial[1], 32);
+        kd.gws0 = input_layout.size.batch[0];
+        kd.gws1 = align_to(input_layout.size.feature[0] * input_layout.size.spatial[1], 32);
 
         kd.lws0 = 1;
         kd.lws1 = 32;
@@ -197,13 +202,12 @@ depth_concatenate_gpu::ks_type depth_concatenate_gpu::ks = {
     { std::make_tuple(data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb },
     { std::make_tuple(data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx },
     { std::make_tuple(data_types::f16, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx }
-
 };
 
 namespace {
     struct attach {
         attach() {
-            implementation_map<depth_concatenate_inst>::add({
+            implementation_map<depth_concatenate>::add({
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), depth_concatenate_gpu::create },
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), depth_concatenate_gpu::create },
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), depth_concatenate_gpu::create },
@@ -213,6 +217,7 @@ namespace {
         ~attach() {}
     };
 }
+
 attach attach_impl;
 
 } // namespace neural

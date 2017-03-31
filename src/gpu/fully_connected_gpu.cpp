@@ -19,12 +19,14 @@
 #include "fully_connected_inst.h"
 #include "kernel.h"
 #include "kd_selector.h"
-#include "network_impl.h"
 #include "implementation_map.h"
+#include "network_impl.h"
+#include "engine_impl.h"
+
+#include "api/primitives/reorder.hpp"
+#include "api/primitives/input_layout.hpp"
 
 #include <algorithm>
-#include <stdexcept>
-#include <string>
 
 using namespace cldnn;
 
@@ -56,37 +58,40 @@ struct kd_default_value_selector<gpu::engine_info_internal::configurations>
 };
 
 // how many batches will a single work item compute
-static int get_batches_per_work_item(const memory &output_mem)
+static int get_batches_per_work_item(const layout& output_layout)
 {
-    int batch_size = output_mem.get_layout().size.batch[0];
+    int batch_size = output_layout.size.batch[0];
     return std::min(batch_size, 32);
 }
 
-static int get_local_groups_size(const memory &output_mem)
+static int get_local_groups_size(const layout& output_layout)
 {
-    int batch_size = output_mem.get_layout().size.batch[0];
-    return std::max(1, batch_size / get_batches_per_work_item(output_mem));
+    int batch_size = output_layout.size.batch[0];
+    return std::max(1, batch_size / get_batches_per_work_item(output_layout));
 }
 
 // how many neurons for a single batch will a single work item produce 
-static int get_neurons_per_work_item(const memory &output_mem)
+static int get_neurons_per_work_item(const layout& output_layout)
 {
-    int batch_size = output_mem.get_layout().size.batch[0];
-    auto out_elements_count_per_batch = output_mem.count() / batch_size;
+    int batch_size = output_layout.size.batch[0];
+    auto out_elements_count_per_batch = output_layout.count() / batch_size;
     if (out_elements_count_per_batch % 16 == 0)
         return 2;
     else
         return 1;
 }
 
-struct fully_connected_gpu : primitive_impl
+struct fully_connected_gpu : typed_primitive_impl<fully_connected>
 {
-    fully_connected_inst& _outer;
+    const fully_connected_node& outer;
+    const layout input_layout;
+    const layout weigths_layout;
+
     gpu::engine_info_internal _engine_info;
 
     struct kernel_data 
     {
-        std::vector<cldnn::refcounted_obj_ptr<cldnn::network_impl>> reorder;
+        std::vector<network_impl::ptr> reorder;
         size_t gws0, gws1;
         size_t lws0, lws1;
         std::string kernel_name;
@@ -118,37 +123,41 @@ struct fully_connected_gpu : primitive_impl
             } data_bx_bs_x_bsv16;
         };
     } _kernel_data;
+
     gpu::kernel _kernel;
 
-    typedef kd_selector_t<kernel_data, fully_connected_inst, data_types, format::type, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, gpu::engine_info_internal::configurations> ks_type;
+    typedef kd_selector_t<kernel_data, fully_connected_node, data_types, format::type, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, gpu::engine_info_internal::configurations> ks_type;
     static ks_type ks;
 
-    fully_connected_gpu(fully_connected_inst& arg)
-      : _outer(arg)
-        , _engine_info(arg.get_network().get_engine()->get_context()->get_engine_info())
-        , _kernel_data(ks.get_kernel(_outer,
-            _outer.input_memory().get_layout().data_type,
-            _outer.input_memory().get_layout().size.format,
-            _outer.weights_memory().get_layout().data_type,
-            _outer.weights_memory().get_layout().size.format,
-            _outer.input_memory().get_layout().size.batch[0]
-            , _engine_info.architecture,
+    fully_connected_gpu(const fully_connected_node& arg)
+        : outer(arg)
+        , input_layout(arg.input().get_output_layout())
+        , weigths_layout(arg.weights().get_output_layout())
+        , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
+        , _kernel_data(ks.get_kernel(
+            outer,
+            input_layout.data_type,
+            input_layout.size.format,
+            weigths_layout.data_type,
+            weigths_layout.size.format,
+            input_layout.size.batch[0],
+            _engine_info.architecture,
             _engine_info.configuration))
-        ,_kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
+        ,_kernel(outer.get_program().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(outer, _kernel_data), outer.id())
     {
     }
 
-    static kernel_data set_kernel_data(const fully_connected_inst& outer)
+    static kernel_data set_kernel_data(const fully_connected_node& outer)
     {
-        const auto& input_mem  = outer.input_memory();   // input
-        const auto& output_mem = outer.output_memory();  // output
+        const auto& input_layout  = outer.input().get_output_layout();   // input
+        const auto& output_layout = outer.get_output_layout();  // output
 
         kernel_data kd;
 
-        kd.fp16_unit_used = input_mem.get_layout().data_type == cldnn::data_types::f16;
+        kd.fp16_unit_used = input_layout.data_type == cldnn::data_types::f16;
 
         // Determine global work sizes.
-        kd.gws0 = output_mem.count();
+        kd.gws0 = output_layout.count();
         kd.gws1 = 1;
 
         // Find largest positive local work size that is divider for global work size.
@@ -162,28 +171,28 @@ struct fully_connected_gpu : primitive_impl
         return kd;
     }
 
-    static gpu::jit_constants get_jit_constants(const fully_connected_inst& outer, const kernel_data& data)
+    static gpu::jit_constants get_jit_constants(const fully_connected_node& outer, const kernel_data& data)
     {
-        auto engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
+        auto engine_info = outer.get_program().get_engine()->get_context()->get_engine_info();
 
-        const auto& input_mem  = outer.input_memory();   // input
-        const auto& weight_mem = outer.weights_memory();   // weights
-        const auto& output_mem = outer.output_memory();  // output
+        auto input_layout  = outer.input().get_output_layout();   // input
+        auto weights_layout = outer.weights().get_output_layout();   // weights
+        auto output_layout = outer.get_output_layout();  // output
 
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
         gpu::jit_constants mem_consts{
-            gpu::make_jit_constant("INPUT",                input_mem.get_layout().size),
-            gpu::make_jit_constant("OUTPUT",               output_mem.get_layout().size),
-            gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", input_mem.count() / input_mem.get_layout().size.batch[0]),
-            gpu::make_jit_constant("WEIGHTS",              weight_mem.get_layout().size),
+            gpu::make_jit_constant("INPUT",                input_layout.size),
+            gpu::make_jit_constant("OUTPUT",               output_layout.size),
+            gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", input_layout.count() / input_layout.size.batch[0]),
+            gpu::make_jit_constant("WEIGHTS",              weights_layout.size),
             gpu::make_jit_constant("FP16_SUPPORTED",       static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",       static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",            data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_VAL_ZERO",        data.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("RELU",                 outer.argument.with_activation),
-            gpu::make_jit_constant("NEGATIVE_SLOPE",       outer.argument.activation_negative_slope),
+            gpu::make_jit_constant("RELU",                 outer.get_primitive()->with_activation),
+            gpu::make_jit_constant("NEGATIVE_SLOPE",       outer.get_primitive()->activation_negative_slope),
             gpu::make_jit_constant("BIAS_TERM",             static_cast<int>(outer.bias_term()))
         };
 
@@ -221,22 +230,18 @@ struct fully_connected_gpu : primitive_impl
         if (data.kernel_name == kernel_name_xb_xb_b8_x8_vload ||
             data.kernel_name == kernel_name_xb_bs_xs_xsv8_bsv8_vload)
         {
-            const int batches_per_work_item = get_batches_per_work_item(output_mem);
+            const int batches_per_work_item = get_batches_per_work_item(output_layout);
 
-            mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", get_neurons_per_work_item(output_mem))); // how many neurons for a single batch will a single work item produce
+            mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", get_neurons_per_work_item(output_layout))); // how many neurons for a single batch will a single work item produce
             mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item));                 // how many batches will a single work item compute
-            mem_consts.add_constant(gpu::make_jit_constant("OUTPUT_ELEMENTS_COUNT", output_mem.count() / output_mem.get_layout().size.batch[0]));
+            mem_consts.add_constant(gpu::make_jit_constant("OUTPUT_ELEMENTS_COUNT", output_layout.count() / output_layout.size.batch[0]));
         }
         return mem_consts;
     }
 
-    cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
+    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, fully_connected_inst& instance) override
     {
         const auto& kd    = _kernel_data;
-
-        const auto& input_mem  = _outer.input_memory();   // input
-        const auto& weight_mem = _outer.weights_memory();   // weights
-        const auto& output_mem = _outer.output_memory();  // output
 
         if (kd.reorder.empty())
         {
@@ -244,14 +249,25 @@ struct fully_connected_gpu : primitive_impl
             {
                 const auto& bias_mem = _outer.bias_memory();
                 return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-                    ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, events, input_mem, output_mem, weight_mem, bias_mem);
+                ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, 
+                    events,
+                    instance.input_memory(),
+                    instance.output_memory(),
+                    instance.weights_memory(),
+                    instance.bias_memory());
             }
-            else return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>
-                    ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, events, input_mem, output_mem, weight_mem);
-        }
+            else
+            {
+                return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>
+                ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, 
+                    events,
+                    instance.input_memory(),
+                    instance.output_memory(),
+                    instance.weights_memory());
+            }
 
         auto network = kd.reorder[0];
-        network->set_input_data("input", api_cast(input_mem.get()));
+        network->set_input_data("input", api_cast(instance.input_memory().get()));
         network->execute(events);
         auto output_id = network->get_output_ids()[0];
         auto reorder_output = network->get_primitive(output_id)->output_memory();
@@ -260,31 +276,40 @@ struct fully_connected_gpu : primitive_impl
         {
             const auto& bias_mem = _outer.bias_memory();
             return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-                ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, { network->get_primitive_event(output_id) }, reorder_output, output_mem, weight_mem, bias_mem);
+            ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } },
+               { network->get_primitive_event(output_id) },
+                reorder_output,
+                instance.output_memory(),
+                instance.weights_memory(),
+                instance.bias_memory());
         }
-        else return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>
-                ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, { network->get_primitive_event(output_id) }, reorder_output, output_mem, weight_mem);
-      
+        else
+        {
+            return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>
+            ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } },
+               { network->get_primitive_event(output_id) },
+                reorder_output,
+                instance.output_memory(),
+                instance.weights_memory());
+        }
     }
 
-    static primitive_impl* create(fully_connected_inst &arg)
+    static primitive_impl* create(const fully_connected_node& arg) 
     {
-        auto& input_mem = arg.input_memory();
-        auto& input_size = input_mem.get_layout().size;
-        auto& weights_mem = arg.weights_memory();
-        auto& weights_size = weights_mem.get_layout().size;
+        auto input_size = arg.input().get_output_layout().size;
+        auto weights_layout = arg.weights().get_output_layout();
 
         // validate arguments
         if (input_size.format == cldnn::format::yxfb ||
             input_size.format == cldnn::format::bfyx)
         {
-            if (!weights_mem.get_layout().has_format(data_types::f32, format::bs_xs_xsv8_bsv8) &&
-                weights_mem.get_layout().size.format != format::bs_x_bsv16)
+            if (!weights_layout.has_format(data_types::f32, format::bs_xs_xsv8_bsv8) &&
+                weights_layout.size.format != format::bs_x_bsv16)
             {
                 // weights
-                if (input_size.feature.size() != weights_size.feature.size()
-                    || input_size.batch.size() != weights_size.batch.size()
-                    || input_size.feature[0] != weights_size.feature[0])
+                if (input_size.feature.size() != weights_layout.size.feature.size()
+                    || input_size.batch.size() != weights_layout.size.batch.size()
+                    || input_size.feature[0] != weights_layout.size.feature[0])
                     throw std::invalid_argument("Input and weights sizes do not match");
             }
         }
@@ -298,23 +323,26 @@ struct fully_connected_gpu : primitive_impl
     };
 };
 
-fully_connected_gpu::kernel_data default_yxfb_f32_bfyx_f32(const fully_connected_inst& arg)
+fully_connected_gpu::kernel_data default_yxfb_f32_bfyx_f32(const fully_connected_node& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
     kd.kernel_name = kernel_name_yxfn;
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_yxfb_f32(const fully_connected_inst& arg)
+fully_connected_gpu::kernel_data default_yxfb_f32(const fully_connected_node& arg)
 {
+    auto input_layout = arg.input().get_output_layout();
+    auto output_layout = arg.get_output_layout();
+
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
-    bool batch_multiple_of_8 = arg.input_memory().get_layout().size.batch[0] % 8 == 0;
+    bool batch_multiple_of_8 = input_layout.size.batch[0] % 8 == 0;
 
     if (batch_multiple_of_8 &&
-        (arg.output_memory().count() / arg.output_memory().get_layout().size.batch[0]) % 8 == 0)
+        (output_layout.count() / output_layout.size.batch[0]) % 8 == 0)
     {
-        size_t groups_per_batches = get_local_groups_size(arg.output_memory());
-        kd.gws0 = arg.output_memory().count() / (get_neurons_per_work_item(arg.output_memory()) * get_batches_per_work_item(arg.output_memory()) * groups_per_batches);
+        size_t groups_per_batches = get_local_groups_size(output_layout);
+        kd.gws0 = output_layout.count() / (get_neurons_per_work_item(output_layout) * get_batches_per_work_item(output_layout) * groups_per_batches);
         kd.gws1 = groups_per_batches;
         kd.lws0 = 8;
         kd.lws1 = 1;
@@ -328,17 +356,17 @@ fully_connected_gpu::kernel_data default_yxfb_f32(const fully_connected_inst& ar
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_xb_f32_bx_f32(const fully_connected_inst& arg)
+fully_connected_gpu::kernel_data default_xb_f32_bx_f32(const fully_connected_node& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
 
-    auto input_mem = arg.input_memory();
-    auto output_mem = arg.output_memory();
+    auto input_size = arg.input().get_output_layout().size;
+    auto output_size = arg.get_output_layout().size;
 
-    if (input_mem.get_layout().size.batch[0] >= 8)
+    if (input_size.batch[0] >= 8)
     {
-        kd.gws0 = output_mem.get_layout().size.batch[0];
-        kd.gws1 = output_mem.get_layout().size.spatial[0];
+        kd.gws0 = output_size.batch[0];
+        kd.gws1 = output_size.spatial[0];
         kd.lws0 = 8;
         kd.lws1 = 1;
         kd.kernel_name = kernel_name_xb_bx_b8;
@@ -350,18 +378,21 @@ fully_connected_gpu::kernel_data default_xb_f32_bx_f32(const fully_connected_ins
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_f32(const fully_connected_inst& arg)
+fully_connected_gpu::kernel_data default_bfyx_f32(const fully_connected_node& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
-    if (arg.input_memory().get_layout().size.batch[0] != 1)
+
+    auto input_size = arg.input().get_output_layout().size;
+
+    if (input_size.batch[0] != 1)
     {
-        auto input_mem = arg.input_memory();
+        auto input_layout = arg.input().get_output_layout();
         cldnn::topology topology(
-            cldnn::input_layout("input", input_mem.get_layout()),
-            cldnn::reorder("reorder", "input", cldnn::layout{ input_mem.get_layout().data_type, input_mem.get_layout().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
+            cldnn::input_layout("input", input_layout),
+            cldnn::reorder("reorder", "input", cldnn::layout{ input_layout.data_type, input_layout.size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
         );
         kd = default_yxfb_f32(arg); //fallback to (yxfb, yxfb, fp32) case
-        kd.reorder.push_back({ arg.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false }); //add input reorder bfyx -> yxfb
+        kd.reorder.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false }); //add input reorder bfyx -> yxfb
     }
     else
     {
@@ -370,15 +401,17 @@ fully_connected_gpu::kernel_data default_bfyx_f32(const fully_connected_inst& ar
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const fully_connected_inst& arg)
+fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const fully_connected_node& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
-    bool batch_multiple_of_8 = arg.input_memory().get_layout().size.batch[0] % 8 == 0;
+    bool batch_multiple_of_8 = arg.input().get_output_layout().size.batch[0] % 8 == 0;
+
+    auto output_layout = arg.get_output_layout();
 
     if (batch_multiple_of_8)
     {
-        size_t groups_per_batches = get_local_groups_size(arg.output_memory());
-        kd.gws0 = cldnn::align_to(arg.output_memory().count() / (get_neurons_per_work_item(arg.output_memory()) * get_batches_per_work_item(arg.output_memory()) * groups_per_batches), 8);
+        size_t groups_per_batches = get_local_groups_size(output_layout);
+        kd.gws0 = align_to(output_layout.count() / (get_neurons_per_work_item(output_layout) * get_batches_per_work_item(output_layout) * groups_per_batches), 8);
         kd.gws1 = groups_per_batches;
         kd.lws0 = 8;
         kd.lws1 = 1;
@@ -393,10 +426,10 @@ fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const full
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_f32_bs_xs_xsv8_bsv8_f32(const fully_connected_inst& arg)
+fully_connected_gpu::kernel_data default_bfyx_f32_bs_xs_xsv8_bsv8_f32(const fully_connected_node& arg)
 {
-    auto input_mem = arg.input_memory();
-    auto input_size = input_mem.get_layout().size;
+    auto input_layout = arg.input().get_output_layout();
+    auto input_size = input_layout.size;
     if (input_size.batch[0] < 8)
     {
         // TODO: implement this case
@@ -409,47 +442,50 @@ fully_connected_gpu::kernel_data default_bfyx_f32_bs_xs_xsv8_bsv8_f32(const full
     });
     cldnn::layout expected_mem_layout(cldnn::data_types::f32, expected_mem_size);
     cldnn::topology topology(
-        cldnn::input_layout("input", input_mem.get_layout()),
+        cldnn::input_layout("input", input_layout),
         cldnn::reorder("reorder", "input", expected_mem_layout)
     );
     
     fully_connected_gpu::kernel_data kd = default_yxfb_f32_bs_xs_xsv8_bsv8_f32(arg);
-    kd.reorder.push_back({ arg.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
+    kd.reorder.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_xb_f32_bs_xs_xsv8_bsv8_f32(const fully_connected_inst& arg)
+fully_connected_gpu::kernel_data default_xb_f32_bs_xs_xsv8_bsv8_f32(const fully_connected_node& arg)
 {
-    auto input_mem = arg.input_memory();
-    auto input_size = input_mem.get_layout().size;
+    auto input_layout = arg.input().get_output_layout();
+    auto input_size = input_layout.size;
     if (input_size.batch[0] < 8)
     {
         // TODO: implement this case
         throw std::runtime_error("default_xb_f32_bs_xs_xsv8_bsv8_f32 with batch < 8 not implemented!");
     }
     cldnn::topology topology(
-        cldnn::input_layout("input", input_mem.get_layout()),
-        cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_mem.get_layout().size.transform(cldnn::format::bs_xs_xsv8_bsv8, 1) }, "")
+        cldnn::input_layout("input", input_layout),
+        cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_size.transform(cldnn::format::bs_xs_xsv8_bsv8, 1) }, "")
     );
 
     fully_connected_gpu::kernel_data kd = default_yxfb_f32_bs_xs_xsv8_bsv8_f32(arg);
-    kd.reorder.push_back({ arg.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
+    kd.reorder.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_f32_fyxb_f32_b1(const fully_connected_inst& arg)
+fully_connected_gpu::kernel_data default_bfyx_f32_fyxb_f32_b1(const fully_connected_node& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
     kd.kernel_name = kernel_name_bx_bx_from_fyx;
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_yxfb_fp16(const fully_connected_inst& arg)
+fully_connected_gpu::kernel_data default_yxfb_fp16(const fully_connected_node& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
 
-    auto batch_size = arg.output_memory().get_layout().size.batch[0];
-    auto response_size = arg.weights_memory().get_layout().size.batch[0];
+    auto output_layout = arg.get_output_layout();
+    auto weights_layout = arg.weights().get_output_layout();
+
+    auto batch_size = output_layout.size.batch[0];
+    auto response_size = weights_layout.size.batch[0];
     //bool batch_size_pow_2 = batch_size > 0 && (batch_size & (batch_size - 1)) == 0;
 
     constexpr uint32_t unit_byte_size = sizeof(cl_half);
@@ -491,10 +527,10 @@ fully_connected_gpu::kernel_data default_yxfb_fp16(const fully_connected_inst& a
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_fp16(const fully_connected_inst& arg)
+fully_connected_gpu::kernel_data default_bfyx_fp16(const fully_connected_node& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
-    if (arg.input_memory().get_layout().size.batch[0] != 1)
+    if (arg.input().get_output_layout().size.batch[0] != 1)
     {
         kd.kernel_name = kernel_name_bx_bx_from_fyxb;
     }
@@ -505,11 +541,11 @@ fully_connected_gpu::kernel_data default_bfyx_fp16(const fully_connected_inst& a
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_bs_x_bsv16_b1(const fully_connected_inst& arg)
+fully_connected_gpu::kernel_data default_bfyx_bs_x_bsv16_b1(const fully_connected_node& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
 
-    auto response_size = arg.weights_memory().get_layout().size.batch[0];
+    auto response_size = arg.weights().get_output_layout().size.batch[0];
 
     // Properties of chunk and unit.
     const uint32_t unit_byte_size = kd.fp16_unit_used ? sizeof(cl_half) : sizeof(float);
@@ -546,20 +582,20 @@ fully_connected_gpu::kernel_data default_bfyx_bs_x_bsv16_b1(const fully_connecte
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_f16_yxfb_f16(const fully_connected_inst& arg)
+fully_connected_gpu::kernel_data default_bfyx_f16_yxfb_f16(const fully_connected_node& arg)
 {
     fully_connected_gpu::kernel_data kd = default_yxfb_fp16(arg); //fallback to (yxfb, yxfb, f16) case
 
-    auto input_mem = arg.input_memory();
+    auto input_layout = arg.input().get_output_layout();
     cldnn::topology topology(
-        cldnn::input_layout("input", input_mem.get_layout()),
-        cldnn::reorder("reorder", "input", cldnn::layout{ input_mem.get_layout().data_type, input_mem.get_layout().size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
+        cldnn::input_layout("input", input_layout),
+        cldnn::reorder("reorder", "input", cldnn::layout{ input_layout.data_type, input_layout.size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yx,{ 0,0 } })
     );
-    kd.reorder.push_back({ arg.get_network().get_engine()->build_network(api_cast(topology.get()), cldnn::build_options()), false });
+    kd.reorder.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_f16_fyxb_f16_b1(const fully_connected_inst& arg)
+fully_connected_gpu::kernel_data default_bfyx_f16_fyxb_f16_b1(const fully_connected_node& arg)
 {
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
     kd.kernel_name = kernel_name_bx_bx_from_fyx;
@@ -605,7 +641,7 @@ namespace {
         attach() {
             auto val_fw = fully_connected_gpu::create;
 
-            implementation_map<fully_connected_inst>::add({
+            implementation_map<fully_connected>::add({
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), val_fw },
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::xb), val_fw },
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::x), val_fw },

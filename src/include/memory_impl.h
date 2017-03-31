@@ -16,16 +16,17 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api_impl.h"
-#include "refcounted_obj.h"
-#include "engine_impl.h"
 #include "api/memory.hpp"
+
+#include "api_impl.h"
+#include "engine_impl.h"
 
 namespace cldnn
 {
+
 struct memory_impl : refcounted_obj<memory_impl>
 {
-    memory_impl(const refcounted_obj_ptr<engine_impl>& engine, layout layout): _engine(engine), _layout(layout){}
+    memory_impl(const engine_impl::ptr& engine, layout layout): _engine(engine), _layout(layout){}
     virtual ~memory_impl() = default;
     virtual void* lock() = 0;
     virtual void unlock() = 0;
@@ -34,7 +35,7 @@ struct memory_impl : refcounted_obj<memory_impl>
     const refcounted_obj_ptr<engine_impl>& get_engine() const { return _engine; }
     const layout& get_layout() const { return _layout; }
 protected:
-    const refcounted_obj_ptr<engine_impl> _engine;
+    const engine_impl::ptr _engine;
     const layout _layout;
 };
 

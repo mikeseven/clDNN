@@ -90,8 +90,12 @@ typedef struct cldnn_event_impl* cldnn_event;
 /// @brief Network topology to be defined by user
 typedef struct cldnn_topology_impl* cldnn_topology;
 
+/// @ingroup c_program
+/// @brief Compiled program build from @ref cldnn_topology by @ref cldnn_engine
+typedef struct cldnn_program_impl* cldnn_program;
+
 /// @ingroup c_network
-/// @brief Executable network build from @ref cldnn_topology by @ref cldnn_engine
+/// @brief Executable network allocated from @ref cldnn_program
 typedef struct cldnn_network_impl* cldnn_network;
 
 /// @ingroup c_memory
@@ -373,15 +377,36 @@ CLDNN_API void cldnn_add_event_handler(cldnn_event event, cldnn_event_handler ha
 CLDNN_API void cldnn_get_event_profiling_info(cldnn_event event, cldnn_profiling_interval* profiling, size_t size, size_t* size_ret, cldnn_status* status);
 /// @}
 
+/// @addtogroup c_program
+/// @{
+
+/// @brief Builds executable program based on user-defined @p topology by specified @p engine.
+/// @param[in] engine The engine which will be used to build the program.
+/// @param[in] topology The user-defined topology on which the network will be based.
+/// @param[in] options The pointer of array of @ref cldnn_build_option which define network build options.
+/// @param[in] options_num Number of elements in the @p options array.
+CLDNN_API cldnn_program cldnn_build_program(cldnn_engine engine, cldnn_topology topology, cldnn_build_option* options, size_t options_num, cldnn_status* status);
+
+/// @brief Increment reference counter for the program object.
+CLDNN_API void cldnn_retain_program(cldnn_program program, cldnn_status* status);
+
+/// @brief Decrement reference counter for the program object. Deletes object when counter becomes zero.
+CLDNN_API void cldnn_release_program(cldnn_program program, cldnn_status* status);
+/// @}
+
 /// @addtogroup c_network
 /// @{
 
-/// @brief Builds executable network based on user-defined @p topology by specified @p engine.
+/// @brief Builds and allocates executable network based on user-defined @p topology by specified @p engine. This is a shorthand for cldnn_build_program and cldnn_allocate_network.
 /// @param[in] engine The engine which will be used to build the metwork.
 /// @param[in] topology The user-defined topology on which the network will be based.
 /// @param[in] options The pointer of array of @ref cldnn_build_option which define network build options.
 /// @param[in] options_num Number of elements in the @p options array.
 CLDNN_API        cldnn_network cldnn_build_network(cldnn_engine engine, cldnn_topology topology, cldnn_build_option* options, size_t options_num, cldnn_status* status);
+
+/// @brief Allocates memory for a new network which will be able to execute specified @p program.
+/// @param[in] program The program object which holds binaries compiled from some topology and engine. Multiple network objects can share the same program.
+CLDNN_API        cldnn_network cldnn_allocate_network(cldnn_program program, cldnn_status* status);
 
 /// @brief Increment reference counter for the network object.
 CLDNN_API                 void cldnn_retain_network(cldnn_network network, cldnn_status* status);
@@ -399,10 +424,12 @@ CLDNN_API                 void cldnn_set_network_input(cldnn_network network, cl
 /// @brief Returns @p engine associated with the @p network.
 CLDNN_API         cldnn_engine cldnn_get_network_engine(cldnn_network network, cldnn_status* status);
 
+/// @brief Returns @p program associated with the @p network.
+CLDNN_API        cldnn_program cldnn_get_network_program(cldnn_network network, cldnn_status* status);
+
 /// @brief Returns the actual internal @p topology of the @p network.
 /// @details Due to internal optiomization during network build process, topology returned by this function is differ
 /// than the topology passed to cldnn_build_network().
-CLDNN_API       cldnn_topology cldnn_get_network_topology(cldnn_network network, cldnn_status* status);
 
 /// @brief Returns names of network outputs.
 /// @details Function fills user provided buffer by primitive names. Each name is followed by '\0'.

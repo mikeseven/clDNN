@@ -17,12 +17,9 @@
 #include "roi_pooling_inst.h"
 #include "kernel.h"
 #include "kd_selector.h"
-#include "network_impl.h"
 #include "implementation_map.h"
 
 #include <algorithm>
-#include <stdexcept>
-#include <string>
 
 using namespace cldnn;
 
@@ -42,9 +39,10 @@ struct kd_default_value_selector<neural::gpu::engine_info_internal::configuratio
     static constexpr neural::gpu::engine_info_internal::configurations value = neural::gpu::engine_info_internal::configurations::GT_UNKNOWN;
 };
 
-struct roi_pooling_gpu : primitive_impl
+struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
 {
-    const roi_pooling_inst& _outer;
+    const roi_pooling_node& outer;
+
     gpu::engine_info_internal _engine_info;
 
     struct kernel_data 
@@ -56,25 +54,31 @@ struct roi_pooling_gpu : primitive_impl
     } _kernel_data;
     gpu::kernel _kernel;
 
-    static kd_selector_t<kernel_data, roi_pooling_inst, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
+    static kd_selector_t<kernel_data, roi_pooling_node, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
 
-    roi_pooling_gpu(const roi_pooling_inst& outer)
-        : _outer(outer),
-        _engine_info(outer.get_network().get_engine()->get_context()->get_engine_info()),
-        _kernel_data(ks.get_kernel(outer, outer.input_memory().get_layout().data_type, outer.input_memory().get_layout().size.format, outer.input_memory().get_layout().size.batch[0], _engine_info.architecture, _engine_info.configuration)),
-        _kernel(_outer.get_network().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(_outer, _kernel_data), _outer.id())
+    roi_pooling_gpu(const roi_pooling_node& arg)
+        : outer(arg),
+        _engine_info(outer.get_program().get_engine()->get_context()->get_engine_info()),
+        _kernel_data(ks.get_kernel(
+            outer,
+            outer.input().get_output_layout().data_type,
+            outer.input().get_output_layout().size.format,
+            outer.input().get_output_layout().size.batch[0],
+            _engine_info.architecture,
+            _engine_info.configuration)),
+        _kernel(outer.get_program().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(outer, _kernel_data), outer.id())
     {}
 
-    static kernel_data set_default(const roi_pooling_inst& outer)
+    static kernel_data set_default(const roi_pooling_node& outer)
     {
         kernel_data kd;
 
-        cldnn::data_types input_dt = outer.input_memory().get_layout().data_type;
+        cldnn::data_types input_dt = outer.input().get_output_layout().data_type;
        
         kd.fp16_unit_used = (input_dt == cldnn::data_types::f16);
 
         // Determine global work sizes.
-        kd.gws0 = outer.output_memory().count();
+        kd.gws0 = outer.get_padded_output_layout().count();
         kd.gws1 = 1;
         kd.gws2 = 1;
 
@@ -93,22 +97,22 @@ struct roi_pooling_gpu : primitive_impl
     }
 
 
-    static gpu::jit_constants get_jit_constants(const roi_pooling_inst& outer, const kernel_data& data)
+    static gpu::jit_constants get_jit_constants(const roi_pooling_node& outer, const kernel_data& data)
     {
-        neural::gpu::engine_info_internal engine_info = outer.get_network().get_engine()->get_context()->get_engine_info();
+        neural::gpu::engine_info_internal engine_info = outer.get_program().get_engine()->get_context()->get_engine_info();
 
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        const cldnn::tensor& input_size = outer.input_memory().get_layout().size;
+        const cldnn::tensor& input_size = outer.input().get_padded_output_layout().size;
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT",             input_size),
-            gpu::make_jit_constant("POOLED_HEIGHT",     outer.argument.pooled_height),
-            gpu::make_jit_constant("POOLED_WIDTH",      outer.argument.pooled_width),
-            gpu::make_jit_constant("INPUT_PADDING",     outer.input().at(roi_pooling_inst::data_index)->desc()->output_padding),
-            gpu::make_jit_constant("OUTPUT_PADDING",    outer.argument.output_padding),
-            gpu::make_jit_constant("SPATIAL_SCALE",     outer.argument.spatial_scale),
+            gpu::make_jit_constant("POOLED_HEIGHT",     outer.get_primitive()->pooled_height),
+            gpu::make_jit_constant("POOLED_WIDTH",      outer.get_primitive()->pooled_width),
+            gpu::make_jit_constant("INPUT_PADDING",     outer.input().get_primitive()->output_padding),
+            gpu::make_jit_constant("OUTPUT_PADDING",    outer.get_primitive()->output_padding),
+            gpu::make_jit_constant("SPATIAL_SCALE",     outer.get_primitive()->spatial_scale),
             gpu::make_jit_constant("FP16_SUPPORTED",    static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",    static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),
@@ -117,24 +121,24 @@ struct roi_pooling_gpu : primitive_impl
         return mem_consts;
     }
 
-    cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
+    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, roi_pooling_inst& instance) override
     {
         const kernel_data& kd = _kernel_data;
 
-        const cldnn::memory& input_data = _outer.input_memory(); 
-        const cldnn::memory& input_rois = _outer.rois_memory(); 
-        const cldnn::memory& output_mem = _outer.output_memory(); 
+        const cldnn::memory& input_data = instance.input_memory(); 
+        const cldnn::memory& input_rois = instance.rois_memory(); 
+        const cldnn::memory& output_mem = instance.output_memory(); 
 
         return _kernel.run<gpu::input_mem, gpu::input_mem, gpu::output_mem >
           ({{kd.gws0, kd.gws1, kd.gws2}, {kd.lws0, kd.lws1, kd.lws2}}, events, input_data, input_rois, output_mem);
     }
 
-    static primitive_impl* create(roi_pooling_inst &arg)
+    static primitive_impl* create(const roi_pooling_node& arg)
     {
-        layout input_arg  = arg.input_memory().get_layout();
-        layout output_arg = arg.output_memory().get_layout();
+        auto input_arg  = arg.input().get_output_layout();
+        auto output_arg = arg.get_output_layout();
 
-        const auto padding_filling_value = arg.desc()->padding_filling_value();
+        const auto padding_filling_value = arg.get_primitive()->padding_filling_value();
 
         if (padding_filling_value != 0.0f) {
             throw std::logic_error("ROI pooling supports only zero padding.");
@@ -149,7 +153,7 @@ struct roi_pooling_gpu : primitive_impl
 };
 
 
-kd_selector_t<roi_pooling_gpu::kernel_data, roi_pooling_inst, 
+kd_selector_t<roi_pooling_gpu::kernel_data, roi_pooling_node, 
             data_types,
             format::type,
             kd_optional_selector_t, 
@@ -167,8 +171,8 @@ namespace
     {
         attach()
         {
-            implementation_map<roi_pooling_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), roi_pooling_gpu::create);
-            implementation_map<roi_pooling_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), roi_pooling_gpu::create);
+            implementation_map<roi_pooling>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), roi_pooling_gpu::create);
+            implementation_map<roi_pooling>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), roi_pooling_gpu::create);
         }
 
         ~attach()
@@ -176,11 +180,6 @@ namespace
         }
     };
 
-#ifdef __GNUC__
-    __attribute__((visibility("default")))
-#elif _MSC_VER
-#   pragma section(".nn_init$m", read, write)
-#endif
     attach attach_impl;
 }
 
