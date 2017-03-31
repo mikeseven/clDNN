@@ -22,7 +22,7 @@
 *
 * clDNN Library implements set of primitives:
 *  - Convolution
-*  - Fully connected
+*  - Fully connected (inner product)
 *  - Pooling
 *   * average
 *   * maximum

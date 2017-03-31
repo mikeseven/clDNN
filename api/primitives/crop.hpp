@@ -30,6 +30,20 @@ namespace cldnn
 
 /// @brief Performs crop operation on input.
 /// @details Crops the input to the shape of reference_input accross all dimensions taking into account specified input offsets.
+/// @n
+/// @n\b Examples
+/// @n Crop without offset example:
+/// \image html crop_no_offset.jpg
+/// @n Crop with offset example:
+/// \image html crop_w_offset.jpg
+/// @n
+/// @n\b Requirements 
+/// @n - Input and reference format has to be same
+/// @n - Input, reference and offset layout (order) has to be the same
+/// @n - Input size cannot be greater than reference size in any dimension
+/// @n - All sizes have to have positive numbers
+/// @n - Reference size plus offset cannot exceed input size
+/// @n Breaking any of this conditions will cause exeption throw.
 struct crop : public primitive_base<crop, CLDNN_PRIMITIVE_DESC(crop)>
 {
     CLDNN_DECLATE_PRIMITIVE(crop)

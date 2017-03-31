@@ -4,6 +4,7 @@ INLINE_SIMPLE_STRUCTS  = YES
 TYPEDEF_HIDES_STRUCT   = YES
 HIDE_FRIEND_COMPOUNDS  = YES
 INPUT                  = ../../api
+IMAGE_PATH			   = ../
 RECURSIVE              = YES
 EXAMPLE_PATH           = examples
 SOURCE_BROWSER         = YES
