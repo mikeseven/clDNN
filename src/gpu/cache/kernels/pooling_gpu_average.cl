@@ -26,11 +26,7 @@ KERNEL(pooling_gpu_average)(const __global UNIT_TYPE* input, __global UNIT_TYPE*
     const uint output_buffer_size_x = OUTPUT_PADDING_LOWER_SIZE_X + OUTPUT_SIZE_X + OUTPUT_PADDING_UPPER_SIZE_X;
 
 
-#if OUTPUT_PADDING_LOWER_SIZE_X || OUTPUT_PADDING_UPPER_SIZE_X || OUTPUT_PADDING_LOWER_SIZE_Y || OUTPUT_PADDING_UPPER_SIZE_Y
-    const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * ((get_global_id(1) + OUTPUT_PADDING_LOWER_SIZE_X) + output_buffer_size_x * (get_global_id(2) + OUTPUT_PADDING_LOWER_SIZE_Y));
-#else
-    const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + output_buffer_size_x * get_global_id(2));
-#endif
+    const uint linear_id_xyz = (uint)get_global_id(0) + (uint)get_global_size(0) * (((uint)get_global_id(1) + OUTPUT_PADDING_LOWER_SIZE_X) + (uint)output_buffer_size_x * ((uint)get_global_id(2) + OUTPUT_PADDING_LOWER_SIZE_Y));
 
     const uint x = get_global_id(1);
     const uint y = get_global_id(2);
