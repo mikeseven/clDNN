@@ -633,9 +633,8 @@ public:
 		Type alpha_div_by_size_abs_sqrt = (dt == cldnn::data_types::f32) ? 1.0f : std::sqrt(std::abs(lrn->alpha / lrn->size));
 		Type alpha_abs_sqrt = (dt == cldnn::data_types::f32) ? 1.0f : std::sqrt(std::abs(lrn->alpha));
 
-		Type* input_mem = inputs[0].pointer<Type>().data();
-		Type* output_mem = output.pointer<Type>().data();
-
+		auto input_mem = inputs[0].pointer<Type>();
+		auto output_mem = output.pointer<Type>();
 		int batch = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
 		int feature = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
 		int height = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
@@ -645,7 +644,7 @@ public:
 		int output_width = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
 
 		//Initialized output with zeros.
-		memset(output_mem, 0, output.get_layout().data_size());
+        std::fill(output_mem.begin(), output_mem.end(), static_cast<Type>(0));
 
 		switch (lrn_norm_region)
 		{

@@ -414,12 +414,15 @@ struct memory
     /// @brief Constructs memory object form C API ::cldnn_memory handler
     memory(cldnn_memory data, bool add_ref = false)
         :_impl(data), _layout(get_layout_impl(data))
+        ,_size(_layout.data_size()), _count(_layout.count())
     {
         if (!_impl) throw std::invalid_argument("data");
         if (add_ref) retain();
     }
 
-    memory(const memory& other) : _impl(other._impl), _layout(other._layout)
+    memory(const memory& other)
+        :_impl(other._impl), _layout(other._layout)
+        ,_size(other._size), _count(other._count)
     {
         retain();
     }
@@ -430,6 +433,8 @@ struct memory
         release();
         _impl = other._impl;
         _layout = other._layout;
+        _size = other._size;
+        _count = other._count;
         retain();
         return *this;
     }
@@ -443,10 +448,10 @@ struct memory
     friend bool operator!=(const memory& lhs, const memory& rhs) { return !(lhs == rhs); }
 
     /// number of elements of _layout.data_type stored in memory
-    size_t count() const { return get_layout().count(); }
+    size_t count() const { return _count; }
 
     /// number of bytes used by memory
-    size_t size() const { return get_layout().data_size(); }
+    size_t size() const { return _size; }
 
     /// Associated @ref layout
     const layout& get_layout() const { return _layout; }
@@ -478,6 +483,8 @@ private:
     friend struct engine;
     cldnn_memory _impl;
     layout _layout;
+    size_t _size;
+    size_t _count;
 
     static layout get_layout_impl(cldnn_memory mem)
     {
@@ -498,9 +505,14 @@ private:
         check_status<void>("release memory failed", [=](status_t* status) { cldnn_release_memory(_impl, status); });
     }
 
-    void* lock() const
+    template<typename T>
+    T* lock() const
     {
-        return check_status<void*>("memory lock failed", [=](status_t* status) { return cldnn_lock_memory(_impl, status); });
+        if (data_type_traits::align_of(_layout.data_type) % alignof(T) != 0)
+        {
+            throw std::logic_error("memory data type alignment do not match");
+        }
+        return check_status<T*>("memory lock failed", [=](status_t* status) { return static_cast<T*>(cldnn_lock_memory(_impl, status)); });
     }
 
     void unlock() const
@@ -513,32 +525,36 @@ CLDNN_API_CLASS(memory)
 
 /// @brief Helper class to get an access @ref memory data
 /// @details
-/// This class followis RAII idiom and implements basic C++ collection members.
+/// This class provides an access to @ref memory data following RAII idiom and exposes basic C++ collection members.
 /// @ref memory object is locked on construction of pointer and "unlocked" on descruction.
 /// Objects of this class could be used in many STL utility functions like copy(), transform(), etc.
 /// As well as in range-for loops.
 template<typename T>
 struct pointer
 {
-    /// Constructs pointer from @ref memory and locks @c (pin) ref@ memory object.
-    pointer(const memory& mem): _mem(mem)
-    {
-        auto data_type = _mem.get_layout().data_type;
-        if (data_type_traits::align_of(data_type) % alignof(T) != 0)
-        {
-            throw std::logic_error("memory data type alignment do not match");
-        }
-        _ptr = static_cast<T*>(_mem.lock());
-    }
+    /// @brief Constructs pointer from @ref memory and locks @c (pin) ref@ memory object.
+    pointer(const memory& mem)
+        : _mem(mem)
+        , _size(_mem.size()/sizeof(T))
+        , _ptr(_mem.lock<T>())
+    {}
 
-    /// Unlocks @ref memory
+    /// @brief Unlocks @ref memory
     ~pointer() { _mem.unlock(); }
 
-    /// Returns a pointer to locked memory
-    T* data() { return _ptr; }
+    /// @brief Copy construction.
+    pointer(const pointer& other) : pointer(other._mem){}
 
-    /// Returns the number of elements (of type T) stored in memory
-    size_t size() const { return _mem.size() / sizeof(T); }
+    /// @brief Copy assignment.
+    pointer& operator=(const pointer& other)
+    {
+        if (this->_mem != other._mem)
+            do_copy(other._mem);
+        return *this;
+    }
+
+    /// @brief Returns the number of elements (of type T) stored in memory
+    size_t size() const { return _size; }
 
 #if defined(_SECURE_SCL) && (_SECURE_SCL > 0)
     typedef stdext::checked_array_iterator<T*> iterator;
@@ -558,24 +574,25 @@ struct pointer
     const_iterator end() const& { return _ptr + size(); }
 #endif
 
+    /// @brief Provides indexed access to pointed memory.
     T& operator[](size_t idx) const&
     {
-        assert(idx < size());
+        assert(idx < _size);
         return _ptr[idx];
     }
 
-    friend bool operator==(const pointer& lhs, const pointer& rhs)
-    {
-        return lhs.data == rhs.data;
-    }
+    /// @brief Returns the raw pointer to pointed memory.
+    T* data() & { return _ptr; }
+    /// @brief Returns the constant raw pointer to pointed memory
+    const T* data() const& { return _ptr; }
 
-    friend bool operator!=(const pointer& lhs, const pointer& rhs)
-    {
-        return !(lhs == rhs);
-    }
+    friend bool operator==(const pointer& lhs, const pointer& rhs) { return lhs._mem == rhs._mem; }
+    friend bool operator!=(const pointer& lhs, const pointer& rhs) { return !(lhs == rhs); }
 
     // do not use this class as temporary object
     // ReSharper disable CppMemberFunctionMayBeStatic, CppMemberFunctionMayBeConst
+    /// Prevents to use pointer as temporary object
+    void data() && {}
     /// Prevents to use pointer as temporary object
     void begin() && {}
     /// Prevents to use pointer as temporary object
@@ -586,7 +603,18 @@ struct pointer
 
 private:
     memory _mem;
+    size_t _size;
     T* _ptr;
+
+    //TODO implement exception safe code.
+    void do_copy(const memory& mem)
+    {
+        auto ptr = mem.lock<T>();
+        _mem.unlock();
+        _mem = mem;
+        _size = _mem.size() / sizeof(T);
+        _ptr = ptr;
+    }
 };
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS

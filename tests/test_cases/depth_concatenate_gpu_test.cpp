@@ -304,13 +304,13 @@ public:
 
         //Output is bfyx
         auto output = memory::allocate(engine, cldnn::layout(inputs[0].get_layout().data_type, tensor(cldnn::format::bfyx, { in_b, out_f, in_h, in_w })));
-        Type * const out_mem = output.pointer<Type>().data();
+        auto out_mem = output.pointer<Type>();
 
         int out_f_off = 0;
         for (const memory & input : inputs)
         {
             const int in_f = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
-            const Type * const in_mem = input.pointer<Type>().data();
+            const auto in_mem = input.pointer<Type>();
 
             for (int n = 0; n < in_b; ++n)
             for (int f = 0; f < in_f; ++f)

@@ -144,7 +144,7 @@ TEST(roi_pooling_forward_gpu, basic_test1) {
 
     EXPECT_EQ(output.get_layout().count(), 1u);
 
-    float* f = output.pointer<float>().data();
+    auto f = output.pointer<float>();
 
     EXPECT_EQ(f[0], 4.0f);
 }
@@ -171,7 +171,7 @@ TEST(roi_pooling_forward_gpu, basic_test2) {
 
     EXPECT_EQ(output.get_layout().count(), (unsigned int) (num_rois * channels * pooled_width * pooled_height));
 
-    float* f = output.pointer<float>().data();
+    auto f = output.pointer<float>();
 
     for (unsigned int i = 0; i < roi_pooling_ref_size; i++) {
         EXPECT_EQ(f[i], roi_pooling_ref[i]);
@@ -204,12 +204,11 @@ TEST(roi_pooling_forward_gpu, test_fp16) {
 
     EXPECT_EQ(output.get_layout().count(), (unsigned int) (num_rois * channels * pooled_width * pooled_height));
 
-    half_t* d = output.pointer<half_t>().data();
+    auto d = output.pointer<FLOAT16>();
 
     for (unsigned int i = 0; i < roi_pooling_ref_size; i++) {
-        FLOAT16 f((int16_t) d[i]);
         FLOAT16 ref(roi_pooling_ref[i]);
-        EXPECT_FLOAT_EQ((float) f, (float) ref);
+        EXPECT_FLOAT_EQ((float) d[i], (float) ref);
     }
 }
 
@@ -376,13 +375,12 @@ private:
     template<typename Type>
     void prepare_input_for_test_typed(std::vector<cldnn::memory>& inputs) 
     {    
-        Type* bottom_rois = inputs[1].pointer<Type>().data();
+        auto bottom_rois = inputs[1].pointer<Type>();
         int num_rois = inputs[1].get_layout().size.batch[0];
 
-        for (int n = 0; n < num_rois; ++n) 
+        for (int n = 0; n < num_rois*5; n+=5) 
         {
-            bottom_rois[0] = 0;
-            bottom_rois += 5;
+            bottom_rois[n] = 0;
         }
     }
 
@@ -396,14 +394,16 @@ private:
         int pooled_width = (*roi_layer).pooled_width;
         int pooled_height = (*roi_layer).pooled_height;
         Type spatial_scale = (Type)((*roi_layer).spatial_scale);
-        Type* output_mem = output.pointer<Type>().data();
+        auto output_pointer = output.pointer<Type>();
+        Type* output_mem = output_pointer.data();
         int num_rois = inputs[1].get_layout().size.batch[0];
         int fm = inputs[0].get_layout().size.feature[0];
         int height = inputs[0].get_layout().size.spatial[1];
         int width = inputs[0].get_layout().size.spatial[0];
 
-        const Type* bottom_data = inputs[0].pointer<Type>().data();
-        const Type* bottom_rois = inputs[1].pointer<Type>().data();
+        const auto bottom_data = inputs[0].pointer<Type>();
+        const auto bottom_rois_pointer = inputs[1].pointer<Type>();
+        const Type* bottom_rois = bottom_rois_pointer.data();
 
         int batch_size = inputs[0].get_layout().size.batch[0];
         //int* argmax_data = max_idx_.mutable_cpu_data();
@@ -422,7 +422,7 @@ private:
             int roi_height = std::max(roi_end_y - roi_start_y + 1, 1);
             int roi_width = std::max(roi_end_x - roi_start_x + 1, 1);
             
-            const Type* batch_data = bottom_data + roi_batch_ind * fm * height * width;
+            const Type* batch_data = bottom_data.data() + roi_batch_ind * fm * height * width;
 
             for (int c = 0; c < fm; ++c) 
             {

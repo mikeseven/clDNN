@@ -111,7 +111,7 @@ prior_box_arg::prior_box_arg(network_impl& network, std::shared_ptr<const prior_
 	const float offset = argument.offset;
 	int num_priors = (int)desc->aspect_ratios.size() * (int)desc->min_sizes.size() + (int)desc->max_sizes.size();
 
-	float* out_ptr = output_mem.pointer<float>().data();
+	auto out_ptr = output_mem.pointer<float>();
 	int dim = layer_height * layer_width * num_priors * 4;
 	int idx = 0;
 	for (int h = 0; h < layer_height; ++h) {
@@ -175,8 +175,7 @@ prior_box_arg::prior_box_arg(network_impl& network, std::shared_ptr<const prior_
 	}
 
 	// set the variance.
-	out_ptr += output_mem.get_layout().size.spatial[0] * output_mem.get_layout().size.spatial[1];
-	int count = 0;
+	int count = output_mem.get_layout().size.spatial[0] * output_mem.get_layout().size.spatial[1];
 	for (int h = 0; h < layer_height; ++h) {
 		for (int w = 0; w < layer_width; ++w) {
 			for (int i = 0; i < num_priors; ++i) {

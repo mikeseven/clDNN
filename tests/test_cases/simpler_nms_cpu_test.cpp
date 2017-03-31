@@ -169,7 +169,7 @@ TEST(simpler_nms, basic) {
     const memory& output = t.Run(cls_scores, bbox_pred);
     EXPECT_EQ((unsigned int)output.get_layout().count(), simpler_nms_ref_size);
 
-    float* f = output.pointer<float>().data();
+    auto f = output.pointer<float>();
 
     for (unsigned int i = 0 ; i < simpler_nms_ref_size ; i++) {
         EXPECT_NEAR(f[i], simpler_nms_ref[i], epsilon);
@@ -195,11 +195,10 @@ TEST(simpler_nms, fp16) {
     const memory& output = t.Run(cls_scores, bbox_pred);
     EXPECT_EQ((unsigned int)output.get_layout().count(), simpler_nms_ref_size);
 
-    half_t* d = output.pointer<half_t>().data();
+    auto d = output.pointer<FLOAT16>();
 
     for (unsigned int i = 0 ; i < simpler_nms_ref_size ; i++) {
-        FLOAT16 f((int16_t)d[i]);
         FLOAT16 ref(simpler_nms_ref[i]);        
-        EXPECT_NEAR((float)f, (float)ref, epsilon_fp16);
+        EXPECT_NEAR((float)d[i], (float)ref, epsilon_fp16);
     }
 }

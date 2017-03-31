@@ -191,7 +191,7 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
 
 	auto output_memory = outputs.at("conv").get_memory();
 	auto output_layout = output_memory.get_layout();
-	T* output_ptr = output_memory.pointer<T>().data();
+	auto output_ptr = output_memory.pointer<T>();
 
 	EXPECT_EQ(output_layout.size.format.value, test_input_fmt.value);
 	tensor output_tensor = output_layout.size.transform(cldnn::format::yxfb, 0);

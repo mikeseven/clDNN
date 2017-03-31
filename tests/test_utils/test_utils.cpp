@@ -108,8 +108,8 @@ namespace tests
 		int y_size = out_layout.size.transform(cldnn::format::bfyx, 0).sizes()[2];
 		int x_size = out_layout.size.transform(cldnn::format::bfyx, 0).sizes()[3];
 
-		auto res_data = out.pointer<Type>().data();
-		auto ref_data = ref.pointer<Type>().data();
+		auto res_data = out.pointer<Type>();
+		auto ref_data = ref.pointer<Type>();
 
 		for (int b = 0; b < batch_size; b++)
 		{

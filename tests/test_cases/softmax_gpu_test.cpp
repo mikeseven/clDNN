@@ -605,8 +605,8 @@ public:
 
 //        const auto params = static_cast<cldnn::softmax *>(layer_parmas);
 
-        const Type * const in0_mem = input.pointer<Type>().data();
-        Type * const out_mem = output.pointer<Type>().data();
+        const auto in0_mem = input.pointer<Type>();
+        auto out_mem = output.pointer<Type>();
 
         const int in0_b = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
         const int in0_f = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
