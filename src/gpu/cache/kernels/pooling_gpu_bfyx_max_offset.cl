@@ -27,10 +27,11 @@ KERNEL(pooling_gpu_bfyx_max_offset)(const __global UNIT_TYPE* input, __global UN
     const uint output_buffer_size_y = OUTPUT_PADDING_LOWER_SIZE_Y + OUTPUT_SIZE_Y + OUTPUT_PADDING_UPPER_SIZE_Y;
 
 
-    const uint linear_id_xyz = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
-
     const uint x = get_global_id(0);
     const uint y = get_global_id(1);
+
+    if ((x >= OUTPUT_SIZE_X) || (y >= OUTPUT_SIZE_Y))
+        return;
 
     const int offset_x = INPUT_PADDING_LOWER_SIZE_X + x * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
     const int offset_y = INPUT_PADDING_LOWER_SIZE_Y + y * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
@@ -41,13 +42,13 @@ KERNEL(pooling_gpu_bfyx_max_offset)(const __global UNIT_TYPE* input, __global UN
     for(uint j = 0; j < WINDOW_SIZE_Y; j++)
     {
         int input_offset_y = offset_y + j;
-        bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
+        bool zero_y = input_offset_y >= input_buffer_size_y || input_offset_y < 0;
         if(!zero_y)
         {
             for(uint i = 0; i < WINDOW_SIZE_X; i++)
             {
                 int input_offset_x = offset_x + i;
-                bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
+                bool zero = input_offset_x >= input_buffer_size_x || input_offset_x < 0;
                 if(!zero)
                 {
                     int input_idx = batch_and_feature_offset * input_buffer_size_x * input_buffer_size_y;
@@ -63,7 +64,7 @@ KERNEL(pooling_gpu_bfyx_max_offset)(const __global UNIT_TYPE* input, __global UN
     uint output_pos = (b * OUTPUT_FEATURE_NUM + f) * output_buffer_size_x * output_buffer_size_y;
     output_pos += (OUTPUT_PADDING_LOWER_SIZE_Y + y) * output_buffer_size_x + OUTPUT_PADDING_LOWER_SIZE_X + x;
 
-    if (offset_y < 0 || offset_y + WINDOW_SIZE_Y - 1 >= INPUT_SIZE_Y || offset_x < 0 || offset_x + WINDOW_SIZE_X - 1 >= INPUT_SIZE_X)
+    if (offset_y < 0 || offset_y + WINDOW_SIZE_Y - 1 >= input_buffer_size_y || offset_x < 0 || offset_x + WINDOW_SIZE_X - 1 >= input_buffer_size_x)
         output[output_pos] = max(result, (UNIT_TYPE)0);
     else
         output[output_pos] = result;

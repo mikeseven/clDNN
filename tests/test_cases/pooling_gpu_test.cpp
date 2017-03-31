@@ -23,6 +23,7 @@
 #include <api/network.hpp>
 #include <api/engine.hpp>
 #include "test_utils/test_utils.h"
+#include "api/primitives/reorder.hpp"
 
 using namespace cldnn;
 using namespace tests;
@@ -438,4 +439,403 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad)
     //TODO !!!implement correct output size calculation!!!
 	EXPECT_EQ(-0.125f, output_ptr[3]);
 	EXPECT_EQ(-1.125f, output_ptr[4]);
+}
+
+TEST(pooling_forward_gpu, offsets_avg_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i2x2x1x1_outpad2) {
+    //  Brief test description.
+    //
+    //  Pool window: 2x2
+    //  Pool stride: 2x2
+    //  Pool mode: avg
+    //  Padding: 2x2
+    //
+    //  Input offset : -1x-1
+    //  Input data:
+    //  [ padd, padd, padd, padd]
+    //  [ padd,  1.5, -0.5, padd]
+    //  [ padd, -1.0,  0.5, padd]
+    //  [ padd, padd, padd, padd]
+    //
+    //  Expected output:
+    //  [0, 0, 0, 0, 0, 0]
+    //  [0, 0, 0, 0, 0, 0]
+    //  [ 0, 0, 0.375, -0.125, 0, 0]
+    //  [ 0, 0, -0.25,  0.125, 0, 0]
+    //  [0, 0, 0, 0, 0, 0]
+    //  [0, 0, 0, 0, 0, 0]
+
+    engine engine;
+    std::vector<format> formats_to_test = { format::yxfb , format::bfyx };
+
+    for (std::vector<format>::iterator it = formats_to_test.begin(); it != formats_to_test.end(); ++it)
+    {
+        std::cout << "Testing format: " << format::order(*it) << std::endl;
+
+        tensor input_tensor(format::bfyx, { 1, 1, 2, 2 });
+        auto input_prim = memory::allocate(engine, { data_types::f32, input_tensor.transform(*it, 1) });
+
+        topology topology;
+        topology.add(input_layout("input_prim", input_prim.get_layout()));
+        topology.add(pooling("pool_prim", "input_prim", pooling_mode::average, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }, { format::yx,{ 2,2 } }));
+
+        network network(engine, topology);
+        set_values(input_prim, { 1.5f, -0.5f, -1.0f, 0.5f });
+        network.set_input_data("input_prim", input_prim);
+
+        std::vector<float> expected = {
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.375f, -0.125f, 0.0f, 0.0f,
+            0.0f, 0.0f, -0.25f, 0.125f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        };
+
+        auto outputs = network.execute();
+        EXPECT_EQ(outputs.size(), size_t(1));
+        EXPECT_EQ(outputs.begin()->first, "pool_prim");
+
+        auto output_prim = outputs.begin()->second.get_memory();
+        auto output_ptr = output_prim.pointer<float>();
+        for (size_t i = 0; i < expected.size(); ++i) {
+            EXPECT_EQ(expected[i], output_ptr[i]);
+        }
+    }
+}
+
+TEST(pooling_forward_gpu, offsets_max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_outpad2) {
+    //  Brief test description.
+    //
+    //  Pool window: 2x2
+    //  Pool stride: 2x2
+    //  Pool mode: max
+    //  Padding: 2x2
+    //
+    //  Input offset : -1x-1
+    //  Input data:
+    //  [ padd, padd, padd, padd, padd]
+    //  [ padd,  1.5, -1.0, -0.5, padd]
+    //  [ padd,  1.0, -1.0, -1.0, padd]
+    //  [ padd, -1.0, -1.0, -0.5, padd]
+    //  [ padd, padd, padd, padd, padd]
+    //
+    //  Expected output:
+    //  [0, 0, 0, 0, 0]
+    //  [0, 1.5, 0, 0, 0]
+    //  [0, 1, -0.5, 0, 0]
+    //  [0, 0, 0, 0, 0]
+
+    engine engine;
+    std::vector<format> formats_to_test = { format::yxfb , format::bfyx };
+
+    for (std::vector<format>::iterator it = formats_to_test.begin(); it != formats_to_test.end(); ++it)
+    {
+        std::cout << "Testing format: " << format::order(*it) << std::endl;
+
+        tensor input_tensor(format::bfyx, { 1, 1, 3, 3 });
+        auto input_prim = memory::allocate(engine, { data_types::f32, input_tensor.transform(*it, 1) });
+
+        topology topology;
+        topology.add(input_layout("input_prim", input_prim.get_layout()));
+        topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }, { format::yx,{ 1,1 } }));
+
+        network network(engine, topology);
+
+        set_values(input_prim, {
+            1.50f, -1.00f, -0.50f,
+            1.00f, -1.00f, -1.00f,
+            -1.00f, -1.00f, -0.50f
+        });
+
+        network.set_input_data("input_prim", input_prim);
+
+        std::vector<float> expected = {
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.5f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.f, -0.5f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        };
+
+        auto outputs = network.execute();
+        EXPECT_EQ(outputs.size(), size_t(1));
+        EXPECT_EQ(outputs.begin()->first, "pool_prim");
+
+        auto output_prim = outputs.begin()->second.get_memory();
+        auto output_ptr = output_prim.pointer<float>();
+        for (size_t i = 0; i < expected.size(); ++i) {
+            EXPECT_EQ(expected[i], output_ptr[i]);
+        }
+    }
+}
+
+TEST(pooling_forward_gpu, offsets_avg_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i2x2x1x1_inpad2x1_outpad2) {
+    //  Brief test description.
+    //
+    //  Pool window: 2x2
+    //  Pool stride: 2x2
+    //  Pool mode: avg
+    //  Out Padding: 2x2
+    //  Input Padding: 2x1 (yx format) out of the reorder layer
+    //
+    //  Input offset : -1x-1
+    //  Input data:
+    //  [ padd, padd, padd, padd]
+    //  [ padd,  1.5, -0.5, padd]
+    //  [ padd, -1.0,  0.5, padd]
+    //  [ padd, padd, padd, padd]
+    //
+    //  Expected output:
+    //  [0, 0, 0, 0, 0, 0]
+    //  [0, 0, 0, 0, 0, 0]
+    //  [ 0, 0, 0.375, -0.125, 0, 0]
+    //  [ 0, 0, -0.25,  0.125, 0, 0]
+    //  [0, 0, 0, 0, 0, 0]
+    //  [0, 0, 0, 0, 0, 0]
+
+    engine engine;
+    std::vector<format> formats_to_test = { format::yxfb , format::bfyx };
+
+    for (std::vector<format>::iterator it = formats_to_test.begin(); it != formats_to_test.end(); ++it)
+    {
+        std::cout << "Testing format: " << format::order(*it) << std::endl;
+
+        tensor input_tensor(format::bfyx, { 1, 1, 2, 2 });
+        auto input_prim = memory::allocate(engine, { data_types::f32, input_tensor.transform(*it, 1) });
+
+        topology topology;
+        topology.add(input_layout("input_prim", input_prim.get_layout()));
+        topology.add(reorder("reorder", "input_prim", input_prim.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 2, 1 } }));
+        topology.add(pooling("pool_prim", "reorder", pooling_mode::average, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }, { format::yx,{ 2,2 } }));
+
+        network network(engine, topology);
+        set_values(input_prim, { 1.5f, -0.5f, -1.0f, 0.5f });
+        network.set_input_data("input_prim", input_prim);
+
+        std::vector<float> expected = {
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.375f, -0.125f, 0.0f, 0.0f,
+            0.0f, 0.0f, -0.25f, 0.125f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        };
+
+        auto outputs = network.execute();
+        EXPECT_EQ(outputs.size(), size_t(1));
+        EXPECT_EQ(outputs.begin()->first, "pool_prim");
+
+        auto output_prim = outputs.begin()->second.get_memory();
+        auto output_ptr = output_prim.pointer<float>();
+        for (size_t i = 0; i < expected.size(); ++i) {
+            EXPECT_EQ(expected[i], output_ptr[i]);
+        }
+    }
+}
+
+TEST(pooling_forward_gpu, offsets_max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_inpad2x1_outpad2) {
+    //  Brief test description.
+    //
+    //  Pool window: 2x2
+    //  Pool stride: 2x2
+    //  Pool mode: max
+    //  Padding: 2x2
+    //  Input Padding: 2x1 (yx format) out of the reorder layer
+    //
+    //  Input offset : -1x-1
+    //  Input data:
+    //  [ padd, padd, padd, padd, padd]
+    //  [ padd,  1.5, -1.0, -0.5, padd]
+    //  [ padd,  1.0, -1.0, -1.0, padd]
+    //  [ padd, -1.0, -1.0, -0.5, padd]
+    //  [ padd, padd, padd, padd, padd]
+    //
+    //  Expected output:
+    //  [0, 0, 0, 0, 0]
+    //  [0, 1.5, 0, 0, 0]
+    //  [0, 1, -0.5, 0, 0]
+    //  [0, 0, 0, 0, 0]
+    //  [0, 0, 0, 0, 0]
+
+    engine engine;
+    std::vector<format> formats_to_test = { format::yxfb , format::bfyx };
+
+    for (std::vector<format>::iterator it = formats_to_test.begin(); it != formats_to_test.end(); ++it)
+    {
+        std::cout << "Testing format: " << format::order(*it) << std::endl;
+
+        tensor input_tensor(format::bfyx, { 1, 1, 3, 3 });
+        auto input_prim = memory::allocate(engine, { data_types::f32, input_tensor.transform(*it, 1) });
+
+        topology topology;
+        topology.add(input_layout("input_prim", input_prim.get_layout()));
+        topology.add(reorder("reorder", "input_prim", input_prim.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 2, 1 } }));
+        topology.add(pooling("pool_prim", "reorder", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }, { format::yx,{ 1,1 } }));
+
+        network network(engine, topology);
+
+        set_values(input_prim, {
+            1.50f, -1.00f, -0.50f,
+            1.00f, -1.00f, -1.00f,
+            -1.00f, -1.00f, -0.50f
+        });
+
+        network.set_input_data("input_prim", input_prim);
+
+        std::vector<float> expected = {
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.5f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.f, -0.5f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        };
+
+        auto outputs = network.execute();
+        EXPECT_EQ(outputs.size(), size_t(1));
+        EXPECT_EQ(outputs.begin()->first, "pool_prim");
+
+        auto output_prim = outputs.begin()->second.get_memory();
+        auto output_ptr = output_prim.pointer<float>();
+        for (size_t i = 0; i < expected.size(); ++i) {
+            EXPECT_EQ(expected[i], output_ptr[i]);
+        }
+    }
+}
+
+TEST(pooling_forward_gpu, avg_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i2x2x1x1_inpad2x1_outpad2) {
+    //  Brief test description.
+    //
+    //  Pool window: 2x2
+    //  Pool stride: 2x2
+    //  Pool mode: avg
+    //  Out Padding: 2x2
+    //  Input Padding: 2x1 (yx format) out of the reorder layer
+    //
+    //  Input offset : 0x0
+    //  Input data:
+    //  [ 1, 2, 3, 4]
+    //  [ 5,  1.5, -0.5, 6]
+    //  [ 7, -1.0,  0.5, 8]
+    //  [ 9, 10, 11, 12]
+    //
+    //  Expected output:
+    //  [0, 0, 0, 0, 0, 0]
+    //  [0, 0, 0, 0, 0, 0]
+    //  [ 0, 0, 2.375, 3.125, 0, 0]
+    //  [ 0, 0, 6.25,  7.875, 0, 0]
+    //  [0, 0, 0, 0, 0, 0]
+    //  [0, 0, 0, 0, 0, 0]
+
+    engine engine;
+    std::vector<format> formats_to_test = { format::yxfb , format::bfyx };
+
+    for (std::vector<format>::iterator it = formats_to_test.begin(); it != formats_to_test.end(); ++it)
+    {
+        std::cout << "Testing format: " << format::order(*it) << std::endl;
+
+        tensor input_tensor(format::bfyx, { 1, 1, 4, 4 });
+        auto input_prim = memory::allocate(engine, { data_types::f32, input_tensor.transform(*it, 1) });
+
+        topology topology;
+        topology.add(input_layout("input_prim", input_prim.get_layout()));
+        topology.add(reorder("reorder", "input_prim", input_prim.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 2, 1 } }));
+        topology.add(pooling("pool_prim", "reorder", pooling_mode::average, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ 0,0 } }, { format::yx,{ 2,2 } }));
+
+        network network(engine, topology);
+        set_values(input_prim, {
+            1.f, 2.f, 3.f, 4.f,
+            5.f, 1.5f, -0.5f, 6.f,
+            7.f, -1.0f, 0.5f, 8.f,
+            9.f, 10.f, 11.f, 12.f});
+        network.set_input_data("input_prim", input_prim);
+
+        std::vector<float> expected = {
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 2.375f, 3.125f, 0.0f, 0.0f,
+            0.0f, 0.0f, 6.25f, 7.875f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        };
+
+        auto outputs = network.execute();
+        EXPECT_EQ(outputs.size(), size_t(1));
+        EXPECT_EQ(outputs.begin()->first, "pool_prim");
+
+        auto output_prim = outputs.begin()->second.get_memory();
+        auto output_ptr = output_prim.pointer<float>();
+        for (size_t i = 0; i < expected.size(); ++i) {
+            EXPECT_EQ(expected[i], output_ptr[i]);
+        }
+    }
+}
+
+TEST(pooling_forward_gpu, max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_inpad2x1_outpad2) {
+    //  Brief test description.
+    //
+    //  Pool window: 2x2
+    //  Pool stride: 2x2
+    //  Pool mode: max
+    //  Padding: 2x2
+    //  Input Padding: 2x1 (yx format) out of the reorder layer
+    //
+    //  Input offset : 0x0
+    //  Input data:
+    //  [ 1, 2, 3, 4, 5]
+    //  [ 6,  1.5, -1.0, -0.5, 7]
+    //  [ 8,  1.0, -1.0, -1.0, 9]
+    //  [ 10, -1.0, -1.0, -0.5, 11]
+    //  [ 12, 13, 14, 15, 16]
+    //
+    //  Expected output:
+    //  [0, 0, 0, 0, 0, 0]
+    //  [0, 1, 3, 5, 0, 0]
+    //  [0, 8, 1.5, 9, 0, 0]
+    //  [0, 12, 14, 16, 0, 0]
+    //  [0, 0, 0, 0, 0, 0]
+
+    engine engine;
+    std::vector<format> formats_to_test = { format::yxfb , format::bfyx };
+
+    for (std::vector<format>::iterator it = formats_to_test.begin(); it != formats_to_test.end(); ++it)
+    {
+        std::cout << "Testing format: " << format::order(*it) << std::endl;
+
+        tensor input_tensor(format::bfyx, { 1, 1, 5, 5 });
+        auto input_prim = memory::allocate(engine, { data_types::f32, input_tensor.transform(*it, 1) });
+
+        topology topology;
+        topology.add(input_layout("input_prim", input_prim.get_layout()));
+        topology.add(reorder("reorder", "input_prim", input_prim.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 2, 1 } }));
+        topology.add(pooling("pool_prim", "reorder", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }, { format::yx,{ 1,1 } }));
+
+        network network(engine, topology);
+
+        set_values(input_prim, {
+            1.f, 2.f, 3.f, 4.f, 5.f,
+            6.f, 1.50f, -1.00f, -0.50f, 7.f,
+            8.f, 1.00f, -1.00f, -1.00f, 9.f,
+            10.f, -1.00f, -1.00f, -0.50f, 11.f,
+            12.f, 13.f, 14.f, 15.f, 16.f
+        });
+
+        network.set_input_data("input_prim", input_prim);
+
+        std::vector<float> expected = {
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.f, 3.f, 5.f, 0.0f, 0.0f,
+            0.0f, 8.f, 1.5f, 9.f, 0.0f, 0.0f,
+            0.0f, 12.f, 14.f, 16.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        };
+
+        auto outputs = network.execute();
+        EXPECT_EQ(outputs.size(), size_t(1));
+        EXPECT_EQ(outputs.begin()->first, "pool_prim");
+
+        auto output_prim = outputs.begin()->second.get_memory();
+        auto output_ptr = output_prim.pointer<float>();
+        for (size_t i = 0; i < expected.size(); ++i) {
+            EXPECT_EQ(expected[i], output_ptr[i]);
+        }
+    }
 }
