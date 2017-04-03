@@ -38,7 +38,7 @@ public:
     const memory& scale_memory() const { return dep_memory(1); }
     const memory& bias_memory() const { return dep_memory(2); }
 
-    const bool& bias_term() const { return argument.bias_term; }
+    bool bias_term() const { return _inputs.size() > 2; }
 };
 
 using scale_inst = typed_primitive_inst<scale>;
