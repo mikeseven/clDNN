@@ -59,20 +59,20 @@ layout fully_connected_inst::calc_output_layout(const topology_map& topology_map
 {
     auto input_desc = topology_map.at(desc->input[0])->primitive_desc;
     auto input_layout = input_desc->type->calc_output_layout(topology_map, input_desc);
-
-    auto bias_desc = topology_map.at(desc->bias)->primitive_desc;
-    auto bias_layout = bias_desc->type->calc_output_layout(topology_map, bias_desc);
+    
+    auto weights_desc = topology_map.at(desc->weights)->primitive_desc;
+    auto weights_layout = weights_desc->type->calc_output_layout(topology_map, weights_desc);
 
     if(is_batch_after_spatial(input_layout.size.format.order()) || 
         (input_layout.size.format == format::bfyx &&                //this condition tests whether our input is batch>1 in bfyx format, if yes there will be
         input_layout.size.batch[0] > 1))                            //extra reorder between input and this fc from bfyx to yxfb format (so "is_batch_after_spatial" should return true)
     {
-        auto result = layout(input_layout.data_type, tensor(format::xb, { bias_layout.size.spatial[0], input_layout.size.batch[0] }));
+        auto result = layout(input_layout.data_type, tensor(format::xb, { weights_layout.size.batch[0], input_layout.size.batch[0] }));
         return result;
     }
     else
     {
-        auto result = layout(input_layout.data_type, tensor(format::bx, { input_layout.size.batch[0], bias_layout.size.spatial[0] }));
+        auto result = layout(input_layout.data_type, tensor(format::bx, { input_layout.size.batch[0], weights_layout.size.batch[0] }));
         return result;
     }
 }

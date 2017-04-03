@@ -184,6 +184,7 @@ struct fully_connected_gpu : primitive_impl
             gpu::make_jit_constant("UNIT_VAL_ZERO",        data.fp16_unit_used ? "0.0h" : "0.0f"),
             gpu::make_jit_constant("RELU",                 outer.argument.with_activation),
             gpu::make_jit_constant("NEGATIVE_SLOPE",       outer.argument.activation_negative_slope),
+            gpu::make_jit_constant("BIAS_TERM",             static_cast<int>(outer.bias_term()))
         };
 
         if (data.kernel_name == kernel_name_xb_xb_block_fp16)
@@ -235,23 +236,35 @@ struct fully_connected_gpu : primitive_impl
 
         const auto& input_mem  = _outer.input_memory();   // input
         const auto& weight_mem = _outer.weights_memory();   // weights
-        const auto& bias_mem   = _outer.bias_memory();   // biases
         const auto& output_mem = _outer.output_memory();  // output
 
         if (kd.reorder.empty())
-            return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-                ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, events, input_mem, output_mem, weight_mem, bias_mem);
-
+        {
+            if (_outer.bias_term())
+            {
+                const auto& bias_mem = _outer.bias_memory();
+                return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                    ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, events, input_mem, output_mem, weight_mem, bias_mem);
+            }
+            else return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>
+                    ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, events, input_mem, output_mem, weight_mem);
+        }
 
         auto network = kd.reorder[0];
         network->set_input_data("input", api_cast(input_mem.get()));
         network->execute(events);
         auto output_id = network->get_output_ids()[0];
-
         auto reorder_output = network->get_primitive(output_id)->output_memory();
 
-        return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
-            ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, { network->get_primitive_event(output_id) }, reorder_output, output_mem, weight_mem, bias_mem);
+        if (_outer.bias_term())
+        {
+            const auto& bias_mem = _outer.bias_memory();
+            return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
+                ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, { network->get_primitive_event(output_id) }, reorder_output, output_mem, weight_mem, bias_mem);
+        }
+        else return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>
+                ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, { network->get_primitive_event(output_id) }, reorder_output, output_mem, weight_mem);
+      
     }
 
     static primitive_impl* create(fully_connected_inst &arg)

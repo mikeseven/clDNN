@@ -178,8 +178,12 @@ __attribute__((reqd_work_group_size(SUB_GROUP_SIZE, 1, 1)))
 KERNEL (fully_connected_gpu_xb_xb_block_fp16)(
     const __global UNIT_TYPE* input,
     __global UNIT_TYPE* output,
-    const __global UNIT_TYPE* weight,
-    const __global UNIT_TYPE* bias)
+    const __global UNIT_TYPE* weight
+#if BIAS_TERM
+    , __global UNIT_TYPE* bias)
+#else
+    )
+#endif
 {
     // constexpr:
     const uint input_batch_byte_size       = INPUT_BATCH_NUM * UNIT_BYTE_SIZE;
@@ -216,8 +220,9 @@ KERNEL (fully_connected_gpu_xb_xb_block_fp16)(
     const uint filter_base    = sg_id * BYTES_PER_SG_READ;
 
     // Filter base offset in bytes (x/f format of biases).
+#if BIAS_TERM
     const uint bias_base = filter_base;
-
+#endif
     // Output base offset in bytes (xb format of output). INPUT_BATCH_NUM is the same as OUTPUT_BATCH_NUM.
     const uint output_base    = (sg_id * INPUT_BATCH_NUM + batch_group_id) * BYTES_PER_SG_READ;
 
@@ -256,13 +261,18 @@ KERNEL (fully_connected_gpu_xb_xb_block_fp16)(
     if (sg_id < RG_COUNT - 1)
 #endif
     {
+#if BIAS_TERM
         CHUNK_TYPE bias_val = BIAS_READ(bias, bias_base + sg_elem_offset);
-
+#endif
         uint output_offset = output_base;
         __attribute__((opencl_unroll_hint(UNITS_PER_SG_READ)))
         for (uint acc_pos = 0; acc_pos < UNITS_PER_SG_READ; ++acc_pos)
-        {
+        {         
+#if BIAS_TERM
             CHUNK_UNITS_TYPE output_val = AS_UNITS(acc[acc_pos]) + SG_UNIT_SELECT(bias_val, acc_pos);
+#else
+            CHUNK_UNITS_TYPE output_val = AS_UNITS(acc[acc_pos]);
+#endif
             ACTIVATION(output_val, output_val);
             OUTPUT_WRITE(output, output_offset + sg_elem_offset, AS_CHUNK(output_val));
             output_offset += output_batch_byte_size;
@@ -277,7 +287,11 @@ KERNEL (fully_connected_gpu_xb_xb_block_fp16)(
         __attribute__((opencl_unroll_hint(LAST_RG_SIZE)))
         for (uint acc_pos = 0; acc_pos < LAST_RG_SIZE; ++acc_pos)
         {
+#if BIAS_TERM
             CHUNK_UNITS_TYPE output_val = AS_UNITS(acc[acc_pos]) + SG_UNIT_SELECT(bias_val, acc_pos);
+#else
+            CHUNK_UNITS_TYPE output_val = AS_UNITS(acc[acc_pos]);
+#endif
             ACTIVATION(output_val, output_val);
             OUTPUT_WRITE(output, output_offset + sg_elem_offset, AS_CHUNK(output_val));
             output_offset += output_batch_byte_size;

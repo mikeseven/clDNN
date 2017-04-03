@@ -47,8 +47,12 @@ __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
     const __global float* input,
     __global float* output,
-    const __global float* weight,
-    const __global float* bias)
+    const __global float* weight
+#if BIAS_TERM
+    , __global UNIT_TYPE* bias)
+#else
+    )
+#endif
 {
     const uint global_id = get_global_id(0);
     const uint group_id = get_group_id(0);
@@ -121,6 +125,7 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
         input_idx += 64; // 64 because of input format which have blocks of 64 elements
     }
 
+#if BIAS_TERM
     blockC00 += bias[neuronIdx];
 #if BATCHES_PER_WORK_ITEM >= 16
     blockC01 += bias[neuronIdx];
@@ -142,7 +147,7 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
 #endif
 
 #endif // #if NEURONS_PER_WORK_ITEM > 1
-
+#endif // #if BIAS_TERM
     ACTIVATION(blockC00, blockC00);
 #if BATCHES_PER_WORK_ITEM >= 16
     ACTIVATION(blockC01, blockC01);

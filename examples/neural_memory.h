@@ -171,7 +171,7 @@ struct neural_memory
     };
 };
 
-inline neural_memory::arguments argument(cldnn::memory const& mem) { return neural_memory::arguments(mem.get_layout()); };
+inline neural_memory::arguments argument(cldnn::memory const& mem) { return neural_memory::arguments(mem.get_layout()); }
 
 } //end namespace backward_comp
 } //end namespace cldnn

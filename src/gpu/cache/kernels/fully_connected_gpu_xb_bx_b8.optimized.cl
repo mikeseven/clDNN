@@ -25,14 +25,22 @@ __attribute__((reqd_work_group_size(8, 1, 1)))
 KERNEL (fully_connected_gpu_xb_bx_b8)(
     const __global float* input,
     __global float* output,
-    const __global float* weight,
-    const __global float* bias)
+    const __global float* weight
+#if BIAS_TERM
+    , __global UNIT_TYPE* bias)
+#else
+    )
+#endif
 {
     const uint batch_id = get_global_id(0);
 
     uint outXIdx = get_global_id(1);
     uint weight_offset = outXIdx * INPUT_ELEMENTS_COUNT + batch_id;
+#if BIAS_TERM
     float result = bias[outXIdx];
+#else
+    float result = 0.0f;
+#endif
 
     float8 _data = 0.f;
     const uint sub_group_id = get_local_id(0);

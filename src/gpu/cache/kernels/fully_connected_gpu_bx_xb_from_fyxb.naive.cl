@@ -42,8 +42,12 @@
 KERNEL (fully_connected_gpu_bx_xb_from_fyxb)(
     const __global UNIT_TYPE* input,
     __global UNIT_TYPE* output,
-    const __global UNIT_TYPE* weight,
-    const __global UNIT_TYPE* bias)
+    const __global UNIT_TYPE* weight
+#if BIAS_TERM
+    , __global UNIT_TYPE* bias)
+#else
+    )
+#endif
 {
     const uint x = get_global_id(0);
     const uint batch_id = x / WEIGHTS_BATCH_NUM;
@@ -62,7 +66,9 @@ KERNEL (fully_connected_gpu_bx_xb_from_fyxb)(
         input_idx  += MULTIPLY_OFFSET(UNIT_TYPE, 1);
         weight_idx += MULTIPLY_OFFSET(UNIT_TYPE, WEIGHTS_BATCH_NUM);
     }
+#if BIAS_TERM
     result += bias[outXIdx];
+#endif
     ACTIVATION(output[x], result);
 }
 

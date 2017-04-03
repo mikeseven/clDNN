@@ -42,15 +42,23 @@
 KERNEL (fully_connected_gpu_xb_bx)(
     const __global UNIT_TYPE* input,
     __global UNIT_TYPE* output,
-    const __global UNIT_TYPE* weight,
-    const __global UNIT_TYPE* bias)
+    const __global UNIT_TYPE* weight
+#if BIAS_TERM
+    , __global UNIT_TYPE* bias)
+#else
+    )
+#endif
 {
     const uint x = get_global_id(0);
     const uint batch_id = x % INPUT_BATCH_NUM;
 
     const uint outXIdx = x / INPUT_BATCH_NUM;
     uint weight_offset = outXIdx * INPUT_ELEMENTS_COUNT;
+#if BIAS_TERM
     UNIT_TYPE result = bias[outXIdx];
+#else 
+    UNIT_TYPE result = UNIT_VAL_ZERO;
+#endif
     for (uint i = 0; i < INPUT_ELEMENTS_COUNT; i++)
     {
         result += input[i * INPUT_BATCH_NUM + batch_id] * weight[weight_offset++];

@@ -46,8 +46,12 @@ __attribute__((reqd_work_group_size(SUB_GROUP_SIZE, 1, 1)))
 KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
     const __global float* input,
     __global float* output,
-    const __global float* weight,
-    const __global float* bias)
+    const __global float* weight
+#if BIAS_TERM
+    , __global UNIT_TYPE* bias)
+#else
+    )
+#endif
 {
     const uint global_id = get_global_id(0);
     const uint group_id = get_global_id(1); // which part of batches we are computing, for example for batch 64 we compute batches 0..31 for group_id == 0 and batches 32..65 for group_id == 1
@@ -138,6 +142,7 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
         input_idx += INPUT_BATCH_NUM; // we don't need to multiply by 8 because of vload8
     }
 
+#if BIAS_TERM
     blockC00 += bias[neuronIdx];
 #if BATCHES_PER_WORK_ITEM >= 16
     blockC01 += bias[neuronIdx];
@@ -191,7 +196,7 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
     vstore8(blockC02, out_id + 2, output);
     vstore8(blockC03, out_id + 3, output);
 #endif
-
+#endif // #if BIAS_TERM
 #if NEURONS_PER_WORK_ITEM > 1
 
     vstore8(blockC10, out_id+INPUT_BATCH_NUM, output);

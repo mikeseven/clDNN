@@ -38,14 +38,14 @@ struct fully_connected : public primitive_base<fully_connected, CLDNN_PRIMITIVE_
     /// @param id This primitive id.
     /// @param input Input primitive id.
     /// @param weights Primitive id containing weights data.
-    /// @param bias Primitive id containing bias data.
+    /// @param bias Primitive id containing bias data. Provide empty string if using Relu without bias.
     /// @param with_activation Enable Relu activation.
     /// @param activation_slp Relu activation slope.
     fully_connected(
         const primitive_id& id,
         const primitive_id& input,
         const primitive_id& weights,
-        const primitive_id& bias,
+        const primitive_id& bias = "",
         bool with_activation = false,
         float activation_slp = 0.0f,
         const padding& input_padding = padding(),
@@ -79,7 +79,13 @@ struct fully_connected : public primitive_base<fully_connected, CLDNN_PRIMITIVE_
     float activation_negative_slope;
 
 protected:
-    std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override { return{ weights, bias }; }
+    std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override 
+    {
+        if (bias.empty())
+            return{ weights };
+        else
+            return{ weights, bias }; 
+    }
 
     void update_dto(dto& dto) const override
     {

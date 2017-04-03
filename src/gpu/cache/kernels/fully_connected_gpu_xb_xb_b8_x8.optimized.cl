@@ -25,8 +25,12 @@ __attribute__((reqd_work_group_size(8, 1, 1)))
 KERNEL (fully_connected_gpu_xb_xb_b8_x8)(
     const __global float* input,
     __global float* output,
-    const __global float* weight,
-    const __global float* bias)
+    const __global float* weight
+#if BIAS_TERM
+    , __global UNIT_TYPE* bias)
+#else
+    )
+#endif
 {
     const uint global_id = get_global_id(0);
     const int x = get_global_id(0);
@@ -57,10 +61,11 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8)(
         weight_offset+= WEIGHTS_BATCH_NUM;
     }
 
-
+#if BIAS_TERM
     ADD_BIAS_8(_data0, bias[neuronIdx + sub_group_id]);
 #if NEURONS_PER_WORK_ITEM > 8
     ADD_BIAS_8(_data1, bias[neuronIdx + sub_group_id + 8]);
+#endif
 #endif
     ACTIVATION(_data0, _data0);
 #if NEURONS_PER_WORK_ITEM > 8
