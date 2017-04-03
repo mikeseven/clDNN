@@ -1182,7 +1182,7 @@ public:
 
     static std::vector<tests::test_params*> generate_generic_test_params(int variant)
     {
-        assert(variant >= 0 && variant <= 2);
+        assert(!variant || variant == 1);
 
         std::vector<tests::test_params*> all_generic_params;
 
