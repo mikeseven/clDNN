@@ -61,6 +61,14 @@ struct format_traits
 };
 
 /// @brief Represents memory formats (orders).
+/// @n In CNN most of data is describe as 4 dimensional blocks. In Intel(R) clDNN library we describe memory with 4 letters
+/// - b - number of blocks in batch
+/// - f - number of feature maps, features or channels
+/// - x - spatial, width
+/// - y - spatial, height
+/// /n
+/// For explanation how each format type is implemented in memory we will use naming shown bellow:
+/// \image html layout_memory_representation.jpg
 struct format
 {
     enum type : int32_t
@@ -70,19 +78,21 @@ struct format
           xy = cldnn_format_xy,   ///< 2D, Y-axis then X-axis: { x0y0, x0y1, x1y0, x1y1}.
           xb = cldnn_format_xb,   ///< 1D+batch.
           bx = cldnn_format_bx,   ///< 1D+batch.
-        yxfn = cldnn_format_yxfn, ///< 3D + number of neurons.
-        yxfb = cldnn_format_yxfb, ///< 3D + batch.
-        byxf = cldnn_format_byxf, ///< batch + 3D.
-        bfyx = cldnn_format_bfyx, ///< used in Caffe.
-        fyxb = cldnn_format_fyxb, ///< used in Caffe.
-        oiyx = cldnn_format_oiyx, ///< format used only for weights: o - output feature maps, i - input feature maps.
-        yxoi = cldnn_format_yxoi, ///< format used only for weights: o - output feature maps, i - input feature maps.
-        oyxi = cldnn_format_oyxi, ///< format used only for weights: o - output feature maps, i - input feature maps.
-        yxio = cldnn_format_yxio, ///< format used only for weights: o - output feature maps, i - input feature maps.
-        os_iyx_osv16 = cldnn_format_os_iyx_osv16, ///< format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice.
-        bs_xs_xsv8_bsv8 = cldnn_format_bs_xs_xsv8_bsv8, ///< format used only for Fully connected: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice.
-        bs_x_bsv16 = cldnn_format_bs_x_bsv16, ///< format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx).
-
+        yxfn = cldnn_format_yxfn, ///< 3D + number of neurons. TO REMOVE
+        yxfb = cldnn_format_yxfb, ///< batch first, feature and than spatials \n \image html yxfb.jpg
+        byxf = cldnn_format_byxf, ///< used in bitmaps, input from user i.e b images of RGB format \n \image html byxf.jpg
+        bfyx = cldnn_format_bfyx, ///< the most common format for activations in clDNN. \n \image html bfyx.jpg
+        fyxb = cldnn_format_fyxb, ///< format not used inside clDNN, but supported in reorder as extension for user provided formats.
+        oiyx = cldnn_format_oiyx, ///< format used only for weights: o - output feature maps, i - input feature maps. TO REMOVE
+        yxoi = cldnn_format_yxoi, ///< format used only for weights: o - output feature maps, i - input feature maps. TO REMOVE
+        oyxi = cldnn_format_oyxi, ///< format used only for weights: o - output feature maps, i - input feature maps. TO REMOVE
+        yxio = cldnn_format_yxio, ///< format used only for weights: o - output feature maps, i - input feature maps. TO REMOVE
+        os_iyx_osv16 = cldnn_format_os_iyx_osv16, ///< format used only for convolution weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice.
+                                                  ///< \n \image html os_iyx_osv16.jpg
+        bs_xs_xsv8_bsv8 = cldnn_format_bs_xs_xsv8_bsv8, ///< format used only for fully connected weights: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice.
+                                                        ///< \n \image html bs_xs_xsv8_bsv8.jpg
+        bs_x_bsv16 = cldnn_format_bs_x_bsv16, ///< format used only for fully connected weights fp16 batch=1 : bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx).
+                                              ///< \n \image html bs_x_bsv16.jpg
         format_num = cldnn_format_format_num,
         any = cldnn_format_any,
     };
