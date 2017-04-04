@@ -62,12 +62,12 @@ struct format_traits
 
 /// @brief Represents memory formats (orders).
 /// @n In CNN most of data is describe as 4 dimensional blocks. In Intel(R) clDNN library we describe memory with 4 letters
-/// - b - number of blocks in batch
-/// - f - number of feature maps, features or channels
+/// - b - number of blocks in batch. For weights formats: output features - conv, neurons - inner product
+/// - f - number of feature maps, features or channels. For weights formats: input features - conv, inputs, inner product
 /// - x - spatial, width
 /// - y - spatial, height
 /// /n
-/// For explanation how each format type is implemented in memory we will use naming shown bellow:
+/// For explanation how each format type is implemented in memory we will use naming shown bellow (b=2,f=3,y=3,x=3):
 /// \image html layout_memory_representation.jpg
 struct format
 {
@@ -93,7 +93,7 @@ struct format
                                                         ///< \n \image html bs_xs_xsv8_bsv8.jpg
         bs_x_bsv16 = cldnn_format_bs_x_bsv16, ///< format used only for fully connected weights fp16 batch=1 : bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx).
                                               ///< \n \image html bs_x_bsv16.jpg
-        format_num = cldnn_format_format_num,
+        format_num = cldnn_format_format_num, ///< number of format types
         any = cldnn_format_any,
     };
 
