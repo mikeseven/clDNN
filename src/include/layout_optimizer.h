@@ -53,21 +53,12 @@ public:
         bias,
         input
     };
-    enum class optimization_attributes_type
-    {
-        splitted_convolution
-    };
-    struct optimization_attributes
-    {
-        int32_t splitted_convolution = 0;
-    };
 
 private:
     bool _enabled;
     refcounted_obj_ptr<topology_impl> _topology;
     refcounted_obj_ptr<engine_impl> _engine;
     std::vector<primitive_id> _outputs;
-    optimization_attributes _optimization_attributes;
 
     struct cache_key
     {
@@ -168,17 +159,6 @@ public:
         }
 
         return reorder;
-    }
-
-    void set_optimization_attribute(optimization_attributes_type attribute, int32_t val)
-    {
-        switch (attribute)
-        {
-        case optimization_attributes_type::splitted_convolution:
-            _optimization_attributes.splitted_convolution = val;
-            break;
-        default: throw std::out_of_range("unsupported layout optimization attribute");
-        }
     }
 
     auto optimize() const -> meta::deduce_ret_type_t<decltype(&network_impl::get_primitives)>;

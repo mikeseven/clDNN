@@ -285,19 +285,6 @@ void network_builder::prepare_padding()
 
 void cldnn::network_builder::reorder_inputs()
 {
-    //first pass to set layout optimization_attributes for topology
-    for (auto& p : _topology_map)
-    {
-        auto& prim = p.second;
-        if (prim->primitive_desc->type() == cldnn::convolution::type_id())
-        {
-            auto conv = std::static_pointer_cast<const cldnn::convolution>(prim->primitive_desc);
-
-            if (conv->split() > 1)
-                _lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::splitted_convolution, 1);
-        }
-    }
-
     const auto reorder_input = [this](std::shared_ptr<convolution> conv)
     {
         std::shared_ptr<const convolution> const_conv = std::static_pointer_cast<const convolution>(conv);
