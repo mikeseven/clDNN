@@ -44,9 +44,9 @@ namespace KernelSelctor
         jit << GetBaseJit(newParams);
         jit << "#define REORDER_MODE_" << toString(newParams.reorderParams.mode);
 
-        const auto& out = newParams.outDims;
+        const auto& in = newParams.inDims;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
+        kernel.work_groups.global = cl::NDRange(in.x, in.y, in.z*in.w);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "reorder");
         kernel.args_desc = GetArgumentDesc(1, false, false);
 

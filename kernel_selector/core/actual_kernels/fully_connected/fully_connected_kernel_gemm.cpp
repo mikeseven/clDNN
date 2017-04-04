@@ -84,10 +84,13 @@ namespace KernelSelctor {
             cl_kernel.kernel_string = GetKernelString(weights_reorder_kernel_name, GetBaseJit(newParams), "align_weights");
             cl_kernel.args_desc = GetArgumentDesc(1, false, false);
 
+            assert(newParams.inputLayout == bx || newParams.inputLayout == bfyx);
+            assert(newParams.outputLayout == bx);
+
             const uint bpp = BytesPerElement(newParams.inputType);
             const size_t aligned_input_size = (newParams.inputLayout == bx) ? newParams.inDesc.pitches.x : newParams.inDesc.pitches.z;
-            const size_t output_size = newParams.outDims.Length();
-            const size_t new_buffer_size = output_size * aligned_input_size;
+            const size_t output_size_in_batch = newParams.outDims.x;
+            const size_t new_buffer_size = output_size_in_batch * aligned_input_size;
             const size_t new_buffer_size_in_bytes = new_buffer_size * bpp;
 
             cl_kernel.work_groups.global = cl::NDRange(new_buffer_size, 1, 1);

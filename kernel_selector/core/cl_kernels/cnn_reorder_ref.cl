@@ -41,15 +41,17 @@ __kernel void reorder(
     __global DATA_TYPE* input,
     __global DATA_TYPE* output)
 {
-    const unsigned int y = get_global_id(0);
-    const unsigned int z = get_global_id(1);
-    const unsigned int w = get_global_id(2);
+    const unsigned x = get_global_id(0);
+    const unsigned y = get_global_id(1);
+#if INPUT_BATCH == 1
+    const unsigned z = get_global_id(2);
+    const unsigned w = 0;
+#else
+    const unsigned z = get_global_id(2) % INPUT_DEPTH;
+    const unsigned w = get_global_id(2) / INPUT_DEPTH;
+#endif
     
     const unsigned int src_index = INPUT_OFFSET + w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH;
-
-    for (unsigned int x = 0 ; x < INPUT_WIDTH; x++)
-    {
-         output[get_soruce_index(x, y, z, w)] = input[src_index + x];
-    }
+    output[get_soruce_index(x, y, z, w)] = input[src_index + x];
 }
 
