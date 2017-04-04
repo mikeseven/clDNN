@@ -289,7 +289,7 @@ void cldnn::network_builder::reorder_inputs()
     for (auto& p : _topology_map)
     {
         auto& prim = p.second;
-        if (prim->primitive_desc->type() == cldnn::convolution::type_id())
+        if (prim->primitive_desc->type == cldnn::convolution::type_id())
         {
             auto conv = std::static_pointer_cast<const cldnn::convolution>(prim->primitive_desc);
 
