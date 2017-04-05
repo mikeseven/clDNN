@@ -185,11 +185,11 @@ typedef struct
 /// \image html layout_memory_representation.jpg
 typedef enum /*:int32_t*/
 {
-    cldnn_format_x,             ///< 1D.
-    cldnn_format_yx,            ///< 2D, X-axis then Y-axis: { x0y0, x1y0, x0y1, x1y1}.
-    cldnn_format_xy,            ///< 2D, Y-axis then X-axis: { x0y0, x0y1, x1y0, x1y1}.
-    cldnn_format_xb,            ///< 1D+batch.
-    cldnn_format_bx,            ///< 1D+batch.
+    cldnn_format_x,             ///< 1D. TO REMOVE
+    cldnn_format_yx,            ///< 2D, X-axis then Y-axis: { x0y0, x1y0, x0y1, x1y1}. TO REMOVE
+    cldnn_format_xy,            ///< 2D, Y-axis then X-axis: { x0y0, x0y1, x1y0, x1y1}. TO REMOVE
+    cldnn_format_xb,            ///< 1D+batch. TO REMOVE
+    cldnn_format_bx,            ///< 1D+batch. TO REMOVE
     cldnn_format_yxfn,          ///< 3D + number of neurons. TO REMOVE
     cldnn_format_yxfb,          ///< batch first, feature and than spatials \n \image html yxfb.jpg
     cldnn_format_byxf,          ///< used in bitmaps, input from user i.e b images of RGB format \n \image html byxf.jpg

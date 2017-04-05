@@ -29,7 +29,10 @@ namespace cldnn
 /// @{
 
 /// @details Depth concatenation is used to concatenate features from multiple sources into one destination.
-/// Note that all sources must have the same spatial and batch sizes and also the same format as output.
+/// Note that 
+/// - all sources must have the same spatial and batch sizes and also the same format as output.
+/// - order of arguments in primitive creation has impact on order of feature maps in output primitive. 
+/// 
 /// @par Alogrithm:
 /// \code
 ///     int outputIdx = 0
