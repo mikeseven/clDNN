@@ -23,7 +23,7 @@ namespace cldnn
 {
 
 static void generate_anchors(unsigned int base_size, const std::vector<float>& ratios, const std::vector<float>& scales,   // input
-                             std::vector<simpler_nms_inst::anchor>& anchors);                                                                // output
+                             std::vector<simpler_nms_inst::anchor>& anchors);                                              // output
 
 
 primitive_type_id simpler_nms_type_id()
@@ -123,7 +123,7 @@ static void calc_ratio_anchors(const simpler_nms_inst::anchor& base_anchor, cons
 }
 
 static void generate_anchors(unsigned int base_size, const std::vector<float>& ratios, const std::vector<float>& scales,   // input
-                     std::vector<simpler_nms_inst::anchor>& anchors)                                                           // output
+                     std::vector<simpler_nms_inst::anchor>& anchors)                                                       // output
 {
     float end = (float)(base_size - 1);        // because we start at zero
 
@@ -132,17 +132,13 @@ static void generate_anchors(unsigned int base_size, const std::vector<float>& r
     std::vector<simpler_nms_inst::anchor> ratio_anchors;
     calc_ratio_anchors(base_anchor, ratios, ratio_anchors);
 
-    size_t num_ratio_anchors = ratio_anchors.size();
+    std::vector<simpler_nms_inst::anchor> tmp_anchors;
 
-    for (unsigned int i = 0 ; i < num_ratio_anchors ; i++)
+    for (auto& ratio_anchor : ratio_anchors)
     {
-        calc_anchors(ratio_anchors[i], scales, anchors);
-
-        size_t num_temp_anchors = anchors.size();
-
-        for (unsigned int j = 0 ; j < num_temp_anchors ; j++) {
-            anchors.push_back(anchors[j]);
-        }
+        calc_anchors(ratio_anchor, scales, tmp_anchors);
+        anchors.insert(anchors.end(), tmp_anchors.begin(), tmp_anchors.end());
+        tmp_anchors.clear();
     }
 }
 }

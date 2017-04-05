@@ -149,6 +149,7 @@ scale_gpu::kernel_data set_default(const scale_node& arg)
 {
     scale_gpu::kernel_data kd = scale_gpu::set_kernel_data(arg);
     kd.scale_bfyx_used = (arg.scale().get_output_layout().size.format == cldnn::format::bfyx) ? true : false;
+    kd.input_bfyx_used = (arg.input().get_output_layout().size.format == cldnn::format::bfyx) ? true : false;
     kd.kernel_name = kernel_name;
 
     return kd;

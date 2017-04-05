@@ -321,7 +321,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         if (data.padding_only)
         {
             mem_consts.add_constant(gpu::make_jit_constant("INPUT", input_layout.size));
-            mem_consts.add_constant(gpu::make_jit_constant("OUTPUT", input_layout.size));
+            mem_consts.add_constant(gpu::make_jit_constant("OUTPUT", output_layout.size));
         }
         else if (data.has_mean)
         {

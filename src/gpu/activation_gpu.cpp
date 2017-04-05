@@ -72,12 +72,6 @@ struct activation_gpu : typed_primitive_impl<activation>
         }
         else
         {
-            if (outer.get_primitive()->output_padding)
-                throw std::runtime_error("Error, output padding not supported in non bfyx format in RELU primitive!");
-
-            if(outer.input().get_primitive()->output_padding)
-                throw std::runtime_error("Error, input padding not supported in non bfyx format in RELU primitive!");
-
             kd.kernel_name = kernel_name;
         }
 
