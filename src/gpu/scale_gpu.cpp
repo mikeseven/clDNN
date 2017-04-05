@@ -77,6 +77,7 @@ struct scale_gpu : typed_primitive_impl<scale>
         auto engine_info = outer.get_program().get_engine()->get_context()->get_engine_info();
 
         auto input_layout = outer.input().get_padded_output_layout();
+        auto input_size = input_layout.size.transform(format::bfyx, 1);
 
         kernel_data kd;
 
@@ -85,9 +86,9 @@ struct scale_gpu : typed_primitive_impl<scale>
         kd.scale_bfyx_used = false;
         kd.input_bfyx_used = false;
         // Determine global work sizes.
-        kd.gws0 = input_layout.size.batch[0];   // B
-        kd.gws1 = input_layout.size.feature[0]; // F
-        kd.gws2 = input_layout.size.spatial[0] * input_layout.size.spatial[1]; // X, Y
+        kd.gws0 = input_size.batch[0];   // B
+        kd.gws1 = input_size.feature[0]; // F
+        kd.gws2 = input_size.spatial[0] * input_size.spatial[1]; // X, Y
         // Find largest positive local work size that is divider for global work size.
         kd.lws2 = std::min(std::max(kd.gws2, static_cast<size_t>(1)), static_cast<size_t>(32));
         while (kd.gws2 % kd.lws2 != 0)
@@ -110,11 +111,11 @@ struct scale_gpu : typed_primitive_impl<scale>
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT",                 input_layout.size),
+            gpu::make_jit_constant("OUTPUT",                outer.get_output_layout().size),
             gpu::make_jit_constant("SCALE",                 scale_layout.size),
-            gpu::make_jit_constant("SCALE",                 outer.scale().get_output_layout().size),
             gpu::make_jit_constant("FP16_UNIT_USED",        static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",             data.fp16_unit_used ? "half" : "float"),
-            gpu::make_jit_constant("BIAS_TERM",             static_cast<int>(outer.get_primitive()->bias_term)),
+            gpu::make_jit_constant("BIAS_TERM",             static_cast<int>(!outer.get_primitive()->bias.empty())),
             gpu::make_jit_constant("SCALE_BFYX_USED",       static_cast<int>(data.scale_bfyx_used)),
             gpu::make_jit_constant("INPUT_BFYX_USED",       static_cast<int>(data.input_bfyx_used)),
             gpu::make_jit_constant("INPUT_PADDING",         outer.input().get_primitive()->output_padding),

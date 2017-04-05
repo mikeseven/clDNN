@@ -60,9 +60,9 @@ depth_concatenate_inst::typed_primitive_inst(network_impl& network, depth_concat
     auto output_format = output_memory().get_layout().fused_format();
 
     tensor::value_type depth_count = 0;
-    auto input_size = _inputs.at(0)->non_padded_output_layout().size;
+    auto input_size = _deps.at(0)->non_padded_output_layout().size;
     auto output_size = non_padded_output_layout().size;
-    for (const auto& i : _inputs)
+    for (const auto& i : _deps)
     {
         auto& input_mem = i->output_memory();
         auto input_mem_size = i->non_padded_output_layout().size;

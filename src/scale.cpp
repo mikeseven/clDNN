@@ -53,24 +53,16 @@ scale_inst::typed_primitive_inst(network_impl& network, scale_node const& node)
 
     auto scale_batch_size = scale_memory().get_layout().size.batch[0];
     auto scale_feature_size = scale_memory().get_layout().size.feature[0];
-    auto scale_x_size = scale_memory().get_layout().size.spatial[0];
-    auto scale_y_size = scale_memory().get_layout().size.spatial[1];
 
     auto input_batch_size = input_memory().get_layout().size.batch[0];
     auto input_feature_size = input_memory().get_layout().size.feature[0];
-    auto input_x_size = input_memory().get_layout().size.spatial[0];
-    auto input_y_size = input_memory().get_layout().size.spatial[1];
 
     if((scale_batch_size != input_batch_size) && (scale_batch_size != 1))
         throw std::runtime_error("Batch dimension mismatch between input and scale input!");
     if ((scale_feature_size != input_feature_size) && (scale_feature_size != 1))
         throw std::runtime_error("Feature dimension mismatch between input and scale input!");
-    if ((scale_x_size != input_x_size) && (scale_x_size != 1))
-        throw std::runtime_error("X dimension mismatch between input and scale input!");
-    if ((scale_y_size != input_y_size) && (scale_y_size != 1))
-        throw std::runtime_error("Y dimension mismatch between input and scale input!");
 
-    if (!desc->bias.empty())
+    if (!argument.bias.empty())
     {
         auto bias_format = bias_memory().get_layout().size.format;
         auto bias_raw_sizes = bias_memory().get_layout().size.raw;

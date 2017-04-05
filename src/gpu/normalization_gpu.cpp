@@ -149,7 +149,7 @@ struct lrn_gpu : typed_primitive_impl<normalization>
         auto alpha_abs_sqrt = std::sqrt(std::abs(alpha));
         auto alpha_div_by_size_abs_sqrt = std::sqrt(std::abs(alpha_div_by_size));
 
-        auto input_padding = outer.get_primitive()->input_padding;
+        auto input_padding = outer.input().get_primitive()->output_padding;
         auto input_size = outer.input().get_output_layout().size;
 
         int count = input_size.sizes()[0] * input_size.sizes()[1] * input_size.sizes()[2] * input_size.sizes()[3];

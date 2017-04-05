@@ -61,7 +61,7 @@ public:
 
     const std::vector<std::shared_ptr<const primitive_inst>>& dependencies() const
     { 
-        return reinterpret_cast<std::vector<std::shared_ptr<const primitive_inst>> const&>(_inputs);
+        return reinterpret_cast<std::vector<std::shared_ptr<const primitive_inst>> const&>(_deps);
     }
 
     const memory& dep_memory(size_t index) const { return dependencies().at(index)->output_memory(); }
@@ -88,7 +88,7 @@ protected:
 
     std::shared_ptr<primitive_impl> _impl;
 
-    std::vector<std::shared_ptr<primitive_inst>> _inputs;
+    std::vector<std::shared_ptr<primitive_inst>> _deps;
     memory _output;
 
     bool _output_changed; //todo: implement output reuse if neither of inputs has changed

@@ -313,6 +313,17 @@ void program_impl::trim_to_outputs()
 
 void program_impl::reorder_inputs(layout_optimizer& lo)
 {
+    //first pass to set layout optimization_attributes for topology
+    for (auto& p : nodes_map)
+    {
+        auto& prim = *p.second;
+        if (prim.type() == cldnn::convolution::type_id())
+        {
+            if (prim.as<convolution>().get_primitive()->split() > 1)
+                lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::splitted_convolution, 1);
+        }
+    }
+
     const auto reorder_input = [this, &lo](typed_program_node<convolution>& conv_node)
     {
         auto conv_prim = conv_node.get_primitive();

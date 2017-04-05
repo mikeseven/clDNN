@@ -27,13 +27,13 @@ event_impl::ptr primitive_inst::execute(const std::vector<event_impl::ptr>& even
     if (!_has_valid_input)
         throw std::runtime_error("Cannot execute primitive " + id() + " with invalid/unset input");
 
-    if (_inputs.size() == 0)
+    if (_deps.size() == 0)
         return _impl->execute(events, *this);
 
     std::vector<event_impl::ptr> dependencies;
-    dependencies.reserve(_inputs.size());
+    dependencies.reserve(_deps.size());
 
-    for(auto& input : _inputs)
+    for(auto& input : _deps)
     {
         dependencies.emplace_back(get_network().execute_primitive(input, events));
     }
@@ -45,7 +45,7 @@ primitive_inst::primitive_inst(network_impl& network, program_node const& node)
     : _network(network)
     , _node(node)
     , _impl(node.get_selected_impl())
-    , _inputs(network.get_primitives(desc()->dependecies()))
+    , _deps(network.get_primitives(desc()->dependecies()))
     , _output(allocate_output())
     , _output_changed(false)
 {}
@@ -54,7 +54,7 @@ primitive_inst::primitive_inst(network_impl& network, program_node const& node, 
     : _network(network)
     , _node(node)
     , _impl(node.get_selected_impl())
-    , _inputs(network.get_primitives(desc()->dependecies()))
+    , _deps(network.get_primitives(desc()->dependecies()))
     , _output(buffer)
     , _output_changed(false)
 {
