@@ -285,7 +285,7 @@ public:
     void * opaque_custom_param = nullptr;
         
     std::string print();
-	std::string print_tensor(cldnn::tensor tensor);
+	static std::string print_tensor(cldnn::tensor tensor);
 	bool is_weight_format(cldnn::format fmt);
 };
 
