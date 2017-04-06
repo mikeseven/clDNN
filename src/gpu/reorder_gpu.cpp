@@ -342,7 +342,7 @@ struct reorder_gpu : primitive_impl
         auto& input_size_raw = input_mem.get_layout().size.raw;
         auto dimensions = input_size_raw.size();
         auto order = get_calculation_order(input_mem.get_layout().size.format);
-        if (dimensions != order.size()) throw std::runtime_error("reorder_inst number of input dimensions != size of indices order");
+        if (dimensions != order.size()) throw std::runtime_error("reorder number of input dimensions != size of indices order");
 
         size_t gws_2 = input_size_raw[order[dimensions - 1]];
         size_t gws_1 = input_size_raw[order[dimensions - 2]];

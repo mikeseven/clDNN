@@ -76,7 +76,6 @@ deconvolution_inst::typed_primitive_inst(network_impl& network, std::shared_ptr<
         auto input_offset = desc->input_offset().transform(input_arg.size.format, 0);
         auto output_offset = desc->output_offset().transform(output_arg.size.format, 0);
 
-        if (filter_arg.size.raw.size() != output_arg.size.raw.size() + 1) throw std::runtime_error("window_size != 5");
         if (bias_arg.size.raw.size() != 3) throw std::runtime_error("biases isn't 1D vector."); // b=1, f=1
         if (bias_arg.size.spatial[0] != output_size.feature[0] / split) throw std::runtime_error("biases/output feature maps number does not match.");
         if (desc->padding_filling_value() != 0.0f) throw std::runtime_error("unknown padding mode.");

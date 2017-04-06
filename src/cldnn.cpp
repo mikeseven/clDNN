@@ -24,6 +24,13 @@
 #include "memory_impl.h"
 #include "primitive_inst.h"
 
+namespace cldnn {
+    last_err& last_err::instance() {
+        thread_local static last_err _instance;
+        return _instance;
+    }
+}
+
 #define SHOULD_NOT_BE_NULL(arg, msg_prefix) \
     if(arg == nullptr) \
         throw std::invalid_argument( std::string(msg_prefix)  + " should not be null.");
@@ -79,7 +86,7 @@ uint32_t cldnn_get_engine_count(/*cldnn_engine_type*/ int32_t type, cldnn_status
     }
     else
     {
-        if (status) *status = CLDNN_UNSUPPORTED;
+        if (status) *status = CLDNN_DEVICE_ERROR;
         return 0;
     }
 }
@@ -89,7 +96,7 @@ cldnn_engine cldnn_create_engine(/*cldnn_engine_type*/ int32_t type, uint32_t en
     if (engine_num > 0 || (type != cldnn_engine_type::cldnn_engine_ocl))
     {
         if (status)
-            *status = CLDNN_UNSUPPORTED;
+            *status = CLDNN_DEVICE_ERROR;
         return nullptr;
     }
 
@@ -446,6 +453,14 @@ cldnn_engine cldnn_get_memory_engine(cldnn_memory memory, cldnn_status* status)
         auto engine_ptr = api_cast(memory)->get_engine();
         if (!engine_ptr) throw std::logic_error("no assigned engine");
         return api_cast(engine_ptr.detach());
+    });
+}
+
+const char* cldnn_get_last_error_message(cldnn_status* status)
+{
+    return exception_handler<const char*>(CLDNN_ERROR, status, nullptr, [&]()
+    {
+        return cldnn::last_err::instance().get_last_error_message().c_str();
     });
 }
 
