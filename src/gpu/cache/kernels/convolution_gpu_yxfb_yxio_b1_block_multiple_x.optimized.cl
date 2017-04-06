@@ -25,7 +25,9 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
     const __global float* input,
     __global float* output,
     const __global float* filter,
+#if BIAS_TERM
     const __global float* bias,
+#endif
     uint split_idx)
 {
 #if USE_VECTOR == 8
@@ -198,11 +200,12 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
                 }
             }
         }
-
+#if BIAS_TERM
         for(uint a = 0; a < X_PER_WORK_ITEM; a++)
         {
             _data[a] += BLOCK_READ(bias + ofm_offset);
         }
+#endif
         for(uint a = 0; a < X_PER_WORK_ITEM; a++)
         {
             ACTIVATION(_data[a], _data[a]);

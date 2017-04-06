@@ -25,7 +25,9 @@ KERNEL(convolution_gpu_yxfb_yxio_b8)(
     const __global float* input,
     __global float* output,
     const __global float* filter,
+#if BIAS_TERM
     const __global float* bias,
+#endif
     uint split_idx)
 {
     const uint batch_num = INPUT_BATCH_NUM;
@@ -134,12 +136,12 @@ KERNEL(convolution_gpu_yxfb_yxio_b8)(
             }
         }
     }
-
+#if BIAS_TERM
     ADD_BIAS_8(_data0, bias[ofm_offset + sub_group_id]);
 #if OFM_PER_WORK_ITEM == 16
     ADD_BIAS_8(_data1, bias[ofm_offset + sub_group_id + 8]);
 #endif
-
+#endif // #if BIAS_TERM
     ACTIVATION(_data0, _data0);
 #if OFM_PER_WORK_ITEM == 16
     ACTIVATION(_data1, _data1);

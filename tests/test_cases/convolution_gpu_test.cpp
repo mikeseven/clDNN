@@ -356,6 +356,77 @@ TEST(DISABLED_convolution_gpu, generic_random) {
 	}
 }
 
+TEST(convolution_f32_fw_gpu, basic_convolution_no_bias) {
+    //  Filter : 2x3
+    //  Stride : 2x1
+    //  Input  : 4x5
+    //  Output : 2x3
+    //
+    //  Input:
+    //  1  2  3  4  5
+    //  2  2  3  4  6
+    //  3  3  3  5  1
+    //  1  1  1  1  1
+    //
+    //  Filter:
+    //  1  2  1
+    //  2  1  2
+    //
+    //  Output:
+    // 21  28  39
+    // 18  20  20
+
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 5, 1, 1 } } });
+    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 3 } } });
+
+    set_values(input, { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 2.0f, 2.0f, 3.0f, 4.0f, 6.0f, 3.0f, 3.0f, 3.0f, 5.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f });
+    set_values(weights, { 1.0f, 2.0f, 1.0f, 2.0f, 1.0f, 2.0f });
+    VVF<float> output_vec = {
+        { 20.0f, 27.0f, 38.0f },
+        { 17.0f, 19.0f, 19.0f } };
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        convolution("conv", "input", { "weights" }, { format::yx,{ 0,0 } }, { format::yx, 0,{ 2,1 } }));
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "conv");
+
+    auto output_memory = outputs.at("conv").get_memory();
+    auto output_layout = output_memory.get_layout();
+    auto output_ptr = output_memory.pointer<float>();
+
+    int y_size = output_layout.size.sizes()[0];
+    int x_size = output_layout.size.sizes()[1];
+    int f_size = output_layout.size.sizes()[2];
+    int b_size = output_layout.size.sizes()[3];
+    EXPECT_EQ(output_layout.size.format, format::yxfb);
+    EXPECT_EQ(y_size, 2);
+    EXPECT_EQ(x_size, 3);
+    EXPECT_EQ(f_size, 1);
+    EXPECT_EQ(b_size, 1);
+    for (int y = 0; y < y_size; ++y) {
+        for (int x = 0; x < x_size; ++x) {
+            EXPECT_EQ(output_vec[y][x], output_ptr[y * x_size + x]);
+        }
+    }
+
+    //VVF temp_vec(y_size, VF(x_size, 0.0f));
+    //for (int y = 0; y < y_size; ++y) {
+    //	for (int x = 0; x < x_size; ++x) {
+    //		temp_vec[y][x] = output_ptr[y * x_size + x];
+    //	}
+    //}
+    //print_2d(temp_vec);
+}
+
 TEST(convolution_f32_fw_gpu, basic_convolution) {
 	//  Filter : 2x3
 	//  Stride : 2x1

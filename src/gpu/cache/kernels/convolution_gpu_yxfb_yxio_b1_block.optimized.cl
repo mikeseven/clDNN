@@ -25,7 +25,9 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block)(
     const __global float* input,
     __global float* output,
     const __global float* filter,
+#if BIAS_TERM
     const __global float* bias,
+#endif
     uint split_idx)
 {
 #ifdef USE_VECTOR_8
@@ -137,8 +139,9 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block)(
                 }
             }
         }
-
+#if BIAS_TERM
         _data0 += BLOCK_READ(bias + ofm_offset);
+#endif
         ACTIVATION(_data0, _data0);
 
         BLOCK_WRITE(output + out_id, _data0);

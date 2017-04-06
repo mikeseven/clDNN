@@ -90,7 +90,9 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
     const __global UNIT_TYPE* input,
     __global UNIT_TYPE* output,
     const __global UNIT_TYPE* weights,
+#if BIAS_TERM
     const __global UNIT_TYPE* bias,
+#endif   
     uint split_idx)
 {
     // constexpr:
@@ -213,11 +215,14 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
     uint out_addr = (batch_idx * OUTPUT_FEATURE_NUM + split_idx * FILTER_OUTPUT_FEATURE_NUM + feature_idx) * output_buffer_size_x * output_buffer_size_y; // out_addr indices into start of 16 feature maps.
     out_addr += (OUTPUT_PADDING_LOWER_SIZE_Y + or) * output_buffer_size_x + OUTPUT_PADDING_LOWER_SIZE_X + oc;  // offset for the 4x3 block that this workitem is working on;
 
+#if BIAS_TERM
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
             out[r * OUT_BLOCK_WIDTH + c] += bias[feature_idx];
         }
     }
+#endif
+
 
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {

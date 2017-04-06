@@ -29,7 +29,9 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
     const __global half* input,
     __global half* output,
     const __global half* filter,
+#if BIAS_TERM
     const __global half* bias,
+#endif
     uint split_idx)
 {
     // get_global_size(0) -> Number of work items needed to compute all features and all batches for single output spatial position
@@ -139,13 +141,13 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
             }
         }
     }
-
+#if BIAS_TERM
     uint bias_val_pair = *(const __global uint*)(bias + (ofm_offset + 2 * sub_group_id));
     for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
     {
         ADD_BIAS_16_FP16(_data[s], bias_val_pair);
     }
-
+#endif
     for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
     {
         ACTIVATION(_data[s], _data[s]);

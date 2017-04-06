@@ -24,7 +24,9 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
     const __global float* input,
     __global float* output,
     const __global float* filter,
+#if BIAS_TERM
     const __global float* bias,
+#endif
     uint split_idx)
 {
     const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
@@ -102,13 +104,13 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
             }
         }
     }
-
+#if BIAS_TERM
     float bias_val = bias[ofm_offset + sub_group_id];
     for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
     {
         ADD_BIAS_8(_data[s], bias_val);
     }
-
+#endif
     for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
     {
         ACTIVATION(_data[s], _data[s]);

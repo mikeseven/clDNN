@@ -27,7 +27,9 @@ KERNEL(convolution_gpu_yxfb_yxio_fp16)(
     const __global half* input,
     __global half* output,
     const __global half* filter,
+#if BIAS_TERM
     const __global half* bias,
+#endif
     uint split_idx)
 {
     const int batch_num = INPUT_BATCH_NUM;
@@ -86,8 +88,9 @@ KERNEL(convolution_gpu_yxfb_yxio_fp16)(
             }
         }
     }
-
+#if BIAS_TERM
     result += bias[ofm_offset];
+#endif
     ACTIVATION(output[global_id], result);
 }
 

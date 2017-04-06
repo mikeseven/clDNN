@@ -24,7 +24,9 @@ KERNEL(convolution_gpu_yxfb_oiyx)(
     const __global float* input,
     __global float* output,
     const __global float* filter,
+#if BIAS_TERM
     const __global float* bias,
+#endif
     uint split_idx)
 {
     const int batch_num = INPUT_BATCH_NUM;
@@ -35,7 +37,11 @@ KERNEL(convolution_gpu_yxfb_oiyx)(
 
     const int ofm_offset = (global_id / batch_num) % FILTER_OUTPUT_FEATURE_NUM;
 
+#if BIAS_TERM
     float result = bias[ofm_offset];
+#else
+    float result = 0.0f;
+#endif
 
     bool finish = false;
     const int out_x = (uint)get_global_id(1) - OUTPUT_PADDING_LOWER_SIZE_X;

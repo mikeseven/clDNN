@@ -53,6 +53,14 @@ public:
 
         return dep_memory(1 + argument.weights.size() + index);
     }
+
+    bool bias_term() const
+    {
+        if (argument.bias.size() != 0)
+            return true;
+        else
+            return false;
+    }
 };
 
 using convolution_inst = typed_primitive_inst<convolution>;

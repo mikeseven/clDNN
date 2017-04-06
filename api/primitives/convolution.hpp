@@ -69,6 +69,35 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
             throw std::runtime_error("convolution's weights/bias count does not match");
     }
 
+    /// @brief Constructs convolution primitive.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param weights List of primitive ids containing weights data.
+    /// @param input_padding Input padding/offset.
+    /// @param stride Defines shift in input buffer between adjacent calculations of output values.
+    /// @param with_activation Enable Relu activation.
+    /// @param activation_slp Relu activation slope.
+    convolution(
+        const primitive_id& id,
+        const primitive_id& input,
+        const std::vector<primitive_id>& weights,
+        const padding& input_padding = { format::yx,{ 0,0 } },
+        tensor stride = { format::yx, 0,{ 1, 1 } },
+        bool with_activation = false,
+        float activation_slp = 0.0f,
+        const padding& output_padding = { format::yx,{ 0,0 } }
+    )
+        :primitive_base(id, { input }, input_padding, output_padding)
+        , weights(_weights.cpp_ids)
+        , bias(_bias.cpp_ids)
+        , stride(stride)
+        , with_activation(with_activation)
+        , activation_negative_slope(activation_slp)
+        , _weights(weights)
+        , _bias(std::vector<primitive_id>(0))
+    {
+    }
+
     /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{convolution}
     convolution(const dto* dto)
         :primitive_base(dto)
@@ -80,7 +109,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , _weights(dto->weights)
         , _bias(dto->bias)
     {
-        if (!dto->split || weights.size() != bias.size() || dto->split != weights.size())
+        if (!dto->split || (weights.size() != bias.size() && bias.size() != 0) || dto->split != weights.size())
             throw std::invalid_argument("Invalid convolution dto: bad split value");
     }
 
