@@ -155,7 +155,7 @@ T check_status(std::string err_msg, std::function<T(status_t*)> func)
     status_t status = CLDNN_SUCCESS;
     auto result = func(&status);
     if (status != CLDNN_SUCCESS)
-        CLDNN_THROW(err_msg.append(": ").append(cldnn_get_last_error_message(&status)), status);
+        CLDNN_THROW(err_msg.append(": ").append(cldnn_get_last_error_message()), status);
     return result;
 }
 
@@ -165,7 +165,7 @@ inline void check_status<void>(std::string err_msg, std::function<void(status_t*
     status_t status = CLDNN_SUCCESS;
     func(&status);
     if (status != CLDNN_SUCCESS)
-        CLDNN_THROW(err_msg.append(": ").append(cldnn_get_last_error_message(&status)), status);
+        CLDNN_THROW(err_msg.append(": ").append(cldnn_get_last_error_message()), status);
 }
 
 /// @}

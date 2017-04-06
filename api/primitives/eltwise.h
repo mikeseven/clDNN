@@ -39,13 +39,15 @@ typedef enum /*:int32_t*/
     cldnn_eltwise_sub,
     /// @brief Eltwise max.
     cldnn_eltwise_max,
-    /// @brief Eltwise product.
+    /// @brief Eltwise product (Hamarad).
     cldnn_eltwise_prod
 } cldnn_eltwise_mode;
 
 /// @brief Performs elementwise operations (sum, subtract, max or product) on two input primitives
 /// Also supports built-in Relu @CLDNN_PRIMITIVE_DESC{activation} available by setting it in arguments.
-/// @details Second input (input2) needs to be the same size as input.
+/// @notes
+/// - both inputs have to have equal sizes in all dimensions
+/// - format of both inputs has to be the same
 CLDNN_BEGIN_PRIMITIVE_DESC(eltwise)
 /// @brief Second input primitive id with values needed for eltwise computation.
 cldnn_primitive_id input2;

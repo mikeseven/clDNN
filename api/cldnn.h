@@ -72,7 +72,7 @@ extern "C" {
 #define CLDNN_DEVICE_ERROR          -4
 #define CLDNN_UNSUPPORTED_SIZE      -5
 #define CLDNN_UNSUPPORTED_FORMAT    -6
-#define CLDNN_DIMENSION_MISS_MATCH  -7
+#define CLDNN_DIMENSION_MISMATCH    -7
 
 /// @brief Represents errors status for all API calls
 typedef int32_t cldnn_status;
@@ -459,7 +459,7 @@ CLDNN_API cldnn_engine cldnn_get_memory_engine(cldnn_memory memory, cldnn_status
 /// @brief If cldnn function returns status different than CLDNN_SUCCESS, user call this function to get more details.
 /// @returns pointer to array of chars with more detailed description of last error.
 /// @note If sequence of error occure, description of only last error will avaiable
-CLDNN_API const char* cldnn_get_last_error_message(cldnn_status* status);
+CLDNN_API const char* cldnn_get_last_error_message();
 /// @}
 
 #ifdef __cplusplus

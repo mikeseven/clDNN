@@ -456,12 +456,15 @@ cldnn_engine cldnn_get_memory_engine(cldnn_memory memory, cldnn_status* status)
     });
 }
 
-const char* cldnn_get_last_error_message(cldnn_status* status)
+const char* cldnn_get_last_error_message()
 {
-    return exception_handler<const char*>(CLDNN_ERROR, status, nullptr, [&]()
-    {
+    try {
         return cldnn::last_err::instance().get_last_error_message().c_str();
-    });
+    }
+    catch (...)
+    {
+        return "Reading error message failed.";
+    }
 }
 
 } /* extern "C" */

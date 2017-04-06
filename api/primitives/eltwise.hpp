@@ -37,13 +37,15 @@ enum class eltwise_mode : int32_t
     sub = cldnn_eltwise_sub,
     /// @brief Eltwise max.
     max = cldnn_eltwise_max,
-    /// @brief Eltwise product.
+    /// @brief Eltwise product (Hamarad).
     prod = cldnn_eltwise_prod,
 };
 
 /// @brief Performs elementwise operations (sum, subtract, max or product) on two input primitives
 /// Also supports built-in Relu @ref activation available by setting it in arguments.
-/// @details Second input (input2) needs to be the same size as input.
+/// @notes
+/// - both inputs have to have equal sizes in all dimensions
+/// - format of both inputs has to be the same
 struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
 {
     CLDNN_DECLATE_PRIMITIVE(eltwise)
