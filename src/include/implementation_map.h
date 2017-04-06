@@ -105,7 +105,8 @@ public:
         // lookup in database; throw if not found 
         auto key = key_builder()(engine_type, primitive);
         auto it = map_type::instance().find(key);
-        if (it == std::end(map_type::instance())) throw std::runtime_error("not yet implemented");
+        if (it == std::end(map_type::instance())) 
+            throw std::runtime_error("not yet implemented");
 
         // create implementation & attach it to result 
         return it->second;

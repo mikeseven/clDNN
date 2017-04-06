@@ -22,24 +22,22 @@
 
 typedef std::tuple<cldnn::layout*, std::vector<unsigned>> topology_params;
 
-void PrintTupleTo(const topology_params& t, ::std::ostream* os)
-{
+void PrintTupleTo(const topology_params& t, ::std::ostream* os) {
     const auto & output_layout = std::get<0>(t);
     const auto & generator = std::get<1>(t);
     std::stringstream ss;
 
-    ss << "Topology test " << " ("
+    ss << "Topology test failed: ("
         << cldnn::data_type_traits::name(output_layout->data_type) << " "
         << tests::test_params::print_tensor(output_layout->size) << ") Generator: [";
     for (auto v : generator) {
         ss << v << ", ";
     }
-    ss.seekp(-1, ss.cur) << "]";
+    ss.seekp(-1, ss.cur) << "]\n";
     *os << ss.str();
 }
 
-class topology_test : public ::testing::TestWithParam<topology_params>
-{
+class topology_test : public ::testing::TestWithParam<topology_params> {
 protected:
     class topology_generator {
     public:
@@ -68,7 +66,10 @@ protected:
             }
             // add data inputs
             for (const auto& input : inputs) {
-                AddRandomMemory(*topology, input.first, input.second);
+                //first add a reorder to enable optimize_data
+                cldnn::primitive_id input_data_id = input.first + "_input";
+                topology->add(cldnn::reorder(input.first, input_data_id, input.second));
+                AddRandomMemory(*topology, input_data_id, input.second);
             }
             return topology;
         }
@@ -92,8 +93,7 @@ protected:
         static void AddRandomMemory(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout layout) {
             //todo: allocate mem, randomize values by type, add to topology
             auto mem_primitive = cldnn::memory::allocate(topology_test::engine, layout);
-            switch (layout.data_type)
-            {
+            switch (layout.data_type) {
             case cldnn::data_types::f32:
                 tests::set_random_values<float>(mem_primitive, -1.0f, 1.0f);
                 break;
@@ -110,6 +110,9 @@ protected:
 
         class convolution_layer_type : public topology_layer_type {
             virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
+                if (output_layout.size.format != cldnn::format::bfyx) {
+                    return false;
+                }
                 // for now using just one set of params
                 // todo: randomize params
                 cldnn::primitive_id weights_id = id + "_weights";
@@ -130,6 +133,9 @@ protected:
         };
         class normalization_layer_type : public topology_layer_type {
             bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
+                if (output_layout.size.format != cldnn::format::bfyx) {
+                    return false;
+                }
                 // for now using just one set of params
                 // todo: randomize params
                 cldnn::primitive_id input_id = topology_generator::CreateLayerId();
@@ -145,6 +151,9 @@ protected:
         };
         class pooling_layer_type : public topology_layer_type {
             virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
+                if (output_layout.size.spatial.size() != 2) {
+                    return false;
+                }
                 // for now using just one set of params
                 // todo: randomize params
                 cldnn::primitive_id input_id = topology_generator::CreateLayerId();
@@ -158,24 +167,25 @@ protected:
         };
         class fully_connected_layer_type : public topology_layer_type {
             virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
-                if (output_layout.size.format != cldnn::format::bx)
-                {
+                if (output_layout.size.format != cldnn::format::bx) {
                     return false;
                 }
 
                 // for now using just one set of params
                 // todo: randomize params
+
+                cldnn::layout input_layout(output_layout.data_type, { cldnn::format::bfyx,{ output_layout.size.batch[0] , output_layout.size.feature[0], 100, 100 } });
                 cldnn::primitive_id weights_id = id + "_weights";
                 cldnn::layout weights_layout(output_layout.data_type,
-                { cldnn::format::bfyx,{ output_layout.size.feature[0], output_layout.size.feature[0], 128, 128 } });
+                { cldnn::format::bfyx,{ output_layout.size.feature[0], input_layout.size.feature[0], input_layout.size.spatial[1], input_layout.size.spatial[0] } });
                 AddRandomMemory(topology, weights_id, weights_layout);
-                cldnn::primitive_id bias_id = id + "bias";
+                cldnn::primitive_id bias_id = id + "_bias";
                 cldnn::layout bias_layout(output_layout.data_type,
                 { cldnn::format::x,{ output_layout.size.feature[0] } });
                 AddRandomMemory(topology, bias_id, bias_layout);
 
                 cldnn::primitive_id input_id = topology_generator::CreateLayerId();
-                input_layouts.push_back({ input_id, { output_layout.data_type, {cldnn::format::bfyx, { output_layout.size.batch[0] , output_layout.size.feature[0], 128, 128 }}} });
+                input_layouts.push_back({ input_id, input_layout });
                 topology.add(
                     cldnn::fully_connected(id, input_id, { weights_id }, { bias_id }));
                 return true;
@@ -313,14 +323,10 @@ public:
         cldnn::build_options options;
         options.set_option(cldnn::build_option::optimize_data(true));
         cldnn::engine temp_engine;// using temp_engine since reusing the same one does not free all resources (network build becomes slower and slower)
-        cldnn::network network(temp_engine/*engine*/, *topology, options);
+        cldnn::network network(temp_engine, *topology, options);
         auto outputs = network.execute();
         EXPECT_NE(outputs.find(topology_generator::output_layer_id), outputs.end());
 
-        //todo compare outputs with ref implementation (since network is optimizing data, output layout isn't guaranteed to equal the one requested)
-        if (::testing::Test::HasFailure()) {
-            PrintTupleTo(GetParam(), &std::cout);
-        }
         delete topology;
     }
 
@@ -348,7 +354,7 @@ public:
     {
         // create vectors used to create topologies [max_layer_index, layer_index0, layer_index1,...]
         std::set<std::vector<unsigned>> all_generators;
-        static std::default_random_engine rng(1337);
+        static std::default_random_engine rng(tests::random_seed);
         std::uniform_int_distribution<unsigned> distribution(0, 0xFF);//assuming we won't exceed 256 total layer types
 
         const unsigned Initial_layer_types = 10;//don't change this - starting with this index ensures adding layers won't void previously generated tests
@@ -380,7 +386,10 @@ public:
         }
         ss << cldnn::data_type_traits::name(output_layout->data_type) << "_";
         ss << cldnn::format::traits(output_layout->size.format).order;
-
+        for (const auto& d : output_layout->size.raw) {
+            ss << "_" << d;
+        }
+        
         return ss.str();
     }
 protected:
@@ -409,9 +418,35 @@ std::vector<topology_test::topology_generator::topology_layer_type*> topology_te
 };
 const cldnn::primitive_id topology_test::topology_generator::output_layer_id("tg_output_layer");
 
+// void PrintTo(const topology_test& t, ::std::ostream* os) {
+//     PrintTupleTo(t.GetParam(), os);
+// }
+// void PrintTo(const topology_params& t, ::std::ostream* os) {
+//     PrintTupleTo(t, os);
+// }
+// ::std::ostream& operator<<(::std::ostream& os, const topology_test& t) {
+//     PrintTupleTo(t.GetParam(), &os);
+//     return os;
+// }
+// ::std::ostream& operator<<(::std::ostream& os, const topology_params& t) {
+//     PrintTupleTo(t, &os);
+//     return os;
+// }
+
 TEST_P(topology_test, random_topology)
 {
-    run_single_test();
+     try
+     {
+         run_single_test();
+         if (::testing::Test::HasFailure()) {
+             PrintTupleTo(GetParam(), &std::cout);
+         }
+     }
+     catch (...)
+     {
+         PrintTupleTo(GetParam(), &std::cout);
+         throw;
+     }
 }
 
 INSTANTIATE_TEST_CASE_P(TOPOLOGY,
