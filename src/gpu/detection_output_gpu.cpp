@@ -84,12 +84,12 @@ struct bounding_box
 	}
 };
 
-struct detection_output_gpu : primitive_impl
+struct detection_output_gpu : typed_primitive_impl<detection_output>
 {
-    const detection_output_inst& _outer;
+    const detection_output_node& outer;
 
-	detection_output_gpu(const detection_output_inst& outer)
-        : _outer(outer)
+	detection_output_gpu(const detection_output_node& outer)
+        : outer(outer)
     {}
 
 	static void decode_bounding_box(
@@ -240,7 +240,7 @@ struct detection_output_gpu : primitive_impl
 
 	void generate_detections(int num_of_images, cldnn::pointer<float> out_ptr, const std::vector<std::map<int, std::vector<bounding_box> >>& all_bboxes, const std::vector<std::map<int, std::vector<float> > >& confidences)
 	{
-		auto args = _outer.argument;
+		auto& args = *outer.get_primitive();
 		std::vector<std::map<int, std::vector<int> > > all_indices;
 		for (int image = 0; image < num_of_images; ++image)
 		{
@@ -362,10 +362,10 @@ struct detection_output_gpu : primitive_impl
 		}
 	}
 
-	void extract_locations_per_image(std::vector<std::map<int, std::vector<bounding_box> >>& locations, const int num_of_priors, const int num_loc_classes)
+	void extract_locations_per_image(detection_output_inst& instance, std::vector<std::map<int, std::vector<bounding_box> >>& locations, const int num_of_priors, const int num_loc_classes)
 	{
-		auto args = _outer.argument;
-		const auto& input_location = _outer.location_memory();
+		auto& args = *outer.get_primitive();
+		const auto& input_location = instance.location_memory();
 		auto location_ptr = input_location.pointer<float>();
 		const float* location_data = location_ptr.data();
 		const int num_of_images = (int)locations.size();
@@ -393,9 +393,9 @@ struct detection_output_gpu : primitive_impl
 		}
 	}
 
-	void extract_prior_boxes_and_variances(std::vector<bounding_box>& prior_bboxes, std::vector<std::vector<float> >& prior_variances)
+	void extract_prior_boxes_and_variances(detection_output_inst& instance, std::vector<bounding_box>& prior_bboxes, std::vector<std::vector<float> >& prior_variances)
 	{
-		const auto& input_prior_box = _outer.prior_box_memory();
+		const auto& input_prior_box = instance.prior_box_memory();
 		auto prior_box_ptr = input_prior_box.pointer<float>();
 		const float* prior_box_data = prior_box_ptr.data();
 		const int num_of_priors = (int)prior_bboxes.size();
@@ -418,11 +418,11 @@ struct detection_output_gpu : primitive_impl
 		}
 	}
 
-	void extract_confidences_per_image(std::vector<std::map<int, std::vector<float> > >& confidences, const int num_of_priors)
+	void extract_confidences_per_image(detection_output_inst& instance, std::vector<std::map<int, std::vector<float> > >& confidences, const int num_of_priors)
 	{
-		auto args = _outer.argument;
+		auto args = *outer.get_primitive();
 		const int num_of_images = (int)confidences.size();
-		const auto& input_confidence = _outer.confidence_memory();
+		const auto& input_confidence = instance.confidence_memory();
 		auto confidence_ptr = input_confidence.pointer<float>();
 		const float* confidence_data = confidence_ptr.data();
 		for (int image = 0; image < num_of_images; ++image)
@@ -439,24 +439,24 @@ struct detection_output_gpu : primitive_impl
 		}
 	}
 
-	void prepare_data(std::vector<std::map<int, std::vector<bounding_box> >> &bboxes, std::vector<std::map<int, std::vector<float> > >& confidences)
+	void prepare_data(detection_output_inst& instance, std::vector<std::map<int, std::vector<bounding_box>>> &bboxes, std::vector<std::map<int, std::vector<float> > >& confidences)
 	{
 		assert(bboxes.size() == confidences.size());
 
-		auto args = _outer.argument;
+		auto& args = *outer.get_primitive();
 
 		const int num_of_images = (int)bboxes.size();
-		const int num_of_priors = _outer.prior_box_memory().get_layout().size.spatial[1] / PRIOR_BOX_SIZE;
+		const int num_of_priors = instance.prior_box_memory().get_layout().size.spatial[1] / PRIOR_BOX_SIZE;
 		const int num_loc_classes = args.share_location ? 1 : args.num_classes;
 
 		// Extract locations per image.
 		std::vector<std::map<int, std::vector<bounding_box> >> locations(num_of_images); // Per image : label -> bounding boxes.
-		extract_locations_per_image(locations, num_of_priors, num_loc_classes);
+		extract_locations_per_image(instance, locations, num_of_priors, num_loc_classes);
 
 		// Extract prior boxes - same within a batch.
 		std::vector<bounding_box> prior_bboxes(num_of_priors); // Prior-Boxes (identical for all images since we assume all images in a batch are of same dimension).
 		std::vector<std::vector<float> > prior_variances(num_of_priors); // Variances per prior-box (identical for all images since we assume all images in a batch are of same dimension).
-		extract_prior_boxes_and_variances(prior_bboxes, prior_variances);
+		extract_prior_boxes_and_variances(instance, prior_bboxes, prior_variances);
 
 		// Create the decoded bounding boxes according to locations predictions and prior-boxes. 
 		for (int image = 0; image < num_of_images; ++image)
@@ -486,32 +486,32 @@ struct detection_output_gpu : primitive_impl
 		}
 
 		// Extract confidences per image.
-		extract_confidences_per_image(confidences, num_of_priors);
+		extract_confidences_per_image(instance, confidences, num_of_priors);
 	}
 
-    cldnn::refcounted_obj_ptr<cldnn::event_impl> execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events) override
+    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, detection_output_inst& instance) override
     {
 		for (auto& a : events) 
 		{
 			a->wait();
 		}
 
-		const int num_of_images = _outer.location_memory().get_layout().size.batch[0]; //batch size
+		const int num_of_images = instance.location_memory().get_layout().size.batch[0]; //batch size
 		
 		std::vector<std::map<int, std::vector<bounding_box> >> bboxes(num_of_images); // Per image : label -> decoded bounding boxes.
 		std::vector<std::map<int, std::vector<float> > > confidences(num_of_images); // Per image : class -> confidences per bounding box.
 
-		prepare_data(bboxes, confidences);
+		prepare_data(instance, bboxes, confidences);
 
-		generate_detections(num_of_images, _outer.output_memory().pointer<float>(), bboxes, confidences);
+		generate_detections(num_of_images, instance.output_memory().pointer<float>(), bboxes, confidences);
 
-		event_impl* ev = _outer.get_network().get_engine().get()->create_user_event();
+		event_impl* ev = instance.get_network().get_engine().get()->create_user_event();
 		ev->set();
 
 		return ev;
     }
 
-    static primitive_impl *create(detection_output_inst &arg)
+    static primitive_impl* create(const detection_output_node& arg)
 	{
         return new detection_output_gpu(arg);
     }
@@ -519,12 +519,11 @@ struct detection_output_gpu : primitive_impl
 
 namespace
 {
-
     struct attach
     {
         attach()
         {
-            implementation_map<detection_output_inst>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), detection_output_gpu::create);
+            implementation_map<detection_output>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), detection_output_gpu::create);
         }
 
         ~attach()

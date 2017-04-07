@@ -272,7 +272,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         if (!engine_info.supports_fp16 && (input_use_half || output_use_half))
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        if (outer.input().at(0)->non_padded_output_layout().count() != outer.non_padded_output_layout().count())
+        if (outer.input().get_output_layout().count() != outer.get_output_layout().count())
         {
             throw std::runtime_error("Input/output elements numbers mismatch!!");
         }

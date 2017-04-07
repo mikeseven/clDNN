@@ -26,22 +26,33 @@
 namespace cldnn
 {
 
-	template <>
-	class typed_primitive_inst<detection_output> : public typed_primitive_inst_base<detection_output>
-	{
-		using parent = typed_primitive_inst_base<detection_output>;
+template <>
+class typed_program_node<detection_output> : public typed_program_node_base<detection_output>
+{
+public:
+    auto& location() const { return get_dependency(0); }
+    auto& confidence() const { return get_dependency(1); }
+    auto& prior_box() const { return get_dependency(2); }
+};
 
-	public:
-		static layout calc_output_layout(const topology_map& topology_map, std::shared_ptr<const detection_output> desc);
+using detection_output_node = typed_program_node<detection_output>;
 
-	public:
-		typed_primitive_inst(network_impl& network, std::shared_ptr<const detection_output> desc);
+template <>
+class typed_primitive_inst<detection_output> : public typed_primitive_inst_base<detection_output>
+{
+	using parent = typed_primitive_inst_base<detection_output>;
 
-		const memory& location_memory() const { return dep_memory(0); }
-		const memory& confidence_memory() const { return dep_memory(1); }
-		const memory& prior_box_memory() const { return dep_memory(2); }
-	};
+public:
+	static layout calc_output_layout(detection_output_node const& node);
 
-	using detection_output_inst = typed_primitive_inst<detection_output>;
+public:
+	typed_primitive_inst(network_impl& network, detection_output_node const& node);
+
+	const memory& location_memory() const { return dep_memory(0); }
+	const memory& confidence_memory() const { return dep_memory(1); }
+	const memory& prior_box_memory() const { return dep_memory(2); }
+};
+
+using detection_output_inst = typed_primitive_inst<detection_output>;
 
 }
