@@ -29,6 +29,12 @@
 namespace cldnn
 {
 
+/// @addtogroup cpp_api C++ API
+/// @{
+
+/// @defgroup cpp_network Network Execution
+/// @{
+
 /// @brief Represents network output returned by @ref network::get_output().
 struct network_output
 {
