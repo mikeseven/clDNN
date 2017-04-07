@@ -71,11 +71,22 @@ T exception_handler(cldnn_status default_error, cldnn_status* status, const T& d
         throw;
 #endif
     }
-    catch (std::exception& err)
+    catch (const std::exception& err)
     {
         if (status)
             *status = default_error;
         cldnn::last_err::instance().set_last_exception(err);
+
+#ifndef NDEBUG
+        static_cast<void>(default_result);
+        throw;
+#endif
+    }
+    catch (...)
+    {
+        if (status)
+            *status = default_error;
+        cldnn::last_err::instance().set_last_error_message("error unknown");
 
 #ifndef NDEBUG
         static_cast<void>(default_result);
@@ -101,7 +112,19 @@ inline void exception_handler(cldnn_status default_error, cldnn_status* status, 
     {
         if (status)
           *status = err.status();
+        cldnn::last_err::instance().set_last_exception(err);
 #ifndef NDEBUG
+        throw;
+#endif
+    }
+    catch (const std::exception& err)
+    {
+        if (status)
+            *status = default_error;
+        cldnn::last_err::instance().set_last_exception(err);
+
+#ifndef NDEBUG
+        static_cast<void>(default_result);
         throw;
 #endif
     }
@@ -109,6 +132,7 @@ inline void exception_handler(cldnn_status default_error, cldnn_status* status, 
     {
         if (status)
             *status = default_error;
+        cldnn::last_err::instance().set_last_error_message("error unknown");
 #ifndef NDEBUG
         throw;
 #endif

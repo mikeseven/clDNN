@@ -30,6 +30,26 @@ namespace cldnn
 
 /// @brief Performs forward fully connected layer (inner product).
 /// Also supports built-in Relu @CLDNN_PRIMITIVE_DESC{activation} available by setting it in arguments.
+/// @notes 
+/// - Equation: Input[F x Y x F] x Output(X) == Weights(B x F x X x F) has to be fulfilled
+/// - Bias has to be linear data [1,1,1,X], where X is equal to number of outputs.
+
+/// <table>
+/// <caption id = "multi_row">Format support</caption>
+///        <tr><th>Data type               <th>activation format       <th>weights format
+///        <tr><td rowspan="7">F32         <td rowspan="4">bfyx        <td>yxfb
+///        <tr>                                                        <td>fyxb
+///        <tr>                                                        <td>bs_xs_xsv8_bsv8
+///        <tr>                                                        <td>bs_x_bsv16
+///        <tr>                            <td rowspan="3">yxfb        <td>bfyx
+///        <tr>                                                        <td>yxfb
+///        <tr>                                                        <td>bs_xs_xsv8_bsv8
+///        <tr><td rowspan="4">F16         <td rowspan="3">bfyx        <td>yxfb
+///        <tr>                                                        <td>fyxb
+///        <tr>                                                        <td>bs_x_bsv16
+///        <tr>                            <td >yxfb                   <td>bfyx
+/// </table>
+
 struct fully_connected : public primitive_base<fully_connected, CLDNN_PRIMITIVE_DESC(fully_connected)>
 {
     CLDNN_DECLATE_PRIMITIVE(fully_connected)
