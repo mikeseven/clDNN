@@ -34,7 +34,7 @@ struct topology
 {
     /// @brief Constructs empty network topology.
     topology()
-        : _impl(check_status<cldnn_topology>("failed to create topology", [&](status_t* status) { return cldnn_create_topology(status); }))
+        : _impl(check_status<cldnn_topology>("failed to create topology", cldnn_create_topology))
     {}
 
     /// @brief Constructs topology containing primitives provided in argument(s).
