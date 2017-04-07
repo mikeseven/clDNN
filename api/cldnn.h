@@ -427,10 +427,6 @@ CLDNN_API         cldnn_engine cldnn_get_network_engine(cldnn_network network, c
 /// @brief Returns @p program associated with the @p network.
 CLDNN_API        cldnn_program cldnn_get_network_program(cldnn_network network, cldnn_status* status);
 
-/// @brief Returns the actual internal @p topology of the @p network.
-/// @details Due to internal optiomization during network build process, topology returned by this function is differ
-/// than the topology passed to cldnn_build_network().
-
 /// @brief Returns names of network outputs.
 /// @details Function fills user provided buffer by primitive names. Each name is followed by '\0'.
 /// Empty name "\0\0" means end of data.
