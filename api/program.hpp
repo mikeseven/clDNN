@@ -425,5 +425,6 @@ private:
         check_status<void>("retain topology failed", [=](status_t* status) { cldnn_release_program(_impl, status); });
     }
 };
-
+/// @}
+/// @}
 }
