@@ -20,6 +20,7 @@
 
 #include "api_impl.h"
 #include "engine_impl.h"
+#include "refcounted_obj.h"
 
 namespace cldnn
 {

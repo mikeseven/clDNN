@@ -275,7 +275,7 @@ cldnn_network cldnn_build_network(cldnn_engine engine, cldnn_topology topology, 
         return nullptr;
 
     cldnn_network network = cldnn_allocate_network(program, status);
-    //TODO: release program before returning network?
+    cldnn_release_program(program, nullptr);
     return network;
 }
 void cldnn_retain_network(cldnn_network network, cldnn_status* status)
