@@ -193,7 +193,7 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
             gpu::make_jit_constant("UNIT_VAL_ZERO",        data.fp16_unit_used ? "0.0h" : "0.0f"),
             gpu::make_jit_constant("RELU",                 outer.get_primitive()->with_activation),
             gpu::make_jit_constant("NEGATIVE_SLOPE",       outer.get_primitive()->activation_negative_slope),
-            gpu::make_jit_constant("BIAS_TERM",             static_cast<int>(outer.bias_term()))
+            gpu::make_jit_constant("BIAS_TERM",             static_cast<int>(!outer.get_primitive()->bias.empty()))
         };
 
         if (data.kernel_name == kernel_name_xb_xb_block_fp16)
@@ -245,9 +245,8 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
 
         if (kd.reorder.empty())
         {
-            if (_outer.bias_term())
+            if (instance.bias_term())
             {
-                const auto& bias_mem = _outer.bias_memory();
                 return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
                 ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } }, 
                     events,
@@ -265,6 +264,7 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
                     instance.output_memory(),
                     instance.weights_memory());
             }
+        }
 
         auto network = kd.reorder[0];
         network->set_input_data("input", api_cast(instance.input_memory().get()));
@@ -272,9 +272,8 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
         auto output_id = network->get_output_ids()[0];
         auto reorder_output = network->get_primitive(output_id)->output_memory();
 
-        if (_outer.bias_term())
+        if (instance.bias_term())
         {
-            const auto& bias_mem = _outer.bias_memory();
             return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem>
             ({ { kd.gws0, kd.gws1 },{ kd.lws0, kd.lws1 } },
                { network->get_primitive_event(output_id) },
