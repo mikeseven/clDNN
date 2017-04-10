@@ -124,7 +124,6 @@ inline void exception_handler(cldnn_status default_error, cldnn_status* status, 
         cldnn::last_err::instance().set_last_exception(err);
 
 #ifndef NDEBUG
-        static_cast<void>(default_result);
         throw;
 #endif
     }
