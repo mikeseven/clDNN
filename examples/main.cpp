@@ -180,6 +180,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, microbench.")
         ("run_single_layer", bpo::value<std::string>()->value_name("<layer_name>"),
             "Runs only a specified layer from topology")
+        ("run_until_primitive", bpo::value<std::string>()->value_name("<primitive_name>"),
+            "Runs topology until specified primitive.")
         ("engine", bpo::value<cldnn::engine_types>()->value_name("<eng-type>")->default_value(cldnn::engine_types::ocl, "gpu"),
             "Type of an engine used for classification.\nIt can be one of:\n  \treference, gpu.")
         ("dump_hidden_layers", bpo::bool_switch(),
@@ -401,6 +403,12 @@ int main(int argc, char* argv[])
         {
             run_single_layer = parsed_args["run_single_layer"].as<std::string>();
         }
+
+        std::string run_until_primitive = "";
+        if (parsed_args.count("run_until_primitive"))
+        {
+            run_until_primitive = parsed_args["run_until_primitive"].as<std::string>();
+        }
         ep.topology_name = parsed_args["model"].as<std::string>();
         ep.batch = parsed_args["batch"].as<std::uint32_t>();
         ep.meaningful_kernels_names = parsed_args["meaningful_names"].as<bool>();
@@ -408,6 +416,7 @@ int main(int argc, char* argv[])
         ep.optimize_weights = parsed_args["optimize_weights"].as<bool>();
         ep.use_half = parsed_args["use_half"].as<bool>();
         ep.run_single_layer = run_single_layer;
+        ep.run_until_primitive_name = run_until_primitive;
         ep.dump_hidden_layers = parsed_args["dump_hidden_layers"].as<bool>();
         ep.dump_layer_name = dump_layer;
         ep.dump_single_batch = parsed_args.count("dump_batch") != 0;

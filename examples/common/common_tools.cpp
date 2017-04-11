@@ -368,10 +368,27 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     options.set_option(cldnn::build_option::profiling(ep.profiling));
     options.set_option(cldnn::build_option::debug(ep.dump_hidden_layers || ep.profiling));
 
-    std::vector<cldnn::primitive_id> outputs{ "output" };
-    if (!ep.dump_layer_name.empty())  outputs.push_back(ep.dump_layer_name);
-    if (!ep.run_single_layer.empty()) outputs.push_back(ep.run_single_layer);
+
+    std::vector<cldnn::primitive_id> outputs(0);
+    if (ep.run_until_primitive_name.empty())
+    {
+        outputs.push_back("output");
+        if (!ep.dump_layer_name.empty())  outputs.push_back(ep.dump_layer_name);
+        if (!ep.run_single_layer.empty()) outputs.push_back(ep.run_single_layer);
+    }
+    else
+    {
+        outputs.push_back(ep.run_until_primitive_name); //set the user custom primitive as output (works only while not in debug moge, because in debug moge every primitive is an output)
+        if (!ep.dump_layer_name.empty())
+        {
+            if(ep.run_until_primitive_name != ep.dump_layer_name)
+                throw std::runtime_error("Dump layer should be set to " + ep.run_until_primitive_name);
+            else
+                outputs.push_back(ep.dump_layer_name);
+        }  
+    }
     options.set_option(cldnn::build_option::outputs(outputs));
+
     try 
     {
         cldnn::program program(engine, topology, options);
@@ -470,7 +487,9 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     auto scheduling_time(timer_execution.uptime());
 
     //OCL buffers mapping blocks until all primitives are completed
-    output = outputs.at("output").get_memory();
+    std::string output_primitve_id = ep.run_until_primitive_name.empty() ? "output" :  ep.run_until_primitive_name;
+    output = outputs.at(output_primitve_id).get_memory();
+
     auto execution_time(timer_execution.uptime());
 
     if (log_energy)
@@ -509,7 +528,7 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     }
     else
     {
-        // We do not log results for microbench
+        // We do not log results
         if (ep.topology_name != "microbench")
         {
             instrumentation::logger::log_memory_to_file(output, "final_result");
@@ -630,8 +649,11 @@ void run_topology(const execution_params &ep)
             auto time = execute_topology(network, ep, energyLib, output);
 
             auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-
-            output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), images_in_batch, ep.print_type);
+           
+            if (ep.run_until_primitive_name.empty())
+                output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), images_in_batch, ep.print_type);
+            else
+                std::cout << "Finished at user custom primtive: " << ep.run_until_primitive_name << std::endl;
 
             if (time_in_sec != 0.0)
             {
