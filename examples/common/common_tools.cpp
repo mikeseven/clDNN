@@ -518,7 +518,10 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
         auto it = outputs.find(ep.dump_layer_name);
         if(it != std::end(outputs))
         {
-            instrumentation::logger::log_memory_to_file(it->second.get_memory(), it->first, ep.dump_single_batch, ep.dump_batch_id, ep.dump_single_feature, ep.dump_feature_id);
+            if (!ep.dump_weights)
+                instrumentation::logger::log_memory_to_file(it->second.get_memory(), it->first, ep.dump_single_batch, ep.dump_batch_id, ep.dump_single_feature, ep.dump_feature_id);
+            else
+                instrumentation::logger::log_weights_to_file(it->second.get_memory(), it->first);
         }
         else
         {

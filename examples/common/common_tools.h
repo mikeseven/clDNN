@@ -135,6 +135,7 @@ struct execution_params {
     // for dumping
     bool        dump_hidden_layers; // dump all
     std::string dump_layer_name;    // dump only this specific layer
+    bool        dump_weights;       // true when dumping weights: <primitive_name>.nnd
     bool        dump_single_batch;
     uint32_t    dump_batch_id;
     bool        dump_single_feature;

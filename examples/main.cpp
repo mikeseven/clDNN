@@ -185,7 +185,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("dump_hidden_layers", bpo::bool_switch(),
             "Dump results from hidden layers of network to files.")
         ("dump_layer", bpo::value<std::string>()->value_name("<layer_name>"),
-            "Dump results of specified network layer to files.")
+            "Dump results of specified network layer (or weights of the layer <name>_weights.nnd) to files.")
         ("dump_batch", bpo::value<std::uint32_t>()->value_name("<batch-id>"),
             "Dump results only for this specified batch.")
         ("dump_feature", bpo::value<std::uint32_t>()->value_name("<feature-id>"),
@@ -394,6 +394,10 @@ int main(int argc, char* argv[])
         if (parsed_args.count("dump_layer"))
         {
             dump_layer = parsed_args["dump_layer"].as<std::string>();
+            if (dump_layer.find("_weights.nnd"))
+                ep.dump_weights = true;
+            else
+                ep.dump_weights = false;
         }
 
 
