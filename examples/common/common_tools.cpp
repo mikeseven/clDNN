@@ -374,15 +374,14 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     {
         outputs.push_back("output");
         if (!ep.dump_layer_name.empty())  outputs.push_back(ep.dump_layer_name);
-        if (!ep.run_single_layer.empty()) outputs.push_back(ep.run_single_layer);
     }
     else
     {
-        outputs.push_back(ep.run_until_primitive_name); //set the user custom primitive as output (works only while not in debug moge, because in debug moge every primitive is an output)
+        outputs.push_back(ep.run_until_primitive_name); //set the user custom primitive as output (works only while not in debug moge, because in debug mode every primitive is an output)
         if (!ep.dump_layer_name.empty())
         {
-            if(ep.run_until_primitive_name != ep.dump_layer_name)
-                throw std::runtime_error("Dump layer should be set to " + ep.run_until_primitive_name);
+            if(ep.dump_hidden_layers)
+                throw std::runtime_error("ERROR: Can't dump hidden layers when custom output is set.");
             else
                 outputs.push_back(ep.dump_layer_name);
         }  
@@ -528,7 +527,7 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     }
     else
     {
-        // We do not log results
+        // We do not log results for microbench.
         if (ep.topology_name != "microbench")
         {
             instrumentation::logger::log_memory_to_file(output, "final_result");
