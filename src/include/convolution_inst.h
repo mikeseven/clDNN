@@ -45,6 +45,14 @@ public:
 
         return get_dependency(1 + typed_desc()->weights.size() + idx);
     }
+
+    bool bias_term() const
+    {
+        if (get_primitive()->bias.size() != 0)
+            return true;
+        else
+            return false;
+    }
 };
 
 using convolution_node = typed_program_node<convolution>;
