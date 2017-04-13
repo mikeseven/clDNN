@@ -95,29 +95,31 @@
 
 #include "cldnn.h"
 
-namespace {
-// There is no portable half precision floating point support.
-// Using wrapped integral type with the same size and alignment restrictions.
-class half_impl
-{
-public:
-    half_impl() = default;
-    explicit half_impl(uint16_t data) : _data(data) {}
-    operator uint16_t() const { return _data; }
+namespace cldnn {
+    // There is no portable half precision floating point support.
+    // Using wrapped integral type with the same size and alignment restrictions.
+    class half_impl
+    {
+    public:
+        half_impl() = default;
+        template <typename T, typename = typename std::enable_if<!std::is_floating_point<T>::value>::type>
+        explicit half_impl(T data) : _data(data) {}
 
-private:
-    uint16_t _data;
-};
+        operator uint16_t() const { return _data; }
+        CLDNN_API half_impl(float value);
+
+    private:
+        uint16_t _data;
+    };
 }
 // Use complete implementation if necessary.
 #if defined HALF_HALF_HPP
 typedef half half_t;
 #else
-typedef half_impl half_t;
+typedef cldnn::half_impl half_t;
 #endif
 
 namespace cldnn {
-
 /// @addtogroup cpp_api C++ API
 /// @{
 

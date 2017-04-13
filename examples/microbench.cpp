@@ -17,12 +17,35 @@
 #include "common/common_tools.h"
 #include "file.h"
 
+
 #include <string>
 #include <api/primitives/input_layout.hpp>
 #include <api/primitives/convolution.hpp>
 #include <api/primitives/data.hpp>
 
 using namespace cldnn;
+
+
+typedef enum
+{
+    zero = 0,
+    one,
+    zero_to_nine, 
+} filler_type;
+
+template<typename T>
+void fill_memory(const memory& memory, filler_type fill)
+{
+
+    auto mem_ptr = memory.pointer<T>();
+    float val = (fill == filler_type::zero) ? 0.0f : 1.0f;
+    for (auto& it : mem_ptr)
+    {
+        if (fill == zero_to_nine)
+            val += fmod(val + 1.0f, 10.0f);
+        it = T(val);
+    }
+}
 
 void test_conv(
     const engine& engine,
@@ -49,6 +72,20 @@ void test_conv(
     auto weights = memory::allocate(engine, { data_type, weight_size });
     auto bias = memory::allocate(engine, { data_type, bias_size });
 
+    // to get different type of weights, biases and input values changed here. Feel free to add new type of fillers
+    auto fill_with = filler_type::zero;
+    if (!use_half)
+    {
+        fill_memory<float>(input, fill_with);
+        fill_memory<float>(weights, fill_with);
+        fill_memory<float>(bias, fill_with);
+    }
+    else
+    {
+        fill_memory<half_t>(input, fill_with);
+        fill_memory<half_t>(weights, fill_with);
+        fill_memory<half_t>(bias, fill_with);
+    }
     auto conv = convolution(
         id,
         id + "_input",
@@ -99,10 +136,10 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         topology,
         "conv2_3x3",
         batch_size,
-        56, 56, 64, // input: x,y,f
-        { format::yx,{ -1, -1 } }, // padding
-        { format::yx,{ 1, 1 } }, // stride
-        192, // output feature maps num
+        56, 56, 384, // input: x,y,f
+        { format::yx,{ 0, 0 } }, // padding
+        { format::yx,{ 2, 2 } }, // stride
+        384, // output feature maps num
         3, 3, // kernel size
         use_half
     );

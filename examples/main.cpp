@@ -355,30 +355,34 @@ int main(int argc, char* argv[])
             // Determine weights directory (either based on executable directory - if not specified, or
             // relative to current working directory or absolute - if specified).
             auto weights_dir = std::string(); 
-            if (parsed_args.count("weights"))
-                weights_dir = bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string();
-            else
-            {
-                weights_dir = join_path(exec_info->dir(), parsed_args["model"].as<std::string>());
-                if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
-                    weights_dir = join_path(exec_info->dir(), "weights");
-            }
-
-            // Validate weights directory.
-            if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
+            
+            if (!microbench) // don't need weights for microbench.
             {
                 if (parsed_args.count("weights"))
-                {
-                    std::cerr << "ERROR: specified network weights path (\"" << weights_dir
-                        << "\") does not exist or does not point to directory (--weights option invald)!!!" << std::endl;
-                }
+                    weights_dir = bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string();
                 else
                 {
-                    std::cerr << "ERROR: could not find default network weights path for selected topology. Neither '"
-                        << parsed_args["model"].as<std::string>() << "' nor 'weights' folder exist!!!" << std::endl;
+                    weights_dir = join_path(exec_info->dir(), parsed_args["model"].as<std::string>());
+                    if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
+                        weights_dir = join_path(exec_info->dir(), "weights");
                 }
 
-                return 1;
+                // Validate weights directory.
+                if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
+                {
+                    if (parsed_args.count("weights"))
+                    {
+                        std::cerr << "ERROR: specified network weights path (\"" << weights_dir
+                            << "\") does not exist or does not point to directory (--weights option invald)!!!" << std::endl;
+                    }
+                    else
+                    {
+                        std::cerr << "ERROR: could not find default network weights path for selected topology. Neither '"
+                            << parsed_args["model"].as<std::string>() << "' nor 'weights' folder exist!!!" << std::endl;
+                    }
+
+                    return 1;
+                }
             }
 
             ep.input_dir = input_dir;
