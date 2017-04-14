@@ -164,6 +164,8 @@ def main(args):
 
                         # Only add the count to the total if it's > 0.  Count will be -1 if there was an error fetching the count.
                         if count > 0:
+                            if 'New Critical Issues' or 'Total Critical Issues' in issueType["name"]:
+                                status = -3
                             issueTypeTotals[architecture][issueType["name"]] += count
 
                             # Also log summary details
@@ -289,5 +291,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     success = main(args)
-    print('\nExiting with status ' + str(success))
+    if success == -3:
+        print('\nExiting with status ' + str(success) + ' !!!CRITICALS FOUND!!!')
+    else:
+        print('\nExiting with status ' + str(success))
     sys.exit(success)
