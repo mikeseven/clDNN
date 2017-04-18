@@ -478,7 +478,7 @@ CLDNN_API cldnn_engine cldnn_get_memory_engine(cldnn_memory memory, cldnn_status
 /// @returns 16bit half_t
 CLDNN_API uint16_t cldnn_float_to_half(float,cldnn_status*);
 /// @brief converts  half_t(f16 bit) to float(32 bit) 
-/// @returns 16bit half_t
+/// @returns 32bit float
 CLDNN_API float cldnn_half_to_float(uint16_t, cldnn_status*);
 
 /// @}
