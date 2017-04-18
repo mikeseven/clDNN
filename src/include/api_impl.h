@@ -49,6 +49,10 @@ namespace cldnn {
         std::string _msg;
         last_err() :_msg("Operation succeed") {}
     };
+
+    // float <--> half convertors
+    float half_to_float(uint16_t value);
+    uint16_t float_to_half(float value);
 }
 
 
@@ -139,6 +143,3 @@ inline void exception_handler(cldnn_status default_error, cldnn_status* status, 
 #endif
     }
 }
-
-float half_to_float(uint16_t value);
-uint16_t float_to_half(float value);

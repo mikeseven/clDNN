@@ -106,8 +106,21 @@ namespace cldnn {
         explicit half_impl(T data) : _data(data) {}
 
         operator uint16_t() const { return _data; }
-        CLDNN_API operator float() const;
-        CLDNN_API explicit half_impl(float value);
+        operator float() const
+        {
+           cldnn_status status = CLDNN_SUCCESS;
+           auto value = cldnn_half_to_float(_data, &status);
+           if (status != CLDNN_SUCCESS)
+               throw std::runtime_error("Conversion from half failed");
+           return value;
+        }
+        explicit half_impl(float value)
+        {
+            cldnn_status status = CLDNN_SUCCESS;
+            _data = cldnn_float_to_half(value, &status);
+            if (status != CLDNN_SUCCESS)
+                throw std::runtime_error("Conversion to half failed");
+        }
 
     private:
         uint16_t _data;

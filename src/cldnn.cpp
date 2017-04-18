@@ -510,7 +510,7 @@ CLDNN_API uint16_t cldnn_float_to_half(float value, cldnn_status* status)
 {
     return exception_handler<uint16_t>(CLDNN_ERROR, status, 0, [&]()
     {
-        return float_to_half(value);
+        return cldnn::float_to_half(value);
     });
 }
 
@@ -518,7 +518,7 @@ CLDNN_API float cldnn_half_to_float(uint16_t value, cldnn_status* status)
 {
     return exception_handler<float>(CLDNN_ERROR, status, 0.0f, [&]()
     {
-        return half_to_float(value);
+        return cldnn::half_to_float(value);
     });
 }
 
