@@ -106,6 +106,7 @@ namespace cldnn {
         explicit half_impl(T data) : _data(data) {}
 
         operator uint16_t() const { return _data; }
+        CLDNN_API operator float() const;
         CLDNN_API explicit half_impl(float value);
 
     private:

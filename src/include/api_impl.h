@@ -139,3 +139,6 @@ inline void exception_handler(cldnn_status default_error, cldnn_status* status, 
 #endif
     }
 }
+
+float half_to_float(uint16_t value);
+uint16_t float_to_half(float value);

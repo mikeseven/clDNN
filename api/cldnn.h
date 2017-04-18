@@ -474,6 +474,13 @@ CLDNN_API cldnn_layout cldnn_get_memory_layout(cldnn_memory memory, cldnn_status
 /// @brief Returns reference to the engine associated with memory object.
 /// @returns The engine associated with memory object. Or NULL if memory was attached to user-allocated buffer.
 CLDNN_API cldnn_engine cldnn_get_memory_engine(cldnn_memory memory, cldnn_status* status);
+/// @brief converts float(32 bit) to half_t(fp16 bit)
+/// @returns 16bit half_t
+CLDNN_API uint16_t cldnn_float_to_half(float,cldnn_status*);
+/// @brief converts  half_t(f16 bit) to float(32 bit) 
+/// @returns 16bit half_t
+CLDNN_API float cldnn_half_to_float(uint16_t, cldnn_status*);
+
 /// @}
 
 /// @addtogroup c_error
