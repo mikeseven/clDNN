@@ -38,7 +38,8 @@ layout deconvolution_inst::calc_output_layout(deconvolution_node const& node)
 
     //compute output_dim <= stride * (input_size - 1) + kernel_size + 2 * input_offset;
     auto kernel_xy = weights_layout.size.spatial;
-    assert(kernel_xy.size() == 2);
+    if (kernel_xy.size() != 2) 
+        throw std::runtime_error("Weights have to have 2 dimensions in spatial domain.");
 
     auto output_spatial_x = strd.spatial[0] * (input_layout.size.spatial[0] - 1) + kernel_xy[0] + 2 * input_offset.spatial[0];
     auto output_spatial_y = strd.spatial[1] * (input_layout.size.spatial[1] - 1) + kernel_xy[1] + 2 * input_offset.spatial[1];
@@ -62,9 +63,9 @@ deconvolution_inst::typed_primitive_inst(network_impl& network, deconvolution_no
     auto output_inst = output_memory().get_layout();
 
     if (input_inst.size.raw.size() != output_inst.size.raw.size())
-        throw std::runtime_error("input/output number of dimension does not match.");
+        throw std::runtime_error("Input/output number of dimension does not match.");
     if (stride.raw.size() != output_inst.size.raw.size())
-        throw std::runtime_error("stride/output number of dimension does not match.");
+        throw std::runtime_error("Stride/output number of dimension does not match.");
 
     auto split = argument.split();
     for (decltype(split) j = 0; j < split; j++)
@@ -77,28 +78,29 @@ deconvolution_inst::typed_primitive_inst(network_impl& network, deconvolution_no
         auto output_offset = argument.output_offset().transform(output_inst.size.format, 0);
 
         if (bias_inst.size.raw.size() != 3)
-            throw std::runtime_error("biases isn't 1D vector."); // b=1, f=1
-
+            throw std::runtime_error("Biases isn't 1D vector."); // b=1, f=1
         if (bias_inst.size.spatial[0] != output_size.feature[0] / split)
-            throw std::runtime_error("biases/output feature maps number does not match.");
-
+            throw std::runtime_error("Biases/output feature maps number does not match.");
         if (argument.padding_filling_value() != 0.0f)
-            throw std::runtime_error("unknown padding mode.");
-
+            throw std::runtime_error("Wnknown padding mode.");
         if (input_offset.raw.size() != input_inst.size.raw.size())
-            throw std::runtime_error("input offset/input number of dimension does not match.");
-
-        assert(1 == output_size.feature.size());
-        assert(1 == output_size.batch.size());
-        assert(2 == filter_inst.size.feature.size());
-        assert(1 == filter_inst.size.batch.size());
-        assert(1 == filter_inst.size.batch[0]);
+            throw std::runtime_error("Input offset/input number of dimension does not match.");
+        if (1 != output_size.feature.size())
+            throw std::runtime_error("Only one-dimensional features are supported");
+        if (1 != output_size.batch.size())
+            throw std::runtime_error("Only one-dimensional batch size is supported");
+        if (2 != filter_inst.size.feature.size())
+            throw std::runtime_error("Filter has to have 2 dimensions in spatial domain.");
+        if (1 != filter_inst.size.batch.size())
+            throw std::runtime_error("Only one-dimensional features for filter are supported");
+        if (1 != filter_inst.size.batch[0])
+            throw std::runtime_error("Batch size for filter has to equal 1");
 
         if (output_size.feature[0] + output_offset.feature[0] > output_inst.size.feature[0]
             || (output_size.feature[0] / split) > filter_inst.size.feature[0])
-            throw std::runtime_error("weights/output feature maps number does not match.");
+            throw std::runtime_error("Weights/output feature maps number does not match.");
         if ((input_inst.size.feature[0] - input_offset.feature[0]) / split < filter_inst.size.feature[1])
-            throw std::runtime_error("weights/input feature maps number does not match.");
+            throw std::runtime_error("Weights/input feature maps number does not match.");
     }
 }
 }

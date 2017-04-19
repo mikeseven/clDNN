@@ -31,14 +31,21 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
     auto desc = node.get_primitive();
 
     auto input_layout = node.input().get_output_layout();
-    assert(input_layout.size.spatial.size() == 2);
+
+    if (input_layout.size.format != format::bfyx && input_layout.size.format != format::yxfb)
+        throw std::invalid_argument("Pooling supports yxfb and bfyx formats only");
+    if (input_layout.size.spatial.size() != 2)
+        throw std::invalid_argument("One dimensional spatials aren't supported by pooling");
+
     auto input_offsets = desc->input_offset().transform(input_layout.size.format, 0).sizes();
     auto strides = desc->stride.transform(input_layout.size.format, 1).sizes();
     auto window_sizes = desc->size.transform(input_layout.size.format, 1).sizes();
     //TODO !!!implement correct output size calculation!!!
     auto output_sizes = input_layout.size.sizes();
     auto format_order = input_layout.size.format.order();
-    assert(output_sizes.size() == format_order.size());
+    if (output_sizes.size() != format_order.size())
+        throw std::invalid_argument("output and input format size mismatch");
+
     for (decltype(output_sizes.size()) i = 0; i < output_sizes.size(); i++)
     {
         if (format_traits::is_spatial_char(format_order[i]))
