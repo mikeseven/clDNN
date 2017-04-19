@@ -43,7 +43,7 @@ struct input_layout : public primitive_base<input_layout, CLDNN_PRIMITIVE_DESC(i
     /// @param id This primitive id.
     /// @param layout Defines layout for the data will be passed to network.
     input_layout(const primitive_id& id, const layout& layout)
-        :primitive_base(id, {}, padding(), padding())
+        :primitive_base(id, {}, padding())
         , layout(layout)
     {}
 

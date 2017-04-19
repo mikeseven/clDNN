@@ -70,8 +70,8 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
 
     static kernel_data set_default(const deconvolution_node& arg)
     {
-        const auto& input_layout = arg.input().get_padded_output_layout();  // input
-        const auto& output_size = arg.get_padded_output_layout().size; // output
+        const auto& input_layout = arg.input().get_output_layout();  // input
+        const auto& output_size = arg.get_output_layout().get_buffer_size(); // output
 
         auto split = arg.get_primitive()->split();
         auto batch_size = output_size.batch[0];
@@ -123,21 +123,19 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
 
     gpu::jit_constants get_jit_constants() const
     {
-        auto input_offset = outer.get_primitive()->input_offset().transform(input_layout.size.format, 0);
-        auto output_offset = outer.get_primitive()->output_offset().transform(output_layout.size.format, 0);
-        auto output_padding = outer.get_primitive()->output_padding;
+        auto input_offset = outer.get_primitive()->input_offset.transform(input_layout.size.format, 0);
+        auto output_padding = outer.get_output_layout().data_padding;
         auto split = outer.get_primitive()->split();
 
         auto input_size = input_layout.size;
         tensor stride(cldnn::format::bfyx, { 1, 1, outer.get_primitive()->stride.spatial[1], outer.get_primitive()->stride.spatial[0] });
-        padding input_padding = outer.input().get_primitive()->output_padding;
+        padding input_padding = outer.input().get_output_layout().data_padding;
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT",                     input_size),
             gpu::make_jit_constant("OUTPUT",                    output_layout.size),
             gpu::make_jit_constant("STRIDE",                    stride),
             gpu::make_jit_constant("INPUT_OFFSET",              input_offset),
-            gpu::make_jit_constant("OUTPUT_OFFSET",             output_offset),
             // TODO: Output limit is incorrect for following cases (1. primitive used as input for two different convolutions with different padding, 2. asymmetric padding). Need to be checked and corrected.
             gpu::make_jit_constant("OUTPUT_LIMIT",              output_layout.size.add(output_padding.lower_size()).add(output_padding.upper_size())),
             gpu::make_jit_constant("INPUT_PADDING",             input_padding),
@@ -165,7 +163,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
         auto& output_mem = instance.output_memory();
         auto& filter_mem = instance.weights_memory(0);
 
-        if (outer.get_primitive()->padding_filling_value() != 0.0f)
+        if (outer.get_output_layout().data_padding.filling_value() != 0.0f)
             throw std::invalid_argument("Unknown padding mode in convolution.");
 
         // Check whether all memory elements use the same unit type (FP16 or FP32).

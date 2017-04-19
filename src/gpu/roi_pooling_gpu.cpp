@@ -78,7 +78,7 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
         kd.fp16_unit_used = (input_dt == cldnn::data_types::f16);
 
         // Determine global work sizes.
-        kd.gws0 = outer.get_padded_output_layout().count();
+        kd.gws0 = outer.get_output_layout().get_buffer_size().count();
         kd.gws1 = 1;
         kd.gws2 = 1;
 
@@ -104,14 +104,14 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        const cldnn::tensor& input_size = outer.input().get_padded_output_layout().size;
+        const cldnn::tensor& input_size = outer.input().get_output_layout().get_buffer_size();
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("INPUT",             input_size),
             gpu::make_jit_constant("POOLED_HEIGHT",     outer.get_primitive()->pooled_height),
             gpu::make_jit_constant("POOLED_WIDTH",      outer.get_primitive()->pooled_width),
-            gpu::make_jit_constant("INPUT_PADDING",     outer.input().get_primitive()->output_padding),
-            gpu::make_jit_constant("OUTPUT_PADDING",    outer.get_primitive()->output_padding),
+            gpu::make_jit_constant("INPUT_PADDING",     outer.input().get_output_layout().data_padding),
+            gpu::make_jit_constant("OUTPUT_PADDING",    outer.get_output_layout().data_padding),
             gpu::make_jit_constant("SPATIAL_SCALE",     outer.get_primitive()->spatial_scale),
             gpu::make_jit_constant("FP16_SUPPORTED",    static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",    static_cast<int>(data.fp16_unit_used)),
@@ -138,7 +138,7 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
         auto input_arg  = arg.input().get_output_layout();
         auto output_arg = arg.get_output_layout();
 
-        const auto padding_filling_value = arg.get_primitive()->padding_filling_value();
+        const auto padding_filling_value = arg.get_output_layout().data_padding.filling_value();
 
         if (padding_filling_value != 0.0f) {
             throw std::logic_error("ROI pooling supports only zero padding.");

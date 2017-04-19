@@ -19,7 +19,7 @@
 
 #include "cldnn_defs.h"
 #include "compounds.h"
-#include "tensor.hpp"
+#include "layout.hpp"
 
 #include <algorithm>
 #include <string>
@@ -33,104 +33,6 @@ namespace cldnn
 
 /// @addtogroup cpp_topology Network Topology
 /// @{
-
-/// @brief Represents data padding information.
-struct padding
-{
-    /// @brief Filling value for padding area.
-    float filling_value() const { return _filling_value; }
-    
-    /// @brief Gets lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
-    /// @return Tensor with padding for top/left/lower bounds of data.
-    tensor lower_size() const { return _lower_size; }
-
-    /// @brief Gets upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
-    /// @return Tensor with padding for bottom/right/upper bounds of data.
-    tensor upper_size() const { return _upper_size; }
-
-    /// @brief Gets format of tensors used in padding.
-    cldnn::format format() const { return _lower_size.format; }
-
-    /// @brief 
-    /// @param format @ref cldnn::format for provided sizes.
-    /// @param lower_sizes Top-left padding sizes. See @ref tensor::tensor(cldnn::format, value_type, const std::vector<value_type>&) for details.
-    /// @param upper_sizes Bottom-right padding sizes. See @ref tensor::tensor(cldnn::format, value_type, const std::vector<value_type>&) for details.
-    /// @param filling_value Filling value for padding area.
-    padding(cldnn::format format, const std::vector<tensor::value_type>& lower_sizes, const std::vector<tensor::value_type>& upper_sizes, float filling_value = 0.0f)
-        : _lower_size(format, 0, to_abs(lower_sizes)), _upper_size(format, 0, to_abs(upper_sizes)), _filling_value(filling_value)
-    {}
-
-    /// @brief Constrcuts symmetric padding.
-    /// @param format @ref cldnn::format for provided sizes.
-    /// @param sizes Top-left and bottom-right padding sizes. See @ref tensor::tensor(cldnn::format, value_type, const std::vector<value_type>&) for details.
-    /// @param filling_value Filling value for padding area.
-    padding(cldnn::format format, const std::vector<tensor::value_type>& sizes, float filling_value = 0.0f)
-        : padding(format, sizes, sizes, filling_value)
-    {}
-
-    /// @brief Constructs "zero-sized" padding.
-    padding(): padding(format::bfyx, { 0, 0, 0, 0 }) {}
-
-    /// @brief Copy construction.
-    padding(const cldnn_padding& other)
-        : _lower_size(other.lower_size), _upper_size(other.upper_size), _filling_value(other.filling_value)
-    {}
-
-    /// @brief Implicit conversion to C API @ref cldnn_padding.
-    operator cldnn_padding() const
-    {
-        return { static_cast<cldnn_tensor>(_lower_size),
-                 static_cast<cldnn_tensor>(_upper_size),
-                 _filling_value };
-    }
-
-    /// @brief Returns true if padding size is not zero.
-    explicit operator bool() const
-    {
-        return std::any_of(_lower_size.raw.begin(), _lower_size.raw.end(), [](const tensor::value_type& el) { return el != 0; }) ||
-               std::any_of(_upper_size.raw.begin(), _upper_size.raw.end(), [](const tensor::value_type& el) { return el != 0; });
-    }
-
-    friend std::ostream& operator<<(std::ostream& os, const padding& padding)
-    {
-        if (padding)
-            os << "Format: " << padding.format().order() <<
-                ", lower size: " << padding._lower_size <<
-                ", upper size: " << padding._upper_size;
-        else
-            os << "No padding";
-        return os;
-    }
-
-    static padding max(padding const& lhs, padding const& rhs, float filling_value = 0.0f)
-    {
-        auto lower = tensor::max(lhs.lower_size(), rhs.lower_size());
-        auto upper = tensor::max(lhs.upper_size(), rhs.upper_size());
-        return padding{ lower.format, lower.sizes(), upper.sizes(), filling_value };
-    }
-
-private:
-    tensor _lower_size;    ///< Lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
-    tensor _upper_size;    ///< Upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
-    // TODO: Add support for non-zero filling value (if necessary) or remove variable (if not necessary).
-    float  _filling_value; ///< Filling value for an element of padding. If data type of elements is different than float it is converted
-                           ///< to it using round-towards-nearest-even (for floating-point data types) or round-towards-zero (for integral
-                           ///< data types).
-
-    padding(tensor const& lower, tensor const& upper, float filling_value = 0.0f)
-        : _lower_size(lower), _upper_size(upper), _filling_value(filling_value)
-    {}
-
-    static std::vector<tensor::value_type> to_abs(const std::vector<tensor::value_type>& sizes)
-    {
-        std::vector<tensor::value_type> result;
-        result.reserve(sizes.size());
-        std::transform(sizes.cbegin(), sizes.cend(), std::back_inserter(result), [](const tensor::value_type& el) { return abs(el); });
-        return result; // NRVO
-    }
-};
-
-CLDNN_API_CLASS(padding)
 
 /// @brief Globally unique primitive type id.
 using primitive_type_id = cldnn_primitive_type_id;
@@ -190,15 +92,14 @@ public:
         const primitive_type_id& type,
         const primitive_id& id,
         const std::vector<primitive_id>& input,
-        const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :type(type), id(id), input(_input.cpp_ids), input_padding(input_padding), output_padding(output_padding), _input(input)
+        :type(type), id(id), input(_input.cpp_ids), output_padding(output_padding), _input(input)
     {}
 
     /// @brief Constructs a copy from basic C API @CLDNN_PRIMITIVE_DESC{primitive}
     primitive(const CLDNN_PRIMITIVE_DESC(primitive)* dto)
-        :type(dto->type), id(dto->id), input(_input.cpp_ids), input_padding(dto->input_padding), output_padding(dto->output_padding), _input(dto->input)
+        :type(dto->type), id(dto->id), input(_input.cpp_ids), output_padding(dto->output_padding), _input(dto->input)
     {}
 
     virtual ~primitive() = default;
@@ -235,11 +136,6 @@ public:
     /// @brief Implicit conversion to primiitive id.
     operator primitive_id() const { return id; }
 
-    //TODO remove backward compatibility
-    tensor input_offset() const { return input_padding.lower_size().negate(); }
-    tensor output_offset() const { return output_padding.lower_size(); }
-    float padding_filling_value() const { return input_padding.filling_value(); }
-
     /// @brief Primitive's type id.
     const primitive_type_id type;
 
@@ -248,9 +144,6 @@ public:
 
     /// @brief List of ids of input primitives.
     fixed_size_vector_ref input;
-
-    // to be removed
-    padding input_padding;
 
     /// @brief Requested output padding.
     padding output_padding;
@@ -304,7 +197,6 @@ public:
         _dto.id = id.c_str();
         _dto.type = type;
         _dto.input = _input.ref();
-        _dto.input_padding = input_padding;
         _dto.output_padding = output_padding;
 
         //call abstract method to update primitive-specific fields
@@ -316,9 +208,8 @@ protected:
     explicit primitive_base(
         const primitive_id& id,
         const std::vector<primitive_id>& input,
-        const padding& input_padding = padding(),
         const padding& output_padding = padding())
-        : primitive(PType::type_id(), id, input, input_padding, output_padding)
+        : primitive(PType::type_id(), id, input, output_padding)
     {}
 
     primitive_base(const DTO* dto)

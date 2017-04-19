@@ -78,17 +78,17 @@ struct pooling_gpu : typed_primitive_impl<pooling>
 
     static kernel_data set_default(const pooling_node& arg)
     {
-        auto input_layout = arg.input().get_padded_output_layout();  // input
-        auto output_layout = arg.get_padded_output_layout(); // output
+        auto input_layout = arg.input().get_output_layout();  // input
+        auto const& output_buffer_size = arg.get_output_layout().get_buffer_size();
 
         kernel_data kd;
 
         kd.fp16_unit_used = input_layout.data_type == cldnn::data_types::f16;
 
         // Determine global work sizes.
-        kd.gws0 = output_layout.size.batch[0] * output_layout.size.feature[0];
-        kd.gws1 = output_layout.size.spatial[0];
-        kd.gws2 = output_layout.size.spatial[1];
+        kd.gws0 = output_buffer_size.batch[0] * output_buffer_size.feature[0];
+        kd.gws1 = output_buffer_size.spatial[0];
+        kd.gws2 = output_buffer_size.spatial[1];
 
         // Find largest positive local work size that is divider for global work size.
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
@@ -120,8 +120,8 @@ struct pooling_gpu : typed_primitive_impl<pooling>
     // Checks if we need boundary checking in kernel.
     static bool needs_boundary_check(const pooling_node& outer)
     {
-        auto input_layout = outer.input().get_padded_output_layout();
-        auto input_offset = outer.get_primitive()->input_offset().transform(input_layout.size.format, 0);
+        auto input_buffer_size = outer.input().get_output_layout().get_buffer_size();
+        auto input_offset = outer.get_primitive()->input_offset.transform(input_buffer_size.format, 0);
         
         if (input_offset.spatial[0] || input_offset.spatial[1])
             return true;
@@ -130,8 +130,8 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         auto& stride = outer.get_primitive()->stride;
 
         // If modulo is not 0 that means it is not dividable by stride, so we would go out of boundary.
-        auto mod_x = (input_layout.size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_size.spatial[0]) % stride.spatial[0];
-        auto mod_y = (input_layout.size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_size.spatial[1]) % stride.spatial[1];
+        auto mod_x = (input_buffer_size.spatial[0] - (2 * input_offset.spatial[0]) - kernel_size.spatial[0]) % stride.spatial[0];
+        auto mod_y = (input_buffer_size.spatial[1] - (2 * input_offset.spatial[1]) - kernel_size.spatial[1]) % stride.spatial[1];
 
         return mod_x || mod_y;
     }
@@ -145,8 +145,8 @@ struct pooling_gpu : typed_primitive_impl<pooling>
 
         auto input_layout = outer.input().get_output_layout();
         auto output_layout = outer.get_output_layout();
-        auto input_padding = outer.input().get_primitive()->output_padding;
-        auto output_padding = outer.get_primitive()->output_padding;
+        auto input_padding = outer.input().get_output_layout().data_padding;
+        auto output_padding = outer.get_output_layout().data_padding;
         auto input_size = input_layout.size;
 
         gpu::jit_constants mem_consts{
@@ -154,7 +154,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
             gpu::make_jit_constant("OUTPUT",            output_layout.size),
             gpu::make_jit_constant("WINDOW",            outer.get_primitive()->size),
             gpu::make_jit_constant("STRIDE",            outer.get_primitive()->stride),
-            gpu::make_jit_constant("INPUT_OFFSET",      outer.get_primitive()->input_offset()),
+            gpu::make_jit_constant("INPUT_OFFSET",      outer.get_primitive()->input_offset),
             gpu::make_jit_constant("FP16_SUPPORTED",    static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",    static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",         data.fp16_unit_used ? "half" : "float"),
@@ -179,14 +179,11 @@ struct pooling_gpu : typed_primitive_impl<pooling>
 
     static primitive_impl* create(const pooling_node& arg)
     {
-        auto input_arg = arg.input().get_padded_output_layout();
-        auto output_arg = arg.get_padded_output_layout();
-
-        auto& input_buffer_size = input_arg.size;
-        auto& output_buffer_size = output_arg.size;
+        auto const& input_buffer_size = arg.input().get_output_layout().get_buffer_size();
+        auto const& output_buffer_size = arg.get_output_layout().get_buffer_size();
         auto& stride = arg.get_primitive()->stride;
         auto& window = arg.get_primitive()->size;
-        const auto padding = arg.get_primitive()->padding_filling_value();
+        const auto padding = arg.get_output_layout().data_padding.filling_value();
 
         if (padding != 0.0f) 
             throw std::logic_error("Pooling supports only zero padding.");
@@ -200,7 +197,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         if (window.raw.size() != output_buffer_size.raw.size())
             throw std::invalid_argument("Pooling window_size/output number of dimension does not match.");
 
-        if (input_arg.size.format != output_arg.size.format)
+        if (input_buffer_size.format != output_buffer_size.format)
             throw std::invalid_argument("Pooling input/output data format does not match.");
         
         return new pooling_gpu(arg);

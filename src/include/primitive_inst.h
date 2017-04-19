@@ -66,7 +66,6 @@ public:
 
     const memory& dep_memory(size_t index) const { return dependencies().at(index)->output_memory(); }
     const memory& output_memory() const { return _output; }
-    layout non_padded_output_layout() const;
     primitive_type_id type() const { return _node.get_primitive()->type; }
     primitive_id id() const { return _node.get_primitive()->id; }
     const auto desc() const { return _node.get_primitive(); }

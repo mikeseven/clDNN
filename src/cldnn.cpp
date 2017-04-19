@@ -490,7 +490,7 @@ cldnn_memory cldnn_attach_memory(cldnn_layout layout, void* pointer, size_t size
     return exception_handler<cldnn_memory>(CLDNN_ERROR, status, nullptr, [&]()
     {
         cldnn::layout layout_obj(layout);
-        if (layout_obj.data_size() > size) 
+        if (layout_obj.bytes_count() > size) 
             std::invalid_argument("buffer size does not match layout size");
         return api_cast(new cldnn::simple_attached_memory(layout_obj, pointer));
     });

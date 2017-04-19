@@ -74,10 +74,9 @@ struct detection_output : public primitive_base<detection_output, CLDNN_PRIMITIV
 		const prior_box_code_type code_type = prior_box_code_type::corner,
 		const bool variance_encoded_in_target = false,
 		const float confidence_threshold = -std::numeric_limits<float>::max(),
-        const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, { input_location, input_confidence, input_prior_box }, input_padding, output_padding)
+        : primitive_base(id, { input_location, input_confidence, input_prior_box }, output_padding)
 		, num_classes(num_classes)
 		, keep_top_k(keep_top_k)
 		, share_location(share_location)

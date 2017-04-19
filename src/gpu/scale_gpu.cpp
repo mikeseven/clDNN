@@ -76,8 +76,8 @@ struct scale_gpu : typed_primitive_impl<scale>
     {
         auto engine_info = outer.get_program().get_engine()->get_context()->get_engine_info();
 
-        auto input_layout = outer.input().get_padded_output_layout();
-        auto input_size = input_layout.size.transform(format::bfyx, 1);
+        auto input_layout = outer.input().get_output_layout();
+        auto const& input_size = input_layout.get_buffer_size().transform(format::bfyx, 1);
 
         kernel_data kd;
 
@@ -118,8 +118,8 @@ struct scale_gpu : typed_primitive_impl<scale>
             gpu::make_jit_constant("BIAS_TERM",             static_cast<int>(!outer.get_primitive()->bias.empty())),
             gpu::make_jit_constant("SCALE_BFYX_USED",       static_cast<int>(data.scale_bfyx_used)),
             gpu::make_jit_constant("INPUT_BFYX_USED",       static_cast<int>(data.input_bfyx_used)),
-            gpu::make_jit_constant("INPUT_PADDING",         outer.input().get_primitive()->output_padding),
-            gpu::make_jit_constant("OUTPUT_PADDING",        outer.get_primitive()->output_padding)
+            gpu::make_jit_constant("INPUT_PADDING",         outer.input().get_output_layout().data_padding),
+            gpu::make_jit_constant("OUTPUT_PADDING",        outer.get_output_layout().data_padding)
         };
 
         return mem_consts;

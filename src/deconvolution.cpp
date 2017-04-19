@@ -32,7 +32,7 @@ layout deconvolution_inst::calc_output_layout(deconvolution_node const& node)
 
     auto input_layout = node.input().get_output_layout();
     auto weights_layout = node.weights(0).get_output_layout(); //weights are stored after inputs
-    auto input_offset = desc->input_offset().transform(input_layout.size.format, 0);
+    auto input_offset = desc->input_offset.transform(input_layout.size.format, 0);
     auto strd = desc->stride.transform(format::bfyx, 0);
     auto split = desc->weights.size();
 
@@ -111,14 +111,13 @@ deconvolution_inst::typed_primitive_inst(network_impl& network, deconvolution_no
         auto& filter_inst = filter_mem.get_layout(); //deconvolution filter
         auto& bias_inst = bias_memory(j).get_layout();
 
-        auto input_offset = argument.input_offset().transform(input_inst.size.format, 0);
-        auto output_offset = argument.output_offset().transform(output_inst.size.format, 0);
+        auto input_offset = argument.input_offset.transform(input_inst.size.format, 0);
 
         if (bias_inst.size.batch[0] != 1 && bias_inst.size.feature[0] != 1 && bias_inst.size.spatial[1] != 1)
             throw std::runtime_error("Biases isn't 1D vector."); // b=1, f=1
         if (bias_inst.size.spatial[0] != output_size.feature[0] / split)
             throw std::runtime_error("Biases/output feature maps number does not match.");
-        if (argument.padding_filling_value() != 0.0f)
+        if (node.get_output_layout().data_padding.filling_value() != 0.0f)
             throw std::runtime_error("Wnknown padding mode.");
         if (input_offset.raw.size() != input_inst.size.raw.size())
             throw std::runtime_error("Input offset/input number of dimension does not match.");

@@ -55,6 +55,7 @@ struct program_node
 
     program_node(std::shared_ptr<primitive> prim, program_impl& prog) : desc(prim), myprog(prog)
     {
+        output_layout.data_padding = prim->output_padding;
     }
 
 public:
@@ -66,13 +67,19 @@ public:
 
     auto get_selected_impl() const { return selected_impl; }
 
-    auto const& get_dependencies() const { return dependencies; }
-    auto& get_dependency(size_t idx) const { return *dependencies.at(idx); }
+    auto const& get_dependencies() { return dependencies; }
+    // for const method, add const to stored successors/predecessors
+    auto const& get_dependencies() const { return reinterpret_cast<const std::vector<const program_node*>&>(dependencies); }
+
+    auto& get_dependency(size_t idx) { return *dependencies.at(idx); }
+    auto& get_dependency(size_t idx) const { return static_cast<program_node const&>(*dependencies.at(idx)); }
 
     void replace_dependency(size_t idx, program_node& new_dep);
     void replace_dependency(program_node const& old_dep, program_node& new_dep);
 
-    auto const& get_users() const { return users; }
+    auto const& get_users() { return users; }
+    // for const method, add const to stored successors/predecessors
+    auto const& get_users() const { return reinterpret_cast<const std::list<const program_node*>&>(users); }
 
     //do not modify primitive directly to keep synchronisation wit graph
     std::shared_ptr<const primitive> get_primitive() const { return desc; }
@@ -82,12 +89,12 @@ public:
     {
         //changing output padding shouldn't cause any changes to other primitives
         //so just change it
-        desc->output_padding = padd;
+        output_layout.data_padding = padd;
     }
 
     void merge_output_padding(padding const& padd)
     {
-        set_output_padding(padding::max(padd, desc->output_padding));
+        set_output_padding(padding::max(padd, output_layout.data_padding));
     }
 
     layout get_output_layout();
@@ -100,13 +107,18 @@ public:
         return output_layout;
     }
 
-    layout get_padded_output_layout() { return add_padding(get_output_layout()); }
-    layout get_padded_output_layout() const { return add_padding(get_output_layout()); }
-
     void recalc_output_layout()
     {
         valid_output_layout = false;
         get_output_layout();
+    }
+
+    bool is_padded() { return static_cast<bool>(get_output_layout().data_padding); }
+    bool is_padded() const { return static_cast<bool>(get_output_layout().data_padding); }
+
+    bool has_padded_dependency() const
+    {
+        return std::any_of(get_dependencies().begin(), get_dependencies().end(), [](const program_node* node) { return node->is_padded(); });
     }
 
     auto is_input() const { return dependencies.empty(); }
@@ -177,8 +189,6 @@ protected:
             }
         }
     }
-
-    layout add_padding(layout const& l) const;
 };
 
 /*

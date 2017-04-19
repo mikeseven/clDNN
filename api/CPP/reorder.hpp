@@ -47,10 +47,9 @@ struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
         const primitive_id& input,
         const layout& output_layout,
         const std::vector<float>& values_to_subtract = {},
-        const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        : primitive_base(id, { input }, input_padding, output_padding)
+        : primitive_base(id, { input }, output_padding)
         , output_layout(output_layout)
         , mean("")
         , subtract_per_feature(values_to_subtract)
@@ -67,10 +66,9 @@ struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
         const primitive_id& input,
         const layout& output_layout,
         primitive_id mean,
-        const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        : primitive_base(id, { input }, input_padding, output_padding)
+        : primitive_base(id, { input }, output_padding)
         , output_layout(output_layout)
         , mean(mean)
         , subtract_per_feature(0)

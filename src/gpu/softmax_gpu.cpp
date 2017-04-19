@@ -60,28 +60,30 @@ struct softmax_gpu : typed_primitive_impl<softmax>
     {
         auto engine_info = outer.get_program().get_engine()->get_context()->get_engine_info();
 
-        auto input_layout  = outer.input().get_padded_output_layout();  // input
-        auto output_layout = outer.get_padded_output_layout(); // output
+        auto input_layout  = outer.input().get_output_layout();  // input
+        auto const& input_buffer_size = input_layout.get_buffer_size();
+
+        auto const& output_buffer_size = outer.get_output_layout().get_buffer_size();
 
         kernel_data kd;
 
         kd.fp16_unit_used      = input_layout.data_type == cldnn::data_types::f16;
         kd.fp16_supported      = engine_info.supports_fp16 != 0;
-        auto batch_num         = output_layout.size.batch[0];
-        auto feature_num       = input_layout.size.feature[0];
-        size_t out_buffer_size = output_layout.count();
-        auto input_size        = input_layout.size;
+        auto batch_num         = output_buffer_size.batch[0];
+        auto feature_num       = input_buffer_size.feature[0];
+        size_t out_buffer_size = output_buffer_size.count();
         kd.leftovers = 0;
         kd.elements_in_batch = 0;
         
-        if (input_size.feature[0] != 1 || input_size.spatial[1] != 1)
+        if (input_buffer_size.feature[0] != 1 ||
+            input_buffer_size.spatial[1] != 1)
         {
-            kd.elements_in_batch = input_size.spatial[0] * input_size.spatial[1];
+            kd.elements_in_batch = input_buffer_size.spatial[0] * input_buffer_size.spatial[1];
             kd.gws0 = cldnn::align_to(kd.elements_in_batch, 32);
             kd.gws1 = batch_num;
             kd.lws0 = 32;
             kd.items_num = feature_num;
-            kd.kernel_name = (input_layout.size.format == cldnn::format::bfyx) ? kernel_name_batches_bfyx : kernel_name_batches_yxfb;
+            kd.kernel_name = (input_buffer_size.format == cldnn::format::bfyx) ? kernel_name_batches_bfyx : kernel_name_batches_yxfb;
         }
         else if (batch_num <= 1)
         {
@@ -93,8 +95,7 @@ struct softmax_gpu : typed_primitive_impl<softmax>
 
             kd.kernel_name = kernel_name;
         }
-        else if (input_size.format == format::bfyx ||
-            input_size.format == format::bfyx)
+        else if (input_buffer_size.format == format::bfyx)
         {
             // We have two units of data per work item in current implementation.
             auto local_mem_per_wi = 2 * (kd.fp16_unit_used ? sizeof(half_t) : sizeof(float));
@@ -150,25 +151,25 @@ struct softmax_gpu : typed_primitive_impl<softmax>
         if (!data.fp16_supported && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        auto input_size = outer.input().get_padded_output_layout().size;
+        auto input_buffer_size = outer.input().get_output_layout().get_buffer_size();
 
         //kernel relies on INPUT_SIZE_X being a number of values per batch, for bfyx format, when spatials == 1,1
         //and actual number of values is stored as fueatures count (squeezenet), swap feature[0] with spatial[0]
-        if (input_size.format == format::bfyx)
+        if (input_buffer_size.format == format::bfyx)
         {
-            if (input_size.feature[0] > 1)
-                input_size = tensor(format::bfyx, { input_size.batch[0], input_size.spatial[0], input_size.spatial[1], input_size.feature[0] });
+            if (input_buffer_size.feature[0] > 1)
+                input_buffer_size = tensor(format::bfyx, { input_buffer_size.batch[0], input_buffer_size.spatial[0], input_buffer_size.spatial[1], input_buffer_size.feature[0] });
         }
 
-        else if (input_size.format == format::yxfb)
+        else if (input_buffer_size.format == format::yxfb)
         {
-            if (input_size.feature[0] > 1)
-                input_size = tensor(format::yxfb, { input_size.spatial[1], input_size.feature[0], input_size.spatial[0], input_size.batch[0] });
+            if (input_buffer_size.feature[0] > 1)
+                input_buffer_size = tensor(format::yxfb, { input_buffer_size.spatial[1], input_buffer_size.feature[0], input_buffer_size.spatial[0], input_buffer_size.batch[0] });
         }
 
 
         return gpu::jit_constants{
-            gpu::make_jit_constant("INPUT",          input_size),
+            gpu::make_jit_constant("INPUT",          input_buffer_size),
             gpu::make_jit_constant("ITEMS_NUM",      data.items_num),
             gpu::make_jit_constant("LWS",            data.lws0),
             gpu::make_jit_constant("GWS",            data.gws0),

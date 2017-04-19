@@ -33,7 +33,7 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
     auto input_layout = node.input().get_output_layout();
     auto weights_layout = node.weights(0).get_output_layout(); //weights are stored after inputs
 
-    auto input_offset = desc->input_offset().transform(input_layout.size.format, 0);
+    auto input_offset = desc->input_offset.transform(input_layout.size.format, 0);
     auto strd = desc->stride.transform(format::bfyx, 0);
 	auto dilation = desc->dilation.transform(format::bfyx, 0);
     auto split = desc->weights.size();
@@ -143,12 +143,11 @@ convolution_inst::typed_primitive_inst(network_impl& network, convolution_node c
                 throw std::runtime_error("Biases/output feature maps number does not match.");
         }
 
-        auto input_offset = argument.input_offset().transform(input_inst.size.format, 0);
-        auto output_offset = argument.output_offset().transform(output_inst.size.format, 0);
+        auto input_offset = argument.input_offset.transform(input_inst.size.format, 0);
 
         if (filter_inst.size.raw.size() != output_inst.size.raw.size())
             throw std::runtime_error("Weights number of dimensions do not match output number of dimensions.");
-        if (argument.padding_filling_value() != 0.0f)
+        if (node.get_output_layout().data_padding.filling_value() != 0.0f)
             throw std::runtime_error("Unknown padding mode.");
         if (input_offset.raw.size() != input_inst.size.raw.size())
             throw std::runtime_error("Input offset/input number of dimension does not match.");

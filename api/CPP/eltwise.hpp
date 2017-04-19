@@ -64,10 +64,9 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
         eltwise_mode mode,
         bool with_activation = false,
         float activation_slp = 0.0f,
-        const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :primitive_base(id, { input }, input_padding, output_padding)
+        :primitive_base(id, { input }, output_padding)
         , input2(input2)
         , mode(mode)
         , with_activation(with_activation)

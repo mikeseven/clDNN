@@ -19,7 +19,7 @@
 #include <cstdint>
 #include "cldnn_defs.h"
 #include "compounds.h"
-#include "tensor.hpp"
+#include "layout.hpp"
 #include "engine.hpp"
 #include <memory>
 #include <iterator>
@@ -30,7 +30,7 @@ namespace cldnn
 /// @addtogroup cpp_api C++ API
 /// @{
 
-/// @defgroup cpp_memory Memory Management
+/// @defgroup cpp_memory Memory description and management
 /// @{
 
 /// @brief Possible data types could be stored in memory.
@@ -211,7 +211,7 @@ struct memory
     /// Allocate memory on @p engine using specified @p layout
     static memory allocate(const engine& engine, const layout& layout)
     {
-        size_t size = layout.data_size();
+        size_t size = layout.bytes_count();
         if (size == 0) throw std::invalid_argument("size should be more than 0");
         return check_status<cldnn_memory>("memory allocation failed", [&](status_t* status)
         {
@@ -228,7 +228,7 @@ struct memory
     {
         if (!ptr) throw std::invalid_argument("pointer should not be null");
         size_t data_size = size * sizeof(T);
-        if (data_size != layout.data_size()) {
+        if (data_size != layout.bytes_count()) {
             std::string err_str("buffer size mismatch - input size " + std::to_string(data_size) + " layout size " + std::to_string(layout.data_size()));
             throw std::invalid_argument(err_str);
         }
@@ -243,7 +243,7 @@ struct memory
     /// @brief Constructs memory object form C API ::cldnn_memory handler
     memory(cldnn_memory data, bool add_ref = false)
         :_impl(data), _layout(get_layout_impl(data))
-        ,_size(_layout.data_size()), _count(_layout.count())
+        ,_size(_layout.bytes_count()), _count(_layout.count())
     {
         if (!_impl) throw std::invalid_argument("data");
         if (add_ref) retain();

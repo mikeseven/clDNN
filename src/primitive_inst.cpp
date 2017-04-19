@@ -58,21 +58,14 @@ primitive_inst::primitive_inst(network_impl& network, program_node const& node, 
     , _output(buffer)
     , _output_changed(false)
 {
-    auto req_layout = node.get_padded_output_layout();
+    auto req_layout = node.get_output_layout();
     if (buffer.get_layout() != req_layout)
         throw std::runtime_error("Provided buffer does not meet primitive's requirements");
 }
 
-layout primitive_inst::non_padded_output_layout() const
-{
-    layout tmp = _output.get_layout();
-    tmp.size = tmp.size.sub(_node.get_primitive()->output_padding.lower_size()).sub(_node.get_primitive()->output_padding.upper_size());
-    return tmp;
-}
-
 memory primitive_inst::allocate_output()
 {
-    auto layout = _node.get_padded_output_layout();
+    auto layout = _node.get_output_layout();
     return api_cast(get_network().get_engine()->allocate_buffer(layout));
 }
 }

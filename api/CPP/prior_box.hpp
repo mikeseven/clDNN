@@ -65,10 +65,9 @@ struct prior_box : public primitive_base<prior_box, CLDNN_PRIMITIVE_DESC(prior_b
 		const float step_width = 0.f,
 		const float step_height = 0.f,
 		const float offset = 0.5f,
-        const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_padding, output_padding)
+        : primitive_base(id, {input}, output_padding)
 		, img_size(img_size)
         , min_sizes(min_sizes)
         , max_sizes(max_sizes)

@@ -52,9 +52,7 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
     {
         auto output_layout = outer.get_output_layout(); // output
 
-        if (outer.input().get_primitive()->output_padding ||
-            outer.input2().get_primitive()->output_padding ||
-            outer.get_primitive()->input_padding)
+        if (outer.has_padded_dependency())
         {
             throw std::runtime_error("Input padding for eltwise not yet supported");
         }
@@ -78,8 +76,8 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
         }
         else
         {
-            if (outer.get_primitive()->output_padding)
-                throw std::runtime_error("Input padding for eltwise is not yet supported for not-bfyx input");
+            if (outer.is_padded())
+                throw std::runtime_error("Output padding for eltwise is not yet supported for not-bfyx input");
 
             kd.kernel_name = kernel_name;
         }
@@ -102,7 +100,7 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
             gpu::make_jit_constant("INPUT",                 input_layout.size),
             gpu::make_jit_constant("OUTPUT",                output_layout.size),
             gpu::make_jit_constant("INPUT2" ,               input2_layout.size),
-            gpu::make_jit_constant("OUTPUT_PADDING",        outer.get_primitive()->output_padding),
+            gpu::make_jit_constant("OUTPUT_PADDING",        outer.get_output_layout().data_padding),
             gpu::make_jit_constant("FP16_SUPPORTED",        static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",        static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",             data.fp16_unit_used ? "half" : "float"),

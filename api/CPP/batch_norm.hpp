@@ -59,10 +59,9 @@ struct batch_norm : public primitive_base<batch_norm, CLDNN_PRIMITIVE_DESC(batch
         const primitive_id& variance,
         bool use_global_stats,
         float epsilon,
-        const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :primitive_base(id, {input}, input_padding, output_padding)
+        :primitive_base(id, {input}, output_padding)
         , mean(mean)
         , variance(variance)
         , use_global_stats(use_global_stats)

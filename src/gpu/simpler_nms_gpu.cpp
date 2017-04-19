@@ -233,7 +233,7 @@ struct simpler_nms_gpu : typed_primitive_impl<simpler_nms>
     static gpu::jit_constants get_jit_constants(const simpler_nms_node& outer, const kernel_data& data)
     {   
         gpu::jit_constants foo{
-            gpu::make_jit_constant("INPUT", outer.cls_score().get_padded_output_layout().size),
+            gpu::make_jit_constant("INPUT", outer.cls_score().get_output_layout().get_buffer_size()),
             gpu::make_jit_constant("UNIT_TYPE", data.fp16_unit_used ? "half" : "float")
         };
 

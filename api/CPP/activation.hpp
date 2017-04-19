@@ -41,10 +41,9 @@ struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activ
         const primitive_id& id,
         const primitive_id& input,
         float slope,
-        const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_padding, output_padding)
+        : primitive_base(id, {input}, output_padding)
         , negative_slope(slope)
     {
     }

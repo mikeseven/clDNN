@@ -84,15 +84,16 @@ struct depth_concatenate_gpu : typed_primitive_impl<depth_concatenate>
 
     static kernel_data set_kernel_data(int input_idx, const depth_concatenate_node& outer)
     {
-        const auto& input_layout = outer.input(input_idx).get_padded_output_layout();  // current input
+        const auto& input_layout = outer.input(input_idx).get_output_layout();  // current input
+        const auto& input_buffer_size = input_layout.get_buffer_size();
 
         kernel_data kd;
 
         kd.fp16_unit_used = input_layout.data_type == cldnn::data_types::f16;
 
         // Determine global work sizes.
-        kd.gws0 = input_layout.size.spatial[0] * input_layout.size.spatial[1];
-        kd.gws1 = input_layout.size.batch[0];
+        kd.gws0 = input_buffer_size.spatial[0] * input_buffer_size.spatial[1];
+        kd.gws1 = input_buffer_size.batch[0];
         // Find largest positive local work size that is divider for global work size.
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
         while (kd.gws0 % kd.lws0 != 0)
@@ -112,14 +113,14 @@ struct depth_concatenate_gpu : typed_primitive_impl<depth_concatenate>
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
         auto input_layout = outer.input(input_idx).get_output_layout();
-        auto input_padding = outer.input(input_idx).get_primitive()->output_padding;
-        auto output_padding = outer.get_primitive()->output_padding;
-        auto padded_input_layout = outer.input(input_idx).get_padded_output_layout();
+        auto input_padding = outer.input(input_idx).get_output_layout().data_padding;
+        auto output_padding = outer.get_output_layout().data_padding;
+        auto input_buffer_size = outer.input(input_idx).get_output_layout().get_buffer_size();
 
         return gpu::jit_constants{
             gpu::make_jit_constant("INPUT",          input_layout.size),
             gpu::make_jit_constant("OUTPUT",         outer.get_output_layout().size),
-            gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", padded_input_layout.count() / padded_input_layout.size.batch[0]),
+            gpu::make_jit_constant("INPUT_ELEMENTS_COUNT", input_buffer_size.count() / input_buffer_size.batch[0]),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(fp16_supported)),
             gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",      data.fp16_unit_used ? "half" : "float"),
@@ -166,18 +167,19 @@ depth_concatenate_gpu::kernel_data default_yxfb(const std::pair<int, const depth
 depth_concatenate_gpu::kernel_data default_bfyx(const std::pair<int, const depth_concatenate_node&>& arg)
 {
     auto idx = arg.first;
-    auto input_layout = arg.second.input(idx).get_padded_output_layout();
+    auto input_layout = arg.second.input(idx).get_output_layout();
+    auto input_buffer_size = input_layout.get_buffer_size();
 
     depth_concatenate_gpu::kernel_data kd = depth_concatenate_gpu::set_kernel_data(idx, arg.second);
 
-    auto input_padding = arg.second.input(idx).get_primitive()->output_padding;
-    auto output_padding = arg.second.get_primitive()->output_padding;
+    auto input_padding = arg.second.input(idx).get_output_layout().data_padding;
+    auto output_padding = arg.second.get_output_layout().data_padding;
 
     // TODO: add support for f16 into this no padding kernel
     if (!input_padding && !output_padding && input_layout.data_type == cldnn::data_types::f32)
     {
-        kd.gws0 = input_layout.size.batch[0];
-        kd.gws1 = align_to(input_layout.count() / input_layout.size.batch[0] / 8, 16);
+        kd.gws0 = input_buffer_size.batch[0];
+        kd.gws1 = align_to(input_layout.count() / input_buffer_size.batch[0] / 8, 16);
 
         kd.lws0 = 1;
         kd.lws1 = 16;
@@ -186,8 +188,8 @@ depth_concatenate_gpu::kernel_data default_bfyx(const std::pair<int, const depth
     }
     else
     {
-        kd.gws0 = input_layout.size.batch[0];
-        kd.gws1 = align_to(input_layout.size.feature[0] * input_layout.size.spatial[1], 32);
+        kd.gws0 = input_buffer_size.batch[0];
+        kd.gws1 = align_to(input_buffer_size.feature[0] * input_buffer_size.spatial[1], 32);
 
         kd.lws0 = 1;
         kd.lws1 = 32;

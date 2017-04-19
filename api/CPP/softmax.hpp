@@ -46,10 +46,9 @@ struct softmax : public primitive_base<softmax, CLDNN_PRIMITIVE_DESC(softmax)>
     softmax(
         const primitive_id& id,
         const primitive_id& input,
-        const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
-        :primitive_base(id, {input}, input_padding, output_padding)
+        :primitive_base(id, {input}, output_padding)
     {}
 
     /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{softmax}

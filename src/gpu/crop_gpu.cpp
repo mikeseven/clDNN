@@ -68,7 +68,8 @@ struct crop_gpu : typed_primitive_impl<crop>
     {
         auto engine_info = outer.get_program().get_engine()->get_context()->get_engine_info();
 
-        auto output_layout = outer.get_padded_output_layout();  // input
+        auto output_layout = outer.get_output_layout();  // input
+        auto const& output_buffer_size = output_layout.get_buffer_size();
 
         kernel_data kd;
 
@@ -77,9 +78,9 @@ struct crop_gpu : typed_primitive_impl<crop>
         kd.crop_bfyx_used = false;
 
         // Determine global work sizes.
-        kd.gws0 = output_layout.size.batch[0];   // B
-        kd.gws1 = output_layout.size.feature[0]; // F
-        kd.gws2 = output_layout.size.spatial[0] * output_layout.size.spatial[1]; // X, Y
+        kd.gws0 = output_buffer_size.batch[0];   // B
+        kd.gws1 = output_buffer_size.feature[0]; // F
+        kd.gws2 = output_buffer_size.spatial[0] * output_buffer_size.spatial[1]; // X, Y
         // Find largest positive local work size that is divider for global work size.
         kd.lws2 = std::min(std::max(kd.gws2, static_cast<size_t>(1)), static_cast<size_t>(32));
         while (kd.gws2 % kd.lws2 != 0)
@@ -97,8 +98,8 @@ struct crop_gpu : typed_primitive_impl<crop>
         if (!data.fp16_supported && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        auto input_size = outer.input().get_padded_output_layout().size;
-        auto output_size = outer.get_padded_output_layout().size;
+        auto input_size = outer.input().get_output_layout().get_buffer_size();
+        auto output_size = outer.get_output_layout().get_buffer_size();
         auto offsets = outer.get_primitive()->offsets;
 
         gpu::jit_constants mem_consts{

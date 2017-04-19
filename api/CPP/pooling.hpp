@@ -53,13 +53,14 @@ struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
         const primitive_id& id,
         const primitive_id& input,
         pooling_mode mode,
+        const tensor& input_offset,
         const tensor& stride,
         const tensor& size,
-        const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_padding, output_padding)
+        : primitive_base(id, {input}, output_padding)
         , mode(static_cast<pooling_mode>(mode))
+        , input_offset(input_offset)
         , stride(stride)
         , size(size)
     {}
@@ -68,12 +69,15 @@ struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
     pooling(const dto* dto)
         : primitive_base(dto)
         , mode(static_cast<pooling_mode>(dto->mode))
+        , input_offset(dto->input_offset)
         , stride(dto->stride)
         , size(dto->size)
     {}
 
     /// @brief Pooling mode.
     pooling_mode mode;
+    /// @brief Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the pooling window should start calculations.
+    tensor input_offset;
     /// @brief Defines shift in input buffer between adjacent calculations of output values.
     tensor stride;
     /// @brief Pooling kernel size.

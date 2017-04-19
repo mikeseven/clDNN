@@ -50,15 +50,16 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
         const primitive_id& input,
         const std::vector<primitive_id>& weights,
         const std::vector<primitive_id>& bias,
-        const padding& input_padding = { format::bfyx, {0,0,0,0} },
+        tensor input_offset = { format::bfyx,{ 0,0,0,0 } },
         tensor stride = { format::bfyx, 0, { 1, 1, 1, 1 } },
         bool with_activation = false,
         float activation_slp = 0.0f,
         const padding& output_padding = { format::bfyx,{ 0,0,0,0 } }
     )
-        :primitive_base(id, { input }, input_padding, output_padding)
+        :primitive_base(id, { input }, output_padding)
         , weights(_weights.cpp_ids)
         , bias(_bias.cpp_ids)
+        , input_offset(input_offset)
         , stride(stride)
         , with_activation(with_activation)
         , activation_negative_slope(activation_slp)
@@ -72,6 +73,7 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
         :primitive_base(dto)
         , weights(_weights.cpp_ids)
         , bias(_bias.cpp_ids)
+        , input_offset(dto->input_offset)
         , stride(dto->stride)
         , with_activation(dto->with_activation != 0)
         , activation_negative_slope(dto->activation_negative_slope)
@@ -86,6 +88,8 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
     fixed_size_vector_ref weights;
     /// @brief List of primitive ids containing bias data.
     fixed_size_vector_ref bias;
+    /// @brief Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the deconvolution window should start calculations.
+    tensor input_offset;
     /// @brief Defines shift in input buffer between adjacent calculations of output values.
     tensor stride;
     /// @brief Enables Relu activation.

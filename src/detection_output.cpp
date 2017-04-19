@@ -101,7 +101,7 @@ detection_output_inst::typed_primitive_inst(network_impl& network, detection_out
         throw std::invalid_argument("Detection output layer supports only bfyx input format.");
     }
 
-    if (argument.input_padding || argument.output_padding)
+    if (node.is_padded() || node.has_padded_dependency())
     {
         throw std::invalid_argument("Detection output layer doesn't support input and output padding.");
     }

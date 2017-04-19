@@ -86,9 +86,9 @@ struct activation_gpu : typed_primitive_impl<activation>
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
         auto input_size = outer.input().get_output_layout().size;
-        auto input_padding = outer.input().get_primitive()->output_padding;
+        auto input_padding = outer.input().get_output_layout().data_padding;
         auto output_size = outer.get_output_layout().size;
-        auto output_padding = outer.get_primitive()->output_padding;
+        auto output_padding = outer.get_output_layout().data_padding;
 
         gpu::jit_constants mem_consts
         {

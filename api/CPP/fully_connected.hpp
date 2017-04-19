@@ -68,10 +68,9 @@ struct fully_connected : public primitive_base<fully_connected, CLDNN_PRIMITIVE_
         const primitive_id& bias = "",
         bool with_activation = false,
         float activation_slp = 0.0f,
-        const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_padding, output_padding)
+        : primitive_base(id, {input}, output_padding)
         , weights(weights)
         , bias(bias)
         , with_activation(with_activation)

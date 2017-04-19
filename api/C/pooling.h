@@ -44,6 +44,8 @@ typedef enum /*:int32_t*/
 CLDNN_BEGIN_PRIMITIVE_DESC(pooling)
 /// @brief Pooling method. See #cldnn_pooling_mode.
 int32_t mode;
+/// @brief Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the pooling window should start calculations.
+cldnn_tensor input_offset;
 /// @brief Defines shift in input buffer between adjacent calculations of output values.
 cldnn_tensor stride;
 /// @brief Pooling kernel size.

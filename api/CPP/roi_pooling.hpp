@@ -39,10 +39,9 @@ struct roi_pooling : public primitive_base<roi_pooling, CLDNN_PRIMITIVE_DESC(roi
         int pooled_width,
         int pooled_height,
         float spatial_scale,
-        const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input_data, input_rois}, input_padding, output_padding)
+        : primitive_base(id, {input_data, input_rois}, output_padding)
         , pooled_width(pooled_width)
         , pooled_height(pooled_height)
         , spatial_scale(spatial_scale)

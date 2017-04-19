@@ -168,6 +168,10 @@ layout program_node::get_output_layout()
         return output_layout;
 
     auto new_layout = desc->type->calc_output_layout(*this);
+    //TODO: after merging padding into layout, calc_output_layout can now return padding as well
+    // for now just ignore it and preserve already set padding value - in future we should probably take care of this
+    // situation however.
+    new_layout.data_padding = output_layout.data_padding;
     if (new_layout != output_layout) //output_layout has changed! invalidate users
         invalidate_users();
 
@@ -175,14 +179,6 @@ layout program_node::get_output_layout()
     valid_output_layout = true;
     return std::move(new_layout);
 }
-
-layout program_node::add_padding(layout const& l) const
-{
-    auto padding = desc->output_padding;
-    auto padded_size = l.size.add(padding.lower_size()).add(padding.upper_size());
-    return layout(l.data_type, padded_size);
-}
-
 
 program_impl::program_impl(engine_impl::ptr engine, topology_impl const& topology, build_options const& options)
     : engine(engine), options(options)
@@ -366,7 +362,6 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 {
                     if (reorder_prim->subtract_per_feature.empty() &&
                         reorder_prim->mean.empty() &&
-                        !reorder_prim->input_padding &&
                         !reorder_prim->output_padding) //just plain reorder
                     {
                         conv_node.replace_dependency(0, reorder_input);
@@ -514,7 +509,7 @@ void program_impl::prepare_padding()
         auto prev_prim_output_layout = conv_input_node.get_output_layout();
 
         // Compute initial required paddings for primitive used as input for convolution.
-        auto input_offset = conv->input_offset().transform(conv_layout.size.format, 0);
+        auto input_offset = conv->input_offset.transform(conv_layout.size.format, 0);
         auto stride = conv->stride.transform(cldnn::format::bfyx, 0);
 		auto dilation = conv->dilation.transform(cldnn::format::bfyx, 0);
 		auto input_limit_x = input_offset.spatial[0] + (conv_layout.size.spatial[0] - 1) * stride.spatial[0] + (filter_layout.size.spatial[0] - 1) * dilation.spatial[0] + 1;

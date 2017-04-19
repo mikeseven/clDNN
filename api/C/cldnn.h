@@ -223,6 +223,16 @@ typedef struct
     int32_t sizes[CLDNN_TENSOR_DIM_MAX];
 } cldnn_tensor;
 
+/// @brief Padding information.
+typedef struct
+{
+    cldnn_tensor lower_size; ///< Lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
+    cldnn_tensor upper_size; ///< Upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
+    float filling_value;     ///< Filling value for an element of padding. If data type of elements is different than float it is converted
+                             ///< to it using round-towards-nearest-even (for floating-point data types) or round-towards-zero (for integral
+                             ///< data types).
+} cldnn_padding;
+
 /// @brief Data type stored in memory.
 typedef enum /*:size_t*/
 {
@@ -234,23 +244,14 @@ typedef enum /*:size_t*/
 /// @brief Memory layout description.
 typedef struct
 {
-    size_t data_type;  ///< data type (@ref cldnn_data_type) stored in memory.
-    cldnn_tensor size; ///< N-dimensional vector describes size (in elements) of memory.
+    size_t data_type;       ///< data type (@ref cldnn_data_type) stored in memory.
+    cldnn_tensor size;      ///< N-dimensional vector describes size (in elements) of memory (excluding padding).
+    cldnn_padding padding;  ///< Explicitly added padding to memory buffer.
 } cldnn_layout;
 /// @}
 
 /// @addtogroup c_topology
 /// @{
-
-/// @brief Padding information.
-typedef struct
-{
-    cldnn_tensor lower_size; ///< Lower padding sizes. For spatials, it means size of left (X) and top (Y) padding.
-    cldnn_tensor upper_size; ///< Upper padding sizes. For spatials, it means size of right (X) and bottom (Y) padding.
-    float filling_value;     ///< Filling value for an element of padding. If data type of elements is different than float it is converted
-                             ///< to it using round-towards-nearest-even (for floating-point data types) or round-towards-zero (for integral
-                             ///< data types).
-} cldnn_padding;
 
 /// @brief Represents reference to an array of floats.
 typedef struct
@@ -280,7 +281,6 @@ typedef struct
     cldnn_primitive_type_id type; /**< @brief Primitive type identificator. */\
     cldnn_primitive_id id;        /**< @brief Primitive id unique within a topology. */\
     cldnn_primitive_id_arr input; /**< @brief Input primitives ids. */\
-    cldnn_padding input_padding;  /**< @brief Input padding information. */\
     cldnn_padding output_padding; /**< @brief Output padding information. */
 
 /// @brief Close primitive descriptor definition.

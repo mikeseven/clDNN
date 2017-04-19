@@ -30,7 +30,7 @@ namespace cldnn
 /// @addtogroup cpp_api C++ API
 /// @{
 
-/// @addtogroup cpp_memory
+/// @addtogroup cpp_memory Memory description and management
 /// @{
 
 /// @brief Format information helper class.

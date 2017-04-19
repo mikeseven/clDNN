@@ -129,7 +129,7 @@ struct lrn_gpu : typed_primitive_impl<lrn>
         }
 
         // Checking for supported paddings.
-        if (arg.get_primitive()->input_padding.filling_value() != 0.0f)
+        if (arg.get_output_layout().data_padding.filling_value() != 0.0f)
             throw std::runtime_error("Unknown padding mode in lrn");
 
         return kd;
@@ -153,7 +153,7 @@ struct lrn_gpu : typed_primitive_impl<lrn>
         auto alpha_abs_sqrt = std::sqrt(std::abs(alpha));
         auto alpha_div_by_size_abs_sqrt = std::sqrt(std::abs(alpha_div_by_size));
 
-        auto input_padding = outer.input().get_primitive()->output_padding;
+        auto input_padding = outer.input().get_output_layout().data_padding;
         auto input_size = outer.input().get_output_layout().size;
 
         auto output_padding = outer.get_primitive()->output_padding;
@@ -173,13 +173,13 @@ struct lrn_gpu : typed_primitive_impl<lrn>
             gpu::make_jit_constant("ALPHA_VAL_FACTOR_DIV_BY_SIZE",  data.fp16_unit_used ? alpha_div_by_size_abs_sqrt : 1.0f),
             gpu::make_jit_constant("BETA",                          outer.get_primitive()->beta),
             gpu::make_jit_constant("K",                             outer.get_primitive()->k),
-            gpu::make_jit_constant("HELP_INPUT_OFFSET",             outer.get_primitive()->input_offset().feature[0] - static_cast<int32_t>(size / 2)),
+            gpu::make_jit_constant("HELP_INPUT_OFFSET",             input_padding.lower_size().negate().feature[0] - static_cast<int32_t>(size / 2)),
             gpu::make_jit_constant("FP16_SUPPORTED",                static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",                static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",                     data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_VAL_ZERO",                 data.fp16_unit_used ? "0.0h" : "0.0f"),
             gpu::make_jit_constant("INPUT_PADDING",                 input_padding),
-            gpu::make_jit_constant("OUTPUT_PADDING",                outer.get_primitive()->output_padding),
+            gpu::make_jit_constant("OUTPUT_PADDING",                outer.get_output_layout().data_padding),
             gpu::make_jit_constant("INPUT_BUFFER_SIZE_X",           !input_padding ? input_size.spatial[0] : input_size.spatial[0] + input_padding.upper_size().spatial[0] + input_padding.lower_size().spatial[0]),
             gpu::make_jit_constant("INPUT_BUFFER_SIZE_Y",           !input_padding ? input_size.spatial[1] : input_size.spatial[1] + input_padding.upper_size().spatial[1] + input_padding.lower_size().spatial[1]),
             gpu::make_jit_constant("OUTPUT_BUFFER_SIZE_X",          !output_padding ? output_size.spatial[0] : output_size.spatial[0] + output_padding.upper_size().spatial[0] + output_padding.lower_size().spatial[0]),

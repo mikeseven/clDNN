@@ -42,7 +42,7 @@ struct data : public primitive_base<data, CLDNN_PRIMITIVE_DESC(data)>
     /// @param mem @ref memory object which contains data.
     /// @note If memory is attached by memory::attach(), the attached buffer should be valid till network build.
     data(const primitive_id& id, const memory& mem)
-        :primitive_base(id, {}, padding(), padding())
+        :primitive_base(id, {}, padding())
         , mem(mem.get(), true)
     {}
 
