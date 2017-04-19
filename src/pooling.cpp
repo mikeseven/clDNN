@@ -33,9 +33,9 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
     auto input_layout = node.input().get_output_layout();
 
     if (input_layout.size.format != format::bfyx && input_layout.size.format != format::yxfb)
-        throw std::invalid_argument("Pooling supports yxfb and bfyx formats only");
+        throw std::runtime_error("Pooling supports formats with two dimensions in spatials only");
     if (input_layout.size.spatial.size() != 2)
-        throw std::invalid_argument("One dimensional spatials aren't supported by pooling");
+        throw std::runtime_error("One dimensional spatials aren't supported by pooling");
 
     auto input_offsets = desc->input_offset().transform(input_layout.size.format, 0).sizes();
     auto strides = desc->stride.transform(input_layout.size.format, 1).sizes();
@@ -44,7 +44,7 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
     auto output_sizes = input_layout.size.sizes();
     auto format_order = input_layout.size.format.order();
     if (output_sizes.size() != format_order.size())
-        throw std::invalid_argument("output and input format size mismatch");
+        throw std::runtime_error("output and input format size mismatch");
 
     for (decltype(output_sizes.size()) i = 0; i < output_sizes.size(); i++)
     {
@@ -52,9 +52,9 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
         {
             // TODO: Consider moving general parameter verification to arguments constructor.
             if (strides[i] <= 0)
-                throw std::invalid_argument("Stride must be positive (>= 1)");
+                throw std::runtime_error("Stride must be positive (>= 1)");
             if (2 * input_offsets[i] >= output_sizes[i])
-                throw std::invalid_argument("Input offset is greater than input data range. There is no input data to process");
+                throw std::runtime_error("Input offset is greater than input data range. There is no input data to process");
 
             output_sizes[i] = static_cast<cldnn::tensor::value_type>(
                 2 * input_offsets[i] < output_sizes[i]
