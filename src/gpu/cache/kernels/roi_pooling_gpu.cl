@@ -47,13 +47,13 @@ KERNEL(roi_pooling_gpu)(const __global UNIT_TYPE* input_data,
 
     const uint ph_mult_height = ph * roi_height;
     const uint pw_mult_width = pw * roi_width;
-    uint ystart = ph_mult_height / POOLED_HEIGHT;
-    uint xstart = pw_mult_width / POOLED_WIDTH;
-    uint yend   = (ph_mult_height + roi_height) / POOLED_HEIGHT;
+    int ystart = ph_mult_height / POOLED_HEIGHT;
+    int xstart = pw_mult_width / POOLED_WIDTH;
+    int yend   = (ph_mult_height + roi_height) / POOLED_HEIGHT;
     if ( (yend * POOLED_HEIGHT) < (ph_mult_height + roi_height) ) {
         ++yend;
     }
-    uint xend   = (pw_mult_width + roi_width) / POOLED_WIDTH;
+    int xend   = (pw_mult_width + roi_width) / POOLED_WIDTH;
     if ( (xend * POOLED_WIDTH) < (pw_mult_width + roi_width) ) {
         ++xend;
     }
