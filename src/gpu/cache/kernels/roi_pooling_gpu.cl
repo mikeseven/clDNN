@@ -27,33 +27,33 @@ KERNEL(roi_pooling_gpu)(const __global UNIT_TYPE* input_data,
                         const __global UNIT_TYPE* input_rois,
                         __global UNIT_TYPE* output)
 {
-    int output_index = get_global_id(0);
+    const uint output_index = get_global_id(0);
 
-    int pw = output_index % POOLED_WIDTH;
-    int ph = (output_index / POOLED_WIDTH) % POOLED_HEIGHT;
-    int fm = (output_index / POOLED_SIZE) % INPUT_FEATURE_NUM;
-    int batch = output_index / POOLED_BATCH_SIZE;
+    const uint pw = output_index % POOLED_WIDTH;
+    const uint ph = (output_index / POOLED_WIDTH) % POOLED_HEIGHT;
+    const uint fm = (output_index / POOLED_SIZE) % INPUT_FEATURE_NUM;
+    const uint batch = output_index / POOLED_BATCH_SIZE;
 
     const __global UNIT_TYPE* rois = input_rois + batch * ROI_NUM_ELEMENTS;
-    int roi_batch_ind = rois[0];
-	int roi_start_x = GET_ROI(rois[1]);
-    int roi_start_y = GET_ROI(rois[2]);
-    int roi_end_x   = GET_ROI(rois[3]);
-    int roi_end_y   = GET_ROI(rois[4]);
+    const int roi_batch_ind = rois[0];
+    const int roi_start_x = GET_ROI(rois[1]);
+    const int roi_start_y = GET_ROI(rois[2]);
+    const int roi_end_x   = GET_ROI(rois[3]);
+    const int roi_end_y   = GET_ROI(rois[4]);
 
     // Force malformed ROIs to be 1x1
-    int roi_width  = max(roi_end_x - roi_start_x + 1, 1);
-    int roi_height = max(roi_end_y - roi_start_y + 1, 1);
+    const uint roi_width  = max(roi_end_x - roi_start_x + 1, 1);
+    const uint roi_height = max(roi_end_y - roi_start_y + 1, 1);
 
-    int ph_mult_height = ph * roi_height;
-    int pw_mult_width = pw * roi_width;
-    int ystart = ph_mult_height / POOLED_HEIGHT;
-    int xstart = pw_mult_width / POOLED_WIDTH;
-    int yend   = (ph_mult_height + roi_height) / POOLED_HEIGHT;
+    const uint ph_mult_height = ph * roi_height;
+    const uint pw_mult_width = pw * roi_width;
+    uint ystart = ph_mult_height / POOLED_HEIGHT;
+    uint xstart = pw_mult_width / POOLED_WIDTH;
+    uint yend   = (ph_mult_height + roi_height) / POOLED_HEIGHT;
     if ( (yend * POOLED_HEIGHT) < (ph_mult_height + roi_height) ) {
         ++yend;
     }
-    int xend   = (pw_mult_width + roi_width) / POOLED_WIDTH;
+    uint xend   = (pw_mult_width + roi_width) / POOLED_WIDTH;
     if ( (xend * POOLED_WIDTH) < (pw_mult_width + roi_width) ) {
         ++xend;
     }
@@ -70,7 +70,7 @@ KERNEL(roi_pooling_gpu)(const __global UNIT_TYPE* input_data,
     	maxval = 0;
     }
 
-    int offset = (roi_batch_ind * INPUT_FEATURE_NUM + fm) * INPUT_SIZE_Y * INPUT_SIZE_X;
+    const uint offset = (roi_batch_ind * INPUT_FEATURE_NUM + fm) * INPUT_SIZE_Y * INPUT_SIZE_X;
     const __global UNIT_TYPE* input = input_data + offset + (INPUT_PADDING_LOWER_SIZE_Y * INPUT_SIZE_X) + INPUT_PADDING_LOWER_SIZE_X;
 
     for (int h = ystart; h < yend; ++h) {
