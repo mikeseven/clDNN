@@ -48,6 +48,7 @@ public:
 
 	static primitive_impl* create_prior_box(const prior_box_node& prior_box)
 	{
+		// This primitive is being executed on CPU during network compilation.
 		return new wait_for_events_gpu(prior_box);
 	}
 };

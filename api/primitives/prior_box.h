@@ -30,17 +30,31 @@
 extern "C" {
 #endif
 
+/// @brief Generates a set of default bounding boxes with different sizes and aspect ratios.
+/// @details The prior-boxes are shared across all the images in a batch (since they have the same width and height).
+///	First feature stores the mean of each prior coordinate. 
+/// Second feature stores the variance of each prior coordinate.
 CLDNN_BEGIN_PRIMITIVE_DESC(prior_box) 
-cldnn_tensor img_size; // Image width + height
-cldnn_float_arr min_sizes; // Minimum box size
-cldnn_float_arr max_sizes; // Maximum box size
-cldnn_float_arr aspect_ratios; // Various of aspect ratios. Duplicate ratios will be ignored.
-uint32_t flip; // If not 0, will flip each aspect ratio. For example, if there is aspect ratio "r", aspect ratio "1.0/r" we will generated as well.
-uint32_t clip; // If not 0, will clip the prior so that it is within [0, 1].
-cldnn_float_arr variance; // Variance for adjusting the prior boxes.
-float step_width; // Step width
-float step_height; // Step height
-float offset; // Offset to the top left corner of each cell.
+/// @brief Image width and height.
+cldnn_tensor img_size;
+/// @brief Minimum box sizes in pixels.
+cldnn_float_arr min_sizes;
+/// @brief Maximum box sizes in pixels.
+cldnn_float_arr max_sizes;
+/// @brief Various of aspect ratios. Duplicate ratios will be ignored.
+cldnn_float_arr aspect_ratios;
+/// @brief If not 0, will flip each aspect ratio. For example, if there is aspect ratio "r", aspect ratio "1.0/r" we will generated as well.
+uint32_t flip;
+/// @brief If not 0, will clip the prior so that it is within [0, 1].
+uint32_t clip;
+/// @brief Variance for adjusting the prior boxes.
+cldnn_float_arr variance;
+/// @brief Step width.
+float step_width;
+/// @brief Step height.
+float step_height;
+/// @brief Offset to the top left corner of each cell.
+float offset;
 CLDNN_END_PRIMITIVE_DESC(prior_box)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(prior_box);
