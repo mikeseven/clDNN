@@ -53,9 +53,9 @@ struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
         const primitive_id& id,
         const primitive_id& input,
         pooling_mode mode,
-        const tensor& input_offset,
-        const tensor& stride,
         const tensor& size,
+        const tensor& stride,
+        const tensor& input_offset = tensor(format::x, 0, { 0 }),
         const padding& output_padding = padding()
         )
         : primitive_base(id, {input}, output_padding)
@@ -87,6 +87,7 @@ protected:
     void update_dto(dto& dto) const override
     {
         dto.mode = static_cast<int32_t>(mode);
+        dto.input_offset = input_offset;
         dto.stride = stride;
         dto.size = size;
     }

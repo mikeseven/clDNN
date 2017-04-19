@@ -167,6 +167,9 @@ layout program_node::get_output_layout()
     if (valid_output_layout)
         return output_layout;
 
+    for (auto dep : dependencies)
+        dep->get_output_layout();
+
     auto new_layout = desc->type->calc_output_layout(*this);
     //TODO: after merging padding into layout, calc_output_layout can now return padding as well
     // for now just ignore it and preserve already set padding value - in future we should probably take care of this

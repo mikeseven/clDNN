@@ -50,8 +50,8 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
         const primitive_id& input,
         const std::vector<primitive_id>& weights,
         const std::vector<primitive_id>& bias,
-        tensor input_offset = { format::bfyx,{ 0,0,0,0 } },
         tensor stride = { format::bfyx, 0, { 1, 1, 1, 1 } },
+        tensor input_offset = { format::bfyx,{ 0,0,0,0 } },
         bool with_activation = false,
         float activation_slp = 0.0f,
         const padding& output_padding = { format::bfyx,{ 0,0,0,0 } }
@@ -120,6 +120,7 @@ protected:
     {
         dto.weights = _weights.ref();
         dto.bias = _bias.ref();
+        dto.input_offset = input_offset;
         dto.split = split();
         dto.stride = stride;
         dto.with_activation = with_activation;

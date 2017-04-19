@@ -46,8 +46,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         reordered_input,
         { conv1_weights },
         { conv1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 2, 2 } },
+        { format::yx,{ 2,2 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -55,8 +55,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         "pool1",
         conv1,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 2, 2 } }, // strd
-        { format::bfyx, { 1, 1, 3, 3 } }); // kernel
+        { format::yx,{ 3,3 } }, // kernel
+        { format::yx,{ 2,2 } }); // strd
 
 
     auto fire2_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire2_squeeze1x1_weights.nnd")});
@@ -66,8 +66,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         pool1,
         { fire2_squeeze1x1_weights },
         { fire2_squeeze1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -78,8 +78,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire2_squeeze1x1,
         { fire2_expand1x1_weights },
         { fire2_expand1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -90,8 +90,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire2_squeeze1x1,
         { fire2_expand3x3_weights },
         { fire2_expand3x3_bias },
-        { format::bfyx, { 0, 0, -1, -1 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ -1,-1 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -112,8 +112,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire2_concat,
         { fire3_squeeze1x1_weights },
         { fire3_squeeze1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -124,8 +124,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire3_squeeze1x1,
         { fire3_expand1x1_weights },
         { fire3_expand1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -136,8 +136,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire3_squeeze1x1,
         { fire3_expand3x3_weights },
         { fire3_expand3x3_bias },
-        { format::bfyx, { 0, 0, -1, -1 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ -1,-1 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -153,8 +153,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         "pool3",
         fire3_concat,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 2, 2 } }, // strd
-        { format::bfyx, { 1, 1, 3, 3 } }); // kernel
+        { format::yx,{ 3,3 } }, // kernel
+        { format::yx,{ 2,2 } }); // strd
 
     auto fire4_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire4_squeeze1x1_weights.nnd")});
     auto fire4_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire4_squeeze1x1_bias.nnd")});
@@ -163,8 +163,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         pool3,
         { fire4_squeeze1x1_weights },
         { fire4_squeeze1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -175,8 +175,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire4_squeeze1x1,
         { fire4_expand1x1_weights },
         { fire4_expand1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -187,8 +187,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire4_squeeze1x1,
         { fire4_expand3x3_weights },
         { fire4_expand3x3_bias },
-        { format::bfyx, { 0, 0, -1, -1 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ -1,-1 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -207,8 +207,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire4_concat,
         { fire5_squeeze1x1_weights },
         { fire5_squeeze1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -219,8 +219,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire5_squeeze1x1,
         { fire5_expand1x1_weights },
         { fire5_expand1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -231,8 +231,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire5_squeeze1x1,
         { fire5_expand3x3_weights },
         { fire5_expand3x3_bias },
-        { format::bfyx, { 0, 0, -1, -1 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ -1,-1 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -248,8 +248,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         "pool5",
         fire5_concat,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 2, 2 } }, // strd
-        { format::bfyx, { 1, 1, 3, 3 } }); // kernel
+        { format::yx,{ 3,3 } }, // kernel
+        { format::yx,{ 2,2 } }); // strd
 
     auto fire6_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire6_squeeze1x1_weights.nnd")});
     auto fire6_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire6_squeeze1x1_bias.nnd")});
@@ -258,8 +258,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         pool5,
         { fire6_squeeze1x1_weights },
         { fire6_squeeze1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -270,8 +270,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire6_squeeze1x1,
         { fire6_expand1x1_weights },
         { fire6_expand1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -282,8 +282,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire6_squeeze1x1,
         { fire6_expand3x3_weights },
         { fire6_expand3x3_bias },
-        { format::bfyx, { 0, 0, -1, -1 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ -1,-1 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -302,8 +302,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire6_concat,
         { fire7_squeeze1x1_weights },
         { fire7_squeeze1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -314,8 +314,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire7_squeeze1x1,
         { fire7_expand1x1_weights },
         { fire7_expand1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -326,8 +326,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire7_squeeze1x1,
         { fire7_expand3x3_weights },
         { fire7_expand3x3_bias },
-        { format::bfyx, { 0, 0, -1, -1 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ -1,-1 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -346,8 +346,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire7_concat,
         { fire8_squeeze1x1_weights },
         { fire8_squeeze1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -358,8 +358,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire8_squeeze1x1,
         { fire8_expand1x1_weights },
         { fire8_expand1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -370,8 +370,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire8_squeeze1x1,
         { fire8_expand3x3_weights },
         { fire8_expand3x3_bias },
-        { format::bfyx, { 0, 0, -1, -1 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ -1,-1 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -391,8 +391,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire8_concat,
         { fire9_squeeze1x1_weights },
         { fire9_squeeze1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -403,8 +403,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire9_squeeze1x1,
         { fire9_expand1x1_weights },
         { fire9_expand1x1_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -415,8 +415,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire9_squeeze1x1,
         { fire9_expand3x3_weights },
         { fire9_expand3x3_bias },
-        { format::bfyx, { 0, 0, -1, -1 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ -1,-1 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -436,8 +436,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire9_concat,
         { conv10_weights },
         { conv10_bias },
-        { format::bfyx, { 0, 0, 0, 0 } },
-        { format::bfyx, { 1, 1, 1, 1 } },
+        { format::yx,{ 1,1 } },
+        { format::yx,{ 0,0 } },
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
@@ -445,8 +445,8 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         "pool10",
         conv10,
         pooling_mode::average,
-        { format::bfyx, { 1, 1, 1, 1 } }, // strd
-        { format::bfyx,{ 1, 1, 14, 14 } }); // kernel
+        { format::yx,{ 14,14 } }, // kernel
+        { format::yx,{ 1,1 } }); // strd
 
     auto softmax = cldnn::softmax(
         "output",

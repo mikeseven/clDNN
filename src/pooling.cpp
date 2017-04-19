@@ -32,9 +32,10 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
 
     auto input_layout = node.input().get_output_layout();
 
-    if (input_layout.size.format != format::bfyx && input_layout.size.format != format::yxfb)
-        throw std::runtime_error("Pooling supports formats with two dimensions in spatials only");
+    if (input_layout.size.spatial.size() != 2)
+        throw std::runtime_error("Only two dimensional spatials are supported by pooling");
 
+    auto input_offsets = desc->input_offset.transform(input_layout.size.format, 0).sizes();
     auto strides = desc->stride.transform(input_layout.size.format, 1).sizes();
     auto window_sizes = desc->size.transform(input_layout.size.format, 1).sizes();
     //TODO !!!implement correct output size calculation!!!

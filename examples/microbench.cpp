@@ -55,7 +55,7 @@ void test_conv(
     int32_t in_w,
     int32_t in_h,
     int32_t in_feature,
-    const padding& offset,
+    const tensor& offset,
     const tensor& stride,
     int32_t out_feature,
     int32_t kernel_w,
@@ -91,8 +91,8 @@ void test_conv(
         id + "_input",
         { id + "_weights" },
         { id + "_bias" },
-        offset,
         stride,
+        offset,
 		{ format::bfyx,{ 1,1,1,1 } },
         true);
 
