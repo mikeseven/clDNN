@@ -161,6 +161,8 @@ protected:
     std::vector<program_node*> dependencies;
     std::list<program_node*> users;
 
+    std::list<program_node*>::const_iterator processing_itr;
+
     bool output = false;
     bool user_mark = false;
 
@@ -237,6 +239,7 @@ private:
 
     std::list<program_node*> inputs;
     std::vector<program_node*> outputs;
+    std::list<program_node*> processing_order;
 
     std::map<primitive_id, std::shared_ptr<program_node>> nodes_map;
 
@@ -285,6 +288,8 @@ private:
     }
 
     void remove_if_dangling(program_node& node);
+
+    void calc_processing_order();
 
     void forward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;
     void backward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;

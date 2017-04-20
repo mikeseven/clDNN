@@ -234,6 +234,7 @@ void program_impl::init_graph(topology_impl const& topology)
     }
 
     set_outputs();
+    calc_processing_order();
 }
 
 void program_impl::optimize_graph()
@@ -252,12 +253,11 @@ void program_impl::optimize_graph()
 
 void program_impl::compile_graph()
 {
-    forward_bfs([](program_node& node) {
-        node.get_output_layout();
-    });
-
-    for (auto& node : nodes_map)
-        node.second->selected_impl = node.second->type()->choose_impl(*engine, *node.second);
+    for (auto& node : processing_order)
+    {
+        node->get_output_layout();
+        node->selected_impl = node->type()->choose_impl(*engine, *node);
+    }
 }
 
 void program_impl::set_outputs()
@@ -304,7 +304,10 @@ void program_impl::trim_to_outputs()
 {
     backward_bfs(nullptr, [this](program_node& node) {
         if (!node.is_marked())
+        {
+            processing_order.erase(node.processing_itr);
             optimized_out.push_back(node.id());
+        }
     });
 
     for (auto const& opt : optimized_out)
@@ -477,7 +480,6 @@ void program_impl::prepare_padding()
 {
     for (auto& pair : nodes_map)
     {
-        
         if (pair.second->get_primitive()->type != convolution::type_id())
             continue;
 
@@ -562,8 +564,55 @@ void program_impl::remove_if_dangling(program_node& node)
     if (!node.users.empty() || !node.dependencies.empty() || node.is_output())
         return;
 
+    processing_order.erase(node.processing_itr);
     optimized_out.push_back(node.id());
     nodes_map.erase(node.id());
+}
+
+void program_impl::calc_processing_order()
+{
+    processing_order.clear();
+
+    //run dfs to sort nodes topologically
+    for (auto input : inputs)
+    {
+        if (input->is_marked())
+            continue;
+
+        input->mark();
+        std::list<std::pair<program_node*, std::list<program_node*>::const_iterator>> stack = { std::make_pair(input, input->users.begin()) };
+
+        while (!stack.empty()) //imitate call stack
+        {
+        new_frame:
+            auto& frame = stack.back();
+
+            while (frame.second != frame.first->users.end())
+            {
+                auto successor = *frame.second;
+                ++frame.second;
+
+                if (!successor->is_marked())
+                {
+                    successor->mark();
+
+                    //recurrence call
+                    stack.push_back(std::make_pair(successor, successor->users.begin()));
+                    goto new_frame;
+                }
+            }
+
+            //we have finished processing one node so add it to the processing queue
+            processing_order.push_front(frame.first);
+            frame.first->processing_itr = processing_order.begin();
+
+            //return from call
+            stack.pop_back();
+        }
+    }
+
+    for (auto& node : nodes_map)
+        node.second->unmark();
 }
 
 void program_impl::forward_bfs(std::function<void(program_node&)> const& mark_func, std::function<void(program_node&)> const& unmark_func) const
