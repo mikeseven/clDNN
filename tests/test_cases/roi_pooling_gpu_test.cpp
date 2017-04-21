@@ -89,7 +89,6 @@ TestRunner<Dtype>::TestRunner(
                                     pooled_width,
                                     pooled_height,
                                     spatial_scale,
-                                    padding(),
                                     padding()))
 {    
     _topology.add(input_layout(data_name, _data_layout));
@@ -293,7 +292,6 @@ public:
                     test_cases[i].pooled_width,
                     test_cases[i].pooled_height,
                     spatial_scale,
-                    padding(),
                     padding()));
         }
 

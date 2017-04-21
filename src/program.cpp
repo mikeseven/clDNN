@@ -29,6 +29,8 @@
 #include "api/CPP/pooling.hpp"
 #include "api/CPP/reorder.hpp"
 
+#include "convolution_inst.h"
+
 
 namespace cldnn
 {
@@ -349,7 +351,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
         else if (input_node.type() == reorder::type_id()) //convolution's input is a reorder
         {
             auto reorder_prim = input_node.as<reorder>().typed_desc();
-            auto reoreder_output_layout = reorder_prim->output_layout;
+            auto reoreder_output_layout = input_node.get_output_layout();
             new_input = lo.get_reorder(
                 reoreder_output_layout,
                 reorder_prim->id,
@@ -358,9 +360,10 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
 
             if (new_input) //output format is not optimal
             {
-                auto opt_layout = new_input->output_layout;
                 auto& reorder_input = input_node.get_dependency(0);
                 auto reorder_input_layout = reorder_input.get_output_layout();
+
+                auto opt_layout = layout(new_input->output_data_type, reorder_input_layout.size.transform(new_input->output_format, 1));
                 if (reorder_input_layout == opt_layout) //reorder 'breaks' optimal format
                 {
                     if (reorder_prim->subtract_per_feature.empty() &&
@@ -372,13 +375,15 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                     }
                     else //change reorder's output layout
                     {
-                        reorder_prim->output_layout = opt_layout;
+                        reorder_prim->output_format = opt_layout.size.format;
+                        reorder_prim->output_data_type = opt_layout.data_type;
                         new_input = nullptr;
                     }
                 }
                 else //current reorder gives bad output, simply change it
                 {
-                    reorder_prim->output_layout = opt_layout;
+                    reorder_prim->output_format = opt_layout.size.format;
+                    reorder_prim->output_data_type = opt_layout.data_type;
                     new_input = nullptr;
                 }
             }
@@ -492,21 +497,10 @@ void program_impl::prepare_padding()
         }
 
         // Calculating input padding needed for convolution
-        auto filter_prim = node.get_dependency(conv->input.size()).get_primitive(); //weights are stored after inputs
+        auto& filter_node = node.as<convolution>().weights(0);
+        auto filter_prim = filter_node.get_primitive();
 
-        layout filter_layout(data_types::f32, { format::bfyx,{ 0,0,0,0 } });
-        if (filter_prim->type == data::type_id())
-        {
-            filter_layout = std::static_pointer_cast<const cldnn::data>(filter_prim)->mem.get_layout();
-        }
-        else if (filter_prim->type == input_layout::type_id())
-        {
-            filter_layout = std::static_pointer_cast<const cldnn::input_layout>(filter_prim)->layout;
-        }
-        else if (filter_prim->type == reorder::type_id())
-        {
-            filter_layout = std::static_pointer_cast<const cldnn::reorder>(filter_prim)->output_layout;
-        }
+        layout filter_layout = filter_node.get_output_layout();
         
         // convolution have only one input primitive
         auto prev_prim_output_layout = conv_input_node.get_output_layout();

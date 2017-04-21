@@ -34,6 +34,7 @@ namespace cldnn
 /// which will be passed to network before execution.
 /// For example, network input images.
 /// @note User should call network::set_input_data() for every @p input_layout primitive before network execution.
+/// @note @p output_padding property of @p input_layout is ignored - its output layout is always equal to input layout defined during object creation.
 /// @sa network::set_input_data(), cldnn::data
 struct input_layout : public primitive_base<input_layout, CLDNN_PRIMITIVE_DESC(input_layout)>
 {

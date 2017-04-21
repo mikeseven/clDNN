@@ -29,6 +29,16 @@ primitive_type_id reorder_type_id()
     return &instance;
 }
 
+layout reorder_inst::calc_output_layout(reorder_node const& node)
+{
+    auto input_layout = node.input().get_output_layout();
+    auto odt = node.get_primitive()->output_data_type;
+    auto of = node.get_primitive()->output_format;
+    auto op = node.get_primitive()->output_padding;
+
+    return layout(odt, input_layout.size.transform(of, 1), op);
+}
+
 std::string reorder_inst::to_string(reorder_node const& node)
 {
     std::stringstream           primitive_description;

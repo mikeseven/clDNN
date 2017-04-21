@@ -40,10 +40,7 @@ class typed_primitive_inst<reorder> : public typed_primitive_inst_base<reorder>
     using parent = typed_primitive_inst_base<reorder>;
 
 public:
-    static layout calc_output_layout(reorder_node const& node)
-    {
-        return node.get_primitive()->output_layout;
-    }
+    static layout calc_output_layout(reorder_node const& node);
     static std::string to_string(reorder_node const& node);
 
 public:

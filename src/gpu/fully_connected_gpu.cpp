@@ -391,7 +391,7 @@ fully_connected_gpu::kernel_data default_bfyx_f32(const fully_connected_node& ar
         auto input_layout = arg.input().get_output_layout();
         cldnn::topology topology(
             cldnn::input_layout("input", input_layout),
-            cldnn::reorder("reorder", "input", cldnn::layout{ input_layout.data_type, input_layout.size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yxfb,{ 0,0,0,0 } })
+            cldnn::reorder("reorder", "input", format::yxfb, input_layout.data_type, "", { cldnn::format::bfyx,{ 0,0,0,0 } })
         );
         kd = default_yxfb_f32(arg); //fallback to (yxfb, yxfb, fp32) case
         kd.reorder.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false }); //add input reorder bfyx -> yxfb
@@ -450,14 +450,9 @@ fully_connected_gpu::kernel_data default_bfyx_f32_bs_xs_xsv8_bsv8_f32(const full
         throw std::runtime_error("default_bfyx_f32_bs_xs_xsv8_bsv8_f32 with batch < 8 not implemented!");
     }
 
-    auto expected_mem_size = cldnn::tensor(cldnn::format::bs_xs_xsv8_bsv8,
-    {
-        input_size.batch[0], input_size.feature[0] * input_size.spatial[0] * input_size.spatial[1]
-    });
-    cldnn::layout expected_mem_layout(cldnn::data_types::f32, expected_mem_size);
     cldnn::topology topology(
         cldnn::input_layout("input", input_layout),
-        cldnn::reorder("reorder", "input", expected_mem_layout)
+        cldnn::reorder("reorder", "input", format::bs_xs_xsv8_bsv8, data_types::f32)
     );
     
     fully_connected_gpu::kernel_data kd = default_yxfb_f32_bs_xs_xsv8_bsv8_f32(arg);
@@ -584,7 +579,7 @@ fully_connected_gpu::kernel_data default_bfyx_f16_yxfb_f16(const fully_connected
     auto input_layout = arg.input().get_output_layout();
     cldnn::topology topology(
         cldnn::input_layout("input", input_layout),
-        cldnn::reorder("reorder", "input", cldnn::layout{ input_layout.data_type, input_layout.size.transform(cldnn::format::yxfb, 1) }, "", { cldnn::format::yxfb,{ 0,0,0,0 } })
+        cldnn::reorder("reorder", "input", format::yxfb, input_layout.data_type)
     );
     kd.reorder.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });
     return kd;

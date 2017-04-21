@@ -35,8 +35,10 @@ extern "C" {
 /// Also merged with subtraction layer, which can subtract values while doing reordering.
 /// NOTE THAT THIS WILL SUBTRACT THE SAME VALUES FROM EACH BATCH.
 CLDNN_BEGIN_PRIMITIVE_DESC(reorder)
-/// @brief Requested memory layout.
-cldnn_layout output_layout;
+/// @brief Requested memory format.
+cldnn_format_type output_format;
+/// @brief Requested memory data type.
+cldnn_data_type output_data_type;
 /// @brief Primitive id to get mean subtract values. Ignored if subtract_per_featrue is set.
 cldnn_primitive_id mean_subtract;
 /// @brief Array of mean subtract values.

@@ -333,8 +333,6 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
 	str << std::endl << "Test params: " << test_param->print();
 
     str << "Layer params:\n"
-        << "Input padding: lower size: " << test_param->print_tensor(primitive->input_padding.lower_size())
-        << " upper size : " << test_param->print_tensor(primitive->input_padding.upper_size()) << '\n'
         << "Output padding lower size: " << test_param->print_tensor(primitive->output_padding.lower_size())
         << " upper size: " << test_param->print_tensor(primitive->output_padding.upper_size()) << '\n';
 

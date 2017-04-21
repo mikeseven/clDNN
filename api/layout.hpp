@@ -299,6 +299,13 @@ struct layout
         return fuse(data_type, size.format);
     }
 
+    layout with_padding(padding const& padd) const
+    {
+        layout ret = *this;
+        ret.data_padding = padd;
+        return ret;
+    }
+
     /// Data type stored in @ref memory (see. @ref data_types)
     data_types data_type;
 

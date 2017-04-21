@@ -218,7 +218,7 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_across_channel_tes
     
     topology topology(
         input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout(), "", { 0, 0, 0, 0 }, { 0, 0, 0, 2 }),
+        reorder("reorder", "input", input.get_layout(), "", { 0, 0, 0, 0 }, { 0, 0, 2, 2 }),
         lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
         );
     
@@ -719,8 +719,6 @@ public:
 		//Output is bfyx
         data_types dt = inputs[0].get_layout().data_type;
 		auto output = memory::allocate( engine, cldnn::layout(dt, inputs[0].get_layout().size.add(lrn->output_padding.lower_size()).add(lrn->output_padding.upper_size()).transform(cldnn::format::bfyx, 0)) );
-
-		assert(!lrn->input_padding);
 
 		Type beta = lrn->beta;
 		Type k = lrn->k;
