@@ -52,6 +52,7 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         { conv1_biases },
         { format::yx, {0,0} },
         { format::yx, {4,4} },
+		{ format::yx, {1,1} },
         true);
 
     auto pool1 = pooling(
@@ -81,6 +82,7 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         { conv2_g1_biases, conv2_g2_biases },
         { format::yx, {-2, -2} },
         { format::yx, {1, 1} },
+		{ format::yx, {1, 1} },
         true);
 
     auto pool2 = pooling(
@@ -108,6 +110,7 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         { conv3_biases },
         { format::yx, {-1, -1} },
         { format::yx, {1,1} },
+		{ format::yx, {1, 1} },
         true);
 
     auto conv4_g1_weights = file::create({ engine, join_path(weights_dir, "conv4_g1_weights.nnd")});
@@ -121,6 +124,7 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         { conv4_g1_biases, conv4_g2_biases },
         { format::yx, {-1,-1} },
         { format::yx, {1,1} },
+		{ format::yx, {1, 1} },
         true);
 
     auto conv5_g1_weights = file::create({ engine, join_path(weights_dir, "conv5_g1_weights.nnd")});
@@ -134,6 +138,7 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         { conv5_g1_biases, conv5_g2_biases },
         { format::yx,{-1,-1} },
         { format::yx,{1,1} },
+		{ format::yx, {1, 1} },
         true);
 
     auto pool5 = pooling(

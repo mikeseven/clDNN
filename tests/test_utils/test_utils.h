@@ -300,7 +300,7 @@ public:
     template<typename Type>
     void compare_buffers(const cldnn::memory& out, const cldnn::memory& ref);
 
-    size_t get_linear_index(const cldnn::layout & layout, int b, int f, int y, int x);
+    static size_t get_linear_index(const cldnn::layout & layout, int b, int f, int y, int x);
     size_t get_linear_index_with_broadcast(const cldnn::layout & in_layout, int b, int f, int y, int x, const cldnn::layout & out_layout);
 
     static std::vector<test_params*> generate_generic_test_params(std::vector<test_params*>& all_generic_params, bool use_weight_formats = false);

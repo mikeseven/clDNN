@@ -517,8 +517,9 @@ void program_impl::prepare_padding()
         // Compute initial required paddings for primitive used as input for convolution.
         auto input_offset = conv->input_offset().transform(conv_layout.size.format, 0);
         auto stride = conv->stride.transform(cldnn::format::yx, 0);
-        auto input_limit_x = input_offset.spatial[0] + (conv_layout.size.spatial[0] - 1) * stride.spatial[0] + filter_layout.size.spatial[0];
-        auto input_limit_y = input_offset.spatial[1] + (conv_layout.size.spatial[1] - 1) * stride.spatial[1] + filter_layout.size.spatial[1];
+		auto dilation = conv->dilation.transform(cldnn::format::yx, 0);
+		auto input_limit_x = input_offset.spatial[0] + (conv_layout.size.spatial[0] - 1) * stride.spatial[0] + (filter_layout.size.spatial[0] - 1) * dilation.spatial[0] + 1;
+		auto input_limit_y = input_offset.spatial[1] + (conv_layout.size.spatial[1] - 1) * stride.spatial[1] + (filter_layout.size.spatial[1] - 1) * dilation.spatial[1] + 1;
 
         auto left_padding = std::max(-input_offset.spatial[0], 0);
         auto top_padding = std::max(-input_offset.spatial[1], 0);

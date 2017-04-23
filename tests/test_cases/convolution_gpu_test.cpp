@@ -58,12 +58,14 @@ T kahan_summation(std::vector<T> &input) {
 }
 
 template<typename T>
-VVF<T> reference_convolve(VVVF<T> &input, VVVF<T> &filter, int stride_y, int stride_x, float bias,
+VVF<T> reference_convolve(VVVF<T> &input, VVVF<T> &filter, int stride_y, int stride_x, float bias, int dilation_y = 1, int dilation_x = 1,
 		int input_padding_y = 0, int input_padding_x = 0, int output_padding_y = 0, 
 		int output_padding_x = 0, size_t f_begin = 0)
 {
-	size_t output_y = 1 + (input[0].size() - filter[0].size() + 2 * input_padding_y) / stride_y + 2 * output_padding_y;
-	size_t output_x = 1 + (input[0][0].size() - filter[0][0].size() + 2 * input_padding_x) / stride_x + 2 * output_padding_x;
+	size_t kernel_extent_y = dilation_y * (filter[0].size() - 1) + 1;
+	size_t kernel_extent_x = dilation_x * (filter[0][0].size() - 1) + 1;
+	size_t output_y = 1 + (input[0].size() - kernel_extent_y + 2 * input_padding_y) / stride_y + 2 * output_padding_y;
+	size_t output_x = 1 + (input[0][0].size() - kernel_extent_x + 2 * input_padding_x) / stride_x + 2 * output_padding_x;
 	VVF<T> output(output_y, VF<T>(output_x, bias));
 	for (size_t f = 0; f < filter.size(); ++f) {
 		for (size_t y = 0; y < (output_y - 2 * output_padding_y); ++y) {
@@ -71,10 +73,10 @@ VVF<T> reference_convolve(VVVF<T> &input, VVVF<T> &filter, int stride_y, int str
 				VF<T> values;
 				values.reserve(filter[0].size() * filter[0][0].size());
 				for (size_t yf = 0; yf < filter[0].size(); ++yf) {
-					int yi = -input_padding_y + (int)yf + stride_y * (int)y;
+					int yi = -input_padding_y + (int)yf * dilation_y + stride_y * (int)y;
 					if (yi < 0 || (int)input[0].size() <= yi) continue;
 					for (size_t xf = 0; xf < filter[0][0].size(); ++xf) {
-						int xi = -input_padding_x + (int)xf + stride_x * (int)x;
+						int xi = -input_padding_x + (int)xf * dilation_x + stride_x * (int)x;
 						if (xi < 0 || (int)input[0][0].size() <= xi) continue;
 						values.push_back(input[f_begin + f][yi][xi] * filter[f][yf][xf]);
 					}
@@ -104,11 +106,45 @@ void print_2d(VVF<T> &data) {
 	std::cout << "\nprinting data:\n";
 	for (VF<T> &v : data) {
 		for (float f : v) {
-			std::cout << std::setw(4) << std::right << f;
+			std::cout << std::setw(4) << std::right << f << " ";
 		}
 		std::cout << std::endl;
 	}
 	std::cout << std::endl;
+}
+
+static std::string print_test_params(cldnn::format test_input_fmt, cldnn::format test_filter_fmt, 
+	int input_b, int input_f, int input_y, int input_x,
+	int filter_o, int filter_i, int filter_y, int filter_x,
+	int stride_y, int stride_x,
+	int dilation_y, int dilation_x,
+	int input_padding_y, int input_padding_x,
+	int output_padding_y, int output_padding_x)
+{
+	std::stringstream str;
+	
+	str << std::endl
+		<< "failing test parameters:" << std::endl
+		<< "input_format = " << format::traits(test_input_fmt).order << std::endl
+		<< "filter_format = " << format::traits(test_filter_fmt).order << std::endl
+		<< "input_b = " << input_b << std::endl
+		<< "input_f = " << input_f << std::endl
+		<< "input_y = " << input_y << std::endl
+		<< "input_x = " << input_x << std::endl
+		<< "filter_o = " << filter_o << std::endl
+		<< "filter_i = " << filter_i << std::endl
+		<< "filter_y = " << filter_y << std::endl
+		<< "filter_x = " << filter_x << std::endl
+		<< "stride_y = " << stride_y << std::endl
+		<< "stride_x = " << stride_x << std::endl
+		<< "dilation_y = " << dilation_y << std::endl
+		<< "dilation_x = " << dilation_x << std::endl
+		<< "input_padding_y = " << input_padding_y << std::endl
+		<< "input_padding_x = " << input_padding_x << std::endl
+		<< "output_padding_y = " << output_padding_y << std::endl
+		<< "output_padding_x = " << output_padding_x << std::endl;
+
+	return str.str();
 }
 
 template<typename T>
@@ -116,6 +152,7 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
 							  int input_b, int input_f, int input_y, int input_x,
 							  int filter_o, int filter_i, int filter_y, int filter_x, 
 							  int stride_y, int stride_x,
+							  int dilation_y, int dilation_x,
 							  int input_padding_y, int input_padding_x, 
 							  int output_padding_y, int output_padding_x) {
 
@@ -129,8 +166,8 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
 	for (int output_b = 0; output_b < input_b; ++output_b) {
 		for (int s = 0; s < split; ++s) {
 			for (int output_f = 0; output_f < filter_o; ++output_f) {
-				output_cpu[output_b][output_f + s * filter_o] = reference_convolve<T>(input_rnd[output_b], filter_rnd[s][output_f], stride_y, stride_x,
-					bias_rnd_vec[s][output_f], input_padding_y, input_padding_x, output_padding_y, output_padding_x, s * filter_i);
+				output_cpu[output_b][output_f + s * filter_o] = reference_convolve<T>(input_rnd[output_b], filter_rnd[s][output_f], stride_y, stride_x, 
+					bias_rnd_vec[s][output_f], dilation_y, dilation_x, input_padding_y, input_padding_x, output_padding_y, output_padding_x, s * filter_i);
 			}
 		}
 	}
@@ -165,13 +202,15 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
 
 	topology topology(
 		input_layout("input", input.get_layout()),
+		reorder("reorder", "input", input.get_layout()), // This node is needed for optimize_data flag
 		convolution(
 			"conv",
-			"input",
+			"reorder",
 			weights_str,
 			biases_str,
 			{ format::yx, { input_padding_y, input_padding_x } },
 			{ format::yx, 0, { stride_y, stride_x } },
+			{ format::yx, 0,{ dilation_y, dilation_x } },
 			false,
 			0,
 			{ format::yx, { output_padding_y, output_padding_x } })
@@ -181,11 +220,20 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
 		topology.add(data(weights_str[s], weights[s]));
 		topology.add(data(biases_str[s], biases[s]));
 	}
+	cldnn::build_options options;
+	if (input.get_layout().size.format == cldnn::format::bfyx)
+	{
+		options.set_option(cldnn::build_option::optimize_data(true));
+	}
 
-	network network(engine, topology);
-	network.set_input_data("input", input);
-
-	auto outputs = network.execute();
+	std::map<primitive_id, network_output> outputs;
+	ASSERT_NO_THROW(
+	{
+		network network(engine, topology, options);
+		network.set_input_data("input", input);
+		outputs = network.execute();
+	}) << print_test_params(test_input_fmt, test_filter_fmt, input_b, input_f, input_y, input_x, filter_o, filter_i, filter_y, filter_x, 
+							stride_y, stride_x, dilation_y, dilation_x, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
 	EXPECT_EQ(outputs.size(), size_t(1));
 	EXPECT_EQ(outputs.begin()->first, "conv");
 
@@ -204,29 +252,34 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
 	EXPECT_EQ(f_size, (int)output_cpu[0].size());
 	EXPECT_EQ(b_size, (int)output_cpu.size());
 	bool test_is_correct = true;
-	VF<T> output_cpu_vec = flatten_4d<T>(test_input_fmt, output_cpu);
-	for (size_t i = 0; i < output_cpu_vec.size(); ++i) {
-		if (!floating_point_equal(output_cpu_vec[i], output_ptr[i])) {
-			test_is_correct = false;
-			break;
+	for (int b = 0; b < b_size; b++)
+	{
+		for (int f = 0; f < f_size; f++)
+		{
+			for (int y = 0; y < y_size; y++)
+			{
+				for (int x = 0; x < x_size; x++)
+				{
+					if ( (y < output_padding_y) ||
+						 (y >= y_size - output_padding_y) ||
+						 (x < output_padding_x) ||
+						 (x >= x_size - output_padding_x) )
+					{
+						//Ignore padded values in the output.
+						continue;
+					}
+					size_t res_index = generic_test::get_linear_index(output_layout, b, f, y, x);
+					// CPU reference format is bfyx.
+					if (!floating_point_equal(output_cpu[b][f][y][x], output_ptr[res_index])) {
+						test_is_correct = false;
+						break;
+					}
+				}
+			}
 		}
 	}
-	EXPECT_EQ(test_is_correct, true) << std::endl
-		<< "failing test parameters:" << std::endl
-		<< "input_b = " << input_b << std::endl
-		<< "input_f = " << input_f << std::endl
-		<< "input_y = " << input_y << std::endl
-		<< "input_x = " << input_x << std::endl
-		<< "filter_o = " << filter_o << std::endl
-		<< "filter_i = " << filter_i << std::endl
-		<< "filter_y = " << filter_y << std::endl
-		<< "filter_x = " << filter_x << std::endl
-		<< "stride_y = " << stride_y << std::endl
-		<< "stride_x = " << stride_x << std::endl
-		<< "input_padding_y = " << input_padding_y << std::endl
-		<< "input_padding_x = " << input_padding_x << std::endl
-		<< "output_padding_y = " << output_padding_y << std::endl
-		<< "output_padding_x = " << output_padding_x << std::endl;
+	EXPECT_EQ(test_is_correct, true) << print_test_params(test_input_fmt, test_filter_fmt, input_b, input_f, input_y, input_x, filter_o, filter_i, filter_y, filter_x, 
+														  stride_y, stride_x, dilation_y, dilation_x, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
 
 	bool print_data = !test_is_correct;
 	if (!print_data) return;
@@ -286,7 +339,9 @@ struct input_filter_format_pair {
 static input_filter_format_pair test_formats[] = {
       // input      filter        is fp32  is fp16
 	{ format::yxfb, format::oiyx, true,    false },
-    { format::yxfb, format::yxio, true,    true }
+    { format::yxfb, format::yxio, true,    true },
+	{ format::bfyx, format::oiyx, true,    false },
+	{ format::bfyx, format::yxio, true,    true },
 };
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
@@ -300,6 +355,7 @@ static input_filter_format_pair test_formats[] = {
 TEST(DISABLED_convolution_gpu, generic_random) {
 	std::vector<std::pair<int, int>> input_sizes = { { 100, 100 },{ 227, 227 },{ 400, 600 },{ 531, 777 },{ 4096, 1980 } };
 	std::vector<std::pair<int, int>> filter_sizes = { { 1, 1 },{ 2, 2 },{ 3, 3 },{ 4, 4 },{ 5, 5 },{ 7, 7 },{ 9, 9 },{ 11, 11 },{ 1, 3 },{ 5, 2 } };
+	std::vector<std::pair<int, int>> dilation_sizes = { { 1, 1 }, { 2, 4 } };
 
 	engine engine;
 	bool f16_supported = !!engine.get_info().supports_fp16;
@@ -315,31 +371,45 @@ TEST(DISABLED_convolution_gpu, generic_random) {
 						if (input_f % filter_i != 0)
 							continue; // only legal split is allowed
 						for (std::pair<int, int> &filter_yx : filter_sizes) {
-							if (input_yx.first < filter_yx.first || input_yx.second < filter_yx.second)
-								continue; // the filter can't be larger than the input
-							for (int stride_y = 1; stride_y <= 5; ++stride_y) {
-								for (int stride_x = 1; stride_x <= 5; ++stride_x) {
-									for (int input_padding_y = 0; input_padding_y <= 1; ++input_padding_y) {
-										for (int input_padding_x = 0; input_padding_x <= 1; ++input_padding_x) {
-											for (int output_padding_y = 0; output_padding_y <= 1; ++output_padding_y) {
-												for (int output_padding_x = 0; output_padding_x <= 1; ++output_padding_x) {
-													for (int i = 0; i < (int)ARRAY_SIZE(test_formats); i++) {
-														if (test_formats[i].is_fp32) {
-															generic_convolution_test<float>(test_formats[i].input, test_formats[i].filter,
-																input_b, input_f, input_yx.first, input_yx.second,	// BFYX
-																filter_o, filter_i, filter_yx.first, filter_yx.second,
-																stride_y, stride_x,
-																input_padding_y, input_padding_x,
-																output_padding_y, output_padding_x);
-														}
-														if (!f16_supported) continue;
-														if (test_formats[i].is_fp16) {
-															generic_convolution_test<FLOAT16>(test_formats[i].input, test_formats[i].filter,
-																input_b, input_f, input_yx.first, input_yx.second,	// BFYX
-																filter_o, filter_i, filter_yx.first, filter_yx.second,
-																stride_y, stride_x,
-																input_padding_y, input_padding_x,
-																output_padding_y, output_padding_x);
+							for (std::pair<int, int> &dilation_yx : dilation_sizes) {
+								std::pair<int, int> kernel_extent_yx = std::make_pair(dilation_yx.first * (filter_yx.first - 1) + 1, dilation_yx.second * (filter_yx.second - 1) + 1);
+								if (input_yx.first < kernel_extent_yx.first || input_yx.second < kernel_extent_yx.second)
+									continue; // the filter can't be larger than the input
+								for (int stride_y = 1; stride_y <= 5; ++stride_y) {
+									for (int stride_x = 1; stride_x <= 5; ++stride_x) {
+										for (int input_padding_y = 0; input_padding_y <= 1; ++input_padding_y) {
+											for (int input_padding_x = 0; input_padding_x <= 1; ++input_padding_x) {
+												for (int output_padding_y = 0; output_padding_y <= 1; ++output_padding_y) {
+													for (int output_padding_x = 0; output_padding_x <= 1; ++output_padding_x) {
+														for (int i = 0; i < (int)ARRAY_SIZE(test_formats); i++) {
+															if (test_formats[i].input == format::bfyx)
+															{
+																if ((stride_x != stride_y) ||
+																	((stride_x != 1) && (stride_x != 2) && (stride_x != 4)))
+																{
+																	//Currently not supported.
+																	continue;
+																}
+															}
+															if (test_formats[i].is_fp32) {
+																generic_convolution_test<float>(test_formats[i].input, test_formats[i].filter,
+																	input_b, input_f, input_yx.first, input_yx.second,	// BFYX
+																	filter_o, filter_i, filter_yx.first, filter_yx.second,
+																	stride_y, stride_x,
+																	dilation_yx.first, dilation_yx.second,
+																	input_padding_y, input_padding_x,
+																	output_padding_y, output_padding_x);
+															}
+															if (!f16_supported) continue;
+															if (test_formats[i].is_fp16) {
+																generic_convolution_test<FLOAT16>(test_formats[i].input, test_formats[i].filter,
+																	input_b, input_f, input_yx.first, input_yx.second,	// BFYX
+																	filter_o, filter_i, filter_yx.first, filter_yx.second,
+																	stride_y, stride_x,
+																	dilation_yx.first, dilation_yx.second,
+																	input_padding_y, input_padding_x,
+																	output_padding_y, output_padding_x);
+															}
 														}
 													}
 												}
@@ -564,6 +634,7 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_padding) {
 			{ "biases" },
 			{ format::yx,{ 2,1 } },
 			{ format::yx, 0,{ 1,1 } },
+			{ format::yx, { 1, 1 } },
 			false,
 			0,
 			{ format::yx,{ 0,0 } })
@@ -669,6 +740,7 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_and_output_padding) {
 			{ "biases" },
 			{ format::yx,{ 2,1 } },
 			{ format::yx, 0,{ 1,1 } },
+			{ format::yx,{ 1, 1 } },
 			false,
 			0,
 			{ format::yx,{ 1,2 } })
@@ -1232,6 +1304,7 @@ TEST(convolution_f32_fw_gpu, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
             { "biases" },
             { format::yx, { -1,-1 } },
             { format::yx,{ 2,2 } },
+			{ format::yx,{ 1, 1 } },
             false,
             0,
             { format::yx,{ 1,1 } })
@@ -1757,6 +1830,7 @@ TEST(convolution_gpu, trivial_convolution_relu) {
             { "biases" },
             { format::yx, { 0,0 } },
             { format::yx,{ 2,2 } },
+			{ format::yx,{ 1, 1 } },
             true,
             0)
     );
@@ -1830,6 +1904,7 @@ TEST(convolution_gpu, relu_with_negative_slope) {
             { "biases" },
             { format::yx, { 0,0 } },
             { format::yx,{ 2,2 } },
+			{ format::yx,{ 1, 1 } },
             true,
             0.1f)
     );
@@ -1994,6 +2069,7 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxio_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
             { "biases" },
             { format::yx, { 0,0 } },
             { format::yx,{ stride_y,stride_x } },
+			{ format::yx,{ 1, 1 } },
             true,
             0.1f)
     );

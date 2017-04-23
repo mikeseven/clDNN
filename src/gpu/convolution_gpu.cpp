@@ -165,6 +165,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
             gpu::make_jit_constant("RELU",                      static_cast<int>(outer.get_primitive()->with_activation)),
             gpu::make_jit_constant("NEGATIVE_SLOPE",            outer.get_primitive()->activation_negative_slope),
             gpu::make_jit_constant("BIAS_TERM",                 static_cast<int>(outer.bias_term())),
+			gpu::make_jit_constant("DILATION",                  outer.get_primitive()->dilation),
         };
 
         if (weights_layout.size.format == format::yxio ||
@@ -468,6 +469,7 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution_node& arg)
 /// @param output_block_height   Height of output block used in algorithm.
 /// @param filter_size           Tensor with spatial (X, Y) data containing filter size used in algorithm.
 /// @param stride                Tensor with spatial (X, Y) data containing stride used in algorithm.
+/// @param dilation              Tensor with spatial (X, Y) data containing dilation used in algorithm.
 /// @param sub_group_size        Number of work items grouped in single sub-group (enforced SIMD size).
 /// @param read_chunk_size       Size of smallest chunk of data that can be read by sub-group in algorithm
 ///                              (in number of elements).
@@ -488,6 +490,7 @@ static std::pair<size_t, size_t> get_bfyx_req_input_block_dims(
     size_t output_block_height,
     const cldnn::tensor& filter_size,
     const cldnn::tensor& stride,
+	const cldnn::tensor& dilation,
     size_t sub_group_size = 16,
     size_t read_chunk_size = 8,
     size_t min_read_size = 16)
@@ -497,9 +500,9 @@ static std::pair<size_t, size_t> get_bfyx_req_input_block_dims(
     assert(filter_size.spatial[0] > 0 && filter_size.spatial[1] > 0);
 
     // Number of elements in X dimension needed from input to compute output block without re-reading input.
-    std::size_t input_block_req_width = (output_block_width - 1) * stride.spatial[0] + filter_size.spatial[0];
+    std::size_t input_block_req_width = (output_block_width - 1) * stride.spatial[0] + (filter_size.spatial[0] - 1) * dilation.spatial[0] + 1;
     // Number of elements in Y dimension needed from input to compute output block without re-reading input.
-    std::size_t input_block_req_height = (output_block_height - 1) * stride.spatial[1] + filter_size.spatial[1];
+    std::size_t input_block_req_height = (output_block_height - 1) * stride.spatial[1] + (filter_size.spatial[1] - 1) * dilation.spatial[1] + 1;
 
     // Required number of elements in X dimension rounded to nearest >= read chunk size.
     std::size_t input_block_read_width = std::max(cldnn::round_up_to(input_block_req_width, read_chunk_size), min_read_size);
@@ -514,6 +517,7 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution_node& a
     auto filter_size = arg.weights(0).get_padded_output_layout().size;
     auto output_size = arg.get_output_layout().size;
     auto stride = arg.get_primitive()->stride;
+	auto dilation = arg.get_primitive()->dilation;
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.kernel_name = kernel_name_bfyx_os_iyx_osv16;
@@ -543,8 +547,8 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution_node& a
             kd.prefetch = 4;
         }
         //if less than 16 values is required to compute one single row of output
-        //then each WI shall compute one sinle row to maximise reuse within SIMD subgroup (this gives very nice performance results)
-        else if (output_size.spatial[0] + filter_size.spatial[0] - 1 < sub_group_size)
+        //then each WI shall compute one single row to maximize reuse within SIMD subgroup (this gives very nice performance results)
+        else if (output_size.spatial[0] + (filter_size.spatial[0] - 1) * dilation.spatial[0] < sub_group_size)
         {
             kd.block_width = output_size.spatial[0];
             kd.block_height = 1;
@@ -588,6 +592,7 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution_node& a
         auto input_block_dims = get_bfyx_req_input_block_dims(kd.block_width, kd.block_height,
                                                                 filter_size,
                                                                 stride,
+																dilation,
                                                                 sub_group_size,
                                                                 kd.fp16_unit_used ? sub_group_size : sub_group_size / 2,
                                                                 sub_group_size);

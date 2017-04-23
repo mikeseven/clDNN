@@ -85,14 +85,14 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
 
             for (uint i = 0; i < FILTER_SIZE_Y; i++)
             {
-                int input_offset_y = y + i;
+                int input_offset_y = y + i * DILATION_SIZE_Y;
                 bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
 
                 if(!zero_y)
                 {
                     for (uint j = 0; j < FILTER_SIZE_X; j++)
                     {
-                        int input_offset_x = x + j;
+                        int input_offset_x = x + j * DILATION_SIZE_X;
 
                         bool zero_x[X_PER_WORK_ITEM];
                         for(int z = 0; z < X_PER_WORK_ITEM; z++)

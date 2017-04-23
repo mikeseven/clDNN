@@ -43,6 +43,9 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
     /// @param bias List of primitive ids containing bias data.
     /// @param input_padding Input padding/offset.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
+	/// @param dilation Defines gaps in the input - dilation rate k=1 is normal convolution, k=2 means skipping one pixel per input, k=4 means skipping 3 pixels.
+	/// As an example in one dimension, a filter w of size 3 would compute over input x the following: w[0]*x[0] + w[1]*x[1] + w[2]*x[2] for dilation of 1.
+	/// For dilation 2 the filter would instead compute w[0]*x[0] + w[1]*x[2] + w[2]*x[4].
     /// @param with_activation Enable Relu activation.
     /// @param activation_slp Relu activation slope.
     convolution(
@@ -52,6 +55,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         const std::vector<primitive_id>& bias,
         const padding& input_padding = { format::yx, { 0,0 } },
         tensor stride = { format::yx, 0, { 1, 1 } },
+		tensor dilation = { format::yx, 0, { 1, 1 } },
         bool with_activation = false,
         float activation_slp = 0.0f,
         const padding& output_padding = { format::yx, { 0,0 } }
@@ -60,6 +64,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , weights(_weights.cpp_ids)
         , bias(_bias.cpp_ids)
         , stride(stride)
+		, dilation(dilation)
         , with_activation(with_activation)
         , activation_negative_slope(activation_slp)
         , _weights(weights)
@@ -75,6 +80,9 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
     /// @param weights List of primitive ids containing weights data.
     /// @param input_padding Input padding/offset.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
+	/// @param dilation Defines gaps in the input - dilation rate k=1 is normal convolution, k=2 means skipping one pixel per input, k=4 means skipping 3 pixels.
+	/// As an example in one dimension, a filter w of size 3 would compute over input x the following: w[0]*x[0] + w[1]*x[1] + w[2]*x[2] for dilation of 1.
+	/// For dilation 2 the filter would instead compute w[0]*x[0] + w[1]*x[2] + w[2]*x[4].
     /// @param with_activation Enable Relu activation.
     /// @param activation_slp Relu activation slope.
     convolution(
@@ -83,6 +91,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         const std::vector<primitive_id>& weights,
         const padding& input_padding = { format::yx,{ 0,0 } },
         tensor stride = { format::yx, 0,{ 1, 1 } },
+		tensor dilation = { format::yx, 0,{ 1, 1 } },
         bool with_activation = false,
         float activation_slp = 0.0f,
         const padding& output_padding = { format::yx,{ 0,0 } }
@@ -91,6 +100,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , weights(_weights.cpp_ids)
         , bias(_bias.cpp_ids)
         , stride(stride)
+		, dilation(dilation)
         , with_activation(with_activation)
         , activation_negative_slope(activation_slp)
         , _weights(weights)
@@ -104,6 +114,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , weights(_weights.cpp_ids)
         , bias(_bias.cpp_ids)
         , stride(dto->stride)
+		, dilation(dto->dilation)
         , with_activation(dto->with_activation != 0)
         , activation_negative_slope(dto->activation_negative_slope)
         , _weights(dto->weights)
@@ -119,6 +130,10 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
     fixed_size_vector_ref bias;
     /// @brief Defines shift in input buffer between adjacent calculations of output values.
     tensor stride;
+	/// @brief Defines gaps in the input - dilation rate k=1 is normal convolution, k=2 means skipping one pixel per input, k=4 means skipping 3 pixels.
+	/// As an example in one dimension, a filter w of size 3 would compute over input x the following: w[0]*x[0] + w[1]*x[1] + w[2]*x[2] for dilation of 1. 
+	/// For dilation 2 the filter would instead compute w[0]*x[0] + w[1]*x[2] + w[2]*x[4].
+	tensor dilation;
     /// @brief Enable Relu activation.
     bool with_activation;
     /// @brief Relu activation slope.
@@ -151,6 +166,7 @@ protected:
         dto.split = split();
         dto.with_activation = with_activation;
         dto.activation_negative_slope = activation_negative_slope;
+		dto.dilation = dilation;
     }
 };
 /// @}

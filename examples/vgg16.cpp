@@ -51,6 +51,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         { conv1_1_b },
         { format::yx, { -1, -1 } },
         { format::yx, { 1, 1 } },
+		{ format::yx, { 1, 1 } },
         true); // negative slope for RELU
 
     auto conv1_2_w = file::create({ engine, join_path(weights_dir, "conv1_2_weights.nnd")});
@@ -61,6 +62,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         { conv1_2_b },
         { format::yx, { -1, -1 } },
         { format::yx, { 1, 1 } },
+		{ format::yx, { 1, 1 } },
         true); // negative slope for RELU
 
 
@@ -79,6 +81,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         { conv2_1_b },
         { format::yx, { -1, -1 } },
         { format::yx, { 1, 1 } },
+		{ format::yx, { 1, 1 } },
         true); // negative slope for RELU
 
     auto conv2_2_w = file::create({ engine, join_path(weights_dir, "conv2_2_weights.nnd")});
@@ -89,6 +92,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         { conv2_2_b },
         { format::yx, { -1, -1 } },
         { format::yx, { 1, 1 } },
+		{ format::yx, { 1, 1 } },
         true); // negative slope for RELU
 
     auto pool2 = pooling("pool2",
@@ -106,6 +110,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         { conv3_1_b },
         { format::yx, { -1, -1 } },
         { format::yx, { 1, 1 } },
+		{ format::yx, { 1, 1 } },
         true); // negative slope for RELU
 
     auto conv3_2_w = file::create({ engine, join_path(weights_dir, "conv3_2_weights.nnd")});
@@ -116,6 +121,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         { conv3_2_b },
         { format::yx, { -1, -1 } },
         { format::yx, { 1, 1 } },
+		{ format::yx, { 1, 1 } },
         true); // negative slope for RELU
 
     auto conv3_3_w = file::create({ engine, join_path(weights_dir, "conv3_3_weights.nnd")});
@@ -126,6 +132,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         { conv3_3_b },
         { format::yx, { -1, -1 } },
         { format::yx, { 1, 1 } },
+		{ format::yx, { 1, 1 } },
         true); // negative slope for RELU
 
     auto pool3 = pooling("pool3",
@@ -143,6 +150,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         { conv4_1_b },
         { format::yx, { -1, -1 } },
         { format::yx, { 1, 1 } },
+		{ format::yx, { 1, 1 } },
         true); // negative slope for RELU
 
     auto conv4_2_w = file::create({ engine, join_path(weights_dir, "conv4_2_weights.nnd")});
@@ -153,6 +161,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         { conv4_2_b },
         { format::yx, { -1, -1 } },
         { format::yx, { 1, 1 } },
+		{ format::yx, { 1, 1 } },
         true); // negative slope for RELU
 
     auto conv4_3_w = file::create({ engine, join_path(weights_dir, "conv4_3_weights.nnd")});
@@ -163,6 +172,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         { conv4_3_b },
         { format::yx, { -1, -1 } },
         { format::yx, { 1, 1 } },
+		{ format::yx, { 1, 1 } },
         true); // negative slope for RELU
 
     auto pool4 = pooling("pool4",
@@ -180,6 +190,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         { conv5_1_b },
         { format::yx, { -1, -1 } },
         { format::yx, { 1,1 } },
+		{ format::yx, { 1, 1 } },
         true); // negative slope for RELU
 
     auto conv5_2_w = file::create({ engine, join_path(weights_dir, "conv5_2_weights.nnd")});
@@ -190,6 +201,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         { conv5_2_b },
         { format::yx, { -1, -1 } },
         { format::yx, { 1,1 } },
+		{ format::yx, { 1, 1 } },
         true); // negative slope for RELU
 
     auto conv5_3_w = file::create({ engine, join_path(weights_dir, "conv5_3_weights.nnd")});
@@ -200,6 +212,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         { conv5_3_b },
         { format::yx, { -1, -1 } },
         { format::yx, { 1,1 } },
+		{ format::yx, { 1, 1 } },
         true); // negative slope for RELU
 
     auto pool5 = pooling("pool5",

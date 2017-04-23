@@ -50,6 +50,7 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         { conv1_bias },
         { format::yx, {0,0} },
         { format::yx, {1,1} },
+		{ format::yx, {1,1} },
         true);
 
     auto pool1 = pooling(
@@ -68,6 +69,7 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         { conv2_bias },
         { format::yx, {0,0} },
         { format::yx, {1,1} },
+		{ format::yx, {1,1} },
         true);
 
     auto pool2 = pooling(
@@ -86,6 +88,7 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         { conv3_bias },
         { format::yx, {0,0} },
         { format::yx, {1,1} },
+		{ format::yx, {1,1} },
         true);
 
     auto pool3 = pooling(
