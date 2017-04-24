@@ -17,6 +17,7 @@
 #include "layout_optimizer.h"
 #include "topology_impl.h"
 #include "network_impl.h"
+#include "primitive_inst.h"
 
 #include "api/primitives/data.hpp"
 #include "api/primitives/reorder.hpp"
@@ -162,12 +163,17 @@ layout_optimizer::create_reorder_if_needed(const layout& current_layout, const c
     return std::make_pair(nullptr, true);
 }
 
-auto layout_optimizer::optimize() const -> std::vector<std::shared_ptr<primitive_inst>>
+void layout_optimizer::optimize() const
 {
     if (!_enabled)
-        return std::vector<std::shared_ptr<primitive_inst>>();
+        return;
 
     network_impl net(_engine, _topology);
     net.execute(std::vector<refcounted_obj_ptr<event_impl>>());
-    return net.get_outputs();
+    for (auto const& output : net.get_outputs())
+    {
+        auto input_id = output->dependencies().at(0)->id();
+        auto& data_node = net.get_program()->get_node(input_id).as<data>();
+        const_cast<data&>(*data_node.get_primitive()).mem = output->output_memory();
+    }
 }

@@ -405,15 +405,18 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
 
 void program_impl::optimize_weights(layout_optimizer& lo)
 {
+    std::list<program_node*> outputs_to_recalc;
+
     //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
     //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
     //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
-    const auto add_weights = [this, &lo](program_node const& weights, layout_optimizer::data_type weights_type, auto& node, layout const& output_layout, size_t dep_idx)
+    const auto add_weights = [this, &lo, &outputs_to_recalc](program_node& weights, layout_optimizer::data_type weights_type, auto& node, layout const& output_layout, size_t dep_idx)
     {
         if (weights.type() == data::type_id())
         {
             lo.add_weights_for_optimization(weights.as<data>().typed_desc(), weights_type,
                 node.get_primitive(), output_layout);
+            outputs_to_recalc.push_back(&weights);
         }
         else if (weights.type() == input_layout::type_id())
         {
@@ -463,17 +466,11 @@ void program_impl::optimize_weights(layout_optimizer& lo)
     }
 
     //all optimizing primitives has been added and inputs for all primitives has been updated.
-    //run reorders now
-    auto opt_outputs = lo.optimize();
+    //run reorders and replace cldnn::data::mem
+    lo.optimize();
 
-    //replace weights primitives with optimized one, if required
-    for (auto const& output : opt_outputs)
-    {
-        auto input_id = output->dependencies().at(0)->id();
-        auto& data_node = nodes_map.at(input_id)->as<data>();
-        data_node.typed_desc()->mem = output->output_memory();
-        data_node.recalc_output_layout();
-    }
+    for (auto dnode : outputs_to_recalc)
+        dnode->recalc_output_layout();
 }
 
 void program_impl::prepare_padding()

@@ -181,7 +181,7 @@ public:
         }
     }
 
-    auto optimize() const -> std::vector<std::shared_ptr<primitive_inst>>;
+    void optimize() const;
     auto get_engine() { return _engine; }
 };
 }

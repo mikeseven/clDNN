@@ -22,6 +22,16 @@
 namespace cldnn
 {
 
+template <>
+class typed_program_node<data> : public typed_program_node_base<data>
+{
+public:
+    void set_memory(memory const& new_mem)
+    {
+        typed_desc()->mem = new_mem;
+    }
+};
+
 using data_node = typed_program_node<data>;
 
 template <>

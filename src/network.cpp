@@ -47,10 +47,11 @@ network_impl::network_impl(program_impl::cptr program)
     cl::Buffer out(context->context(), CL_MEM_WRITE_ONLY, 1);
     warmup_kernel.run<cl_int, cl_int, cl_int, cl::Buffer>({ 1024, 8 }, {}, 0, 111, 7, out);
     context->queue().finish();
+
 }
 
 network_impl::network_impl(engine_impl::ptr engine, const topology_impl& topo, const build_options& options)
-    : network_impl(engine->build_program(topo, options))
+    : network_impl(program_impl::cptr(engine->build_program(topo, options), false))
 {
 
 }
