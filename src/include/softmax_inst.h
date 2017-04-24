@@ -30,6 +30,7 @@ class typed_primitive_inst<softmax> : public typed_primitive_inst_base<softmax>
 
 public:
     static layout calc_output_layout(softmax_node const& node);
+    static std::string to_string(softmax_node const& node);
 
 public:
     typed_primitive_inst(network_impl& network, softmax_node const& desc);

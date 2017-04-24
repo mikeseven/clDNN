@@ -36,4 +36,24 @@ layout roi_pooling_inst::calc_output_layout(roi_pooling_node const& node)
 
     return layout(rois_layout.data_type, { format::bfyx, { num_rois, fm, desc->pooled_height, desc->pooled_width }});
 }
+
+std::string roi_pooling_inst::to_string(roi_pooling_node const& node)
+{
+    std::stringstream               primitive_description;
+    auto desc                       = node.get_primitive();
+    auto input                      = node.input();
+    auto input_rois                 = node.rois();
+
+    primitive_description << "id: " << desc->id << ", type: roi_pooling" << 
+        "\n\tinput: "         << input.id() << ", count: " << input.get_output_layout().count() << ",  size: " << input.get_output_layout().size <<
+        "\n\tinput_rois: "    << input_rois.id() << ", count: " << input_rois.get_output_layout().count() << ",  size: " << input_rois.get_output_layout().size <<
+        "\n\tpooled_width: "  << desc->pooled_width << "pooled_height: " << desc->pooled_height <<
+        "\n\tspatial_scale: " << desc->spatial_scale <<
+        "\n\tinput padding: " << desc->input_padding <<
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
+
 }

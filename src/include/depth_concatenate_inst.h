@@ -40,6 +40,7 @@ class typed_primitive_inst<depth_concatenate> : public typed_primitive_inst_base
 
 public:
     static layout calc_output_layout(depth_concatenate_node const& node);
+    static std::string to_string(depth_concatenate_node const& node);
 
 public:
     typed_primitive_inst(network_impl& network, depth_concatenate_node const& node);

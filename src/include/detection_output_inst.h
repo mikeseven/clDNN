@@ -44,6 +44,7 @@ class typed_primitive_inst<detection_output> : public typed_primitive_inst_base<
 
 public:
 	static layout calc_output_layout(detection_output_node const& node);
+    static std::string to_string(detection_output_node const& node);
 
 public:
 	typed_primitive_inst(network_impl& network, detection_output_node const& node);

@@ -40,6 +40,21 @@ layout softmax_inst::calc_output_layout(softmax_node const& node)
     return layoutTemp;
 }
 
+std::string softmax_inst::to_string(softmax_node const& node)
+{
+    std::stringstream   primitive_description;
+    auto desc           = node.get_primitive();
+    auto input          = node.input();
+
+    primitive_description << "id: " << desc->id << ", type: softmax" << 
+        "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
+        "\n\tinput padding: "  << desc->input_padding <<
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: count: "  << node.get_output_layout().count() <<",  size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
+
 softmax_inst::typed_primitive_inst(network_impl& network, softmax_node const& node)
     : parent(network, node)
 {

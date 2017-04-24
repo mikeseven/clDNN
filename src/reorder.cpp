@@ -29,6 +29,24 @@ primitive_type_id reorder_type_id()
     return &instance;
 }
 
+std::string reorder_inst::to_string(reorder_node const& node)
+{
+    std::stringstream           primitive_description;
+    auto desc                   = node.get_primitive();
+    auto input                  = node.input();
+    auto output_layout_data     = desc->output_layout.data_type == data_types::f16 ? "f16" : "f32";
+    auto mean = desc->mean;
+
+    primitive_description << "id: " << desc->id << ", type: reorder" 
+        "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
+        "\n\tmean: "  << mean <<
+        "\n\tinput padding: " << desc->input_padding <<
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: data_type:" << output_layout_data <<", count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
+
 reorder_inst::typed_primitive_inst(network_impl& network, reorder_node const& node)
     : parent(network, node)
 {

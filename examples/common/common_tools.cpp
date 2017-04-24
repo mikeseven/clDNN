@@ -396,11 +396,25 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
         }
 
         cldnn::network network(program);
+
         auto allocation_time = timer_compilation.uptime() - compile_time;
         
         if (ep.print_type == Verbose)
         {
             std::cout << "Network allocation finished in " << instrumentation::to_string(allocation_time) << std::endl;
+        }
+
+        if (ep.print_type == ExtendedTesting)
+        {
+            std::cout << "All primitives information: " << std::endl;
+            std::vector<std::string> primitives_id = topology.get_primitive_ids();
+            std::string primitive_info = "";
+            for (auto& prim : primitives_id) //loop through primitives_id vector, so we print information about all primitives 
+            {
+                primitive_info = network.get_primitive_info(prim);
+                std::cout << primitive_info << std::endl;
+            }
+
         }
 
         return network;
@@ -468,7 +482,6 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     }
 
     decltype(network.execute()) outputs;
-
     cldnn::instrumentation::timer<> timer_execution;
 
     for (decltype(ep.loop) i = 0; i < ep.loop; i++)
@@ -477,14 +490,13 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
         if (log_energy)
             energyLib.ReadSample();
     }
-
     //GPU primitives scheduled in unblocked manner
     auto scheduling_time(timer_execution.uptime());
 
     //OCL buffers mapping blocks until all primitives are completed
     std::string output_primitve_id = ep.run_until_primitive_name.empty() ? "output" :  ep.run_until_primitive_name;
     output = outputs.at(output_primitve_id).get_memory();
-
+    
     auto execution_time(timer_execution.uptime());
 
     if (log_energy)
@@ -577,6 +589,10 @@ void run_topology(const execution_params &ep)
     {
         std::cout << "Building " << ep.topology_name << " started" << std::endl;
     }
+    else if (ep.print_type == ExtendedTesting)
+    {
+        std::cout << "Extended testing of " << ep.topology_name << std::endl;
+    }
     cldnn::instrumentation::timer<> timer_build;
     cldnn::layout input_layout = { ep.use_half ? cldnn::data_types::f16 : cldnn::data_types::f32, {} };
     if (ep.topology_name == "alexnet")
@@ -603,7 +619,6 @@ void run_topology(const execution_params &ep)
 
     auto network = build_network(engine, primitives, ep);
     auto input = cldnn::memory::allocate(engine, input_layout);
-
     //TODO check if we can define the 'empty' memory
     float zero = 0;
     cldnn::layout zero_layout( cldnn::data_types::f32, {cldnn::format::x, {1}} );

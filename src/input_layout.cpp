@@ -53,4 +53,16 @@ void input_layout_inst::set_data(memory_impl* mem)
     _output_changed = true;
 }
 
+std::string input_layout_inst::to_string(input_layout_node const& node)
+{
+    std::stringstream   primitive_description;
+    auto desc           = node.get_primitive();
+    auto count          = node.get_output_layout().count();
+
+    primitive_description << "id: " << desc->id << ", type: input" << 
+        "\n\tcount: " << count << ", size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
+
 }

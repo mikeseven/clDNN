@@ -39,6 +39,7 @@ class typed_primitive_inst<crop> : public typed_primitive_inst_base<crop>
 
 public:
     static layout calc_output_layout(crop_node const& node);
+    static std::string to_string(crop_node const& node);
 
 public:
     typed_primitive_inst(network_impl& network, crop_node const& node);

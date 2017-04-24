@@ -39,6 +39,7 @@ class typed_primitive_inst<mean_substract> : public typed_primitive_inst_base<me
 
 public:
     static layout calc_output_layout(mean_substract_node const& node);
+    static std::string to_string(mean_substract_node const& node);
 
 public:
     typed_primitive_inst(network_impl& network, mean_substract_node const& node);

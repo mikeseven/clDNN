@@ -53,6 +53,43 @@ layout deconvolution_inst::calc_output_layout(deconvolution_node const& node)
     return result;
 }
 
+std::string deconvolution_inst::to_string(deconvolution_node const& node)
+{
+    std::stringstream           primitive_description;
+    auto desc                   = node.get_primitive();
+    auto input                  = node.input();
+    auto strd                   = desc->stride.transform(format::yx, 0);
+    auto activation             = desc->with_activation ? " true" : "false";
+    std::stringstream           ss_weights, ss_biases;
+    for (size_t i = 0; i < desc->weights.size(); ++i)
+    {
+        ss_weights << node.weights(i).id();
+        ss_weights << ", count: " << node.weights(i).get_output_layout().count();
+        i != (desc->weights.size() - 1) ? ss_weights << ", " : ss_weights << "";
+    }
+
+    for (size_t i = 0; i < desc->bias.size(); ++i)
+    {
+        ss_biases << node.bias(i).id();
+        ss_biases << ", count: " << node.bias(i).get_output_layout().count();
+        i != (desc->bias.size() - 1) ? ss_biases << ", " : ss_biases << "";
+    }
+
+    primitive_description << "id: " << desc->id << ", type: deconvolution" << 
+        "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ",  size: " << input.get_output_layout().size <<
+        "\n\tweights count: " << desc->weights.size() << 
+        "\n\tweights: " << ss_weights.str() << 
+        "\n\tbiases count: " << desc->bias.size() <<
+        "\n\tbiases: " << ss_biases.str() << 
+        "\n\tstride: " << strd.spatial[0] << "x" << strd.spatial[1] <<
+        "\n\twith activation: " << activation << ", slope: " << desc->activation_negative_slope <<
+        "\n\tinput padding: " << desc->input_padding <<
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
+
 deconvolution_inst::typed_primitive_inst(network_impl& network, deconvolution_node const& node)
     : parent(network, node)
 {

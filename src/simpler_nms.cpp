@@ -41,6 +41,32 @@ layout simpler_nms_inst::calc_output_layout(simpler_nms_node const& node)
     return layout(input_layout.data_type, { format::bx,{ desc->post_nms_topn, CLDNN_ROI_VECTOR_SIZE } });
 }
 
+std::string simpler_nms_inst::to_string(simpler_nms_node const& node)
+{
+    std::stringstream                   primitive_description;
+    auto desc                           = node.get_primitive();
+    auto scales_parm                    = desc->scales;
+    std::stringstream                   ss_scales_param;
+    for (size_t i = 0; i < scales_parm.size(); ++i)
+    {
+        ss_scales_param << scales_parm.at(i);
+        i != (scales_parm.size() - 1) ? ss_scales_param << ", " : ss_scales_param << "";
+    }  
+
+    primitive_description << "id: " << desc->id << ", type: simpler_nms" << 
+        "\n\tcls_scores id: " << node.cls_score().id()  << ", size: " << node.cls_score().get_output_layout().count() << ",  size: " << node.cls_score().get_output_layout().size <<
+        "\n\tbbox_pred id:  " << node.bbox_pred().id()  << "\n" << node.bbox_pred().get_output_layout().count() << ",  size: " << node.bbox_pred().get_output_layout().size <<
+        "\n\timage_info id: " << node.image_info().id() << "\n" << node.image_info().get_output_layout().count() << ",  size: " << node.image_info().get_output_layout().size <<
+        "\n\tmax proposals: " << desc->max_proposals    << ", tiou_treshold: " << desc->iou_threshold << 
+        "\n\tmin_bbox_size: " << desc->min_bbox_size    << ", feature_stride: " << desc->feature_stride <<
+        "\n\tpre_nms_topn: "  << desc->pre_nms_topn     << ", post_nms_topn: " << desc->post_nms_topn <<
+        "\n\tscales param: "  << ss_scales_param.str()  << 
+        "\n\tinput padding: " << desc->input_padding <<
+        "\n\toutput padding: "<< desc->output_padding <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
 
 simpler_nms_inst::typed_primitive_inst(network_impl& network, simpler_nms_node const& node)
     :parent(network, node)

@@ -40,6 +40,7 @@ class typed_primitive_inst<batch_norm> : public typed_primitive_inst_base<batch_
 
 public:
     static layout calc_output_layout(batch_norm_node const& node);
+    static std::string to_string(batch_norm_node const& node);
 
 public:
     typed_primitive_inst(network_impl& network, batch_norm_node const& node);

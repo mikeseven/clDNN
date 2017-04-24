@@ -30,6 +30,28 @@ layout batch_norm_inst::calc_output_layout(batch_norm_node const& node)
     return node.input().get_output_layout();
 }
 
+std::string batch_norm_inst::to_string(batch_norm_node const& node)
+{
+    std::stringstream               primitive_description;
+    auto desc                       = node.get_primitive();
+    auto input                      = node.input();
+    auto mean                       = node.mean();
+    auto variance                   = node.variance();
+    auto global_stats               = desc->use_global_stats ? " true" : "false";
+
+    primitive_description << "id: " << desc->id << ", type: batch_norm" << 
+        "\n\tinput id: " << input.id() << ", size: " << node.input().get_output_layout().count() << ",  size: " << input.get_output_layout().size <<
+        "\n\tmean id: " << mean.id() << ", size: " << mean.get_output_layout().count() << ",  size: " << mean.get_output_layout().size <<
+        "\n\tvariance id: " << variance.id() << ", size: " << variance.get_output_layout().count() << ",  size: " << variance.get_output_layout().size <<
+        "\n\tuse_global_stats: " << global_stats << 
+        "\n\tepsilon: " << desc->epsilon << 
+        "\n\tinput padding: " << desc->input_padding <<
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
+
 batch_norm_inst::typed_primitive_inst(network_impl& network, batch_norm_node const& node)
     :parent(network, node) 
 {

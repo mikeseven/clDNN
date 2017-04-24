@@ -43,6 +43,54 @@ layout detection_output_inst::calc_output_layout(detection_output_node const& no
     return{ input_layout.data_type, cldnn::tensor(cldnn::format::bfyx,{ 1, 1, node.get_primitive()->keep_top_k * input_layout.size.batch[0], DETECTION_OUTPUT_ROW_SIZE }) };
 }
 
+std::string detection_output_inst::to_string(detection_output_node const& node)
+{
+    std::stringstream           primitive_description;
+    auto desc                   = node.get_primitive();
+    auto input_location         = node.location();
+    auto input_confidence       = node.confidence();
+    auto input_prior_box        = node.prior_box();
+    auto share_location         = desc->share_location ? "true" : "false"; 
+    auto variance_encoded       = desc->variance_encoded_in_target ? "true" : "false";
+    std::string                 str_code_type;
+
+    switch (desc->code_type)
+    {
+    case prior_box_code_type::corner:
+        str_code_type = "corner";
+        break;
+    case prior_box_code_type::center_size:
+        str_code_type = "center size";
+        break;
+    case prior_box_code_type::corner_size:
+        str_code_type = "corner size";
+        break;
+    default:
+        str_code_type = "not supported code type";
+        break;
+    }
+    
+    primitive_description << "id: " << desc->id << ", type: detection_output" <<
+        "\n\tinput_location: " << input_location.id() << ", sizes: " << input_location.get_output_layout().size <<
+        "\n\tinput_confidence: " << input_confidence.id() << ", sizes: " << input_confidence.get_output_layout().size <<
+        "\n\tinput_prior_box: " << input_prior_box.id() << ", sizes: " << input_prior_box.get_output_layout().size <<
+        "\n\tnum_classes: " << desc->num_classes << 
+        "\n\tkeep_top_k: " << desc->keep_top_k << 
+        "\n\tshare_location: " << share_location << 
+        "\n\tbackground_label_id: " << desc->background_label_id << 
+        "\n\tnms_treshold: " << desc->nms_threshold <<
+        "\n\ttop_k: " << desc->top_k << 
+        "\n\teta: " << desc->eta << 
+        "\n\tcode_type: " << str_code_type << 
+        "\n\tvariance_encoded: " << variance_encoded << 
+        "\n\tconfidence_threshold: " << desc->confidence_threshold <<
+        "\n\tinput padding: " << desc->input_padding <<
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
+
 detection_output_inst::typed_primitive_inst(network_impl& network, detection_output_node const& node)
     :parent(network, node)
 {

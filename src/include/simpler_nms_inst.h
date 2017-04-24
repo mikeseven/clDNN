@@ -75,6 +75,7 @@ public:
 	};
 
     static layout calc_output_layout(simpler_nms_node const& node);
+    static std::string to_string(simpler_nms_node const& node);
 
 public:    
     typed_primitive_inst(network_impl& network, simpler_nms_node const& desc);

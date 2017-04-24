@@ -66,4 +66,25 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
 
     return{ input_layout.data_type,{ input_layout.size.format, output_sizes } };
 }
+
+std::string pooling_inst::to_string(pooling_node const& node)
+{
+    std::stringstream   primitive_description;
+    auto desc           = node.get_primitive();
+    auto input          = node.input();
+    auto strd           = desc->stride.transform(format::yx, 0);
+    auto kernel_size    = desc->size.transform(format::yx, 0);
+    auto mode           = desc->mode == pooling_mode::average ? "avarage" : "max";   
+
+    primitive_description << "id: " << desc->id << ", type: pooling" << ", mode: " << mode <<
+        "\n\tinput: "         << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
+        "\n\tstride: "        << strd.spatial[0] << "x" << strd.spatial[1] << 
+        "\n\tkernel size: "   << kernel_size.spatial[0] << "x" << kernel_size.spatial[1] << 
+        "\n\tinput padding: " << desc->input_padding <<
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+    
+    return primitive_description.str();
+}
+
 }

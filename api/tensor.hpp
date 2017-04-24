@@ -344,6 +344,17 @@ struct tensor
         return false;
     }
 
+    friend std::ostream& operator<<(std::ostream& os, const tensor& tensor)
+    {
+        for (size_t i = 0; i < tensor.raw.size(); ++i)
+        {
+            os << tensor.raw.at(i);
+            i != (tensor.raw.size() - 1) ? os << "x" : os << "";
+        }
+        return os;
+    }
+
+
     /// @brief Returns a tensor with all negated elements.
     tensor negate() const
     {

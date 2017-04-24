@@ -53,6 +53,14 @@ public:
 
     const topology_map& get_primitives() const { return _primitives; }
 
+    const std::vector<primitive_id> get_primitives_id() const 
+    {
+        std::vector<primitive_id> prim_ids;
+        for (const auto& prim : _primitives)
+            prim_ids.push_back(prim.first);
+        return prim_ids;
+    }
+
 private:
     topology_map _primitives;
 };

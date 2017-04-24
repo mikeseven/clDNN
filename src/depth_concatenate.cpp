@@ -53,6 +53,27 @@ layout depth_concatenate_inst::calc_output_layout(depth_concatenate_node const& 
     return layout{ input_layout.data_type,{ input_format, result_sizes } };
 }
 
+std::string depth_concatenate_inst::to_string(depth_concatenate_node const& node)
+{
+    std::stringstream           primitive_description;
+    auto desc                   = node.get_primitive();
+    std::stringstream           ss_inputs;
+    for (size_t i = 0; i < node.inputs_count(); ++i)
+    {
+        ss_inputs << node.input(i).id();
+        ss_inputs << ", count: " << node.input(i).get_output_layout().count();
+        i != (node.inputs_count() - 1) ? ss_inputs << ", " : ss_inputs << "";
+    }
+
+    primitive_description << "id: " << desc->id << ", type: depth_concatenate" << 
+        "\n\tinputs count: " << node.inputs_count() << 
+        "\n\tinputs: " << ss_inputs.str() << 
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
+
 depth_concatenate_inst::typed_primitive_inst(network_impl& network, depth_concatenate_node const& node)
     :parent(network, node)
 {

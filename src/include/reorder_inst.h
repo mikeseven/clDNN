@@ -44,6 +44,7 @@ public:
     {
         return node.get_primitive()->output_layout;
     }
+    static std::string to_string(reorder_node const& node);
 
 public:
     typed_primitive_inst(network_impl& network, reorder_node const& node);

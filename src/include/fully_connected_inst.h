@@ -39,6 +39,7 @@ class typed_primitive_inst<fully_connected> : public typed_primitive_inst_base<f
 
 public:
     static layout calc_output_layout(fully_connected_node const& node);
+    static std::string to_string(fully_connected_node const& node);
 
 public:
     typed_primitive_inst(network_impl& network, fully_connected_node const& node);

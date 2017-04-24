@@ -88,6 +88,29 @@ struct topology
     /// @brief Returns wrapped C API @ref cldnn_topology.
     cldnn_topology get() const { return _impl; }
 
+    const std::vector<primitive_id> get_primitive_ids() const
+    {
+        size_t size_ret = 0;
+        status_t err_invalid_arg = CLDNN_SUCCESS;
+        cldnn_get_primitive_ids(_impl, nullptr, 0, &size_ret, &err_invalid_arg);
+        assert(err_invalid_arg == CLDNN_INVALID_ARG);
+        assert(size_ret > 0);
+        std::vector<char> names_buf(size_ret);
+
+        check_status<void>("get topology ids failed", [&](status_t* status)
+        {
+            cldnn_get_primitive_ids(_impl, names_buf.data(), names_buf.size(), &size_ret, status);
+        });
+        assert(names_buf.size() == size_ret);
+
+        std::vector<primitive_id> result;
+        for (auto buf_ptr = names_buf.data(); *buf_ptr != 0; buf_ptr += result.back().size() + 1)
+        {
+            result.emplace_back(buf_ptr);
+        }
+        return result;
+    }
+
 private:
     friend struct engine;
     friend struct network;

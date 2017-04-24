@@ -315,6 +315,13 @@ CLDNN_API cldnn_topology cldnn_create_topology(cldnn_status* status);
 /// @param[in] dto The pointer to a structure defined by @ref CLDNN_BEGIN_PRIMITIVE_DESC and @ref CLDNN_END_PRIMITIVE_DESC
 CLDNN_API void cldnn_add_primitive(cldnn_topology topology, const CLDNN_PRIMITIVE_DESC(primitive)* dto, cldnn_status* status);
 
+/// @brief Return all primitives id from topology.
+/// @details Function fills user provided buffer by primitive ids. Each id is followed by '\0'.
+/// @param[in] ids Pointer to user-allocated buffer to store names.
+/// @param[in] size Size (in chars) of the buffer.
+/// @param[out] size_ret Required size (in chars) to store result.
+CLDNN_API void cldnn_get_primitive_ids(cldnn_topology topology, char* ids, size_t size, size_t* size_ret, cldnn_status* status);
+
 /// @brief Increment reference counter for the topology object.
 CLDNN_API void cldnn_retain_topology(cldnn_topology topology, cldnn_status* status);
 
@@ -420,6 +427,15 @@ CLDNN_API                 void cldnn_release_network(cldnn_network network, cldn
 /// @details User should set the input data for every @p input_layout primitive defined in @p topology
 /// by calling this function before call to cldnn_execute_network().
 CLDNN_API                 void cldnn_set_network_input(cldnn_network network, cldnn_primitive_id id, cldnn_memory mem, cldnn_status* status);
+
+/// @brief Returns information about particular primitive.
+/// @details Function fills user provided buffer by primitive description.
+/// @param[in] id Primitive @p id of @p input_layout primitive defined in @p topology.
+/// @param[in] info Pointer to user-allocated buffer to store names.
+/// @param[in] size Size (in chars) of the buffer.
+/// @param[out] size_ret Required size (in chars) to store result.
+/// @returns pointer to array of chars with detailed information about particular primitive.
+CLDNN_API void cldnn_get_primitive_info(cldnn_network network, cldnn_primitive_id id, char* info, size_t size, size_t* size_ret, cldnn_status* status);
 
 /// @brief Returns @p engine associated with the @p network.
 CLDNN_API         cldnn_engine cldnn_get_network_engine(cldnn_network network, cldnn_status* status);

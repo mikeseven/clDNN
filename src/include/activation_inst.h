@@ -31,7 +31,7 @@ class typed_primitive_inst<activation> : public typed_primitive_inst_base<activa
 
 public:
     static layout calc_output_layout(activation_node const& node);
-
+    static std::string to_string(activation_node const& node);
 public:
     typed_primitive_inst(network_impl& network, activation_node const& node);
 

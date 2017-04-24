@@ -92,6 +92,12 @@ void network_impl::set_input_data(const primitive_id& id, memory_impl* data)
     input->set_data(data);
 }
 
+std::string network_impl::get_primitive_info(const primitive_id& id) const
+{    
+    const auto& node = _program->get_node(id);
+    return node.type()->to_string(node);
+}
+
 void network_impl::execute(const std::vector<refcounted_obj_ptr<event_impl>>& events)
 {
     //Wait for previous execution completion

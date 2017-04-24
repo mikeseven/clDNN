@@ -40,6 +40,7 @@ class typed_primitive_inst<scale> : public typed_primitive_inst_base<scale>
 
 public:
     static layout calc_output_layout(scale_node const& node);
+    static std::string to_string(scale_node const& node);
 
 public:
     typed_primitive_inst(network_impl& network, scale_node const& desc);

@@ -54,11 +54,11 @@ public:
     }
 
     std::vector<primitive_id> get_output_ids() const;
-
     void execute(const std::vector<event_impl::ptr>& events);
 
     // Implementation specific calls
     std::shared_ptr<primitive_inst> get_primitive(const primitive_id& id);
+    std::string get_primitive_info(const primitive_id& id) const;
     const event_impl::ptr& get_primitive_event(const primitive_id& id) const { return _events.at(id); }
     std::vector<std::shared_ptr<primitive_inst>> get_primitives(const std::vector<primitive_id>& ids);
     event_impl::ptr execute_primitive(const std::shared_ptr<primitive_inst>& primitive, const std::vector<event_impl::ptr>& events);

@@ -46,6 +46,41 @@ layout prior_box_inst::calc_output_layout(prior_box_node const& node)
     return{ input_layout.data_type, cldnn::tensor(cldnn::format::bfyx,{ 1, 2, layer_width * layer_height * num_priors * 4, 1 }) };
 }
 
+std::string vector_to_string(std::vector<float> vec)
+{
+    std::stringstream result;
+    for (size_t i = 0; i < vec.size(); i++)
+        result << vec.at(i) << ", ";
+    return result.str();
+}
+
+std::string prior_box_inst::to_string(prior_box_node const& node)
+{
+    std::stringstream               primitive_description;
+    auto desc                       = node.get_primitive();
+    auto input                      = node.input();
+    auto flip                       = desc->flip ? "true" : "false";
+    auto clip                       = desc->clip ? "true" : "false";
+    std::string str_min_sizes       = vector_to_string(desc->min_sizes);
+    std::string str_max_sizes       = vector_to_string(desc->max_sizes);
+    std::string str_aspect_ratio    = vector_to_string(desc->aspect_ratios);
+    std::string str_variance        = vector_to_string(desc->variance);
+
+    primitive_description << "id: " << desc->id << ", type: normalization" <<
+        "\n\tinput: "        << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
+        "\n\timage size: "   << desc->img_size <<
+        "\n\tmin_sizes: "    << str_min_sizes << ", max sizes: " << str_max_sizes <<
+        "\n\taspect_ratio: " << str_aspect_ratio <<
+        "\n\tflip: "         << flip << "clip: " << clip <<
+        "\n\tstep_width: "   << desc->step_width << ", step_height: " << desc->step_height << ", offset: " << desc->offset <<
+        "\n\tstr_variance: " << str_variance <<
+        "\n\tinput padding: " << desc->input_padding <<
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
+
 template<typename dtype>
 void prior_box_inst::generate_output()
 {

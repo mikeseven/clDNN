@@ -46,6 +46,18 @@ namespace {
     }
 }
 
+std::string data_inst::to_string(data_node const& node)
+{
+    std::stringstream           primitive_description;
+    auto desc                   = node.get_primitive();
+    auto count                  = node.get_output_layout().count();
+
+    primitive_description << "id: " << desc->id << ", type: data" <<
+        "\n\tcount: "     << count <<", size: " << node.get_output_layout().size <<'\n';
+
+    return primitive_description.str();
+}
+
 data_inst::typed_primitive_inst(network_impl& network, data_node const& node)
     : parent(network, node, attach_or_copy_data(network, node.get_primitive()->mem))
 {

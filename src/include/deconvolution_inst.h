@@ -54,6 +54,7 @@ class typed_primitive_inst<deconvolution> : public typed_primitive_inst_base<dec
 
 public:
     static layout calc_output_layout(deconvolution_node const& node);
+    static std::string to_string(deconvolution_node const& node);
 
 public:
     typed_primitive_inst(network_impl& network, deconvolution_node const& node);

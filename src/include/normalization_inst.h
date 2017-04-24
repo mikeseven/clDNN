@@ -31,7 +31,7 @@ class typed_primitive_inst<normalization> : public typed_primitive_inst_base<nor
 
 public:
     static layout calc_output_layout(normalization_node const& node);
-
+    static std::string to_string(normalization_node const& node);
 public:
     typed_primitive_inst(network_impl& network, normalization_node const& node);
 

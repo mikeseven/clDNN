@@ -30,6 +30,25 @@ layout crop_inst::calc_output_layout(crop_node const& node)
     return node.reference_input().get_output_layout();
 }
 
+std::string crop_inst::to_string(crop_node const& node)
+{
+    std::stringstream               primitive_description;
+    auto desc                       = node.get_primitive();
+    auto input                      = node.input();
+    auto ref_input                  = node.reference_input();
+    auto offsets                    = desc->offsets;
+    
+    primitive_description << "id: " << desc->id << ", type: crop" << 
+        "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ",  size: " << input.get_output_layout().size <<
+        "\n\treference input: " << ref_input.id() << ", sizes: " << ref_input.get_output_layout().size <<
+        "\n\toffsets: " << offsets <<
+        "\n\tinput padding: " << desc->input_padding <<
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
+
 crop_inst::typed_primitive_inst(network_impl& network, crop_node const& node)
     :parent(network, node)
 {

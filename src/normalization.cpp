@@ -30,6 +30,28 @@ layout normalization_inst::calc_output_layout(normalization_node const& node)
     return node.input().get_output_layout();
 }
 
+std::string normalization_inst::to_string(normalization_node const& node)
+{
+    std::stringstream           primitive_description;
+    auto desc                   = node.get_primitive();
+    auto input                  = node.input();
+    auto norm_size              = desc->size;
+    auto k                      = desc->k;
+    auto alpha                  = desc->alpha;
+    auto beta                   = desc->beta;
+    auto norm_region            = desc->norm_region == cldnn_lrn_norm_region::cldnn_lrn_norm_region_across_channel ? "across channel" : "within channel";
+
+    primitive_description << "id: " << desc->id << ", type: normalization" << 
+        "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
+        "\n\tk: "     << k << ", alpha: " << alpha << ", beta: " << beta <<
+        "\n\tsize of normalization: " << norm_size << ", normalization region: " << norm_region <<
+        "\n\tinput padding: " << desc->input_padding <<
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: size: " << node.get_output_layout().size << '\n';
+   
+    return primitive_description.str();
+}
+
 normalization_inst::typed_primitive_inst(network_impl& network, normalization_node const& desc)
     :parent(network, desc)
 {

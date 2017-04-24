@@ -30,6 +30,22 @@ layout activation_inst::calc_output_layout(activation_node const& node)
     return node.input().get_output_layout();
 }
 
+std::string activation_inst::to_string(activation_node const& node)
+{
+    std::stringstream            primitive_description;
+    auto desc                   = node.get_primitive();
+    auto input                  = node.input();
+
+    primitive_description << "id: " << desc->id << ", type: activation" <<
+        "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: "  << input.get_output_layout().size <<
+        "\n\tslope: " << desc->negative_slope <<
+        "\n\tinput padding: " << desc->input_padding <<
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
+
 activation_inst::typed_primitive_inst(network_impl& network, activation_node const& node)
     :parent(network, node)
 {

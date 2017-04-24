@@ -61,6 +61,48 @@ void cldnn_add_primitive(cldnn_topology topology, const CLDNN_PRIMITIVE_DESC(pri
     });
 }
 
+void cldnn_get_primitive_ids(cldnn_topology topology, char* ids, size_t size, size_t* size_ret, cldnn_status* status)
+{
+    return exception_handler(CLDNN_ERROR, status, [&]()
+    {
+        SHOULD_NOT_BE_NULL(topology, "Topology");
+        auto ids_size = api_cast(topology)->get_primitives().size();
+        SHOULD_NOT_EQUAL_0(ids_size, "Primitives number");
+        auto& primitives_ids = api_cast(topology)->get_primitives_id();
+        *size_ret = std::accumulate(
+            std::begin(primitives_ids),
+            std::end(primitives_ids),
+            size_t(1), //final zero symbol
+            [](size_t acc, const cldnn::primitive_id& id)
+            {
+                return acc + id.size() + 1; // plus zero symbol
+            });
+
+        if (size < *size_ret)
+        {
+            if (status) *status = CLDNN_INVALID_ARG;
+            return;
+        }
+
+        size_t i = 0;
+        for (auto& id : primitives_ids)
+        {
+            // workaround for Microsoft VC++
+#if defined _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+            i += id.copy(ids + i, size - i - 2);
+#if defined _MSC_VER
+#pragma warning(pop)
+#endif
+            ids[i++] = 0; // plus zero symbol
+            assert(i < size);
+        }
+        ids[i] = 0; // final zero symbol
+    });
+}
+
 void cldnn_retain_topology(cldnn_topology topology, cldnn_status* status)
 {
     return exception_handler(CLDNN_ERROR, status, [&]()
@@ -328,6 +370,30 @@ cldnn_program cldnn_get_network_program(cldnn_network network, cldnn_status* sta
         auto program_ptr = api_cast(network)->get_program();
         if(!program_ptr) throw std::logic_error("no assigned program");
         return api_cast(const_cast<cldnn::program_impl*>(program_ptr.detach()));
+    });
+}
+
+void cldnn_get_primitive_info(cldnn_network network, cldnn_primitive_id prim_id, char* info, size_t size, size_t* size_ret, cldnn_status* status)
+{
+    return exception_handler(CLDNN_ERROR, status, [&]()
+    {
+        SHOULD_NOT_BE_NULL(network, "Network");
+        const auto& prim_info = api_cast(network)->get_primitive_info(prim_id);
+        *size_ret = prim_info.size()+1;
+
+        if (size < *size_ret)
+        {
+            if (status) *status = CLDNN_INVALID_ARG;
+            return;
+        }
+
+        size_t i = 0;
+        for (const auto c : prim_info)
+        {
+            info[i++] = c; 
+            assert(i < size);
+        }
+        info[i] = 0; // final zero symbol
     });
 }
 

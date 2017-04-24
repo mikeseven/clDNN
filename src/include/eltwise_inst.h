@@ -40,6 +40,7 @@ class typed_primitive_inst<eltwise> : public typed_primitive_inst_base<eltwise>
 
 public:
     static layout calc_output_layout(eltwise_node const& node);
+    static std::string to_string(eltwise_node const& node);
 
 public:
     typed_primitive_inst(network_impl& network, eltwise_node const& node);

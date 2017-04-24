@@ -34,6 +34,7 @@ public:
     {
         return node.get_primitive()->mem.get_layout();
     }
+    static std::string to_string(data_node const& node);
 
 public:
     typed_primitive_inst(network_impl& network, data_node const& node);

@@ -59,5 +59,14 @@ struct primitive_type_base : ::cldnn_primitive_type
 
         return PType_Inst::calc_output_layout(node);
     }
+
+    std::string to_string(const cldnn::program_node& node) const
+    {
+        if (node.get_primitive()->type != this)
+            throw std::invalid_argument("primitive_type_base::to_string: primitive type mismatch");
+
+        return PType_Inst::to_string(node);
+    }
+
 };
 }

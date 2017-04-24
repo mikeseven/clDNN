@@ -24,7 +24,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
-
+#include <iostream>
 
 namespace cldnn
 {
@@ -89,6 +89,17 @@ struct padding
     {
         return std::any_of(_lower_size.raw.begin(), _lower_size.raw.end(), [](const tensor::value_type& el) { return el != 0; }) ||
                std::any_of(_upper_size.raw.begin(), _upper_size.raw.end(), [](const tensor::value_type& el) { return el != 0; });
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const padding& padding)
+    {
+        if (padding)
+            os << "Format: " << padding.format().order() <<
+                ", lower size: " << padding._lower_size <<
+                ", upper size: " << padding._upper_size;
+        else
+            os << "No padding";
+        return os;
     }
 
     static padding max(padding const& lhs, padding const& rhs, float filling_value = 0.0f)

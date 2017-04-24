@@ -39,6 +39,7 @@ public:
     {
         return node.get_primitive()->layout;
     }
+    static std::string to_string(input_layout_node const& node);
 
 public:
     typed_primitive_inst(network_impl& network, input_layout_node const& node);

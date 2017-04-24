@@ -94,6 +94,27 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
     return result;
 }
 
+std::string convolution_inst::to_string(convolution_node const& node)
+{
+    std::stringstream           primitive_description;
+    auto desc                   = node.get_primitive();
+    auto strd                   = desc->stride.transform(format::yx, 0);
+    auto weights_count          = node.weights(0).get_output_layout().count();
+    auto bias_count             = node.bias_term() ? node.bias(0).get_output_layout().count() : 0;
+    auto input                  = node.input();
+    auto activation             = desc->with_activation ? " true" : "false";
+    primitive_description << "id: " << desc->id << ", type: convolution" << 
+        "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
+        "\n\tweights count: " << weights_count << ", bias count: " << bias_count << 
+        "\n\tstride: " << strd.spatial[0] << "x" << strd.spatial[1] << 
+        "\n\twith activation: "<< activation <<", slope: "<< desc->activation_negative_slope << 
+        "\n\tinput padding: "  << desc->input_padding <<
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ", size: " << node.get_output_layout().size << '\n';
+    
+    return primitive_description.str();
+}
+
 convolution_inst::typed_primitive_inst(network_impl& network, convolution_node const& node)
     : parent(network, node)
 {

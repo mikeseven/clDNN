@@ -31,7 +31,7 @@ class typed_primitive_inst<prior_box> : public typed_primitive_inst_base<prior_b
 
 public:
     static layout calc_output_layout(prior_box_node const& node);
-
+    static std::string to_string(prior_box_node const& node);
 public:
     typed_primitive_inst(network_impl& network, prior_box_node const& node);
 

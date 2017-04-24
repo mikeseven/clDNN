@@ -64,6 +64,7 @@ class typed_primitive_inst<convolution> : public typed_primitive_inst_base<convo
 
 public:
     static layout calc_output_layout(convolution_node const& node);
+    static std::string to_string(convolution_node const& node);
 
 public:
     typed_primitive_inst(network_impl& network, convolution_node const& node);
