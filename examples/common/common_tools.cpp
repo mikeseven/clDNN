@@ -621,7 +621,7 @@ void run_topology(const execution_params &ep)
     auto input = cldnn::memory::allocate(engine, input_layout);
     //TODO check if we can define the 'empty' memory
     float zero = 0;
-    cldnn::layout zero_layout( cldnn::data_types::f32, {cldnn::format::x, {1}} );
+    cldnn::layout zero_layout( cldnn::data_types::f32, {cldnn::format::bfyx, {1,1,1,1}} );
     auto output = cldnn::memory::attach(zero_layout, &zero, 1);
 
     if (ep.topology_name != "microbench")

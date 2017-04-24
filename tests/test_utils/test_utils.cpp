@@ -373,5 +373,5 @@ namespace tests
 	std::vector<cldnn::format> generic_test::test_weight_formats = { cldnn::format::oiyx , cldnn::format::yxoi , cldnn::format::oyxi, cldnn::format::yxio };
     std::vector<int32_t> generic_test::test_batch_sizes = { 1, 2 };// 4, 8, 16};
     std::vector<int32_t> generic_test::test_feature_sizes = { 1, 2 };// , 3, 15};
-    std::vector<tensor> generic_test::test_input_sizes = { { format::yx,{ 100,100 } } ,{ format::yx,{ 227,227 } } ,{ format::yx,{ 400,600 } } };    
+    std::vector<tensor> generic_test::test_input_sizes = { { format::bfyx,{ 1, 1, 100,100 } } ,{ format::bfyx,{ 1, 1, 227,227 } } ,{ format::bfyx,{ 1, 1, 400,600 } } };
 }

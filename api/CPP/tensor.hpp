@@ -73,12 +73,6 @@ struct format
 {
     enum type : int32_t
     {
-           x = cldnn_format_x,    ///< 1D.
-          yx = cldnn_format_yx,   ///< 2D, X-axis then Y-axis: { x0y0, x1y0, x0y1, x1y1}.
-          xy = cldnn_format_xy,   ///< 2D, Y-axis then X-axis: { x0y0, x0y1, x1y0, x1y1}.
-          xb = cldnn_format_xb,   ///< 1D+batch.
-          bx = cldnn_format_bx,   ///< 1D+batch.
-        yxfn = cldnn_format_yxfn, ///< 3D + number of neurons. TO REMOVE
         yxfb = cldnn_format_yxfb, ///< batch first, feature and than spatials \n \image html yxfb.jpg
         byxf = cldnn_format_byxf, ///< used in bitmaps, input from user i.e b images of RGB format \n \image html byxf.jpg
         bfyx = cldnn_format_bfyx, ///< the most common format for activations in clDNN. \n \image html bfyx.jpg
@@ -102,12 +96,6 @@ struct format
     {
         static const std::map<type, format_traits> traits
         {
-            { x,   { 1, 1, 1, "x", "??x" } },
-            { yx,  { 1, 1, 2, "yx", "??xy" } },
-            { xy,  { 1, 1, 2, "xy", "??xy" } },
-            { xb,  { 1, 1, 1, "xb", "b?x" } },
-            { bx,  { 1, 1, 1, "bx", "b?x" } },
-            { yxfn,{ 1, 1, 2, "yxfn", "nfxy" } },
             { yxfb,{ 1, 1, 2, "yxfb", "bfxy" } },
             { byxf,{ 1, 1, 2, "byxf", "bfxy" } },
             { bfyx,{ 1, 1, 2, "bfyx", "bfxy" } },
@@ -145,7 +133,7 @@ struct format
                 merged_channels.push_back(c);
 
         std::list<type> formats;
-        for (int fmt = x; fmt < format_num; ++fmt)
+        for (int fmt = yxfb; fmt < format_num; ++fmt)
             if (order(static_cast<type>(fmt)).size() == merged_channels.size())
                 formats.push_back(static_cast<type>(fmt));
 
@@ -269,7 +257,7 @@ struct tensor
     {}
 
     /// @brief Constructs tensor with size 0.
-    tensor() :tensor(format::x, 0, { 0 }) {}
+    tensor() :tensor(format::bfyx, 0, { 0, 0, 0, 0 }) {}
 
     /// @brief Implicit conversion form C API :: cldnn_tensor.
     tensor(const cldnn_tensor& other)
@@ -488,6 +476,11 @@ struct tensor
         for(size_t i = 0; i < old_sizes.size(); i++)
         {
             auto c = val_order[i];
+            if ((((new_fmt == format::oiyx) || (new_fmt == format::yxoi) || (new_fmt == format::oyxi) || (new_fmt == format::yxio) || (new_fmt == format::os_iyx_osv16))
+                && ((c == 'b') || (c == 'f'))) || 
+                (new_fmt == format::bs_xs_xsv8_bsv8) || (new_fmt == format::bs_x_bsv16)
+                && ((c == 'f') || (c == 'y')))
+                continue;
             auto new_pos = new_order.find(c);
             if (new_pos == std::string::npos)
                 throw std::invalid_argument("cannot convert to new format");

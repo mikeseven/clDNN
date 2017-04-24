@@ -89,8 +89,8 @@ void generic_relu_test(cldnn::format test_input_fmt, int input_b, int input_f, i
 			"relu",
 			"input",
 			slope,
-			{ format::yx,{ input_padding_y, input_padding_x } },
-			{ format::yx,{ output_padding_y, output_padding_x } }));
+			{ format::bfyx,{ 0,0,input_padding_y, input_padding_x } },
+			{ format::bfyx,{ 0,0,output_padding_y, output_padding_x } }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();
@@ -166,7 +166,7 @@ TEST(relu_f32_fw_gpu, basic_yxfb) {
 
 	topology topology(
 		input_layout("input", input.get_layout()),
-		activation( "relu", "input", 0.5, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } }));
+		activation( "relu", "input", 0.5, { format::bfyx,{ 0, 0, 0, 0 } }, { format::bfyx,{ 0, 0, 0, 0 } }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();
@@ -231,8 +231,8 @@ TEST(relu_f32_fw_gpu, basic_input_padding_yxfb) {
 
 	topology topology(
 		input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout(), "" ,{ format::yx,{ 0, 0 } }, { format::yx,{ 2, 1 } }),
-		activation("relu", "reorder", 0.5, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } }));
+        reorder("reorder", "input", input.get_layout(), "" , { format::bfyx,{ 0, 0, 0, 0 } }, { format::bfyx,{ 0, 0, 2, 1 } }),
+		activation("relu", "reorder", 0.5, { format::bfyx,{ 0, 0, 0, 0 } }, { format::bfyx,{ 0, 0, 0, 0 } }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();
@@ -302,7 +302,7 @@ TEST(relu_f32_fw_gpu, basic_output_padding_yxfb) {
 
 	topology topology(
 		input_layout("input", input.get_layout()),
-		activation("relu", "input", 0.5, { format::yx,{ 0, 0 } }, { format::yx,{ 3, 3 } }));
+		activation("relu", "input", 0.5, { format::bfyx,{ 0, 0, 0, 0 } }, { format::bfyx,{ 0, 0, 3, 3 } }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();

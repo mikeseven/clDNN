@@ -164,34 +164,31 @@ cldnn::memory read_file(std::ifstream &rfile, file_header &file_head, const cldn
 
         case cldnn::format::bfyx: //FC
         {
-            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
-            { cldnn::format::bfyx,
+            if (array.size() == 1)
             {
-                static_cast<cldnn::tensor::value_type>(array[3]), // batches
-                static_cast<cldnn::tensor::value_type>(array[2]), // feature maps
-                static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
+                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, { cldnn::format::bfyx, { 1, 1, 1, static_cast<cldnn::tensor::value_type>(array[0]) } }));
             }
-            }));
-            break;
-        }
-
-        case cldnn::format::bx: // 2D
-        {
-            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
-            { cldnn::format::bx,
+            else if (array.size() == 2)
             {
-                static_cast<cldnn::tensor::value_type>(array[1]),
-                static_cast<cldnn::tensor::value_type>(array[0])
+                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, { cldnn::format::bfyx,
+                {
+                    static_cast<cldnn::tensor::value_type>(array[1]), 1, 1,
+                    static_cast<cldnn::tensor::value_type>(array[0])
+                }
+                }));
             }
-            }));
+            else
+            {
+                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
+                { cldnn::format::bfyx,
+                {
+                    static_cast<cldnn::tensor::value_type>(array[3]), // batches
+                    static_cast<cldnn::tensor::value_type>(array[2]), // feature maps
+                    static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
+                }
+                }));
+            }
             break;
-        }
-
-        case cldnn::format::x: // 1D
-        {
-            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, { cldnn::format::x,{ static_cast<cldnn::tensor::value_type>(array[0]) } }));
-            break;
-
         }
 
         // FP32
@@ -213,27 +210,28 @@ cldnn::memory read_file(std::ifstream &rfile, file_header &file_head, const cldn
         case cldnn::format::byxf:
         case cldnn::format::yxfb:
         {
-            auto size = cldnn::tensor(cldnn::format::byxf,
+            if (array.size() == 2)
             {
-                static_cast<cldnn::tensor::value_type>(array[0]), // batch
-                static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2]),  // kernel spatials y, x
-                static_cast<cldnn::tensor::value_type>(array[1]), // fm
+                auto size = cldnn::tensor(cldnn::format::byxf,
+                {
+                    static_cast<cldnn::tensor::value_type>(array[0]), // batch
+                    1, static_cast<cldnn::tensor::value_type>(array[1]),
+                    1,
+                }
+                ).transform(format, 1);
+                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, size));
             }
-            ).transform(format, 1);
-            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, size));
-            break;
-        }
-
-        // FP32
-        case cldnn::format::xb:
-        {
-            auto size = cldnn::tensor(cldnn::format::xb,
+            else
             {
-                static_cast<cldnn::tensor::value_type>(array[1]), // x
-                static_cast<cldnn::tensor::value_type>(array[0]), // batch
+                auto size = cldnn::tensor(cldnn::format::byxf,
+                {
+                    static_cast<cldnn::tensor::value_type>(array[0]), // batch
+                    static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2]),  // kernel spatials y, x
+                    static_cast<cldnn::tensor::value_type>(array[1]), // fm
+                }
+                ).transform(format, 1);
+                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, size));
             }
-            );
-            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, size));
             break;
         }
 
@@ -297,20 +295,12 @@ void file::serialize(const cldnn::memory& data, const std::string& name)
     fstream.write(reinterpret_cast<const char*>(&fh),sizeof(fh));
     fstream.write(reinterpret_cast<const char*>(&fh_ext), sizeof(fh_ext));
     std::vector<uint64_t> array(fh.dimension);
-    if (format == memory::format::type::xb_f32 || format == memory::format::type::bx_f32 ||
-        format == memory::format::type::xb_f16 || format == memory::format::type::bx_f16)
+    const auto dimension_offset = size.raw.size() - fh.dimension; // TODO!!! do it better way, this is needed because weights can have 5 dimensions with batch dimension always equal 1!
+    for (auto ar = 0; ar < fh.dimension; ar++)
     {
-        array[0] = size.batch[0];
-        array[1] = size.spatial[0];
+        array[ar] = size.raw[dimension_offset + ar];
     }
-    else
-    {
-        const auto dimension_offset = size.raw.size() - fh.dimension; // TODO!!! do it better way, this is needed because weights can have 5 dimensions with batch dimension always equal 1!
-        for (auto ar = 0; ar < fh.dimension; ar++)
-        {
-            array[ar] = size.raw[dimension_offset + ar];
-        }
-    }
+
     fstream.write(reinterpret_cast<const char*>(&array[0]), array.size()*sizeof(uint64_t));
     auto ptr = data.pointer<char>();
     fstream.write(&ptr[0], ptr.size());

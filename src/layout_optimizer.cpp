@@ -48,7 +48,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     switch (type)
     {
     case data_type::bias: //convolution bias
-        expected_tensor = cldnn::tensor(cldnn::format::x, { static_cast<tensor::value_type>(current_layout.count()) });
+        expected_tensor = cldnn::tensor(cldnn::format::bfyx, { 1, 1, 1, static_cast<tensor::value_type>(current_layout.count()) });
         break;
 
     case data_type::weights: //convolution weights
@@ -94,7 +94,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     switch (type)
     {
     case data_type::bias: //fc bias
-        expected_tensor = cldnn::tensor(cldnn::format::x, { static_cast<tensor::value_type>(current_layout.count()) });
+        expected_tensor = cldnn::tensor(cldnn::format::bfyx, { 1, 1, 1, static_cast<tensor::value_type>(current_layout.count()) });
         break;
 
     case data_type::weights: //fc weights
@@ -128,7 +128,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
             else if (batch == 1)
                 expected_tensor = current_layout.size.transform(format::bs_x_bsv16, 1);
             else
-                expected_tensor = current_layout.size.transform(format::xb, 1);
+                expected_tensor = current_layout.size.transform(format::yxfb, 1);
         }
 
         break;

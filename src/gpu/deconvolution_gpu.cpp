@@ -129,7 +129,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
         auto split = outer.get_primitive()->split();
 
         auto input_size = input_layout.size;
-        tensor stride(cldnn::format::yx, { outer.get_primitive()->stride.spatial[1], outer.get_primitive()->stride.spatial[0] });
+        tensor stride(cldnn::format::bfyx, { 1, 1, outer.get_primitive()->stride.spatial[1], outer.get_primitive()->stride.spatial[0] });
         padding input_padding = outer.input().get_primitive()->output_padding;
 
         gpu::jit_constants mem_consts{

@@ -38,7 +38,7 @@ layout simpler_nms_inst::calc_output_layout(simpler_nms_node const& node)
     auto desc = node.get_primitive();
     layout input_layout = node.get_dependency(cls_scores_index).get_output_layout();
 
-    return layout(input_layout.data_type, { format::bx,{ desc->post_nms_topn, CLDNN_ROI_VECTOR_SIZE } });
+    return layout(input_layout.data_type, { format::bfyx,{ desc->post_nms_topn, 1, 1, CLDNN_ROI_VECTOR_SIZE } });
 }
 
 std::string simpler_nms_inst::to_string(simpler_nms_node const& node)

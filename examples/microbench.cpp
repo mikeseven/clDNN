@@ -66,7 +66,7 @@ void test_conv(
     auto input_size = tensor(format::bfyx, { batch_size, in_feature, in_h, in_w });
 
     auto weight_size = tensor(format::yxio, { kernel_h, kernel_w, in_feature, out_feature });
-    auto bias_size = tensor(format::x, { out_feature });
+    auto bias_size = tensor(format::bfyx, { 1, 1, 1, out_feature });
 
     auto input = memory::allocate(engine, { data_type, input_size });
     auto weights = memory::allocate(engine, { data_type, weight_size });
@@ -112,8 +112,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "conv1_7x7_s2",
         batch_size,
         224, 224, 3, // input: x,y,f
-        { format::yx,{ -3, -3 } }, // padding
-        { format::yx,{ 2, 2 } }, // stride
+        { format::bfyx, { 0, 0, -3, -3 } }, // padding
+        { format::bfyx, { 1, 1, 2, 2 } }, // stride
         64, // output feature maps num
         7, 7, // kernel size
         use_half
@@ -125,8 +125,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "conv2_3x3_reduce",
         batch_size,
         56, 56, 64, // input: x,y,f
-        { format::yx,{ 0, 0 } }, // padding
-        { format::yx,{ 2, 2 } }, // stride
+        { format::bfyx, { 0, 0, 0, 0 } }, // padding
+        { format::bfyx, { 1, 1, 2, 2 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
         use_half
@@ -138,8 +138,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "conv2_3x3",
         batch_size,
         56, 56, 384, // input: x,y,f
-        { format::yx,{ 0, 0 } }, // padding
-        { format::yx,{ 2, 2 } }, // stride
+        { format::bfyx, { 0, 0, 0, 0 } }, // padding
+        { format::bfyx, { 1, 1, 2, 2 } }, // stride
         384, // output feature maps num
         3, 3, // kernel size
         use_half
@@ -151,8 +151,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "inception_3a_1x1",
         batch_size,
         28, 28, 192, // input: x,y,f
-        { format::yx,{ 0, 0 } }, // padding
-        { format::yx,{ 1, 1 } }, // stride
+        { format::bfyx, { 0, 0, 0, 0 } }, // padding
+        { format::bfyx, { 1, 1, 1, 1 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
         use_half
@@ -164,8 +164,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "inception_3a_3x3_reduce",
         batch_size,
         28, 28, 64, // input: x,y,f
-        { format::yx,{ 0, 0 } }, // padding
-        { format::yx,{ 1, 1 } }, // stride
+        { format::bfyx, { 0, 0, 0, 0 } }, // padding
+        { format::bfyx, { 1, 1, 1, 1 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
         use_half
@@ -177,8 +177,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "inception_3a_3x3",
         batch_size,
         28, 28, 192, // input: x,y,f
-        { format::yx,{ -1, -1 } }, // padding
-        { format::yx,{ 1, 1 } }, // stride
+        { format::bfyx, { 0, 0, -1, -1 } }, // padding
+        { format::bfyx, { 1, 1, 1, 1 } }, // stride
         64, // output feature maps num
         3, 3, // kernel size
         use_half
@@ -190,8 +190,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "inception_3a_double3x3_reduce",
         batch_size,
         28, 28, 192, // input: x,y,f
-        { format::yx,{ 0, 0 } }, // padding
-        { format::yx,{ 1, 1 } }, // stride
+        { format::bfyx, { 0, 0, 0, 0 } }, // padding
+        { format::bfyx, { 1, 1, 1, 1 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
         use_half
@@ -203,8 +203,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "inception_3a_double3x3a",
         batch_size,
         28, 28, 64, // input: x,y,f
-        { format::yx,{ -1, -1 } }, // padding
-        { format::yx,{ 1, 1 } }, // stride
+        { format::bfyx, { 0, 0, -1, -1 } }, // padding
+        { format::bfyx, { 1, 1, 1, 1 } }, // stride
         96, // output feature maps num
         3, 3, // kernel size
         use_half
@@ -216,8 +216,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "inception_3a_double3x3b",
         batch_size,
         28, 28, 96, // input: x,y,f
-        { format::yx,{ -1, -1 } }, // padding
-        { format::yx,{ 1, 1 } }, // stride
+        { format::bfyx, { 0, 0, -1, -1 } }, // padding
+        { format::bfyx, { 1, 1, 1, 1 } }, // stride
         96, // output feature maps num
         3, 3, // kernel size
         use_half
@@ -229,8 +229,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "inception_3b_1x1",
         batch_size,
         28, 28, 256, // input: x,y,f
-        { format::yx,{ 0, 0 } }, // padding
-        { format::yx,{ 1, 1 } }, // stride
+        { format::bfyx, { 0, 0, 0, 0 } }, // padding
+        { format::bfyx, { 1, 1, 1, 1 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
         use_half
@@ -242,8 +242,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "inception_3b_3x3_reduce",
         batch_size,
         28, 28, 64, // input: x,y,f
-        { format::yx,{ 0, 0 } }, // padding
-        { format::yx,{ 1, 1 } }, // stride
+        { format::bfyx, { 0, 0, 0, 0 } }, // padding
+        { format::bfyx, { 1, 1, 1, 1 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
         use_half
@@ -255,8 +255,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "inception_3b_3x3",
         batch_size,
         28, 28, 192, // input: x,y,f
-        { format::yx,{ -1, -1 } }, // padding
-        { format::yx,{ 1, 1 } }, // stride
+        { format::bfyx, { 0, 0, -1, -1 } }, // padding
+        { format::bfyx, { 1, 1, 1, 1 } }, // stride
         64, // output feature maps num
         3, 3, // kernel size
         use_half
@@ -269,8 +269,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "inception_3b_double3x3_reduce",
         batch_size,
         28, 28, 192, // input: x,y,f
-        { format::yx,{ 0, 0 } }, // padding
-        { format::yx,{ 1, 1 } }, // stride
+        { format::bfyx, { 0, 0, 0, 0 } }, // padding
+        { format::bfyx, { 1, 1, 1, 1 } }, // stride
         64, // output feature maps num
         1, 1, // kernel size
         use_half
@@ -282,8 +282,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "inception_3b_double3x3a",
         batch_size,
         28, 28, 64, // input: x,y,f
-        { format::yx,{ -1, -1 } }, // padding
-        { format::yx,{ 1, 1 } }, // stride
+        { format::bfyx, { 0, 0, -1, -1 } }, // padding
+        { format::bfyx, { 1, 1, 1, 1 } }, // stride
         96, // output feature maps num
         3, 3, // kernel size
         use_half
@@ -295,8 +295,8 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         "inception_3b_double3x3b",
         batch_size,
         28, 28, 96, // input: x,y,f
-        { format::yx,{ -1, -1 } }, // padding
-        { format::yx,{ 1, 1 } }, // stride
+        { format::bfyx, { 0, 0, -1, -1 } }, // padding
+        { format::bfyx, { 1, 1, 1, 1 } }, // stride
         96, // output feature maps num
         3, 3, // kernel size
         use_half

@@ -534,7 +534,7 @@ void cldnn_unlock_memory(cldnn_memory memory, cldnn_status* status)
 
 cldnn_layout cldnn_get_memory_layout(cldnn_memory memory, cldnn_status* status)
 {
-    cldnn_layout error_result = cldnn::layout(cldnn::data_types::f32, { cldnn::format::x, {0} });
+    cldnn_layout error_result = cldnn::layout(cldnn::data_types::f32, { cldnn::format::bfyx, {0, 0, 0, 0} });
 
     return exception_handler<cldnn_layout>(CLDNN_ERROR, status, error_result, [&]()
     {

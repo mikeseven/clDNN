@@ -52,7 +52,7 @@ TYPED_TEST(prior_box_test, test_setup_basic)
 	std::vector<float> min_sizes = { 4 };
 	std::vector<float> max_sizes = { 9 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -79,7 +79,7 @@ TYPED_TEST(prior_box_test, test_setup_multi_size)
 	std::vector<float> min_sizes = { 4, 14 };
 	std::vector<float> max_sizes = { 9, 19 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -107,7 +107,7 @@ TYPED_TEST(prior_box_test, test_setup_no_max_size)
 
 	std::vector<float> min_sizes = { 4 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -135,7 +135,7 @@ TYPED_TEST(prior_box_test, test_setup_multi_size_no_max_size)
 
 	std::vector<float> min_sizes = { 4, 14 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -167,7 +167,7 @@ TYPED_TEST(prior_box_test, test_setup_aspect_ratio_one_no_flip)
 
 	bool flip = false;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -197,7 +197,7 @@ TYPED_TEST(prior_box_test, test_setup_aspect_ratio_no_flip)
 
 	bool flip = false;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -225,7 +225,7 @@ TYPED_TEST(prior_box_test, test_setup_aspect_ratio_flip)
 	std::vector<float> max_sizes = { 9 };
 	std::vector<float> aspect_ratios = { 2 , 3 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -255,7 +255,7 @@ TYPED_TEST(prior_box_test, test_setup_aspect_ratio_flip_multi_size)
 
 	bool flip = true;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -282,7 +282,7 @@ TYPED_TEST(prior_box_test, test_forward_basic)
 	std::vector<float> min_sizes = { 4 };
 	std::vector<float> max_sizes = { 9 };
 
-    topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes));
+    topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes));
     network network(engine, topology);
     network.set_input_data("input_prim", input_prim);
 
@@ -332,7 +332,7 @@ TYPED_TEST(prior_box_test, test_forward_no_max_size)
 
 	std::vector<float> min_sizes = { 4 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -383,7 +383,7 @@ TYPED_TEST(prior_box_test, test_forward_variance_one)
 	bool clip = false;
 	std::vector<float> variance = { 1 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -441,7 +441,7 @@ TYPED_TEST(prior_box_test, test_forward_variance_multi)
 	bool clip = false;
 	std::vector<float> variance = { 0.1f, 0.2f, 0.3f, 0.4f };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -496,7 +496,7 @@ TYPED_TEST(prior_box_test, test_forward_aspect_ratio_no_flip)
 	std::vector<float> aspect_ratios = { 2 };
 	bool flip = false;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -558,7 +558,7 @@ TYPED_TEST(prior_box_test, test_forward_aspect_ratio)
 	std::vector<float> max_sizes = { 9 };
 	std::vector<float> aspect_ratios = { 2 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -631,7 +631,7 @@ TYPED_TEST(prior_box_test, test_forward_aspect_ratio_multi_size) {
 	bool flip = true;
 	bool clip = true;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -727,7 +727,7 @@ TYPED_TEST(prior_box_test, test_forward_fix_step) {
 	float step_width = 10.f;
 	float step_height = 10.f;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance, step_width, step_height));
+	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance, step_width, step_height));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 

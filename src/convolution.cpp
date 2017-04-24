@@ -34,8 +34,8 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
     auto weights_layout = node.weights(0).get_output_layout(); //weights are stored after inputs
 
     auto input_offset = desc->input_offset().transform(input_layout.size.format, 0);
-    auto strd = desc->stride.transform(format::yx, 0);
-	auto dilation = desc->dilation.transform(format::yx, 0);
+    auto strd = desc->stride.transform(format::bfyx, 0);
+	auto dilation = desc->dilation.transform(format::bfyx, 0);
     auto split = desc->weights.size();
 
     // compute how many outputs in rows and columns will be generate by filter. 
@@ -137,7 +137,7 @@ convolution_inst::typed_primitive_inst(network_impl& network, convolution_node c
         if (bias_term())
         {
             auto& bias_inst = bias_memory(j).get_layout();
-            if (bias_inst.size.raw.size() != 3)
+            if (bias_inst.size.batch[0] != 1 && bias_inst.size.feature[0] != 1 && bias_inst.size.spatial[1] != 1)
                 throw std::runtime_error("Biases isn't 1D vector."); // b=1, f=1
             if (bias_inst.size.spatial[0] != output_size.feature[0] / split)
                 throw std::runtime_error("Biases/output feature maps number does not match.");

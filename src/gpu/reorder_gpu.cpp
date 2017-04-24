@@ -90,7 +90,10 @@ struct reorder_gpu : typed_primitive_impl<reorder>
             outer.get_primitive()->output_padding.lower_size().batch[0] == 0 &&
             outer.get_primitive()->output_padding.upper_size().feature[0] == 0 &&
             outer.get_primitive()->output_padding.upper_size().batch[0] == 0;
-        kd.is_flatten = (input_layout.size.raw.size() != output_layout.size.raw.size());
+        kd.is_flatten = ((input_layout.size.batch[0] != 1 && output_layout.size.batch[0] == 1) ||
+            (input_layout.size.feature[0] != 1 && output_layout.size.feature[0] == 1) ||
+            (input_layout.size.spatial[0] != 1 && output_layout.size.spatial[0] == 1) ||
+            (input_layout.size.spatial[1] != 1 && output_layout.size.spatial[1] == 1));
 
         return kd;
     }
@@ -145,15 +148,15 @@ struct reorder_gpu : typed_primitive_impl<reorder>
                         uint _id_in_slice = pos[0] % 16; \
                         return _id_in_slice + 16 * (pos[2] + size[2] * _slice_id);)__C";
         
-        case format::bx:
-            return "return lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[0] + pos[0]);";
+//        case format::bx:
+//            return "return lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[0] + pos[0]);";
         
-        case format::xb:
-            return "return lpad[0] + pos[0] + (lpad[0] + size[0] + upad[0]) * (lpad[2] + pos[2]);";
+//        case format::xb:
+//            return "return lpad[0] + pos[0] + (lpad[0] + size[0] + upad[0]) * (lpad[2] + pos[2]);";
         
         // No reorder, only conversion (use simpler 1D kernels for that).
-        case format::x:
-            return "return lpad[2] + pos[2];";
+//        case format::x:
+//            return "return lpad[2] + pos[2];";
 
         default:
             throw std::invalid_argument("This format is not supported in GPU reorder_inst");
@@ -188,15 +191,15 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         case format::fyxb:
             return { 0, 2, 3, 1 };
         
-        case format::bx:
-            return { 1, 2, 0 };
+        //case format::bx:
+        //    return { 1, 2, 0 };
         
-        case format::xb:
-            return { 1, 0, 2 };
+        //case format::xb:
+        //    return { 1, 0, 2 };
         
         // No reorder, only conversion (use simpler 1D kernels for that).
-        case format::x:
-            return { 0, 1, 2 };
+        //case format::x:
+        //    return { 0, 1, 2 };
 
         default:
             throw std::invalid_argument("This format is not supported in GPU reorder_inst");
@@ -204,7 +207,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
     }
 
     // output idx for flatten
-    static std::string get_idx_calculation_flatten(data_types /*odt*/, format::type ofmt, data_types idt, format::type ifmt)
+    static std::string get_idx_calculation_flatten(data_types /*odt*/, format::type ofmt)
     {
         // Flatten cases
         // 0 - batch (b), 1 - feature (f), 2, 3 - spatial (x -> 2, y -> 3)
@@ -223,21 +226,21 @@ struct reorder_gpu : typed_primitive_impl<reorder>
                         return _id_in_slice + 16 * (pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * _slice_id)));)__C";
         
         //equivalent to axis = 1 (feature), end_axis = -1(x) in caffe
-        case format::bx:
+        case format::bfyx:
             return "return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));";
         
         //equivalent to axis = 0 (batch), end_axis = 2(y) in caffe
-        case format::xb:
-            return "return pos[0] + size[0] * ((pos[1] * size[2] * size[3]) + size[1] * (pos[2] + size[2] * pos[3]) / size[2]);";
+        //case format::xb:
+        //    return "return pos[0] + size[0] * ((pos[1] * size[2] * size[3]) + size[1] * (pos[2] + size[2] * pos[3]) / size[2]);";
         
         //flatten all into one dimension - equivalent to axis = 0 (batch), end_axis = 3(x) in caffe
-        case format::x:
-        {
-            std::vector<uint32_t> calcOrder = get_calculation_order(idt, ifmt);
-            return "return pos[" + std::to_string(calcOrder[0]) + "] + size[" + std::to_string(calcOrder[0]) + "] * (pos[" + std::to_string(calcOrder[1]) +
-                "] + size[" + std::to_string(calcOrder[1]) + "] * (pos[" + std::to_string(calcOrder[2]) + "] + size[" + std::to_string(calcOrder[2]) +
-                "] * pos[" + std::to_string(calcOrder[3]) + "]));";
-        }
+        //case format::x:
+        //{
+        //    std::vector<uint32_t> calcOrder = get_calculation_order(idt, ifmt);
+        //    return "return pos[" + std::to_string(calcOrder[0]) + "] + size[" + std::to_string(calcOrder[0]) + "] * (pos[" + std::to_string(calcOrder[1]) +
+        //        "] + size[" + std::to_string(calcOrder[1]) + "] * (pos[" + std::to_string(calcOrder[2]) + "] + size[" + std::to_string(calcOrder[2]) +
+        //        "] * pos[" + std::to_string(calcOrder[3]) + "]));";
+        //}
         
         default:
             throw std::invalid_argument("This format is not supported in GPU reorder_inst - flatten");
@@ -280,7 +283,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("DIMENSIONS", std::to_string(input_layout.size.raw.size())),
-            gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", data.is_flatten ? get_idx_calculation_flatten(output_layout.data_type, output_layout.size.format, input_layout.data_type, input_layout.size.format) : get_idx_calculation(output_layout.data_type, output_layout.size.format)),
+            gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", data.is_flatten ? get_idx_calculation_flatten(output_layout.data_type, output_layout.size.format) : get_idx_calculation(output_layout.data_type, output_layout.size.format)),
             gpu::make_jit_constant("CALCULATION_ORDER", get_calculation_order_string(input_layout.data_type, input_layout.size.format)),
             gpu::make_jit_constant("SRC_TYPE", input_use_half ? std::string("half") : std::string("float")),
             gpu::make_jit_constant("DEST_TYPE", output_use_half ? std::string("half") : std::string("float")),

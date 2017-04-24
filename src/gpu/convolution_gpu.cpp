@@ -138,7 +138,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
         const int batch_size = output_layout.size.batch[0];
 
         auto input_size = input_layout.size;
-        tensor stride(cldnn::format::yx, { 
+        tensor stride(cldnn::format::bfyx, { 1, 1,
             std::min(outer.get_primitive()->stride.spatial[1], input_size.spatial[1]),
             std::min(outer.get_primitive()->stride.spatial[0], input_size.spatial[0])
         });

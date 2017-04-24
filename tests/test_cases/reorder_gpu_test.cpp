@@ -581,7 +581,7 @@ TEST(reorder_gpu_f32, basic_flatten_yxfb_to_bx)
     auto y_size = 2;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    layout output_layout(data_types::f32, { format::bx,{ batch_num, y_size * x_size * feature_num } });
+    layout output_layout(data_types::f32, { format::bfyx,{ 1,batch_num,1, y_size * x_size * feature_num } });
 
     std::vector<float> input_vec = {
         1.f, 0.f,
@@ -649,7 +649,7 @@ TEST(reorder_gpu_f32, basic_flatten_yxfb_to_xb)
     auto y_size = 2;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    layout output_layout(data_types::f32, { format::xb,{ y_size * x_size * feature_num, batch_num } });
+    layout output_layout(data_types::f32, { format::yxfb,{ 1, y_size * x_size * feature_num, 1, batch_num } });
 
     std::vector<float> input_vec = {
         1.f, 0.f,
@@ -720,7 +720,7 @@ TEST(reorder_gpu_f32, basic_flatten_bfyx_to_bx)
     auto y_size = 2;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ batch_num, feature_num, y_size, x_size } } });
-    layout output_layout(data_types::f32, { format::bx,{ batch_num, y_size * x_size * feature_num } });
+    layout output_layout(data_types::f32, { format::bfyx,{ batch_num, 1, 1, y_size * x_size * feature_num } });
 
     std::vector<float> input_vec = {
         1.f, 2.f,
@@ -781,7 +781,7 @@ TEST(reorder_gpu_f32, basic_flatten_yxfb_to_x)
     auto y_size = 2;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    layout output_layout(data_types::f32, { format::x,{ y_size * x_size * feature_num * batch_num } });
+    layout output_layout(data_types::f32, { format::bfyx,{ 1, 1, 1, y_size * x_size * feature_num * batch_num } });
 
     std::vector<float> input_vec = {
         1.f, 0.f,

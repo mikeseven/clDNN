@@ -69,7 +69,7 @@ struct padding
     {}
 
     /// @brief Constructs "zero-sized" padding.
-    padding(): padding(format::x, {0}) {}
+    padding(): padding(format::bfyx, { 0, 0, 0, 0 }) {}
 
     /// @brief Copy construction.
     padding(const cldnn_padding& other)

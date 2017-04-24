@@ -659,9 +659,9 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_bx) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
-    auto bias_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
+    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 1, 3 } } });
+    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 1, 3 } } });
+    auto bias_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 1, 3 } } });
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
@@ -723,9 +723,9 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_xb) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
-    auto bias_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 2, 1, 3 } } });
+    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 2, 1, 3 } } });
+    auto bias_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 2, 1, 3 } } });
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
@@ -785,9 +785,9 @@ TEST(scale_gpu, basic_in2x3_scale_single_value_bx) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 1, 1 } } });
-    auto bias_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 1, 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 1,  3 } } });
+    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 1, 1, 1, 1 } } });
+    auto bias_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 1, 1, 1, 1 } } });
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
@@ -845,9 +845,9 @@ TEST(scale_gpu, basic_in2x3_scale_single_value_xb) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 1, 1 } } });
-    auto bias_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 1, 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 2, 1, 3 } } });
+    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 1, 1 } } });
+    auto bias_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 1, 1 } } });
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
@@ -902,8 +902,8 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_no_bias_bx) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bx,{ 2, 3 } } });
+    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 1, 3 } } });
+    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 1, 3 } } });
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
@@ -952,8 +952,8 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_no_bias_xb) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::xb,{ 2, 3 } } });
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 2, 1, 3 } } });
+    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 2, 1, 3 } } });
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
@@ -1017,9 +1017,9 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_yxfb_bfyx_same_size_padding) {
 
         topology topology;
         topology.add(input_layout("input", input.get_layout()));
-        topology.add(reorder("reorder", "input", input.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 2, 1 } }));
+        topology.add(reorder("reorder", "input", input.get_layout(), "", { format::bfyx,{ 0, 0, 0, 0 } }, { format::bfyx,{ 0, 0, 2, 1 } }));
         topology.add(input_layout("scale_input", scale_input.get_layout()));
-        topology.add(scale("scale", "reorder", "scale_input", { format::yx,{ 0, 0 } }, { format::yx,{ 2, 2 } }));
+        topology.add(scale("scale", "reorder", "scale_input", { format::bfyx,{ 0, 0, 0, 0 } }, { format::bfyx,{ 0, 0, 2, 2 } }));
 
         std::vector<float> input_vec = { 1.f, 2.f, 3.f, 4.f };
         set_values(input, input_vec);

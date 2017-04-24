@@ -60,10 +60,10 @@ struct depth_concatenate : public primitive_base<depth_concatenate, CLDNN_PRIMIT
     depth_concatenate(
         const primitive_id& id,
         const std::vector<primitive_id>& input,
-        const padding& output_padding = { format::yx,{ 0,0 } }
+        const padding& output_padding = { format::bfyx,{ 0,0,0,0 } }
     )
         // We're not using input padding but we must provide it, so it will always be 0,0
-        :primitive_base(id, { input }, { format::yx,{ 0,0 } }, output_padding)
+        :primitive_base(id, { input }, { format::bfyx,{ 0,0,0,0 } }, output_padding)
     {}
 
     /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC(depth_concatenate)

@@ -50,17 +50,17 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         reordered_input,
         { conv1_weights },
         { conv1_biases },
-        { format::yx, {0,0} },
-        { format::yx, {4,4} },
-		{ format::yx, {1,1} },
+        { format::bfyx, {0,0,0,0} },
+        { format::bfyx, {1,1,4,4} },
+		{ format::bfyx, {1,1} },
         true);
 
     auto pool1 = pooling(
         "pool1",
         conv1,
         pooling_mode::max,
-        { format::yx, {2,2} }, // strd
-        { format::yx, {3,3} }); // kernel
+        { format::bfyx, {1,1,2,2} }, // strd
+        { format::bfyx, {1,1,3,3} }); // kernel
 
     auto lrn1 = lrn(
         "lrn1",
@@ -80,17 +80,17 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         lrn1,
         { conv2_g1_weights, conv2_g2_weights },
         { conv2_g1_biases, conv2_g2_biases },
-        { format::yx, {-2, -2} },
-        { format::yx, {1, 1} },
-		{ format::yx, {1, 1} },
+        { format::bfyx, {0, 0, -2, -2} },
+        { format::bfyx, {1, 1, 1, 1} },
+		{ format::bfyx, {1, 1} },
         true);
 
     auto pool2 = pooling(
         "pool2",
         conv2_group2,
         pooling_mode::max,
-        { format::yx, { 2,2 } }, // strd
-        { format::yx, { 3,3 } }); // kernel
+        { format::bfyx, { 1,1,2,2 } }, // strd
+        { format::bfyx, { 1,1,3,3 } }); // kernel
 
     auto lrn2 = lrn(
         "lrn2",
@@ -108,9 +108,9 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         lrn2,
         { conv3_weights },
         { conv3_biases },
-        { format::yx, {-1, -1} },
-        { format::yx, {1,1} },
-		{ format::yx, {1, 1} },
+        { format::bfyx, {0,0,-1, -1} },
+        { format::bfyx, {1,1,1,1} },
+		{ format::bfyx, {1, 1, 1, 1} },
         true);
 
     auto conv4_g1_weights = file::create({ engine, join_path(weights_dir, "conv4_g1_weights.nnd")});
@@ -122,9 +122,9 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         conv3,
         { conv4_g1_weights, conv4_g2_weights },
         { conv4_g1_biases, conv4_g2_biases },
-        { format::yx, {-1,-1} },
-        { format::yx, {1,1} },
-		{ format::yx, {1, 1} },
+        { format::bfyx, {0,0,-1,-1} },
+        { format::bfyx, {1,1,1,1} },
+		{ format::bfyx, {1, 1, 1, 1} },
         true);
 
     auto conv5_g1_weights = file::create({ engine, join_path(weights_dir, "conv5_g1_weights.nnd")});
@@ -136,17 +136,17 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         conv4_group2,
         { conv5_g1_weights, conv5_g2_weights },
         { conv5_g1_biases, conv5_g2_biases },
-        { format::yx,{-1,-1} },
-        { format::yx,{1,1} },
-		{ format::yx, {1, 1} },
+        { format::bfyx,{0,0,-1,-1} },
+        { format::bfyx,{1,1,1,1} },
+		{ format::bfyx, {1, 1, 1, 1} },
         true);
 
     auto pool5 = pooling(
         "pool5",
         conv5_group2,
         pooling_mode::max,
-        { format::xy,{ 2, 2 } }, // strd
-        { format::xy,{ 3, 3 } }); // kernel
+        { format::bfyx,{ 1, 1, 2, 2 } }, // strd
+        { format::bfyx,{ 1, 1, 3, 3 } }); // kernel
 
     auto fc6_weights = file::create({ engine, join_path(weights_dir, "fc6_weights.nnd")});
     auto fc6_biases = file::create({ engine, join_path(weights_dir, "fc6_biases.nnd")});

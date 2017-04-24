@@ -128,9 +128,7 @@ namespace {
     
             implementation_map<activation>::add({
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), val_fw},
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::xb), val_fw},
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), val_fw},
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::xb), val_fw},
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), val_fw },
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), val_fw },
             });

@@ -100,7 +100,7 @@ template <typename Dtype>
 TestRunnerSimplerNMS<Dtype>::TestRunnerSimplerNMS() :
                             _cls_scores_layout(cldnn::type_to_data_type<Dtype>::value, { format::bfyx, { 1, 18, 14, 23 } } ),
                             _bbox_pred_layout(cldnn::type_to_data_type<Dtype>::value, { format::bfyx, { 1, 36, 14, 23 } } ),
-                            _image_info_layout(cldnn::type_to_data_type<Dtype>::value, { format::x, { 3 } } ),
+                            _image_info_layout(cldnn::type_to_data_type<Dtype>::value, { format::bfyx, { 1, 1, 1, 3 } } ),
                             _test_layer(layer_name, 
                                         cls_scores_name, 
                                         bbox_pred_name,

@@ -48,9 +48,9 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         reordered_input,
         { conv1_1_w },
         { conv1_1_b },
-        { format::yx, { -1, -1 } },
-        { format::yx, { 1, 1 } },
-		{ format::yx, { 1, 1 } },
+        { format::bfyx, { 0, 0, -1, -1 } },
+        { format::bfyx, { 1, 1, 1, 1 } },
+		{ format::bfyx, { 1, 1, 1, 1 } },
         true); // negative slope for RELU
 
     auto conv1_2_w = file::create({ engine, join_path(weights_dir, "conv1_2_weights.nnd")});
@@ -59,17 +59,17 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
             conv1_1,
         { conv1_2_w },
         { conv1_2_b },
-        { format::yx, { -1, -1 } },
-        { format::yx, { 1, 1 } },
-		{ format::yx, { 1, 1 } },
+        { format::bfyx, { 0, 0, -1, -1 } },
+        { format::bfyx, { 1, 1, 1, 1 } },
+		{ format::bfyx, { 1, 1, 1, 1 } },
         true); // negative slope for RELU
 
 
     auto pool1 = pooling("pool1",
         conv1_2,
         pooling_mode::max,
-        { format::yx, { 2,2 } }, // strd
-        { format::yx, { 2,2 } } // kernel
+        { format::bfyx, { 1, 1, 2, 2 } }, // strd
+        { format::bfyx, { 1, 1, 2, 2 } } // kernel
     );
 
     auto conv2_1_w = file::create({ engine, join_path(weights_dir, "conv2_1_weights.nnd")});
@@ -78,9 +78,9 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         pool1,
         { conv2_1_w },
         { conv2_1_b },
-        { format::yx, { -1, -1 } },
-        { format::yx, { 1, 1 } },
-		{ format::yx, { 1, 1 } },
+        { format::bfyx, { 0, 0, -1, -1 } },
+        { format::bfyx, { 1, 1, 1, 1 } },
+		{ format::bfyx, { 1, 1, 1, 1 } },
         true); // negative slope for RELU
 
     auto conv2_2_w = file::create({ engine, join_path(weights_dir, "conv2_2_weights.nnd")});
@@ -89,16 +89,16 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         conv2_1,
         { conv2_2_w },
         { conv2_2_b },
-        { format::yx, { -1, -1 } },
-        { format::yx, { 1, 1 } },
-		{ format::yx, { 1, 1 } },
+        { format::bfyx, { 0, 0, -1, -1 } },
+        { format::bfyx, { 1, 1, 1, 1 } },
+		{ format::bfyx, { 1, 1, 1, 1 } },
         true); // negative slope for RELU
 
     auto pool2 = pooling("pool2",
         conv2_2,
         pooling_mode::max,
-        { format::yx, { 2,2 } }, // strd
-        { format::yx, { 2,2 } } // kernel
+        { format::bfyx, { 1, 1, 2, 2 } }, // strd
+        { format::bfyx, { 1, 1, 2, 2 } } // kernel
     );
 
     auto conv3_1_w = file::create({ engine, join_path(weights_dir, "conv3_1_weights.nnd")});
@@ -107,9 +107,9 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         pool2,
         { conv3_1_w },
         { conv3_1_b },
-        { format::yx, { -1, -1 } },
-        { format::yx, { 1, 1 } },
-		{ format::yx, { 1, 1 } },
+        { format::bfyx, { 0, 0, -1, -1 } },
+        { format::bfyx, { 1, 1, 1, 1 } },
+		{ format::bfyx, { 1, 1, 1, 1 } },
         true); // negative slope for RELU
 
     auto conv3_2_w = file::create({ engine, join_path(weights_dir, "conv3_2_weights.nnd")});
@@ -118,9 +118,9 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         conv3_1,
         { conv3_2_w },
         { conv3_2_b },
-        { format::yx, { -1, -1 } },
-        { format::yx, { 1, 1 } },
-		{ format::yx, { 1, 1 } },
+        { format::bfyx, { 0, 0, -1, -1 } },
+        { format::bfyx, { 1, 1, 1, 1 } },
+		{ format::bfyx, { 1, 1, 1, 1 } },
         true); // negative slope for RELU
 
     auto conv3_3_w = file::create({ engine, join_path(weights_dir, "conv3_3_weights.nnd")});
@@ -129,16 +129,16 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         conv3_2,
         { conv3_3_w },
         { conv3_3_b },
-        { format::yx, { -1, -1 } },
-        { format::yx, { 1, 1 } },
-		{ format::yx, { 1, 1 } },
+        { format::bfyx, { 0, 0, -1, -1 } },
+        { format::bfyx, { 1, 1, 1, 1 } },
+		{ format::bfyx, { 1, 1, 1, 1 } },
         true); // negative slope for RELU
 
     auto pool3 = pooling("pool3",
         conv3_3,
         pooling_mode::max,
-        { format::yx, { 2,2 } }, // strd
-        { format::yx, { 2,2 } } // kernel
+        { format::bfyx, { 1, 1, 2, 2 } }, // strd
+        { format::bfyx, { 1, 1, 2, 2 } } // kernel
     );
 
     auto conv4_1_w = file::create({ engine, join_path(weights_dir, "conv4_1_weights.nnd")});
@@ -147,9 +147,9 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         pool3,
         { conv4_1_w },
         { conv4_1_b },
-        { format::yx, { -1, -1 } },
-        { format::yx, { 1, 1 } },
-		{ format::yx, { 1, 1 } },
+        { format::bfyx, { 0, 0, -1, -1 } },
+        { format::bfyx, { 1, 1, 1, 1 } },
+		{ format::bfyx, { 1, 1, 1, 1 } },
         true); // negative slope for RELU
 
     auto conv4_2_w = file::create({ engine, join_path(weights_dir, "conv4_2_weights.nnd")});
@@ -158,9 +158,9 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         conv4_1,
         { conv4_2_w },
         { conv4_2_b },
-        { format::yx, { -1, -1 } },
-        { format::yx, { 1, 1 } },
-		{ format::yx, { 1, 1 } },
+        { format::bfyx, { 0, 0, -1, -1 } },
+        { format::bfyx, { 1, 1, 1, 1 } },
+		{ format::bfyx, { 1, 1, 1, 1 } },
         true); // negative slope for RELU
 
     auto conv4_3_w = file::create({ engine, join_path(weights_dir, "conv4_3_weights.nnd")});
@@ -169,16 +169,16 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         conv4_2,
         { conv4_3_w },
         { conv4_3_b },
-        { format::yx, { -1, -1 } },
-        { format::yx, { 1, 1 } },
-		{ format::yx, { 1, 1 } },
+        { format::bfyx, { 0, 0, -1, -1 } },
+        { format::bfyx, { 1, 1, 1, 1 } },
+		{ format::bfyx, { 1, 1, 1, 1 } },
         true); // negative slope for RELU
 
     auto pool4 = pooling("pool4",
         conv4_3,
         pooling_mode::max,
-        { format::yx, { 2,2 } }, // strd
-        { format::yx, { 2,2 } } // kernel
+        { format::bfyx, { 1, 1, 2, 2 } }, // strd
+        { format::bfyx, { 1, 1, 2, 2 } } // kernel
     );
 
     auto conv5_1_w = file::create({ engine, join_path(weights_dir, "conv5_1_weights.nnd")});
@@ -187,9 +187,9 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         pool4,
         { conv5_1_w },
         { conv5_1_b },
-        { format::yx, { -1, -1 } },
-        { format::yx, { 1,1 } },
-		{ format::yx, { 1, 1 } },
+        { format::bfyx, { 0, 0, -1, -1 } },
+        { format::bfyx, { 1, 1, 1, 1 } },
+		{ format::bfyx, { 1, 1, 1, 1 } },
         true); // negative slope for RELU
 
     auto conv5_2_w = file::create({ engine, join_path(weights_dir, "conv5_2_weights.nnd")});
@@ -198,9 +198,9 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         conv5_1,
         { conv5_2_w },
         { conv5_2_b },
-        { format::yx, { -1, -1 } },
-        { format::yx, { 1,1 } },
-		{ format::yx, { 1, 1 } },
+        { format::bfyx, { 0, 0, -1, -1 } },
+        { format::bfyx, { 1, 1, 1, 1 } },
+		{ format::bfyx, { 1, 1, 1, 1 } },
         true); // negative slope for RELU
 
     auto conv5_3_w = file::create({ engine, join_path(weights_dir, "conv5_3_weights.nnd")});
@@ -209,16 +209,16 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         conv5_2,
         { conv5_3_w },
         { conv5_3_b },
-        { format::yx, { -1, -1 } },
-        { format::yx, { 1,1 } },
-		{ format::yx, { 1, 1 } },
+        { format::bfyx, { 0, 0, -1, -1 } },
+        { format::bfyx, { 1, 1, 1, 1 } },
+		{ format::bfyx, { 1, 1, 1, 1 } },
         true); // negative slope for RELU
 
     auto pool5 = pooling("pool5",
         conv5_3,
         pooling_mode::max,
-        { format::yx, { 2,2 } }, // strd
-        { format::yx, { 2,2 } } // kernel
+        { format::bfyx, { 1, 1, 2, 2 } }, // strd
+        { format::bfyx, { 1, 1, 2, 2 } } // kernel
     );
 
     auto fc6_w = file::create({ engine, join_path(weights_dir, "fc6_weights.nnd")});

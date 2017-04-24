@@ -218,8 +218,8 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_across_channel_tes
     
     topology topology(
         input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 0, 2 } }),
-        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
+        reorder("reorder", "input", input.get_layout(), "", { 0, 0, 0, 0 }, { 0, 0, 0, 2 }),
+        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
         );
     
     network network(engine, topology);
@@ -274,8 +274,8 @@ TEST(local_response_normalization_gpu, lrn_input_padding_bfyx_within_channel_tes
 
     topology topology(
         input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 3, 3 } }),
-        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_within_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
+        reorder("reorder", "input", input.get_layout(), "", { 0, 0, 0, 0 }, { 0, 0, 3, 3 }),
+        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_within_channel, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
     );
 
     network network(engine, topology);

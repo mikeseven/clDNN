@@ -74,8 +74,7 @@ struct softmax_gpu : typed_primitive_impl<softmax>
         kd.leftovers = 0;
         kd.elements_in_batch = 0;
         
-        if (input_size.format == format::bfyx ||
-            input_size.format == format::yxfb)
+        if (input_size.feature[0] != 1 && input_size.spatial[1] != 1)
         {
             kd.elements_in_batch = input_size.spatial[0] * input_size.spatial[1];
             kd.gws0 = cldnn::align_to(kd.elements_in_batch, 32);
@@ -94,8 +93,8 @@ struct softmax_gpu : typed_primitive_impl<softmax>
 
             kd.kernel_name = kernel_name;
         }
-        else if (input_size.format == format::bx ||
-            input_size.format == format::bx)
+        else if (input_size.format == format::bfyx ||
+            input_size.format == format::bfyx)
         {
             // We have two units of data per work item in current implementation.
             auto local_mem_per_wi = 2 * (kd.fp16_unit_used ? sizeof(half_t) : sizeof(float));
@@ -203,10 +202,10 @@ namespace {
     struct attach {
         attach() {
             auto val_fw = softmax_gpu::create;
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::xb), val_fw);
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::xb), val_fw);
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bx), val_fw);
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bx), val_fw);
+            //implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::xb), val_fw);
+            //implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::xb), val_fw);
+            //implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bx), val_fw);
+            //implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bx), val_fw);
             implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), val_fw);
             implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), val_fw);
             implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), val_fw);

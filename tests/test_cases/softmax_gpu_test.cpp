@@ -47,7 +47,7 @@ public:
 
     softmax_gpu_xb_f32_test_fixture()
         :engine()
-        ,input(memory::allocate(engine, { data_types::f32, { format::xb, { input_x, input_b}}}))
+        ,input(memory::allocate(engine, { data_types::f32, { format::yxfb, { 1, input_x, 1, input_b}}}))
     {}
 
     void compare_out_buffer_with_expected() {

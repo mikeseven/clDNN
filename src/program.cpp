@@ -496,7 +496,7 @@ void program_impl::prepare_padding()
         // Calculating input padding needed for convolution
         auto filter_prim = node.get_dependency(conv->input.size()).get_primitive(); //weights are stored after inputs
 
-        layout filter_layout(data_types::f32, { format::x,{ 0 } });
+        layout filter_layout(data_types::f32, { format::bfyx,{ 0,0,0,0 } });
         if (filter_prim->type == data::type_id())
         {
             filter_layout = std::static_pointer_cast<const cldnn::data>(filter_prim)->mem.get_layout();
@@ -515,8 +515,8 @@ void program_impl::prepare_padding()
 
         // Compute initial required paddings for primitive used as input for convolution.
         auto input_offset = conv->input_offset().transform(conv_layout.size.format, 0);
-        auto stride = conv->stride.transform(cldnn::format::yx, 0);
-		auto dilation = conv->dilation.transform(cldnn::format::yx, 0);
+        auto stride = conv->stride.transform(cldnn::format::bfyx, 0);
+		auto dilation = conv->dilation.transform(cldnn::format::bfyx, 0);
 		auto input_limit_x = input_offset.spatial[0] + (conv_layout.size.spatial[0] - 1) * stride.spatial[0] + (filter_layout.size.spatial[0] - 1) * dilation.spatial[0] + 1;
 		auto input_limit_y = input_offset.spatial[1] + (conv_layout.size.spatial[1] - 1) * stride.spatial[1] + (filter_layout.size.spatial[1] - 1) * dilation.spatial[1] + 1;
 
@@ -531,7 +531,7 @@ void program_impl::prepare_padding()
         //    round_up_to(left_padding + prev_prim_output_layout.size.spatial[0] + right_padding, 16));
         //right_padding = needed_buffer_size_x - left_padding - prev_prim_output_layout.size.spatial[0];
 
-        cldnn::padding needed_padding(cldnn::format::xy, { left_padding, top_padding }, { right_padding, bottom_padding });
+        cldnn::padding needed_padding(cldnn::format::bfyx, { 0, 0, left_padding, top_padding }, { 0, 0, right_padding, bottom_padding });
 
         conv_input_node.merge_output_padding(needed_padding);
     }

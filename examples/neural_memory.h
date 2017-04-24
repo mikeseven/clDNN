@@ -29,7 +29,7 @@ struct neural_memory
             oiyx_f32,   // format used only for weights: o - output feature maps, i - input feature maps
             yxoi_f32,   // format used only for weights: o - output feature maps, i - input feature maps
             oyxi_f32,   // format used only for weights: o - output feature maps, i - input feature maps
-            yxio_f32,   // format used only for weights: o - output feature maps, i - input feature maps
+            yxio_f32 = 11,   // format used only for weights: o - output feature maps, i - input feature maps
             os_iyx_osv16_f32, // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
             bs_xs_xsv8_bsv8_f32, // format used only for Fully connected: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice, xsv - 8 values of single slice 
             bs_x_bsv16_f32,      // format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx)
@@ -94,10 +94,6 @@ struct neural_memory
     {
         switch (format.value)
         {
-        case cldnn::format::x:    return format::type::x_f32;
-        case cldnn::format::xb:   return format::type::xb_f32;
-        case cldnn::format::bx:   return format::type::bx_f32;
-        case cldnn::format::yxfn: return format::type::yxfn_f32;
         case cldnn::format::yxfb: return format::type::yxfb_f32;
         case cldnn::format::byxf: return format::type::byxf_f32;
         case cldnn::format::bfyx: return format::type::bfyx_f32;
@@ -140,10 +136,9 @@ struct neural_memory
     {
         switch (value % format::type::half_base)
         {
-        case format::type::x_f32: return cldnn::format::x;
-        case format::type::xb_f32: return cldnn::format::xb;
-        case format::type::bx_f32: return cldnn::format::bx;
-        case format::type::yxfn_f32: return cldnn::format::yxfn;
+        case format::type::x_f32: return cldnn::format::bfyx;
+        case format::type::xb_f32: return cldnn::format::yxfb;
+        case format::type::bx_f32: return cldnn::format::bfyx;
         case format::type::yxfb_f32: return cldnn::format::yxfb;
         case format::type::byxf_f32: return cldnn::format::byxf;
         case format::type::bfyx_f32: return cldnn::format::bfyx;

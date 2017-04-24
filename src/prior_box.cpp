@@ -48,11 +48,47 @@ layout prior_box_inst::calc_output_layout(prior_box_node const& node)
 
 std::string vector_to_string(std::vector<float> vec)
 {
-    std::stringstream result;
-    for (size_t i = 0; i < vec.size(); i++)
-        result << vec.at(i) << ", ";
-    return result.str();
-}
+	//Check arguments
+	if (argument.min_sizes.size() == 0) {
+		throw std::runtime_error("Must provide at least one min size.");
+	}
+	for (size_t i = 0; i < argument.min_sizes.size(); i++) {
+		if (argument.min_sizes[i] <= 0) {
+			throw std::runtime_error("Min size must be positive.");
+		}
+	}
+	if ( (argument.max_sizes.size() > 0) && (argument.min_sizes.size() != argument.max_sizes.size())) {
+		throw std::runtime_error("Number of min sizes must be equal to number of max sizes.");
+	}
+	for (size_t i = 0; i < argument.max_sizes.size(); i++) {
+		if (argument.min_sizes[i] >= argument.max_sizes[i]) {
+			throw std::runtime_error("Max size must be greater than Min size.");
+		}
+	}
+	if (argument.variance.size() > 1) {
+		if (argument.variance.size() != 4) {
+			throw std::runtime_error("Must provide 4 variances.");
+		}
+		for (size_t i = 0; i < argument.variance.size(); i++) {
+			if (argument.variance[i] <= 0) {
+				throw std::runtime_error("Variance must be positive.");
+			}
+		}
+	}
+	else if (argument.variance.size() == 1) {
+		if (argument.variance[0] <= 0) {
+			throw std::runtime_error("Variance must be positive.");
+		}
+	}
+	if ((argument.img_size.spatial[0] <= 0) || (argument.img_size.spatial[1] <= 0)) {
+		throw std::runtime_error("Image dimensions must be positive.");
+	}
+	if ((argument.step_height < 0) || (argument.step_width < 0)) {
+		throw std::runtime_error("Step dimensions must be positive.");
+	}
+	if (argument.img_size.format != format::bfyx) {
+		throw std::runtime_error("Image size format should be format::bfyx.");
+	}
 
 std::string prior_box_inst::to_string(prior_box_node const& node)
 {
