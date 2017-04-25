@@ -156,8 +156,8 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
             gpu::make_jit_constant("OUTPUT_PADDING",            output_padding),
             gpu::make_jit_constant("FILTER",                    weights_layout.size),
             gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
-            gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"),
-            gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM_1"),
+            gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_BATCH_NUM"),
+            gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM"),
             gpu::make_jit_constant("FP16_SUPPORTED",            static_cast<int>(_engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",            static_cast<int>(_kernel_data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",                 _kernel_data.fp16_unit_used ? "half" : "float"),
@@ -168,8 +168,8 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
 			gpu::make_jit_constant("DILATION",                  outer.get_primitive()->dilation),
         };
 
-        if (weights_layout.size.format == format::yxio ||
-            weights_layout.has_format(data_types::f32, format::yxoi))
+        if (weights_layout.size.format == format::yxfb ||
+            weights_layout.has_format(data_types::f32, format::yxfb))
         {
             const auto local_work_group_size = _kernel_data.lws0;
 
@@ -281,12 +281,12 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
     {
         auto filter_layout = arg.weights(0).get_output_layout(); //convolution filter
 
-        assert(arg.get_output_layout().size.feature[0] / arg.get_primitive()->split() == filter_layout.size.feature[0]); // memory::format oixy
+        assert(arg.get_output_layout().size.feature[0] / arg.get_primitive()->split() == filter_layout.size.batch[0]); // memory::format oixy
         
         switch (filter_layout.size.format)
         {
-        case format::oiyx:
-        case format::yxio:
+        case format::bfyx:
+        case format::yxfb:
         case format::os_iyx_osv16:
             break;
         default:
@@ -445,7 +445,7 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution_node& arg)
     const uint32_t min_ofm_per_wi = 16;
     const uint32_t min_batches_per_wi = 1;
     const uint32_t min_lws = 16;
-    const auto filter_ofm_num = filter_layout.size.feature[0];
+    const auto filter_ofm_num = filter_layout.size.batch[0];
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     // Number of output features is positive and dividable by minimum number of output features processed inside work item.
@@ -548,8 +548,8 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution_node& a
     // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
     constexpr int sub_group_size = 16;
 
-    const uint32_t of_threads_per_batch = round_up_to(filter_size.feature[0], sub_group_size);
-    kd.leftovers = of_threads_per_batch - filter_size.feature[0];
+    const uint32_t of_threads_per_batch = round_up_to(filter_size.batch[0], sub_group_size);
+    kd.leftovers = of_threads_per_batch - filter_size.batch[0];
 
     if (filter_size.spatial[0] > max_supported_filter_size ||
         filter_size.spatial[1] > max_supported_filter_size)
@@ -628,20 +628,20 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution_node& a
 }
 
 convolution_gpu::ks_type convolution_gpu::ks = {
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::oiyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b1 },
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 8, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 64, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 128, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b1 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 8, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b8 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 64, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 128, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32_b32 },
 
-    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxio, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16 },
-    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxio, 16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
-    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxio, 32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
-    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxio, 64, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
-    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxio, 128, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16 },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxfb, 16, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxfb, 32, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxfb, 64, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxfb, 128, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f16_b16 },
 
     { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::os_iyx_osv16, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_os_iyx_osv16 },
 

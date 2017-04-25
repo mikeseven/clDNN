@@ -55,7 +55,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         if (batch < 32 || expected_data_type != data_types::f16 || !_optimization_attributes.splitted_convolution)
             expected_tensor = current_layout.size.transform(format::os_iyx_osv16, 1);
         else
-            expected_tensor = current_layout.size.transform(format::yxio, 1);
+            expected_tensor = current_layout.size.transform(format::yxfb, 1);
 
         break;
 
@@ -99,37 +99,24 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
 
     case data_type::weights: //fc weights
     {
-        auto dimensions = current_layout.size.format.dimension();
-        if (dimensions == 4)
+        if (batch > 1 && expected_data_type != data_types::f16 && batch % 8 == 0)
         {
-            if (batch > 1 && expected_data_type != data_types::f16 && batch % 8 == 0)
+            expected_tensor = cldnn::tensor(cldnn::format::bs_xs_xsv8_bsv8,
             {
-                expected_tensor = cldnn::tensor(cldnn::format::bs_xs_xsv8_bsv8,
-                {
-                    current_layout.size.batch[0], current_layout.size.feature[0] * current_layout.size.spatial[0] * current_layout.size.spatial[1]
-                });
-            }
-            else if (batch == 1)
-            {
-                expected_tensor = cldnn::tensor(cldnn::format::bs_x_bsv16,
-                {
-                    current_layout.size.batch[0], current_layout.size.feature[0] * current_layout.size.spatial[0] * current_layout.size.spatial[1]
-                });
-                // TODO: Check is there is no preformance regression for FP32 and, if not, remove these comments.
-                //expected_tensor = current_layout.size.transform(format::fyxb, 1);
-            }
-            else
-                expected_tensor = current_layout.size.transform(format::yxfb, 1);
+                current_layout.size.batch[0], current_layout.size.feature[0] * current_layout.size.spatial[0] * current_layout.size.spatial[1]
+            });
         }
-        else if (dimensions == 2)
+        else if (batch == 1)
         {
-            if (batch >= 8 && expected_data_type != data_types::f16 && batch % 8 == 0)
-                expected_tensor = current_layout.size.transform(format::bs_xs_xsv8_bsv8, 1);
-            else if (batch == 1)
-                expected_tensor = current_layout.size.transform(format::bs_x_bsv16, 1);
-            else
-                expected_tensor = current_layout.size.transform(format::yxfb, 1);
+            expected_tensor = cldnn::tensor(cldnn::format::bs_x_bsv16,
+            {
+                current_layout.size.batch[0], current_layout.size.feature[0] * current_layout.size.spatial[0] * current_layout.size.spatial[1]
+            });
+            // TODO: Check is there is no preformance regression for FP32 and, if not, remove these comments.
+            //expected_tensor = current_layout.size.transform(format::fyxb, 1);
         }
+        else
+            expected_tensor = current_layout.size.transform(format::yxfb, 1);
 
         break;
     }

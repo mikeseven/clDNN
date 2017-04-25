@@ -855,19 +855,9 @@ public:
 
 			for (auto dt : data_types)
 			{
-				if (test_param->is_weight_format(input_format))
+				for (auto fmt : generic_test::test_input_formats)
 				{
-					for (auto fmt : generic_test::test_weight_formats)
-					{
-						output_layouts.push_back({ dt, input_tensor.transform(fmt, 1) });
-					}
-				}
-				else
-				{
-					for (auto fmt : generic_test::test_input_formats)
-					{
-						output_layouts.push_back({ dt, input_tensor.transform(fmt, 1) });
-					}
+					output_layouts.push_back({ dt, input_tensor.transform(fmt, 1) });
 				}
 			}
 			// TODO: check unsupported formats.
@@ -890,11 +880,7 @@ public:
 		return (	(format == cldnn_format_type::cldnn_format_yxfb) ||
 					(format == cldnn_format_type::cldnn_format_byxf) ||
 					(format == cldnn_format_type::cldnn_format_bfyx) ||
-					(format == cldnn_format_type::cldnn_format_fyxb) ||
-					(format == cldnn_format_type::cldnn_format_oiyx) ||
-					(format == cldnn_format_type::cldnn_format_yxoi) ||
-					(format == cldnn_format_type::cldnn_format_oyxi) ||
-					(format == cldnn_format_type::cldnn_format_yxio)
+					(format == cldnn_format_type::cldnn_format_fyxb)
 				);	
 	}
 

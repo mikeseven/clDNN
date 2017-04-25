@@ -120,16 +120,10 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         case format::bfyx:
             return "return lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[3] + pos[3] + (lpad[3] + size[3] + upad[3]) * (lpad[1] + pos[1] + (lpad[1] + size[1] + upad[1]) * (lpad[0] + pos[0])));";
         
-        case format::oiyx:
-            return "return lpad[3] + pos[3] + (lpad[3] + size[3] + upad[3]) * (lpad[4] + pos[4] + (lpad[4] + size[4] + upad[4]) * (lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[1] + pos[1])));";
-        
-        case format::yxio:
-            return "return lpad[1] + pos[1] + (lpad[1] + size[1] + upad[1]) * (lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[3] + pos[3] + (lpad[3] + size[3] + upad[3]) * (lpad[4] + pos[4])));";
-        
         case format::os_iyx_osv16:
-            return R"__C(uint _slice_id = pos[1] / 16; \
-                        uint _id_in_slice = pos[1] % 16; \
-                        return _id_in_slice + 16 * (pos[3] + size[3] * (pos[4] + size[4] * (pos[2] + _slice_id * size[2])));)__C";
+            return R"__C(uint _slice_id = pos[0] / 16; \
+                        uint _id_in_slice = pos[0] % 16; \
+                        return _id_in_slice + 16 * (pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + _slice_id * size[1])));)__C";
         
         case format::bs_xs_xsv8_bsv8:
             if (dt == data_types::f32)
@@ -181,12 +175,6 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         
         case format::bfyx:
             return { 2, 3, 1, 0 };
-        
-        case format::oiyx:
-            return { 0, 3, 4, 2, 1 };
-        
-        case format::yxio:
-            return { 0, 1, 2, 3, 4 };
         
         case format::fyxb:
             return { 0, 2, 3, 1 };

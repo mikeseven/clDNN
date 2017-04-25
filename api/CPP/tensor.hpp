@@ -77,10 +77,6 @@ struct format
         byxf = cldnn_format_byxf, ///< used in bitmaps, input from user i.e b images of RGB format \n \image html byxf.jpg
         bfyx = cldnn_format_bfyx, ///< the most common format for activations in clDNN. \n \image html bfyx.jpg
         fyxb = cldnn_format_fyxb, ///< format not used inside clDNN, but supported in reorder as extension for user provided formats.
-        oiyx = cldnn_format_oiyx, ///< format used only for weights: o - output feature maps, i - input feature maps. TO REMOVE
-        yxoi = cldnn_format_yxoi, ///< format used only for weights: o - output feature maps, i - input feature maps. TO REMOVE
-        oyxi = cldnn_format_oyxi, ///< format used only for weights: o - output feature maps, i - input feature maps. TO REMOVE
-        yxio = cldnn_format_yxio, ///< format used only for weights: o - output feature maps, i - input feature maps. TO REMOVE
         os_iyx_osv16 = cldnn_format_os_iyx_osv16, ///< format used only for convolution weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice.
                                                   ///< \n \image html os_iyx_osv16.jpg
         bs_xs_xsv8_bsv8 = cldnn_format_bs_xs_xsv8_bsv8, ///< format used only for fully connected weights: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice.
@@ -100,11 +96,7 @@ struct format
             { byxf,{ 1, 1, 2, "byxf", "bfxy" } },
             { bfyx,{ 1, 1, 2, "bfyx", "bfxy" } },
             { fyxb,{ 1, 1, 2, "fyxb", "bfxy" } },
-            { oiyx,{ 1, 2, 2, "oiyx", "?oixy" } },
-            { yxoi,{ 1, 2, 2, "yxoi", "?oixy" } },
-            { oyxi,{ 1, 2, 2, "oyxi", "?oixy" } },
-            { yxio,{ 1, 2, 2, "yxio", "?oixy" } },
-            { os_iyx_osv16, { 1, 2, 2, "oiyx", "?oixy" }},
+            { os_iyx_osv16, { 1, 1, 2, "bfyx", "bfxy" }},
             { bs_xs_xsv8_bsv8, { 1, 1, 1, "bx", "b?x" }},
             { bs_x_bsv16, { 1, 1, 1, "bx", "b?x" }}
         };
@@ -476,11 +468,10 @@ struct tensor
         for(size_t i = 0; i < old_sizes.size(); i++)
         {
             auto c = val_order[i];
-            if ((((new_fmt == format::oiyx) || (new_fmt == format::yxoi) || (new_fmt == format::oyxi) || (new_fmt == format::yxio) || (new_fmt == format::os_iyx_osv16))
-                && ((c == 'b') || (c == 'f'))) || 
-                (new_fmt == format::bs_xs_xsv8_bsv8) || (new_fmt == format::bs_x_bsv16)
+            if ((new_fmt == format::bs_xs_xsv8_bsv8) || (new_fmt == format::bs_x_bsv16)
                 && ((c == 'f') || (c == 'y')))
                 continue;
+
             auto new_pos = new_order.find(c);
             if (new_pos == std::string::npos)
                 throw std::invalid_argument("cannot convert to new format");

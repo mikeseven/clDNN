@@ -65,7 +65,7 @@ void test_conv(
     auto data_type = use_half ? data_types::f16 : data_types::f32;
     auto input_size = tensor(format::bfyx, { batch_size, in_feature, in_h, in_w });
 
-    auto weight_size = tensor(format::yxio, { kernel_h, kernel_w, in_feature, out_feature });
+    auto weight_size = tensor(format::yxfb, { kernel_h, kernel_w, in_feature, out_feature });
     auto bias_size = tensor(format::bfyx, { 1, 1, 1, out_feature });
 
     auto input = memory::allocate(engine, { data_type, input_size });

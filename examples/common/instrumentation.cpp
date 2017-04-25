@@ -250,34 +250,6 @@ namespace instrumentation {
     }
 
     template<typename elemType>
-    void dump_yxoi(const cldnn::memory& mem, std::stringstream & stream)
-    {
-        auto mem_arg = argument(mem);
-        auto mem_ptr = mem.pointer<elemType>();
-
-        auto i_size = mem_arg.size.batch[0];
-        auto o_size = mem_arg.size.feature[0];
-        auto x_size = mem_arg.size.spatial[0];
-        auto y_size = mem_arg.size.spatial[1];
-        unsigned int input_it = 0;
-        for (cldnn::tensor::value_type i = 0; i < i_size; i++)
-        {
-            for (cldnn::tensor::value_type o = 0; o < o_size; o++)
-            {
-                for (cldnn::tensor::value_type x = 0; x < x_size; x++)
-                {
-                    for (cldnn::tensor::value_type y = 0; y < y_size; y++)
-                    {
-                        stream << convert_element(mem_ptr[input_it]) << " ";
-                        input_it++;
-                    }
-                    stream << std::endl;
-                }
-            }
-        }
-    }
-
-    template<typename elemType>
     void dump_oiyx(const cldnn::memory& mem, std::stringstream & stream)
     {
         auto mem_arg = argument(mem);
@@ -293,34 +265,6 @@ namespace instrumentation {
             for (cldnn::tensor::value_type y = 0; y < y_size; y++)
             {
                 for (cldnn::tensor::value_type i = 0; i < i_size; i++)
-                {
-                    for (cldnn::tensor::value_type o = 0; o < o_size; o++)
-                    {
-                        stream << convert_element(mem_ptr[input_it]) << " ";
-                        input_it++;
-                    }
-                    stream << std::endl;
-                }
-            }
-        }
-    }
-
-    template<typename elemType>
-    void dump_oyxi(const cldnn::memory& mem, std::stringstream & stream)
-    {
-        auto mem_arg = argument(mem);
-        auto mem_ptr = mem.pointer<elemType>();
-
-        auto i_size = mem_arg.size.batch[0];
-        auto o_size = mem_arg.size.feature[0];
-        auto x_size = mem_arg.size.spatial[0];
-        auto y_size = mem_arg.size.spatial[1];
-        unsigned int input_it = 0;
-        for (cldnn::tensor::value_type i = 0; i < i_size; i++)
-        {
-            for (cldnn::tensor::value_type x = 0; x < x_size; x++)
-            {
-                for (cldnn::tensor::value_type y = 0; y < y_size; y++)
                 {
                     for (cldnn::tensor::value_type o = 0; o < o_size; o++)
                     {
@@ -436,12 +380,12 @@ namespace instrumentation {
                 dump_yxfb<float>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case neural_memory::format::xb_f32:
+        case neural_memory::format::fc_xb_f32:
             {
                 dump_xb<float>(mem_prim, single_batch, batch_id, streams);
             }
             break;
-        case neural_memory::format::bx_f32:
+        case neural_memory::format::fc_bx_f32:
             {
                 dump_bx<float>(mem_prim, single_batch, batch_id, streams);
             }
@@ -463,12 +407,12 @@ namespace instrumentation {
                 dump_yxfb<half_t>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case neural_memory::format::xb_f16:
+        case neural_memory::format::fc_xb_f16:
             {
                 dump_xb<half_t>(mem_prim, single_batch, batch_id, streams);
             }
             break;
-        case neural_memory::format::bx_f16:
+        case neural_memory::format::fc_bx_f16:
             {
                 dump_bx<half_t>(mem_prim, single_batch, batch_id, streams);
             }
@@ -502,24 +446,14 @@ namespace instrumentation {
         switch (mem_arg.format)
         {
         //FP 32
-        case neural_memory::format::yxio_f32:
+        case neural_memory::format::weights_yxfb_f32:
             {
                 dump_yxio<float>(mem_prim, stream);
             }
             break;
-        case neural_memory::format::yxoi_f32:
-            {
-                dump_yxoi<float>(mem_prim, stream);
-            }
-            break;
-        case neural_memory::format::oiyx_f32:
+        case neural_memory::format::weights_bfyx_f32:
             {
                 dump_oiyx<float>(mem_prim,stream);
-            }
-            break;
-        case neural_memory::format::oyxi_f32:
-            {
-                dump_oyxi<float>(mem_prim, stream);
             }
             break;
         case neural_memory::format::os_iyx_osv16_f32:
@@ -538,24 +472,14 @@ namespace instrumentation {
             }
         break;
         //FP 16
-        case neural_memory::format::yxio_f16:
+        case neural_memory::format::weights_yxfb_f16:
             {
                 dump_yxio<half_t>(mem_prim, stream);
             }
             break;
-        case neural_memory::format::yxoi_f16:
-            {
-                dump_yxoi<half_t>(mem_prim, stream);
-            }
-        break;
-            case neural_memory::format::oiyx_f16:
+            case neural_memory::format::weights_bfyx_f16:
             {
                 dump_oiyx<half_t>(mem_prim, stream);
-            }
-        break;
-        case neural_memory::format::oyxi_f16:
-            {
-                dump_oyxi<half_t>(mem_prim, stream);
             }
         break;
         case neural_memory::format::os_iyx_osv16_f16:

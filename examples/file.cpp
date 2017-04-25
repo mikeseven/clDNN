@@ -150,18 +150,6 @@ cldnn::memory read_file(std::ifstream &rfile, file_header &file_head, const cldn
     {
         switch (format)
         {
-        case cldnn::format::oiyx: //CONV 
-        {
-            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
-            { cldnn::format::oiyx,
-            {
-                static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2]), // ofm, ifm
-                static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
-            }
-            }));
-            break;
-        }
-
         case cldnn::format::bfyx: //FC
         {
             if (array.size() == 1)
@@ -188,21 +176,6 @@ cldnn::memory read_file(std::ifstream &rfile, file_header &file_head, const cldn
                 }
                 }));
             }
-            break;
-        }
-
-        // FP32
-        case cldnn::format::oyxi:
-        case cldnn::format::yxoi:
-        case cldnn::format::yxio:
-        {
-            auto size = cldnn::tensor(cldnn::format::oiyx,
-            {
-                static_cast<cldnn::tensor::value_type>(array[0]), static_cast<cldnn::tensor::value_type>(array[1]), // ofm, ifm
-                static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2])  // kernel spatials y, x
-            }
-            ).transform(format, 1);
-            p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, size));
             break;
         }
 

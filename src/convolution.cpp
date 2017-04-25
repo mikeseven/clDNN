@@ -84,7 +84,7 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
         // ? ceil_div(std::max(input_layout.size.spatial[1] - 2 * input_offset.spatial[1] - kernel_xy[1], 0), strd.spatial[1]) + 1
         : 0);
     // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
-    auto number_of_features = weights_layout.size.feature[0] * static_cast<int32_t>(split);
+    auto number_of_features = weights_layout.size.batch[0] * static_cast<int32_t>(split);
 
     tensor output_size(format::yxfb, {
         output_spatial_y, output_spatial_x, number_of_features, input_layout.size.batch[0] }
@@ -146,8 +146,8 @@ convolution_inst::typed_primitive_inst(network_impl& network, convolution_node c
         auto input_offset = argument.input_offset().transform(input_inst.size.format, 0);
         auto output_offset = argument.output_offset().transform(output_inst.size.format, 0);
 
-        if (filter_inst.size.raw.size() != output_inst.size.raw.size() + 1)
-            throw std::runtime_error("Window_size != 5");
+        if (filter_inst.size.raw.size() != output_inst.size.raw.size())
+            throw std::runtime_error("Window_size != 4");
         if (argument.padding_filling_value() != 0.0f)
             throw std::runtime_error("Unknown padding mode.");
         if (input_offset.raw.size() != input_inst.size.raw.size())
@@ -156,16 +156,12 @@ convolution_inst::typed_primitive_inst(network_impl& network, convolution_node c
             throw std::runtime_error("Only one-dimensional features are supported");
         if (1 != output_size.batch.size())
             throw std::runtime_error("Only one-dimensional batch size is supported");
-        if (2 != filter_inst.size.feature.size())
+        if (2 != filter_inst.size.spatial.size())
             throw std::runtime_error("Weights have to have 2 dimensions in spatial domain.");
-        if (1 != filter_inst.size.batch.size())
-            throw std::runtime_error("Only one-dimensional features for filter are supported");
-        if (1 != filter_inst.size.batch[0])
-            throw std::runtime_error("Batch size for filter has to equal 1");
         if (output_size.feature[0] + output_offset.feature[0] > output_inst.size.feature[0]
-            || (output_size.feature[0] / split) > filter_inst.size.feature[0])
+            || (output_size.feature[0] / split) > filter_inst.size.batch[0])
             throw std::runtime_error("Weights/output feature maps number does not match.");
-        if ((input_inst.size.feature[0] - input_offset.feature[0]) / split < filter_inst.size.feature[1])
+        if ((input_inst.size.feature[0] - input_offset.feature[0]) / split < filter_inst.size.feature[0])
             throw std::runtime_error("Weights/input feature maps number does not match.");
     }
 }

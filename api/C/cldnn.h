@@ -192,20 +192,10 @@ typedef struct
 /// \image html layout_memory_representation.jpg
 typedef enum /*:int32_t*/
 {
-    cldnn_format_x,             ///< 1D. TO REMOVE
-    cldnn_format_yx,            ///< 2D, X-axis then Y-axis: { x0y0, x1y0, x0y1, x1y1}. TO REMOVE
-    cldnn_format_xy,            ///< 2D, Y-axis then X-axis: { x0y0, x0y1, x1y0, x1y1}. TO REMOVE
-    cldnn_format_xb,            ///< 1D+batch. TO REMOVE
-    cldnn_format_bx,            ///< 1D+batch. TO REMOVE
-    cldnn_format_yxfn,          ///< 3D + number of neurons. TO REMOVE
     cldnn_format_yxfb,          ///< batch first, feature and than spatials \n \image html yxfb.jpg
     cldnn_format_byxf,          ///< used in bitmaps, input from user i.e b images of RGB format \n \image html byxf.jpg
     cldnn_format_bfyx,          ///< the most common format for activations in clDNN. \n \image html bfyx.jpg
     cldnn_format_fyxb,          ///< format not used inside clDNN, but supported in reorder as extension for user provided formats.
-    cldnn_format_oiyx,          ///< format used only for weights: o - output feature maps, i - input feature maps. TO REMOVE
-    cldnn_format_yxoi,          ///< format used only for weights: o - output feature maps, i - input feature maps. TO REMOVE
-    cldnn_format_oyxi,          ///< format used only for weights: o - output feature maps, i - input feature maps. TO REMOVE
-    cldnn_format_yxio,          ///< format used only for weights: o - output feature maps, i - input feature maps. TO REMOVE
     cldnn_format_os_iyx_osv16,  ///< format used only for convolution weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice.
                                 ///< \n \image html os_iyx_osv16.jpg
     cldnn_format_bs_xs_xsv8_bsv8, ///< format used only for fully connected weights: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice.

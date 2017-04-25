@@ -606,36 +606,17 @@ fully_connected_gpu::kernel_data default_bfyx_f16_fyxb_f16_b1(const fully_connec
 
 fully_connected_gpu::ks_type fully_connected_gpu::ks = {
     { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32_bfyx_f32 },
-
     { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
-    //{ std::make_tuple(data_types::f32, format::xb, data_types::f32, format::xb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
-    //{ std::make_tuple(data_types::f32, format::x, data_types::f32, format::xb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32 },
-
-    //{ std::make_tuple(data_types::f32, format::xb, data_types::f32, format::bx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_xb_f32_bx_f32 },
     { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_xb_f32_bx_f32 },
-
     { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32 },
-
     { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::fyxb, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32_fyxb_f32_b1 },
-    //{ std::make_tuple(data_types::f32, format::bx, data_types::f32, format::xb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32 },
-
     { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bs_xs_xsv8_bsv8, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32_bs_xs_xsv8_bsv8_f32 },
     { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::bs_xs_xsv8_bsv8, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32_bs_xs_xsv8_bsv8_f32 },
-    //{ std::make_tuple(data_types::f32, format::xb, data_types::f32, format::bs_xs_xsv8_bsv8, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_xb_f32_bs_xs_xsv8_bsv8_f32 },
-
     { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bs_x_bsv16, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
-    //{ std::make_tuple(data_types::f32, format::bx, data_types::f32, format::bs_x_bsv16, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
-    
     { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_fp16 },
-    //{ std::make_tuple(data_types::f16, format::xb, data_types::f16, format::xb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_fp16 },
-    //{ std::make_tuple(data_types::f16, format::x, data_types::f16, format::xb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_fp16 },
-
     { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f16_yxfb_f16 },
     { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::fyxb, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f16_fyxb_f16_b1 },
-    //{ std::make_tuple(data_types::f16, format::bx, data_types::f16, format::xb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_fp16 },
-
     { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::bs_x_bsv16, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
-    //{ std::make_tuple(data_types::f16, format::bx, data_types::f16, format::bs_x_bsv16, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
 };
 
 namespace {
@@ -645,18 +626,9 @@ namespace {
 
             implementation_map<fully_connected>::add({
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), val_fw },
-                //{ std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::xb), val_fw },
-                //{ std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::x), val_fw },
-
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), val_fw },
-                //{ std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::xb), val_fw },
-                //{ std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::x), val_fw },
-
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), val_fw },
-                //{ std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bx), val_fw },
-
                 { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), val_fw },
-                //{ std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bx), val_fw },
             });
         }
         ~attach() {}

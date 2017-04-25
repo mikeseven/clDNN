@@ -43,7 +43,7 @@ layout deconvolution_inst::calc_output_layout(deconvolution_node const& node)
 
     auto output_spatial_x = strd.spatial[0] * (input_layout.size.spatial[0] - 1) + kernel_xy[0] + 2 * input_offset.spatial[0];
     auto output_spatial_y = strd.spatial[1] * (input_layout.size.spatial[1] - 1) + kernel_xy[1] + 2 * input_offset.spatial[1];
-    auto number_of_features = weights_layout.size.feature[0] * static_cast<int32_t>(split);
+    auto number_of_features = weights_layout.size.batch[0] * static_cast<int32_t>(split);
 
     tensor output_size(format::yxfb, {
         output_spatial_y, output_spatial_x, number_of_features, input_layout.size.batch[0] }
@@ -126,17 +126,13 @@ deconvolution_inst::typed_primitive_inst(network_impl& network, deconvolution_no
             throw std::runtime_error("Only one-dimensional features are supported");
         if (1 != output_size.batch.size())
             throw std::runtime_error("Only one-dimensional batch size is supported");
-        if (2 != filter_inst.size.feature.size())
-            throw std::runtime_error("Filter has to have 2 dimensions in spatial domain.");
-        if (1 != filter_inst.size.batch.size())
-            throw std::runtime_error("Only one-dimensional features for filter are supported");
-        if (1 != filter_inst.size.batch[0])
-            throw std::runtime_error("Batch size for filter has to equal 1");
+        if (2 != filter_inst.size.spatial.size())
+            throw std::runtime_error("Weights have to have 2 dimensions in spatial domain.");
 
         if (output_size.feature[0] + output_offset.feature[0] > output_inst.size.feature[0]
-            || (output_size.feature[0] / split) > filter_inst.size.feature[0])
+            || (output_size.feature[0] / split) > filter_inst.size.batch[0])
             throw std::runtime_error("Weights/output feature maps number does not match.");
-        if ((input_inst.size.feature[0] - input_offset.feature[0]) / split < filter_inst.size.feature[1])
+        if ((input_inst.size.feature[0] - input_offset.feature[0]) / split < filter_inst.size.feature[0])
             throw std::runtime_error("Weights/input feature maps number does not match.");
     }
 }

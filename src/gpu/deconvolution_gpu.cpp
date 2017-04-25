@@ -144,8 +144,8 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
             gpu::make_jit_constant("OUTPUT_PADDING",            output_padding),
             gpu::make_jit_constant("FILTER",                    weights_layout.size),
             gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
-            gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"),
-            gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM_1"),
+            gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_BATCH_NUM"),
+            gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM"),
             gpu::make_jit_constant("FP16_SUPPORTED",            static_cast<int>(_engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",            static_cast<int>(_kernel_data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",                 _kernel_data.fp16_unit_used ? "half" : "float"),
@@ -199,13 +199,13 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
     {
         auto filter_layout = arg.weights(0).get_output_layout(); //convolution filter
 
-        assert(arg.get_output_layout().size.feature[0] / arg.get_primitive()->split() == filter_layout.size.feature[0]); // memory::format oixy
+        assert(arg.get_output_layout().size.feature[0] / arg.get_primitive()->split() == filter_layout.size.batch[0]); // memory::format oixy
 
         switch (filter_layout.fused_format())
         {
         // FP32 (float)
-        case fuse(data_types::f32, format::oiyx):
-        case fuse(data_types::f32, format::yxio):
+        case fuse(data_types::f32, format::bfyx):
+        case fuse(data_types::f32, format::yxfb):
             break;
         default:
             throw std::runtime_error("deconvolution weights format unsupported");
@@ -230,10 +230,10 @@ deconvolution_gpu::kernel_data default_yxio_f32(const deconvolution_node& arg)
 }
 
 deconvolution_gpu::ks_type deconvolution_gpu::ks = {
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::oiyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxio, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
-    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::oiyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
-    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::yxio, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
+    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
+    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
 };
 
 namespace{

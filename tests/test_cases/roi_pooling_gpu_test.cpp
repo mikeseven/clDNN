@@ -327,8 +327,7 @@ public:
 
     virtual bool is_format_supported(cldnn::format format) 
     {
-        return (format == cldnn_format_type::cldnn_format_bfyx || 
-                format == cldnn_format_type::cldnn_format_bx );
+        return (format == cldnn_format_type::cldnn_format_bfyx);
     }
 
 	virtual cldnn::tensor get_expected_output_tensor()

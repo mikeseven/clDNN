@@ -74,14 +74,6 @@ inline VF<T> flatten_4d(cldnn::format input_format, VVVVF<T> &data) {
 						for (size_t bi = 0; bi < a; ++bi)
 							vec[idx++] = data[bi][fi][yi][xi];
 			break;
-
-		case cldnn::format::oiyx:
-    		for (size_t oi = 0; oi < a; ++oi)
-    			for (size_t ii = 0; ii < b; ++ii)
-    				for (size_t yi = 0; yi < c; ++yi)
-    					for (size_t xi = 0; xi < d; ++xi)
-    						vec[idx++] = data[oi][ii][yi][xi];
-            break;
 		
 		case cldnn::format::bfyx:
 			for (size_t bi = 0; bi < a; ++bi)
@@ -89,14 +81,6 @@ inline VF<T> flatten_4d(cldnn::format input_format, VVVVF<T> &data) {
 					for (size_t yi = 0; yi < c; ++yi)
 						for (size_t xi = 0; xi < d; ++xi)
 							vec[idx++] = data[bi][fi][yi][xi];
-			break;
-		
-		case cldnn::format::yxio:
-			for (size_t yi = 0; yi < c; ++yi)
-				for (size_t xi = 0; xi < d; ++xi)
-					for (size_t ii = 0; ii < b; ++ii)
-						for (size_t oi = 0; oi < a; ++oi)															
-							vec[idx++] = data[oi][ii][yi][xi];
 			break;
 
 		default:
@@ -276,7 +260,7 @@ public:
     test_params(cldnn::data_types dt, cldnn::format input_format, int32_t batch_size, int32_t feature_size, cldnn::tensor input_size) :
         data_type(dt) 
 	{
-		cldnn::tensor t = cldnn::tensor(is_weight_format(input_format) ? cldnn::format::oiyx : cldnn::format::bfyx, { batch_size, feature_size, input_size.spatial[1],  input_size.spatial[0] } );
+		cldnn::tensor t = cldnn::tensor(cldnn::format::bfyx, { batch_size, feature_size, input_size.spatial[1],  input_size.spatial[0] } );
 		input_layouts.push_back( t.transform(cldnn::format(input_format), 1));
 	}
 
@@ -287,7 +271,6 @@ public:
         
     std::string print();
 	static std::string print_tensor(cldnn::tensor tensor);
-	bool is_weight_format(cldnn::format fmt);
 };
 
 class generic_test : public ::testing::TestWithParam<std::tuple<test_params*, cldnn::primitive*>>

@@ -103,7 +103,7 @@ namespace tests
 		auto out_layout = out.get_layout();
 		auto ref_layout = ref.get_layout();
 
-		cldnn::format base_fmt = (cldnn::format::traits(out_layout.size.format).internal_order == "bfxy") ? cldnn::format::bfyx : cldnn::format::oiyx;
+		cldnn::format base_fmt = cldnn::format::bfyx;
 
 		EXPECT_EQ(out_layout.size.transform(base_fmt, 1), ref_layout.size.transform(base_fmt, 1));
 		EXPECT_EQ(out_layout.data_type, ref_layout.data_type);
@@ -185,42 +185,6 @@ namespace tests
 				xPitch = layout.size.sizes()[3] * fPitch;
 				yPitch = layout.size.sizes()[2] * xPitch;
 				bPitch = layout.size.sizes()[1] * yPitch;
-				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
-			}
-			case format::oiyx:
-			{
-				//o=sizes[0], i=sizes[1], y=sizes[2], x=sizes[3]
-				xPitch = 1;
-				yPitch = layout.size.sizes()[3] * xPitch;
-				fPitch = layout.size.sizes()[2] * yPitch;
-				bPitch = layout.size.sizes()[1] * fPitch;
-				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
-			}
-			case format::yxoi:
-			{
-				//y=sizes[0], x=sizes[1], o=sizes[2], i=sizes[3]
-				fPitch = 1;
-				bPitch = layout.size.sizes()[3] * fPitch;
-				xPitch = layout.size.sizes()[2] * bPitch;
-				yPitch = layout.size.sizes()[1] * xPitch;
-				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
-			}
-			case format::oyxi:
-			{
-				//o=sizes[0], y=sizes[1], x=sizes[2], i=sizes[3]
-				fPitch = 1;
-				xPitch = layout.size.sizes()[3] * fPitch;
-				yPitch = layout.size.sizes()[2] * xPitch;
-				bPitch = layout.size.sizes()[1] * yPitch;
-				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
-			}
-			case format::yxio:
-			{
-				//y=sizes[0], x=sizes[1], i=sizes[2], o=sizes[3]
-				bPitch = 1;
-				fPitch = layout.size.sizes()[3] * bPitch;
-				xPitch = layout.size.sizes()[2] * fPitch;
-				yPitch = layout.size.sizes()[1] * xPitch;
 				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
 			}
 			default:
@@ -360,17 +324,10 @@ namespace tests
         }
 		return str.str();
     }
-
-	bool test_params::is_weight_format(cldnn::format fmt)
-	{
-		assert((cldnn::format::traits(fmt).internal_order == "bfxy") || (cldnn::format::traits(fmt).internal_order == "?oixy"));
-
-		return cldnn::format::traits(fmt).internal_order == "?oixy";
-	}
     
     std::vector<cldnn::data_types> generic_test::test_data_types = { cldnn::data_types::f32 , cldnn::data_types::f16 };
     std::vector<cldnn::format> generic_test::test_input_formats = { cldnn::format::bfyx , cldnn::format::yxfb, cldnn::format::fyxb, cldnn::format::byxf };
-	std::vector<cldnn::format> generic_test::test_weight_formats = { cldnn::format::oiyx , cldnn::format::yxoi , cldnn::format::oyxi, cldnn::format::yxio };
+	std::vector<cldnn::format> generic_test::test_weight_formats = { cldnn::format::bfyx , cldnn::format::yxfb , cldnn::format::fyxb };
     std::vector<int32_t> generic_test::test_batch_sizes = { 1, 2 };// 4, 8, 16};
     std::vector<int32_t> generic_test::test_feature_sizes = { 1, 2 };// , 3, 15};
     std::vector<tensor> generic_test::test_input_sizes = { { format::bfyx,{ 1, 1, 100,100 } } ,{ format::bfyx,{ 1, 1, 227,227 } } ,{ format::bfyx,{ 1, 1, 400,600 } } };
