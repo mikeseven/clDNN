@@ -849,7 +849,6 @@ public:
 		for (auto test_param : all_generic_params)
 		{
 			cldnn::tensor input_tensor = test_param->input_layouts[0];
-			const cldnn::format input_format = input_tensor.format;
 
 			std::vector<cldnn::layout> output_layouts = {};
 

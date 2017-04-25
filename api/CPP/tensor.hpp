@@ -468,8 +468,8 @@ struct tensor
         for(size_t i = 0; i < old_sizes.size(); i++)
         {
             auto c = val_order[i];
-            if ((new_fmt == format::bs_xs_xsv8_bsv8) || (new_fmt == format::bs_x_bsv16)
-                && ((c == 'f') || (c == 'y')))
+            //skip f and y for the formats that do not have it
+            if (((new_fmt == format::bs_xs_xsv8_bsv8) || (new_fmt == format::bs_x_bsv16)) && ((c == 'f') || (c == 'y')))
                 continue;
 
             auto new_pos = new_order.find(c);

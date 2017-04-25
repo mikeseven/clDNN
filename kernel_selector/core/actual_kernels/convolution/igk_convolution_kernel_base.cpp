@@ -101,10 +101,6 @@ namespace KernelSelctor
     {
         switch (l)
         {
-        case KernelSelctor::x: return cldnn::format::x;
-        case KernelSelctor::xb: return cldnn::format::xb;
-        case KernelSelctor::bx: return cldnn::format::bx;
-        case KernelSelctor::yxfn: return cldnn::format::yxfn;
         case KernelSelctor::yxfb: return cldnn::format::yxfb;
         case KernelSelctor::byxf: return cldnn::format::byxf;
         case KernelSelctor::bfyx: return cldnn::format::bfyx;
@@ -112,7 +108,7 @@ namespace KernelSelctor
         case KernelSelctor::bs_xs_xsv8_bsv8: return cldnn::format::bs_xs_xsv8_bsv8;
         default:
             assert(0);
-            return cldnn::format::x;
+            return cldnn::format::bfyx;
         }
     }
 
@@ -123,8 +119,10 @@ namespace KernelSelctor
         const auto& cp = params.convParams;
 
         cldnn::tensor stride(
-            cldnn::format::yx, 
-            { (cldnn::tensor::value_type)std::min(cp.stride.y, params.inDims.y),
+            cldnn::format::bfyx, 
+            { (cldnn::tensor::value_type)1,
+              (cldnn::tensor::value_type)1,
+              (cldnn::tensor::value_type)std::min(cp.stride.y, params.inDims.y),
               (cldnn::tensor::value_type)std::min(cp.stride.x, params.inDims.x) });
         cldnn::tensor filter_tensor = cldnn::tensor(
             cldnn::format::os_iyx_osv16, // TODO: support more layouts
@@ -135,12 +133,16 @@ namespace KernelSelctor
         cldnn::tensor input_tensor = dim_2_tensor(params.inDims, params_2_cldnn(params.inputLayout));
         cldnn::tensor output_tensor = dim_2_tensor(params.outDims, params_2_cldnn(params.outputLayout));
         cldnn::tensor input_padding_tensor = cldnn::tensor(
-            cldnn::format::yx,
-            { (cldnn::tensor::value_type)cp.padding.y,
+            cldnn::format::bfyx,
+            { (cldnn::tensor::value_type)0,
+              (cldnn::tensor::value_type)0,
+              (cldnn::tensor::value_type)cp.padding.y,
               (cldnn::tensor::value_type)cp.padding.x });
         cldnn::tensor output_padding_tensor = cldnn::tensor(
-            cldnn::format::yx,
+            cldnn::format::bfyx,
             { (cldnn::tensor::value_type)0,
+              (cldnn::tensor::value_type)0,
+              (cldnn::tensor::value_type)0,
               (cldnn::tensor::value_type)0 });
         auto input_offset_with_padding = params.inDesc.offset - cp.padding.x - params.inDesc.pitches.x*cp.padding.y;
 
