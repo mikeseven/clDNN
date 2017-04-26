@@ -178,13 +178,13 @@ TEST(crop_gpu, basic_in2x3x2x2_crop_offsets) {
     auto x_offset = 1;
     auto y_offset = 1;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    auto reference_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ crop_y_size, crop_x_size, crop_feature_num, crop_batch_num } } });
+    auto input = memory::allocate(engine, { data_types::f32,{ tensor(spatial(x_size, y_size), feature(feature_num), batch(batch_num)) } });
+    auto reference_input = memory::allocate(engine, { data_types::f32,{ tensor(batch(crop_batch_num), spatial(crop_x_size, crop_y_size), feature(crop_feature_num)) } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("reference_input", reference_input.get_layout()));
-    topology.add(crop("crop", "input", "reference_input", { format::yxfb,{ y_offset, x_offset, feature_offset, batch_offset } }));
+    topology.add(crop("crop", "input", "reference_input", { tensor(feature(0)) }));
 
     std::vector<float> input_vec = { 1.f, 0.f, 5.f, 1.5f,
         2.f, 0.f, 6.f, 5.2f,

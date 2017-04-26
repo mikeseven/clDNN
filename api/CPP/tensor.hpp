@@ -171,6 +171,99 @@ struct format
     constexpr explicit operator cldnn_format_type() const { return static_cast<cldnn_format_type>(value); }
 };
 
+/// @brief Helper structs used in tensor constructor with dim_vec_kinds
+template <typename Ty, Ty ... Vals>
+struct val_tuple {};
+
+template <typename Ty, Ty Val>
+struct always_false_ty_val : public std::false_type {};
+
+//helper struct to tell wheter type T is any of given types U...
+//termination case when U... is empty -> return std::false_type
+template <class T, class... U>
+struct is_any_of : public std::false_type {};
+
+//helper struct to tell whether type is any of given types (U, Rest...)
+//recurrence case when at least one type U is present -> returns std::true_type if std::same<T, U>::value is true, otherwise call is_any_of<T, Rest...> recurrently
+template <class T, class U, class... Rest>
+struct is_any_of<T, U, Rest...> : public std::conditional_t<std::is_same<T, U>::value, std::true_type, is_any_of<T, Rest...>> {};
+
+/// @brief enum class that represent dimension kinds
+enum class dim_vec_kind
+{
+    batch,
+    feature,
+    spatial
+};
+
+/// @brief template class with max_dimensionalities and dimension offset for dimension kinds
+template <dim_vec_kind Kind>
+struct dim_vec_limits
+{
+    static_assert(always_false_ty_val<dim_vec_kind, Kind>::value, "Limits are undefined for selected value of dim_vec_kind.");
+};
+
+template <>
+struct dim_vec_limits<dim_vec_kind::batch>
+{
+    static constexpr const int32_t max_dimentionality = CLDNN_TENSOR_BATCH_DIM_MAX;
+    static constexpr const int32_t dim_offset = 0;
+};
+
+template <>
+struct dim_vec_limits<dim_vec_kind::feature>
+{
+    static constexpr const int32_t max_dimentionality = CLDNN_TENSOR_FEATURE_DIM_MAX;
+    static constexpr const int32_t dim_offset = CLDNN_TENSOR_BATCH_DIM_MAX;
+};
+
+template <>
+struct dim_vec_limits<dim_vec_kind::spatial>
+{
+    static constexpr const int32_t max_dimentionality = CLDNN_TENSOR_SPATIAL_DIM_MAX;
+    static constexpr const int32_t dim_offset = CLDNN_TENSOR_BATCH_DIM_MAX + CLDNN_TENSOR_FEATURE_DIM_MAX;
+};
+
+/// @brief Template class used in tensor constructor using dim_vec_kinds
+template <dim_vec_kind Kind>
+class dim_vec_kind_init
+{
+    friend struct tensor;
+
+private:
+    static constexpr const auto _max_dimensionality = dim_vec_limits<Kind>::max_dimentionality;
+    static constexpr const auto _dimOffset = dim_vec_limits<Kind>::dim_offset;
+
+public:
+    template <typename ... DimTys>
+    explicit dim_vec_kind_init(DimTys&& ... values)
+        : _sizes{ int32_t(std::forward<DimTys>(values)) ... }, _dimSize(sizeof...(DimTys))
+    {
+    }
+
+private:
+    int32_t _sizes[_max_dimensionality];
+    int32_t _dimSize;
+};
+
+template <typename ... InitTys>
+dim_vec_kind_init<dim_vec_kind::batch> batch(InitTys&& ... inits)
+{
+    return dim_vec_kind_init<dim_vec_kind::batch>(std::forward<InitTys>(inits) ...);
+}
+
+template <typename ... InitTys>
+dim_vec_kind_init<dim_vec_kind::feature> feature(InitTys&& ... inits)
+{
+    return dim_vec_kind_init<dim_vec_kind::feature>(std::forward<InitTys>(inits) ...);
+}
+
+template <typename ... InitTys>
+dim_vec_kind_init<dim_vec_kind::spatial> spatial(InitTys&& ... inits)
+{
+    return dim_vec_kind_init<dim_vec_kind::spatial>(std::forward<InitTys>(inits) ...);
+}
+
 /// @brief N-dimensional vector. Mostly used to represent memory size.
 struct tensor
 {
@@ -182,12 +275,47 @@ struct tensor
     array_ref<value_type> feature;  ///< Feature maps.
     array_ref<value_type> spatial;  ///< Spatial dimensions.
 
+    using _stored_kinds = val_tuple<dim_vec_kind,
+        dim_vec_kind::batch,
+        dim_vec_kind::spatial,
+        dim_vec_kind::feature
+    >;
+
     /**
      * \brief Internal storage for tensor's data.
      * had to keep it public to support "Standard Layout"
      * please do not access this field directly
      */
     value_type _sizes[CLDNN_TENSOR_DIM_MAX];
+    value_type _dimOffset;
+    value_type _dimSize;
+
+    /// @brief Constructs tensor.
+    /// @param[in] kind_inits Dimensions defined using dim_vec_kind
+    /// @details Example:
+    /*! @code
+    *
+    tensor my_tensor(batch(2), spatial(5, 6));   // y=6, x=5, b=2, f - not set
+    cout << my_tensor.batch[0] << endl;           // 2
+    cout << my_tensor.feature[0] << endl;         // 1 - default_size
+    cout << "x=" << my_tensor.spatial[0] << endl; // x=5
+    cout << "y=" << my_tensor.spatial[1] << endl; // y=6
+    *
+    * @endcode
+    */
+    template <typename ... KindInitTys,
+        typename = std::enable_if_t<is_any_of<KindInitTys..., cldnn::dim_vec_kind_init<dim_vec_kind::batch>,
+        cldnn::dim_vec_kind_init<dim_vec_kind::feature>, cldnn::dim_vec_kind_init<dim_vec_kind::spatial>>::value, void>>
+        tensor(KindInitTys&& ... kind_inits)
+        : format(cldnn::format::yxfb) //TODO: when format will be moved from tensor to layout this line will be removed
+        , raw(_sizes, CLDNN_TENSOR_DIM_MAX)
+        , batch(_sizes, CLDNN_TENSOR_BATCH_DIM_MAX)
+        , feature(_sizes + CLDNN_TENSOR_BATCH_DIM_MAX, CLDNN_TENSOR_FEATURE_DIM_MAX)
+        , spatial(_sizes + CLDNN_TENSOR_BATCH_DIM_MAX + CLDNN_TENSOR_FEATURE_DIM_MAX, CLDNN_TENSOR_SPATIAL_DIM_MAX)
+    {
+        std::fill_n(_sizes, CLDNN_TENSOR_DIM_MAX, 1);
+        assign_inits(std::forward<KindInitTys>(kind_inits) ...);
+    }
 
     /// @brief Constructs @p tensor.
     /// @param[in] fmt Format (order).
@@ -196,9 +324,9 @@ struct tensor
     /// @details Example:
     /*! @code
      * 
-       tensor my_tensor(format::yx, 10, { 2, 3 });   // y=2, x=3, b,f - not set
-       cout << my_tensor.batch[0] << endl;           // 10 - default_size
-       cout << my_tensor.feature[0] << endl;         // 10 - default_size
+       tensor my_tensor(format::yxfb, 10, { 2, 3, 1, 1 });   // y=2, x=3, b=1, f=1
+       cout << my_tensor.batch[0] << endl;           // 1
+       cout << my_tensor.feature[0] << endl;         // 1
        cout << "x=" << my_tensor.spatial[0] << endl; // x=3
        cout << "y=" << my_tensor.spatial[1] << endl; // y=2
      *
@@ -525,6 +653,43 @@ struct tensor
             trans_lhs._sizes[i] = std::max(trans_lhs.raw[i], trans_rhs.raw[i]);
 
         return trans_lhs;
+    }
+
+private:
+
+    /// @brief Helper functions for tensor constructor using dim_vec_kinds
+    template <dim_vec_kind Kind, typename KindInitTy>
+    void assign_init_helper1(const val_tuple<bool, true>&, std::size_t offset_idx, KindInitTy&& kind_init)
+    {
+        auto pos = kind_init._dimOffset + offset_idx;
+        _sizes[pos] = kind_init._sizes[offset_idx];
+    }
+
+    template <dim_vec_kind Kind>
+    void assign_init(std::size_t) {}
+
+    template <dim_vec_kind Kind, typename KindInitTy, typename ... KindInitTys>
+    void assign_init(std::size_t offset_idx, KindInitTy&& kind_init, KindInitTys&& ... kind_inits)
+    {
+        if (kind_init._dimSize > (value_type)offset_idx)
+            assign_init_helper1<Kind>(val_tuple<bool, true>(), offset_idx, std::forward<KindInitTy>(kind_init));
+        assign_init<Kind>(offset_idx, std::forward<KindInitTys>(kind_inits) ...);
+    }
+
+    template <typename ... KindInitTys, dim_vec_kind StoredKind, dim_vec_kind ... StoredKinds>
+    void assign_inits_helper1(const val_tuple<dim_vec_kind, StoredKind, StoredKinds ...>&, std::size_t offset_idx, KindInitTys&& ... kind_inits)
+    {
+        assign_init<StoredKind>(offset_idx, std::forward<KindInitTys>(kind_inits) ...);                                                                             //}
+        assign_inits_helper1(val_tuple<dim_vec_kind, StoredKinds ...>(), offset_idx + 1, std::forward<KindInitTys>(kind_inits) ...);
+    }
+
+    template <typename ... KindInitTys>
+    void assign_inits_helper1(const val_tuple<dim_vec_kind>&, std::size_t, KindInitTys&& ...) {}
+
+    template <typename ... KindInitTys>
+    void assign_inits(KindInitTys&& ... kind_inits)
+    {
+        assign_inits_helper1(_stored_kinds(), 0, std::forward<KindInitTys>(kind_inits) ...);
     }
 };
 

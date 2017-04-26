@@ -208,6 +208,9 @@ typedef enum /*:int32_t*/
 
 #define CLDNN_FLOAT_TYPE_MASK 0x80
 
+#define CLDNN_TENSOR_BATCH_DIM_MAX 1
+#define CLDNN_TENSOR_FEATURE_DIM_MAX 1
+#define CLDNN_TENSOR_SPATIAL_DIM_MAX 2
 #define CLDNN_TENSOR_DIM_MAX 8
 
 /// @brief N-dimensional vector. Mostly used to represent memory size.
