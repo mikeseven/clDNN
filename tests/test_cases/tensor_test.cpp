@@ -111,17 +111,14 @@ TEST(tensor_api, order_os_iyx_osv16)
 
     //sizes
     EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(2));
+    EXPECT_EQ(test.feature.size(), size_t(1));
     EXPECT_EQ(test.spatial.size(), size_t(2));
 
     //passed values
     EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(4));
     EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(3));
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(1));
-    EXPECT_EQ(test.feature[1], cldnn::tensor::value_type(2));
-
-    //defaults
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(0));
+    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(1));
+    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(2));
 
     //reverse
     auto sizes = test.sizes();

@@ -74,7 +74,7 @@ struct softmax_gpu : typed_primitive_impl<softmax>
         kd.leftovers = 0;
         kd.elements_in_batch = 0;
         
-        if (input_size.feature[0] != 1 && input_size.spatial[1] != 1)
+        if (input_size.feature[0] != 1 || input_size.spatial[1] != 1)
         {
             kd.elements_in_batch = input_size.spatial[0] * input_size.spatial[1];
             kd.gws0 = cldnn::align_to(kd.elements_in_batch, 32);
@@ -202,10 +202,6 @@ namespace {
     struct attach {
         attach() {
             auto val_fw = softmax_gpu::create;
-            //implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::xb), val_fw);
-            //implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::xb), val_fw);
-            //implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bx), val_fw);
-            //implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bx), val_fw);
             implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), val_fw);
             implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), val_fw);
             implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), val_fw);

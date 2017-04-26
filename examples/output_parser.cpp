@@ -21,9 +21,22 @@ std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memo
     auto mem_layout = input_mem.get_layout();
     bool needs_data_type_conversion = mem_layout.data_type != cldnn::data_types::f32;
 
+    bool needs_format_conversion = true;
+    switch (mem_layout.size.format)
+    {
+    case cldnn::format::bfyx:
+        needs_format_conversion = true;
+        break;
+    case cldnn::format::yxfb:
+        needs_format_conversion = false;
+        break;
+    default:
+        throw std::invalid_argument("Unsupported format for result parser");
+    }
+
     auto mem = input_mem;
     // Convert format if necessary.
-    if(needs_data_type_conversion)
+    if(needs_format_conversion || needs_data_type_conversion)
     {
         cldnn::topology topology;
         cldnn::data input_data("input_mem", input_mem);
@@ -36,6 +49,14 @@ std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memo
             cldnn::reorder data_type_reorder("data_type_reorder", curr_id, mem_layout);
             topology.add(data_type_reorder);
             curr_id = data_type_reorder.id;
+        }
+
+        if (needs_format_conversion)
+        {
+            mem_layout.size = mem_layout.size.transform(cldnn::format::yxfb, 1);
+            cldnn::reorder format_reorder("format_reorder", curr_id, mem_layout);
+            topology.add(format_reorder);
+            curr_id = format_reorder.id;
         }
 
         mem = cldnn::network(cldnn::engine(), topology, {cldnn::build_option::outputs({curr_id})}).execute().begin()->second.get_memory();

@@ -781,7 +781,7 @@ TEST(reorder_gpu_f32, basic_flatten_yxfb_to_x)
     auto y_size = 2;
 
     auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    layout output_layout(data_types::f32, { format::bfyx,{ 1, 1, 1, y_size * x_size * feature_num * batch_num } });
+    layout output_layout(data_types::f32, { format::yxfb,{ 1, 1, 1, y_size * x_size * feature_num * batch_num } });
 
     std::vector<float> input_vec = {
         1.f, 0.f,
@@ -812,9 +812,15 @@ TEST(reorder_gpu_f32, basic_flatten_yxfb_to_x)
     auto output = outputs.begin()->second.get_memory();
     auto output_ptr = output.pointer<float>();
 
-    for (int j = 0; j < batch_num * feature_num * y_size * x_size; ++j) { //B * F * Y * X
-        int linear_id = j;
-        EXPECT_EQ(output_ptr[linear_id], input_vec[linear_id]);
+    for (int i = 0; i < batch_num; ++i) { //B
+        for (int j = 0; j < feature_num * y_size * x_size; ++j) { //F * Y * X
+            int linear_id_output = j * batch_num + i;
+            int cpos = j / (x_size * y_size);
+            int ypos = (j / x_size) % y_size;
+            int xpos = j % x_size;
+            int linear_id = i + batch_num * (cpos + feature_num * (xpos + x_size * ypos));
+            EXPECT_EQ(output_ptr[linear_id_output], input_vec[linear_id]);
+        }
     }
 }
 

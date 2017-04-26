@@ -398,7 +398,7 @@ int main(int argc, char* argv[])
         if (parsed_args.count("dump_layer"))
         {
             dump_layer = parsed_args["dump_layer"].as<std::string>();
-            if (dump_layer.find("_weights.nnd"))
+            if (dump_layer.find("_weights.nnd") != std::string::npos)
                 ep.dump_weights = true;
             else
                 ep.dump_weights = false;

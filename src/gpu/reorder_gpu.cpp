@@ -83,17 +83,17 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         auto output_layout = outer.get_output_layout();
 
         kd.has_mean = outer.has_mean();
-        kd.padding_only = (!kd.has_mean) && outer.get_primitive()->subtract_per_feature.empty() &&
+        kd.is_flatten = ((input_layout.size.batch[0] != 1 && output_layout.size.batch[0] == 1) ||
+            (input_layout.size.feature[0] != 1 && output_layout.size.feature[0] == 1) ||
+            (input_layout.size.spatial[0] != 1 && output_layout.size.spatial[0] == 1) ||
+            (input_layout.size.spatial[1] != 1 && output_layout.size.spatial[1] == 1));
+        kd.padding_only = (!kd.is_flatten) && (!kd.has_mean) && outer.get_primitive()->subtract_per_feature.empty() &&
             input_layout.size.format == output_layout.size.format &&
             input_layout.size.format == format::bfyx &&
             outer.get_primitive()->output_padding.lower_size().feature[0] == 0 &&
             outer.get_primitive()->output_padding.lower_size().batch[0] == 0 &&
             outer.get_primitive()->output_padding.upper_size().feature[0] == 0 &&
             outer.get_primitive()->output_padding.upper_size().batch[0] == 0;
-        kd.is_flatten = ((input_layout.size.batch[0] != 1 && output_layout.size.batch[0] == 1) ||
-            (input_layout.size.feature[0] != 1 && output_layout.size.feature[0] == 1) ||
-            (input_layout.size.spatial[0] != 1 && output_layout.size.spatial[0] == 1) ||
-            (input_layout.size.spatial[1] != 1 && output_layout.size.spatial[1] == 1));
 
         return kd;
     }
@@ -106,8 +106,6 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         // reorder_inst and optional conversion cases.
         // For input formats:
         // 0 - batch (b), 1 - feature (f), 2, 3 - spatial (x -> 2, y -> 3)
-        // For weights formats:
-        // 0 - batch (b), 1, 2 - feature (o -> 1, i -> 2), 3, 4 - spatial (x -> 3, y -> 4)
         case format::byxf:
             return "return lpad[1] + pos[1] + (lpad[1] + size[1] + upad[1]) * (lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[3] + pos[3] + (lpad[3] + size[3] + upad[3]) * (lpad[0] + pos[0])));";
         
@@ -141,16 +139,6 @@ struct reorder_gpu : typed_primitive_impl<reorder>
             return R"__C(uint _slice_id = pos[0] / 16; \
                         uint _id_in_slice = pos[0] % 16; \
                         return _id_in_slice + 16 * (pos[2] + size[2] * _slice_id);)__C";
-        
-//        case format::bx:
-//            return "return lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[0] + pos[0]);";
-        
-//        case format::xb:
-//            return "return lpad[0] + pos[0] + (lpad[0] + size[0] + upad[0]) * (lpad[2] + pos[2]);";
-        
-        // No reorder, only conversion (use simpler 1D kernels for that).
-//        case format::x:
-//            return "return lpad[2] + pos[2];";
 
         default:
             throw std::invalid_argument("This format is not supported in GPU reorder_inst");
@@ -165,8 +153,6 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         // reorder_inst and optional conversion cases.
         // For input formats:
         // 0 - batch (b), 1 - feature (f), 2, 3 - spatial (x -> 2, y -> 3)
-        // For weights formats:
-        // 0 - batch (b), 1, 2 - feature (o -> 1, i -> 2), 3, 4 - spatial (x -> 3, y -> 4)
         case format::byxf:
             return { 1, 2, 3, 0 };
         
@@ -178,16 +164,6 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         
         case format::fyxb:
             return { 0, 2, 3, 1 };
-        
-        //case format::bx:
-        //    return { 1, 2, 0 };
-        
-        //case format::xb:
-        //    return { 1, 0, 2 };
-        
-        // No reorder, only conversion (use simpler 1D kernels for that).
-        //case format::x:
-        //    return { 0, 1, 2 };
 
         default:
             throw std::invalid_argument("This format is not supported in GPU reorder_inst");
@@ -218,17 +194,8 @@ struct reorder_gpu : typed_primitive_impl<reorder>
             return "return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));";
         
         //equivalent to axis = 0 (batch), end_axis = 2(y) in caffe
-        //case format::xb:
-        //    return "return pos[0] + size[0] * ((pos[1] * size[2] * size[3]) + size[1] * (pos[2] + size[2] * pos[3]) / size[2]);";
-        
-        //flatten all into one dimension - equivalent to axis = 0 (batch), end_axis = 3(x) in caffe
-        //case format::x:
-        //{
-        //    std::vector<uint32_t> calcOrder = get_calculation_order(idt, ifmt);
-        //    return "return pos[" + std::to_string(calcOrder[0]) + "] + size[" + std::to_string(calcOrder[0]) + "] * (pos[" + std::to_string(calcOrder[1]) +
-        //        "] + size[" + std::to_string(calcOrder[1]) + "] * (pos[" + std::to_string(calcOrder[2]) + "] + size[" + std::to_string(calcOrder[2]) +
-        //        "] * pos[" + std::to_string(calcOrder[3]) + "]));";
-        //}
+        case format::yxfb:
+            return "return pos[0] + size[0] * ((pos[1] * size[2] * size[3]) + size[1] * (pos[2] + size[2] * pos[3]) / size[2]);";
         
         default:
             throw std::invalid_argument("This format is not supported in GPU reorder_inst - flatten");

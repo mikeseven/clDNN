@@ -405,6 +405,7 @@ fully_connected_gpu::kernel_data default_bfyx_f32(const fully_connected_node& ar
 
 fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const fully_connected_node& arg)
 {
+    auto input_layout = arg.input().get_output_layout();
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
     bool batch_multiple_of_8 = arg.input().get_output_layout().size.batch[0] % 8 == 0;
 
@@ -423,6 +424,22 @@ fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const full
     {
         // TODO: implement this case
         throw std::runtime_error("Not implemented bs_xs_bsv8_xsv8_f32 for batch not multiple of 8");
+    }
+
+    if ((input_layout.size.feature[0] == 1) && (input_layout.size.spatial[1] == 1))
+    {
+        auto input_size = input_layout.size;
+        if (input_size.batch[0] < 8)
+        {
+            // TODO: implement this case
+            throw std::runtime_error("default_xb_f32_bs_xs_xsv8_bsv8_f32 with batch < 8 not implemented!");
+        }
+        cldnn::topology topology(
+            cldnn::input_layout("input", input_layout),
+            cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_size.transform(cldnn::format::bs_xs_xsv8_bsv8, 1) }, "")
+        );
+
+        kd.reorder.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });
     }
 
     return kd;
@@ -448,25 +465,6 @@ fully_connected_gpu::kernel_data default_bfyx_f32_bs_xs_xsv8_bsv8_f32(const full
         cldnn::reorder("reorder", "input", expected_mem_layout)
     );
     
-    fully_connected_gpu::kernel_data kd = default_yxfb_f32_bs_xs_xsv8_bsv8_f32(arg);
-    kd.reorder.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });
-    return kd;
-}
-
-fully_connected_gpu::kernel_data default_xb_f32_bs_xs_xsv8_bsv8_f32(const fully_connected_node& arg)
-{
-    auto input_layout = arg.input().get_output_layout();
-    auto input_size = input_layout.size;
-    if (input_size.batch[0] < 8)
-    {
-        // TODO: implement this case
-        throw std::runtime_error("default_xb_f32_bs_xs_xsv8_bsv8_f32 with batch < 8 not implemented!");
-    }
-    cldnn::topology topology(
-        cldnn::input_layout("input", input_layout),
-        cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_size.transform(cldnn::format::bs_xs_xsv8_bsv8, 1) }, "")
-    );
-
     fully_connected_gpu::kernel_data kd = default_yxfb_f32_bs_xs_xsv8_bsv8_f32(arg);
     kd.reorder.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });
     return kd;
