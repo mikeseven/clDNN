@@ -89,6 +89,12 @@ std::string vector_to_string(std::vector<float> vec)
 	if (argument.img_size.format != format::bfyx) {
 		throw std::runtime_error("Image size format should be format::bfyx.");
 	}
+    if (argument.img_size.batch[0] != 1) {
+        throw std::runtime_error("Image size batch size needs to be 1.");
+    }
+    if (argument.img_size.feature[0] != 1) {
+        throw std::runtime_error("Image size feature size needs to be 1.");
+    }
 
 std::string prior_box_inst::to_string(prior_box_node const& node)
 {

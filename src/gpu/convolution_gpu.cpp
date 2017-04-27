@@ -168,8 +168,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
 			gpu::make_jit_constant("DILATION",                  outer.get_primitive()->dilation),
         };
 
-        if (weights_layout.size.format == format::yxfb ||
-            weights_layout.has_format(data_types::f32, format::yxfb))
+        if (weights_layout.size.format == format::yxfb)
         {
             const auto local_work_group_size = _kernel_data.lws0;
 

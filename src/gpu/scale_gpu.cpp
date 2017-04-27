@@ -160,10 +160,6 @@ kd_selector_t<scale_gpu::kernel_data, scale_node, data_types, format::type, kd_o
     { std::make_tuple(data_types::f16, format::yxfb, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
     { std::make_tuple(data_types::f32, format::bfyx, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
     { std::make_tuple(data_types::f16, format::bfyx, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
-    //{ std::make_tuple(data_types::f32, format::xb, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
-    //{ std::make_tuple(data_types::f16, format::xb, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
-    //{ std::make_tuple(data_types::f32, format::bx, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
-    //{ std::make_tuple(data_types::f16, format::bx, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
 };
 
 namespace {
@@ -175,10 +171,6 @@ namespace {
             implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), val_fw);
             implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), val_fw);
             implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), val_fw);
-            //implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::xb), val_fw);
-            //implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::xb), val_fw);
-            //implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bx), val_fw);
-            //implementation_map<scale>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bx), val_fw);
         }
         ~attach() {}
     };

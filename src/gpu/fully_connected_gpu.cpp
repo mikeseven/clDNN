@@ -429,11 +429,6 @@ fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const full
     if ((input_layout.size.feature[0] == 1) && (input_layout.size.spatial[1] == 1))
     {
         auto input_size = input_layout.size;
-        if (input_size.batch[0] < 8)
-        {
-            // TODO: implement this case
-            throw std::runtime_error("default_xb_f32_bs_xs_xsv8_bsv8_f32 with batch < 8 not implemented!");
-        }
         cldnn::topology topology(
             cldnn::input_layout("input", input_layout),
             cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_size.transform(cldnn::format::bs_xs_xsv8_bsv8, 1) }, "")

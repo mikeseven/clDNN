@@ -147,7 +147,7 @@ convolution_inst::typed_primitive_inst(network_impl& network, convolution_node c
         auto output_offset = argument.output_offset().transform(output_inst.size.format, 0);
 
         if (filter_inst.size.raw.size() != output_inst.size.raw.size())
-            throw std::runtime_error("Window_size != 4");
+            throw std::runtime_error("Weights number of dimensions do not match output number of dimensions.");
         if (argument.padding_filling_value() != 0.0f)
             throw std::runtime_error("Unknown padding mode.");
         if (input_offset.raw.size() != input_inst.size.raw.size())
