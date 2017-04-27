@@ -22,7 +22,8 @@
 
 typedef std::tuple<cldnn::layout*, std::vector<unsigned>> topology_params;
 
-void PrintTupleTo(const topology_params& t, ::std::ostream* os) {
+void PrintTupleTo(const topology_params& t, ::std::ostream* os)
+{
     const auto & output_layout = std::get<0>(t);
     const auto & generator = std::get<1>(t);
     std::stringstream ss;
@@ -30,42 +31,51 @@ void PrintTupleTo(const topology_params& t, ::std::ostream* os) {
     ss << "Topology test failed: ("
         << cldnn::data_type_traits::name(output_layout->data_type) << " "
         << tests::test_params::print_tensor(output_layout->size) << ") Generator: [";
-    for (auto v : generator) {
+    for (auto v : generator)
+    {
         ss << v << ", ";
     }
     ss.seekp(-1, ss.cur) << "]\n";
     *os << ss.str();
 }
 
-class topology_test : public ::testing::TestWithParam<topology_params> {
+class topology_test : public ::testing::TestWithParam<topology_params>
+{
 protected:
-    class topology_generator {
+    class topology_generator
+    {
     public:
         typedef std::pair<cldnn::primitive_id, cldnn::layout> named_layout;
-        class topology_layer_type {
+        class topology_layer_type
+        {
         public:
             // return false for invalid output_layout
             virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) = 0;
         };
         static std::vector<topology_layer_type*> layer_types;
-        static cldnn::topology* CreateTopology(cldnn::layout output_layout, const std::vector<unsigned> generator_vec) {
-            if (generator_vec.size() < 2) {
+        static cldnn::topology* CreateTopology(cldnn::layout output_layout, const std::vector<unsigned> generator_vec)
+        {
+            if (generator_vec.size() < 2)
+            {
                 return nullptr;
             }
             auto topology = new cldnn::topology();
             std::deque<named_layout> inputs;
             const unsigned max_index = generator_vec[0];
             inputs.push_back({ output_layer_id, output_layout });
-            for (unsigned g_index = 1; g_index < generator_vec.size(); g_index++) {
+            for (unsigned g_index = 1; g_index < generator_vec.size(); g_index++)
+            {
                 auto input = inputs.front();
                 inputs.pop_front();
-                if (!AddSinglePrimitive(*topology, input.first, input.second, inputs, generator_vec.at(g_index), max_index)) {
+                if (!AddSinglePrimitive(*topology, input.first, input.second, inputs, generator_vec.at(g_index), max_index))
+                {
                     delete topology;
                     return nullptr;
                 }
             }
             // add data inputs
-            for (const auto& input : inputs) {
+            for (const auto& input : inputs)
+            {
                 //first add a reorder to enable optimize_data
                 cldnn::primitive_id input_data_id = input.first + "_input";
                 topology->add(cldnn::reorder(input.first, input_data_id, input.second));
@@ -73,27 +83,34 @@ protected:
             }
             return topology;
         }
-        static cldnn::primitive_id CreateLayerId() {
+        static cldnn::primitive_id CreateLayerId()
+        {
             static unsigned layer_id = 0;
             return "tg_layer_" + std::to_string(layer_id++);
         }
         static const cldnn::primitive_id output_layer_id;
-        static bool AddSinglePrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts, unsigned type_index, unsigned max_type) {
-            if (layer_types.size() < max_type) {
+        static bool AddSinglePrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts, unsigned type_index, unsigned max_type)
+        {
+            if (layer_types.size() < max_type)
+            {
                 return false;//shouldn't happen
             }
-            for (unsigned t = 0; t < max_type; t++) {
-                if (layer_types.at((type_index + t) % max_type)->AddPrimitive(topology, id, output_layout, input_layouts)) {
+            for (unsigned t = 0; t < max_type; t++)
+            {
+                if (layer_types.at((type_index + t) % max_type)->AddPrimitive(topology, id, output_layout, input_layouts))
+                {
                     return true;
                 }
             }
             //todo: consider using a data primitive here
             return false;
         }
-        static void AddRandomMemory(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout layout) {
+        static void AddRandomMemory(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout layout)
+        {
             //todo: allocate mem, randomize values by type, add to topology
             auto mem_primitive = cldnn::memory::allocate(topology_test::engine, layout);
-            switch (layout.data_type) {
+            switch (layout.data_type)
+            {
             case cldnn::data_types::f32:
                 tests::set_random_values<float>(mem_primitive, -1.0f, 1.0f);
                 break;
@@ -108,9 +125,12 @@ protected:
     protected:
         topology_generator() {}
 
-        class convolution_layer_type : public topology_layer_type {
-            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
-                if (output_layout.size.format != cldnn::format::bfyx) {
+        class convolution_layer_type : public topology_layer_type
+        {
+            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
+            {
+                if (output_layout.size.format != cldnn::format::bfyx)
+                {
                     return false;
                 }
                 // for now using just one set of params
@@ -131,9 +151,12 @@ protected:
                 return true;
             }
         };
-        class normalization_layer_type : public topology_layer_type {
-            bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
-                if (output_layout.size.format != cldnn::format::bfyx) {
+        class normalization_layer_type : public topology_layer_type
+        {
+            bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
+            {
+                if (output_layout.size.format != cldnn::format::bfyx)
+                {
                     return false;
                 }
                 // for now using just one set of params
@@ -149,9 +172,12 @@ protected:
                 return true;
             }
         };
-        class pooling_layer_type : public topology_layer_type {
-            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
-                if (output_layout.size.spatial.size() != 2) {
+        class pooling_layer_type : public topology_layer_type
+        {
+            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
+            {
+                if (output_layout.size.spatial.size() != 2)
+                {
                     return false;
                 }
                 // for now using just one set of params
@@ -165,9 +191,12 @@ protected:
                 return true;
             }
         };
-        class fully_connected_layer_type : public topology_layer_type {
-            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
-                if (output_layout.size.format != cldnn::format::bx) {
+        class fully_connected_layer_type : public topology_layer_type
+        {
+            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
+            {
+                if (output_layout.size.format != cldnn::format::bx)
+                {
                     return false;
                 }
 
@@ -191,8 +220,10 @@ protected:
                 return true;
             }
         };
-        class reorder_layer_type : public topology_layer_type {
-            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
+        class reorder_layer_type : public topology_layer_type
+        {
+            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
+            {
                 // for now using just one set of params
                 // todo: randomize params
                 cldnn::primitive_id input_id = topology_generator::CreateLayerId();
@@ -201,8 +232,10 @@ protected:
                 return true;
             }
         };
-        class activation_layer_type : public topology_layer_type {
-            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
+        class activation_layer_type : public topology_layer_type
+        {
+            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
+            {
                 // for now using just one set of params
                 // todo: randomize params
                 cldnn::primitive_id input_id = topology_generator::CreateLayerId();
@@ -211,12 +244,15 @@ protected:
                 return true;
             }
         };
-        class depth_concatenate_layer_type : public topology_layer_type {
-            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
+        class depth_concatenate_layer_type : public topology_layer_type
+        {
+            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
+            {
                 // for now using just one set of params
                 // todo: randomize params
                 if (output_layout.size.format != cldnn::format::bfyx// should be "output_layout.size.format.dimension() < 4" but requires too many case handling since tensor is immutable
-                    || output_layout.size.feature[0] < 2) {
+                    || output_layout.size.feature[0] < 2)
+                {
                     return false;
                 }
                 cldnn::primitive_id input_id1 = topology_generator::CreateLayerId();
@@ -252,8 +288,10 @@ protected:
                 return true;
             }
         };
-        class eltwise_layer_type : public topology_layer_type {
-            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
+        class eltwise_layer_type : public topology_layer_type
+        {
+            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
+            {
                 // for now using just one set of params
                 // todo: randomize params
                 cldnn::primitive_id input_id = topology_generator::CreateLayerId();
@@ -264,8 +302,10 @@ protected:
                 return true;
             }
         };
-        class scale_layer_type : public topology_layer_type {
-            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
+        class scale_layer_type : public topology_layer_type
+        {
+            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
+            {
                 // for now using just one set of params
                 // todo: randomize params
                 cldnn::primitive_id input_id = topology_generator::CreateLayerId();
@@ -276,8 +316,10 @@ protected:
                 return true;
             }
         };
-        class softmax_layer_type : public topology_layer_type {
-            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts) {
+        class softmax_layer_type : public topology_layer_type
+        {
+            virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
+            {
                 // for now using just one set of params
                 // todo: randomize params
                 cldnn::primitive_id input_id = topology_generator::CreateLayerId();
@@ -357,12 +399,15 @@ public:
         static std::default_random_engine rng(tests::random_seed);
         std::uniform_int_distribution<unsigned> distribution(0, 0xFF);//assuming we won't exceed 256 total layer types
 
-        const unsigned Initial_layer_types = 10;//don't change this - starting with this index ensures adding layers won't void previously generated tests
-        for (unsigned types = Initial_layer_types; types <= topology_test::topology_generator::layer_types.size(); types++) {
-            for (unsigned i = 0; i < topologies_per_type_size; i++) {
+        const unsigned Initial_layer_types = 10;//don't change this - starting with this index ensures adding layers won't alter previously generated tests
+        for (unsigned types = Initial_layer_types; types <= topology_test::topology_generator::layer_types.size(); types++)
+        {
+            for (unsigned i = 0; i < topologies_per_type_size; i++)
+            {
                 std::vector<unsigned> generator;
                 generator.push_back(types);
-                for (unsigned j = 0; j < generator_length; j++) {
+                for (unsigned j = 0; j < generator_length; j++)
+                {
                     generator.push_back(distribution(rng) % types);
                 }
                 all_generators.insert(generator);
@@ -370,8 +415,10 @@ public:
         }
         return all_generators;
     }
-    static void TearDownTestCase() {
-        for (auto& p : all_output_layouts) {
+    static void TearDownTestCase()
+    {
+        for (auto& p : all_output_layouts)
+        {
             delete p;
         }
     }
@@ -381,12 +428,14 @@ public:
         const auto & generator = std::get<1>(info.param);
         std::stringstream ss;
         ss << info.index << "_";
-        for (auto v : generator) {
+        for (auto v : generator)
+        {
             ss << v << "_";
         }
         ss << cldnn::data_type_traits::name(output_layout->data_type) << "_";
         ss << cldnn::format::traits(output_layout->size.format).order;
-        for (const auto& d : output_layout->size.raw) {
+        for (const auto& d : output_layout->size.raw)
+        {
             ss << "_" << d;
         }
         
@@ -418,27 +467,13 @@ std::vector<topology_test::topology_generator::topology_layer_type*> topology_te
 };
 const cldnn::primitive_id topology_test::topology_generator::output_layer_id("tg_output_layer");
 
-// void PrintTo(const topology_test& t, ::std::ostream* os) {
-//     PrintTupleTo(t.GetParam(), os);
-// }
-// void PrintTo(const topology_params& t, ::std::ostream* os) {
-//     PrintTupleTo(t, os);
-// }
-// ::std::ostream& operator<<(::std::ostream& os, const topology_test& t) {
-//     PrintTupleTo(t.GetParam(), &os);
-//     return os;
-// }
-// ::std::ostream& operator<<(::std::ostream& os, const topology_params& t) {
-//     PrintTupleTo(t, &os);
-//     return os;
-// }
-
 TEST_P(topology_test, DISABLED_random_topology)
 {
      try
      {
          run_single_test();
-         if (::testing::Test::HasFailure()) {
+         if (::testing::Test::HasFailure())
+         {
              PrintTupleTo(GetParam(), &std::cout);
          }
      }
