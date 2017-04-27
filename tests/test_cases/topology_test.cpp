@@ -272,7 +272,7 @@ protected:
                 input_layouts.push_back({ input_id, output_layout });
                 cldnn::primitive_id scale_params_id = id + "_scale_params";
                 AddRandomMemory(topology, scale_params_id, output_layout);
-                topology.add(cldnn::scale(id, input_id, scale_params_id, false));
+                topology.add(cldnn::scale(id, input_id, scale_params_id, ""));
                 return true;
             }
         };
@@ -315,7 +315,7 @@ protected:
     };
 public:
     static const unsigned topologies_per_type_size = 10;
-    topology_test::topology_test() : output_layout(std::get<0>(GetParam())), generator(std::get<1>(GetParam())) {}
+    topology_test() : output_layout(std::get<0>(GetParam())), generator(std::get<1>(GetParam())) {}
     void run_single_test()
     {
         cldnn::topology* topology = topology_generator::CreateTopology(*output_layout, generator);
