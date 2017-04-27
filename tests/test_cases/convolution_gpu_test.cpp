@@ -623,7 +623,7 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_padding) {
 			{ "biases" },
 			{ format::bfyx,{ 1,1,2,1 } },
 			{ format::bfyx, 0,{ 0,0,1,1 } },
-			{ format::yx, { 1, 1 } },
+			{ format::bfyx, { 1, 1, 1, 1 } },
 			false,
 			0,
 			{ format::bfyx,{ 0,0,0,0 } })
@@ -729,7 +729,7 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_and_output_padding) {
 			{ "biases" },
 			{ format::bfyx,{ 1,1,2,1 } },
 			{ format::bfyx, 0,{ 0,0,1,1 } },
-			{ format::yx,{ 1, 1 } },
+            { format::bfyx,{ 1, 1, 1, 1 } },
 			false,
 			0,
 			{ format::bfyx,{ 0,0,1,2 } })
@@ -1293,7 +1293,7 @@ TEST(convolution_f32_fw_gpu, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
             { "biases" },
             { format::bfyx, { 0,0,-1,-1 } },
             { format::bfyx,{ 1,1,2,2 } },
-			{ format::yx,{ 1, 1 } },
+            { format::bfyx,{ 1, 1, 1, 1 } },
             false,
             0,
             { format::bfyx,{ 0,0,1,1 } })
@@ -1819,7 +1819,7 @@ TEST(convolution_gpu, trivial_convolution_relu) {
             { "biases" },
             { format::bfyx, { 0,0,0,0 } },
             { format::bfyx,{ 1,1,2,2 } },
-			{ format::yx,{ 1, 1 } },
+            { format::bfyx,{ 1, 1, 1, 1 } },
             true,
             0)
     );
@@ -1893,7 +1893,7 @@ TEST(convolution_gpu, relu_with_negative_slope) {
             { "biases" },
             { format::bfyx, { 0,0,0,0 } },
             { format::bfyx,{ 1,1,2,2 } },
-			{ format::yx,{ 1, 1 } },
+			{ format::bfyx,{ 1, 1, 1, 1 } },
             true,
             0.1f)
     );
@@ -2058,7 +2058,7 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxfb_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
             { "biases" },
             { format::bfyx, { 0,0,0,0 } },
             { format::bfyx,{ 1,1,stride_y,stride_x } },
-			{ format::yx,{ 1, 1 } },
+            { format::bfyx,{ 1, 1, 1, 1 } },
             true,
             0.1f)
     );

@@ -52,7 +52,7 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         { conv1_biases },
         { format::bfyx, {0,0,0,0} },
         { format::bfyx, {1,1,4,4} },
-		{ format::bfyx, {1,1} },
+		{ format::bfyx, {1,1,1,1} },
         true);
 
     auto pool1 = pooling(
@@ -82,7 +82,7 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         { conv2_g1_biases, conv2_g2_biases },
         { format::bfyx, {0, 0, -2, -2} },
         { format::bfyx, {1, 1, 1, 1} },
-		{ format::bfyx, {1, 1} },
+		{ format::bfyx, {1, 1, 1, 1} },
         true);
 
     auto pool2 = pooling(
