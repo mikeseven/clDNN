@@ -433,7 +433,7 @@ const cldnn::primitive_id topology_test::topology_generator::output_layer_id("tg
 //     return os;
 // }
 
-TEST_P(topology_test, random_topology)
+TEST_P(topology_test, DISABLED_random_topology)
 {
      try
      {
