@@ -20,6 +20,7 @@
 #include "engine.hpp"
 #include "profiling.hpp"
 #include <algorithm>
+#include <cassert>
 
 namespace cldnn
 {

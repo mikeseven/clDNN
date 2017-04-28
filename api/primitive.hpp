@@ -150,15 +150,18 @@ struct primitive
     /// @brief Initialize fields common for all primitives.
     struct fixed_size_vector_ref
     {
+    private:
+        std::vector<primitive_id>& vref;
+
     public:
         fixed_size_vector_ref(std::vector<primitive_id>& ref) : vref(ref)
         {}
 
-        auto size() const { return vref.size(); }
-        auto begin() const { return vref.begin(); }
-        auto end() const { return vref.end(); }
-        auto cbegin() const { return vref.cbegin(); }
-        auto cned() const { return vref.cend(); }
+        auto size() const -> decltype(vref.size()) { return vref.size(); }
+        auto begin() const -> decltype(vref.begin()) { return vref.begin(); }
+        auto end() const -> decltype(vref.end()) { return vref.end(); }
+        auto cbegin() const -> decltype(vref.cbegin()) { return vref.cbegin(); }
+        auto cned() const -> decltype(vref.cend()) { return vref.cend(); }
 
         primitive_id& operator[](size_t idx) { return vref[idx]; }
         primitive_id const& operator[](size_t idx) const { return vref[idx]; }
@@ -170,9 +173,6 @@ struct primitive
         const primitive_id* data() const { return vref.data(); }
 
         const std::vector<primitive_id>& ref() const { return vref; }
-
-    private:
-        std::vector<primitive_id>& vref;
     };
 public:
     primitive(
