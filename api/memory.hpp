@@ -111,10 +111,10 @@ bool data_type_match(data_types data_type)
 }
 
 /// Helper function to get both data_types and format::type in a single, unique value. Useable in 'case' statement.
-constexpr auto fuse(data_types dt, format::type fmt)
+constexpr auto fuse(data_types dt, format::type fmt) -> decltype(static_cast<std::underlying_type<data_types>::type>(dt) | static_cast<std::underlying_type<format::type>::type>(fmt))
 {
-    using dt_type = std::underlying_type_t<data_types>;
-    using fmt_type = std::underlying_type_t<format::type>;
+    using dt_type = std::underlying_type<data_types>::type;
+    using fmt_type = std::underlying_type<format::type>::type;
     using fmt_narrow_type = int16_t;
 
     return static_cast<fmt_type>(fmt) <= std::numeric_limits<fmt_narrow_type>::max() &&
@@ -196,7 +196,7 @@ struct layout
         return (data_type == dt && format == size.format);
     }
 
-    auto fused_format() const
+    auto fused_format() const -> decltype(fuse(data_type, size.format))
     {
         return fuse(data_type, size.format);
     }
