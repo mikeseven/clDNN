@@ -35,11 +35,6 @@ layout detection_output_inst::calc_output_layout(detection_output_node const& no
 
     auto input_layout = node.location().get_output_layout();
 
-    if (input_layout.data_type != data_types::f32)
-    {
-        throw std::invalid_argument("Detection output layer supports only FP32.");
-    }
-
     // Batch size and feature size are 1.
     // Number of bounding boxes to be kept is set to keep_top_k*batch size. 
     // If number of detections is lower than keep_top_k, will write dummy results at the end with image_id=-1. 
@@ -56,12 +51,6 @@ detection_output_inst::typed_primitive_inst(network_impl& network, detection_out
          (prior_box_memory().get_layout().size.format != format::bfyx) )
     {
         throw std::invalid_argument("Detection output layer supports only bfyx input format.");
-    }
-    if ((location_memory().get_layout().data_type != data_types::f32) ||
-        (confidence_memory().get_layout().data_type != data_types::f32) ||
-        (prior_box_memory().get_layout().data_type != data_types::f32))
-    {
-        throw std::invalid_argument("Detection output layer supports only FP32.");
     }
 
     if (argument.input_padding || argument.output_padding)

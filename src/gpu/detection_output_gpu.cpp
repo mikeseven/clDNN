@@ -238,8 +238,10 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 		}
 	}
 
-	void generate_detections(int num_of_images, cldnn::pointer<float> out_ptr, const std::vector<std::map<int, std::vector<bounding_box> >>& all_bboxes, const std::vector<std::map<int, std::vector<float> > >& confidences)
+	template<typename dtype>
+	void generate_detections(detection_output_inst& instance, int num_of_images, const std::vector<std::map<int, std::vector<bounding_box> >>& all_bboxes, const std::vector<std::map<int, std::vector<float> > >& confidences)
 	{
+		cldnn::pointer<dtype> out_ptr = instance.output_memory().pointer<dtype>();
 		auto& args = *outer.get_primitive();
 		std::vector<std::map<int, std::vector<int> > > all_indices;
 		for (int image = 0; image < num_of_images; ++image)
@@ -335,14 +337,14 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 				for (size_t i = 0; i < indices.size(); ++i)
 				{
 					int idx = indices[i];
-					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE] = (float)image;
-					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 1] = (float)label;
-					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 2] = scores[idx];
+					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE] = (dtype)(float)image;
+					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 1] = (dtype)(float)label;
+					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 2] = (dtype)scores[idx];
 					const bounding_box& bbox = bboxes[idx];
-					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 3] = bbox.xmin;
-					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 4] = bbox.ymin;
-					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 5] = bbox.xmax;
-					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 6] = bbox.ymax;
+					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 3] = (dtype)bbox.xmin;
+					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 4] = (dtype)bbox.ymin;
+					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 5] = (dtype)bbox.xmax;
+					out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 6] = (dtype)bbox.ymax;
 					++count;
 					++saved_detections_per_image;
 				}
@@ -350,24 +352,25 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 			//In case number of detections is smaller than keep_top_k fill the rest of the buffer with invalid image id (-1).
 			for (auto j = saved_detections_per_image; j < args.keep_top_k; ++j)
 			{
-				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE] = -1;
-				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 1] = 0;
-				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 2] = 0;
-				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 3] = 0;
-				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 4] = 0;
-				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 5] = 0;
-				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 6] = 0;
+				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE] = (dtype)-1.f;
+				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 1] = (dtype)0.f;
+				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 2] = (dtype)0.f;
+				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 3] = (dtype)0.f;
+				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 4] = (dtype)0.f;
+				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 5] = (dtype)0.f;
+				out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 6] = (dtype)0.f;
 				++count;
 			}
 		}
 	}
 
+	template<typename dtype>
 	void extract_locations_per_image(detection_output_inst& instance, std::vector<std::map<int, std::vector<bounding_box> >>& locations, const int num_of_priors, const int num_loc_classes)
 	{
 		auto& args = *outer.get_primitive();
 		const auto& input_location = instance.location_memory();
-		auto location_ptr = input_location.pointer<float>();
-		const float* location_data = location_ptr.data();
+		auto location_ptr = input_location.pointer<dtype>();
+		const dtype* location_data = location_ptr.data();
 		const int num_of_images = (int)locations.size();
 
 		for (int image = 0; image < num_of_images; ++image)
@@ -383,48 +386,50 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 					{
 						label_to_bbox[label].resize(num_of_priors);
 					}
-					label_to_bbox[label][prior].xmin = location_data[idx + cls * PRIOR_BOX_SIZE];
-					label_to_bbox[label][prior].ymin = location_data[idx + cls * PRIOR_BOX_SIZE + 1];
-					label_to_bbox[label][prior].xmax = location_data[idx + cls * PRIOR_BOX_SIZE + 2];
-					label_to_bbox[label][prior].ymax = location_data[idx + cls * PRIOR_BOX_SIZE + 3];
+					label_to_bbox[label][prior].xmin = (float)(location_data[idx + cls * PRIOR_BOX_SIZE]);
+					label_to_bbox[label][prior].ymin = (float)(location_data[idx + cls * PRIOR_BOX_SIZE + 1]);
+					label_to_bbox[label][prior].xmax = (float)(location_data[idx + cls * PRIOR_BOX_SIZE + 2]);
+					label_to_bbox[label][prior].ymax = (float)(location_data[idx + cls * PRIOR_BOX_SIZE + 3]);
 				}
 			}
 			location_data += num_of_priors * num_loc_classes * PRIOR_BOX_SIZE;
 		}
 	}
 
+	template<typename dtype>
 	void extract_prior_boxes_and_variances(detection_output_inst& instance, std::vector<bounding_box>& prior_bboxes, std::vector<std::vector<float> >& prior_variances)
 	{
 		const auto& input_prior_box = instance.prior_box_memory();
-		auto prior_box_ptr = input_prior_box.pointer<float>();
-		const float* prior_box_data = prior_box_ptr.data();
+		auto prior_box_ptr = input_prior_box.pointer<dtype>();
+		const dtype* prior_box_data = prior_box_ptr.data();
 		const int num_of_priors = (int)prior_bboxes.size();
 		for (int prior = 0; prior < num_of_priors; ++prior)
 		{
 			int idx = prior * PRIOR_BOX_SIZE;
 			bounding_box bbox;
-			bbox.xmin = prior_box_data[idx];
-			bbox.ymin = prior_box_data[idx + 1];
-			bbox.xmax = prior_box_data[idx + 2];
-			bbox.ymax = prior_box_data[idx + 3];
+			bbox.xmin = (float)(prior_box_data[idx]);
+			bbox.ymin = (float)(prior_box_data[idx + 1]);
+			bbox.xmax = (float)(prior_box_data[idx + 2]);
+			bbox.ymax = (float)(prior_box_data[idx + 3]);
 			prior_bboxes[prior] = bbox;
 			idx += num_of_priors * PRIOR_BOX_SIZE;
 			std::vector<float> var(PRIOR_BOX_SIZE);
 			for (int j = 0; j < PRIOR_BOX_SIZE; ++j)
 			{
-				var[j] = prior_box_data[idx + j];
+				var[j] = (float)(prior_box_data[idx + j]);
 			}
 			prior_variances[prior] = var;
 		}
 	}
 
+	template<typename dtype>
 	void extract_confidences_per_image(detection_output_inst& instance, std::vector<std::map<int, std::vector<float> > >& confidences, const int num_of_priors)
 	{
 		auto args = *outer.get_primitive();
 		const int num_of_images = (int)confidences.size();
 		const auto& input_confidence = instance.confidence_memory();
-		auto confidence_ptr = input_confidence.pointer<float>();
-		const float* confidence_data = confidence_ptr.data();
+		auto confidence_ptr = input_confidence.pointer<dtype>();
+		const dtype* confidence_data = confidence_ptr.data();
 		for (int image = 0; image < num_of_images; ++image)
 		{
 			std::map<int, std::vector<float> >& label_to_scores = confidences[image];
@@ -432,13 +437,14 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 				int idx = prior * args.num_classes;
 				for (int cls = 0; cls < (int)args.num_classes; ++cls)
 				{
-					label_to_scores[cls].push_back(confidence_data[idx + cls]);
+					label_to_scores[cls].push_back((float)(confidence_data[idx + cls]));
 				}
 			}
 			confidence_data += num_of_priors * args.num_classes;
 		}
 	}
 
+	template<typename dtype>
 	void prepare_data(detection_output_inst& instance, std::vector<std::map<int, std::vector<bounding_box>>> &bboxes, std::vector<std::map<int, std::vector<float> > >& confidences)
 	{
 		assert(bboxes.size() == confidences.size());
@@ -451,12 +457,12 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 
 		// Extract locations per image.
 		std::vector<std::map<int, std::vector<bounding_box> >> locations(num_of_images); // Per image : label -> bounding boxes.
-		extract_locations_per_image(instance, locations, num_of_priors, num_loc_classes);
+		extract_locations_per_image<dtype>(instance, locations, num_of_priors, num_loc_classes);
 
 		// Extract prior boxes - same within a batch.
 		std::vector<bounding_box> prior_bboxes(num_of_priors); // Prior-Boxes (identical for all images since we assume all images in a batch are of same dimension).
 		std::vector<std::vector<float> > prior_variances(num_of_priors); // Variances per prior-box (identical for all images since we assume all images in a batch are of same dimension).
-		extract_prior_boxes_and_variances(instance, prior_bboxes, prior_variances);
+		extract_prior_boxes_and_variances<dtype>(instance, prior_bboxes, prior_variances);
 
 		// Create the decoded bounding boxes according to locations predictions and prior-boxes. 
 		for (int image = 0; image < num_of_images; ++image)
@@ -486,7 +492,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 		}
 
 		// Extract confidences per image.
-		extract_confidences_per_image(instance, confidences, num_of_priors);
+		extract_confidences_per_image<dtype>(instance, confidences, num_of_priors);
 	}
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, detection_output_inst& instance) override
@@ -501,9 +507,18 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 		std::vector<std::map<int, std::vector<bounding_box> >> bboxes(num_of_images); // Per image : label -> decoded bounding boxes.
 		std::vector<std::map<int, std::vector<float> > > confidences(num_of_images); // Per image : class -> confidences per bounding box.
 
-		prepare_data(instance, bboxes, confidences);
+		if (instance.location_memory().get_layout().data_type == data_types::f32)
+		{
+			prepare_data<data_type_to_type<data_types::f32>::type>(instance, bboxes, confidences);
 
-		generate_detections(num_of_images, instance.output_memory().pointer<float>(), bboxes, confidences);
+			generate_detections<data_type_to_type<data_types::f32>::type>(instance, num_of_images, bboxes, confidences);
+		}
+		else
+		{
+			prepare_data<data_type_to_type<data_types::f16>::type>(instance, bboxes, confidences);
+
+			generate_detections<data_type_to_type<data_types::f16>::type>(instance, num_of_images, bboxes, confidences);
+		}
 
 		event_impl* ev = instance.get_network().get_engine().get()->create_user_event();
 		ev->set();
@@ -524,6 +539,7 @@ namespace
         attach()
         {
             implementation_map<detection_output>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), detection_output_gpu::create);
+			implementation_map<detection_output>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), detection_output_gpu::create);
         }
 
         ~attach()
