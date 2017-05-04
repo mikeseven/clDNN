@@ -370,12 +370,8 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
 
 
     std::vector<cldnn::primitive_id> outputs(0);
-    if (ep.run_until_primitive_name.empty())
-    {
-        outputs.push_back("output");
-        if (!ep.dump_layer_name.empty())  outputs.push_back(ep.dump_layer_name);
-    }
-    else
+    outputs.push_back("output");
+    if (!ep.run_until_primitive_name.empty())
     {
         outputs.push_back(ep.run_until_primitive_name); //set the user custom primitive as output (works only while not in debug moge, because in debug mode every primitive is an output)
         if (!ep.dump_layer_name.empty())
