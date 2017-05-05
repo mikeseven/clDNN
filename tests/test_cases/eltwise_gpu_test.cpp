@@ -98,8 +98,8 @@ void generic_eltwise_test(cldnn::format test_input_fmt, int input_b, int input_f
 	topology topology;
 	topology.add(input_layout("input1", input1.get_layout()));
 	topology.add(input_layout("input2", input2.get_layout()));
-    topology.add(reorder("reorder1", "input1", input1.get_layout().with_padding({ format::yx,{ input_padding_y, input_padding_x } })));
-	topology.add(eltwise("eltwise", "reorder1", "input2", mode, relu, slope, { format::yx,{ output_padding_y, output_padding_x } }));
+    topology.add(reorder("reorder1", "input1", input1.get_layout().with_padding({ format::bfyx,{ 0, 0, input_padding_y, input_padding_x } })));
+	topology.add(eltwise("eltwise", "reorder1", "input2", mode, relu, slope, { format::bfyx,{ 0, 0, output_padding_y, output_padding_x } }));
 
 	network network(engine, topology);
 	network.set_input_data("input1", input1);

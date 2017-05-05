@@ -67,12 +67,8 @@ public:
 
     auto get_selected_impl() const { return selected_impl; }
 
-    auto const& get_dependencies() { return dependencies; }
-    // for const method, add const to stored successors/predecessors
-    auto const& get_dependencies() const { return reinterpret_cast<const std::vector<const program_node*>&>(dependencies); }
-
-    auto& get_dependency(size_t idx) { return *dependencies.at(idx); }
-    auto& get_dependency(size_t idx) const { return static_cast<program_node const&>(*dependencies.at(idx)); }
+    auto const& get_dependencies() const { return dependencies; }
+    auto& get_dependency(size_t idx) const { return *dependencies.at(idx); }
 
     void replace_dependency(size_t idx, program_node& new_dep);
     void replace_dependency(program_node const& old_dep, program_node& new_dep);

@@ -55,7 +55,7 @@ using VVVF = std::vector<VVF<T>>;		// 3d feature map
 template<typename T>
 using VVVVF = std::vector<VVVF<T>>;	// batch of 3d feature maps
 template<typename T>
-using VVVVVF = std::vector<VVVVF<T>>;	// split of oiyx filters
+using VVVVVF = std::vector<VVVVF<T>>;	// split of bfyx filters
 
 template<typename T>
 inline VF<T> flatten_4d(cldnn::format input_format, VVVVF<T> &data) {
@@ -118,7 +118,7 @@ std::vector<std::vector<std::vector<T>>> generate_random_3d(size_t a, size_t b, 
 	return v;
 }
 
-// parameters order is assumed to be bfyx or oiyx
+// parameters order is assumed to be bfyx or bfyx
 template<typename T>
 std::vector<std::vector<std::vector<std::vector<T>>>> generate_random_4d(size_t a, size_t b, size_t c, size_t d, int min, int max) {
 	std::vector<std::vector<std::vector<std::vector<T>>>> v(a);
@@ -127,7 +127,7 @@ std::vector<std::vector<std::vector<std::vector<T>>>> generate_random_4d(size_t 
 	return v;
 }
 
-// parameters order is assumed to be soiyx for filters when split > 1 
+// parameters order is assumed to be sbfyx for filters when split > 1 
 template<typename T>
 std::vector<std::vector<std::vector<std::vector<std::vector<T>>>>> generate_random_5d(size_t a, size_t b, size_t c, size_t d, size_t e, int min, int max) {
 	std::vector<std::vector<std::vector<std::vector<std::vector<T>>>>> v(a);
@@ -373,7 +373,7 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
 	else if (primitive->type == cldnn::reorder::type_id())
 	{
 		auto reorder = static_cast<cldnn::reorder*>(primitive);
-		str << "Output data type: " << cldnn::data_type_traits::name(reorder->output_layout.data_type) << " Output tensor: " << test_param->print_tensor(reorder->output_layout.size) << " Mean: " << reorder->mean << "Subtract per feature: " << "TODO" /*std::vector<float> subtract_per_feature*/;
+		str << "Output data type: " << cldnn::data_type_traits::name(reorder->output_data_type) << " Mean: " << reorder->mean << "Subtract per feature: " << "TODO" /*std::vector<float> subtract_per_feature*/;
 	}
 	else if (primitive->type == cldnn::normalize::type_id())
 	{

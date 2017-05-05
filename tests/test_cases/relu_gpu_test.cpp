@@ -85,12 +85,12 @@ void generic_relu_test(cldnn::format test_input_fmt, int input_b, int input_f, i
 	set_values(input, input_rnd_vec);
 	topology topology(
 		input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout().with_padding({ format::yx, { input_padding_y, input_padding_x } })),
+        reorder("reorder", "input", input.get_layout().with_padding({ format::bfyx, { 0, 0, input_padding_y, input_padding_x } })),
 		activation(
 			"relu",
 			"reorder",
 			slope,
-			{ format::yx,{ output_padding_y, output_padding_x } }));
+			{ format::bfyx,{ 0, 0, output_padding_y, output_padding_x } }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();
@@ -166,7 +166,7 @@ TEST(relu_f32_fw_gpu, basic_yxfb) {
 
 	topology topology(
 		input_layout("input", input.get_layout()),
-		activation( "relu", "input", 0.5, { format::yx,{ 0, 0 } }));
+		activation( "relu", "input", 0.5, { format::bfyx,{ 0, 0, 0, 0 } }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();
@@ -231,8 +231,8 @@ TEST(relu_f32_fw_gpu, basic_input_padding_yxfb) {
 
 	topology topology(
 		input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout().with_padding({ format::yx,{ 2, 1 } })),
-		activation("relu", "reorder", 0.5, { format::yx,{ 0, 0 } }));
+        reorder("reorder", "input", input.get_layout().with_padding({ format::bfyx,{ 0, 0, 2, 1 } })),
+		activation("relu", "reorder", 0.5, { format::bfyx,{ 0, 0, 0, 0 } }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();
@@ -302,7 +302,7 @@ TEST(relu_f32_fw_gpu, basic_output_padding_yxfb) {
 
 	topology topology(
 		input_layout("input", input.get_layout()),
-		activation("relu", "input", 0.5, { format::yx,{ 3, 3 } }));
+		activation("relu", "input", 0.5, { format::bfyx,{ 0, 0, 3, 3 } }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();
@@ -311,12 +311,13 @@ TEST(relu_f32_fw_gpu, basic_output_padding_yxfb) {
 
 	auto output_memory = outputs.at("relu").get_memory();
 	auto output_layout = output_memory.get_layout();
+    auto output_size = output_layout.get_buffer_size();
 	auto output_ptr = output_memory.pointer<float>();
 
-	int y_size = output_layout.size.sizes()[0];
-	int x_size = output_layout.size.sizes()[1];
-	int f_size = output_layout.size.sizes()[2];
-	int b_size = output_layout.size.sizes()[3];
+    int y_size = output_size.spatial[1];
+    int x_size = output_size.spatial[0];
+    int f_size = output_size.feature[0];
+    int b_size = output_size.batch[0];
 	EXPECT_EQ(output_layout.size.format, format::yxfb);
 	EXPECT_EQ(y_size, 10);
 	EXPECT_EQ(x_size, 11);

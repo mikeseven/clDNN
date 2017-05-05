@@ -351,16 +351,15 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
         else if (input_node.type() == reorder::type_id()) //convolution's input is a reorder
         {
             auto reorder_prim = input_node.as<reorder>().typed_desc();
-            auto reoreder_output_layout = input_node.get_output_layout();
+            auto& reorder_input = input_node.get_dependency(0);
             new_input = lo.get_reorder(
-                reoreder_output_layout,
+                reorder_input.get_output_layout(),
                 reorder_prim->id,
                 layout_optimizer::data_type::input,
                 conv_prim).first;
 
             if (new_input) //output format is not optimal
             {
-                auto& reorder_input = input_node.get_dependency(0);
                 auto reorder_input_layout = reorder_input.get_output_layout();
 
                 auto opt_layout = layout(new_input->output_data_type, reorder_input_layout.size.transform(new_input->output_format, 1));

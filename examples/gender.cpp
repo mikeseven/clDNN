@@ -48,8 +48,8 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         reordered_input,
         { conv1_weights },
         { conv1_bias },
-        { format::yx, {1,1} },
-        { format::yx, {0,0} },
+        { format::bfyx, {1,1,1,1} },
+        { format::bfyx, {0,0,0,0} },
 		{ format::bfyx, {1,1,1,1} },
         true);
 
@@ -57,8 +57,8 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         "pool1",
         conv1,
         pooling_mode::max,
-        { format::yx, {3,3} },  // kernel
-        { format::yx, {1,1} }); // strd
+        { format::bfyx, {1,1,3,3} },  // kernel
+        { format::bfyx, {1,1,1,1} }); // strd
 
     auto conv2_weights = file::create({ engine, join_path(weights_dir, "conv2_weights.nnd")});
     auto conv2_bias = file::create({ engine, join_path(weights_dir, "conv2_bias.nnd")});
@@ -67,8 +67,8 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         pool1,
         { conv2_weights },
         { conv2_bias },
-        { format::yx, {1,1} },
-        { format::yx, {0,0} },
+        { format::bfyx, {1,1,1,1} },
+        { format::bfyx, {0,0,0,0} },
 		{ format::bfyx, {1,1,1,1} },
         true);
 
@@ -76,8 +76,8 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         "pool2",
         conv2,
         pooling_mode::max,
-        { format::yx, {3,3} },  // kernel
-        { format::yx, {2,2} }); // strd
+        { format::bfyx, {1,1,3,3} },  // kernel
+        { format::bfyx, {1,1,2,2} }); // strd
 
     auto conv3_weights = file::create({ engine, join_path(weights_dir, "conv3_weights.nnd")});
     auto conv3_bias = file::create({ engine, join_path(weights_dir, "conv3_bias.nnd")});
@@ -86,8 +86,8 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         pool2,
         { conv3_weights },
         { conv3_bias },
-        { format::yx, {1,1} },
-        { format::yx, {0,0} },
+        { format::bfyx, {1,1,1,1} },
+        { format::bfyx, {0,0,0,0} },
 		{ format::bfyx, {1,1,1,1} },
         true);
 
@@ -95,8 +95,8 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         "pool3",
         conv3,
         pooling_mode::max,
-        { format::yx, {3,3} },  // kernel
-        { format::yx, {2,2} }); // strd
+        { format::bfyx, {1,1,3,3} },  // kernel
+        { format::bfyx, {1,1,2,2} }); // strd
 
     auto fc1_g_weights = file::create({ engine, join_path(weights_dir, "fc1_g_weights.nnd")});
     auto fc1_g_bias = file::create({ engine, join_path(weights_dir, "fc1_g_bias.nnd")});

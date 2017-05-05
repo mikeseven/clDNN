@@ -448,7 +448,6 @@ convolution_gpu::kernel_data default_yxio_f16(const convolution_node& arg)
 convolution_gpu::kernel_data default_yxio_f16_b16(const convolution_node& arg)
 {
     auto filter_layout = arg.weights(0).get_output_layout();
-    auto const& filter_buffer_size = filter_layout.get_buffer_size();
 
     auto output_layout = arg.get_output_layout();
     auto const& output_buffer_size = output_layout.get_buffer_size();
@@ -563,8 +562,8 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution_node& a
     // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
     constexpr int sub_group_size = 16;
 
-    const uint32_t of_threads_per_batch = round_up_to(filter_size.batch[0], sub_group_size);
-    kd.leftovers = of_threads_per_batch - filter_size.batch[0];
+    const uint32_t of_threads_per_batch = round_up_to(filter_buffer_size.batch[0], sub_group_size);
+    kd.leftovers = of_threads_per_batch - filter_buffer_size.batch[0];
 
     if (filter_buffer_size.spatial[0] > max_supported_filter_size ||
         filter_buffer_size.spatial[1] > max_supported_filter_size)

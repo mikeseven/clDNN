@@ -593,17 +593,34 @@ struct tensor
         auto new_order = new_fmt.order();
         std::vector<value_type> old_sizes = sizes();
         std::vector<value_type> new_sizes(new_order.size(), default_size);
+        auto tmp = 1;
         for(size_t i = 0; i < old_sizes.size(); i++)
         {
             auto c = val_order[i];
             //skip f and y for the formats that do not have it
             if (((new_fmt == format::bs_xs_xsv8_bsv8) || (new_fmt == format::bs_x_bsv16)) && ((c == 'f') || (c == 'y')))
+            {
+                tmp *= old_sizes[i];
                 continue;
+            }
 
             auto new_pos = new_order.find(c);
             if (new_pos == std::string::npos)
                 throw std::invalid_argument("cannot convert to new format");
             new_sizes[new_pos] = old_sizes[i];
+        }
+        
+        if (tmp != 1)
+        {
+            for (size_t i = 0; i < old_sizes.size(); i++)
+            {
+                auto c = val_order[i];
+                if (c == 'x')
+                {
+                    auto new_pos = new_order.find(c);
+                    new_sizes[new_pos] *= tmp;
+                }
+            }
         }
         return{ new_fmt, default_size, new_sizes };
     }

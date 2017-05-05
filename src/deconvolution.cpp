@@ -128,9 +128,6 @@ deconvolution_inst::typed_primitive_inst(network_impl& network, deconvolution_no
         if (2 != filter_inst.size.spatial.size())
             throw std::runtime_error("Weights have to have 2 dimensions in spatial domain.");
 
-        if (output_size.feature[0] + output_offset.feature[0] > output_inst.size.feature[0]
-            || (output_size.feature[0] / split) > filter_inst.size.batch[0])
-            throw std::runtime_error("Weights/output feature maps number does not match.");
         if ((input_inst.size.feature[0] - input_offset.feature[0]) / split < filter_inst.size.feature[0])
             throw std::runtime_error("Weights/input feature maps number does not match.");
     }

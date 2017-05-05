@@ -50,7 +50,7 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz3x3_wstr1x1_i3x3x1x1_nopad) {
 
     topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
-    topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx, {3,3} }, { format::yx, {1,1} }));
+    topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::bfyx, {1,1,3,3} }, { format::bfyx, {1,1,1,1} }));
 
     network network(engine, topology);
     set_values(input_prim, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f });
@@ -90,7 +90,7 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
 
     topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
-    topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx, { 2,2 } }, { format::yx, { 1,1 } }));
+    topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::bfyx, { 1,1,2,2 } }, { format::bfyx, { 1,1,1,1 } }));
 
     network network(engine, topology);
     set_values(input_prim, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 0.0f, -1.0f, 0.5f });
@@ -134,7 +134,7 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr2x2_i4x4x1x1_nopad) {
 
     topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
-    topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }));
+    topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 1,1,2,2 } }));
 
     network network(engine, topology);
     set_values(input_prim, { -0.25f, 1.00f, 0.50f, 0.25f, 2.00f, 1.50f, -0.50f, -0.75f, 0.00f, -1.00f, 0.50f, 0.25f, 0.50f, -2.00f, -1.50f, -2.50f });
@@ -188,7 +188,7 @@ TEST(pooling_forward_gpu, basic_max_yxfb_f32_wsiz2x2_wstr1x1_i3x3x2x2_nopad) {
 
     topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
-    topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 1,1 } }));
+    topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 1,1,1,1 } }));
 
     network network(engine, topology);
     set_values(input_prim, { -0.5f, 0.5f, -1.5f, 0.0f, 0.5f, 0.0f, -0.5f, 0.5f, 0.0f, -0.5f, 0.0f, -0.5f, 1.0f, -2.0f, 0.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -2.0f, 1.0f, 1.5f, 0.0f, -1.0f, -0.5f, -2.0f, 0.5f, -0.5f, -1.0f, 1.0f, -0.5f, -0.5f, 1.5f, -0.5f, 0.0f });
@@ -238,7 +238,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad)
 
     topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
-    topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx, { -1,-1 } }));
+    topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx, { 0, 0, -1,-1 } }));
 
     network network(engine, topology);
     set_values(input_prim, { 1.50f, -0.50f, -1.00f, 0.50f });
@@ -283,7 +283,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad)
 
     topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
-    topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }));
+    topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 0,0,-1,-1 } }));
 
     network network(engine, topology);
 
@@ -332,7 +332,7 @@ TEST(pooling_forward_gpu, basic_avg_yxfb_f32_wsiz2x2_wstr1x1_i3x3x1x1_nopad) {
 
     topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
-    topology.add(pooling("pool_prim", "input_prim", pooling_mode::average, { format::yx,{ 2,2 } }, { format::yx,{ 1,1 } }));
+    topology.add(pooling("pool_prim", "input_prim", pooling_mode::average, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 1,1,1,1 } }));
 
     network network(engine, topology);
     set_values(input_prim, { -0.5f, 1.0f, 0.5f, 2.0f, 1.5f, -0.5f, 4.0f, -1.0f, 3.5f });
@@ -377,7 +377,7 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad)
 
     topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
-    topology.add(pooling("pool_prim", "input_prim", pooling_mode::average, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }));
+    topology.add(pooling("pool_prim", "input_prim", pooling_mode::average, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 0,0,-1,-1 } }));
 
     network network(engine, topology);
     set_values(input_prim, { 1.5f, -0.5f, -1.0f, 0.5f });
@@ -421,7 +421,7 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad)
 
     topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
-    topology.add(pooling("pool_prim", "input_prim", pooling_mode::average, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }));
+    topology.add(pooling("pool_prim", "input_prim", pooling_mode::average, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 0,0,-1,-1 } }));
 
     network network(engine, topology);
     set_values(input_prim, { 1.5f, -0.5f, 2.5f, -1.0f, 0.5f, 3.0f, 0.5f, 0.0f, -8.0f });
@@ -476,7 +476,7 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i2x2x1x1_out
 
         topology topology;
         topology.add(input_layout("input_prim", input_prim.get_layout()));
-        topology.add(pooling("pool_prim", "input_prim", pooling_mode::average, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }, { format::yx,{ 2,2 } }));
+        topology.add(pooling("pool_prim", "input_prim", pooling_mode::average, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 0,0,-1,-1 } }, { format::bfyx,{ 0,0,2,2 } }));
 
         network network(engine, topology);
         set_values(input_prim, { 1.5f, -0.5f, -1.0f, 0.5f });
@@ -537,7 +537,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_out
 
         topology topology;
         topology.add(input_layout("input_prim", input_prim.get_layout()));
-        topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }, { format::yx,{ 1,1 } }));
+        topology.add(pooling("pool_prim", "input_prim", pooling_mode::max, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 0,0,-1,-1 } }, { format::bfyx,{ 0,0,1,1 } }));
 
         network network(engine, topology);
 
@@ -604,8 +604,8 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i2x2x1x1_inp
 
         topology topology;
         topology.add(input_layout("input_prim", input_prim.get_layout()));
-        topology.add(reorder("reorder", "input_prim", input_prim.get_layout().with_padding({ format::yx, {2,1} })));
-        topology.add(pooling("pool_prim", "reorder", pooling_mode::average, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }, { format::yx,{ 2,2 } }));
+        topology.add(reorder("reorder", "input_prim", input_prim.get_layout().with_padding({ format::bfyx, {0,0,2,1} })));
+        topology.add(pooling("pool_prim", "reorder", pooling_mode::average, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 0,0,-1,-1 } }, { format::bfyx,{ 0,0,2,2 } }));
 
         network network(engine, topology);
         set_values(input_prim, { 1.5f, -0.5f, -1.0f, 0.5f });
@@ -668,8 +668,8 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_inp
 
         topology topology;
         topology.add(input_layout("input_prim", input_prim.get_layout()));
-        topology.add(reorder("reorder", "input_prim", input_prim.get_layout().with_padding({ format::yx,{ 2, 1 } })));
-        topology.add(pooling("pool_prim", "reorder", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }, { format::yx,{ 1,1 } }));
+        topology.add(reorder("reorder", "input_prim", input_prim.get_layout().with_padding({ format::bfyx,{ 0, 0, 2, 1 } })));
+        topology.add(pooling("pool_prim", "reorder", pooling_mode::max, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 0,0,-1,-1 } }, { format::bfyx,{ 0,0,1,1 } }));
 
         network network(engine, topology);
 
@@ -737,8 +737,8 @@ TEST(pooling_forward_gpu, avg_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i2x2x1x1_inpad2x1_ou
 
         topology topology;
         topology.add(input_layout("input_prim", input_prim.get_layout()));
-        topology.add(reorder("reorder", "input_prim", input_prim.get_layout().with_padding({ format::yx,{ 2, 1 } })));
-        topology.add(pooling("pool_prim", "reorder", pooling_mode::average, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ 0,0 } }, { format::yx,{ 2,2 } }));
+        topology.add(reorder("reorder", "input_prim", input_prim.get_layout().with_padding({ format::bfyx,{ 0, 0, 2, 1 } })));
+        topology.add(pooling("pool_prim", "reorder", pooling_mode::average, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 0,0,0,0 } }, { format::bfyx,{ 0,0,2,2 } }));
 
         network network(engine, topology);
         set_values(input_prim, {
@@ -805,8 +805,8 @@ TEST(pooling_forward_gpu, max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_inpad2x1_ou
 
         topology topology;
         topology.add(input_layout("input_prim", input_prim.get_layout()));
-        topology.add(reorder("reorder", "input_prim", input_prim.get_layout().with_padding({ format::yx,{ 2, 1 } })));
-        topology.add(pooling("pool_prim", "reorder", pooling_mode::max, { format::yx,{ 2,2 } }, { format::yx,{ 2,2 } }, { format::yx,{ -1,-1 } }, { format::yx,{ 1,1 } }));
+        topology.add(reorder("reorder", "input_prim", input_prim.get_layout().with_padding({ format::bfyx,{ 0, 0, 2, 1 } })));
+        topology.add(pooling("pool_prim", "reorder", pooling_mode::max, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 1,1,2,2 } }, { format::bfyx,{ 0,0,-1,-1 } }, { format::bfyx,{ 0,0,1,1 } }));
 
         network network(engine, topology);
 

@@ -67,8 +67,8 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
 
         const uint ofm_offset = (global_id * (OFM_PER_WORK_ITEM / batch_num)) % FILTER_OUTPUT_FEATURE_NUM;
 
-        bool finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_OFFSET_SIZE_X
-                   || out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_OFFSET_SIZE_Y;
+        bool finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_PADDING_LOWER_SIZE_X
+                   || out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_PADDING_LOWER_SIZE_Y;
 
         const uint sub_group_id = (uint)get_local_id(0) % INPUT_BATCH_NUM;
 
@@ -214,7 +214,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
         BLOCK_WRITE(output + out_id[0], _data[0]);
         for(uint a = 1; a < X_PER_WORK_ITEM; a++)
         {
-            if(!(out_x + a >= OUTPUT_LIMIT_SIZE_X || out_x + a < OUTPUT_OFFSET_SIZE_X))
+            if(!(out_x + a >= OUTPUT_LIMIT_SIZE_X || out_x + a < OUTPUT_PADDING_LOWER_SIZE_X))
                 BLOCK_WRITE(output + out_id[a], _data[a]);
         }
 

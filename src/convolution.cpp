@@ -53,7 +53,7 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
 		throw std::invalid_argument("Dilation must be positive (>= 1)");
 	if ( (input_layout.size.batch[0] > 1) && (dilation.spatial[0] > 1 || dilation.spatial[1] > 1) )
 		throw std::invalid_argument("Dilation not supported in batch > 1");
-    if (2 * input_offset.spatial[0] >= input_layout.size.spatial[0] || 2 * input_offset.spatial[1] >= input_layout.size.spatial[1])
+    if (2 * input_offset.spatial[0] > input_layout.size.spatial[0] || 2 * input_offset.spatial[1] > input_layout.size.spatial[1])
         throw std::invalid_argument("Input offset is greater than input data range. There is no input data to process");
 
     // NOTE: Using most common calculation.
@@ -157,9 +157,6 @@ convolution_inst::typed_primitive_inst(network_impl& network, convolution_node c
             throw std::runtime_error("Only one-dimensional batch size is supported");
         if (2 != filter_inst.size.spatial.size())
             throw std::runtime_error("Weights have to have 2 dimensions in spatial domain.");
-        if (output_size.feature[0] + output_offset.feature[0] > output_inst.size.feature[0]
-            || (output_size.feature[0] / split) > filter_inst.size.batch[0])
-            throw std::runtime_error("Weights/output feature maps number does not match.");
         if ((input_inst.size.feature[0] - input_offset.feature[0]) / split < filter_inst.size.feature[0])
             throw std::runtime_error("Weights/input feature maps number does not match.");
     }
