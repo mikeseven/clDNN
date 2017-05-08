@@ -76,7 +76,6 @@ public:
 
     //do not modify primitive directly to keep synchronisation wit graph
     std::shared_ptr<const primitive> get_primitive() const { return desc; }
-    //std::string get_primitive_info() const { return desc->type->to_string(*this); } //DELETE THIS
 
     //primitive modification functions
     void set_output_padding(padding const& padd)

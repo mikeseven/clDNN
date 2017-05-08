@@ -205,7 +205,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("print_type", bpo::value<std::uint32_t>()->value_name("<print_type>")->default_value(0),
             "0 = Verbose (default)\n"
             "1 = only print performance results\n"
-            "2 = only print wrong/correct classification - used for broad correctness testing.")
+            "2 = print topology primtives descritpion, print wrong/correct classification - used for broad correctness testing.")
         ("optimize_weights", bpo::bool_switch(),
             "Performs weights convertion to most desirable format for each network layer while building network.")
         ("perf_per_watt", bpo::bool_switch(),
