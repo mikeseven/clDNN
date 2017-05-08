@@ -55,8 +55,11 @@ KERNEL (lrn_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     acc = mad(acc, UNIT_CVT_FUNC(ALPHA_DIV_BY_SIZE), UNIT_CVT_FUNC(K));
     acc = native_powr(acc, -UNIT_CVT_FUNC(BETA));
 
-    output[linear_id] =acc * input[input_id];
+    const uint out_y_offset = OUTPUT_FEATURE_NUM * OUTPUT_BATCH_NUM * OUTPUT_BUFFER_SIZE_X * (OUTPUT_PADDING_UPPER_SIZE_Y + y);
+    const uint out_x_offset = OUTPUT_FEATURE_NUM * OUTPUT_BATCH_NUM * (OUTPUT_PADDING_UPPER_SIZE_X + x);
+    const uint out_bf_offset = feature_id * OUTPUT_BATCH_NUM + batch_id;
+    const uint output_idx = out_y_offset + out_x_offset + out_bf_offset;
+    output[output_idx] =acc * input[input_id];
 }
-
 
 #undef UNIT_CVT_FUNC

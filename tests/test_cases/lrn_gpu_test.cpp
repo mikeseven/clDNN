@@ -28,6 +28,97 @@
 #include <iostream>
 #include "float16.h"
 
+
+TEST(local_response_normalization_gpu_yxfb_output_padding, lrn_test) {
+
+    using namespace cldnn;
+    using namespace tests;
+
+    // test initialization
+
+    // input-output parameters:
+
+    const int32_t x = 2, y = 2, b = 1, f = 7, size = 3;
+
+    const int32_t out_padding_x = 1;
+    const int32_t out_padding_y = 1;
+
+    std::initializer_list<float> input_oracle_init = {
+        -1.0f, -0.5f,  0.0f,  0.5f,  1.0f,  1.5f,  2.0f,    // b=0, x=0, y=0
+        -2.0f, -1.7f, -1.2f, -0.7f, -0.2f,  0.3f,  0.8f,    // b=0, x=1, y=0
+        0.1f,  0.4f,  0.9f,  1.4f,  1.9f,  2.4f,  2.9f,    // b=0, x=0, y=1
+        -10.0f, -8.0f, -7.5f, -7.0f, -6.5f, -6.0f, -5.5f };  // b=0, x=1, y=1
+
+    std::initializer_list<float> output_oracle_init = {
+        0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,
+
+        0,0,0,0,0,0,0,
+        -0.54433f, -0.27217f,  0.00000f,  0.27217f,  0.32366f,  0.30814f,  0.45266f,    // b=0, x=0, y=0
+        -0.42484f, -0.31845f, -0.32025f, -0.30941f, -0.13928f,  0.19550f,  0.53034f,    // b=0, x=1, y=0
+        0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,
+        0.08889f,  0.23964f,  0.32244f,  0.31267f,  0.28876f,  0.26604f,  0.37728f,    // b=0, x=0, y=1
+        -0.21721f, -0.13945f, -0.15913f, -0.16455f, -0.17056f, -0.17725f, -0.23420f, // b=0, x=1, y=1
+        0,0,0,0,0,0,0,
+        
+        0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,
+    };
+
+    // lrn parameters:
+    const float k = 1.0f, alpha = 3.0f, beta = 0.75f;
+
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y, x, f, b } } });
+    cldnn::layout out_layout = cldnn::layout(cldnn::data_types::f32, { format::yxfb, {y + 2 * out_padding_y, x + 2 * out_padding_x, f, b} });
+    auto output_oracle = memory::allocate(engine, out_layout);
+
+    set_values(input, input_oracle_init);
+    set_values(output_oracle, output_oracle_init);
+
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(normalization("lrn", "input", size, k, alpha, beta, cldnn_lrn_norm_region_across_channel, cldnn::padding(), cldnn::padding(cldnn::format::xy, { out_padding_x, out_padding_y })));
+
+    network network(engine, topology);
+
+    network.set_input_data("input", input);
+
+    // ------------------------------------------------------------------------------------------------
+    // test run
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "lrn");
+
+    auto output = outputs.begin()->second.get_memory();
+
+    // analysis of results
+    bool result = true;
+
+    try {
+
+        auto buff = output.pointer<float>();
+        auto buff_oracle = output_oracle.pointer<float>();
+
+        for (size_t i = 0; i < (x + 2 * out_padding_x)*(y + 2 * out_padding_y)*b*f; ++i) {
+            EXPECT_NEAR(buff[i], buff_oracle[i], 1e-04F);
+        }
+    }
+    catch (const std::exception& E) {
+        std::cout << E.what() << std::endl;
+    }
+
+    EXPECT_EQ(true, result);
+    // ------------------------------------------------------------------------------------------------
+    // test clean
+}
+
 TEST(local_response_normalization_gpu, lrn_test) {
 
     using namespace cldnn;

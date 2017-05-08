@@ -96,14 +96,18 @@ struct lrn_gpu : typed_primitive_impl<normalization>
         kd.lws1 = 1;
         kd.lws2 = 1;
 
+        auto& output_padding = arg.get_primitive()->output_padding;
         auto& input_padding = arg.input().get_primitive()->output_padding;
+
         if (arg.get_primitive()->norm_region == cldnn_lrn_norm_region_across_channel)
         {
             // TODO: add half case: b16 (b*f dividable by 128).
             if (!kd.fp16_unit_used &&                        // halfs are not used
                 !input_padding &&                            // optimized kernel_batch8 does not support input padding
                 input_layout.size.batch[0] % 8 == 0 && // batch_num is multiple of 8
-                kd.gws0 % 64 == 0)                           // batch_num * feature_num is multiple of 64
+                kd.gws0 % 64 == 0 &&
+                !input_padding &&
+                !output_padding)                           // batch_num * feature_num is multiple of 64
             {
                 kd.gws0 /= 8;
                 kd.lws0 = 8; // gws0 is dividable by 64, so after correction it will be dividable by 8.
@@ -152,12 +156,15 @@ struct lrn_gpu : typed_primitive_impl<normalization>
         auto input_padding = outer.input().get_primitive()->output_padding;
         auto input_size = outer.input().get_output_layout().size;
 
+        auto output_padding = outer.get_primitive()->output_padding;
+        auto output_size = outer.get_output_layout().size;
+
         int count = input_size.sizes()[0] * input_size.sizes()[1] * input_size.sizes()[2] * input_size.sizes()[3];
 
         gpu::jit_constants mem_consts {
             gpu::make_jit_constant("INPUT",                         input_size),
             gpu::make_jit_constant("COUNT",                         count),
-            gpu::make_jit_constant("OUTPUT",                        outer.get_output_layout().size),
+            gpu::make_jit_constant("OUTPUT",                        output_size),
             gpu::make_jit_constant("P_SIZE",                        size),
             gpu::make_jit_constant("PAD",                           pad),
             gpu::make_jit_constant("ALPHA",                         data.fp16_unit_used ? alpha_sign : alpha),
@@ -174,7 +181,9 @@ struct lrn_gpu : typed_primitive_impl<normalization>
             gpu::make_jit_constant("INPUT_PADDING",                 input_padding),
             gpu::make_jit_constant("OUTPUT_PADDING",                outer.get_primitive()->output_padding),
             gpu::make_jit_constant("INPUT_BUFFER_SIZE_X",           !input_padding ? input_size.spatial[0] : input_size.spatial[0] + input_padding.upper_size().spatial[0] + input_padding.lower_size().spatial[0]),
-            gpu::make_jit_constant("INPUT_BUFFER_SIZE_Y",           !input_padding ? input_size.spatial[1] : input_size.spatial[1] + input_padding.upper_size().spatial[1] + input_padding.lower_size().spatial[1])
+            gpu::make_jit_constant("INPUT_BUFFER_SIZE_Y",           !input_padding ? input_size.spatial[1] : input_size.spatial[1] + input_padding.upper_size().spatial[1] + input_padding.lower_size().spatial[1]),
+            gpu::make_jit_constant("OUTPUT_BUFFER_SIZE_X",          !output_padding ? output_size.spatial[0] : output_size.spatial[0] + output_padding.upper_size().spatial[0] + output_padding.lower_size().spatial[0]),
+            gpu::make_jit_constant("OUTPUT_BUFFER_SIZE_Y",          !output_padding ? output_size.spatial[1] : output_size.spatial[1] + output_padding.upper_size().spatial[1] + output_padding.lower_size().spatial[1]),
         };
 
         return mem_consts;
