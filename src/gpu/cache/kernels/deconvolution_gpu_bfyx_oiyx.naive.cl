@@ -31,7 +31,9 @@ KERNEL(deconvolution_gpu_bfyx_oiyx)(
     const __global UNIT_TYPE* input,
     __global UNIT_TYPE* output,
     const __global UNIT_TYPE* filter,
+#if BIAS_TERM
     const __global UNIT_TYPE* bias,
+#endif
     uint split_idx)
 {
     const int batch_num = INPUT_BATCH_NUM;
@@ -46,7 +48,11 @@ KERNEL(deconvolution_gpu_bfyx_oiyx)(
 
     const int ofm_offset = (global_id / (OUTPUT_SIZE_X * OUTPUT_SIZE_Y * INPUT_FEATURE_NUM)) % FILTER_OUTPUT_FEATURE_NUM;
 
+#if BIAS_TERM
     UNIT_TYPE result = bias[ofm_offset];
+#else
+    UNIT_TYPE result = 0.0f;
+#endif
 
     bool finish = false;
 
