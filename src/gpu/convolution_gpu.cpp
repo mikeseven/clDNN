@@ -320,7 +320,8 @@ convolution_gpu::kernel_data default_yxio_f32_b1(const convolution_node& arg)
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.lws0 = 16;
-    if (filter_layout.size.feature[0] * batch_size % kd.lws0 != 0)
+    if (filter_layout.size.feature[0] * batch_size % kd.lws0 != 0 ||
+        arg.get_primitive()->output_padding)
     {
         kd = default_yxio_f32(arg);
     }
@@ -355,6 +356,11 @@ convolution_gpu::kernel_data default_yxio_f32_b1(const convolution_node& arg)
         kd.kernel_name = kernel_name_yxfb_yxio_b1_block_multiple_x;
 
         kd.gws0 = (filter_layout.size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
+
+        if (kd.gws0 == 0)
+        {
+            kd = default_yxio_f32(arg);
+        }
     }
     return kd;
 }
@@ -385,6 +391,11 @@ convolution_gpu::kernel_data default_yxio_f32_b8(const convolution_node& arg)
         kd.kernel_name = kernel_name_yxfb_yxio_b8;
     
         kd.gws0 = (output_layout.size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
+
+        if (kd.gws0 == 0)
+        {
+            kd = default_yxio_f32(arg);
+        }
     }
     return kd;
 }
@@ -409,6 +420,11 @@ convolution_gpu::kernel_data default_yxio_f32_b32(const convolution_node& arg)
         kd.kernel_name = kernel_name_yxfb_yxio_b16;
 
         kd.gws0 = (output_layout.size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
+
+        if (kd.gws0 == 0)
+        {
+            kd = default_yxio_f32(arg);
+        }
     }
     return kd;
 }
@@ -455,6 +471,11 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution_node& arg)
         kd.gws0 = filter_ofm_num * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item);
         kd.lws0 = min_lws;
         kd.kernel_name = kernel_name_yxfb_yxio_b16_fp16;
+
+        if (kd.gws0 == 0)
+        {
+            kd = default_yxio_f16(arg);
+        }
     }
     else
     {
