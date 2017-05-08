@@ -382,15 +382,6 @@ TEST(DISABLED_convolution_gpu, generic_random) {
 												for (int output_padding_y = 0; output_padding_y <= 1; ++output_padding_y) {
 													for (int output_padding_x = 0; output_padding_x <= 1; ++output_padding_x) {
 														for (int i = 0; i < (int)ARRAY_SIZE(test_formats); i++) {
-															if (test_formats[i].input == format::bfyx)
-															{
-																if ((stride_x != stride_y) ||
-																	((stride_x != 1) && (stride_x != 2) && (stride_x != 4)))
-																{
-																	//Currently not supported.
-																	continue;
-																}
-															}
 															if (test_formats[i].is_fp32) {
 																generic_convolution_test<float>(test_formats[i].input, test_formats[i].filter,
 																	input_b, input_f, input_yx.first, input_yx.second,	// BFYX
