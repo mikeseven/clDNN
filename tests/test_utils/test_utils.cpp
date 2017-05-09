@@ -29,7 +29,7 @@ using namespace cldnn;
 
 namespace tests 
 {
-	generic_test::generic_test() : generic_params(std::get<0>(GetParam())), layer_params(std::get<1>(GetParam()))
+	generic_test::generic_test() : generic_params(std::get<0>(GetParam())), layer_params(std::get<1>(GetParam())), max_ulps_diff_allowed(4)
 	{
 	}
 
@@ -64,6 +64,11 @@ namespace tests
                 return;
             }       
         }
+		if (layer_params->input[0] == "reorder0")
+		{
+			// Add reorder layer with output padding as input to the tested layer.
+			topology.add(reorder("reorder0", "input0", input_mems[0].get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 3, 1 },{ 2, 5 } }));
+		}
         		
 		network network(engine, topology);
 
@@ -126,8 +131,8 @@ namespace tests
 						size_t res_index = get_linear_index(out_layout, b, f, y, x);
 						size_t ref_index = get_linear_index(ref_layout, b, f, y, x);
 
-						EXPECT_TRUE(floating_point_equal(res_data[res_index], ref_data[ref_index]))
-							<< "Expected " << (float)res_data[res_index] << " to be almost equal (within 4 ULP's) to " << (float)ref_data[ref_index] 
+						EXPECT_TRUE(floating_point_equal(res_data[res_index], ref_data[ref_index], max_ulps_diff_allowed))
+							<< "Expected " << (float)res_data[res_index] << " to be almost equal (within " << max_ulps_diff_allowed << " ULP's) to " << (float)ref_data[ref_index]
 							<< " (ref index = " << ref_index << ", B " << b << ", F "<< f << ", Y " << y << ", X " << x << ")!";
 
 						if (HasFailure())

@@ -22,7 +22,6 @@
 #include <api/primitives/reorder.hpp>
 #include <api/primitives/convolution.hpp>
 #include <api/primitives/pooling.hpp>
-#include <api/primitives/normalization.hpp>
 #include <api/primitives/fully_connected.hpp>
 #include <api/primitives/softmax.hpp>
 

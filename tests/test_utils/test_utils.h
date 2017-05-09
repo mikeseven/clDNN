@@ -27,11 +27,12 @@
 #include <api/primitive.hpp>
 #include "float16.h"
 #include "api/primitives/depth_concatenate.hpp"
-#include "api/primitives/normalization.hpp"
+#include "api/primitives/lrn.hpp"
 #include "api/primitives/roi_pooling.hpp"
 #include "api/primitives/scale.hpp"
 #include "api/primitives/softmax.hpp"
 #include "api/primitives/reorder.hpp"
+#include "api/primitives/normalize.hpp"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -319,6 +320,7 @@ protected:
     cldnn::engine engine;
     test_params* generic_params;
     cldnn::primitive* layer_params;
+	int max_ulps_diff_allowed; //Max number of ulps allowed between 2 values when comparing the output buffer and the reference buffer.
     virtual cldnn::memory generate_reference(const std::vector<cldnn::memory>& inputs) = 0;
     // Allows the test to override the random input data that the framework generates
 
@@ -360,9 +362,9 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
         auto dc = static_cast<cldnn::depth_concatenate *>(primitive);
         (void)dc;
     }
-    else if(primitive->type == cldnn::normalization::type_id())
+    else if(primitive->type == cldnn::lrn::type_id())
     {
-        auto lrn = static_cast<cldnn::normalization *>(primitive);
+        auto lrn = static_cast<cldnn::lrn *>(primitive);
         std::string norm_region = (lrn->norm_region == cldnn_lrn_norm_region_across_channel) ? "across channel" : "within channel";
         str << "Norm region: " << norm_region
             << " Size: " << lrn->size
@@ -391,6 +393,12 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
 	{
 		auto reorder = static_cast<cldnn::reorder*>(primitive);
 		str << "Output data type: " << cldnn::data_type_traits::name(reorder->output_layout.data_type) << " Output tensor: " << test_param->print_tensor(reorder->output_layout.size) << " Mean: " << reorder->mean << "Subtract per feature: " << "TODO" /*std::vector<float> substract_per_feature*/;
+	}
+	else if (primitive->type == cldnn::normalize::type_id())
+	{
+		auto normalize = static_cast<cldnn::normalize*>(primitive);
+		std::string norm_region = normalize->across_spatial ? "across_spatial" : "within_spatial";
+		str << "Norm region: " << norm_region << " Epsilon: " << normalize->epsilon << " Scale factor: " << normalize->scale_factor;
 	}
     else
     {

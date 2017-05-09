@@ -16,28 +16,28 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/normalization.hpp"
+#include "api/primitives/lrn.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn
 {
 
-using normalization_node = typed_program_node<normalization>;
+using lrn_node = typed_program_node<lrn>;
 
 template <>
-class typed_primitive_inst<normalization> : public typed_primitive_inst_base<normalization>
+class typed_primitive_inst<lrn> : public typed_primitive_inst_base<lrn>
 {
-    using parent = typed_primitive_inst_base<normalization>;
+    using parent = typed_primitive_inst_base<lrn>;
 
 public:
-    static layout calc_output_layout(normalization_node const& node);
-    static std::string to_string(normalization_node const& node);
+    static layout calc_output_layout(lrn_node const& node);
+	static std::string to_string(lrn_node const& node);
 public:
-    typed_primitive_inst(network_impl& network, normalization_node const& node);
+    typed_primitive_inst(network_impl& network, lrn_node const& node);
 
     const memory& input_memory() const { return dep_memory(0); }
 };
 
-using normalization_inst = typed_primitive_inst<normalization>;
+using lrn_inst = typed_primitive_inst<lrn>;
 
 }

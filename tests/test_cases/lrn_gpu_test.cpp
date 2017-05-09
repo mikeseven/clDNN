@@ -19,7 +19,7 @@
 #include <gtest/gtest.h>
 #include <api/memory.hpp>
 #include <api/primitives/input_layout.hpp>
-#include "api/primitives/normalization.hpp"
+#include "api/primitives/lrn.hpp"
 #include "api/primitives/reorder.hpp"
 #include <api/topology.hpp>
 #include <api/network.hpp>
@@ -84,7 +84,7 @@ TEST(local_response_normalization_gpu_yxfb_output_padding, lrn_test) {
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
-    topology.add(normalization("lrn", "input", size, k, alpha, beta, cldnn_lrn_norm_region_across_channel, cldnn::padding(), cldnn::padding(cldnn::format::xy, { out_padding_x, out_padding_y })));
+    topology.add(lrn("lrn", "input", size, k, alpha, beta, cldnn_lrn_norm_region_across_channel, cldnn::padding(), cldnn::padding(cldnn::format::xy, { out_padding_x, out_padding_y })));
 
     network network(engine, topology);
 
@@ -155,7 +155,7 @@ TEST(local_response_normalization_gpu, lrn_test) {
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
-    topology.add(normalization("lrn", "input", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel));
+    topology.add(lrn("lrn", "input", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel));
 
     network network(engine, topology);
 
@@ -219,7 +219,7 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_across_channel_tes
     topology topology(
         input_layout("input", input.get_layout()),
         reorder("reorder", "input", input.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 0, 2 } }),
-        normalization("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
+        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
         );
     
     network network(engine, topology);
@@ -275,7 +275,7 @@ TEST(local_response_normalization_gpu, lrn_input_padding_bfyx_within_channel_tes
     topology topology(
         input_layout("input", input.get_layout()),
         reorder("reorder", "input", input.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 3, 3 } }),
-        normalization("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_within_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
+        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_within_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
     );
 
     network network(engine, topology);
@@ -331,7 +331,7 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_within_channel_tes
     topology topology(
         input_layout("input", input.get_layout()),
         reorder("reorder", "input", input.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 2, 2 } }),
-        normalization("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_within_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
+        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_within_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
     );
 
     network network(engine, topology);
@@ -387,7 +387,7 @@ TEST(local_response_normalization_gpu, lrn_input_padding_bfyx_across_channel_tes
     topology topology(
         input_layout("input", input.get_layout()),
         reorder("reorder", "input", input.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 2, 2 } }),
-        normalization("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
+        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
     );
 
     network network(engine, topology);
@@ -458,7 +458,7 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_b8_test) {
     topology topology(
         input_layout("input", input.get_layout()),
         reorder("reorder", "input", input.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 0, 2 } }),
-        normalization("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
+        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
     );
 
     network network(engine, topology);
@@ -550,7 +550,7 @@ TEST(local_response_normalization_gpu, lrn_test_batches) {
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
-    topology.add(normalization("lrn", "input", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel));
+    topology.add(lrn("lrn", "input", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel));
 
     network network(engine, topology);
 
@@ -617,7 +617,7 @@ TEST(local_response_normalization_gpu, test_within_channel) {
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
-    topology.add(normalization("lrn", "input", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_within_channel));
+    topology.add(lrn("lrn", "input", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_within_channel));
 
     network network(engine, topology);
 
@@ -680,10 +680,10 @@ public:
 
 		for (auto norm_region : norm_regions)
 		{
-			all_layer_params.push_back(new normalization("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region));
-			all_layer_params.push_back(new normalization("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 13, 6 } }));
-			all_layer_params.push_back(new normalization("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region));
-			all_layer_params.push_back(new normalization("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 5, 11 },{ 19, 0 } }));
+			all_layer_params.push_back(new lrn("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region));
+			all_layer_params.push_back(new lrn("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 13, 6 } }));
+			all_layer_params.push_back(new lrn("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region));
+			all_layer_params.push_back(new lrn("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 5, 11 },{ 19, 0 } }));
 		}
 
 		//The test checks only valid combinations.
@@ -705,7 +705,7 @@ public:
 	template<typename Type>
 	memory generate_reference_typed(const std::vector<cldnn::memory>& inputs)
 	{
-		const cldnn::normalization* lrn = (cldnn::normalization*)layer_params;
+		const cldnn::lrn* lrn = (cldnn::lrn*)layer_params;
 
 		//Output is bfyx
         data_types dt = inputs[0].get_layout().data_type;
@@ -862,7 +862,7 @@ public:
             }
         }
 
-        const auto layer = static_cast<cldnn::normalization *>(v);
+        const auto layer = static_cast<cldnn::lrn *>(v);
         res << (layer->norm_region == cldnn_lrn_norm_region_across_channel ? "_Across" : "_Within")
             << "_Size" << layer->size;
 

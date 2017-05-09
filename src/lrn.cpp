@@ -14,23 +14,23 @@
 // limitations under the License.
 */
 
-#include "normalization_inst.h"
+#include "lrn_inst.h"
 #include "primitive_type_base.h"
 
 namespace cldnn
 {
-primitive_type_id normalization_type_id()
+primitive_type_id lrn_type_id()
 {
-    static primitive_type_base<normalization, normalization_inst> instance;
+    static primitive_type_base<lrn, lrn_inst> instance;
     return &instance;
 }
 
-layout normalization_inst::calc_output_layout(normalization_node const& node)
+layout lrn_inst::calc_output_layout(lrn_node const& node)
 {
     return node.input().get_output_layout();
 }
 
-std::string normalization_inst::to_string(normalization_node const& node)
+std::string lrn_inst::to_string(lrn_node const& node)
 {
     std::stringstream           primitive_description;
     auto desc                   = node.get_primitive();
@@ -41,7 +41,7 @@ std::string normalization_inst::to_string(normalization_node const& node)
     auto beta                   = desc->beta;
     auto norm_region            = desc->norm_region == cldnn_lrn_norm_region::cldnn_lrn_norm_region_across_channel ? "across channel" : "within channel";
 
-    primitive_description << "id: " << desc->id << ", type: normalization" << 
+    primitive_description << "id: " << desc->id << ", type: lrn" << 
         "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
         "\n\tk: "     << k << ", alpha: " << alpha << ", beta: " << beta <<
         "\n\tsize of normalization: " << norm_size << ", normalization region: " << norm_region <<
@@ -52,7 +52,7 @@ std::string normalization_inst::to_string(normalization_node const& node)
     return primitive_description.str();
 }
 
-normalization_inst::typed_primitive_inst(network_impl& network, normalization_node const& desc)
+lrn_inst::typed_primitive_inst(network_impl& network, lrn_node const& desc)
     :parent(network, desc)
 {
     if (argument.size == 0)

@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "normalization.h"
+#include "lrn.h"
 #include "../primitive.hpp"
 
 namespace cldnn
@@ -39,9 +39,9 @@ namespace cldnn
 ///   @li N : number of feature maps
 ///   @li n : size of normalization
 ///   @li k, alpha, beta : hyper parameters (equal to 2, 10e-4, 0.75 in paper).
-struct normalization :public primitive_base<normalization, CLDNN_PRIMITIVE_DESC(normalization)>
+struct lrn :public primitive_base<lrn, CLDNN_PRIMITIVE_DESC(lrn)>
 {
-    CLDNN_DECLATE_PRIMITIVE(normalization)
+    CLDNN_DECLATE_PRIMITIVE(lrn)
 
     /// @brief Constructs LRN primitive.
     /// @param id This primitive id.
@@ -51,7 +51,7 @@ struct normalization :public primitive_base<normalization, CLDNN_PRIMITIVE_DESC(
     /// @param alpha Hyper parameter "alpha".
     /// @param beta Hyper parameter "beta".
     /// @param lrn_norm_region Normalize across or within channel
-    normalization(
+	lrn(
         const primitive_id& id,
         const primitive_id& input,
         uint32_t size,
@@ -71,7 +71,7 @@ struct normalization :public primitive_base<normalization, CLDNN_PRIMITIVE_DESC(
     {}
 
     /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{normalization}
-    normalization(const dto* dto)
+	lrn(const dto* dto)
         : primitive_base(dto)
         , size(dto->size)
         , k(dto->k)

@@ -6,7 +6,7 @@
 #include <include/topology_impl.h>
 #include <iostream>
 #include <api/memory.hpp>
-#include <api/primitives/normalization.hpp>
+#include <api/primitives/lrn.hpp>
 #include <api/primitives/convolution.hpp>
 #include <api/primitives/fully_connected.hpp>
 #include <api/primitives/pooling.hpp>
@@ -168,7 +168,7 @@ protected:
                 float alpha = 0.0001f;
                 float beta = 0.75f;
                 cldnn_lrn_norm_region norm_type = cldnn_lrn_norm_region_across_channel;
-                topology.add(cldnn::normalization(id, input_id, size, k, alpha, beta, norm_type));
+                topology.add(cldnn::lrn(id, input_id, size, k, alpha, beta, norm_type));
                 return true;
             }
         };

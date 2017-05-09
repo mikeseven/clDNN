@@ -15,8 +15,8 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#ifndef NORMALIZATION_H
-#define NORMALIZATION_H
+#ifndef LRN_H
+#define LRN_H
 
 #include "../cldnn.h"
 /// @addtogroup c_api C API
@@ -47,7 +47,7 @@ typedef enum /*:int32_t*/
 ///   @li N : number of feature maps
 ///   @li n : size of normalization
 ///   @li k, alpha, beta : hyper parameters (equal to 2, 10e-4, 0.75 in paper).
-CLDNN_BEGIN_PRIMITIVE_DESC(normalization)
+CLDNN_BEGIN_PRIMITIVE_DESC(lrn)
 /// @brief Size of normalization.
 uint32_t size;
 /// @brief Hyper parameter "k".
@@ -58,9 +58,9 @@ float alpha;
 float beta;
 /// @brief Normalize across or within channel
 cldnn_lrn_norm_region norm_region;
-CLDNN_END_PRIMITIVE_DESC(normalization)
+CLDNN_END_PRIMITIVE_DESC(lrn)
 
-CLDNN_DECLARE_PRIMITIVE_TYPE_ID(normalization);
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(lrn);
 
 #ifdef __cplusplus
 }
@@ -69,5 +69,5 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(normalization);
 /// @}
 /// @}
 /// @}
-#endif /* NORMALIZATION_H */
+#endif /* LRN_H */
 

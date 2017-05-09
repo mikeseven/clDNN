@@ -22,7 +22,7 @@
 #include <api/primitives/reorder.hpp>
 #include <api/primitives/convolution.hpp>
 #include <api/primitives/pooling.hpp>
-#include <api/primitives/normalization.hpp>
+#include <api/primitives/lrn.hpp>
 #include <api/primitives/fully_connected.hpp>
 #include <api/primitives/depth_concatenate.hpp>
 #include <api/primitives/softmax.hpp>
@@ -60,7 +60,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { format::yx, { 2,2 } },  // strd
         { format::yx, { 3,3 } }); // kernel
 
-    auto pool1_norm1 = normalization("pool1_norm1",
+    auto pool1_norm1 = lrn("pool1_norm1",
         pool1_3x3_s2,
         5,
         1.0f,
@@ -90,7 +90,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 		{ format::yx, { 1, 1 } },
         true);
 
-    auto conv2_norm2 = normalization("conv2_norm2",
+    auto conv2_norm2 = lrn("conv2_norm2",
         conv2_3x3,
         5,
         1.0f,

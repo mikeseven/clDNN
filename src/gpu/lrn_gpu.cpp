@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "normalization_inst.h"
+#include "lrn_inst.h"
 #include "kernel.h"
 #include "kd_selector.h"
 #include "implementation_map.h"
@@ -46,9 +46,9 @@ struct kd_default_value_selector<neural::gpu::engine_info_internal::configuratio
 };
 
 
-struct lrn_gpu : typed_primitive_impl<normalization>
+struct lrn_gpu : typed_primitive_impl<lrn>
 {
-    const normalization_node& outer;
+    const lrn_node& outer;
     gpu::engine_info_internal _engine_info;
 
     struct kernel_data
@@ -60,9 +60,9 @@ struct lrn_gpu : typed_primitive_impl<normalization>
     } _kernel_data;
     gpu::kernel _kernel;
 
-    static kd_selector_t<kernel_data, normalization_node, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
+    static kd_selector_t<kernel_data, lrn_node, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
 
-    lrn_gpu(const normalization_node& arg)
+    lrn_gpu(const lrn_node& arg)
         : outer(arg),
         _engine_info(outer.get_program().get_engine()->get_context()->get_engine_info()),
         _kernel_data(ks.get_kernel(
@@ -75,7 +75,7 @@ struct lrn_gpu : typed_primitive_impl<normalization>
         _kernel(outer.get_program().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(outer, _kernel_data), outer.id())
     {}
 
-    static kernel_data set_default(const normalization_node& arg)
+    static kernel_data set_default(const lrn_node& arg)
     {
         auto input_layout = arg.input().get_output_layout();  // input
 
@@ -135,7 +135,7 @@ struct lrn_gpu : typed_primitive_impl<normalization>
         return kd;
     }
 
-    static gpu::jit_constants get_jit_constants(const normalization_node& outer, const kernel_data& data)
+    static gpu::jit_constants get_jit_constants(const lrn_node& outer, const kernel_data& data)
     {
         auto engine_info = outer.get_program().get_engine()->get_context()->get_engine_info();
 
@@ -189,7 +189,7 @@ struct lrn_gpu : typed_primitive_impl<normalization>
         return mem_consts;
     }
 
-    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, normalization_inst& instance) override
+    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, lrn_inst& instance) override
     {
         const auto& kd    = _kernel_data;
 
@@ -201,11 +201,11 @@ struct lrn_gpu : typed_primitive_impl<normalization>
     }
 
 
-    static primitive_impl* create(const normalization_node& arg) { return new lrn_gpu(arg); }
+    static primitive_impl* create(const lrn_node& arg) { return new lrn_gpu(arg); }
 
 };
 
-lrn_gpu::kernel_data default_yxfb(const normalization_node& arg)
+lrn_gpu::kernel_data default_yxfb(const lrn_node& arg)
 {
     if (arg.get_primitive()->norm_region == cldnn_lrn_norm_region_within_channel)
     {
@@ -216,7 +216,7 @@ lrn_gpu::kernel_data default_yxfb(const normalization_node& arg)
     return kd;
 }
 
-lrn_gpu::kernel_data get_kernel_within_channel(const normalization_node& arg, format format)
+lrn_gpu::kernel_data get_kernel_within_channel(const lrn_node& arg, format format)
 {
     lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
 
@@ -242,7 +242,7 @@ lrn_gpu::kernel_data get_kernel_within_channel(const normalization_node& arg, fo
     return kd;
 }
 
-lrn_gpu::kernel_data get_kernel_across_channel(const normalization_node& arg, format format)
+lrn_gpu::kernel_data get_kernel_across_channel(const lrn_node& arg, format format)
 {
     auto input_layout = arg.input().get_output_layout();
     lrn_gpu::kernel_data kd = lrn_gpu::set_default(arg);
@@ -263,7 +263,7 @@ lrn_gpu::kernel_data get_kernel_across_channel(const normalization_node& arg, fo
 }
 
 
-lrn_gpu::kernel_data get_yxfb_lrn_kernel(const normalization_node& arg)
+lrn_gpu::kernel_data get_yxfb_lrn_kernel(const lrn_node& arg)
 {
     switch (arg.get_primitive()->norm_region)
     {
@@ -277,7 +277,7 @@ lrn_gpu::kernel_data get_yxfb_lrn_kernel(const normalization_node& arg)
 }
 
 
-lrn_gpu::kernel_data get_bfyx_lrn_kernel(const normalization_node& arg)
+lrn_gpu::kernel_data get_bfyx_lrn_kernel(const lrn_node& arg)
 {
     switch (arg.get_primitive()->norm_region)
     {
@@ -290,7 +290,7 @@ lrn_gpu::kernel_data get_bfyx_lrn_kernel(const normalization_node& arg)
     }
 }
 
-kd_selector_t<lrn_gpu::kernel_data, normalization_node, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> lrn_gpu::ks = {
+kd_selector_t<lrn_gpu::kernel_data, lrn_node, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> lrn_gpu::ks = {
     { std::make_tuple(data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), get_yxfb_lrn_kernel },
     { std::make_tuple(data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), get_yxfb_lrn_kernel },
     { std::make_tuple(data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), get_bfyx_lrn_kernel },
@@ -301,10 +301,10 @@ kd_selector_t<lrn_gpu::kernel_data, normalization_node, data_types, format::type
 namespace {
     struct attach {
         attach() {
-            implementation_map<normalization>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), lrn_gpu::create);
-            implementation_map<normalization>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), lrn_gpu::create);
-            implementation_map<normalization>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), lrn_gpu::create);
-            implementation_map<normalization>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), lrn_gpu::create);
+            implementation_map<lrn>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), lrn_gpu::create);
+            implementation_map<lrn>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), lrn_gpu::create);
+            implementation_map<lrn>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), lrn_gpu::create);
+            implementation_map<lrn>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), lrn_gpu::create);
         }
         ~attach() {}
     };

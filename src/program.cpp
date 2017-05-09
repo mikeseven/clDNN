@@ -26,7 +26,6 @@
 #include "api/primitives/depth_concatenate.hpp"
 #include "api/primitives/eltwise.hpp"
 #include "api/primitives/input_layout.hpp"
-#include "api/primitives/normalization.hpp"
 #include "api/primitives/pooling.hpp"
 #include "api/primitives/reorder.hpp"
 

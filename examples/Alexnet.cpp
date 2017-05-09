@@ -22,7 +22,7 @@
 #include <api/primitives/reorder.hpp>
 #include <api/primitives/convolution.hpp>
 #include <api/primitives/pooling.hpp>
-#include <api/primitives/normalization.hpp>
+#include <api/primitives/lrn.hpp>
 #include <api/primitives/fully_connected.hpp>
 #include <api/primitives/softmax.hpp>
 
@@ -62,7 +62,7 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         { format::yx, {2,2} }, // strd
         { format::yx, {3,3} }); // kernel
 
-    auto lrn1 = normalization(
+    auto lrn1 = lrn(
         "lrn1",
         pool1,
         5,
@@ -92,7 +92,7 @@ topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engi
         { format::yx, { 2,2 } }, // strd
         { format::yx, { 3,3 } }); // kernel
 
-    auto lrn2 = normalization(
+    auto lrn2 = lrn(
         "lrn2",
         pool2,
         5,
