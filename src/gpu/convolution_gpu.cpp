@@ -573,16 +573,11 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution_node& a
         kd.block_height = 4;
         kd.prefetch = 4;
     }
-    else if (stride.spatial[0] == 4 && stride.spatial[1] == 4)
+    else
     {
         kd.block_width = 4;
         kd.block_height = 3;
         kd.prefetch = 5;
-    }
-    else
-    {
-        // TODO: Implement and use naive bfyx algorithm here.
-        throw std::runtime_error("Unsupported stride (!= 1,2,4) in bfyx convolution");
     }
 
 
