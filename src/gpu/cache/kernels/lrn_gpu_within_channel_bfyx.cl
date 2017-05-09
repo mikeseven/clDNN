@@ -50,7 +50,7 @@ KERNEL (lrn_gpu_within_channel_bfyx)(const __global UNIT_TYPE* input, __global U
         hend = min(hend, INPUT_SIZE_Y);
         wend = min(wend, INPUT_SIZE_X);
         UNIT_TYPE aveval = 0;
-        const uint first_element_offset = INPUT_PADDING_UPPER_SIZE_X + INPUT_BUFFER_SIZE_X * INPUT_PADDING_UPPER_SIZE_Y;
+        const uint first_element_offset = INPUT_PADDING_LOWER_SIZE_X + INPUT_BUFFER_SIZE_X * INPUT_PADDING_LOWER_SIZE_Y;
         __global const UNIT_TYPE* bottom_slice = input + first_index_in_batch + first_element_offset;
         for (int h = hstart; h < hend; ++h)
         {

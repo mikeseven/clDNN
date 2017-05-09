@@ -35,7 +35,7 @@ KERNEL (lrn_gpu_within_channel_yxfb)(const __global UNIT_TYPE* input, __global U
         const uint x = (index / OUTPUT_BATCH_NUM / OUTPUT_FEATURE_NUM) % OUTPUT_SIZE_X;
         const uint y = index / OUTPUT_BATCH_NUM / OUTPUT_FEATURE_NUM / OUTPUT_SIZE_X;
 
-        const uint first_element_offset = INPUT_FEATURE_NUM * INPUT_BATCH_NUM * INPUT_PADDING_UPPER_SIZE_X + INPUT_PADDING_UPPER_SIZE_Y * INPUT_BUFFER_SIZE_X * INPUT_FEATURE_NUM * INPUT_BATCH_NUM;
+        const uint first_element_offset = INPUT_FEATURE_NUM * INPUT_BATCH_NUM * INPUT_PADDING_LOWER_SIZE_X + INPUT_PADDING_LOWER_SIZE_Y * INPUT_BUFFER_SIZE_X * INPUT_FEATURE_NUM * INPUT_BATCH_NUM;
         const uint batch_num = INPUT_BATCH_NUM;
         int input_id = b + batch_num * (fm + INPUT_FEATURE_NUM * ((INPUT_PADDING_LOWER_SIZE_Y + y) * INPUT_BUFFER_SIZE_X + INPUT_PADDING_LOWER_SIZE_X + x));
 

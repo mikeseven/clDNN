@@ -45,7 +45,7 @@ KERNEL (lrn_gpu_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* outpu
     UNIT_TYPE acc = UNIT_VAL_ZERO;
 
     int input_offset_f = f + HELP_INPUT_OFFSET;
-    const uint first_element_index = INPUT_PADDING_UPPER_SIZE_X + INPUT_PADDING_UPPER_SIZE_Y * INPUT_BUFFER_SIZE_X;
+    const uint first_element_index = INPUT_PADDING_LOWER_SIZE_X + INPUT_PADDING_LOWER_SIZE_Y * INPUT_BUFFER_SIZE_X;
     int input_idx = first_element_index + x + INPUT_BUFFER_SIZE_X * (y + INPUT_BUFFER_SIZE_Y * (input_offset_f + INPUT_FEATURE_NUM * b));
 
     for (int i = 0; i < P_SIZE; i++)

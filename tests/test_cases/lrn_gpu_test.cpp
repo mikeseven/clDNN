@@ -678,17 +678,26 @@ public:
 	{
 		std::vector<cldnn_lrn_norm_region> norm_regions = { cldnn_lrn_norm_region_across_channel, cldnn_lrn_norm_region_within_channel };
 
+		//The test checks only valid combinations.
 		for (auto norm_region : norm_regions)
 		{
+			// No padding
 			all_layer_params.push_back(new lrn("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region));
-			all_layer_params.push_back(new lrn("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 13, 6 } }));
 			all_layer_params.push_back(new lrn("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region));
+			
+			// Output padding
+			all_layer_params.push_back(new lrn("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 13, 6 } }));
 			all_layer_params.push_back(new lrn("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 5, 11 },{ 19, 0 } }));
+
+			// Input padding
+			all_layer_params.push_back(new lrn("lrn", "reorder0", 3, 1.f, 5e-05f, 0.75f, norm_region));
+			all_layer_params.push_back(new lrn("lrn", "reorder0", 5, 17.19f, 0.079f, 0.19f, norm_region));
+
+			// Input + Output padding
+			all_layer_params.push_back(new lrn("lrn", "reorder0", 3, 1.f, 5e-05f, 0.75f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 2, 17 } }));
+			all_layer_params.push_back(new lrn("lrn", "reorder0", 5, 17.19f, 0.079f, 0.19f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 3, 1 },{ 6, 9 } }));
 		}
-
-		//The test checks only valid combinations.
-		//TODO: add more combinations.
-
+		
 		return all_layer_params;
 	}
 
@@ -711,7 +720,6 @@ public:
         data_types dt = inputs[0].get_layout().data_type;
 		auto output = memory::allocate( engine, cldnn::layout(dt, inputs[0].get_layout().size.add(lrn->output_padding.lower_size()).add(lrn->output_padding.upper_size()).transform(cldnn::format::bfyx, 0)) );
 
-		// TODO: need to add support for input padding.
 		assert(!lrn->input_padding);
 
 		Type beta = lrn->beta;
