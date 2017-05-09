@@ -35,7 +35,8 @@ void convert_weights(cldnn::data_types dt, cldnn::format::type format, std::stri
             auto mem = file::read({ engine, w.c_str() });
             layout output_layout{
                 dt,
-                mem.get_layout().size.transform(format, 1)
+                mem.get_layout().format,
+                mem.get_layout().size
             };
 
             topology topology(data("input", mem), reorder("reorder", "input", output_layout));

@@ -119,9 +119,9 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
         , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
         , _kernel_data(ks.get_kernel(arg,
             input_layout.data_type,
-            input_layout.size.format,
+            input_layout.format,
             weights_layout.data_type,
-            weights_layout.size.format,
+            weights_layout.format,
             input_layout.size.batch[0],
             _engine_info.architecture,
             _engine_info.configuration))
@@ -131,16 +131,16 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
 
     gpu::jit_constants get_jit_constants() const
     {
-        auto input_offset = outer.get_primitive()->input_offset.transform(input_layout.size.format, 0);
+        auto input_offset = outer.get_primitive()->input_offset;
         auto output_padding = outer.get_output_layout().data_padding;
         auto split = outer.get_primitive()->split();
 
         const int batch_size = output_layout.size.batch[0];
 
         auto input_size = input_layout.size;
-        tensor stride(cldnn::format::bfyx, { 1, 1,
-            std::min(outer.get_primitive()->stride.spatial[1], input_size.spatial[1]),
-            std::min(outer.get_primitive()->stride.spatial[0], input_size.spatial[0])
+        tensor stride({ 1, 1,
+            std::min(outer.get_primitive()->stride.spatial[0], input_size.spatial[0]),
+            std::min(outer.get_primitive()->stride.spatial[1], input_size.spatial[1])
         });
         padding input_padding = outer.input().get_output_layout().data_padding;
 
@@ -167,7 +167,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
 			gpu::make_jit_constant("DILATION",                  outer.get_primitive()->dilation),
         };
 
-        if (weights_layout.size.format == format::yxfb)
+        if (weights_layout.format == format::yxfb)
         {
             const auto local_work_group_size = _kernel_data.lws0;
 
@@ -203,7 +203,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
                 mem_consts.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 8));
         }
 
-        if (input_layout.size.format == format::bfyx)
+        if (input_layout.format == format::bfyx)
         {
             mem_consts.add_constant(gpu::make_jit_constant("SUB_GROUP_SIZE",      _kernel_data.lws2));
             mem_consts.add_constant(gpu::make_jit_constant("OUT_BLOCK_WIDTH",     _kernel_data.block_width));
@@ -281,7 +281,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
 
         assert(arg.get_output_layout().size.feature[0] / arg.get_primitive()->split() == filter_layout.size.batch[0]); // memory::format oixy
         
-        switch (filter_layout.size.format)
+        switch (filter_layout.format)
         {
         case format::bfyx:
         case format::yxfb:
@@ -583,7 +583,7 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution_node& a
         }
         //if less than 16 values is required to compute one single row of output
         //then each WI shall compute one single row to maximize reuse within SIMD subgroup (this gives very nice performance results)
-        else if (output_size.spatial[0] + (filter_size.spatial[0] - 1) * dilation.spatial[0] < sub_group_size)
+        else if (output_size.spatial[0] + (filter_buffer_size.spatial[0] - 1) * dilation.spatial[0] < sub_group_size)
         {
             kd.block_width = output_size.spatial[0];
             kd.block_height = 1;

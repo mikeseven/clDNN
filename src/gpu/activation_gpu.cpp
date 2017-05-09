@@ -66,7 +66,7 @@ struct activation_gpu : typed_primitive_impl<activation>
             --kd.lws0;
         }
 
-        if (input_layout.size.format == cldnn::format::bfyx)
+        if (input_layout.format == cldnn::format::bfyx)
         {
             kd.kernel_name = kernel_name_bfyx;
         }

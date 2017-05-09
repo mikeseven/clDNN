@@ -44,7 +44,7 @@ namespace tests
 
         for (size_t i = 0 ; i < generic_params->input_layouts.size() ; i++)
         {           
-            input_mems.push_back( memory::allocate(engine, { generic_params->data_type, generic_params->input_layouts[i] }) );
+            input_mems.push_back( memory::allocate(engine, { generic_params->data_type, generic_params->fmt, generic_params->input_layouts[i] }) );
             
             if (generic_params->data_type == data_types::f32)
             {
@@ -58,7 +58,7 @@ namespace tests
             std::string layer_name = "input" + std::to_string(i);
             topology.add(input_layout(layer_name, input_mems[i].get_layout()));            
             
-            if (!is_format_supported(generic_params->input_layouts[i].format))
+            if (!is_format_supported(generic_params->fmt))
             {
                 ASSERT_THROW(network bad(engine, topology), std::exception);
                 return;
@@ -105,12 +105,12 @@ namespace tests
 
 		cldnn::format base_fmt = cldnn::format::bfyx;
 
-		EXPECT_EQ(out_layout.size.transform(base_fmt, 1), ref_layout.size.transform(base_fmt, 1));
+		EXPECT_EQ(out_layout.size, ref_layout.size);
 		EXPECT_EQ(out_layout.data_type, ref_layout.data_type);
 		EXPECT_EQ(get_expected_output_tensor(), out_layout.size);
-		EXPECT_EQ(out_layout.size.get_linear_size(), ref_layout.size.get_linear_size());
+		EXPECT_EQ(out_layout.size.get_linear_size(out_layout.format), ref_layout.size.get_linear_size(ref_layout.format));
 
-		auto output_sizes = out_layout.size.transform(base_fmt, 0).sizes();
+		auto output_sizes = out_layout.size.sizes();
 
 		int batch_size = output_sizes[0];
 		int feature_size = output_sizes[1];
@@ -149,42 +149,42 @@ namespace tests
 	size_t generic_test::get_linear_index(const layout & layout, int b, int f, int y, int x)
 	{
 		uint32_t bPitch, fPitch, yPitch, xPitch;
-		switch (layout.size.format)
+		switch (layout.format)
 		{
 			case format::bfyx:
 			{
 				//b=sizes[0], f=sizes[1], y=sizes[2], x=sizes[3]
 				xPitch = 1;
-				yPitch = layout.size.sizes()[3] * xPitch;
-				fPitch = layout.size.sizes()[2] * yPitch;
-				bPitch = layout.size.sizes()[1] * fPitch;
+				yPitch = layout.size.sizes(format::bfyx)[3] * xPitch;
+				fPitch = layout.size.sizes(format::bfyx)[2] * yPitch;
+				bPitch = layout.size.sizes(format::bfyx)[1] * fPitch;
 				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
 			}
 			case format::yxfb:
 			{
 				//y=sizes[0], x=sizes[1], f=sizes[2], b=sizes[3]
 				bPitch = 1;
-				fPitch = layout.size.sizes()[3] * bPitch;
-				xPitch = layout.size.sizes()[2] * fPitch;
-				yPitch = layout.size.sizes()[1] * xPitch;
+				fPitch = layout.size.sizes(format::yxfb)[3] * bPitch;
+				xPitch = layout.size.sizes(format::yxfb)[2] * fPitch;
+				yPitch = layout.size.sizes(format::yxfb)[1] * xPitch;
 				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
 			}
 			case format::fyxb:
 			{
 				//f=sizes[0], y=sizes[1], x=sizes[2], b=sizes[3]
 				bPitch = 1;
-				xPitch = layout.size.sizes()[3] * bPitch;
-				yPitch = layout.size.sizes()[2] * xPitch;
-				fPitch = layout.size.sizes()[1] * yPitch;
+				xPitch = layout.size.sizes(format::fyxb)[3] * bPitch;
+				yPitch = layout.size.sizes(format::fyxb)[2] * xPitch;
+				fPitch = layout.size.sizes(format::fyxb)[1] * yPitch;
 				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
 			}
 			case format::byxf:
 			{
 				//b=sizes[0], y=sizes[1], x=sizes[2], f=sizes[3]
 				fPitch = 1;
-				xPitch = layout.size.sizes()[3] * fPitch;
-				yPitch = layout.size.sizes()[2] * xPitch;
-				bPitch = layout.size.sizes()[1] * yPitch;
+				xPitch = layout.size.sizes(format::byxf)[3] * fPitch;
+				yPitch = layout.size.sizes(format::byxf)[2] * xPitch;
+				bPitch = layout.size.sizes(format::byxf)[1] * yPitch;
 				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
 			}
 			default:
@@ -198,17 +198,17 @@ namespace tests
 	//TODO: is it ok that it assumes flat memory?
     size_t generic_test::get_linear_index_with_broadcast(const layout & in_layout, int b, int f, int y, int x, const layout & out_layout)
 	{
-		assert(in_layout.size.format == out_layout.size.format);	//TODO: won't be needed after sig change. we could support different layouts but there's no need, atm.
+		assert(in_layout.format == out_layout.format);	//TODO: won't be needed after sig change. we could support different layouts but there's no need, atm.
 
-		const auto in0 = in_layout.size.sizes()[0];
-		const auto in1 = in_layout.size.sizes()[1];
-		const auto in2 = in_layout.size.sizes()[2];
-		const auto in3 = in_layout.size.sizes()[3];
+		const auto in0 = in_layout.size.sizes(in_layout.format)[0];
+		const auto in1 = in_layout.size.sizes(in_layout.format)[1];
+		const auto in2 = in_layout.size.sizes(in_layout.format)[2];
+		const auto in3 = in_layout.size.sizes(in_layout.format)[3];
 
-		const auto out0 = out_layout.size.sizes()[0];
-		const auto out1 = out_layout.size.sizes()[1];
-		const auto out2 = out_layout.size.sizes()[2];
-		const auto out3 = out_layout.size.sizes()[3];
+		const auto out0 = out_layout.size.sizes(out_layout.format)[0];
+		const auto out1 = out_layout.size.sizes(out_layout.format)[1];
+		const auto out2 = out_layout.size.sizes(out_layout.format)[2];
+		const auto out3 = out_layout.size.sizes(out_layout.format)[3];
 
 		assert(in0 == 1 || in0 == out0);
 		assert(in1 == 1 || in1 == out1);
@@ -216,7 +216,7 @@ namespace tests
 		assert(in3 == 1 || in3 == out3);
 
 		uint32_t bPitch, fPitch, yPitch, xPitch;
-		switch (in_layout.size.format)
+		switch (in_layout.format)
 		{
 			case format::bfyx:
 			{
@@ -302,10 +302,9 @@ namespace tests
 	std::string test_params::print_tensor(cldnn::tensor t)
 	{
 		std::stringstream str;
-		str << "Format " << format::traits(t.format).order << " sizes [ ";
-		for (size_t i = 0; i < t.sizes().size(); i++)
+		for (size_t i = 0; i < t.sizes(format::bfyx).size(); i++)
 		{
-			str << t.sizes()[i] << " ";
+			str << t.sizes(format::bfyx)[i] << " ";
 		}
 		str << "]";
 		return str.str();
@@ -330,5 +329,5 @@ namespace tests
 	std::vector<cldnn::format> generic_test::test_weight_formats = { cldnn::format::bfyx , cldnn::format::yxfb , cldnn::format::fyxb };
     std::vector<int32_t> generic_test::test_batch_sizes = { 1, 2 };// 4, 8, 16};
     std::vector<int32_t> generic_test::test_feature_sizes = { 1, 2 };// , 3, 15};
-    std::vector<tensor> generic_test::test_input_sizes = { { format::bfyx,{ 1, 1, 100,100 } } ,{ format::bfyx,{ 1, 1, 227,227 } } ,{ format::bfyx,{ 1, 1, 400,600 } } };
+    std::vector<tensor> generic_test::test_input_sizes = { { 1, 1, 100,100 } ,{ 1, 1, 227,227 } ,{ 1, 1, 400,600 } };
 }

@@ -30,17 +30,9 @@ layout depth_concatenate_inst::calc_output_layout(depth_concatenate_node const& 
     auto desc = node.get_primitive();
 
     auto input_layout = node.input(0).get_output_layout();
+    auto input_format = input_layout.format;
     auto result_sizes = input_layout.size.sizes();
-    auto input_format = input_layout.size.format;
-
-    // get indicies of feature coordinates and initialize particular result coordinate to 0
-    auto& format_order = input_format.order();
-    assert(result_sizes.size() == format_order.size());
-    if (input_layout.size.feature.size() != 1)
-        throw std::domain_error("depth_concatenate supports only one feature dimension");
-
-    auto feature_index = format_order.find_first_of(format_traits::feature_chars());
-    assert(feature_index != std::string::npos);
+    auto feature_index = CLDNN_TENSOR_BATCH_DIM_MAX;
 
     // calculate sum of features from all inputs
     result_sizes[feature_index] = 0;
@@ -50,7 +42,7 @@ layout depth_concatenate_inst::calc_output_layout(depth_concatenate_node const& 
         result_sizes[feature_index] += input_sizes[feature_index];
     }
 
-    return layout{ input_layout.data_type,{ input_format, result_sizes } };
+    return layout{ input_layout.data_type, input_format, result_sizes };
 }
 
 std::string depth_concatenate_inst::to_string(depth_concatenate_node const& node)

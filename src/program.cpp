@@ -362,7 +362,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
             {
                 auto reorder_input_layout = reorder_input.get_output_layout();
 
-                auto opt_layout = layout(new_input->output_data_type, reorder_input_layout.size.transform(new_input->output_format, 1));
+                auto opt_layout = layout(new_input->output_data_type, new_input->output_format, reorder_input_layout.size);
                 if (reorder_input_layout == opt_layout) //reorder 'breaks' optimal format
                 {
                     if (reorder_prim->subtract_per_feature.empty() &&
@@ -374,14 +374,14 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                     }
                     else //change reorder's output layout
                     {
-                        reorder_prim->output_format = opt_layout.size.format;
+                        reorder_prim->output_format = opt_layout.format;
                         reorder_prim->output_data_type = opt_layout.data_type;
                         new_input = nullptr;
                     }
                 }
                 else //current reorder gives bad output, simply change it
                 {
-                    reorder_prim->output_format = opt_layout.size.format;
+                    reorder_prim->output_format = opt_layout.format;
                     reorder_prim->output_data_type = opt_layout.data_type;
                     new_input = nullptr;
                 }
@@ -490,7 +490,7 @@ void program_impl::prepare_padding()
         auto conv_layout = node.get_output_layout();
 
         // right now output padding optimization is only available for bfyx format and data type = float32
-        if (conv_layout.size.format != cldnn::format::bfyx)
+        if (conv_layout.format != cldnn::format::bfyx)
         {
             continue;
         }
@@ -505,9 +505,10 @@ void program_impl::prepare_padding()
         auto prev_prim_output_layout = conv_input_node.get_output_layout();
 
         // Compute initial required paddings for primitive used as input for convolution.
-        auto input_offset = conv->input_offset.transform(conv_layout.size.format, 0);
-        auto stride = conv->stride.transform(cldnn::format::bfyx, 0);
-		auto dilation = conv->dilation.transform(cldnn::format::bfyx, 0);
+        auto input_offset = conv->input_offset;
+        auto stride = conv->stride;
+		auto dilation = conv->dilation;
+
 		auto input_limit_x = input_offset.spatial[0] + (conv_layout.size.spatial[0] - 1) * stride.spatial[0] + (filter_layout.size.spatial[0] - 1) * dilation.spatial[0] + 1;
 		auto input_limit_y = input_offset.spatial[1] + (conv_layout.size.spatial[1] - 1) * stride.spatial[1] + (filter_layout.size.spatial[1] - 1) * dilation.spatial[1] + 1;
 
@@ -522,7 +523,7 @@ void program_impl::prepare_padding()
         //    round_up_to(left_padding + prev_prim_output_layout.size.spatial[0] + right_padding, 16));
         //right_padding = needed_buffer_size_x - left_padding - prev_prim_output_layout.size.spatial[0];
 
-        cldnn::padding needed_padding(cldnn::format::bfyx, { 0, 0, left_padding, top_padding }, { 0, 0, right_padding, bottom_padding });
+        cldnn::padding needed_padding({ 0, 0, left_padding, top_padding }, { 0, 0, right_padding, bottom_padding }, 0);
 
         conv_input_node.merge_output_padding(needed_padding);
     }

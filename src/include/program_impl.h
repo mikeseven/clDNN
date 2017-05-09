@@ -164,7 +164,7 @@ protected:
     std::shared_ptr<primitive_impl> selected_impl;
 
     bool valid_output_layout = false;
-    layout output_layout = layout(data_types::f32, tensor());
+    layout output_layout = layout(data_types::f32, format::bfyx, tensor());
 
     std::vector<program_node*> dependencies;
     std::list<program_node*> users;

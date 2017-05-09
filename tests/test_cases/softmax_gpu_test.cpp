@@ -47,7 +47,7 @@ public:
 
     softmax_gpu_xb_f32_test_fixture()
         :engine()
-        ,input(memory::allocate(engine, { data_types::f32, { format::yxfb, { 1, input_x, 1, input_b}}}))
+        ,input(memory::allocate(engine, { data_types::f32, format::yxfb, { input_b, 1, input_x, 1}}))
     {}
 
     void compare_out_buffer_with_expected() {
@@ -193,7 +193,7 @@ TEST(softmax_gpu_bfyx_f32, sum_to_one_per_feature) {
         batch_num = 2, buf_size = x_size*y_size * batch_num * feature_num;
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ batch_num, feature_num, y_size , x_size } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_num, feature_num, x_size , y_size } });
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(softmax("softmax", "input"));
@@ -251,7 +251,7 @@ TEST(softmax_gpu_bfyx_f32, check_max_values_corectness) {
         batch_num = 2, buf_size = x_size*y_size * batch_num * feature_num;
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ batch_num, feature_num, y_size , x_size } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_num, feature_num, x_size , y_size } });
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(softmax("softmax", "input"));
@@ -601,17 +601,17 @@ public:
         const memory & input = inputs[0];
 
         //Output is bfyx
-        auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().size.transform(cldnn::format::bfyx, 0)));
+        auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, cldnn::format::bfyx, input.get_layout().size));
 
 //        const auto params = static_cast<cldnn::softmax *>(layer_parmas);
 
         const auto in0_mem = input.pointer<Type>();
         auto out_mem = output.pointer<Type>();
 
-        const int in0_b = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
-        const int in0_f = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
-        const int in0_h = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
-        const int in0_w = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+        const int in0_b = input.get_layout().size.sizes()[0];
+        const int in0_f = input.get_layout().size.sizes()[1];
+        const int in0_h = input.get_layout().size.sizes()[3];
+        const int in0_w = input.get_layout().size.sizes()[2];
 
 //        const int out_b = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
 //        const int out_f = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
@@ -686,12 +686,12 @@ public:
 
         for (unsigned i = 0; i < p->input_layouts.size(); ++i)
         {
-            const auto chans = format::traits(p->input_layouts[i].format).order;
+            const auto chans = format::traits(p->fmt).order;
 
             res << "_" << "Input" << i;
-            for (unsigned int j = 0; j < p->input_layouts[i].sizes().size(); ++j)
+            for (unsigned int j = 0; j < p->input_layouts[i].sizes(p->fmt).size(); ++j)
             {
-                res << chans[j] << p->input_layouts[i].sizes()[j];
+                res << chans[j] << p->input_layouts[i].sizes(p->fmt)[j];
             }
         }
 

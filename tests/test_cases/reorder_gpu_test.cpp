@@ -60,8 +60,8 @@ TEST(reorder_gpu_f32, basic)
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb, { 2, 2, 2, 2 } } });
-    layout output_layout(data_types::f32, { format::bfyx,{ 2,2,2,2 } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 2, 2 } });
+    layout output_layout(data_types::f32, format::bfyx,{ 2,2,2,2 });
 
     set_values(input, {
         1.f, 0.f,
@@ -146,9 +146,9 @@ TEST(reorder_gpu_f32, basic_subtract) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32, { format::yxfb, { 2, 2, 2, 2 }} });
-    layout output_layout( data_types::f32, {format::bfyx, {2,2,2,2}} );
-    auto subtract = memory::allocate(engine, { data_types::f32, { format::byxf, { 1, 2, 2, 2 } } });
+    auto input = memory::allocate(engine, { data_types::f32,  format::yxfb, { 2, 2, 2, 2 } });
+    layout output_layout( data_types::f32, format::bfyx, {2,2,2,2} );
+    auto subtract = memory::allocate(engine, { data_types::f32, format::byxf, { 1, 2, 2, 2 } });
 
     set_values(input, {
         1.f, 0.f,
@@ -235,8 +235,8 @@ TEST(reorder_gpu_f32, basic_subtract_value) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 2, 2 } } });
-    layout output_layout(data_types::f32, { format::bfyx,{ 2,2,2,2 } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 2, 2 } });
+    layout output_layout(data_types::f32, format::bfyx,{ 2,2,2,2 });
     std::vector<float> subtract_val = { 0.5, 2.5 };
 
     set_values(input, {
@@ -326,9 +326,9 @@ TEST(reorder_gpu_f16, basic_subtract_f32_output_f32) {
         return;
     }
 
-    auto input = memory::allocate(engine, { data_types::f16,{ format::yxfb,{ 2, 2, 2, 2 } } });
-    layout output_layout(data_types::f32, { format::bfyx,{ 2,2,2,2 } });
-    auto subtract = memory::allocate(engine, { data_types::f32, { format::byxf, { 1, 2, 2, 2 } } });
+    auto input = memory::allocate(engine, { data_types::f16, format::yxfb, { 2, 2, 2, 2 } });
+    layout output_layout(data_types::f32, format::bfyx,{ 2,2,2,2 });
+    auto subtract = memory::allocate(engine, { data_types::f32, format::byxf, { 1, 2, 2, 2 } });
 
     set_values(input, {
         half_t(0x3C00), half_t(0x0000), // 1.f, 0.f,
@@ -420,8 +420,8 @@ TEST(reorder_gpu_f16, basic_subtract_value) {
         return;
     }
 
-    auto input = memory::allocate(engine, { data_types::f16,{ format::yxfb,{ 2, 2, 2, 2 } } });
-    layout output_layout(data_types::f16, { format::bfyx,{ 2,2,2,2 } });
+    auto input = memory::allocate(engine, { data_types::f16, format::yxfb, { 2, 2, 2, 2 } });
+    layout output_layout(data_types::f16, format::bfyx,{ 2,2,2,2 });
     std::vector<float> subtract_val = { 0.5, 2.5 };
 
     set_values(input, {
@@ -504,8 +504,8 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
     expected_values[0xF802] = half_t(0x8000);    // -0
     expected_values[0xF803] = half_t(0xFC12);    // A NaN (sample: -NaN.0x12).
 
-    auto input = memory::allocate(engine, { data_types::f16,{ format::yxfb,{ 2, 2, static_cast<int32_t>(expected_values.size()) / 4, 1 } } });
-    layout interm_layout( data_types::f32, { format::byxf, { 1, 2, 2, static_cast<int32_t>(expected_values.size()) / 4 } });
+    auto input = memory::allocate(engine, { data_types::f16, format::yxfb, { 1, static_cast<int32_t>(expected_values.size()) / 4, 2, 2 } });
+    layout interm_layout( data_types::f32, format::byxf, { 1, static_cast<int32_t>(expected_values.size()) / 4, 2, 2 });
     auto output_layout = input.get_layout();
 
     set_values(input, expected_values);
@@ -580,8 +580,8 @@ TEST(DISABLED_reorder_gpu_f32, basic_flatten_yxfb_to_bx)
     auto x_size = 2;
     auto y_size = 2;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    layout output_layout(data_types::f32, { format::bfyx,{ 1,batch_num,1, y_size * x_size * feature_num } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb,{ batch_num, feature_num, x_size, y_size } });
+    layout output_layout(data_types::f32, format::bfyx,{ batch_num, 1, y_size * x_size * feature_num, 1 });
 
     std::vector<float> input_vec = {
         1.f, 0.f,
@@ -648,8 +648,8 @@ TEST(DISABLED_reorder_gpu_f32, basic_flatten_yxfb_to_xb)
     auto x_size = 2;
     auto y_size = 2;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    layout output_layout(data_types::f32, { format::yxfb,{ 1, y_size * x_size * feature_num, 1, batch_num } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb,{ batch_num, feature_num, x_size, y_size } });
+    layout output_layout(data_types::f32, format::yxfb,{ batch_num, 1, y_size * x_size * feature_num, 1 });
 
     std::vector<float> input_vec = {
         1.f, 0.f,
@@ -719,8 +719,8 @@ TEST(DISABLED_reorder_gpu_f32, basic_flatten_bfyx_to_bx)
     auto x_size = 2;
     auto y_size = 2;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ batch_num, feature_num, y_size, x_size } } });
-    layout output_layout(data_types::f32, { format::bfyx,{ batch_num, 1, 1, y_size * x_size * feature_num } });
+    auto input = memory::allocate(engine, { data_types::f32,format::bfyx,{ batch_num, feature_num, x_size, y_size } });
+    layout output_layout(data_types::f32, format::bfyx,{ batch_num, 1, y_size * x_size * feature_num, 1 });
 
     std::vector<float> input_vec = {
         1.f, 2.f,
@@ -780,8 +780,8 @@ TEST(DISABLED_reorder_gpu_f32, basic_flatten_yxfb_to_x)
     auto x_size = 2;
     auto y_size = 2;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    layout output_layout(data_types::f32, { format::yxfb,{ 1, 1, 1, y_size * x_size * feature_num * batch_num } });
+    auto input = memory::allocate(engine, { data_types::f32,format::yxfb,{ batch_num, feature_num, x_size, y_size } });
+    layout output_layout(data_types::f32, format::yxfb,{ 1, 1, y_size * x_size * feature_num * batch_num, 1 });
 
     std::vector<float> input_vec = {
         1.f, 0.f,
@@ -862,7 +862,7 @@ public:
 			{
 				for (auto fmt : generic_test::test_input_formats)
 				{
-					output_layouts.push_back({ dt, input_tensor.transform(fmt, 1) });
+					output_layouts.push_back({ dt, fmt, input_tensor });
 				}
 			}
 			// TODO: check unsupported formats.
@@ -898,12 +898,12 @@ public:
 		assert(mean == "");
 		assert(subtract_per_feature.size() == 0);
 		
-		auto output = memory::allocate(engine, cldnn::layout(reorder->output_data_type, inputs[0].get_layout().size));
+		auto output = memory::allocate(engine, cldnn::layout(reorder->output_data_type, inputs[0].get_layout().format, inputs[0].get_layout().size));
 
 		cldnn::pointer<InputType> input_mem = inputs[0].pointer<InputType>();
 		cldnn::pointer<OutputType> output_mem = output.pointer<OutputType>();
 
-		for (size_t i = 0; i < inputs[0].get_layout().size.get_linear_size(); i++)
+		for (size_t i = 0; i < inputs[0].get_layout().size.get_linear_size(inputs[0].get_layout().format); i++)
 		{
 			// Write the output in the same order as the input with type conversion as needed.
 			// The correct order will be checked in generic_test::compare_buffers.

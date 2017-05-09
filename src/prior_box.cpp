@@ -43,7 +43,7 @@ layout prior_box_inst::calc_output_layout(prior_box_node const& node)
     // 2 features. First feature stores the mean of each prior coordinate.
     // Second feature stores the variance of each prior coordinate.
 
-    return{ input_layout.data_type, cldnn::tensor(cldnn::format::bfyx,{ 1, 2, layer_width * layer_height * num_priors * 4, 1 }) };
+    return{ input_layout.data_type, cldnn::format::bfyx, cldnn::tensor( { 1, 2, 1, layer_width * layer_height * num_priors * 4 }) };
 }
 
 std::string vector_to_string(std::vector<float> vec)
@@ -85,9 +85,6 @@ std::string vector_to_string(std::vector<float> vec)
 	}
 	if ((argument.step_height < 0) || (argument.step_width < 0)) {
 		throw std::runtime_error("Step dimensions must be positive.");
-	}
-	if (argument.img_size.format != format::bfyx) {
-		throw std::runtime_error("Image size format should be format::bfyx.");
 	}
     if (argument.img_size.batch[0] != 1) {
         throw std::runtime_error("Image size batch size needs to be 1.");

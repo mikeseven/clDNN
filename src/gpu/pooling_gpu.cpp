@@ -69,7 +69,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         _kernel_data(ks.get_kernel(
             outer,
             outer.input().get_output_layout().data_type,
-            outer.input().get_output_layout().size.format,
+            outer.input().get_output_layout().format,
             outer.input().get_output_layout().size.batch[0],
             _engine_info.architecture,
             _engine_info.configuration)),
@@ -121,7 +121,8 @@ struct pooling_gpu : typed_primitive_impl<pooling>
     static bool needs_boundary_check(const pooling_node& outer)
     {
         auto input_buffer_size = outer.input().get_output_layout().get_buffer_size();
-        auto input_offset = outer.get_primitive()->input_offset.transform(input_buffer_size.format, 0);
+        auto input_format = outer.input().get_output_layout().format;
+        auto input_offset = outer.get_primitive()->input_offset;
         
         if (input_offset.spatial[0] || input_offset.spatial[1])
             return true;
@@ -180,24 +181,30 @@ struct pooling_gpu : typed_primitive_impl<pooling>
     static primitive_impl* create(const pooling_node& arg)
     {
         auto const& input_buffer_size = arg.input().get_output_layout().get_buffer_size();
+        auto const& input_dimensions = input_buffer_size.batch.size() + input_buffer_size.feature.size() + input_buffer_size.spatial.size();
         auto const& output_buffer_size = arg.get_output_layout().get_buffer_size();
+        auto const& output_dimensions = output_buffer_size.batch.size() + output_buffer_size.feature.size() + output_buffer_size.spatial.size();
+        auto const& input_format = arg.input().get_output_layout().format;
+        auto const& output_format = arg.get_output_layout().format;
         auto& stride = arg.get_primitive()->stride;
+        auto const& stride_dimensions = stride.batch.size() + stride.feature.size() + stride.spatial.size();
         auto& window = arg.get_primitive()->size;
+        auto const& window_dimensions = window.batch.size() + window.feature.size() + window.spatial.size();
         const auto padding = arg.get_output_layout().data_padding.filling_value();
 
         if (padding != 0.0f) 
             throw std::logic_error("Pooling supports only zero padding.");
 
-        if (input_buffer_size.raw.size() != output_buffer_size.raw.size())
+        if (input_dimensions != output_dimensions)
             throw std::invalid_argument("Pooling input/output number of dimension does not match.");
 
-        if (stride.raw.size() != output_buffer_size.raw.size())
+        if (stride_dimensions != output_dimensions)
             throw std::invalid_argument("Pooling stride/output number of dimension does not match.");
 
-        if (window.raw.size() != output_buffer_size.raw.size())
+        if (window_dimensions != output_dimensions)
             throw std::invalid_argument("Pooling window_size/output number of dimension does not match.");
 
-        if (input_buffer_size.format != output_buffer_size.format)
+        if (input_format != output_format)
             throw std::invalid_argument("Pooling input/output data format does not match.");
         
         return new pooling_gpu(arg);

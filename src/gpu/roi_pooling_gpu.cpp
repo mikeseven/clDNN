@@ -62,7 +62,7 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
         _kernel_data(ks.get_kernel(
             outer,
             outer.input().get_output_layout().data_type,
-            outer.input().get_output_layout().size.format,
+            outer.input().get_output_layout().format,
             outer.input().get_output_layout().size.batch[0],
             _engine_info.architecture,
             _engine_info.configuration)),
@@ -144,7 +144,7 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
             throw std::logic_error("ROI pooling supports only zero padding.");
         }
 
-        if (input_arg.size.format != output_arg.size.format) {
+        if (input_arg.format != output_arg.format) {
             throw std::invalid_argument("ROI pooling input/output data format does not match.");
         }
         

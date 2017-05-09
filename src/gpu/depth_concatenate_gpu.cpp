@@ -75,7 +75,7 @@ struct depth_concatenate_gpu : typed_primitive_impl<depth_concatenate>
         for (auto input_idx = 0; input_idx < inputs_count; ++input_idx)
         {
             auto input_layout = outer.input(input_idx).get_output_layout();
-            auto data = ks.get_kernel(std::make_pair(input_idx, std::cref(outer)), input_layout.data_type, input_layout.size.format, input_layout.size.batch[0], _engine_info.architecture, _engine_info.configuration);//set_kernel_data(/*input_idx,*/ _outer/*, engine_info*/);
+            auto data = ks.get_kernel(std::make_pair(input_idx, std::cref(outer)), input_layout.data_type, input_layout.format, input_layout.size.batch[0], _engine_info.architecture, _engine_info.configuration);//set_kernel_data(/*input_idx,*/ _outer/*, engine_info*/);
             gpu::kernel kernel(context, data.kernel_name, get_jit_constants(input_idx, data), outer.id());
 
             _kernels_with_data.emplace_back(std::move(kernel), std::move(data));

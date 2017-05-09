@@ -55,7 +55,7 @@ struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
         pooling_mode mode,
         const tensor& size,
         const tensor& stride,
-        const tensor& input_offset = tensor(format::bfyx, 0, { 0,0,0,0 }),
+        const tensor& input_offset = { 0,0,0,0 },
         const padding& output_padding = padding()
         )
         : primitive_base(id, {input}, output_padding)

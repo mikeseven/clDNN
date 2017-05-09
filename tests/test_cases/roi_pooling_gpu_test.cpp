@@ -81,15 +81,15 @@ TestRunner<Dtype>::TestRunner(
         int pooled_width,
                        int pooled_height,
                        float spatial_scale) :
-                            _data_layout(cldnn::type_to_data_type<Dtype>::value, { format::bfyx, { 1, channels, height, width } } ),
-                            _rois_layout(cldnn::type_to_data_type<Dtype>::value, { format::bfyx, { num_rois, 1, 1, CLDNN_ROI_VECTOR_SIZE } }),
+                            _data_layout(cldnn::type_to_data_type<Dtype>::value, format::bfyx, { 1, channels, width, height } ),
+                            _rois_layout(cldnn::type_to_data_type<Dtype>::value, format::bfyx, { num_rois, 1, CLDNN_ROI_VECTOR_SIZE, 1 }),
                             _test_layer(roi_pooling( layer_name, 
                                     data_name, 
                                     rois_name,
                                     pooled_width,
                                     pooled_height,
                                     spatial_scale,
-                                    padding()))
+                                    { { 0, 0, 0, 0 }, 0 }))
 {    
     _topology.add(input_layout(data_name, _data_layout));
     _topology.add(input_layout(rois_name, _rois_layout));
@@ -255,8 +255,8 @@ public:
                                 test_params* tp = new test_params();
 
                                 tp->data_type = data_type;
-                                tp->input_layouts.push_back(cldnn::tensor(fmt,{batch_size, feature_size, input_size.spatial[1], input_size.spatial[0]}));
-                                tp->input_layouts.push_back(cldnn::tensor(cldnn::format::bfyx,{num_rois, 1, 1, CLDNN_ROI_VECTOR_SIZE}));
+                                tp->input_layouts.push_back(cldnn::tensor({batch_size, feature_size, input_size.spatial[0], input_size.spatial[1]}));
+                                tp->input_layouts.push_back(cldnn::tensor({num_rois, 1, CLDNN_ROI_VECTOR_SIZE, 1}));
 
                                 all_generic_params.push_back(tp);
                             }
@@ -292,7 +292,7 @@ public:
                     test_cases[i].pooled_width,
                     test_cases[i].pooled_height,
                     spatial_scale,
-                    padding()));
+                    { { 0, 0, 0, 0}, 0 }));
         }
 
         return all_layer_params;
@@ -348,12 +348,12 @@ public:
 
         for (unsigned i = 0; i < p->input_layouts.size(); ++i)
         {
-            const auto chans = format::traits(p->input_layouts[i].format).order;
+            const auto chans = format::traits(p->fmt).order;
 
             res << "_" << "Input" << i;
-            for (unsigned int j = 0; j < p->input_layouts[i].sizes().size(); ++j)
+            for (unsigned int j = 0; j < p->input_layouts[i].sizes(p->fmt).size(); ++j)
             {
-                res << chans[j] << p->input_layouts[i].sizes()[j];
+                res << chans[j] << p->input_layouts[i].sizes(p->fmt)[j];
             }
         }
 
@@ -385,7 +385,7 @@ private:
     memory generate_reference_typed(const std::vector<cldnn::memory>& inputs) 
     {
         data_types dt = inputs[0].get_layout().data_type;
-        auto output = memory::allocate(engine, cldnn::layout(dt, get_output_layout().transform(cldnn::format::bfyx, 0)));
+        auto output = memory::allocate(engine, cldnn::layout(dt, cldnn::format::bfyx, get_output_layout()));
 
         const cldnn::roi_pooling* roi_layer = (cldnn::roi_pooling*)layer_params;
         int pooled_width = (*roi_layer).pooled_width;
@@ -540,7 +540,7 @@ private:
         
         int fm = generic_params->input_layouts[0].feature[0];
         int num_rois = generic_params->input_layouts[1].batch[0];
-        cldnn::tensor output_layout = { format::bfyx, { num_rois, fm, roi_pooling->pooled_height, roi_pooling->pooled_width }};
+        cldnn::tensor output_layout = { num_rois, fm, roi_pooling->pooled_width, roi_pooling->pooled_height };
         return output_layout;
     }
 

@@ -137,13 +137,12 @@ cldnn::memory read_file(std::ifstream &rfile, file_header &file_head, const cldn
     {
         auto a = array[0], b = array[1], c = array[2];
         p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
-        { cldnn::format::bfyx,
+        cldnn::format::bfyx,
         {
             static_cast<cldnn::tensor::value_type>(1),
             static_cast<cldnn::tensor::value_type>(c),
-            static_cast<cldnn::tensor::value_type>(b),
-            static_cast<cldnn::tensor::value_type>(a)
-        }
+            static_cast<cldnn::tensor::value_type>(a),
+            static_cast<cldnn::tensor::value_type>(b)
         }));
     }
     else
@@ -154,26 +153,23 @@ cldnn::memory read_file(std::ifstream &rfile, file_header &file_head, const cldn
         {
             if (array.size() == 1)
             {
-                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, { cldnn::format::bfyx, { 1, 1, 1, static_cast<cldnn::tensor::value_type>(array[0]) } }));
+                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, format, { 1, 1, static_cast<cldnn::tensor::value_type>(array[0]), 1 }));
             }
             else if (array.size() == 2)
             {
-                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, { cldnn::format::bfyx,
+                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, format,
                 {
-                    static_cast<cldnn::tensor::value_type>(array[1]), 1, 1,
-                    static_cast<cldnn::tensor::value_type>(array[0])
-                }
+                    static_cast<cldnn::tensor::value_type>(array[1]), 1,
+                    static_cast<cldnn::tensor::value_type>(array[0]), 1
                 }));
             }
             else
             {
-                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type,
-                { cldnn::format::bfyx,
+                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, format,
                 {
                     static_cast<cldnn::tensor::value_type>(array[3]), // batches
                     static_cast<cldnn::tensor::value_type>(array[2]), // feature maps
-                    static_cast<cldnn::tensor::value_type>(array[1]), static_cast<cldnn::tensor::value_type>(array[0])  // kernel spatials y, x
-                }
+                    static_cast<cldnn::tensor::value_type>(array[0]), static_cast<cldnn::tensor::value_type>(array[1])  // kernel spatials y, x
                 }));
             }
             break;
@@ -185,25 +181,25 @@ cldnn::memory read_file(std::ifstream &rfile, file_header &file_head, const cldn
         {
             if (array.size() == 2)
             {
-                auto size = cldnn::tensor(cldnn::format::byxf,
+                auto size = cldnn::tensor(
                 {
                     static_cast<cldnn::tensor::value_type>(array[0]), // batch
                     1, static_cast<cldnn::tensor::value_type>(array[1]),
                     1,
                 }
-                ).transform(format, 1);
-                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, size));
+                );
+                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, format, size));
             }
             else
             {
-                auto size = cldnn::tensor(cldnn::format::byxf,
+                auto size = cldnn::tensor(
                 {
                     static_cast<cldnn::tensor::value_type>(array[0]), // batch
-                    static_cast<cldnn::tensor::value_type>(array[3]), static_cast<cldnn::tensor::value_type>(array[2]),  // kernel spatials y, x
-                    static_cast<cldnn::tensor::value_type>(array[1]), // fm
+                    static_cast<cldnn::tensor::value_type>(array[1]),
+                    static_cast<cldnn::tensor::value_type>(array[2]), static_cast<cldnn::tensor::value_type>(array[3]),  // kernel spatials y, x
                 }
-                ).transform(format, 1);
-                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, size));
+                );
+                p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, format, size));
             }
             break;
         }

@@ -253,18 +253,21 @@ class test_params
 {
 public:
     
-    test_params()
+    test_params() :
+        fmt(cldnn::format::bfyx)
     {        
     }
 
     test_params(cldnn::data_types dt, cldnn::format input_format, int32_t batch_size, int32_t feature_size, cldnn::tensor input_size) :
-        data_type(dt) 
+        data_type(dt),
+        fmt(input_format)
 	{
-		cldnn::tensor t = cldnn::tensor(cldnn::format::bfyx, { batch_size, feature_size, input_size.spatial[1],  input_size.spatial[0] } );
-		input_layouts.push_back( t.transform(cldnn::format(input_format), 1));
+		cldnn::tensor t = cldnn::tensor({ batch_size, feature_size, input_size.spatial[0],  input_size.spatial[1] } );
+		input_layouts.push_back( t );
 	}
 
     cldnn::data_types data_type;
+    cldnn::format fmt;
     std::vector<cldnn::tensor> input_layouts;            
 
     void * opaque_custom_param = nullptr;

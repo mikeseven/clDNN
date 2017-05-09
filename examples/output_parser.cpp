@@ -22,7 +22,7 @@ std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memo
     bool needs_data_type_conversion = mem_layout.data_type != cldnn::data_types::f32;
 
     bool needs_format_conversion = true;
-    switch (mem_layout.size.format)
+    switch (mem_layout.format)
     {
     case cldnn::format::bfyx:
         needs_format_conversion = true;
@@ -53,7 +53,7 @@ std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memo
 
         if (needs_format_conversion)
         {
-            mem_layout.size = mem_layout.size.transform(cldnn::format::yxfb, 1);
+            mem_layout.format = cldnn::format::yxfb;
             cldnn::reorder format_reorder("format_reorder", curr_id, mem_layout);
             topology.add(format_reorder);
             curr_id = format_reorder.id;

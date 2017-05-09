@@ -33,9 +33,9 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
     auto input_layout = node.input().get_output_layout();
     auto weights_layout = node.weights(0).get_output_layout(); //weights are stored after inputs
 
-    auto input_offset = desc->input_offset.transform(input_layout.size.format, 0);
-    auto strd = desc->stride.transform(format::bfyx, 0);
-	auto dilation = desc->dilation.transform(format::bfyx, 0);
+    auto input_offset = desc->input_offset;
+    auto strd = desc->stride;
+	auto dilation = desc->dilation;
     auto split = desc->weights.size();
 
     // compute how many outputs in rows and columns will be generate by filter. 
@@ -44,7 +44,7 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
     if (kernel_xy.size() != 2)
         throw std::runtime_error("Weights have to have 2 dimensions in spatial domain.");
 
-	tensor kernel_extent = { format::bfyx, 0, { 1, 1, dilation.spatial[1] * (kernel_xy[1] - 1) + 1, dilation.spatial[0] * (kernel_xy[0] - 1) + 1 } };
+	tensor kernel_extent = { 1, 1, dilation.spatial[0] * (kernel_xy[0] - 1) + 1, dilation.spatial[1] * (kernel_xy[1] - 1) + 1 };
 
     // TODO: Consider moving general parameter verification to arguments constructor.
     if (strd.spatial[0] <= 0 || strd.spatial[1] <= 0)
@@ -86,11 +86,9 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
     // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
     auto number_of_features = weights_layout.size.batch[0] * static_cast<int32_t>(split);
 
-    tensor output_size(format::yxfb, {
-        output_spatial_y, output_spatial_x, number_of_features, input_layout.size.batch[0] }
-    );
+    tensor output_size({ input_layout.size.batch[0], number_of_features, output_spatial_x, output_spatial_y });
 
-    auto result = layout({ input_layout.data_type, output_size.transform(input_layout.size.format, 1) });
+    auto result = layout({ input_layout.data_type, input_layout.format, output_size });
     return result;
 }
 
@@ -143,7 +141,7 @@ convolution_inst::typed_primitive_inst(network_impl& network, convolution_node c
                 throw std::runtime_error("Biases/output feature maps number does not match.");
         }
 
-        auto input_offset = argument.input_offset.transform(input_inst.size.format, 0);
+        auto input_offset = argument.input_offset;
 
         if (filter_inst.size.raw.size() != output_inst.size.raw.size())
             throw std::runtime_error("Weights number of dimensions do not match output number of dimensions.");

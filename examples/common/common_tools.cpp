@@ -267,7 +267,7 @@ void load_images_from_file_list(
 
     auto dim = memory_layout.size.spatial;
 
-    if(memory_layout.size.format != cldnn::format::byxf) throw std::runtime_error("Only bfyx format is supported as input to images from files");
+    if(memory_layout.format != cldnn::format::byxf) throw std::runtime_error("Only bfyx format is supported as input to images from files");
 
     if(!cldnn::data_type_match<MemElemTy>(memory_layout.data_type))
         throw std::runtime_error("Memory format expects different type of elements than specified");
@@ -594,7 +594,7 @@ void run_topology(const execution_params &ep)
         std::cout << "Extended testing of " << ep.topology_name << std::endl;
     }
     cldnn::instrumentation::timer<> timer_build;
-    cldnn::layout input_layout = { ep.use_half ? cldnn::data_types::f16 : cldnn::data_types::f32, {} };
+    cldnn::layout input_layout = { ep.use_half ? cldnn::data_types::f16 : cldnn::data_types::f32, cldnn::format::byxf, {} };
     if (ep.topology_name == "alexnet")
         primitives = build_alexnet(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "vgg16" || ep.topology_name == "vgg16_face")
@@ -621,7 +621,7 @@ void run_topology(const execution_params &ep)
     auto input = cldnn::memory::allocate(engine, input_layout);
     //TODO check if we can define the 'empty' memory
     float zero = 0;
-    cldnn::layout zero_layout( cldnn::data_types::f32, {cldnn::format::bfyx, {1,1,1,1}} );
+    cldnn::layout zero_layout( cldnn::data_types::f32, cldnn::format::bfyx, {1,1,1,1} );
     auto output = cldnn::memory::attach(zero_layout, &zero, 1);
 
     if (ep.topology_name != "microbench")

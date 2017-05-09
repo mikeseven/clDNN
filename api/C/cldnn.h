@@ -216,7 +216,6 @@ typedef enum /*:int32_t*/
 /// @brief N-dimensional vector. Mostly used to represent memory size.
 typedef struct
 {
-    int32_t format; /*cldnn_format_type*/
     size_t batch_num;
     size_t feature_num;
     size_t spatial_num;
@@ -245,6 +244,7 @@ typedef enum /*:size_t*/
 typedef struct
 {
     size_t data_type;       ///< data type (@ref cldnn_data_type) stored in memory.
+    int32_t format;
     cldnn_tensor size;      ///< N-dimensional vector describes size (in elements) of memory (excluding padding).
     cldnn_padding padding;  ///< Explicitly added padding to memory buffer.
 } cldnn_layout;

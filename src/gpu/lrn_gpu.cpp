@@ -68,7 +68,7 @@ struct lrn_gpu : typed_primitive_impl<lrn>
         _kernel_data(ks.get_kernel(
             outer,
             outer.input().get_output_layout().data_type,
-            outer.input().get_output_layout().size.format,
+            outer.input().get_output_layout().format,
             outer.input().get_output_layout().size.batch[0],
             _engine_info.architecture,
             _engine_info.configuration)),

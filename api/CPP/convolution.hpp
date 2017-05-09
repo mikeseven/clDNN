@@ -53,12 +53,12 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         const primitive_id& input,
         const std::vector<primitive_id>& weights,
         const std::vector<primitive_id>& bias,
-        tensor stride = { format::bfyx, 0, { 1, 1, 1, 1 } },
-        tensor input_offset = { format::bfyx, { 0,0,0,0 } },
-		tensor dilation = { format::bfyx, 0, { 1, 1, 1, 1 } },
+        tensor stride = { 1, 1, 1, 1 },
+        tensor input_offset = { 0,0,0,0 },
+		tensor dilation = { 1, 1, 1, 1 },
         bool with_activation = false,
         float activation_slp = 0.0f,
-        const padding& output_padding = { format::bfyx, { 0,0,0,0 } }
+        const padding& output_padding = padding()
     )
         :primitive_base(id, { input }, output_padding)
         , weights(_weights.cpp_ids)
@@ -90,12 +90,12 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         const primitive_id& id,
         const primitive_id& input,
         const std::vector<primitive_id>& weights,
-        tensor stride = { format::bfyx, 0,{ 1, 1, 1, 1 } },
-        tensor input_offset = { format::bfyx,{ 0,0,0,0 } },
-		tensor dilation = { format::bfyx, 0,{ 1, 1, 1, 1 } },
+        tensor stride = { 1, 1, 1, 1 },
+        tensor input_offset = { 0,0,0,0 },
+		tensor dilation = { 1, 1, 1, 1 },
         bool with_activation = false,
         float activation_slp = 0.0f,
-        const padding& output_padding = { format::bfyx,{ 0,0,0,0 } }
+        const padding& output_padding = padding()
     )
         :primitive_base(id, { input }, output_padding)
         , weights(_weights.cpp_ids)

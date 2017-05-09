@@ -475,7 +475,7 @@ cldnn_memory cldnn_allocate_memory(cldnn_engine engine, cldnn_layout layout, cld
     return exception_handler<cldnn_memory>(CLDNN_ERROR, status, nullptr, [&]()
     {
         SHOULD_NOT_BE_NULL(engine, "Engine");
-        if (layout.size.format < cldnn_format_any || layout.size.format >= cldnn_format_format_num)
+        if (layout.format < cldnn_format_any || layout.format >= cldnn_format_format_num)
             throw std::invalid_argument("Unknown format of layout.");
         if (layout.data_type != cldnn_data_type::cldnn_f16 &&
             layout.data_type != cldnn_data_type::cldnn_f32 &&
@@ -534,7 +534,7 @@ void cldnn_unlock_memory(cldnn_memory memory, cldnn_status* status)
 
 cldnn_layout cldnn_get_memory_layout(cldnn_memory memory, cldnn_status* status)
 {
-    cldnn_layout error_result = cldnn::layout(cldnn::data_types::f32, { cldnn::format::bfyx, {0, 0, 0, 0} });
+    cldnn_layout error_result = cldnn::layout(cldnn::data_types::f32, cldnn::format::bfyx, {0, 0, 0, 0});
 
     return exception_handler<cldnn_layout>(CLDNN_ERROR, status, error_result, [&]()
     {

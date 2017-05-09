@@ -137,9 +137,9 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
         , _kernel_data(ks.get_kernel(
             outer,
             input_layout.data_type,
-            input_layout.size.format,
+            input_layout.format,
             weigths_layout.data_type,
-            weigths_layout.size.format,
+            weigths_layout.format,
             input_layout.size.batch[0],
             _engine_info.architecture,
             _engine_info.configuration))
@@ -296,14 +296,15 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
     static primitive_impl* create(const fully_connected_node& arg) 
     {
         auto input_size = arg.input().get_output_layout().size;
+        auto input_format = arg.input().get_output_layout().format;
         auto weights_layout = arg.weights().get_output_layout();
 
         // validate arguments
-        if (input_size.format == cldnn::format::yxfb ||
-            input_size.format == cldnn::format::bfyx)
+        if (input_format == cldnn::format::yxfb ||
+            input_format == cldnn::format::bfyx)
         {
-            if (!weights_layout.has_format(data_types::f32, format::bs_xs_xsv8_bsv8) &&
-                weights_layout.size.format != format::bs_x_bsv16)
+            if (!weights_layout.has_fused_format(data_types::f32, format::bs_xs_xsv8_bsv8) &&
+                weights_layout.format != format::bs_x_bsv16)
             {
                 // weights
                 if (input_size.feature.size() != weights_layout.size.feature.size()
@@ -391,7 +392,7 @@ fully_connected_gpu::kernel_data default_bfyx_f32(const fully_connected_node& ar
         auto input_layout = arg.input().get_output_layout();
         cldnn::topology topology(
             cldnn::input_layout("input", input_layout),
-            cldnn::reorder("reorder", "input", format::yxfb, input_layout.data_type, "", { cldnn::format::bfyx,{ 0,0,0,0 } })
+            cldnn::reorder("reorder", "input", format::yxfb, input_layout.data_type, "", padding())
         );
         kd = default_yxfb_f32(arg); //fallback to (yxfb, yxfb, fp32) case
         kd.reorder.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false }); //add input reorder bfyx -> yxfb
@@ -431,7 +432,7 @@ fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const full
         auto input_size = input_layout.size;
         cldnn::topology topology(
             cldnn::input_layout("input", input_layout),
-            cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, input_size.transform(cldnn::format::bs_xs_xsv8_bsv8, 1) }, "")
+            cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, cldnn::format::bs_xs_xsv8_bsv8, input_size }, "")
         );
 
         kd.reorder.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });

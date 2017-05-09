@@ -73,7 +73,7 @@ struct neural_memory
 
     static format_traits traits(const cldnn::layout& layout)
     {
-        return format_traits(layout.size.format.order().length(), layout.data_type);
+        return format_traits(layout.format.order().length(), layout.data_type);
     }
 
     static uint8_t get_format_base(cldnn::format format)
@@ -93,7 +93,7 @@ struct neural_memory
 
     static neural_memory::format::type convert_format(const cldnn::layout& layout)
     {
-        switch (layout.size.format.value)
+        switch (layout.format.value)
         {
         case cldnn::format::format_num: return neural_memory::format::type::format_num;
         case cldnn::format::any: return neural_memory::format::type::any;
@@ -111,7 +111,7 @@ struct neural_memory
             break;
         default: throw std::invalid_argument("unsupported data type");
         }
-        return static_cast<neural_memory::format::type>(get_format_base(layout.size.format) + format_shift);
+        return static_cast<neural_memory::format::type>(get_format_base(layout.format) + format_shift);
     }
 
     static cldnn::format to_tensor_format(format::type value)

@@ -32,8 +32,8 @@ layout deconvolution_inst::calc_output_layout(deconvolution_node const& node)
 
     auto input_layout = node.input().get_output_layout();
     auto weights_layout = node.weights(0).get_output_layout(); //weights are stored after inputs
-    auto input_offset = desc->input_offset.transform(input_layout.size.format, 0);
-    auto strd = desc->stride.transform(format::bfyx, 0);
+    auto input_offset = desc->input_offset;
+    auto strd = desc->stride;
     auto split = desc->weights.size();
 
     //compute output_dim <= stride * (input_size - 1) + kernel_size + 2 * input_offset;
@@ -45,11 +45,9 @@ layout deconvolution_inst::calc_output_layout(deconvolution_node const& node)
     auto output_spatial_y = strd.spatial[1] * (input_layout.size.spatial[1] - 1) + kernel_xy[1] + 2 * input_offset.spatial[1];
     auto number_of_features = weights_layout.size.batch[0] * static_cast<int32_t>(split);
 
-    tensor output_size(format::yxfb, {
-        output_spatial_y, output_spatial_x, number_of_features, input_layout.size.batch[0] }
-    );
+    tensor output_size({ input_layout.size.batch[0], number_of_features, output_spatial_x, output_spatial_y });
 
-    auto result = layout({ input_layout.data_type, output_size.transform(input_layout.size.format, 1) });
+    auto result = layout({ input_layout.data_type, input_layout.format, output_size });
     return result;
 }
 
@@ -111,7 +109,7 @@ deconvolution_inst::typed_primitive_inst(network_impl& network, deconvolution_no
         auto& filter_inst = filter_mem.get_layout(); //deconvolution filter
         auto& bias_inst = bias_memory(j).get_layout();
 
-        auto input_offset = argument.input_offset.transform(input_inst.size.format, 0);
+        auto input_offset = argument.input_offset;
 
         if (bias_inst.size.batch[0] != 1 && bias_inst.size.feature[0] != 1 && bias_inst.size.spatial[1] != 1)
             throw std::runtime_error("Biases isn't 1D vector."); // b=1, f=1

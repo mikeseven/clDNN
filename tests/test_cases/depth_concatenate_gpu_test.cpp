@@ -51,8 +51,8 @@ TEST(depth_concatenate_f32_gpu, test01) {
     //
 
     engine engine;
-    auto input1 = memory::allocate(engine, {data_types::f32, tensor(format::yxfb, { 1,1,2,2 })});
-    auto input2 = memory::allocate(engine, { data_types::f32, tensor(format::yxfb,{ 1,1,3,2 })});
+    auto input1 = memory::allocate(engine, {data_types::f32, format::yxfb, { 2,2,1,1 }});
+    auto input2 = memory::allocate(engine, { data_types::f32, format::yxfb,{ 2,3,1,1 }});
 
     set_values(input1, { 0.5f, 0.7f, 0.2f, 0.4f });
     set_values(input2, { 1.0f, 0.1f, 0.3f, -0.5f, 0.0f, -0.2f });
@@ -93,7 +93,7 @@ TEST(depth_concatenate_f32_gpu, test01) {
 //////////////////////////////////////////////////////////////////////////////
 
 //TODO: this should be done using TEST_P or some equivallent construct
-static network setup_depth_concatatenate_network(const std::vector<data_types> dts, const std::vector<tensor> ts)
+static network setup_depth_concatatenate_network(const std::vector<data_types> dts, const std::vector<tensor> ts, const std::vector<cldnn::format> fmt)
 {
     assert(dts.size() == ts.size());
     const size_t sz = ts.size();
@@ -106,7 +106,7 @@ static network setup_depth_concatatenate_network(const std::vector<data_types> d
 
     for (size_t i = 0; i < sz; ++i)
     {
-        auto input = memory::allocate(engine, { dts[i], ts[i] });
+        auto input = memory::allocate(engine, { dts[i], fmt[i], ts[i] });
 
         input_names[i] = "input";
         input_names[i] += std::to_string(i);
@@ -132,24 +132,24 @@ TEST(NegativeDepthConcatenateTest, DISABLED_TestAll) {
     std::vector<int> t2 { 1, 2, 3, 7 };
 
     //TODO: should be ASSERT_THROW(statement, exception_type) - but what exception type?
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ }, { }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ }, { }, { }));
 
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, od }, { tensor(f, t), tensor(f, t) }));
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d }, { tensor(f, t), tensor(of, t) }));
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d }, { tensor(f, t), tensor(f, t0) }));
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d }, { tensor(f, t), tensor(f, t1) }));
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d }, { tensor(f, t), tensor(f, t2) }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, od }, { tensor(t), tensor(t) }, { f, f }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d }, { tensor(t), tensor(t) }, { f, of }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d }, { tensor(t), tensor(t0) }, { f, f }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d }, { tensor(t), tensor(t1) }, { f, f }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d }, { tensor(t), tensor(t2) }, { f, f }));
 
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, od, d }, { tensor(f, t), tensor(f, t), tensor(f, t) }));
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, od }, { tensor(f, t), tensor(f, t), tensor(f, t) }));
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(f, t), tensor(of, t), tensor(f, t) }));
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(f, t), tensor(f, t), tensor(of, t) }));
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(f, t), tensor(f, t0), tensor(f, t) }));
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(f, t), tensor(f, t1), tensor(f, t) }));
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(f, t), tensor(f, t2), tensor(f, t) }));
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(f, t), tensor(f, t), tensor(f, t0) }));
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(f, t), tensor(f, t), tensor(f, t1) }));
-    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(f, t), tensor(f, t), tensor(f, t2) }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, od, d }, { tensor(t), tensor(t), tensor(t) }, { f, f, f }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, od }, { tensor(t), tensor(t), tensor(t) }, { f, f, f }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(t), tensor(t), tensor(t) }, { f, of, f }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(t), tensor(t), tensor(t) }, { f, f, of }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(t), tensor(t0), tensor(t) }, { f, f, f }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(t), tensor(t1), tensor(t) }, { f, f, f }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(t), tensor(t2), tensor(t) }, { f, f, f }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(t), tensor(t), tensor(t0) }, { f, f, f }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(t), tensor(t), tensor(t1) }, { f, f, f }));
+    ASSERT_ANY_THROW(setup_depth_concatatenate_network({ d, d, d }, { tensor(t), tensor(t), tensor(t2) }, { f, f, f }));
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -213,7 +213,7 @@ public:
                         test_params * tp = new test_params();
                         tp->data_type = dt;
 
-                        tp->input_layouts.push_back( cldnn::tensor( fmt, { b, f0, h, w }) );
+                        tp->input_layouts.push_back( cldnn::tensor( { b, f0, w, h }) );
 
                         all_generic_params.emplace_back(tp);
                     }
@@ -225,8 +225,8 @@ public:
                         test_params * tp = new test_params();
                         tp->data_type = dt;
 
-                        tp->input_layouts.push_back( cldnn::tensor( fmt, { b, f0, h, w }) );
-                      tp->input_layouts.push_back( cldnn::tensor( fmt, { b, f1, h, w }) );
+                        tp->input_layouts.push_back( cldnn::tensor( { b, f0, w, h }) );
+                      tp->input_layouts.push_back( cldnn::tensor( { b, f1, w, h }) );
 
                         all_generic_params.emplace_back(tp);
                     }
@@ -239,9 +239,9 @@ public:
                         test_params * tp = new test_params();
                         tp->data_type = dt;
 
-                        tp->input_layouts.push_back( cldnn::tensor( fmt, { b, f0, h, w }) );
-                        tp->input_layouts.push_back( cldnn::tensor( fmt, { b, f1, h, w }) );
-                        tp->input_layouts.push_back( cldnn::tensor( fmt, { b, f2, h, w }) );
+                        tp->input_layouts.push_back( cldnn::tensor( { b, f0, w, h }) );
+                        tp->input_layouts.push_back( cldnn::tensor( { b, f1, w, h }) );
+                        tp->input_layouts.push_back( cldnn::tensor( { b, f2, w, h }) );
 
                         all_generic_params.emplace_back(tp);
                     }
@@ -284,32 +284,32 @@ public:
     {
         assert(!inputs.empty());
 
-        const int in_b = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
-        const int in_h = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
-        const int in_w = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+        const int in_b = inputs[0].get_layout().size.batch[0];
+        const int in_h = inputs[0].get_layout().size.spatial[1];
+        const int in_w = inputs[0].get_layout().size.spatial[0];
 
         int out_f = 0;
 
         for (const memory & input : inputs)
         {
-            assert(input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0] == in_b);
-            assert(input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2] == in_h);
-            assert(input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3] == in_w);
+            assert(input.get_layout().size.batch[0] == in_b);
+            assert(input.get_layout().size.spatial[1] == in_h);
+            assert(input.get_layout().size.spatial[0] == in_w);
 
-            out_f += input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
+            out_f += input.get_layout().size.feature[0];
 
             assert(input.get_layout().data_type == inputs[0].get_layout().data_type);
-            assert(input.get_layout().size.format == inputs[0].get_layout().size.format);
+            assert(input.get_layout().format == inputs[0].get_layout().format);
         }
 
         //Output is bfyx
-        auto output = memory::allocate(engine, cldnn::layout(inputs[0].get_layout().data_type, tensor(cldnn::format::bfyx, { in_b, out_f, in_h, in_w })));
+        auto output = memory::allocate(engine, cldnn::layout(inputs[0].get_layout().data_type, cldnn::format::bfyx, tensor({ in_b, out_f, in_w, in_h })));
         auto out_mem = output.pointer<Type>();
 
         int out_f_off = 0;
         for (const memory & input : inputs)
         {
-            const int in_f = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
+            const int in_f = input.get_layout().size.feature[0];
             const auto in_mem = input.pointer<Type>();
 
             for (int n = 0; n < in_b; ++n)
@@ -355,12 +355,12 @@ public:
 
         for (unsigned i = 0; i < p->input_layouts.size(); ++i)
         {
-            const auto chans = format::traits(p->input_layouts[i].format).order;
+            const auto chans = p->fmt.order();
 
             res << "_" << "Input" << i;
-            for (unsigned int j = 0; j < p->input_layouts[i].sizes().size(); ++j)
+            for (unsigned int j = 0; j < p->input_layouts[i].sizes(p->fmt).size(); ++j)
             {
-                res << chans[j] << p->input_layouts[i].sizes()[j];
+                res << chans[j] << p->input_layouts[i].sizes(p->fmt)[j];
             }
         }
 

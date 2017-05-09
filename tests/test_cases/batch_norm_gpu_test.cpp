@@ -41,9 +41,9 @@ TEST(batch_normalization_gpu, basic_in2x3x2x2_no_global_stats) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 3, 2, 2 } } });
-    auto mean = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 2, 1 } } });
-    auto variance = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 2, 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 3, 2 } });
+    auto mean = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 2, 1, 1 } });
+    auto variance = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 2, 1, 1 } });
 
     float epsilon = 0.0001f;
 
@@ -114,9 +114,9 @@ TEST(batch_normalization_gpu, basic_in2x3x2x2_use_global_stats) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 3, 2, 2 } } });
-    auto mean = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 2, 1 } } });
-    auto variance = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 2, 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 3, 2 } });
+    auto mean = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 2, 1, 1 } });
+    auto variance = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 2, 1, 1 } });
 
     float epsilon = 0.0001f;
 

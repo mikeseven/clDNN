@@ -33,14 +33,14 @@ using namespace cldnn;
 cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
 {
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
-    input_layout.size = { format::byxf,{ batch_size, 224, 224, 3 } };
+    input_layout.size = { batch_size, 3, 224, 224 };
     auto input = cldnn::input_layout("input", input_layout);
 
     // subtract mean values
     auto reordered_input = reorder(
         "reorder",
         input,
-        { input_layout.data_type, input_layout.size },
+        { input_layout.data_type, input_layout.format, input_layout.size },
         std::vector<float>{ 104.0f, 117.0f, 123.0f });
 
     auto conv1_7x7_s2_w = file::create({ engine, join_path(weights_dir, "conv1_7x7_s2_weights.nnd")});
@@ -49,17 +49,17 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         reordered_input,
         { conv1_7x7_s2_w },
         { conv1_7x7_s2_b },
-        { format::bfyx, { 1, 1, 2, 2 } },
-        { format::bfyx, { 0, 0, -3, -3 } },
+        { 1, 1, 2, 2 },
+        { 0, 0, -3, -3 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto pool1_3x3_s2 = pooling("pool1_3x3_s2",
         conv1_7x7_s2,
         pooling_mode::max,
-        { format::bfyx, { 1,1,3,3 } },  // kernel
-        { format::bfyx, { 1,1,2,2 } }); // strd
+        { 1,1,3,3 },  // kernel
+        { 1,1,2,2 }); // strd
 
     auto pool1_norm1 = lrn("pool1_norm1",
         pool1_3x3_s2,
@@ -75,10 +75,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pool1_norm1,
         { conv2_3x3_reduce_w },
         { conv2_3x3_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto conv2_3x3_w = file::create({ engine, join_path(weights_dir, "conv2_3x3_weights.nnd")});
@@ -87,10 +87,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         conv2_3x3_reduce,
         { conv2_3x3_w },
         { conv2_3x3_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -1, -1 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -1, -1 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto conv2_norm2 = lrn("conv2_norm2",
@@ -104,8 +104,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     auto pool2_3x3_s2 = pooling("pool2_3x3_s2",
         conv2_norm2,
         pooling_mode::max,
-        { format::bfyx, { 1,1,3,3 } }, // kernel
-        { format::bfyx, { 1,1,2,2 } }); // strd
+        { 1,1,3,3 }, // kernel
+        { 1,1,2,2 }); // strd
 
     // ----------- END OF PIPE -------------
     // Inception 1
@@ -116,10 +116,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pool2_3x3_s2,
         { inception_3a_1x1_w },
         { inception_3a_1x1_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 2nd branch
@@ -130,10 +130,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pool2_3x3_s2,
         { inception_3a_3x3_reduce_w },
         { inception_3a_3x3_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
 
@@ -143,10 +143,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_3a_3x3_reduce,
         { inception_3a_3x3_w },
         { inception_3a_3x3_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -1, -1 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -1, -1 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 3rd branch
@@ -157,10 +157,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pool2_3x3_s2,
         { inception_3a_5x5_reduce_w },
         { inception_3a_5x5_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
 
@@ -170,10 +170,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_3a_5x5_reduce,
         { inception_3a_5x5_w },
         { inception_3a_5x5_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -2, -2 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -2, -2 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 4th branch
@@ -181,9 +181,9 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     auto inception_3a_pool = pooling("inception_3a_pool",
         pool2_3x3_s2,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 3, 3 } }, // kernel
-        { format::bfyx, { 1, 1, 1, 1 } }, // strd
-        { format::bfyx, { 0, 0, -1, -1 } } //padding 
+        { 1, 1, 3, 3 }, // kernel
+        { 1, 1, 1, 1 }, // strd
+        { 0, 0, -1, -1 } //padding 
     );
 
     auto inception_3a_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_3a_pool_proj_weights.nnd")});
@@ -192,10 +192,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_3a_pool,
         { inception_3a_pool_proj_w },
         { inception_3a_pool_proj_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_3a_output = depth_concatenate("inception_3a_output",
@@ -216,10 +216,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_3a_output,
         { inception_3b_1x1_w },
         { inception_3b_1x1_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 2nd branch
@@ -230,10 +230,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_3a_output,
         { inception_3b_3x3_reduce_w },
         { inception_3b_3x3_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_3b_3x3_w = file::create({ engine, join_path(weights_dir, "inception_3b_3x3_weights.nnd")});
@@ -242,10 +242,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_3b_3x3_reduce,
         { inception_3b_3x3_w },
         { inception_3b_3x3_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -1, -1 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -1, -1 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 3rd branch
@@ -256,10 +256,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_3a_output,
         { inception_3b_5x5_reduce_w },
         { inception_3b_5x5_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_3b_5x5_w = file::create({ engine, join_path(weights_dir, "inception_3b_5x5_weights.nnd")});
@@ -268,10 +268,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_3b_5x5_reduce,
         { inception_3b_5x5_w },
         { inception_3b_5x5_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -2, -2 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -2, -2 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 4th branch
@@ -279,9 +279,9 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     auto inception_3b_pool = pooling("inception_3b_pool",
         inception_3a_output,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 3, 3 } }, // kernel
-        { format::bfyx, { 1, 1, 1, 1 } }, // strd
-        { format::bfyx, { 0, 0, -1, -1 } } //padding 
+        { 1, 1, 3, 3 }, // kernel
+        { 1, 1, 1, 1 }, // strd
+        { 0, 0, -1, -1 } //padding 
     );
 
     auto inception_3b_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_3b_pool_proj_weights.nnd")});
@@ -290,10 +290,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_3b_pool,
         { inception_3b_pool_proj_w },
         { inception_3b_pool_proj_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_3b_output = depth_concatenate("inception_3b_output",
@@ -309,8 +309,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     auto pool3_3x3_s2 = pooling("pool3_3x3_s2",
         inception_3b_output,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 3, 3 } }, // kernel
-        { format::bfyx, { 1, 1, 2, 2 } }  // strd
+        { 1, 1, 3, 3 }, // kernel
+        { 1, 1, 2, 2 }  // strd
     );
 
     // --------------------- 3rd inception ---------------------------------
@@ -321,10 +321,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pool3_3x3_s2,
         { inception_4a_1x1_w },
         { inception_4a_1x1_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 2nd branch
@@ -335,10 +335,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pool3_3x3_s2,
         { inception_4a_3x3_reduce_w },
         { inception_4a_3x3_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4a_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4a_3x3_weights.nnd")});
@@ -347,10 +347,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4a_3x3_reduce,
         { inception_4a_3x3_w },
         { inception_4a_3x3_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -1, -1 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -1, -1 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 3rd branch
@@ -361,10 +361,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pool3_3x3_s2,
         { inception_4a_5x5_reduce_w },
         { inception_4a_5x5_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4a_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4a_5x5_weights.nnd")});
@@ -373,10 +373,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4a_5x5_reduce,
         { inception_4a_5x5_w },
         { inception_4a_5x5_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -2, -2 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -2, -2 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 4th branch
@@ -384,9 +384,9 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     auto inception_4a_pool = pooling("inception_4a_pool",
         pool3_3x3_s2,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 3, 3 } }, // kernel
-        { format::bfyx, { 1, 1, 1, 1 } }, // strd
-        { format::bfyx,{ 0, 0, -1, -1 } } //padding 
+        { 1, 1, 3, 3 }, // kernel
+        { 1, 1, 1, 1 }, // strd
+        { 0,0,-1,-1 } //padding 
     );
 
     auto inception_4a_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4a_pool_proj_weights.nnd")});
@@ -395,10 +395,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4a_pool,
         { inception_4a_pool_proj_w },
         { inception_4a_pool_proj_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4a_output = depth_concatenate("inception_4a_output",
@@ -418,10 +418,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4a_output,
         { inception_4b_1x1_w },
         { inception_4b_1x1_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 2nd branch
@@ -432,10 +432,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4a_output,
         { inception_4b_3x3_reduce_w },
         { inception_4b_3x3_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4b_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4b_3x3_weights.nnd")});
@@ -444,10 +444,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4b_3x3_reduce,
         { inception_4b_3x3_w },
         { inception_4b_3x3_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -1, -1 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -1, -1 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 3rd branch
@@ -458,10 +458,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4a_output,
         { inception_4b_5x5_reduce_w },
         { inception_4b_5x5_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4b_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4b_5x5_weights.nnd")});
@@ -470,10 +470,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4b_5x5_reduce,
         { inception_4b_5x5_w },
         { inception_4b_5x5_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -2, -2 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -2, -2 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 4th branch
@@ -481,9 +481,9 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     auto inception_4b_pool = pooling("inception_4b_pool",
         inception_4a_output,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 3, 3 } }, // kernel
-        { format::bfyx, { 1, 1, 1, 1 } }, // strd
-        { format::bfyx,{ 0, 0, -1, -1 } } //padding 
+        { 1, 1, 3, 3 }, // kernel
+        { 1, 1, 1, 1 }, // strd
+        { 0,0,-1,-1 } //padding 
     );
 
     auto inception_4b_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4b_pool_proj_weights.nnd")});
@@ -492,10 +492,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4b_pool,
         { inception_4b_pool_proj_w },
         { inception_4b_pool_proj_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4b_output = depth_concatenate("inception_4b_output",
@@ -516,10 +516,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4b_output,
         { inception_4c_1x1_w },
         { inception_4c_1x1_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 2nd branch
@@ -530,10 +530,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4b_output,
         { inception_4c_3x3_reduce_w },
         { inception_4c_3x3_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4c_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4c_3x3_weights.nnd")});
@@ -542,10 +542,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4c_3x3_reduce,
         { inception_4c_3x3_w },
         { inception_4c_3x3_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -1, -1 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -1, -1 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 3rd branch
@@ -555,10 +555,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4b_output,
         { inception_4c_5x5_reduce_w },
         { inception_4c_5x5_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4c_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4c_5x5_weights.nnd")});
@@ -567,10 +567,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4c_5x5_reduce,
         { inception_4c_5x5_w },
         { inception_4c_5x5_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -2, -2 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -2, -2 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 4th branch
@@ -578,9 +578,9 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     auto inception_4c_pool = pooling("inception_4c_pool",
         inception_4b_output,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 3, 3 } }, // kernel
-        { format::bfyx, { 1, 1, 1, 1 } }, // strd
-        { format::bfyx,{ 0, 0, -1, -1 } } //padding 
+        { 1, 1, 3, 3 }, // kernel
+        { 1, 1, 1, 1 }, // strd
+        { 0,0,-1,-1 } //padding 
     );
 
     auto inception_4c_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4c_pool_proj_weights.nnd")});
@@ -589,10 +589,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4c_pool,
         { inception_4c_pool_proj_w },
         { inception_4c_pool_proj_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4c_output = depth_concatenate("inception_4c_output",
@@ -611,10 +611,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4c_output,
         { inception_4d_1x1_w },
         { inception_4d_1x1_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 2nd branch
@@ -625,10 +625,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4c_output,
         { inception_4d_3x3_reduce_w },
         { inception_4d_3x3_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4d_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4d_3x3_weights.nnd")});
@@ -637,10 +637,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4d_3x3_reduce,
         { inception_4d_3x3_w },
         { inception_4d_3x3_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -1, -1 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -1, -1 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 3rd branch
@@ -650,10 +650,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4c_output,
         { inception_4d_5x5_reduce_w },
         { inception_4d_5x5_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4d_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4d_5x5_weights.nnd")});
@@ -662,10 +662,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4d_5x5_reduce,
         { inception_4d_5x5_w },
         { inception_4d_5x5_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -2, -2 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -2, -2 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 4th branch
@@ -673,9 +673,9 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     auto inception_4d_pool = pooling("inception_4d_pool",
         inception_4c_output,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 3, 3 } }, // kernel
-        { format::bfyx, { 1, 1, 1, 1 } }, // strd
-        { format::bfyx,{ 0, 0, -1, -1 } } //padding 
+        { 1, 1, 3, 3 }, // kernel
+        { 1, 1, 1, 1 }, // strd
+        { 0,0,-1,-1 } //padding 
     );
 
     auto inception_4d_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4d_pool_proj_weights.nnd")});
@@ -684,10 +684,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4d_pool,
         { inception_4d_pool_proj_w },
         { inception_4d_pool_proj_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4d_output = depth_concatenate("inception_4d_output",
@@ -706,10 +706,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4d_output,
         { inception_4e_1x1_w },
         { inception_4e_1x1_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 2nd branch
@@ -720,10 +720,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4d_output,
         { inception_4e_3x3_reduce_w },
         { inception_4e_3x3_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4e_3x3_w = file::create({ engine, join_path(weights_dir, "inception_4e_3x3_weights.nnd")});
@@ -732,10 +732,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4e_3x3_reduce,
         { inception_4e_3x3_w },
         { inception_4e_3x3_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -1, -1 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -1, -1 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 3rd branch
@@ -745,10 +745,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4d_output,
         { inception_4e_5x5_reduce_w },
         { inception_4e_5x5_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4e_5x5_w = file::create({ engine, join_path(weights_dir, "inception_4e_5x5_weights.nnd")});
@@ -757,10 +757,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4e_5x5_reduce,
         { inception_4e_5x5_w },
         { inception_4e_5x5_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -2, -2 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -2, -2 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 4th branch
@@ -768,9 +768,9 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     auto inception_4e_pool = pooling("inception_4e_pool",
         inception_4d_output,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 3, 3 } }, // kernel
-        { format::bfyx, { 1, 1, 1, 1 } }, // strd
-        { format::bfyx,{ 0, 0, -1, -1 } } //padding 
+        { 1, 1, 3, 3 }, // kernel
+        { 1, 1, 1, 1 }, // strd
+        { 0,0,-1,-1 } //padding 
     );
 
     auto inception_4e_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4e_pool_proj_weights.nnd")});
@@ -779,10 +779,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_4e_pool,
         { inception_4e_pool_proj_w },
         { inception_4e_pool_proj_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_4e_output = depth_concatenate("inception_4e_output",
@@ -798,8 +798,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     auto pool4_3x3_s2 = pooling("pool4_3x3_s2",
         inception_4e_output,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 3, 3 } }, // kernel
-        { format::bfyx, { 1, 1, 2, 2 } } // strd
+        { 1, 1, 3, 3 }, // kernel
+        { 1, 1, 2, 2 } // strd
     );
 
     // --------------------- 8th inception ---------------------------------
@@ -810,10 +810,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pool4_3x3_s2,
         { inception_5a_1x1_w },
         { inception_5a_1x1_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 2nd branch
@@ -824,10 +824,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pool4_3x3_s2,
         { inception_5a_3x3_reduce_w },
         { inception_5a_3x3_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_5a_3x3_w = file::create({ engine, join_path(weights_dir, "inception_5a_3x3_weights.nnd")});
@@ -836,10 +836,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_5a_3x3_reduce,
         { inception_5a_3x3_w },
         { inception_5a_3x3_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -1, -1 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -1, -1 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 3rd branch
@@ -849,10 +849,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pool4_3x3_s2,
         { inception_5a_5x5_reduce_w },
         { inception_5a_5x5_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_5a_5x5_w = file::create({ engine, join_path(weights_dir, "inception_5a_5x5_weights.nnd")});
@@ -861,10 +861,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_5a_5x5_reduce,
         { inception_5a_5x5_w },
         { inception_5a_5x5_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -2, -2 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -2, -2 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 4th branch
@@ -872,9 +872,9 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     auto inception_5a_pool = pooling("inception_5a_pool",
         pool4_3x3_s2,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 3, 3 } }, // kernel
-        { format::bfyx, { 1, 1, 1, 1 } }, // strd
-        { format::bfyx,{ 0, 0, -1, -1 } } //padding 
+        { 1, 1, 3, 3 }, // kernel
+        { 1, 1, 1, 1 }, // strd
+        { 0,0,-1,-1 } //padding 
     );
 
     auto inception_5a_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_5a_pool_proj_weights.nnd")});
@@ -883,10 +883,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_5a_pool,
         { inception_5a_pool_proj_w },
         { inception_5a_pool_proj_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_5a_output = depth_concatenate("inception_5a_output",
@@ -905,10 +905,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_5a_output,
         { inception_5b_1x1_w },
         { inception_5b_1x1_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 2nd branch
@@ -919,10 +919,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_5a_output,
         { inception_5b_3x3_reduce_w },
         { inception_5b_3x3_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_5b_3x3_w = file::create({ engine, join_path(weights_dir, "inception_5b_3x3_weights.nnd")});
@@ -931,10 +931,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_5b_3x3_reduce,
         { inception_5b_3x3_w },
         { inception_5b_3x3_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -1, -1 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -1, -1 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 3rd branch
@@ -944,10 +944,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_5a_output,
         { inception_5b_5x5_reduce_w },
         { inception_5b_5x5_reduce_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_5b_5x5_w = file::create({ engine, join_path(weights_dir, "inception_5b_5x5_weights.nnd")});
@@ -956,10 +956,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_5b_5x5_reduce,
         { inception_5b_5x5_w },
         { inception_5b_5x5_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, -2, -2 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, -2, -2 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     // 4th branch
@@ -967,9 +967,9 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     auto inception_5b_pool = pooling("inception_5b_pool",
         inception_5a_output,
         pooling_mode::max,
-        { format::bfyx, { 1, 1, 3, 3 } }, // kernel
-        { format::bfyx, { 1, 1, 1, 1 } }, // strd
-        { format::bfyx,{ 0, 0, -1, -1 } } //padding 
+        { 1, 1, 3, 3 }, // kernel
+        { 1, 1, 1, 1 }, // strd
+        { 0,0,-1,-1 } //padding 
     );
 
     auto inception_5b_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_5b_pool_proj_weights.nnd")});
@@ -978,10 +978,10 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         inception_5b_pool,
         { inception_5b_pool_proj_w },
         { inception_5b_pool_proj_b },
-        { format::bfyx, { 1, 1, 1, 1 } },
-        { format::bfyx, { 0, 0, 0, 0 } },
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 0 },
 
-		{ format::bfyx, { 1, 1, 1, 1 } },
+		{ 1, 1, 1, 1 },
         true);
 
     auto inception_5b_output = depth_concatenate("inception_5b_output",
@@ -996,8 +996,8 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
     auto pool5_7x7_s1 = pooling("pool5_7x7_s1",
         inception_5b_output,
         pooling_mode::average,
-        { format::bfyx, { 1, 1, 7, 7 } }, // kernel
-        { format::bfyx, { 1, 1, 1, 1 } } // strd
+        { 1, 1, 7, 7 }, // kernel
+        { 1, 1, 1, 1 } // strd
     );
 
 

@@ -70,7 +70,7 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
             --kd.lws0;
         }
 
-        if (output_layout.size.format == cldnn::format::bfyx)
+        if (output_layout.format == cldnn::format::bfyx)
         {
             kd.kernel_name = kernel_name_bfyx;
         }

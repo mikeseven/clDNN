@@ -83,7 +83,7 @@ struct softmax_gpu : typed_primitive_impl<softmax>
             kd.gws1 = batch_num;
             kd.lws0 = 32;
             kd.items_num = feature_num;
-            kd.kernel_name = (input_buffer_size.format == cldnn::format::bfyx) ? kernel_name_batches_bfyx : kernel_name_batches_yxfb;
+            kd.kernel_name = (input_layout.format == cldnn::format::bfyx) ? kernel_name_batches_bfyx : kernel_name_batches_yxfb;
         }
         else if (batch_num <= 1)
         {
@@ -95,7 +95,7 @@ struct softmax_gpu : typed_primitive_impl<softmax>
 
             kd.kernel_name = kernel_name;
         }
-        else if (input_buffer_size.format == format::bfyx)
+        else if (input_layout.format == format::bfyx)
         {
             // We have two units of data per work item in current implementation.
             auto local_mem_per_wi = 2 * (kd.fp16_unit_used ? sizeof(half_t) : sizeof(float));
@@ -155,18 +155,8 @@ struct softmax_gpu : typed_primitive_impl<softmax>
 
         //kernel relies on INPUT_SIZE_X being a number of values per batch, for bfyx format, when spatials == 1,1
         //and actual number of values is stored as fueatures count (squeezenet), swap feature[0] with spatial[0]
-        if (input_buffer_size.format == format::bfyx)
-        {
-            if (input_buffer_size.feature[0] > 1)
-                input_buffer_size = tensor(format::bfyx, { input_buffer_size.batch[0], input_buffer_size.spatial[0], input_buffer_size.spatial[1], input_buffer_size.feature[0] });
-        }
-
-        else if (input_buffer_size.format == format::yxfb)
-        {
-            if (input_buffer_size.feature[0] > 1)
-                input_buffer_size = tensor(format::yxfb, { input_buffer_size.spatial[1], input_buffer_size.feature[0], input_buffer_size.spatial[0], input_buffer_size.batch[0] });
-        }
-
+        if (input_buffer_size.feature[0] > 1)
+            input_buffer_size = tensor({ input_buffer_size.batch[0], input_buffer_size.spatial[0], input_buffer_size.feature[0], input_buffer_size.spatial[1] });
 
         return gpu::jit_constants{
             gpu::make_jit_constant("INPUT",          input_buffer_size),

@@ -132,28 +132,25 @@ struct padding
     /// @return Tensor with padding for bottom/right/upper bounds of data.
     tensor upper_size() const { return _upper_size; }
 
-    /// @brief Gets format of tensors used in padding.
-    cldnn::format format() const { return _lower_size.format; }
-
     /// @brief 
     /// @param format @ref cldnn::format for provided sizes.
     /// @param lower_sizes Top-left padding sizes. See @ref tensor::tensor(cldnn::format, value_type, const std::vector<value_type>&) for details.
     /// @param upper_sizes Bottom-right padding sizes. See @ref tensor::tensor(cldnn::format, value_type, const std::vector<value_type>&) for details.
     /// @param filling_value Filling value for padding area.
-    padding(cldnn::format format, const std::vector<tensor::value_type>& lower_sizes, const std::vector<tensor::value_type>& upper_sizes, float filling_value = 0.0f)
-        : _lower_size(format, 0, to_abs(lower_sizes)), _upper_size(format, 0, to_abs(upper_sizes)), _filling_value(filling_value)
+    padding(const std::vector<tensor::value_type>& lower_sizes, const std::vector<tensor::value_type>& upper_sizes, float filling_value = 0.0f)
+        : _lower_size(to_abs(lower_sizes), 0), _upper_size(to_abs(upper_sizes), 0), _filling_value(filling_value)
     {}
 
     /// @brief Constrcuts symmetric padding.
     /// @param format @ref cldnn::format for provided sizes.
     /// @param sizes Top-left and bottom-right padding sizes. See @ref tensor::tensor(cldnn::format, value_type, const std::vector<value_type>&) for details.
     /// @param filling_value Filling value for padding area.
-    padding(cldnn::format format, const std::vector<tensor::value_type>& sizes, float filling_value = 0.0f)
-        : padding(format, sizes, sizes, filling_value)
+    padding(const std::vector<tensor::value_type>& sizes, float filling_value = 0.0f)
+        : padding(sizes, sizes, filling_value)
     {}
 
     /// @brief Constructs "zero-sized" padding.
-    padding() : padding(format::bfyx, { 0,0,0,0 }) {}
+    padding() : padding({ 0,0,0,0 }, 0) {}
 
     /// @brief Copy construction.
     padding(const cldnn_padding& other)
@@ -195,7 +192,7 @@ struct padding
     {
         auto lower = tensor::max(lhs.lower_size(), rhs.lower_size());
         auto upper = tensor::max(lhs.upper_size(), rhs.upper_size());
-        return padding{ lower.format, lower.sizes(), upper.sizes(), filling_value };
+        return padding{ lower.sizes(), upper.sizes(), filling_value };
     }
 
 private:
@@ -205,10 +202,6 @@ private:
     float  _filling_value; ///< Filling value for an element of padding. If data type of elements is different than float it is converted
                            ///< to it using round-towards-nearest-even (for floating-point data types) or round-towards-zero (for integral
                            ///< data types).
-
-    padding(tensor const& lower, tensor const& upper, float filling_value = 0.0f)
-        : _lower_size(lower), _upper_size(upper), _filling_value(filling_value)
-    {}
 
     static std::vector<tensor::value_type> to_abs(const std::vector<tensor::value_type>& sizes)
     {
@@ -226,8 +219,9 @@ CLDNN_API_CLASS(padding)
 struct layout
 {
     /// Constructs layout based on @p data_type and @p size information described by @ref tensor
-    layout(data_types data_type, tensor size, padding padding = padding())
+    layout(data_types data_type, format fmt, tensor size, padding padding = padding())
         : data_type(data_type)
+        , format(fmt)
         , size(size)
         , data_padding(padding)
     {}
@@ -235,6 +229,7 @@ struct layout
     /// Construct C++ layout based on C API @p cldnn_layout
     layout(const cldnn_layout& other)
         : data_type(static_cast<data_types>(other.data_type))
+        , format(static_cast<cldnn::format::type>(other.format))
         , size(other.size)
         , data_padding(other.padding)
     {}
@@ -242,7 +237,7 @@ struct layout
     /// Convert to C API @p cldnn_layout
     operator cldnn_layout() const
     {
-        return{ static_cast<decltype(cldnn_layout::data_type)>(data_type), size, data_padding };
+        return{ static_cast<decltype(cldnn_layout::data_type)>(data_type), static_cast<decltype(cldnn_layout::format)>(format), size, data_padding };
     }
 
     layout(const layout& other) = default;
@@ -252,6 +247,7 @@ struct layout
         if (this == &other)
             return *this;
         data_type = other.data_type;
+        format = other.format;
         size = other.size;
         data_padding = other.data_padding;
         return *this;
@@ -260,6 +256,7 @@ struct layout
     friend bool operator==(const layout& lhs, const layout& rhs)
     {
         return lhs.data_type == rhs.data_type
+            && lhs.format == rhs.format
             && lhs.size == rhs.size
             && lhs.data_padding == rhs.data_padding;
     }
@@ -273,32 +270,36 @@ struct layout
     {
         if (lhs.data_type != rhs.data_type)
             return (lhs.data_type < rhs.data_type);
+        if (lhs.format != rhs.format)
+            return (lhs.format < rhs.format);
         if (lhs.size < rhs.size)
             return (lhs.size < rhs.size);
         return (lhs.data_padding < rhs.data_padding);
     }
 
-    /// number of elements to be stored in this memory layout
+    /// Number of elements to be stored in this memory layout
     size_t count() const { return size.count(); }
 
+    /// Layout size with padding included
     tensor get_buffer_size() const
     {
         return size.add(data_padding.lower_size()).add(data_padding.upper_size());
     }
 
     /// Number of bytes needed to store this layout
-    size_t bytes_count() const { return data_type_traits::size_of(data_type) * get_buffer_size().get_linear_size(); }
+    size_t bytes_count() const { return data_type_traits::size_of(data_type) * get_buffer_size().get_linear_size(format); }
 
-    bool has_format(data_types const& dt, format const& format) const
+    bool has_fused_format(data_types const& dt, format const& fmt) const
     {
-        return (data_type == dt && format == size.format);
+        return (data_type == dt && format == fmt);
     }
 
     auto fused_format() const
     {
-        return fuse(data_type, size.format);
+        return fuse(data_type, format);
     }
 
+    /// Modify padding in layout
     layout with_padding(padding const& padd) const
     {
         layout ret = *this;
@@ -308,6 +309,9 @@ struct layout
 
     /// Data type stored in @ref memory (see. @ref data_types)
     data_types data_type;
+
+    /// Format stored in @ref memory (see. @ref format)
+    format format;
 
     /// The size of the @ref memory (excluding padding)
     tensor size;

@@ -73,7 +73,7 @@ struct batch_norm_gpu : typed_primitive_impl<batch_norm>
         _kernel_data(ks.get_kernel(
             outer, 
             input_layout.data_type,
-            input_layout.size.format,
+            input_layout.format,
             outer.get_primitive()->use_global_stats,
             _engine_info.architecture,
             _engine_info.configuration)),

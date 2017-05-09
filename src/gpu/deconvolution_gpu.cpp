@@ -112,9 +112,9 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
         , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
         , _kernel_data(ks.get_kernel(arg,
             input_layout.data_type,
-            input_layout.size.format,
+            input_layout.format,
             weights_layout.data_type,
-            weights_layout.size.format,
+            weights_layout.format,
             input_layout.size.batch[0],
             _engine_info.architecture,
             _engine_info.configuration))
@@ -123,12 +123,12 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
 
     gpu::jit_constants get_jit_constants() const
     {
-        auto input_offset = outer.get_primitive()->input_offset.transform(input_layout.size.format, 0);
+        auto input_offset = outer.get_primitive()->input_offset;
         auto output_padding = outer.get_output_layout().data_padding;
         auto split = outer.get_primitive()->split();
 
         auto input_size = input_layout.size;
-        tensor stride(cldnn::format::bfyx, { 1, 1, outer.get_primitive()->stride.spatial[1], outer.get_primitive()->stride.spatial[0] });
+        tensor stride({ 1, 1, outer.get_primitive()->stride.spatial[0], outer.get_primitive()->stride.spatial[1] });
         padding input_padding = outer.input().get_output_layout().data_padding;
 
         gpu::jit_constants mem_consts{
@@ -216,14 +216,14 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
 deconvolution_gpu::kernel_data default_oiyx_f32(const deconvolution_node& arg)
 {
     deconvolution_gpu::kernel_data kd = deconvolution_gpu::set_default(arg);
-    kd.kernel_name = (arg.input().get_output_layout().size.format == cldnn::format::bfyx) ? kernel_name_bfyx_oiyx : kernel_name_yxfb_oiyx;
+    kd.kernel_name = (arg.input().get_output_layout().format == cldnn::format::bfyx) ? kernel_name_bfyx_oiyx : kernel_name_yxfb_oiyx;
     return kd;
 }
 
 deconvolution_gpu::kernel_data default_yxio_f32(const deconvolution_node& arg)
 {
     deconvolution_gpu::kernel_data kd = deconvolution_gpu::set_default(arg);
-    kd.kernel_name = (arg.input().get_output_layout().size.format == cldnn::format::bfyx) ? kernel_name_bfyx_yxio : kernel_name_yxfb_yxio;
+    kd.kernel_name = (arg.input().get_output_layout().format == cldnn::format::bfyx) ? kernel_name_bfyx_yxio : kernel_name_yxfb_yxio;
     return kd;
 }
 

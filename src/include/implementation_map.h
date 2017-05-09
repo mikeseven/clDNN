@@ -49,7 +49,7 @@ struct implementation_key
     typedef std::tuple<engine_types, data_types, format::type> type;
     type operator()(engine_types engine_type, const typed_program_node<primitive_kind>& primitive)
     {
-        return std::make_tuple(engine_type, primitive.get_dependency(0).get_output_layout().data_type, primitive.get_dependency(0).get_output_layout().size.format);
+        return std::make_tuple(engine_type, primitive.get_dependency(0).get_output_layout().data_type, primitive.get_dependency(0).get_output_layout().format);
     }
 };
 

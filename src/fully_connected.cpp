@@ -63,16 +63,16 @@ layout fully_connected_inst::calc_output_layout(fully_connected_node const& node
     auto input_layout = node.input().get_output_layout();
     auto weights_layout = node.weights().get_output_layout();
 
-    if(is_batch_after_spatial(input_layout.size.format.order()) || 
-        (input_layout.size.format == format::bfyx &&                //this condition tests whether our input is batch>1 in bfyx format, if yes there will be
+    if(is_batch_after_spatial(input_layout.format.order()) || 
+        (input_layout.format == format::bfyx &&                //this condition tests whether our input is batch>1 in bfyx format, if yes there will be
         input_layout.size.batch[0] > 1))                            //extra reorder between input and this fc from bfyx to yxfb format (so "is_batch_after_spatial" should return true)
     {
-        auto result = layout(input_layout.data_type, tensor(format::yxfb, { 1, weights_layout.size.batch[0], 1, input_layout.size.batch[0] }));
+        auto result = layout(input_layout.data_type, format::yxfb, tensor({ input_layout.size.batch[0], 1, weights_layout.size.batch[0], 1 }));
         return result;
     }
     else
     {
-        auto result = layout(input_layout.data_type, tensor(format::bfyx, { input_layout.size.batch[0], 1, 1, weights_layout.size.batch[0] }));
+        auto result = layout(input_layout.data_type, format::bfyx, tensor({ input_layout.size.batch[0], 1, weights_layout.size.batch[0], 1 }));
         return result;
     }
 }
@@ -102,12 +102,12 @@ std::string fully_connected_inst::to_string(fully_connected_node const& node)
 fully_connected_inst::typed_primitive_inst(network_impl& network, fully_connected_node const& node)
     :parent(network, node)
 {
-    auto input_size = input_memory().get_layout().size;
-    auto output_size = output_memory().get_layout().size;
+    auto input_size = input_memory().get_layout();
+    auto output_size = output_memory().get_layout();
 
     if(input_size.format != format::yxfb
         && input_size.format != format::bfyx //special batch1 case
-        && (input_size.raw.size() != output_size.raw.size()) )
+        && (input_size.size.raw.size() != output_size.size.raw.size()) )
     {
         throw std::invalid_argument("Fully connected input/output number of dimension does not match.");
     }

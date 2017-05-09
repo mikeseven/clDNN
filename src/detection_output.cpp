@@ -40,7 +40,7 @@ layout detection_output_inst::calc_output_layout(detection_output_node const& no
     // If number of detections is lower than keep_top_k, will write dummy results at the end with image_id=-1. 
     // Each row is a 7 dimension vector, which stores:
     // [image_id, label, confidence, xmin, ymin, xmax, ymax]
-    return{ input_layout.data_type, cldnn::tensor(cldnn::format::bfyx,{ 1, 1, node.get_primitive()->keep_top_k * input_layout.size.batch[0], DETECTION_OUTPUT_ROW_SIZE }) };
+    return{ input_layout.data_type, cldnn::format::bfyx, cldnn::tensor({ 1, 1, DETECTION_OUTPUT_ROW_SIZE, node.get_primitive()->keep_top_k * input_layout.size.batch[0] }) };
 }
 
 std::string detection_output_inst::to_string(detection_output_node const& node)
@@ -94,9 +94,9 @@ std::string detection_output_inst::to_string(detection_output_node const& node)
 detection_output_inst::typed_primitive_inst(network_impl& network, detection_output_node const& node)
     :parent(network, node)
 {
-    if ( (location_memory().get_layout().size.format != format::bfyx) ||
-         (confidence_memory().get_layout().size.format != format::bfyx) ||
-         (prior_box_memory().get_layout().size.format != format::bfyx) )
+    if ( (location_memory().get_layout().format != format::bfyx) ||
+         (confidence_memory().get_layout().format != format::bfyx) ||
+         (prior_box_memory().get_layout().format != format::bfyx) )
     {
         throw std::invalid_argument("Detection output layer supports only bfyx input format.");
     }

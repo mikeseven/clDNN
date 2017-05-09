@@ -131,7 +131,7 @@ struct crop_gpu : typed_primitive_impl<crop>
 crop_gpu::kernel_data set_default(const crop_node& arg)
 {
     crop_gpu::kernel_data kd = crop_gpu::set_kernel_data(arg);
-    kd.crop_bfyx_used = (arg.input().get_output_layout().size.format == format::bfyx) ? true : false;
+    kd.crop_bfyx_used = (arg.input().get_output_layout().format == format::bfyx) ? true : false;
     kd.kernel_name = kernel_name;
 
     return kd;

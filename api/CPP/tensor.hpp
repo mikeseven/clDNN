@@ -97,8 +97,8 @@ struct format
             { bfyx,{ 1, 1, 2, "bfyx", "bfxy" } },
             { fyxb,{ 1, 1, 2, "fyxb", "bfxy" } },
             { os_iyx_osv16, { 1, 1, 2, "bfyx", "bfxy" }},
-            { bs_xs_xsv8_bsv8, { 1, 1, 1, "bx", "b?x" }},
-            { bs_x_bsv16, { 1, 1, 1, "bx", "b?x" }}
+            { bs_xs_xsv8_bsv8, { 1, 1, 1, "bx", "b?x?" }},
+            { bs_x_bsv16, { 1, 1, 1, "bx", "b?x?" }}
         };
         return traits.at(fmt);
     }
@@ -269,7 +269,6 @@ struct tensor
 {
     typedef int32_t value_type;     ///< Values type stored in tensor.
     //TODO find the way to prevent direct change of following fields.
-    cldnn::format format;
     array_ref<value_type> raw;      ///< Raw representation of all dimensions.
     array_ref<value_type> batch;    ///< Batch dimensions.
     array_ref<value_type> feature;  ///< Feature maps.
@@ -290,6 +289,20 @@ struct tensor
     value_type _dimOffset;
     value_type _dimSize;
 
+    tensor()
+        : raw(_sizes, CLDNN_TENSOR_DIM_MAX)
+        , batch(_sizes, CLDNN_TENSOR_BATCH_DIM_MAX)
+        , feature(_sizes + CLDNN_TENSOR_BATCH_DIM_MAX, CLDNN_TENSOR_FEATURE_DIM_MAX)
+        , spatial(_sizes + CLDNN_TENSOR_BATCH_DIM_MAX + CLDNN_TENSOR_FEATURE_DIM_MAX, CLDNN_TENSOR_SPATIAL_DIM_MAX)
+    {
+    }
+
+    explicit tensor(value_type default_size)
+        : tensor()
+    {
+        std::fill_n(_sizes, CLDNN_TENSOR_DIM_MAX, default_size);
+    }
+
     /// @brief Constructs tensor.
     /// @param[in] kind_inits Dimensions defined using dim_vec_kind. If dimension is not provided it is set to 1.
     /// @details Example:
@@ -307,85 +320,61 @@ struct tensor
         typename = std::enable_if_t<is_any_of<KindInitTys..., cldnn::dim_vec_kind_init<dim_vec_kind::batch>,
         cldnn::dim_vec_kind_init<dim_vec_kind::feature>, cldnn::dim_vec_kind_init<dim_vec_kind::spatial>>::value, void>>
     tensor(KindInitTys&& ... kind_inits)
-        : format(cldnn::format::yxfb) //TODO: when format will be moved from tensor to layout this line will be removed
-        , raw(_sizes, CLDNN_TENSOR_DIM_MAX)
-        , batch(_sizes, CLDNN_TENSOR_BATCH_DIM_MAX)
-        , feature(_sizes + CLDNN_TENSOR_BATCH_DIM_MAX, CLDNN_TENSOR_FEATURE_DIM_MAX)
-        , spatial(_sizes + CLDNN_TENSOR_BATCH_DIM_MAX + CLDNN_TENSOR_FEATURE_DIM_MAX, CLDNN_TENSOR_SPATIAL_DIM_MAX)
+        : tensor(1)
     {
-        std::fill_n(_sizes, CLDNN_TENSOR_DIM_MAX, 1);
         assign_inits(std::forward<KindInitTys>(kind_inits) ...);
     }
 
     /// @brief Constructs @p tensor.
-    /// @param[in] fmt Format (order).
-    /// @param[in] default_size Default value for coordinates not reperesented in format.
-    /// @param[in] sizes Dimensions in order defined in @p fmt.
     /// @details Example:
     /*! @code
      * 
-       tensor my_tensor(format::yxfb, 10, { 2, 3, 1, 1 });   // y=2, x=3, b=1, f=1
-       cout << my_tensor.batch[0] << endl;           // 1
-       cout << my_tensor.feature[0] << endl;         // 1
-       cout << "x=" << my_tensor.spatial[0] << endl; // x=3
-       cout << "y=" << my_tensor.spatial[1] << endl; // y=2
+       tensor my_tensor( 2, 3, 4, 5 );   // b=2, f=3, x=4, y=5
+       cout << my_tensor.batch[0] << endl;           // 2
+       cout << my_tensor.feature[0] << endl;         // 3
+       cout << "x=" << my_tensor.spatial[0] << endl; // x=4
+       cout << "y=" << my_tensor.spatial[1] << endl; // y=5
      *
      * @endcode
      */ 
-    tensor(cldnn::format fmt, value_type default_size, const std::vector<value_type>& sizes)
-        : format(fmt)
-        , raw(_sizes, fmt.batch_num() + fmt.feature_num() + fmt.spatial_num())
-        , batch  (_sizes, fmt.batch_num())
-        , feature(_sizes+ fmt.batch_num(), fmt.feature_num())
-        , spatial(_sizes+ fmt.batch_num() + fmt.feature_num(), fmt.spatial_num())
+    tensor(value_type batch_num, value_type feature_num, value_type width, value_type height)
+        : tensor(1)
     {
-        auto input_order = fmt.order();
-        auto internal_order = fmt.internal_order();
-        std::fill_n(_sizes, CLDNN_TENSOR_DIM_MAX, default_size);
-
-        if (sizes.size() != input_order.length())
-            throw std::invalid_argument("number of sizes does not match format");
-
-        for (size_t i = 0; i < input_order.size(); ++i)
-        {
-            auto c = input_order[i];
-            auto pos = internal_order.find(c);
-            if (pos == internal_order.npos)
-                throw std::domain_error(std::string("Unknown coord type: ") + c);
-
-            _sizes[pos] = sizes[i];
-        }
+        _sizes[0] = batch_num;
+        _sizes[CLDNN_TENSOR_BATCH_DIM_MAX] = feature_num;
+        _sizes[CLDNN_TENSOR_BATCH_DIM_MAX + CLDNN_TENSOR_FEATURE_DIM_MAX] = width;
+        _sizes[CLDNN_TENSOR_BATCH_DIM_MAX + CLDNN_TENSOR_FEATURE_DIM_MAX + 1] = height;
     }
 
-    /// @brief Constructs @p tensor with default value 1.
-    /// @param[in] fmt Format (order).
-    /// @param[in] sizes Dimensions in order defined in @p fmt.
-    /// @details Useful for @ref memory allocation.
-    /// Example:
+    /// @brief Constructs @p tensor using vector of sizes.
+    /// @param[in] sizes dimensions need to be provided in the following order {batch, feature, spatial_x, spatial_y}.
+    /// @param[in] default_size default_size for tensor dimensions.
+    /// @details Example:
     /*! @code
-    *
-    tensor my_tensor(format::yx, { 2, 3 });
-    cout << my_tensor.batch[0] << endl;           // 1
-    cout << my_tensor.feature[0] << endl;         // 1
-    cout << "x=" << my_tensor.spatial[0] << endl; // x=3
-    cout << "y=" << my_tensor.spatial[1] << endl; // y=2
-    *
-    * @endcode
-    */
-    tensor(cldnn::format fmt, const std::vector<value_type>& sizes)
-        :tensor(fmt, 1, sizes)
-    {}
-
-    /// @brief Constructs tensor with size 0.
-    tensor() :tensor(format::bfyx, 0, { 0, 0, 0, 0 }) {}
+     * 
+       tensor my_tensor( { 2, 3, 4, 5 } );   // b=2, f=3, x=4, y=5
+       cout << my_tensor.batch[0] << endl;           // 2
+       cout << my_tensor.feature[0] << endl;         // 3
+       cout << "x=" << my_tensor.spatial[0] << endl; // x=4
+       cout << "y=" << my_tensor.spatial[1] << endl; // y=5
+     *
+     * @endcode
+     */ 
+    tensor(const std::vector<value_type>& sizes, value_type default_size = 1)
+        : tensor(default_size)
+    {
+        _sizes[0] = sizes[0];
+        _sizes[CLDNN_TENSOR_BATCH_DIM_MAX] = sizes[CLDNN_TENSOR_BATCH_DIM_MAX];
+        _sizes[CLDNN_TENSOR_BATCH_DIM_MAX + CLDNN_TENSOR_FEATURE_DIM_MAX] = sizes[CLDNN_TENSOR_BATCH_DIM_MAX + CLDNN_TENSOR_FEATURE_DIM_MAX];
+        _sizes[CLDNN_TENSOR_BATCH_DIM_MAX + CLDNN_TENSOR_FEATURE_DIM_MAX + 1] = sizes[CLDNN_TENSOR_BATCH_DIM_MAX + CLDNN_TENSOR_FEATURE_DIM_MAX + 1];
+    }
 
     /// @brief Implicit conversion form C API :: cldnn_tensor.
     tensor(const cldnn_tensor& other)
-        : format(static_cast<cldnn::format::type>(other.format))
-        , raw(_sizes, format.batch_num() + format.feature_num() + format.spatial_num())
-        , batch(_sizes, format.batch_num())
-        , feature(_sizes + format.batch_num(), format.feature_num())
-        , spatial(_sizes + format.batch_num() + format.feature_num(), format.spatial_num())
+        : raw(_sizes, other.batch_num + other.feature_num + other.spatial_num)
+        , batch(_sizes, other.batch_num)
+        , feature(_sizes + other.batch_num, other.feature_num)
+        , spatial(_sizes + other.batch_num + other.feature_num, other.spatial_num)
     {
         std::copy_n(other.sizes, CLDNN_TENSOR_DIM_MAX, _sizes);
     }
@@ -394,7 +383,6 @@ struct tensor
     operator cldnn_tensor() const
     {
         cldnn_tensor result;
-        result.format = static_cast<cldnn_format_type>(format);
         result.batch_num = batch.size();
         result.feature_num = feature.size();
         result.spatial_num = spatial.size();
@@ -404,11 +392,7 @@ struct tensor
 
     /// @brief Copy construction.
     tensor(const tensor& other)
-        : format(other.format)
-        ,     raw(_sizes, format.batch_num() + format.feature_num() + format.spatial_num())
-        ,   batch(_sizes, format.batch_num())
-        , feature(_sizes + format.batch_num(), format.feature_num())
-        , spatial(_sizes + format.batch_num() + format.feature_num(), format.spatial_num())
+        : tensor()
     {
         std::copy_n(other._sizes, CLDNN_TENSOR_DIM_MAX, _sizes);
     }
@@ -418,19 +402,13 @@ struct tensor
     {
         if (this == &other)
             return *this;
-        format = other.format;
-        raw     = { _sizes, format.batch_num() + format.feature_num() + format.spatial_num() };
-        batch   = { _sizes, format.batch_num() };
-        feature = { _sizes + format.batch_num(), format.feature_num() };
-        spatial = { _sizes + format.batch_num() + format.feature_num(), format.spatial_num() };
         std::copy_n(other._sizes, CLDNN_TENSOR_DIM_MAX, _sizes);
         return *this;
     }
 
     friend bool operator==(const tensor& lhs, const tensor& rhs)
     {
-        return lhs.format == rhs.format
-            && lhs.raw.size() == rhs.raw.size()
+        return lhs.raw.size() == rhs.raw.size()
             && std::equal(lhs.raw.begin(), lhs.raw.end(), rhs.raw.begin());
     }
 
@@ -441,8 +419,6 @@ struct tensor
 
     friend bool operator<(const tensor& lhs, const tensor& rhs)
     {
-        if (lhs.format != rhs.format)
-            return lhs.format < rhs.format;
         if (lhs.raw.size() != rhs.raw.size())
             return lhs.raw.size() < rhs.raw.size();
         for (size_t i = 0; i < lhs.raw.size(); ++i)
@@ -499,11 +475,10 @@ struct tensor
     /// @brief Returns a tensor with all elements added by appropriate elements of @p rhs
     tensor add(const tensor& rhs) const
     {
-        auto transformed_rhs = rhs.transform(format, 0);
         auto result = *this;
-        for(size_t i = 0; i < result.raw.size(); i++)
+        for (size_t i = 0; i < result.raw.size(); i++)
         {
-            result._sizes[i] += transformed_rhs._sizes[i];
+            result._sizes[i] += rhs._sizes[i];
         }
         return result;
     }
@@ -515,9 +490,9 @@ struct tensor
     }
 
     /// @brief Returns a vector of tensors values, ordered regarding to @p format.
-    std::vector<value_type> sizes() const {
-        auto output_order = format.order();
-        auto internal_order = format.internal_order();
+    std::vector<value_type> sizes(cldnn::format fmt) const {
+        auto output_order = fmt.order();
+        auto internal_order = fmt.internal_order();
         std::vector<value_type> sizes(output_order.size(), 0);
 
         for (size_t i = 0; i < sizes.size(); ++i)
@@ -533,20 +508,28 @@ struct tensor
         return sizes;
     }
 
+    /// @brief Returns a vector of tensors values, ordered regarding to @p format.
+    std::vector<value_type> sizes() const {
+        std::vector<value_type> sizes(sizeof(_sizes) / sizeof(_sizes[0]), 0);
+        for (size_t i = 0; i < sizes.size(); ++i)
+            sizes[i] = _sizes[i];
+        return sizes;
+    }
+
     /// @brief Get aligned linear tensor size calculated as multiplication of all elements. 
-    size_t get_linear_size() const
+    size_t get_linear_size(cldnn::format fmt) const
     {
         auto sizes = this->sizes();
-        if(this->format == cldnn::format::os_iyx_osv16 && !is_aligned_to(sizes[0], 16))
+        if(fmt == cldnn::format::os_iyx_osv16 && !is_aligned_to(sizes[0], 16))
         {
             sizes[0] = align_to(sizes[0], 16);
         }
-        else if (this->format == cldnn::format::bs_xs_xsv8_bsv8 && !(is_aligned_to(sizes[0], 8) && is_aligned_to(sizes[1], 8)))
+        else if (fmt == cldnn::format::bs_xs_xsv8_bsv8 && !(is_aligned_to(sizes[0], 8) && is_aligned_to(sizes[1], 8)))
         {
             sizes[0] = align_to(sizes[0], 8);
             sizes[1] = align_to(sizes[1], 8);
         }
-        else if(this->format == cldnn::format::bs_x_bsv16 && !is_aligned_to(sizes[0], 16))
+        else if(fmt == cldnn::format::bs_x_bsv16 && !is_aligned_to(sizes[0], 16))
         {
             sizes[0] = align_to(sizes[0], 16);
         }
@@ -574,32 +557,37 @@ struct tensor
     /// @details Example:
     /*!
      * @code
-       tensor my_tensor(format::yx, { 2, 3 });
+       tensor my_tensor({ 2, 3, 4, 5 });
        auto my_sizes = my_tensor.sizes();
        cout << "dims_num=" << my_sizes.size() << endl; // dims_num=2
-       cout << "x=" << my_sizes[1] << endl;            // x=3
-       cout << "y=" << my_sizes[0] << endl;            // y=2
-       auto new_tensor = my_tensor.transform(format::fyxb, 10);
+       cout << "b=" << my_sizes[0] << endl;            // b=2
+       cout << "f=" << my_sizes[1] << endl;            // f=3
+       cout << "x=" << my_sizes[2] << endl;            // x=5
+       cout << "y=" << my_sizes[3] << endl;            // y=4
+       auto new_tensor = my_tensor.transform(format::yxfb, 10);
        auto new_sizes = new_tensor.sizes();
        cout << "new_num=" << new_sizes.size() << endl;   // new_num=4
-       for(auto dim : new_sizes) cout << " " << dim;     //  10 2 3 10
+       for(auto dim : new_sizes) cout << " " << dim;     //  5 4 3 2
        cout << endl;
        * @endcode
      */
     tensor transform(cldnn::format new_fmt, value_type default_size) const
     {
-        if (format == new_fmt) return *this;
-        auto val_order = format.order();
-        auto new_order = new_fmt.order();
+        cldnn::format format = cldnn::format::bfyx;
+        auto val_order = format.internal_order();
+        auto new_order = new_fmt.internal_order();
         std::vector<value_type> old_sizes = sizes();
-        std::vector<value_type> new_sizes(new_order.size(), default_size);
+        std::vector<value_type> new_sizes(old_sizes.size(), default_size);
         auto tmp = 1;
-        for(size_t i = 0; i < old_sizes.size(); i++)
+        for(size_t i = 0; i < format.order().size(); i++)
         {
             auto c = val_order[i];
             //skip f and y for the formats that do not have it
             if (((new_fmt == format::bs_xs_xsv8_bsv8) || (new_fmt == format::bs_x_bsv16)) && ((c == 'f') || (c == 'y')))
             {
+                if (new_order[i] == '?')
+                    new_sizes[i] = default_size;
+
                 tmp *= old_sizes[i];
                 continue;
             }
@@ -610,9 +598,10 @@ struct tensor
             new_sizes[new_pos] = old_sizes[i];
         }
         
+        //in case of formats with smaller number of dimensions than input, flatten is performed below
         if (tmp != 1)
         {
-            for (size_t i = 0; i < old_sizes.size(); i++)
+            for (size_t i = 0; i < format.order().size(); i++)
             {
                 auto c = val_order[i];
                 if (c == 'x')
@@ -622,28 +611,28 @@ struct tensor
                 }
             }
         }
-        return{ new_fmt, default_size, new_sizes };
+        return { new_sizes };
     }
 
     /// @brief Calculates linear offset for given @p coord within current tensor.
     /// @param coord The coordinate within current tensor.
-    size_t get_linear_offset(const tensor& coord) const
+    size_t get_linear_offset(const tensor& coord, cldnn::format fmt) const
     {
-        auto my_sizes = sizes();
-        auto adjusted_coords = coord.transform(format, 0).sizes();
-        if (this->format == cldnn::format::os_iyx_osv16 && !is_aligned_to(my_sizes[0], 16))
+        auto my_sizes = this->sizes();
+        auto adjusted_coords = coord.sizes();
+        if (fmt == cldnn::format::os_iyx_osv16 && !is_aligned_to(my_sizes[0], 16))
         {
             my_sizes[0] = align_to(my_sizes[0], 16);
             adjusted_coords[0] = align_to(adjusted_coords[0], 16);
         }
-        else if (this->format == cldnn::format::bs_xs_xsv8_bsv8 && !(is_aligned_to(my_sizes[0], 8) && is_aligned_to(my_sizes[1], 8)))
+        else if (fmt == cldnn::format::bs_xs_xsv8_bsv8 && !(is_aligned_to(my_sizes[0], 8) && is_aligned_to(my_sizes[1], 8)))
         {
             my_sizes[0] = align_to(my_sizes[0], 8);
             my_sizes[1] = align_to(my_sizes[1], 8);
             adjusted_coords[0] = align_to(adjusted_coords[0], 8);
             adjusted_coords[1] = align_to(adjusted_coords[1], 8);
         }
-        else if (this->format == cldnn::format::bs_x_bsv16 && !is_aligned_to(my_sizes[0], 16))
+        else if (fmt == cldnn::format::bs_x_bsv16 && !is_aligned_to(my_sizes[0], 16))
         {
             my_sizes[0] = align_to(my_sizes[0], 16);
             adjusted_coords[0] = align_to(adjusted_coords[0], 16);
@@ -663,13 +652,11 @@ struct tensor
     /// @brief Returns a tensor containing values maximum from @p lhs and @p rhs.
     static tensor max(tensor const& lhs, tensor const& rhs)
     {
-        auto comm_format = format::common_format(lhs.format, rhs.format);
-        auto trans_lhs = lhs.transform(comm_format, std::numeric_limits<value_type>::min());
-        auto trans_rhs = rhs.transform(comm_format, std::numeric_limits<value_type>::min());
-        for (size_t i = 0; i < trans_lhs.raw.size(); ++i)
-            trans_lhs._sizes[i] = std::max(trans_lhs.raw[i], trans_rhs.raw[i]);
+        auto ret = lhs;
+        for (size_t i = 0; i < lhs.raw.size(); ++i)
+            ret._sizes[i] = std::max(ret._sizes[i], rhs._sizes[i]);
 
-        return trans_lhs;
+        return ret;
     }
 
 private:

@@ -53,16 +53,13 @@ crop_inst::typed_primitive_inst(network_impl& network, crop_node const& node)
     :parent(network, node)
 {
     auto reference_input_sizes = reference_input_memory().get_layout().size;
-    auto reference_format = reference_input_sizes.format;
+    auto reference_format = reference_input_memory().get_layout().format;
     auto input_sizes = input_memory().get_layout().size;
-    auto input_format = input_sizes.format;
+    auto input_format = input_memory().get_layout().format;
     auto offsets = argument.offsets;
 
     if (input_format != reference_format)
         throw std::runtime_error("Mismatch between input and reference_input format order!");
-
-    if (offsets.format != input_format)
-        throw std::runtime_error("Mismatch between offsets and input format order!");
 
     if ((input_format!= format::yxfb) && (input_format != format::bfyx))
         throw std::runtime_error("Crop layer is only supported for yxfb and bfyx formats!");

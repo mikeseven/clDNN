@@ -29,8 +29,8 @@ layout scale_inst::calc_output_layout(scale_node const& node)
 {
     auto result = node.input().get_output_layout();
 
-    auto scale_sizes = node.scale().get_output_layout().size.transform(format::yxfb, 1);
-    auto input_sizes = result.size.transform(format::yxfb, 1);
+    auto scale_sizes = node.scale().get_output_layout().size;
+    auto input_sizes = result.size;
 
     auto scale_x_size = scale_sizes.spatial[0];
     auto scale_y_size = scale_sizes.spatial[1];
@@ -68,7 +68,7 @@ std::string scale_inst::to_string(scale_node const& node)
 scale_inst::typed_primitive_inst(network_impl& network, scale_node const& node)
     :parent(network, node)
 {
-    auto scale_format = scale_memory().get_layout().size.format;
+    auto scale_format = scale_memory().get_layout().format;
 
     auto scale_batch_size = scale_memory().get_layout().size.batch[0];
     auto scale_feature_size = scale_memory().get_layout().size.feature[0];
@@ -83,7 +83,7 @@ scale_inst::typed_primitive_inst(network_impl& network, scale_node const& node)
 
     if (!argument.bias.empty())
     {
-        auto bias_format = bias_memory().get_layout().size.format;
+        auto bias_format = bias_memory().get_layout().format;
         auto bias_raw_sizes = bias_memory().get_layout().size.raw;
 
         if (scale_format != bias_format)

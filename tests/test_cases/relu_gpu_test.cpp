@@ -80,17 +80,17 @@ void generic_relu_test(cldnn::format test_input_fmt, int input_b, int input_f, i
 	VF<T> input_rnd_vec = flatten_4d<T>(test_input_fmt, input_rnd);
 	
 	engine engine;
-	tensor input_tensor(format::bfyx, { input_b, input_f, input_y, input_x });
-	auto input = memory::allocate(engine, { type_to_data_type<T>::value, input_tensor.transform(test_input_fmt, 0) });
+	tensor input_tensor({ input_b, input_f, input_x, input_y });
+	auto input = memory::allocate(engine, { type_to_data_type<T>::value, test_input_fmt, input_tensor });
 	set_values(input, input_rnd_vec);
 	topology topology(
 		input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout().with_padding({ format::bfyx, { 0, 0, input_padding_y, input_padding_x } })),
+        reorder("reorder", "input", input.get_layout().with_padding({ { 0, 0, input_padding_x, input_padding_y }, 0 })),
 		activation(
 			"relu",
 			"reorder",
 			slope,
-			{ format::bfyx,{ 0, 0, output_padding_y, output_padding_x } }));
+			{ { 0, 0, output_padding_x, output_padding_y }, 0 }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();
@@ -101,12 +101,12 @@ void generic_relu_test(cldnn::format test_input_fmt, int input_b, int input_f, i
 	auto output_layout = output_memory.get_layout();
 	auto output_ptr = output_memory.pointer<T>();
 
-	EXPECT_EQ(output_layout.size.format.value, test_input_fmt.value);
-	tensor output_tensor = output_layout.size.transform(cldnn::format::yxfb, 0);
-	int y_size = output_tensor.sizes()[0];
-	int x_size = output_tensor.sizes()[1];
-	int f_size = output_tensor.sizes()[2];
-	int b_size = output_tensor.sizes()[3];
+	EXPECT_EQ(output_layout.format.value, test_input_fmt.value);
+	tensor output_tensor = output_layout.size;
+    int y_size = output_tensor.spatial[1];
+    int x_size = output_tensor.spatial[0];
+    int f_size = output_tensor.feature[0];
+    int b_size = output_tensor.batch[0];
 	EXPECT_EQ(y_size, input_y + 2 * output_padding_y);
 	EXPECT_EQ(x_size, input_x + 2 * output_padding_x);
 	EXPECT_EQ(f_size, input_f);
@@ -152,7 +152,7 @@ TEST(relu_f32_fw_gpu, basic_yxfb) {
 
 	engine engine;
 
-	auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 5, 1, 1 } } });
+	auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 5, 4 } });
 	set_values(input,
 	{ 1.0f, -2.0f, -3.0f, 4.0f, 5.0f,
 	  2.0f, 2.0f, 3.0f, 4.0f, -6.0f,
@@ -166,7 +166,7 @@ TEST(relu_f32_fw_gpu, basic_yxfb) {
 
 	topology topology(
 		input_layout("input", input.get_layout()),
-		activation( "relu", "input", 0.5, { format::bfyx,{ 0, 0, 0, 0 } }));
+		activation( "relu", "input", 0.5, { { 0, 0, 0, 0 }, 0 }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();
@@ -177,11 +177,11 @@ TEST(relu_f32_fw_gpu, basic_yxfb) {
 	auto output_layout = output_memory.get_layout();
 	auto output_ptr = output_memory.pointer<float>();
 
-	int y_size = output_layout.size.sizes()[0];
-	int x_size = output_layout.size.sizes()[1];
-	int f_size = output_layout.size.sizes()[2];
-	int b_size = output_layout.size.sizes()[3];
-	EXPECT_EQ(output_layout.size.format, format::yxfb);
+    int y_size = output_layout.size.spatial[1];
+    int x_size = output_layout.size.spatial[0];
+    int f_size = output_layout.size.feature[0];
+    int b_size = output_layout.size.batch[0];
+	EXPECT_EQ(output_layout.format, format::yxfb);
 	EXPECT_EQ(y_size, 4);
 	EXPECT_EQ(x_size, 5);
 	EXPECT_EQ(f_size, 1);
@@ -216,7 +216,7 @@ TEST(relu_f32_fw_gpu, basic_input_padding_yxfb) {
 
 	engine engine;
 
-	auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 5, 1, 1 } } });
+	auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 5, 4 } });
 
 	set_values(input,
 	{ 1.0f, -2.0f, -3.0f, 4.0f, 5.0f,
@@ -231,8 +231,8 @@ TEST(relu_f32_fw_gpu, basic_input_padding_yxfb) {
 
 	topology topology(
 		input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout().with_padding({ format::bfyx,{ 0, 0, 2, 1 } })),
-		activation("relu", "reorder", 0.5, { format::bfyx,{ 0, 0, 0, 0 } }));
+        reorder("reorder", "input", input.get_layout().with_padding({ { 0, 0, 2, 1 }, 0 })),
+		activation("relu", "reorder", 0.5, { { 0, 0, 0, 0 }, 0 }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();
@@ -242,11 +242,11 @@ TEST(relu_f32_fw_gpu, basic_input_padding_yxfb) {
 	auto output_layout = output_memory.get_layout();
 	auto output_ptr = output_memory.pointer<float>();
 
-	int y_size = output_layout.size.sizes()[0];
-	int x_size = output_layout.size.sizes()[1];
-	int f_size = output_layout.size.sizes()[2];
-	int b_size = output_layout.size.sizes()[3];
-	EXPECT_EQ(output_layout.size.format, format::yxfb);
+    int y_size = output_layout.size.spatial[1];
+    int x_size = output_layout.size.spatial[0];
+    int f_size = output_layout.size.feature[0];
+    int b_size = output_layout.size.batch[0];
+	EXPECT_EQ(output_layout.format, format::yxfb);
 	EXPECT_EQ(y_size, 4);
 	EXPECT_EQ(x_size, 5);
 	EXPECT_EQ(f_size, 1);
@@ -282,7 +282,7 @@ TEST(relu_f32_fw_gpu, basic_output_padding_yxfb) {
 
 	engine engine;
 
-	auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 4, 5, 1, 1 } } });
+	auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 5, 4 } });
 	set_values(input,
 	{ 1.0f, -2.0f, -3.0f, 4.0f, 5.0f,
 		2.0f, 2.0f, 3.0f, 4.0f, -6.0f,
@@ -302,7 +302,7 @@ TEST(relu_f32_fw_gpu, basic_output_padding_yxfb) {
 
 	topology topology(
 		input_layout("input", input.get_layout()),
-		activation("relu", "input", 0.5, { format::bfyx,{ 0, 0, 3, 3 } }));
+		activation("relu", "input", 0.5, { { 0, 0, 3, 3 }, 0 }));
 	network network(engine, topology);
 	network.set_input_data("input", input);
 	auto outputs = network.execute();
@@ -318,7 +318,7 @@ TEST(relu_f32_fw_gpu, basic_output_padding_yxfb) {
     int x_size = output_size.spatial[0];
     int f_size = output_size.feature[0];
     int b_size = output_size.batch[0];
-	EXPECT_EQ(output_layout.size.format, format::yxfb);
+	EXPECT_EQ(output_layout.format, format::yxfb);
 	EXPECT_EQ(y_size, 10);
 	EXPECT_EQ(x_size, 11);
 	EXPECT_EQ(f_size, 1);

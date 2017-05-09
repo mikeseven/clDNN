@@ -200,7 +200,7 @@ struct simpler_nms_gpu : typed_primitive_impl<simpler_nms>
         _kernel_data(ks.get_kernel(
             outer,
             outer.cls_score().get_output_layout().data_type,
-            outer.cls_score().get_output_layout().size.format,
+            outer.cls_score().get_output_layout().format,
             outer.cls_score().get_output_layout().size.batch[0],
             _engine_info.architecture,
             _engine_info.configuration)),
@@ -274,8 +274,8 @@ struct simpler_nms_gpu : typed_primitive_impl<simpler_nms>
         const cldnn::memory& image_info = instance.dep_memory(simpler_nms_inst::image_info_index);
 
         // feat map sizes
-        int fm_h = cls_scores.get_layout().size.sizes()[2];
-        int fm_w = cls_scores.get_layout().size.sizes()[3];
+        int fm_h = cls_scores.get_layout().size.spatial[1];
+        int fm_w = cls_scores.get_layout().size.spatial[0];
         
         int fm_sz = fm_w * fm_h;
 

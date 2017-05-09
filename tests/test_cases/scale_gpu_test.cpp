@@ -47,8 +47,8 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_same_size) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 3, 2, 2 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 3, 2, 2 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 3, 2 } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 3, 2 } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
@@ -107,8 +107,8 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_same_size_bfyx) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 2, 2, 3 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 2, 2, 3 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 2, 3, 2 } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 2, 3, 2 } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
@@ -170,8 +170,8 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_same_size_scale_bfyx) {
     auto x_size = 3;
     auto y_size = 2;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ batch_num, feature_num, y_size, x_size } } });
+    auto input = memory::allocate(engine, { data_types::f32,format::yxfb,{ batch_num, feature_num, x_size, y_size } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_num, feature_num, x_size, y_size } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
@@ -243,9 +243,9 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_same_size_bias_term) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 3, 2, 2 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 3, 2, 2 } } });
-    auto bias = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 3, 2, 2 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 3, 2 } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 3, 2 } });
+    auto bias = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 3, 2 } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
@@ -318,8 +318,8 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_scalar) {
     auto x_size = 3;
     auto y_size = 2;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 1, 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32,format::yxfb,{ batch_num, feature_num, x_size, y_size } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 1, 1 } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
@@ -383,8 +383,8 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_y) {
     auto x_size = 3;
     auto y_size = 2;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, 1, 1, 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32,format::yxfb,{ batch_num, feature_num, x_size, y_size } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1,1,1,y_size } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
@@ -449,8 +449,8 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_x) {
     auto x_size = 3;
     auto y_size = 2;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, x_size, 1, 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32,format::yxfb,{ batch_num, feature_num, x_size, y_size } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 1, x_size, 1 } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
@@ -517,8 +517,8 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_xy) {
     auto x_size = 3;
     auto y_size = 2;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, 1, 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32,format::yxfb,{ batch_num, feature_num, x_size, y_size } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 1, x_size, y_size } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
@@ -590,8 +590,8 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_batch1) {
     auto x_size = 3;
     auto y_size = 2;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32,format::yxfb,{ batch_num, feature_num, x_size, y_size } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, feature_num, x_size, y_size } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
@@ -659,9 +659,9 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_bx) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 1, 3 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 1, 3 } } });
-    auto bias_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 1, 3 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 1, 3, 1 } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 1, 3, 1 } });
+    auto bias_input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 1, 3, 1 } });
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
@@ -723,9 +723,9 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_xb) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 2, 1, 3 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 2, 1, 3 } } });
-    auto bias_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 2, 1, 3 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 3, 1, 2, 1 } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb, { 3, 1, 2, 1 } });
+    auto bias_input = memory::allocate(engine, { data_types::f32, format::yxfb, { 3, 1, 2, 1 } });
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
@@ -785,9 +785,9 @@ TEST(scale_gpu, basic_in2x3_scale_single_value_bx) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 1, 3 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 1, 1, 1, 1 } } });
-    auto bias_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 1, 1, 1, 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 1, 3, 1 } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 1, 1 } });
+    auto bias_input = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 1, 1 } });
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
@@ -845,9 +845,9 @@ TEST(scale_gpu, basic_in2x3_scale_single_value_xb) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 2, 1, 3 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 1, 1 } } });
-    auto bias_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 1, 1, 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 3, 1, 2, 1 } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 1, 1 } });
+    auto bias_input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 1, 1 } });
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
@@ -902,8 +902,8 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_no_bias_bx) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 1, 3 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 1, 3 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 1, 3, 1 } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 1, 3, 1 } });
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
@@ -952,8 +952,8 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_no_bias_xb) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 2, 1, 3 } } });
-    auto scale_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1, 2, 1, 3 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 3, 1, 2, 1 } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb, { 3, 1, 2, 1 } });
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
@@ -1010,16 +1010,16 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_yxfb_bfyx_same_size_padding) {
     {
         std::cout << "Testing format: " << format::order(*it) << std::endl;
 
-        tensor input_tensor(format::bfyx, { 1, 1, 2, 2 });
+        tensor input_tensor({ 1, 1, 2, 2 });
 
-        auto input = memory::allocate(engine, { data_types::f32, input_tensor.transform(*it, 1) });
-        auto scale_input = memory::allocate(engine, { data_types::f32, input_tensor.transform(*it, 1) });
+        auto input = memory::allocate(engine, { data_types::f32, *it, input_tensor });
+        auto scale_input = memory::allocate(engine, { data_types::f32, *it, input_tensor });
 
         topology topology;
         topology.add(input_layout("input", input.get_layout()));
-        topology.add(reorder("reorder", "input", input.get_layout().with_padding({ format::bfyx,{ 0, 0, 2, 1 } })));
+        topology.add(reorder("reorder", "input", input.get_layout().with_padding({ { 0, 0, 1, 2 }, 0 })));
         topology.add(input_layout("scale_input", scale_input.get_layout()));
-        topology.add(scale("scale", "reorder", "scale_input", { format::bfyx,{ 0, 0, 2, 2 } }));
+        topology.add(scale("scale", "reorder", "scale_input", padding({ { 0, 0, 2, 2 }, 0 })));
 
         std::vector<float> input_vec = { 1.f, 2.f, 3.f, 4.f };
         set_values(input, input_vec);
@@ -1063,20 +1063,22 @@ static network setup_scale_network(
     const tensor input_tensor,
     const tensor scale_tensor,
     const tensor bias_tensor,
+    const format f,
+    const format of,
     bool pass_bias          //TODO: a WA for lack of std::optional<tensor> bias
 )
 {
     engine engine;
     topology topology;
 
-    auto input_mem = memory::allocate(engine, { dt, input_tensor });
-    auto scale_mem = memory::allocate(engine, { dt, scale_tensor });
+    auto input_mem = memory::allocate(engine, { dt, f, input_tensor });
+    auto scale_mem = memory::allocate(engine, { dt, of, scale_tensor });
     topology.add(input_layout("input", input_mem.get_layout()));
     topology.add(input_layout("scale_input", scale_mem.get_layout()));
 
     if (pass_bias)
     {
-        auto bias_mem = memory::allocate(engine, { dt, bias_tensor });
+        auto bias_mem = memory::allocate(engine, { dt, f, bias_tensor });
         topology.add(input_layout("bias_input", bias_mem.get_layout()));
 
         topology.add(scale("scale", "input", "scale_input", "bias_input" ));
@@ -1102,6 +1104,7 @@ TEST(NegativeScaleTest, TestAll) {
     auto of = format::yxfb;
 
     std::vector<int> t { 3, 4, 5, 6 };
+    std::vector<int> t2 { 5, 6, 4, 3 };
 
     // broadcast rules mean that either the dim size is equal to input dim or is 1
     std::vector<std::vector<int>> good_ts =
@@ -1113,28 +1116,28 @@ TEST(NegativeScaleTest, TestAll) {
     std::vector<std::vector<int>> bad_ts = { { 2, 4, 5, 6 }, { 3, 2, 5, 6 }, { 3, 4, 2, 6 }, { 3, 4, 5, 2 } };
 
     //TODO: should be ASSERT_THROW(statement, exception_type) - but what exception type?
-    ASSERT_ANY_THROW(setup_scale_network(d, { }, { }, { }, false));
-    ASSERT_ANY_THROW(setup_scale_network(d, { }, { }, { }, true));
+    ASSERT_ANY_THROW(setup_scale_network(d, { }, { }, { }, f, of, false));
+    ASSERT_ANY_THROW(setup_scale_network(d, { }, { }, { }, f, of, true));
 
-    ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(of, t), tensor(f, t), true));
-    ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(of, t), tensor(f, t), false));
+    ASSERT_ANY_THROW(setup_scale_network(d, tensor(t), tensor(t2), tensor(t), f, of, true));
+    ASSERT_ANY_THROW(setup_scale_network(d, tensor(t), tensor(t2), tensor(t), f, of, false));
 
     // make sure that it's the input that's masked in the scale/bias with a "1", not ther other way around
     for (const auto & good : good_ts)
     {
-        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, good), tensor(f, t), tensor(f, t), true));
+        ASSERT_ANY_THROW(setup_scale_network(d, tensor(good), tensor(t), tensor(t), f, of, true));
     }
 
     // sizes must either be equal to input or at most have 
     for (const auto & bad : bad_ts)
     {
-        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, bad), tensor(f, t), true));
-        ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, t), tensor(f, bad), true));
+        ASSERT_ANY_THROW(setup_scale_network(d, tensor(t), tensor(bad), tensor(t), f, of, true));
+        ASSERT_ANY_THROW(setup_scale_network(d, tensor(t), tensor(t), tensor(bad), f, of, true));
 
         for (const auto & good : good_ts)
         {
-            ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, bad), tensor(f, good), true));
-            ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, good), tensor(f, bad), true));
+            ASSERT_ANY_THROW(setup_scale_network(d, tensor(t), tensor(bad), tensor(good), f, of, true));
+            ASSERT_ANY_THROW(setup_scale_network(d, tensor(t), tensor(good), tensor(bad), f, of, true));
         }
     }
 
@@ -1142,7 +1145,7 @@ TEST(NegativeScaleTest, TestAll) {
     for (unsigned i = 0; i < good_ts.size(); ++i)
     for (unsigned j = 0; j < good_ts.size(); ++j)
         if (i != j)
-            ASSERT_ANY_THROW(setup_scale_network(d, tensor(f, t), tensor(f, good_ts[i]), tensor(f, good_ts[j]), true));
+            ASSERT_ANY_THROW(setup_scale_network(d, tensor(t), tensor(good_ts[i]), tensor(good_ts[j]), f, of, true));
 
 }
 
@@ -1213,10 +1216,10 @@ public:
                     test_params * tp = new test_params();
                     tp->data_type = dt;
 
-                    tp->input_layouts.push_back( cldnn::tensor( fmt, { b, f, h, w } ));
-                    tp->input_layouts.push_back( cldnn::tensor( fmt, { mb, mf, mh, mw } ));
+                    tp->input_layouts.push_back( cldnn::tensor( { b, f, w, h } ));
+                    tp->input_layouts.push_back( cldnn::tensor( { mb, mf, mw, mh } ));
                     if (variant)
-                            tp->input_layouts.push_back( cldnn::tensor( fmt, { mb, mf, mh, mw } ));
+                            tp->input_layouts.push_back( cldnn::tensor( { mb, mf, mw, mh } ));
 
                     all_generic_params.emplace_back(tp);
                 }
@@ -1266,7 +1269,7 @@ public:
         assert(!bias_input_present || bias);
 
         //Output is bfyx
-        auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().size.transform(cldnn::format::bfyx, 0)));
+        auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, cldnn::format::bfyx, input.get_layout().size ));
 
         const auto in0_mem = input.pointer<Type>();
         const auto in1_mem = scale.pointer<Type>();
@@ -1274,21 +1277,21 @@ public:
         const Type * const in2_mem = in2_mem_ptr ? in2_mem_ptr->data() : nullptr; //TODO: is the condition needed or is it nullptr anyway?
         auto out_mem = output.pointer<Type>();
 
-        const int in0_b = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
-        const int in0_f = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
-        const int in0_h = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
-        const int in0_w = input.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+        const int in0_b = input.get_layout().size.sizes()[0];
+        const int in0_f = input.get_layout().size.sizes()[1];
+        const int in0_h = input.get_layout().size.sizes()[2];
+        const int in0_w = input.get_layout().size.sizes()[3];
 
         { // asserting dims
-            const int out_b = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0]; (void) out_b;
-            const int out_f = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1]; (void) out_f;
-            const int out_h = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2]; (void) out_h;
-            const int out_w = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3]; (void) out_w;
+            const int out_b = output.get_layout().size.sizes()[0]; (void) out_b;
+            const int out_f = output.get_layout().size.sizes()[1]; (void) out_f;
+            const int out_h = output.get_layout().size.sizes()[2]; (void) out_h;
+            const int out_w = output.get_layout().size.sizes()[3]; (void) out_w;
 
-            const int in1_b = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0]; (void) in1_b;
-            const int in1_f = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1]; (void) in1_f;
-            const int in1_h = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2]; (void) in1_h;
-            const int in1_w = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3]; (void) in1_w;
+            const int in1_b = scale.get_layout().size.sizes()[0]; (void) in1_b;
+            const int in1_f = scale.get_layout().size.sizes()[1]; (void) in1_f;
+            const int in1_h = scale.get_layout().size.sizes()[2]; (void) in1_h;
+            const int in1_w = scale.get_layout().size.sizes()[3]; (void) in1_w;
             // input and output dims must match
             assert(in0_b == out_b && in0_f == out_f && in0_h == out_h && in0_w == out_w);
 
@@ -1303,10 +1306,10 @@ public:
 
             if (bias)
             {
-                const int in2_b = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0]; (void) in2_b;
-                const int in2_f = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1]; (void) in2_f;
-                const int in2_h = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2]; (void) in2_h;
-                const int in2_w = scale.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3]; (void) in2_w;
+                const int in2_b = scale.get_layout().size.sizes()[0]; (void) in2_b;
+                const int in2_f = scale.get_layout().size.sizes()[1]; (void) in2_f;
+                const int in2_h = scale.get_layout().size.sizes()[2]; (void) in2_h;
+                const int in2_w = scale.get_layout().size.sizes()[3]; (void) in2_w;
 
                 // scale and bias dims must match
                 assert(in1_b == in2_b && in1_f == in2_f && in1_h == in2_h && in1_w == in2_w);
@@ -1364,11 +1367,11 @@ public:
             if (i == 1) res << "_ScaleInput";
             if (i == 2) res << "_BiasInput";
 
-            const auto chans = format::traits(p->input_layouts[i].format).order;
+            const auto chans = format::traits(p->fmt).order;
 
-            for (unsigned int j = 0; j < p->input_layouts[i].sizes().size(); ++j)
+            for (unsigned int j = 0; j < p->input_layouts[i].sizes(p->fmt).size(); ++j)
             {
-                res << chans[j] << p->input_layouts[i].sizes()[j];
+                res << chans[j] << p->input_layouts[i].sizes(p->fmt)[j];
             }
         }
         return res.str();

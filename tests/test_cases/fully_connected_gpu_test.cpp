@@ -81,11 +81,11 @@ void generic_fully_connected_test(cldnn::format test_input_fmt, cldnn::format te
 	VF<T> weights_rnd_vec = flatten_4d<T>(test_weights_fmt, weights_rnd);
 
 	engine engine;
-	tensor input_tensor(format::bfyx, { input_b, f, y, x });
-	tensor weights_tensor(format::bfyx, { output_x, f, y, x });
-	auto input = memory::allocate(engine, { type_to_data_type<T>::value, input_tensor.transform(test_input_fmt, 0) });
-	auto weights = memory::allocate(engine, { type_to_data_type<T>::value, weights_tensor.transform(test_weights_fmt, 0) });
-	auto bias = memory::allocate(engine, { type_to_data_type<T>::value, { format::bfyx, { 1,1,1,output_x } } });
+	tensor input_tensor({ input_b, f, x, y });
+	tensor weights_tensor({ output_x, f, x, y });
+	auto input = memory::allocate(engine, { type_to_data_type<T>::value, test_input_fmt, input_tensor });
+	auto weights = memory::allocate(engine, { type_to_data_type<T>::value, test_weights_fmt, weights_tensor });
+	auto bias = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { 1,1,output_x,1 } });
 	set_values(input, input_rnd_vec);
 	set_values(weights, weights_rnd_vec);
 	set_values(bias, bias_rnd_vec);
@@ -108,16 +108,16 @@ void generic_fully_connected_test(cldnn::format test_input_fmt, cldnn::format te
 	auto output_layout = output_memory.get_layout();
 	auto output_ptr = output_memory.pointer<T>();
 
-	//EXPECT_EQ(output_layout.size.format.value, test_input_fmt);
-	tensor output_tensor = output_layout.size.transform(cldnn::format::bfyx, 0);
-	int b_size = output_tensor.sizes()[0];
-	int x_size = output_tensor.sizes()[3];
+	//EXPECT_EQ(output_layout.format.value, test_input_fmt);
+	tensor output_tensor = output_layout.size;
+	int b_size = output_tensor.batch[0];
+	int x_size = output_tensor.spatial[0];
 	EXPECT_EQ(b_size, input_b);
 	EXPECT_EQ(x_size, output_x);
 	
 	bool test_is_correct = true;
 	VVVVF<T> output_cpu = fully_connected_reference<T>(input_rnd, weights_rnd, bias_rnd_vec, relu, slope);
-	VF<T> output_cpu_vec = flatten_4d<T>(layout_4d(output_layout.size.format), output_cpu);
+	VF<T> output_cpu_vec = flatten_4d<T>(layout_4d(output_layout.format), output_cpu);
 	for (size_t i = 0; i < output_cpu_vec.size(); ++i) {
 		if (!floating_point_equal(output_cpu_vec[i], output_ptr[i])) {
 			EXPECT_FLOAT_EQ(output_cpu_vec[i], output_ptr[i]); // to print the problematic values
@@ -201,8 +201,8 @@ TEST(fully_connected_gpu, no_biases) {
 
     engine engine;
 
-    auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ input_x, input_b, 1, 1 } } });
-    auto weights_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ weight_b, 1, 1, weight_x } } });
+    auto input_prim = memory::allocate(engine, { data_types::f32,format::yxfb,{ input_b, 1, input_x, 1} });
+    auto weights_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ weight_b, 1, weight_x, 1 } });
 
     set_values(input_prim, { -0.5f, 2.0f, 0.5f });
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
@@ -259,10 +259,10 @@ TEST(fully_connected_gpu, xb_f32_batch_1) {
 
     engine engine;
 
-    auto input_prim = memory::allocate( engine, { data_types::f32, { format::yxfb, { input_x, input_b, 1, 1 } } });
+    auto input_prim = memory::allocate( engine, { data_types::f32, format::yxfb, { input_b, 1, input_x, 1 } });
     //auto output_prim = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } },{ 1 } } });
-    auto weights_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ weight_b, 1, 1, weight_x } } });
-    auto bias_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx, { 1,1,1,output_x } } });
+    auto weights_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ weight_b, 1, weight_x, 1 } });
+    auto bias_prim = memory::allocate(engine, { data_types::f32,format::bfyx, { 1,1,output_x, 1} });
 
     set_values(input_prim, { -0.5f, 2.0f, 0.5f });
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
@@ -320,10 +320,10 @@ TEST(fully_connected_gpu, xb_f32_batch_2) {
 
     engine engine;
 
-    auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 1,input_x,1,input_b } } });
+    auto input_prim = memory::allocate(engine, { data_types::f32,format::yxfb,{ input_b,1,input_x, 1 } });
     //auto output_prim = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } },{ 1 } } });
-    auto weights_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ weight_b, 1, 1, weight_x } } });
-    auto bias_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 1,1,1,output_x } } });
+    auto weights_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ weight_b, 1, weight_x, 1 } });
+    auto bias_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ 1,1,output_x,1 } });
 
     set_values(input_prim, { -0.5f, 1.0f, 2.0f, 1.5f, 0.5f, 0.0f });
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
@@ -382,10 +382,10 @@ TEST(fully_connected_gpu, x_f32) {
 
     engine engine;
 
-    auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx, { 1,1,1,input_x } } });
+    auto input_prim = memory::allocate(engine, { data_types::f32,format::bfyx, { 1,1,input_x,1 } });
     //auto output_prim = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } },{ 1 } } });
-    auto weights_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ weight_b, 1, 1, weight_x } } });
-    auto bias_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 1,1,1,output_x } } });
+    auto weights_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ weight_b, 1, weight_x, 1 } });
+    auto bias_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ 1,1,output_x,1 } });
 
     set_values(input_prim, { -0.5f, 2.0f, 0.5f });
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
@@ -439,10 +439,10 @@ TEST(fully_connected_gpu, yxfn_f32) {
 
     engine engine;
 
-    auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb, { 1, 2, 2, 1 } } });
+    auto input_prim = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 2, 2, 1 } });
     //auto output_prim = memory::allocate({ memory::format::xb_f32,{ 2 ,{ { 1 } }, 1 } });
-    auto weights_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 2, 1, 2 } } });
-    auto bias_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 1,1,1,2 } } });
+    auto weights_prim = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 2, 2, 1 } });
+    auto bias_prim = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 2, 1 } });
 
     set_values(input_prim, { 1.f, 3.f, -2.f, -4.f });
     set_values(weights_prim, { 1.f, -1.f, 2.0f, 0.f, 3.0f, 4.0f, 0.5f, 5.0f });
@@ -497,10 +497,10 @@ TEST(fully_connected_gpu, xb_f32_batch_1_relu) {
 
     engine engine;
 
-    auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ input_x, input_b, 1, 1 } } });
+    auto input_prim = memory::allocate(engine, { data_types::f32,format::yxfb,{ input_b, 1, input_x, 1 } });
     //auto output_prim = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } },{ 1 } } });
-    auto weights_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ weight_b, 1, 1, weight_x } } });
-    auto bias_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 1,1,1,output_x } } });
+    auto weights_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ weight_b, 1, weight_x, 1 } });
+    auto bias_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ 1,1,output_x, 1 } });
 
     set_values(input_prim, { -0.5f, 2.0f, 0.5f });
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
@@ -558,10 +558,10 @@ TEST(fully_connected_gpu, xb_f32_batch_2_relu) {
 
     engine engine;
 
-    auto input_prim = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ input_x, 1, 1, input_b } } });
+    auto input_prim = memory::allocate(engine, { data_types::f32,format::yxfb,{ input_b, 1, input_x, 1 } });
     //auto output_prim = memory::allocate({ memory::format::xb_f32,{ output_b,{ { output_x } },{ 1 } } });
-    auto weights_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ weight_b, 1, 1, weight_x } } });
-    auto bias_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 1,1,1,output_x } } });
+    auto weights_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ weight_b, 1, weight_x, 1 } });
+    auto bias_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ 1,1,output_x,1 } });
 
     set_values(input_prim, { -0.5f, 1.0f, 2.0f, 1.5f, 0.5f, 0.0f });
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
@@ -620,10 +620,10 @@ TEST(fully_connected_gpu, x_f32_relu) {
 
     engine engine;
 
-    auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 1,1,1,input_x } } });
+    auto input_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ 1,1,input_x,1 } });
     //auto output_prim = memory::allocate({ memory::format::x_f32,{ 1       ,{ { output_x } }, 1 } });
-    auto weights_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ weight_b, 1, 1, weight_x } } });
-    auto bias_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 1,1,1,output_x } } });
+    auto weights_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ weight_b, 1, weight_x, 1 } });
+    auto bias_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ 1,1,output_x,1 } });
 
     set_values(input_prim, { -0.5f, 2.0f, 0.5f });
     set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });
@@ -679,10 +679,10 @@ TEST(fully_connected_gpu, x_f32_relu_with_negative_slope) {
 
     engine engine;
 
-    auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 1,1,1,input_x } } });
+    auto input_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ 1,1,input_x,1 } });
     //auto output_prim = memory::allocate({ memory::format::x_f32,{ 1       ,{ { output_x } }, 1 } });
-    auto weights_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ weight_b, 1, 1, weight_x } } });
-    auto bias_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 1,1,1,output_x } } });
+    auto weights_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ weight_b, 1, weight_x, 1 } });
+    auto bias_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ 1,1,output_x,1 } });
 
 	set_values(input_prim, { -0.5f, 2.0f, 0.5f });
 	set_values(weights_prim, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f, -0.5f, 1.0f, 1.5f });

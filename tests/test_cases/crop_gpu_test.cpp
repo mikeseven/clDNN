@@ -57,13 +57,13 @@ TEST(crop_gpu, basic_in2x3x2x2_crop_all) {
     auto crop_x_size = x_size - 2;
     auto crop_y_size = y_size - 2;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    auto reference_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ crop_y_size, crop_x_size, crop_feature_num, crop_batch_num } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb,{ batch_num, feature_num, x_size, y_size } });
+    auto reference_input = memory::allocate(engine, { data_types::f32, format::yxfb,{ crop_batch_num, crop_feature_num, crop_x_size, crop_y_size } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("reference_input", reference_input.get_layout()));
-    topology.add(crop("crop", "input", "reference_input", { format::yxfb,{ 0, 0, 0, 0 } }));
+    topology.add(crop("crop", "input", "reference_input", { 0, 0, 0, 0 }));
 
     std::vector<float> input_vec = generate_random_input<float>(batch_num, feature_num, y_size, x_size, -10, 10);
     set_values(input, input_vec);
@@ -111,13 +111,13 @@ TEST(crop_gpu, basic_in2x3x2x2_crop_all_bfyx) {
     auto crop_x_size = x_size - 2;
     auto crop_y_size = y_size - 1;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ batch_num, feature_num, y_size, x_size } } });
-    auto reference_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ crop_batch_num, crop_feature_num, crop_y_size, crop_x_size } } });
+    auto input = memory::allocate(engine, { data_types::f32,format::bfyx,{ batch_num, feature_num, x_size, y_size } });
+    auto reference_input = memory::allocate(engine, { data_types::f32,format::bfyx,{ crop_batch_num, crop_feature_num, crop_x_size, crop_y_size } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("reference_input", reference_input.get_layout()));
-    topology.add(crop("crop", "input", "reference_input", { format::bfyx, {0, 0, 0, 0} } ));
+    topology.add(crop("crop", "input", "reference_input", {0, 0, 0, 0} ));
 
     std::vector<float> input_vec = generate_random_input<float>(batch_num, feature_num, y_size, x_size, -10, 10);
     set_values(input, input_vec);
@@ -178,8 +178,8 @@ TEST(crop_gpu, basic_in2x3x2x2_crop_offsets) {
     auto x_offset = 1;
     auto y_offset = 1;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ tensor(spatial(x_size, y_size), feature(feature_num), batch(batch_num)) } });
-    auto reference_input = memory::allocate(engine, { data_types::f32,{ tensor(batch(crop_batch_num), spatial(crop_x_size, crop_y_size), feature(crop_feature_num)) } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { tensor(spatial(x_size, y_size), feature(feature_num), batch(batch_num)) } });
+    auto reference_input = memory::allocate(engine, { data_types::f32, format::yxfb, { tensor(batch(crop_batch_num), spatial(crop_x_size, crop_y_size), feature(crop_feature_num)) } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
