@@ -24,7 +24,7 @@
 #endif
 
 
-KERNEL (normalize_gpu_within_spatial_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
+KERNEL (normalize_gpu_within_spatial_yxfb)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
 	const uint x = get_global_id(0);
 	if (x >= INPUT_SIZE_X)
@@ -32,8 +32,7 @@ KERNEL (normalize_gpu_within_spatial_bfyx)(const __global UNIT_TYPE* input, __gl
 	const uint y = get_global_id(1);
 	const uint b = get_global_id(2);
 
-	uint input_first = b * INPUT_FEATURE_NUM * INPUT_BUFFER_SIZE_Y * INPUT_BUFFER_SIZE_X;
-	input_first += (INPUT_PADDING_LOWER_SIZE_Y + y) * INPUT_BUFFER_SIZE_X + INPUT_PADDING_LOWER_SIZE_X + x; // skip input padding
+	uint input_first = b + INPUT_BATCH_NUM * INPUT_FEATURE_NUM * ((INPUT_PADDING_LOWER_SIZE_Y + y) * INPUT_BUFFER_SIZE_X + INPUT_PADDING_LOWER_SIZE_X + x);
 
 	// Compute norm
 	uint input_idx = input_first;
@@ -42,20 +41,19 @@ KERNEL (normalize_gpu_within_spatial_bfyx)(const __global UNIT_TYPE* input, __gl
 	{
 		float value = (float)input[input_idx];
 		norm = mad(value, value, norm);
-		input_idx += INPUT_BUFFER_SIZE_X * INPUT_BUFFER_SIZE_Y; // skip to the next feature
+		input_idx += INPUT_BATCH_NUM; // skip to the next feature
 	}
 	norm = native_powr(norm, -0.5f);
 
-	uint output_idx = b * OUTPUT_FEATURE_NUM * OUTPUT_BUFFER_SIZE_X * OUTPUT_BUFFER_SIZE_Y;
-	output_idx += (OUTPUT_PADDING_LOWER_SIZE_Y + y) * OUTPUT_BUFFER_SIZE_X + OUTPUT_PADDING_LOWER_SIZE_X + x; // skip output padding
+	uint output_idx = b + OUTPUT_BATCH_NUM * OUTPUT_FEATURE_NUM * ((OUTPUT_PADDING_LOWER_SIZE_Y + y) * OUTPUT_BUFFER_SIZE_X + OUTPUT_PADDING_LOWER_SIZE_X + x);
 
 	// Scale the input
 	input_idx = input_first;
 	for (int i = 0; i < INPUT_FEATURE_NUM; i++)
 	{
 		output[output_idx] = UNIT_CVT_FUNC(norm) * input[input_idx] * UNIT_CVT_FUNC(SCALE);
-		output_idx += OUTPUT_BUFFER_SIZE_X * OUTPUT_BUFFER_SIZE_Y;
-		input_idx += INPUT_BUFFER_SIZE_X * INPUT_BUFFER_SIZE_Y;
+		output_idx += OUTPUT_BATCH_NUM;
+		input_idx += INPUT_BATCH_NUM;
 	}
 }
 

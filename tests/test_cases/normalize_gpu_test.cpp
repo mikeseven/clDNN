@@ -30,14 +30,18 @@
 
 using namespace cldnn;
 
-TEST(normalize_gpu, normalize_test_across_spatial)
+class normalize_gpu_test : public ::testing::TestWithParam<cldnn::format>
+{
+};
+
+TEST_P(normalize_gpu_test, normalize_test_across_spatial)
 {
 	using namespace cldnn;
 	using namespace tests;
 
 	engine engine;
 
-	auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 7, 10, 13, 17 } } });
+	auto input = memory::allocate(engine, { data_types::f32,{ GetParam(),{ 7, 10, 13, 17 } } });
 
 	tests::set_random_values<float>(input, -100, 100);
 
@@ -84,14 +88,14 @@ TEST(normalize_gpu, normalize_test_across_spatial)
 	}  
 }
 
-TEST(normalize_gpu, normalize_test_across_spatial_scale)
+TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale)
 {
 	using namespace cldnn;
 	using namespace tests;
 
 	engine engine;
 
-	auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 12, 5, 2, 7 } } });
+	auto input = memory::allocate(engine, { data_types::f32,{ GetParam(),{ 12, 5, 2, 7 } } });
 
 	tests::set_random_values<float>(input, -100, 100);
 
@@ -140,14 +144,14 @@ TEST(normalize_gpu, normalize_test_across_spatial_scale)
 	}
 }
 
-TEST(normalize_gpu, normalize_test_within_spatial)
+TEST_P(normalize_gpu_test, normalize_test_within_spatial)
 {
 	using namespace cldnn;
 	using namespace tests;
 
 	engine engine;
 
-	auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 5, 7, 12, 19 } } });
+	auto input = memory::allocate(engine, { data_types::f32,{ GetParam(),{ 5, 7, 12, 19 } } });
 
 	tests::set_random_values<float>(input, -100, 100);
 
@@ -194,14 +198,14 @@ TEST(normalize_gpu, normalize_test_within_spatial)
 	}
 }
 
-TEST(normalize_gpu, normalize_test_within_spatial_scale)
+TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale)
 {
 	using namespace cldnn;
 	using namespace tests;
 
 	engine engine;
 
-	auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 9, 4, 23, 18 } } });
+	auto input = memory::allocate(engine, { data_types::f32,{ GetParam(),{ 9, 4, 23, 18 } } });
 
 	tests::set_random_values<float>(input, -100, 100);
 
@@ -250,6 +254,17 @@ TEST(normalize_gpu, normalize_test_within_spatial_scale)
 	}
 }
 
+struct custom_param_name_functor_normalize_test {
+	std::string operator()(const ::testing::TestParamInfo<cldnn::format>& info) {
+		return std::to_string(info.index);
+	}
+};
+
+INSTANTIATE_TEST_CASE_P(normalize_gpu_test,
+	normalize_gpu_test,
+	::testing::Values(format::bfyx, format::yxfb),
+	custom_param_name_functor_normalize_test());
+
 class normalize_test : public tests::generic_test
 {
 
@@ -257,7 +272,7 @@ public:
 
 	virtual void SetUp()
 	{
-		max_ulps_diff_allowed = 7;
+		max_ulps_diff_allowed = 9;
 	}
 
 	static void TearDownTestCase() 
@@ -307,7 +322,7 @@ public:
 
 	virtual bool is_format_supported(cldnn::format format)
 	{
-		return (format == cldnn_format_type::cldnn_format_bfyx);
+		return ((format == cldnn_format_type::cldnn_format_bfyx) || (format == cldnn_format_type::cldnn_format_yxfb));
 	}
 
 	template<typename Type>

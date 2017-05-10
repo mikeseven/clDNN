@@ -24,57 +24,44 @@
 #endif
 
 
-KERNEL (normalize_gpu_across_spatial_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
+KERNEL (normalize_gpu_across_spatial_yxfb)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
 	const uint b = get_global_id(0);
 
 	float norm = EPSILON;
 
-	uint input_first = b * INPUT_FEATURE_NUM * INPUT_BUFFER_SIZE_Y * INPUT_BUFFER_SIZE_X;
-
 	// Compute norm
-	uint input_idx = input_first;
+	uint input_idx = 0;
+	
 	for (int f = 0; f < INPUT_FEATURE_NUM; f++)
 	{
-		input_idx += INPUT_PADDING_LOWER_SIZE_Y * INPUT_BUFFER_SIZE_X;
 		for (int y = 0; y < INPUT_SIZE_Y; y++)
 		{
-			input_idx += INPUT_PADDING_LOWER_SIZE_X;
 			for (int x = 0; x < INPUT_SIZE_X; x++)
 			{
+				input_idx = b + INPUT_BATCH_NUM * (f + INPUT_FEATURE_NUM * ((INPUT_PADDING_LOWER_SIZE_Y + y) * INPUT_BUFFER_SIZE_X + INPUT_PADDING_LOWER_SIZE_X + x));
 				float value = (float)input[input_idx];
 				norm = mad(value, value, norm);
-				input_idx++;
 			}
-			input_idx += INPUT_PADDING_UPPER_SIZE_X;
 		}
-		input_idx += INPUT_PADDING_UPPER_SIZE_Y * INPUT_BUFFER_SIZE_X;
 	}
+
 	norm = native_powr(norm, -0.5f);
 
-	uint output_idx = b * OUTPUT_FEATURE_NUM * OUTPUT_BUFFER_SIZE_X * OUTPUT_BUFFER_SIZE_Y;
+	uint output_idx = 0;
 
 	// Scale the input
-	input_idx = input_first;
 	for (int f = 0; f < INPUT_FEATURE_NUM; f++)
 	{
-		input_idx += INPUT_PADDING_LOWER_SIZE_Y * INPUT_BUFFER_SIZE_X;
-		output_idx += OUTPUT_PADDING_LOWER_SIZE_Y * OUTPUT_BUFFER_SIZE_X;
 		for (int y = 0; y < INPUT_SIZE_Y; y++)
 		{
-			input_idx += INPUT_PADDING_LOWER_SIZE_X;
-			output_idx += OUTPUT_PADDING_LOWER_SIZE_X;
 			for (int x = 0; x < INPUT_SIZE_X; x++)
 			{
+				input_idx = b + INPUT_BATCH_NUM * (f + INPUT_FEATURE_NUM * ((INPUT_PADDING_LOWER_SIZE_Y + y) * INPUT_BUFFER_SIZE_X + INPUT_PADDING_LOWER_SIZE_X + x));
+				output_idx = b + INPUT_BATCH_NUM * (f + OUTPUT_FEATURE_NUM * ((OUTPUT_PADDING_LOWER_SIZE_Y + y) * OUTPUT_BUFFER_SIZE_X + OUTPUT_PADDING_LOWER_SIZE_X + x));
 				output[output_idx] = UNIT_CVT_FUNC(norm) * input[input_idx] * UNIT_CVT_FUNC(SCALE);
-				input_idx++;
-				output_idx++;
 			}
-			input_idx += INPUT_PADDING_UPPER_SIZE_X;
-			output_idx += OUTPUT_PADDING_UPPER_SIZE_X;
 		}
-		input_idx += INPUT_PADDING_UPPER_SIZE_Y * INPUT_BUFFER_SIZE_X;
-		output_idx += OUTPUT_PADDING_UPPER_SIZE_Y * OUTPUT_BUFFER_SIZE_X;
 	}
 }
 
