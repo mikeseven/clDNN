@@ -464,6 +464,8 @@ CLDNN_API cldnn_memory cldnn_allocate_memory(cldnn_engine engine, cldnn_layout l
 /// @brief Create memory object attached to the buffer allocated by user.
 /// @note User is responsible for buffer deallocation. Buffer lifetime should be bigger than lifetime of the memory object.
 CLDNN_API cldnn_memory cldnn_attach_memory(cldnn_layout layout, void* pointer, size_t size, cldnn_status* status);
+/// @brief Checks if two memory objects refer to the same underlaying buffer.
+CLDNN_API bool cldnn_is_the_same_buffer(cldnn_memory mem1, cldnn_memory mem2, cldnn_status* status);
 /// @brief Increment reference counter for the memory object.
 CLDNN_API void cldnn_retain_memory(cldnn_memory memory, cldnn_status* status);
 /// @brief Decrement reference counter for the memory object. Deletes object when counter becomes zero.

@@ -60,6 +60,7 @@ T* arr_end(T* buf, size_t count) { return buf + count; }
 
 struct gpu_buffer : public cldnn::memory_impl {
     gpu_buffer(const cldnn::refcounted_obj_ptr<cldnn::engine_impl>& engine, const cldnn::layout& layout);
+    gpu_buffer(const cldnn::refcounted_obj_ptr<cldnn::engine_impl>& engine, const cldnn::layout& new_layout, const cl::Buffer& buffer);
     void* lock() override;
     void unlock() override;
     const cl::Buffer& get_buffer() const {

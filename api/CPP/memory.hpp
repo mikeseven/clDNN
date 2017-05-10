@@ -126,6 +126,14 @@ struct memory
         return my_engine == engine.get();
     }
 
+    bool is_the_same_buffer(const memory& other) const
+    {
+        return check_status<bool>("checking if two memories refers to the same buffer failed", [&](status_t* status)
+        {
+            return cldnn_is_the_same_buffer(_impl, other._impl, status);
+        });
+    }
+
     /// Creates the @ref pointer object to get an access memory data
     template<typename T> friend struct cldnn::pointer;
     template<typename T> cldnn::pointer<T> pointer() const;

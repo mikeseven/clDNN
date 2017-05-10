@@ -49,6 +49,9 @@ public:
     engine_types type() const { return engine_types::ocl; }
 
     memory_impl* allocate_buffer(layout layout);
+    memory_impl* reinterpret_buffer(memory_impl* memory, layout new_layout);
+    bool is_the_same_buffer(memory_impl* mem1, memory_impl* mem2);
+
     event_impl* create_user_event();
     program_impl* build_program(const topology_impl& topology, const build_options& options);
     network_impl* build_network(const topology_impl& topology, const build_options& options);

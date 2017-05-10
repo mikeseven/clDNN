@@ -26,41 +26,51 @@ event_impl::ptr primitive_inst::execute(const std::vector<event_impl::ptr>& even
 {
     if (!_has_valid_input)
         throw std::runtime_error("Cannot execute primitive " + id() + " with invalid/unset input");
+ 
+    on_execute();
 
     if (_deps.size() == 0)
+    {
+        if (!output_changed()) //mainly for input_layout
+            return nullptr;
+
+        _output_changed = true;
         return _impl->execute(events, *this);
+    }
 
     std::vector<event_impl::ptr> dependencies;
     dependencies.reserve(_deps.size());
 
+    bool run = output_changed();
     for(auto& input : _deps)
     {
-        dependencies.emplace_back(get_network().execute_primitive(input, events));
+        auto dep_event = get_network().execute_primitive(input, events);
+        if (input->output_changed())
+        {
+            dependencies.emplace_back(std::move(dep_event));
+            run = true;
+        }
     }
 
-    return _impl->execute(dependencies, *this);
+    if (run)
+    {
+        _output_changed = true;
+        return _impl->execute(dependencies, *this);
+    }
+    else
+        return nullptr;
 }
 
-primitive_inst::primitive_inst(network_impl& network, program_node const& node)
+primitive_inst::primitive_inst(network_impl& network, program_node const& node, bool allocate_buffer)
     : _network(network)
     , _node(node)
     , _impl(node.get_selected_impl())
     , _deps(network.get_primitives(desc()->dependecies()))
-    , _output(allocate_output())
-    , _output_changed(false)
-{}
-
-primitive_inst::primitive_inst(network_impl& network, program_node const& node, memory const& buffer)
-    : _network(network)
-    , _node(node)
-    , _impl(node.get_selected_impl())
-    , _deps(network.get_primitives(desc()->dependecies()))
-    , _output(buffer)
+    , _output()
     , _output_changed(false)
 {
-    auto req_layout = node.get_output_layout();
-    if (buffer.get_layout() != req_layout)
-        throw std::runtime_error("Provided buffer does not meet primitive's requirements");
+    if (allocate_buffer)
+        _output = allocate_output();
 }
 
 memory primitive_inst::allocate_output()

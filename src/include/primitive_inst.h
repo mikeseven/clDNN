@@ -26,6 +26,7 @@
 
 #include <memory>
 #include <vector>
+#include <boost/optional.hpp>
 
 namespace neural { namespace gpu { class gpu_toolkit; } }
 
@@ -65,7 +66,7 @@ public:
     }
 
     const memory& dep_memory(size_t index) const { return dependencies().at(index)->output_memory(); }
-    const memory& output_memory() const { return _output; }
+    const memory& output_memory() const { return _output.get(); }
     primitive_type_id type() const { return _node.get_primitive()->type; }
     primitive_id id() const { return _node.get_primitive()->id; }
     const auto desc() const { return _node.get_primitive(); }
@@ -74,13 +75,13 @@ public:
     event_impl::ptr execute(const std::vector<event_impl::ptr>& events);
 
     auto output_changed() const { return _output_changed; }
+    void reset_output_change() { _output_changed = false; }
 
     //return pointer to const to prevent arbitrary 'execute' call -> use primitive_inst.execute() instead
     const auto get_impl() const { return _impl.get(); }
 
 protected:
-    primitive_inst(network_impl& network, program_node const& node);
-    primitive_inst(network_impl& netowkr, program_node const& node, memory const& buffer);
+    primitive_inst(network_impl& network, program_node const& node, bool allocate_buffer);
 
     network_impl& _network;
     program_node const& _node;
@@ -88,13 +89,19 @@ protected:
     std::shared_ptr<primitive_impl> _impl;
 
     std::vector<std::shared_ptr<primitive_inst>> _deps;
-    memory _output;
+
+    //_output is optional because its initialization might be postponed (reshape_inst may either allocate it's own buffer or attach input as output
+    // depending on reshape_node.is_in_place())
+    boost::optional<memory> _output;
 
     bool _output_changed; //todo: implement output reuse if neither of inputs has changed
     bool _has_valid_input = true; //by default all primitives has valid inputs, exception is input_layout (see input_layout_inst)
 
-private:
     memory allocate_output();
+
+    //event function called by primitive_inst::execute after checking if primitive should rerun and before calling _impl->execute()
+    //mainly for reshape (to update output memory if reshape_node.is_in_place() == true)
+    virtual void on_execute() {}
 };
 
 /*
@@ -133,20 +140,25 @@ public:
     using typed_node = typed_program_node<PType>;
     using typed_impl = typed_primitive_impl<PType>;
 
+    const typed_node& node;
+    const PType& argument;
+
     typed_primitive_inst_base(network_impl& network, typed_node const& node)
-        : primitive_inst(network, node)
+        : typed_primitive_inst_base(network, node, true)
+    {}
+
+protected:
+    typed_primitive_inst_base(network_impl& network, typed_node const& node, bool allocate_buffer)
+        : primitive_inst(network, node, allocate_buffer)
         , node(_node)
         , argument(*node.get_primitive())
     {}
 
     typed_primitive_inst_base(network_impl& network, typed_node const& node, memory const& buffer)
-        : primitive_inst(network, node, buffer)
-        , node(_node)
-        , argument(*node.get_primitive())
-    {}
-
-    const typed_node& node;
-    const PType& argument;
+        : typed_primitive_inst_base(network, node, false)
+    {
+        _output = buffer;
+    }
 };
 
 /*

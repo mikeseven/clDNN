@@ -31,6 +31,16 @@ namespace neural { namespace gpu {
         gpu_buffer::unlock();
     }
 
+    gpu_buffer::gpu_buffer(const cldnn::refcounted_obj_ptr<cldnn::engine_impl>& engine, const cldnn::layout& new_layout, const cl::Buffer& buffer)
+        : memory_impl(engine, new_layout)
+        , _context(engine->get_context())
+        , _lock_count(0)
+        , _buffer(buffer)
+        , _mapped_ptr(nullptr)
+    {
+
+    }
+
     void* gpu_buffer::lock() {
         std::lock_guard<std::mutex> locker(_mutex);
         if (0 == _lock_count) {

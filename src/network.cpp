@@ -47,13 +47,11 @@ network_impl::network_impl(program_impl::cptr program)
     cl::Buffer out(context->context(), CL_MEM_WRITE_ONLY, 1);
     warmup_kernel.run<cl_int, cl_int, cl_int, cl::Buffer>({ 1024, 8 }, {}, 0, 111, 7, out);
     context->queue().finish();
-
 }
 
 network_impl::network_impl(engine_impl::ptr engine, const topology_impl& topo, const build_options& options)
     : network_impl(program_impl::cptr(engine->build_program(topo, options), false))
 {
-
 }
 
 void network_impl::reset_execution(bool wait)
@@ -64,6 +62,9 @@ void network_impl::reset_execution(bool wait)
         events.reserve(_events.size());
         for (auto& pair : _events)
         {
+            if (!pair.second)
+                continue;
+
             auto clevent = pair.second->get();
             auto event_status = clevent.getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>();
             if (event_status != CL_COMPLETE)
@@ -107,6 +108,9 @@ void network_impl::execute(const std::vector<refcounted_obj_ptr<event_impl>>& ev
     {
         auto output_event = execute_primitive(output, events);
     }
+
+    for (auto& prim : _primitives)
+        prim.second->reset_output_change();
 }
 
 std::vector<primitive_id> network_impl::get_output_ids() const

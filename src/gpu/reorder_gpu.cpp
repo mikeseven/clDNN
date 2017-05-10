@@ -232,7 +232,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         auto lower_padding = output_layout.data_padding.lower_size();
         auto upper_padding = output_layout.data_padding.upper_size();
 
-        if (!engine_info.supports_fp16 && (input_use_half || output_use_half))
+        if (!engine_info.supports_fp16 && (input_use_half != output_use_half))
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
         if (outer.input().get_output_layout().count() != outer.get_output_layout().count())
@@ -240,13 +240,17 @@ struct reorder_gpu : typed_primitive_impl<reorder>
             throw std::runtime_error("Input/output elements numbers mismatch!!");
         }
 
+        std::string half_type_str = "half";
+        if (input_use_half && output_use_half)
+            half_type_str = "ushort";
+
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("DIMENSIONS", std::to_string(input_dimensions)),
             gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", data.is_flatten ? get_idx_calculation_flatten(output_layout.data_type, output_layout.format) : get_idx_calculation(output_layout.data_type, output_layout.format)),
             gpu::make_jit_constant("CALCULATION_ORDER", get_calculation_order_string(input_layout.data_type, input_layout.format)),
-            gpu::make_jit_constant("SRC_TYPE", input_use_half ? std::string("half") : std::string("float")),
-            gpu::make_jit_constant("DEST_TYPE", output_use_half ? std::string("half") : std::string("float")),
+            gpu::make_jit_constant("SRC_TYPE", input_use_half ? half_type_str : std::string("float")),
+            gpu::make_jit_constant("DEST_TYPE", output_use_half ? half_type_str : std::string("float")),
             gpu::make_jit_constant("SRC_DEST_TYPE_CVT", input_output_type_cvt),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16))
         };

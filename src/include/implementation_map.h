@@ -34,6 +34,7 @@ class singleton_map : public std::map<T, U> {
 namespace cldnn {
 
 struct reorder;
+struct reshape;
 struct data;
 struct input_layout;
 struct prior_box;
@@ -58,6 +59,16 @@ struct implementation_key<reorder>
 {
     typedef cldnn::engine_types type;
     type operator()(engine_types engine_type, const typed_program_node<reorder>&)
+    {
+        return engine_type;
+    }
+};
+
+template<>
+struct implementation_key<reshape>
+{
+    typedef cldnn::engine_types type;
+    type operator()(engine_types engine_type, const typed_program_node<reshape>&)
     {
         return engine_type;
     }

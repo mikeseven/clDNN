@@ -35,7 +35,7 @@ input_layout_inst::typed_primitive_inst(network_impl& network, input_layout_node
 
 void input_layout_inst::set_data(memory_impl* mem)
 {
-    if (mem->get_layout() != _output.get_layout())
+    if (mem->get_layout() != output_memory().get_layout())
         throw std::invalid_argument("data layout does not match");
 
     if (mem->is_allocated_by(get_network().get_engine()))
@@ -45,7 +45,7 @@ void input_layout_inst::set_data(memory_impl* mem)
     else
     {
         pointer<char> src(memory(api_cast(mem), true));
-        pointer<char> dst(_output);
+        pointer<char> dst(output_memory());
         std::copy(src.begin(), src.end(), dst.begin());
     }
 
