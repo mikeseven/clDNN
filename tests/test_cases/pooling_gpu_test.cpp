@@ -471,7 +471,7 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i2x2x1x1_out
     {
         std::cout << "Testing format: " << format::order(*it) << std::endl;
 
-        tensor input_tensor({ 1, 1, 2, 2 });
+        tensor input_tensor( 1, 1, 2, 2 );
         auto input_prim = memory::allocate(engine, { data_types::f32, *it, input_tensor });
 
         topology topology;
@@ -532,7 +532,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_out
     {
         std::cout << "Testing format: " << format::order(*it) << std::endl;
 
-        tensor input_tensor({ 1, 1, 3, 3 });
+        tensor input_tensor( 1, 1, 3, 3 );
         auto input_prim = memory::allocate(engine, { data_types::f32, *it, input_tensor });
 
         topology topology;
@@ -599,7 +599,7 @@ TEST(pooling_forward_gpu, offsets_avg_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i2x2x1x1_inp
     {
         std::cout << "Testing format: " << format::order(*it) << std::endl;
 
-        tensor input_tensor({ 1, 1, 2, 2 });
+        tensor input_tensor( 1, 1, 2, 2 );
         auto input_prim = memory::allocate(engine, { data_types::f32, *it, input_tensor });
 
         topology topology;
@@ -663,7 +663,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_inp
     {
         std::cout << "Testing format: " << format::order(*it) << std::endl;
 
-        tensor input_tensor({ 1, 1, 3, 3 });
+        tensor input_tensor( 1, 1, 3, 3 );
         auto input_prim = memory::allocate(engine, { data_types::f32, *it, input_tensor });
 
         topology topology;
@@ -732,7 +732,7 @@ TEST(pooling_forward_gpu, avg_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i2x2x1x1_inpad2x1_ou
     {
         std::cout << "Testing format: " << format::order(*it) << std::endl;
 
-        tensor input_tensor({ 1, 1, 4, 4 });
+        tensor input_tensor( 1, 1, 4, 4 );
         auto input_prim = memory::allocate(engine, { data_types::f32, *it, input_tensor });
 
         topology topology;
@@ -800,7 +800,7 @@ TEST(pooling_forward_gpu, max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_inpad2x1_ou
     {
         std::cout << "Testing format: " << format::order(*it) << std::endl;
 
-        tensor input_tensor({ 1, 1, 5, 5 });
+        tensor input_tensor( 1, 1, 5, 5 );
         auto input_prim = memory::allocate(engine, { data_types::f32, *it, input_tensor });
 
         topology topology;

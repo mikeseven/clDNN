@@ -44,7 +44,7 @@ TYPED_TEST(prior_box_test, test_setup_basic)
 {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -52,7 +52,7 @@ TYPED_TEST(prior_box_test, test_setup_basic)
 	std::vector<float> min_sizes = { 4 };
 	std::vector<float> max_sizes = { 9 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -71,7 +71,7 @@ TYPED_TEST(prior_box_test, test_setup_multi_size)
 {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -79,7 +79,7 @@ TYPED_TEST(prior_box_test, test_setup_multi_size)
 	std::vector<float> min_sizes = { 4, 14 };
 	std::vector<float> max_sizes = { 9, 19 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -100,14 +100,14 @@ TYPED_TEST(prior_box_test, test_setup_no_max_size)
 {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
 
 	std::vector<float> min_sizes = { 4 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -128,14 +128,14 @@ TYPED_TEST(prior_box_test, test_setup_multi_size_no_max_size)
 {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
 
 	std::vector<float> min_sizes = { 4, 14 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -156,7 +156,7 @@ TYPED_TEST(prior_box_test, test_setup_aspect_ratio_one_no_flip)
 {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -167,7 +167,7 @@ TYPED_TEST(prior_box_test, test_setup_aspect_ratio_one_no_flip)
 
 	bool flip = false;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -186,7 +186,7 @@ TYPED_TEST(prior_box_test, test_setup_aspect_ratio_no_flip)
 {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -197,7 +197,7 @@ TYPED_TEST(prior_box_test, test_setup_aspect_ratio_no_flip)
 
 	bool flip = false;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -216,7 +216,7 @@ TYPED_TEST(prior_box_test, test_setup_aspect_ratio_flip)
 {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -225,7 +225,7 @@ TYPED_TEST(prior_box_test, test_setup_aspect_ratio_flip)
 	std::vector<float> max_sizes = { 9 };
 	std::vector<float> aspect_ratios = { 2 , 3 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -244,7 +244,7 @@ TYPED_TEST(prior_box_test, test_setup_aspect_ratio_flip_multi_size)
 {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -255,7 +255,7 @@ TYPED_TEST(prior_box_test, test_setup_aspect_ratio_flip_multi_size)
 
 	bool flip = true;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -274,7 +274,7 @@ TYPED_TEST(prior_box_test, test_forward_basic)
 {
     engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx, { 10, 10, 10, 10} } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx, { 10, 10, 10, 10} });
 	
     topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -282,7 +282,7 @@ TYPED_TEST(prior_box_test, test_forward_basic)
 	std::vector<float> min_sizes = { 4 };
 	std::vector<float> max_sizes = { 9 };
 
-    topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes));
+    topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes));
     network network(engine, topology);
     network.set_input_data("input_prim", input_prim);
 
@@ -325,14 +325,14 @@ TYPED_TEST(prior_box_test, test_forward_no_max_size)
 {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
 
 	std::vector<float> min_sizes = { 4 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -371,7 +371,7 @@ TYPED_TEST(prior_box_test, test_forward_variance_one)
 {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -383,7 +383,7 @@ TYPED_TEST(prior_box_test, test_forward_variance_one)
 	bool clip = false;
 	std::vector<float> variance = { 1 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -429,7 +429,7 @@ TYPED_TEST(prior_box_test, test_forward_variance_multi)
 {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -441,7 +441,7 @@ TYPED_TEST(prior_box_test, test_forward_variance_multi)
 	bool clip = false;
 	std::vector<float> variance = { 0.1f, 0.2f, 0.3f, 0.4f };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -486,7 +486,7 @@ TYPED_TEST(prior_box_test, test_forward_aspect_ratio_no_flip)
 {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -496,7 +496,7 @@ TYPED_TEST(prior_box_test, test_forward_aspect_ratio_no_flip)
 	std::vector<float> aspect_ratios = { 2 };
 	bool flip = false;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -549,7 +549,7 @@ TYPED_TEST(prior_box_test, test_forward_aspect_ratio)
 {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -558,7 +558,7 @@ TYPED_TEST(prior_box_test, test_forward_aspect_ratio)
 	std::vector<float> max_sizes = { 9 };
 	std::vector<float> aspect_ratios = { 2 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -620,7 +620,7 @@ TYPED_TEST(prior_box_test, test_forward_aspect_ratio)
 TYPED_TEST(prior_box_test, test_forward_aspect_ratio_multi_size) {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -631,7 +631,7 @@ TYPED_TEST(prior_box_test, test_forward_aspect_ratio_multi_size) {
 	bool flip = true;
 	bool clip = true;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip, clip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -713,7 +713,7 @@ TYPED_TEST(prior_box_test, test_forward_aspect_ratio_multi_size) {
 TYPED_TEST(prior_box_test, test_forward_fix_step) {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ 10, 10, 20, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 20 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -727,7 +727,7 @@ TYPED_TEST(prior_box_test, test_forward_fix_step) {
 	float step_width = 10.f;
 	float step_height = 10.f;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::bfyx,{ 1,1,100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance, step_width, step_height));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance, step_width, step_height));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 

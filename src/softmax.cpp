@@ -33,9 +33,9 @@ layout softmax_inst::calc_output_layout(softmax_node const& node)
     if (input_layout.size.spatial[0] == 1 && input_layout.size.spatial[1] == 1) //squeezenet spatials are 1x1
     {
         if (input_layout.format == format::bfyx)
-            layoutTemp = cldnn::layout(input_layout.data_type, format::bfyx, tensor({ input_layout.size.batch[0], 1, input_layout.size.feature[0], 1 }));
+            layoutTemp = cldnn::layout(input_layout.data_type, format::bfyx, tensor(input_layout.size.batch[0], 1, input_layout.size.feature[0], 1));
         else
-            layoutTemp = cldnn::layout(input_layout.data_type, format::yxfb, tensor({ input_layout.size.batch[0], 1, input_layout.size.feature[0], 1 }));
+            layoutTemp = cldnn::layout(input_layout.data_type, format::yxfb, tensor(input_layout.size.batch[0], 1, input_layout.size.feature[0], 1));
     }
     return layoutTemp;
 }
@@ -48,8 +48,8 @@ std::string softmax_inst::to_string(softmax_node const& node)
 
     primitive_description << "id: " << desc->id << ", type: softmax" << 
         "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
-        "\n\tinput padding: "  << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: "  << node.get_output_layout().count() <<",  size: " << node.get_output_layout().size << '\n';
 
     return primitive_description.str();

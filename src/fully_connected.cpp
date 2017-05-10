@@ -67,12 +67,12 @@ layout fully_connected_inst::calc_output_layout(fully_connected_node const& node
         (input_layout.format == format::bfyx &&                //this condition tests whether our input is batch>1 in bfyx format, if yes there will be
         input_layout.size.batch[0] > 1))                            //extra reorder between input and this fc from bfyx to yxfb format (so "is_batch_after_spatial" should return true)
     {
-        auto result = layout(input_layout.data_type, format::yxfb, tensor({ input_layout.size.batch[0], 1, weights_layout.size.batch[0], 1 }));
+        auto result = layout(input_layout.data_type, format::yxfb, tensor(input_layout.size.batch[0], 1, weights_layout.size.batch[0], 1));
         return result;
     }
     else
     {
-        auto result = layout(input_layout.data_type, format::bfyx, tensor({ input_layout.size.batch[0], 1, weights_layout.size.batch[0], 1 }));
+        auto result = layout(input_layout.data_type, format::bfyx, tensor(input_layout.size.batch[0], 1, weights_layout.size.batch[0], 1));
         return result;
     }
 }
@@ -92,8 +92,8 @@ std::string fully_connected_inst::to_string(fully_connected_node const& node)
         "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
         "\n\tweights id: "<< weights_id <<", count: " << weights_count << ", bias id: "<< bias_id <<",count: " << bias_count <<
         "\n\twith activation: " << activation <<
-        "\n\tinput padding: " << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
 
     return primitive_description.str();

@@ -104,10 +104,10 @@ bool data_type_match(data_types data_type)
 }
 
 /// Helper function to get both data_types and format::type in a single, unique value. Useable in 'case' statement.
-constexpr auto fuse(data_types dt, format::type fmt)
+constexpr auto fuse(data_types dt, cldnn::format::type fmt)
 {
     using dt_type = std::underlying_type_t<data_types>;
-    using fmt_type = std::underlying_type_t<format::type>;
+    using fmt_type = std::underlying_type_t<cldnn::format::type>;
     using fmt_narrow_type = int16_t;
 
     return static_cast<fmt_type>(fmt) <= std::numeric_limits<fmt_narrow_type>::max() &&
@@ -133,17 +133,15 @@ struct padding
     tensor upper_size() const { return _upper_size; }
 
     /// @brief 
-    /// @param format @ref cldnn::format for provided sizes.
-    /// @param lower_sizes Top-left padding sizes. See @ref tensor::tensor(cldnn::format, value_type, const std::vector<value_type>&) for details.
-    /// @param upper_sizes Bottom-right padding sizes. See @ref tensor::tensor(cldnn::format, value_type, const std::vector<value_type>&) for details.
+    /// @param lower_sizes Top-left padding sizes. See @ref tensor::tensor(const std::vector<value_type>&, value_type) for details.
+    /// @param upper_sizes Bottom-right padding sizes. See @ref tensor::tensor(const std::vector<value_type>&, value_type) for details.
     /// @param filling_value Filling value for padding area.
     padding(const std::vector<tensor::value_type>& lower_sizes, const std::vector<tensor::value_type>& upper_sizes, float filling_value = 0.0f)
         : _lower_size(to_abs(lower_sizes), 0), _upper_size(to_abs(upper_sizes), 0), _filling_value(filling_value)
     {}
 
     /// @brief Constrcuts symmetric padding.
-    /// @param format @ref cldnn::format for provided sizes.
-    /// @param sizes Top-left and bottom-right padding sizes. See @ref tensor::tensor(cldnn::format, value_type, const std::vector<value_type>&) for details.
+    /// @param sizes Top-left and bottom-right padding sizes. See @ref tensor::tensor(const std::vector<value_type>&, value_type) for details.
     /// @param filling_value Filling value for padding area.
     padding(const std::vector<tensor::value_type>& sizes, float filling_value = 0.0f)
         : padding(sizes, sizes, filling_value)
@@ -219,7 +217,7 @@ CLDNN_API_CLASS(padding)
 struct layout
 {
     /// Constructs layout based on @p data_type and @p size information described by @ref tensor
-    layout(data_types data_type, format fmt, tensor size, padding padding = padding())
+    layout(data_types data_type, cldnn::format fmt, tensor size, padding padding = padding())
         : data_type(data_type)
         , format(fmt)
         , size(size)
@@ -289,7 +287,7 @@ struct layout
     /// Number of bytes needed to store this layout
     size_t bytes_count() const { return data_type_traits::size_of(data_type) * get_buffer_size().get_linear_size(format); }
 
-    bool has_fused_format(data_types const& dt, format const& fmt) const
+    bool has_fused_format(data_types const& dt, cldnn::format const& fmt) const
     {
         return (data_type == dt && format == fmt);
     }
@@ -311,7 +309,7 @@ struct layout
     data_types data_type;
 
     /// Format stored in @ref memory (see. @ref format)
-    format format;
+    cldnn::format format;
 
     /// The size of the @ref memory (excluding padding)
     tensor size;

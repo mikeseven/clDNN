@@ -47,14 +47,14 @@ std::string reorder_inst::to_string(reorder_node const& node)
     std::stringstream           primitive_description;
     auto desc                   = node.get_primitive();
     auto input                  = node.input();
-    auto output_layout_data     = desc->output_layout.data_type == data_types::f16 ? "f16" : "f32";
+    auto output_layout_data     = desc->output_data_type == data_types::f16 ? "f16" : "f32";
     auto mean = desc->mean;
 
     primitive_description << "id: " << desc->id << ", type: reorder" 
         "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
         "\n\tmean: "  << mean <<
-        "\n\tinput padding: " << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: data_type:" << output_layout_data <<", count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
 
     return primitive_description.str();

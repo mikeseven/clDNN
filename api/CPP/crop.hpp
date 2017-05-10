@@ -56,7 +56,7 @@ struct crop : public primitive_base<crop, CLDNN_PRIMITIVE_DESC(crop)>
     crop(
         const primitive_id& id,
         const primitive_id& input,
-        const primitive_id& reference_input,
+        const tensor& reference_input,
         const tensor& offsets,
         const padding& output_padding = padding()
     )
@@ -75,16 +75,14 @@ struct crop : public primitive_base<crop, CLDNN_PRIMITIVE_DESC(crop)>
     }
 
     /// @brief Reference input primitive id with the required dimensions.
-    primitive_id reference_input;
+    tensor reference_input;
     /// @brief Input offsets.
     tensor offsets;
 
 protected:
-    std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override { return{ reference_input }; }
-
     void update_dto(dto& dto) const override
     {
-        dto.reference_input = reference_input.c_str();
+        dto.reference_input = reference_input;
         dto.offsets = offsets;
     }
 };

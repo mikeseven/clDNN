@@ -144,9 +144,9 @@ TYPED_TEST(detection_output_test, test_setup_basic)
 	const int keep_top_k = 150;
 
 	cldnn::engine engine;
-	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } } });
-	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, 2, this->num_priors * 4, 1 } } });
+	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
+	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4} });
 
 	topology topology;
 	topology.add(input_layout("input_location", input_location.get_layout()));
@@ -178,9 +178,9 @@ TYPED_TEST(detection_output_test, test_forward_share_location)
 	const int background_label_id = 0;
 
 	cldnn::engine engine;
-	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } } });
-	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, 2, this->num_priors * 4, 1 } } });
+	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
+	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4} });
 
 	auto location_ptr = input_location.pointer<TypeParam>();
 	auto confidence_ptr = input_confidence.pointer<TypeParam>();
@@ -229,9 +229,9 @@ TYPED_TEST(detection_output_test, test_forward_num_detections_greater_than_keep_
 	const int background_label_id = 0;
 
 	cldnn::engine engine;
-	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } } });
-	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, 2, this->num_priors * 4, 1 } } });
+	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
+	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4} });
 
 	auto location_ptr = input_location.pointer<TypeParam>();
 	auto confidence_ptr = input_confidence.pointer<TypeParam>();
@@ -274,9 +274,9 @@ TYPED_TEST(detection_output_test, test_forward_num_detections_smaller_than_keep_
 	const int background_label_id = 0;
 
 	cldnn::engine engine;
-	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } } });
-	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, 2, this->num_priors * 4, 1 } } });
+	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
+	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4} });
 
 	auto location_ptr = input_location.pointer<TypeParam>();
 	auto confidence_ptr = input_confidence.pointer<TypeParam>();
@@ -330,9 +330,9 @@ TYPED_TEST(detection_output_test, test_forward_share_location_top_k)
 	const int background_label_id = 0;
 
 	cldnn::engine engine;
-	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } } });
-	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, 2, this->num_priors * 4, 1 } } });
+	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
+	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4 } });
 
 	auto location_ptr = input_location.pointer<TypeParam>();
 	auto confidence_ptr = input_confidence.pointer<TypeParam>();
@@ -377,9 +377,9 @@ TYPED_TEST(detection_output_test, test_forward_no_share_location)
 	const int background_label_id = -1;
 
 	cldnn::engine engine;
-	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } } });
-	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, 2, this->num_priors * 4, 1 } } });
+	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
+	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4 } });
 
 	auto location_ptr = input_location.pointer<TypeParam>();
 	auto confidence_ptr = input_confidence.pointer<TypeParam>();
@@ -441,9 +441,9 @@ TYPED_TEST(detection_output_test, test_forward_no_share_location_top_k)
 	const int top_k = 2;
 
 	cldnn::engine engine;
-	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } } });
-	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, 2, this->num_priors * 4, 1 } } });
+	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
+	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4 } });
 
 	auto location_ptr = input_location.pointer<TypeParam>();
 	auto confidence_ptr = input_confidence.pointer<TypeParam>();
@@ -492,9 +492,9 @@ TYPED_TEST(detection_output_test, test_forward_no_share_location_neg_0)
 	const int background_label_id = 0;
 
 	cldnn::engine engine;
-	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } } });
-	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, 2, this->num_priors * 4, 1 } } });
+	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
+	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4 } });
 
 	auto location_ptr = input_location.pointer<TypeParam>();
 	auto confidence_ptr = input_confidence.pointer<TypeParam>();
@@ -546,9 +546,9 @@ TYPED_TEST(detection_output_test, test_forward_no_share_location_neg_0_top_k)
 	const int top_k = 2;
 
 	cldnn::engine engine;
-	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } } });
-	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, { format::bfyx,{ this->num_of_images, 2, this->num_priors * 4, 1 } } });
+	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx, { this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
+	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx, { this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx, { this->num_of_images, 2, 1, this->num_priors * 4 } });
 
 	auto location_ptr = input_location.pointer<TypeParam>();
 	auto confidence_ptr = input_confidence.pointer<TypeParam>();

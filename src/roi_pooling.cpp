@@ -49,8 +49,8 @@ std::string roi_pooling_inst::to_string(roi_pooling_node const& node)
         "\n\tinput_rois: "    << input_rois.id() << ", count: " << input_rois.get_output_layout().count() << ",  size: " << input_rois.get_output_layout().size <<
         "\n\tpooled_width: "  << desc->pooled_width << "pooled_height: " << desc->pooled_height <<
         "\n\tspatial_scale: " << desc->spatial_scale <<
-        "\n\tinput padding: " << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
 
     return primitive_description.str();

@@ -59,10 +59,9 @@ struct normalize :public primitive_base<normalize, CLDNN_PRIMITIVE_DESC(normaliz
 		const bool across_spatial = true,
 		const float epsilon = 1e-10f,
 		const float scale_factor = 1.f,
-        const padding& input_padding = padding(),
         const padding& output_padding = padding()
         )
-        : primitive_base(id, {input}, input_padding, output_padding)
+        : primitive_base(id, {input}, output_padding)
         , across_spatial(across_spatial)
         , epsilon(epsilon)
 		, scale_factor(scale_factor)

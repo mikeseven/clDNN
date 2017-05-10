@@ -81,8 +81,8 @@ void generic_fully_connected_test(cldnn::format test_input_fmt, cldnn::format te
 	VF<T> weights_rnd_vec = flatten_4d<T>(test_weights_fmt, weights_rnd);
 
 	engine engine;
-	tensor input_tensor({ input_b, f, x, y });
-	tensor weights_tensor({ output_x, f, x, y });
+	tensor input_tensor( input_b, f, x, y );
+	tensor weights_tensor( output_x, f, x, y );
 	auto input = memory::allocate(engine, { type_to_data_type<T>::value, test_input_fmt, input_tensor });
 	auto weights = memory::allocate(engine, { type_to_data_type<T>::value, test_weights_fmt, weights_tensor });
 	auto bias = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { 1,1,output_x,1 } });

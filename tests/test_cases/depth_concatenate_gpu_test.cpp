@@ -198,7 +198,6 @@ public:
         std::vector<tests::test_params*> all_generic_params;
 
         for (cldnn::data_types dt : test_data_types)
-        for (cldnn::format fmt : test_input_formats)
         for (int32_t b : test_batch_sizes)
         for (tensor & t : test_input_sizes)
         {
@@ -213,7 +212,7 @@ public:
                         test_params * tp = new test_params();
                         tp->data_type = dt;
 
-                        tp->input_layouts.push_back( cldnn::tensor( { b, f0, w, h }) );
+                        tp->input_layouts.push_back( cldnn::tensor(  b, f0, w, h ) );
 
                         all_generic_params.emplace_back(tp);
                     }
@@ -225,8 +224,8 @@ public:
                         test_params * tp = new test_params();
                         tp->data_type = dt;
 
-                        tp->input_layouts.push_back( cldnn::tensor( { b, f0, w, h }) );
-                      tp->input_layouts.push_back( cldnn::tensor( { b, f1, w, h }) );
+                        tp->input_layouts.push_back( cldnn::tensor(  b, f0, w, h ) );
+                      tp->input_layouts.push_back( cldnn::tensor(  b, f1, w, h ) );
 
                         all_generic_params.emplace_back(tp);
                     }
@@ -239,9 +238,9 @@ public:
                         test_params * tp = new test_params();
                         tp->data_type = dt;
 
-                        tp->input_layouts.push_back( cldnn::tensor( { b, f0, w, h }) );
-                        tp->input_layouts.push_back( cldnn::tensor( { b, f1, w, h }) );
-                        tp->input_layouts.push_back( cldnn::tensor( { b, f2, w, h }) );
+                        tp->input_layouts.push_back( cldnn::tensor( b, f0, w, h ) );
+                        tp->input_layouts.push_back( cldnn::tensor( b, f1, w, h ) );
+                        tp->input_layouts.push_back( cldnn::tensor( b, f2, w, h ) );
 
                         all_generic_params.emplace_back(tp);
                     }
@@ -303,7 +302,7 @@ public:
         }
 
         //Output is bfyx
-        auto output = memory::allocate(engine, cldnn::layout(inputs[0].get_layout().data_type, cldnn::format::bfyx, tensor({ in_b, out_f, in_w, in_h })));
+        auto output = memory::allocate(engine, cldnn::layout(inputs[0].get_layout().data_type, cldnn::format::bfyx, tensor( in_b, out_f, in_w, in_h )));
         auto out_mem = output.pointer<Type>();
 
         int out_f_off = 0;

@@ -58,8 +58,8 @@ std::string scale_inst::to_string(scale_node const& node)
         "\n\tinput: "         << input.id() << ", count: " << input.get_output_layout().count() << ",  size: " << input.get_output_layout().size <<
         "\n\tscale input: "   << scale_input.id() << ", count: " << scale_input.get_output_layout().count() << ",  size: " << scale_input.get_output_layout().size <<
         "\n\tbias count: "    << bias_count <<
-        "\n\tinput padding: " << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
 
     return primitive_description.str();

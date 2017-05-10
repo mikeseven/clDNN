@@ -241,9 +241,7 @@ public:
         std::vector<int> test_rois_sizes = { 1, 20 };          
         
 		for (cldnn::data_types data_type : test_data_types)
-		{
-			for (cldnn::format fmt : test_input_formats)
-			{        
+		{      
                 for (int batch_size : test_batch_sizes)
                 {
                     for (int feature_size : test_feature_sizes)
@@ -255,15 +253,14 @@ public:
                                 test_params* tp = new test_params();
 
                                 tp->data_type = data_type;
-                                tp->input_layouts.push_back(cldnn::tensor({batch_size, feature_size, input_size.spatial[0], input_size.spatial[1]}));
-                                tp->input_layouts.push_back(cldnn::tensor({num_rois, 1, CLDNN_ROI_VECTOR_SIZE, 1}));
+                                tp->input_layouts.push_back(cldnn::tensor(batch_size, feature_size, input_size.spatial[0], input_size.spatial[1]));
+                                tp->input_layouts.push_back(cldnn::tensor(num_rois, 1, CLDNN_ROI_VECTOR_SIZE, 1));
 
                                 all_generic_params.push_back(tp);
                             }
                         }
                     }
                 }
-            }
         }
 
 		return all_generic_params;

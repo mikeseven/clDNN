@@ -67,7 +67,7 @@ namespace tests
 		if (layer_params->input[0] == "reorder0")
 		{
 			// Add reorder layer with output padding as input to the tested layer.
-			topology.add(reorder("reorder0", "input0", input_mems[0].get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 3, 1 },{ 2, 5 } }));
+			topology.add(reorder("reorder0", "input0", input_mems[0].get_layout().with_padding({ { 0, 0, 1, 3 },{ 0, 0, 5, 2 } })));
 		}
         		
 		network network(engine, topology);
@@ -102,8 +102,6 @@ namespace tests
 	{
 		auto out_layout = out.get_layout();
 		auto ref_layout = ref.get_layout();
-
-		cldnn::format base_fmt = cldnn::format::bfyx;
 
 		EXPECT_EQ(out_layout.size, ref_layout.size);
 		EXPECT_EQ(out_layout.data_type, ref_layout.data_type);

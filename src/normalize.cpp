@@ -42,8 +42,8 @@ std::string normalize_inst::to_string(normalize_node const& node)
 	primitive_description << "id: " << desc->id << ", type: normalize" <<
 		"\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
 		"\n\tepsilon: " << epsilon << ", scale factor: " << scale << ", normalization region: " << norm_region <<
-		"\n\tinput padding: " << desc->input_padding <<
-		"\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
 		"\n\toutput: size: " << node.get_output_layout().size << '\n';
 
 	return primitive_description.str();
@@ -52,5 +52,10 @@ std::string normalize_inst::to_string(normalize_node const& node)
 normalize_inst::typed_primitive_inst(network_impl& network, normalize_node const& node)
     :parent(network, node)
 {
+	auto input_layout = node.input().get_output_layout();
+	if (input_layout.format != format::bfyx)
+	{
+		throw std::invalid_argument("Normalize layer supports only bfyx input format.");
+	}
 }
 }

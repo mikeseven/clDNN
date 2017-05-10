@@ -41,7 +41,7 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial)
 
 	engine engine;
 
-	auto input = memory::allocate(engine, { data_types::f32,{ GetParam(),{ 7, 10, 13, 17 } } });
+	auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 7, 10, 17, 13 } });
 
 	tests::set_random_values<float>(input, -100, 100);
 
@@ -61,12 +61,12 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial)
 
 	auto buff = output.pointer<float>();
 
-	auto output_sizes = output.get_layout().size.transform(format::bfyx, 0).sizes();
+	auto output_sizes = output.get_layout().size.sizes();
 
 	int batch_size = output_sizes[0];
 	int feature_size = output_sizes[1];
-	int y_size = output_sizes[2];
-	int x_size = output_sizes[3];
+	int y_size = output_sizes[3];
+	int x_size = output_sizes[2];
 
 	for (int b = 0; b < batch_size; ++b)
 	{
@@ -95,7 +95,7 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale)
 
 	engine engine;
 
-	auto input = memory::allocate(engine, { data_types::f32,{ GetParam(),{ 12, 5, 2, 7 } } });
+	auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 12, 5, 7, 2 } });
 
 	tests::set_random_values<float>(input, -100, 100);
 
@@ -117,12 +117,12 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale)
 
 	auto buff = output.pointer<float>();
 
-	auto output_sizes = output.get_layout().size.transform(format::bfyx, 0).sizes();
+	auto output_sizes = output.get_layout().size.sizes();
 
 	int batch_size = output_sizes[0];
 	int feature_size = output_sizes[1];
-	int y_size = output_sizes[2];
-	int x_size = output_sizes[3];
+	int y_size = output_sizes[3];
+	int x_size = output_sizes[2];
 
 	for (int b = 0; b < batch_size; ++b)
 	{
@@ -151,7 +151,7 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial)
 
 	engine engine;
 
-	auto input = memory::allocate(engine, { data_types::f32,{ GetParam(),{ 5, 7, 12, 19 } } });
+	auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 5, 7, 19, 12 } });
 
 	tests::set_random_values<float>(input, -100, 100);
 
@@ -171,12 +171,12 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial)
 
 	auto buff = output.pointer<float>();
 
-	auto output_sizes = output.get_layout().size.transform(format::bfyx, 0).sizes();
+	auto output_sizes = output.get_layout().size.sizes();
 
 	int batch_size = output_sizes[0];
 	int feature_size = output_sizes[1];
-	int y_size = output_sizes[2];
-	int x_size = output_sizes[3];
+	int y_size = output_sizes[3];
+	int x_size = output_sizes[2];
 
 	for (int b = 0; b < batch_size; ++b) 
 	{
@@ -205,7 +205,7 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale)
 
 	engine engine;
 
-	auto input = memory::allocate(engine, { data_types::f32,{ GetParam(),{ 9, 4, 23, 18 } } });
+	auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 9, 4, 18, 23 } });
 
 	tests::set_random_values<float>(input, -100, 100);
 
@@ -227,12 +227,12 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale)
 
 	auto buff = output.pointer<float>();
 
-	auto output_sizes = output.get_layout().size.transform(format::bfyx, 0).sizes();
+	auto output_sizes = output.get_layout().size.sizes();
 
 	int batch_size = output_sizes[0];
 	int feature_size = output_sizes[1];
-	int y_size = output_sizes[2];
-	int x_size = output_sizes[3];
+	int y_size = output_sizes[3];
+	int x_size = output_sizes[2];
 
 	for (int b = 0; b < batch_size; ++b)
 	{
@@ -299,18 +299,18 @@ public:
 		all_layer_params.push_back(new normalize("normalize", "input0", false, 1e-10f, -2.4f));
 		
 		// Output padding
-		all_layer_params.push_back(new normalize("normalize", "input0", true, 1e-10f, 1.f, { format::yx,{ 0, 0 } }, { format::yx,{ 13, 6 } }));
-		all_layer_params.push_back(new normalize("normalize", "input0", false, 1e-10f, 2.f, { format::yx,{ 0, 0 } }, { format::yx,{ 4, 12 } }));
-		all_layer_params.push_back(new normalize("normalize", "input0", true, 1e-10f, 1.2f, { format::yx,{ 0, 0 } }, { format::yx,{ 5, 11 },{ 19, 3 } }));
-		all_layer_params.push_back(new normalize("normalize", "input0", false, 1e-10f, -1.f, { format::yx,{ 0, 0 } }, { format::yx,{ 13, 5 },{ 2, 1 } }));
+		all_layer_params.push_back(new normalize("normalize", "input0", true, 1e-10f, 1.f, {{ 0, 0, 6, 13 },0}));
+		all_layer_params.push_back(new normalize("normalize", "input0", false, 1e-10f, 2.f, {{ 0, 0, 12, 4 }, 0}));
+		all_layer_params.push_back(new normalize("normalize", "input0", true, 1e-10f, 1.2f, { { 0, 0, 11, 5 },{ 0, 0, 3, 19 } }));
+		all_layer_params.push_back(new normalize("normalize", "input0", false, 1e-10f, -1.f, { { 0, 0, 5, 13 },{ 0, 0, 1, 2 } }));
 		
 		// Input padding (output of reorder layer)
-		all_layer_params.push_back(new normalize("normalize", "reorder0", true, 1e-10f, 0.5f, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } }));
-		all_layer_params.push_back(new normalize("normalize", "reorder0", false, 1e-10f, -0.5f, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } }));
+		all_layer_params.push_back(new normalize("normalize", "reorder0", true, 1e-10f, 0.5f, {{ 0, 0, 0, 0 },0 }));
+		all_layer_params.push_back(new normalize("normalize", "reorder0", false, 1e-10f, -0.5f, {{ 0, 0, 0, 0 },0 }));
 		
 		// Input padding (output of reorder layer) + Output padding
-		all_layer_params.push_back(new normalize("normalize", "reorder0", true, 1e-10f, 1.5f, { format::yx,{ 0, 0 } }, { format::yx,{ 1, 2 },{ 3, 4 } }));
-		all_layer_params.push_back(new normalize("normalize", "reorder0", false, 1e-10f, 1.8f, { format::yx,{ 0, 0 } }, { format::yx,{ 4, 3 },{ 2, 1 } }));
+		all_layer_params.push_back(new normalize("normalize", "reorder0", true, 1e-10f, 1.5f, { { 0, 0, 2, 1 },{ 0, 0, 4, 3 } }));
+		all_layer_params.push_back(new normalize("normalize", "reorder0", false, 1e-10f, 1.8f, { { 0, 0, 3, 4 },{ 0, 0, 1, 2 } }));
 
 		return all_layer_params;
 	}
@@ -332,22 +332,20 @@ public:
 
 		//Output is bfyx
         data_types dt = inputs[0].get_layout().data_type;
-		auto output = memory::allocate( engine, cldnn::layout(dt, inputs[0].get_layout().size.add(normalize->output_padding.lower_size()).add(normalize->output_padding.upper_size()).transform(cldnn::format::bfyx, 0)) );
-
-		assert(!normalize->input_padding);
+		auto output = memory::allocate( engine, cldnn::layout(dt, cldnn::format::bfyx, inputs[0].get_layout().size.add(normalize->output_padding.lower_size()).add(normalize->output_padding.upper_size())) );
 
 		float epsilon = normalize->epsilon;
 		Type scale = normalize->scale_factor;
 
 		auto input_mem = inputs[0].pointer<Type>();
 		auto output_mem = output.pointer<Type>();
-		int batch = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
-		int feature = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
-		int height = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
-		int width = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+		int batch = inputs[0].get_layout().size.sizes()[0];
+		int feature = inputs[0].get_layout().size.sizes()[1];
+		int height = inputs[0].get_layout().size.sizes()[3];
+		int width = inputs[0].get_layout().size.sizes()[2];
 
-		int output_height = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
-		int output_width = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+		int output_height = output.get_layout().size.sizes()[3];
+		int output_width = output.get_layout().size.sizes()[2];
 
 		//Initialized output with zeros.
         std::fill(output_mem.begin(), output_mem.end(), static_cast<Type>(0));
@@ -382,7 +380,7 @@ public:
 							size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 
 							int output_index = (n * feature + c) * output_height * output_width;
-							tensor lower_padding = normalize->output_padding.lower_size().transform(cldnn::format::bfyx, 0);
+							tensor lower_padding = normalize->output_padding.lower_size();
 							output_index += (lower_padding.sizes()[2] + h) * output_width + lower_padding.sizes()[3] + w;
 
 							output_mem[output_index] = (Type)norm * input_mem[input_index] * scale;
@@ -415,7 +413,7 @@ public:
 							size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 
 							int output_index = (n * feature + c) * output_height * output_width;
-							tensor lower_padding = normalize->output_padding.lower_size().transform(cldnn::format::bfyx, 0);
+							tensor lower_padding = normalize->output_padding.lower_size();
 							output_index += (lower_padding.sizes()[2] + h) * output_width + lower_padding.sizes()[3] + w;
 
 							output_mem[output_index] = (Type)norm * input_mem[input_index] * scale;

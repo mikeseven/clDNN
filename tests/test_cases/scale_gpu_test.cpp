@@ -1010,7 +1010,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_yxfb_bfyx_same_size_padding) {
     {
         std::cout << "Testing format: " << format::order(*it) << std::endl;
 
-        tensor input_tensor({ 1, 1, 2, 2 });
+        tensor input_tensor(1, 1, 2, 2);
 
         auto input = memory::allocate(engine, { data_types::f32, *it, input_tensor });
         auto scale_input = memory::allocate(engine, { data_types::f32, *it, input_tensor });
@@ -1019,7 +1019,7 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_yxfb_bfyx_same_size_padding) {
         topology.add(input_layout("input", input.get_layout()));
         topology.add(reorder("reorder", "input", input.get_layout().with_padding({ { 0, 0, 1, 2 }, 0 })));
         topology.add(input_layout("scale_input", scale_input.get_layout()));
-        topology.add(scale("scale", "reorder", "scale_input", padding({ { 0, 0, 2, 2 }, 0 })));
+        topology.add(scale("scale", "reorder", "scale_input", padding( { 0, 0, 2, 2 }, 0 )));
 
         std::vector<float> input_vec = { 1.f, 2.f, 3.f, 4.f };
         set_values(input, input_vec);
@@ -1190,7 +1190,6 @@ public:
         std::vector<tests::test_params*> all_generic_params;
 
         for (cldnn::data_types dt : test_data_types)
-        for (cldnn::format fmt : test_input_formats)
         for (tensor & t : test_input_sizes)
         {
             std::vector<std::vector<int>> attempted_dims;
@@ -1216,10 +1215,10 @@ public:
                     test_params * tp = new test_params();
                     tp->data_type = dt;
 
-                    tp->input_layouts.push_back( cldnn::tensor( { b, f, w, h } ));
-                    tp->input_layouts.push_back( cldnn::tensor( { mb, mf, mw, mh } ));
+                    tp->input_layouts.push_back( cldnn::tensor(  b, f, w, h  ));
+                    tp->input_layouts.push_back( cldnn::tensor(  mb, mf, mw, mh  ));
                     if (variant)
-                            tp->input_layouts.push_back( cldnn::tensor( { mb, mf, mw, mh } ));
+                            tp->input_layouts.push_back( cldnn::tensor(  mb, mf, mw, mh  ));
 
                     all_generic_params.emplace_back(tp);
                 }

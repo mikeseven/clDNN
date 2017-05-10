@@ -174,8 +174,8 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
 
 	engine engine;
     
-    tensor input_tensor({ input_b, input_f, input_x, input_y });
-    tensor filter_tensor({ filter_o, filter_i, filter_x, filter_y });
+    tensor input_tensor( input_b, input_f, input_x, input_y );
+    tensor filter_tensor( filter_o, filter_i, filter_x, filter_y );
 
 	auto input = memory::allocate(engine, { cldnn::type_to_data_type<T>::value, test_input_fmt, input_tensor } );
 	std::vector<memory> weights, biases;
@@ -1949,9 +1949,9 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxfb_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
 
     engine engine;
 
-    auto input_size = tensor({ batch_size, input_feature_count, input_x, input_y });
+    auto input_size = tensor( batch_size, input_feature_count, input_x, input_y );
     auto input = memory::allocate(engine, { data_types::f32, input_format, input_size });
-    auto weights_size = tensor({ output_feature_count, input_feature_count, weights_x, weights_y });
+    auto weights_size = tensor( output_feature_count, input_feature_count, weights_x, weights_y );
     auto weights = memory::allocate(engine, { data_types::f32, weights_format, weights_size });
     auto biases = memory::allocate(engine, { data_types::f32, biases_format, {1,1,output_feature_count,1}});
 
@@ -2141,13 +2141,13 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxfb_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
     const int32_t output_y = (input_y - weights_y) / stride_y + 1;
 
 
-    auto input_size = tensor({ batch_size, input_feature_count, input_x, input_y });
+    auto input_size = tensor( batch_size, input_feature_count, input_x, input_y );
     auto input = memory::allocate(engine, { data_types::f32, input_format, input_size });
-    auto weights_size = tensor({ output_feature_count, input_feature_count, weights_x, weights_y });
+    auto weights_size = tensor( output_feature_count, input_feature_count, weights_x, weights_y );
     auto weights = memory::allocate(engine, { data_types::f32, weights_format, weights_size });
-    auto biases_size = tensor({ 1,1,output_feature_count,1 });
+    auto biases_size = tensor( 1,1,output_feature_count,1 );
     auto biases = memory::allocate(engine, { data_types::f32, biases_format, biases_size });
-    auto output_size = tensor({ batch_size, output_feature_count, output_x, output_y });
+    auto output_size = tensor( batch_size, output_feature_count, output_x, output_y );
     //auto output = memory::allocate({output_format, {batch_size, {output_x, output_y}, output_feature_count}});
 
     //auto input_cvtd = memory::allocate(engine, { data_types::f16, input_size });

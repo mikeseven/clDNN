@@ -75,8 +75,8 @@ TEST(local_response_normalization_gpu_yxfb_output_padding, lrn_test) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y, x, f, b } } });
-    cldnn::layout out_layout = cldnn::layout(cldnn::data_types::f32, { format::yxfb, {y + 2 * out_padding_y, x + 2 * out_padding_x, f, b} });
+    auto input = memory::allocate(engine, { data_types::f32,format::yxfb,{ b, f, x, y } });
+    cldnn::layout out_layout = cldnn::layout(cldnn::data_types::f32, format::yxfb, {b, f, x + 2 * out_padding_x, y + 2 * out_padding_y});
     auto output_oracle = memory::allocate(engine, out_layout);
 
     set_values(input, input_oracle_init);
@@ -84,7 +84,7 @@ TEST(local_response_normalization_gpu_yxfb_output_padding, lrn_test) {
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
-    topology.add(lrn("lrn", "input", size, k, alpha, beta, cldnn_lrn_norm_region_across_channel, cldnn::padding(), cldnn::padding(cldnn::format::xy, { out_padding_x, out_padding_y })));
+    topology.add(lrn("lrn", "input", size, k, alpha, beta, cldnn_lrn_norm_region_across_channel, { { 0, 0, out_padding_x, out_padding_y } ,0 }));
 
     network network(engine, topology);
 
@@ -147,7 +147,7 @@ TEST(local_response_normalization_gpu, lrn_test) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32, { format::yxfb, { py, px, pf, pb }} });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { pb, pf, px, py } });
     auto output_oracle = memory::allocate(engine, input.get_layout());
 
     set_values(input, input_oracle_init);
@@ -203,7 +203,7 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_across_channel_tes
     const float pk = 1.0f, palpha = 3.0f, pbeta = 0.75f;
  
     engine engine;
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ py, px, pf, pb } } });
+    auto input = memory::allocate(engine, { data_types::f32,format::yxfb,{ pb, pf, px, py } });
     set_values(input, {
         -1.0f, -0.5f,  0.0f,  0.5f,  1.0f,  1.5f,  2.0f,    // b=0, x=0, y=0
         -2.0f, -1.7f, -1.2f, -0.7f, -0.2f,  0.3f,  0.8f,    // b=0, x=1, y=0
@@ -218,8 +218,8 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_across_channel_tes
     
     topology topology(
         input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout(), "", { 0, 0, 0, 0 }, { 0, 0, 2, 2 }),
-        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
+        reorder("reorder", "input", input.get_layout().with_padding({ { 0,0,2,2 },0 })),
+        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { { 0, 0, 0, 0 }, 0 })
         );
     
     network network(engine, topology);
@@ -234,10 +234,10 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_across_channel_tes
     auto output_ptr = output_memory.pointer<float>();
 
     try {
-        int y_size = output_layout.size.sizes()[0];
-        int x_size = output_layout.size.sizes()[1];
-        int f_size = output_layout.size.sizes()[2];
-        int b_size = output_layout.size.sizes()[3];
+        int y_size = output_layout.size.sizes()[3];
+        int x_size = output_layout.size.sizes()[2];
+        int f_size = output_layout.size.sizes()[1];
+        int b_size = output_layout.size.sizes()[0];
         EXPECT_EQ(y_size, py);
         EXPECT_EQ(x_size, px);
         EXPECT_EQ(f_size, pf);
@@ -264,7 +264,7 @@ TEST(local_response_normalization_gpu, lrn_input_padding_bfyx_within_channel_tes
     // lrn parameters:
     const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
     engine engine;
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ pb, pf, py, px } } });
+    auto input = memory::allocate(engine, { data_types::f32,format::bfyx,{ pb, pf, px, py } });
     set_values(input, {
         1.270355f, -0.276111f, 0.302943f, -0.103556f, -0.388616f, -0.669846f, -2.441765f, 0.613500f, 0.150486f, 0.326861f, 0.945122f, -2.423861f, -1.042511f, 0.772510f, -0.052556f, -0.897190f, -1.171790f, 1.003860f, -0.343486f, -0.785948f, 0.761825f, 0.436011f, 1.426594f, -0.435498f, -0.576754f, -1.267563f, -0.391251f, 1.093607f, 0.087347f, 1.592100f, -0.298722f, -0.623962f, -2.065285f, -0.082339f, 0.979977f, 0.331055f, -0.693516f, 2.132489f, -0.924463f, 0.905520f, 1.002985f, -0.524016f, 0.839577f, -0.210728f, -0.051400f, -1.592077f, 1.420933f, -0.736530f, -0.569861f, 0.863847f, -1.238764f, -1.176492f, -0.128082f, -0.521338f, 0.483847f, 0.625554f, 0.500752f, -1.098126f, -1.255482f, -1.579891f, 1.626291f, -0.969261f, -0.480432f, 2.858260f, 0.350113f, -0.901251f, -0.506315f, 1.029405f, 1.100748f, -0.476692f, -0.191909f, 0.282852f, -0.309875f, 1.023757f, 0.340389f, -1.042515f, 1.311320f, -1.351468f, -0.785442f, 0.478464f, -1.374495f, -0.225860f, -0.632197f, -0.221852f, 0.481983f, -0.550967f, 1.679756f, -1.230878f, -0.030937f, -0.181357f, -0.079843f, -0.096342f, -0.359259f, -0.630267f, 1.346543f, -0.532399f, 0.200703f, -0.567115f, 0.968568f, -0.753102f, -0.600049f, -0.726843f, -0.289637f, -1.344441f, 0.655292f, 1.499955f, -1.280091f, 0.541340f, -1.353928f, 0.252612f, 0.337532f, -2.277788f, 0.396562f, 0.019647f, -1.600525f, 0.901632f, 0.731327f, 0.218514f, -0.135189f, 0.012691f, 0.593577f, -0.484725f, 1.189892f, 0.164477f, 0.217850f, -0.129365f
     });  
@@ -274,8 +274,8 @@ TEST(local_response_normalization_gpu, lrn_input_padding_bfyx_within_channel_tes
 
     topology topology(
         input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout(), "", { 0, 0, 0, 0 }, { 0, 0, 3, 3 }),
-        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_within_channel, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
+        reorder("reorder", "input", input.get_layout().with_padding({ { 0, 0, 3, 3 }, 0 })),
+        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_within_channel, { { 0, 0, 0, 0 }, 0 })
     );
 
     network network(engine, topology);
@@ -290,8 +290,8 @@ TEST(local_response_normalization_gpu, lrn_input_padding_bfyx_within_channel_tes
     auto output_ptr = output_memory.pointer<float>();
 
     try {
-        int y_size = output_layout.size.sizes()[2];
-        int x_size = output_layout.size.sizes()[3];
+        int y_size = output_layout.size.sizes()[3];
+        int x_size = output_layout.size.sizes()[2];
         int f_size = output_layout.size.sizes()[1];
         int b_size = output_layout.size.sizes()[0];
         EXPECT_EQ(y_size, py);
@@ -320,7 +320,7 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_within_channel_tes
     // lrn parameters:
     const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
     engine engine;
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ py, px, pf, pb } } });
+    auto input = memory::allocate(engine, { data_types::f32,format::yxfb,{ pb, pf, px, py } });
     set_values(input, {
         1.270355f, -0.276111f, 0.302943f, -0.103556f, -0.388616f, -0.669846f, -2.441765f, 0.613500f, 0.150486f, 0.326861f, 0.945122f, -2.423861f, -1.042511f, 0.772510f, -0.052556f, -0.897190f, -1.171790f, 1.003860f, -0.343486f, -0.785948f, 0.761825f, 0.436011f, 1.426594f, -0.435498f, -0.576754f, -1.267563f, -0.391251f, 1.093607f, 0.087347f, 1.592100f, -0.298722f, -0.623962f, -2.065285f, -0.082339f, 0.979977f, 0.331055f, -0.693516f, 2.132489f, -0.924463f, 0.905520f, 1.002985f, -0.524016f, 0.839577f, -0.210728f, -0.051400f, -1.592077f, 1.420933f, -0.736530f, -0.569861f, 0.863847f, -1.238764f, -1.176492f, -0.128082f, -0.521338f, 0.483847f, 0.625554f, 0.500752f, -1.098126f, -1.255482f, -1.579891f, 1.626291f, -0.969261f, -0.480432f, 2.858260f, 0.350113f, -0.901251f, -0.506315f, 1.029405f, 1.100748f, -0.476692f, -0.191909f, 0.282852f, -0.309875f, 1.023757f, 0.340389f, -1.042515f, 1.311320f, -1.351468f, -0.785442f, 0.478464f, -1.374495f, -0.225860f, -0.632197f, -0.221852f, 0.481983f, -0.550967f, 1.679756f, -1.230878f, -0.030937f, -0.181357f, -0.079843f, -0.096342f, -0.359259f, -0.630267f, 1.346543f, -0.532399f, 0.200703f, -0.567115f, 0.968568f, -0.753102f, -0.600049f, -0.726843f, -0.289637f, -1.344441f, 0.655292f, 1.499955f, -1.280091f, 0.541340f, -1.353928f, 0.252612f, 0.337532f, -2.277788f, 0.396562f, 0.019647f, -1.600525f, 0.901632f, 0.731327f, 0.218514f, -0.135189f, 0.012691f, 0.593577f, -0.484725f, 1.189892f, 0.164477f, 0.217850f, -0.129365f
     });
@@ -330,8 +330,8 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_within_channel_tes
     };
     topology topology(
         input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 2, 2 } }),
-        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_within_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
+        reorder("reorder", "input", input.get_layout().with_padding({ { 0, 0, 2, 2 }, 0 })),
+        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_within_channel, { { 0, 0, 0, 0 }, 0 })
     );
 
     network network(engine, topology);
@@ -346,10 +346,10 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_within_channel_tes
     auto output_ptr = output_memory.pointer<float>();
 
     try {
-        int y_size = output_layout.size.sizes()[0];
-        int x_size = output_layout.size.sizes()[1];
-        int f_size = output_layout.size.sizes()[2];
-        int b_size = output_layout.size.sizes()[3];
+        int y_size = output_layout.size.sizes()[3];
+        int x_size = output_layout.size.sizes()[2];
+        int f_size = output_layout.size.sizes()[1];
+        int b_size = output_layout.size.sizes()[0];
         EXPECT_EQ(y_size, py);
         EXPECT_EQ(x_size, px);
         EXPECT_EQ(f_size, pf);
@@ -376,7 +376,7 @@ TEST(local_response_normalization_gpu, lrn_input_padding_bfyx_across_channel_tes
     // lrn parameters:
     const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
     engine engine;
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ pb, pf, py, px } } });
+    auto input = memory::allocate(engine, { data_types::f32,format::bfyx,{ pb, pf, px, py } });
     set_values(input, {
         1.270355f, -0.276111f, 0.302943f, -0.103556f, -0.388616f, -0.669846f, -2.441765f, 0.613500f, 0.150486f, 0.326861f, 0.945122f, -2.423861f, -1.042511f, 0.772510f, -0.052556f, -0.897190f, -1.171790f, 1.003860f, -0.343486f, -0.785948f, 0.761825f, 0.436011f, 1.426594f, -0.435498f, -0.576754f, -1.267563f, -0.391251f, 1.093607f, 0.087347f, 1.592100f, -0.298722f, -0.623962f, -2.065285f, -0.082339f, 0.979977f, 0.331055f, -0.693516f, 2.132489f, -0.924463f, 0.905520f, 1.002985f, -0.524016f, 0.839577f, -0.210728f, -0.051400f, -1.592077f, 1.420933f, -0.736530f, -0.569861f, 0.863847f, -1.238764f, -1.176492f, -0.128082f, -0.521338f, 0.483847f, 0.625554f, 0.500752f, -1.098126f, -1.255482f, -1.579891f, 1.626291f, -0.969261f, -0.480432f, 2.858260f, 0.350113f, -0.901251f, -0.506315f, 1.029405f, 1.100748f, -0.476692f, -0.191909f, 0.282852f, -0.309875f, 1.023757f, 0.340389f, -1.042515f, 1.311320f, -1.351468f, -0.785442f, 0.478464f, -1.374495f, -0.225860f, -0.632197f, -0.221852f, 0.481983f, -0.550967f, 1.679756f, -1.230878f, -0.030937f, -0.181357f, -0.079843f, -0.096342f, -0.359259f, -0.630267f, 1.346543f, -0.532399f, 0.200703f, -0.567115f, 0.968568f, -0.753102f, -0.600049f, -0.726843f, -0.289637f, -1.344441f, 0.655292f, 1.499955f, -1.280091f, 0.541340f, -1.353928f, 0.252612f, 0.337532f, -2.277788f, 0.396562f, 0.019647f, -1.600525f, 0.901632f, 0.731327f, 0.218514f, -0.135189f, 0.012691f, 0.593577f, -0.484725f, 1.189892f, 0.164477f, 0.217850f, -0.129365f
     });
@@ -386,8 +386,8 @@ TEST(local_response_normalization_gpu, lrn_input_padding_bfyx_across_channel_tes
 
     topology topology(
         input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 2, 2 } }),
-        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
+        reorder("reorder", "input", input.get_layout().with_padding({ { 0, 0, 2, 2 }, 0 })),
+        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { { 0, 0, 0, 0 }, 0 })
     );
 
     network network(engine, topology);
@@ -402,8 +402,8 @@ TEST(local_response_normalization_gpu, lrn_input_padding_bfyx_across_channel_tes
     auto output_ptr = output_memory.pointer<float>();
 
     try {
-        int y_size = output_layout.size.sizes()[2];
-        int x_size = output_layout.size.sizes()[3];
+        int y_size = output_layout.size.sizes()[3];
+        int x_size = output_layout.size.sizes()[2];
         int f_size = output_layout.size.sizes()[1];
         int b_size = output_layout.size.sizes()[0];
         EXPECT_EQ(y_size, py);
@@ -431,7 +431,7 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_b8_test) {
     // lrn parameters:
     const float pk = 1.0f, palpha = 3.0f, pbeta = 0.75f;
     engine engine;
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ py, px, pf, pb } } });
+    auto input = memory::allocate(engine, { data_types::f32,format::yxfb,{ pb, pf, px, py } });
     set_values(input, {
         -1.0f, -2.0f, -1.3f, -2.2f, -1.1f, -3.5f, -2.0f, -2.0f,
         -0.5f, -1.7f, -5.5f, -1.7f, -0.5f, -1.7f, -0.5f, -6.2f,
@@ -457,8 +457,8 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_b8_test) {
 
     topology topology(
         input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout(), "", { format::yx,{ 0, 0 } }, { format::yx,{ 0, 2 } }),
-        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { format::yx,{ 0, 0 } }, { format::yx,{ 0, 0 } })
+        reorder("reorder", "input", input.get_layout().with_padding({ { 0, 0, 2, 0 }, 0 })),
+        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_across_channel, { { 0, 0, 0, 0 }, 0 })
     );
 
     network network(engine, topology);
@@ -473,10 +473,10 @@ TEST(local_response_normalization_gpu, lrn_input_padding_yxfb_b8_test) {
     auto output_ptr = output_memory.pointer<float>();
 
     try {
-        int y_size = output_layout.size.sizes()[0];
-        int x_size = output_layout.size.sizes()[1];
-        int f_size = output_layout.size.sizes()[2];
-        int b_size = output_layout.size.sizes()[3];
+        int y_size = output_layout.size.sizes()[3];
+        int x_size = output_layout.size.sizes()[2];
+        int f_size = output_layout.size.sizes()[1];
+        int b_size = output_layout.size.sizes()[0];
         EXPECT_EQ(y_size, py);
         EXPECT_EQ(x_size, px);
         EXPECT_EQ(f_size, pf);
@@ -542,7 +542,7 @@ TEST(local_response_normalization_gpu, lrn_test_batches) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32, { format::yxfb, { py, px, pf, pb } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { pb, pf, px, py } });
     auto output_oracle = memory::allocate(engine, input.get_layout());
 
     set_values(input, input_oracle_init);
@@ -609,7 +609,7 @@ TEST(local_response_normalization_gpu, test_within_channel) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32, { format::bfyx, { pb, pf, py, px }} });
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx, { pb, pf, px, py } });
     auto output_oracle = memory::allocate(engine, input.get_layout());
 
     set_values(input, input_oracle_init);
@@ -686,16 +686,16 @@ public:
 			all_layer_params.push_back(new lrn("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region));
 			
 			// Output padding
-			all_layer_params.push_back(new lrn("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 13, 6 } }));
-			all_layer_params.push_back(new lrn("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 5, 11 },{ 19, 0 } }));
+            all_layer_params.push_back(new lrn("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region, { { 0, 0, 6, 13 }, 0 }));
+			all_layer_params.push_back(new lrn("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region, { { 0, 0, 11, 5 },{ 0, 0, 0, 19 } }));
 
 			// Input padding
 			all_layer_params.push_back(new lrn("lrn", "reorder0", 3, 1.f, 5e-05f, 0.75f, norm_region));
 			all_layer_params.push_back(new lrn("lrn", "reorder0", 5, 17.19f, 0.079f, 0.19f, norm_region));
 
 			// Input + Output padding
-			all_layer_params.push_back(new lrn("lrn", "reorder0", 3, 1.f, 5e-05f, 0.75f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 2, 17 } }));
-			all_layer_params.push_back(new lrn("lrn", "reorder0", 5, 17.19f, 0.079f, 0.19f, norm_region, { format::yx,{ 0, 0 } }, { format::yx,{ 3, 1 },{ 6, 9 } }));
+            all_layer_params.push_back(new lrn("lrn", "reorder0", 3, 1.f, 5e-05f, 0.75f, norm_region, { { 0, 0, 17, 2 }, 0 }));
+			all_layer_params.push_back(new lrn("lrn", "reorder0", 5, 17.19f, 0.079f, 0.19f, norm_region, { { 0, 0, 1, 3 },{ 0, 0, 9, 6 } }));
 		}
 		
 		return all_layer_params;
@@ -718,7 +718,7 @@ public:
 
 		//Output is bfyx
         data_types dt = inputs[0].get_layout().data_type;
-		auto output = memory::allocate( engine, cldnn::layout(dt, inputs[0].get_layout().size.add(lrn->output_padding.lower_size()).add(lrn->output_padding.upper_size()).transform(cldnn::format::bfyx, 0)) );
+		auto output = memory::allocate( engine, cldnn::layout(dt, cldnn::format::bfyx, inputs[0].get_layout().size.add(lrn->output_padding.lower_size()).add(lrn->output_padding.upper_size())) );
 
 		Type beta = lrn->beta;
 		Type k = lrn->k;
@@ -859,10 +859,10 @@ public:
 
         for (unsigned i = 0; i < p->input_layouts.size(); ++i)
         {
-            const auto chans = format::traits(p->input_layouts[i].format).order;
+            const auto chans = format::traits(p->fmt).order;
 
             res << "_" << "Input" << i;
-            for (unsigned int j = 0; j < p->input_layouts[i].sizes().size(); ++j)
+            for (unsigned int j = 0; j < p->input_layouts[i].sizes(p->fmt).size(); ++j)
             {
                 res << chans[j] << p->input_layouts[i].sizes()[j];
             }

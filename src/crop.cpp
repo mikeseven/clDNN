@@ -27,7 +27,9 @@ primitive_type_id crop_type_id()
 
 layout crop_inst::calc_output_layout(crop_node const& node)
 {
-    return node.reference_input().get_output_layout();
+    auto input_layout = node.input().get_output_layout();
+    auto result = layout({ input_layout.data_type, input_layout.format, node.get_primitive()->reference_input });
+    return result;
 }
 
 std::string crop_inst::to_string(crop_node const& node)
@@ -35,15 +37,15 @@ std::string crop_inst::to_string(crop_node const& node)
     std::stringstream               primitive_description;
     auto desc                       = node.get_primitive();
     auto input                      = node.input();
-    auto ref_input                  = node.reference_input();
+    auto ref_input                  = desc->reference_input;
     auto offsets                    = desc->offsets;
     
     primitive_description << "id: " << desc->id << ", type: crop" << 
         "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ",  size: " << input.get_output_layout().size <<
-        "\n\treference input: " << ref_input.id() << ", sizes: " << ref_input.get_output_layout().size <<
+        "\n\treference input sizes: " << ref_input <<
         "\n\toffsets: " << offsets <<
-        "\n\tinput padding: " << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
 
     return primitive_description.str();
@@ -52,14 +54,10 @@ std::string crop_inst::to_string(crop_node const& node)
 crop_inst::typed_primitive_inst(network_impl& network, crop_node const& node)
     :parent(network, node)
 {
-    auto reference_input_sizes = reference_input_memory().get_layout().size;
-    auto reference_format = reference_input_memory().get_layout().format;
+    auto reference_input_sizes = argument.reference_input;
     auto input_sizes = input_memory().get_layout().size;
     auto input_format = input_memory().get_layout().format;
     auto offsets = argument.offsets;
-
-    if (input_format != reference_format)
-        throw std::runtime_error("Mismatch between input and reference_input format order!");
 
     if ((input_format!= format::yxfb) && (input_format != format::bfyx))
         throw std::runtime_error("Crop layer is only supported for yxfb and bfyx formats!");

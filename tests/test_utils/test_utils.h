@@ -262,7 +262,7 @@ public:
         data_type(dt),
         fmt(input_format)
 	{
-		cldnn::tensor t = cldnn::tensor({ batch_size, feature_size, input_size.spatial[0],  input_size.spatial[1] } );
+		cldnn::tensor t = cldnn::tensor(batch_size, feature_size, input_size.spatial[0],  input_size.spatial[1] );
 		input_layouts.push_back( t );
 	}
 

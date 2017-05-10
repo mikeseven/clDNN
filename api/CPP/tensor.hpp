@@ -352,7 +352,7 @@ struct tensor
     /// @details Example:
     /*! @code
      * 
-       tensor my_tensor( { 2, 3, 4, 5 } );   // b=2, f=3, x=4, y=5
+       tensor my_tensor = { 2, 3, 4, 5 };   // b=2, f=3, x=4, y=5
        cout << my_tensor.batch[0] << endl;           // 2
        cout << my_tensor.feature[0] << endl;         // 3
        cout << "x=" << my_tensor.spatial[0] << endl; // x=4
@@ -371,10 +371,7 @@ struct tensor
 
     /// @brief Implicit conversion form C API :: cldnn_tensor.
     tensor(const cldnn_tensor& other)
-        : raw(_sizes, other.batch_num + other.feature_num + other.spatial_num)
-        , batch(_sizes, other.batch_num)
-        , feature(_sizes + other.batch_num, other.feature_num)
-        , spatial(_sizes + other.batch_num + other.feature_num, other.spatial_num)
+        : tensor()
     {
         std::copy_n(other.sizes, CLDNN_TENSOR_DIM_MAX, _sizes);
     }
@@ -508,7 +505,7 @@ struct tensor
         return sizes;
     }
 
-    /// @brief Returns a vector of tensors values, ordered regarding to @p format.
+    /// @brief Returns a vector of tensors values, ordered batch, feature, spatial_x, spatial_y.
     std::vector<value_type> sizes() const {
         std::vector<value_type> sizes(sizeof(_sizes) / sizeof(_sizes[0]), 0);
         for (size_t i = 0; i < sizes.size(); ++i)
@@ -524,10 +521,10 @@ struct tensor
         {
             sizes[0] = align_to(sizes[0], 16);
         }
-        else if (fmt == cldnn::format::bs_xs_xsv8_bsv8 && !(is_aligned_to(sizes[0], 8) && is_aligned_to(sizes[1], 8)))
+        else if (fmt == cldnn::format::bs_xs_xsv8_bsv8 && !(is_aligned_to(sizes[0], 8) && is_aligned_to(sizes[2], 8)))
         {
             sizes[0] = align_to(sizes[0], 8);
-            sizes[1] = align_to(sizes[1], 8);
+            sizes[2] = align_to(sizes[2], 8);
         }
         else if(fmt == cldnn::format::bs_x_bsv16 && !is_aligned_to(sizes[0], 16))
         {

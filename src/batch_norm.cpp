@@ -45,8 +45,8 @@ std::string batch_norm_inst::to_string(batch_norm_node const& node)
         "\n\tvariance id: " << variance.id() << ", size: " << variance.get_output_layout().count() << ",  size: " << variance.get_output_layout().size <<
         "\n\tuse_global_stats: " << global_stats << 
         "\n\tepsilon: " << desc->epsilon << 
-        "\n\tinput padding: " << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
 
     return primitive_description.str();

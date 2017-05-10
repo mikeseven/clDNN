@@ -45,7 +45,7 @@ layout deconvolution_inst::calc_output_layout(deconvolution_node const& node)
     auto output_spatial_y = strd.spatial[1] * (input_layout.size.spatial[1] - 1) + kernel_xy[1] + 2 * input_offset.spatial[1];
     auto number_of_features = weights_layout.size.batch[0] * static_cast<int32_t>(split);
 
-    tensor output_size({ input_layout.size.batch[0], number_of_features, output_spatial_x, output_spatial_y });
+    tensor output_size(input_layout.size.batch[0], number_of_features, output_spatial_x, output_spatial_y);
 
     auto result = layout({ input_layout.data_type, input_layout.format, output_size });
     return result;
@@ -56,7 +56,7 @@ std::string deconvolution_inst::to_string(deconvolution_node const& node)
     std::stringstream           primitive_description;
     auto desc                   = node.get_primitive();
     auto input                  = node.input();
-    auto strd                   = desc->stride.transform(format::yx, 0);
+    auto strd                   = desc->stride;
     auto activation             = desc->with_activation ? " true" : "false";
     std::stringstream           ss_weights, ss_biases;
     for (size_t i = 0; i < desc->weights.size(); ++i)
@@ -81,8 +81,8 @@ std::string deconvolution_inst::to_string(deconvolution_node const& node)
         "\n\tbiases: " << ss_biases.str() << 
         "\n\tstride: " << strd.spatial[0] << "x" << strd.spatial[1] <<
         "\n\twith activation: " << activation << ", slope: " << desc->activation_negative_slope <<
-        "\n\tinput padding: " << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
 
     return primitive_description.str();

@@ -89,7 +89,7 @@ void generic_eltwise_test(cldnn::format test_input_fmt, int input_b, int input_f
 	VF<T> input2_rnd_vec = flatten_4d<T>(test_input_fmt, input2_rnd);
 
 	engine engine;
-	tensor input_tensor({ input_b, input_f, input_x, input_y });
+	tensor input_tensor( input_b, input_f, input_x, input_y );
 	auto input1 = memory::allocate(engine, { type_to_data_type<T>::value, test_input_fmt, input_tensor });
 	auto input2 = memory::allocate(engine, { type_to_data_type<T>::value, test_input_fmt, input_tensor });
 	set_values(input1, input1_rnd_vec);

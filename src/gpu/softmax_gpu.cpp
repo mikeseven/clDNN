@@ -156,7 +156,7 @@ struct softmax_gpu : typed_primitive_impl<softmax>
         //kernel relies on INPUT_SIZE_X being a number of values per batch, for bfyx format, when spatials == 1,1
         //and actual number of values is stored as fueatures count (squeezenet), swap feature[0] with spatial[0]
         if (input_buffer_size.feature[0] > 1)
-            input_buffer_size = tensor({ input_buffer_size.batch[0], input_buffer_size.spatial[0], input_buffer_size.feature[0], input_buffer_size.spatial[1] });
+            input_buffer_size = tensor( input_buffer_size.batch[0], input_buffer_size.spatial[0], input_buffer_size.feature[0], input_buffer_size.spatial[1] );
 
         return gpu::jit_constants{
             gpu::make_jit_constant("INPUT",          input_buffer_size),

@@ -67,33 +67,28 @@ namespace KernelSelctor
             BytesPerElement(params->inputType);
     }
 
-    cldnn::tensor desc_2_tensor(const TensorDesc& desc, cldnn::format f)
+    cldnn::tensor desc_2_tensor(const TensorDesc& desc)
     {
         auto stride_x = desc.pitches.x;
         auto stride_y = desc.pitches.y / desc.pitches.x;
         auto stride_z = desc.pitches.z / desc.pitches.y;
         auto stride_w = desc.pitches.w / desc.pitches.z;
 
-        return{ f, 
-            {
+        return{
                 (cldnn::tensor::value_type)stride_w,
                 (cldnn::tensor::value_type)stride_z,
-                (cldnn::tensor::value_type)stride_y,
-                (cldnn::tensor::value_type)stride_x
-            } 
-        };
+                (cldnn::tensor::value_type)stride_x,
+                (cldnn::tensor::value_type)stride_y
+            };
     }
 
-    cldnn::tensor dim_2_tensor(const uDims& dim, cldnn::format f)
+    cldnn::tensor dim_2_tensor(const uDims& dim)
     {
-        assert(f == cldnn::format::bfyx);
-        return{ f,
-        {
+        return{
             (cldnn::tensor::value_type)dim.w,
             (cldnn::tensor::value_type)dim.z,
-            (cldnn::tensor::value_type)dim.y,
-            (cldnn::tensor::value_type)dim.x
-        }
+            (cldnn::tensor::value_type)dim.x,
+            (cldnn::tensor::value_type)dim.y
         };
     }
 
@@ -119,31 +114,27 @@ namespace KernelSelctor
         const auto& cp = params.convParams;
 
         cldnn::tensor stride(
-            cldnn::format::bfyx, 
-            { (cldnn::tensor::value_type)1,
               (cldnn::tensor::value_type)1,
-              (cldnn::tensor::value_type)std::min(cp.stride.y, params.inDims.y),
-              (cldnn::tensor::value_type)std::min(cp.stride.x, params.inDims.x) });
-        cldnn::tensor filter_tensor = cldnn::tensor(
-            cldnn::format::os_iyx_osv16, // TODO: support more layouts
-            { (cldnn::tensor::value_type)params.outDims.z,
+              (cldnn::tensor::value_type)1,
+              (cldnn::tensor::value_type)std::min(cp.stride.x, params.inDims.x),
+              (cldnn::tensor::value_type)std::min(cp.stride.y, params.inDims.y));
+        cldnn::tensor filter_tensor = cldnn::tensor( // TODO: support more layouts
+              (cldnn::tensor::value_type)params.outDims.z,
               (cldnn::tensor::value_type)params.inDims.z,
-              (cldnn::tensor::value_type)cp.filterSize.y,
-              (cldnn::tensor::value_type)cp.filterSize.x });
-        cldnn::tensor input_tensor = dim_2_tensor(params.inDims, params_2_cldnn(params.inputLayout));
-        cldnn::tensor output_tensor = dim_2_tensor(params.outDims, params_2_cldnn(params.outputLayout));
+              (cldnn::tensor::value_type)cp.filterSize.x,
+              (cldnn::tensor::value_type)cp.filterSize.y );
+        cldnn::tensor input_tensor = dim_2_tensor(params.inDims);
+        cldnn::tensor output_tensor = dim_2_tensor(params.outDims);
         cldnn::tensor input_padding_tensor = cldnn::tensor(
-            cldnn::format::bfyx,
-            { (cldnn::tensor::value_type)0,
               (cldnn::tensor::value_type)0,
-              (cldnn::tensor::value_type)cp.padding.y,
-              (cldnn::tensor::value_type)cp.padding.x });
+              (cldnn::tensor::value_type)0,
+              (cldnn::tensor::value_type)cp.padding.x,
+              (cldnn::tensor::value_type)cp.padding.y );
         cldnn::tensor output_padding_tensor = cldnn::tensor(
-            cldnn::format::bfyx,
-            { (cldnn::tensor::value_type)0,
               (cldnn::tensor::value_type)0,
               (cldnn::tensor::value_type)0,
-              (cldnn::tensor::value_type)0 });
+              (cldnn::tensor::value_type)0,
+              (cldnn::tensor::value_type)0 );
         auto input_offset_with_padding = params.inDesc.offset - cp.padding.x - params.inDesc.pitches.x*cp.padding.y;
 
         jit_constants mem_consts{

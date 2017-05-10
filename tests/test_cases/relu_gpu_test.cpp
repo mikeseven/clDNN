@@ -80,7 +80,7 @@ void generic_relu_test(cldnn::format test_input_fmt, int input_b, int input_f, i
 	VF<T> input_rnd_vec = flatten_4d<T>(test_input_fmt, input_rnd);
 	
 	engine engine;
-	tensor input_tensor({ input_b, input_f, input_x, input_y });
+	tensor input_tensor( input_b, input_f, input_x, input_y );
 	auto input = memory::allocate(engine, { type_to_data_type<T>::value, test_input_fmt, input_tensor });
 	set_values(input, input_rnd_vec);
 	topology topology(

@@ -32,7 +32,6 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
 
     auto input_layout = node.input().get_output_layout();
     auto input_spatial_size = node.input().get_output_layout().size.spatial.size();
-    auto input_format = input_layout.format;
 
     if (input_spatial_size != 2)
         throw std::runtime_error("Only two dimensional spatials are supported by pooling");
@@ -67,16 +66,16 @@ std::string pooling_inst::to_string(pooling_node const& node)
     std::stringstream   primitive_description;
     auto desc           = node.get_primitive();
     auto input          = node.input();
-    auto strd           = desc->stride.transform(format::yx, 0);
-    auto kernel_size    = desc->size.transform(format::yx, 0);
+    auto strd           = desc->stride;
+    auto kernel_size    = desc->size;
     auto mode           = desc->mode == pooling_mode::average ? "avarage" : "max";   
 
     primitive_description << "id: " << desc->id << ", type: pooling" << ", mode: " << mode <<
         "\n\tinput: "         << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
         "\n\tstride: "        << strd.spatial[0] << "x" << strd.spatial[1] << 
         "\n\tkernel size: "   << kernel_size.spatial[0] << "x" << kernel_size.spatial[1] << 
-        "\n\tinput padding: " << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
     
     return primitive_description.str();

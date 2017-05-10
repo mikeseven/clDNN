@@ -60,7 +60,8 @@ std::string depth_concatenate_inst::to_string(depth_concatenate_node const& node
     primitive_description << "id: " << desc->id << ", type: depth_concatenate" << 
         "\n\tinputs count: " << node.inputs_count() << 
         "\n\tinputs: " << ss_inputs.str() << 
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
 
     return primitive_description.str();

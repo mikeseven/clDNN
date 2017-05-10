@@ -63,10 +63,10 @@ void test_conv(
     bool use_half)
 {
     auto data_type = use_half ? data_types::f16 : data_types::f32;
-    auto input_size = tensor({ batch_size, in_feature, in_w, in_h });
+    auto input_size = tensor(batch_size, in_feature, in_w, in_h);
 
-    auto weight_size = tensor({ out_feature, in_feature, kernel_w, kernel_h });
-    auto bias_size = tensor({ 1, 1, out_feature, 1 });
+    auto weight_size = tensor(out_feature, in_feature, kernel_w, kernel_h);
+    auto bias_size = tensor(1, 1, out_feature, 1);
 
     auto input = memory::allocate(engine, { data_type, format::bfyx, input_size });
     auto weights = memory::allocate(engine, { data_type, format::yxfb, weight_size });
@@ -303,7 +303,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     );
 
     //not used but needs to be in the topology
-    auto output = data("output", memory::allocate(engine, { input_layout.data_type, format::bfyx, tensor({ 1, 1, 1, 1 }) }));
+    auto output = data("output", memory::allocate(engine, { input_layout.data_type, format::bfyx, tensor( 1, 1, 1, 1 ) }));
     topology.add(output);
 
     return topology;

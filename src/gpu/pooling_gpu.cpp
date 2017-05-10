@@ -121,7 +121,6 @@ struct pooling_gpu : typed_primitive_impl<pooling>
     static bool needs_boundary_check(const pooling_node& outer)
     {
         auto input_buffer_size = outer.input().get_output_layout().get_buffer_size();
-        auto input_format = outer.input().get_output_layout().format;
         auto input_offset = outer.get_primitive()->input_offset;
         
         if (input_offset.spatial[0] || input_offset.spatial[1])

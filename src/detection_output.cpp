@@ -40,7 +40,7 @@ layout detection_output_inst::calc_output_layout(detection_output_node const& no
     // If number of detections is lower than keep_top_k, will write dummy results at the end with image_id=-1. 
     // Each row is a 7 dimension vector, which stores:
     // [image_id, label, confidence, xmin, ymin, xmax, ymax]
-    return{ input_layout.data_type, cldnn::format::bfyx, cldnn::tensor({ 1, 1, DETECTION_OUTPUT_ROW_SIZE, node.get_primitive()->keep_top_k * input_layout.size.batch[0] }) };
+    return{ input_layout.data_type, cldnn::format::bfyx, cldnn::tensor(1, 1, DETECTION_OUTPUT_ROW_SIZE, node.get_primitive()->keep_top_k * input_layout.size.batch[0]) };
 }
 
 std::string detection_output_inst::to_string(detection_output_node const& node)
@@ -84,8 +84,8 @@ std::string detection_output_inst::to_string(detection_output_node const& node)
         "\n\tcode_type: " << str_code_type << 
         "\n\tvariance_encoded: " << variance_encoded << 
         "\n\tconfidence_threshold: " << desc->confidence_threshold <<
-        "\n\tinput padding: " << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
 
     return primitive_description.str();

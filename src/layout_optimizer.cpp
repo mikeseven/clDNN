@@ -49,7 +49,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     switch (type)
     {
     case data_type::bias: //convolution bias
-        expected_tensor = cldnn::tensor({ 1, 1, static_cast<tensor::value_type>(current_layout.count()), 1 });
+        expected_tensor = cldnn::tensor(1, 1, static_cast<tensor::value_type>(current_layout.count()), 1);
         expected_format = cldnn::format::bfyx;
         break;
 
@@ -109,7 +109,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     switch (type)
     {
     case data_type::bias: //fc bias
-        expected_tensor = cldnn::tensor({ 1, 1, static_cast<tensor::value_type>(current_layout.count()), 1 });
+        expected_tensor = cldnn::tensor(1, 1, static_cast<tensor::value_type>(current_layout.count()), 1);
         expected_format = cldnn::format::bfyx;
         break;
 
@@ -118,17 +118,15 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         if (batch > 1 && expected_data_type != data_types::f16 && batch % 8 == 0)
         {
             expected_tensor = cldnn::tensor(
-            {
                 current_layout.size.batch[0], 1, current_layout.size.feature[0] * current_layout.size.spatial[0] * current_layout.size.spatial[1], 1
-            });
+            );
             expected_format = cldnn::format::bs_xs_xsv8_bsv8;
         }
         else if (batch == 1)
         {
             expected_tensor = cldnn::tensor(
-            {
                 current_layout.size.batch[0], 1, current_layout.size.feature[0] * current_layout.size.spatial[0] * current_layout.size.spatial[1], 1
-            });
+            );
             expected_format = cldnn::format::bs_x_bsv16;
         }
         else

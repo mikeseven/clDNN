@@ -61,8 +61,8 @@ std::string simpler_nms_inst::to_string(simpler_nms_node const& node)
         "\n\tmin_bbox_size: " << desc->min_bbox_size    << ", feature_stride: " << desc->feature_stride <<
         "\n\tpre_nms_topn: "  << desc->pre_nms_topn     << ", post_nms_topn: " << desc->post_nms_topn <<
         "\n\tscales param: "  << ss_scales_param.str()  << 
-        "\n\tinput padding: " << desc->input_padding <<
-        "\n\toutput padding: "<< desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
 
     return primitive_description.str();

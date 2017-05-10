@@ -45,8 +45,8 @@ std::string lrn_inst::to_string(lrn_node const& node)
         "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
         "\n\tk: "     << k << ", alpha: " << alpha << ", beta: " << beta <<
         "\n\tsize of normalization: " << norm_size << ", normalization region: " << norm_region <<
-        "\n\tinput padding: " << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: size: " << node.get_output_layout().size << '\n';
    
     return primitive_description.str();

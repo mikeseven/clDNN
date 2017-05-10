@@ -182,22 +182,18 @@ cldnn::memory read_file(std::ifstream &rfile, file_header &file_head, const cldn
             if (array.size() == 2)
             {
                 auto size = cldnn::tensor(
-                {
                     static_cast<cldnn::tensor::value_type>(array[0]), // batch
                     1, static_cast<cldnn::tensor::value_type>(array[1]),
-                    1,
-                }
+                    1
                 );
                 p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, format, size));
             }
             else
             {
                 auto size = cldnn::tensor(
-                {
                     static_cast<cldnn::tensor::value_type>(array[0]), // batch
                     static_cast<cldnn::tensor::value_type>(array[1]),
-                    static_cast<cldnn::tensor::value_type>(array[2]), static_cast<cldnn::tensor::value_type>(array[3]),  // kernel spatials y, x
-                }
+                    static_cast<cldnn::tensor::value_type>(array[2]), static_cast<cldnn::tensor::value_type>(array[3])  // kernel spatials y, x
                 );
                 p_arg = std::unique_ptr<cldnn::layout>(new cldnn::layout(data_type, format, size));
             }

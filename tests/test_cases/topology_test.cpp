@@ -129,7 +129,7 @@ protected:
         {
             virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
             {
-                if (output_layout.size.format != cldnn::format::bfyx)
+                if (output_layout.format != cldnn::format::bfyx)
                 {
                     return false;
                 }
@@ -137,11 +137,11 @@ protected:
                 // todo: randomize params
                 cldnn::primitive_id weights_id = id + "_weights";
                 cldnn::layout weights_layout(output_layout.data_type,
-                { cldnn::format::yxio,{ 1, 1, output_layout.size.feature[0], output_layout.size.feature[0] } });
+                cldnn::format::yxfb,{ output_layout.size.feature[0], output_layout.size.feature[0], 1, 1 });
                 AddRandomMemory(topology, weights_id, weights_layout);
                 cldnn::primitive_id bias_id = id + "_bias";
                 cldnn::layout bias_layout(output_layout.data_type,
-                { cldnn::format::x,{ output_layout.size.feature[0] } });
+                cldnn::format::bfyx,{ 1, 1, output_layout.size.feature[0], 1 });
                 AddRandomMemory(topology, bias_id, bias_layout);
 
                 cldnn::primitive_id input_id = topology_generator::CreateLayerId();
@@ -155,7 +155,7 @@ protected:
         {
             bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
             {
-                if (output_layout.size.format != cldnn::format::bfyx)
+                if (output_layout.format != cldnn::format::bfyx)
                 {
                     return false;
                 }
@@ -184,8 +184,8 @@ protected:
                 // todo: randomize params
                 cldnn::primitive_id input_id = topology_generator::CreateLayerId();
                 cldnn::pooling_mode mode = cldnn::pooling_mode::max;
-                cldnn::tensor stride = { cldnn::format::yx,{ 1, 1 } };
-                cldnn::tensor size = { cldnn::format::yx,{ 3, 3 } };
+                cldnn::tensor stride = { 1, 1, 1, 1 };
+                cldnn::tensor size = { 1, 1, 3, 3 };
                 input_layouts.push_back({ input_id, output_layout });
                 topology.add(cldnn::pooling(id, input_id, mode, stride, size));
                 return true;
@@ -195,7 +195,7 @@ protected:
         {
             virtual bool AddPrimitive(cldnn::topology& topology, cldnn::primitive_id id, cldnn::layout output_layout, std::deque<named_layout>& input_layouts)
             {
-                if (output_layout.size.format != cldnn::format::bx)
+                if (output_layout.format != cldnn::format::bfyx)
                 {
                     return false;
                 }
@@ -203,14 +203,14 @@ protected:
                 // for now using just one set of params
                 // todo: randomize params
 
-                cldnn::layout input_layout(output_layout.data_type, { cldnn::format::bfyx,{ output_layout.size.batch[0] , output_layout.size.feature[0], 100, 100 } });
+                cldnn::layout input_layout(output_layout.data_type, cldnn::format::bfyx,{ output_layout.size.batch[0] , output_layout.size.feature[0], 100, 100 } );
                 cldnn::primitive_id weights_id = id + "_weights";
                 cldnn::layout weights_layout(output_layout.data_type,
-                { cldnn::format::bfyx,{ output_layout.size.feature[0], input_layout.size.feature[0], input_layout.size.spatial[1], input_layout.size.spatial[0] } });
+                cldnn::format::bfyx,{ output_layout.size.feature[0], input_layout.size.feature[0], input_layout.size.spatial[0], input_layout.size.spatial[1] });
                 AddRandomMemory(topology, weights_id, weights_layout);
                 cldnn::primitive_id bias_id = id + "_bias";
                 cldnn::layout bias_layout(output_layout.data_type,
-                { cldnn::format::x,{ output_layout.size.feature[0] } });
+                cldnn::format::bfyx,{ 1, 1, output_layout.size.feature[0], 1 });
                 AddRandomMemory(topology, bias_id, bias_layout);
 
                 cldnn::primitive_id input_id = topology_generator::CreateLayerId();
@@ -250,7 +250,7 @@ protected:
             {
                 // for now using just one set of params
                 // todo: randomize params
-                if (output_layout.size.format != cldnn::format::bfyx// should be "output_layout.size.format.dimension() < 4" but requires too many case handling since tensor is immutable
+                if (output_layout.format != cldnn::format::bfyx// should be "output_layout.size.format.dimension() < 4" but requires too many case handling since tensor is immutable
                     || output_layout.size.feature[0] < 2)
                 {
                     return false;
@@ -259,27 +259,23 @@ protected:
                 cldnn::primitive_id input_id2 = topology_generator::CreateLayerId();
                 cldnn::layout input_layout1(
                     output_layout.data_type,
-                    {
-                        cldnn::format::bfyx,
+                    cldnn::format::bfyx,
                         {
                             output_layout.size.batch[0],
                             output_layout.size.feature[0] - 1,
                             output_layout.size.spatial[0],
                             output_layout.size.spatial[1]
                         }
-                    }
                 );
                 cldnn::layout input_layout2(
                     output_layout.data_type,
-                    {
-                        cldnn::format::bfyx,
+                    cldnn::format::bfyx,
                         {
                             output_layout.size.batch[0],
                             1,
                             output_layout.size.spatial[0],
                             output_layout.size.spatial[1]
                         }
-                    }
                 );
                 input_layouts.push_back({ input_id1, input_layout1 });
                 input_layouts.push_back({ input_id2, input_layout2 });
@@ -377,16 +373,16 @@ public:
         assert(all_output_layouts.empty());
         std::vector<cldnn::data_types> data_types = { cldnn::data_types::f32, cldnn::data_types::f16 };
         std::vector<cldnn::tensor> output_tensors = {
-            { cldnn::format::bx,{ 1, 100 } },
-            { cldnn::format::bx,{ 5, 100 } },
-            { cldnn::format::bfyx,{ 1, 10, 100, 100 } },
-            { cldnn::format::bfyx,{ 8, 1, 100, 100 } },
+            { 1, 1, 100, 1 },
+            { 5, 1, 100, 1 },
+            { 1, 10, 100, 100 },
+            { 8, 1, 100, 100 },
         };
         // todo: consider iterating on format X dimensions
 
         for (auto dt : data_types) {
             for (auto t : output_tensors) {
-                all_output_layouts.push_back(new cldnn::layout(dt, t));
+                all_output_layouts.push_back(new cldnn::layout(dt, cldnn::format::bfyx, t));
             }
         }
         return all_output_layouts;
@@ -433,7 +429,7 @@ public:
             ss << v << "_";
         }
         ss << cldnn::data_type_traits::name(output_layout->data_type) << "_";
-        ss << cldnn::format::traits(output_layout->size.format).order;
+        ss << cldnn::format::traits(output_layout->format).order;
         for (const auto& d : output_layout->size.raw)
         {
             ss << "_" << d;

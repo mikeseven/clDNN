@@ -68,7 +68,7 @@ struct normalize_gpu : typed_primitive_impl<normalize>
         _kernel_data(ks.get_kernel(
             outer,
             outer.input().get_output_layout().data_type,
-            outer.input().get_output_layout().size.format,
+            outer.input().get_output_layout().format,
             outer.input().get_output_layout().size.batch[0],
             _engine_info.architecture,
             _engine_info.configuration)),
@@ -84,7 +84,7 @@ struct normalize_gpu : typed_primitive_impl<normalize>
         kd.fp16_unit_used = input_layout.data_type == cldnn::data_types::f16;
 
         // Checking for supported paddings.
-        if (arg.get_primitive()->input_padding.filling_value() != 0.0f)
+        if (input_layout.data_padding.filling_value() != 0.0f)
             throw std::runtime_error("Unknown padding mode in normalize");
 
         return kd;

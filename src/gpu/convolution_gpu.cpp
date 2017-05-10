@@ -138,10 +138,10 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
         const int batch_size = output_layout.size.batch[0];
 
         auto input_size = input_layout.size;
-        tensor stride({ 1, 1,
+        tensor stride( 1, 1,
             std::min(outer.get_primitive()->stride.spatial[0], input_size.spatial[0]),
             std::min(outer.get_primitive()->stride.spatial[1], input_size.spatial[1])
-        });
+        );
         padding input_padding = outer.input().get_output_layout().data_padding;
 
         gpu::jit_constants mem_consts{

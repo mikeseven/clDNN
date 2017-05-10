@@ -49,7 +49,7 @@ extern "C" {
 
 CLDNN_BEGIN_PRIMITIVE_DESC(crop)
 /// @brief Reference input primitive id with the required dimensions.
-cldnn_primitive_id reference_input;
+cldnn_tensor reference_input;
 /// @brief Input offsets.
 cldnn_tensor offsets;
 CLDNN_END_PRIMITIVE_DESC(crop)

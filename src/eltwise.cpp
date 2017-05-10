@@ -63,8 +63,8 @@ std::string eltwise_inst::to_string(eltwise_node const& node)
         "\n\tinput_2: " << input_2.id() << ", count: " << input_2.get_output_layout().count() << ",  size: " << input_2.get_output_layout().size <<
         "\n\tmode: " << str_mode <<
         "\n\twith activation: " << activation << ", slope: " << desc->activation_negative_slope << 
-        "\n\tinput padding: " << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
 
     return primitive_description.str();

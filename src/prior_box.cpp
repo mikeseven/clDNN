@@ -43,55 +43,16 @@ layout prior_box_inst::calc_output_layout(prior_box_node const& node)
     // 2 features. First feature stores the mean of each prior coordinate.
     // Second feature stores the variance of each prior coordinate.
 
-    return{ input_layout.data_type, cldnn::format::bfyx, cldnn::tensor( { 1, 2, 1, layer_width * layer_height * num_priors * 4 }) };
+    return{ input_layout.data_type, cldnn::format::bfyx, cldnn::tensor( 1, 2, 1, layer_width * layer_height * num_priors * 4 ) };
 }
 
 std::string vector_to_string(std::vector<float> vec)
 {
-	//Check arguments
-	if (argument.min_sizes.size() == 0) {
-		throw std::runtime_error("Must provide at least one min size.");
-	}
-	for (size_t i = 0; i < argument.min_sizes.size(); i++) {
-		if (argument.min_sizes[i] <= 0) {
-			throw std::runtime_error("Min size must be positive.");
-		}
-	}
-	if ( (argument.max_sizes.size() > 0) && (argument.min_sizes.size() != argument.max_sizes.size())) {
-		throw std::runtime_error("Number of min sizes must be equal to number of max sizes.");
-	}
-	for (size_t i = 0; i < argument.max_sizes.size(); i++) {
-		if (argument.min_sizes[i] >= argument.max_sizes[i]) {
-			throw std::runtime_error("Max size must be greater than Min size.");
-		}
-	}
-	if (argument.variance.size() > 1) {
-		if (argument.variance.size() != 4) {
-			throw std::runtime_error("Must provide 4 variances.");
-		}
-		for (size_t i = 0; i < argument.variance.size(); i++) {
-			if (argument.variance[i] <= 0) {
-				throw std::runtime_error("Variance must be positive.");
-			}
-		}
-	}
-	else if (argument.variance.size() == 1) {
-		if (argument.variance[0] <= 0) {
-			throw std::runtime_error("Variance must be positive.");
-		}
-	}
-	if ((argument.img_size.spatial[0] <= 0) || (argument.img_size.spatial[1] <= 0)) {
-		throw std::runtime_error("Image dimensions must be positive.");
-	}
-	if ((argument.step_height < 0) || (argument.step_width < 0)) {
-		throw std::runtime_error("Step dimensions must be positive.");
-	}
-    if (argument.img_size.batch[0] != 1) {
-        throw std::runtime_error("Image size batch size needs to be 1.");
-    }
-    if (argument.img_size.feature[0] != 1) {
-        throw std::runtime_error("Image size feature size needs to be 1.");
-    }
+    std::stringstream result;
+    for (size_t i = 0; i < vec.size(); i++)
+        result << vec.at(i) << ", ";
+    return result.str();
+}
 
 std::string prior_box_inst::to_string(prior_box_node const& node)
 {
@@ -113,8 +74,8 @@ std::string prior_box_inst::to_string(prior_box_node const& node)
         "\n\tflip: "         << flip << "clip: " << clip <<
         "\n\tstep_width: "   << desc->step_width << ", step_height: " << desc->step_height << ", offset: " << desc->offset <<
         "\n\tstr_variance: " << str_variance <<
-        "\n\tinput padding: " << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: size: " << node.get_output_layout().size << '\n';
 
     return primitive_description.str();
@@ -259,9 +220,6 @@ prior_box_inst::typed_primitive_inst(network_impl& network, prior_box_node const
 	}
 	if ((argument.step_height < 0) || (argument.step_width < 0)) {
 		throw std::runtime_error("Step dimensions must be positive.");
-	}
-	if (argument.img_size.format != format::yx) {
-		throw std::runtime_error("Image size format should be format::yx.");
 	}
 
 	if (input_memory().get_layout().data_type == data_types::f32)

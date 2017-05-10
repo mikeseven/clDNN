@@ -27,7 +27,6 @@ class typed_program_node<crop> : public typed_program_node_base<crop>
 {
 public:
     auto& input() const { return get_dependency(0); }
-    auto& reference_input() const { return get_dependency(1); }
 };
 
 using crop_node = typed_program_node<crop>;
@@ -45,7 +44,6 @@ public:
     typed_primitive_inst(network_impl& network, crop_node const& node);
 
     const memory& input_memory() const { return dep_memory(0); }
-    const memory& reference_input_memory() const { return dep_memory(1); }
 };
 
 using crop_inst = typed_primitive_inst<crop>;

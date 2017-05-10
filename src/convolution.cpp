@@ -86,7 +86,7 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
     // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
     auto number_of_features = weights_layout.size.batch[0] * static_cast<int32_t>(split);
 
-    tensor output_size({ input_layout.size.batch[0], number_of_features, output_spatial_x, output_spatial_y });
+    tensor output_size(input_layout.size.batch[0], number_of_features, output_spatial_x, output_spatial_y);
 
     auto result = layout({ input_layout.data_type, input_layout.format, output_size });
     return result;
@@ -96,7 +96,7 @@ std::string convolution_inst::to_string(convolution_node const& node)
 {
     std::stringstream           primitive_description;
     auto desc                   = node.get_primitive();
-    auto strd                   = desc->stride.transform(format::yx, 0);
+    auto strd                   = desc->stride;
     auto weights_count          = node.weights(0).get_output_layout().count();
     auto bias_count             = node.bias_term() ? node.bias(0).get_output_layout().count() : 0;
     auto input                  = node.input();
@@ -106,8 +106,8 @@ std::string convolution_inst::to_string(convolution_node const& node)
         "\n\tweights count: " << weights_count << ", bias count: " << bias_count << 
         "\n\tstride: " << strd.spatial[0] << "x" << strd.spatial[1] << 
         "\n\twith activation: "<< activation <<", slope: "<< desc->activation_negative_slope << 
-        "\n\tinput padding: "  << desc->input_padding <<
-        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: " << node.get_output_layout().count() << ", size: " << node.get_output_layout().size << '\n';
     
     return primitive_description.str();
