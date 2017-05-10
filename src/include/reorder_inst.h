@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/reorder.hpp"
+#include "api/CPP/reorder.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn

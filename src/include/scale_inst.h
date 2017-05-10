@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/scale.hpp"
+#include "api/CPP/scale.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn

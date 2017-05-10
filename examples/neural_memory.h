@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <api/memory.hpp>
+#include "api/CPP/memory.hpp"
 
 namespace cldnn
 {

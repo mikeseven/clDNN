@@ -21,10 +21,10 @@
 #include "topology_impl.h"
 #include "meta_utils.h"
 
-#include "api/primitives/data.hpp"
-#include "api/primitives/reorder.hpp"
-#include "api/primitives/convolution.hpp"
-#include "api/primitives/fully_connected.hpp"
+#include "api/CPP/data.hpp"
+#include "api/CPP/reorder.hpp"
+#include "api/CPP/convolution.hpp"
+#include "api/CPP/fully_connected.hpp"
 
 #include <boost/optional.hpp>
 

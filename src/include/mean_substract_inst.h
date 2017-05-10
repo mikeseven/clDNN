@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/mean_substract.hpp"
+#include "api/CPP/mean_substract.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn

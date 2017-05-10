@@ -24,7 +24,7 @@
 #include <cl2_wrapper.h>
 #include <memory>
 #include <chrono>
-#include "api/profiling.hpp"
+#include "api/CPP/profiling.hpp"
 
 namespace neural { namespace gpu {
 

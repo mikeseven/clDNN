@@ -15,7 +15,7 @@
 */
 
 #include "convolution_kernel_bfyx_os_iyx_osv16.h"
-#include "api/cldnn_defs.h"
+#include "api/CPP/cldnn_defs.h"
 
 namespace KernelSelctor 
 {

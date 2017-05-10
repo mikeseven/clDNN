@@ -16,9 +16,9 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/memory.hpp"
-#include "api/tensor.hpp"
-#include "api/profiling.hpp"
+#include "api/CPP/memory.hpp"
+#include "api/CPP/tensor.hpp"
+#include "api/CPP/profiling.hpp"
 #include <iostream>
 #include <sstream>
 

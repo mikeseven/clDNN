@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/eltwise.hpp"
+#include "api/CPP/eltwise.hpp"
 #include "primitive_inst.h"
 #include <memory>
 #include "topology_impl.h"

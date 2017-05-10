@@ -17,7 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "network_impl.h"
 
-#include "api/primitives/input_layout.hpp"
+#include "api/CPP/input_layout.hpp"
 
 #include "engine_impl.h"
 #include "event_impl.h"

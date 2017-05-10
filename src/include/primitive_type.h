@@ -16,9 +16,9 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/memory.hpp"
-#include "api/primitive.hpp"
-#include "api/program.hpp"
+#include "api/CPP/memory.hpp"
+#include "api/CPP/primitive.hpp"
+#include "api/CPP/program.hpp"
 
 #include "topology_impl.h"
 

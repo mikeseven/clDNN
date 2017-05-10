@@ -1,5 +1,5 @@
 #include "output_parser.h"
-#include "api/network.hpp"
+#include "api/CPP/network.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -10,8 +10,8 @@
 #include <stdexcept>
 #include <system_error>
 #include <chrono>
-#include <api/primitives/data.hpp>
-#include <api/primitives/reorder.hpp>
+#include <api/CPP/data.hpp>
+#include <api/CPP/reorder.hpp>
 
 // returns a vector with size equal to number of images in batch and each subvector contains sorted pairs of 
 // values specifying match percentage and category number

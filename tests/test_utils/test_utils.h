@@ -18,21 +18,21 @@
 
 #pragma once
 
-#include "api/memory.hpp"
-#include "api/tensor.hpp"
+#include "api/CPP/memory.hpp"
+#include "api/CPP/tensor.hpp"
 #include <iostream>
 #include <limits>
 #include <random>
 #include <gtest/gtest.h>
-#include <api/primitive.hpp>
+#include <api/CPP/primitive.hpp>
 #include "float16.h"
-#include "api/primitives/depth_concatenate.hpp"
-#include "api/primitives/lrn.hpp"
-#include "api/primitives/roi_pooling.hpp"
-#include "api/primitives/scale.hpp"
-#include "api/primitives/softmax.hpp"
-#include "api/primitives/reorder.hpp"
-#include "api/primitives/normalize.hpp"
+#include "api/CPP/depth_concatenate.hpp"
+#include "api/CPP/lrn.hpp"
+#include "api/CPP/roi_pooling.hpp"
+#include "api/CPP/scale.hpp"
+#include "api/CPP/softmax.hpp"
+#include "api/CPP/reorder.hpp"
+#include "api/CPP/normalize.hpp"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 

@@ -17,12 +17,12 @@
 #include "common/common_tools.h"
 #include "file.h"
 #include <string>
-#include <api/primitives/input_layout.hpp>
-#include <api/primitives/reorder.hpp>
-#include <api/primitives/convolution.hpp>
-#include <api/primitives/pooling.hpp>
-#include <api/primitives/depth_concatenate.hpp>
-#include <api/primitives/softmax.hpp>
+#include <api/CPP/input_layout.hpp>
+#include <api/CPP/reorder.hpp>
+#include <api/CPP/convolution.hpp>
+#include <api/CPP/pooling.hpp>
+#include <api/CPP/depth_concatenate.hpp>
+#include <api/CPP/softmax.hpp>
 
 using namespace cldnn;
 

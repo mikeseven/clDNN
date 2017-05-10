@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/batch_norm.hpp"
+#include "api/CPP/batch_norm.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn

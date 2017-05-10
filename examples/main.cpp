@@ -16,7 +16,7 @@
 
 #include "common/common_tools.h"
 #include "neural_memory.h"
-#include "api/memory.hpp"
+#include "api/CPP/memory.hpp"
 
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>

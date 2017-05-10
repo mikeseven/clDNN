@@ -15,7 +15,7 @@
 */
 
 #include <gtest/gtest.h>
-#include <api/tensor.hpp>
+#include <api/CPP/tensor.hpp>
 
 TEST(tensor_api, order_x)
 {

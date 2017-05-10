@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/profiling.hpp"
+#include "api/CPP/profiling.hpp"
 #include "event_impl.h"
 
 namespace neural { namespace gpu {

@@ -15,7 +15,7 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "api/cldnn.h"
+#include "api/C/cldnn.h"
 #include "api_impl.h"
 #include "engine_impl.h"
 #include "topology_impl.h"
@@ -479,11 +479,7 @@ cldnn_memory cldnn_allocate_memory(cldnn_engine engine, cldnn_layout layout, cld
             throw std::invalid_argument("Unknown format of layout.");
         if (layout.data_type != cldnn_data_type::cldnn_f16 &&
             layout.data_type != cldnn_data_type::cldnn_f32 &&
-            layout.data_type != cldnn_data_type::cldnn_f64 &&
-            layout.data_type != cldnn_data_type::cldnn_i8  &&
-            layout.data_type != cldnn_data_type::cldnn_i16 &&
-            layout.data_type != cldnn_data_type::cldnn_i32 &&
-            layout.data_type != cldnn_data_type::cldnn_i64)
+            layout.data_type != cldnn_data_type::cldnn_i8)
             throw std::invalid_argument("Unknown data_type of layout.");
         return api_cast(api_cast(engine)->allocate_buffer(layout));
     });

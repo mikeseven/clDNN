@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitive.hpp"
+#include "api/CPP/primitive.hpp"
 
 #include "api_impl.h"
 #include "refcounted_obj.h"
