@@ -385,28 +385,11 @@ public:
             events.emplace_back(dependency->get());
         }
 
-        if (context()->get_configuration().enable_profiling) {
-            instrumentation::timer<> pre_enqueue_timer;
-            auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
-            setArgs<0>(clkernel, std::forward<Args>(args)...);
-            auto pre_enqueue_time = pre_enqueue_timer.uptime();
-            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
-            end_event.wait();
-            context()->report_profiling({ _kernel_id,
-                {
-                    {"pre-enqueue", std::make_shared<instrumentation::profiling_period_basic>(pre_enqueue_time)},
-                    {"submission",  std::make_shared<profiling_period_event>(end_event, CL_PROFILING_COMMAND_QUEUED, CL_PROFILING_COMMAND_SUBMIT)},
-                    {"starting",    std::make_shared<profiling_period_event>(end_event, CL_PROFILING_COMMAND_SUBMIT, CL_PROFILING_COMMAND_START)},
-                    {"executing",   std::make_shared<profiling_period_event>(end_event, CL_PROFILING_COMMAND_START,  CL_PROFILING_COMMAND_END)}
-                } });
-        }
-        else {
-            auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
-            setArgs<0>(clkernel, std::forward<Args>(args)...);
-            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
-        }
+        auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
+        setArgs<0>(clkernel, std::forward<Args>(args)...);
+        context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
 
-		return { new cldnn::event_impl(end_event), false };
+        return{ new cldnn::event_impl(end_event), false };
     }
 };
 

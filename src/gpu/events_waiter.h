@@ -40,24 +40,7 @@ public:
             events.emplace_back(dependency->get());
         }
 
-        if (context()->get_configuration().enable_profiling) {
-            instrumentation::timer<> pre_enqueue_timer;
-            auto pre_enqueue_time = pre_enqueue_timer.uptime();
-            //TODO cl::CommandQueue::enqueueMarkerWithWaitList() should be const
-            const_cast<cl::CommandQueue&>(context()->queue()).enqueueMarkerWithWaitList(&events, &end_event);
-            end_event.wait();
-            context()->report_profiling({ "events_waiter",
-            {
-                { "pre-enqueue", std::make_shared<instrumentation::profiling_period_basic>(pre_enqueue_time) },
-                { "submission",  std::make_shared<profiling_period_event>(end_event, CL_PROFILING_COMMAND_QUEUED, CL_PROFILING_COMMAND_SUBMIT) },
-                { "starting",    std::make_shared<profiling_period_event>(end_event, CL_PROFILING_COMMAND_SUBMIT, CL_PROFILING_COMMAND_START) },
-                { "executing",   std::make_shared<profiling_period_event>(end_event, CL_PROFILING_COMMAND_START,  CL_PROFILING_COMMAND_END) }
-            } });
-        }
-        else {
-            const_cast<cl::CommandQueue&>(context()->queue()).enqueueMarkerWithWaitList(&events, &end_event);
-        }
-        
+        const_cast<cl::CommandQueue&>(context()->queue()).enqueueMarkerWithWaitList(&events, &end_event);
 		return { new cldnn::event_impl(end_event), false };
     }
 };
