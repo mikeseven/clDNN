@@ -21,13 +21,13 @@
 #include "layout_optimizer.h"
 
 #include "primitive_type.h"
-#include "api/primitives/convolution.hpp"
-#include "api/primitives/data.hpp"
-#include "api/primitives/depth_concatenate.hpp"
-#include "api/primitives/eltwise.hpp"
-#include "api/primitives/input_layout.hpp"
-#include "api/primitives/pooling.hpp"
-#include "api/primitives/reorder.hpp"
+#include "api/CPP/convolution.hpp"
+#include "api/CPP/data.hpp"
+#include "api/CPP/depth_concatenate.hpp"
+#include "api/CPP/eltwise.hpp"
+#include "api/CPP/input_layout.hpp"
+#include "api/CPP/pooling.hpp"
+#include "api/CPP/reorder.hpp"
 
 
 namespace cldnn

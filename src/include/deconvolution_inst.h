@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/deconvolution.hpp"
+#include "api/CPP/deconvolution.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn

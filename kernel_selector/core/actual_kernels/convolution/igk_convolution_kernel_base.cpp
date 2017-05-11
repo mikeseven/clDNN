@@ -15,8 +15,8 @@
 */
 
 #include "igk_convolution_kernel_base.h"
-#include "api/tensor.hpp"
-#include "api/cldnn_defs.h"
+#include "api/CPP/tensor.hpp"
+#include "api/CPP/cldnn_defs.h"
 
 namespace KernelSelctor 
 {

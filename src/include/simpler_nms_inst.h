@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/simpler_nms.hpp"
+#include "api/CPP/simpler_nms.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn

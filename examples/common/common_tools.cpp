@@ -26,8 +26,8 @@
 
 #include <regex>
 #include <string>
-#include <api/primitives/data.hpp>
-#include <api/network.hpp>
+#include <api/CPP/data.hpp>
+#include <api/CPP/network.hpp>
 
 using namespace boost::filesystem;
 

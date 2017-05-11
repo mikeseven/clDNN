@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/detection_output.hpp"
+#include "api/CPP/detection_output.hpp"
 #include "primitive_inst.h"
 #include "topology_impl.h"
 

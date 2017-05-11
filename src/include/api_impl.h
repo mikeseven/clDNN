@@ -17,8 +17,8 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "api/cldnn.h"
-#include "api/cldnn_defs.h"
+#include "api/C/cldnn.h"
+#include "api/CPP/cldnn_defs.h"
 
 #include <functional>
 #include <stdexcept>

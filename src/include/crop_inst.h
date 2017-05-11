@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/crop.hpp"
+#include "api/CPP/crop.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn

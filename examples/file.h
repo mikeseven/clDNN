@@ -14,8 +14,8 @@
 // limitations under the License.
 */
 #pragma once
-#include "api/memory.hpp"
-#include "api/primitives/data.hpp"
+#include "api/CPP/memory.hpp"
+#include "api/CPP/data.hpp"
 #include <string>
 
 namespace file

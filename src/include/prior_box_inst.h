@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/prior_box.hpp"
+#include "api/CPP/prior_box.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn

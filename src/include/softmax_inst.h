@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/softmax.hpp"
+#include "api/CPP/softmax.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn

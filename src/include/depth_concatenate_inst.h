@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/depth_concatenate.hpp"
+#include "api/CPP/depth_concatenate.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn

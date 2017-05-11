@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/convolution.hpp"
+#include "api/CPP/convolution.hpp"
 #include "primitive_inst.h"
 
 #include <memory>

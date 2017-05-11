@@ -23,8 +23,8 @@
 #include "network_impl.h"
 #include "engine_impl.h"
 
-#include "api/primitives/reorder.hpp"
-#include "api/primitives/input_layout.hpp"
+#include "api/CPP/reorder.hpp"
+#include "api/CPP/input_layout.hpp"
 
 #include <algorithm>
 

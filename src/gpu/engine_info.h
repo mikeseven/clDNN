@@ -15,7 +15,7 @@
 */
 #pragma once
 #include <cstdint>
-#include "api/engine.hpp"
+#include "api/CPP/engine.hpp"
 
 namespace neural { namespace gpu {
 
@@ -26,7 +26,6 @@ struct engine_info_internal : cldnn::engine_info
     {
         GT0 = 0,
         GT1,
-        GT1_5,
         GT2,
         GT3,
         GT4,
@@ -36,12 +35,12 @@ struct engine_info_internal : cldnn::engine_info
 
     enum models
     {
-        HSW, BDW, BXT, CHV, SKL, CNL, ICL, GLV, KBL, GLK
+        APL, SKL, KBL
     };
 
     enum architectures
     {
-        GEN7 = 0, GEN7_5, GEN8, GEN9, GEN10, GEN11, GEN12, GEN_UNKNOWN, GEN_COUNT
+        GEN9, GEN_UNKNOWN, GEN_COUNT
     };
 
     configurations configuration;

@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/pooling.hpp"
+#include "api/CPP/pooling.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn

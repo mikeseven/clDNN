@@ -22,7 +22,7 @@
 #include <nmmintrin.h>
 #include <array>
 #include <boost/filesystem.hpp>
-#include <api/primitives/data.hpp>
+#include <api/CPP/data.hpp>
 
 using memory = cldnn::backward_comp::neural_memory;
 using cldnn::backward_comp::argument;

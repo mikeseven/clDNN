@@ -16,8 +16,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/profiling.hpp"
-#include "api/primitive.hpp"
+#include "api/CPP/profiling.hpp"
+#include "api/CPP/primitive.hpp"
 
 #include "memory_gpu.h"
 #include "kernels_cache.h"

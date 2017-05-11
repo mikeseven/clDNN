@@ -17,7 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "api/network.hpp"
+#include "api/CPP/network.hpp"
 
 #include "api_impl.h"
 #include "engine_impl.h"

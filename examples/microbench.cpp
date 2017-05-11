@@ -19,9 +19,9 @@
 
 
 #include <string>
-#include <api/primitives/input_layout.hpp>
-#include <api/primitives/convolution.hpp>
-#include <api/primitives/data.hpp>
+#include <api/CPP/input_layout.hpp>
+#include <api/CPP/convolution.hpp>
+#include <api/CPP/data.hpp>
 
 using namespace cldnn;
 

@@ -16,12 +16,12 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include <gtest/gtest.h>
-#include <api/memory.hpp>
-#include <api/primitives/input_layout.hpp>
-#include "api/primitives/detection_output.hpp"
-#include <api/topology.hpp>
-#include <api/network.hpp>
-#include <api/engine.hpp>
+#include "api/CPP/memory.hpp"
+#include <api/CPP/input_layout.hpp>
+#include "api/CPP/detection_output.hpp"
+#include <api/CPP/topology.hpp>
+#include <api/CPP/network.hpp>
+#include <api/CPP/engine.hpp>
 #include "test_utils/test_utils.h"
 
 namespace cldnn
@@ -583,4 +583,5 @@ TYPED_TEST(detection_output_test, test_forward_no_share_location_neg_0_top_k)
 	this->check_results(output_prim, 1, "0 1 0.8 0.50 0.20 0.80 0.50");
 	this->check_results(output_prim, 2, "1 1 0.6 0.40 0.40 0.70 0.70");
 	this->check_results(output_prim, 3, "-1 0 0 0 0 0 0");
-}
+}
+

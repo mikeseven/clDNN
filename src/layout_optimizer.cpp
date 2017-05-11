@@ -19,8 +19,8 @@
 #include "network_impl.h"
 #include "primitive_inst.h"
 
-#include "api/primitives/data.hpp"
-#include "api/primitives/reorder.hpp"
+#include "api/CPP/data.hpp"
+#include "api/CPP/reorder.hpp"
 #include <boost/filesystem.hpp>
 #include <sstream>
 

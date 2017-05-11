@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "api/memory.hpp"
-#include "api/network.hpp"
+#include "api/CPP/memory.hpp"
+#include "api/CPP/network.hpp"
 #include "file.h"
 #include "common/common_tools.h"
-#include <api/primitives/data.hpp>
-#include <api/primitives/reorder.hpp>
+#include <api/CPP/data.hpp>
+#include <api/CPP/reorder.hpp>
 
 // memory->memory convolution
 void convert_weights(cldnn::data_types dt, cldnn::format::type format, std::string convertion_path)

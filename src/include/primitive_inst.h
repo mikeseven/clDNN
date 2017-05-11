@@ -17,8 +17,8 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "api/memory.hpp"
-#include "api/primitive.hpp"
+#include "api/CPP/memory.hpp"
+#include "api/CPP/primitive.hpp"
 
 #include "event_impl.h"
 #include "program_impl.h"

@@ -20,10 +20,10 @@
 #include "power_intrumentation.h"
 #include "instrumentation.h"
 
-#include "api/topology.hpp"
-#include "api/network.hpp"
-#include "api/profiling.hpp"
-#include "api/memory.hpp"
+#include "api/CPP/topology.hpp"
+#include "api/CPP/network.hpp"
+#include "api/CPP/profiling.hpp"
+#include "api/CPP/memory.hpp"
 
 #include <memory>
 #include <string>
