@@ -40,7 +40,7 @@ void generic_reshape_test(tensor const& input_size, tensor const& reshape_size, 
     auto input = memory::allocate(engine, { std::is_same<ElemType, FLOAT16>::value ? data_types::f16 : data_types::f32, input_size });
     
     {
-        auto input_ptr = input.pointer<ElemType>();
+        auto input_ptr = input.cldnn::memory::pointer<ElemType>();
         auto input_itr = input_ptr.begin();
 
         auto elements = input_size.count();
@@ -98,7 +98,7 @@ void generic_reshape_test(tensor const& input_size, tensor const& reshape_size, 
         auto upper = output_padd.upper_size().transform(reshape_size.format, 0).sizes();
         auto offsets = sizes;
         int32_t accum = 1;
-        for (int i = 1; i <= sizes.size(); ++i)
+        for (size_t i = 1; i <= sizes.size(); ++i)
         {
             offsets[sizes.size() - i] = accum;
             accum *= lower[sizes.size() - i] + sizes[sizes.size() - i] + upper[sizes.size() - i];
