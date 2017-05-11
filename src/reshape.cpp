@@ -35,6 +35,21 @@ layout reshape_inst::calc_output_layout(reshape_node const& node)
     return input_layout;
 }
 
+std::string reshape_inst::to_string(reshape_node const& node)
+{
+    std::stringstream           primitive_description;
+    auto desc = node.get_primitive();
+    auto input = node.input();
+    primitive_description << "id: " << desc->id << ", type: reshape" <<
+        "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
+        "\n\toutput shape: " << desc->output_shape <<
+        "\n\tinput padding: " << desc->input_padding <<
+        "\n\toutput padding: " << desc->output_padding <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ", size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
+
 reshape_inst::typed_primitive_inst(network_impl& network, reshape_node const& node)
     : parent(network, node, false)
 {
