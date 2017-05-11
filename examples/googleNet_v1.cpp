@@ -51,7 +51,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { conv1_7x7_s2_b },
         { 1, 1, 2, 2 },
         { 0, 0, -3, -3 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -77,7 +76,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { conv2_3x3_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -89,7 +87,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { conv2_3x3_b },
         { 1, 1, 1, 1 },
         { 0, 0, -1, -1 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -118,7 +115,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_3a_1x1_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -132,7 +128,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_3a_3x3_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -145,7 +140,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_3a_3x3_b },
         { 1, 1, 1, 1 },
         { 0, 0, -1, -1 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -159,7 +153,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_3a_5x5_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -172,7 +165,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_3a_5x5_b },
         { 1, 1, 1, 1 },
         { 0, 0, -2, -2 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -183,7 +175,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pooling_mode::max,
         { 1, 1, 3, 3 }, // kernel
         { 1, 1, 1, 1 }, // strd
-        { 0, 0, -1, -1 } //padding 
+        { 0, 0, -1, -1 } //input offset
     );
 
     auto inception_3a_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_3a_pool_proj_weights.nnd")});
@@ -218,7 +210,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_3b_1x1_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -232,7 +223,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_3b_3x3_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -244,7 +234,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_3b_3x3_b },
         { 1, 1, 1, 1 },
         { 0, 0, -1, -1 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -258,7 +247,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_3b_5x5_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -270,7 +258,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_3b_5x5_b },
         { 1, 1, 1, 1 },
         { 0, 0, -2, -2 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -281,7 +268,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pooling_mode::max,
         { 1, 1, 3, 3 }, // kernel
         { 1, 1, 1, 1 }, // strd
-        { 0, 0, -1, -1 } //padding 
+        { 0, 0, -1, -1 } //input offset
     );
 
     auto inception_3b_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_3b_pool_proj_weights.nnd")});
@@ -292,7 +279,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_3b_pool_proj_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -323,7 +309,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4a_1x1_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -337,7 +322,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4a_3x3_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -349,7 +333,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4a_3x3_b },
         { 1, 1, 1, 1 },
         { 0, 0, -1, -1 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -363,7 +346,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4a_5x5_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -375,7 +357,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4a_5x5_b },
         { 1, 1, 1, 1 },
         { 0, 0, -2, -2 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -386,7 +367,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pooling_mode::max,
         { 1, 1, 3, 3 }, // kernel
         { 1, 1, 1, 1 }, // strd
-        { 0,0,-1,-1 } //padding 
+        { 0,0,-1,-1 } //input offset
     );
 
     auto inception_4a_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4a_pool_proj_weights.nnd")});
@@ -397,7 +378,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4a_pool_proj_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -420,7 +400,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4b_1x1_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -434,7 +413,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4b_3x3_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -446,7 +424,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4b_3x3_b },
         { 1, 1, 1, 1 },
         { 0, 0, -1, -1 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -460,7 +437,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4b_5x5_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -472,7 +448,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4b_5x5_b },
         { 1, 1, 1, 1 },
         { 0, 0, -2, -2 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -483,7 +458,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pooling_mode::max,
         { 1, 1, 3, 3 }, // kernel
         { 1, 1, 1, 1 }, // strd
-        { 0,0,-1,-1 } //padding 
+        { 0,0,-1,-1 } //input offset
     );
 
     auto inception_4b_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4b_pool_proj_weights.nnd")});
@@ -494,7 +469,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4b_pool_proj_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -518,7 +492,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4c_1x1_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -532,7 +505,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4c_3x3_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -544,7 +516,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4c_3x3_b },
         { 1, 1, 1, 1 },
         { 0, 0, -1, -1 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -557,7 +528,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4c_5x5_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -569,7 +539,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4c_5x5_b },
         { 1, 1, 1, 1 },
         { 0, 0, -2, -2 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -580,7 +549,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pooling_mode::max,
         { 1, 1, 3, 3 }, // kernel
         { 1, 1, 1, 1 }, // strd
-        { 0,0,-1,-1 } //padding 
+        { 0,0,-1,-1 } //input offset
     );
 
     auto inception_4c_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4c_pool_proj_weights.nnd")});
@@ -591,7 +560,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4c_pool_proj_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -613,7 +581,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4d_1x1_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -627,7 +594,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4d_3x3_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -639,7 +605,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4d_3x3_b },
         { 1, 1, 1, 1 },
         { 0, 0, -1, -1 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -652,7 +617,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4d_5x5_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -664,7 +628,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4d_5x5_b },
         { 1, 1, 1, 1 },
         { 0, 0, -2, -2 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -675,7 +638,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pooling_mode::max,
         { 1, 1, 3, 3 }, // kernel
         { 1, 1, 1, 1 }, // strd
-        { 0,0,-1,-1 } //padding 
+        { 0,0,-1,-1 } //input offset
     );
 
     auto inception_4d_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4d_pool_proj_weights.nnd")});
@@ -686,7 +649,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4d_pool_proj_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -708,7 +670,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4e_1x1_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -722,7 +683,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4e_3x3_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -734,7 +694,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4e_3x3_b },
         { 1, 1, 1, 1 },
         { 0, 0, -1, -1 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -747,7 +706,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4e_5x5_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -759,7 +717,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4e_5x5_b },
         { 1, 1, 1, 1 },
         { 0, 0, -2, -2 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -770,7 +727,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pooling_mode::max,
         { 1, 1, 3, 3 }, // kernel
         { 1, 1, 1, 1 }, // strd
-        { 0,0,-1,-1 } //padding 
+        { 0,0,-1,-1 } //input offset
     );
 
     auto inception_4e_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_4e_pool_proj_weights.nnd")});
@@ -781,7 +738,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_4e_pool_proj_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -812,7 +768,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_5a_1x1_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -826,7 +781,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_5a_3x3_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -838,7 +792,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_5a_3x3_b },
         { 1, 1, 1, 1 },
         { 0, 0, -1, -1 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -851,7 +804,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_5a_5x5_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -863,7 +815,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_5a_5x5_b },
         { 1, 1, 1, 1 },
         { 0, 0, -2, -2 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -874,7 +825,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pooling_mode::max,
         { 1, 1, 3, 3 }, // kernel
         { 1, 1, 1, 1 }, // strd
-        { 0,0,-1,-1 } //padding 
+        { 0,0,-1,-1 } //input offset
     );
 
     auto inception_5a_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_5a_pool_proj_weights.nnd")});
@@ -885,7 +836,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_5a_pool_proj_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -907,7 +857,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_5b_1x1_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -921,7 +870,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_5b_3x3_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -933,7 +881,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_5b_3x3_b },
         { 1, 1, 1, 1 },
         { 0, 0, -1, -1 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -946,7 +893,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_5b_5x5_reduce_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -958,7 +904,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_5b_5x5_b },
         { 1, 1, 1, 1 },
         { 0, 0, -2, -2 },
-
 		{ 1, 1, 1, 1 },
         true);
 
@@ -969,7 +914,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         pooling_mode::max,
         { 1, 1, 3, 3 }, // kernel
         { 1, 1, 1, 1 }, // strd
-        { 0,0,-1,-1 } //padding 
+        { 0,0,-1,-1 } //input offset
     );
 
     auto inception_5b_pool_proj_w = file::create({ engine, join_path(weights_dir, "inception_5b_pool_proj_weights.nnd")});
@@ -980,7 +925,6 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { inception_5b_pool_proj_b },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-
 		{ 1, 1, 1, 1 },
         true);
 

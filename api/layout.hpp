@@ -284,8 +284,33 @@ struct layout
         return size.add(data_padding.lower_size()).add(data_padding.upper_size());
     }
 
+    /// @brief Get aligned linear size calculated as multiplication of all elements. 
+    size_t get_linear_size() const
+    {
+        auto sizes = get_buffer_size().sizes();
+        if (this->format == cldnn::format::os_iyx_osv16 && !is_aligned_to(sizes[0], 16))
+        {
+            sizes[0] = align_to(sizes[0], 16);
+        }
+        else if (this->format == cldnn::format::bs_xs_xsv8_bsv8 && !(is_aligned_to(sizes[0], 8) && is_aligned_to(sizes[2], 8)))
+        {
+            sizes[0] = align_to(sizes[0], 8);
+            sizes[2] = align_to(sizes[2], 8);
+        }
+        else if (this->format == cldnn::format::bs_x_bsv16 && !is_aligned_to(sizes[0], 16))
+        {
+            sizes[0] = align_to(sizes[0], 16);
+        }
+        return std::accumulate(
+            sizes.begin(),
+            sizes.end(),
+            static_cast<size_t>(1),
+            std::multiplies<size_t>()
+        );
+    }
+
     /// Number of bytes needed to store this layout
-    size_t bytes_count() const { return data_type_traits::size_of(data_type) * get_buffer_size().get_linear_size(format); }
+    size_t bytes_count() const { return data_type_traits::size_of(data_type) * get_linear_size(); }
 
     bool has_fused_format(data_types const& dt, cldnn::format const& fmt) const
     {

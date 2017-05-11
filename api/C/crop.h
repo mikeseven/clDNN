@@ -40,7 +40,6 @@ extern "C" {
 /// \image html crop_w_offset.jpg
 /// @n
 /// @n\b Requirements 
-/// @n - Input and reference format has to be same
 /// @n - Input, reference and offset layout (order) has to be the same
 /// @n - Input size cannot be greater than reference size in any dimension
 /// @n - All sizes have to have positive numbers
@@ -48,7 +47,7 @@ extern "C" {
 /// @n Breaking any of this conditions will cause exeption throw.
 
 CLDNN_BEGIN_PRIMITIVE_DESC(crop)
-/// @brief Reference input primitive id with the required dimensions.
+/// @brief Reference input tensor with the required dimensions.
 cldnn_tensor reference_input;
 /// @brief Input offsets.
 cldnn_tensor offsets;

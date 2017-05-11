@@ -51,7 +51,7 @@ struct crop : public primitive_base<crop, CLDNN_PRIMITIVE_DESC(crop)>
     /// @brief Constructs crop primitive.
     /// @param id This primitive id.
     /// @param input Input primitive id.
-    /// @param input2 Reference input primitive id with the required dimensions.
+    /// @param reference_input Reference input tensor with the required dimensions.
     /// @param offsets Input offsets.
     crop(
         const primitive_id& id,
@@ -74,7 +74,7 @@ struct crop : public primitive_base<crop, CLDNN_PRIMITIVE_DESC(crop)>
     {
     }
 
-    /// @brief Reference input primitive id with the required dimensions.
+    /// @brief Reference input tensor with the required dimensions.
     tensor reference_input;
     /// @brief Input offsets.
     tensor offsets;

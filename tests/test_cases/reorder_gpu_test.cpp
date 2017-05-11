@@ -903,7 +903,7 @@ public:
 		cldnn::pointer<InputType> input_mem = inputs[0].pointer<InputType>();
 		cldnn::pointer<OutputType> output_mem = output.pointer<OutputType>();
 
-		for (size_t i = 0; i < inputs[0].get_layout().size.get_linear_size(inputs[0].get_layout().format); i++)
+		for (size_t i = 0; i < inputs[0].get_layout().get_linear_size(); i++)
 		{
 			// Write the output in the same order as the input with type conversion as needed.
 			// The correct order will be checked in generic_test::compare_buffers.

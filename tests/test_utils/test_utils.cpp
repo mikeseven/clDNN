@@ -106,7 +106,7 @@ namespace tests
 		EXPECT_EQ(out_layout.size, ref_layout.size);
 		EXPECT_EQ(out_layout.data_type, ref_layout.data_type);
 		EXPECT_EQ(get_expected_output_tensor(), out_layout.size);
-		EXPECT_EQ(out_layout.size.get_linear_size(out_layout.format), ref_layout.size.get_linear_size(ref_layout.format));
+		EXPECT_EQ(out_layout.get_linear_size(), ref_layout.get_linear_size());
 
 		auto output_sizes = out_layout.size.sizes();
 
@@ -153,36 +153,36 @@ namespace tests
 			{
 				//b=sizes[0], f=sizes[1], y=sizes[2], x=sizes[3]
 				xPitch = 1;
-				yPitch = layout.size.sizes(format::bfyx)[3] * xPitch;
-				fPitch = layout.size.sizes(format::bfyx)[2] * yPitch;
-				bPitch = layout.size.sizes(format::bfyx)[1] * fPitch;
+				yPitch = layout.get_buffer_size().sizes(format::bfyx)[3] * xPitch;
+				fPitch = layout.get_buffer_size().sizes(format::bfyx)[2] * yPitch;
+				bPitch = layout.get_buffer_size().sizes(format::bfyx)[1] * fPitch;
 				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
 			}
 			case format::yxfb:
 			{
 				//y=sizes[0], x=sizes[1], f=sizes[2], b=sizes[3]
 				bPitch = 1;
-				fPitch = layout.size.sizes(format::yxfb)[3] * bPitch;
-				xPitch = layout.size.sizes(format::yxfb)[2] * fPitch;
-				yPitch = layout.size.sizes(format::yxfb)[1] * xPitch;
+				fPitch = layout.get_buffer_size().sizes(format::yxfb)[3] * bPitch;
+				xPitch = layout.get_buffer_size().sizes(format::yxfb)[2] * fPitch;
+				yPitch = layout.get_buffer_size().sizes(format::yxfb)[1] * xPitch;
 				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
 			}
 			case format::fyxb:
 			{
 				//f=sizes[0], y=sizes[1], x=sizes[2], b=sizes[3]
 				bPitch = 1;
-				xPitch = layout.size.sizes(format::fyxb)[3] * bPitch;
-				yPitch = layout.size.sizes(format::fyxb)[2] * xPitch;
-				fPitch = layout.size.sizes(format::fyxb)[1] * yPitch;
+				xPitch = layout.get_buffer_size().sizes(format::fyxb)[3] * bPitch;
+				yPitch = layout.get_buffer_size().sizes(format::fyxb)[2] * xPitch;
+				fPitch = layout.get_buffer_size().sizes(format::fyxb)[1] * yPitch;
 				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
 			}
 			case format::byxf:
 			{
 				//b=sizes[0], y=sizes[1], x=sizes[2], f=sizes[3]
 				fPitch = 1;
-				xPitch = layout.size.sizes(format::byxf)[3] * fPitch;
-				yPitch = layout.size.sizes(format::byxf)[2] * xPitch;
-				bPitch = layout.size.sizes(format::byxf)[1] * yPitch;
+				xPitch = layout.get_buffer_size().sizes(format::byxf)[3] * fPitch;
+				yPitch = layout.get_buffer_size().sizes(format::byxf)[2] * xPitch;
+				bPitch = layout.get_buffer_size().sizes(format::byxf)[1] * yPitch;
 				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
 			}
 			default:
@@ -198,15 +198,15 @@ namespace tests
 	{
 		assert(in_layout.format == out_layout.format);	//TODO: won't be needed after sig change. we could support different layouts but there's no need, atm.
 
-		const auto in0 = in_layout.size.sizes(in_layout.format)[0];
-		const auto in1 = in_layout.size.sizes(in_layout.format)[1];
-		const auto in2 = in_layout.size.sizes(in_layout.format)[2];
-		const auto in3 = in_layout.size.sizes(in_layout.format)[3];
+		const auto in0 = in_layout.get_buffer_size().sizes(in_layout.format)[0];
+		const auto in1 = in_layout.get_buffer_size().sizes(in_layout.format)[1];
+		const auto in2 = in_layout.get_buffer_size().sizes(in_layout.format)[2];
+		const auto in3 = in_layout.get_buffer_size().sizes(in_layout.format)[3];
 
-		const auto out0 = out_layout.size.sizes(out_layout.format)[0];
-		const auto out1 = out_layout.size.sizes(out_layout.format)[1];
-		const auto out2 = out_layout.size.sizes(out_layout.format)[2];
-		const auto out3 = out_layout.size.sizes(out_layout.format)[3];
+		const auto out0 = out_layout.get_buffer_size().sizes(out_layout.format)[0];
+		const auto out1 = out_layout.get_buffer_size().sizes(out_layout.format)[1];
+		const auto out2 = out_layout.get_buffer_size().sizes(out_layout.format)[2];
+		const auto out3 = out_layout.get_buffer_size().sizes(out_layout.format)[3];
 
 		assert(in0 == 1 || in0 == out0);
 		assert(in1 == 1 || in1 == out1);

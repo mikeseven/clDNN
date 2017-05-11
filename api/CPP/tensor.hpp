@@ -18,6 +18,7 @@
 #pragma once
 #include "cldnn_defs.h"
 #include "compounds.h"
+#include "meta_utils.hpp"
 
 #include <map>
 #include <list>
@@ -116,37 +117,6 @@ struct format
     /// @brief Returns number of dimensions contained within a @p format
     static size_t dimension(type fmt) { return order(fmt).size(); }
 
-    /// @brief Find common format.
-    static type common_format(type t1, type t2)
-    {
-        auto merged_channels = order(t1);
-        for (auto c : order(t2))
-            if (merged_channels.find(c) == merged_channels.npos)
-                merged_channels.push_back(c);
-
-        std::list<type> formats;
-        for (int fmt = yxfb; fmt < format_num; ++fmt)
-            if (order(static_cast<type>(fmt)).size() == merged_channels.size())
-                formats.push_back(static_cast<type>(fmt));
-
-        for (auto c : merged_channels)
-        {
-            auto itr = formats.begin();
-            while (itr != formats.end())
-            {
-                if (order(*itr).find(c) == std::string::npos)
-                    itr = formats.erase(itr);
-                else
-                    ++itr;
-            }
-        }
-
-        if (formats.empty())
-            throw std::domain_error("Could not find common format for formats: " + order(t1) + " and " + order(t2));
-
-        return formats.front();
-    }
-
     /// @brief Returns number of batch dimensions.
     size_t batch_num() const { return traits(value).batch_num; }
     /// @brief Returns number of feature dimensions.
@@ -172,22 +142,8 @@ struct format
 };
 
 /// @brief Helper structs used in tensor constructor with dim_vec_kinds
-template <typename Ty, Ty ... Vals>
-struct val_tuple {};
-
-template <typename Ty, Ty Val>
-struct always_false_ty_val : public std::false_type {};
-
-//helper struct to tell wheter type T is any of given types U...
-//termination case when U... is empty -> return std::false_type
-template <class T, class... U>
-struct is_any_of : public std::false_type {};
-
-//helper struct to tell whether type is any of given types (U, Rest...)
-//recurrence case when at least one type U is present -> returns std::true_type if std::same<T, U>::value is true, otherwise call is_any_of<T, Rest...> recurrently
-template <class T, class U, class... Rest>
-struct is_any_of<T, U, Rest...> : public std::conditional_t<std::is_same<T, U>::value, std::true_type, is_any_of<T, Rest...>> {};
-
+namespace tensor_dim
+{
 /// @brief enum class that represent dimension kinds
 enum class dim_vec_kind
 {
@@ -200,7 +156,7 @@ enum class dim_vec_kind
 template <dim_vec_kind Kind>
 struct dim_vec_limits
 {
-    static_assert(always_false_ty_val<dim_vec_kind, Kind>::value, "Limits are undefined for selected value of dim_vec_kind.");
+    static_assert(meta::always_false_ty_val<dim_vec_kind, Kind>::value, "Limits are undefined for selected value of dim_vec_kind.");
 };
 
 template <>
@@ -229,39 +185,37 @@ template <dim_vec_kind Kind>
 class dim_vec_kind_init
 {
     friend struct tensor;
-
-private:
+public:
     static constexpr auto _max_dimensionality = dim_vec_limits<Kind>::max_dimentionality;
     static constexpr auto _dimOffset = dim_vec_limits<Kind>::dim_offset;
 
-public:
     template <typename ... DimTys>
     explicit dim_vec_kind_init(DimTys&& ... values)
         : _sizes{ int32_t(std::forward<DimTys>(values)) ... }, _dimSize(sizeof...(DimTys))
     {
     }
 
-private:
     int32_t _sizes[_max_dimensionality];
     int32_t _dimSize;
 };
-
-template <typename ... InitTys>
-dim_vec_kind_init<dim_vec_kind::batch> batch(InitTys&& ... inits)
-{
-    return dim_vec_kind_init<dim_vec_kind::batch>(std::forward<InitTys>(inits) ...);
 }
 
 template <typename ... InitTys>
-dim_vec_kind_init<dim_vec_kind::feature> feature(InitTys&& ... inits)
+tensor_dim::dim_vec_kind_init<tensor_dim::dim_vec_kind::batch> batch(InitTys&& ... inits)
 {
-    return dim_vec_kind_init<dim_vec_kind::feature>(std::forward<InitTys>(inits) ...);
+    return tensor_dim::dim_vec_kind_init<tensor_dim::dim_vec_kind::batch>(std::forward<InitTys>(inits) ...);
 }
 
 template <typename ... InitTys>
-dim_vec_kind_init<dim_vec_kind::spatial> spatial(InitTys&& ... inits)
+tensor_dim::dim_vec_kind_init<tensor_dim::dim_vec_kind::feature> feature(InitTys&& ... inits)
 {
-    return dim_vec_kind_init<dim_vec_kind::spatial>(std::forward<InitTys>(inits) ...);
+    return tensor_dim::dim_vec_kind_init<tensor_dim::dim_vec_kind::feature>(std::forward<InitTys>(inits) ...);
+}
+
+template <typename ... InitTys>
+tensor_dim::dim_vec_kind_init<tensor_dim::dim_vec_kind::spatial> spatial(InitTys&& ... inits)
+{
+    return tensor_dim::dim_vec_kind_init<tensor_dim::dim_vec_kind::spatial>(std::forward<InitTys>(inits) ...);
 }
 
 /// @brief N-dimensional vector. Mostly used to represent memory size.
@@ -274,10 +228,10 @@ struct tensor
     array_ref<value_type> feature;  ///< Feature maps.
     array_ref<value_type> spatial;  ///< Spatial dimensions.
 
-    using _stored_kinds = val_tuple<dim_vec_kind,
-        dim_vec_kind::batch,
-        dim_vec_kind::spatial,
-        dim_vec_kind::feature
+    using _stored_kinds = meta::val_tuple<tensor_dim::dim_vec_kind,
+        tensor_dim::dim_vec_kind::batch,
+        tensor_dim::dim_vec_kind::spatial,
+        tensor_dim::dim_vec_kind::feature
     >;
 
     /**
@@ -317,8 +271,14 @@ struct tensor
     * @endcode
     */
     template <typename ... KindInitTys,
-        typename = std::enable_if_t<is_any_of<KindInitTys..., cldnn::dim_vec_kind_init<dim_vec_kind::batch>,
-        cldnn::dim_vec_kind_init<dim_vec_kind::feature>, cldnn::dim_vec_kind_init<dim_vec_kind::spatial>>::value, void>>
+        typename = typename std::enable_if<
+            meta::all<
+                meta::is_any_of<KindInitTys,
+                    cldnn::tensor_dim::dim_vec_kind_init<cldnn::tensor_dim::dim_vec_kind::batch>,
+                    cldnn::tensor_dim::dim_vec_kind_init<cldnn::tensor_dim::dim_vec_kind::feature>,
+                    cldnn::tensor_dim::dim_vec_kind_init<tensor_dim::dim_vec_kind::spatial>
+                >::value...
+            >::value, void>::type>
     tensor(KindInitTys&& ... kind_inits)
         : tensor(1)
     {
@@ -451,7 +411,7 @@ struct tensor
     tensor mul(value_type multiplier) const
     {
         auto result = *this;
-        for(size_t i = 0; i < result.raw.size(); i++ )
+        for(size_t i = 0; i < CLDNN_TENSOR_DIM_MAX; i++ )
         {
             result._sizes[i] *= multiplier;
         }
@@ -462,7 +422,7 @@ struct tensor
     tensor div(value_type divider) const
     {
         auto result = *this;
-        for (size_t i = 0; i < result.raw.size(); i++)
+        for (size_t i = 0; i < CLDNN_TENSOR_DIM_MAX; i++)
         {
             result._sizes[i] /= divider;
         }
@@ -473,7 +433,7 @@ struct tensor
     tensor add(const tensor& rhs) const
     {
         auto result = *this;
-        for (size_t i = 0; i < result.raw.size(); i++)
+        for (size_t i = 0; i < CLDNN_TENSOR_DIM_MAX; i++)
         {
             result._sizes[i] += rhs._sizes[i];
         }
@@ -511,31 +471,6 @@ struct tensor
         for (size_t i = 0; i < sizes.size(); ++i)
             sizes[i] = _sizes[i];
         return sizes;
-    }
-
-    /// @brief Get aligned linear tensor size calculated as multiplication of all elements. 
-    size_t get_linear_size(cldnn::format fmt) const
-    {
-        auto sizes = this->sizes();
-        if(fmt == cldnn::format::os_iyx_osv16 && !is_aligned_to(sizes[0], 16))
-        {
-            sizes[0] = align_to(sizes[0], 16);
-        }
-        else if (fmt == cldnn::format::bs_xs_xsv8_bsv8 && !(is_aligned_to(sizes[0], 8) && is_aligned_to(sizes[2], 8)))
-        {
-            sizes[0] = align_to(sizes[0], 8);
-            sizes[2] = align_to(sizes[2], 8);
-        }
-        else if(fmt == cldnn::format::bs_x_bsv16 && !is_aligned_to(sizes[0], 16))
-        {
-            sizes[0] = align_to(sizes[0], 16);
-        }
-        return std::accumulate(
-            sizes.begin(),
-            sizes.end(),
-            static_cast<size_t>(1),
-            std::multiplies<size_t>()
-        );
     }
 
     /// @brief Returns tensor elements count calculated as multiplication of all elements.
@@ -650,7 +585,7 @@ struct tensor
     static tensor max(tensor const& lhs, tensor const& rhs)
     {
         auto ret = lhs;
-        for (size_t i = 0; i < lhs.raw.size(); ++i)
+        for (size_t i = 0; i < CLDNN_TENSOR_DIM_MAX; ++i)
             ret._sizes[i] = std::max(ret._sizes[i], rhs._sizes[i]);
 
         return ret;
@@ -659,10 +594,10 @@ struct tensor
 private:
 
     /// @brief Helper functions for tensor constructor using dim_vec_kinds
-    template <dim_vec_kind Kind>
+    template <cldnn::tensor_dim::dim_vec_kind Kind>
     void assign_init(std::size_t) {}
 
-    template <dim_vec_kind Kind, typename KindInitTy, typename ... KindInitTys>
+    template <cldnn::tensor_dim::dim_vec_kind Kind, typename KindInitTy, typename ... KindInitTys>
     void assign_init(std::size_t offset_idx, KindInitTy&& kind_init, KindInitTys&& ... kind_inits)
     {
         if (kind_init._dimSize > (value_type)offset_idx)
@@ -673,15 +608,15 @@ private:
         assign_init<Kind>(offset_idx, std::forward<KindInitTys>(kind_inits) ...);
     }
 
-    template <typename ... KindInitTys, dim_vec_kind StoredKind, dim_vec_kind ... StoredKinds>
-    void assign_inits_helper1(const val_tuple<dim_vec_kind, StoredKind, StoredKinds ...>&, std::size_t offset_idx, KindInitTys&& ... kind_inits)
+    template <typename ... KindInitTys, cldnn::tensor_dim::dim_vec_kind StoredKind, cldnn::tensor_dim::dim_vec_kind ... StoredKinds>
+    void assign_inits_helper1(const meta::val_tuple<cldnn::tensor_dim::dim_vec_kind, StoredKind, StoredKinds ...>&, std::size_t offset_idx, KindInitTys&& ... kind_inits)
     {
-        assign_init<StoredKind>(offset_idx, std::forward<KindInitTys>(kind_inits) ...);                                                                             //}
-        assign_inits_helper1(val_tuple<dim_vec_kind, StoredKinds ...>(), offset_idx + 1, std::forward<KindInitTys>(kind_inits) ...);
+        assign_init<StoredKind>(offset_idx, std::forward<KindInitTys>(kind_inits) ...);
+        assign_inits_helper1(meta::val_tuple<cldnn::tensor_dim::dim_vec_kind, StoredKinds ...>(), offset_idx + 1, std::forward<KindInitTys>(kind_inits) ...);
     }
 
     template <typename ... KindInitTys>
-    void assign_inits_helper1(const val_tuple<dim_vec_kind>&, std::size_t, KindInitTys&& ...) {}
+    void assign_inits_helper1(const meta::val_tuple<cldnn::tensor_dim::dim_vec_kind>&, std::size_t, KindInitTys&& ...) {}
 
     template <typename ... KindInitTys>
     void assign_inits(KindInitTys&& ... kind_inits)

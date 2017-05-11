@@ -1,4 +1,4 @@
-/*
+﻿/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -209,7 +209,7 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
 			weights_str,
 			biases_str,
             { 1,1,stride_x, stride_y },
-            { 0, 0, input_padding_x, input_padding_y },
+            { 0, 0, -input_padding_x, -input_padding_y },
 			{ 1,1,dilation_x, dilation_y },
 			false,
 			0,
@@ -242,7 +242,7 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
 	auto output_ptr = output_memory.pointer<T>();
 
 	EXPECT_EQ(output_layout.format.value, test_input_fmt.value);
-	tensor output_tensor = output_layout.size;
+	tensor output_tensor = output_layout.get_buffer_size();
     int y_size = output_tensor.spatial[1];
     int x_size = output_tensor.spatial[0];
     int f_size = output_tensor.feature[0];
@@ -338,8 +338,10 @@ struct input_filter_format_pair {
 
 static input_filter_format_pair test_formats[] = {
       // input      filter        is fp32  is fp16
-	{ format::yxfb, format::bfyx, true,    false },
-    { format::yxfb, format::yxfb, true,    true }
+	{ format::bfyx, format::bfyx, true,    false },
+    { format::yxfb, format::yxfb, true,    true },
+    { format::bfyx, format::bfyx, true,    false },
+    { format::bfyx, format::yxfb, true,    true },
 };
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
@@ -386,8 +388,8 @@ TEST(DISABLED_convolution_gpu, generic_random) {
 																	filter_o, filter_i, filter_yx.first, filter_yx.second,
 																	stride_y, stride_x,
 																	dilation_yx.first, dilation_yx.second,
-																	input_padding_y, input_padding_x,
-																	output_padding_y, output_padding_x);
+                                                                    input_padding_y, input_padding_x,
+                                                                    output_padding_y, output_padding_x);
 															}
 															if (!f16_supported) continue;
 															if (test_formats[i].is_fp16) {

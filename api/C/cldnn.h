@@ -244,7 +244,7 @@ typedef enum /*:size_t*/
 typedef struct
 {
     size_t data_type;       ///< data type (@ref cldnn_data_type) stored in memory.
-    int32_t format;
+    int32_t format;         ///< Memor format (@ref cldnn_format_type)
     cldnn_tensor size;      ///< N-dimensional vector describes size (in elements) of memory (excluding padding).
     cldnn_padding padding;  ///< Explicitly added padding to memory buffer.
 } cldnn_layout;

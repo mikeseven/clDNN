@@ -16,6 +16,7 @@
 #pragma once
 
 #include <type_traits>
+#include "api/meta_utils.hpp"
 
 namespace cldnn
 {
@@ -24,16 +25,6 @@ struct primitive;
 
 namespace meta
 {
-
-//helper struct to tell wheter type T is any of given types U...
-//termination case when U... is empty -> return std::false_type
-template <class T, class... U>
-struct is_any_of : public std::false_type {};
-
-//helper struct to tell whether type is any of given types (U, Rest...)
-//recurrence case when at least one type U is present -> returns std::true_type if std::same<T, U>::value is true, otherwise call is_any_of<T, Rest...> recurrently
-template <class T, class U, class... Rest>
-struct is_any_of<T, U, Rest...> : public std::conditional_t<std::is_same<T, U>::value, std::true_type, is_any_of<T, Rest...>> {};
 
 template <class T, class... U>
 constexpr bool is_any_of_v = is_any_of<T, U...>::value;
