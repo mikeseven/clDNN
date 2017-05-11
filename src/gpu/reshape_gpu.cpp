@@ -77,7 +77,7 @@ struct reshape_gpu : public typed_primitive_impl<reshape>
         auto sizes = dims.sizes();
 
         int32_t accum = 1;
-        for (int i = 1; i <= sizes.size(); ++i)
+        for (size_t i = 1; i <= sizes.size(); ++i)
         {
             auto size = sizes[sizes.size() - i];
             sizes[sizes.size() - i] = accum;

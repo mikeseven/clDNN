@@ -46,7 +46,7 @@ void generic_reshape_test(tensor const& input_size, tensor const& reshape_size, 
         auto elements = input_size.count();
 
         int value = 1;
-        for (int i = 0; i < elements; ++i)
+        for (size_t i = 0; i < elements; ++i)
             *input_itr++ = (ElemType)value++;
     }
 
