@@ -233,7 +233,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         auto upper_padding = output_layout.data_padding.upper_size();
 
         bool needs_fp16 = (input_use_half != output_use_half || //float->half or half->float conversion require fp16 support
-            (input_use_half && (data.has_mean || !outer.get_primitive()->substract_per_feature.empty()))); //half->half with subtraction require fp16 support
+            (input_use_half && (data.has_mean || !outer.get_primitive()->subtract_per_feature.empty()))); //half->half with subtraction require fp16 support
 
         if (!engine_info.supports_fp16 && needs_fp16)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
