@@ -30,35 +30,17 @@ event_impl::ptr primitive_inst::execute(const std::vector<event_impl::ptr>& even
     on_execute();
 
     if (_deps.size() == 0)
-    {
-        if (!output_changed()) //mainly for input_layout
-            return nullptr;
-
-        _output_changed = true;
         return _impl->execute(events, *this);
-    }
 
     std::vector<event_impl::ptr> dependencies;
     dependencies.reserve(_deps.size());
 
-    bool run = output_changed();
     for(auto& input : _deps)
     {
-        auto dep_event = get_network().execute_primitive(input, events);
-        if (input->output_changed())
-        {
-            dependencies.emplace_back(std::move(dep_event));
-            run = true;
-        }
+        dependencies.emplace_back(get_network().execute_primitive(input, events));
     }
 
-    if (run)
-    {
-        _output_changed = true;
-        return _impl->execute(dependencies, *this);
-    }
-    else
-        return nullptr;
+     return _impl->execute(dependencies, *this);
 }
 
 primitive_inst::primitive_inst(network_impl& network, program_node const& node, bool allocate_buffer)

@@ -40,7 +40,7 @@ void generic_reshape_test(tensor const& input_size, tensor const& reshape_size, 
     auto input = memory::allocate(engine, { std::is_same<ElemType, FLOAT16>::value ? data_types::f16 : data_types::f32, input_size });
     
     {
-        auto input_ptr = input.pointer<ElemType>();
+        auto input_ptr = input.cldnn::memory::pointer<ElemType>();
         auto input_itr = input_ptr.begin();
 
         auto elements = input_size.count();

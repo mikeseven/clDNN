@@ -232,7 +232,10 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         auto lower_padding = output_layout.data_padding.lower_size();
         auto upper_padding = output_layout.data_padding.upper_size();
 
-        if (!engine_info.supports_fp16 && (input_use_half != output_use_half))
+        bool needs_fp16 = (input_use_half != output_use_half || //float->half or half->float conversion require fp16 support
+            (input_use_half && (data.has_mean || !outer.get_primitive()->substract_per_feature.empty()))); //half->half with subtraction require fp16 support
+
+        if (!engine_info.supports_fp16 && needs_fp16)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
         if (outer.input().get_output_layout().count() != outer.get_output_layout().count())
@@ -241,7 +244,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         }
 
         std::string half_type_str = "half";
-        if (input_use_half && output_use_half)
+        if (input_use_half && output_use_half && !needs_fp16) //half->half without subtraction (so plain reorder) can be done on shorts without explicit fp16 support
             half_type_str = "ushort";
 
 
