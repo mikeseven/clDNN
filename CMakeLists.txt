@@ -453,7 +453,7 @@ mark_as_advanced(CLDNN__INCLUDE_COST_MODEL)
 # ======================================================================================================
 
 # Run (requires CLDNN__INCLUDE_TESTS to be true): Tests (unit tests and small acceptance tests) for clDNN framework.
-set(CLDNN__RUN_TESTS ON CACHE BOOL "Run: clDNN framework's tests.")
+set(CLDNN__RUN_TESTS OFF CACHE BOOL "Run: clDNN framework's tests.")
 mark_as_advanced(CLDNN__RUN_TESTS)
 
 # ======================================================================================================
@@ -461,8 +461,6 @@ mark_as_advanced(CLDNN__RUN_TESTS)
 # Compile / Link: Use static C++ Runtime library.
 set(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME OFF CACHE BOOL "Compile / Link: Use static version of C++ Runtime library instead of shared one.")
 mark_as_advanced(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME)
-# We no longer need test run after each build since we have CI env.
-set(CLDNN__RUN_TESTS OFF)
 
 # ======================================================================================================
 
@@ -1160,6 +1158,7 @@ endif()
 if(CLDNN__INCLUDE_COST_MODEL)
   add_subdirectory(cost_model)
 endif()
+add_subdirectory(docs)
 
 # ======================================================================================================
 # ======================================================================================================

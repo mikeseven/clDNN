@@ -14,19 +14,29 @@
 
 #!/bin/bash
 
-BUILD_DIR=${1:-"UnixMk"}
+ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+BUILD_DIR="${ROOT_DIR}/build/Linux64"
+OUT_DIR="${ROOT_DIR}/build/out/Linux64"
 
-echo Creating echo Creating Unix Makefiles...
+USE_NINJA=${1:-"N"}
+USE_DEVTOOLSET="${2}"
 
-# Following environment variables can customize build system:
-# USE_SDE_EMULATION -- Whether to use SDE emulation posible values: on, off  (lack of varable is equal to off)
-# RUN_ULTS_OFFLINE --  whether to seprate ULTs execution for building process. Possible values: on, off (lack of variable is equal to off
-# 
-# Examples:
-# RUN_ULTS_OFFLINE=on ./create_unixmake_gcc.sh       # This will make ULTs running offline
-# WITH_CAFFE=on ./create_unixmake_gcc.sh             # This will build caffe tests
+if [ "${USE_NINJA^^}" = "Y" ]; then
+    echo "Creating Ninja Makefiles ..."
+    GENERATOR="Ninja"
+else
+    echo "Creating Unix/Linux Makefiles ..."
+    GENERATOR="Unix Makefiles"
+fi
 
-cmake -G"Unix Makefiles" -B"./${BUILD_DIR}/Release" --no-warn-unused-cli -DRUN_ULTS_OFFLINE:BOOL=${RUN_ULTS_OFFLINE} -DWITH_CAFFE:BOOL=${WITH_CAFFE} -DUSE_SDE_EMULATION:BOOL=${USE_SDE_EMULATION} -DCMAKE_BUILD_TYPE:STRING="Release" -DCMAKE_CONFIGURATION_TYPES:STRING="Release" -H"."
-cmake -G"Unix Makefiles" -B"./${BUILD_DIR}/Debug" --no-warn-unused-cli -DRUN_ULTS_OFFLINE:BOOL=${RUN_ULTS_OFFLINE} -DWITH_CAFFE:BOOL=${WITH_CAFFE} -DUSE_SDE_EMULATION:BOOL=${USE_SDE_EMULATION} -DCMAKE_BUILD_TYPE:STRING="Debug" -DCMAKE_CONFIGURATION_TYPES:STRING="Debug" -H"."-G"Unix Makefiles" -B"./${BUILD_DIR}/Debug" --no-warn-unused-cli -DRUN_ULTS_OFFLINE:BOOL=${RUN_ULTS_OFFLINE} -DUSE_SDE_EMULATION:BOOL=${USE_SDE_EMULATION} -DCMAKE_BUILD_TYPE:STRING="Debug" -DCMAKE_CONFIGURATION_TYPES:STRING="Debug" -H"."
+if [ "${USE_DEVTOOLSET}" = "" ]; then
+    cd ${ROOT_DIR} && cmake -E make_directory "${BUILD_DIR}/Debug" && cd "${BUILD_DIR}/Debug" && cmake -G "${GENERATOR}" "-DCLDNN__OUTPUT_DIR=${OUT_DIR}/Debug" "-DCMAKE_BUILD_TYPE=Debug" "${ROOT_DIR}"
+    cd ${ROOT_DIR} && cmake -E make_directory "${BUILD_DIR}/Release" && cd "${BUILD_DIR}/Release" && cmake -G "${GENERATOR}" "-DCLDNN__OUTPUT_DIR=${OUT_DIR}/Release" "-DCMAKE_BUILD_TYPE=Release" "${ROOT_DIR}"
+else
+    echo Using devtoolset-${USE_DEVTOOLSET,,} ...
+    cd ${ROOT_DIR} && cmake -E make_directory "${BUILD_DIR}/Debug" && cd "${BUILD_DIR}/Debug" && scl enable devtoolset-${USE_DEVTOOLSET,,} "cmake -G \"${GENERATOR}\" \"-DCLDNN__OUTPUT_DIR=${OUT_DIR}/Debug\" \"-DCMAKE_BUILD_TYPE=Debug\" \"${ROOT_DIR}\""
+    cd ${ROOT_DIR} && cmake -E make_directory "${BUILD_DIR}/Release" && cd "${BUILD_DIR}/Release" && scl enable devtoolset-${USE_DEVTOOLSET,,} "cmake -G \"${GENERATOR}\" \"-DCLDNN__OUTPUT_DIR=${OUT_DIR}/Release\" \"-DCMAKE_BUILD_TYPE=Release\" \"${ROOT_DIR}\""
+fi
+
 
 echo Done.
