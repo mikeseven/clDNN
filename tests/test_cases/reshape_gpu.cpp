@@ -16,13 +16,13 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include <gtest/gtest.h>
-#include <api/topology.hpp>
-#include <api/network.hpp>
-#include <api/engine.hpp>
+#include <api/CPP/topology.hpp>
+#include <api/CPP/network.hpp>
+#include <api/CPP/engine.hpp>
 
-#include <api/primitives/data.hpp>
-#include <api/primitives/reshape.hpp>
-#include <api/primitives/input_layout.hpp>
+#include <api/CPP/data.hpp>
+#include <api/CPP/reshape.hpp>
+#include <api/CPP/input_layout.hpp>
 
 #include "test_utils/test_utils.h"
 

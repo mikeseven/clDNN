@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/primitives/reshape.hpp"
+#include "api/CPP/reshape.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn

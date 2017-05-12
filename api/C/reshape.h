@@ -18,7 +18,7 @@
 #ifndef RESHAPE_H
 #define RESHAPE_H
 
-#include "../cldnn.h"
+#include "cldnn.h"
 /// @addtogroup c_api C API
 /// @{
 /// @addtogroup c_topology Network Topology

@@ -16,8 +16,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "reshape.h"
-#include "../primitive.hpp"
+#include "../C/reshape.h"
+#include "primitive.hpp"
 
 namespace cldnn
 {
