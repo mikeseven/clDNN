@@ -41,19 +41,19 @@ struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
     /// @param id This primitive id.
     /// @param input Input primitive id.
     /// @param output_layout Requested memory layout.
-    /// @param values_to_substract Array of mean subtract values.
+    /// @param values_to_subtract Array of mean subtract values.
     reorder(
         const primitive_id& id,
         const primitive_id& input,
         const layout& output_layout,
-        const std::vector<float>& values_to_substract = {},
+        const std::vector<float>& values_to_subtract = {},
         const padding& input_padding = padding(),
         const padding& output_padding = padding()
     )
         : primitive_base(id, { input }, input_padding, output_padding)
         , output_layout(output_layout)
         , mean("")
-        , substract_per_feature(values_to_substract)
+        , subtract_per_feature(values_to_subtract)
     {
     }
 
@@ -73,7 +73,7 @@ struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
         : primitive_base(id, { input }, input_padding, output_padding)
         , output_layout(output_layout)
         , mean(mean)
-        , substract_per_feature(0)
+        , subtract_per_feature(0)
     {
     }
 
@@ -81,17 +81,17 @@ struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
     reorder(const dto* dto)
         : primitive_base(dto)
         , output_layout(dto->output_layout)
-        , mean(dto->mean_substract)
-        , substract_per_feature(float_arr_to_vector(dto->substract_per_feature))
+        , mean(dto->mean_subtract)
+        , subtract_per_feature(float_arr_to_vector(dto->subtract_per_feature))
     {
     }
 
     /// @brief Requested memory layout.
     layout output_layout;
-    /// @brief Primitive id to get mean subtract values. Ignored if substract_per_featrue is set.
+    /// @brief Primitive id to get mean subtract values. Ignored if subtract_per_featrue is set.
     primitive_id mean;
     /// @brief Array of mean subtract values.
-    std::vector<float> substract_per_feature;
+    std::vector<float> subtract_per_feature;
 
 protected:
     std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override
@@ -104,8 +104,8 @@ protected:
     void update_dto(dto& dto) const override
     {
         dto.output_layout = output_layout;
-        dto.mean_substract = mean.c_str();
-        dto.substract_per_feature = float_vector_to_arr(substract_per_feature);
+        dto.mean_subtract = mean.c_str();
+        dto.subtract_per_feature = float_vector_to_arr(subtract_per_feature);
     }
 };
 /// @}

@@ -392,7 +392,7 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
 	else if (primitive->type == cldnn::reorder::type_id())
 	{
 		auto reorder = static_cast<cldnn::reorder*>(primitive);
-		str << "Output data type: " << cldnn::data_type_traits::name(reorder->output_layout.data_type) << " Output tensor: " << test_param->print_tensor(reorder->output_layout.size) << " Mean: " << reorder->mean << "Subtract per feature: " << "TODO" /*std::vector<float> substract_per_feature*/;
+		str << "Output data type: " << cldnn::data_type_traits::name(reorder->output_layout.data_type) << " Output tensor: " << test_param->print_tensor(reorder->output_layout.size) << " Mean: " << reorder->mean << "Subtract per feature: " << "TODO" /*std::vector<float> subtract_per_feature*/;
 	}
 	else if (primitive->type == cldnn::normalize::type_id())
 	{

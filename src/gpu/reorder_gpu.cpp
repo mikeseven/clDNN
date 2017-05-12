@@ -83,7 +83,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         auto output_layout = outer.get_output_layout();
 
         kd.has_mean = outer.has_mean();
-        kd.padding_only = (!kd.has_mean) && outer.get_primitive()->substract_per_feature.empty() &&
+        kd.padding_only = (!kd.has_mean) && outer.get_primitive()->subtract_per_feature.empty() &&
             input_layout.size.format == output_layout.size.format &&
             input_layout.size.format == format::bfyx &&
             outer.get_primitive()->output_padding.lower_size().feature[0] == 0 &&
@@ -350,13 +350,13 @@ struct reorder_gpu : typed_primitive_impl<reorder>
             }
 
         }
-        else if (!outer.get_primitive()->substract_per_feature.empty())
+        else if (!outer.get_primitive()->subtract_per_feature.empty())
         {
             std::stringstream s;
             s << "(float[]){ ";
-            for (uint32_t i = 0; i < outer.get_primitive()->substract_per_feature.size(); i++)
+            for (uint32_t i = 0; i < outer.get_primitive()->subtract_per_feature.size(); i++)
             {
-                s << outer.get_primitive()->substract_per_feature[i] << ", ";
+                s << outer.get_primitive()->subtract_per_feature[i] << ", ";
             }
             s << " }";
             mem_consts.add_constant(gpu::make_jit_constant("VALUE_TO_SUBTRACT", s.str()));
@@ -447,7 +447,7 @@ reorder_gpu::kernel_data set_default(const reorder_node& arg)
         //if we got values to subtract, then choose apropriate kernel
         if (kd.has_mean)
             kd.kernel_name = kernelName_subtract;
-        else if (!arg.get_primitive()->substract_per_feature.empty())
+        else if (!arg.get_primitive()->subtract_per_feature.empty())
             kd.kernel_name = kernelName_subtract_values;
         else
             kd.kernel_name = kernelName;
@@ -462,7 +462,7 @@ reorder_gpu::kernel_data set_default_dim1(const reorder_node& arg)
 
     if (kd.has_mean)
         kd.kernel_name = kernel_name_1d_convert_subtract;
-    else if (!arg.get_primitive()->substract_per_feature.empty())
+    else if (!arg.get_primitive()->subtract_per_feature.empty())
         kd.kernel_name = kernel_name_1d_convert_subtract_values;
     else
         kd.kernel_name = kernel_name_1d_convert;

@@ -171,12 +171,12 @@ TEST(reorder_gpu_f32, basic_subtract) {
 
     topology topology(
         input_layout("input", input.get_layout()),
-        input_layout("substract", subtract.get_layout()),
-        reorder("reorder", "input", output_layout, "substract"));
+        input_layout("subtract", subtract.get_layout()),
+        reorder("reorder", "input", output_layout, "subtract"));
 
     network network(engine, topology);
     network.set_input_data("input", input);
-    network.set_input_data("substract", subtract);
+    network.set_input_data("subtract", subtract);
 
     auto outputs = network.execute();
     EXPECT_EQ(outputs.size(), size_t(1));
@@ -351,8 +351,8 @@ TEST(reorder_gpu_f16, basic_subtract_f32_output_f32) {
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
-    topology.add(data("substract", subtract));
-    topology.add(reorder("reorder", "input", output_layout, "substract"));
+    topology.add(data("subtract", subtract));
+    topology.add(reorder("reorder", "input", output_layout, "subtract"));
 
     network network(engine, topology);
     network.set_input_data("input", input);
@@ -909,9 +909,9 @@ public:
 		const cldnn::reorder* reorder = (cldnn::reorder*)layer_params;
 		const layout& output_layout = reorder->output_layout;
 		primitive_id mean = reorder->mean;
-		std::vector<float> substract_per_feature = reorder->substract_per_feature;
+		std::vector<float> subtract_per_feature = reorder->subtract_per_feature;
 		assert(mean == "");
-		assert(substract_per_feature.size() == 0);
+		assert(subtract_per_feature.size() == 0);
 		
 		auto output = memory::allocate(engine, cldnn::layout(output_layout.data_type, inputs[0].get_layout().size));
 

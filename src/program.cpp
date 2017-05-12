@@ -364,7 +364,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 auto reorder_input_layout = reorder_input.get_output_layout();
                 if (reorder_input_layout == opt_layout) //reorder 'breaks' optimal format
                 {
-                    if (reorder_prim->substract_per_feature.empty() &&
+                    if (reorder_prim->subtract_per_feature.empty() &&
                         reorder_prim->mean.empty() &&
                         !reorder_prim->input_padding &&
                         !reorder_prim->output_padding) //just plain reorder

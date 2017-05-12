@@ -37,10 +37,10 @@ extern "C" {
 CLDNN_BEGIN_PRIMITIVE_DESC(reorder)
 /// @brief Requested memory layout.
 cldnn_layout output_layout;
-/// @brief Primitive id to get mean subtract values. Ignored if substract_per_featrue is set.
-cldnn_primitive_id mean_substract;
+/// @brief Primitive id to get mean subtract values. Ignored if subtract_per_featrue is set.
+cldnn_primitive_id mean_subtract;
 /// @brief Array of mean subtract values.
-cldnn_float_arr substract_per_feature;
+cldnn_float_arr subtract_per_feature;
 CLDNN_END_PRIMITIVE_DESC(reorder)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(reorder);
