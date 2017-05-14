@@ -52,10 +52,5 @@ std::string normalize_inst::to_string(normalize_node const& node)
 normalize_inst::typed_primitive_inst(network_impl& network, normalize_node const& node)
     :parent(network, node)
 {
-	auto input_layout = node.input().get_output_layout();
-	if (input_layout.format != format::bfyx)
-	{
-		throw std::invalid_argument("Normalize layer supports only bfyx input format.");
-	}
 }
 }

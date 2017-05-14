@@ -52,7 +52,7 @@ struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
         , output_format(output_layout.format)
         , output_data_type(output_layout.data_type)
         , mean("")
-        , subtract_per_feature(values_to_substract)
+        , subtract_per_feature(values_to_subtract)
     {
     }
 
@@ -71,7 +71,7 @@ struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
         , output_format(output_layout.format)
         , output_data_type(output_layout.data_type)
         , mean(mean)
-        , substract_per_feature(0)
+        , subtract_per_feature(0)
     {
     }
 

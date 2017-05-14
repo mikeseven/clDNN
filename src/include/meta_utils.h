@@ -16,7 +16,7 @@
 #pragma once
 
 #include <type_traits>
-#include "api/meta_utils.hpp"
+#include "api/CPP/meta_utils.hpp"
 
 namespace cldnn
 {
