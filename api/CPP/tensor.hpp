@@ -605,7 +605,7 @@ private:
 template<details::dim_vec_kind Kind>
 inline void details::dim_vec_kind_init<Kind>::init_tensor_values(cldnn::tensor & t)
 {
-    for (size_t i = _dimOffset; i < _dimOffset + _dimSize; i++)
+    for (size_t i = _dimOffset; i < (size_t)(_dimOffset + _dimSize); i++)
         t._sizes[i] = _sizes[i - _dimOffset];
 }
 
