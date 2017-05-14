@@ -210,8 +210,6 @@ private:
     }
 };
 
-CLDNN_API_CLASS(padding)
-
 /// @brief Describes memory layout.
 /// @details Contains information about data stored in @ref memory.
 struct layout

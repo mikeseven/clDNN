@@ -175,8 +175,6 @@ private:
     }
 };
 
-CLDNN_API_CLASS(memory)
-
 /// @brief Helper class to get an access @ref memory data
 /// @details
 /// This class provides an access to @ref memory data following RAII idiom and exposes basic C++ collection members.
