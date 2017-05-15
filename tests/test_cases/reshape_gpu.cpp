@@ -135,8 +135,8 @@ TEST(reshape_gpu_f32, basic_2dim_in_place)
 {
     generic_reshape_test<float>(
         format::bfyx,
-        tensor({ 1, 1, 2, 2 }),
-        tensor({ 1, 1, 4, 1 }),
+        tensor(1, 1, 2, 2),
+        tensor(1, 1, 4, 1),
         true);
 }
 
@@ -144,8 +144,8 @@ TEST(reshape_gpu_f16, basic_2dim_in_place)
 {
     generic_reshape_test<FLOAT16>(
         format::bfyx,
-        tensor({ 1, 1, 2, 2 }),
-        tensor({ 1, 1, 1, 4 }),
+        tensor(1, 1, 2, 2),
+        tensor(1, 1, 1, 4),
         true);
 }
 
@@ -153,8 +153,8 @@ TEST(reshape_gpu_f32, basic_4dim_in_place)
 {
     generic_reshape_test<float>(
         format::yxfb,
-        tensor({ 9, 9, 2, 4 }),
-        tensor({ 27, 2, 3, 4 }),
+        tensor(9, 9, 2, 4),
+        tensor(27, 2, 3, 4),
         true);
 }
 
@@ -162,8 +162,8 @@ TEST(reshape_gpu_f16, basic_4dim_in_place)
 {
     generic_reshape_test<FLOAT16>(
         format::yxfb,
-        tensor({ 9, 9, 2, 4 }),
-        tensor({ 3, 4, 27, 2 }),
+        tensor(9, 9, 2, 4),
+        tensor(3, 4, 27, 2),
         true);
 }
 
@@ -171,8 +171,8 @@ TEST(reshpape_gpu_f32, basic_2dim_output_padd)
 {
     generic_reshape_test<float>(
         format::byxf,
-        tensor({ 1, 1, 4, 2 }),
-        tensor({ 1, 1, 8, 1 }),
+        tensor(1, 1, 4, 2),
+        tensor(1, 1, 8, 1),
         false,
         padding(),
         padding(std::vector<int>{ 0,0,1,1 })
@@ -183,8 +183,8 @@ TEST(reshape_gpu_f16, basic_2dim_output_padd)
 {
     generic_reshape_test<FLOAT16>(
         format::byxf,
-        tensor({ 1, 1, 3, 4 }),
-        tensor({ 1, 1, 2, 6 }),
+        tensor(1, 1, 3, 4),
+        tensor(1, 1, 2, 6),
         false,
         padding(),
         padding(std::vector<int>{ 0,0,2,2 })
@@ -195,8 +195,8 @@ TEST(reshape_gpu_f32, basic_2dim_input_padd)
 {
     generic_reshape_test<float>(
         format::fyxb,
-        tensor({ 1, 1, 2, 5 }),
-        tensor({ 1, 1, 5, 2 }),
+        tensor(1, 1, 2, 5),
+        tensor(1, 1, 5, 2),
         false,
         padding({ 0,0,3,2 }, { 0,0,1,4 })
         );
@@ -206,8 +206,8 @@ TEST(reshape_gpu_f16, basic_2dim_input_padd)
 {
     generic_reshape_test<FLOAT16>(
         format::fyxb,
-        tensor({ 1, 1, 3, 3, }),
-        tensor({ 1, 1, 1, 9 }),
+        tensor(1, 1, 3, 3),
+        tensor(1, 1, 1, 9),
         false,
         padding({ 0,0,4,1 }, { 0,0,2,3 })
         );
@@ -217,8 +217,8 @@ TEST(reshape_gpu_f32, basic_2dim_input_output_padd)
 {
     generic_reshape_test<float>(
         format::byxf,
-        tensor({ 1, 1, 5, 7 }),
-        tensor({ 1, 1, 7, 5 }),
+        tensor(1, 1, 5, 7),
+        tensor(1, 1, 7, 5),
         false,
         padding({ 0,0,4,4 }, { 0,0,1,1 }),
         padding({ 0,0,0,0 }, { 0,0,3,0 })
@@ -229,8 +229,8 @@ TEST(reshape_gpu_f16, basic_2dim_input_output_padd)
 {
     generic_reshape_test<FLOAT16>(
         format::byxf,
-        tensor({ 1, 1, 6, 6 }),
-        tensor({ 1, 1, 3, 12 }),
+        tensor(1, 1, 6, 6),
+        tensor(1, 1, 3, 12),
         false,
         padding({ 0,0,1,1 }, { 0,0,0,0 }),
         padding({ 0,0,2,1 }, { 0,0,1,2 })
@@ -241,8 +241,8 @@ TEST(reshpape_gpu_f32, basic_4dim_output_padd)
 {
     generic_reshape_test<float>(
         format::bfyx,
-        tensor({ 2, 5, 7, 3 }),
-        tensor({ 1, 14, 15, 1 }),
+        tensor(2, 5, 7, 3),
+        tensor(1, 14, 15, 1),
         false,
         padding(),
         padding({ 1,0,0,1 },{ 0,2,3,0 })
@@ -253,8 +253,8 @@ TEST(reshape_gpu_f16, basic_4dim_output_padd)
 {
     generic_reshape_test<FLOAT16>(
         format::bfyx,
-        tensor({ 5, 4, 2, 2 }),
-        tensor({ 40, 2, 1, 1 }),
+        tensor(5, 4, 2, 2),
+        tensor(40, 2, 1, 1),
         false,
         padding(),
         padding({ 0,2,0,1 },{ 0,2,3,0 })
@@ -265,8 +265,8 @@ TEST(reshape_gpu_f32, basic_4dim_input_padd)
 {
     generic_reshape_test<float>(
         format::yxfb,
-        tensor({ 8, 128, 3, 3 }),
-        tensor({ 16, 8, 8, 9 }),
+        tensor(8, 128, 3, 3),
+        tensor(16, 8, 8, 9),
         false,
         padding({ 0,1,3,3}, { 0,1,1,1 })
         );
@@ -276,8 +276,8 @@ TEST(reshape_gpu_f16, basic_4dim_input_padd)
 {
     generic_reshape_test<FLOAT16>(
         format::yxfb,
-        tensor({ 2, 32, 8, 8 }),
-        tensor({ 8, 128, 1, 4 }),
+        tensor(2, 32, 8, 8),
+        tensor(8, 128, 1, 4),
         false,
         padding({ 2,2,1,0 }, { 1,2,2,0 })
         );
@@ -287,8 +287,8 @@ TEST(reshape_gpu_f32, basic_4dim_input_output_padd)
 {
     generic_reshape_test<float>(
         format::fyxb,
-        tensor({ 8, 1024, 25, 25 }),
-        tensor({ 8, 64, 100, 100 }),
+        tensor(8, 1024, 25, 25),
+        tensor(8, 64, 100, 100),
         false,
         padding({ 2,0,2,1 }, { 0,1,4,0 }),
         padding({ 1,2,3,4 }, { 0,4,1,1 })
@@ -299,8 +299,8 @@ TEST(reshape_gpu_f16, basic_4dim_input_output_padd)
 {
     generic_reshape_test<FLOAT16>(
         format::byxf,
-        tensor({ 32, 3, 227, 227 }),
-        tensor({ 8, 12, 227, 227 }),
+        tensor(32, 3, 227, 227),
+        tensor(8, 12, 227, 227),
         false,
         padding({ 0,1,4,4 }, { 0,1,1,1 }),
         padding({ 0,29,29,0 }, { 0,0,0,0 })
