@@ -47,7 +47,7 @@ struct reshape : public primitive_base<reshape, CLDNN_PRIMITIVE_DESC(reshape)>
         const tensor& output_shape,
         const padding& output_padding = padding()
     )
-        : primitive_base(id, { input }, padding(), output_padding)
+        : primitive_base(id, { input }, output_padding)
         , output_shape(output_shape)
     {
     }
