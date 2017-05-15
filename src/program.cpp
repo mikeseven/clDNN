@@ -352,8 +352,10 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
         {
             auto reorder_prim = input_node.as<reorder>().typed_desc();
             auto& reorder_input = input_node.get_dependency(0);
+            auto reorder_layout = reorder_input.get_output_layout();
+            reorder_layout.data_type = reorder_prim->output_data_type;
             new_input = lo.get_reorder(
-                reorder_input.get_output_layout(),
+                reorder_layout,
                 reorder_prim->id,
                 layout_optimizer::data_type::input,
                 conv_prim).first;
