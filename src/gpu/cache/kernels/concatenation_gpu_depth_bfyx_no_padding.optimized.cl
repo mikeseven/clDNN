@@ -30,7 +30,7 @@
 
 __attribute__((reqd_work_group_size(1, WORK_GROUP_SIZE, 1)))
 __attribute__((intel_reqd_sub_group_size(WORK_GROUP_SIZE)))
-KERNEL (depth_concatenate_gpu_bfyx_no_padding)(__global float* input, __global float* output, uint depth_offset)
+KERNEL (concatenation_gpu_depth_bfyx_no_padding)(__global float* input, __global float* output, uint depth_offset)
 {
     const uint batch_id = get_group_id(0);
 

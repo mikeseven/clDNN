@@ -24,7 +24,6 @@
 #include "api/CPP/convolution.hpp"
 #include "api/CPP/deconvolution.hpp"
 #include "api/CPP/data.hpp"
-#include "api/CPP/depth_concatenate.hpp"
 #include "api/CPP/eltwise.hpp"
 #include "api/CPP/input_layout.hpp"
 #include "api/CPP/pooling.hpp"

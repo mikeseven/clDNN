@@ -44,7 +44,7 @@ struct input_layout : public primitive_base<input_layout, CLDNN_PRIMITIVE_DESC(i
     /// @param id This primitive id.
     /// @param layout Defines layout for the data will be passed to network.
     input_layout(const primitive_id& id, const layout& layout)
-        :primitive_base(id, {}, padding())
+        :primitive_base(id, {}, layout.data_padding)
         , layout(layout)
     {}
 
@@ -52,7 +52,9 @@ struct input_layout : public primitive_base<input_layout, CLDNN_PRIMITIVE_DESC(i
     explicit input_layout(const dto* dto)
         :primitive_base(dto)
         , layout(dto->layout)
-    {}
+    {
+        output_padding = layout.data_padding;
+    }
 
     /// @brief Defines layout for the data will be passed to network.
     const cldnn::layout layout;

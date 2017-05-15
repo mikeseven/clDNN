@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "../C/depth_concatenate.h"
+#include "../C/concatenation.h"
 #include "primitive.hpp"
 
 namespace cldnn
@@ -28,9 +28,9 @@ namespace cldnn
 /// @addtogroup cpp_primitives Primitives
 /// @{
 
-/// @details Depth concatenation is used to concatenate features from multiple sources into one destination.
+/// @details Concatenation is used to concatenate multiple sources into one destination along specified dimension.
 /// @notes 
-/// - all sources must have the same spatial and batch sizes and also the same format as output.
+/// - all other dimensions (except the one along which concatenation take place) must have the same value in each source.
 /// - order of arguments in primitive creation has impact on order of feature maps in output primitive. 
 /// 
 /// @par Alogrithm:
@@ -50,29 +50,46 @@ namespace cldnn
 ///   @li output : data structure holding output data for this primitive
 ///   @li i.features : number of features in currently processed input
 ///   @li outputIdx : index of destination feature 
-struct depth_concatenate : public primitive_base<depth_concatenate, CLDNN_PRIMITIVE_DESC(depth_concatenate)>
+struct concatenation : public primitive_base<concatenation, CLDNN_PRIMITIVE_DESC(concatenation)>
 {
-    CLDNN_DECLATE_PRIMITIVE(depth_concatenate)
+    CLDNN_DECLATE_PRIMITIVE(concatenation)
 
-    /// @li Constructs Depth concatenate primitive.
+    enum concatenation_axis
+    {
+        along_b = cldnn_concatenation_along_b,
+        along_f = cldnn_concatenation_along_f,
+        along_x = cldnn_concatenation_along_x,
+        along_y = cldnn_concatenation_along_y
+    };
+
+    /// @li Constructs concatenation primitive.
     /// @param id This primitive id.
     /// @param input Vector of input primitives ids.
-    depth_concatenate(
+    /// @param axis Selected dimension for concatenation.
+    concatenation(
         const primitive_id& id,
         const std::vector<primitive_id>& input,
+        const concatenation_axis axis,
         const padding& output_padding = padding()
     )
-        // We're not using input padding but we must provide it, so it will always be 0,0
         :primitive_base(id, { input }, output_padding)
+        , axis(axis)
     {}
 
     /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC(depth_concatenate)
-    depth_concatenate(const dto* dto)
+    concatenation(const dto* dto)
         :primitive_base(dto)
+        , axis(static_cast<concatenation_axis>(dto->axis))
     {}
 
+    /// @brief Dimension along which concatenation should take place
+    concatenation_axis axis;
+
 private:
-    void update_dto(dto&) const override {}
+    void update_dto(dto& dto) const override
+    {
+        dto.axis = static_cast<cldnn_concatenation_axis>(axis);
+    }
 };
 /// @}
 /// @}

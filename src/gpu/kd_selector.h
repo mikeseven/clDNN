@@ -15,6 +15,9 @@
 #pragma once
 
 #include "boost/functional/hash.hpp"
+#include "boost/optional.hpp"
+
+#include "meta_utils.h"
 
 #include <initializer_list>
 #include <tuple>
@@ -29,7 +32,47 @@ namespace mputils
 {
 template <typename ... Tys> struct type_tuple;
 
+template <class TT1, class TT2>
+struct merge_type_tuples;
+
+template <class... TT1_Tys, class... TT2_Tys>
+struct merge_type_tuples<type_tuple<TT1_Tys...>, type_tuple<TT2_Tys...>>
+{
+    using type = type_tuple<TT1_Tys..., TT2_Tys...>;
+};
+
+template <int SplitIdx, class... Tys>
+struct split_types
+{
+    using lower = type_tuple<>;
+    using upper = type_tuple<>;
+};
+
+template <int SplitIdx, class T, class... Rest>
+struct split_types<SplitIdx, T, Rest...>
+{
+private:
+    using reccurence_lower = typename split_types<SplitIdx - 1, Rest...>::lower;
+    using reccurence_upper = typename split_types<SplitIdx - 1, Rest...>::upper;
+
+public:
+    using lower = std::conditional_t<(SplitIdx > 0),
+        typename merge_type_tuples<type_tuple<T>, reccurence_lower>::type,
+        reccurence_lower>;
+
+    using upper = std::conditional_t<(SplitIdx < 0),
+        typename merge_type_tuples<type_tuple<T>, reccurence_upper>::type,
+        reccurence_upper>;
+};
+
 template <std::size_t ... Idxs> struct index_tuple {};
+
+template <class TargetTypesTuple, class InitTypesTuple>
+struct can_init;
+
+template <class... TargetTys, class... InitTys>
+struct can_init<type_tuple<TargetTys...>, type_tuple<InitTys...>> : public cldnn::meta::all<std::is_constructible<TargetTys, InitTys>::value...>
+{};
 
 // -----------------------------------------------------------------------------------------------------------------------
 
@@ -119,6 +162,7 @@ struct index_of_tt<type_tuple<Tys ...>, ElemTy>
 
 // -----------------------------------------------------------------------------------------------------------------------
 
+// remove type 'ElemTy' from type tuple 'TypeTupleTy'
 template <typename TypeTupleTy, typename ElemTy> struct remove_tt;
 
 namespace detail
@@ -152,6 +196,7 @@ using remove_tt_t = typename remove_tt<TypeTupleTy, ElemTy>::type;
 
 // -----------------------------------------------------------------------------------------------------------------------
 
+// create variadic type 'VariadicTTy' with types stored in type tuple 'TypeTupleTy'
 template <template <typename ...> class VariadicTTy, typename TypeTupleTy> struct make_vttype_tt;
 
 template <template <typename ...> class VariadicTTy, typename ... Tys>
@@ -242,13 +287,16 @@ struct kd_default_value_selector
     static constexpr Ty value = static_cast<Ty>(0);
 };
 
-template<typename KernelDataTy, typename OuterTy, std::size_t ReqSelectorCount, typename ... SelectorsTupleTy>
+template<typename KernelDataTy, typename OuterTy, std::size_t ReqSelectorCount, typename SelectorsTupleTy>
 class kd_selector;
 
 template<typename KernelDataTy, typename OuterTy, std::size_t ReqSelectorCount, typename ... SelectorTys>
 class kd_selector<KernelDataTy, OuterTy, ReqSelectorCount, mputils::type_tuple<SelectorTys ...>>
 {
-    using _selector_types = mputils::type_tuple<SelectorTys ...>;
+    using _selector_types = mputils::type_tuple<SelectorTys...>;
+    using _selector_req_types = typename mputils::split_types<ReqSelectorCount, SelectorTys...>::lower;
+    using _selector_opt_types = typename mputils::split_types<ReqSelectorCount, SelectorTys...>::upper;
+
     static_assert(mputils::count_tt<_selector_types, kd_optional_selector_t>::value == 0,
                   "Optional selectors separator can be specified only in template alias. "
                   "Please do not use this class directly - use kd_selector_t alias instead.");
@@ -259,7 +307,10 @@ class kd_selector<KernelDataTy, OuterTy, ReqSelectorCount, mputils::type_tuple<S
 
 
 public:
+    //using req_key_type = mputils::make_vttype_tt_t<std::tuple, _selector_req_types>;
+    //using opt_key_type = mptuils::make_vttype_tt_t<std::tuple, _selector_opt_types>;
     using key_type = mputils::make_vttype_tt_t<std::tuple, _selector_types>;
+
     using hash_type = boost::hash<key_type>;
     using mapped_type = KernelDataTy (*)(const OuterTy&);
     using map_type = std::unordered_map<key_type, mapped_type, hash_type>;
@@ -267,6 +318,21 @@ public:
 
 
 private:
+    /*struct kernel_key
+    {
+        template <class... InitTypes, class = std::enable_if_t<mputils::can_init<
+                mputils::type_tuple<SelectorTys...>,
+                mputils::type_tuple<InitTypes&&...>
+            >::value && (sizeof...(InitTypes) >= ReqSelectorCount)>>
+        kernel_key(InitTypes&&... tys)
+            : req_params{ tys }
+        {
+
+        }
+        req_key_type req_params;
+        opt_key_type opt_params;
+    };*/
+
     map_type _kernel_map;
 
 
