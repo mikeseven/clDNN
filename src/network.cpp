@@ -62,9 +62,6 @@ void network_impl::reset_execution(bool wait)
         events.reserve(_events.size());
         for (auto& pair : _events)
         {
-            if (!pair.second)
-                continue;
-
             auto clevent = pair.second->get();
             auto event_status = clevent.getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>();
             if (event_status != CL_COMPLETE)
