@@ -1,1 +1,1 @@
-XCOPY "\\samba-users.igk.intel.com\samba\Users\leszczyn\clDNN_Validation\cldnn-val-8" "C:\Tests\IE\bin\IE" /Y  
+XCOPY "\\samba-users.igk.intel.com\samba\Users\leszczyn\clDNN_Validation\cldnn-val-9" "C:\Tests\IE\bin\IE" /Y  

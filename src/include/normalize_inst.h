@@ -22,6 +22,14 @@
 namespace cldnn
 {
 
+template <>
+struct typed_program_node<normalize> : public typed_program_node_base<normalize>
+{
+public:
+    auto& input() const { return get_dependency(0); }
+    auto& scale() const { return get_dependency(1); }
+};
+
 using normalize_node = typed_program_node<normalize>;
 
 template <>
@@ -36,6 +44,7 @@ public:
     typed_primitive_inst(network_impl& network, normalize_node const& node);
 
     const memory& input_memory() const { return dep_memory(0); }
+	const memory& scale_memory() const { return dep_memory(1); }
 };
 
 using normalize_inst = typed_primitive_inst<normalize>;

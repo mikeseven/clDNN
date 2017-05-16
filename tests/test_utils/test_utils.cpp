@@ -107,13 +107,14 @@ namespace tests
 		EXPECT_EQ(out_layout.data_type, ref_layout.data_type);
 		EXPECT_EQ(get_expected_output_tensor(), out_layout.size);
 		EXPECT_EQ(out_layout.get_linear_size(), ref_layout.get_linear_size());
+		EXPECT_EQ(out_layout.data_padding, ref_layout.data_padding);
 
-		auto output_sizes = out_layout.size.sizes();
+		auto output_size = out_layout.size;
 
-		int batch_size = output_sizes[0];
-		int feature_size = output_sizes[1];
-		int y_size = output_sizes[2];
-		int x_size = output_sizes[3];
+		int batch_size = output_size.batch[0];
+		int feature_size = output_size.feature[0];
+		int y_size = output_size.spatial[1];
+		int x_size = output_size.spatial[0];
 
 		auto res_data = out.pointer<Type>();
 		auto ref_data = ref.pointer<Type>();
@@ -143,7 +144,6 @@ namespace tests
 		}
 	}
 
-	//TODO: is it ok that it assumes flat memory?
 	size_t generic_test::get_linear_index(const layout & layout, int b, int f, int y, int x)
 	{
 		uint32_t bPitch, fPitch, yPitch, xPitch;
@@ -156,7 +156,7 @@ namespace tests
 				yPitch = layout.get_buffer_size().sizes(format::bfyx)[3] * xPitch;
 				fPitch = layout.get_buffer_size().sizes(format::bfyx)[2] * yPitch;
 				bPitch = layout.get_buffer_size().sizes(format::bfyx)[1] * fPitch;
-				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
+				break;
 			}
 			case format::yxfb:
 			{
@@ -165,7 +165,7 @@ namespace tests
 				fPitch = layout.get_buffer_size().sizes(format::yxfb)[3] * bPitch;
 				xPitch = layout.get_buffer_size().sizes(format::yxfb)[2] * fPitch;
 				yPitch = layout.get_buffer_size().sizes(format::yxfb)[1] * xPitch;
-				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
+				break;
 			}
 			case format::fyxb:
 			{
@@ -174,7 +174,7 @@ namespace tests
 				xPitch = layout.get_buffer_size().sizes(format::fyxb)[3] * bPitch;
 				yPitch = layout.get_buffer_size().sizes(format::fyxb)[2] * xPitch;
 				fPitch = layout.get_buffer_size().sizes(format::fyxb)[1] * yPitch;
-				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
+				break;
 			}
 			case format::byxf:
 			{
@@ -183,13 +183,14 @@ namespace tests
 				xPitch = layout.get_buffer_size().sizes(format::byxf)[3] * fPitch;
 				yPitch = layout.get_buffer_size().sizes(format::byxf)[2] * xPitch;
 				bPitch = layout.get_buffer_size().sizes(format::byxf)[1] * yPitch;
-				return ((b * bPitch) + (f * fPitch) + (y * yPitch) + (x * xPitch));
+				break;
 			}
 			default:
 			{
 				throw std::runtime_error("Format not supported yet.");
 			}
 		}
+		return ((b * bPitch) + (f * fPitch) + ((y + layout.data_padding.lower_size().spatial[1]) * yPitch) + ((x + layout.data_padding.lower_size().spatial[0]) * xPitch));
 	}
 
 	//TODO: change the sig to take the layout size only for the output stuff
@@ -262,7 +263,7 @@ namespace tests
 	//Default implementation. Should be overridden in derived class otherwise.
 	cldnn::tensor generic_test::get_expected_output_tensor()
 	{
-		return generic_params->input_layouts[0].add(layer_params->output_padding.lower_size()).add(layer_params->output_padding.upper_size());
+		return generic_params->input_layouts[0];
 	}
 
 	std::vector<test_params*> generic_test::generate_generic_test_params(std::vector<test_params*>& all_generic_params, bool use_weight_formats)

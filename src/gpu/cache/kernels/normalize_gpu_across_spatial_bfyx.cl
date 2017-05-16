@@ -24,7 +24,7 @@
 #endif
 
 
-KERNEL (normalize_gpu_across_spatial_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
+KERNEL (normalize_gpu_across_spatial_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output, const __global UNIT_TYPE* scale_input)
 {
 	const uint b = get_global_id(0);
 
@@ -66,7 +66,7 @@ KERNEL (normalize_gpu_across_spatial_bfyx)(const __global UNIT_TYPE* input, __gl
 			output_idx += OUTPUT_PADDING_LOWER_SIZE_X;
 			for (int x = 0; x < INPUT_SIZE_X; x++)
 			{
-				output[output_idx] = UNIT_CVT_FUNC(norm) * input[input_idx] * UNIT_CVT_FUNC(SCALE);
+				output[output_idx] = UNIT_CVT_FUNC(norm) * input[input_idx] * scale_input[SCALE_INDEX];
 				input_idx++;
 				output_idx++;
 			}

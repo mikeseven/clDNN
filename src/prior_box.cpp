@@ -33,8 +33,8 @@ layout prior_box_inst::calc_output_layout(prior_box_node const& node)
     auto input_layout = node.input().get_output_layout();
     assert(input_layout.size.spatial.size() == 2);
 
-    const int layer_width = input_layout.size.spatial[1];
-    const int layer_height = input_layout.size.spatial[0];
+    const int layer_width = input_layout.size.spatial[0];
+    const int layer_height = input_layout.size.spatial[1];
 
     int num_priors = (int)desc->aspect_ratios.size() * (int)desc->min_sizes.size() + (int)desc->max_sizes.size();
 
@@ -220,6 +220,11 @@ prior_box_inst::typed_primitive_inst(network_impl& network, prior_box_node const
 	}
 	if ((argument.step_height < 0) || (argument.step_width < 0)) {
 		throw std::runtime_error("Step dimensions must be positive.");
+	}
+
+	if (node.is_padded())
+	{
+		throw std::invalid_argument("Prior-box layer doesn't support output padding.");
 	}
 
 	if (input_memory().get_layout().data_type == data_types::f32)
