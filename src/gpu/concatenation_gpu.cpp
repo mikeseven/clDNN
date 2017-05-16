@@ -250,7 +250,6 @@ concatenation_gpu::kernel_data default_spatial_bfyx(const std::pair<int, const c
 {
     auto idx = arg.first;
     auto input_layout = arg.second.input(idx).get_output_layout();
-    auto input_buffer_size = input_layout.get_buffer_size();
 
     concatenation_gpu::kernel_data kd = concatenation_gpu::set_kernel_data(idx, arg.second);
 
