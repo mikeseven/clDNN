@@ -249,12 +249,8 @@ concatenation_gpu::kernel_data default_depth_bfyx(const std::pair<int, const con
 concatenation_gpu::kernel_data default_spatial_bfyx(const std::pair<int, const concatenation_node&>& arg)
 {
     auto idx = arg.first;
-    auto input_layout = arg.second.input(idx).get_output_layout();
-
     concatenation_gpu::kernel_data kd = concatenation_gpu::set_kernel_data(idx, arg.second);
-
     kd.kernel_name = kernel_name_spatial;
-
     return kd;
 }
 
