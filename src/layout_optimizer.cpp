@@ -150,12 +150,10 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
     auto expected_format = current_layout.format;
-    auto batch = current_layout.size.batch[0];
 
     if (output_layout)
     {
         expected_data_type = output_layout.get().data_type;
-        batch = output_layout.get().size.batch[0];
     }
     else if (type != data_type::input)
         throw std::runtime_error("'output_layout' is required parameter for weights/bias optimization");
