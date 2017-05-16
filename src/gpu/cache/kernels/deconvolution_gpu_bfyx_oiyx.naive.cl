@@ -85,7 +85,11 @@ KERNEL(deconvolution_gpu_bfyx_oiyx)(
 
                         for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
                         {
+#if FP16_UNIT_USED
+                            result = fma(input[input_idx], filter[filter_idx], result);
+#else
                             result = mad(input[input_idx], filter[filter_idx], result);
+#endif
                             filter_idx += FILTER_SIZE_Y * FILTER_SIZE_X;
                             input_idx += INPUT_SIZE_X * INPUT_SIZE_Y;
                         }
