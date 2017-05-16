@@ -20,7 +20,7 @@
     #define ACTIVATION(output, input) output = input;
 #endif
 
-KERNEL(deconvolution_gpu_yxfb_oiyx)(
+KERNEL(deconvolution_gpu_bfyx_oiyx)(
     const __global float* input,
     __global float* output,
     const __global float* filter,
