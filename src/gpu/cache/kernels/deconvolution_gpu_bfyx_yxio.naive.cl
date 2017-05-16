@@ -28,24 +28,27 @@ KERNEL(deconvolution_gpu_yxfb_yxio)(
     uint split_idx)
 {
     const int batch_num = INPUT_BATCH_NUM;
+    const uint batch_id = get_global_id(0) % INPUT_BATCH_NUM;
+    const uint feature_id = get_global_id(0) / INPUT_BATCH_NUM;
+    const uint out_x = get_global_id(1);
+    const uint out_y = get_global_id(2);
 
-    const uint linear_id = get_global_id(1) + get_global_size(1) * (get_global_id(2) + get_global_size(2) * get_global_id(0));
-    const int bifn_num = batch_num * FILTER_OUTPUT_FEATURE_NUM;
+    const uint linear_id = out_x + OUTPUT_SIZE_X * (out_y + OUTPUT_SIZE_Y * (feature_id + OUTPUT_FEATURE_NUM * batch_id));
+    const int bifn_num = batch_num * OUTPUT_SIZE_X * OUTPUT_SIZE_Y * FILTER_OUTPUT_FEATURE_NUM;
     int global_id = linear_id % bifn_num + (linear_id / bifn_num) * bifn_num * FILTER_ARRAY_NUM + split_idx * bifn_num;
 
-    const int ofm_offset = (global_id / batch_num) % FILTER_OUTPUT_FEATURE_NUM;
+    const int ofm_offset = (global_id / (OUTPUT_SIZE_X * OUTPUT_SIZE_Y * INPUT_FEATURE_NUM)) % FILTER_OUTPUT_FEATURE_NUM;
 
     float result = bias[ofm_offset];
 
     bool finish = false;
-    const uint out_x = get_global_id(1);
-    const uint out_y = get_global_id(2);
 
     finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_PADDING_LOWER_SIZE_X;
     finish = (out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_PADDING_LOWER_SIZE_Y) ? true : finish;
+
     if(!finish)
     {
-       const int batch_offset = global_id / (FILTER_OUTPUT_FEATURE_NUM * INPUT_SIZE_X * INPUT_SIZE_Y);
+        const int batch_offset = global_id / (OUTPUT_FEATURE_NUM * OUTPUT_SIZE_X * OUTPUT_SIZE_Y);
 
         const int x = out_x - INPUT_OFFSET_SIZE_X - (FILTER_SIZE_X - 1);
         const int y = out_y - INPUT_OFFSET_SIZE_Y - (FILTER_SIZE_Y - 1);
@@ -54,20 +57,22 @@ KERNEL(deconvolution_gpu_yxfb_yxio)(
         {
             int input_offset_y = y + i;
             bool zero_y = (input_offset_y >= INPUT_SIZE_Y * STRIDE_SIZE_Y) || (input_offset_y < 0) || ((input_offset_y % STRIDE_SIZE_Y) != 0);
+
             if(!zero_y)
             {
                 for (uint j = 0; j < FILTER_SIZE_X; j++)
                 {
                     int input_offset_x = x + j;
                     bool zero = (input_offset_x >= INPUT_SIZE_X * STRIDE_SIZE_X) || (input_offset_x < 0) || ((input_offset_x % STRIDE_SIZE_X) != 0);
+
                     if(!zero)
                     {
                         int input_idx = (input_offset_x / STRIDE_SIZE_X + (input_offset_y * INPUT_SIZE_X / STRIDE_SIZE_Y));
                         input_idx += split_idx * FILTER_INPUT_FEATURE_NUM;
+                        input_idx += (feature_id - ofm_offset) * INPUT_SIZE_X * INPUT_SIZE_Y;
                         input_idx += batch_offset * FILTER_OUTPUT_FEATURE_NUM * INPUT_SIZE_X * INPUT_SIZE_Y;
 
                         uint filter_idx = ofm_offset + FILTER_INPUT_FEATURE_NUM * FILTER_OUTPUT_FEATURE_NUM * ((FILTER_SIZE_X * FILTER_SIZE_Y - 1) - (i * FILTER_SIZE_X + j));
-
 
                         for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
                         {
