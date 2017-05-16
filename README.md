@@ -30,7 +30,6 @@ The latest clDNN documentation is at [GitHub pages](http://01org.github.io/cldnn
 
 There is also inline documentation available that can be [generated with Doxygen](#generating-documentation).
 
-
 ## Support
 Please report issues and suggestions 
 [GitHub issues](https://github.com/01org/cldnn/issues).
@@ -199,7 +198,6 @@ in order to create it.
 
 ### Deployment
 
-Special `install` target will place the header files, libraries and documentation in `/usr/local`. To change
+Special `install` target will place the API header files and libraries in `/usr/local`
+(`C:/Program Files/clDNN` or `C:/Program Files (x86)/clDNN` on Windows). To change
 the installation path, use the option `-DCMAKE_INSTALL_PREFIX=<prefix>` when invoking CMake.
-
-** TODO: ADD SUPPORT FOR INSTALL TARGET!!! **
