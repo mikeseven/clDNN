@@ -35,7 +35,7 @@ struct engine_info_internal : cldnn::engine_info
 
     enum models
     {
-        APL, SKL, KBL
+        HD500_505, HD5XX, HD6XX
     };
 
     enum architectures
