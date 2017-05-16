@@ -718,7 +718,7 @@ public:
 
 		//Output is bfyx
         data_types dt = inputs[0].get_layout().data_type;
-		auto output = memory::allocate( engine, cldnn::layout(dt, cldnn::format::bfyx, inputs[0].get_layout().size.add(lrn->output_padding.lower_size()).add(lrn->output_padding.upper_size())) );
+		auto output = memory::allocate(engine, cldnn::layout(dt, cldnn::format::bfyx, inputs[0].get_layout().size, lrn->output_padding));
 
 		Type beta = lrn->beta;
 		Type k = lrn->k;
@@ -732,13 +732,13 @@ public:
 
 		auto input_mem = inputs[0].pointer<Type>();
 		auto output_mem = output.pointer<Type>();
-		int batch = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
-		int feature = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
-		int height = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
-		int width = inputs[0].get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+		int batch = inputs[0].get_layout().size.batch[0];
+		int feature = inputs[0].get_layout().size.feature[0];
+		int height = inputs[0].get_layout().size.spatial[1];
+		int width = inputs[0].get_layout().size.spatial[0];
 
-		int output_height = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
-		int output_width = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
+		int output_height = output.get_layout().get_buffer_size().spatial[1];
+		int output_width = output.get_layout().get_buffer_size().spatial[0];
 
 		//Initialized output with zeros.
         std::fill(output_mem.begin(), output_mem.end(), static_cast<Type>(0));
@@ -768,8 +768,8 @@ public:
 								scale = scale * alpha_div_by_size + k;
 
 								int output_index = (n * feature + c) * output_height * output_width;
-								tensor lower_padding = lrn->output_padding.lower_size().transform(cldnn::format::bfyx, 0);
-								output_index += (lower_padding.sizes()[2] + h) * output_width + lower_padding.sizes()[3] + w;
+								tensor lower_padding = lrn->output_padding.lower_size(); 
+								output_index += (lower_padding.spatial[1] + h) * output_width + lower_padding.spatial[0] + w;
 
 								size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 								output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)scale, -(float)beta);
@@ -813,8 +813,8 @@ public:
 								size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 
 								int output_index = (n * feature + c) * output_height * output_width;
-								tensor lower_padding = lrn->output_padding.lower_size().transform(cldnn::format::bfyx, 0);
-								output_index += (lower_padding.sizes()[2] + h) * output_width + lower_padding.sizes()[3] + w;
+								tensor lower_padding = lrn->output_padding.lower_size();
+								output_index += (lower_padding.spatial[1] + h) * output_width + lower_padding.spatial[0] + w;
 
 								output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)(scale * alpha + k), -(float)beta);							
 							}

@@ -382,7 +382,7 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
 	{
 		auto normalize = static_cast<cldnn::normalize*>(primitive);
 		std::string norm_region = normalize->across_spatial ? "across_spatial" : "within_spatial";
-		str << "Norm region: " << norm_region << " Epsilon: " << normalize->epsilon << " Scale factor: " << normalize->scale_factor;
+		str << "Norm region: " << norm_region << " Epsilon: " << normalize->epsilon << " Scale input id: " << normalize->scale_input;
 	}
     else
     {

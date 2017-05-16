@@ -24,7 +24,7 @@
 #endif
 
 
-KERNEL (normalize_gpu_across_spatial_yxfb)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
+KERNEL (normalize_gpu_across_spatial_yxfb)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output, const __global UNIT_TYPE* scale_input)
 {
 	const uint b = get_global_id(0);
 
@@ -59,7 +59,7 @@ KERNEL (normalize_gpu_across_spatial_yxfb)(const __global UNIT_TYPE* input, __gl
 			{
 				input_idx = b + INPUT_BATCH_NUM * (f + INPUT_FEATURE_NUM * ((INPUT_PADDING_LOWER_SIZE_Y + y) * INPUT_BUFFER_SIZE_X + INPUT_PADDING_LOWER_SIZE_X + x));
 				output_idx = b + INPUT_BATCH_NUM * (f + OUTPUT_FEATURE_NUM * ((OUTPUT_PADDING_LOWER_SIZE_Y + y) * OUTPUT_BUFFER_SIZE_X + OUTPUT_PADDING_LOWER_SIZE_X + x));
-				output[output_idx] = UNIT_CVT_FUNC(norm) * input[input_idx] * UNIT_CVT_FUNC(SCALE);
+				output[output_idx] = UNIT_CVT_FUNC(norm) * input[input_idx] * scale_input[SCALE_INDEX];
 			}
 		}
 	}
