@@ -204,6 +204,8 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
         // FP32 (float)
         case fuse(data_types::f32, format::bfyx):
         case fuse(data_types::f32, format::yxfb):
+        case fuse(data_types::f16, format::bfyx):
+        case fuse(data_types::f16, format::yxfb):
             break;
         default:
             throw std::runtime_error("deconvolution weights format unsupported");
@@ -213,14 +215,14 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
     }
 };
 
-deconvolution_gpu::kernel_data default_oiyx_f32(const deconvolution_node& arg)
+deconvolution_gpu::kernel_data default_oiyx(const deconvolution_node& arg)
 {
     deconvolution_gpu::kernel_data kd = deconvolution_gpu::set_default(arg);
     kd.kernel_name = (arg.input().get_output_layout().format == cldnn::format::bfyx) ? kernel_name_bfyx_oiyx : kernel_name_yxfb_oiyx;
     return kd;
 }
 
-deconvolution_gpu::kernel_data default_yxio_f32(const deconvolution_node& arg)
+deconvolution_gpu::kernel_data default_yxio(const deconvolution_node& arg)
 {
     deconvolution_gpu::kernel_data kd = deconvolution_gpu::set_default(arg);
     kd.kernel_name = (arg.input().get_output_layout().format == cldnn::format::bfyx) ? kernel_name_bfyx_yxio : kernel_name_yxfb_yxio;
@@ -228,10 +230,14 @@ deconvolution_gpu::kernel_data default_yxio_f32(const deconvolution_node& arg)
 }
 
 deconvolution_gpu::ks_type deconvolution_gpu::ks = {
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
-    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
-    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio },
+    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx },
+    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio },
+    { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx },
+    { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio },
 };
 
 namespace{
@@ -239,6 +245,8 @@ namespace{
         attach() {
             implementation_map<deconvolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), deconvolution_gpu::create);
             implementation_map<deconvolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), deconvolution_gpu::create);
+            implementation_map<deconvolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), deconvolution_gpu::create);
+            implementation_map<deconvolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), deconvolution_gpu::create);
         }
         ~attach() {}
     };

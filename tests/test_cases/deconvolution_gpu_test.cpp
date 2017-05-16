@@ -25,6 +25,7 @@
 #include <api/CPP/network.hpp>
 #include <api/CPP/engine.hpp>
 #include "test_utils/test_utils.h"
+#include "test_utils/float16.h"
 
 
 using namespace cldnn;
@@ -573,5 +574,70 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_yxfb_stride2_pad1) {
     for (unsigned int i = 0; i < expected_output_vec.size(); i++)
     {
         EXPECT_FLOAT_EQ(expected_output_vec[i], output_ptr[i]);
+    }
+}
+
+TEST(deconvolution_f16_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_yxfb_stride2_pad1) {
+    //  Filter : 2x2
+    //  Input  : 2x2x1x2
+    //  Output : 2x2x1x2
+    //  Stride : 2x2
+    //  Pad    : 1x1
+    //
+    //  Input:
+    //  8  0.5    1   3
+    //  6  9      2   4
+    //
+    //  Filter
+    //  -2   2
+    //   7  -0.5
+    //
+    //  Bias
+    //  1
+    //
+    //  Output:
+    //  -3    4.5    0.5   22
+    //   13  -17     5    -7
+
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f16, format::bfyx,{ 2, 1, 2, 2 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 2 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 1, 1 } });
+
+    cldnn::build_options options;
+    options.set_option(cldnn::build_option::optimize_data(true));
+
+    set_values(input, { FLOAT16(8.f), FLOAT16(0.5f), FLOAT16(6.f), FLOAT16(9.f),
+        FLOAT16(1.f), FLOAT16(3.f), FLOAT16(2.f), FLOAT16(4.f) });
+    set_values(weights, { -2.f, 2.f, 7.f, -0.5f});
+    set_values(biases, { 1.0f });
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        deconvolution("deconv", "input", { "weights" }, { "biases" }, { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
+    );
+
+    network network(engine, topology, options);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "deconv");
+
+    auto output_prim = outputs.begin()->second.get_memory();
+
+    auto output_ptr = output_prim.pointer<uint16_t>();
+
+    std::vector<float> expected_output_vec = {
+        -3.f, 4.5f, 13.f, -17.f,
+        .5f, 22.f, 5.f, -7.f
+    };
+
+    for (unsigned int i = 0; i < expected_output_vec.size(); i++)
+    {
+        EXPECT_FLOAT_EQ(expected_output_vec[i], float16_to_float32(output_ptr[i]));
     }
 }
