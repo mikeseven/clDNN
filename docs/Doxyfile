@@ -4,7 +4,9 @@ INLINE_SIMPLE_STRUCTS  = YES
 TYPEDEF_HIDES_STRUCT   = YES
 HIDE_FRIEND_COMPOUNDS  = YES
 INPUT                  = ../api
-IMAGE_PATH             = ./img
+INPUT				   += ../../tutorial
+INPUT				   += ../../tutorial/main.cpp ../../tutorial/chapter_1.cpp
+IMAGE_PATH			   = ../
 RECURSIVE              = YES
 EXAMPLE_PATH           = ../tests/examples
 SOURCE_BROWSER         = YES
@@ -22,3 +24,4 @@ EXPAND_AS_DEFINED      = CLDNN_BEGIN_PRIMITIVE_DESC \
                          CLDNN_DECLARE_PRIMITIVE_TYPE_ID
 ALIASES                = CLDNN_PRIMITIVE_DESC{1}="@ref cldnn_\1_desc"
 HAVE_DOT               = YES
+WARN_LOGFILE		   = "log.log"

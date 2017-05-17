@@ -435,7 +435,14 @@ public:
 
         auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
         setArgs<0>(clkernel, std::forward<Args>(args)...);
-        context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
+        if (context()->enable_single_kernel)
+        {
+            if (!_kernel_id.compare(context()->single_kernel_name))
+                context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
+        }
+        else
+            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
+
 
         return{ new cldnn::event_impl(end_event), false };
     }
