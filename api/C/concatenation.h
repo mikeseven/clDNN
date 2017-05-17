@@ -15,8 +15,8 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#ifndef DEPTH_CONCATENATE_H
-#define DEPTH_CONCATENATE_H
+#ifndef CONCATENATION_H
+#define CONCATENATION_H
 
 #include "cldnn.h"
 /// @addtogroup c_api C API
@@ -30,8 +30,17 @@
 extern "C" {
 #endif
 
-/// @details Depth concatenation is used to concatenate features from multiple sources into one destination.
-/// Note that all sources must have the same spatial and batch sizes and also the same format as output.
+typedef enum
+{
+    cldnn_concatenation_along_b = 0,
+    cldnn_concatenation_along_f = CLDNN_TENSOR_BATCH_DIM_MAX,
+    cldnn_concatenation_along_x = CLDNN_TENSOR_BATCH_DIM_MAX + CLDNN_TENSOR_FEATURE_DIM_MAX,
+    cldnn_concatenation_along_y = cldnn_concatenation_along_x + 1
+} cldnn_concatenation_axis;
+
+/// @details Concatenation is used to concatenate multiple sources into one destination along specified dimension.
+/// Note that all other dimensions (except the one along which concatenation take place) must have the same value in each source
+/// and each source should have the same format.
 /// @par Alogrithm:
 /// \code
 ///     int outputIdx = 0
@@ -49,10 +58,12 @@ extern "C" {
 ///   @li output : data structure holding output data for this primitive
 ///   @li i.features : number of features in currently processed input
 ///   @li outputIdx : index of destination feature 
-CLDNN_BEGIN_PRIMITIVE_DESC(depth_concatenate)
-CLDNN_END_PRIMITIVE_DESC(depth_concatenate)
+CLDNN_BEGIN_PRIMITIVE_DESC(concatenation)
+/// @brief Dimension along which concatenation should take place.
+cldnn_concatenation_axis axis;
+CLDNN_END_PRIMITIVE_DESC(concatenation)
 
-CLDNN_DECLARE_PRIMITIVE_TYPE_ID(depth_concatenate);
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(concatenation);
 
 #ifdef __cplusplus
 }
@@ -61,5 +72,5 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(depth_concatenate);
 /// @}
 /// @}
 /// @}
-#endif /* DEPTH_CONCATENATE_H */
+#endif /* CONCATENATION_H */
 

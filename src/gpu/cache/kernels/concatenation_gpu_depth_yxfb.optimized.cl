@@ -18,7 +18,7 @@
 #endif
 
 
-KERNEL (depth_concatenate_gpu_yxfb)(__global UNIT_TYPE* input, __global UNIT_TYPE* output, uint depth_offset)
+KERNEL (concatenation_gpu_depth_yxfb)(__global UNIT_TYPE* input, __global UNIT_TYPE* output, uint depth_offset)
 {
     uint global_id = get_global_id(0);
 

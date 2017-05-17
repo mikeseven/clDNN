@@ -24,7 +24,7 @@
 #include <api/CPP/pooling.hpp>
 #include <api/CPP/lrn.hpp>
 #include <api/CPP/fully_connected.hpp>
-#include <api/CPP/depth_concatenate.hpp>
+#include <api/CPP/concatenation.hpp>
 #include <api/CPP/softmax.hpp>
 
 using namespace cldnn;
@@ -190,13 +190,13 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 		{ 1, 1, 1, 1 },
         true);
 
-    auto inception_3a_output = depth_concatenate("inception_3a_output",
+    auto inception_3a_output = concatenation("inception_3a_output",
         {
             inception_3a_1x1,
             inception_3a_3x3,
             inception_3a_5x5,
             inception_3a_pool_proj
-        });
+        }, concatenation::along_f);
     // End of 1st nception
     
     // --------------------- 2nd inception ---------------------------------
@@ -282,13 +282,13 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 		{ 1, 1, 1, 1 },
         true);
 
-    auto inception_3b_output = depth_concatenate("inception_3b_output",
+    auto inception_3b_output = concatenation("inception_3b_output",
         {
             inception_3b_1x1,
             inception_3b_3x3,
             inception_3b_5x5,
             inception_3b_pool_proj
-        });
+        }, concatenation::along_f);
 
     // End of 2nd inception
 
@@ -381,13 +381,13 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 		{ 1, 1, 1, 1 },
         true);
 
-    auto inception_4a_output = depth_concatenate("inception_4a_output",
+    auto inception_4a_output = concatenation("inception_4a_output",
     {
             inception_4a_1x1,
             inception_4a_3x3,
             inception_4a_5x5,
             inception_4a_pool_proj
-    });
+    }, concatenation::along_f);
     // End of 3rd inception
 
     // --------------------- 4th inception ---------------------------------
@@ -472,13 +472,13 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 		{ 1, 1, 1, 1 },
         true);
 
-    auto inception_4b_output = depth_concatenate("inception_4b_output",
+    auto inception_4b_output = concatenation("inception_4b_output",
     {
             inception_4b_1x1,
             inception_4b_3x3,
             inception_4b_5x5,
             inception_4b_pool_proj
-    });
+    }, concatenation::along_f);
 
     // End of 4th inception
     
@@ -563,13 +563,13 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 		{ 1, 1, 1, 1 },
         true);
 
-    auto inception_4c_output = depth_concatenate("inception_4c_output",
+    auto inception_4c_output = concatenation("inception_4c_output",
     {
             inception_4c_1x1,
             inception_4c_3x3,
             inception_4c_5x5,
             inception_4c_pool_proj
-    });
+    }, concatenation::along_f);
 
     // --------------------- 6th inception ---------------------------------
     // 1st branch
@@ -652,13 +652,13 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 		{ 1, 1, 1, 1 },
         true);
 
-    auto inception_4d_output = depth_concatenate("inception_4d_output",
+    auto inception_4d_output = concatenation("inception_4d_output",
     {
             inception_4d_1x1,
             inception_4d_3x3,
             inception_4d_5x5,
             inception_4d_pool_proj
-    });
+    }, concatenation::along_f);
 
     // --------------------- 7th inception ---------------------------------
     // 1st branch
@@ -741,13 +741,13 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 		{ 1, 1, 1, 1 },
         true);
 
-    auto inception_4e_output = depth_concatenate("inception_4e_output",
+    auto inception_4e_output = concatenation("inception_4e_output",
     {
             inception_4e_1x1,
             inception_4e_3x3,
             inception_4e_5x5,
             inception_4e_pool_proj
-    });
+    }, concatenation::along_f);
    
     // ----------- End of 7th inception -------------------
 
@@ -839,13 +839,13 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 		{ 1, 1, 1, 1 },
         true);
 
-    auto inception_5a_output = depth_concatenate("inception_5a_output",
+    auto inception_5a_output = concatenation("inception_5a_output",
     {
             inception_5a_1x1,
             inception_5a_3x3,
             inception_5a_5x5,
             inception_5a_pool_proj
-    });
+    }, concatenation::along_f);
 
     // --------------------- 8th inception ---------------------------------
     // 1st branch
@@ -928,13 +928,13 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
 		{ 1, 1, 1, 1 },
         true);
 
-    auto inception_5b_output = depth_concatenate("inception_5b_output",
+    auto inception_5b_output = concatenation("inception_5b_output",
     {
             inception_5b_1x1,
             inception_5b_3x3,
             inception_5b_5x5,
             inception_5b_pool_proj
-    });
+    }, concatenation::along_f);
 
     // ------------------ ENDING PIPE --------------------------
     auto pool5_7x7_s1 = pooling("pool5_7x7_s1",

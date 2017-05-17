@@ -19,7 +19,7 @@
 #include <gtest/gtest.h>
 #include "api/CPP/memory.hpp"
 #include <api/CPP/input_layout.hpp>
-#include "api/CPP/depth_concatenate.hpp"
+#include "api/CPP/concatenation.hpp"
 #include <api/CPP/topology.hpp>
 #include <api/CPP/network.hpp>
 #include <api/CPP/engine.hpp>
@@ -60,7 +60,7 @@ TEST(depth_concatenate_f32_gpu, test01) {
     topology topology;
     topology.add(input_layout("input1", input1.get_layout()));
     topology.add(input_layout("input2", input2.get_layout()));
-    topology.add(depth_concatenate("depth1", { "input1", "input2" }));
+    topology.add(concatenation("depth1", { "input1", "input2" }, concatenation::along_f));
 
     network network(engine, topology);
 
@@ -114,7 +114,7 @@ static network setup_depth_concatatenate_network(const std::vector<data_types> d
         topology.add(input_layout(input_names[i], input.get_layout()));
     }
     //TODO: ask Uzi if something tests cases where there's missing input_names (nodes not present in the topology, etc.)
-    topology.add(depth_concatenate("depth_concat_node", input_names));
+    topology.add(concatenation("depth_concat_node", input_names, concatenation::along_f));
 
     return network(engine, topology);
 }
@@ -184,9 +184,9 @@ public:
 
         switch(i)
         {
-            case 1 : all_layer_params.push_back(new depth_concatenate("depth_concatenate", {"input0"})); break;
-            case 2 : all_layer_params.push_back(new depth_concatenate("depth_concatenate", {"input0", "input1"})); break;
-            case 3 : all_layer_params.push_back(new depth_concatenate("depth_concatenate", {"input0", "input1", "input2"})); break;
+            case 1 : all_layer_params.push_back(new concatenation("depth_concatenate", {"input0"}, concatenation::along_f)); break;
+            case 2 : all_layer_params.push_back(new concatenation("depth_concatenate", {"input0", "input1"}, concatenation::along_f)); break;
+            case 3 : all_layer_params.push_back(new concatenation("depth_concatenate", {"input0", "input1", "input2"}, concatenation::along_f)); break;
             default: assert(0);
         }
 
