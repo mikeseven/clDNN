@@ -47,7 +47,7 @@ KERNEL(deconvolution_gpu_yxfb_yxio)(
 #if BIAS_TERM
     UNIT_TYPE result = bias[ofm_offset];
 #else
-    UNIT_TYPE result = 0.0f;
+    UNIT_TYPE result = UNIT_VAL_ZERO;
 #endif
 
     bool finish = false;
